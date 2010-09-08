@@ -259,6 +259,11 @@ public class TestKeyValueHeap extends HBaseTestCase {
     public boolean reseek(KeyValue key) throws IOException {
       return seek(key);
     }
+
+    @Override
+    public long getSequenceID() {
+      return 0;
+    }
   }
 
 }

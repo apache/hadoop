@@ -507,6 +507,8 @@ Release 0.21.0 - Unreleased
                HBaseConfiguration is changed
                (Robert Mahfoud via Stack)
    HBASE-2964  Deadlock when RS tries to RPC to itself inside SplitTransaction
+   HBASE-1485  Wrong or indeterminate behavior when there are duplicate
+               versions of a column (pranav via jgray)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

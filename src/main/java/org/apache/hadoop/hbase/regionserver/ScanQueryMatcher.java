@@ -199,18 +199,16 @@ public class ScanQueryMatcher {
       }
     }
 
-    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength);
-    // if SKIP -> SEEK_NEXT_COL
-    // if (NEXT,DONE) -> SEEK_NEXT_ROW
-    // if (INCLUDE) -> INCLUDE
-    if (colChecker == MatchCode.SKIP) {
-      return MatchCode.SEEK_NEXT_COL;
-    } else if (colChecker == MatchCode.NEXT || colChecker == MatchCode.DONE) {
+    MatchCode colChecker = columns.checkColumn(bytes, offset, qualLength, timestamp);
+    /*
+     * According to current implementation, colChecker can only be
+     * SEEK_NEXT_COL, SEEK_NEXT_ROW, SKIP or INCLUDE. Therefore, always return
+     * the MatchCode. If it is SEEK_NEXT_ROW, also set stickyNextRow.
+     */
+    if (colChecker == MatchCode.SEEK_NEXT_ROW) {
       stickyNextRow = true;
-      return MatchCode.SEEK_NEXT_ROW;
     }
-
-    return MatchCode.INCLUDE;
+    return colChecker;
 
   }
 

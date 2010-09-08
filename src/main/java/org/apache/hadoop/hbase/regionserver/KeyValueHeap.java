@@ -87,7 +87,7 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
     } else {
       KeyValueScanner topScanner = this.heap.peek();
       if (topScanner == null ||
-          this.comparator.compare(kvNext, topScanner.peek()) > 0) {
+          this.comparator.compare(kvNext, topScanner.peek()) >= 0) {
         this.heap.add(this.current);
         this.current = this.heap.poll();
       }
@@ -153,7 +153,22 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
       this.kvComparator = kvComparator;
     }
     public int compare(KeyValueScanner left, KeyValueScanner right) {
-      return compare(left.peek(), right.peek());
+      int comparison = compare(left.peek(), right.peek());
+      if (comparison != 0) {
+        return comparison;
+      } else {
+        // Since both the keys are exactly the same, we break the tie in favor
+        // of the key which came latest.
+        long leftSequenceID = left.getSequenceID();
+        long rightSequenceID = right.getSequenceID();
+        if (leftSequenceID > rightSequenceID) {
+          return -1;
+        } else if (leftSequenceID < rightSequenceID) {
+          return 1;
+        } else {
+          return 0;
+        }
+      }
     }
     /**
      * Compares two KeyValue
@@ -252,5 +267,10 @@ public class KeyValueHeap implements KeyValueScanner, InternalScanner {
    */
   public PriorityQueue<KeyValueScanner> getHeap() {
     return this.heap;
+  }
+
+  @Override
+  public long getSequenceID() {
+    return 0;
   }
 }

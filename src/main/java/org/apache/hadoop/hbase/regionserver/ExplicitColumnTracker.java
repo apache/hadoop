@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -51,6 +52,9 @@ public class ExplicitColumnTracker implements ColumnTracker {
   private final List<ColumnCount> columnsToReuse;
   private int index;
   private ColumnCount column;
+  /** Keeps track of the latest timestamp included for current column.
+   * Used to eliminate duplicates. */
+  private long latestTSOfCurrentColumn;
 
   /**
    * Default constructor.
@@ -84,51 +88,63 @@ public class ExplicitColumnTracker implements ColumnTracker {
    * @param bytes KeyValue buffer
    * @param offset offset to the start of the qualifier
    * @param length length of the qualifier
+   * @param timestamp timestamp of the key being checked
    * @return MatchCode telling ScanQueryMatcher what action to take
    */
-  public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset, int length) {
+  public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
+      int length, long timestamp) {
     do {
       // No more columns left, we are done with this query
       if(this.columns.size() == 0) {
-        return ScanQueryMatcher.MatchCode.DONE; // done_row
+        return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
       }
 
       // No more columns to match against, done with storefile
       if(this.column == null) {
-        return ScanQueryMatcher.MatchCode.NEXT; // done_row
+        return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
       }
 
       // Compare specific column to current column
       int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(),
           column.getLength(), bytes, offset, length);
 
-      // Matches, decrement versions left and include
+      // Column Matches. If it is not a duplicate key, decrement versions left
+      // and include.
       if(ret == 0) {
+        //If column matches, check if it is a duplicate timestamp
+        if (sameAsPreviousTS(timestamp)) {
+          //If duplicate, skip this Key
+          return ScanQueryMatcher.MatchCode.SKIP;
+        }
         if(this.column.decrement() == 0) {
           // Done with versions for this column
           this.columns.remove(this.index);
+          resetTS();
           if(this.columns.size() == this.index) {
             // Will not hit any more columns in this storefile
             this.column = null;
           } else {
             this.column = this.columns.get(this.index);
           }
+        } else {
+          setTS(timestamp);
         }
         return ScanQueryMatcher.MatchCode.INCLUDE;
       }
 
+      resetTS();
 
       if (ret > 0) {
-         // Specified column is smaller than the current, skip to next column.
-        return ScanQueryMatcher.MatchCode.SKIP;
+        // Specified column is smaller than the current, skip to next column.
+        return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
       }
 
       // Specified column is bigger than current column
       // Move down current column and check again
       if(ret <= -1) {
-        if(++this.index == this.columns.size()) {
+        if(++this.index >= this.columns.size()) {
           // No more to match, do not include, done with storefile
-          return ScanQueryMatcher.MatchCode.NEXT; // done_row
+          return ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW; // done_row
         }
         // This is the recursive case.
         this.column = this.columns.get(this.index);
@@ -154,6 +170,19 @@ public class ExplicitColumnTracker implements ColumnTracker {
     buildColumnList();
     this.index = 0;
     this.column = this.columns.get(this.index);
+    resetTS();
+  }
+
+  private void resetTS() {
+    latestTSOfCurrentColumn = HConstants.LATEST_TIMESTAMP;
+  }
+
+  private void setTS(long timestamp) {
+    latestTSOfCurrentColumn = timestamp;
+  }
+
+  private boolean sameAsPreviousTS(long timestamp) {
+    return timestamp == latestTSOfCurrentColumn;
   }
 
   private void buildColumnList() {

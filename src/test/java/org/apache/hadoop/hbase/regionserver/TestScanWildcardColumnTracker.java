@@ -52,7 +52,8 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<MatchCode>();
 
     for(byte [] qualifier : qualifiers) {
-      ScanQueryMatcher.MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length);
+      ScanQueryMatcher.MatchCode mc = tracker.checkColumn(qualifier, 0,
+          qualifier.length, 1);
       actual.add(mc);
     }
 
@@ -77,13 +78,15 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
     List<ScanQueryMatcher.MatchCode> expected = new ArrayList<MatchCode>();
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
 
     List<MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
 
+    long timestamp = 0;
     for(byte [] qualifier : qualifiers) {
-      MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length);
+      MatchCode mc = tracker.checkColumn(qualifier, 0, qualifier.length,
+          ++timestamp);
       actual.add(mc);
     }
 
@@ -106,7 +109,7 @@ public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
     try {
       for(byte [] qualifier : qualifiers) {
-        tracker.checkColumn(qualifier, 0, qualifier.length);
+        tracker.checkColumn(qualifier, 0, qualifier.length, 1);
       }
     } catch (Exception e) {
       ok = true;

@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.UUID;
 
 import org.apache.commons.logging.Log;
@@ -2844,7 +2845,7 @@ public class TestFromClientSide {
     return Bytes.equals(left, right);
   }
 
-  @Ignore @Test
+  @Test
   public void testDuplicateVersions() throws Exception {
     byte [] TABLE = Bytes.toBytes("testDuplicateVersions");
 
@@ -3044,18 +3045,198 @@ public class TestFromClientSide {
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
     assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-        0, 7);
+        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
+        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
+        0, 9);
 
     scan = new Scan(ROW);
     scan.addColumn(FAMILY, QUALIFIER);
     scan.setMaxVersions(Integer.MAX_VALUE);
     result = getSingleScanResult(ht, scan);
     assertNResult(result, ROW, FAMILY, QUALIFIER,
-        new long [] {STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
-        new byte[][] {VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
-        0, 7);
+        new long [] {STAMPS[1], STAMPS[2], STAMPS[3], STAMPS[4], STAMPS[5], STAMPS[6], STAMPS[8], STAMPS[9], STAMPS[13], STAMPS[15]},
+        new byte[][] {VALUES[1], VALUES[2], VALUES[3], VALUES[14], VALUES[5], VALUES[6], VALUES[8], VALUES[9], VALUES[13], VALUES[15]},
+        0, 9);
+  }
+
+  @Test
+  public void testUpdates() throws Exception {
+
+    byte [] TABLE = Bytes.toBytes("testUpdates");
+    HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+
+    // Write a column with values at timestamp 1, 2 and 3
+    byte[] row = Bytes.toBytes("row1");
+    byte[] qualifier = Bytes.toBytes("myCol");
+    Put put = new Put(row);
+    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+    hTable.put(put);
+
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+    hTable.put(put);
+
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+    hTable.put(put);
+
+    Get get = new Get(row);
+    get.addColumn(FAMILY, qualifier);
+    get.setMaxVersions();
+
+    // Check that the column indeed has the right values at timestamps 1 and
+    // 2
+    Result result = hTable.get(get);
+    NavigableMap<Long, byte[]> navigableMap =
+        result.getMap().get(FAMILY).get(qualifier);
+    assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
+    assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
+
+    // Update the value at timestamp 1
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+    hTable.put(put);
+
+    // Update the value at timestamp 2
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+    hTable.put(put);
+
+    // Check that the values at timestamp 2 and 1 got updated
+    result = hTable.get(get);
+    navigableMap = result.getMap().get(FAMILY).get(qualifier);
+    assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
+    assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
+  }
+
+  @Test
+  public void testUpdatesWithMajorCompaction() throws Exception {
+
+    String tableName = "testUpdatesWithMajorCompaction";
+    byte [] TABLE = Bytes.toBytes(tableName);
+    HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+
+    // Write a column with values at timestamp 1, 2 and 3
+    byte[] row = Bytes.toBytes("row2");
+    byte[] qualifier = Bytes.toBytes("myCol");
+    Put put = new Put(row);
+    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+    hTable.put(put);
+
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+    hTable.put(put);
+
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+    hTable.put(put);
+
+    Get get = new Get(row);
+    get.addColumn(FAMILY, qualifier);
+    get.setMaxVersions();
+
+    // Check that the column indeed has the right values at timestamps 1 and
+    // 2
+    Result result = hTable.get(get);
+    NavigableMap<Long, byte[]> navigableMap =
+        result.getMap().get(FAMILY).get(qualifier);
+    assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
+    assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
+
+    // Trigger a major compaction
+    admin.flush(tableName);
+    admin.majorCompact(tableName);
+    Thread.sleep(6000);
+
+    // Update the value at timestamp 1
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+    hTable.put(put);
+
+    // Update the value at timestamp 2
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+    hTable.put(put);
+
+    // Trigger a major compaction
+    admin.flush(tableName);
+    admin.majorCompact(tableName);
+    Thread.sleep(6000);
+
+    // Check that the values at timestamp 2 and 1 got updated
+    result = hTable.get(get);
+    navigableMap = result.getMap().get(FAMILY).get(qualifier);
+    assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
+    assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
+  }
+
+  @Test
+  public void testMajorCompactionBetweenTwoUpdates() throws Exception {
+
+    String tableName = "testMajorCompactionBetweenTwoUpdates";
+    byte [] TABLE = Bytes.toBytes(tableName);
+    HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+
+    // Write a column with values at timestamp 1, 2 and 3
+    byte[] row = Bytes.toBytes("row3");
+    byte[] qualifier = Bytes.toBytes("myCol");
+    Put put = new Put(row);
+    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+    hTable.put(put);
+
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+    hTable.put(put);
+
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+    hTable.put(put);
+
+    Get get = new Get(row);
+    get.addColumn(FAMILY, qualifier);
+    get.setMaxVersions();
+
+    // Check that the column indeed has the right values at timestamps 1 and
+    // 2
+    Result result = hTable.get(get);
+    NavigableMap<Long, byte[]> navigableMap =
+        result.getMap().get(FAMILY).get(qualifier);
+    assertEquals("AAA", Bytes.toString(navigableMap.get(1L)));
+    assertEquals("BBB", Bytes.toString(navigableMap.get(2L)));
+
+    // Trigger a major compaction
+    admin.flush(tableName);
+    admin.majorCompact(tableName);
+    Thread.sleep(6000);
+
+    // Update the value at timestamp 1
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+    hTable.put(put);
+
+    // Trigger a major compaction
+    admin.flush(tableName);
+    admin.majorCompact(tableName);
+    Thread.sleep(6000);
+
+    // Update the value at timestamp 2
+    put = new Put(row);
+    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+    hTable.put(put);
+
+    // Trigger a major compaction
+    admin.flush(tableName);
+    admin.majorCompact(tableName);
+    Thread.sleep(6000);
+
+    // Check that the values at timestamp 2 and 1 got updated
+    result = hTable.get(get);
+    navigableMap = result.getMap().get(FAMILY).get(qualifier);
+
+    assertEquals("CCC", Bytes.toString(navigableMap.get(1L)));
+    assertEquals("DDD", Bytes.toString(navigableMap.get(2L)));
   }
 
   @Test

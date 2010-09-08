@@ -668,6 +668,15 @@ public class MemStore implements HeapSize {
       this.kvsetIt = null;
       this.snapshotIt = null;
     }
+
+    /**
+     * MemStoreScanner returns max value as sequence id because it will
+     * always have the latest data among all files.
+     */
+    @Override
+    public long getSequenceID() {
+      return Long.MAX_VALUE;
+    }
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(

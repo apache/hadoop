@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -36,6 +37,9 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   private int columnLength = 0;
   private int currentCount = 0;
   private int maxVersions;
+  /* Keeps track of the latest timestamp included for current column.
+   * Used to eliminate duplicates. */
+  private long latestTSOfCurrentColumn;
 
   /**
    * Return maxVersions of every row.
@@ -53,10 +57,12 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * @param bytes
    * @param offset
    * @param length
+   * @param timestamp
    * @return The match code instance.
    */
   @Override
-  public MatchCode checkColumn(byte[] bytes, int offset, int length) {
+  public MatchCode checkColumn(byte[] bytes, int offset, int length,
+      long timestamp) {
     if (columnBuffer == null) {
       // first iteration.
       columnBuffer = bytes;
@@ -64,17 +70,27 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       columnLength = length;
       currentCount = 0;
 
-      if (++currentCount > maxVersions)
-        return ScanQueryMatcher.MatchCode.SKIP;
+      if (++currentCount > maxVersions) {
+        return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
+      }
+      setTS(timestamp);
       return ScanQueryMatcher.MatchCode.INCLUDE;
     }
     int cmp = Bytes.compareTo(bytes, offset, length,
         columnBuffer, columnOffset, columnLength);
     if (cmp == 0) {
-      if (++currentCount > maxVersions)
-        return ScanQueryMatcher.MatchCode.SKIP; // skip to next col
+      //If column matches, check if it is a duplicate timestamp
+      if (sameAsPreviousTS(timestamp)) {
+        return ScanQueryMatcher.MatchCode.SKIP;
+      }
+      if (++currentCount > maxVersions) {
+        return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL; // skip to next col
+      }
+      setTS(timestamp);
       return ScanQueryMatcher.MatchCode.INCLUDE;
     }
+
+    resetTS();
 
     // new col > old col
     if (cmp > 0) {
@@ -84,7 +100,8 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
       columnLength = length;
       currentCount = 0;
       if (++currentCount > maxVersions)
-        return ScanQueryMatcher.MatchCode.SKIP;
+        return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
+      setTS(timestamp);
       return ScanQueryMatcher.MatchCode.INCLUDE;
     }
 
@@ -101,8 +118,10 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     columnOffset = offset;
     columnLength = length;
     currentCount = 0;
-    if (++currentCount > maxVersions)
-      return ScanQueryMatcher.MatchCode.SKIP;
+    if (++currentCount > maxVersions) {
+      return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
+    }
+    setTS(timestamp);
     return ScanQueryMatcher.MatchCode.INCLUDE;
   }
 
@@ -116,6 +135,19 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
   @Override
   public void reset() {
     columnBuffer = null;
+    resetTS();
+  }
+
+  private void resetTS() {
+    latestTSOfCurrentColumn = HConstants.LATEST_TIMESTAMP;
+  }
+
+  private void setTS(long timestamp) {
+    latestTSOfCurrentColumn = timestamp;
+  }
+
+  private boolean sameAsPreviousTS(long timestamp) {
+    return timestamp == latestTSOfCurrentColumn;
   }
 
   /**

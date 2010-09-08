@@ -50,9 +50,10 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     //Initialize result
     List<ScanQueryMatcher.MatchCode> result = new ArrayList<ScanQueryMatcher.MatchCode>();
 
+    long timestamp = 0;
     //"Match"
     for(byte [] col : scannerColumns){
-      result.add(exp.checkColumn(col, 0, col.length));
+      result.add(exp.checkColumn(col, 0, col.length, ++timestamp));
     }
 
     assertEquals(expected.size(), result.size());
@@ -76,11 +77,11 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     columns.add(col2);
     columns.add(col4);
     List<MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.DONE);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
     int maxVersions = 1;
 
     //Create "Scanner"
@@ -106,25 +107,25 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     columns.add(col4);
 
     List<ScanQueryMatcher.MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
 
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
 
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
 
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
     expected.add(ScanQueryMatcher.MatchCode.INCLUDE);
-    expected.add(ScanQueryMatcher.MatchCode.DONE);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
 
-    expected.add(ScanQueryMatcher.MatchCode.DONE);
-    expected.add(ScanQueryMatcher.MatchCode.DONE);
-    expected.add(ScanQueryMatcher.MatchCode.DONE);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
+    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
     int maxVersions = 2;
 
     //Create "Scanner"
@@ -163,13 +164,13 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
     ColumnTracker explicit = new ExplicitColumnTracker(columns, maxVersions);
     for (int i = 0; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length);
+      explicit.checkColumn(col, 0, col.length, 1);
     }
     explicit.update();
 
     for (int i = 1; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
-      explicit.checkColumn(col, 0, col.length);
+      explicit.checkColumn(col, 0, col.length, 1);
     }
   }
 
@@ -184,8 +185,8 @@ public class TestExplicitColumnTracker extends HBaseTestCase {
       new byte[][] { col1, col4 });
     List<ScanQueryMatcher.MatchCode> expected = Arrays.<ScanQueryMatcher.MatchCode>asList(
       new ScanQueryMatcher.MatchCode[] {
-        ScanQueryMatcher.MatchCode.SKIP,
-        ScanQueryMatcher.MatchCode.SKIP });
+        ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
+        ScanQueryMatcher.MatchCode.SEEK_NEXT_COL });
     runTest(1, columns, scanner, expected);
   }
 }

@@ -42,9 +42,11 @@ public interface ColumnTracker {
    * @param bytes
    * @param offset
    * @param length
+   * @param timestamp
    * @return The match code instance.
    */
-  public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset, int length);
+  public ScanQueryMatcher.MatchCode checkColumn(byte [] bytes, int offset,
+      int length, long timestamp);
 
   /**
    * Updates internal variables in between files

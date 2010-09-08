@@ -368,4 +368,9 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     //guarantees that heap will never be null before this call.
     return this.heap.reseek(kv);
   }
+
+  @Override
+  public long getSequenceID() {
+    return 0;
+  }
 }

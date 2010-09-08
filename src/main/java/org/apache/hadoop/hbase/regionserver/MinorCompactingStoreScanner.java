@@ -130,4 +130,9 @@ public class MinorCompactingStoreScanner implements KeyValueScanner, InternalSca
   public void close() {
     heap.close();
   }
+
+  @Override
+  public long getSequenceID() {
+    return 0;
+  }
 }

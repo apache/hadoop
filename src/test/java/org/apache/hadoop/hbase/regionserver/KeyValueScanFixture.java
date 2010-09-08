@@ -103,4 +103,9 @@ public class KeyValueScanFixture implements KeyValueScanner {
   public void close() {
     // noop.
   }
+
+  @Override
+  public long getSequenceID() {
+    return 0;
+  }
 }

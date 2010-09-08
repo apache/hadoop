@@ -163,4 +163,9 @@ class StoreFileScanner implements KeyValueScanner {
   public boolean shouldSeek(Scan scan, final SortedSet<byte[]> columns) {
     return reader.shouldSeek(scan, columns);
   }
+
+  @Override
+  public long getSequenceID() {
+    return reader.getSequenceID();
+  }
 }
