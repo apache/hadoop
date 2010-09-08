@@ -294,6 +294,9 @@ public class HbaseObjectWritable implements Writable, Configurable {
       if ( List.class.isAssignableFrom(c)) {
         code = CLASS_TO_CODE.get(List.class);
       }
+      else if (Writable.class.isAssignableFrom(c)) {
+        code = CLASS_TO_CODE.get(Writable.class);
+      }
     }
     if (code == null) {
       LOG.error("Unsupported type " + c);

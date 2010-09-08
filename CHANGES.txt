@@ -889,6 +889,8 @@ Release 0.21.0 - Unreleased
    HBASE-2857  HBaseAdmin.tableExists() should not require a full meta scan
    HBASE-2962  Add missing methods to HTableInterface (and HTable)
                (Lars Francke via Stack)
+   HBASE-2942  Custom filters should not require registration in 
+               HBaseObjectWritable (Gary Helmling via Andrew Purtell)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
