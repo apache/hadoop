@@ -509,6 +509,8 @@ Release 0.21.0 - Unreleased
    HBASE-2964  Deadlock when RS tries to RPC to itself inside SplitTransaction
    HBASE-1485  Wrong or indeterminate behavior when there are duplicate
                versions of a column (pranav via jgray)
+   HBASE-2967  Failed split: IOE 'File is Corrupt!' -- sync length not being
+               written out to SequenceFile
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

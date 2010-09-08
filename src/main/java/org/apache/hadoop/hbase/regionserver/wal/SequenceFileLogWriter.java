@@ -120,7 +120,6 @@ public class SequenceFileLogWriter implements HLog.Writer {
 
   @Override
   public void sync() throws IOException {
-    this.writer.sync();
     if (this.syncFs != null) {
       try {
        this.syncFs.invoke(this.writer, HLog.NO_ARGS);
