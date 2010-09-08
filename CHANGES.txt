@@ -238,6 +238,9 @@ Trunk (unreleased changes)
     HADOOP-6930. AvroRpcEngine doesn't work with generated Avro code. 
     (sharad)
 
+    HADOOP-6940. RawLocalFileSystem's markSupported method misnamed markSupport.
+    (Tom White via eli).
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

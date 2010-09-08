@@ -128,7 +128,8 @@ public class RawLocalFileSystem extends FileSystem {
      */
     public int available() throws IOException { return fis.available(); }
     public void close() throws IOException { fis.close(); }
-    public boolean markSupport() { return false; }
+    @Override
+    public boolean markSupported() { return false; }
     
     public int read() throws IOException {
       try {
