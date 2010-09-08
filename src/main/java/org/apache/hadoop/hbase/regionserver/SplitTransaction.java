@@ -61,6 +61,8 @@ import org.apache.zookeeper.KeeperException;
  *    }
  *  }
  * </Pre>
+ * <p>This class is not thread safe.  Caller needs ensure split is run by
+ * one thread only.
  */
 class SplitTransaction {
   private static final Log LOG = LogFactory.getLog(SplitTransaction.class);
@@ -127,36 +129,26 @@ class SplitTransaction {
   /**
    * Does checks on split inputs.
    * @return <code>true</code> if the region is splittable else
-   * <code>false</code> if it is not (e.g. its already closed, etc.). If we
-   * return <code>true</code>, we'll have taken out the parent's
-   * <code>splitsAndClosesLock</code> and only way to unlock is successful
-   * {@link #execute(OnlineRegions)} or {@link #rollback(OnlineRegions)}
+   * <code>false</code> if it is not (e.g. its already closed, etc.).
    */
   public boolean prepare() {
-    boolean prepared = false;
-    this.parent.lock.writeLock().lock();
-    try {
-      if (this.parent.isClosed() || this.parent.isClosing()) return prepared;
-      HRegionInfo hri = this.parent.getRegionInfo();
-      // Check splitrow.
-      byte [] startKey = hri.getStartKey();
-      byte [] endKey = hri.getEndKey();
-      if (Bytes.equals(startKey, splitrow) ||
-          !this.parent.getRegionInfo().containsRow(splitrow)) {
-        LOG.info("Split row is not inside region key range or is equal to " +
+    if (this.parent.isClosed() || this.parent.isClosing()) return false;
+    HRegionInfo hri = this.parent.getRegionInfo();
+    // Check splitrow.
+    byte [] startKey = hri.getStartKey();
+    byte [] endKey = hri.getEndKey();
+    if (Bytes.equals(startKey, splitrow) ||
+        !this.parent.getRegionInfo().containsRow(splitrow)) {
+      LOG.info("Split row is not inside region key range or is equal to " +
           "startkey: " + Bytes.toString(this.splitrow));
-        return prepared;
-      }
-      long rid = getDaughterRegionIdTimestamp(hri);
-      this.hri_a = new HRegionInfo(hri.getTableDesc(), startKey, this.splitrow,
-        false, rid);
-      this.hri_b = new HRegionInfo(hri.getTableDesc(), this.splitrow, endKey,
-        false, rid);
-      prepared = true;
-    } finally {
-      if (!prepared) this.parent.lock.writeLock().unlock();
+      return false;
     }
-    return prepared;
+    long rid = getDaughterRegionIdTimestamp(hri);
+    this.hri_a = new HRegionInfo(hri.getTableDesc(), startKey, this.splitrow,
+      false, rid);
+    this.hri_b = new HRegionInfo(hri.getTableDesc(), this.splitrow, endKey,
+      false, rid);
+    return true;
   }
 
   /**
@@ -188,9 +180,7 @@ class SplitTransaction {
       final RegionServerServices services)
   throws IOException {
     LOG.info("Starting split of region " + this.parent);
-    if (!this.parent.lock.writeLock().isHeldByCurrentThread()) {
-      throw new SplitAndCloseWriteLockNotHeld();
-    }
+    assert !this.parent.lock.writeLock().isHeldByCurrentThread() : "Unsafe to hold write lock while performing RPCs";
 
     // If true, no cluster to write meta edits into.
     boolean testing =
@@ -250,9 +240,6 @@ class SplitTransaction {
         server.abort("Exception running daughter opens", e);
       }
     }
-
-    // Unlock if successful split.
-    this.parent.lock.writeLock().unlock();
 
     // Leaving here, the splitdir with its dross will be in place but since the
     // split was successful, just leave it; it'll be cleaned when parent is
@@ -441,9 +428,6 @@ class SplitTransaction {
    * @throws IOException If thrown, rollback failed.  Take drastic action.
    */
   public void rollback(final OnlineRegions or) throws IOException {
-    if (!this.parent.lock.writeLock().isHeldByCurrentThread()) {
-      throw new SplitAndCloseWriteLockNotHeld();
-    }
     FileSystem fs = this.parent.getFilesystem();
     ListIterator<JournalEntry> iterator =
       this.journal.listIterator(this.journal.size());
@@ -481,16 +465,7 @@ class SplitTransaction {
         throw new RuntimeException("Unhandled journal entry: " + je);
       }
     }
-    if (this.parent.lock.writeLock().isHeldByCurrentThread()) {
-      this.parent.lock.writeLock().unlock();
-    }
   }
-
-  /**
-   * Thrown if lock not held.
-   */
-  @SuppressWarnings("serial")
-  public class SplitAndCloseWriteLockNotHeld extends IOException {}
 
   HRegionInfo getFirstDaughter() {
     return hri_a;

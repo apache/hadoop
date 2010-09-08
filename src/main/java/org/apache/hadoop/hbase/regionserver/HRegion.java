@@ -214,7 +214,7 @@ public class HRegion implements HeapSize { // , Writable{
   final FlushRequester flushRequester;
   private final long blockingMemStoreSize;
   final long threadWakeFrequency;
-  // Used to guard splits and closes
+  // Used to guard closes
   final ReentrantReadWriteLock lock =
     new ReentrantReadWriteLock();
 

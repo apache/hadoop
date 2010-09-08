@@ -506,6 +506,7 @@ Release 0.21.0 - Unreleased
    HBASE-2925  LRU of HConnectionManager.HBASE_INSTANCES breaks if
                HBaseConfiguration is changed
                (Robert Mahfoud via Stack)
+   HBASE-2964  Deadlock when RS tries to RPC to itself inside SplitTransaction
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

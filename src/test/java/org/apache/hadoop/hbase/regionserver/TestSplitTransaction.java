@@ -95,8 +95,6 @@ public class TestSplitTransaction {
   private SplitTransaction prepareGOOD_SPLIT_ROW() {
     SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
     assertTrue(st.prepare());
-    // Assert the write lock is held on successful prepare as the javadoc asserts.
-    assertTrue(this.parent.lock.writeLock().isHeldByCurrentThread());
     return st;
   }
 
