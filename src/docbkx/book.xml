@@ -32,36 +32,28 @@
       <para>First...</para>
     </section>
   </chapter>
+
   <chapter xml:id="filesystem">
     <title>Filesystem Format</title>
-    <subtitle>How HBase persists to the target Filesystem</subtitle>
+
+    <subtitle>How HBase is persisted on the Filesystem</subtitle>
 
     <section>
       <title>HFile</title>
-    <section>
-      <title>HFile Tool</title>
-      <para>To view a textualized version of hfile content, you can do use
-      the
-      <classname>org.apache.hadoop.hbase.io.hfile.HFile
-      </classname>
-      tool.  Type the following to see usage:
-     <code>
-       $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile
-     </code>
-     For example, to view the content of the file
-     <filename>hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475
-     </filename>,  type the following:
-     <code>
-     $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f
-hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475
-     </code>
-     If you leave off the option -v to see just a summary on the hfile.
-     See usage for other things to do with the <classname>HFile</classname> tool.
-      </para>
 
+      <section>
+        <title>HFile Tool</title>
 
-    </section>
-
+        <para>To view a textualized version of hfile content, you can do use
+        the <classname>org.apache.hadoop.hbase.io.hfile.HFile
+        </classname>tool. Type the following to see usage:<programlisting><code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile </code> </programlisting>For
+        example, to view the content of the file
+        <filename>hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475</filename>,
+        type the following:<programlisting> <code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475 </code> </programlisting>If
+        you leave off the option -v to see just a summary on the hfile. See
+        usage for other things to do with the <classname>HFile</classname>
+        tool.</para>
+      </section>
     </section>
   </chapter>
 
@@ -693,22 +685,25 @@ hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475
           </footnote></para>
       </section>
     </section>
+
     <section>
-        <title>WAL Tools</title>
-            <section>
-                <title><classname>HLog</classname> main</title>
-                <para>The main method on <classname>HLog</classname> offers manual split and dump facilities.
-                </para>
-                <para>
-                    You can get a textual dump of a WAL file content by doing the following:
-                    <code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --dump hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</code> 
-                    The return code will be non-zero if issues with the file so you can test wholesomeness of file by
-                    redirecting <varname>STDOUT</varname> to <code>/dev/null</code> and testing the program return.
-                </para>
-                <para>Similarily you can force a split of a log file directory by doing
-                    <code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code> 
-               </para>
-            </section>
-     </section>
+      <title>WAL Tools</title>
+
+      <section>
+        <title><classname>HLog</classname> main</title>
+
+        <para>The main method on <classname>HLog</classname> offers manual
+        split and dump facilities.</para>
+
+        <para>You can get a textual dump of a WAL file content by doing the
+        following:<programlisting> <code>$ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --dump hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</code> </programlisting>The
+        return code will be non-zero if issues with the file so you can test
+        wholesomeness of file by redirecting <varname>STDOUT</varname> to
+        <code>/dev/null</code> and testing the program return.</para>
+
+        <para>Similarily you can force a split of a log file directory by
+        doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
+      </section>
+    </section>
   </chapter>
 </book>
