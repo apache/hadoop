@@ -140,6 +140,10 @@ public class LoadBalancer {
       new TreeMap<HServerInfo,List<HRegionInfo>>(
           new HServerInfo.LoadComparator());
     int numServers = clusterState.size();
+    if (numServers == 0) {
+      LOG.debug("numServers=0 so nothing to balance");
+      return null;
+    }
     int numRegions = 0;
     // Iterate so we can count regions as we build the map
     for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
