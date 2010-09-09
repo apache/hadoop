@@ -32,6 +32,38 @@
       <para>First...</para>
     </section>
   </chapter>
+  <chapter xml:id="filesystem">
+    <title>Filesystem Format</title>
+    <subtitle>How HBase persists to the target Filesystem</subtitle>
+
+    <section>
+      <title>HFile</title>
+    <section>
+      <title>HFile Tool</title>
+      <para>To view a textualized version of hfile content, you can do use
+      the
+      <classname>org.apache.hadoop.hbase.io.hfile.HFile
+      </classname>
+      tool.  Type the following to see usage:
+     <code>
+       $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile
+     </code>
+     For example, to view the content of the file
+     <filename>hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475
+     </filename>,  type the following:
+     <code>
+     $ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f
+hdfs://10.81.47.41:9000/hbase/TEST/1418428042/DSMP/4759508618286845475
+     </code>
+     If you leave off the option -v to see just a summary on the hfile.
+     See usage for other things to do with the <classname>HFile</classname> tool.
+      </para>
+
+
+    </section>
+
+    </section>
+  </chapter>
 
   <chapter>
     <title>Regions</title>

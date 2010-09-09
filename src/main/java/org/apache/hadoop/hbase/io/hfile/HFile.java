@@ -1826,6 +1826,8 @@ public class HFile {
       Configuration conf = HBaseConfiguration.create();
       conf.set("fs.defaultFS",
         conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
+      conf.set("fs.default.name",
+        conf.get(org.apache.hadoop.hbase.HConstants.HBASE_DIR));
       FileSystem fs = FileSystem.get(conf);
       ArrayList<Path> files = new ArrayList<Path>();
       if (cmd.hasOption("f")) {
