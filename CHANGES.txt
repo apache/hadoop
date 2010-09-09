@@ -515,6 +515,7 @@ Release 0.21.0 - Unreleased
                (Guilherme Mauro Germoglio Barbosa via Stack)
    HBASE-2973  NPE in LogCleaner
    HBASE-2974  LoadBalancer ArithmeticException: / by zero
+   HBASE-2975  DFSClient names in master and RS should be unique
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

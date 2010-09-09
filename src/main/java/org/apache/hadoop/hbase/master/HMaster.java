@@ -204,7 +204,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Hack! Maps DFSClient => Master for logs.  HDFS made this 
     // config param for task trackers, but we can piggyback off of it.
     if (this.conf.get("mapred.task.id") == null) {
-      this.conf.set("mapred.task.id", "hb_m_" + this.address.toString());
+      this.conf.set("mapred.task.id", "hb_m_" + this.address.toString() +
+        "_" + System.currentTimeMillis());
     }
 
     /*
