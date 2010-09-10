@@ -1862,12 +1862,12 @@ public class HLog implements Syncable {
     Configuration conf = HBaseConfiguration.create();
     for (int i = 1; i < args.length; i++) {
       try {
-      Path logPath = new Path(args[i]);
-      if (dump) {
-        dump(conf, logPath);
-      } else {
-        split(conf, logPath);
-      }
+        Path logPath = new Path(args[i]);
+        if (dump) {
+          dump(conf, logPath);
+        } else {
+          split(conf, logPath);
+        }
       } catch (Throwable t) {
         t.printStackTrace(System.err);
         System.exit(-1);

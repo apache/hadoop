@@ -32,9 +32,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.ServerConnection;
-import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -64,8 +64,8 @@ public class TestMetaReaderEditor {
     UTIL.startMiniCluster();
     ZKW = new ZooKeeperWatcher(UTIL.getConfiguration(),
       "TestMetaReaderEditor", ABORTABLE);
-    ServerConnection connection =
-      ServerConnectionManager.getConnection(UTIL.getConfiguration());
+    HConnection connection =
+      HConnectionManager.getConnection(UTIL.getConfiguration());
     CT = new CatalogTracker(ZKW, connection, ABORTABLE);
     CT.start();
   }

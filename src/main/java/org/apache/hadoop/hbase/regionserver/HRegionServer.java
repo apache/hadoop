@@ -61,9 +61,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
@@ -77,23 +77,22 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Action;
-import org.apache.hadoop.hbase.client.MultiAction;
-import org.apache.hadoop.hbase.client.MultiResponse;
-import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
+import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.ServerConnection;
-import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
@@ -154,7 +153,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected HServerInfo serverInfo;
   protected final Configuration conf;
 
-  private final ServerConnection connection;
+  private final HConnection connection;
   protected final AtomicBoolean haveRootRegion = new AtomicBoolean(false);
   private FileSystem fs;
   private Path rootDir;
@@ -286,7 +285,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     this.fsOk = true;
     this.conf = conf;
-    this.connection = ServerConnectionManager.getConnection(conf);
+    this.connection = HConnectionManager.getConnection(conf);
     this.isOnline = false;
 
     // Config'ed params
@@ -418,7 +417,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           }
         }
         // Try to get the root region location from zookeeper.
-        checkRootRegionLocation();
+        this.catalogTracker.waitForRoot();
         long now = System.currentTimeMillis();
         // Drop into the send loop if msgInterval has elapsed or if something
         // to send. If we fail talking to the master, then we'll sleep below
@@ -508,9 +507,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       HBaseRPC.stopProxy(this.hbaseMaster);
       this.hbaseMaster = null;
     }
-
+    this.leases.close();
+    HConnectionManager.deleteConnection(conf, true);
     this.zooKeeper.close();
-
     if (!killed) {
       join();
     }
@@ -557,7 +556,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         stop("Received " + msgs[i]);
         continue;
       }
-      this.connection.unsetRootRegionLocation();
       LOG.warn("NOT PROCESSING " + msgs[i] + " -- WHY IS MASTER SENDING IT TO US?");
     }
     return outboundMessages;
@@ -572,19 +570,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       hsl.addRegionInfo(createRegionLoad(r));
     }
     return hsl;
-  }
-
-  private void checkRootRegionLocation() throws InterruptedException {
-    if (this.haveRootRegion.get()) return;
-    HServerAddress rootServer = catalogTracker.getRootLocation();
-    if (rootServer != null) {
-      // By setting the root region location, we bypass the wait imposed on
-      // HTable for all regions being assigned.
-      HRegionLocation hrl =
-        new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, rootServer);
-      this.connection.setRootRegionLocation(hrl);
-      this.haveRootRegion.set(true);
-    }
   }
 
   private void closeWAL(final boolean delete) {
@@ -708,6 +693,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // Init in here rather than in constructor after thread name has been set
       this.metrics = new RegionServerMetrics();
       startServiceThreads();
+      LOG.info("Serving as " + this.serverInfo.getServerName() +
+        ", sessionid=0x" +
+        Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
       isOnline = true;
     } catch (Throwable e) {
       this.isOnline = false;

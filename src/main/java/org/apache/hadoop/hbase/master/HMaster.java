@@ -62,10 +62,10 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ServerConnection;
-import org.apache.hadoop.hbase.client.ServerConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
@@ -146,7 +146,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // file system manager for the master FS operations
   private final MasterFileSystem fileSystemManager;
 
-  private final ServerConnection connection;
+  private final HConnection connection;
+
   // server manager to deal with region server info
   private final ServerManager serverManager;
 
@@ -243,7 +244,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      */
     // TODO: Do this using Dependency Injection, using PicoContainer or Spring.
     this.fileSystemManager = new MasterFileSystem(this);
-    this.connection = ServerConnectionManager.getConnection(conf);
+    this.connection = HConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName());
 
     this.serverManager = new ServerManager(this, this);
@@ -266,7 +267,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.clusterStatusTracker.start();
 
     LOG.info("Server active/primary master; " + this.address +
-      "; clusterStarter=" + this.clusterStarter);
+      "; clusterStarter=" + this.clusterStarter + ", sessionid=0x" +
+      Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
   }
 
   /**
@@ -320,8 +322,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.rpcServer.stop();
     if (this.balancerChore != null) this.balancerChore.interrupt();
     this.activeMasterManager.stop();
-    this.zooKeeper.close();
     this.executorService.shutdown();
+    HConnectionManager.deleteConnection(this.conf, true);
+    this.zooKeeper.close();
     LOG.info("HMaster main thread exiting");
   }
 

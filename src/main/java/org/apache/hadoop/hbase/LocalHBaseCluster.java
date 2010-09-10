@@ -126,7 +126,11 @@ public class LocalHBaseCluster {
 
   public JVMClusterUtil.RegionServerThread addRegionServer(final int index)
   throws IOException {
-    JVMClusterUtil.RegionServerThread rst = JVMClusterUtil.createRegionServerThread(this.conf,
+    // Create each regionserver with its own Configuration instance so each has
+    // its HConnection instance rather than share (see HBASE_INSTANCES down in
+    // the guts of HConnectionManager.
+    JVMClusterUtil.RegionServerThread rst =
+      JVMClusterUtil.createRegionServerThread(new Configuration(this.conf),
         this.regionServerClass, index);
     this.regionThreads.add(rst);
     return rst;

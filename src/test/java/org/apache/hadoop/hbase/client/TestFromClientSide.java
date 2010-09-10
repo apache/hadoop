@@ -151,8 +151,7 @@ public class TestFromClientSide {
     putRows(ht, 3, value2, keyPrefix1);
     putRows(ht, 3, value2, keyPrefix2);
     putRows(ht, 3, value2, keyPrefix3);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(),
-      Bytes.toBytes("testWeirdCacheBehaviour"));
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
     System.out.println("Checking values for key: " + keyPrefix1);
     assertEquals("Got back incorrect number of rows from scan", 3,
         getNumberOfRows(keyPrefix1, value2, table));

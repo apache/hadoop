@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.EOFException;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -162,7 +163,15 @@ public class SequenceFileLogReader implements HLog.Reader {
     } catch (IOException e) {
       Log.warn("Failed getting position to add to throw", e);
     }
-    return new IOException((this.path == null? "": this.path.toString()) +
-      ", pos=" + pos + ", edit=" + this.edit, ioe);
+    // Preserve EOFE because these are treated differently if it comes up during
+    // a split of logs
+    String msg = (this.path == null? "": this.path.toString()) +
+      ", pos=" + pos + ", edit=" + this.edit;
+    if (ioe instanceof EOFException) {
+      EOFException eof = new EOFException(msg);
+      eof.initCause(ioe);
+      return eof;
+    }
+    return new IOException(msg, ioe);
   }
 }

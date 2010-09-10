@@ -122,6 +122,14 @@ public interface HConnection {
   public void clearRegionCache();
 
   /**
+   * Allows flushing the region cache of all locations that pertain to
+   * <code>tableName</code>
+   * @param tableName Name of the table whose regions we are to remove from
+   * cache.
+   */
+  public void clearRegionCache(final byte [] tableName);
+
+  /**
    * Find the location of the region of <i>tableName</i> that <i>row</i>
    * lives in, ignoring any value that might be in the cache.
    * @param tableName name of the table <i>row</i> is in

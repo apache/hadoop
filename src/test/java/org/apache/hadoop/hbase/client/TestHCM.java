@@ -147,8 +147,8 @@ public class TestHCM {
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
-    HConnectionManager.TableServers conn =
-        (HConnectionManager.TableServers) table.getConnection();
+    HConnectionManager.HConnectionImplementation conn =
+        (HConnectionManager.HConnectionImplementation)table.getConnection();
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     conn.deleteCachedLocation(TABLE_NAME, ROW);
     HRegionLocation rl = conn.getCachedLocation(TABLE_NAME, ROW);

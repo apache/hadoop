@@ -31,8 +31,8 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.client.ServerConnection;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
@@ -53,7 +53,7 @@ import org.apache.zookeeper.KeeperException;
 public class CatalogTracker {
   private static final Log LOG = LogFactory.getLog(CatalogTracker.class);
 
-  private final ServerConnection connection;
+  private final HConnection connection;
 
   private final ZooKeeperWatcher zookeeper;
 
@@ -80,8 +80,8 @@ public class CatalogTracker {
    * @param abortable if fatal exception
    * @throws IOException 
    */
-  public CatalogTracker(final ZooKeeperWatcher zk,
-      final ServerConnection connection, final Abortable abortable)
+  public CatalogTracker(final ZooKeeperWatcher zk, final HConnection connection,
+      final Abortable abortable)
   throws IOException {
     this(zk, connection, abortable, 0);
   }
@@ -95,9 +95,8 @@ public class CatalogTracker {
    * @param defaultTimeout Timeout to use.
    * @throws IOException 
    */
-  public CatalogTracker(final ZooKeeperWatcher zk,
-      final ServerConnection connection, final Abortable abortable,
-      final int defaultTimeout)
+  public CatalogTracker(final ZooKeeperWatcher zk, final HConnection connection,
+      final Abortable abortable, final int defaultTimeout)
   throws IOException {
     this.zookeeper = zk;
     this.connection = connection;

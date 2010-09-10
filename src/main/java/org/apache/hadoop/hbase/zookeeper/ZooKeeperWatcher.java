@@ -351,7 +351,7 @@ public class ZooKeeperWatcher implements Watcher {
    */
   public void close() {
     try {
-      if(zooKeeper != null) {
+      if (zooKeeper != null) {
         zooKeeper.close();
 //        super.close();
       }

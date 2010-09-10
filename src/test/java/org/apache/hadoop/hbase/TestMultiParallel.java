@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -33,7 +36,8 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class TestMultiParallel extends MultiRegionTable {
-
+  // This test needs to be rewritten to use HBaseTestingUtility -- St.Ack 20100910
+  private static final Log LOG = LogFactory.getLog(TestMultiParallel.class);
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
   private static final String FAMILY = "family";
@@ -82,6 +86,7 @@ public class TestMultiParallel extends MultiRegionTable {
   }
 
   public void testBatchWithGet() throws Exception {
+    LOG.info("test=testBatchWithGet");
     HTable table = new HTable(conf, TEST_TABLE);
 
     // load test data
@@ -125,6 +130,7 @@ public class TestMultiParallel extends MultiRegionTable {
    * @throws Exception
    */
   public void testFlushCommitsWithAbort() throws Exception {
+    LOG.info("test=testFlushCommitsWithAbort");
     doTestFlushCommits(true);
   }
 
@@ -133,8 +139,11 @@ public class TestMultiParallel extends MultiRegionTable {
   }
 
   public void doTestFlushCommits(boolean doAbort) throws Exception {
+    LOG.info("test=doTestFlushCommits");
     // Load the data
-    HTable table = new HTable(conf, TEST_TABLE);
+    Configuration newconf = new Configuration(conf);
+    newconf.setInt("hbase.client.retries.number", 10);
+    HTable table = new HTable(newconf, TEST_TABLE);
     table.setAutoFlush(false);
     table.setWriteBufferSize(10 * 1024 * 1024);
 
@@ -170,8 +179,10 @@ public class TestMultiParallel extends MultiRegionTable {
   }
 
   public void testBatchWithPut() throws Exception {
-
-    HTable table = new HTable(conf, TEST_TABLE);
+    LOG.info("test=testBatchWithPut");
+    Configuration newconf = new Configuration(conf);
+    newconf.setInt("hbase.client.retries.number", 10);
+    HTable table = new HTable(newconf, TEST_TABLE);
 
     // put multiple rows using a batch
     List<Row> puts = constructPutRequests();
@@ -191,7 +202,7 @@ public class TestMultiParallel extends MultiRegionTable {
   }
 
   public void testBatchWithDelete() throws Exception {
-
+    LOG.info("test=testBatchWithDelete");
     HTable table = new HTable(conf, TEST_TABLE);
 
     // Load some data
@@ -219,7 +230,7 @@ public class TestMultiParallel extends MultiRegionTable {
   }
 
   public void testHTableDeleteWithList() throws Exception {
-
+    LOG.info("test=testHTableDeleteWithList");
     HTable table = new HTable(conf, TEST_TABLE);
 
     // Load some data
@@ -247,6 +258,7 @@ public class TestMultiParallel extends MultiRegionTable {
   }
 
   public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
+    LOG.info("test=testBatchWithManyColsInOneRowGetAndPut");
     HTable table = new HTable(conf, TEST_TABLE);
 
     List<Row> puts = new ArrayList<Row>();
@@ -282,6 +294,7 @@ public class TestMultiParallel extends MultiRegionTable {
   }
 
   public void testBatchWithMixedActions() throws Exception {
+    LOG.info("test=testBatchWithMixedActions");
     HTable table = new HTable(conf, TEST_TABLE);
 
     // Load some data to start

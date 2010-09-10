@@ -29,6 +29,7 @@ Release 0.21.0 - Unreleased
    HBASE-2553  Revisit IncrementColumnValue implementation in 0.22
    HBASE-2692  Master rewrite and cleanup for 0.90
                (Karthik Ranganathan, Jon Gray & Stack)
+   HBASE-2961  Close zookeeper when done with it (HCM, Master, and RS)
                
 
   BUG FIXES

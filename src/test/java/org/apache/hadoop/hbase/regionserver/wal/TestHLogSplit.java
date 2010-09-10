@@ -324,7 +324,7 @@ public class TestHLogSplit {
     HLog.Entry entry;
     while ((entry = in.next()) != null) ++actualCount;
     assertEquals(entryCount-1, actualCount);
-    
+
     // should not have stored the EOF files as corrupt
     FileStatus[] archivedLogs = fs.listStatus(corruptDir);
     assertEquals(archivedLogs.length, 0);
