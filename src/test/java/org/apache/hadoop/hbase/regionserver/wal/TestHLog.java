@@ -522,7 +522,7 @@ public class TestHLog  {
       assertEquals(COL_COUNT, entry.getEdit().size());
       int idx = 0;
       for (KeyValue val : entry.getEdit().getKeyValues()) {
-        assertTrue(Bytes.equals(hri.getRegionName(),
+        assertTrue(Bytes.equals(hri.getEncodedNameAsBytes(),
           entry.getKey().getEncodedRegionName()));
         assertTrue(Bytes.equals(tableName, entry.getKey().getTablename()));
         assertTrue(Bytes.equals(row, val.getRow()));
@@ -535,7 +535,7 @@ public class TestHLog  {
       entry = reader.next();
       assertEquals(1, entry.getEdit().size());
       for (KeyValue val : entry.getEdit().getKeyValues()) {
-        assertTrue(Bytes.equals(hri.getRegionName(),
+        assertTrue(Bytes.equals(hri.getEncodedNameAsBytes(),
           entry.getKey().getEncodedRegionName()));
         assertTrue(Bytes.equals(tableName, entry.getKey().getTablename()));
         assertTrue(Bytes.equals(HLog.METAROW, val.getRow()));

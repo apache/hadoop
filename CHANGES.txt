@@ -518,6 +518,8 @@ Release 0.21.0 - Unreleased
    HBASE-2974  LoadBalancer ArithmeticException: / by zero
    HBASE-2975  DFSClient names in master and RS should be unique
    HBASE-2978  LoadBalancer IndexOutOfBoundsException
+   HBASE-2983  TestHLog unit test is mis-comparing an assertion
+               (Alex Newman via Todd Lipcon)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
