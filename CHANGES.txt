@@ -901,6 +901,7 @@ Release 0.21.0 - Unreleased
                HBaseObjectWritable (Gary Helmling via Andrew Purtell)
    HBASE-2976  Running HFile tool passing fully-qualified filename I get
                'IllegalArgumentException: Wrong FS'
+   HBASE-2977  Refactor master command line to a new class
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
