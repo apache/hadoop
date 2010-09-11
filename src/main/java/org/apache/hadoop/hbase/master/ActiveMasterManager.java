@@ -156,6 +156,13 @@ class ActiveMasterManager extends ZooKeeperListener {
     return thisMasterStartedCluster;
   }
 
+  /**
+   * @return True if cluster has an active master.
+   */
+  public boolean isActiveMaster() {
+    return this.clusterHasActiveMaster.get();
+  }
+
   public void stop() {
     try {
       // If our address is in ZK, delete it on our way out

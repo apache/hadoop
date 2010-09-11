@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -32,7 +31,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -43,7 +41,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -52,11 +49,9 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -78,7 +73,6 @@ import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
@@ -86,7 +80,6 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
-import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -94,6 +87,7 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 
@@ -216,6 +210,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      */
     this.zooKeeper =
       new ZooKeeperWatcher(conf, MASTER + "-" + getMasterAddress(), this);
+
     this.clusterStarter = 0 ==
       ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
 
@@ -228,8 +223,26 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      * now wait until it dies to try and become the next active master.  If we
      * do not succeed on our first attempt, this is no longer a cluster startup.
      */
-    activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
-    zooKeeper.registerListener(activeMasterManager);
+    this.activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
+    this.zooKeeper.registerListener(activeMasterManager);
+
+
+    // If we're a backup master, stall until a primary to writes his address
+    if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP,
+        HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
+      // This will only be a minute or so while the cluster starts up,
+      // so don't worry about setting watches on the parent znode
+      while (!this.activeMasterManager.isActiveMaster()) {
+        try {
+          LOG.debug("Waiting for master address ZNode to be written " +
+            "(Also watching cluster state node)");
+          Thread.sleep(conf.getInt("zookeeper.session.timeout", 60 * 1000));
+        } catch (InterruptedException e) {
+          // interrupted = user wants to kill us.  Don't continue
+          throw new IOException("Interrupted waiting for master address");
+        }
+      }
+    }
 
     // Wait here until we are the active master
     clusterStarter = activeMasterManager.blockUntilBecomingActiveMaster();
