@@ -3829,20 +3829,20 @@ public class TestFromClientSide {
     Get g2 = new Get(Bytes.toBytes("bbb"));
     table.get(g2);
 
-    // Get the configured number of cache read-ahead regions.  For various
-    // reasons, the meta may not yet have all regions in place (e.g. hbase-2757). 
-    // That the prefetch gets at least half shows prefetch is bascially working.
-    int prefetchRegionNumber = conf.getInt("hbase.client.prefetch.limit", 10) / 2;
+    // Get the configured number of cache read-ahead regions.
+    int prefetchRegionNumber = conf.getInt("hbase.client.prefetch.limit", 10);
 
     // the total number of cached regions == region('aaa") + prefeched regions.
     LOG.info("Testing how many regions cached");
-    assertTrue(prefetchRegionNumber < HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+    assertEquals("Number of cached region is incorrect ", prefetchRegionNumber,
+        HConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     table.getConnection().clearRegionCache();
 
     Get g3 = new Get(Bytes.toBytes("abc"));
     table.get(g3);
-    assertTrue(prefetchRegionNumber < HConnectionManager.getCachedRegionCount(conf, TABLENAME));
+    assertEquals("Number of cached region is incorrect ", prefetchRegionNumber,
+        HConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     LOG.info("Finishing testRegionCachePreWarm");
   }
