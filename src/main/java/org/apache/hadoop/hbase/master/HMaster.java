@@ -865,24 +865,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
   }
 
-  protected static void doMain(String [] args,
-      Class<? extends HMaster> masterClass) throws Exception {
-    int ret = ToolRunner.run(
-      HBaseConfiguration.create(),
-      new HMasterCommandLine(masterClass),
-      args);
-    if (ret != 0) {
-      System.exit(ret);
-    }
-    // Otherwise exit gracefully so other threads clean up
-  }
 
   /**
-   * Main program
-   * @param args
-   * @throws IOException 
+   * @see org.apache.hadoop.hbase.master.HMasterCommandLine
    */
   public static void main(String [] args) throws Exception {
-    doMain(args, HMaster.class);
+    new HMasterCommandLine(HMaster.class).doMain(args);
   }
 }

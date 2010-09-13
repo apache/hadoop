@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.io.File;
-import java.lang.management.RuntimeMXBean;
-import java.lang.management.ManagementFactory;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
@@ -32,8 +30,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,10 +37,11 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.util.ServerCommandLine;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.zookeeper.KeeperException;
 
-public class HMasterCommandLine extends Configured implements Tool {
+public class HMasterCommandLine extends ServerCommandLine {
   private static final Log LOG = LogFactory.getLog(HMasterCommandLine.class);
 
   private static final String USAGE =
@@ -57,29 +54,14 @@ public class HMasterCommandLine extends Configured implements Tool {
 
   private final Class<? extends HMaster> masterClass;
 
-
   public HMasterCommandLine(Class<? extends HMaster> masterClass) {
     this.masterClass = masterClass;
   }
 
-  private void usage(String message) {
-    if (message != null) {
-      System.err.println(message);
-      System.err.println("\n");
-    }
-
-    System.err.println(USAGE);
+  protected String getUsage() {
+    return USAGE;
   }
 
-  private static void logJVMInfo() {
-    // Print out vm stats before starting up.
-    RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
-    if (runtime != null) {
-      LOG.info("vmName=" + runtime.getVmName() + ", vmVendor=" +
-               runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
-      LOG.info("vmInputArguments=" + runtime.getInputArguments());
-    }
-  }
 
   public int run(String args[]) throws Exception {
     Options opt = new Options();
