@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 #include <string.h> 
-#include <error.h>
 #include "hdfsJniHelper.h"
 
 static pthread_mutex_t hdfsHashMutex = PTHREAD_MUTEX_INITIALIZER;

@@ -195,52 +195,66 @@ class UnderReplicatedBlocks implements Iterable<Block> {
     }
   }
 
-  /* returns an interator of all blocks in a given priority queue */
-  public synchronized Iterable<Block> getQueue(int priority) {
-    if (priority < 0 || priority >= LEVEL) {
-      return null;
-    }
-    return priorityQueues.get(priority);
+  /* returns an iterator of all blocks in a given priority queue */
+  synchronized BlockIterator iterator(int level) {
+    return new BlockIterator(level);
   }
-  
+    
   /* return an iterator of all the under replication blocks */
   public synchronized BlockIterator iterator() {
     return new BlockIterator();
   }
   
-    class BlockIterator implements Iterator<Block> {
-      private int level;
-      private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
-      BlockIterator()  
-      {
-        level=0;
-        for(int i=0; i<LEVEL; i++) {
-          iterators.add(priorityQueues.get(i).iterator());
-        }
+  class BlockIterator implements Iterator<Block> {
+    private int level;
+    private boolean isIteratorForLevel = false;
+    private List<Iterator<Block>> iterators = new ArrayList<Iterator<Block>>();
+
+    BlockIterator()  
+    {
+      level=0;
+      for(int i=0; i<LEVEL; i++) {
+        iterators.add(priorityQueues.get(i).iterator());
       }
-              
-      private void update() {
-        while(level< LEVEL-1 && !iterators.get(level).hasNext()) {
-          level++;
-        }
+    }
+
+    BlockIterator(int l) {
+      level = l;
+      isIteratorForLevel = true;
+      iterators.add(priorityQueues.get(level).iterator());
+    }
+
+    private void update() {
+      if (isIteratorForLevel)
+        return;
+      while(level< LEVEL-1 && !iterators.get(level).hasNext()) {
+        level++;
       }
-              
-      public Block next() {
-        update();
-        return iterators.get(level).next();
-      }
-              
-      public boolean hasNext() {
-        update();
-        return iterators.get(level).hasNext();
-      }
-              
-      public void remove() {
+    }
+
+    public Block next() {
+      if (isIteratorForLevel)
+        return iterators.get(0).next();
+      update();
+      return iterators.get(level).next();
+    }
+
+    public boolean hasNext() {
+      if (isIteratorForLevel)
+        return iterators.get(0).hasNext();
+      update();
+      return iterators.get(level).hasNext();
+    }
+
+    public void remove() {
+      if (isIteratorForLevel) 
+        iterators.get(0).remove();
+      else
         iterators.get(level).remove();
-      }
-      
-      public int getPriority() {
-        return level;
+    }
+
+    public int getPriority() {
+      return level;
     };
-  }
+  }  
 }

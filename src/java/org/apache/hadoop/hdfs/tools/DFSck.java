@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.SecurityUtil;
@@ -85,14 +84,16 @@ public class DFSck extends Configured implements Tool {
    * Print fsck usage information
    */
   static void printUsage() {
-    System.err.println("Usage: DFSck <path> [-list-corruptfiles | [-move | -delete | -openforwrite ] [-files [-blocks [-locations | -racks]]]] ");
+    System.err.println("Usage: DFSck <path> [-list-corruptfileblocks | " +
+        "[-move | -delete | -openforwrite] " +
+        "[-files [-blocks [-locations | -racks]]]]");
     System.err.println("\t<path>\tstart checking from this path");
     System.err.println("\t-move\tmove corrupted files to /lost+found");
     System.err.println("\t-delete\tdelete corrupted files");
     System.err.println("\t-files\tprint out files being checked");
     System.err.println("\t-openforwrite\tprint out files opened for write");
-    System.err.println("\t-list-corruptfiles\tprint out corrupt files up to a "+
-        "maximum defined by property dfs.corruptfilesreturned.max");
+    System.err.println("\t-list-corruptfileblocks\tprint out list of missing "
+        + "blocks and files they belong to");
     System.err.println("\t-blocks\tprint out block report");
     System.err.println("\t-locations\tprint out locations for every block");
     System.err.println("\t-racks\tprint out network topology for data-node locations");
@@ -123,6 +124,67 @@ public class DFSck extends Configured implements Tool {
       throw new IOException(e);
     }
   }
+  
+  /*
+   * To get the list, we need to call iteratively until the server says
+   * there is no more left.
+   */
+  private Integer listCorruptFileBlocks(String dir, String baseUrl)
+      throws IOException {
+    int errCode = -1;
+    int numCorrupt = 0;
+    String lastBlock = null;
+    final String noCorruptLine = "has no CORRUPT files";
+    final String noMoreCorruptLine = "has no more CORRUPT files";
+    boolean allDone = false;
+    while (!allDone) {
+      final StringBuffer url = new StringBuffer(baseUrl);
+      if (lastBlock != null) {
+        url.append("&startblockafter=").append(lastBlock);
+      }
+      URL path = new URL(url.toString());
+      SecurityUtil.fetchServiceTicket(path);
+      URLConnection connection = path.openConnection();
+      InputStream stream = connection.getInputStream();
+      BufferedReader input = new BufferedReader(new InputStreamReader(
+          stream, "UTF-8"));
+      try {
+        String line = null;
+        while ((line = input.readLine()) != null) {
+          if ((line.endsWith(noCorruptLine)) || 
+              (line.endsWith(noMoreCorruptLine)) ||
+              (line.endsWith(NamenodeFsck.NONEXISTENT_STATUS))) {
+            allDone = true;
+            break;
+          }
+          if ((line.isEmpty())
+              || (line.startsWith("FSCK started by")) 
+              || (line.startsWith("The filesystem under path")))
+            continue;
+          numCorrupt++;
+          if (numCorrupt == 1) {
+            System.out.println("The list of corrupt files under path '" 
+                + dir + "' are:");
+          }
+          System.out.println(line);
+          try {
+            // Get the block # that we need to send in next call
+            lastBlock = line.split("\t")[0];
+          } catch (Exception e) {
+            allDone = true;
+            break;
+          }
+        }
+      } finally {
+        input.close();
+      }
+    }
+    System.out.println("The filesystem under path '" + dir + "' has " 
+        + numCorrupt + " CORRUPT files");
+    if (numCorrupt == 0)
+      errCode = 0;
+    return errCode;
+  }
             
   private int doWork(final String[] args) throws IOException {
     String proto = "http://";
@@ -141,15 +203,22 @@ public class DFSck extends Configured implements Tool {
       if (!args[idx].startsWith("-")) { dir = args[idx]; break; }
     }
     url.append(URLEncoder.encode(dir, "UTF-8"));
+    boolean doListCorruptFileBlocks = false;
     for (int idx = 0; idx < args.length; idx++) {
       if (args[idx].equals("-move")) { url.append("&move=1"); }
       else if (args[idx].equals("-delete")) { url.append("&delete=1"); }
       else if (args[idx].equals("-files")) { url.append("&files=1"); }
       else if (args[idx].equals("-openforwrite")) { url.append("&openforwrite=1"); }
-      else if (args[idx].equals("-list-corruptfiles")) { url.append("&corruptfiles=1"); }
       else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
       else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
       else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
+      else if (args[idx].equals("-list-corruptfileblocks")) {
+        url.append("&listcorruptfileblocks=1");
+        doListCorruptFileBlocks = true;
+      }
+    }
+    if (doListCorruptFileBlocks) {
+      return listCorruptFileBlocks(dir, url.toString());
     }
     URL path = new URL(url.toString());
     SecurityUtil.fetchServiceTicket(path);

@@ -22,7 +22,6 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -104,16 +103,15 @@ public class TestBlockToken {
       Set<TokenIdentifier> tokenIds = UserGroupInformation.getCurrentUser()
           .getTokenIdentifiers();
       assertEquals("Only one BlockTokenIdentifier expected", 1, tokenIds.size());
-      long [] result = {0};
+      long result = 0;
       for (TokenIdentifier tokenId : tokenIds) {
         BlockTokenIdentifier id = (BlockTokenIdentifier) tokenId;
         LOG.info("Got: " + id.toString());
         assertTrue("Received BlockTokenIdentifier is wrong", ident.equals(id));
         sm.checkAccess(id, null, block, BlockTokenSecretManager.AccessMode.WRITE);
-        result = id.getBlockIds();
+        result = id.getBlockId();
       }
-      assertEquals("Got more than one block back", 1, result.length);
-      return result[0];
+      return result;
     }
   }
 
@@ -224,28 +222,4 @@ public class TestBlockToken {
     }
   }
 
-  @Test
-  public void collectionOfBlocksActsSanely() {
-    final long[][] testBlockIds = new long [][] {{99l, 7l, -32l, 0l},
-                                                 {},
-                                                 {42l},
-                                                 {-5235l, 2352}};
-    final long [] notBlockIds = new long [] { 32l, 1l, -23423423l};
-
-    for(long [] bids : testBlockIds) {
-      BlockTokenIdentifier bti = new BlockTokenIdentifier("Madame Butterfly", 
-          bids, EnumSet.noneOf(BlockTokenSecretManager.AccessMode.class));
-
-      for(long bid : bids) assertTrue(bti.isBlockIncluded(bid));
-
-      for(long nbid : notBlockIds) assertFalse(bti.isBlockIncluded(nbid));
-
-      // BlockTokenIdentifiers maintain a sorted array of the block Ids.
-      long[] sorted = Arrays.copyOf(bids, bids.length);
-      Arrays.sort(sorted);
-
-      assertTrue(Arrays.toString(bids)+" doesn't equal "+Arrays.toString(sorted), 
-          Arrays.equals(bti.getBlockIds(), sorted));
-    }
-  }
 }

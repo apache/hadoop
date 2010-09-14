@@ -77,6 +77,8 @@ import org.apache.log4j.LogManager;
  * {@link NameNode#refreshUserToGroupsMappings()} after
  * every G operations, which purges the name-node's user group cache.
  * By default the refresh is never called.</li>
+ * <li>-keepResults do not clean up the name-space after execution.</li>
+ * <li>-useExisting do not recreate the name-space, use existing data.</li>
  * </ol>
  * 
  * The benchmark first generates inputs for each thread so that the
@@ -92,7 +94,7 @@ public class NNThroughputBenchmark {
   private static final Log LOG = LogFactory.getLog(NNThroughputBenchmark.class);
   private static final int BLOCK_SIZE = 16;
   private static final String GENERAL_OPTIONS_USAGE = 
-    "    [-logLevel L] [-UGCacheRefreshCount G]";
+    "     [-keepResults] | [-logLevel L] | [-UGCacheRefreshCount G]";
 
   static Configuration config;
   static NameNode nameNode;
@@ -139,8 +141,7 @@ public class NNThroughputBenchmark {
   abstract class OperationStatsBase {
     protected static final String BASE_DIR_NAME = "/nnThroughputBenchmark";
     protected static final String OP_ALL_NAME = "all";
-    protected static final String OP_ALL_USAGE = "-op all " +
-                                  "<other ops options> [-keepResults]";
+    protected static final String OP_ALL_USAGE = "-op all <other ops options>";
 
     protected String baseDir;
     protected short replication;
@@ -672,6 +673,34 @@ public class NNThroughputBenchmark {
   }
 
   /**
+   * List file status statistics.
+   * 
+   * Measure how many get-file-status calls the name-node can handle per second.
+   */
+  class FileStatusStats extends OpenFileStats {
+    // Operation types
+    static final String OP_FILE_STATUS_NAME = "fileStatus";
+    static final String OP_FILE_STATUS_USAGE = 
+      "-op " + OP_FILE_STATUS_NAME + OP_USAGE_ARGS;
+
+    FileStatusStats(List<String> args) {
+      super(args);
+    }
+
+    String getOpName() {
+      return OP_FILE_STATUS_NAME;
+    }
+
+    long executeOp(int daemonId, int inputIdx, String ignore) 
+    throws IOException {
+      long start = System.currentTimeMillis();
+      nameNode.getFileInfo(fileNames[daemonId][inputIdx]);
+      long end = System.currentTimeMillis();
+      return end-start;
+    }
+  }
+
+  /**
    * Rename file statistics.
    * 
    * Measure how many rename calls the name-node can handle per second.
@@ -1164,6 +1193,7 @@ public class NNThroughputBenchmark {
         + " | \n\t" + CreateFileStats.OP_CREATE_USAGE
         + " | \n\t" + OpenFileStats.OP_OPEN_USAGE
         + " | \n\t" + DeleteFileStats.OP_DELETE_USAGE
+        + " | \n\t" + FileStatusStats.OP_FILE_STATUS_USAGE
         + " | \n\t" + RenameFileStats.OP_RENAME_USAGE
         + " | \n\t" + BlockReportStats.OP_BLOCK_REPORT_USAGE
         + " | \n\t" + ReplicationStats.OP_REPLICATION_USAGE
@@ -1199,6 +1229,10 @@ public class NNThroughputBenchmark {
       }
       if(runAll || DeleteFileStats.OP_DELETE_NAME.equals(type)) {
         opStat = bench.new DeleteFileStats(args);
+        ops.add(opStat);
+      }
+      if(runAll || FileStatusStats.OP_FILE_STATUS_NAME.equals(type)) {
+        opStat = bench.new FileStatusStats(args);
         ops.add(opStat);
       }
       if(runAll || RenameFileStats.OP_RENAME_NAME.equals(type)) {

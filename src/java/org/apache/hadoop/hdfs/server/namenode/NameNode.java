@@ -33,7 +33,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
@@ -1119,12 +1118,20 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     namesystem.metaSave(filename);
   }
 
-  /** {@inheritDoc} */
-  public FileStatus[] getCorruptFiles() 
-    throws AccessControlException, IOException {
-    
-    return namesystem.getCorruptFiles();
-    
+  /**
+   * 
+   * @param path
+   *          Sub-tree used in querying corrupt files
+   * @param startBlockAfter
+   *          Paging support---pass in the last block returned from the previous
+   *          call and some # of corrupt blocks after that point are returned
+   * @return a list in which each entry describes a corrupt file/block
+   * @throws AccessControlException
+   * @throws IOException
+   */
+  public Collection<FSNamesystem.CorruptFileBlockInfo> listCorruptFileBlocks(String path,
+      String startBlockAfter) throws AccessControlException, IOException {
+    return namesystem.listCorruptFileBlocks(path, startBlockAfter);
   }
   
   /** {@inheritDoc} */

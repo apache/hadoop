@@ -50,7 +50,7 @@ public class StreamFile extends DfsServlet {
   static DataNode datanode = null;
   static {
     if ((datanode = DataNode.getDataNode()) != null) {
-      nameNodeAddr = datanode.getNameNodeAddr();
+      nameNodeAddr = datanode.getNameNodeAddrForClient();
     }
   }
   

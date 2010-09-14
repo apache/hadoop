@@ -177,29 +177,16 @@ public class BlockTokenSecretManager extends
   /** Generate an block token for current user */
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock block,
       EnumSet<AccessMode> modes) throws IOException {
-    return generateToken(new long [] { block.getBlockId() }, modes);
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    String userID = (ugi == null ? null : ugi.getShortUserName());
+    return generateToken(userID, block.getLocalBlock(), modes);
   }
 
   /** Generate a block token for a specified user */
-  public Token<BlockTokenIdentifier> generateToken(String userId, Block block,
-      EnumSet<AccessMode> modes) throws IOException {
-    return generateToken(userId, new long [] { block.getBlockId() }, modes);
-  }
-
-  /** Generate a block token for the current user based on a collection
-   * of blockIds
-   */
-  public Token<BlockTokenIdentifier> generateToken(long[] blockIds,
-      EnumSet<AccessMode> modes) throws IOException {
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    String userID = (ugi == null ? null : ugi.getShortUserName());
-    return generateToken(userID, blockIds, modes);
-  }
-  
-  /** Generate a block token based on a collection of blockIds */
-  public Token<BlockTokenIdentifier> generateToken(String userID,
-      long[] blockIds, EnumSet<AccessMode> modes) {
-    BlockTokenIdentifier id = new BlockTokenIdentifier(userID, blockIds, modes);
+  public Token<BlockTokenIdentifier> generateToken(String userId,
+      Block block, EnumSet<AccessMode> modes) throws IOException {
+    BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
+        .getBlockId(), modes);
     return new Token<BlockTokenIdentifier>(id, this);
   }
 
@@ -226,7 +213,7 @@ public class BlockTokenSecretManager extends
       throw new InvalidToken("Block token with " + id.toString()
           + " doesn't belong to user " + userId);
     }
-    if (!id.isBlockIncluded(block.getBlockId())) {
+    if (id.getBlockId() != block.getBlockId()) {
       throw new InvalidToken("Block token with " + id.toString()
           + " doesn't apply to block " + block);
     }

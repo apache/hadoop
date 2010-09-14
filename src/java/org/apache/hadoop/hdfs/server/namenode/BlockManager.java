@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -384,7 +383,7 @@ public class BlockManager {
   }
 
   List<LocatedBlock> getBlockLocations(BlockInfo[] blocks, long offset,
-      long length, int nrBlocksToReturn) throws IOException {
+      long length, int nrBlocksToReturn, boolean needBlockToken) throws IOException {
     int curBlk = 0;
     long curPos = 0, blkSize = 0;
     int nrBlocks = (blocks[0].getNumBytes() == 0) ? 0 : blocks.length;
@@ -403,7 +402,7 @@ public class BlockManager {
     long endOff = offset + length;
     List<LocatedBlock> results = new ArrayList<LocatedBlock>(blocks.length);
     do {
-      results.add(getBlockLocation(blocks[curBlk], curPos));
+      results.add(getBlockLocation(blocks[curBlk], curPos, needBlockToken));
       curPos += blocks[curBlk].getNumBytes();
       curBlk++;
     } while (curPos < endOff 
@@ -412,13 +411,14 @@ public class BlockManager {
     return results;
   }
 
-  /** @return a LocatedBlock for the given block */
-  LocatedBlock getBlockLocation(final BlockInfo blk, final long pos
+  /** @param needBlockToken 
+   * @return a LocatedBlock for the given block */
+  LocatedBlock getBlockLocation(final BlockInfo blk, final long pos, boolean needBlockToken
       ) throws IOException {
     if (!blk.isComplete()) {
       final BlockInfoUnderConstruction uc = (BlockInfoUnderConstruction)blk;
       final DatanodeDescriptor[] locations = uc.getExpectedLocations();
-      return namesystem.createLocatedBlock(uc, locations, pos, false);
+      return namesystem.createLocatedBlock(uc, locations, pos, false, needBlockToken);
     }
 
     // get block locations
@@ -444,7 +444,7 @@ public class BlockManager {
           machines[j++] = d;
       }
     }
-    return namesystem.createLocatedBlock(blk, machines, pos, isCorrupt);    
+    return namesystem.createLocatedBlock(blk, machines, pos, isCorrupt, needBlockToken);    
   }
 
   /**
@@ -1723,27 +1723,13 @@ public class BlockManager {
                                    Long startingBlockId) {
     return corruptReplicas.getCorruptReplicaBlockIds(numExpectedBlocks,
                                                      startingBlockId);
-  }  
-  
-  /**
-   * @return inodes of files with corrupt blocks, with a maximum of 
-   * MAX_CORRUPT_FILES_RETURNED inodes listed in total
-   */
-  INode[] getCorruptInodes() {
-    LinkedHashSet<INode> set = new LinkedHashSet<INode>();
-
-    for (Block blk : 
-            neededReplications.getQueue(
-                UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS)){
-      INode inode = blocksMap.getINode(blk);
-      if (inode != null && countNodes(blk).liveReplicas() == 0) {
-        set.add(inode);
-        if (set.size() >= this.maxCorruptFilesReturned) {
-          break;  
-        }
-      } 
-    }
-    return set.toArray(new INode[set.size()]);
   }
-  
+
+  /**
+   * Return an iterator over the set of blocks for which there are no replicas.
+   */
+  BlockIterator getCorruptReplicaBlockIterator() {
+    return neededReplications
+        .iterator(UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+  }
 }

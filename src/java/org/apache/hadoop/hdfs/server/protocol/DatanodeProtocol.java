@@ -45,9 +45,9 @@ import org.apache.avro.reflect.Nullable;
 @InterfaceAudience.Private
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 26: Add block pool ID to Block
+   * 27: Add block pool ID to Block
    */
-  public static final long versionID = 26L;
+  public static final long versionID = 27L;
   
   // error code
   final static int NOTIFY = 0;

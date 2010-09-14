@@ -35,6 +35,8 @@ Trunk (unreleased changes)
 
     HDFS-1359. Add BlockPoolID to Block. (suresh)
 
+    HDFS-1361. Add -fileStatus operation to NNThroughputBenchmark. (shv)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)
@@ -110,6 +112,9 @@ Trunk (unreleased changes)
     HDFS-330.  Datanode Web UIs should provide robots.txt.
     (Allen Wittenauer via jghoman)
 
+    HDFS-881.  Refactor DataNode Packet header into DataTransferProtocol.
+    (Todd Lipcon via jghoman)
+
     HDFS-1036. docs for fetchdt
 
     HDFS-1318. Add JMX interface for read access to namenode and datanode
@@ -117,6 +122,11 @@ Trunk (unreleased changes)
 
     HDFS-1356.  Provide information as to whether or not security is 
     enabled on web interface for NameNode (boryas)
+
+    HDFS-1205. FSDatasetAsyncDiskService should name its threads.
+    (Todd Lipcon via eli)
+
+    HDFS-1111. Introduce getCorruptFileBlocks() for fsck. (Sriram Rao via shv)
 
   OPTIMIZATIONS
 
@@ -232,6 +242,22 @@ Trunk (unreleased changes)
     HDFS-1352. Fix jsvc.location. (Eli Collins via jghoman)
 
     HDFS-1284. TestBlockToken fails.  (Kan Zhang via jghoman)
+
+    HDFS-1355. ant veryclean (clean-cache) doesn't clean enough. 
+    (Luke Lu via jghoman)
+
+    HDFS-1353. Remove most of getBlockLocation optimization. (jghoman)
+
+    HDFS-1369. Invalid javadoc reference in FSDatasetMBean.java (Eli Collins)
+
+    HDFS-829. hdfsJniHelper.c: #include <error.h> is not portable. 
+    (Allen Wittenauer via jghoman)
+
+    HDFS-1310. The ClientDatanodeProtocol proxy should be stopped in
+    DFSInputStream.readBlockLength(..).  (sam rash via szetszwo)
+
+    HDFS-1357. HFTP traffic served by DataNode shouldn't use service port 
+    on NameNode. (Kan Zhang via jghoman)
 
 Release 0.21.0 - Unreleased
 

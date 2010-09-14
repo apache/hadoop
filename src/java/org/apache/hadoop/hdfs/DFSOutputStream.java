@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
@@ -127,17 +128,30 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   private short blockReplication; // replication factor of file
   
   private class Packet {
-    ByteBuffer buffer;           // only one of buf and buffer is non-null
-    byte[]  buf;  
     long    seqno;               // sequencenumber of buffer in block
     long    offsetInBlock;       // offset in block
     boolean lastPacketInBlock;   // is this the last packet in block?
     int     numChunks;           // number of chunks currently in packet
     int     maxChunks;           // max chunks in packet
-    int     dataStart;
-    int     dataPos;
-    int     checksumStart;
-    int     checksumPos;      
+
+    /** buffer for accumulating packet checksum and data */
+    ByteBuffer buffer; // wraps buf, only one of these two may be non-null
+    byte[]  buf;
+
+    /**
+     * buf is pointed into like follows:
+     *  (C is checksum data, D is payload data)
+     *
+     * [HHHHHCCCCC________________DDDDDDDDDDDDDDDD___]
+     *       ^    ^               ^               ^
+     *       |    checksumPos     dataStart       dataPos
+     *   checksumStart
+     */
+    int checksumStart;
+    int dataStart;
+    int dataPos;
+    int checksumPos;
+
     private static final long HEART_BEAT_SEQNO = -1L;
 
     /**
@@ -150,7 +164,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       this.seqno = HEART_BEAT_SEQNO;
       
       buffer = null;
-      int packetSize = DataNode.PKT_HEADER_LEN + DFSClient.SIZE_OF_INTEGER;
+      int packetSize = PacketHeader.PKT_HEADER_LEN + DFSClient.SIZE_OF_INTEGER; // TODO(todd) strange
       buf = new byte[packetSize];
       
       checksumStart = dataStart = packetSize;
@@ -170,7 +184,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       buffer = null;
       buf = new byte[pktSize];
       
-      checksumStart = DataNode.PKT_HEADER_LEN + DFSClient.SIZE_OF_INTEGER;
+      checksumStart = PacketHeader.PKT_HEADER_LEN;
       checksumPos = checksumStart;
       dataStart = checksumStart + chunksPerPkt * checksum.getChecksumSize();
       dataPos = dataStart;
@@ -221,20 +235,15 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       int pktLen = DFSClient.SIZE_OF_INTEGER + dataLen + checksumLen;
       
       //normally dataStart == checksumPos, i.e., offset is zero.
-      buffer = ByteBuffer.wrap(buf, dataStart - checksumPos,
-                               DataNode.PKT_HEADER_LEN + pktLen);
+      buffer = ByteBuffer.wrap(
+        buf, dataStart - checksumPos,
+        PacketHeader.PKT_HEADER_LEN + pktLen - DFSClient.SIZE_OF_INTEGER);
       buf = null;
       buffer.mark();
-      
-      /* write the header and data length.
-       * The format is described in comment before DataNode.BlockSender
-       */
-      buffer.putInt(pktLen);  // pktSize
-      buffer.putLong(offsetInBlock); 
-      buffer.putLong(seqno);
-      buffer.put((byte) ((lastPacketInBlock) ? 1 : 0));
-      //end of pkt header
-      buffer.putInt(dataLen); // actual data length, excluding checksum.
+
+      PacketHeader header = new PacketHeader(
+        pktLen, offsetInBlock, seqno, lastPacketInBlock, dataLen);
+      header.putInBuffer(buffer);
       
       buffer.reset();
       return buffer;
@@ -1110,7 +1119,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
   private void computePacketChunkSize(int psize, int csize) {
     int chunkSize = csize + checksum.getChecksumSize();
-    int n = DataNode.PKT_HEADER_LEN + DFSClient.SIZE_OF_INTEGER;
+    int n = PacketHeader.PKT_HEADER_LEN;
     chunksPerPacket = Math.max((psize - n + chunkSize-1)/chunkSize, 1);
     packetSize = n + chunkSize*chunksPerPacket;
     if (DFSClient.LOG.isDebugEnabled()) {
@@ -1212,7 +1221,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       // indicate the end of block and reset bytesCurBlock.
       //
       if (bytesCurBlock == blockSize) {
-        currentPacket = new Packet(DataNode.PKT_HEADER_LEN+4, 0, 
+        currentPacket = new Packet(PacketHeader.PKT_HEADER_LEN, 0, 
             bytesCurBlock);
         currentPacket.lastPacketInBlock = true;
         waitAndQueuePacket(currentPacket);
@@ -1405,7 +1414,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
       if (bytesCurBlock != 0) {
         // send an empty packet to mark the end of the block
-        currentPacket = new Packet(DataNode.PKT_HEADER_LEN+4, 0, 
+        currentPacket = new Packet(PacketHeader.PKT_HEADER_LEN, 0, 
             bytesCurBlock);
         currentPacket.lastPacketInBlock = true;
       }
@@ -1456,7 +1465,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
 
   synchronized void setChunksPerPacket(int value) {
     chunksPerPacket = Math.min(chunksPerPacket, value);
-    packetSize = DataNode.PKT_HEADER_LEN + DFSClient.SIZE_OF_INTEGER +
+    packetSize = PacketHeader.PKT_HEADER_LEN +
                  (checksum.getBytesPerChecksum() + 
                   checksum.getChecksumSize()) * chunksPerPacket;
   }

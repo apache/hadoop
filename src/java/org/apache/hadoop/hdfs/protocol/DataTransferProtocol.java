@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -561,4 +562,141 @@ public interface DataTransferProtocol {
       return ack.toString();
     }
   }
+
+  /**
+   * Header data for each packet that goes through the read/write pipelines.
+   */
+  public static class PacketHeader implements Writable {
+    /** Header size for a packet */
+    public static final int PKT_HEADER_LEN = ( 4 + /* Packet payload length */
+                                               8 + /* offset in block */
+                                               8 + /* seqno */
+                                               1 + /* isLastPacketInBlock */
+                                               4   /* data length */ );
+
+    private int packetLen;
+    private long offsetInBlock;
+    private long seqno;
+    private boolean lastPacketInBlock;
+    private int dataLen;
+
+    public PacketHeader() {
+    }
+
+    public PacketHeader(int packetLen, long offsetInBlock, long seqno,
+                        boolean lastPacketInBlock, int dataLen) {
+      this.packetLen = packetLen;
+      this.offsetInBlock = offsetInBlock;
+      this.seqno = seqno;
+      this.lastPacketInBlock = lastPacketInBlock;
+      this.dataLen = dataLen;
+    }
+
+    public int getDataLen() {
+      return dataLen;
+    }
+
+    public boolean isLastPacketInBlock() {
+      return lastPacketInBlock;
+    }
+
+    public long getSeqno() {
+      return seqno;
+    }
+
+    public long getOffsetInBlock() {
+      return offsetInBlock;
+    }
+
+    public int getPacketLen() {
+      return packetLen;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("PacketHeader(")
+        .append("packetLen=").append(packetLen)
+        .append(" offsetInBlock=").append(offsetInBlock)
+        .append(" seqno=").append(seqno)
+        .append(" lastPacketInBlock=").append(lastPacketInBlock)
+        .append(" dataLen=").append(dataLen)
+        .append(")");
+      return sb.toString();
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      // Note that it's important for packetLen to come first and not
+      // change format -
+      // this is used by BlockReceiver to read entire packets with
+      // a single read call.
+      packetLen = in.readInt();
+      offsetInBlock = in.readLong();
+      seqno = in.readLong();
+      lastPacketInBlock = in.readBoolean();
+      dataLen = in.readInt();
+    }
+
+    public void readFields(ByteBuffer buf) throws IOException {
+      packetLen = buf.getInt();
+      offsetInBlock = buf.getLong();
+      seqno = buf.getLong();
+      lastPacketInBlock = (buf.get() != 0);
+      dataLen = buf.getInt();
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      out.writeInt(packetLen);
+      out.writeLong(offsetInBlock);
+      out.writeLong(seqno);
+      out.writeBoolean(lastPacketInBlock);
+      out.writeInt(dataLen);
+    }
+
+    /**
+     * Write the header into the buffer.
+     * This requires that PKT_HEADER_LEN bytes are available.
+     */
+    public void putInBuffer(ByteBuffer buf) {
+      buf.putInt(packetLen)
+        .putLong(offsetInBlock)
+        .putLong(seqno)
+        .put((byte)(lastPacketInBlock ? 1 : 0))
+        .putInt(dataLen);
+    }
+
+    /**
+     * Perform a sanity check on the packet, returning true if it is sane.
+     * @param lastSeqNo the previous sequence number received - we expect the current
+     * sequence number to be larger by 1.
+     */
+    public boolean sanityCheck(long lastSeqNo) {
+      // We should only have a non-positive data length for the last packet
+      if (dataLen <= 0 && lastPacketInBlock) return false;
+      // The last packet should not contain data
+      if (lastPacketInBlock && dataLen != 0) return false;
+      // Seqnos should always increase by 1 with each packet received
+      if (seqno != lastSeqNo + 1) return false;
+      return true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof PacketHeader)) return false;
+      PacketHeader other = (PacketHeader)o;
+      return (other.packetLen == packetLen &&
+              other.offsetInBlock == offsetInBlock &&
+              other.seqno == seqno &&
+              other.lastPacketInBlock == lastPacketInBlock &&
+              other.dataLen == dataLen);
+    }
+
+    @Override
+    public int hashCode() {
+      return (int)seqno;
+    }
+  }
+
 }

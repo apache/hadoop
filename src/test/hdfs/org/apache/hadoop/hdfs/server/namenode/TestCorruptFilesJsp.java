@@ -20,20 +20,18 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertTrue;
 
 import java.net.URL;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.junit.Test;
 
 /** A JUnit test for corrupt_files.jsp */
@@ -66,10 +64,11 @@ public class TestCorruptFilesJsp  {
       }
 
       // verify there are not corrupt files
-      ClientProtocol namenode = DFSClient.createNamenode(conf);
-      FileStatus[] badFiles = namenode.getCorruptFiles();
-      assertTrue("There are " + badFiles.length
-          + " corrupt files, but expecting none", badFiles.length == 0);
+      final NameNode namenode = cluster.getNameNode();
+      Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode
+          .listCorruptFileBlocks("/", null);
+      assertTrue("There are " + badFiles.size()
+          + " corrupt files, but expecting none", badFiles.size() == 0);
 
       // Check if webui agrees
       URL url = new URL("http://"
@@ -95,9 +94,9 @@ public class TestCorruptFilesJsp  {
       }
 
       // verify if all corrupt files were reported to NN
-      badFiles = namenode.getCorruptFiles();
-      assertTrue("Expecting 3 corrupt files, but got " + badFiles.length,
-          badFiles.length == 3);
+      badFiles = namenode.listCorruptFileBlocks("/", null);
+      assertTrue("Expecting 3 corrupt files, but got " + badFiles.size(),
+          badFiles.size() == 3);
 
       // Check if webui agrees
       url = new URL("http://"

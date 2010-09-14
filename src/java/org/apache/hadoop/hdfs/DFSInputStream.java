@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
@@ -146,10 +147,14 @@ public class DFSInputStream extends FSInputStream {
     int replicaNotFoundCount = locatedblock.getLocations().length;
     
     for(DatanodeInfo datanode : locatedblock.getLocations()) {
+      ClientDatanodeProtocol cdp = null;
+      
       try {
-        final ClientDatanodeProtocol cdp = DFSClient.createClientDatanodeProtocolProxy(
-            datanode, dfsClient.conf, dfsClient.socketTimeout, locatedblock);
+        cdp = DFSClient.createClientDatanodeProtocolProxy(
+        datanode, dfsClient.conf, dfsClient.socketTimeout, locatedblock);
+        
         final long n = cdp.getReplicaVisibleLength(locatedblock.getBlock());
+        
         if (n >= 0) {
           return n;
         }
@@ -165,6 +170,10 @@ public class DFSInputStream extends FSInputStream {
         if (DFSClient.LOG.isDebugEnabled()) {
           DFSClient.LOG.debug("Failed to getReplicaVisibleLength from datanode "
               + datanode + " for block " + locatedblock.getBlock(), ioe);
+        }
+      } finally {
+        if (cdp != null) {
+          RPC.stopProxy(cdp);
         }
       }
     }

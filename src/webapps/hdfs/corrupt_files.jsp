@@ -23,6 +23,7 @@
 	import="org.apache.hadoop.fs.FileStatus"
 	import="org.apache.hadoop.fs.FileUtil"
 	import="org.apache.hadoop.fs.Path"
+	import="java.util.Collection"
 	import="java.util.Arrays" %>
 <%!//for java.io.Serializable
   private static final long serialVersionUID = 1L;%>
@@ -32,9 +33,9 @@
   String namenodeRole = nn.getRole().toString();
   String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":"
       + nn.getNameNodeAddress().getPort();
-  FileStatus[] corruptFileStatuses = nn.getCorruptFiles();
-  Path[] corruptFilePaths = FileUtil.stat2Paths(corruptFileStatuses);
-  int corruptFileCount = corruptFileStatuses.length;
+  Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = 
+	nn.listCorruptFileBlocks("/", null);
+  int corruptFileCount = corruptFileBlocks.size();
 %>
 
 <html>
@@ -58,11 +59,10 @@
     Please run fsck for a thorough health analysis.
 <%
   } else {
-    Arrays.sort(corruptFilePaths);
-    for (Path corruptFilePath : corruptFilePaths) {
-      String currentPath = corruptFilePath.toString();
+    for (FSNamesystem.CorruptFileBlockInfo c : corruptFileBlocks) {
+      String currentFileBlock = c.toString();
 %>
-      <%=currentPath%><br>
+      <%=currentFileBlock%><br>
 <%
     }
 %>

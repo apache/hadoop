@@ -218,6 +218,7 @@ public class DataNode extends Configured
   private HttpServer infoServer = null;
   DataNodeMetrics myMetrics;
   private InetSocketAddress nameNodeAddr;
+  private InetSocketAddress nameNodeAddrForClient;
   private InetSocketAddress selfAddr;
   private static DataNode datanodeObject = null;
   private Thread dataNodeThread = null;
@@ -315,6 +316,7 @@ public class DataNode extends Configured
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     }
     this.nameNodeAddr = NameNode.getServiceAddress(conf, true);
+    this.nameNodeAddrForClient = NameNode.getAddress(conf);
     
     this.socketTimeout =  conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
                                       HdfsConstants.READ_TIMEOUT);
@@ -584,6 +586,10 @@ public class DataNode extends Configured
 
   public InetSocketAddress getNameNodeAddr() {
     return nameNodeAddr;
+  }
+  
+  public InetSocketAddress getNameNodeAddrForClient() {
+    return nameNodeAddrForClient;
   }
   
   public InetSocketAddress getSelfAddr() {
@@ -928,6 +934,12 @@ public class DataNode extends Configured
           return;
         }
         LOG.warn(StringUtils.stringifyException(re));
+        try {
+          long sleepTime = Math.min(1000, heartBeatInterval);
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
       } catch (IOException e) {
         LOG.warn(StringUtils.stringifyException(e));
       }
@@ -1285,14 +1297,6 @@ public class DataNode extends Configured
       Not all the fields might be used while reading.
     
    ************************************************************************ */
-  
-  /** Header size for a packet */
-  public static final int PKT_HEADER_LEN = ( 4 + /* Packet payload length */
-                                      8 + /* offset in block */
-                                      8 + /* seqno */
-                                      1   /* isLastPacketInBlock */);
-  
-
 
   /**
    * Used for transferring a block of data.  This class

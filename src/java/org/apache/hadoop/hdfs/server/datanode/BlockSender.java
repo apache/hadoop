@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.DataChecksum;
@@ -304,15 +305,12 @@ class BlockSender implements java.io.Closeable, FSConstants {
     int packetLen = len + numChunks*checksumSize + 4;
     boolean lastDataPacket = offset + len == endOffset && len > 0;
     pkt.clear();
-    
-    // write packet header
-    pkt.putInt(packetLen);
-    pkt.putLong(offset);
-    pkt.putLong(seqno);
-    pkt.put((byte)((len == 0) ? 1 : 0));
-               //why no ByteBuf.putBoolean()?
-    pkt.putInt(len);
-    
+
+
+    PacketHeader header = new PacketHeader(
+      packetLen, offset, seqno, (len == 0), len);
+    header.putInBuffer(pkt);
+
     int checksumOff = pkt.position();
     int checksumLen = numChunks * checksumSize;
     byte[] buf = pkt.array();
@@ -444,7 +442,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       }
       
       int maxChunksPerPacket;
-      int pktSize = DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER;
+      int pktSize = PacketHeader.PKT_HEADER_LEN;
       
       if (transferToAllowed && !verifyChecksum && 
           baseStream instanceof SocketOutputStream && 

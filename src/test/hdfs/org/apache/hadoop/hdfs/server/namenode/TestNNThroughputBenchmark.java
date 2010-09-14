@@ -19,18 +19,18 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.util.Arrays;
 
-import junit.framework.TestCase;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.junit.Test;
 
-public class TestNNThroughputBenchmark extends TestCase {
+public class TestNNThroughputBenchmark {
 
   /**
    * This test runs all benchmarks defined in {@link NNThroughputBenchmark}.
    */
+  @Test
   public void testNNThroughput() throws Exception {
     Configuration conf = new HdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://localhost:" + 0);

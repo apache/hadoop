@@ -19,11 +19,13 @@ package org.apache.hadoop.hdfs;
 
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.READ_BLOCK;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.WRITE_BLOCK;
+import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.ERROR;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.SUCCESS;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -32,6 +34,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -148,14 +151,16 @@ public class TestDataTransferProtocol extends TestCase {
   throws IOException {
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt(512);         // checksum size
-    sendOut.writeInt(8);           // size of packet
-    sendOut.writeLong(block.getNumBytes());          // OffsetInBlock
-    sendOut.writeLong(100);        // sequencenumber
-    sendOut.writeBoolean(true);    // lastPacketInBlock
 
-    sendOut.writeInt(0);           // chunk length
+    PacketHeader hdr = new PacketHeader(
+      8,                   // size of packet
+      block.getNumBytes(), // OffsetInBlock
+      100,                 // sequencenumber
+      true,                // lastPacketInBlock
+      0);                  // chunk length
+    hdr.write(sendOut);
     sendOut.writeInt(0);           // zero checksum
-        
+
     //ok finally write a block with 0 len
     SUCCESS.write(recvOut);
     Text.writeString(recvOut, "");
@@ -373,13 +378,15 @@ public class TestDataTransferProtocol extends TestCase {
         new DatanodeInfo[1], BlockTokenSecretManager.DUMMY_TOKEN);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt(512);
-    sendOut.writeInt(4);           // size of packet
-    sendOut.writeLong(0);          // OffsetInBlock
-    sendOut.writeLong(100);        // sequencenumber
-    sendOut.writeBoolean(false);   // lastPacketInBlock
-    
-    // bad data chunk length
-    sendOut.writeInt(-1-random.nextInt(oneMil));
+
+    PacketHeader hdr = new PacketHeader(
+      4,     // size of packet
+      0,     // offset in block,
+      100,   // seqno
+      false, // last packet
+      -1 - random.nextInt(oneMil)); // bad datalen
+    hdr.write(sendOut);
+
     SUCCESS.write(recvOut);
     Text.writeString(recvOut, "");
     new PipelineAck(100, new Status[]{ERROR}).write(recvOut);
@@ -395,12 +402,14 @@ public class TestDataTransferProtocol extends TestCase {
         new DatanodeInfo[1], BlockTokenSecretManager.DUMMY_TOKEN);
     sendOut.writeByte((byte)DataChecksum.CHECKSUM_CRC32);
     sendOut.writeInt(512);         // checksum size
-    sendOut.writeInt(8);           // size of packet
-    sendOut.writeLong(0);          // OffsetInBlock
-    sendOut.writeLong(100);        // sequencenumber
-    sendOut.writeBoolean(true);    // lastPacketInBlock
 
-    sendOut.writeInt(0);           // chunk length
+    hdr = new PacketHeader(
+      8,     // size of packet
+      0,     // OffsetInBlock
+      100,   // sequencenumber
+      true,  // lastPacketInBlock
+      0);    // chunk length
+    hdr.write(sendOut);
     sendOut.writeInt(0);           // zero checksum
     sendOut.flush();
     //ok finally write a block with 0 len
@@ -496,5 +505,40 @@ public class TestDataTransferProtocol extends TestCase {
     } finally {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testPacketHeader() throws IOException {
+    PacketHeader hdr = new PacketHeader(
+      4,                   // size of packet
+      1024,                // OffsetInBlock
+      100,                 // sequencenumber
+      false,               // lastPacketInBlock
+      4096);               // chunk length
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    hdr.write(new DataOutputStream(baos));
+
+    // Read back using DataInput
+    PacketHeader readBack = new PacketHeader();
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    readBack.readFields(new DataInputStream(bais));
+    assertEquals(hdr, readBack);
+
+    // Read back using ByteBuffer
+    readBack = new PacketHeader();
+    readBack.readFields(ByteBuffer.wrap(baos.toByteArray()));
+    assertEquals(hdr, readBack);
+
+    // Test sanity check for good header
+    PacketHeader goodHeader = new PacketHeader(
+      4,                   // size of packet
+      0,                   // OffsetInBlock
+      100,                 // sequencenumber
+      true,                // lastPacketInBlock
+      0);                  // chunk length
+
+    assertTrue(hdr.sanityCheck(99));
+    assertFalse(hdr.sanityCheck(100));
   }
 }

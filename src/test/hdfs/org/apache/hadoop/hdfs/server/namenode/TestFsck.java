@@ -28,6 +28,7 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
 import java.util.Random;
 import java.util.regex.Pattern;
 
@@ -35,10 +36,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -47,8 +45,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
@@ -455,121 +451,68 @@ public class TestFsck extends TestCase {
     }
   }
   
-  /**
-   * Check if NamenodeFsck.buildSummaryResultForListCorruptFiles constructs the
-   * proper string according to the number of corrupt files
-   */
-  public void testbuildResultForListCorruptFile() {
-    assertEquals("Verifying result for zero corrupt files",
-        "Unable to locate any corrupt files under '/'.\n\n"
-            + "Please run a complete fsck to confirm if '/' "
-            + NamenodeFsck.HEALTHY_STATUS, NamenodeFsck
-            .buildSummaryResultForListCorruptFiles(0, "/"));
-
-    assertEquals("Verifying result for one corrupt file",
-        "There is at least 1 corrupt file under '/', which "
-            + NamenodeFsck.CORRUPT_STATUS, NamenodeFsck
-            .buildSummaryResultForListCorruptFiles(1, "/"));
-
-    assertEquals("Verifying result for than one corrupt file",
-        "There are at least 100 corrupt files under '/', which "
-            + NamenodeFsck.CORRUPT_STATUS, NamenodeFsck
-            .buildSummaryResultForListCorruptFiles(100, "/"));
-
-    try {
-      NamenodeFsck.buildSummaryResultForListCorruptFiles(-1, "/");
-      fail("NamenodeFsck.buildSummaryResultForListCorruptFiles should "
-          + "have thrown IllegalArgumentException for non-positive argument");
-    } catch (IllegalArgumentException e) {
-      // expected result
-    }
-  }
-  
   /** check if option -list-corruptfiles of fsck command works properly */
-  public void testCorruptFilesOption() throws Exception {
+  public void testFsckListCorruptFilesBlocks() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setLong("dfs.blockreport.intervalMsec", 1000);
+    conf.setInt("dfs.datanode.directoryscan.interval", 1);
+    FileSystem fs = null;
+
     MiniDFSCluster cluster = null;
     try {
-
-      final int FILE_SIZE = 512;
-      // the files and directories are intentionally prefixes of each other in
-      // order to verify if fsck can distinguish correctly whether the path
-      // supplied by user is a file or a directory
-      Path[] filepaths = { new Path("/audiobook"), new Path("/audio/audio1"),
-          new Path("/audio/audio2"), new Path("/audio/audio") };
-
-      Configuration conf = new HdfsConfiguration();
-      conf.setInt("dfs.datanode.directoryscan.interval", 1); // datanode scans
-                                                             // directories
-      conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000); // datanode sends
-                                                             // block reports
       cluster = new MiniDFSCluster(conf, 1, true, null);
-      FileSystem fs = cluster.getFileSystem();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      DFSTestUtil util = new DFSTestUtil("testGetCorruptFiles", 3, 1, 1024);
+      util.createFiles(fs, "/corruptData", (short) 1);
+      util.waitReplication(fs, "/corruptData", (short) 1);
 
-      // create files
-      for (Path filepath : filepaths) {
-        DFSTestUtil.createFile(fs, filepath, FILE_SIZE, (short) 1, 0L);
-        DFSTestUtil.waitReplication(fs, filepath, (short) 1);
-      }
+      // String outStr = runFsck(conf, 0, true, "/corruptData", "-list-corruptfileblocks");
+      String outStr = runFsck(conf, 0, false, "/corruptData", "-list-corruptfileblocks");
+      System.out.println("1. good fsck out: " + outStr);
+      assertTrue(outStr.contains("has 0 CORRUPT files"));
+      // delete the blocks
+      File baseDir = new File(System.getProperty("test.build.data",
+      "build/test/data"),"dfs/data");
+      for (int i=0; i<8; i++) {
+        File data_dir = new File(baseDir, "data" +(i+1)+ MiniDFSCluster.FINALIZED_DIR_NAME);
+        File[] blocks = data_dir.listFiles();
+        if (blocks == null)
+          continue;
 
-      // verify there are not corrupt files
-      ClientProtocol namenode = DFSClient.createNamenode(conf);
-      FileStatus[] badFiles = namenode.getCorruptFiles();
-      assertTrue("There are " + badFiles.length
-          + " corrupt files, but expecting none", badFiles.length == 0);
-
-      // Check if fsck -list-corruptfiles agree
-      String outstr = runFsck(conf, 0, true, "/", "-list-corruptfiles");
-      assertTrue(outstr.contains(NamenodeFsck
-          .buildSummaryResultForListCorruptFiles(0, "/")));
-
-      // Now corrupt all the files except for the last one
-      for (int idx = 0; idx < filepaths.length - 1; idx++) {
-        String blockName = DFSTestUtil.getFirstBlock(fs, filepaths[idx])
-            .getBlockName();
-        TestDatanodeBlockScanner.corruptReplica(blockName, 0);
-
-        // read the file so that the corrupt block is reported to NN
-        FSDataInputStream in = fs.open(filepaths[idx]);
-        try {
-          in.readFully(new byte[FILE_SIZE]);
-        } catch (ChecksumException ignored) { // checksum error is expected.
+        for (int idx = 0; idx < blocks.length; idx++) {
+          if (!blocks[idx].getName().startsWith("blk_")) {
+            continue;
+          }
+          assertTrue("Cannot remove file.", blocks[idx].delete());
         }
-        in.close();
       }
 
-      // verify if all corrupt files were reported to NN
-      badFiles = namenode.getCorruptFiles();
-      assertTrue("Expecting 3 corrupt files, but got " + badFiles.length,
-          badFiles.length == 3);
-
-      // check the corrupt file
-      String corruptFile = "/audiobook";
-      outstr = runFsck(conf, 1, true, corruptFile, "-list-corruptfiles");
-      assertTrue(outstr.contains(NamenodeFsck
-          .buildSummaryResultForListCorruptFiles(1, corruptFile)));
-
-      // check corrupt dir
-      String corruptDir = "/audio";
-      outstr = runFsck(conf, 1, true, corruptDir, "-list-corruptfiles");
-      assertTrue(outstr.contains("/audio/audio1"));
-      assertTrue(outstr.contains("/audio/audio2"));
-      assertTrue(outstr.contains(NamenodeFsck
-          .buildSummaryResultForListCorruptFiles(2, corruptDir)));
-
-      // check healthy file
-      String healthyFile = "/audio/audio";
-      outstr = runFsck(conf, 0, true, healthyFile, "-list-corruptfiles");
-      assertTrue(outstr.contains(NamenodeFsck
-          .buildSummaryResultForListCorruptFiles(0, healthyFile)));
-
-      // clean up
-      for (Path filepath : filepaths) {
-        fs.delete(filepath, false);
+      // wait for the namenode to see the corruption
+      final NameNode namenode = cluster.getNameNode();
+      Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = namenode
+          .listCorruptFileBlocks("/corruptData", null);
+      int numCorrupt = corruptFileBlocks.size();
+      while (numCorrupt == 0) {
+        Thread.sleep(1000);
+        corruptFileBlocks = namenode
+            .listCorruptFileBlocks("/corruptData", null);
+        numCorrupt = corruptFileBlocks.size();
       }
+      outStr = runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
+      System.out.println("2. bad fsck out: " + outStr);
+      assertTrue(outStr.contains("has 3 CORRUPT files"));
+
+      // Do a listing on a dir which doesn't have any corrupt blocks and validate
+      util.createFiles(fs, "/goodData");
+      outStr = runFsck(conf, 0, true, "/goodData", "-list-corruptfileblocks");
+      System.out.println("3. good fsck out: " + outStr);
+      assertTrue(outStr.contains("has 0 CORRUPT files"));
+      util.cleanup(fs,"/corruptData");
+      util.cleanup(fs, "/goodData");
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      if (cluster != null) {cluster.shutdown();}
     }
   }
+
 }

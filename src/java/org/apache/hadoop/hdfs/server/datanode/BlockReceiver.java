@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
@@ -334,9 +335,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
        * calculation in DFSClient to make the guess accurate.
        */
       int chunkSize = bytesPerChecksum + checksumSize;
-      int chunksPerPacket = (datanode.writePacketSize - DataNode.PKT_HEADER_LEN - 
-                             SIZE_OF_INTEGER + chunkSize - 1)/chunkSize;
-      buf = ByteBuffer.allocate(DataNode.PKT_HEADER_LEN + SIZE_OF_INTEGER +
+      int chunksPerPacket = (datanode.writePacketSize - PacketHeader.PKT_HEADER_LEN
+                             + chunkSize - 1)/chunkSize;
+      buf = ByteBuffer.allocate(PacketHeader.PKT_HEADER_LEN +
                                 Math.max(chunksPerPacket, 1) * chunkSize);
       buf.limit(0);
     }
@@ -365,7 +366,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                             payloadLen);
     }
     
-    int pktSize = payloadLen + DataNode.PKT_HEADER_LEN;
+    // Subtract SIZE_OF_INTEGER since that accounts for the payloadLen that
+    // we read above.
+    int pktSize = payloadLen + PacketHeader.PKT_HEADER_LEN - SIZE_OF_INTEGER;
     
     if (buf.remaining() < pktSize) {
       //we need to read more data
@@ -407,30 +410,31 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private int receivePacket() throws IOException {
     // read the next packet
     readNextPacket();
-    
+
     buf.mark();
-    //read the header
-    buf.getInt(); // packet length
-    long offsetInBlock = buf.getLong(); // get offset of packet in block
-    
-    if (offsetInBlock > replicaInfo.getNumBytes()) {
-      throw new IOException("Received an out-of-sequence packet for " + block + 
-          "from " + inAddr + " at offset " + offsetInBlock +
-          ". Expecting packet starting at " + replicaInfo.getNumBytes());
-    }
-    long seqno = buf.getLong();    // get seqno
-    boolean lastPacketInBlock = (buf.get() != 0);
-    
-    int len = buf.getInt();
-    if (len < 0) {
-      throw new IOException("Got wrong length during writeBlock(" + block + 
-                            ") from " + inAddr + " at offset " + 
-                            offsetInBlock + ": " + len); 
-    } 
+    PacketHeader header = new PacketHeader();
+    header.readFields(buf);
     int endOfHeader = buf.position();
     buf.reset();
-    
-    return receivePacket(offsetInBlock, seqno, lastPacketInBlock, len, endOfHeader);
+
+    // Sanity check the header
+    if (header.getOffsetInBlock() > replicaInfo.getNumBytes()) {
+      throw new IOException("Received an out-of-sequence packet for " + block + 
+          "from " + inAddr + " at offset " + header.getOffsetInBlock() +
+          ". Expecting packet starting at " + replicaInfo.getNumBytes());
+    }
+    if (header.getDataLen() < 0) {
+      throw new IOException("Got wrong length during writeBlock(" + block + 
+                            ") from " + inAddr + " at offset " + 
+                            header.getOffsetInBlock() + ": " +
+                            header.getDataLen()); 
+    }
+
+    return receivePacket(
+      header.getOffsetInBlock(),
+      header.getSeqno(),
+      header.isLastPacketInBlock(),
+      header.getDataLen(), endOfHeader);
   }
 
   /**

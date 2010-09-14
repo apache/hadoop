@@ -58,8 +58,6 @@ class FSDatasetAsyncDiskService {
   
   private final ThreadGroup threadGroup = new ThreadGroup("async disk service");
   
-  private ThreadFactory threadFactory;
-  
   private HashMap<File, ThreadPoolExecutor> executors
       = new HashMap<File, ThreadPoolExecutor>();
   
@@ -73,15 +71,26 @@ class FSDatasetAsyncDiskService {
    * @param volumes The roots of the data volumes.
    */
   FSDatasetAsyncDiskService(File[] volumes) {
-    
-    threadFactory = new ThreadFactory() {
-      public Thread newThread(Runnable r) {
-        return new Thread(threadGroup, r);
-      }
-    };
-    
+
     // Create one ThreadPool per volume
     for (int v = 0 ; v < volumes.length; v++) {
+      final File vol = volumes[v];
+      ThreadFactory threadFactory = new ThreadFactory() {
+          int counter = 0;
+
+          @Override
+          public Thread newThread(Runnable r) {
+            int thisIndex;
+            synchronized (this) {
+              thisIndex = counter++;
+            }
+            Thread t = new Thread(threadGroup, r);
+            t.setName("Async disk worker #" + thisIndex +
+                      " for volume " + vol);
+            return t;
+          }
+        };
+
       ThreadPoolExecutor executor = new ThreadPoolExecutor(
           CORE_THREADS_PER_VOLUME, MAXIMUM_THREADS_PER_VOLUME, 
           THREADS_KEEP_ALIVE_SECONDS, TimeUnit.SECONDS, 
@@ -89,7 +98,7 @@ class FSDatasetAsyncDiskService {
 
       // This can reduce the number of running threads
       executor.allowCoreThreadTimeOut(true);
-      executors.put(volumes[v], executor);
+      executors.put(vol, executor);
     }
     
   }

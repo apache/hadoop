@@ -91,7 +91,7 @@ public class DatanodeJspHelper {
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
 
-    DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddr(), conf);
+    DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
     String target = dir;
     final HdfsFileStatus targetStatus = dfs.getFileInfo(target);
     if (targetStatus == null) { // not exists
@@ -193,7 +193,7 @@ public class DatanodeJspHelper {
         JspHelper.addTableFooter(out);
       }
     }
-    String namenodeHost = datanode.getNameNodeAddr().getHostName();
+    String namenodeHost = datanode.getNameNodeAddrForClient().getHostName();
     out.print("<br><a href=\"http://"
         + InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":"
         + namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
@@ -254,7 +254,7 @@ public class DatanodeJspHelper {
     }
     blockSize = Long.parseLong(blockSizeStr);
 
-    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddr(), conf);
+    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
     List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
         Long.MAX_VALUE).getLocatedBlocks();
     // Add the various links for looking at the file contents
@@ -311,7 +311,7 @@ public class DatanodeJspHelper {
     // generate a table and dump the info
     out.println("\n<table>");
     
-    String namenodeHost = datanode.getNameNodeAddr().getHostName();
+    String namenodeHost = datanode.getNameNodeAddrForClient().getHostName();
     String namenodeHostName = InetAddress.getByName(namenodeHost).getCanonicalHostName();
     
     for (LocatedBlock cur : blocks) {
@@ -379,7 +379,7 @@ public class DatanodeJspHelper {
       return;
     }
 
-    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddr(), conf);
+    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
 
     Token<BlockTokenIdentifier> blockToken = BlockTokenSecretManager.DUMMY_TOKEN;
     if (conf.getBoolean(
@@ -618,7 +618,7 @@ public class DatanodeJspHelper {
           + "\">");
 
     // fetch the block from the datanode that has the last block for this file
-    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddr(), conf);
+    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
     List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
         Long.MAX_VALUE).getLocatedBlocks();
     if (blocks == null || blocks.size() == 0) {

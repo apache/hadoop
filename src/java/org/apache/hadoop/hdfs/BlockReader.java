@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -211,35 +212,23 @@ public class BlockReader extends FSInputChecker {
     // Read next packet if the previous packet has been read completely.
     if (dataLeft <= 0) {
       //Read packet headers.
-      int packetLen = in.readInt();
-      long offsetInBlock = in.readLong();
-      long seqno = in.readLong();
-      boolean lastPacketInBlock = in.readBoolean();
-    
+      PacketHeader header = new PacketHeader();
+      header.readFields(in);
+
       if (LOG.isDebugEnabled()) {
-        LOG.debug("DFSClient readChunk got seqno " + seqno +
-                  " offsetInBlock " + offsetInBlock +
-                  " lastPacketInBlock " + lastPacketInBlock +
-                  " packetLen " + packetLen);
+        LOG.debug("DFSClient readChunk got header " + header);
       }
-      
-      int dataLen = in.readInt();
-    
+
       // Sanity check the lengths
-      if ( ( dataLen <= 0 && !lastPacketInBlock ) ||
-           ( dataLen != 0 && lastPacketInBlock) ||
-           (seqno != (lastSeqNo + 1)) ) {
-           throw new IOException("BlockReader: error in packet header" +
-                                 "(chunkOffset : " + chunkOffset + 
-                                 ", dataLen : " + dataLen +
-                                 ", seqno : " + seqno + 
-                                 " (last: " + lastSeqNo + "))");
+      if (!header.sanityCheck(lastSeqNo)) {
+           throw new IOException("BlockReader: error in packet header " +
+                                 header);
       }
-      
-      lastSeqNo = seqno;
-      dataLeft = dataLen;
-      adjustChecksumBytes(dataLen);
-      if (dataLen > 0) {
+
+      lastSeqNo = header.getSeqno();
+      dataLeft = header.getDataLen();
+      adjustChecksumBytes(header.getDataLen());
+      if (header.getDataLen() > 0) {
         IOUtils.readFully(in, checksumBytes.array(), 0,
                           checksumBytes.limit());
       }

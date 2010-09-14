@@ -1189,10 +1189,7 @@
   </target>
 
   <target name="clean-cache" depends="clean" description="Clean. Delete ivy cache">
-    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs"/>
-    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-test"/>
-    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-${herriot.suffix}"/>
-    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop/hadoop-hdfs-${herriot.suffix}-test"/>
+    <delete dir="${user.home}/.ivy2/cache/org.apache.hadoop"/>
   </target>
 
   <!-- ================================================================== -->
