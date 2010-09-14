@@ -128,6 +128,9 @@ Trunk (unreleased changes)
 
     HDFS-1111. Introduce getCorruptFileBlocks() for fsck. (Sriram Rao via shv)
 
+    HDFS-1395. Add @Override to FSDataset methods that implement
+    FSDatasetInterface methods. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
