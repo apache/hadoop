@@ -47,10 +47,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class TestReplicationSink {
+public class DISABLEDTestReplicationSink {
 
   private static final Log LOG =
-      LogFactory.getLog(TestReplicationSink.class);
+      LogFactory.getLog(DISABLEDTestReplicationSink.class);
 
   private static final int BATCH_SIZE = 10;
 
