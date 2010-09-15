@@ -404,11 +404,16 @@
     </description>
   </property>
   <property>
-    <name>hfile.min.blocksize.size</name>
+    <name>hbase.mapreduce.hfileoutputformat.blocksize</name>
     <value>65536</value>
-    <description>Minimum store file block size.  The smaller you make this, the
-    bigger your index and the less you fetch on a random-access.  Set size down
-    if you have small cells and want faster random-access of individual cells.
+    <description>The mapreduce HFileOutputFormat writes storefiles/hfiles.
+    This is the minimum hfile blocksize to emit.  Usually in hbase, writing
+    hfiles, the blocksize is gotten from the table schema (HColumnDescriptor)
+    but in the mapreduce outputformat context, we don't have access to the
+    schema so get blocksize from Configuation.  The smaller you make
+    the blocksize, the bigger your index and the less you fetch on a
+    random-access.  Set the blocksize down if you have small cells and want
+    faster random-access of individual cells.
     </description>
   </property>
   <property>

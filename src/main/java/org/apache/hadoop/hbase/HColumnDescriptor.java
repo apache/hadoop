@@ -74,7 +74,14 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String COMPRESSION = "COMPRESSION";
   public static final String COMPRESSION_COMPACT = "COMPRESSION_COMPACT";
   public static final String BLOCKCACHE = "BLOCKCACHE";
+  
+  /**
+   * Size of storefile/hfile 'blocks'.  Default is {@link #DEFAULT_BLOCKSIZE}.
+   * Use smaller block sizes for faster random-access at expense of larger
+   * indices (more memory consumption).
+   */
   public static final String BLOCKSIZE = "BLOCKSIZE";
+
   public static final String LENGTH = "LENGTH";
   public static final String TTL = "TTL";
   public static final String BLOOMFILTER = "BLOOMFILTER";
@@ -109,8 +116,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final boolean DEFAULT_BLOCKCACHE = true;
 
   /**
-   * Default size of blocks in files store to the filesytem.  Use smaller for
-   * faster random-access at expense of larger indices (more memory consumption).
+   * Default size of blocks in files stored to the filesytem (hfiles).
    */
   public static final int DEFAULT_BLOCKSIZE = HFile.DEFAULT_BLOCKSIZE;
 
@@ -224,7 +230,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param inMemory If true, column data should be kept in an HRegionServer's
    * cache
    * @param blockCacheEnabled If true, MapFile blocks should be cached
-   * @param blocksize
+   * @param blocksize Block size to use when writing out storefiles.  Use
+   * smaller blocksizes for faster random-access at expense of larger indices
+   * (more memory consumption).  Default is usually 64k.
    * @param timeToLive Time-to-live of cell contents, in seconds
    * (use HConstants.FOREVER for unlimited TTL)
    * @param bloomFilter Bloom filter type for this column
@@ -385,7 +393,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @return Blocksize.
+   * @return The storefile/hfile blocksize for this column family.
    */
   public synchronized int getBlocksize() {
     if (this.blocksize == null) {
@@ -397,7 +405,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @param s
+   * @param s Blocksize to use when writing out storefiles/hfiles on this
+   * column family.
    */
   public void setBlocksize(int s) {
     setValue(BLOCKSIZE, Integer.toString(s));
