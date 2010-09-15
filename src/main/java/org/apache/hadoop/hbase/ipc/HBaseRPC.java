@@ -487,53 +487,27 @@ public class HBaseRPC {
    * @param instance instance
    * @param bindAddress bind address
    * @param port port to bind to
-   * @param conf configuration
-   * @return Server
-   * @throws IOException e
-   */
-  public static Server getServer(final Object instance, final String bindAddress, final int port, Configuration conf)
-    throws IOException {
-    return getServer(instance, bindAddress, port, 1, false, conf);
-  }
-
-  /**
-   * Construct a server for a protocol implementation instance listening on a
-   * port and address.
-   *
-   * @param instance instance
-   * @param bindAddress bind address
-   * @param port port to bind to
    * @param numHandlers number of handlers to start
    * @param verbose verbose flag
    * @param conf configuration
    * @return Server
    * @throws IOException e
    */
-  public static Server getServer(final Object instance, final String bindAddress, final int port,
+  public static Server getServer(final Object instance,
+                                 final Class<?>[] ifaces,
+                                 final String bindAddress, final int port,
                                  final int numHandlers,
                                  final boolean verbose, Configuration conf)
     throws IOException {
-    return new Server(instance, conf, bindAddress, port, numHandlers, verbose);
+    return new Server(instance, ifaces, conf, bindAddress, port, numHandlers, verbose);
   }
 
   /** An RPC Server. */
   public static class Server extends HBaseServer {
     private Object instance;
     private Class<?> implementation;
+    private Class<?> ifaces[];
     private boolean verbose;
-
-    /**
-     * Construct an RPC server.
-     * @param instance the instance whose methods will be called
-     * @param conf the configuration to use
-     * @param bindAddress the address to bind on to listen for connection
-     * @param port the port to listen for connections on
-     * @throws IOException e
-     */
-    public Server(Object instance, Configuration conf, String bindAddress, int port)
-      throws IOException {
-      this(instance, conf,  bindAddress, port, 1, false);
-    }
 
     private static String classNameBase(String className) {
       String[] names = className.split("\\.", -1);
@@ -552,12 +526,19 @@ public class HBaseRPC {
      * @param verbose whether each call should be logged
      * @throws IOException e
      */
-    public Server(Object instance, Configuration conf, String bindAddress,  int port,
+    public Server(Object instance, final Class<?>[] ifaces,
+                  Configuration conf, String bindAddress,  int port,
                   int numHandlers, boolean verbose) throws IOException {
       super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
       this.instance = instance;
       this.implementation = instance.getClass();
+
       this.verbose = verbose;
+
+      this.ifaces = ifaces;
+
+      // create metrics for the advertised interfaces this server implements.
+      this.rpcMetrics.createMetrics(this.ifaces);
     }
 
     @Override

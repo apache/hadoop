@@ -316,10 +316,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.abortRequested = false;
     this.stopped = false;
 
+
+    //HRegionInterface,
+    //HBaseRPCErrorHandler, Runnable, Watcher, Stoppable, OnlineRegions
+
     // Server to handle client requests
-    this.server = HBaseRPC.getServer(this, address.getBindAddress(), address
-        .getPort(), conf.getInt("hbase.regionserver.handler.count", 10), false,
-        conf);
+    this.server = HBaseRPC.getServer(this,
+        new Class<?>[]{HRegionInterface.class, HBaseRPCErrorHandler.class,
+        OnlineRegions.class},
+        address.getBindAddress(),
+      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+      false, conf);
     this.server.setErrorHandler(this);
     // Address is giving a default IP for the moment. Will be changed after
     // calling the master.
@@ -665,15 +672,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             + this.serverInfo.getServerAddress() + ", Now=" + hsa.toString());
         this.serverInfo.setServerAddress(hsa);
       }
-      
-      // hack! Maps DFSClient => RegionServer for logs.  HDFS made this 
+
+      // hack! Maps DFSClient => RegionServer for logs.  HDFS made this
       // config param for task trackers, but we can piggyback off of it.
       if (this.conf.get("mapred.task.id") == null) {
         this.conf.set("mapred.task.id", 
             "hb_rs_" + this.serverInfo.getServerName() + "_" +
             System.currentTimeMillis());
       }
-      
+
       // Master sent us hbase.rootdir to use. Should be fully qualified
       // path with file system specification included. Set 'fs.defaultFS'
       // to match the filesystem on hbase.rootdir else underlying hadoop hdfs
@@ -2202,7 +2209,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       byte[] regionName = e.getKey();
       List<Action> actionsForRegion = e.getValue();
       // sort based on the row id - this helps in the case where we reach the
-      // end of a region, so that we don't have to try the rest of the 
+      // end of a region, so that we don't have to try the rest of the
       // actions in the list.
       Collections.sort(actionsForRegion);
       Row action = null;

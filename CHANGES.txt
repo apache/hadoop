@@ -961,6 +961,7 @@ Release 0.21.0 - Unreleased
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
    HBASE-2041  Change WAL default configuration values
+   HBASE-2997  Performance fixes - profiler driven
 
 
 Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009

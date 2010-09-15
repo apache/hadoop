@@ -186,6 +186,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         desc.values.entrySet()) {
       this.values.put(e.getKey(), e.getValue());
     }
+    setMaxVersions(desc.getMaxVersions());
   }
 
   /**
@@ -371,12 +372,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /** @return maximum number of versions */
-  public synchronized int getMaxVersions() {
-    if (this.cachedMaxVersions == -1) {
-      String value = getValue(HConstants.VERSIONS);
-      this.cachedMaxVersions = (value != null)?
-        Integer.valueOf(value).intValue(): DEFAULT_VERSIONS;
-    }
+  public int getMaxVersions() {
     return this.cachedMaxVersions;
   }
 
@@ -385,6 +381,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public void setMaxVersions(int maxVersions) {
     setValue(HConstants.VERSIONS, Integer.toString(maxVersions));
+    cachedMaxVersions = maxVersions;
   }
 
   /**
@@ -641,12 +638,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         ImmutableBytesWritable value = new ImmutableBytesWritable();
         key.readFields(in);
         value.readFields(in);
-        
+
         // in version 8, the BloomFilter setting changed from bool to enum
         if (version < 8 && Bytes.toString(key.get()).equals(BLOOMFILTER)) {
           value.set(Bytes.toBytes(
               Boolean.getBoolean(Bytes.toString(value.get()))
-                ? BloomType.ROW.toString() 
+                ? BloomType.ROW.toString()
                 : BloomType.NONE.toString()));
         }
 
@@ -656,6 +653,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         // Convert old values.
         setValue(COMPRESSION, Compression.Algorithm.NONE.getName());
       }
+      String value = getValue(HConstants.VERSIONS);
+      this.cachedMaxVersions = (value != null)?
+          Integer.valueOf(value).intValue(): DEFAULT_VERSIONS;
     }
   }
 

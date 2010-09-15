@@ -202,6 +202,10 @@ public class KeyValue implements Writable, HeapSize {
   private int offset = 0;
   private int length = 0;
 
+  // the row cached
+  private byte [] rowCache = null;
+
+
   /** Here be dragons **/
 
   // used to achieve atomic operations in the memstore.
@@ -673,8 +677,13 @@ public class KeyValue implements Writable, HeapSize {
   /**
    * @return Length of key portion.
    */
+  private int keyLength = 0;
+
   public int getKeyLength() {
-    return Bytes.toInt(this.bytes, this.offset);
+    if (keyLength == 0) {
+      keyLength = Bytes.toInt(this.bytes, this.offset);
+    }
+    return keyLength;
   }
 
   /**
@@ -861,19 +870,25 @@ public class KeyValue implements Writable, HeapSize {
    * @return Row in a new byte array.
    */
   public byte [] getRow() {
-    int o = getRowOffset();
-    short l = getRowLength();
-    byte [] result = new byte[l];
-    System.arraycopy(getBuffer(), o, result, 0, l);
-    return result;
+    if (rowCache == null) {
+      int o = getRowOffset();
+      short l = getRowLength();
+      rowCache = new byte[l];
+      System.arraycopy(getBuffer(), o, rowCache, 0, l);
+    }
+    return rowCache;
   }
 
   /**
    *
    * @return Timestamp
    */
+  private long timestampCache = -1;
   public long getTimestamp() {
-    return getTimestamp(getKeyLength());
+    if (timestampCache == -1) {
+      timestampCache = getTimestamp(getKeyLength());
+    }
+    return timestampCache;
   }
 
   /**

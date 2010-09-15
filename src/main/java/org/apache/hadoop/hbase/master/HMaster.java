@@ -182,8 +182,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      */
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
     int numHandlers = conf.getInt("hbase.regionserver.handler.count", 10);
-    this.rpcServer = HBaseRPC.getServer(this, a.getBindAddress(), a.getPort(),
-      numHandlers, false, conf);
+    this.rpcServer = HBaseRPC.getServer(this,
+	new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
+        a.getBindAddress(), a.getPort(),
+        numHandlers, false, conf);
     this.address = new HServerAddress(rpcServer.getListenerAddress());
 
     // set the thread name now we have an address

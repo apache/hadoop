@@ -92,12 +92,24 @@ public class HBaseRpcMetrics implements Updater {
     return new MetricsTimeVaryingRate(key, this.registry);
   }
 
-  public synchronized void inc(String name, int amt) {
+  public void inc(String name, int amt) {
     MetricsTimeVaryingRate m = get(name);
     if (m == null) {
-      m = create(name);
+      LOG.warn("Got inc() request for method that doesnt exist: " +
+      name);
+      return; // ignore methods that dont exist.
     }
     m.inc(amt);
+  }
+
+  public void createMetrics(Class<?> []ifaces) {
+    for (Class<?> iface : ifaces) {
+      Method[] methods = iface.getMethods();
+      for (Method method : methods) {
+        if (get(method.getName()) == null)
+          create(method.getName());
+      }
+    }
   }
 
   /**
