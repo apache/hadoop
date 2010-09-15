@@ -10,6 +10,11 @@ Release 0.21.1 - Unreleased
     HADOOP-6833. IPC leaks call parameters when exceptions thrown.
     (Todd Lipcon via Eli Collins)
 
+  IMPROVEMENTS
+
+    HADOOP-6934. Test for ByteWritable comparator.
+    (Johannes Zillmann via Eli Collins)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
