@@ -1904,10 +1904,11 @@ public class KeyValue implements Writable, HeapSize {
 
   // HeapSize
   public long heapSize() {
-    return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE +
+    return ClassSize.align(ClassSize.OBJECT + (2 * ClassSize.REFERENCE) +
         ClassSize.align(ClassSize.ARRAY + length) +
-        (2 * Bytes.SIZEOF_INT) +
-        Bytes.SIZEOF_LONG);
+        (3 * Bytes.SIZEOF_INT) +
+        ClassSize.align(ClassSize.ARRAY + (rowCache == null ? 0 : rowCache.length)) +
+        (2 * Bytes.SIZEOF_LONG));
   }
 
   // this overload assumes that the length bytes have already been read,
