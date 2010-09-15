@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.base.Function;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -304,6 +305,85 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     initialize();
   }
 
+  private static final int NORMAL_QOS = 0;
+  private static final int QOS_THRESHOLD = 10;  // the line between low and high qos
+  private static final int HIGH_QOS = 100;
+
+  class QosFunction implements Function<Writable,Integer> {
+    public boolean isMetaRegion(byte[] regionName) {
+      HRegion region;
+      try {
+        region = getRegion(regionName);
+      } catch (NotServingRegionException ignored) {
+        return false;
+      }
+      return region.getRegionInfo().isMetaRegion();
+    }
+
+    @Override
+    public Integer apply(Writable from) {
+      if (from instanceof HBaseRPC.Invocation) {
+        HBaseRPC.Invocation inv = (HBaseRPC.Invocation) from;
+
+        String methodName = inv.getMethodName();
+
+        // scanner methods...
+        if (methodName.equals("next") || methodName.equals("close")) {
+          // translate!
+          Long scannerId;
+          try {
+            scannerId = (Long) inv.getParameters()[0];
+          } catch (ClassCastException ignored) {
+            //LOG.debug("Low priority: " + from);
+            return NORMAL_QOS; // doh.
+          }
+          String scannerIdString = Long.toString(scannerId);
+          InternalScanner scanner = scanners.get(scannerIdString);
+          if (scanner instanceof HRegion.RegionScanner) {
+            HRegion.RegionScanner rs = (HRegion.RegionScanner) scanner;
+            HRegionInfo regionName = rs.getRegionName();
+            if (regionName.isMetaRegion()) {
+              //LOG.debug("High priority scanner request: " + scannerId);
+              return HIGH_QOS;
+            }
+          }
+        }
+        else if (methodName.equals("getHServerInfo") ||
+            methodName.equals("getRegionsAssignment") ||
+            methodName.equals("unlockRow") ||
+            methodName.equals("getProtocolVersion") ||
+            methodName.equals("getClosestRowBefore")) {
+          //LOG.debug("High priority method: " + methodName);
+          return HIGH_QOS;
+        }
+        else if (inv.getParameterClasses()[0] == byte[].class) {
+          // first arg is byte array, so assume this is a regionname:
+          if (isMetaRegion((byte[]) inv.getParameters()[0])) {
+            //LOG.debug("High priority with method: " + methodName + " and region: "
+            //    + Bytes.toString((byte[]) inv.getParameters()[0]));
+            return HIGH_QOS;
+          }
+        }
+        else if (inv.getParameterClasses()[0] == MultiAction.class) {
+          MultiAction ma = (MultiAction) inv.getParameters()[0];
+          Set<byte[]> regions = ma.getRegions();
+          // ok this sucks, but if any single of the actions touches a meta, the whole
+          // thing gets pingged high priority.  This is a dangerous hack because people
+          // can get their multi action tagged high QOS by tossing a Get(.META.) AND this
+          // regionserver hosts META/-ROOT-
+          for (byte[] region: regions) {
+            if (isMetaRegion(region)) {
+              //LOG.debug("High priority multi with region: " + Bytes.toString(region));
+              return HIGH_QOS; // short circuit for the win.
+            }
+          }
+        }
+      }
+      //LOG.debug("Low priority: " + from.toString());
+      return NORMAL_QOS;
+    }
+  }
+
   /**
    * Creates all of the state that needs to be reconstructed in case we are
    * doing a restart. This is shared between the constructor and restart(). Both
@@ -326,8 +406,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         OnlineRegions.class},
         address.getBindAddress(),
       address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-      false, conf);
+        conf.getInt("hbase.regionserver.metahandler.count", 10),
+        false, conf, QOS_THRESHOLD);
     this.server.setErrorHandler(this);
+    this.server.setQosFunction(new QosFunction());
+
     // Address is giving a default IP for the moment. Will be changed after
     // calling the master.
     this.serverInfo = new HServerInfo(new HServerAddress(new InetSocketAddress(

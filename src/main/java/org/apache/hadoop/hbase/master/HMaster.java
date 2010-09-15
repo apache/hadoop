@@ -95,13 +95,13 @@ import org.apache.zookeeper.Watcher;
  * run the cluster.  All others park themselves in their constructor until
  * master or cluster shutdown or until the active master loses its lease in
  * zookeeper.  Thereafter, all running master jostle to take over master role.
- * 
+ *
  * <p>The Master can be asked shutdown the cluster. See {@link #shutdown()}.  In
  * this case it will tell all regionservers to go down and then wait on them
  * all reporting in that they are down.  This master will then shut itself down.
- * 
+ *
  * <p>You can also shutdown just this master.  Call {@link #stopMaster()}.
- * 
+ *
  * @see HMasterInterface
  * @see HMasterRegionInterface
  * @see Watcher
@@ -171,7 +171,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * <li>Initialize master components - server manager, region manager,
    *     region server queue, file system manager, etc
    * </ol>
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
@@ -185,13 +185,16 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.rpcServer = HBaseRPC.getServer(this,
 	new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
         a.getBindAddress(), a.getPort(),
-        numHandlers, false, conf);
+        numHandlers,
+        0, // we dont use high priority handlers in master
+        false, conf,
+        0); // this is a DNC w/o high priority handlers
     this.address = new HServerAddress(rpcServer.getListenerAddress());
 
     // set the thread name now we have an address
     setName(MASTER + "-" + this.address);
 
-    // Hack! Maps DFSClient => Master for logs.  HDFS made this 
+    // Hack! Maps DFSClient => Master for logs.  HDFS made this
     // config param for task trackers, but we can piggyback off of it.
     if (this.conf.get("mapred.task.id") == null) {
       this.conf.set("mapred.task.id", "hb_m_" + this.address.toString() +
@@ -340,7 +343,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * Initializations we need to do if we are cluster starter.
    * @param starter
    * @param mfs
-   * @throws IOException 
+   * @throws IOException
    */
   private static void clusterStarterInitializations(final MasterFileSystem mfs,
     final ServerManager sm, final CatalogTracker ct, final AssignmentManager am)

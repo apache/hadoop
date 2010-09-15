@@ -20,12 +20,14 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.common.base.Function;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.net.NetUtils;
@@ -82,8 +84,9 @@ public class HBaseRPC {
     super();
   }                                  // no public ctor
 
+
   /** A method invocation, including the method name and its parameters.*/
-  private static class Invocation implements Writable, Configurable {
+  public static class Invocation implements Writable, Configurable {
     private String methodName;
     @SuppressWarnings("unchecked")
     private Class[] parameterClasses;
@@ -497,9 +500,9 @@ public class HBaseRPC {
                                  final Class<?>[] ifaces,
                                  final String bindAddress, final int port,
                                  final int numHandlers,
-                                 final boolean verbose, Configuration conf)
+                                 int metaHandlerCount, final boolean verbose, Configuration conf, int highPriorityLevel)
     throws IOException {
-    return new Server(instance, ifaces, conf, bindAddress, port, numHandlers, verbose);
+    return new Server(instance, ifaces, conf, bindAddress, port, numHandlers, metaHandlerCount, verbose, highPriorityLevel);
   }
 
   /** An RPC Server. */
@@ -527,9 +530,9 @@ public class HBaseRPC {
      * @throws IOException e
      */
     public Server(Object instance, final Class<?>[] ifaces,
-                  Configuration conf, String bindAddress,  int port,
-                  int numHandlers, boolean verbose) throws IOException {
-      super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
+                  Configuration conf, String bindAddress, int port,
+                  int numHandlers, int metaHandlerCount, boolean verbose, int highPriorityLevel) throws IOException {
+      super(bindAddress, port, Invocation.class, numHandlers, metaHandlerCount, conf, classNameBase(instance.getClass().getName()), highPriorityLevel);
       this.instance = instance;
       this.implementation = instance.getClass();
 

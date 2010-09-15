@@ -158,7 +158,7 @@ public class HRegion implements HeapSize { // , Writable{
    * This directory contains the directory for this region.
    */
   final Path tableDir;
-  
+
   final HLog log;
   final FileSystem fs;
   final Configuration conf;
@@ -631,7 +631,7 @@ public class HRegion implements HeapSize { // , Writable{
   private void cleanupTmpDir() throws IOException {
     FSUtils.deleteDirectory(this.fs, getTmpDir());
   }
-  
+
   /**
    * Get the temporary diretory for this region. This directory
    * will have its contents removed when the region is reopened.
@@ -798,7 +798,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * Flush the memstore.
-   * 
+   *
    * Flushing the memstore is a little tricky. We have a lot of updates in the
    * memstore, all of which have also been written to the log. We need to
    * write those updates in the memstore out to disk, while being able to
@@ -1279,12 +1279,12 @@ public class HRegion implements HeapSize { // , Writable{
       retCodes = new OperationStatusCode[operations.length];
       Arrays.fill(retCodes, OperationStatusCode.NOT_RUN);
     }
-    
+
     public boolean isDone() {
       return nextIndexToProcess == operations.length;
     }
   }
-  
+
   /**
    * Perform a batch put with no pre-specified locks
    * @see HRegion#put(Pair[])
@@ -1298,7 +1298,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     return put(putsAndLocks);
   }
-  
+
   /**
    * Perform a batch of puts.
    * @param putsAndLocks the list of puts paired with their requested lock IDs.
@@ -1307,7 +1307,7 @@ public class HRegion implements HeapSize { // , Writable{
   public OperationStatusCode[] put(Pair<Put, Integer>[] putsAndLocks) throws IOException {
     BatchOperationInProgress<Pair<Put, Integer>> batchOp =
       new BatchOperationInProgress<Pair<Put,Integer>>(putsAndLocks);
-    
+
     while (!batchOp.isDone()) {
       checkReadOnly();
       checkResources();
@@ -1384,7 +1384,7 @@ public class HRegion implements HeapSize { // , Writable{
             batchOp.operations[i].getFirst().getFamilyMap().values(),
             byteNow);
       }
-      
+
       // ------------------------------------
       // STEP 3. Write to WAL
       // ----------------------------------
@@ -1392,12 +1392,12 @@ public class HRegion implements HeapSize { // , Writable{
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         // Skip puts that were determined to be invalid during preprocessing
         if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
-        
+
         Put p = batchOp.operations[i].getFirst();
         if (!p.getWriteToWAL()) continue;
         addFamilyMapToWALEdit(p.getFamilyMap(), walEdit);
       }
-      
+
       // Append the edit to WAL
       this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
           walEdit, now);
@@ -1635,7 +1635,7 @@ public class HRegion implements HeapSize { // , Writable{
       for (Map.Entry<byte[], List<KeyValue>> e : familyMap.entrySet()) {
         byte[] family = e.getKey();
         List<KeyValue> edits = e.getValue();
-  
+
         Store store = getStore(family);
         for (KeyValue kv: edits) {
           kv.setMemstoreTS(w.getWriteNumber());
@@ -1706,7 +1706,7 @@ public class HRegion implements HeapSize { // , Writable{
    * <p>We can ignore any log message that has a sequence ID that's equal to or
    * lower than minSeqId.  (Because we know such log messages are already
    * reflected in the HFiles.)
-   * 
+   *
    * <p>While this is running we are putting pressure on memory yet we are
    * outside of our usual accounting because we are not yet an onlined region
    * (this stuff is being run as part of Region initialization).  This means
@@ -1715,7 +1715,7 @@ public class HRegion implements HeapSize { // , Writable{
    * we're not yet online so our relative sequenceids are not yet aligned with
    * HLog sequenceids -- not till we come up online, post processing of split
    * edits.
-   * 
+   *
    * <p>But to help relieve memory pressure, at least manage our own heap size
    * flushing if are in excess of per-region limits.  Flushing, though, we have
    * to be careful and avoid using the regionserver/hlog sequenceid.  Its running
@@ -1725,7 +1725,7 @@ public class HRegion implements HeapSize { // , Writable{
    * in this region and with its split editlogs, then we could miss edits the
    * next time we go to recover. So, we have to flush inline, using seqids that
    * make sense in a this single region context only -- until we online.
-   * 
+   *
    * @param regiondir
    * @param minSeqId Any edit found in split editlogs needs to be in excess of
    * this minSeqId to be applied, else its skipped.
@@ -1970,7 +1970,7 @@ public class HRegion implements HeapSize { // , Writable{
       closeRegionOperation();
     }
   }
-  
+
   /**
    * Obtains or tries to obtain the given row lock.
    * @param waitForLock if true, will block until the lock is available.
@@ -2018,7 +2018,7 @@ public class HRegion implements HeapSize { // , Writable{
       closeRegionOperation();
     }
   }
-  
+
   /**
    * Used by unit tests.
    * @param lockid
@@ -2135,6 +2135,9 @@ public class HRegion implements HeapSize { // , Writable{
     private boolean filterClosed = false;
     private long readPt;
 
+    public HRegionInfo getRegionName() {
+      return regionInfo;
+    }
     RegionScanner(Scan scan, List<KeyValueScanner> additionalScanners) throws IOException {
       //DebugPrint.println("HRegionScanner.<init>");
       this.filter = scan.getFilter();

@@ -30,6 +30,7 @@ import java.io.DataInput;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -47,7 +48,7 @@ public final class MultiAction implements Writable {
 
   /**
    * Get the total number of Actions
-   * 
+   *
    * @return total number of Actions for all groups in this container.
    */
   public int size() {
@@ -62,7 +63,7 @@ public final class MultiAction implements Writable {
    * Add an Action to this container based on it's regionName. If the regionName
    * is wrong, the initial execution will fail, but will be automatically
    * retried after looking up the correct region.
-   * 
+   *
    * @param regionName
    * @param a
    */
@@ -73,6 +74,10 @@ public final class MultiAction implements Writable {
       actions.put(regionName, rsActions);
     }
     rsActions.add(a);
+  }
+
+  public Set<byte[]> getRegions() {
+    return actions.keySet();
   }
 
   /**
