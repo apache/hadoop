@@ -609,6 +609,18 @@ public class HBaseTestingUtility {
     return createMultiRegions(getConfiguration(), table, columnFamily);
   }
 
+  public static final byte[][] KEYS = {
+    HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("bbb"),
+    Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
+    Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
+    Bytes.toBytes("iii"), Bytes.toBytes("jjj"), Bytes.toBytes("kkk"),
+    Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
+    Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
+    Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"),
+    Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("www"),
+    Bytes.toBytes("xxx"), Bytes.toBytes("yyy")
+  };
+
   /**
    * Creates many regions names "aaa" to "zzz".
    * @param c Configuration to use.
@@ -620,17 +632,6 @@ public class HBaseTestingUtility {
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily)
   throws IOException {
-    byte[][] KEYS = {
-      HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("bbb"),
-      Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
-      Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
-      Bytes.toBytes("iii"), Bytes.toBytes("jjj"), Bytes.toBytes("kkk"),
-      Bytes.toBytes("lll"), Bytes.toBytes("mmm"), Bytes.toBytes("nnn"),
-      Bytes.toBytes("ooo"), Bytes.toBytes("ppp"), Bytes.toBytes("qqq"),
-      Bytes.toBytes("rrr"), Bytes.toBytes("sss"), Bytes.toBytes("ttt"),
-      Bytes.toBytes("uuu"), Bytes.toBytes("vvv"), Bytes.toBytes("www"),
-      Bytes.toBytes("xxx"), Bytes.toBytes("yyy")
-    };
     return createMultiRegions(c, table, columnFamily, KEYS);
   }
 
@@ -963,16 +964,18 @@ public class HBaseTestingUtility {
    * Make sure that at least the specified number of region servers
    * are running
    * @param num minimum number of region servers that should be running
+   * @return True if we started some servers
    * @throws IOException
    */
-  public void ensureSomeRegionServersAvailable(final int num)
+  public boolean ensureSomeRegionServersAvailable(final int num)
       throws IOException {
     if (this.getHBaseCluster().getLiveRegionServerThreads().size() < num) {
       // Need at least "num" servers.
       LOG.info("Started new server=" +
         this.getHBaseCluster().startRegionServer());
-
+      return true;
     }
+    return false;
   }
 
   /**

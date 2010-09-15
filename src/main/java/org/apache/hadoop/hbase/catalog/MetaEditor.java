@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.catalog;
 
 import java.io.IOException;
+import java.net.ConnectException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -115,11 +116,15 @@ public class MetaEditor {
    * @param regionInfo region to update location of
    * @param serverInfo server the region is located on
    * @throws IOException
+   * @throws ConnectException Usually because the regionserver carrying .META.
+   * is down.
+   * @throws NullPointerException Because no -ROOT- server connection
    */
   public static void updateMetaLocation(CatalogTracker catalogTracker,
       HRegionInfo regionInfo, HServerInfo serverInfo)
-  throws IOException {
+  throws IOException, ConnectException {
     HRegionInterface server = catalogTracker.waitForRootServerConnectionDefault();
+    if (server == null) throw new NullPointerException("No server for -ROOT-");
     updateLocation(server, CatalogTracker.ROOT_REGION, regionInfo, serverInfo);
   }
 
@@ -152,9 +157,10 @@ public class MetaEditor {
    * @param catalogRegionName name of catalog region being updated
    * @param regionInfo region to update location of
    * @param serverInfo server the region is located on
-   * @throws IOException
+   * @throws IOException In particular could throw {@link java.net.ConnectException}
+   * if the server is down on other end.
    */
-  public static void updateLocation(HRegionInterface server,
+  private static void updateLocation(HRegionInterface server,
       byte [] catalogRegionName, HRegionInfo regionInfo, HServerInfo serverInfo)
   throws IOException {
     Put put = new Put(regionInfo.getRegionName());

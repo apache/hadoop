@@ -1198,7 +1198,7 @@ public class HConnectionManager {
         ExecutorService pool) throws IOException {
       Result[] results = new Result[list.size()];
       processBatch((List) list, tableName, pool, results);
-      
+
       // mutate list so that it is empty for complete success, or contains only failed records
       // results are returned in the same order as the requests in list
       // walk the list backwards, so we can remove from list without impacting the indexes of earlier members

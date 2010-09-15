@@ -132,6 +132,10 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
     return data;
   }
 
+  public String getNode() {
+    return this.node;
+  }
+
   @Override
   public synchronized void nodeCreated(String path) {
     if(path.equals(node)) {

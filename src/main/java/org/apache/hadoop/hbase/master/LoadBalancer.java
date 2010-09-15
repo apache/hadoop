@@ -141,8 +141,8 @@ public class LoadBalancer {
     }
     int numRegions = 0;
     // Iterate so we can count regions as we build the map
-    for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
-      clusterState.entrySet()) {
+    for(Map.Entry<HServerInfo, List<HRegionInfo>> server:
+        clusterState.entrySet()) {
       server.getKey().getLoad().setNumberOfRegions(server.getValue().size());
       numRegions += server.getKey().getLoad().getNumberOfRegions();
       serversByLoad.put(server.getKey(), server.getValue());
@@ -527,8 +527,6 @@ public class LoadBalancer {
     private final HServerInfo source;
     private HServerInfo dest;
 
-    
-
     /**
      * Instantiate a plan for a region move, moving the specified region from
      * the specified source server to the specified destination server.
@@ -588,6 +586,12 @@ public class LoadBalancer {
     @Override
     public int compareTo(RegionPlan o) {
       return getRegionName().compareTo(o.getRegionName());
+    }
+
+    @Override
+    public String toString() {
+      return "hri=" + this.hri.getRegionNameAsString() + ", src=" +
+        this.source.getServerName() + ", dest=" + this.dest.getServerName();
     }
   }
 }

@@ -273,7 +273,9 @@ public class HBaseAdmin implements Abortable {
       byte [] lastKey = null;
       for(byte [] splitKey : splitKeys) {
         if(lastKey != null && Bytes.equals(splitKey, lastKey)) {
-          throw new IllegalArgumentException("All split keys must be unique, found duplicate");
+          throw new IllegalArgumentException("All split keys must be unique, " +
+            "found duplicate: " + Bytes.toStringBinary(splitKey) +
+            ", " + Bytes.toStringBinary(lastKey));
         }
         lastKey = splitKey;
       }

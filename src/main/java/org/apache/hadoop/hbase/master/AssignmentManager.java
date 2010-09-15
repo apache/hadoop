@@ -88,7 +88,7 @@ public class AssignmentManager extends ZooKeeperListener {
   private final Map<String, RegionState> regionsInTransition =
     new TreeMap<String, RegionState>();
 
-  /** Plans for region movement. */
+  /** Plans for region movement. Key is the encoded version of a region name*/
   // TODO: When do plans get cleaned out?  Ever?
   // Its cleaned on server shutdown processing -- St.Ack
   private final Map<String, RegionPlan> regionPlans =
@@ -240,9 +240,10 @@ public class AssignmentManager extends ZooKeeperListener {
   private void handleRegion(RegionTransitionData data) {
     synchronized(regionsInTransition) {
       // Verify this is a known server
-      if(!serverManager.isServerOnline(data.getServerName())) {
-        LOG.warn("Attempted to handle region transition for server " +
-          data.getServerName() + " but server is not online");
+      if (!serverManager.isServerOnline(data.getServerName()) &&
+          !this.master.getServerName().equals(data.getServerName())) {
+        LOG.warn("Attempted to handle region transition for server but " +
+          "server is not online: " + data);
         return;
       }
       String encodedName = HRegionInfo.encodeRegionName(data.getRegionName());
@@ -251,6 +252,9 @@ public class AssignmentManager extends ZooKeeperListener {
         ", server=" + data.getServerName() + ", region=" + prettyPrintedRegionName);
       RegionState regionState = regionsInTransition.get(encodedName);
       switch(data.getEventType()) {
+        case M2ZK_REGION_OFFLINE:
+          LOG.warn("What to do with this event? " + data);
+          break;
 
         case RS2ZK_REGION_CLOSING:
           // Should see CLOSING after we have asked it to CLOSE or additional
@@ -494,7 +498,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // go of this lock.  There must be a better construct that this -- St.Ack 20100811
     this.assignLock.lock();
     try {
-      synchronized(regionsInTransition) {
+      synchronized (regionsInTransition) {
         state = regionsInTransition.get(encodedName);
         if(state == null) {
           state = new RegionState(region, RegionState.State.OFFLINE);
@@ -546,6 +550,8 @@ public class AssignmentManager extends ZooKeeperListener {
         plan = new RegionPlan(state.getRegion(), null,
           LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
         regionPlans.put(encodedName, plan);
+      } else {
+        LOG.debug("Using preexisting plan=" + plan);
       }
     }
     try {
@@ -934,14 +940,26 @@ public class AssignmentManager extends ZooKeeperListener {
     // Clean out any exisiting assignment plans for this server
     synchronized (this.regionPlans) {
       for (Iterator <Map.Entry<String, RegionPlan>> i =
-        this.regionPlans.entrySet().iterator(); i.hasNext();) {
+          this.regionPlans.entrySet().iterator(); i.hasNext();) {
         Map.Entry<String, RegionPlan> e = i.next();
         if (e.getValue().getDestination().equals(hsi)) {
-          // Use iterator's remove else we'll get CME.fail a
+          // Use iterator's remove else we'll get CME
           i.remove();
         }
       }
     }
+    // Remove assignment info related to the downed server.  Remove the downed
+    // server from list of servers else it looks like a server w/ no load.
+    synchronized (this.regions) {
+      Set<HRegionInfo> hris = new HashSet<HRegionInfo>();
+      for (Map.Entry<HRegionInfo, HServerInfo> e: this.regions.entrySet()) {
+        // Add to a Set -- don't call setOffline in here else we get a CME.
+        if (e.getValue().equals(hsi)) hris.add(e.getKey());
+      }
+      for (HRegionInfo hri: hris) setOffline(hri);
+      this.servers.remove(hsi);
+    }
+    // If anything in transition related to the server, clean it up.
     synchronized (regionsInTransition) {
       // Iterate all regions in transition checking if were on this server
       final String serverName = hsi.getServerName();

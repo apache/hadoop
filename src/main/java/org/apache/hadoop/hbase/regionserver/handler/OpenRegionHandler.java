@@ -155,7 +155,7 @@ public class OpenRegionHandler extends EventHandler {
 
     // Finally, Transition ZK node to OPENED
     try {
-      if(ZKAssign.transitionNodeOpened(server.getZooKeeper(), regionInfo,
+      if (ZKAssign.transitionNodeOpened(server.getZooKeeper(), regionInfo,
           server.getServerName(), openingVersion) == -1) {
         LOG.warn("Completed the OPEN of a region but when transitioning from " +
             " OPENING to OPENED got a version mismatch, someone else clashed " +

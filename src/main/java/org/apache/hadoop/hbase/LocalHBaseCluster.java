@@ -30,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -166,7 +168,8 @@ public class LocalHBaseCluster {
   public List<JVMClusterUtil.RegionServerThread> getLiveRegionServers() {
     List<JVMClusterUtil.RegionServerThread> liveServers =
       new ArrayList<JVMClusterUtil.RegionServerThread>();
-    for (JVMClusterUtil.RegionServerThread rst: getRegionServers()) {
+    List<RegionServerThread> list = getRegionServers();
+    for (JVMClusterUtil.RegionServerThread rst: list) {
       if (rst.isAlive()) liveServers.add(rst);
     }
     return liveServers;

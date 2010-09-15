@@ -33,7 +33,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HMsg;
@@ -55,8 +54,8 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -87,7 +86,6 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
-import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 
@@ -258,7 +256,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.serverManager = new ServerManager(this, this);
 
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
-      this, conf.getInt("hbase.master.catalog.timeout", -1));
+      this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
     this.catalogTracker.start();
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
@@ -563,6 +561,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
           this.assignmentManager.getRegionsInTransition());
         return false;
       }
+      if (!this.serverManager.getDeadServers().isEmpty()) {
+        LOG.debug("Not running balancer because dead regionserver processing");
+      }
       Map<HServerInfo, List<HRegionInfo>> assignments =
         this.assignmentManager.getAssignments();
       // Returned Map from AM does not include mention of servers w/o assignments.
@@ -576,6 +577,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
       if (plans != null && !plans.isEmpty()) {
         for (RegionPlan plan: plans) {
+          LOG.info("balance=" + plan);
           this.assignmentManager.balance(plan);
         }
       }

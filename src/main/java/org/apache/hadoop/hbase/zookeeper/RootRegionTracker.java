@@ -28,7 +28,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Tracks the root region server location node in zookeeper.
  * Root region location is set by {@link RootLocationEditor} usually called
- * out of {@link RegionServerServices#postOpenDeployTasks(org.apache.hadoop.hbase.regionserver.HRegion, org.apache.hadoop.hbase.catalog.CatalogTracker)}
+ * out of {@link RegionServerServices#postOpenDeployTasks(org.apache.hadoop.hbase.regionserver.HRegion, org.apache.hadoop.hbase.catalog.CatalogTracker)}.
+ * This class has a watcher on the root location and notices changes.
  */
 public class RootRegionTracker extends ZooKeeperNodeTracker {
   /**

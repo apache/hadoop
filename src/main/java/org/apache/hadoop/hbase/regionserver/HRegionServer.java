@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
-import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.net.BindException;
 import java.net.InetSocketAddress;
@@ -64,7 +63,6 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterAddressTracker;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -352,7 +350,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // create the catalog tracker and start it
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
-      this, this.conf.getInt("hbase.regionserver.catalog.timeout", -1));
+      this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
 
     this.clusterStatusTracker = new ClusterStatusTracker(this.zooKeeper, this);
@@ -1143,7 +1141,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       RootLocationEditor.setRootLocation(getZooKeeper(),
         getServerInfo().getServerAddress());
     } else if (r.getRegionInfo().isMetaRegion()) {
-      // TODO: doh, this has weird naming between RootEditor/MetaEditor
       MetaEditor.updateMetaLocation(ct, r.getRegionInfo(), getServerInfo());
     } else {
       if (daughter) {
@@ -1361,8 +1358,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
+  @Override
   public HRegionInfo getRegionInfo(final byte[] regionName)
-      throws NotServingRegionException {
+  throws NotServingRegionException {
     requestCount.incrementAndGet();
     return getRegion(regionName).getRegionInfo();
   }
@@ -2228,20 +2226,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           }
         }
       } catch (IOException ioe) {
-          if (multi.size() == 1) {
-            throw ioe;
-          } else {
-            LOG.error("Exception found while attempting " + action.toString()
-                + " " + StringUtils.stringifyException(ioe));
-            response.add(regionName,null);
-            // stop processing on this region, continue to the next.
-          }
+        if (multi.size() == 1) {
+          throw ioe;
+        } else {
+          LOG.error("Exception found while attempting " + action.toString() +
+            " " + StringUtils.stringifyException(ioe));
+          response.add(regionName,null);
+          // stop processing on this region, continue to the next.
         }
       }
-      
-      return response;
     }
-  
+    return response;
+  }
+
   /**
    * @deprecated Use HRegionServer.multi( MultiAction action) instead
    */

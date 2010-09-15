@@ -499,7 +499,7 @@ public class ServerManager {
    */
   public void sendRegionOpen(HServerInfo server, HRegionInfo region) {
     HRegionInterface hri = getServerConnection(server);
-    if(hri == null) {
+    if (hri == null) {
       LOG.warn("Attempting to send OPEN RPC to server " + server.getServerName()
           + " failed because no RPC connection found to this server");
       return;
@@ -533,7 +533,7 @@ public class ServerManager {
       HConnection connection =
         HConnectionManager.getConnection(this.master.getConfiguration());
       HRegionInterface hri = serverConnections.get(info.getServerName());
-      if(hri == null) {
+      if (hri == null) {
         LOG.info("new connection");
         hri = connection.getHRegionConnection(info.getServerAddress(), false);
         serverConnections.put(info.getServerName(), hri);

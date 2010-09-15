@@ -521,6 +521,7 @@ Release 0.21.0 - Unreleased
    HBASE-2983  TestHLog unit test is mis-comparing an assertion
                (Alex Newman via Todd Lipcon)
    HBASE-2986  multi writable can npe causing client hang
+   HBASE-2979  Fix failing TestMultParrallel in hudson build
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -169,9 +169,6 @@ public class ZooKeeperWatcher implements Watcher {
         "state=" + event.getState() + ", " +
         "path=" + event.getPath());
 
-    // While we are still using both ZKWs, need to call parent process()
-//    super.process(event);
-
     switch(event.getType()) {
 
       // If event type is NONE, this is a connection status change

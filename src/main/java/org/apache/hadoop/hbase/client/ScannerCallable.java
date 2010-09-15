@@ -20,14 +20,15 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.ipc.RemoteException;
-import org.mortbay.log.Log;
-
-import java.io.IOException;
 
 
 /**
@@ -35,6 +36,7 @@ import java.io.IOException;
  * Used by {@link ResultScanner}s made by {@link HTable}.
  */
 public class ScannerCallable extends ServerCallable<Result[]> {
+  private static final Log LOG = LogFactory.getLog(ScannerCallable.class);
   private long scannerId = -1L;
   private boolean instantiated = false;
   private boolean closed = false;
@@ -103,7 +105,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
     try {
       this.server.close(this.scannerId);
     } catch (IOException e) {
-      Log.warn("Ignore, probably already closed", e);
+      LOG.warn("Ignore, probably already closed", e);
     }
     this.scannerId = -1L;
   }

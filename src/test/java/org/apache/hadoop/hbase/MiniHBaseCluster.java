@@ -223,6 +223,8 @@ public class MiniHBaseCluster {
       try {
         LOG.info("Hook closing fs=" + this.fs);
         this.fs.close();
+      } catch (NullPointerException npe) {
+        LOG.debug("Need to fix these: " + npe.toString());
       } catch (IOException e) {
         LOG.warn("Running hook", e);
       }

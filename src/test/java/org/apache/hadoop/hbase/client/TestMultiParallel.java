@@ -17,54 +17,67 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.client;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.ArrayList;
-
-public class TestMultiParallel extends MultiRegionTable {
-  // This test needs to be rewritten to use HBaseTestingUtility -- St.Ack 20100910
+public class TestMultiParallel {
   private static final Log LOG = LogFactory.getLog(TestMultiParallel.class);
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
   private static final String FAMILY = "family";
   private static final String TEST_TABLE = "multi_test_table";
   private static final byte[] BYTES_FAMILY = Bytes.toBytes(FAMILY);
   private static final byte[] ONE_ROW = Bytes.toBytes("xxx");
+  private static final byte [][] KEYS = makeKeys();
 
-  List<byte[]> keys = new ArrayList<byte[]>();
-
-  public TestMultiParallel() {
-    super(2, FAMILY);
-    desc = new HTableDescriptor(TEST_TABLE);
-    desc.addFamily(new HColumnDescriptor(FAMILY));
-    makeKeys();
+  @BeforeClass public static void beforeClass() throws Exception {
+    UTIL.startMiniCluster(2);
+    HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));
+    UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
   }
 
-  private void makeKeys() {
+  @AfterClass public static void afterClass() throws IOException {
+    UTIL.getMiniHBaseCluster().shutdown();
+  }
+
+  @Before public void before() throws IOException {
+    LOG.info("before");
+    if (UTIL.ensureSomeRegionServersAvailable(2)) {
+      // Distribute regions
+      UTIL.getMiniHBaseCluster().getMaster().balance();
+    }
+    LOG.info("before done");
+  }
+
+  private static byte[][] makeKeys() {
+    byte [][] starterKeys = HBaseTestingUtility.KEYS;
     // Create a "non-uniform" test set with the following characteristics:
     // a) Unequal number of keys per region
 
     // Don't use integer as a multiple, so that we have a number of keys that is
     // not a multiple of the number of regions
-    int numKeys = (int) ((float) KEYS.length * 10.33F);
+    int numKeys = (int) ((float) starterKeys.length * 10.33F);
 
+    List<byte[]> keys = new ArrayList<byte[]>();
     for (int i = 0; i < numKeys; i++) {
-      int kIdx = i % KEYS.length;
-      byte[] k = KEYS[kIdx];
+      int kIdx = i % starterKeys.length;
+      byte[] k = starterKeys[kIdx];
       byte[] cp = new byte[k.length + 1];
       System.arraycopy(k, 0, cp, 0, k.length);
       cp[k.length] = new Integer(i % 256).byteValue();
@@ -76,18 +89,19 @@ public class TestMultiParallel extends MultiRegionTable {
     // c) keys are not in sorted order (within a region), to ensure that the
     // sorting code and index mapping doesn't break the functionality
     for (int i = 0; i < 100; i++) {
-      int kIdx = i % KEYS.length;
-      byte[] k = KEYS[kIdx];
+      int kIdx = i % starterKeys.length;
+      byte[] k = starterKeys[kIdx];
       byte[] cp = new byte[k.length + 1];
       System.arraycopy(k, 0, cp, 0, k.length);
       cp[k.length] = new Integer(i % 256).byteValue();
       keys.add(cp);
     }
+    return keys.toArray(new byte [][] {new byte [] {}});
   }
 
-  public void testBatchWithGet() throws Exception {
+  @Test public void testBatchWithGet() throws Exception {
     LOG.info("test=testBatchWithGet");
-    HTable table = new HTable(conf, TEST_TABLE);
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // load test data
     List<Row> puts = constructPutRequests();
@@ -95,7 +109,7 @@ public class TestMultiParallel extends MultiRegionTable {
 
     // create a list of gets and run it
     List<Row> gets = new ArrayList<Row>();
-    for (byte[] k : keys) {
+    for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
       gets.add(get);
@@ -110,14 +124,14 @@ public class TestMultiParallel extends MultiRegionTable {
     }
 
     // Compare results
-    assertEquals(singleRes.size(), multiRes.length);
+    Assert.assertEquals(singleRes.size(), multiRes.length);
     for (int i = 0; i < singleRes.size(); i++) {
-      assertTrue(singleRes.get(i).containsColumn(BYTES_FAMILY, QUALIFIER));
+      Assert.assertTrue(singleRes.get(i).containsColumn(BYTES_FAMILY, QUALIFIER));
       KeyValue[] singleKvs = singleRes.get(i).raw();
       KeyValue[] multiKvs = multiRes[i].raw();
       for (int j = 0; j < singleKvs.length; j++) {
-        assertEquals(singleKvs[j], multiKvs[j]);
-        assertEquals(0, Bytes.compareTo(singleKvs[j].getValue(), multiKvs[j]
+        Assert.assertEquals(singleKvs[j], multiKvs[j]);
+        Assert.assertEquals(0, Bytes.compareTo(singleKvs[j].getValue(), multiKvs[j]
             .getValue()));
       }
     }
@@ -129,32 +143,32 @@ public class TestMultiParallel extends MultiRegionTable {
    * 
    * @throws Exception
    */
-  public void testFlushCommitsWithAbort() throws Exception {
+  @Test public void testFlushCommitsWithAbort() throws Exception {
     LOG.info("test=testFlushCommitsWithAbort");
     doTestFlushCommits(true);
   }
 
-  public void testFlushCommitsNoAbort() throws Exception {
+  @Test public void testFlushCommitsNoAbort() throws Exception {
+    LOG.info("test=testFlushCommitsNoAbort");
     doTestFlushCommits(false);
   }
 
-  public void doTestFlushCommits(boolean doAbort) throws Exception {
-    LOG.info("test=doTestFlushCommits");
+  private void doTestFlushCommits(boolean doAbort) throws Exception {
     // Load the data
-    Configuration newconf = new Configuration(conf);
-    newconf.setInt("hbase.client.retries.number", 10);
-    HTable table = new HTable(newconf, TEST_TABLE);
+    LOG.info("get new table");
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
     table.setAutoFlush(false);
     table.setWriteBufferSize(10 * 1024 * 1024);
 
+    LOG.info("constructPutRequests");
     List<Row> puts = constructPutRequests();
     for (Row put : puts) {
       table.put((Put) put);
     }
+    LOG.info("puts");
     table.flushCommits();
-
     if (doAbort) {
-      cluster.abortRegionServer(0);
+      LOG.info("Aborted=" + UTIL.getMiniHBaseCluster().abortRegionServer(0));
 
       // try putting more keys after the abort. same key/qual... just validating
       // no exceptions thrown
@@ -166,100 +180,107 @@ public class TestMultiParallel extends MultiRegionTable {
       table.flushCommits();
     }
 
+    LOG.info("validating loaded data");
     validateLoadedData(table);
 
     // Validate server and region count
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    ClusterStatus cs = admin.getClusterStatus();
-    assertEquals((doAbort ? 1 : 2), cs.getServers());
-    for (HServerInfo info : cs.getServerInfo()) {
-      System.out.println(info);
-      assertTrue(info.getLoad().getNumberOfRegions() > 10);
+    List<JVMClusterUtil.RegionServerThread> liveRSs =
+      UTIL.getMiniHBaseCluster().getLiveRegionServerThreads();
+    int count = 0;
+    for (JVMClusterUtil.RegionServerThread t: liveRSs) {
+      count++;
+      LOG.info("Count=" + count + ", Alive=" + t.getRegionServer());
     }
+    LOG.info("Count=" + count);
+    Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
+      (doAbort ? 1 : 2), count);
+    for (JVMClusterUtil.RegionServerThread t: liveRSs) {
+      int regions = t.getRegionServer().getOnlineRegions().size();
+      Assert.assertTrue("Count of regions=" + regions, regions > 10);
+    }
+    LOG.info("done");
   }
 
-  public void testBatchWithPut() throws Exception {
+  @Test public void testBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
-    Configuration newconf = new Configuration(conf);
-    newconf.setInt("hbase.client.retries.number", 10);
-    HTable table = new HTable(newconf, TEST_TABLE);
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // put multiple rows using a batch
     List<Row> puts = constructPutRequests();
 
     Result[] results = table.batch(puts);
-    validateSizeAndEmpty(results, keys.size());
+    validateSizeAndEmpty(results, KEYS.length);
 
     if (true) {
-      cluster.abortRegionServer(0);
+      UTIL.getMiniHBaseCluster().abortRegionServer(0);
 
       puts = constructPutRequests();
       results = table.batch(puts);
-      validateSizeAndEmpty(results, keys.size());
+      validateSizeAndEmpty(results, KEYS.length);
     }
 
     validateLoadedData(table);
   }
 
-  public void testBatchWithDelete() throws Exception {
+  @Test public void testBatchWithDelete() throws Exception {
     LOG.info("test=testBatchWithDelete");
-    HTable table = new HTable(conf, TEST_TABLE);
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // Load some data
     List<Row> puts = constructPutRequests();
     Result[] results = table.batch(puts);
-    validateSizeAndEmpty(results, keys.size());
+    validateSizeAndEmpty(results, KEYS.length);
 
     // Deletes
     List<Row> deletes = new ArrayList<Row>();
-    for (int i = 0; i < keys.size(); i++) {
-      Delete delete = new Delete(keys.get(i));
+    for (int i = 0; i < KEYS.length; i++) {
+      Delete delete = new Delete(KEYS[i]);
       delete.deleteFamily(BYTES_FAMILY);
       deletes.add(delete);
     }
     results = table.batch(deletes);
-    validateSizeAndEmpty(results, keys.size());
+    validateSizeAndEmpty(results, KEYS.length);
 
     // Get to make sure ...
-    for (byte[] k : keys) {
+    for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
-      assertFalse(table.exists(get));
+      Assert.assertFalse(table.exists(get));
     }
 
   }
 
-  public void testHTableDeleteWithList() throws Exception {
+  @Test public void testHTableDeleteWithList() throws Exception {
     LOG.info("test=testHTableDeleteWithList");
-    HTable table = new HTable(conf, TEST_TABLE);
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // Load some data
     List<Row> puts = constructPutRequests();
     Result[] results = table.batch(puts);
-    validateSizeAndEmpty(results, keys.size());
+    validateSizeAndEmpty(results, KEYS.length);
 
     // Deletes
     ArrayList<Delete> deletes = new ArrayList<Delete>();
-    for (int i = 0; i < keys.size(); i++) {
-      Delete delete = new Delete(keys.get(i));
+    for (int i = 0; i < KEYS.length; i++) {
+      Delete delete = new Delete(KEYS[i]);
       delete.deleteFamily(BYTES_FAMILY);
       deletes.add(delete);
     }
     table.delete(deletes);
-    assertTrue(deletes.isEmpty());
+    Assert.assertTrue(deletes.isEmpty());
 
     // Get to make sure ...
-    for (byte[] k : keys) {
+    for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
-      assertFalse(table.exists(get));
+      Assert.assertFalse(table.exists(get));
     }
 
   }
 
-  public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
+  @Test public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
     LOG.info("test=testBatchWithManyColsInOneRowGetAndPut");
-    HTable table = new HTable(conf, TEST_TABLE);
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     List<Row> puts = new ArrayList<Row>();
     for (int i = 0; i < 100; i++) {
@@ -293,13 +314,13 @@ public class TestMultiParallel extends MultiRegionTable {
 
   }
 
-  public void testBatchWithMixedActions() throws Exception {
+  @Test public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
-    HTable table = new HTable(conf, TEST_TABLE);
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // Load some data to start
     Result[] results = table.batch(constructPutRequests());
-    validateSizeAndEmpty(results, keys.size());
+    validateSizeAndEmpty(results, KEYS.length);
 
     // Batch: get, get, put(new col), delete, get, get of put, get of deleted,
     // put
@@ -309,42 +330,42 @@ public class TestMultiParallel extends MultiRegionTable {
     byte[] val2 = Bytes.toBytes("putvalue2");
 
     // 0 get
-    Get get = new Get(keys.get(10));
+    Get get = new Get(KEYS[10]);
     get.addColumn(BYTES_FAMILY, QUALIFIER);
     actions.add(get);
 
     // 1 get
-    get = new Get(keys.get(11));
+    get = new Get(KEYS[11]);
     get.addColumn(BYTES_FAMILY, QUALIFIER);
     actions.add(get);
 
     // 2 put of new column
-    Put put = new Put(keys.get(10));
+    Put put = new Put(KEYS[10]);
     put.add(BYTES_FAMILY, qual2, val2);
     actions.add(put);
 
     // 3 delete
-    Delete delete = new Delete(keys.get(20));
+    Delete delete = new Delete(KEYS[20]);
     delete.deleteFamily(BYTES_FAMILY);
     actions.add(delete);
 
     // 4 get
-    get = new Get(keys.get(30));
+    get = new Get(KEYS[30]);
     get.addColumn(BYTES_FAMILY, QUALIFIER);
     actions.add(get);
 
     // 5 get of the put in #2 (entire family)
-    get = new Get(keys.get(10));
+    get = new Get(KEYS[10]);
     get.addFamily(BYTES_FAMILY);
     actions.add(get);
 
     // 6 get of the delete from #3
-    get = new Get(keys.get(20));
+    get = new Get(KEYS[20]);
     get.addColumn(BYTES_FAMILY, QUALIFIER);
     actions.add(get);
 
     // 7 put of new column
-    put = new Put(keys.get(40));
+    put = new Put(KEYS[40]);
     put.add(BYTES_FAMILY, qual2, val2);
     actions.add(put);
 
@@ -363,7 +384,7 @@ public class TestMultiParallel extends MultiRegionTable {
     validateEmpty(results[7]);
 
     // validate last put, externally from the batch
-    get = new Get(keys.get(40));
+    get = new Get(KEYS[40]);
     get.addColumn(BYTES_FAMILY, qual2);
     Result r = table.get(get);
     validateResult(r, qual2, val2);
@@ -376,13 +397,13 @@ public class TestMultiParallel extends MultiRegionTable {
   }
 
   private void validateResult(Result r, byte[] qual, byte[] val) {
-    assertTrue(r.containsColumn(BYTES_FAMILY, qual));
-    assertEquals(0, Bytes.compareTo(val, r.getValue(BYTES_FAMILY, qual)));
+    Assert.assertTrue(r.containsColumn(BYTES_FAMILY, qual));
+    Assert.assertEquals(0, Bytes.compareTo(val, r.getValue(BYTES_FAMILY, qual)));
   }
 
   private List<Row> constructPutRequests() {
     List<Row> puts = new ArrayList<Row>();
-    for (byte[] k : keys) {
+    for (byte[] k : KEYS) {
       Put put = new Put(k);
       put.add(BYTES_FAMILY, QUALIFIER, VALUE);
       puts.add(put);
@@ -392,28 +413,28 @@ public class TestMultiParallel extends MultiRegionTable {
 
   private void validateLoadedData(HTable table) throws IOException {
     // get the data back and validate that it is correct
-    for (byte[] k : keys) {
+    for (byte[] k : KEYS) {
+      LOG.info("Assert=" + Bytes.toString(k));
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
       Result r = table.get(get);
-      assertTrue(r.containsColumn(BYTES_FAMILY, QUALIFIER));
-      assertEquals(0, Bytes.compareTo(VALUE, r
+      Assert.assertTrue(r.containsColumn(BYTES_FAMILY, QUALIFIER));
+      Assert.assertEquals(0, Bytes.compareTo(VALUE, r
           .getValue(BYTES_FAMILY, QUALIFIER)));
     }
   }
 
   private void validateEmpty(Result result) {
-    assertTrue(result != null);
-    assertTrue(result.getRow() == null);
-    assertEquals(0, result.raw().length);
+    Assert.assertTrue(result != null);
+    Assert.assertTrue(result.getRow() == null);
+    Assert.assertEquals(0, result.raw().length);
   }
 
   private void validateSizeAndEmpty(Result[] results, int expectedSize) {
     // Validate got back the same number of Result objects, all empty
-    assertEquals(expectedSize, results.length);
+    Assert.assertEquals(expectedSize, results.length);
     for (Result result : results) {
       validateEmpty(result);
     }
   }
-
 }

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.catalog;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
@@ -43,38 +45,34 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Tracks the availability of the catalog tables <code>-ROOT-</code> and
  * <code>.META.</code>.
- * <p>
+ * 
  * This class is "read-only" in that the locations of the catalog tables cannot
  * be explicitly set.  Instead, ZooKeeper is used to learn of the availability
- * and location of ROOT.  ROOT is used to learn of the location of META.  If not
- * available in ROOT, ZooKeeper is used to monitor for a new location of META.
+ * and location of <code>-ROOT-</code>.  <code>-ROOT-</code> is used to learn of
+ * the location of <code>.META.</code>  If not available in <code>-ROOT-</code>,
+ * ZooKeeper is used to monitor for a new location of <code>.META.</code>.
+ *
  * <p>Call {@link #start()} to start up operation.
  */
 public class CatalogTracker {
   private static final Log LOG = LogFactory.getLog(CatalogTracker.class);
-
   private final HConnection connection;
-
   private final ZooKeeperWatcher zookeeper;
-
   private final RootRegionTracker rootRegionTracker;
-
   private final MetaNodeTracker metaNodeTracker;
-
   private final AtomicBoolean metaAvailable = new AtomicBoolean(false);
   private HServerAddress metaLocation;
-
   private final int defaultTimeout;
 
   public static final byte [] ROOT_REGION =
     HRegionInfo.ROOT_REGIONINFO.getRegionName();
-
   public static final byte [] META_REGION =
     HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
 
   /**
    * Constructs the catalog tracker.  Find current state of catalog tables and
-   * begin active tracking by executing {@link #start()}.
+   * begin active tracking by executing {@link #start()} post construction.
+   * Does not timeout.
    * @param zk
    * @param connection server connection
    * @param abortable if fatal exception
@@ -88,11 +86,12 @@ public class CatalogTracker {
 
   /**
    * Constructs the catalog tracker.  Find current state of catalog tables and
-   * begin active tracking by executing {@link #start()}.
+   * begin active tracking by executing {@link #start()} post construction.
    * @param zk
    * @param connection server connection
    * @param abortable if fatal exception
-   * @param defaultTimeout Timeout to use.
+   * @param defaultTimeout Timeout to use.  Pass zero for no timeout
+   * ({@link Object#wait(long)} when passed a <code>0</code> waits for ever).
    * @throws IOException 
    */
   public CatalogTracker(final ZooKeeperWatcher zk, final HConnection connection,
@@ -101,26 +100,22 @@ public class CatalogTracker {
     this.zookeeper = zk;
     this.connection = connection;
     this.rootRegionTracker = new RootRegionTracker(zookeeper, abortable);
-    this.metaNodeTracker = new MetaNodeTracker(zookeeper, this);
+    this.metaNodeTracker = new MetaNodeTracker(zookeeper, this, abortable);
     this.defaultTimeout = defaultTimeout;
   }
 
   /**
    * Starts the catalog tracker.
-   * <p>
    * Determines current availability of catalog tables and ensures all further
-   * transitions of either region is tracked.
+   * transitions of either region are tracked.
    * @throws IOException
    * @throws InterruptedException 
    */
   public void start() throws IOException, InterruptedException {
-    // Register listeners with zk
-    zookeeper.registerListener(rootRegionTracker);
-    zookeeper.registerListener(metaNodeTracker);
-    // Start root tracking
-    rootRegionTracker.start();
+    this.rootRegionTracker.start();
+    this.metaNodeTracker.start();
     // Determine meta assignment; may not work because root and meta not yet
-    // deployed.
+    // deployed.  Calling the below will set {@link #metaLocation}.
     getMetaServerConnection(true);
   }
 
@@ -148,7 +143,7 @@ public class CatalogTracker {
    */
   public void waitForRoot()
   throws InterruptedException {
-    rootRegionTracker.getRootRegionLocation();
+    this.rootRegionTracker.blockUntilAvailable();
   }
 
   /**
@@ -161,7 +156,7 @@ public class CatalogTracker {
    * @throws NotAllMetaRegionsOnlineException if root not available before
    *                                          timeout
    */
-  public HServerAddress waitForRoot(final long timeout)
+  HServerAddress waitForRoot(final long timeout)
   throws InterruptedException, NotAllMetaRegionsOnlineException {
     HServerAddress address = rootRegionTracker.waitRootRegionLocation(timeout);
     if (address == null) {
@@ -235,27 +230,27 @@ public class CatalogTracker {
    */
   private HRegionInterface getMetaServerConnection(boolean refresh)
   throws IOException, InterruptedException {
-    synchronized(metaAvailable) {
-      if(metaAvailable.get()) {
+    synchronized (metaAvailable) {
+      if (metaAvailable.get()) {
         HRegionInterface current = getCachedConnection(metaLocation);
-        if(!refresh) {
+        if (!refresh) {
           return current;
         }
-        if(verifyRegionLocation(current, META_REGION)) {
+        if (verifyRegionLocation(current, META_REGION)) {
           return current;
         }
         resetMetaLocation();
       }
       HRegionInterface rootConnection = getRootServerConnection();
-      if(rootConnection == null) {
+      if (rootConnection == null) {
         return null;
       }
       HServerAddress newLocation = MetaReader.readMetaLocation(rootConnection);
-      if(newLocation == null) {
+      if (newLocation == null) {
         return null;
       }
       HRegionInterface newConnection = getCachedConnection(newLocation);
-      if(verifyRegionLocation(newConnection, META_REGION)) {
+      if (verifyRegionLocation(newConnection, META_REGION)) {
         setMetaLocation(newLocation);
         return newConnection;
       }
@@ -270,7 +265,7 @@ public class CatalogTracker {
    */
   public void waitForMeta() throws InterruptedException {
     synchronized(metaAvailable) {
-      while(!metaAvailable.get()) {
+      while (!metaAvailable.get()) {
         metaAvailable.wait();
       }
     }
@@ -339,8 +334,8 @@ public class CatalogTracker {
 
   private void resetMetaLocation() {
     LOG.info("Current cached META location is not valid, resetting");
-    metaAvailable.set(false);
-    metaLocation = null;
+    this.metaAvailable.set(false);
+    this.metaLocation = null;
   }
 
   private void setMetaLocation(HServerAddress metaLocation) {
@@ -368,11 +363,20 @@ public class CatalogTracker {
 
   private boolean verifyRegionLocation(HRegionInterface metaServer,
       byte [] regionName) {
+    Throwable t = null;
     try {
       return metaServer.getRegionInfo(regionName) != null;
     } catch (NotServingRegionException e) {
-      return false;
+      t = e;
+    } catch (UndeclaredThrowableException e) {
+      // We can get a ConnectException wrapped by a UTE if client fails connect
+      // If not a ConnectException, rethrow.
+      if (!(e.getCause() instanceof ConnectException)) throw e;
+      t = e.getCause();
     }
+    LOG.info("Failed verification of " + Bytes.toString(regionName) +
+      ": " + t.getMessage());
+    return false;
   }
 
   /**
@@ -406,5 +410,9 @@ public class CatalogTracker {
       resetMetaLocation();
     }
     return result;
+  }
+
+  MetaNodeTracker getMetaNodeTracker() {
+    return this.metaNodeTracker;
   }
 }
