@@ -909,6 +909,7 @@ Release 0.21.0 - Unreleased
    HBASE-2977  Refactor master command line to a new class
    HBASE-2980  Refactor region server command line to a new class
    HBASE-2988  Support alternate compression for major compactions
+   HBASE-2941  port HADOOP-6713 - threading scalability for RPC reads - to HBase
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
