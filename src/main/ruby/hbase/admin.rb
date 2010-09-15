@@ -132,7 +132,11 @@ module Hbase
         end
 
         # Add column to the table
-        htd.addFamily(hcd(arg))
+        descriptor = hcd(arg)
+        if arg[COMPRESSION_COMPACT]
+          descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
+        end
+        htd.addFamily(descriptor)
       end
 
       # Perform the create table call
@@ -216,6 +220,9 @@ module Hbase
         # No method parameter, try to use the args as a column definition
         unless method = arg.delete(METHOD)
           descriptor = hcd(arg)
+          if arg[COMPRESSION_COMPACT]
+            descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
+          end
           column_name = descriptor.getNameAsString
 
           # If column already exist, then try to alter it. Create otherwise.
