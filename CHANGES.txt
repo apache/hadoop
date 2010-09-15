@@ -520,6 +520,7 @@ Release 0.21.0 - Unreleased
    HBASE-2978  LoadBalancer IndexOutOfBoundsException
    HBASE-2983  TestHLog unit test is mis-comparing an assertion
                (Alex Newman via Todd Lipcon)
+   HBASE-2986  multi writable can npe causing client hang
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

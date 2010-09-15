@@ -961,7 +961,7 @@ public abstract class HBaseServer {
             throw e;
           }
         } catch (Exception e) {
-          LOG.info(getName() + " caught: " +
+          LOG.warn(getName() + " caught: " +
                    StringUtils.stringifyException(e));
         }
       }

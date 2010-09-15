@@ -1128,9 +1128,8 @@ public class HConnectionManager {
               for (Entry<byte[], List<Pair<Integer,Result>>> e : resp.getResults().entrySet()) {
                 byte[] regionName = e.getKey();
                 List<Pair<Integer, Result>> regionResults = e.getValue();
-                for (int i = 0; i < regionResults.size(); i++) {
-                  Pair<Integer, Result> regionResult = regionResults.get(i);
-                  if (regionResult.getSecond() == null) {
+                for (Pair<Integer, Result> regionResult : regionResults) {
+                  if (regionResult == null) {
                     // failed
                     LOG.debug("Failures for region: " + Bytes.toStringBinary(regionName) + ", removing from cache");
                   } else {

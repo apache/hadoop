@@ -61,7 +61,7 @@ public class MultiResponse implements Writable {
 
   /**
    * Add the pair to the container, grouped by the regionName
-   * 
+   *
    * @param regionName
    * @param r
    *          First item in the pair is the original index of the Action
@@ -89,8 +89,12 @@ public class MultiResponse implements Writable {
       List<Pair<Integer, Result>> lst = e.getValue();
       out.writeInt(lst.size());
       for (Pair<Integer, Result> r : lst) {
-        out.writeInt(r.getFirst());
-        HbaseObjectWritable.writeObject(out, r.getSecond(), Result.class, null);
+        if (r == null) {
+          out.writeInt(-1); // Cant have index -1; on other side we recognize -1 as 'null'
+        } else {
+          out.writeInt(r.getFirst()); // Can this can npe!?!
+          HbaseObjectWritable.writeObject(out, r.getSecond(), Result.class, null);
+        }
       }
     }
   }
@@ -106,8 +110,12 @@ public class MultiResponse implements Writable {
           listSize);
       for (int j = 0; j < listSize; j++) {
         Integer idx = in.readInt();
-        Result r = (Result) HbaseObjectWritable.readObject(in, null);
-        lst.add(new Pair<Integer, Result>(idx, r));
+        if (idx == -1) {
+          lst.add(null); 
+        } else {
+          Result r = (Result) HbaseObjectWritable.readObject(in, null);
+          lst.add(new Pair<Integer, Result>(idx, r));
+        }
       }
       results.put(key, lst);
     }
