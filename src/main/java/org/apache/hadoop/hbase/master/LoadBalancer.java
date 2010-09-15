@@ -591,7 +591,8 @@ public class LoadBalancer {
     @Override
     public String toString() {
       return "hri=" + this.hri.getRegionNameAsString() + ", src=" +
-        this.source.getServerName() + ", dest=" + this.dest.getServerName();
+        (this.source == null? "": this.source.getServerName()) +
+        ", dest=" + this.dest.getServerName();
     }
   }
 }
