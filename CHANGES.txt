@@ -128,6 +128,9 @@ Trunk (unreleased changes)
     HADOOP-6934. Test for ByteWritable comparator.
     (Johannes Zillmann via Eli Collins)
 
+    HADOOP-6950. Suggest that HADOOP_CLASSPATH should be preserved in 
+    hadoop-env.sh.template. (Philip Zeyliger via Eli Collins)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
