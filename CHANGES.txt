@@ -53,6 +53,9 @@ Release 0.20.3 - Unreleased
     HADOOP-6928. Fix BooleanWritable comparator in 0.20.
     (Owen O'Malley and Johannes Zillmann via Eli Collins)
 
+    HDFS-1404. TestNodeCount logic incorrect in branch-0.20.
+    (Todd Lipcon via Eli Collins)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
