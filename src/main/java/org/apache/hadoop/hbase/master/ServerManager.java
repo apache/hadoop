@@ -127,7 +127,6 @@ public class ServerManager {
     this.services = services;
     Configuration c = master.getConfiguration();
     int monitorInterval = c.getInt("hbase.master.monitor.interval", 60 * 1000);
-    // TODO: Fix.
     this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 1);
     this.metrics = new MasterMetrics(master.getServerName());
     this.serverMonitorThread = new ServerMonitor(monitorInterval, master);
@@ -221,8 +220,8 @@ public class ServerManager {
     info.setLoad(load);
     // TODO: Why did we update the RS location ourself?  Shouldn't RS do this?
     // masterStatus.getZooKeeper().updateRSLocationGetWatch(info, watcher);
-    this.onlineServers.put(serverName, info);
-    if (hri == null) {
+    onlineServers.put(serverName, info);
+    if(hri == null) {
       serverConnections.remove(serverName);
     } else {
       serverConnections.put(serverName, hri);
@@ -550,9 +549,10 @@ public class ServerManager {
    * Waits for the minimum number of servers to be running.
    */
   public void waitForMinServers() {
-    while (numServers() < minimumServerCount && !this.master.isStopped()) {
+    while(numServers() < minimumServerCount) {
+//        !masterStatus.getShutdownRequested().get()) {
       LOG.info("Waiting for enough servers to check in.  Currently have " +
-        numServers() + " but need at least " + minimumServerCount);
+          numServers() + " but need at least " + minimumServerCount);
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {

@@ -523,9 +523,6 @@ Release 0.21.0 - Unreleased
    HBASE-2986  multi writable can npe causing client hang
    HBASE-2979  Fix failing TestMultParrallel in hudson build
    HBASE-2899  hfile.min.blocksize.size ignored/documentation wrong
-   HBASE-3006  Reading compressed HFile blocks causes way too many DFS RPC
-               calls severly impacting performance
-               (Kannan Muthukkaruppan via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -145,14 +145,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // Cluster status zk tracker and local setter
   private ClusterStatusTracker clusterStatusTracker;
 
-  // True if this a cluster startup as opposed to a master joining an already
-  // running cluster
-  boolean freshClusterStart;
+  // True if this is the master that started the cluster.
+  boolean clusterStarter;
 
-  // This flag is for stopping this Master instance.  Its set when we are
-  // stopping or aborting
-  private volatile boolean stopped = false;
-  // Set on abort -- usually failure of our zk session.
+  // This flag is for stopping this Master instance.
+  private boolean stopped = false;
+  // Set on abort -- usually failure of our zk session
   private volatile boolean abort = false;
 
   // Instance of the hbase executor service.
@@ -185,12 +183,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
     int numHandlers = conf.getInt("hbase.regionserver.handler.count", 10);
     this.rpcServer = HBaseRPC.getServer(this,
-      new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
-      a.getBindAddress(), a.getPort(),
-      numHandlers,
-      0, // we dont use high priority handlers in master
-      false, conf,
-      0); // this is a DNC w/o high priority handlers
+	new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
+        a.getBindAddress(), a.getPort(),
+        numHandlers,
+        0, // we dont use high priority handlers in master
+        false, conf,
+        0); // this is a DNC w/o high priority handlers
     this.address = new HServerAddress(rpcServer.getListenerAddress());
 
     // set the thread name now we have an address
@@ -216,9 +214,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.zooKeeper =
       new ZooKeeperWatcher(conf, MASTER + "-" + getMasterAddress(), this);
 
-    // Are there regionservers running already?
-    boolean regionservers =
-      0 == ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
+    this.clusterStarter = 0 ==
+      ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
 
     /*
      * 3. Block on becoming the active master.
@@ -232,10 +229,26 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
     this.zooKeeper.registerListener(activeMasterManager);
 
-    stallIfBackupMaster(this.conf, this.activeMasterManager);
+
+    // If we're a backup master, stall until a primary to writes his address
+    if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP,
+        HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
+      // This will only be a minute or so while the cluster starts up,
+      // so don't worry about setting watches on the parent znode
+      while (!this.activeMasterManager.isActiveMaster()) {
+        try {
+          LOG.debug("Waiting for master address ZNode to be written " +
+            "(Also watching cluster state node)");
+          Thread.sleep(conf.getInt("zookeeper.session.timeout", 60 * 1000));
+        } catch (InterruptedException e) {
+          // interrupted = user wants to kill us.  Don't continue
+          throw new IOException("Interrupted waiting for master address");
+        }
+      }
+    }
 
     // Wait here until we are the active master
-    activeMasterManager.blockUntilBecomingActiveMaster();
+    clusterStarter = activeMasterManager.blockUntilBecomingActiveMaster();
 
     /**
      * 4. We are active master now... go initialize components we need to run.
@@ -259,39 +272,14 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.serverManager);
     regionServerTracker.start();
 
-    // Set the cluster as up.  If new RSs, they'll be waiting on this before
-    // going ahead with their startup.
+    // Set the cluster as up.
     this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
-
-    this.freshClusterStart =
-      !this.clusterStatusTracker.isClusterUp() && !regionservers;
     this.clusterStatusTracker.setClusterUp();
     this.clusterStatusTracker.start();
 
     LOG.info("Server active/primary master; " + this.address +
-      "; freshClusterStart=" + this.freshClusterStart + ", sessionid=0x" +
+      "; clusterStarter=" + this.clusterStarter + ", sessionid=0x" +
       Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
-  }
-
-  /**
-   * Stall startup if we are designated a backup master.
-   * @param c
-   * @param amm
-   * @throws InterruptedException
-   */
-  private static void stallIfBackupMaster(final Configuration c,
-      final ActiveMasterManager amm)
-  throws InterruptedException {
-    // If we're a backup master, stall until a primary to writes his address
-    if (!c.getBoolean(HConstants.MASTER_TYPE_BACKUP,
-      HConstants.DEFAULT_MASTER_TYPE_BACKUP)) return;
-    // This will only be a minute or so while the cluster starts up,
-    // so don't worry about setting watches on the parent znode
-    while (!amm.isActiveMaster()) {
-      LOG.debug("Waiting for master address ZNode to be written " +
-        "(Also watching cluster state node)");
-      Thread.sleep(c.getInt("zookeeper.session.timeout", 60 * 1000));
-    }
   }
 
   /**
@@ -309,22 +297,20 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       startServiceThreads();
       // wait for minimum number of region servers to be up
       this.serverManager.waitForMinServers();
-
-      // Start assignment of user regions, startup or failure
-      if (!this.stopped) {
-        if (this.freshClusterStart) {
-          clusterStarterInitializations(this.fileSystemManager,
+      // start assignment of user regions, startup or failure
+      if (this.clusterStarter) {
+        clusterStarterInitializations(this.fileSystemManager,
             this.serverManager, this.catalogTracker, this.assignmentManager);
-        } else {
-          // Process existing unassigned nodes in ZK, read all regions from META,
-          // rebuild in-memory state.
-          this.assignmentManager.processFailover();
-        }
+      } else {
+        // Process existing unassigned nodes in ZK, read all regions from META,
+        // rebuild in-memory state.
+        this.assignmentManager.processFailover();
       }
-
       // Check if we should stop every second.
       Sleeper sleeper = new Sleeper(1000, this);
-      while (!this.stopped) sleeper.sleep();
+      while (!this.stopped  && !this.abort) {
+        sleeper.sleep();
+      }
     } catch (Throwable t) {
       abort("Unhandled exception. Starting shutdown.", t);
     }
@@ -809,7 +795,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (t != null) LOG.fatal(msg, t);
     else LOG.fatal(msg);
     this.abort = true;
-    stop("Aborting");
   }
 
   @Override

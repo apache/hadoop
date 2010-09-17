@@ -61,7 +61,7 @@ public class TestCompaction extends HBaseTestCase {
 
     // Set cache flush size to 1MB
     conf.setInt("hbase.hregion.memstore.flush.size", 1024*1024);
-    conf.setInt("hbase.hregion.memstore.block.multiplier", 100);
+    conf.setInt("hbase.hregion.memstore.block.multiplier", 10);
     this.cluster = null;
   }
 

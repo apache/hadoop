@@ -19,7 +19,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -1052,15 +1051,10 @@ public class HFile {
         // decompressor reading into next block -- IIRC, it just grabs a
         // bunch of data w/o regard to whether decompressor is coming to end of a
         // decompression.
-
-        // We use a buffer of DEFAULT_BLOCKSIZE size.  This might be extreme.
-        // Could maybe do with less. Study and figure it: TODO
         InputStream is = this.compressAlgo.createDecompressionStream(
-            new BufferedInputStream(
-                new BoundedRangeFileInputStream(this.istream, offset, compressedSize,
-                                                pread),
-                Math.min(DEFAULT_BLOCKSIZE, compressedSize)),
-            decompressor, 0);
+          new BoundedRangeFileInputStream(this.istream, offset, compressedSize,
+            pread),
+          decompressor, 0);
         buf = ByteBuffer.allocate(decompressedSize);
         IOUtils.readFully(is, buf.array(), 0, buf.capacity());
         is.close();

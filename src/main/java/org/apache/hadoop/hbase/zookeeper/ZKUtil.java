@@ -554,7 +554,7 @@ public class ZKUtil {
       String znode)
   throws KeeperException {
     byte [] data = getDataAndWatch(zkw, znode);
-    if (data == null) {
+    if(data == null) {
       return null;
     }
     String addrString = Bytes.toString(data);
