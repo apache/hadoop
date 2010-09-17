@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.concurrent.Semaphore;
 
 import org.apache.commons.logging.Log;
@@ -57,6 +58,39 @@ public class TestActiveMasterManager {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
+  @Test public void testRestartMaster() throws IOException, KeeperException {
+    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+      "testActiveMasterManagerFromZK", null);
+    ZKUtil.createAndFailSilent(zk, zk.baseZNode);
+    try {
+      ZKUtil.deleteNode(zk, zk.masterAddressZNode);
+    } catch(KeeperException.NoNodeException nne) {}
+
+    // Create the master node with a dummy address
+    HServerAddress master = new HServerAddress("localhost", 1);
+    // Should not have a master yet
+    DummyMaster dummyMaster = new DummyMaster();
+    ActiveMasterManager activeMasterManager = new ActiveMasterManager(zk,
+      master, dummyMaster);
+    zk.registerListener(activeMasterManager);
+    assertFalse(activeMasterManager.clusterHasActiveMaster.get());
+
+    // First test becoming the active master uninterrupted
+    activeMasterManager.blockUntilBecomingActiveMaster();
+    assertTrue(activeMasterManager.clusterHasActiveMaster.get());
+    assertMaster(zk, master);
+
+    // Now pretend master restart
+    DummyMaster secondDummyMaster = new DummyMaster();
+    ActiveMasterManager secondActiveMasterManager = new ActiveMasterManager(zk,
+      master, secondDummyMaster);
+    zk.registerListener(secondActiveMasterManager);
+    assertFalse(secondActiveMasterManager.clusterHasActiveMaster.get());
+    activeMasterManager.blockUntilBecomingActiveMaster();
+    assertTrue(activeMasterManager.clusterHasActiveMaster.get());
+    assertMaster(zk, master);
+  }
+
   /**
    * Unit tests that uses ZooKeeper but does not use the master-side methods
    * but rather acts directly on ZK.
@@ -64,22 +98,21 @@ public class TestActiveMasterManager {
    */
   @Test
   public void testActiveMasterManagerFromZK() throws Exception {
-
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "testActiveMasterManagerFromZK", null);
+      "testActiveMasterManagerFromZK", null);
     ZKUtil.createAndFailSilent(zk, zk.baseZNode);
     try {
       ZKUtil.deleteNode(zk, zk.masterAddressZNode);
     } catch(KeeperException.NoNodeException nne) {}
 
     // Create the master node with a dummy address
-    HServerAddress firstMasterAddress = new HServerAddress("firstMaster", 1234);
-    HServerAddress secondMasterAddress = new HServerAddress("secondMaster", 1234);
+    HServerAddress firstMasterAddress = new HServerAddress("localhost", 1);
+    HServerAddress secondMasterAddress = new HServerAddress("localhost", 2);
 
     // Should not have a master yet
     DummyMaster ms1 = new DummyMaster();
     ActiveMasterManager activeMasterManager = new ActiveMasterManager(zk,
-        firstMasterAddress, ms1);
+      firstMasterAddress, ms1);
     zk.registerListener(activeMasterManager);
     assertFalse(activeMasterManager.clusterHasActiveMaster.get());
 
@@ -132,6 +165,9 @@ public class TestActiveMasterManager {
 
     assertTrue(t.manager.clusterHasActiveMaster.get());
     assertTrue(t.isActiveMaster);
+
+    LOG.info("Deleting master node");
+    ZKUtil.deleteNode(zk, zk.masterAddressZNode);
   }
 
   /**

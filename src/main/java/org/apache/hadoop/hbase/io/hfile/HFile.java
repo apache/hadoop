@@ -1059,7 +1059,7 @@ public class HFile {
             new BufferedInputStream(
                 new BoundedRangeFileInputStream(this.istream, offset, compressedSize,
                                                 pread),
-                Math.min(DEFAUT_BLOCKSIZE, compressedSize)),
+                Math.min(DEFAULT_BLOCKSIZE, compressedSize)),
             decompressor, 0);
         buf = ByteBuffer.allocate(decompressedSize);
         IOUtils.readFully(is, buf.array(), 0, buf.capacity());
