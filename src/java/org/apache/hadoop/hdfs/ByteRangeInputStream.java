@@ -89,29 +89,26 @@ class ByteRangeInputStream extends FSInputStream {
         in = null;
       }
       
-      final URLOpener o;
-      
       // use the original url  if no resolved url exists (e.g., if it's 
       // the first time a request is made)
-      System.out.println("url: "+resolvedURL.getURL());
-      if (resolvedURL.getURL() == null) {
-        o = originalURL;
-      } else {
-        o = resolvedURL;
-      }
-        
+      final URLOpener o = resolvedURL.getURL() == null? originalURL: resolvedURL;
+
       final HttpURLConnection connection = o.openConnection();
-      connection.setRequestMethod("GET");
-      if (startPos != 0) {
-        connection.setRequestProperty("Range", "bytes="+startPos+"-");
+      try {
+        connection.setRequestMethod("GET");
+        if (startPos != 0) {
+          connection.setRequestProperty("Range", "bytes="+startPos+"-");
+        }
+        connection.connect();
+        final String cl = connection.getHeaderField(StreamFile.CONTENT_LENGTH);
+        filelength = cl == null? -1: Long.parseLong(cl);
+        if (HftpFileSystem.LOG.isDebugEnabled()) {
+          HftpFileSystem.LOG.debug("filelength = " + filelength);
+        }
+        in = connection.getInputStream();
+      } catch(IOException ioe) {
+        HftpFileSystem.throwIOExceptionFromConnection(connection, ioe);
       }
-      connection.connect();
-      final String cl = connection.getHeaderField(StreamFile.CONTENT_LENGTH);
-      filelength = cl == null? -1: Long.parseLong(cl);
-      if (HftpFileSystem.LOG.isDebugEnabled()) {
-        HftpFileSystem.LOG.debug("filelength = " + filelength);
-      }
-      in = connection.getInputStream();
       
       if (startPos != 0 && connection.getResponseCode() != 206) {
         // we asked for a byte range but did not receive a partial content

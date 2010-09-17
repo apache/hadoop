@@ -57,8 +57,11 @@ class DecommissionManager {
      */
     public void run() {
       for(; fsnamesystem.isRunning(); ) {
-        synchronized(fsnamesystem) {
+        fsnamesystem.writeLock();
+        try {
           check();
+        } finally {
+          fsnamesystem.writeUnlock();
         }
   
         try {

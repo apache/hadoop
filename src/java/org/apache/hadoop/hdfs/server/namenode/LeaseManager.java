@@ -366,11 +366,15 @@ public class LeaseManager {
     /** Check leases periodically. */
     public void run() {
       for(; fsnamesystem.isRunning(); ) {
-        synchronized(fsnamesystem) {
+        fsnamesystem.writeLock();
+        try {
           if (!fsnamesystem.isInSafeMode()) {
             checkLeases();
           }
+        } finally {
+          fsnamesystem.writeUnlock();
         }
+
 
         try {
           Thread.sleep(2000);

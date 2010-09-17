@@ -131,6 +131,10 @@ Trunk (unreleased changes)
     HDFS-1395. Add @Override to FSDataset methods that implement
     FSDatasetInterface methods. (suresh)
 
+    HDFS-1383. Improve the error messages when using hftp://.  (szetszwo)
+
+    HDFS-1093. Change the FSNamesystem lock to a read/write lock. (dhruba)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
@@ -1185,6 +1189,8 @@ Release 0.21.0 - Unreleased
     same test case (Cos)
 
     HDFS-1267. fuse-dfs does not compile. (Devaraj Das via tomwhite)
+
+    HDFS-1363. Eliminate second synchronized sections in appendFile(). (shv)
 
 Release 0.20.3 - Unreleased
 

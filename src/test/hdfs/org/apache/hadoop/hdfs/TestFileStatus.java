@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
@@ -29,17 +34,17 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
-
-import static org.junit.Assert.*;
-import org.junit.Test;
-import org.junit.BeforeClass;
 import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 /**
  * This class tests the FileStatus API.
@@ -184,7 +189,7 @@ public class TestFileStatus {
 
   /** Test FileStatus objects obtained from a directory */
   @Test
-  public void testGetFileStatusOnDir() throws IOException {
+  public void testGetFileStatusOnDir() throws Exception {
     // Create the directory
     Path dir = new Path("/test/mkdirs");
     assertTrue("mkdir failed", fs.mkdirs(dir));
@@ -284,5 +289,17 @@ public class TestFileStatus {
     assertEquals(file2.toString(), itor.next().getPath().toString());
     assertEquals(file3.toString(), itor.next().getPath().toString());
     assertFalse(itor.hasNext());      
+
+    { //test permission error on hftp 
+      fs.setPermission(dir, new FsPermission((short)0));
+      try {
+        final String username = UserGroupInformation.getCurrentUser().getShortUserName() + "1";
+        final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, conf, "somegroup");
+        hftp2.getContentSummary(dir);
+        fail();
+      } catch(IOException ioe) {
+        FileSystem.LOG.info("GOOD: getting an exception", ioe);
+      }
+    }
   }
 }

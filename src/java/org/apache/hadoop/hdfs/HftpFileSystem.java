@@ -269,6 +269,15 @@ public class HftpFileSystem extends FileSystem {
     return ugiParamenter.toString();
   }
   
+  static Void throwIOExceptionFromConnection(
+      final HttpURLConnection connection, final IOException ioe
+      ) throws IOException {
+    final int code = connection.getResponseCode();
+    final String s = connection.getResponseMessage();
+    throw s == null? ioe:
+        new IOException(s + " (error code=" + code + ")", ioe);
+  }
+
   /**
    * Open an HTTP connection to the namenode to read file data and metadata.
    * @param path The path component of the URL
@@ -278,9 +287,13 @@ public class HftpFileSystem extends FileSystem {
       throws IOException {
     query = updateQuery(query);
     final URL url = getNamenodeURL(path, query);
-    HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-    connection.setRequestMethod("GET");
-    connection.connect();
+    final HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+    try {
+      connection.setRequestMethod("GET");
+      connection.connect();
+    } catch(IOException ioe) {
+      throwIOExceptionFromConnection(connection, ioe);
+    }
     return connection;
   }
 

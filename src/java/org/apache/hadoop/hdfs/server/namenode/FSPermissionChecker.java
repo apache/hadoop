@@ -120,7 +120,6 @@ class FSPermissionChecker {
           + ", subAccess=" + subAccess);
     }
     // check if (parentAccess != null) && file exists, then check sb
-    synchronized(root) {
       // Resolve symlinks, the check is performed on the link target.
       INode[] inodes = root.getExistingPathINodes(path, true);
       int ancestorIndex = inodes.length - 2;
@@ -147,7 +146,6 @@ class FSPermissionChecker {
       if (doCheckOwner) {
         checkOwner(inodes[inodes.length - 1]);
       }
-    }
   }
 
   private void checkOwner(INode inode) throws AccessControlException {
