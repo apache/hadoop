@@ -131,6 +131,9 @@ Trunk (unreleased changes)
     HADOOP-6950. Suggest that HADOOP_CLASSPATH should be preserved in 
     hadoop-env.sh.template. (Philip Zeyliger via Eli Collins)
 
+    HADOOP-6922. Make AccessControlList a writable and update documentation
+    for Job ACLs.  (Ravi Gummadi via vinodkv)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -35,7 +37,15 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
 public class AccessControlList implements Writable {
-  
+
+  static {                                      // register a ctor
+    WritableFactories.setFactory
+    (AccessControlList.class,
+      new WritableFactory() {
+        public Writable newInstance() { return new AccessControlList(); }
+      });
+  }
+
   // Indicates an ACL string that represents access to all users
   public static final String WILDCARD_ACL_VALUE = "*";
   private static final int INITIAL_CAPACITY = 256;
@@ -46,7 +56,13 @@ public class AccessControlList implements Writable {
   private Set<String> groups;
   // Whether all users are granted access.
   private boolean allAllowed;
-  
+
+  /**
+   * This constructor exists primarily for AccessControlList to be Writable.
+   */
+  public AccessControlList() {
+  }
+
   /**
    * Construct a new ACL from a String representation of the same.
    * 
