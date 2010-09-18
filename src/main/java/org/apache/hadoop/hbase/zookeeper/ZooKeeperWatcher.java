@@ -42,14 +42,15 @@ import org.apache.zookeeper.ZooKeeper;
  * classes which need to be notified of ZooKeeper events must register with
  * the local instance of this watcher via {@link #registerListener}.
  *
- * <p>This class also holds and manages the connection to ZooKeeper.  Code to deal
- * with connection related events and exceptions are handled here.
+ * <p>This class also holds and manages the connection to ZooKeeper.  Code to
+ * deal with connection related events and exceptions are handled here.
  */
 public class ZooKeeperWatcher implements Watcher {
   private static final Log LOG = LogFactory.getLog(ZooKeeperWatcher.class);
 
-  // name of this watcher (for logging only)
-  private String name;
+  // Identifiier for this watcher (for logging only).  Its made of the prefix
+  // passed on construction and the zookeeper sessionid.
+  private String identifier;
 
   // zookeeper quorum
   private String quorum;
@@ -86,17 +87,19 @@ public class ZooKeeperWatcher implements Watcher {
 
   /**
    * Instantiate a ZooKeeper connection and watcher.
-   * @param name name of this watcher, for logging/debug purposes only
+   * @param descriptor Descriptive string that is added to zookeeper sessionid
+   * and used as identifier for this instance.
    * @throws IOException
    */
-  public ZooKeeperWatcher(Configuration conf, String name,
+  public ZooKeeperWatcher(Configuration conf, String descriptor,
       Abortable abortable)
   throws IOException {
-    this.name = name;
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
-    this.zooKeeper = ZKUtil.connect(conf, quorum, this);
+    this.zooKeeper = ZKUtil.connect(conf, quorum, this, descriptor);
+    // Identifier will get the sessionid appended later below down when we
+    // handle the syncconnect event.
+    this.identifier = descriptor;
     this.abortable = abortable;
-    info("Connected to ZooKeeper");
     setNodeNames(conf);
     try {
       // Create all the necessary "directories" of znodes
@@ -106,10 +109,24 @@ public class ZooKeeperWatcher implements Watcher {
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, tableZNode);
     } catch (KeeperException e) {
-      error("Unexpected KeeperException creating base node", e);
-      error("Message: " + e.getMessage());
+      LOG.error(prefix("Unexpected KeeperException creating base node"), e);
       throw new IOException(e);
     }
+  }
+
+  @Override
+  public String toString() {
+    return this.identifier;
+  }
+
+  /**
+   * Adds this instance's identifier as a prefix to the passed <code>str</code>
+   * @param str String to amend.
+   * @return A new string with this instance's identifier as prefix: e.g.
+   * if passed 'hello world', the returned string could be
+   */
+  public String prefix(final String str) {
+    return this.toString() + " " + str;
   }
 
   /**
@@ -164,10 +181,10 @@ public class ZooKeeperWatcher implements Watcher {
    */
   @Override
   public void process(WatchedEvent event) {
-    LOG.debug("<" + name + "> Received ZooKeeper Event, " +
+    LOG.debug(prefix("Received ZooKeeper Event, " +
         "type=" + event.getType() + ", " +
         "state=" + event.getState() + ", " +
-        "path=" + event.getPath());
+        "path=" + event.getPath()));
 
     switch(event.getType()) {
 
@@ -220,20 +237,22 @@ public class ZooKeeperWatcher implements Watcher {
    */
   private void connectionEvent(WatchedEvent event) {
     switch(event.getState()) {
-      // SyncConnected is normal, ignore
       case SyncConnected:
+        // Update our identifier.  Otherwise ignore.
+        this.identifier = this.identifier + "-0x" +
+          Long.toHexString(this.zooKeeper.getSessionId());
+        LOG.info(this.identifier + " connected");
         break;
 
       // Abort the server if Disconnected or Expired
       // TODO: Åny reason to handle these two differently?
       case Disconnected:
-        info("Received Disconnected from ZooKeeper, ignoring");
+        LOG.info(prefix("Received Disconnected from ZooKeeper, ignoring"));
         break;
       case Expired:
-        error("Received Expired from ZooKeeper, aborting server");
-        if(abortable != null) {
-          abortable.abort("Received Expired from ZooKeeper, aborting server", null);
-        }
+        String msg = prefix("Received Expired from ZooKeeper, aborting server");
+        LOG.error(msg);
+        if (abortable != null) abortable.abort(msg, null);
         break;
     }
   }
@@ -258,7 +277,7 @@ public class ZooKeeperWatcher implements Watcher {
    */
   public void keeperException(KeeperException ke)
   throws KeeperException {
-    error("Received unexpected KeeperException, re-throwing exception", ke);
+    LOG.error(prefix("Received unexpected KeeperException, re-throwing exception"), ke);
     throw ke;
   }
 
@@ -274,72 +293,10 @@ public class ZooKeeperWatcher implements Watcher {
    * @param ie
    */
   public void interruptedException(InterruptedException ie) {
-    debug("Received InterruptedException, doing nothing here", ie);
+    LOG.debug(prefix("Received InterruptedException, doing nothing here"), ie);
+    // At least preserver interrupt.
+    Thread.currentThread().interrupt();
     // no-op
-  }
-
-  // Logging methods
-
-  /**
-   * Exposed info logging method so our zookeeper output is named.
-   * @param string log line
-   */
-  public void info(String string) {
-    LOG.info("<" + name + "> " + string);
-  }
-
-  /**
-   * Exposed debug logging method so our zookeeper output is named.
-   * @param string log line
-   */
-  public void debug(String string) {
-    LOG.debug("<" + name + "> " + string);
-  }
-
-  /**
-   * Exposed debug logging method so our zookeeper output is named.
-   * @param string log line
-   */
-  public void debug(String string, Throwable t) {
-    LOG.debug("<" + name + "> " + string, t);
-  }
-
-  /**
-   * Exposed warn logging method so our zookeeper output is named.
-   * @param string log line
-   */
-  public void warn(String string) {
-    LOG.warn("<" + name + "> " + string);
-  }
-
-  /**
-   * Exposed warn logging method so our zookeeper output is named.
-   * @param string log line
-   * @param t exception
-   */
-  public void warn(String string, Throwable t) {
-    LOG.warn("<" + name + "> " + string, t);
-  }
-
-  /**
-   * Exposed error logging method so our zookeeper output is named.
-   * @param string log line
-   */
-  public void error(String string) {
-    LOG.error("<" + name + "> " + string);
-  }
-
-  /**
-   * Exposed error logging method so our zookeeper output is named.
-   * @param string log line
-   * @param t exception
-   */
-  public void error(String string, Throwable t) {
-    LOG.error("<" + name + "> " + string, t);
-  }
-
-  public boolean isDebugEnabled() {
-    return LOG.isDebugEnabled();
   }
 
   /**

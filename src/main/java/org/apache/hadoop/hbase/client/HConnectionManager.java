@@ -917,10 +917,7 @@ public class HConnectionManager {
         throws ZooKeeperConnectionException {
       if(zooKeeper == null) {
         try {
-          this.zooKeeper = new ZooKeeperWatcher(conf,
-            ZKUtil.getZooKeeperClusterKey(conf), this);
-          LOG.debug("zkw created, sessionid=0x" +
-            Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
+          this.zooKeeper = new ZooKeeperWatcher(conf, "hconnection", this);
         } catch (IOException e) {
           throw new ZooKeeperConnectionException(e);
         }

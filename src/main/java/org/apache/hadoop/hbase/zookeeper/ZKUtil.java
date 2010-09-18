@@ -80,11 +80,18 @@ public class ZKUtil {
   public static ZooKeeper connect(Configuration conf, String quorum,
       Watcher watcher)
   throws IOException {
+    return connect(conf, quorum, watcher, "");
+  }
+
+  public static ZooKeeper connect(Configuration conf, String quorum,
+      Watcher watcher, final String descriptor)
+  throws IOException {
     if(quorum == null) {
       throw new IOException("Unable to determine ZooKeeper quorum");
     }
     int timeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
-    LOG.debug("Opening connection to ZooKeeper with quorum (" + quorum + ")");
+    LOG.info(descriptor + " opening connection to ZooKeeper with quorum (" +
+      quorum + ")");
     return new ZooKeeper(quorum, timeout, watcher);
   }
 
@@ -186,14 +193,14 @@ public class ZKUtil {
   throws KeeperException {
     try {
       Stat s = zkw.getZooKeeper().exists(znode, zkw);
-      zkw.debug("Set watcher on existing znode " + znode);
+      LOG.info(zkw.prefix("Set watcher on existing znode " + znode));
       return s != null ? true : false;
     } catch (KeeperException e) {
-      zkw.warn("Unable to set watcher on znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to set watcher on znode " + znode), e);
       zkw.keeperException(e);
       return false;
     } catch (InterruptedException e) {
-      zkw.warn("Unable to set watcher on znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to set watcher on znode " + znode), e);
       zkw.interruptedException(e);
       return false;
     }
@@ -216,11 +223,11 @@ public class ZKUtil {
       Stat s = zkw.getZooKeeper().exists(znode, null);
       return s != null ? s.getVersion() : -1;
     } catch (KeeperException e) {
-      zkw.warn("Unable to set watcher on znode (" + znode + ")", e);
+      LOG.warn(zkw.prefix("Unable to set watcher on znode (" + znode + ")"), e);
       zkw.keeperException(e);
       return -1;
     } catch (InterruptedException e) {
-      zkw.warn("Unable to set watcher on znode (" + znode + ")", e);
+      LOG.warn(zkw.prefix("Unable to set watcher on znode (" + znode + ")"), e);
       zkw.interruptedException(e);
       return -1;
     }
@@ -253,15 +260,15 @@ public class ZKUtil {
       List<String> children = zkw.getZooKeeper().getChildren(znode, zkw);
       return children;
     } catch(KeeperException.NoNodeException ke) {
-      zkw.debug("Unable to list children of znode " + znode + " " +
-          "because node does not exist (not an error)");
+      LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
+          "because node does not exist (not an error)"));
       return null;
     } catch (KeeperException e) {
-      zkw.warn("Unable to list children of znode " + znode + " ", e);
+      LOG.warn(zkw.prefix("Unable to list children of znode " + znode + " "), e);
       zkw.keeperException(e);
       return null;
     } catch (InterruptedException e) {
-      zkw.warn("Unable to list children of znode " + znode + " ", e);
+      LOG.warn(zkw.prefix("Unable to list children of znode " + znode + " "), e);
       zkw.interruptedException(e);
       return null;
     }
@@ -397,15 +404,15 @@ public class ZKUtil {
     try {
       return !zkw.getZooKeeper().getChildren(znode, null).isEmpty();
     } catch(KeeperException.NoNodeException ke) {
-      zkw.debug("Unable to list children of znode " + znode + " " +
-      "because node does not exist (not an error)");
+      LOG.debug(zkw.prefix("Unable to list children of znode " + znode + " " +
+      "because node does not exist (not an error)"));
       return false;
     } catch (KeeperException e) {
-      zkw.warn("Unable to list children of znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to list children of znode " + znode), e);
       zkw.keeperException(e);
       return false;
     } catch (InterruptedException e) {
-      zkw.warn("Unable to list children of znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to list children of znode " + znode), e);
       zkw.interruptedException(e);
       return false;
     }
@@ -430,7 +437,7 @@ public class ZKUtil {
       Stat stat = zkw.getZooKeeper().exists(znode, null);
       return stat == null ? 0 : stat.getNumChildren();
     } catch(KeeperException e) {
-      zkw.warn("Unable to get children of node " + znode);
+      LOG.warn(zkw.prefix("Unable to get children of node " + znode));
       zkw.keeperException(e);
     } catch(InterruptedException e) {
       zkw.interruptedException(e);
@@ -450,18 +457,19 @@ public class ZKUtil {
   throws KeeperException {
     try {
       byte [] data = zkw.getZooKeeper().getData(znode, null, null);
-      zkw.debug("Retrieved " + data.length + " bytes of data from znode " + znode);
+      LOG.debug(zkw.prefix("Retrieved " + data.length +
+        " bytes of data from znode " + znode));
       return data;
     } catch (KeeperException.NoNodeException e) {
-      zkw.debug("Unable to get data of znode " + znode + " " +
-          "because node does not exist (not an error)");
+      LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
+        "because node does not exist (not an error)"));
       return null;
     } catch (KeeperException e) {
-      zkw.warn("Unable to get data of znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
       zkw.keeperException(e);
       return null;
     } catch (InterruptedException e) {
-      zkw.warn("Unable to get data of znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
       zkw.interruptedException(e);
       return null;
     }
@@ -482,19 +490,19 @@ public class ZKUtil {
   throws KeeperException {
     try {
       byte [] data = zkw.getZooKeeper().getData(znode, zkw, null);
-      zkw.debug("Retrieved " + data.length + " bytes of data from znode " +
-          znode + " and set a watcher");
+      LOG.debug(zkw.prefix("Retrieved " + data.length +
+        " bytes of data from znode " + znode + " and set a watcher"));
       return data;
     } catch (KeeperException.NoNodeException e) {
-      zkw.debug("Unable to get data of znode " + znode + " " +
-          "because node does not exist (not an error)");
+      LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
+        "because node does not exist (not an error)"));
       return null;
     } catch (KeeperException e) {
-      zkw.warn("Unable to get data of znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
       zkw.keeperException(e);
       return null;
     } catch (InterruptedException e) {
-      zkw.warn("Unable to get data of znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
       zkw.interruptedException(e);
       return null;
     }
@@ -520,18 +528,19 @@ public class ZKUtil {
   throws KeeperException {
     try {
       byte [] data = zkw.getZooKeeper().getData(znode, zkw, stat);
-      zkw.debug("Retrieved " + data.length + " bytes of data from znode " + znode);
+      LOG.debug(zkw.prefix("Retrieved " + data.length +
+        " bytes of data from znode " + znode));
       return data;
     } catch (KeeperException.NoNodeException e) {
-      zkw.debug("Unable to get data of znode " + znode + " " +
-          "because node does not exist (not necessarily an error)");
+      LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
+          "because node does not exist (not necessarily an error)"));
       return null;
     } catch (KeeperException e) {
-      zkw.warn("Unable to get data of znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
       zkw.keeperException(e);
       return null;
     } catch (InterruptedException e) {
-      zkw.warn("Unable to get data of znode " + znode, e);
+      LOG.warn(zkw.prefix("Unable to get data of znode " + znode), e);
       zkw.interruptedException(e);
       return null;
     }
@@ -558,7 +567,8 @@ public class ZKUtil {
       return null;
     }
     String addrString = Bytes.toString(data);
-    zkw.debug("Read server address from znode " + znode + ": " + addrString);
+    LOG.debug(zkw.prefix("Read server address from znode " + znode + ": " +
+      addrString));
     return new HServerAddress(addrString);
   }
 
@@ -705,6 +715,7 @@ public class ZKUtil {
       return false;
     } catch (InterruptedException e) {
       LOG.info("Interrupted", e);
+      Thread.currentThread().interrupt();
     }
     return true;
   }

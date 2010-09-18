@@ -1172,8 +1172,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Start Server.  This service is like leases in that it internally runs
     // a thread.
     this.server.start();
-    LOG.info("HRegionServer started at: "
-        + this.serverInfo.getServerAddress().toString());
   }
 
   /*

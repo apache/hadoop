@@ -184,7 +184,7 @@ class ActiveMasterManager extends ZooKeeperListener {
         ZKUtil.deleteNode(watcher, watcher.masterAddressZNode);
       }
     } catch (KeeperException e) {
-      watcher.error("Error deleting our own master address node", e);
+      LOG.error(this.watcher.prefix("Error deleting our own master address node"), e);
     }
   }
 }
