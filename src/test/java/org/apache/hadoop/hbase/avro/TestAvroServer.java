@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.avro.generated.AGet;
 import org.apache.hadoop.hbase.avro.generated.APut;
 import org.apache.hadoop.hbase.avro.generated.ATableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -93,7 +94,7 @@ public class TestAvroServer {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=60000)
   public void testTableAdminAndMetadata() throws Exception {
     AvroServer.HBaseImpl impl = new AvroServer.HBaseImpl();
 
@@ -122,6 +123,8 @@ public class TestAvroServer {
 
     tableA.maxFileSize = 123456L;
     impl.modifyTable(tableAname, tableA);
+    // It can take a while for the change to take effect.  Wait here a while.
+    while(impl.describeTable(tableAname).maxFileSize != 123456L) Threads.sleep(100);
     assertEquals(123456L, (long) impl.describeTable(tableAname).maxFileSize);
 
     impl.enableTable(tableAname);
