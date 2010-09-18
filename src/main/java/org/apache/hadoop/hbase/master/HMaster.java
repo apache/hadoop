@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -145,12 +146,14 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // Cluster status zk tracker and local setter
   private ClusterStatusTracker clusterStatusTracker;
 
-  // True if this is the master that started the cluster.
-  boolean clusterStarter;
+  // True if this a cluster startup where there are no already running servers
+  // as opposed to a master joining an already running cluster
+  boolean freshClusterStartup;
 
-  // This flag is for stopping this Master instance.
-  private boolean stopped = false;
-  // Set on abort -- usually failure of our zk session
+  // This flag is for stopping this Master instance.  Its set when we are
+  // stopping or aborting
+  private volatile boolean stopped = false;
+  // Set on abort -- usually failure of our zk session.
   private volatile boolean abort = false;
 
   // Instance of the hbase executor service.
@@ -178,17 +181,17 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.conf = conf;
     /*
      * 1. Determine address and initialize RPC server (but do not start).
-     * The RPC server ports can be ephemeral.
+     * The RPC server ports can be ephemeral. Create a ZKW instance.
      */
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
     int numHandlers = conf.getInt("hbase.regionserver.handler.count", 10);
     this.rpcServer = HBaseRPC.getServer(this,
-	new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
-        a.getBindAddress(), a.getPort(),
-        numHandlers,
-        0, // we dont use high priority handlers in master
-        false, conf,
-        0); // this is a DNC w/o high priority handlers
+      new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
+      a.getBindAddress(), a.getPort(),
+      numHandlers,
+      0, // we dont use high priority handlers in master
+      false, conf,
+      0); // this is a DNC w/o high priority handlers
     this.address = new HServerAddress(rpcServer.getListenerAddress());
 
     // set the thread name now we have an address
@@ -201,24 +204,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         "_" + System.currentTimeMillis());
     }
 
-    /*
-     * 2. Determine if this is a fresh cluster startup or failed over master.
-     * This is done by checking for the existence of any ephemeral
-     * RegionServer nodes in ZooKeeper.  These nodes are created by RSs on
-     * their initialization but only after they find the primary master.  As
-     * long as this check is done before we write our address into ZK, this
-     * will work.  Note that multiple masters could find this to be true on
-     * startup (none have become active master yet), which is why there is an
-     * additional check if this master does not become primary on its first attempt.
-     */
     this.zooKeeper =
       new ZooKeeperWatcher(conf, MASTER + "-" + getMasterAddress(), this);
 
-    this.clusterStarter = 0 ==
-      ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
-
     /*
-     * 3. Block on becoming the active master.
+     * 2. Block on becoming the active master.
      * We race with other masters to write our address into ZooKeeper.  If we
      * succeed, we are the primary/active master and finish initialization.
      *
@@ -228,32 +218,25 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      */
     this.activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
     this.zooKeeper.registerListener(activeMasterManager);
+    stallIfBackupMaster(this.conf, this.activeMasterManager);
+    activeMasterManager.blockUntilBecomingActiveMaster();
 
-
-    // If we're a backup master, stall until a primary to writes his address
-    if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP,
-        HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
-      // This will only be a minute or so while the cluster starts up,
-      // so don't worry about setting watches on the parent znode
-      while (!this.activeMasterManager.isActiveMaster()) {
-        try {
-          LOG.debug("Waiting for master address ZNode to be written " +
-            "(Also watching cluster state node)");
-          Thread.sleep(conf.getInt("zookeeper.session.timeout", 60 * 1000));
-        } catch (InterruptedException e) {
-          // interrupted = user wants to kill us.  Don't continue
-          throw new IOException("Interrupted waiting for master address");
-        }
-      }
-    }
-
-    // Wait here until we are the active master
-    clusterStarter = activeMasterManager.blockUntilBecomingActiveMaster();
-
-    /**
-     * 4. We are active master now... go initialize components we need to run.
+    /*
+     * 3. Determine if this is a fresh cluster startup or failed over master.
+     * This is done by checking for the existence of any ephemeral
+     * RegionServer nodes in ZooKeeper.  These nodes are created by RSs on
+     * their initialization but initialization will not happen unless clusterup
+     * flag is set -- see ClusterStatusTracker below.
      */
-    // TODO: Do this using Dependency Injection, using PicoContainer or Spring.
+    this.freshClusterStartup =
+      0 == ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
+
+    /*
+     * 4. We are active master now... go initialize components we need to run.
+     * Note, there may be dross in zk from previous runs; it'll get addressed
+     * when we enter {@link #run()} below.
+     */
+    // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this);
     this.connection = HConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName());
@@ -270,16 +253,38 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
       this.serverManager);
-    regionServerTracker.start();
+    this.regionServerTracker.start();
 
-    // Set the cluster as up.
+    // Set the cluster as up.  If new RSs, they'll be waiting on this before
+    // going ahead with their startup.
     this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
     this.clusterStatusTracker.setClusterUp();
     this.clusterStatusTracker.start();
 
     LOG.info("Server active/primary master; " + this.address +
-      "; clusterStarter=" + this.clusterStarter + ", sessionid=0x" +
+      "; freshClusterStart=" + this.freshClusterStartup + ", sessionid=0x" +
       Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
+  }
+
+  /*
+   * Stall startup if we are designated a backup master.
+   * @param c
+   * @param amm
+   * @throws InterruptedException
+   */
+  private static void stallIfBackupMaster(final Configuration c,
+      final ActiveMasterManager amm)
+  throws InterruptedException {
+    // If we're a backup master, stall until a primary to writes his address
+    if (!c.getBoolean(HConstants.MASTER_TYPE_BACKUP,
+      HConstants.DEFAULT_MASTER_TYPE_BACKUP)) return;
+    // This will only be a minute or so while the cluster starts up,
+    // so don't worry about setting watches on the parent znode
+    while (!amm.isActiveMaster()) {
+      LOG.debug("Waiting for master address ZNode to be written " +
+        "(Also watching cluster state node)");
+      Thread.sleep(c.getInt("zookeeper.session.timeout", 60 * 1000));
+    }
   }
 
   /**
@@ -295,22 +300,24 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     try {
       // start up all service threads.
       startServiceThreads();
-      // wait for minimum number of region servers to be up
-      this.serverManager.waitForMinServers();
-      // start assignment of user regions, startup or failure
-      if (this.clusterStarter) {
-        clusterStarterInitializations(this.fileSystemManager,
+      // Wait for minimum number of region servers to report in
+      this.serverManager.waitForRegionServers();
+
+      // Start assignment of user regions, startup or failure
+      if (!this.stopped) {
+        if (this.freshClusterStartup) {
+          clusterStarterInitializations(this.fileSystemManager,
             this.serverManager, this.catalogTracker, this.assignmentManager);
-      } else {
-        // Process existing unassigned nodes in ZK, read all regions from META,
-        // rebuild in-memory state.
-        this.assignmentManager.processFailover();
+        } else {
+          // Process existing unassigned nodes in ZK, read all regions from META,
+          // rebuild in-memory state.
+          this.assignmentManager.processFailover();
+        }
       }
+
       // Check if we should stop every second.
       Sleeper sleeper = new Sleeper(1000, this);
-      while (!this.stopped  && !this.abort) {
-        sleeper.sleep();
-      }
+      while (!this.stopped) sleeper.sleep();
     } catch (Throwable t) {
       abort("Unhandled exception. Starting shutdown.", t);
     }
@@ -341,22 +348,17 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   /*
    * Initializations we need to do if we are cluster starter.
-   * @param starter
    * @param mfs
+   * @param sm
+   * @param ct
+   * @param am
    * @throws IOException
    */
   private static void clusterStarterInitializations(final MasterFileSystem mfs,
     final ServerManager sm, final CatalogTracker ct, final AssignmentManager am)
   throws IOException, InterruptedException, KeeperException {
-      // This master is starting the cluster (its not a preexisting cluster
-      // that this master is joining).
-      // Initialize the filesystem, which does the following:
-      //   - Creates the root hbase directory in the FS if DNE
-      //   - If fresh start, create first ROOT and META regions (bootstrap)
-      //   - Checks the FS to make sure the root directory is readable
-      //   - Creates the archive directory for logs
+      // Check filesystem has required basics
       mfs.initialize();
-      // Do any log splitting necessary
       // TODO: Should do this in background rather than block master startup
       // TODO: Do we want to do this before/while/after RSs check in?
       //       It seems that this method looks at active RSs but happens
@@ -795,6 +797,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (t != null) LOG.fatal(msg, t);
     else LOG.fatal(msg);
     this.abort = true;
+    stop("Aborting");
   }
 
   @Override

@@ -114,9 +114,6 @@ public class CatalogTracker {
   public void start() throws IOException, InterruptedException {
     this.rootRegionTracker.start();
     this.metaNodeTracker.start();
-    // Determine meta assignment; may not work because root and meta not yet
-    // deployed.  Calling the below will set {@link #metaLocation}.
-    getMetaServerConnection(true);
   }
 
   /**
@@ -205,7 +202,7 @@ public class CatalogTracker {
    */
   private HRegionInterface getRootServerConnection()
   throws IOException, InterruptedException {
-    HServerAddress address = rootRegionTracker.getRootRegionLocation();
+    HServerAddress address = this.rootRegionTracker.getRootRegionLocation();
     if (address == null) {
       return null;
     }

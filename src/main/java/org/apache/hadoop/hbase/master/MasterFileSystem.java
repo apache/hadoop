@@ -83,8 +83,11 @@ public class MasterFileSystem {
   }
 
   /**
+   * Create initial layout in filesystem.
    * <ol>
-   * <li>Check if the root region exists and is readable, if not create it</li>
+   * <li>Check if the root region exists and is readable, if not create it.
+   * Create hbase.version and the -ROOT- directory if not one.
+   * </li>
    * <li>Create a log archive directory for RS to put archived logs</li>
    * </ol>
    */

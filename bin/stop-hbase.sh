@@ -55,6 +55,8 @@ while kill -0 `cat $pid` > /dev/null 2>&1; do
   echo -n "."
   sleep 1;
 done
+# Add a CR after we're done w/ dots.
+echo
 
 # distributed == false means that the HMaster will kill ZK when it exits
 distMode=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool hbase.cluster.distributed`

@@ -86,8 +86,6 @@ public class ServerManager {
 
   private final ServerMonitor serverMonitorThread;
 
-  private int minimumServerCount;
-
   private final LogCleaner logCleaner;
 
   // Reporting to track master metrics.
@@ -106,7 +104,7 @@ public class ServerManager {
 
     @Override
     protected void chore() {
-      int numServers = numServers();
+      int numServers = countOfRegionServers();
       int numDeadServers = deadservers.size();
       double averageLoad = getAverageLoad();
       String deadServersList = deadservers.toString();
@@ -127,7 +125,6 @@ public class ServerManager {
     this.services = services;
     Configuration c = master.getConfiguration();
     int monitorInterval = c.getInt("hbase.master.monitor.interval", 60 * 1000);
-    this.minimumServerCount = c.getInt("hbase.regions.server.count.min", 1);
     this.metrics = new MasterMetrics(master.getServerName());
     this.serverMonitorThread = new ServerMonitor(monitorInterval, master);
     String n = Thread.currentThread().getName();
@@ -220,8 +217,8 @@ public class ServerManager {
     info.setLoad(load);
     // TODO: Why did we update the RS location ourself?  Shouldn't RS do this?
     // masterStatus.getZooKeeper().updateRSLocationGetWatch(info, watcher);
-    onlineServers.put(serverName, info);
-    if(hri == null) {
+    this.onlineServers.put(serverName, info);
+    if (hri == null) {
       serverConnections.remove(serverName);
     } else {
       serverConnections.put(serverName, hri);
@@ -277,7 +274,7 @@ public class ServerManager {
     }
 
     HMsg [] reply = null;
-    int numservers = numServers();
+    int numservers = countOfRegionServers();
     if (this.clusterShutdown) {
       if (numservers <= 2) {
         // Shutdown needs to be staggered; the meta regions need to close last
@@ -362,14 +359,10 @@ public class ServerManager {
     return averageLoad;
   }
 
-  /** @return the number of active servers */
-  public int numServers() {
-    int num = -1;
-    // This synchronized seems gratuitous.
-    synchronized (this.onlineServers) {
-      num = this.onlineServers.size();
-    }
-    return num;
+  /** @return the count of active regionservers */
+  int countOfRegionServers() {
+    // Presumes onlineServers is a concurrent map
+    return this.onlineServers.size();
   }
 
   /**
@@ -476,17 +469,6 @@ public class ServerManager {
       " to dead servers, submitted shutdown handler to be executed");
   }
 
-  public boolean canAssignUserRegions() {
-    if (minimumServerCount == 0) {
-      return true;
-    }
-    return (numServers() >= minimumServerCount);
-  }
-
-  public void setMinimumServerCount(int minimumServerCount) {
-    this.minimumServerCount = minimumServerCount;
-  }
-
   // RPC methods to region servers
 
   /**
@@ -546,18 +528,25 @@ public class ServerManager {
   }
 
   /**
-   * Waits for the minimum number of servers to be running.
+   * Waits for the regionservers to report in.
+   * @throws InterruptedException 
    */
-  public void waitForMinServers() {
-    while(numServers() < minimumServerCount) {
-//        !masterStatus.getShutdownRequested().get()) {
-      LOG.info("Waiting for enough servers to check in.  Currently have " +
-          numServers() + " but need at least " + minimumServerCount);
-      try {
-        Thread.sleep(1000);
-      } catch (InterruptedException e) {
-        LOG.warn("Got interrupted waiting for servers to check in, looping");
+  public void waitForRegionServers()
+  throws InterruptedException {
+    long interval = this.master.getConfiguration().
+      getLong("hbase.master.wait.on.regionservers.interval", 3000);
+    // So, number of regionservers > 0 and its been n since last check in, break,
+    // else just stall here
+    for (int oldcount = countOfRegionServers(); !this.master.isStopped();) {
+      Thread.sleep(interval);
+      int count = countOfRegionServers();
+      if (count == oldcount && count > 0) break;
+      if (count == 0) {
+        LOG.info("Waiting on regionserver(s) to checkin");
+      } else {
+        LOG.info("Waiting on regionserver(s) count to settle; currently=" + count);
       }
+      oldcount = count;
     }
   }
 
@@ -571,8 +560,8 @@ public class ServerManager {
   }
 
   public void shutdownCluster() {
-    LOG.info("Cluster shutdown requested");
     this.clusterShutdown = true;
+    this.master.stop("Cluster shutdown requested");
   }
 
   public boolean isClusterShutdown() {

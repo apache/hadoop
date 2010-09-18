@@ -95,7 +95,7 @@ class ActiveMasterManager extends ZooKeeperListener {
           clusterHasActiveMaster.set(true);
         } else {
           // Node is no longer there, cluster does not have an active master
-          LOG.debug("No master available. notifying waiting threads");
+          LOG.debug("No master available. Notifying waiting threads");
           clusterHasActiveMaster.set(false);
           // Notify any thread waiting to become the active master
           clusterHasActiveMaster.notifyAll();
@@ -114,46 +114,56 @@ class ActiveMasterManager extends ZooKeeperListener {
    *
    * This also makes sure that we are watching the master znode so will be
    * notified if another master dies.
-   * @return False if we did not start up this cluster, another
-   * master did, or if a problem (zookeeper, stop flag has been set on this
-   * Master)
+   * @return True if no issue becoming active master else false if another
+   * master was running or if some other problem (zookeeper, stop flag has been
+   * set on this Master)
    */
   boolean blockUntilBecomingActiveMaster() {
-    boolean thisMasterStartedCluster = true;
+    boolean cleanSetOfActiveMaster = true;
     // Try to become the active master, watch if there is another master
     try {
-      if(ZKUtil.setAddressAndWatch(watcher, watcher.masterAddressZNode,
-          address)) {
+      if (ZKUtil.setAddressAndWatch(this.watcher,
+          this.watcher.masterAddressZNode, this.address)) {
         // We are the master, return
-        clusterHasActiveMaster.set(true);
-        return thisMasterStartedCluster;
+        this.clusterHasActiveMaster.set(true);
+        return cleanSetOfActiveMaster;
+      }
+
+      // There is another active master running elsewhere or this is a restart
+      // and the master ephemeral node has not expired yet.
+      this.clusterHasActiveMaster.set(true);
+      cleanSetOfActiveMaster = false;
+      HServerAddress currentMaster =
+        ZKUtil.getDataAsAddress(this.watcher, this.watcher.masterAddressZNode);
+      if (currentMaster != null && currentMaster.equals(this.address)) {
+        LOG.info("Current master has this master's address, " + currentMaster +
+          "; master was restarted?  Waiting on znode to expire...");
+        // Hurry along the expiration of the znode.
+        ZKUtil.deleteNode(this.watcher, this.watcher.masterAddressZNode);
+      } else {
+        LOG.info("Another master is the active master, " + currentMaster +
+          "; waiting to become the next active master");
       }
     } catch (KeeperException ke) {
       master.abort("Received an unexpected KeeperException, aborting", ke);
       return false;
     }
-    // There is another active master, this is not a cluster startup
-    // and we must wait until the active master dies
-    LOG.info("Another master is already the active master, waiting to become " +
-      "the next active master");
-    clusterHasActiveMaster.set(true);
-    thisMasterStartedCluster = false;
-    synchronized(clusterHasActiveMaster) {
-      while(clusterHasActiveMaster.get() && !master.isStopped()) {
+    synchronized (this.clusterHasActiveMaster) {
+      while (this.clusterHasActiveMaster.get() && !this.master.isStopped()) {
         try {
-          clusterHasActiveMaster.wait();
+          this.clusterHasActiveMaster.wait();
         } catch (InterruptedException e) {
           // We expect to be interrupted when a master dies, will fall out if so
           LOG.debug("Interrupted waiting for master to die", e);
         }
       }
-      if(master.isStopped()) {
-        return thisMasterStartedCluster;
+      if (this.master.isStopped()) {
+        return cleanSetOfActiveMaster;
       }
       // Try to become active master again now that there is no active master
       blockUntilBecomingActiveMaster();
     }
-    return thisMasterStartedCluster;
+    return cleanSetOfActiveMaster;
   }
 
   /**

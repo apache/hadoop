@@ -157,8 +157,8 @@ public class AssignmentManager extends ZooKeeperListener {
   void cleanoutUnassigned() throws IOException, KeeperException {
     // Cleanup any existing ZK nodes and start watching
     ZKAssign.deleteAllNodes(watcher);
-    ZKUtil.listChildrenAndWatchForNewChildren(watcher,
-        watcher.assignmentZNode);
+    ZKUtil.listChildrenAndWatchForNewChildren(this.watcher,
+      this.watcher.assignmentZNode);
   }
 
   /**
@@ -545,7 +545,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (plan == null) {
         LOG.debug("No previous transition plan for " +
             state.getRegion().getRegionNameAsString() +
-            " so generating a random one from " + serverManager.numServers() +
+            " so generating a random one from " + serverManager.countOfRegionServers() +
             " ( " + serverManager.getOnlineServers().size() + ") available servers");
         plan = new RegionPlan(state.getRegion(), null,
           LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));

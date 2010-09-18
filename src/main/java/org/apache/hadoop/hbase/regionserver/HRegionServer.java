@@ -265,7 +265,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @throws InterruptedException 
    */
   public HRegionServer(Configuration conf) throws IOException, InterruptedException {
-    machineName = DNS.getDefaultHost(conf.get(
+    this.machineName = DNS.getDefaultHost(conf.get(
         "hbase.regionserver.dns.interface", "default"), conf.get(
         "hbase.regionserver.dns.nameserver", "default"));
     String addressStr = machineName
@@ -434,18 +434,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     zooKeeper = new ZooKeeperWatcher(conf, REGIONSERVER + "-"
         + serverInfo.getServerName(), this);
 
+    this.clusterStatusTracker = new ClusterStatusTracker(this.zooKeeper, this);
+    this.clusterStatusTracker.start();
+    this.clusterStatusTracker.blockUntilAvailable();
+
     // create the master address manager, register with zk, and start it
     masterAddressManager = new MasterAddressTracker(zooKeeper, this);
     masterAddressManager.start();
 
-    // create the catalog tracker and start it
+    // Create the catalog tracker and start it; 
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
-
-    this.clusterStatusTracker = new ClusterStatusTracker(this.zooKeeper, this);
-    this.clusterStatusTracker.start();
-    this.clusterStatusTracker.blockUntilAvailable();
   }
 
   /**

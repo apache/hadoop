@@ -526,6 +526,7 @@ Release 0.21.0 - Unreleased
    HBASE-3006  Reading compressed HFile blocks causes way too many DFS RPC
                calls severly impacting performance
                (Kannan Muthukkaruppan via Stack)
+   HBASE-3010  Can't start/stop/start... cluster using new master
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
