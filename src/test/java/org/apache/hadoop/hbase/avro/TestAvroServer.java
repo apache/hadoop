@@ -94,7 +94,7 @@ public class TestAvroServer {
    *
    * @throws Exception
    */
-  @Test (timeout=60000)
+  @Test (timeout=300000)
   public void testTableAdminAndMetadata() throws Exception {
     AvroServer.HBaseImpl impl = new AvroServer.HBaseImpl();
 
