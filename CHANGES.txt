@@ -527,6 +527,9 @@ Release 0.21.0 - Unreleased
                calls severly impacting performance
                (Kannan Muthukkaruppan via Stack)
    HBASE-3010  Can't start/stop/start... cluster using new master
+   HBASE-3015  recovered.edits files not deleted if it only contain edits that
+               have already been flushed; hurts perf for all future opens of
+               the region
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

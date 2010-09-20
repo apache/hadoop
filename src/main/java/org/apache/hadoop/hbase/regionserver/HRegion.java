@@ -1763,12 +1763,13 @@ public class HRegion implements HeapSize { // , Writable{
     if (seqid > minSeqId) {
       // Then we added some edits to memory. Flush and cleanup split edit files.
       internalFlushcache(null, seqid);
-      for (Path file: files) {
-        if (!this.fs.delete(file, false)) {
-          LOG.error("Failed delete of " + file);
-        } else {
-          LOG.debug("Deleted recovered.edits file=" + file);
-        }
+    }
+    // Now delete the content of recovered edits.  We're done w/ them.
+    for (Path file: files) {
+      if (!this.fs.delete(file, false)) {
+        LOG.error("Failed delete of " + file);
+      } else {
+        LOG.debug("Deleted recovered.edits file=" + file);
       }
     }
     return seqid;
