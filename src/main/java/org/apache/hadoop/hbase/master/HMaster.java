@@ -203,8 +203,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         "_" + System.currentTimeMillis());
     }
 
-    this.zooKeeper =
-      new ZooKeeperWatcher(conf, MASTER + "-" + getMasterAddress(), this);
+    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER, this);
 
     /*
      * 2. Block on becoming the active master.

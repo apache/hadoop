@@ -431,8 +431,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   private void initializeZooKeeper() throws IOException, InterruptedException {
     // open connection to zookeeper and set primary watcher
-    zooKeeper = new ZooKeeperWatcher(conf, REGIONSERVER + "-"
-        + serverInfo.getServerName(), this);
+    zooKeeper = new ZooKeeperWatcher(conf, REGIONSERVER + ":" +
+      serverInfo.getServerAddress().getPort(), this);
 
     this.clusterStatusTracker = new ClusterStatusTracker(this.zooKeeper, this);
     this.clusterStatusTracker.start();

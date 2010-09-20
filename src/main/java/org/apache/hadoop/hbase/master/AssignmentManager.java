@@ -253,7 +253,7 @@ public class AssignmentManager extends ZooKeeperListener {
       RegionState regionState = regionsInTransition.get(encodedName);
       switch(data.getEventType()) {
         case M2ZK_REGION_OFFLINE:
-          LOG.warn("What to do with this event? " + data);
+          // Nothing to do.
           break;
 
         case RS2ZK_REGION_CLOSING:
@@ -545,8 +545,8 @@ public class AssignmentManager extends ZooKeeperListener {
       if (plan == null) {
         LOG.debug("No previous transition plan for " +
             state.getRegion().getRegionNameAsString() +
-            " so generating a random one from " + serverManager.countOfRegionServers() +
-            " ( " + serverManager.getOnlineServers().size() + ") available servers");
+            " so generating a random one; " + serverManager.countOfRegionServers() +
+            " (online=" + serverManager.getOnlineServers().size() + ") available servers");
         plan = new RegionPlan(state.getRegion(), null,
           LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
         regionPlans.put(encodedName, plan);

@@ -165,13 +165,13 @@ public class MasterFileSystem {
     }
     for (FileStatus status : logFolders) {
       String serverName = status.getPath().getName();
-      LOG.info("Found log folder : " + serverName);
-      if(onlineServers.get(serverName) == null) {
-        LOG.info("Log folder doesn't belong " +
+      if (onlineServers.get(serverName) == null) {
+        LOG.info("Log folder " + status.getPath() + " doesn't belong " +
           "to a known region server, splitting");
         splitLog(serverName);
       } else {
-        LOG.info("Log folder belongs to an existing region server");
+        LOG.info("Log folder " + status.getPath() +
+          " belongs to an existing region server");
       }
     }
   }

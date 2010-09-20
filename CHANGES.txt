@@ -919,6 +919,7 @@ Release 0.21.0 - Unreleased
    HBASE-2988  Support alternate compression for major compactions
    HBASE-2941  port HADOOP-6713 - threading scalability for RPC reads - to HBase
    HBASE-2782  QOS for META table access
+   HBASE-3017  More log pruning
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

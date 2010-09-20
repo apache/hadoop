@@ -135,8 +135,8 @@ public class ZKAssign {
   public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName, final EventType event)
   throws KeeperException, KeeperException.NodeExistsException {
-    LOG.debug(zkw.prefix("Creating an unassigned node for " +
-      region.getEncodedName() + " in an OFFLINE state"));
+    LOG.debug(zkw.prefix("Creating unassigned node for " +
+      region.getEncodedName() + " in OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(event,
       region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
@@ -167,8 +167,8 @@ public class ZKAssign {
   public static void forceNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName)
   throws KeeperException, KeeperException.NoNodeException {
-    LOG.debug(zkw.prefix("Forcing an existing unassigned node for " +
-      region.getEncodedName() + " to an OFFLINE state"));
+    LOG.debug(zkw.prefix("Forcing existing unassigned node for " +
+      region.getEncodedName() + " to OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(
         EventType.M2ZK_REGION_OFFLINE, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
@@ -200,8 +200,8 @@ public class ZKAssign {
   public static boolean createOrForceNodeOffline(ZooKeeperWatcher zkw,
       HRegionInfo region, String serverName)
   throws KeeperException {
-    LOG.debug(zkw.prefix("Creating or updating an unassigned node for " +
-      region.getEncodedName() + " with an OFFLINE state"));
+    LOG.debug(zkw.prefix("Creating (or updating) unassigned node for " +
+      region.getEncodedName() + " with OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(
         EventType.M2ZK_REGION_OFFLINE, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
@@ -319,7 +319,7 @@ public class ZKAssign {
   private static boolean deleteNode(ZooKeeperWatcher zkw, String regionName,
       EventType expectedState)
   throws KeeperException, KeeperException.NoNodeException {
-    LOG.debug(zkw.prefix("Deleting an existing unassigned " +
+    LOG.debug(zkw.prefix("Deleting existing unassigned " +
       "node for " + regionName + " that is in expected state " + expectedState));
     String node = getNodeName(zkw, regionName);
     Stat stat = new Stat();
@@ -329,7 +329,7 @@ public class ZKAssign {
     }
     RegionTransitionData data = RegionTransitionData.fromBytes(bytes);
     if(!data.getEventType().equals(expectedState)) {
-      LOG.warn(zkw.prefix("Attempting to delete an unassigned " +
+      LOG.warn(zkw.prefix("Attempting to delete unassigned " +
         "node in " + expectedState +
         " state but node is in " + data.getEventType() + " state"));
       return false;
@@ -338,7 +338,7 @@ public class ZKAssign {
       // TODO: Does this go here or only if we successfully delete node?
       zkw.getNodes().remove(node);
       if(!ZKUtil.deleteNode(zkw, node, stat.getVersion())) {
-        LOG.warn(zkw.prefix("Attempting to delete an " +
+        LOG.warn(zkw.prefix("Attempting to delete " +
           "unassigned node in " + expectedState +
             " state but " +
             "after verifying it was in OPENED state, we got a version mismatch"));
@@ -392,7 +392,7 @@ public class ZKAssign {
   public static int createNodeClosing(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName)
   throws KeeperException, KeeperException.NodeExistsException {
-    LOG.debug(zkw.prefix("Creating an unassigned node for " +
+    LOG.debug(zkw.prefix("Creating unassigned node for " +
       region.getEncodedName() + " in a CLOSING state"));
     RegionTransitionData data = new RegionTransitionData(
         EventType.RS2ZK_REGION_CLOSING, region.getRegionName(), serverName);

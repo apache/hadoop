@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.text.DecimalFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -93,6 +94,8 @@ public class ServerManager {
 
   private final DeadServer deadservers = new DeadServer();
 
+  private static final DecimalFormat DF = new DecimalFormat("#.##");
+
   /**
    * Dumps into log current stats on dead servers and number of servers
    * TODO: Make this a metric; dump metrics into log.
@@ -108,10 +111,9 @@ public class ServerManager {
       int numDeadServers = deadservers.size();
       double averageLoad = getAverageLoad();
       String deadServersList = deadservers.toString();
-      LOG.info(numServers + " region servers, " + numDeadServers +
-        " dead, average load " + averageLoad +
-        ((deadServersList != null && deadServersList.length() > 0)?
-          deadServersList: ""));
+      LOG.info("regionservers=" + numServers +
+        ", averageload=" + DF.format(averageLoad) +
+        ((numDeadServers > 0)?  ("deadservers=" + deadServersList): ""));
     }
   }
 
@@ -422,7 +424,7 @@ public class ServerManager {
         LOG.info("Waiting on following regionserver(s) to go down " +
           this.onlineServers.values());
         try {
-          this.onlineServers.wait(500);
+          this.onlineServers.wait(1000);
         } catch (InterruptedException e) {
           // continue
         }
@@ -516,7 +518,7 @@ public class ServerManager {
         HConnectionManager.getConnection(this.master.getConfiguration());
       HRegionInterface hri = serverConnections.get(info.getServerName());
       if (hri == null) {
-        LOG.info("new connection");
+        LOG.debug("New connection to " + info.getServerName());
         hri = connection.getHRegionConnection(info.getServerAddress(), false);
         serverConnections.put(info.getServerName(), hri);
       }
@@ -537,9 +539,10 @@ public class ServerManager {
       getLong("hbase.master.wait.on.regionservers.interval", 3000);
     // So, number of regionservers > 0 and its been n since last check in, break,
     // else just stall here
+    int count = 0;
     for (int oldcount = countOfRegionServers(); !this.master.isStopped();) {
       Thread.sleep(interval);
-      int count = countOfRegionServers();
+      count = countOfRegionServers();
       if (count == oldcount && count > 0) break;
       if (count == 0) {
         LOG.info("Waiting on regionserver(s) to checkin");
@@ -548,6 +551,8 @@ public class ServerManager {
       }
       oldcount = count;
     }
+    LOG.info("Exiting wait on regionserver(s) to checkin; count=" + count +
+      ", stopped=" + this.master.isStopped());
   }
 
   public List<HServerInfo> getOnlineServersList() {
