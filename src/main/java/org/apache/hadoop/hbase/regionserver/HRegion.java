@@ -283,10 +283,6 @@ public class HRegion implements HeapSize { // , Writable{
         10 * 1000);
     String encodedNameStr = this.regionInfo.getEncodedName();
     this.regiondir = getRegionDir(this.tableDir, encodedNameStr);
-    if (LOG.isDebugEnabled()) {
-      // Write out region name as string and its encoded name.
-      LOG.debug("Creating region " + this);
-    }
     long flushSize = regionInfo.getTableDesc().getMemStoreFlushSize();
     if (flushSize == HTableDescriptor.DEFAULT_MEMSTORE_FLUSH_SIZE) {
       flushSize = conf.getLong("hbase.hregion.memstore.flush.size",
@@ -295,6 +291,10 @@ public class HRegion implements HeapSize { // , Writable{
     this.memstoreFlushSize = flushSize;
     this.blockingMemStoreSize = this.memstoreFlushSize *
       conf.getLong("hbase.hregion.memstore.block.multiplier", 2);
+    if (LOG.isDebugEnabled()) {
+      // Write out region name as string and its encoded name.
+      LOG.debug("Instantiated " + this);
+    }
   }
 
   /**
@@ -854,7 +854,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started memstore flush for region " + this +
-        ". Current region memstore size " +
+        "; current region memstore size " +
         StringUtils.humanReadableInt(this.memstoreSize.get()) +
         ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
     }
