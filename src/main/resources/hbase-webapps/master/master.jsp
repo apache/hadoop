@@ -1,6 +1,7 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
   import="org.apache.hadoop.conf.Configuration"
+  import="org.apache.hadoop.util.StringUtils"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.JvmVersion"
   import="org.apache.hadoop.hbase.util.FSUtils"
@@ -66,7 +67,7 @@
 <tr><td>Hadoop Version</td><td><%= org.apache.hadoop.util.VersionInfo.getVersion() %>, r<%= org.apache.hadoop.util.VersionInfo.getRevision() %></td><td>Hadoop version and svn revision</td></tr>
 <tr><td>Hadoop Compiled</td><td><%= org.apache.hadoop.util.VersionInfo.getDate() %>, <%= org.apache.hadoop.util.VersionInfo.getUser() %></td><td>When Hadoop version was compiled and by whom</td></tr>
 <tr><td>HBase Root Directory</td><td><%= FSUtils.getRootDir(master.getConfiguration()).toString() %></td><td>Location of HBase home directory</td></tr>
-<tr><td>Load average</td><td><%= master.getServerManager().getAverageLoad() %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
+<tr><td>Load average</td><td><%= StringUtils.limitDecimalTo2(master.getServerManager().getAverageLoad()) %></td><td>Average number of regions per regionserver. Naive computation.</td></tr>
 <%  if (showFragmentation) { %>
         <tr><td>Fragmentation</td><td><%= frags.get("-TOTAL-") != null ? frags.get("-TOTAL-").intValue() + "%" : "n/a" %></td><td>Overall fragmentation of all tables, including .META. and -ROOT-.</td></tr>
 <%  } %>

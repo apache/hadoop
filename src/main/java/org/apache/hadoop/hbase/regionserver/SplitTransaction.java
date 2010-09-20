@@ -196,6 +196,9 @@ class SplitTransaction {
       services.removeFromOnlineRegions(this.parent.getRegionInfo().getEncodedName());
     }
     this.journal.add(JournalEntry.OFFLINED_PARENT);
+    
+    // TODO: If the below were multithreaded would we complete steps in less
+    // elapsed time?  St.Ack 20100920
 
     splitStoreFiles(this.splitdir, hstoreFilesToSplit);
     // splitStoreFiles creates daughter region dirs under the parent splits dir

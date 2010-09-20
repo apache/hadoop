@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.text.DecimalFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -94,8 +94,6 @@ public class ServerManager {
 
   private final DeadServer deadservers = new DeadServer();
 
-  private static final DecimalFormat DF = new DecimalFormat("#.##");
-
   /**
    * Dumps into log current stats on dead servers and number of servers
    * TODO: Make this a metric; dump metrics into log.
@@ -112,7 +110,7 @@ public class ServerManager {
       double averageLoad = getAverageLoad();
       String deadServersList = deadservers.toString();
       LOG.info("regionservers=" + numServers +
-        ", averageload=" + DF.format(averageLoad) +
+        ", averageload=" + StringUtils.limitDecimalTo2(averageLoad) +
         ((numDeadServers > 0)?  ("deadservers=" + deadServersList): ""));
     }
   }

@@ -682,19 +682,19 @@ public class AssignmentManager extends ZooKeeperListener {
     // Get all available servers
     List<HServerInfo> servers = serverManager.getOnlineServersList();
 
-    LOG.info("Assigning " + allRegions.size() + " across " + servers.size() +
-        " servers");
+    LOG.info("Assigning " + allRegions.size() + " regions across " + servers.size() +
+      " servers");
 
     // Generate a cluster startup region placement plan
     Map<HServerInfo,List<HRegionInfo>> bulkPlan =
       LoadBalancer.bulkAssignment(allRegions, servers);
 
     // For each server, create OFFLINE nodes and send OPEN RPCs
-    for(Map.Entry<HServerInfo,List<HRegionInfo>> entry : bulkPlan.entrySet()) {
+    for (Map.Entry<HServerInfo,List<HRegionInfo>> entry : bulkPlan.entrySet()) {
       HServerInfo server = entry.getKey();
       List<HRegionInfo> regions = entry.getValue();
       LOG.debug("Assigning " + regions.size() + " regions to " + server);
-      for(HRegionInfo region : regions) {
+      for (HRegionInfo region : regions) {
         LOG.debug("Assigning " + region.getRegionNameAsString() + " to " + server);
         String regionName = region.getEncodedName();
         RegionPlan plan = new RegionPlan(region, null,server);
