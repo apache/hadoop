@@ -68,6 +68,10 @@ public class UpgradeUtilities {
   private static long namenodeStorageChecksum;
   // The namespaceId of the namenodeStorage directory
   private static int namenodeStorageNamespaceID;
+  // The clusterId of the namenodeStorage directory
+  private static String namenodeStorageClusterID;
+  // The blockpoolId of the namenodeStorage directory
+  private static String namenodeStorageBlockPoolID;
   // The fsscTime of the namenodeStorage directory
   private static long namenodeStorageFsscTime;
   // The singleton master storage directory for Datanode
@@ -103,6 +107,8 @@ public class UpgradeUtilities {
       NameNode namenode = cluster.getNameNode();
       namenodeStorageNamespaceID = namenode.versionRequest().getNamespaceID();
       namenodeStorageFsscTime = namenode.versionRequest().getCTime();
+      namenodeStorageClusterID = namenode.versionRequest().getClusterID();
+      namenodeStorageBlockPoolID = namenode.versionRequest().getBlockPoolID();
       
       FileSystem fs = FileSystem.get(config);
       Path baseDir = new Path("/TestUpgrade");
@@ -375,6 +381,28 @@ public class UpgradeUtilities {
       return cluster.getNameNode().versionRequest().getNamespaceID();
     }
     return namenodeStorageNamespaceID;
+  }
+  
+  /**
+   * Return the cluster ID inherent in the currently running
+   * Namenode. 
+   */
+  public static String getCurrentClusterID(MiniDFSCluster cluster) throws IOException {
+    if (cluster != null) {
+      return cluster.getNameNode().versionRequest().getClusterID();
+    }
+    return namenodeStorageClusterID;
+  }
+  
+  /**
+   * Return the blockpool ID inherent in the currently running
+   * Namenode. 
+   */
+  public static String getCurrentBlockPoolID(MiniDFSCluster cluster) throws IOException {
+    if (cluster != null) {
+      return cluster.getNameNode().versionRequest().getBlockPoolID();
+    }
+    return namenodeStorageBlockPoolID;
   }
   
   /**

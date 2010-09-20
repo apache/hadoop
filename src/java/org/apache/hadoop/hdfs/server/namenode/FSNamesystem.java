@@ -523,6 +523,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   
   NamespaceInfo getNamespaceInfo() {
     return new NamespaceInfo(dir.fsImage.getNamespaceID(),
+                             dir.fsImage.getClusterID(),
+                             dir.fsImage.getBlockPoolID(),
                              dir.fsImage.getCTime(),
                              getDistributedUpgradeVersion());
   }

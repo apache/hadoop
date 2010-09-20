@@ -665,8 +665,8 @@ public abstract class Storage extends StorageInfo {
     this.storageType = type;
   }
   
-  protected Storage(NodeType type, int nsID, long cT) {
-    super(FSConstants.LAYOUT_VERSION, nsID, cT);
+  protected Storage(NodeType type, int nsID, String cid, String bpid, long cT) {
+    super(FSConstants.LAYOUT_VERSION, nsID, cid, bpid, cT);
     this.storageType = type;
   }
   
@@ -734,20 +734,29 @@ public abstract class Storage extends StorageInfo {
   protected void getFields(Properties props, 
                            StorageDirectory sd 
                            ) throws IOException {
-    String sv, st, sid, sct;
+    String sv, st, sid, scid, sbpid, sct;
     sv = props.getProperty("layoutVersion");
     st = props.getProperty("storageType");
     sid = props.getProperty("namespaceID");
+    scid = props.getProperty("clusterID");
+    sbpid = props.getProperty("blockpoolID");
     sct = props.getProperty("cTime");
-    if (sv == null || st == null || sid == null || sct == null)
+    if (sv == null || st == null || sid == null || scid == null || sbpid == null
+        || sct == null) {
       throw new InconsistentFSStateException(sd.root,
-                                             "file " + STORAGE_FILE_VERSION + " is invalid.");
+        "file " + STORAGE_FILE_VERSION + " is invalid.");
+    }
     int rv = Integer.parseInt(sv);
     NodeType rt = NodeType.valueOf(st);
     int rid = Integer.parseInt(sid);
+    String rcid = scid;
+    String rbpid = sbpid;
     long rct = Long.parseLong(sct);
     if (!storageType.equals(rt) ||
-        !((namespaceID == 0) || (rid == 0) || namespaceID == rid))
+        !((namespaceID == 0) || (rid == 0) || namespaceID == rid) ||
+        !( (clusterID.equals(rcid)) || (clusterID.equals("")) )   ||
+        !( (blockpoolID.equals(rbpid)) || (clusterID.equals("")) )
+        )
       throw new InconsistentFSStateException(sd.root,
                                              "is incompatible with others.");
     if (rv < FSConstants.LAYOUT_VERSION) // future version
@@ -756,6 +765,8 @@ public abstract class Storage extends StorageInfo {
     layoutVersion = rv;
     storageType = rt;
     namespaceID = rid;
+    clusterID = rcid;
+    blockpoolID = rbpid;
     cTime = rct;
   }
   
@@ -772,6 +783,8 @@ public abstract class Storage extends StorageInfo {
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
     props.setProperty("storageType", storageType.toString());
     props.setProperty("namespaceID", String.valueOf(namespaceID));
+    props.setProperty("clusterID", clusterID);
+    props.setProperty("blockpoolID", blockpoolID);
     props.setProperty("cTime", String.valueOf(cTime));
   }
 
@@ -848,6 +861,8 @@ public abstract class Storage extends StorageInfo {
 
   public static String getRegistrationID(StorageInfo storage) {
     return "NS-" + Integer.toString(storage.getNamespaceID())
+      + "-" + storage.getClusterID()
+      + "-" + storage.getBlockPoolID()
       + "-" + Integer.toString(storage.getLayoutVersion())
       + "-" + Long.toString(storage.getCTime());
   }

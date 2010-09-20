@@ -48,8 +48,9 @@ public class NamespaceInfo extends StorageInfo {
     buildVersion = null;
   }
   
-  public NamespaceInfo(int nsID, long cT, int duVersion) {
-    super(FSConstants.LAYOUT_VERSION, nsID, cT);
+  public NamespaceInfo(int nsID, String clusterID, String bpID, 
+      long cT, int duVersion) {
+    super(FSConstants.LAYOUT_VERSION, nsID, clusterID, bpID, cT);
     buildVersion = Storage.getBuildVersion();
     this.distributedUpgradeVersion = duVersion;
   }

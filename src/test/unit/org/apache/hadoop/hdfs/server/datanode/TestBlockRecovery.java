@@ -100,7 +100,8 @@ public class TestBlockRecovery {
     dataDir.mkdirs();
     dirs.add(dataDir);
     DatanodeProtocol namenode = mock(DatanodeProtocol.class);
-    when(namenode.versionRequest()).thenReturn(new NamespaceInfo(1, 1L, 1));
+    when(namenode.versionRequest()).thenReturn(new NamespaceInfo
+        (1, "cid-test", "bpid-test", 1L, 1));
     when(namenode.sendHeartbeat(any(DatanodeRegistration.class), anyLong(), 
         anyLong(), anyLong(), anyInt(), anyInt())).thenReturn(
             new DatanodeCommand[0]);

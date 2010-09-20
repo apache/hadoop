@@ -175,6 +175,8 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createVersionFile(DATA_NODE, baseDirs,
                                          new StorageInfo(Integer.MIN_VALUE,
                                                          UpgradeUtilities.getCurrentNamespaceID(cluster),
+                                                         UpgradeUtilities.getCurrentClusterID(cluster),
+                                                         UpgradeUtilities.getCurrentBlockPoolID(cluster),
                                                          UpgradeUtilities.getCurrentFsscTime(cluster)));
       startDataNodeShouldFail(StartupOption.REGULAR);
       cluster.shutdown();
@@ -188,6 +190,8 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createVersionFile(DATA_NODE, baseDirs,
                                          new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(),
                                                          UpgradeUtilities.getCurrentNamespaceID(cluster),
+                                                         UpgradeUtilities.getCurrentClusterID(cluster),
+                                                         UpgradeUtilities.getCurrentBlockPoolID(cluster),
                                                          Long.MAX_VALUE));
       startDataNodeShouldFail(StartupOption.REGULAR);
       cluster.shutdown();
@@ -223,6 +227,8 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createVersionFile(NAME_NODE, baseDirs,
                                          new StorageInfo(Storage.LAST_UPGRADABLE_LAYOUT_VERSION + 1,
                                                          UpgradeUtilities.getCurrentNamespaceID(null),
+                                                         UpgradeUtilities.getCurrentClusterID(null),
+                                                         UpgradeUtilities.getCurrentBlockPoolID(null),
                                                          UpgradeUtilities.getCurrentFsscTime(null)));
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
@@ -232,6 +238,8 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createVersionFile(NAME_NODE, baseDirs,
                                          new StorageInfo(Integer.MIN_VALUE,
                                                          UpgradeUtilities.getCurrentNamespaceID(null),
+                                                         UpgradeUtilities.getCurrentClusterID(null),
+                                                         UpgradeUtilities.getCurrentBlockPoolID(null),
                                                          UpgradeUtilities.getCurrentFsscTime(null)));
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);

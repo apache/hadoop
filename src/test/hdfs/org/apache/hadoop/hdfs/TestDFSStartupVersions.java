@@ -76,26 +76,28 @@ public class TestDFSStartupVersions extends TestCase {
     long fsscTimeOld = Long.MIN_VALUE;
     long fsscTimeCur = UpgradeUtilities.getCurrentFsscTime(null);
     long fsscTimeNew = Long.MAX_VALUE;
+    String clusterID = "cid-test";
+    String bpID = "bpid-test";
     
     return new StorageInfo[] {
-      new StorageInfo(layoutVersionOld, namespaceIdCur, fsscTimeOld), // 0
-      new StorageInfo(layoutVersionOld, namespaceIdCur, fsscTimeCur), // 1
-      new StorageInfo(layoutVersionOld, namespaceIdCur, fsscTimeNew), // 2
-      new StorageInfo(layoutVersionOld, namespaceIdOld, fsscTimeOld), // 3
-      new StorageInfo(layoutVersionOld, namespaceIdOld, fsscTimeCur), // 4
-      new StorageInfo(layoutVersionOld, namespaceIdOld, fsscTimeNew), // 5
-      new StorageInfo(layoutVersionCur, namespaceIdCur, fsscTimeOld), // 6
-      new StorageInfo(layoutVersionCur, namespaceIdCur, fsscTimeCur), // 7
-      new StorageInfo(layoutVersionCur, namespaceIdCur, fsscTimeNew), // 8
-      new StorageInfo(layoutVersionCur, namespaceIdOld, fsscTimeOld), // 9
-      new StorageInfo(layoutVersionCur, namespaceIdOld, fsscTimeCur), // 10
-      new StorageInfo(layoutVersionCur, namespaceIdOld, fsscTimeNew), // 11
-      new StorageInfo(layoutVersionNew, namespaceIdCur, fsscTimeOld), // 12
-      new StorageInfo(layoutVersionNew, namespaceIdCur, fsscTimeCur), // 13
-      new StorageInfo(layoutVersionNew, namespaceIdCur, fsscTimeNew), // 14
-      new StorageInfo(layoutVersionNew, namespaceIdOld, fsscTimeOld), // 15
-      new StorageInfo(layoutVersionNew, namespaceIdOld, fsscTimeCur), // 16
-      new StorageInfo(layoutVersionNew, namespaceIdOld, fsscTimeNew), // 17
+      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, bpID, fsscTimeOld), // 0
+      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, bpID, fsscTimeCur), // 1
+      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, bpID, fsscTimeNew), // 2
+      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, bpID, fsscTimeOld), // 3
+      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, bpID, fsscTimeCur), // 4
+      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, bpID, fsscTimeNew), // 5
+      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, bpID, fsscTimeOld), // 6
+      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, bpID, fsscTimeCur), // 7
+      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, bpID, fsscTimeNew), // 8
+      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, bpID, fsscTimeOld), // 9
+      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, bpID, fsscTimeCur), // 10
+      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, bpID, fsscTimeNew), // 11
+      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, bpID, fsscTimeOld), // 12
+      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, bpID, fsscTimeCur), // 13
+      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, bpID, fsscTimeNew), // 14
+      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, bpID, fsscTimeOld), // 15
+      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, bpID, fsscTimeCur), // 16
+      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, bpID, fsscTimeNew), // 17
     };
   }
   
@@ -177,6 +179,8 @@ public class TestDFSStartupVersions extends TestCase {
     StorageInfo nameNodeVersion = new StorageInfo(
                                                   UpgradeUtilities.getCurrentLayoutVersion(),
                                                   UpgradeUtilities.getCurrentNamespaceID(cluster),
+                                                  UpgradeUtilities.getCurrentClusterID(cluster),
+                                                  UpgradeUtilities.getCurrentBlockPoolID(cluster),
                                                   UpgradeUtilities.getCurrentFsscTime(cluster));
     log("NameNode version info", NAME_NODE, null, nameNodeVersion);
     for (int i = 0; i < versions.length; i++) {

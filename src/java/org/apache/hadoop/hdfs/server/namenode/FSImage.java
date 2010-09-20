@@ -29,7 +29,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -43,6 +46,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -73,6 +77,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 /**
@@ -159,6 +164,8 @@ public class FSImage extends Storage {
   static private final FsPermission FILE_PERM = new FsPermission((short)0);
   static private final byte[] PATH_SEPARATOR = DFSUtil.string2Bytes(Path.SEPARATOR);
 
+  private static final Random R = new Random();
+  
   /**
    */
   FSImage() {
@@ -1448,6 +1455,51 @@ public class FSImage extends Storage {
     return newID;
   }
 
+  /**
+   * Generate new clusterID.
+   * 
+   * clusterID is a persistent attribute of the cluster.
+   * It is generated when the cluster is created and remains the same
+   * during the life cycle of the cluster.  When a new name node is formated, if 
+   * this is a new cluster, a new clusterID is geneated and stored.  Subsequent 
+   * name node must be given the same ClusterID during its format to be in the 
+   * same cluster.
+   * When a datanode register it receive the clusterID and stick with it.
+   * If at any point, name node or data node tries to join another cluster, it 
+   * will be rejected.
+   * 
+   * @return new clusterID
+   */ 
+  private String newClusterID() {
+    this.clusterID = "cid-" + UUID.randomUUID().toString();
+    return this.clusterID;
+  }
+  
+  /**
+   * Generate new blockpoolID.
+   * 
+   * @return new blockpoolID
+   */ 
+  private String newBlockPoolID() throws UnknownHostException{
+    String ip = "unknownIP";
+    try {
+      ip = DNS.getDefaultIP("default");
+    } catch (UnknownHostException e) {
+      LOG.warn("Could not find ip address of \"default\" inteface.");
+      throw e;
+    }
+    
+    int rand = 0;
+    try {
+      rand = SecureRandom.getInstance("SHA1PRNG").nextInt(Integer.MAX_VALUE);
+    } catch (NoSuchAlgorithmException e) {
+      LOG.warn("Could not use SecureRandom");
+      rand = R.nextInt(Integer.MAX_VALUE);
+    }
+    this.blockpoolID ="BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
+    return this.blockpoolID;
+  }
+  
   /** Create new dfs name directory.  Caution: this destroys all files
    * in this filesystem. */
   void format(StorageDirectory sd) throws IOException {
@@ -1465,6 +1517,8 @@ public class FSImage extends Storage {
   public void format() throws IOException {
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     this.namespaceID = newNamespaceID();
+    this.clusterID = newClusterID();
+    this.blockpoolID = newBlockPoolID();
     this.cTime = 0L;
     this.checkpointTime = now();
     for (Iterator<StorageDirectory> it = 

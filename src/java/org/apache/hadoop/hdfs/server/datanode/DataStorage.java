@@ -66,8 +66,8 @@ public class DataStorage extends Storage {
     storageID = "";
   }
   
-  DataStorage(int nsID, long cT, String strgID) {
-    super(NodeType.DATA_NODE, nsID, cT);
+  DataStorage(int nsID, String cID, String bpID, long cT, String strgID) {
+    super(NodeType.DATA_NODE, nsID, cID, bpID, cT);
     this.storageID = strgID;
   }
   
@@ -164,6 +164,8 @@ public class DataStorage extends Storage {
     sd.clearDirectory(); // create directory
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     this.namespaceID = nsInfo.getNamespaceID();
+    this.clusterID = nsInfo.getClusterID();
+    this.blockpoolID = nsInfo.getBlockPoolID();
     this.cTime = 0;
     // store storageID as it currently is
     sd.write();
@@ -238,6 +240,16 @@ public class DataStorage extends Storage {
                             "Incompatible namespaceIDs in " + sd.getRoot().getCanonicalPath()
                             + ": namenode namespaceID = " + nsInfo.getNamespaceID() 
                             + "; datanode namespaceID = " + getNamespaceID());
+    if (!getClusterID().equals (nsInfo.getClusterID()))
+      throw new IOException(
+                            "Incompatible clusterIDs in " + sd.getRoot().getCanonicalPath()
+                            + ": namenode clusterID = " + nsInfo.getClusterID() 
+                            + "; datanode clusterID = " + getClusterID());
+    if (!getBlockPoolID().equals(nsInfo.getBlockPoolID()))
+      throw new IOException(
+                            "Incompatible blockpoolIDs in " + sd.getRoot().getCanonicalPath()
+                            + ": namenode blockpoolID = " + nsInfo.getBlockPoolID() 
+                            + "; datanode blockpoolID = " + getBlockPoolID());
     if (this.layoutVersion == FSConstants.LAYOUT_VERSION 
         && this.cTime == nsInfo.getCTime())
       return; // regular startup

@@ -37,6 +37,8 @@ Trunk (unreleased changes)
 
     HDFS-1361. Add -fileStatus operation to NNThroughputBenchmark. (shv)
 
+    HDFS-1365.HDFS federation: propose ClusterID and BlockPoolID format (tanping via boryas)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)

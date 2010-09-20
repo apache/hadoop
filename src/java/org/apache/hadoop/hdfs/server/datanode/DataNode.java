@@ -348,6 +348,8 @@ public class DataNode extends Configured
         setNewStorageID(dnRegistration);
         dnRegistration.storageInfo.layoutVersion = FSConstants.LAYOUT_VERSION;
         dnRegistration.storageInfo.namespaceID = nsInfo.namespaceID;
+        dnRegistration.storageInfo.clusterID = nsInfo.clusterID;
+        dnRegistration.storageInfo.blockpoolID = nsInfo.blockpoolID;
         // it would have been better to pass storage as a parameter to
         // constructor below - need to augment ReflectionUtils used below.
         conf.set(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY, dnRegistration.getStorageID());
