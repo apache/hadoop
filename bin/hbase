@@ -76,6 +76,7 @@ if [ $# = 0 ]; then
   echo "  avro             run an HBase Avro server" 
   echo "  migrate          upgrade an hbase.rootdir"
   echo "  hbck             run the hbase 'fsck' tool"
+  echo "  classpath        dumps hbase CLASSPATH"
   echo " or"
   echo "  CLASSNAME        run the class named CLASSNAME"
   echo "Most commands print help when invoked w/o parameters."
@@ -262,6 +263,9 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
   fi
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS='org.apache.zookeeper.ZooKeeperMain'
+elif [ "$COMMAND" = "classpath" ] ; then
+  echo $CLASSPATH
+  exit 0
 else
   CLASS=$COMMAND
 fi
