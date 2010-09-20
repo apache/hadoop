@@ -47,7 +47,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import org.apache.commons.lang.StringUtils;
 
 import com.google.common.base.Function;
 import org.apache.commons.logging.Log;
@@ -2316,11 +2315,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
       } catch (IOException ioe) {
         if (multi.size() == 1) throw ioe;
-        LOG.debug("Exception processing " + StringUtils.abbreviate(action.toString(), 64) +
-            "; " + ioe.getMessage());
-          response.add(regionName,null);
-          // stop processing on this region, continue to the next.
-        }
+        LOG.debug("Exception processing " +
+          org.apache.commons.lang.StringUtils.abbreviate(action.toString(), 64) +
+          "; " + ioe.getMessage());
+        response.add(regionName,null);
+        // stop processing on this region, continue to the next.
       }
     }
     return response;
