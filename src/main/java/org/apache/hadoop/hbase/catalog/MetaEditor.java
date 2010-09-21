@@ -100,9 +100,9 @@ public class MetaEditor {
     if (serverInfo != null) addLocation(put, serverInfo);
     server.put(catalogRegionName, put);
     LOG.info("Added daughter " + regionInfo.getRegionNameAsString() +
-      " in region " + Bytes.toString(catalogRegionName) + " with " +
-      "server=" + serverInfo.getHostnamePort() + ", " +
-      "startcode=" + serverInfo.getStartCode());
+      " in region " + Bytes.toString(catalogRegionName) +
+      (serverInfo == null?
+        ", serverInfo=null": ", serverInfo=" + serverInfo.getServerName()));
   }
 
   /**

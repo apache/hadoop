@@ -152,7 +152,7 @@ public class ServerShutdownHandler extends EventHandler {
     if (bytes == null || bytes.length <= 0) return;
     HRegionInfo hri = Writables.getHRegionInfo(bytes);
     if (!hris.containsKey(hri)) {
-      LOG.info("Fixup; missing daughter " + hri.getEncodedNameAsBytes());
+      LOG.info("Fixup; missing daughter " + hri.getEncodedName());
       MetaEditor.addDaughter(this.server.getCatalogTracker(), hri, null);
       this.services.getAssignmentManager().assign(hri);
     }
