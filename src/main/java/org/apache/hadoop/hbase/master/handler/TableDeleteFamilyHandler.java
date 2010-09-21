@@ -40,7 +40,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
 
   public TableDeleteFamilyHandler(byte[] tableName, byte [] familyName,
       Server server, final MasterServices masterServices) throws IOException {
-    super(EventType.C2M_ADD_FAMILY, tableName, server, masterServices);
+    super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
     this.familyName = familyName;
   }
 

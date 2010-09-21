@@ -40,7 +40,7 @@ public class TableAddFamilyHandler extends TableEventHandler {
 
   public TableAddFamilyHandler(byte[] tableName, HColumnDescriptor familyDesc,
       Server server, final MasterServices masterServices) throws IOException {
-    super(EventType.C2M_ADD_FAMILY, tableName, server, masterServices);
+    super(EventType.C_M_ADD_FAMILY, tableName, server, masterServices);
     this.familyDesc = familyDesc;
   }
 

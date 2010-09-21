@@ -106,15 +106,15 @@ public class TestZKBasedOpenCloseRegion {
 
     EventHandlerListener closeListener =
       new ReopenEventListener(hri.getRegionNameAsString(),
-          closeEventProcessed, EventType.RS2ZK_REGION_CLOSED);
+          closeEventProcessed, EventType.RS_ZK_REGION_CLOSED);
     cluster.getMaster().executorService.
-      registerListener(EventType.RS2ZK_REGION_CLOSED, closeListener);
+      registerListener(EventType.RS_ZK_REGION_CLOSED, closeListener);
 
     EventHandlerListener openListener =
       new ReopenEventListener(hri.getRegionNameAsString(),
-          reopenEventProcessed, EventType.RS2ZK_REGION_OPENED);
+          reopenEventProcessed, EventType.RS_ZK_REGION_OPENED);
     cluster.getMaster().executorService.
-      registerListener(EventType.RS2ZK_REGION_OPENED, openListener);
+      registerListener(EventType.RS_ZK_REGION_OPENED, openListener);
 
     LOG.info("Unassign " + hri.getRegionNameAsString());
     cluster.getMaster().assignmentManager.unassign(hri);
@@ -168,10 +168,10 @@ public class TestZKBasedOpenCloseRegion {
       if(event.getEventType() == eventType) {
         LOG.info("Finished processing " + eventType);
         String regionName = "";
-        if(eventType == EventType.RS2ZK_REGION_OPENED) {
+        if(eventType == EventType.RS_ZK_REGION_OPENED) {
           TotesHRegionInfo hriCarrier = (TotesHRegionInfo)event;
           regionName = hriCarrier.getHRegionInfo().getRegionNameAsString();
-        } else if(eventType == EventType.RS2ZK_REGION_CLOSED) {
+        } else if(eventType == EventType.RS_ZK_REGION_CLOSED) {
           TotesHRegionInfo hriCarrier = (TotesHRegionInfo)event;
           regionName = hriCarrier.getHRegionInfo().getRegionNameAsString();
         }
@@ -200,7 +200,7 @@ public class TestZKBasedOpenCloseRegion {
     EventHandlerListener listener =
       new CloseRegionEventListener(hri.getRegionNameAsString(),
           closeEventProcessed);
-    cluster.getMaster().executorService.registerListener(EventType.RS2ZK_REGION_CLOSED, listener);
+    cluster.getMaster().executorService.registerListener(EventType.RS_ZK_REGION_CLOSED, listener);
 
     cluster.getMaster().assignmentManager.unassign(hri);
 
@@ -224,7 +224,7 @@ public class TestZKBasedOpenCloseRegion {
     @Override
     public void afterProcess(EventHandler event) {
       LOG.info("afterProcess(" + event + ")");
-      if(event.getEventType() == EventType.RS2ZK_REGION_CLOSED) {
+      if(event.getEventType() == EventType.RS_ZK_REGION_CLOSED) {
         LOG.info("Finished processing CLOSE REGION");
         TotesHRegionInfo hriCarrier = (TotesHRegionInfo)event;
         if (regionToClose.equals(hriCarrier.getHRegionInfo().getRegionNameAsString())) {
@@ -238,7 +238,7 @@ public class TestZKBasedOpenCloseRegion {
 
     @Override
     public void beforeProcess(EventHandler event) {
-      if(event.getEventType() == EventType.M2RS_CLOSE_REGION) {
+      if(event.getEventType() == EventType.M_RS_CLOSE_REGION) {
         LOG.info("Received CLOSE RPC and beginning to process it");
       }
     }

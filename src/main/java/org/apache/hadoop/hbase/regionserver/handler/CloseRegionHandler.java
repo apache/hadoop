@@ -75,7 +75,7 @@ public class CloseRegionHandler extends EventHandler {
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices,
       final HRegionInfo regionInfo, final boolean abort, final boolean zk) {
-    this(server, rsServices,  regionInfo, abort, zk, EventType.M2RS_CLOSE_REGION);
+    this(server, rsServices,  regionInfo, abort, zk, EventType.M_RS_CLOSE_REGION);
   }
 
   protected CloseRegionHandler(final Server server,

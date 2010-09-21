@@ -63,7 +63,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
   public ClosedRegionHandler(Server server,
       AssignmentManager assignmentManager, RegionTransitionData data,
       HRegionInfo regionInfo) {
-    super(server, EventType.RS2ZK_REGION_CLOSED);
+    super(server, EventType.RS_ZK_REGION_CLOSED);
     this.assignmentManager = assignmentManager;
     this.data = data;
     this.regionInfo = regionInfo;

@@ -217,7 +217,7 @@ public class TestAdmin {
     MasterServices services = TEST_UTIL.getMiniHBaseCluster().getMaster();
     ExecutorService executor = services.getExecutorService();
     AtomicBoolean done = new AtomicBoolean(false);
-    executor.registerListener(EventType.C2M_MODIFY_TABLE, new DoneListener(done));
+    executor.registerListener(EventType.C_M_MODIFY_TABLE, new DoneListener(done));
     this.admin.modifyTable(tableName, htd);
     while (!done.get()) {
       synchronized (done) {
@@ -228,7 +228,7 @@ public class TestAdmin {
         }
       }
     }
-    executor.unregisterListener(EventType.C2M_MODIFY_TABLE);
+    executor.unregisterListener(EventType.C_M_MODIFY_TABLE);
   }
 
   /**

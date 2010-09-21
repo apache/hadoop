@@ -38,6 +38,6 @@ public class CloseMetaHandler extends CloseRegionHandler {
       final RegionServerServices rsServices,
       final HRegionInfo regionInfo,
       final boolean abort, final boolean zk) {
-    super(server, rsServices, regionInfo, abort, zk, EventType.M2RS_CLOSE_META);
+    super(server, rsServices, regionInfo, abort, zk, EventType.M_RS_CLOSE_META);
   }
 }

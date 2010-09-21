@@ -48,7 +48,7 @@ public class OpenRegionHandler extends EventHandler {
 
   public OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    this(server, rsServices, regionInfo, EventType.M2RS_OPEN_REGION);
+    this(server, rsServices, regionInfo, EventType.M_RS_OPEN_REGION);
   }
 
   protected OpenRegionHandler(final Server server,

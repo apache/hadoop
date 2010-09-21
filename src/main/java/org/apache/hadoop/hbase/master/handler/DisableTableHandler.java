@@ -44,7 +44,7 @@ public class DisableTableHandler extends EventHandler {
   public DisableTableHandler(Server server, byte [] tableName,
       CatalogTracker catalogTracker, AssignmentManager assignmentManager)
   throws TableNotFoundException, IOException {
-    super(server, EventType.C2M_DISABLE_TABLE);
+    super(server, EventType.C_M_DISABLE_TABLE);
     this.tableName = tableName;
     this.tableNameStr = Bytes.toString(this.tableName);
     this.assignmentManager = assignmentManager;

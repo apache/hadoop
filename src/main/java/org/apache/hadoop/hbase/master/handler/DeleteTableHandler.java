@@ -34,7 +34,7 @@ public class DeleteTableHandler extends TableEventHandler {
 
   public DeleteTableHandler(byte [] tableName, Server server,
       final MasterServices masterServices) throws IOException {
-    super(EventType.C2M_DELETE_TABLE, tableName, server, masterServices);
+    super(EventType.C_M_DELETE_TABLE, tableName, server, masterServices);
   }
 
   @Override

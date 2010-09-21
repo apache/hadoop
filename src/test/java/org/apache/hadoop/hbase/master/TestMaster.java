@@ -91,7 +91,7 @@ public class TestMaster {
     CountDownLatch proceed = new CountDownLatch(1);
     RegionOpenListener list = new RegionOpenListener(aboutToOpen, proceed);
     cluster.getMaster().executorService.
-      registerListener(EventType.RS2ZK_REGION_OPENED, list);
+      registerListener(EventType.RS_ZK_REGION_OPENED, list);
 
     LOG.info("Splitting table");
     admin.split(TABLENAME);
@@ -129,7 +129,7 @@ public class TestMaster {
 
     @Override
     public void afterProcess(EventHandler event) {
-      if (event.getEventType() != EventType.RS2ZK_REGION_OPENED) {
+      if (event.getEventType() != EventType.RS_ZK_REGION_OPENED) {
         return;
       }
       try {

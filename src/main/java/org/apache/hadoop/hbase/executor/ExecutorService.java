@@ -106,39 +106,39 @@ public class ExecutorService {
     switch(type) {
       // Master executor services
 
-      case RS2ZK_REGION_CLOSED:
+      case RS_ZK_REGION_CLOSED:
         return ExecutorType.MASTER_CLOSE_REGION;
 
-      case RS2ZK_REGION_OPENED:
+      case RS_ZK_REGION_OPENED:
         return ExecutorType.MASTER_OPEN_REGION;
 
       case M_SERVER_SHUTDOWN:
         return ExecutorType.MASTER_SERVER_OPERATIONS;
 
-      case C2M_DELETE_TABLE:
-      case C2M_DISABLE_TABLE:
-      case C2M_ENABLE_TABLE:
-      case C2M_MODIFY_TABLE:
+      case C_M_DELETE_TABLE:
+      case C_M_DISABLE_TABLE:
+      case C_M_ENABLE_TABLE:
+      case C_M_MODIFY_TABLE:
         return ExecutorType.MASTER_TABLE_OPERATIONS;
 
       // RegionServer executor services
 
-      case M2RS_OPEN_REGION:
+      case M_RS_OPEN_REGION:
         return ExecutorType.RS_OPEN_REGION;
 
-      case M2RS_OPEN_ROOT:
+      case M_RS_OPEN_ROOT:
         return ExecutorType.RS_OPEN_ROOT;
 
-      case M2RS_OPEN_META:
+      case M_RS_OPEN_META:
         return ExecutorType.RS_OPEN_META;
 
-      case M2RS_CLOSE_REGION:
+      case M_RS_CLOSE_REGION:
         return ExecutorType.RS_CLOSE_REGION;
 
-      case M2RS_CLOSE_ROOT:
+      case M_RS_CLOSE_ROOT:
         return ExecutorType.RS_CLOSE_ROOT;
 
-      case M2RS_CLOSE_META:
+      case M_RS_CLOSE_META:
         return ExecutorType.RS_CLOSE_META;
 
       default:

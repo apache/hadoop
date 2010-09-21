@@ -33,7 +33,6 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -190,7 +189,7 @@ public class AssignmentManager extends ZooKeeperListener {
         MetaReader.getRegion(catalogTracker, data.getRegionName()).getFirst();
       String encodedName = regionInfo.getEncodedName();
       switch(data.getEventType()) {
-        case RS2ZK_REGION_CLOSING:
+        case RS_ZK_REGION_CLOSING:
           // Just insert region into RIT.
           // If this never updates the timeout will trigger new assignment
           regionsInTransition.put(encodedName,
@@ -198,7 +197,7 @@ public class AssignmentManager extends ZooKeeperListener {
                   data.getStamp()));
           break;
 
-        case RS2ZK_REGION_CLOSED:
+        case RS_ZK_REGION_CLOSED:
           // Region is closed, insert into RIT and handle it
           regionsInTransition.put(encodedName,
               new RegionState(regionInfo, RegionState.State.CLOSED,
@@ -206,7 +205,7 @@ public class AssignmentManager extends ZooKeeperListener {
           new ClosedRegionHandler(master, this, data, regionInfo).process();
           break;
 
-        case RS2ZK_REGION_OPENING:
+        case RS_ZK_REGION_OPENING:
           // Just insert region into RIT
           // If this never updates the timeout will trigger new assignment
           regionsInTransition.put(encodedName,
@@ -214,7 +213,7 @@ public class AssignmentManager extends ZooKeeperListener {
                   data.getStamp()));
           break;
 
-        case RS2ZK_REGION_OPENED:
+        case RS_ZK_REGION_OPENED:
           // Region is opened, insert into RIT and handle it
           regionsInTransition.put(encodedName,
               new RegionState(regionInfo, RegionState.State.OPENING,
@@ -250,11 +249,11 @@ public class AssignmentManager extends ZooKeeperListener {
         ", server=" + data.getServerName() + ", region=" + prettyPrintedRegionName);
       RegionState regionState = regionsInTransition.get(encodedName);
       switch(data.getEventType()) {
-        case M2ZK_REGION_OFFLINE:
+        case M_ZK_REGION_OFFLINE:
           // Nothing to do.
           break;
 
-        case RS2ZK_REGION_CLOSING:
+        case RS_ZK_REGION_CLOSING:
           // Should see CLOSING after we have asked it to CLOSE or additional
           // times after already being in state of CLOSING
           if (regionState == null ||
@@ -269,7 +268,7 @@ public class AssignmentManager extends ZooKeeperListener {
           regionState.update(RegionState.State.CLOSING, data.getStamp());
           break;
 
-        case RS2ZK_REGION_CLOSED:
+        case RS_ZK_REGION_CLOSED:
           // Should see CLOSED after CLOSING but possible after PENDING_CLOSE
           if (regionState == null ||
               (!regionState.isPendingClose() && !regionState.isClosing())) {
@@ -287,7 +286,7 @@ public class AssignmentManager extends ZooKeeperListener {
             this, data, regionState.getRegion()));
           break;
 
-        case RS2ZK_REGION_OPENING:
+        case RS_ZK_REGION_OPENING:
           // Should see OPENING after we have asked it to OPEN or additional
           // times after already being in state of OPENING
           if(regionState == null ||
@@ -303,7 +302,7 @@ public class AssignmentManager extends ZooKeeperListener {
           regionState.update(RegionState.State.OPENING, data.getStamp());
           break;
 
-        case RS2ZK_REGION_OPENED:
+        case RS_ZK_REGION_OPENED:
           // Should see OPENED after OPENING but possible after PENDING_OPEN
           if(regionState == null ||
               (!regionState.isPendingOpen() && !regionState.isOpening())) {

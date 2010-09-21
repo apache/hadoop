@@ -129,7 +129,7 @@ public class ZKAssign {
   public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName)
   throws KeeperException, KeeperException.NodeExistsException {
-    createNodeOffline(zkw, region, serverName, EventType.M2ZK_REGION_OFFLINE);
+    createNodeOffline(zkw, region, serverName, EventType.M_ZK_REGION_OFFLINE);
   }
 
   public static void createNodeOffline(ZooKeeperWatcher zkw, HRegionInfo region,
@@ -170,7 +170,7 @@ public class ZKAssign {
     LOG.debug(zkw.prefix("Forcing existing unassigned node for " +
       region.getEncodedName() + " to OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(
-        EventType.M2ZK_REGION_OFFLINE, region.getRegionName(), serverName);
+        EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
       String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
@@ -203,7 +203,7 @@ public class ZKAssign {
     LOG.debug(zkw.prefix("Creating (or updating) unassigned node for " +
       region.getEncodedName() + " with OFFLINE state"));
     RegionTransitionData data = new RegionTransitionData(
-        EventType.M2ZK_REGION_OFFLINE, region.getRegionName(), serverName);
+        EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
       String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
@@ -240,7 +240,7 @@ public class ZKAssign {
   public static boolean deleteOpenedNode(ZooKeeperWatcher zkw,
       String regionName)
   throws KeeperException, KeeperException.NoNodeException {
-    return deleteNode(zkw, regionName, EventType.RS2ZK_REGION_OPENED);
+    return deleteNode(zkw, regionName, EventType.RS_ZK_REGION_OPENED);
   }
 
   /**
@@ -266,7 +266,7 @@ public class ZKAssign {
   public static boolean deleteClosedNode(ZooKeeperWatcher zkw,
       String regionName)
   throws KeeperException, KeeperException.NoNodeException {
-    return deleteNode(zkw, regionName, EventType.RS2ZK_REGION_CLOSED);
+    return deleteNode(zkw, regionName, EventType.RS_ZK_REGION_CLOSED);
   }
 
   /**
@@ -292,7 +292,7 @@ public class ZKAssign {
   public static boolean deleteClosingNode(ZooKeeperWatcher zkw,
       String regionName)
   throws KeeperException, KeeperException.NoNodeException {
-    return deleteNode(zkw, regionName, EventType.RS2ZK_REGION_CLOSING);
+    return deleteNode(zkw, regionName, EventType.RS_ZK_REGION_CLOSING);
   }
 
   /**
@@ -395,7 +395,7 @@ public class ZKAssign {
     LOG.debug(zkw.prefix("Creating unassigned node for " +
       region.getEncodedName() + " in a CLOSING state"));
     RegionTransitionData data = new RegionTransitionData(
-        EventType.RS2ZK_REGION_CLOSING, region.getRegionName(), serverName);
+        EventType.RS_ZK_REGION_CLOSING, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
       String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
@@ -433,8 +433,8 @@ public class ZKAssign {
       HRegionInfo region, String serverName, int expectedVersion)
   throws KeeperException {
     return transitionNode(zkw, region, serverName,
-        EventType.RS2ZK_REGION_CLOSING,
-        EventType.RS2ZK_REGION_CLOSED, expectedVersion);
+        EventType.RS_ZK_REGION_CLOSING,
+        EventType.RS_ZK_REGION_CLOSED, expectedVersion);
   }
 
   /**
@@ -467,14 +467,14 @@ public class ZKAssign {
       HRegionInfo region, String serverName)
   throws KeeperException {
     return transitionNodeOpening(zkw, region, serverName,
-      EventType.M2ZK_REGION_OFFLINE);
+      EventType.M_ZK_REGION_OFFLINE);
   }
 
   public static int transitionNodeOpening(ZooKeeperWatcher zkw,
       HRegionInfo region, String serverName, final EventType beginState)
   throws KeeperException {
     return transitionNode(zkw, region, serverName, beginState,
-      EventType.RS2ZK_REGION_OPENING, -1);
+      EventType.RS_ZK_REGION_OPENING, -1);
   }
 
   /**
@@ -507,8 +507,8 @@ public class ZKAssign {
       HRegionInfo region, String serverName, int expectedVersion)
   throws KeeperException {
     return transitionNode(zkw, region, serverName,
-        EventType.RS2ZK_REGION_OPENING,
-        EventType.RS2ZK_REGION_OPENING, expectedVersion);
+        EventType.RS_ZK_REGION_OPENING,
+        EventType.RS_ZK_REGION_OPENING, expectedVersion);
   }
 
   /**
@@ -543,8 +543,8 @@ public class ZKAssign {
       HRegionInfo region, String serverName, int expectedVersion)
   throws KeeperException {
     return transitionNode(zkw, region, serverName,
-        EventType.RS2ZK_REGION_OPENING,
-        EventType.RS2ZK_REGION_OPENED, expectedVersion);
+        EventType.RS_ZK_REGION_OPENING,
+        EventType.RS_ZK_REGION_OPENED, expectedVersion);
   }
 
   /**

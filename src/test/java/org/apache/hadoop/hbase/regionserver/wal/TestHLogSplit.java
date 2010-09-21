@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -127,6 +128,22 @@ public class TestHLogSplit {
 
   @After
   public void tearDown() throws Exception {
+  }
+
+  /**
+   * @throws IOException 
+   * @see https://issues.apache.org/jira/browse/HBASE-3020
+   */
+  @Test public void testRecoveredEditsPathForMeta() throws IOException {
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    long now = System.currentTimeMillis();
+    HLog.Entry entry =
+      new HLog.Entry(new HLogKey(encoded, HConstants.META_TABLE_NAME, 1, now),
+      new WALEdit());
+    Path p = HLog.getRegionSplitEditsPath(fs, entry, new Path("/"));
+    assertEquals(p.getParent().getParent(),
+      HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
   }
 
   @Test(expected = IOException.class)

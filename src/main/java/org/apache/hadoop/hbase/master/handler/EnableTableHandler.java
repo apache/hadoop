@@ -45,7 +45,7 @@ public class EnableTableHandler extends EventHandler {
   public EnableTableHandler(Server server, byte [] tableName,
       CatalogTracker catalogTracker, AssignmentManager assignmentManager)
   throws TableNotFoundException, IOException {
-    super(server, EventType.C2M_ENABLE_TABLE);
+    super(server, EventType.C_M_ENABLE_TABLE);
     this.tableName = tableName;
     this.tableNameStr = Bytes.toString(tableName);
     this.ct = catalogTracker;

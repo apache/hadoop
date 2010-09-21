@@ -59,7 +59,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   public OpenedRegionHandler(Server server,
       AssignmentManager assignmentManager, RegionTransitionData data,
       HRegionInfo regionInfo, HServerInfo serverInfo) {
-    super(server, EventType.RS2ZK_REGION_OPENED);
+    super(server, EventType.RS_ZK_REGION_OPENED);
     this.assignmentManager = assignmentManager;
     this.data = data;
     this.regionInfo = regionInfo;

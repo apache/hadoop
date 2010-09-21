@@ -38,6 +38,6 @@ public class CloseRootHandler extends CloseRegionHandler {
   public CloseRootHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
       final boolean abort, final boolean zk) {
-    super(server, rsServices, regionInfo, abort, zk, EventType.M2RS_CLOSE_ROOT);
+    super(server, rsServices, regionInfo, abort, zk, EventType.M_RS_CLOSE_ROOT);
   }
 }

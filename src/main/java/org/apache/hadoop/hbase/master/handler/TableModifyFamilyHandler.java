@@ -41,7 +41,7 @@ public class TableModifyFamilyHandler extends TableEventHandler {
   public TableModifyFamilyHandler(byte[] tableName,
       HColumnDescriptor familyDesc, Server server,
       final MasterServices masterServices) throws IOException {
-    super(EventType.C2M_MODIFY_FAMILY, tableName, server, masterServices);
+    super(EventType.C_M_MODIFY_FAMILY, tableName, server, masterServices);
     this.familyDesc = familyDesc;
   }
 

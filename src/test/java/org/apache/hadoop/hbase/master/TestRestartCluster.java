@@ -78,7 +78,7 @@ public class TestRestartCluster {
       HMaster.MASTER);
 
     LOG.debug("Created UNASSIGNED zNode for ROOT and META regions in state " +
-        EventType.M2ZK_REGION_OFFLINE);
+        EventType.M_ZK_REGION_OFFLINE);
 
     // start the HB cluster
     LOG.info("Starting HBase cluster...");

@@ -31,6 +31,6 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 public class OpenRootHandler extends OpenRegionHandler {
   public OpenRootHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    super(server, rsServices, regionInfo, EventType.M2RS_OPEN_ROOT);
+    super(server, rsServices, regionInfo, EventType.M_RS_OPEN_ROOT);
   }
 }

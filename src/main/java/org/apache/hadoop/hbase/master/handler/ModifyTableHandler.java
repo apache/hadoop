@@ -34,7 +34,7 @@ public class ModifyTableHandler extends TableEventHandler {
   public ModifyTableHandler(final byte [] tableName,
       final HTableDescriptor htd, final Server server,
       final MasterServices masterServices) throws IOException {
-    super(EventType.C2M_MODIFY_TABLE, tableName, server, masterServices);
+    super(EventType.C_M_MODIFY_TABLE, tableName, server, masterServices);
     this.htd = htd;
   }
 

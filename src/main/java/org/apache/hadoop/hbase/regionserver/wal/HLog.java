@@ -1705,7 +1705,7 @@ public class HLog implements Syncable {
    * @return Path to file into which to dump split log edits.
    * @throws IOException
    */
-  private static Path getRegionSplitEditsPath(final FileSystem fs,
+  static Path getRegionSplitEditsPath(final FileSystem fs,
       final Entry logEntry, final Path rootDir)
   throws IOException {
     Path tableDir = HTableDescriptor.getTableDir(rootDir,
