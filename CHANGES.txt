@@ -532,6 +532,7 @@ Release 0.21.0 - Unreleased
                the region
    HBASE-3018  Bulk assignment on startup runs serially through the cluster
                servers assigning in bulk to one at a time
+   HBASE-3023  NPE processing server crash in MetaReader. getServerUserRegions
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

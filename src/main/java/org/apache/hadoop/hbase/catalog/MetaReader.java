@@ -232,7 +232,8 @@ public class MetaReader {
 
   /**
    * @param data A .META. table row.
-   * @return A pair of the regioninfo and the server address from <code>data</code>.
+   * @return A pair of the regioninfo and the server address from <code>data</code>
+   * (or null for server address if no address set in .META.).
    * @throws IOException
    */
   public static Pair<HRegionInfo, HServerAddress> metaRowToRegionPair(
@@ -410,7 +411,10 @@ public class MetaReader {
       while((result = metaServer.next(scannerid)) != null) {
         if (result != null && result.size() > 0) {
           Pair<HRegionInfo, HServerAddress> pair = metaRowToRegionPair(result);
-          if (!pair.getSecond().equals(hsi.getServerAddress())) continue;
+          if (pair.getSecond() == null ||
+              !pair.getSecond().equals(hsi.getServerAddress())) {
+            continue;
+          }
           hris.put(pair.getFirst(), result);
         }
       }

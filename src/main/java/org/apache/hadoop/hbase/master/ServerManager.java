@@ -111,7 +111,7 @@ public class ServerManager {
       String deadServersList = deadservers.toString();
       LOG.info("regionservers=" + numServers +
         ", averageload=" + StringUtils.limitDecimalTo2(averageLoad) +
-        ((numDeadServers > 0)?  ("deadservers=" + deadServersList): ""));
+        ((numDeadServers > 0)?  (", deadservers=" + deadServersList): ""));
     }
   }
 
