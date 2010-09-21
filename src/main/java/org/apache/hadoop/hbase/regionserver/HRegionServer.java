@@ -1908,7 +1908,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void openRegion(HRegionInfo region) {
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
-    if(region.isRootRegion()) {
+    if (region.isRootRegion()) {
       this.service.submit(new OpenRootHandler(this, this, region));
     } else if(region.isMetaRegion()) {
       this.service.submit(new OpenMetaHandler(this, this, region));

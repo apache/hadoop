@@ -530,6 +530,8 @@ Release 0.21.0 - Unreleased
    HBASE-3015  recovered.edits files not deleted if it only contain edits that
                have already been flushed; hurts perf for all future opens of
                the region
+   HBASE-3018  Bulk assignment on startup runs serially through the cluster
+               servers assigning in bulk to one at a time
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
