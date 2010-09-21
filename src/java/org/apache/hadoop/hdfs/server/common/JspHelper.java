@@ -43,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -179,10 +180,10 @@ public class JspHelper {
     return chosenNode;
   }
 
-  public static void streamBlockInAscii(InetSocketAddress addr, long blockId,
-      Token<BlockTokenIdentifier> blockToken, long genStamp, long blockSize,
-      long offsetIntoBlock, long chunkSizeToView, JspWriter out,
-      Configuration conf) throws IOException {
+  public static void streamBlockInAscii(InetSocketAddress addr, 
+      long blockId, Token<BlockTokenIdentifier> blockToken, long genStamp,
+      long blockSize, long offsetIntoBlock, long chunkSizeToView,
+      JspWriter out, Configuration conf) throws IOException {
     if (chunkSizeToView == 0) return;
     Socket s = new Socket();
     s.connect(addr, HdfsConstants.READ_TIMEOUT);
@@ -191,12 +192,10 @@ public class JspHelper {
       long amtToRead = Math.min(chunkSizeToView, blockSize - offsetIntoBlock);     
       
       // Use the block name for file name. 
-      BlockReader blockReader = 
-        BlockReader.newBlockReader(s, addr.toString() + ":" + blockId,
-                                             blockId, blockToken, genStamp ,offsetIntoBlock, 
-                                             amtToRead, 
-                                             conf.getInt("io.file.buffer.size",
-                                                         4096));
+      String file = BlockReader.getFileName(addr, blockId);
+      BlockReader blockReader = BlockReader.newBlockReader(s, file,
+        new Block(blockId, 0, genStamp), blockToken,
+        offsetIntoBlock, amtToRead, conf.getInt("io.file.buffer.size", 4096));
         
     byte[] buf = new byte[(int)amtToRead];
     int readOffset = 0;

@@ -117,8 +117,7 @@ public class TestDiskError extends TestCase {
       DataOutputStream out = new DataOutputStream(
           s.getOutputStream());
 
-      Sender.opWriteBlock(out, block.getBlock().getBlockId(), 
-          block.getBlock().getGenerationStamp(), 1, 
+      Sender.opWriteBlock(out, block.getBlock().getLocalBlock(), 1, 
           BlockConstructionStage.PIPELINE_SETUP_CREATE, 
           0L, 0L, 0L, "", null, new DatanodeInfo[0], 
           BlockTokenSecretManager.DUMMY_TOKEN);

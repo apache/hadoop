@@ -177,6 +177,18 @@ public class Block implements Writable, Comparable<Block> {
       throw new IOException("Unexpected block size: " + numBytes);
     }
   }
+  
+  // write only the identifier part of the block
+  public void writeId(DataOutput out) throws IOException {
+    out.writeLong(blockId);
+    out.writeLong(generationStamp);
+  }
+
+  // Read only the identifier part of the block
+  public void readId(DataInput in) throws IOException {
+    this.blockId = in.readLong();
+    this.generationStamp = in.readLong();
+  }
 
   @Override // Comparable
   public int compareTo(Block b) {

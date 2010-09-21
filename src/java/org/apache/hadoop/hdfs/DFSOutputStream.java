@@ -892,10 +892,10 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         blockReplyStream = new DataInputStream(NetUtils.getInputStream(s));
 
         // send the request
-        DataTransferProtocol.Sender.opWriteBlock(out,
-            block.getBlockId(), block.getGenerationStamp(),
-            nodes.length, recoveryFlag?stage.getRecoveryStage():stage, newGS,
-            block.getNumBytes(), bytesSent, dfsClient.clientName, null, nodes, accessToken);
+        DataTransferProtocol.Sender.opWriteBlock(out, block.getLocalBlock(), 
+            nodes.length, recoveryFlag ? stage.getRecoveryStage() : stage, newGS, 
+            block.getNumBytes(), bytesSent, dfsClient.clientName, null, nodes,
+            accessToken);
         checksum.writeHeader(out);
         out.flush();
 

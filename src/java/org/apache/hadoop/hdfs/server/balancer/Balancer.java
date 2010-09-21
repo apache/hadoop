@@ -377,8 +377,8 @@ public class Balancer implements Tool {
             BlockTokenSecretManager.AccessMode.COPY));
       }
       DataTransferProtocol.Sender.opReplaceBlock(out,
-          block.getBlock().getBlockId(), block.getBlock().getGenerationStamp(),
-          source.getStorageID(), proxySource.getDatanode(), accessToken);
+          block.getBlock(), source.getStorageID(), 
+          proxySource.getDatanode(), accessToken);
     }
     
     /* Receive a block copy response from the input stream */ 
@@ -1469,7 +1469,7 @@ public class Balancer implements Tool {
   final public static int ILLEGAL_ARGS = -5;
   /** main method of Balancer
    * @param args arguments to a Balancer
-   * @exception any exception occurs during datanode balancing
+   * @throws Exception exception that occured during datanode balancing
    */
   public int run(String[] args) throws Exception {
     long startTime = Util.now();

@@ -372,7 +372,7 @@ public class DatanodeJspHelper {
       out.print("Invalid input (filename absent)");
       return;
     }
-
+    
     final Long blockId = JspHelper.validateLong(req.getParameter("blockId"));
     if (blockId == null) {
       out.print("Invalid input (blockId absent)");
@@ -406,9 +406,8 @@ public class DatanodeJspHelper {
       return;
     }
 
-    String blockSizeStr;
     long blockSize = 0;
-    blockSizeStr = req.getParameter("blockSize");
+    final String blockSizeStr = req.getParameter("blockSize");
     if (blockSizeStr == null) {
       out.print("Invalid input (blockSize absent)");
       return;

@@ -129,10 +129,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Read a block from the disk.
    */
   @Override
-  protected void opReadBlock(DataInputStream in, long blockId, long blockGs,
+  protected void opReadBlock(DataInputStream in, Block block,
       long startOffset, long length, String clientName,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
-    final Block block = new Block(blockId, 0 , blockGs);
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         datanode.socketWriteTimeout);
     DataOutputStream out = new DataOutputStream(
@@ -217,7 +216,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Write a block to disk.
    */
   @Override
-  protected void opWriteBlock(DataInputStream in, long blockId, long blockGs,
+  protected void opWriteBlock(DataInputStream in, Block block, 
       int pipelineSize, BlockConstructionStage stage,
       long newGs, long minBytesRcvd, long maxBytesRcvd,
       String client, DatanodeInfo srcDataNode, DatanodeInfo[] targets,
@@ -228,8 +227,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
                 " tcp no delay " + s.getTcpNoDelay());
     }
 
-    final Block block = new Block(blockId, dataXceiverServer.estimateBlockSize,
-        blockGs);
+    block.setNumBytes(dataXceiverServer.estimateBlockSize);
     LOG.info("Receiving block " + block + 
              " src: " + remoteAddress +
              " dest: " + localAddress);
@@ -303,9 +301,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
           mirrorIn = new DataInputStream(NetUtils.getInputStream(mirrorSock));
 
           // Write header: Copied from DFSClient.java!
-          DataTransferProtocol.Sender.opWriteBlock(mirrorOut,
-              blockId, blockGs, 
-              pipelineSize, stage, newGs, minBytesRcvd, maxBytesRcvd, client, 
+          DataTransferProtocol.Sender.opWriteBlock(mirrorOut, block,
+              pipelineSize, stage, newGs, minBytesRcvd, maxBytesRcvd, client,
               srcDataNode, targets, blockToken);
 
           if (blockReceiver != null) { // send checksum header
@@ -409,9 +406,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Get block checksum (MD5 of CRC32).
    */
   @Override
-  protected void opBlockChecksum(DataInputStream in, long blockId,
-      long blockGs, Token<BlockTokenIdentifier> blockToken) throws IOException {
-    final Block block = new Block(blockId, 0 , blockGs);
+  protected void opBlockChecksum(DataInputStream in, Block block,
+      Token<BlockTokenIdentifier> blockToken) throws IOException {
     DataOutputStream out = new DataOutputStream(NetUtils.getOutputStream(s,
         datanode.socketWriteTimeout));
     if (datanode.isBlockTokenEnabled) {
@@ -433,7 +429,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
       }
     }
 
-    final MetaDataInputStream metadataIn = datanode.data.getMetaDataInputStream(block);
+    final MetaDataInputStream metadataIn = 
+      datanode.data.getMetaDataInputStream(block);
     final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
         metadataIn, BUFFER_SIZE));
 
@@ -473,10 +470,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Read a block from the disk and then sends it to a destination.
    */
   @Override
-  protected void opCopyBlock(DataInputStream in, long blockId, long blockGs,
+  protected void opCopyBlock(DataInputStream in, Block block,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
     // Read in the header
-    Block block = new Block(blockId, 0, blockGs);
     if (datanode.isBlockTokenEnabled) {
       try {
         datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,
@@ -492,7 +488,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
     }
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
-      LOG.info("Not able to copy block " + blockId + " to " 
+      LOG.info("Not able to copy block " + block.getBlockId() + " to " 
           + s.getRemoteSocketAddress() + " because threads quota is exceeded.");
       sendResponse(s, ERROR, datanode.socketWriteTimeout);
       return;
@@ -549,11 +545,10 @@ class DataXceiver extends DataTransferProtocol.Receiver
    */
   @Override
   protected void opReplaceBlock(DataInputStream in,
-      long blockId, long blockGs, String sourceID, DatanodeInfo proxySource,
+      Block block, String sourceID, DatanodeInfo proxySource,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
     /* read header */
-    final Block block = new Block(blockId, dataXceiverServer.estimateBlockSize,
-        blockGs);
+    block.setNumBytes(dataXceiverServer.estimateBlockSize);
     if (datanode.isBlockTokenEnabled) {
       try {
         datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,
@@ -568,7 +563,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
     }
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
-      LOG.warn("Not able to receive block " + blockId + " from " 
+      LOG.warn("Not able to receive block " + block.getBlockId() + " from " 
           + s.getRemoteSocketAddress() + " because threads quota is exceeded.");
       sendResponse(s, ERROR, datanode.socketWriteTimeout);
       return;
@@ -594,8 +589,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
                      new BufferedOutputStream(baseStream, SMALL_BUFFER_SIZE));
 
       /* send request to the proxy */
-      DataTransferProtocol.Sender.opCopyBlock(proxyOut, block.getBlockId(),
-          block.getGenerationStamp(), blockToken);
+      DataTransferProtocol.Sender.opCopyBlock(proxyOut, block, blockToken);
 
       // receive the response from the proxy
       proxyReply = new DataInputStream(new BufferedInputStream(

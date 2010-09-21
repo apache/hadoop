@@ -370,7 +370,7 @@
    </p> 
    <p>
     The Backup node is configured in the same manner as the Checkpoint node.
-    It is started with <code>bin/hdfs namenode -checkpoint</code>.
+    It is started with <code>bin/hdfs namenode -backup</code>.
    </p>
    <p>The location of the Backup (or Checkpoint) node and its accompanying 
       web interface are configured via the <code>dfs.backup.address</code> 

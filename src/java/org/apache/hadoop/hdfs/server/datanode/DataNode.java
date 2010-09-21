@@ -1341,8 +1341,8 @@ public class DataNode extends Configured
         out = new DataOutputStream(new BufferedOutputStream(baseStream, 
                                                             SMALL_BUFFER_SIZE));
 
-        blockSender = new BlockSender(b, 0, b.getNumBytes(), false, false, false, 
-            datanode);
+        blockSender = new BlockSender(b, 0, b.getNumBytes(), 
+            false, false, false, datanode);
         DatanodeInfo srcNode = new DatanodeInfo(dnRegistration);
 
         //
@@ -1354,8 +1354,7 @@ public class DataNode extends Configured
           EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE));
         }
         DataTransferProtocol.Sender.opWriteBlock(out,
-            b.getBlockId(), b.getGenerationStamp(), 0, 
-            BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0, 0, "",
+            b, 0, BlockConstructionStage.PIPELINE_SETUP_CREATE, 0, 0, 0, "",
             srcNode, targets, accessToken);
 
         // send data & checksum

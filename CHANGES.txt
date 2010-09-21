@@ -137,6 +137,9 @@ Trunk (unreleased changes)
 
     HDFS-1093. Change the FSNamesystem lock to a read/write lock. (dhruba)
 
+    HDFS-1407. Change DataTransferProtocol methods to use Block instead 
+    of individual elements of Block. (suresh)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
@@ -799,6 +802,9 @@ Release 0.21.0 - Unreleased
     cos)
 
     HDFS-806. Add new unit tests to the 10-mins 'run-commit-test' target (cos)
+
+    HDFS-1411. Correct backup node startup command in hdfs user guide.
+    (Ching-Shen Chen via shv) 
 
   OPTIMIZATIONS
 

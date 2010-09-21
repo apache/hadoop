@@ -27,6 +27,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -320,6 +322,7 @@ public class BlockReader extends FSInputChecker {
                        long startOffset, long firstChunkOffset,
                        long bytesToRead,
                        Socket dnSock ) {
+    // Path is used only for printing block and file information in debug
     super(new Path("/blk_" + blockId + ":of:" + file)/*too non path-like?*/,
           1, verifyChecksum,
           checksum.getChecksumSize() > 0? checksum : null, 
@@ -346,27 +349,26 @@ public class BlockReader extends FSInputChecker {
   }
 
   public static BlockReader newBlockReader(Socket sock, String file,
-      long blockId, Token<BlockTokenIdentifier> blockToken, long genStamp,
+      Block block, Token<BlockTokenIdentifier> blockToken, 
       long startOffset, long len, int bufferSize) throws IOException {
-    return newBlockReader(sock, file, blockId, blockToken, genStamp, startOffset, len, bufferSize,
+    return newBlockReader(sock, file, block, blockToken, startOffset, len, bufferSize,
         true);
   }
 
   /** Java Doc required */
-  public static BlockReader newBlockReader( Socket sock, String file, long blockId, 
+  public static BlockReader newBlockReader( Socket sock, String file, 
+                                     Block block, 
                                      Token<BlockTokenIdentifier> blockToken,
-                                     long genStamp,
                                      long startOffset, long len,
                                      int bufferSize, boolean verifyChecksum)
                                      throws IOException {
-    return newBlockReader(sock, file, blockId, blockToken, genStamp, startOffset,
+    return newBlockReader(sock, file, block, blockToken, startOffset,
                           len, bufferSize, verifyChecksum, "");
   }
 
   public static BlockReader newBlockReader( Socket sock, String file,
-                                     long blockId, 
+                                     Block block, 
                                      Token<BlockTokenIdentifier> blockToken,
-                                     long genStamp,
                                      long startOffset, long len,
                                      int bufferSize, boolean verifyChecksum,
                                      String clientName)
@@ -375,7 +377,7 @@ public class BlockReader extends FSInputChecker {
     DataTransferProtocol.Sender.opReadBlock(
         new DataOutputStream(new BufferedOutputStream(
             NetUtils.getOutputStream(sock,HdfsConstants.WRITE_TIMEOUT))),
-        blockId, genStamp, startOffset, len, clientName, blockToken);
+        block, startOffset, len, clientName, blockToken);
     
     //
     // Get bytes in block, set streams
@@ -392,12 +394,14 @@ public class BlockReader extends FSInputChecker {
             "Got access token error for OP_READ_BLOCK, self="
                 + sock.getLocalSocketAddress() + ", remote="
                 + sock.getRemoteSocketAddress() + ", for file " + file
-                + ", for block " + blockId + "_" + genStamp);
+                + ", for block " + block.getBlockId() 
+                + "_" + block.getGenerationStamp());
       } else {
         throw new IOException("Got error for OP_READ_BLOCK, self="
             + sock.getLocalSocketAddress() + ", remote="
             + sock.getRemoteSocketAddress() + ", for file " + file
-            + ", for block " + blockId + "_" + genStamp);
+            + ", for block " + block.getBlockId() + "_" 
+            + block.getGenerationStamp());
       }
     }
     DataChecksum checksum = DataChecksum.newDataChecksum( in );
@@ -413,9 +417,8 @@ public class BlockReader extends FSInputChecker {
                             startOffset + " for file " + file);
     }
 
-    return new BlockReader( file, blockId, in, checksum, verifyChecksum,
-                            startOffset, firstChunkOffset, len,
-                            sock );
+    return new BlockReader(file, block.getBlockId(), in, checksum,
+        verifyChecksum, startOffset, firstChunkOffset, len, sock);
   }
 
   @Override
@@ -448,5 +451,11 @@ public class BlockReader extends FSInputChecker {
                   ": " + e.getMessage());
       }
     }
+  }
+  
+  // File name to print when accessing a block directory from servlets
+  public static String getFileName(final InetSocketAddress s,
+      final long blockId) {
+    return s.toString() + ":" + blockId;
   }
 }

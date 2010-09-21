@@ -130,11 +130,10 @@ public class TestBlockTokenWithDFS extends TestCase {
       s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
       s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
-      blockReader = BlockReader.newBlockReader(s, targetAddr
-          .toString()
-          + ":" + block.getBlockId(), block.getBlockId(), lblock
-          .getBlockToken(), block.getGenerationStamp(), 0, -1, conf.getInt(
-          "io.file.buffer.size", 4096));
+      String file = BlockReader.getFileName(targetAddr, block.getBlockId());
+      blockReader = BlockReader.newBlockReader(s, file, block.getLocalBlock(), 
+          lblock.getBlockToken(), 0, -1, 
+          conf.getInt("io.file.buffer.size", 4096));
 
     } catch (IOException ex) {
       if (ex instanceof InvalidBlockTokenException) {

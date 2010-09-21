@@ -248,13 +248,10 @@ public class TestDataNodeVolumeFailure extends TestCase{
     s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
+    String file = BlockReader.getFileName(targetAddr, block.getBlockId());
     BlockReader blockReader = 
-      BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
-          block.getBlockId(), 
-          block.getBlockId(), 
-          lblock.getBlockToken(),
-          block.getGenerationStamp(), 
-          0, -1, 4096);
+      BlockReader.newBlockReader(s, file, block.getLocalBlock(), lblock
+        .getBlockToken(), 0, -1, 4096);
 
     // nothing - if it fails - it will throw and exception
   }
