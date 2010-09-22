@@ -66,6 +66,55 @@
       <para>TODO: Review all of the below to ensure it matches what was
       committed -- St.Ack 20100901</para>
     </note>
+    <section>
+       <title>
+           Region Size
+       </title>
+<para>Region size is one of those tricky things, there are a few factors to consider:
+</para>
+        <itemizedlist>
+          <listitem>
+          <para>
+Regions are the basic element of availability and distribution.
+          </para>
+          </listitem>
+          <listitem>
+          <para>
+HBase scales by having regions across many servers.  Thus if you
+have 2 regions for 16GB data, on a 20 node machine you are a net loss
+there.
+          </para>
+          </listitem>
+          <listitem>
+          <para>
+High region count has been known to make things slow, this is
+getting better, but it is probably better to have 700 regions than
+3000 for the same amount of data.
+          </para>
+          </listitem>
+          <listitem>
+          <para>
+Low region count prevents parallel scalability as per point #2.
+This really cant be stressed enough, since a common problem is loading
+200MB data into HBase then wondering why your awesome 10 node cluster
+is mostly idle.
+          </para>
+          </listitem>
+          <listitem>
+          <para>
+There is not much memory footprint difference between 1 region and
+10 in terms of indexes, etc, held by the regionserver.
+          </para>
+          </listitem>
+        </itemizedlist>
+
+<para>Its probably best to stick to the default,
+perhaps going smaller for hot tables (or manually split hot regions
+to spread the load over the cluster), or go with a 1GB region size
+if your cell sizes tend to be largish (100k and up).
+</para>
+
+    </section>
 
     <section>
       <title>Region Transitions</title>
