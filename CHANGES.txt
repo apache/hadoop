@@ -535,6 +535,7 @@ Release 0.21.0 - Unreleased
    HBASE-3023  NPE processing server crash in MetaReader. getServerUserRegions
    HBASE-3024  NPE processing server crash in MetaEditor.addDaughter
    HBASE-3026  Fixup of "missing" daughters on split is too aggressive
+   HBASE-3003  ClassSize constants dont use 'final'
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

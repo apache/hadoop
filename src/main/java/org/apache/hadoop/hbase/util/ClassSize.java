@@ -39,64 +39,64 @@ public class ClassSize {
   private static int nrOfRefsPerObj = 2;
 
   /** Array overhead */
-  public static int ARRAY = 0;
+  public static final int ARRAY;
 
   /** Overhead for ArrayList(0) */
-  public static int ARRAYLIST = 0;
+  public static final int ARRAYLIST;
 
   /** Overhead for ByteBuffer */
-  public static int BYTE_BUFFER = 0;
+  public static final int BYTE_BUFFER;
 
   /** Overhead for an Integer */
-  public static int INTEGER = 0;
+  public static final int INTEGER;
 
   /** Overhead for entry in map */
-  public static int MAP_ENTRY = 0;
+  public static final int MAP_ENTRY;
 
   /** Object overhead is minimum 2 * reference size (8 bytes on 64-bit) */
-  public static int OBJECT = 0;
+  public static final int OBJECT;
 
   /** Reference size is 8 bytes on 64-bit, 4 bytes on 32-bit */
-  public static int REFERENCE = 0;
+  public static final int REFERENCE;
 
   /** String overhead */
-  public static int STRING = 0;
+  public static final int STRING;
 
   /** Overhead for TreeMap */
-  public static int TREEMAP = 0;
+  public static final int TREEMAP;
 
   /** Overhead for ConcurrentHashMap */
-  public static int CONCURRENT_HASHMAP = 0;
+  public static final int CONCURRENT_HASHMAP;
 
   /** Overhead for ConcurrentHashMap.Entry */
-  public static int CONCURRENT_HASHMAP_ENTRY = 0;
+  public static final int CONCURRENT_HASHMAP_ENTRY;
 
   /** Overhead for ConcurrentHashMap.Segment */
-  public static int CONCURRENT_HASHMAP_SEGMENT = 0;
+  public static final int CONCURRENT_HASHMAP_SEGMENT;
 
   /** Overhead for ConcurrentSkipListMap */
-  public static int CONCURRENT_SKIPLISTMAP = 0;
+  public static final int CONCURRENT_SKIPLISTMAP;
 
   /** Overhead for ConcurrentSkipListMap Entry */
-  public static int CONCURRENT_SKIPLISTMAP_ENTRY = 0;
+  public static final int CONCURRENT_SKIPLISTMAP_ENTRY;
 
   /** Overhead for ReentrantReadWriteLock */
-  public static int REENTRANT_LOCK = 0;
+  public static final int REENTRANT_LOCK;
 
   /** Overhead for AtomicLong */
-  public static int ATOMIC_LONG = 0;
+  public static final int ATOMIC_LONG;
 
   /** Overhead for AtomicInteger */
-  public static int ATOMIC_INTEGER = 0;
+  public static final int ATOMIC_INTEGER;
 
   /** Overhead for AtomicBoolean */
-  public static int ATOMIC_BOOLEAN = 0;
+  public static final int ATOMIC_BOOLEAN;
 
   /** Overhead for CopyOnWriteArraySet */
-  public static int COPYONWRITE_ARRAYSET = 0;
+  public static final int COPYONWRITE_ARRAYSET;
 
   /** Overhead for CopyOnWriteArrayList */
-  public static int COPYONWRITE_ARRAYLIST = 0;
+  public static final int COPYONWRITE_ARRAYLIST;
 
   private static final String THIRTY_TWO = "32";
 
@@ -110,9 +110,10 @@ public class ClassSize {
     String arcModel = sysProps.getProperty("sun.arch.data.model");
 
     //Default value is set to 8, covering the case when arcModel is unknown
-    REFERENCE = 8;
     if (arcModel.equals(THIRTY_TWO)) {
       REFERENCE = 4;
+    } else {
+      REFERENCE = 8;
     }
 
     OBJECT = 2 * REFERENCE;
