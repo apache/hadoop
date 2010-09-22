@@ -29,6 +29,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.OutputFormat;
+import org.apache.hadoop.mapred.TextInputFormat;
+import org.apache.hadoop.mapred.TextOutputFormat;
 
 /**
  * Utility for {@link TableMap} and {@link TableReduce}
@@ -59,6 +63,11 @@ public class TableMapReduceUtil {
     job.setMapperClass(mapper);
     FileInputFormat.addInputPaths(job, table);
     job.set(TableInputFormat.COLUMN_LIST, columns);
+    try {
+      addDependencyJars(job);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 
   /**
@@ -105,6 +114,7 @@ public class TableMapReduceUtil {
     } else if (partitioner != null) {
       job.setPartitionerClass(partitioner);
     }
+    addDependencyJars(job);
   }
 
   /**
@@ -180,5 +190,23 @@ public class TableMapReduceUtil {
    */
   public static void setScannerCaching(JobConf job, int batchSize) {
     job.setInt("hbase.client.scanner.caching", batchSize);
+  }
+
+  /**
+   * @see org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil#addDependencyJars(Job)
+   */
+  public static void addDependencyJars(JobConf job) throws IOException {
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJars(
+      job,
+      org.apache.zookeeper.ZooKeeper.class,
+      com.google.common.base.Function.class,
+      job.getMapOutputKeyClass(),
+      job.getMapOutputValueClass(),
+      job.getOutputKeyClass(),
+      job.getOutputValueClass(),
+      job.getPartitionerClass(),
+      job.getClass("mapred.input.format.class", TextInputFormat.class, InputFormat.class),
+      job.getClass("mapred.output.format.class", TextOutputFormat.class, OutputFormat.class),
+      job.getCombinerClass());
   }
 }
