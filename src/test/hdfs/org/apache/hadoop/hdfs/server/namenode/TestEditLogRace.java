@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.junit.Assert.*;
 import org.junit.Test;
@@ -320,7 +321,7 @@ public class TestEditLogRace {
   public void testSaveImageWhileSyncInProgress() throws Exception {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
-    NameNode.format(conf);
+    GenericTestUtils.formatNamenode(conf);
     final FSNamesystem namesystem = new FSNamesystem(conf);
 
     try {
@@ -410,7 +411,7 @@ public class TestEditLogRace {
   public void testSaveRightBeforeSync() throws Exception {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
-    NameNode.format(conf);
+    GenericTestUtils.formatNamenode(conf);
     final FSNamesystem namesystem = new FSNamesystem(conf);
 
     try {

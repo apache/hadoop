@@ -75,7 +75,7 @@ public class TestNNLeaseRecovery {
 
     FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-    NameNode.format(conf);
+    GenericTestUtils.formatNamenode(conf);
     fsn = spy(new FSNamesystem(conf));
   }
 

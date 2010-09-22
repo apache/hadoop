@@ -76,9 +76,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
-import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
-import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
-import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
@@ -164,6 +161,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
+  public static String clusterIdStr;
 
   protected FSNamesystem namesystem; 
   protected NamenodeRole role;
@@ -1376,7 +1374,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         continue;
       if (isConfirmationNeeded) {
         System.err.print("Re-format filesystem in " + curDir +" ? (Y or N) ");
-        if (!(System.in.read() == 'Y')) {
+        if (System.in.read() != 'Y') {
           System.err.println("Format aborted in "+ curDir);
           return true;
         }
@@ -1384,9 +1382,25 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       }
     }
 
-    FSNamesystem nsys = new FSNamesystem(new FSImage(dirsToFormat,
-                                         editDirsToFormat), conf);
-    nsys.dir.fsImage.format();
+    FSImage fsImage = new FSImage(dirsToFormat, editDirsToFormat);
+    FSNamesystem nsys = new FSNamesystem(fsImage, conf);
+    //new cluster id
+    // if not provided - see if you can find the current one
+    if(clusterIdStr == null || clusterIdStr.equals("")) {
+      // try to get one from the existing storage
+      clusterIdStr = fsImage.determineClusterId();
+      if (clusterIdStr == null || clusterIdStr.equals("")) {
+        throw new IllegalArgumentException("Format must be provided with clusterid");
+      }
+      if(isConfirmationNeeded) {
+        System.err.print("Use existing cluster id=" + clusterIdStr + "? (Y or N)");
+        if(System.in.read() != 'Y') {
+          throw new IllegalArgumentException("Format must be provided with clusterid");
+        }
+        while(System.in.read() != '\n'); // discard the enter-key
+      }
+    }
+    nsys.dir.fsImage.format(clusterIdStr);
     return false;
   }
 
@@ -1443,7 +1457,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       "Usage: java NameNode [" +
       StartupOption.BACKUP.getName() + "] | [" +
       StartupOption.CHECKPOINT.getName() + "] | [" +
-      StartupOption.FORMAT.getName() + "] | [" +
+      StartupOption.FORMAT.getName() + "[" + StartupOption.CLUSTERID.getName() +  
+      " cid ]] | [" +
       StartupOption.UPGRADE.getName() + "] | [" +
       StartupOption.ROLLBACK.getName() + "] | [" +
       StartupOption.FINALIZE.getName() + "] | [" +
@@ -1457,6 +1472,13 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       String cmd = args[i];
       if (StartupOption.FORMAT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.FORMAT;
+        // might be followed by two args
+        if(i+2<argsLen && args[i+1].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
+          i+=2;
+          clusterIdStr = args[i];  
+        }
+      } else if (StartupOption.GENCLUSTERID.getName().equalsIgnoreCase(cmd)) {
+        startOpt = StartupOption.GENCLUSTERID;
       } else if (StartupOption.REGULAR.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.REGULAR;
       } else if (StartupOption.BACKUP.getName().equalsIgnoreCase(cmd)) {
@@ -1502,6 +1524,11 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         boolean aborted = format(conf, true);
         System.exit(aborted ? 1 : 0);
         return null; // avoid javac warning
+      case GENCLUSTERID:
+        System.err.println("Generating new cluster id:");
+        System.out.println(FSImage.newClusterID());
+        System.exit(0);
+        return null;
       case FINALIZE:
         aborted = finalize(conf, true);
         System.exit(aborted ? 1 : 0);

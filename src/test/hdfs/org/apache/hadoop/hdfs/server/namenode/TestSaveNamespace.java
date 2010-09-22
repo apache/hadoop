@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -88,7 +89,7 @@ public class TestSaveNamespace {
   private void saveNamespaceWithInjectedFault(Fault fault) throws IOException {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
-    NameNode.format(conf);
+    GenericTestUtils.formatNamenode(conf);
     FSNamesystem fsn = new FSNamesystem(conf);
 
     // Replace the FSImage with a spy
@@ -162,7 +163,7 @@ public class TestSaveNamespace {
   public void testSaveWhileEditsRolled() throws Exception {
     Configuration conf = getConf();
     NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
-    NameNode.format(conf);
+    GenericTestUtils.formatNamenode(conf);
     FSNamesystem fsn = new FSNamesystem(conf);
 
     // Replace the FSImage with a spy

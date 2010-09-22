@@ -1470,9 +1470,8 @@ public class FSImage extends Storage {
    * 
    * @return new clusterID
    */ 
-  private String newClusterID() {
-    this.clusterID = "cid-" + UUID.randomUUID().toString();
-    return this.clusterID;
+  public static String newClusterID() {
+    return "CID-" + UUID.randomUUID().toString();
   }
   
   /**
@@ -1514,10 +1513,10 @@ public class FSImage extends Storage {
              + " has been successfully formatted.");
   }
 
-  public void format() throws IOException {
+  public void format(String clusterId) throws IOException {;
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     this.namespaceID = newNamespaceID();
-    this.clusterID = newClusterID();
+    this.clusterID = clusterId;
     this.blockpoolID = newBlockPoolID();
     this.cTime = 0L;
     this.checkpointTime = now();
@@ -2036,6 +2035,33 @@ public class FSImage extends Storage {
       list.add(getImageFile(it.next(), NameNodeFile.IMAGE_NEW));
     }
     return list.toArray(new File[list.size()]);
+  }
+  
+  /**
+   * try to find current cluster id in the VERSION files
+   * returns first cluster id found in any VERSION file
+   * null in case none found
+   * @return clusterId or null in case no cluster id found
+   */
+  public String determineClusterId() {
+    String cid = null;
+    Iterator<StorageDirectory> sdit = dirIterator(NameNodeDirType.IMAGE);
+    while(sdit.hasNext()) {
+      StorageDirectory sd = sdit.next();
+      try {
+        Properties props = sd.readFrom(sd.getVersionFile());
+        cid = props.getProperty("clusterID");
+        LOG.info("current cluster id for sd="+sd.getCurrentDir() + 
+            ";lv=" + layoutVersion + ";cid=" + cid);
+        
+        if(cid != null && !cid.equals(""))
+          return cid;
+      } catch (Exception e) {
+        LOG.warn("this sd not available: " + e.getLocalizedMessage());
+      } //ignore
+    }
+    LOG.warn("couldn't find any VERSION file containing valid ClusterId");
+    return null;
   }
 
   /**

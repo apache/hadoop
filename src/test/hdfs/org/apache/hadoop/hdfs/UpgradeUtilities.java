@@ -47,6 +47,8 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
+import org.apache.hadoop.test.GenericTestUtils;
 
 /**
  * This class defines a number of static helper methods used by the
@@ -101,7 +103,7 @@ public class UpgradeUtilities {
       createEmptyDirs(new String[] {datanodeStorage.toString()});
       
       // format and start NameNode and start DataNode
-      NameNode.format(config); 
+      GenericTestUtils.formatNamenode(config);
       cluster = new MiniDFSCluster(config, 1, StartupOption.REGULAR);
         
       NameNode namenode = cluster.getNameNode();

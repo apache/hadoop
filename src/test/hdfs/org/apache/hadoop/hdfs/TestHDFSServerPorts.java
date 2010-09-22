@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.server.namenode.BackupNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.test.GenericTestUtils;
 
 /**
  * This test checks correctness of port usage by hdfs components:
@@ -103,7 +104,7 @@ public class TestHDFSServerPorts extends TestCase {
       NameNode.setServiceAddress(config, NAME_NODE_HOST + "0");      
     }
     config.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, NAME_NODE_HTTP_HOST + "0");
-    NameNode.format(config);
+    GenericTestUtils.formatNamenode(config);
 
     String[] args = new String[] {};
     // NameNode will modify config with the ports it bound to
@@ -261,7 +262,7 @@ public class TestHDFSServerPorts extends TestCase {
       Configuration conf2 = new HdfsConfiguration(config);
       conf2.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
           fileAsURI(new File(hdfsDir, "name2")).toString());
-      NameNode.format(conf2);
+      GenericTestUtils.formatNamenode(conf2);
       boolean started = canStartNameNode(conf2);
       assertFalse(started); // should fail
 

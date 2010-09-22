@@ -232,22 +232,26 @@ public abstract class Storage extends StorageInfo {
     public void read() throws IOException {
       read(getVersionFile());
     }
-    
     public void read(File from) throws IOException {
+      Properties props = readFrom(from);
+      getFields(props, this);
+    }
+    
+    public Properties readFrom(File from) throws IOException {
       RandomAccessFile file = new RandomAccessFile(from, "rws");
       FileInputStream in = null;
+      Properties props = new Properties();
       try {
         in = new FileInputStream(file.getFD());
         file.seek(0);
-        Properties props = new Properties();
         props.load(in);
-        getFields(props, this);
       } finally {
         if (in != null) {
           in.close();
         }
         file.close();
       }
+      return props;
     }
 
     /**

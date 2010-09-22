@@ -60,6 +60,7 @@ import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -302,7 +303,7 @@ public class MiniDFSCluster {
       if (data_dir.exists() && !FileUtil.fullyDelete(data_dir)) {
         throw new IOException("Cannot remove data directory: " + data_dir);
       }
-      NameNode.format(conf); 
+      GenericTestUtils.formatNamenode(conf);
     }
     
     // Start the NameNode

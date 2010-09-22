@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -59,7 +60,7 @@ public class TestReplicationPolicy extends TestCase {
     try {
       FileSystem.setDefaultUri(CONF, "hdfs://localhost:0");
       CONF.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-      NameNode.format(CONF);
+      GenericTestUtils.formatNamenode(CONF);
       namenode = new NameNode(CONF);
     } catch (IOException e) {
       e.printStackTrace();

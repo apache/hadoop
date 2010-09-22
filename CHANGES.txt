@@ -39,6 +39,9 @@ Trunk (unreleased changes)
 
     HDFS-1365.HDFS federation: propose ClusterID and BlockPoolID format (tanping via boryas)
 
+    HDFS-1394. modify -format option for namenode to generated new blockpool id 
+    and accept newcluster (boryas)
+
   IMPROVEMENTS
 
     HDFS-1096. fix for prev. commit. (boryas)

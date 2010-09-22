@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.test;
 
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+
 /**
  * Test provides some very generic helpers which might be used across the tests
  */
@@ -27,5 +32,15 @@ public abstract class GenericTestUtils {
    */
   public static String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+  
+  /**
+   * when formating a namenode - we must provide clusterid.
+   * @param conf
+   * @throws IOException
+   */
+  public static void formatNamenode(Configuration conf) throws IOException {
+    NameNode.clusterIdStr = "testClusterId";
+    NameNode.format(conf);
   }
 }

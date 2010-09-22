@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 public class TestNNThroughputBenchmark {
@@ -35,7 +36,7 @@ public class TestNNThroughputBenchmark {
     Configuration conf = new HdfsConfiguration();
     FileSystem.setDefaultUri(conf, "hdfs://localhost:" + 0);
     conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-    NameNode.format(conf);
+    GenericTestUtils.formatNamenode(conf);
     String[] args = new String[] {"-op", "all"};
     NNThroughputBenchmark.runBenchmark(conf, Arrays.asList(args));
   }
