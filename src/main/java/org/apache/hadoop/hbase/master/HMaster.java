@@ -563,7 +563,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // Only allow one balance run at at time.
       if (this.assignmentManager.isRegionsInTransition()) {
         LOG.debug("Not running balancer because regions in transition: " +
-          this.assignmentManager.getRegionsInTransition());
+          org.apache.commons.lang.StringUtils.
+            abbreviate(this.assignmentManager.getRegionsInTransition().toString(), 64));
         return false;
       }
       if (!this.serverManager.getDeadServers().isEmpty()) {
@@ -582,7 +583,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
       if (plans != null && !plans.isEmpty()) {
         for (RegionPlan plan: plans) {
-          LOG.info("balance=" + plan);
+          LOG.info("balance " + plan);
           this.assignmentManager.balance(plan);
         }
       }

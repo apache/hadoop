@@ -486,7 +486,6 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionName server to be assigned
    */
   public void assign(HRegionInfo region) {
-    LOG.debug("Starting assignment for region " + region.getRegionNameAsString());
     // Grab the state of this region and synchronize on it
     String encodedName = region.getEncodedName();
     RegionState state;
@@ -546,6 +545,9 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
     try {
+      LOG.debug("Assigning region " +
+        state.getRegion().getRegionNameAsString() + " to " +
+        plan.getDestination().getServerName());
       // Send OPEN RPC. This can fail if the server on other end is is not up.
       serverManager.sendRegionOpen(plan.getDestination(), state.getRegion());
       // Transition RegionState to PENDING_OPEN
@@ -726,7 +728,6 @@ public class AssignmentManager extends ZooKeeperListener {
       // regionsInTransition timing out.  Currently its not possible given the
       // Executor architecture on the regionserver side.  St.Ack 20100920.
       for (HRegionInfo region : regions) {
-        LOG.debug("Assigning " + region.getRegionNameAsString() + " to " + this.server);
         regionPlans.put(region.getEncodedName(), new RegionPlan(region, null, server));
         assign(region);
         if (this.stopper.isStopped()) break;

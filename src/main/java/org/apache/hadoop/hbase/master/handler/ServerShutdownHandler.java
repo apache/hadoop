@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
@@ -106,7 +107,7 @@ public class ServerShutdownHandler extends EventHandler {
     NavigableMap<HRegionInfo, Result> hris =
       MetaReader.getServerUserRegions(this.server.getCatalogTracker(), this.hsi);
     LOG.info("Reassigning the " + hris.size() + " region(s) that " + serverName +
-      " was carrying.");
+      " was carrying");
 
     // We should encounter -ROOT- and .META. first in the Set given how its
     // a sorted set.
@@ -151,7 +152,9 @@ public class ServerShutdownHandler extends EventHandler {
     byte [] bytes = result.getValue(HConstants.CATALOG_FAMILY, qualifier);
     if (bytes == null || bytes.length <= 0) return;
     HRegionInfo hri = Writables.getHRegionInfo(bytes);
-    if (!hris.containsKey(hri)) {
+    Pair<HRegionInfo, HServerAddress> pair =
+      MetaReader.getRegion(this.server.getCatalogTracker(), hri.getRegionName());
+    if (pair == null || pair.getFirst() == null) {
       LOG.info("Fixup; missing daughter " + hri.getEncodedName());
       MetaEditor.addDaughter(this.server.getCatalogTracker(), hri, null);
       this.services.getAssignmentManager().assign(hri);
