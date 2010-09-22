@@ -981,6 +981,9 @@ Release 0.21.0 - Unreleased
    HBASE-410   [testing] Speed up the test suite
    HBASE-2041  Change WAL default configuration values
    HBASE-2997  Performance fixes - profiler driven
+   HBASE-2450  For single row reads of specific columns, seek to the 
+   	       first column in HFiles rather than start of row
+	       (Pranav via Ryan, some Ryan)
 
 
 Release 0.20.0 - Tue Sep  8 12:53:05 PDT 2009

@@ -439,7 +439,7 @@ public class MemStore implements HeapSize {
           // to be extra safe we only remove Puts that have a memstoreTS==0
           if (kv.getType() == KeyValue.Type.Put.getCode()) {
             // false means there was a change, so give us the size.
-            addedSize -= heapSizeChange(kv, false);
+            addedSize -= heapSizeChange(kv, true);
 
             it.remove();
           }

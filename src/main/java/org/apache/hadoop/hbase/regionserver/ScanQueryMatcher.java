@@ -159,16 +159,17 @@ public class ScanQueryMatcher {
         this.deletes.add(bytes, offset, qualLength, timestamp, type);
         // Can't early out now, because DelFam come before any other keys
       }
-      // May be able to optimize the SKIP here, if we matched
-      // due to a DelFam, we can skip to next row
-      // due to a DelCol, we can skip to next col
-      // But it requires more info out of isDelete().
-      // needful -> million column challenge.
       return MatchCode.SKIP;
     }
 
     if (!this.deletes.isEmpty() &&
         deletes.isDeleted(bytes, offset, qualLength, timestamp)) {
+
+      // May be able to optimize the SKIP here, if we matched
+      // due to a DelFam, we can skip to next row
+      // due to a DelCol, we can skip to next col
+      // But it requires more info out of isDelete().
+      // needful -> million column challenge.
       return MatchCode.SKIP;
     }
 
@@ -233,6 +234,8 @@ public class ScanQueryMatcher {
     if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
         rowComparator.compareRows(kv.getBuffer(),kv.getRowOffset(),
             kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {
+      // KV >= STOPROW
+      // then NO there is nothing left.
       return false;
     } else {
       return true;
@@ -278,6 +281,28 @@ public class ScanQueryMatcher {
     } else {
       return filter.getNextKeyHint(kv);
     }
+  }
+
+  public KeyValue getKeyForNextColumn(KeyValue kv) {
+    ColumnCount nextColumn = columns.getColumnHint();
+    if (nextColumn == null) {
+      return KeyValue.createLastOnRow(
+          kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+          kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
+          kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+    } else {
+      return KeyValue.createFirstOnRow(
+          kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+          kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
+          nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength());
+    }
+  }
+
+  public KeyValue getKeyForNextRow(KeyValue kv) {
+    return KeyValue.createLastOnRow(
+        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+        null, 0, 0,
+        null, 0, 0);
   }
 
   /**

@@ -260,6 +260,11 @@ public final class HConstants {
   public static final long LATEST_TIMESTAMP = Long.MAX_VALUE;
 
   /**
+   * Timestamp to use when we want to refer to the oldest cell.
+   */
+  public static final long OLDEST_TIMESTAMP = Long.MIN_VALUE;
+
+  /**
    * LATEST_TIMESTAMP in bytes form
    */
   public static final byte [] LATEST_TIMESTAMP_BYTES = Bytes.toBytes(LATEST_TIMESTAMP);

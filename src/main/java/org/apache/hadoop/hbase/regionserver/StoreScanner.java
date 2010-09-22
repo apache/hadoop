@@ -68,7 +68,8 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     // pass columns = try to filter out unnecessary ScanFiles
     List<KeyValueScanner> scanners = getScanners(scan, columns);
 
-    // Seek all scanners to the initial key
+    // Seek all scanners to the start of the Row (or if the exact maching row key does not
+    // exist, then to the start of the next matching Row).
     for(KeyValueScanner scanner : scanners) {
       scanner.seek(matcher.getStartKey());
     }
@@ -261,18 +262,18 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
           return false;
 
         case SEEK_NEXT_ROW:
+          // This is just a relatively simple end of scan fix, to short-cut end us if there is a
+          // endKey in the scan.
           if (!matcher.moreRowsMayExistAfter(kv)) {
             outResult.addAll(results);
             return false;
           }
-          heap.next();
+
+          reseek(matcher.getKeyForNextRow(kv));
           break;
 
         case SEEK_NEXT_COL:
-          // TODO hfile needs 'hinted' seeking to prevent it from
-          // reseeking from the start of the block on every dang seek.
-          // We need that API and expose it the scanner chain.
-          heap.next();
+          reseek(matcher.getKeyForNextColumn(kv));
           break;
 
         case SKIP:
