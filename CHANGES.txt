@@ -11,6 +11,9 @@ Release 0.20.3 - Unreleased
 
   BUG FIXES
 
+    MAPREDUCE-1280. Update Eclipse plugin to the new eclipse.jdt API.
+    (Alex Kozlov via szetszwo)
+
     HADOOP-6760. WebServer shouldn't increase port number in case of negative
     port setting caused by Jetty's race (cos)
 

@@ -159,9 +159,9 @@ public class RunOnHadoopWizard extends Wizard {
 
     // Write it to the disk file
     try {
-      // File confFile = File.createTempFile("hadoop-site-", ".xml",
+      // File confFile = File.createTempFile("core-site-", ".xml",
       // confDir);
-      File confFile = new File(confDir, "hadoop-site.xml");
+      File confFile = new File(confDir, "core-site.xml");
       FileOutputStream fos = new FileOutputStream(confFile);
       conf.writeXml(fos);
       fos.close();
