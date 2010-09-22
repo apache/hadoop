@@ -29,6 +29,9 @@ Release 0.20-append - Unreleased
 
   BUG FIXES
 
+    MAPREDUCE-1280. Update Eclipse plugin to the new eclipse.jdt API.
+    (Alex Kozlov via szetszwo)
+
     HDFS-101. DFSClient correctly detects second datanode failure in write
     pipeline. (Nicolas Spiegelberg via dhruba)
 

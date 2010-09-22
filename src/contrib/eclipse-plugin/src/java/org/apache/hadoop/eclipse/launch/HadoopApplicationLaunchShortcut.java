@@ -32,7 +32,7 @@ import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
-import org.eclipse.jdt.internal.debug.ui.launcher.JavaApplicationLaunchShortcut;
+import org.eclipse.jdt.debug.ui.launchConfigurations.JavaApplicationLaunchShortcut;
 import org.eclipse.jdt.launching.IJavaLaunchConfigurationConstants;
 import org.eclipse.jdt.launching.IRuntimeClasspathEntry;
 import org.eclipse.jdt.launching.JavaRuntime;
@@ -64,7 +64,7 @@ public class HadoopApplicationLaunchShortcut extends
     // Find an existing or create a launch configuration (Standard way)
     ILaunchConfiguration iConf =
         super.findLaunchConfiguration(type, configType);
-
+    if (iConf == null) iConf = super.createConfiguration(type);
     ILaunchConfigurationWorkingCopy iConfWC;
     try {
       /*
