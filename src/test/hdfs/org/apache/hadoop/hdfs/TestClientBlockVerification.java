@@ -26,7 +26,6 @@ import java.util.List;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -83,7 +82,7 @@ public class TestClientBlockVerification {
     int offset, int lenToRead) throws IOException {
     InetSocketAddress targetAddr = null;
     Socket s = null;
-    Block block = testBlock.getBlock().getLocalBlock();
+    ExtendedBlock block = testBlock.getBlock();
     DatanodeInfo[] nodes = testBlock.getLocations();
     targetAddr = NetUtils.createSocketAddr(nodes[0].getName());
     s = new Socket();

@@ -246,13 +246,12 @@ public class DatanodeJspHelper {
       return;
     }
 
-    String blockSizeStr = req.getParameter("blockSize");
-    long blockSize = 0;
+    final String blockSizeStr = req.getParameter("blockSize");
     if (blockSizeStr == null || blockSizeStr.length() == 0) {
       out.print("Invalid input");
       return;
     }
-    blockSize = Long.parseLong(blockSizeStr);
+    long blockSize = Long.parseLong(blockSizeStr);
 
     final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
     List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
@@ -376,6 +375,12 @@ public class DatanodeJspHelper {
     final Long blockId = JspHelper.validateLong(req.getParameter("blockId"));
     if (blockId == null) {
       out.print("Invalid input (blockId absent)");
+      return;
+    }
+    
+    final String poolId = req.getParameter("poolId");
+    if (poolId == null) {
+      out.print("Invalid input (poolId absent)");
       return;
     }
 
@@ -559,7 +564,7 @@ public class DatanodeJspHelper {
     out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
     try {
       JspHelper.streamBlockInAscii(new InetSocketAddress(req.getServerName(),
-          datanodePort), blockId, blockToken, genStamp, blockSize,
+          datanodePort), poolId, blockId, blockToken, genStamp, blockSize,
           startOffset, chunkSizeToView, out, conf);
     } catch (Exception e) {
       out.print(e);
@@ -626,6 +631,7 @@ public class DatanodeJspHelper {
       return;
     }
     LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
+    String poolId = lastBlk.getBlock().getPoolId();
     long blockSize = lastBlk.getBlock().getNumBytes();
     long blockId = lastBlk.getBlock().getBlockId();
     Token<BlockTokenIdentifier> accessToken = lastBlk.getBlockToken();
@@ -644,7 +650,7 @@ public class DatanodeJspHelper {
         - chunkSizeToView : 0;
 
     out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
-    JspHelper.streamBlockInAscii(addr, blockId, accessToken, genStamp,
+    JspHelper.streamBlockInAscii(addr, poolId, blockId, accessToken, genStamp,
         blockSize, startOffset, chunkSizeToView, out, conf);
     out.print("</textarea>");
     dfs.close();

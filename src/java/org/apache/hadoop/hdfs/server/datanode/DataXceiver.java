@@ -34,9 +34,9 @@ import java.net.Socket;
 import java.net.SocketException;
 
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -129,7 +129,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Read a block from the disk.
    */
   @Override
-  protected void opReadBlock(DataInputStream in, Block block,
+  protected void opReadBlock(DataInputStream in, ExtendedBlock block,
       long startOffset, long length, String clientName,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
     OutputStream baseStream = NetUtils.getOutputStream(s, 
@@ -182,7 +182,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
         try {
           if (DataTransferProtocol.Status.read(in) == CHECKSUM_OK
               && datanode.blockScanner != null) {
-            datanode.blockScanner.verifiedByClient(block);
+            datanode.blockScanner.verifiedByClient(block.getLocalBlock());
           }
         } catch (IOException ignored) {}
       }
@@ -216,7 +216,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Write a block to disk.
    */
   @Override
-  protected void opWriteBlock(DataInputStream in, Block block, 
+  protected void opWriteBlock(DataInputStream in, ExtendedBlock block, 
       int pipelineSize, BlockConstructionStage stage,
       long newGs, long minBytesRcvd, long maxBytesRcvd,
       String client, DatanodeInfo srcDataNode, DatanodeInfo[] targets,
@@ -273,7 +273,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
             stage, newGs, minBytesRcvd, maxBytesRcvd,
             client, srcDataNode, datanode);
       } else {
-        datanode.data.recoverClose(block, newGs, minBytesRcvd);
+        // TODO:FEDERATION use ExtendedBlock
+        datanode.data.recoverClose(block.getLocalBlock(), newGs, minBytesRcvd);
       }
 
       //
@@ -376,7 +377,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
       // the block is finalized in the PacketResponder.
       if (client.length() == 0 || 
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
-        datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
+        // TODO:FEDERATION use ExtendedBlock
+        datanode.closeBlock(block.getLocalBlock(), DataNode.EMPTY_DEL_HINT);
         LOG.info("Received block " + block + 
                  " src: " + remoteAddress +
                  " dest: " + localAddress +
@@ -406,7 +408,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Get block checksum (MD5 of CRC32).
    */
   @Override
-  protected void opBlockChecksum(DataInputStream in, Block block,
+  protected void opBlockChecksum(DataInputStream in, ExtendedBlock block,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
     DataOutputStream out = new DataOutputStream(NetUtils.getOutputStream(s,
         datanode.socketWriteTimeout));
@@ -429,8 +431,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
       }
     }
 
+    // TODO:FEDERATION use ExtendedBlock
     final MetaDataInputStream metadataIn = 
-      datanode.data.getMetaDataInputStream(block);
+      datanode.data.getMetaDataInputStream(block.getLocalBlock());
     final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
         metadataIn, BUFFER_SIZE));
 
@@ -470,7 +473,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Read a block from the disk and then sends it to a destination.
    */
   @Override
-  protected void opCopyBlock(DataInputStream in, Block block,
+  protected void opCopyBlock(DataInputStream in, ExtendedBlock block,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
     // Read in the header
     if (datanode.isBlockTokenEnabled) {
@@ -545,7 +548,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
    */
   @Override
   protected void opReplaceBlock(DataInputStream in,
-      Block block, String sourceID, DatanodeInfo proxySource,
+      ExtendedBlock block, String sourceID, DatanodeInfo proxySource,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
     /* read header */
     block.setNumBytes(dataXceiverServer.estimateBlockSize);
@@ -616,7 +619,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
           dataXceiverServer.balanceThrottler, -1);
                     
       // notify name node
-      datanode.notifyNamenodeReceivedBlock(block, sourceID);
+      // TODO:FEDERATION use ExtendedBlock
+      datanode.notifyNamenodeReceivedBlock(block.getLocalBlock(), sourceID);
 
       LOG.info("Moved block " + block + 
           " from " + s.getRemoteSocketAddress());

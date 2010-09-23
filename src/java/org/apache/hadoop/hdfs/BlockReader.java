@@ -35,7 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
@@ -349,7 +349,7 @@ public class BlockReader extends FSInputChecker {
   }
 
   public static BlockReader newBlockReader(Socket sock, String file,
-      Block block, Token<BlockTokenIdentifier> blockToken, 
+      ExtendedBlock block, Token<BlockTokenIdentifier> blockToken, 
       long startOffset, long len, int bufferSize) throws IOException {
     return newBlockReader(sock, file, block, blockToken, startOffset, len, bufferSize,
         true);
@@ -357,7 +357,7 @@ public class BlockReader extends FSInputChecker {
 
   /** Java Doc required */
   public static BlockReader newBlockReader( Socket sock, String file, 
-                                     Block block, 
+                                     ExtendedBlock block, 
                                      Token<BlockTokenIdentifier> blockToken,
                                      long startOffset, long len,
                                      int bufferSize, boolean verifyChecksum)
@@ -367,7 +367,7 @@ public class BlockReader extends FSInputChecker {
   }
 
   public static BlockReader newBlockReader( Socket sock, String file,
-                                     Block block, 
+                                     ExtendedBlock block, 
                                      Token<BlockTokenIdentifier> blockToken,
                                      long startOffset, long len,
                                      int bufferSize, boolean verifyChecksum,
@@ -394,14 +394,14 @@ public class BlockReader extends FSInputChecker {
             "Got access token error for OP_READ_BLOCK, self="
                 + sock.getLocalSocketAddress() + ", remote="
                 + sock.getRemoteSocketAddress() + ", for file " + file
-                + ", for block " + block.getBlockId() 
-                + "_" + block.getGenerationStamp());
+                + ", for pool " + block.getPoolId() + " block " 
+                + block.getBlockId() + "_" + block.getGenerationStamp());
       } else {
         throw new IOException("Got error for OP_READ_BLOCK, self="
             + sock.getLocalSocketAddress() + ", remote="
             + sock.getRemoteSocketAddress() + ", for file " + file
-            + ", for block " + block.getBlockId() + "_" 
-            + block.getGenerationStamp());
+            + ", for pool " + block.getPoolId() + " block " 
+            + block.getBlockId() + "_" + block.getGenerationStamp());
       }
     }
     DataChecksum checksum = DataChecksum.newDataChecksum( in );
@@ -417,6 +417,7 @@ public class BlockReader extends FSInputChecker {
                             startOffset + " for file " + file);
     }
 
+    // TODO:FEDERATION use poolId
     return new BlockReader(file, block.getBlockId(), in, checksum,
         verifyChecksum, startOffset, firstChunkOffset, len, sock);
   }
@@ -453,9 +454,15 @@ public class BlockReader extends FSInputChecker {
     }
   }
   
-  // File name to print when accessing a block directory from servlets
+  /**
+   * File name to print when accessing a block directly (from servlets)
+   * @param s Address of the block location
+   * @param poolId Block pool ID of the block
+   * @param blockId Block ID of the block
+   * @return string that has a file name for debug purposes
+   */
   public static String getFileName(final InetSocketAddress s,
-      final long blockId) {
-    return s.toString() + ":" + blockId;
+      final String poolId, final long blockId) {
+    return s.toString() + ":" + poolId + ":" + blockId;
   }
 }

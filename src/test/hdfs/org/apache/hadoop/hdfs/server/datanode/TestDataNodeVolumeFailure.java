@@ -250,7 +250,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
 
     String file = BlockReader.getFileName(targetAddr, block.getBlockId());
     BlockReader blockReader = 
-      BlockReader.newBlockReader(s, file, block.getLocalBlock(), lblock
+      BlockReader.newBlockReader(s, file, block, lblock
         .getBlockToken(), 0, -1, 4096);
 
     // nothing - if it fails - it will throw and exception

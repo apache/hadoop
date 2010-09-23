@@ -31,7 +31,7 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.ChecksumException;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.io.IOUtils;
@@ -46,7 +46,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
-  private Block block; // the block to read from
+  private ExtendedBlock block; // the block to read from
 
   /** the replica to read from */
   private final Replica replica;
@@ -80,14 +80,14 @@ class BlockSender implements java.io.Closeable, FSConstants {
   private volatile ChunkChecksum lastChunkChecksum = null;
 
   
-  BlockSender(Block block, long startOffset, long length,
+  BlockSender(ExtendedBlock block, long startOffset, long length,
               boolean corruptChecksumOk, boolean chunkOffsetOK,
               boolean verifyChecksum, DataNode datanode) throws IOException {
     this(block, startOffset, length, corruptChecksumOk, chunkOffsetOK,
          verifyChecksum, datanode, null);
   }
 
-  BlockSender(Block block, long startOffset, long length,
+  BlockSender(ExtendedBlock block, long startOffset, long length,
               boolean corruptChecksumOk, boolean chunkOffsetOK,
               boolean verifyChecksum, DataNode datanode, String clientTraceFmt)
       throws IOException {
@@ -145,10 +145,10 @@ class BlockSender implements java.io.Closeable, FSConstants {
       this.transferToAllowed = datanode.transferToAllowed;
       this.clientTraceFmt = clientTraceFmt;
 
-      if ( !corruptChecksumOk || datanode.data.metaFileExists(block) ) {
-        checksumIn = new DataInputStream(
-                new BufferedInputStream(datanode.data.getMetaDataInputStream(block),
-                                        BUFFER_SIZE));
+      // TODO:FEDERATION metaFileExists and getMetaDataInputStream should take ExtendedBlock
+      if ( !corruptChecksumOk || datanode.data.metaFileExists(block.getLocalBlock()) ) {
+        checksumIn = new DataInputStream(new BufferedInputStream(datanode.data
+            .getMetaDataInputStream(block.getLocalBlock()), BUFFER_SIZE));
 
         // read and handle the common header here. For now just a version
        BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
@@ -230,7 +230,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
         DataNode.LOG.debug("replica=" + replica);
       }
 
-      blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
+      // TODO:FEDERATION getBlockInputStream must acccept ExtendedBlock
+      blockIn = datanode.data.getBlockInputStream(block.getLocalBlock(), offset); // seek to offset
     } catch (IOException ioe) {
       IOUtils.closeStream(this);
       IOUtils.closeStream(blockIn);

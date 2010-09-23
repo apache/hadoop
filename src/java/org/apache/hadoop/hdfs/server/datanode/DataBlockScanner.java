@@ -49,6 +49,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.io.IOUtils;
@@ -435,7 +436,8 @@ class DataBlockScanner implements Runnable {
       try {
         adjustThrottler();
         
-        blockSender = new BlockSender(block, 0, -1, false, 
+        // TODO:FEDERATION use ExtendedBlock
+        blockSender = new BlockSender(new ExtendedBlock(block), 0, -1, false, 
                                                false, true, datanode);
 
         DataOutputStream out = 

@@ -387,7 +387,7 @@ public class DFSInputStream extends FSInputStream {
         ExtendedBlock blk = targetBlock.getBlock();
         Token<BlockTokenIdentifier> accessToken = targetBlock.getBlockToken();
         
-        blockReader = BlockReader.newBlockReader(s, src, blk.getLocalBlock(), 
+        blockReader = BlockReader.newBlockReader(s, src, blk,
             accessToken, 
             offsetIntoBlock, blk.getNumBytes() - offsetIntoBlock,
             buffersize, verifyChecksum, dfsClient.clientName);
@@ -629,7 +629,7 @@ public class DFSInputStream extends FSInputStream {
         int len = (int) (end - start + 1);
             
         reader = BlockReader.newBlockReader(dn, src, 
-                                            block.getBlock().getLocalBlock(),
+                                            block.getBlock(),
                                             blockToken,
                                             start, len, buffersize, 
                                             verifyChecksum, dfsClient.clientName);

@@ -22,6 +22,7 @@ package org.apache.hadoop.hdfs.server.datanode;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 
 /**
  * Exception indicating that DataNode does not have a replica
@@ -43,6 +44,11 @@ public class ReplicaNotFoundException extends IOException {
     super();
   }
 
+  ReplicaNotFoundException(ExtendedBlock b) {
+    super("Replica not found for " + b);
+  }
+  
+  // TODO:FEDERATION remove this later
   ReplicaNotFoundException(Block b) {
     super("Replica not found for " + b);
   }

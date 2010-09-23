@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
@@ -57,7 +58,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   public static final Log LOG = DataNode.LOG;
   static final Log ClientTraceLog = DataNode.ClientTraceLog;
   
-  private Block block; // the block to receive
+  private ExtendedBlock block; // the block to receive
   private DataInputStream in = null; // from where data are read
   private DataChecksum checksum; // from where chunks of a block can be read
   private OutputStream out = null; // to block file at local disk
@@ -81,7 +82,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   final private ReplicaInPipelineInterface replicaInfo;
   volatile private boolean mirrorError;
 
-  BlockReceiver(Block block, DataInputStream in, String inAddr,
+  BlockReceiver(ExtendedBlock block, DataInputStream in, String inAddr,
                 String myAddr, BlockConstructionStage stage, 
                 long newGs, long minBytesRcvd, long maxBytesRcvd, 
                 String clientName, DatanodeInfo srcDataNode, DataNode datanode)
@@ -97,29 +98,30 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       //
       // Open local disk out
       //
+      // TODO:FEDERATION use ExtendedBlock in the following method calls
       if (clientName.length() == 0) { //replication or move
-        replicaInfo = datanode.data.createTemporary(block);
+        replicaInfo = datanode.data.createTemporary(block.getLocalBlock());
       } else {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
-          replicaInfo = datanode.data.createRbw(block);
+          replicaInfo = datanode.data.createRbw(block.getLocalBlock());
           break;
         case PIPELINE_SETUP_STREAMING_RECOVERY:
           replicaInfo = datanode.data.recoverRbw(
-              block, newGs, minBytesRcvd, maxBytesRcvd);
+              block.getLocalBlock(), newGs, minBytesRcvd, maxBytesRcvd);
           block.setGenerationStamp(newGs);
           break;
         case PIPELINE_SETUP_APPEND:
-          replicaInfo = datanode.data.append(block, newGs, minBytesRcvd);
+          replicaInfo = datanode.data.append(block.getLocalBlock(), newGs, minBytesRcvd);
           if (datanode.blockScanner != null) { // remove from block scanner
-            datanode.blockScanner.deleteBlock(block);
+            datanode.blockScanner.deleteBlock(block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
           break;
         case PIPELINE_SETUP_APPEND_RECOVERY:
-          replicaInfo = datanode.data.recoverAppend(block, newGs, minBytesRcvd);
+          replicaInfo = datanode.data.recoverAppend(block.getLocalBlock(), newGs, minBytesRcvd);
           if (datanode.blockScanner != null) { // remove from block scanner
-            datanode.blockScanner.deleteBlock(block);
+            datanode.blockScanner.deleteBlock(block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
           break;
@@ -613,9 +615,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     try {
       if (clientName.length() > 0) {
         responder = new Daemon(datanode.threadGroup, 
-                               new PacketResponder(this, block, mirrIn, 
-                                                   replyOut, numTargets,
-                                                   Thread.currentThread()));
+            new PacketResponder(this, block.getLocalBlock(), mirrIn, replyOut, 
+                                numTargets, Thread.currentThread()));
         responder.start(); // start thread to processes reponses
       }
 
@@ -641,7 +642,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
         // Finalize the block. Does this fsync()?
         block.setNumBytes(replicaInfo.getNumBytes());
-        datanode.data.finalizeBlock(block);
+        // TODO:FEDERATION use ExtendedBlock
+        datanode.data.finalizeBlock(block.getLocalBlock());
         datanode.myMetrics.blocksWritten.inc();
       }
 
@@ -673,7 +675,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
    */
   private void cleanupBlock() throws IOException {
     if (clientName.length() == 0) { // not client write
-      datanode.data.unfinalizeBlock(block);
+      // TODO:FEDERATION use ExtendedBlock
+      datanode.data.unfinalizeBlock(block.getLocalBlock());
     }
   }
 
@@ -690,7 +693,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     }
 
     // rollback the position of the meta file
-    datanode.data.adjustCrcChannelPosition(block, streams, checksumSize);
+    // TODO:FEDERATION use ExtendedBlock
+    datanode.data.adjustCrcChannelPosition(block.getLocalBlock(), streams, checksumSize);
   }
 
   /**
@@ -718,7 +722,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     byte[] crcbuf = new byte[checksumSize];
     FSDataset.BlockInputStreams instr = null;
     try { 
-      instr = datanode.data.getTmpInputStreams(block, blkoff, ckoff);
+      // TODO:FEDERATION use ExtendedBlock
+      instr = datanode.data.getTmpInputStreams(block.getLocalBlock(), blkoff, ckoff);
       IOUtils.readFully(instr.dataIn, buf, 0, sizePartialChunk);
 
       // open meta file and read in crc value computer earlier

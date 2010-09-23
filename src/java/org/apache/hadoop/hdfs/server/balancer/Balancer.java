@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
@@ -376,8 +377,9 @@ public class Balancer implements Tool {
             .getBlock(), EnumSet.of(BlockTokenSecretManager.AccessMode.REPLACE,
             BlockTokenSecretManager.AccessMode.COPY));
       }
+      // TODO:FEDERATION use ExtendedBlock in BalancerBlock
       DataTransferProtocol.Sender.opReplaceBlock(out,
-          block.getBlock(), source.getStorageID(), 
+          new ExtendedBlock(block.getBlock()), source.getStorageID(), 
           proxySource.getDatanode(), accessToken);
     }
     

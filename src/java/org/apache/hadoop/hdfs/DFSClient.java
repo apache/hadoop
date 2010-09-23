@@ -967,7 +967,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                 + BLOCK_CHECKSUM + ", block=" + block);
           }
           // get block MD5
-          DataTransferProtocol.Sender.opBlockChecksum(out, block.getLocalBlock(),
+          DataTransferProtocol.Sender.opBlockChecksum(out, block,
               lb.getBlockToken());
 
           final DataTransferProtocol.Status reply = DataTransferProtocol.Status.read(in);

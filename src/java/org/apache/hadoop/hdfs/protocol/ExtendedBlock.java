@@ -79,6 +79,18 @@ public class ExtendedBlock implements Writable {
     block.readHelper(in);
   }
 
+  // Write only the identifier part of the block
+  public void writeId(DataOutput out) throws IOException {
+    DeprecatedUTF8.writeString(out, poolId);
+    block.writeId(out);
+  }
+
+  // Read only the identifier part of the block
+  public void readId(DataInput in) throws IOException {
+    this.poolId = DeprecatedUTF8.readString(in);
+    block.readId(in);
+  }
+  
   public String getPoolId() {
     return poolId;
   }
@@ -109,6 +121,11 @@ public class ExtendedBlock implements Writable {
 
   public void setNumBytes(final long len) {
     block.setNumBytes(len);
+  }
+  
+  public void set(String poolId, long blkid, long gs, long len) {
+    this.poolId = poolId;
+    block.set(blkid, gs, len);
   }
 
   public static Block getLocalBlock(final ExtendedBlock b) {

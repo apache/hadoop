@@ -230,13 +230,8 @@ public class TestBlockReplacement extends TestCase {
     sock.setKeepAlive(true);
     // sendRequest
     DataOutputStream out = new DataOutputStream(sock.getOutputStream());
-    out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
-    REPLACE_BLOCK.write(out);
-    out.writeLong(block.getBlockId());
-    out.writeLong(block.getGenerationStamp());
-    Text.writeString(out, source.getStorageID());
-    sourceProxy.write(out);
-    BlockTokenSecretManager.DUMMY_TOKEN.write(out);
+    DataTransferProtocol.Sender.opReplaceBlock(out, block, source
+        .getStorageID(), sourceProxy, BlockTokenSecretManager.DUMMY_TOKEN);
     out.flush();
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());

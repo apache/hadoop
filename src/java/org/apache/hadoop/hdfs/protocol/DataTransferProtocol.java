@@ -46,9 +46,9 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 19:
-   *    Change the block packet ack protocol to include seqno,
-   *    numberOfReplies, reply0, reply1, ...
+   * Version 20:
+   *    Changed the protocol methods to use ExtendedBlock instead
+   *    of Block.
    */
   public static final int DATA_TRANSFER_VERSION = 19;
 
@@ -229,7 +229,7 @@ public interface DataTransferProtocol {
     }
 
     /** Send OP_READ_BLOCK */
-    public static void opReadBlock(DataOutputStream out, Block blk,
+    public static void opReadBlock(DataOutputStream out, ExtendedBlock blk,
         long blockOffset, long blockLen, String clientName,
         Token<BlockTokenIdentifier> blockToken)
         throws IOException {
@@ -244,7 +244,7 @@ public interface DataTransferProtocol {
     }
     
     /** Send OP_WRITE_BLOCK */
-    public static void opWriteBlock(DataOutputStream out, Block blk,
+    public static void opWriteBlock(DataOutputStream out, ExtendedBlock blk,
         int pipelineSize, BlockConstructionStage stage, long newGs,
         long minBytesRcvd, long maxBytesRcvd, String client, DatanodeInfo src,
         DatanodeInfo[] targets, Token<BlockTokenIdentifier> blockToken)
@@ -273,7 +273,7 @@ public interface DataTransferProtocol {
     
     /** Send OP_REPLACE_BLOCK */
     public static void opReplaceBlock(DataOutputStream out,
-        Block blk, String storageId, DatanodeInfo src,
+        ExtendedBlock blk, String storageId, DatanodeInfo src,
         Token<BlockTokenIdentifier> blockToken) throws IOException {
       op(out, Op.REPLACE_BLOCK);
 
@@ -285,7 +285,7 @@ public interface DataTransferProtocol {
     }
 
     /** Send OP_COPY_BLOCK */
-    public static void opCopyBlock(DataOutputStream out, Block blk,
+    public static void opCopyBlock(DataOutputStream out, ExtendedBlock blk,
         Token<BlockTokenIdentifier> blockToken)
         throws IOException {
       op(out, Op.COPY_BLOCK);
@@ -296,7 +296,7 @@ public interface DataTransferProtocol {
     }
 
     /** Send OP_BLOCK_CHECKSUM */
-    public static void opBlockChecksum(DataOutputStream out, Block blk,
+    public static void opBlockChecksum(DataOutputStream out, ExtendedBlock blk,
         Token<BlockTokenIdentifier> blockToken)
         throws IOException {
       op(out, Op.BLOCK_CHECKSUM);
@@ -346,7 +346,7 @@ public interface DataTransferProtocol {
 
     /** Receive OP_READ_BLOCK */
     private void opReadBlock(DataInputStream in) throws IOException {
-      final Block blk = new Block();
+      final ExtendedBlock blk = new ExtendedBlock();
       blk.readId(in);
       final long offset = in.readLong();
       final long length = in.readLong();
@@ -359,13 +359,13 @@ public interface DataTransferProtocol {
     /**
      * Abstract OP_READ_BLOCK method. Read a block.
      */
-    protected abstract void opReadBlock(DataInputStream in, Block blk,
+    protected abstract void opReadBlock(DataInputStream in, ExtendedBlock blk,
         long offset, long length, String client,
         Token<BlockTokenIdentifier> blockToken) throws IOException;
     
     /** Receive OP_WRITE_BLOCK */
     private void opWriteBlock(DataInputStream in) throws IOException {
-      final Block blk = new Block();
+      final ExtendedBlock blk = new ExtendedBlock();
       blk.readId(in);
       final int pipelineSize = in.readInt(); // num of datanodes in entire pipeline
       final BlockConstructionStage stage = 
@@ -394,7 +394,7 @@ public interface DataTransferProtocol {
      * Abstract OP_WRITE_BLOCK method. 
      * Write a block.
      */
-    protected abstract void opWriteBlock(DataInputStream in, Block blk,
+    protected abstract void opWriteBlock(DataInputStream in, ExtendedBlock blk,
         int pipelineSize, BlockConstructionStage stage, long newGs,
         long minBytesRcvd, long maxBytesRcvd, String client, DatanodeInfo src,
         DatanodeInfo[] targets, Token<BlockTokenIdentifier> blockToken)
@@ -402,7 +402,7 @@ public interface DataTransferProtocol {
 
     /** Receive OP_REPLACE_BLOCK */
     private void opReplaceBlock(DataInputStream in) throws IOException {
-      final Block blk = new Block();
+      final ExtendedBlock blk = new ExtendedBlock();
       blk.readId(in);
       final String sourceId = Text.readString(in); // read del hint
       final DatanodeInfo src = DatanodeInfo.read(in); // read proxy source
@@ -416,12 +416,12 @@ public interface DataTransferProtocol {
      * It is used for balancing purpose; send to a destination
      */
     protected abstract void opReplaceBlock(DataInputStream in,
-        Block blk, String sourceId, DatanodeInfo src,
+        ExtendedBlock blk, String sourceId, DatanodeInfo src,
         Token<BlockTokenIdentifier> blockToken) throws IOException;
 
     /** Receive OP_COPY_BLOCK */
     private void opCopyBlock(DataInputStream in) throws IOException {
-      final Block blk = new Block();
+      final ExtendedBlock blk = new ExtendedBlock();
       blk.readId(in);
       final Token<BlockTokenIdentifier> blockToken = readBlockToken(in);
 
@@ -432,13 +432,13 @@ public interface DataTransferProtocol {
      * Abstract OP_COPY_BLOCK method. It is used for balancing purpose; send to
      * a proxy source.
      */
-    protected abstract void opCopyBlock(DataInputStream in, Block blk,
+    protected abstract void opCopyBlock(DataInputStream in, ExtendedBlock blk,
         Token<BlockTokenIdentifier> blockToken)
         throws IOException;
 
     /** Receive OP_BLOCK_CHECKSUM */
     private void opBlockChecksum(DataInputStream in) throws IOException {
-      final Block blk = new Block();
+      final ExtendedBlock blk = new ExtendedBlock();
       blk.readId(in);
       final Token<BlockTokenIdentifier> blockToken = readBlockToken(in);
 
@@ -450,7 +450,7 @@ public interface DataTransferProtocol {
      * Get the checksum of a block 
      */
     protected abstract void opBlockChecksum(DataInputStream in,
-        Block blk, Token<BlockTokenIdentifier> blockToken)
+        ExtendedBlock blk, Token<BlockTokenIdentifier> blockToken)
         throws IOException;
 
     /** Read an AccessToken */
