@@ -932,6 +932,7 @@ Release 0.21.0 - Unreleased
    HBASE-3017  More log pruning
    HBASE-3022  Change format of enum messages in o.a.h.h.executor package
    HBASE-3001  Ship dependency jars to the cluster for all jobs
+   HBASE-3033  [replication] ReplicationSink.replicateEntries improvements
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
