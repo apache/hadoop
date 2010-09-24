@@ -34,6 +34,15 @@ public class Threads {
 
   /**
    * Utility method that sets name, daemon status and starts passed thread.
+   * @param t thread to run
+   * @return Returns the passed Thread <code>t</code>.
+   */
+  public static Thread setDaemonThreadRunning(final Thread t) {
+    return setDaemonThreadRunning(t, t.getName());
+  }
+
+  /**
+   * Utility method that sets name, daemon status and starts passed thread.
    * @param t thread to frob
    * @param name new name
    * @return Returns the passed Thread <code>t</code>.

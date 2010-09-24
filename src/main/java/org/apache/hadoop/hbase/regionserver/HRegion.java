@@ -2474,22 +2474,6 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Delete a region's meta information from the passed
-   * <code>meta</code> region.  Deletes the row.
-   * @param srvr META server to be updated
-   * @param metaRegionName Meta region name
-   * @param regionName HRegion to remove from <code>meta</code>
-   *
-   * @throws IOException
-   */
-  public static void removeRegionFromMETA(final HRegionInterface srvr,
-    final byte [] metaRegionName, final byte [] regionName)
-  throws IOException {
-    Delete delete = new Delete(regionName);
-    srvr.delete(metaRegionName, delete);
-  }
-
-  /**
    * Utility method used by HMaster marking regions offlined.
    * @param srvr META server to be updated
    * @param metaRegionName Meta region name

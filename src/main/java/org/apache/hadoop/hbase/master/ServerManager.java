@@ -128,13 +128,12 @@ public class ServerManager {
     this.metrics = new MasterMetrics(master.getServerName());
     this.serverMonitorThread = new ServerMonitor(monitorInterval, master);
     String n = Thread.currentThread().getName();
-    Threads.setDaemonThreadRunning(this.serverMonitorThread,
-      n + ".serverMonitor");
-    this.logCleaner = new LogCleaner(c.getInt("hbase.master.cleaner.interval", 60 * 1000),
-      master, c, this.services.getMasterFileSystem().getFileSystem(),
-      this.services.getMasterFileSystem().getOldLogDir());
-    Threads.setDaemonThreadRunning(logCleaner,
-      n + ".oldLogCleaner");
+    Threads.setDaemonThreadRunning(this.serverMonitorThread, n + ".serverMonitor");
+    this.logCleaner =
+      new LogCleaner(c.getInt("hbase.master.cleaner.interval", 60 * 1000),
+        master, c, this.services.getMasterFileSystem().getFileSystem(),
+        this.services.getMasterFileSystem().getOldLogDir());
+    Threads.setDaemonThreadRunning(logCleaner, n + ".oldLogCleaner");
   }
 
   /**

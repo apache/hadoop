@@ -126,10 +126,36 @@ public class MetaReader {
    */
   public static Map<HRegionInfo,HServerAddress> fullScan(CatalogTracker catalogTracker)
   throws IOException {
+    final Map<HRegionInfo,HServerAddress> regions =
+      new TreeMap<HRegionInfo,HServerAddress>();
+    Visitor v = new Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (r ==  null || r.isEmpty()) return true;
+        Pair<HRegionInfo,HServerAddress> region = metaRowToRegionPair(r);
+        regions.put(region.getFirst(), region.getSecond());
+        return true;
+      }
+    };
+    fullScan(catalogTracker, v);
+    return regions;
+  }
+
+  /**
+   * Performs a full scan of <code>.META.</code>.
+   * <p>
+   * Returns a map of every region to it's currently assigned server, according
+   * to META.  If the region does not have an assignment it will have a null
+   * value in the map.
+   * @param catalogTracker
+   * @param visitor
+   * @throws IOException
+   */
+  public static void fullScan(CatalogTracker catalogTracker,
+      final Visitor visitor)
+  throws IOException {
     HRegionInterface metaServer =
       catalogTracker.waitForMetaServerConnectionDefault();
-    Map<HRegionInfo,HServerAddress> allRegions =
-      new TreeMap<HRegionInfo,HServerAddress>();
     Scan scan = new Scan();
     scan.addFamily(HConstants.CATALOG_FAMILY);
     long scannerid = metaServer.openScanner(
@@ -137,16 +163,12 @@ public class MetaReader {
     try {
       Result data;
       while((data = metaServer.next(scannerid)) != null) {
-        if (!data.isEmpty()) {
-          Pair<HRegionInfo,HServerAddress> region =
-            metaRowToRegionPair(data);
-          allRegions.put(region.getFirst(), region.getSecond());
-        }
+        if (!data.isEmpty()) visitor.visit(data);
       }
     } finally {
       metaServer.close(scannerid);
     }
-    return allRegions;
+    return;
   }
 
   /**
@@ -422,5 +444,18 @@ public class MetaReader {
     } finally {
       metaServer.close(scannerid);
     }
+  }
+
+  /**
+   * Implementations 'visit' a catalog table row.
+   */
+  public interface Visitor {
+    /**
+     * Visit the catalog table row.
+     * @param r A row from catalog table
+     * @return True if we are to proceed scanning the table, else false if
+     * we are to stop now.
+     */
+    public boolean visit(final Result r) throws IOException;
   }
 }

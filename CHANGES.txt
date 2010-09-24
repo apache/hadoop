@@ -537,6 +537,7 @@ Release 0.21.0 - Unreleased
    HBASE-3026  Fixup of "missing" daughters on split is too aggressive
    HBASE-3003  ClassSize constants dont use 'final'
    HBASE-3002  Fix zookeepers.sh to work properly with strange JVM options
+   HBASE-3028  No basescanner means no GC'ing of split, offlined parent regions
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

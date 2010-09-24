@@ -619,7 +619,7 @@ public class FSUtils {
     if (!(fs instanceof DistributedFileSystem)) {
       return;
     }
-    LOG.info("Recovering file" + p);
+    LOG.info("Recovering file " + p);
     long startWaiting = System.currentTimeMillis();
 
     // Trying recovery

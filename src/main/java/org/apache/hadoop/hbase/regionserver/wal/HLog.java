@@ -1578,7 +1578,7 @@ public class HLog implements Syncable {
         //Either way, the caller should decide what to do. E.g. ignore if this is the last
         //log in sequence.
         //TODO is this scenario still possible if the log has been recovered (i.e. closed)
-        LOG.warn("Could not open " + path + " for reading. File is empty" + e);
+        LOG.warn("Could not open " + path + " for reading. File is empty: " + e);
         return;
       } else {
         throw e;

@@ -529,6 +529,18 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.offLine = offLine;
   }
 
+
+  /**
+   * @return True if this is a split parent region.
+   */
+  public boolean isSplitParent() {
+    if (!isSplit()) return false;
+    if (!isOffline()) {
+      LOG.warn("Region is split but NOT offline: " + getRegionNameAsString());
+    }
+    return true;
+  }
+
   /**
    * @see java.lang.Object#toString()
    */
