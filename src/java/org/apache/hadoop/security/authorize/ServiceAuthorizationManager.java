@@ -20,6 +20,7 @@ package org.apache.hadoop.security.authorize;
 import java.io.IOException;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,7 +44,7 @@ public class ServiceAuthorizationManager {
   private static final Log LOG = LogFactory
   .getLog(ServiceAuthorizationManager.class);
 
-  private static Map<Class<?>, AccessControlList> protocolToAcl =
+  private Map<Class<?>, AccessControlList> protocolToAcl =
     new IdentityHashMap<Class<?>, AccessControlList>();
   
   /**
@@ -73,7 +74,7 @@ public class ServiceAuthorizationManager {
    * @param hostname fully qualified domain name of the client
    * @throws AuthorizationException on authorization failure
    */
-  public static void authorize(UserGroupInformation user, 
+  public void authorize(UserGroupInformation user, 
                                Class<?> protocol,
                                Configuration conf,
                                String hostname
@@ -129,7 +130,7 @@ public class ServiceAuthorizationManager {
     AUDITLOG.info(AUTHZ_SUCCESSFULL_FOR + user + " for protocol="+protocol);
   }
 
-  public static synchronized void refresh(Configuration conf,
+  public synchronized void refresh(Configuration conf,
                                           PolicyProvider provider) {
     // Get the system property 'hadoop.policy.file'
     String policyFile = 
@@ -157,5 +158,10 @@ public class ServiceAuthorizationManager {
 
     // Flip to the newly parsed permissions
     protocolToAcl = newAcls;
+  }
+
+  // Package-protected for use in tests.
+  Set<Class<?>> getProtocolsWithAcls() {
+    return protocolToAcl.keySet();
   }
 }
