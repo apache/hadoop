@@ -278,6 +278,9 @@ Trunk (unreleased changes)
     HDFS-1357. HFTP traffic served by DataNode shouldn't use service port 
     on NameNode. (Kan Zhang via jghoman)
 
+    HDFS-1419. Federation: Three test cases need minor modification after 
+    the new block id change (Tanping Wang via suresh)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES

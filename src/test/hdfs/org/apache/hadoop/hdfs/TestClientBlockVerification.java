@@ -90,6 +90,7 @@ public class TestClientBlockVerification {
     s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
     String file = BlockReader.getFileName(targetAddr,
+        "test-blockpoolid",
         block.getBlockId());
     return BlockReader.newBlockReader(s, file, block,
         testBlock.getBlockToken(), offset, lenToRead, conf.getInt(

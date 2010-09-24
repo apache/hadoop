@@ -130,7 +130,8 @@ public class TestBlockTokenWithDFS extends TestCase {
       s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
       s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
-      String file = BlockReader.getFileName(targetAddr, block.getBlockId());
+      String file = BlockReader.getFileName(targetAddr, 
+          "test-blockpoolid", block.getBlockId());
       blockReader = BlockReader.newBlockReader(s, file, block, 
           lblock.getBlockToken(), 0, -1, 
           conf.getInt("io.file.buffer.size", 4096));

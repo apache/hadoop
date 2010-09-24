@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -248,7 +247,9 @@ public class TestDataNodeVolumeFailure extends TestCase{
     s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
     s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
 
-    String file = BlockReader.getFileName(targetAddr, block.getBlockId());
+    String file = BlockReader.getFileName(targetAddr, 
+        "test-blockpoolid",
+        block.getBlockId());
     BlockReader blockReader = 
       BlockReader.newBlockReader(s, file, block, lblock
         .getBlockToken(), 0, -1, 4096);
