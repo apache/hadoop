@@ -2,7 +2,8 @@ package org.apache.hadoop.hbase.avro.generated;
 
 @SuppressWarnings("all")
 public class AIOError extends org.apache.avro.specific.SpecificExceptionBase implements org.apache.avro.specific.SpecificRecord {
-  public static final org.apache.avro.Schema SCHEMA$ = org.apache.avro.Schema.parse("{\"type\":\"error\",\"name\":\"AIOError\",\"namespace\":\"org.apache.hadoop.hbase.avro.generated\",\"fields\":[{\"name\":\"message\",\"type\":\"string\"}]}");
+  public static final org.apache.avro.Schema SCHEMA$ =
+    org.apache.avro.Schema.parse("{\"type\":\"error\",\"name\":\"AIOError\",\"namespace\":\"org.apache.hadoop.hbase.avro.generated\",\"fields\":[{\"name\":\"message\",\"type\":\"string\"}]}");
   public org.apache.avro.util.Utf8 message;
   public org.apache.avro.Schema getSchema() { return SCHEMA$; }
   public java.lang.Object get(int field$) {

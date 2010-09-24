@@ -96,7 +96,8 @@ public class TestAvroServer {
    */
   @Test (timeout=300000)
   public void testTableAdminAndMetadata() throws Exception {
-    AvroServer.HBaseImpl impl = new AvroServer.HBaseImpl();
+    AvroServer.HBaseImpl impl =
+      new AvroServer.HBaseImpl(TEST_UTIL.getConfiguration());
 
     assertEquals(impl.listTables().size(), 0);
 
@@ -140,7 +141,8 @@ public class TestAvroServer {
    */
   @Test
   public void testFamilyAdminAndMetadata() throws Exception {
-    AvroServer.HBaseImpl impl = new AvroServer.HBaseImpl();
+    AvroServer.HBaseImpl impl =
+      new AvroServer.HBaseImpl(TEST_UTIL.getConfiguration());
 
     ATableDescriptor tableA = new ATableDescriptor();
     tableA.name = tableAname;
@@ -174,7 +176,8 @@ public class TestAvroServer {
    */
   @Test
   public void testDML() throws Exception {
-    AvroServer.HBaseImpl impl = new AvroServer.HBaseImpl();
+    AvroServer.HBaseImpl impl =
+      new AvroServer.HBaseImpl(TEST_UTIL.getConfiguration());
 
     ATableDescriptor tableA = new ATableDescriptor();
     tableA.name = tableAname;

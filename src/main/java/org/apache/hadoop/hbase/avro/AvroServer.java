@@ -125,7 +125,11 @@ public class AvroServer {
      * @throws IOException 
      */
     HBaseImpl() throws IOException {
-      conf = HBaseConfiguration.create();
+      this(HBaseConfiguration.create());
+    }
+
+    HBaseImpl(final Configuration c) throws IOException {
+      conf = c;
       admin = new HBaseAdmin(conf);
       htablePool = new HTablePool(conf, 10);
       scannerMap = new HashMap<Integer, ResultScanner>();
