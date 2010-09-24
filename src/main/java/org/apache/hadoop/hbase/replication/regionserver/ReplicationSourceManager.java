@@ -285,10 +285,10 @@ public class ReplicationSourceManager {
     LOG.info("Moving " + rsZnode + "'s hlogs to my queue");
     SortedMap<String, SortedSet<String>> newQueues =
         this.zkHelper.copyQueuesFromRS(rsZnode);
+    this.zkHelper.deleteRsQueues(rsZnode);
     if (newQueues == null || newQueues.size() == 0) {
       return;
     }
-    this.zkHelper.deleteRsQueues(rsZnode);
 
     for (Map.Entry<String, SortedSet<String>> entry : newQueues.entrySet()) {
       String peerId = entry.getKey();
