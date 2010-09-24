@@ -47,7 +47,7 @@ public class ZKServerTool {
       if (key.startsWith("server.")) {
         String[] parts = value.split(":");
         String host = parts[0];
-        System.out.println(host);
+        System.out.println("ZK host:" + host);
       }
     }
   }

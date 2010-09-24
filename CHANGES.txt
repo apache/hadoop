@@ -536,6 +536,7 @@ Release 0.21.0 - Unreleased
    HBASE-3024  NPE processing server crash in MetaEditor.addDaughter
    HBASE-3026  Fixup of "missing" daughters on split is too aggressive
    HBASE-3003  ClassSize constants dont use 'final'
+   HBASE-3002  Fix zookeepers.sh to work properly with strange JVM options
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

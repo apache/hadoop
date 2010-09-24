@@ -48,7 +48,7 @@ if [ "$HBASE_MANAGES_ZK" = "" ]; then
 fi
 
 if [ "$HBASE_MANAGES_ZK" = "true" ]; then
-  hosts=`"$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZKServerTool`
+  hosts=`"$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZKServerTool | grep '^ZK host:' | sed 's,^ZK host:,,'`
   cmd=$"${@// /\\ }"
   for zookeeper in $hosts; do
    ssh $HBASE_SSH_OPTS $zookeeper $cmd 2>&1 | sed "s/^/$zookeeper: /" &
