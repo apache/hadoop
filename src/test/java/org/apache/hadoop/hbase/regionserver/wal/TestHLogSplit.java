@@ -142,8 +142,8 @@ public class TestHLogSplit {
       new HLog.Entry(new HLogKey(encoded, HConstants.META_TABLE_NAME, 1, now),
       new WALEdit());
     Path p = HLog.getRegionSplitEditsPath(fs, entry, new Path("/"));
-    assertEquals(p.getParent().getParent(),
-      HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    String parentOfParent = p.getParent().getParent().getName();
+    assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
   }
 
   @Test(expected = IOException.class)
