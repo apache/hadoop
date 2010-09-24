@@ -18,6 +18,9 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hbase.replication.regionserver;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -73,6 +76,11 @@ public class ReplicationSourceMetrics implements Updater {
     metricsRecord = MetricsUtil.createRecord(context, "replication");
     metricsRecord.setTag("RegionServer", name);
     context.registerUpdater(this);
+    try {
+      id = URLEncoder.encode(id, "UTF8");
+    } catch (UnsupportedEncodingException e) {
+      id = "CAN'T ENCODE UTF8";
+    }
     // export for JMX
     new ReplicationStatistics(this.registry, "ReplicationSource for " + id);
   }
