@@ -60,7 +60,6 @@ import javax.security.sasl.SaslServer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.BytesWritable;
@@ -79,7 +78,6 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager;
@@ -184,7 +182,6 @@ public abstract class Server {
   
   private Configuration conf;
   private SecretManager<TokenIdentifier> secretManager;
-  private ServiceAuthorizationManager serviceAuthorizationManager = new ServiceAuthorizationManager();
 
   private int maxQueueSize;
   private final int maxRespSize;
@@ -240,22 +237,6 @@ public abstract class Server {
    */
   public RpcMetrics getRpcMetrics() {
     return rpcMetrics;
-  }
-
-  /**
-   * Refresh the service authorization ACL for the service handled by this server.
-   */
-  public void refreshServiceAcl(Configuration conf, PolicyProvider provider) {
-    serviceAuthorizationManager.refresh(conf, provider);
-  }
-
-  /**
-   * Returns a handle to the serviceAuthorizationManager (required in tests)
-   * @return instance of ServiceAuthorizationManager for this server
-   */
-  @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
-  public ServiceAuthorizationManager getServiceAuthorizationManager() {
-    return serviceAuthorizationManager;
   }
 
   /** A call queued for handling. */
@@ -1671,7 +1652,7 @@ public abstract class Server {
         throw new AuthorizationException("Unknown protocol: " + 
                                          connection.getProtocol());
       }
-      serviceAuthorizationManager.authorize(user, protocol, getConf(), hostname);
+      ServiceAuthorizationManager.authorize(user, protocol, getConf(), hostname);
     }
   }
   
