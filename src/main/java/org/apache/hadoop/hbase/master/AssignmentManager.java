@@ -177,13 +177,13 @@ public class AssignmentManager extends ZooKeeperListener {
     // Check existing regions in transition
     List<String> nodes = ZKUtil.listChildrenAndWatchForNewChildren(watcher,
         watcher.assignmentZNode);
-    if(nodes.isEmpty()) {
+    if (nodes.isEmpty()) {
       LOG.info("No regions in transition in ZK to process on failover");
       return;
     }
     LOG.info("Failed-over master needs to process " + nodes.size() +
         " regions in transition");
-    for(String regionName : nodes) {
+    for (String regionName: nodes) {
       RegionTransitionData data = ZKAssign.getData(watcher, regionName);
       HRegionInfo regionInfo =
         MetaReader.getRegion(catalogTracker, data.getRegionName()).getFirst();
@@ -738,10 +738,10 @@ public class AssignmentManager extends ZooKeeperListener {
   private void rebuildUserRegions() throws IOException {
     Map<HRegionInfo,HServerAddress> allRegions =
       MetaReader.fullScan(catalogTracker);
-    for(Map.Entry<HRegionInfo,HServerAddress> region : allRegions.entrySet()) {
+    for (Map.Entry<HRegionInfo,HServerAddress> region : allRegions.entrySet()) {
       HServerAddress regionLocation = region.getValue();
       HRegionInfo regionInfo = region.getKey();
-      if(regionLocation == null) {
+      if (regionLocation == null) {
         regions.put(regionInfo, null);
         continue;
       }
@@ -1020,6 +1020,7 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (this.regions) {
       checkRegion(hsi, parent, true);
       checkRegion(hsi, a, false);
+      checkRegion(hsi, b, false);
       this.regions.put(a, hsi);
       this.regions.put(b, hsi);
       removeFromServers(hsi, parent, true);
@@ -1031,10 +1032,10 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /*
-   * Caller must hold locks on regions Map.
+   * Caller must hold locks on this.regions Map.
    * @param hsi
    * @param hri
-   * @param expected
+   * @param expected True if we expect <code>hri</code> to be in this.regions.
    */
   private void checkRegion(final HServerInfo hsi, final HRegionInfo hri,
       final boolean expected) {

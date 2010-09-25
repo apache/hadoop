@@ -540,6 +540,8 @@ Release 0.21.0 - Unreleased
    HBASE-3028  No basescanner means no GC'ing of split, offlined parent regions
    HBASE-2989  [replication] RSM won't cleanup after locking if 0 peers
    HBASE-2992  [replication] MalformedObjectNameException in ReplicationMetrics
+   HBASE-3037  When new master joins running cluster does "Received report from
+               unknown server -- telling it to STOP_REGIONSERVER.
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

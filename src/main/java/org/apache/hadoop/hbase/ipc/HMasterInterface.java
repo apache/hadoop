@@ -144,8 +144,17 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion {
   throws UnknownRegionException;
 
   /**
+   * Run the balancer.  Will run the balancer and if regions to move, it will
+   * go ahead and do the reassignments.  Can NOT run for various reasons.  Check
+   * logs.
+   * @return True if balancer ran, false otherwise.
+   */
+  public boolean balance();
+
+  /**
+   * Turn the load balancer on or off.
    * @param b If true, enable balancer. If false, disable balancer.
    * @return Previous balancer value
    */
-  public boolean balance(final boolean b);
+  public boolean balanceSwitch(final boolean b);
 }

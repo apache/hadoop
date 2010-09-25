@@ -879,14 +879,24 @@ public class HBaseAdmin implements Abortable {
   }
 
   /**
+   * Turn the load balancer on or off.
    * @param b If true, enable balancer. If false, disable balancer.
    * @return Previous balancer value
-   * @throws ZooKeeperConnectionException 
-   * @throws MasterNotRunningException 
    */
-  public boolean balance(final boolean b)
+  public boolean balanceSwitch(final boolean b)
   throws MasterNotRunningException, ZooKeeperConnectionException {
-    return getMaster().balance(b);
+    return getMaster().balanceSwitch(b);
+  }
+
+  /**
+   * Invoke the balancer.  Will run the balancer and if regions to move, it will
+   * go ahead and do the reassignments.  Can NOT run for various reasons.  Check
+   * logs.
+   * @return True if balancer ran, false otherwise.
+   */
+  public boolean balancer()
+  throws MasterNotRunningException, ZooKeeperConnectionException {
+    return getMaster().balance();
   }
 
   /**

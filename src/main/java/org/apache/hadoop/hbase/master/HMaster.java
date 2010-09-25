@@ -160,7 +160,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   private LoadBalancer balancer = new LoadBalancer();
   private Thread balancerChore;
-  private volatile boolean balance = true;
+  // If 'true', the balancer is 'on'.  If 'false', the balancer will not run.
+  private volatile boolean balanceSwitch = true;
 
   private Thread catalogJanitorChore;
 
@@ -241,7 +242,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.connection = HConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName());
 
-    this.serverManager = new ServerManager(this, this);
+    this.serverManager = new ServerManager(this, this, this.freshClusterStartup);
 
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
@@ -304,15 +305,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.serverManager.waitForRegionServers();
 
       // Start assignment of user regions, startup or failure
-      if (!this.stopped) {
-        if (this.freshClusterStartup) {
-          clusterStarterInitializations(this.fileSystemManager,
-            this.serverManager, this.catalogTracker, this.assignmentManager);
-        } else {
-          // Process existing unassigned nodes in ZK, read all regions from META,
-          // rebuild in-memory state.
-          this.assignmentManager.processFailover();
-        }
+      if (this.freshClusterStartup) {
+        clusterStarterInitializations(this.fileSystemManager,
+          this.serverManager, this.catalogTracker, this.assignmentManager);
+      } else {
+        // Process existing unassigned nodes in ZK, read all regions from META,
+        // rebuild in-memory state.
+        this.assignmentManager.processFailover();
       }
 
       // Start balancer and meta catalog janitor after meta and regions have
@@ -320,6 +319,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.balancerChore = getAndStartBalancerChore(this);
       this.catalogJanitorChore =
         Threads.setDaemonThreadRunning(new CatalogJanitor(this, this));
+
       // Check if we should stop every second.
       Sleeper sleeper = new Sleeper(1000, this);
       while (!this.stopped) sleeper.sleep();
@@ -442,9 +442,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     try {
       // Start the executor service pools
       this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
-        conf.getInt("hbase.master.executor.openregion.threads", 5));
+        conf.getInt("hbase.master.executor.openregion.threads", 10));
       this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
-        conf.getInt("hbase.master.executor.closeregion.threads", 5));
+        conf.getInt("hbase.master.executor.closeregion.threads", 10));
       this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
         conf.getInt("hbase.master.executor.serverops.threads", 5));
       this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS,
@@ -496,9 +496,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   private static Thread getAndStartBalancerChore(final HMaster master) {
-    String name = master.getServerName() + "-balancerChore";
-    int period = master.getConfiguration().
-      getInt("hbase.balancer.period", 3000000);
+    String name = master.getServerName() + "-BalancerChore";
+    int period = master.getConfiguration().getInt("hbase.balancer.period", 300000);
     // Start up the load balancer chore
     Chore chore = new Chore(name, period, master) {
       @Override
@@ -566,13 +565,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return !isStopped();
   }
 
-  /**
-   * Run the balancer.
-   * @return True if balancer ran, false otherwise.
-   */
+  @Override
   public boolean balance() {
     // If balance not true, don't run balancer.
-    if (!this.balance) return false;
+    if (!this.balanceSwitch) return false;
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
       if (this.assignmentManager.isRegionsInTransition()) {
@@ -606,9 +602,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   @Override
-  public boolean balance(final boolean b) {
-    boolean oldValue = this.balance;
-    this.balance = b;
+  public boolean balanceSwitch(final boolean b) {
+    boolean oldValue = this.balanceSwitch;
+    this.balanceSwitch = b;
     LOG.info("Balance=" + b);
     return oldValue;
   }
