@@ -23,6 +23,7 @@ import java.io.BufferedInputStream;
 import java.io.Closeable;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -794,6 +795,14 @@ public class HFile {
       return this.inMemory;
     }
 
+    private byte[] readAllIndex(final FSDataInputStream in, final long indexOffset,
+        final int indexSize) throws IOException {
+      byte[] allIndex = new byte[indexSize];
+      in.seek(indexOffset);
+      IOUtils.readFully(in, allIndex, 0, allIndex.length);
+      return allIndex;
+    }
+
     /**
      * Read in the index and file info.
      * @return A map of fileinfo data.
@@ -814,16 +823,26 @@ public class HFile {
       String clazzName = Bytes.toString(fi.get(FileInfo.COMPARATOR));
       this.comparator = getComparator(clazzName);
 
+    int allIndexSize = (int)(this.fileSize - this.trailer.dataIndexOffset - FixedFileTrailer.trailerSize());
+    byte[] dataAndMetaIndex = readAllIndex(this.istream, this.trailer.dataIndexOffset, allIndexSize);
+
+    ByteArrayInputStream bis = new ByteArrayInputStream(dataAndMetaIndex);
+    DataInputStream dis = new DataInputStream(bis);
+
       // Read in the data index.
-      this.blockIndex = BlockIndex.readIndex(this.comparator, this.istream,
-        this.trailer.dataIndexOffset, this.trailer.dataIndexCount);
+    this.blockIndex = BlockIndex.readIndexEx(this.comparator, dis, this.trailer.dataIndexCount);
 
       // Read in the metadata index.
       if (trailer.metaIndexCount > 0) {
-        this.metaIndex = BlockIndex.readIndex(Bytes.BYTES_RAWCOMPARATOR,
-          this.istream, this.trailer.metaIndexOffset, trailer.metaIndexCount);
+      this.metaIndex = BlockIndex.readIndexEx(Bytes.BYTES_RAWCOMPARATOR, dis,
+        this.trailer.metaIndexCount);
       }
       this.fileInfoLoaded = true;
+
+      if (null != dis) {
+        dis.close();
+      }
+
       return fi;
     }
 
@@ -1667,6 +1686,38 @@ public class HFile {
         in.seek(indexOffset);
         byte [] magic = new byte[INDEXBLOCKMAGIC.length];
         IOUtils.readFully(in, magic, 0, magic.length);
+        if (!Arrays.equals(magic, INDEXBLOCKMAGIC)) {
+          throw new IOException("Index block magic is wrong: " +
+            Arrays.toString(magic));
+        }
+        for (int i = 0; i < indexSize; ++i ) {
+          long offset   = in.readLong();
+          int dataSize  = in.readInt();
+          byte [] key = Bytes.readByteArray(in);
+          bi.add(key, offset, dataSize);
+        }
+      }
+      return bi;
+    }
+
+    /*
+     * Read in the index that is at <code>indexOffset</code>
+     * Must match what was written by writeIndex in the Writer.close.
+     * @param in
+     * @param indexOffset
+     * @throws IOException
+     */
+    static BlockIndex readIndexEx(final RawComparator<byte []> c, DataInputStream in,
+        final int indexSize)
+    throws IOException {
+      BlockIndex bi = new BlockIndex(c);
+      bi.blockOffsets = new long[indexSize];
+      bi.blockKeys = new byte[indexSize][];
+      bi.blockDataSizes = new int[indexSize];
+      // If index size is zero, no index was written.
+      if (indexSize > 0) {
+        byte [] magic = new byte[INDEXBLOCKMAGIC.length];
+        in.readFully(magic);
         if (!Arrays.equals(magic, INDEXBLOCKMAGIC)) {
           throw new IOException("Index block magic is wrong: " +
             Arrays.toString(magic));
