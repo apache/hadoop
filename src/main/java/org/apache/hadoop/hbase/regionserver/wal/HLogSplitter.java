@@ -153,11 +153,16 @@ public class HLogSplitter {
         Path newPath = HLog.getHLogArchivePath(oldLogDir, file.getPath());
         LOG.info("Moving " + FSUtils.getPath(file.getPath()) + " to "
             + FSUtils.getPath(newPath));
-        fs.rename(file.getPath(), newPath);
+        if (!fs.rename(file.getPath(), newPath)) {
+          throw new IOException("Unable to rename " + file.getPath() +
+            " to " + newPath);
+        }
       }
       LOG.debug("Moved " + files.length + " log files to "
           + FSUtils.getPath(oldLogDir));
-      fs.delete(srcDir, true);
+      if (!fs.delete(srcDir, true)) {
+        throw new IOException("Unable to delete " + srcDir);
+      }
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       IOException io = new IOException("Cannot delete: " + srcDir);
@@ -356,19 +361,27 @@ public class HLogSplitter {
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
         "hbase.regionserver.hlog.splitlog.corrupt.dir", ".corrupt"));
 
-    fs.mkdirs(corruptDir);
+    if (!fs.mkdirs(corruptDir)) {
+      LOG.info("Unable to mkdir " + corruptDir);
+    }
     fs.mkdirs(oldLogDir);
 
     for (Path corrupted : corruptedLogs) {
       Path p = new Path(corruptDir, corrupted.getName());
-      LOG.info("Moving corrupted log " + corrupted + " to " + p);
-      fs.rename(corrupted, p);
+      if (!fs.rename(corrupted, p)) { 
+        LOG.info("Unable to move corrupted log " + corrupted + " to " + p);
+      } else {
+        LOG.info("Moving corrupted log " + corrupted + " to " + p);
+      }
     }
 
     for (Path p : processedLogs) {
       Path newPath = HLog.getHLogArchivePath(oldLogDir, p);
-      fs.rename(p, newPath);
-      LOG.info("Archived processed log " + p + " to " + newPath);
+      if (!fs.rename(p, newPath)) {
+        LOG.info("Unable to move  " + p + " to " + newPath);
+      } else {
+        LOG.info("Archived processed log " + p + " to " + newPath);
+      }
     }
   }
 

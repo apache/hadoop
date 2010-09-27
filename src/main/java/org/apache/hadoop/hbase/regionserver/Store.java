@@ -478,7 +478,9 @@ public class Store implements HeapSize {
     // Write-out finished successfully, move into the right spot
     Path dstPath = StoreFile.getUniqueFile(fs, homedir);
     LOG.info("Renaming flushed file at " + writer.getPath() + " to " + dstPath);
-    fs.rename(writer.getPath(), dstPath);
+    if (!fs.rename(writer.getPath(), dstPath)) {
+      LOG.warn("Unable to rename " + writer.getPath() + " to " + dstPath);
+    }
 
     StoreFile sf = new StoreFile(this.fs, dstPath, blockcache,
       this.conf, this.family.getBloomFilterType(), this.inMemory);

@@ -345,10 +345,14 @@ public class HLog implements Syncable {
     if (failIfLogDirExists && fs.exists(dir)) {
       throw new IOException("Target HLog directory already exists: " + dir);
     }
-    fs.mkdirs(dir);
+    if (!fs.mkdirs(dir)) {
+      throw new IOException("Unable to mkdir " + dir);
+    }
     this.oldLogDir = oldLogDir;
     if (!fs.exists(oldLogDir)) {
-      fs.mkdirs(this.oldLogDir);
+      if (!fs.mkdirs(this.oldLogDir)) {
+        throw new IOException("Unable to mkdir " + this.oldLogDir);
+      }
     }
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
     this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
@@ -724,7 +728,9 @@ public class HLog implements Syncable {
     LOG.info("moving old hlog file " + FSUtils.getPath(p) +
       " whose highest sequenceid is " + seqno + " to " +
       FSUtils.getPath(newPath));
-    this.fs.rename(p, newPath);
+    if (!this.fs.rename(p, newPath)) {
+      throw new IOException("Unable to rename " + p + " to " + newPath);
+    }
   }
 
   /**
@@ -758,12 +764,16 @@ public class HLog implements Syncable {
     close();
     FileStatus[] files = fs.listStatus(this.dir);
     for(FileStatus file : files) {
-      fs.rename(file.getPath(),
-          getHLogArchivePath(this.oldLogDir, file.getPath()));
+      Path p = getHLogArchivePath(this.oldLogDir, file.getPath());
+      if (!fs.rename(file.getPath(),p)) {
+        throw new IOException("Unable to rename " + file.getPath() + " to " + p);
+      }
     }
     LOG.debug("Moved " + files.length + " log files to " +
         FSUtils.getPath(this.oldLogDir));
-    fs.delete(dir, true);
+    if (!fs.delete(dir, true)) {
+      LOG.info("Unable to delete " + dir);
+    }
   }
 
   /**

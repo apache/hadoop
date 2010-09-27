@@ -368,7 +368,9 @@ public class HRegion implements HeapSize { // , Writable{
     final Path initialFiles, final Path regiondir)
   throws IOException {
     if (initialFiles != null && fs.exists(initialFiles)) {
-      fs.rename(initialFiles, regiondir);
+      if (!fs.rename(initialFiles, regiondir)) {
+        LOG.warn("Unable to rename " + initialFiles + " to " + regiondir);
+      }
     }
   }
 
