@@ -275,6 +275,15 @@ public class Delete implements Writable, Row, Comparable<Row> {
   }
 
   /**
+   * Set the timestamp of the delete.
+   * 
+   * @param timestamp
+   */
+  public void setTimestamp(long timestamp) {
+    this.ts = timestamp;
+  }
+
+  /**
    * @return string
    */
   @Override
