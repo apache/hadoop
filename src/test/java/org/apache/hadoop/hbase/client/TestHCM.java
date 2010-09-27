@@ -37,7 +37,8 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mortbay.log.Log;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
@@ -46,6 +47,7 @@ import static org.junit.Assert.assertNotNull;
  * This class is for testing HCM features
  */
 public class TestHCM {
+  private static final Log LOG = LogFactory.getLog(TestHCM.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] TABLE_NAME = Bytes.toBytes("test");
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
@@ -99,7 +101,7 @@ public class TestHCM {
       //      to remove them, so the LRU strategy does not work.
       configuration.set("someotherkey", String.valueOf(_randy.nextInt()));
       last = connection;
-      Log.info("Cache Size: "
+      LOG.info("Cache Size: "
           + getHConnectionManagerCacheSize() + ", Valid Keys: "
           + getValidKeyCount());
       Thread.sleep(100);

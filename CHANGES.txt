@@ -549,6 +549,7 @@ Release 0.21.0 - Unreleased
                time as a split
    HBASE-3042  Use LO4J in SequenceFileLogReader
                (Nicolas Spiegelberg via Stack)
+   HBASE-2995  Incorrect dependency on Log class from Jetty
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

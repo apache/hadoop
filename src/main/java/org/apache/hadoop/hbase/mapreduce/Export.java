@@ -31,7 +31,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
-import org.mortbay.log.Log;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Export an HBase table.
@@ -39,6 +40,7 @@ import org.mortbay.log.Log;
  * back in again.
  */
 public class Export {
+  private static final Log LOG = LogFactory.getLog(Export.class);
   final static String NAME = "export";
 
   /**
@@ -89,7 +91,7 @@ public class Export {
     long startTime = args.length > 3? Long.parseLong(args[3]): 0L;
     long endTime = args.length > 4? Long.parseLong(args[4]): Long.MAX_VALUE;
     s.setTimeRange(startTime, endTime);
-    Log.info("verisons=" + versions + ", starttime=" + startTime +
+    LOG.info("verisons=" + versions + ", starttime=" + startTime +
       ", endtime=" + endTime);
     TableMapReduceUtil.initTableMapperJob(tableName, s, Exporter.class, null,
       null, job);
