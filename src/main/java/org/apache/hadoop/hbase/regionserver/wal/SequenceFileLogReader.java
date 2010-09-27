@@ -26,14 +26,16 @@ import java.lang.Class;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
  
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile;
-import org.mortbay.log.Log;
 
 public class SequenceFileLogReader implements HLog.Reader {
+  private static final Log LOG = LogFactory.getLog(SequenceFileLogReader.class);
 
   /**
    * Hack just to set the correct file length up in SequenceFile.Reader.
@@ -193,7 +195,7 @@ public class SequenceFileLogReader implements HLog.Reader {
     try {
       pos = getPosition();
     } catch (IOException e) {
-      Log.warn("Failed getting position to add to throw", e);
+      LOG.warn("Failed getting position to add to throw", e);
     }
 
     // See what SequenceFile.Reader thinks is the end of the file

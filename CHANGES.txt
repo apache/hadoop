@@ -547,6 +547,8 @@ Release 0.21.0 - Unreleased
                unknown server -- telling it to STOP_REGIONSERVER.
    HBASE-3039  Stuck in regionsInTransition because rebalance came in at same
                time as a split
+   HBASE-3042  Use LO4J in SequenceFileLogReader
+               (Nicolas Spiegelberg via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
