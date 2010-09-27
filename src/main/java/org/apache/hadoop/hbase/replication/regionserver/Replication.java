@@ -162,4 +162,9 @@ public class Replication implements WALObserver {
   public void logRollRequested() {
     // Not interested
   }
+
+  @Override
+  public void logCloseRequested() {
+    // not interested
+  }
 }

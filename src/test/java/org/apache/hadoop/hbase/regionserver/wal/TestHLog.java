@@ -160,9 +160,11 @@ public class TestHLog  {
         log.rollWriter();
       }
       log.close();
-      Path splitsdir = new Path(dir, "splits");
+      Path splitsdir = new Path(this.dir, "splits");
+      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
       List<Path> splits =
-        HLog.splitLog(splitsdir, logdir, oldLogDir, fs, conf);
+        logSplitter.splitLog(splitsdir, logdir,
+          this.oldLogDir, this.fs, conf);
       verifySplits(splits, howmany);
       log = null;
     } finally {
@@ -313,11 +315,11 @@ public class TestHLog  {
     }
   }
   
-  // For this test to pass, requires: 
+  // For this test to pass, requires:
   // 1. HDFS-200 (append support)
-  // 2. HDFS-988 (SafeMode should freeze file operations 
+  // 2. HDFS-988 (SafeMode should freeze file operations
   //              [FSNamesystem.nextGenerationStampForBlock])
-  // 3. HDFS-142 (on restart, maintain pendingCreates) 
+  // 3. HDFS-142 (on restart, maintain pendingCreates)
   @Test
   public void testAppendClose() throws Exception {
     byte [] tableName = Bytes.toBytes(getName());
@@ -344,7 +346,7 @@ public class TestHLog  {
       cluster.getNameNode().setSafeMode(SafeModeAction.SAFEMODE_ENTER);
       cluster.shutdown();
       try {
-        // wal.writer.close() will throw an exception, 
+        // wal.writer.close() will throw an exception,
         // but still call this since it closes the LogSyncer thread first
         wal.close();
       } catch (IOException e) {
@@ -369,7 +371,7 @@ public class TestHLog  {
     Method setLeasePeriod = cluster.getClass()
       .getDeclaredMethod("setLeasePeriod", new Class[]{Long.TYPE, Long.TYPE});
     setLeasePeriod.setAccessible(true);
-    setLeasePeriod.invoke(cluster, 
+    setLeasePeriod.invoke(cluster,
                           new Object[]{new Long(1000), new Long(1000)});
     try {
       Thread.sleep(1000);
@@ -405,8 +407,8 @@ public class TestHLog  {
       throw t.exception;
 
     // Make sure you can read all the content
-    SequenceFile.Reader reader 
-      = new SequenceFile.Reader(fs, walPath, conf);
+    SequenceFile.Reader reader
+      = new SequenceFile.Reader(this.fs, walPath, this.conf);
     int count = 0;
     HLogKey key = HLog.newKey(conf);
     WALEdit val = new WALEdit();
@@ -605,6 +607,11 @@ public class TestHLog  {
     public void logRollRequested() {
       // TODO Auto-generated method stub
       
+    }
+
+    @Override
+    public void logCloseRequested() {
+      // not interested
     }
   }
 }

@@ -47,14 +47,16 @@ public class TestHLogMethods {
     fs.delete(regiondir, true);
     fs.mkdirs(regiondir);
     Path recoverededits = HLog.getRegionDirRecoveredEditsDir(regiondir);
-    String first = HLog.formatRecoveredEditsFileName(-1);
+    String first = HLogSplitter.formatRecoveredEditsFileName(-1);
     createFile(fs, recoverededits, first);
-    createFile(fs, recoverededits, HLog.formatRecoveredEditsFileName(0));
-    createFile(fs, recoverededits, HLog.formatRecoveredEditsFileName(1));
-    createFile(fs, recoverededits, HLog.formatRecoveredEditsFileName(11));
-    createFile(fs, recoverededits, HLog.formatRecoveredEditsFileName(2));
-    createFile(fs, recoverededits, HLog.formatRecoveredEditsFileName(50));
-    String last = HLog.formatRecoveredEditsFileName(Long.MAX_VALUE);
+    createFile(fs, recoverededits, HLogSplitter.formatRecoveredEditsFileName(0));
+    createFile(fs, recoverededits, HLogSplitter.formatRecoveredEditsFileName(1));
+    createFile(fs, recoverededits, HLogSplitter
+        .formatRecoveredEditsFileName(11));
+    createFile(fs, recoverededits, HLogSplitter.formatRecoveredEditsFileName(2));
+    createFile(fs, recoverededits, HLogSplitter
+        .formatRecoveredEditsFileName(50));
+    String last = HLogSplitter.formatRecoveredEditsFileName(Long.MAX_VALUE);
     createFile(fs, recoverededits, last);
     createFile(fs, recoverededits,
       Long.toString(Long.MAX_VALUE) + "." + System.currentTimeMillis());
@@ -63,13 +65,17 @@ public class TestHLogMethods {
     assertEquals(files.pollFirst().getName(), first);
     assertEquals(files.pollLast().getName(), last);
     assertEquals(files.pollFirst().getName(),
-      HLog.formatRecoveredEditsFileName(0));
+      HLogSplitter
+        .formatRecoveredEditsFileName(0));
     assertEquals(files.pollFirst().getName(),
-      HLog.formatRecoveredEditsFileName(1));
+      HLogSplitter
+        .formatRecoveredEditsFileName(1));
     assertEquals(files.pollFirst().getName(),
-      HLog.formatRecoveredEditsFileName(2));
+      HLogSplitter
+        .formatRecoveredEditsFileName(2));
     assertEquals(files.pollFirst().getName(),
-      HLog.formatRecoveredEditsFileName(11));
+      HLogSplitter
+        .formatRecoveredEditsFileName(11));
   }
 
   private void createFile(final FileSystem fs, final Path testdir,

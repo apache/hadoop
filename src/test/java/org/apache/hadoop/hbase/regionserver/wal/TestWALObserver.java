@@ -105,8 +105,13 @@ public class TestWALObserver {
         hlog.rollWriter();
       }
     }
+
+    hlog.close();
+    hlog.closeAndDelete();
+
     assertEquals(11, observer.logRollCounter);
     assertEquals(5, laterobserver.logRollCounter);
+    assertEquals(2, observer.closedCount);
   }
 
   /**
@@ -114,6 +119,7 @@ public class TestWALObserver {
    */
   static class DummyWALObserver implements WALObserver {
     public int logRollCounter = 0;
+    public int closedCount = 0;
 
     @Override
     public void logRolled(Path newFile) {
@@ -130,6 +136,11 @@ public class TestWALObserver {
         WALEdit logEdit) {
       // Not interested
       
+    }
+
+    @Override
+    public void logCloseRequested() {
+      closedCount++;
     }
   }
 }

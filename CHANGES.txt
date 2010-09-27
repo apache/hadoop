@@ -30,6 +30,9 @@ Release 0.21.0 - Unreleased
    HBASE-2692  Master rewrite and cleanup for 0.90
                (Karthik Ranganathan, Jon Gray & Stack)
    HBASE-2961  Close zookeeper when done with it (HCM, Master, and RS)
+   HBASE-2641  HBASE-2641 Refactor HLog splitLog, hbase-2437 continued;
+               break out split code as new classes
+               (James Kennedy via Stack)
                
 
   BUG FIXES

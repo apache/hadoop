@@ -30,8 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.io.SequenceFile;
 import org.mortbay.log.Log;
 
@@ -103,7 +101,24 @@ public class SequenceFileLogReader implements HLog.Reader {
   int edit = 0;
   long entryStart = 0;
 
-  public SequenceFileLogReader() { }
+  private Class<? extends HLogKey> keyClass;
+
+  /**
+   * Default constructor.
+   */
+  public SequenceFileLogReader() {
+  }
+
+  /**
+   * This constructor allows a specific HLogKey implementation to override that
+   * which would otherwise be chosen via configuration property.
+   * 
+   * @param keyClass
+   */
+  public SequenceFileLogReader(Class<? extends HLogKey> keyClass) {
+    this.keyClass = keyClass;
+  }
+
 
   @Override
   public void init(FileSystem fs, Path path, Configuration conf)
@@ -132,7 +147,19 @@ public class SequenceFileLogReader implements HLog.Reader {
     this.entryStart = this.reader.getPosition();
     HLog.Entry e = reuse;
     if (e == null) {
-      HLogKey key = HLog.newKey(conf);
+      HLogKey key;
+      if (keyClass == null) {
+        key = HLog.newKey(conf);
+      } else {
+        try {
+          key = keyClass.newInstance();
+        } catch (InstantiationException ie) {
+          throw new IOException(ie);
+        } catch (IllegalAccessException iae) {
+          throw new IOException(iae);
+        }
+      }
+      
       WALEdit val = new WALEdit();
       e = new HLog.Entry(key, val);
     }

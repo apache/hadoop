@@ -141,7 +141,7 @@ public class TestHLogSplit {
     HLog.Entry entry =
       new HLog.Entry(new HLogKey(encoded, HConstants.META_TABLE_NAME, 1, now),
       new WALEdit());
-    Path p = HLog.getRegionSplitEditsPath(fs, entry, new Path("/"));
+    Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, new Path("/"));
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
   }
@@ -154,7 +154,8 @@ public class TestHLogSplit {
     fs.initialize(fs.getUri(), conf);
     try {
     (new ZombieNewLogWriterRegionServer(stop)).start();
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+      logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
     } finally {
       stop.set(true);
     }
@@ -169,7 +170,8 @@ public class TestHLogSplit {
 
     generateHLogs(1, 10, -1);
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
     Path splitLog = getLogForRegion(hbaseDir, TABLE_NAME, REGION);
@@ -189,7 +191,8 @@ public class TestHLogSplit {
     // initialize will create a new DFSClient with a new client ID
     fs.initialize(fs.getUri(), conf);
 
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
 
     for (String region : regions) {
@@ -210,7 +213,8 @@ public class TestHLogSplit {
     // initialize will create a new DFSClient with a new client ID
     fs.initialize(fs.getUri(), conf);
 
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     for (String region : regions) {
       Path logfile = getLogForRegion(hbaseDir, TABLE_NAME, region);
@@ -225,7 +229,8 @@ public class TestHLogSplit {
 
     fs.initialize(fs.getUri(), conf);
 
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     for (String region : regions) {
       Path logfile = getLogForRegion(hbaseDir, TABLE_NAME, region);
@@ -243,8 +248,9 @@ public class TestHLogSplit {
     corruptHLog(new Path(hlogDir, HLOG_FILE_PREFIX + "5"),
             Corruptions.APPEND_GARBAGE, true, fs);
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
     for (String region : regions) {
       Path logfile = getLogForRegion(hbaseDir, TABLE_NAME, region);
       assertEquals(NUM_WRITERS * ENTRIES, countHLog(logfile, fs, conf));
@@ -260,8 +266,9 @@ public class TestHLogSplit {
     corruptHLog(new Path(hlogDir, HLOG_FILE_PREFIX + "5"),
             Corruptions.INSERT_GARBAGE_ON_FIRST_LINE, true, fs);
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
     for (String region : regions) {
       Path logfile = getLogForRegion(hbaseDir, TABLE_NAME, region);
       assertEquals((NUM_WRITERS - 1) * ENTRIES, countHLog(logfile, fs, conf));
@@ -278,7 +285,8 @@ public class TestHLogSplit {
     corruptHLog(new Path(hlogDir, HLOG_FILE_PREFIX + "5"),
             Corruptions.INSERT_GARBAGE_IN_THE_MIDDLE, false, fs);
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     for (String region : regions) {
       Path logfile = getLogForRegion(hbaseDir, TABLE_NAME, region);
@@ -306,7 +314,8 @@ public class TestHLogSplit {
     corruptHLog(c3, Corruptions.INSERT_GARBAGE_ON_FIRST_LINE, true, fs);
 
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     FileStatus[] archivedLogs = fs.listStatus(corruptDir);
 
@@ -331,7 +340,8 @@ public class TestHLogSplit {
     corruptHLog(c1, Corruptions.TRUNCATE, true, fs);
 
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     Path originalLog = (fs.listStatus(oldLogDir))[0].getPath();
     Path splitLog = getLogForRegion(hbaseDir, TABLE_NAME, REGION);
@@ -354,7 +364,8 @@ public class TestHLogSplit {
     generateHLogs(-1);
 
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     FileStatus[] archivedLogs = fs.listStatus(oldLogDir);
 
@@ -372,7 +383,8 @@ public class TestHLogSplit {
             Corruptions.APPEND_GARBAGE, true, fs);
 
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
   }
 
   // TODO: fix this test (HBASE-2935)
@@ -384,7 +396,8 @@ public class TestHLogSplit {
             Corruptions.APPEND_GARBAGE, true, fs);
     fs.initialize(fs.getUri(), conf);
     try {
-      HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+      logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
     } catch (IOException e) {/* expected */}
 
     assertEquals("if skip.errors is false all files should remain in place",
@@ -396,9 +409,8 @@ public class TestHLogSplit {
   public void testSplit() throws IOException {
     generateHLogs(-1);
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
-
-
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     for (String region : regions) {
       Path logfile = getLogForRegion(hbaseDir, TABLE_NAME, region);
@@ -412,7 +424,8 @@ public class TestHLogSplit {
   throws IOException {
     generateHLogs(-1);
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
     FileStatus [] statuses = null;
     try {
       statuses = fs.listStatus(hlogDir);
@@ -463,7 +476,8 @@ public class TestHLogSplit {
     try {
       zombie.start();
       try {
-        HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+        HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+        logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
       } catch (IOException ex) {/* expected */}
       int logFilesNumber = fs.listStatus(hlogDir).length;
 
@@ -491,7 +505,8 @@ public class TestHLogSplit {
 
     try {
       InstrumentedSequenceFileLogWriter.activateFailure = true;
-      HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+      logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     } catch (IOException e) {
       assertEquals("java.io.IOException: This exception is instrumented and should only be thrown for testing", e.getMessage());
@@ -513,7 +528,8 @@ public class TestHLogSplit {
     generateHLogs(1, 100, -1);
     fs.initialize(fs.getUri(), conf);
 
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
     fs.rename(oldLogDir, hlogDir);
     Path firstSplitPath = new Path(hbaseDir, Bytes.toString(TABLE_NAME) + ".first");
     Path splitPath = new Path(hbaseDir, Bytes.toString(TABLE_NAME));
@@ -522,7 +538,7 @@ public class TestHLogSplit {
 
 
     fs.initialize(fs.getUri(), conf);
-    HLog.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
 
     assertEquals(0, compareHLogSplitDirs(firstSplitPath, splitPath));
   }
@@ -780,14 +796,14 @@ public class TestHLogSplit {
     FileStatus[] f1 = fs.listStatus(p1);
     FileStatus[] f2 = fs.listStatus(p2);
 
-    for (int i=0; i<f1.length; i++) {
+    for (int i = 0; i < f1.length; i++) {
       // Regions now have a directory named RECOVERED_EDITS_DIR and in here
-      // are split edit files.  In below presume only 1.
+      // are split edit files. In below presume only 1.
       Path rd1 = HLog.getRegionDirRecoveredEditsDir(f1[i].getPath());
-      FileStatus [] rd1fs = fs.listStatus(rd1);
+      FileStatus[] rd1fs = fs.listStatus(rd1);
       assertEquals(1, rd1fs.length);
       Path rd2 = HLog.getRegionDirRecoveredEditsDir(f2[i].getPath());
-      FileStatus [] rd2fs = fs.listStatus(rd2);
+      FileStatus[] rd2fs = fs.listStatus(rd2);
       assertEquals(1, rd2fs.length);
       if (!logsAreEqual(rd1fs[0].getPath(), rd2fs[0].getPath())) {
         return -1;

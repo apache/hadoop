@@ -134,6 +134,7 @@ class SplitTransaction {
   public boolean prepare() {
     if (this.parent.isClosed() || this.parent.isClosing()) return false;
     HRegionInfo hri = this.parent.getRegionInfo();
+    parent.prepareToSplit();
     // Check splitrow.
     byte [] startKey = hri.getStartKey();
     byte [] endKey = hri.getEndKey();

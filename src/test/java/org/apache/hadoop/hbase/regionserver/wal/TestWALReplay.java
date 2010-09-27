@@ -170,10 +170,10 @@ public class TestWALReplay {
    * Test case of HRegion that is only made out of bulk loaded files.  Assert
    * that we don't 'crash'.
    * @throws IOException
-   * @throws IllegalAccessException 
-   * @throws NoSuchFieldException 
-   * @throws IllegalArgumentException 
-   * @throws SecurityException 
+   * @throws IllegalAccessException
+   * @throws NoSuchFieldException
+   * @throws IllegalArgumentException
+   * @throws SecurityException
    */
   @Test
   public void testRegionMadeOfBulkLoadedFilesOnly()
@@ -215,10 +215,10 @@ public class TestWALReplay {
    * Test writing edits into an HRegion, closing it, splitting logs, opening
    * Region again.  Verify seqids.
    * @throws IOException
-   * @throws IllegalAccessException 
-   * @throws NoSuchFieldException 
-   * @throws IllegalArgumentException 
-   * @throws SecurityException 
+   * @throws IllegalAccessException
+   * @throws NoSuchFieldException
+   * @throws IllegalArgumentException
+   * @throws SecurityException
    */
   @Test
   public void testReplayEditsWrittenViaHRegion()
@@ -414,7 +414,7 @@ public class TestWALReplay {
   }
 
   private void addWALEdits (final byte [] tableName, final HRegionInfo hri,
-      final byte [] rowName, final byte [] family, 
+      final byte [] rowName, final byte [] family,
       final int count, EnvironmentEdge ee, final HLog wal)
   throws IOException {
     String familyStr = Bytes.toString(family);
@@ -428,7 +428,7 @@ public class TestWALReplay {
     }
   }
 
-  private void addRegionEdits (final byte [] rowName, final byte [] family, 
+  private void addRegionEdits (final byte [] rowName, final byte [] family,
       final int count, EnvironmentEdge ee, final HRegion r,
       final String qualifierPrefix)
   throws IOException {
@@ -465,7 +465,8 @@ public class TestWALReplay {
    */
   private Path runWALSplit(final Configuration c) throws IOException {
     FileSystem fs = FileSystem.get(c);
-    List<Path> splits = HLog.splitLog(this.hbaseRootDir, this.logDir,
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(c);
+    List<Path> splits = logSplitter.splitLog(this.hbaseRootDir, this.logDir,
       this.oldLogDir, fs, c);
     // Split should generate only 1 file since there's only 1 region
     assertEquals(1, splits.size());

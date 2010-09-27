@@ -51,12 +51,12 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -2436,7 +2436,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return Returns <code>this</code>
    * @throws IOException
    */
-  HRegion openHRegion(final Progressable reporter)
+  protected HRegion openHRegion(final Progressable reporter)
   throws IOException {
     long seqid = initialize(reporter);
     if (this.log != null) {
@@ -3032,6 +3032,13 @@ public class HRegion implements HeapSize { // , Writable{
     boolean old = this.splitRequest;
     this.splitRequest = b;
     return old;
+  }
+
+  /**
+   * Give the region a chance to prepare before it is split.
+   */
+  protected void prepareToSplit() {
+    // nothing
   }
 
   /**

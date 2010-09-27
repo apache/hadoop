@@ -39,6 +39,11 @@ public interface WALObserver {
   public void logRollRequested();
 
   /**
+   * The WAL is about to close.
+   */
+  public void logCloseRequested();
+
+  /**
   * Called before each write.
   * @param info
   * @param logKey

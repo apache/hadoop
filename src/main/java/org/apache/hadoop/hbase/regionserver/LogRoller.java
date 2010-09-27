@@ -164,4 +164,9 @@ class LogRoller extends Thread implements WALObserver {
       WALEdit logEdit) {
     // Not interested.
   }
+
+  @Override
+  public void logCloseRequested() {
+    // not interested
+  }
 }

@@ -48,21 +48,41 @@ public class SequenceFileLogWriter implements HLog.Writer {
   // The syncFs method from hdfs-200 or null if not available.
   private Method syncFs;
 
+  private Class<? extends HLogKey> keyClass;
+
+  /**
+   * Default constructor.
+   */
   public SequenceFileLogWriter() {
     super();
   }
 
+  /**
+   * This constructor allows a specific HLogKey implementation to override that
+   * which would otherwise be chosen via configuration property.
+   * 
+   * @param keyClass
+   */
+  public SequenceFileLogWriter(Class<? extends HLogKey> keyClass) {
+    this.keyClass = keyClass;
+  }
+  
   @Override
   public void init(FileSystem fs, Path path, Configuration conf)
       throws IOException {
+
+    if (null == keyClass) {
+      keyClass = HLog.getKeyClass(conf);
+    }
+
     // Create a SF.Writer instance.
     this.writer = SequenceFile.createWriter(fs, conf, path,
-      HLog.getKeyClass(conf), WALEdit.class,
+      keyClass, WALEdit.class,
       fs.getConf().getInt("io.file.buffer.size", 4096),
       (short) conf.getInt("hbase.regionserver.hlog.replication",
-        fs.getDefaultReplication()),
+      fs.getDefaultReplication()),
       conf.getLong("hbase.regionserver.hlog.blocksize",
-        fs.getDefaultBlockSize()),
+      fs.getDefaultBlockSize()),
       SequenceFile.CompressionType.NONE,
       new DefaultCodec(),
       null,
