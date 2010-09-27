@@ -1924,7 +1924,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // TODO: Need to check if this is being served here but currently undergoing
     // a split (so master needs to retry close after split is complete)
     if (!onlineRegions.containsKey(region.getEncodedName())) {
-      LOG.warn("Received close for region we are not serving");
+      LOG.warn("Received close for region we are not serving; " +
+        region.getEncodedName());
       throw new NotServingRegionException("Received close for "
           + region.getRegionNameAsString() + " but we are not serving it");
     }

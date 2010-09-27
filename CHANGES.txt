@@ -542,6 +542,8 @@ Release 0.21.0 - Unreleased
    HBASE-2992  [replication] MalformedObjectNameException in ReplicationMetrics
    HBASE-3037  When new master joins running cluster does "Received report from
                unknown server -- telling it to STOP_REGIONSERVER.
+   HBASE-3039  Stuck in regionsInTransition because rebalance came in at same
+               time as a split
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

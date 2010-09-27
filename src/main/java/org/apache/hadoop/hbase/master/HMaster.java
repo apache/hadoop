@@ -572,9 +572,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
       if (this.assignmentManager.isRegionsInTransition()) {
-        LOG.debug("Not running balancer because regions in transition: " +
+        LOG.debug("Not running balancer because " +
+          this.assignmentManager.getRegionsInTransition().size() +
+          " region(s) in transition: " +
           org.apache.commons.lang.StringUtils.
-            abbreviate(this.assignmentManager.getRegionsInTransition().toString(), 64));
+            abbreviate(this.assignmentManager.getRegionsInTransition().toString(), 256));
         return false;
       }
       if (!this.serverManager.getDeadServers().isEmpty()) {

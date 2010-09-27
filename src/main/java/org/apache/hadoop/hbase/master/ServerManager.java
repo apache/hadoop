@@ -285,7 +285,7 @@ public class ServerManager {
     }
 
     for (HMsg msg: msgs) {
-      LOG.info("Received " + msg);
+      LOG.info("Received " + msg + " from " + serverInfo.getServerName());
       switch (msg.getType()) {
       case REGION_SPLIT:
         this.services.getAssignmentManager().handleSplitReport(serverInfo,
@@ -527,8 +527,9 @@ public class ServerManager {
   throws NotServingRegionException {
     HRegionInterface hri = getServerConnection(server);
     if(hri == null) {
-      LOG.warn("Attempting to send CLOSE RPC to server " + server.getServerName()
-          + " failed because no RPC connection found to this server");
+      LOG.warn("Attempting to send CLOSE RPC to server " +
+        server.getServerName() + " failed because no RPC connection found " +
+        "to this server");
       return;
     }
     hri.closeRegion(region);

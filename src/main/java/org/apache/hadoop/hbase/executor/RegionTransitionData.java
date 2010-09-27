@@ -68,7 +68,7 @@ public class RegionTransitionData implements Writable {
    * {@link EventType#M2ZK_REGION_OFFLINE}.
    *
    * @param eventType type of event
-   * @param regionName name of region
+   * @param regionName name of region as per {@link HRegionInfo#getRegionName()}
    */
   public RegionTransitionData(EventType eventType, byte [] regionName) {
     this(eventType, regionName, null);
@@ -85,7 +85,7 @@ public class RegionTransitionData implements Writable {
    * and {@link EventType#RS2ZK_REGION_OPENED}.
    *
    * @param eventType type of event
-   * @param regionName name of region
+   * @param regionName name of region as per {@link HRegionInfo#getRegionName()}
    * @param serverName name of server setting data
    */
   public RegionTransitionData(EventType eventType, byte [] regionName,
@@ -117,7 +117,7 @@ public class RegionTransitionData implements Writable {
    * Gets the name of the region being transitioned.
    *
    * <p>Region name is required so this never returns null.
-   * @return region name
+   * @return region name, the result of a call to {@link HRegionInfo#getRegionName()}
    */
   public byte [] getRegionName() {
     return regionName;
