@@ -80,6 +80,8 @@ Release 0.20-append - Unreleased
     HDFS-1254. Support append/sync via the default configuration.
     (dhruba)
 
+    HDFS-1346. DFSClient receives out of order packet ack. (hairong)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES

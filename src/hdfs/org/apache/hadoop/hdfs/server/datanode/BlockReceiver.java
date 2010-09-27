@@ -882,8 +882,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             long seqno = -2;
 
             PipelineAck ack = new PipelineAck();
+            boolean localMirrorError = mirrorError;
             try { 
-              if (!mirrorError) {
+              if (!localMirrorError) {
                 // read an ack from downstream datanode
                 ack.readFields(mirrorIn, numTargets);
                 if (LOG.isDebugEnabled()) {
@@ -892,7 +893,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                 }
                 seqno = ack.getSeqno();
               }
-              if (seqno >= 0 || mirrorError) {
+              if (seqno >= 0 || localMirrorError) {
                 Packet pkt = null;
                 synchronized (this) {
                   while (running && datanode.shouldRun && ackQueue.size() == 0) {
@@ -910,7 +911,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                   pkt = ackQueue.removeFirst();
                   expected = pkt.seqno;
                   notifyAll();
-                  if (seqno != expected && !mirrorError) {
+                  if (seqno != expected && !localMirrorError) {
                     throw new IOException("PacketResponder " + numTargets +
                                           " for block " + block +
                                           " expected seqno:" + expected +
