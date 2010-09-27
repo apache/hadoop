@@ -1930,9 +1930,10 @@ public class KeyValue implements Writable, HeapSize {
   // HeapSize
   public long heapSize() {
     return ClassSize.align(ClassSize.OBJECT + (2 * ClassSize.REFERENCE) +
-        ClassSize.align(ClassSize.ARRAY + length) +
+        ClassSize.align(ClassSize.ARRAY) + ClassSize.align(length) +
         (3 * Bytes.SIZEOF_INT) +
-        ClassSize.align(ClassSize.ARRAY + (rowCache == null ? 0 : rowCache.length)) +
+        ClassSize.align(ClassSize.ARRAY) +
+        ClassSize.align((rowCache == null ? 0 : rowCache.length)) +
         (2 * Bytes.SIZEOF_LONG));
   }
 

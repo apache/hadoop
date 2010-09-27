@@ -118,7 +118,7 @@ public class ClassSize {
 
     OBJECT = 2 * REFERENCE;
 
-    ARRAY = 3 * REFERENCE;
+    ARRAY = align(3 * REFERENCE);
 
     ARRAYLIST = align(OBJECT + align(REFERENCE) + align(ARRAY) +
         (2 * Bytes.SIZEOF_INT));
