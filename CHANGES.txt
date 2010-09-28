@@ -134,6 +134,9 @@ Trunk (unreleased changes)
     HADOOP-6922. Make AccessControlList a writable and update documentation
     for Job ACLs.  (Ravi Gummadi via vinodkv)
 
+    HADOOP-6965. Introduces checks for whether the original tgt is valid 
+    in the reloginFromKeytab method.
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
