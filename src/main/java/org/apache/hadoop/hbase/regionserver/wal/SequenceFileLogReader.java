@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.lang.Class;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
  
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -103,9 +104,11 @@ public class SequenceFileLogReader implements HLog.Reader {
             Field fIn = FilterInputStream.class.getDeclaredField("in");
             fIn.setAccessible(true);
             Object realIn = fIn.get(this.in);
-            long realLength = ((Long)realIn.getClass().
-                getMethod("getFileLength", new Class<?> []{}).
-                invoke(realIn, new Object []{})).longValue();
+            Method getFileLength = realIn.getClass().
+              getMethod("getFileLength", new Class<?> []{});
+            getFileLength.setAccessible(true);
+            long realLength = ((Long)getFileLength.
+              invoke(realIn, new Object []{})).longValue();
             assert(realLength >= this.length);
             adjust = realLength - this.length;
           } catch(Exception e) {
