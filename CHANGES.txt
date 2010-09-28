@@ -550,6 +550,8 @@ Release 0.21.0 - Unreleased
    HBASE-3042  Use LO4J in SequenceFileLogReader
                (Nicolas Spiegelberg via Stack)
    HBASE-2995  Incorrect dependency on Log class from Jetty
+   HBASE-3038  WALReaderFSDataInputStream.getPos() fails if Filesize > MAX_INT
+               (Nicolas Spiegelberg via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
