@@ -947,6 +947,8 @@ Release 0.21.0 - Unreleased
                (Andy Chen via Stack)
    HBASE-3030  The return code of many filesystem operations are not checked
                (dhruba borthakur via Stack)
+   HBASE-2646  Compaction requests should be prioritized to prevent blocking
+               (Jeff Whiting via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
