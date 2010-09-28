@@ -830,11 +830,12 @@ public class HFile {
     DataInputStream dis = new DataInputStream(bis);
 
       // Read in the data index.
-    this.blockIndex = BlockIndex.readIndexEx(this.comparator, dis, this.trailer.dataIndexCount);
+    this.blockIndex =
+      BlockIndex.readIndex(this.comparator, dis, this.trailer.dataIndexCount);
 
       // Read in the metadata index.
       if (trailer.metaIndexCount > 0) {
-      this.metaIndex = BlockIndex.readIndexEx(Bytes.BYTES_RAWCOMPARATOR, dis,
+      this.metaIndex = BlockIndex.readIndex(Bytes.BYTES_RAWCOMPARATOR, dis,
         this.trailer.metaIndexCount);
       }
       this.fileInfoLoaded = true;
@@ -1670,45 +1671,13 @@ public class HFile {
     /*
      * Read in the index that is at <code>indexOffset</code>
      * Must match what was written by writeIndex in the Writer.close.
+     * @param c Comparator to use.
      * @param in
-     * @param indexOffset
+     * @param indexSize
      * @throws IOException
      */
     static BlockIndex readIndex(final RawComparator<byte []> c,
-        final FSDataInputStream in, final long indexOffset, final int indexSize)
-    throws IOException {
-      BlockIndex bi = new BlockIndex(c);
-      bi.blockOffsets = new long[indexSize];
-      bi.blockKeys = new byte[indexSize][];
-      bi.blockDataSizes = new int[indexSize];
-      // If index size is zero, no index was written.
-      if (indexSize > 0) {
-        in.seek(indexOffset);
-        byte [] magic = new byte[INDEXBLOCKMAGIC.length];
-        IOUtils.readFully(in, magic, 0, magic.length);
-        if (!Arrays.equals(magic, INDEXBLOCKMAGIC)) {
-          throw new IOException("Index block magic is wrong: " +
-            Arrays.toString(magic));
-        }
-        for (int i = 0; i < indexSize; ++i ) {
-          long offset   = in.readLong();
-          int dataSize  = in.readInt();
-          byte [] key = Bytes.readByteArray(in);
-          bi.add(key, offset, dataSize);
-        }
-      }
-      return bi;
-    }
-
-    /*
-     * Read in the index that is at <code>indexOffset</code>
-     * Must match what was written by writeIndex in the Writer.close.
-     * @param in
-     * @param indexOffset
-     * @throws IOException
-     */
-    static BlockIndex readIndexEx(final RawComparator<byte []> c, DataInputStream in,
-        final int indexSize)
+        DataInputStream in, final int indexSize)
     throws IOException {
       BlockIndex bi = new BlockIndex(c);
       bi.blockOffsets = new long[indexSize];
