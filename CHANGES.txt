@@ -250,6 +250,9 @@ Trunk (unreleased changes)
     HADOOP-6940. RawLocalFileSystem's markSupported method misnamed markSupport.
     (Tom White via eli).
 
+    HADOOP-6951.  Distinct minicluster services (e.g. NN and JT) overwrite each
+    other's service policies.  (Aaron T. Myers via tomwhite)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
