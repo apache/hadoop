@@ -145,10 +145,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // Cluster status zk tracker and local setter
   private ClusterStatusTracker clusterStatusTracker;
 
-  // True if this a cluster startup where there are no already running servers
-  // as opposed to a master joining an already running cluster
-  boolean freshClusterStartup;
-
   // This flag is for stopping this Master instance.  Its set when we are
   // stopping or aborting
   private volatile boolean stopped = false;
@@ -170,8 +166,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    *
    * <ol>
    * <li>Initialize HMaster RPC and address
-   * <li>Connect to ZooKeeper and figure out if this is a fresh cluster start or
-   *     a failed over master
+   * <li>Connect to ZooKeeper.  Get count of regionservers still up.
    * <li>Block until becoming active master
    * <li>Initialize master components - server manager, region manager,
    *     region server queue, file system manager, etc
@@ -209,7 +204,12 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER, this);
 
     /*
-     * 2. Block on becoming the active master.
+     * 2. Count of regoinservers that are up.
+     */
+    int count = ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
+
+    /*
+     * 3. Block on becoming the active master.
      * We race with other masters to write our address into ZooKeeper.  If we
      * succeed, we are the primary/active master and finish initialization.
      *
@@ -223,16 +223,6 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     activeMasterManager.blockUntilBecomingActiveMaster();
 
     /*
-     * 3. Determine if this is a fresh cluster startup or failed over master.
-     * This is done by checking for the existence of any ephemeral
-     * RegionServer nodes in ZooKeeper.  These nodes are created by RSs on
-     * their initialization but initialization will not happen unless clusterup
-     * flag is set -- see ClusterStatusTracker below.
-     */
-    this.freshClusterStartup =
-      0 == ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
-
-    /*
      * 4. We are active master now... go initialize components we need to run.
      * Note, there may be dross in zk from previous runs; it'll get addressed
      * when we enter {@link #run()} below.
@@ -242,7 +232,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.connection = HConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName());
 
-    this.serverManager = new ServerManager(this, this, this.freshClusterStartup);
+    this.serverManager = new ServerManager(this, this);
 
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));
@@ -259,16 +249,20 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
     this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
-    this.clusterStatusTracker.setClusterUp();
+    boolean wasUp = this.clusterStatusTracker.isClusterUp();
+    if (!wasUp) this.clusterStatusTracker.setClusterUp();
     this.clusterStatusTracker.start();
 
     LOG.info("Server active/primary master; " + this.address +
-      "; freshClusterStart=" + this.freshClusterStartup + ", sessionid=0x" +
-      Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
+      ", sessionid=0x" +
+      Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()) +
+      ", ephemeral nodes still up in zk=" + count +
+      ", cluster-up flag was=" + wasUp);
   }
 
   /*
-   * Stall startup if we are designated a backup master.
+   * Stall startup if we are designated a backup master; i.e. we want someone
+   * else to become the master before proceeding.
    * @param c
    * @param amm
    * @throws InterruptedException
@@ -290,27 +284,42 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   /**
    * Main processing loop for the HMaster.
-   * 1. Handle both fresh cluster start as well as failed over initialization of
-   *    the HMaster.
-   * 2. Start the necessary services
-   * 3. Reassign the root region
-   * 4. The master is no longer closed - set "closed" to false
+   * <ol>
+   * <li>Handle both fresh cluster start as well as failed over initialization of
+   *    the HMaster</li>
+   * <li>Start the necessary services</li>
+   * <li>Reassign the root region</li>
+   * <li>The master is no longer closed - set "closed" to false</li>
+   * </ol>
    */
   @Override
   public void run() {
     try {
       // start up all service threads.
       startServiceThreads();
-      // Wait for minimum number of region servers to report in
-      this.serverManager.waitForRegionServers();
 
-      // Start assignment of user regions, startup or failure
-      if (this.freshClusterStartup) {
-        clusterStarterInitializations(this.fileSystemManager,
-          this.serverManager, this.catalogTracker, this.assignmentManager);
+      // Wait for region servers to report in.  Returns count of regions.
+      int regionCount = this.serverManager.waitForRegionServers();
+
+      // TODO: Should do this in background rather than block master startup
+      // TODO: Do we want to do this before/while/after RSs check in?
+      // It seems that this method looks at active RSs but happens concurrently
+      // with when we expect them to be checking in
+      this.fileSystemManager.
+        splitLogAfterStartup(this.serverManager.getOnlineServers());
+
+      // Make sure root and meta assigned before proceeding.
+      assignRootAndMeta();
+
+      // Is this fresh start with no regions assigned or are we a master joining
+      // an already-running cluster?  If regionsCount == 0, then for sure a
+      // fresh start.  TOOD: Be fancier.  If regionsCount == 2, perhaps the
+      // 2 are .META. and -ROOT- and we should fall into the fresh startup
+      // branch below.  For now, do processFailover.
+      if (regionCount == 0) {
+        this.assignmentManager.cleanoutUnassigned();
+        this.assignmentManager.assignAllUserRegions();
       } else {
-        // Process existing unassigned nodes in ZK, read all regions from META,
-        // rebuild in-memory state.
         this.assignmentManager.processFailover();
       }
 
@@ -343,36 +352,42 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     LOG.info("HMaster main thread exiting");
   }
 
-  /*
-   * Initializations we need to do if we are cluster starter.
-   * @param mfs
-   * @param sm
-   * @param ct
-   * @param am
+  /**
+   * Check <code>-ROOT-</code> and <code>.META.</code> are assigned.  If not,
+   * assign them.
+   * @throws InterruptedException
    * @throws IOException
+   * @throws KeeperException
+   * @return Count of regions we assigned.
    */
-  private static void clusterStarterInitializations(final MasterFileSystem mfs,
-    final ServerManager sm, final CatalogTracker ct, final AssignmentManager am)
-  throws IOException, InterruptedException, KeeperException {
-      // Check filesystem has required basics
-      mfs.initialize();
-      // TODO: Should do this in background rather than block master startup
-      // TODO: Do we want to do this before/while/after RSs check in?
-      //       It seems that this method looks at active RSs but happens
-      //       concurrently with when we expect them to be checking in
-      mfs.splitLogAfterStartup(sm.getOnlineServers());
-      // Clean out current state of unassigned
-      am.cleanoutUnassigned();
-      // assign the root region
-      am.assignRoot();
-      ct.waitForRoot();
-      // assign the meta region
-      am.assignMeta();
-      ct.waitForMeta();
-      // above check waits for general meta availability but this does not
+  int assignRootAndMeta()
+  throws InterruptedException, IOException, KeeperException {
+    int assigned = 0;
+    long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
+
+    // Work on ROOT region.  Is it in zk in transition?
+    boolean rit = this.assignmentManager.
+      processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.ROOT_REGIONINFO);
+    if (!catalogTracker.verifyRootRegionLocation(timeout)) {
+      this.assignmentManager.assignRoot();
+      this.catalogTracker.waitForRoot();
+      assigned++;
+    }
+    LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit);
+ 
+    // Work on meta region
+    rit = this.assignmentManager.
+      processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
+    if (!this.catalogTracker.verifyMetaRegionLocation(timeout)) {
+      this.assignmentManager.assignMeta();
+      this.catalogTracker.waitForMeta();
+      // Above check waits for general meta availability but this does not
       // guarantee that the transition has completed
-      am.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
-      am.assignAllUserRegions();
+      this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
+      assigned++;
+    }
+    LOG.info(".META. assigned=" + assigned + ", rit=" + rit);
+    return assigned;
   }
 
   /*

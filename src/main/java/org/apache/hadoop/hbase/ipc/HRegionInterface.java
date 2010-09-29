@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.List;
 import java.util.NavigableSet;
 
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
@@ -51,10 +53,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
    *
    * @param regionName name of the region
    * @return HRegionInfo object for region
-   * @throws NotServingRegionException e
+   * @throws NotServingRegionException
+   * @throws ConnectException
+   * @throws IOException This can manifest as an Hadoop ipc {@link RemoteException}
    */
   public HRegionInfo getRegionInfo(final byte [] regionName)
-  throws NotServingRegionException;
+  throws NotServingRegionException, ConnectException, IOException;
 
   /**
    * Return all the data for the row that matches <i>row</i> exactly,

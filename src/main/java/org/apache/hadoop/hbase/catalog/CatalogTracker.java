@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.catalog;
 
 import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.net.ConnectException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -40,6 +39,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -271,7 +271,9 @@ public class CatalogTracker {
   /**
    * Gets the current location for <code>.META.</code> if available and waits
    * for up to the specified timeout if not immediately available.  Throws an
-   * exception if timed out waiting.
+   * exception if timed out waiting.  This method differs from {@link #waitForMeta()}
+   * in that it will go ahead and verify the location gotten from ZooKeeper by
+   * trying trying to use returned connection.
    * @param timeout maximum time to wait for meta availability, in milliseconds
    * @return location of meta
    * @throws InterruptedException if interrupted while waiting
@@ -282,15 +284,15 @@ public class CatalogTracker {
   public HServerAddress waitForMeta(long timeout)
   throws InterruptedException, IOException, NotAllMetaRegionsOnlineException {
     long stop = System.currentTimeMillis() + timeout;
-    synchronized(metaAvailable) {
-      if(getMetaServerConnection(true) != null) {
+    synchronized (metaAvailable) {
+      if (getMetaServerConnection(true) != null) {
         return metaLocation;
       }
       while(!metaAvailable.get() &&
           (timeout == 0 || System.currentTimeMillis() < stop)) {
         metaAvailable.wait(timeout);
       }
-      if(getMetaServerConnection(true) == null) {
+      if (getMetaServerConnection(true) == null) {
         throw new NotAllMetaRegionsOnlineException(
             "Timed out (" + timeout + "ms)");
       }
@@ -336,7 +338,6 @@ public class CatalogTracker {
   }
 
   private void setMetaLocation(HServerAddress metaLocation) {
-    LOG.info("Found new META location, " + metaLocation);
     metaAvailable.set(true);
     this.metaLocation = metaLocation;
     // no synchronization because these are private and already under lock
@@ -359,21 +360,67 @@ public class CatalogTracker {
   }
 
   private boolean verifyRegionLocation(HRegionInterface metaServer,
-      byte [] regionName) {
+      byte [] regionName)
+  throws IOException {
+    if (metaServer == null) {
+      LOG.info("Passed metaserver is null");
+      return false;
+    }
     Throwable t = null;
     try {
+      // Am expecting only two possible exceptions here; unable
+      // to connect to the regionserver or NotServingRegionException wrapped
+      // in the hadoop rpc RemoteException.
       return metaServer.getRegionInfo(regionName) != null;
-    } catch (NotServingRegionException e) {
+    } catch (ConnectException e) {
       t = e;
-    } catch (UndeclaredThrowableException e) {
-      // We can get a ConnectException wrapped by a UTE if client fails connect
-      // If not a ConnectException, rethrow.
-      if (!(e.getCause() instanceof ConnectException)) throw e;
-      t = e.getCause();
+    } catch (RemoteException e) {
+      IOException ioe = e.unwrapRemoteException();
+      if (ioe instanceof NotServingRegionException) {
+        t = ioe;
+      } else {
+        throw e;
+      }
     }
     LOG.info("Failed verification of " + Bytes.toString(regionName) +
-      ": " + t.getMessage());
+      ", assigning anew: " + t);
     return false;
+  }
+
+  /**
+   * Verify <code>-ROOT-</code> is deployed and accessible.
+   * @param timeout How long to wait on zk for root address (passed through to
+   * the internal call to {@link #waitForRootServerConnection(long)}.
+   * @return True if the <code>-ROOT-</code> location is healthy.
+   * @throws IOException
+   * @throws InterruptedException 
+   */
+  public boolean verifyRootRegionLocation(final long timeout)
+  throws InterruptedException, IOException {
+    HRegionInterface connection = null;
+    try {
+      connection = waitForRootServerConnection(timeout);
+    } catch (NotAllMetaRegionsOnlineException e) {
+      // Pass
+    } catch (IOException e) {
+      // Unexpected exception
+      throw e;
+    }
+    return (connection == null)? false:
+      verifyRegionLocation(connection, HRegionInfo.ROOT_REGIONINFO.getRegionName());
+  }
+
+  /**
+   * Verify <code>.META.</code> is deployed and accessible.
+   * @param timeout How long to wait on zk for <code>.META.</code> address
+   * (passed through to the internal call to {@link #waitForMetaServerConnection(long)}.
+   * @return True if the <code>.META.</code> location is healthy.
+   * @throws IOException Some unexpected IOE.
+   * @throws InterruptedException
+   */
+  public boolean verifyMetaRegionLocation(final long timeout)
+  throws InterruptedException, IOException {
+    return getMetaServerConnection(true) != null;
   }
 
   /**

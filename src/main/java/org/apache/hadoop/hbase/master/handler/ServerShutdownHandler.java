@@ -36,11 +36,16 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.zookeeper.KeeperException;
 
-
+/**
+ * Process server shutdown.
+ * Server-to-handle must be already in the deadservers lists.  See
+ * {@link ServerManager#expireServer(HServerInfo)}.
+ */
 public class ServerShutdownHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(ServerShutdownHandler.class);
   private final HServerInfo hsi;
@@ -55,8 +60,9 @@ public class ServerShutdownHandler extends EventHandler {
     this.server = server;
     this.services = services;
     this.deadServers = deadServers;
-    // Add to dead servers.
-    this.deadServers.add(hsi.getServerName());
+    if (this.deadServers.contains(hsi.getServerName())) {
+      LOG.warn(hsi.getServerName() + " is NOT in deadservers; it should be!");
+    }
   }
 
   @Override

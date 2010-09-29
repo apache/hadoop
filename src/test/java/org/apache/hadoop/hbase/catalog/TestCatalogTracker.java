@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.catalog;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,13 +37,13 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.Progressable;
@@ -52,6 +53,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 /**
@@ -98,6 +100,61 @@ public class TestCatalogTracker {
     CatalogTracker ct = new CatalogTracker(this.watcher, c, this.abortable);
     ct.start();
     return ct;
+  }
+
+  @Test public void testGetMetaServerConnectionFails()
+  throws IOException, InterruptedException, KeeperException {
+    HConnection connection = Mockito.mock(HConnection.class);
+    ConnectException connectException =
+      new ConnectException("Connection refused");
+    final HRegionInterface implementation =
+      Mockito.mock(HRegionInterface.class);
+    Mockito.when(implementation.get((byte [])Mockito.any(), (Get)Mockito.any())).
+      thenThrow(connectException);
+    Mockito.when(connection.getHRegionConnection((HServerAddress)Matchers.anyObject(), Matchers.anyBoolean())).
+      thenReturn(implementation);
+    Assert.assertNotNull(connection.getHRegionConnection(new HServerAddress(), false));
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    try {
+      RootLocationEditor.setRootLocation(this.watcher,
+        new HServerAddress("example.com:1234"));
+      Assert.assertFalse(ct.verifyMetaRegionLocation(100));
+    } finally {
+      // Clean out root location or later tests will be confused... they presume
+      // start fresh in zk.
+      RootLocationEditor.deleteRootLocation(this.watcher);
+    }
+  }
+
+  /**
+   * Test get of root region fails properly if nothing to connect to.
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws KeeperException
+   */
+  @Test
+  public void testVerifyRootRegionLocationFails()
+  throws IOException, InterruptedException, KeeperException {
+    HConnection connection = Mockito.mock(HConnection.class);
+    ConnectException connectException =
+      new ConnectException("Connection refused");
+    final HRegionInterface implementation =
+      Mockito.mock(HRegionInterface.class);
+    Mockito.when(implementation.getRegionInfo((byte [])Mockito.any())).
+      thenThrow(connectException);
+    Mockito.when(connection.getHRegionConnection((HServerAddress)Matchers.anyObject(), Matchers.anyBoolean())).
+      thenReturn(implementation);
+    Assert.assertNotNull(connection.getHRegionConnection(new HServerAddress(), false));
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    try {
+      RootLocationEditor.setRootLocation(this.watcher,
+        new HServerAddress("example.com:1234"));
+      Assert.assertFalse(ct.verifyRootRegionLocation(100));
+    } finally {
+      // Clean out root location or later tests will be confused... they presume
+      // start fresh in zk.
+      RootLocationEditor.deleteRootLocation(this.watcher);
+    }
   }
 
   @Test (expected = NotAllMetaRegionsOnlineException.class)

@@ -160,7 +160,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Handle failover.  Restore state from META and ZK.  Handle any regions in
-   * transition.
+   * transition.  Presumes <code>.META.</code> and <code>-ROOT-</code> deployed.
    * @throws KeeperException
    * @throws IOException
    */
@@ -169,6 +169,12 @@ public class AssignmentManager extends ZooKeeperListener {
     // outside of a synchronization block where usually all accesses to RIT are
     // synchronized.  The presumption is that in this case it is safe since this
     // method is being played by a single thread on startup.
+
+    // TODO: Check list of user regions and their assignments against regionservers.
+    // TODO: Regions that have a null location and are not in regionsInTransitions
+    // need to be handled.
+    // TODO: Regions that are on servers that are not in our online list need
+    // reassigning.
 
     // Scan META to build list of existing regions, servers, and assignment
     rebuildUserRegions();
@@ -183,45 +189,89 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     LOG.info("Failed-over master needs to process " + nodes.size() +
         " regions in transition");
-    for (String regionName: nodes) {
-      RegionTransitionData data = ZKAssign.getData(watcher, regionName);
-      HRegionInfo regionInfo =
-        MetaReader.getRegion(catalogTracker, data.getRegionName()).getFirst();
-      String encodedName = regionInfo.getEncodedName();
-      switch(data.getEventType()) {
-        case RS_ZK_REGION_CLOSING:
-          // Just insert region into RIT.
-          // If this never updates the timeout will trigger new assignment
-          regionsInTransition.put(encodedName,
-              new RegionState(regionInfo, RegionState.State.CLOSING,
-                  data.getStamp()));
-          break;
+    for (String encodedRegionName: nodes) {
+      processRegionInTransition(encodedRegionName, null);
+    }
+  }
 
-        case RS_ZK_REGION_CLOSED:
-          // Region is closed, insert into RIT and handle it
-          regionsInTransition.put(encodedName,
-              new RegionState(regionInfo, RegionState.State.CLOSED,
-                  data.getStamp()));
-          new ClosedRegionHandler(master, this, data, regionInfo).process();
-          break;
-
-        case RS_ZK_REGION_OPENING:
-          // Just insert region into RIT
-          // If this never updates the timeout will trigger new assignment
-          regionsInTransition.put(encodedName,
-              new RegionState(regionInfo, RegionState.State.OPENING,
-                  data.getStamp()));
-          break;
-
-        case RS_ZK_REGION_OPENED:
-          // Region is opened, insert into RIT and handle it
-          regionsInTransition.put(encodedName,
-              new RegionState(regionInfo, RegionState.State.OPENING,
-                  data.getStamp()));
-          new OpenedRegionHandler(master, this, data, regionInfo,
-              serverManager.getServerInfo(data.getServerName())).process();
-          break;
+  /**
+   * If region is up in zk in transition, then do fixup and block and wait until
+   * the region is assigned and out of transition.  Used on startup for
+   * catalog regions.
+   * @param hri Region to look for.
+   * @return True if we processed a region in transition else false if region
+   * was not up in zk in transition.
+   * @throws InterruptedException
+   * @throws KeeperException
+   * @throws IOException
+   */
+  boolean processRegionInTransitionAndBlockUntilAssigned(final HRegionInfo hri)
+  throws InterruptedException, KeeperException, IOException {
+    boolean intransistion = processRegionInTransition(hri.getEncodedName(), hri);
+    if (!intransistion) return intransistion;
+    synchronized(this.regionsInTransition) {
+      while (!this.master.isStopped() &&
+          this.regionsInTransition.containsKey(hri.getEncodedName())) {
+        this.regionsInTransition.wait();
       }
+    }
+    return intransistion;
+  }
+
+  /**
+   * Process failover of <code>encodedName</code>.  Look in 
+   * @param encodedRegionName Region to process failover for.
+   * @param encodedRegionName RegionInfo.  If null we'll go get it from meta table.
+   * @return
+   * @throws KeeperException 
+   * @throws IOException 
+   */
+  boolean processRegionInTransition(final String encodedRegionName,
+      final HRegionInfo regionInfo)
+  throws KeeperException, IOException {
+    RegionTransitionData data = ZKAssign.getData(watcher, encodedRegionName);
+    if (data == null) return false;
+    HRegionInfo hri = (regionInfo != null)? regionInfo:
+      MetaReader.getRegion(catalogTracker, data.getRegionName()).getFirst();
+    processRegionsInTransition(data, hri);
+    return true;
+  }
+
+  void processRegionsInTransition(final RegionTransitionData data,
+      final HRegionInfo regionInfo)
+  throws KeeperException {
+    String encodedRegionName = regionInfo.getEncodedName();
+    LOG.info("Processing region " + regionInfo.getRegionNameAsString() +
+      " in state " + data.getEventType());
+    switch (data.getEventType()) {
+    case RS_ZK_REGION_CLOSING:
+      // Just insert region into RIT.
+      // If this never updates the timeout will trigger new assignment
+      regionsInTransition.put(encodedRegionName, new RegionState(
+          regionInfo, RegionState.State.CLOSING, data.getStamp()));
+      break;
+
+    case RS_ZK_REGION_CLOSED:
+      // Region is closed, insert into RIT and handle it
+      regionsInTransition.put(encodedRegionName, new RegionState(
+          regionInfo, RegionState.State.CLOSED, data.getStamp()));
+      new ClosedRegionHandler(master, this, data, regionInfo).process();
+      break;
+
+    case RS_ZK_REGION_OPENING:
+      // Just insert region into RIT
+      // If this never updates the timeout will trigger new assignment
+      regionsInTransition.put(encodedRegionName, new RegionState(
+          regionInfo, RegionState.State.OPENING, data.getStamp()));
+      break;
+
+    case RS_ZK_REGION_OPENED:
+      // Region is opened, insert into RIT and handle it
+      regionsInTransition.put(encodedRegionName, new RegionState(
+          regionInfo, RegionState.State.OPENING, data.getStamp()));
+      new OpenedRegionHandler(master, this, data, regionInfo,
+          serverManager.getServerInfo(data.getServerName())).process();
+      break;
     }
   }
 
@@ -752,11 +802,11 @@ public class AssignmentManager extends ZooKeeperListener {
   private void rebuildUserRegions() throws IOException {
     Map<HRegionInfo,HServerAddress> allRegions =
       MetaReader.fullScan(catalogTracker);
-    for (Map.Entry<HRegionInfo,HServerAddress> region : allRegions.entrySet()) {
+    for (Map.Entry<HRegionInfo,HServerAddress> region: allRegions.entrySet()) {
       HServerAddress regionLocation = region.getValue();
       HRegionInfo regionInfo = region.getKey();
       if (regionLocation == null) {
-        regions.put(regionInfo, null);
+        this.regions.put(regionInfo, null);
         continue;
       }
       HServerInfo serverInfo = serverManager.getHServerInfo(regionLocation);

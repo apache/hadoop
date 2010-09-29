@@ -68,6 +68,7 @@ public class Leases extends Thread {
   public Leases(final int leasePeriod, final int leaseCheckFrequency) {
     this.leasePeriod = leasePeriod;
     this.leaseCheckFrequency = leaseCheckFrequency;
+    setDaemon(true);
   }
 
   /**

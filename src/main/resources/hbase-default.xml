@@ -157,7 +157,7 @@
   </property>
   <property>
     <name>hbase.regionserver.msginterval</name>
-    <value>5000</value>
+    <value>3000</value>
     <description>Interval between messages from the RegionServer to HMaster
     in milliseconds.
     </description>

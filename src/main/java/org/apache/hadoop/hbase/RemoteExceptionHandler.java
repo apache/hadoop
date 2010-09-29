@@ -79,6 +79,8 @@ public class RemoteExceptionHandler {
    * @throws IOException indicating a server error ocurred if the decoded
    *         exception is not an IOException. The decoded exception is set as
    *         the cause.
+   * @deprecated Use {@link RemoteException#unwrapRemoteException()} instead.
+   * In fact we should look into deprecating this whole class - St.Ack 2010929
    */
   public static IOException decodeRemoteException(final RemoteException re)
   throws IOException {

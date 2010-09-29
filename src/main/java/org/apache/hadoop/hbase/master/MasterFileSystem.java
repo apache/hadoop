@@ -81,6 +81,7 @@ public class MasterFileSystem {
     this.fs = FileSystem.get(conf);
     // set up the archived logs path
     this.oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
+    createInitialFileSystemLayout();
   }
 
   /**
@@ -91,8 +92,9 @@ public class MasterFileSystem {
    * </li>
    * <li>Create a log archive directory for RS to put archived logs</li>
    * </ol>
+   * Idempotent.
    */
-  public void initialize() throws IOException {
+  private void createInitialFileSystemLayout() throws IOException {
     // check if the root directory exists
     checkRootDir(this.rootdir, conf, this.fs);
 

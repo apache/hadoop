@@ -84,7 +84,6 @@ public class ServerManager {
 
   private final Server master;
   private final MasterServices services;
-  private final boolean freshClusterStartup;
 
   private final ServerMonitor serverMonitorThread;
 
@@ -123,11 +122,9 @@ public class ServerManager {
    * @param freshClusterStartup True if we are original master on a fresh
    * cluster startup else if false, we are joining an already running cluster.
    */
-  public ServerManager(final Server master, final MasterServices services,
-      final boolean freshClusterStartup) {
+  public ServerManager(final Server master, final MasterServices services) {
     this.master = master;
     this.services = services;
-    this.freshClusterStartup = freshClusterStartup;
     Configuration c = master.getConfiguration();
     int monitorInterval = c.getInt("hbase.master.monitor.interval", 60 * 1000);
     this.metrics = new MasterMetrics(master.getServerName());
@@ -170,8 +167,7 @@ public class ServerManager {
       throw new PleaseHoldException(message);
     }
     checkIsDead(info.getServerName(), "STARTUP");
-    LOG.info("Received start message from: " + info.getServerName());
-    recordNewServer(info);
+    recordNewServer(info, false, null);
   }
 
   private HServerInfo haveServerWithSameHostAndPortAlready(final String hostnamePort) {
@@ -201,26 +197,24 @@ public class ServerManager {
   }
 
   /**
-   * Adds the HSI to the RS list and creates an empty load
-   * @param info The region server informations
-   */
-  public void recordNewServer(HServerInfo info) {
-    recordNewServer(info, false, null);
-  }
-
-  /**
    * Adds the HSI to the RS list
    * @param info The region server informations
-   * @param useInfoLoad True if the load from the info should be used
-   *                    like under a master failover
+   * @param useInfoLoad True if the load from the info should be used; e.g.
+   * under a master failover
+   * @param hri Region interface.  Can be null.
    */
   void recordNewServer(HServerInfo info, boolean useInfoLoad,
       HRegionInterface hri) {
-    HServerLoad load = useInfoLoad ? info.getLoad() : new HServerLoad();
+    HServerLoad load = useInfoLoad? info.getLoad(): new HServerLoad();
     String serverName = info.getServerName();
+    LOG.info("Registering server=" + serverName + ", regionCount=" +
+      load.getLoad() + ", userLoad=" + useInfoLoad);
     info.setLoad(load);
     // TODO: Why did we update the RS location ourself?  Shouldn't RS do this?
     // masterStatus.getZooKeeper().updateRSLocationGetWatch(info, watcher);
+    // -- If I understand the question, the RS does not update the location
+    // because could be disagreement over locations because of DNS issues; only
+    // master does DNS now -- St.Ack 20100929.
     this.onlineServers.put(serverName, info);
     if (hri == null) {
       serverConnections.remove(serverName);
@@ -254,15 +248,16 @@ public class ServerManager {
     // If we don't know this server, tell it shutdown.
     HServerInfo storedInfo = this.onlineServers.get(info.getServerName());
     if (storedInfo == null) {
-      if (!this.freshClusterStartup) {
-        // If we are joining an existing cluster, then soon as we come up we'll
-        // be getting reports from already running regionservers.
-        LOG.info("Registering new server: " + info.getServerName());
+      if (this.deadservers.contains(storedInfo)) {
+        LOG.warn("Report from deadserver " + storedInfo);
+        return HMsg.STOP_REGIONSERVER_ARRAY;
+      } else {
+        // Just let the server in.  Presume master joining a running cluster.
         // recordNewServer is what happens at the end of reportServerStartup.
         // The only thing we are skipping is passing back to the regionserver
         // the HServerInfo to use.  Here we presume a master has already done
         // that so we'll press on with whatever it gave us for HSI.
-        recordNewServer(info);
+        recordNewServer(info, true, null);
         // If msgs, put off their processing but this is not enough because
         // its possible that the next time the server reports in, we'll still
         // not be up and serving.  For example, if a split, we'll need the
@@ -271,11 +266,6 @@ public class ServerManager {
         if (msgs.length > 0) throw new PleaseHoldException("FIX! Putting off " +
           "message processing because not yet rwady but possible we won't be " +
           "ready next on next report");
-      } else {
-        LOG.warn("Received report from unknown server, a server calling " +
-          " regionServerReport w/o having first called regionServerStartup; " +
-          "telling it " + HMsg.Type.STOP_REGIONSERVER + ": " + info.getServerName());
-        return HMsg.STOP_REGIONSERVER_ARRAY;
       }
     }
 
@@ -474,7 +464,10 @@ public class ServerManager {
           " but server shutdown is already in progress");
       return;
     }
-    // Remove the server from the known servers lists and update load info
+    // Remove the server from the known servers lists and update load info BUT
+    // add to deadservers first; do this so it'll show in dead servers list if
+    // not in online servers list.
+    this.deadservers.add(serverName);
     this.onlineServers.remove(serverName);
     this.serverConnections.remove(serverName);
     // If cluster is going down, yes, servers are going to be expiring; don't
@@ -488,7 +481,7 @@ public class ServerManager {
       return;
     }
     this.services.getExecutorService().submit(new ServerShutdownHandler(this.master,
-        this.services, deadservers, info));
+        this.services, this.deadservers, info));
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed");
   }
@@ -554,9 +547,10 @@ public class ServerManager {
 
   /**
    * Waits for the regionservers to report in.
+   * @return Count of regions out on cluster
    * @throws InterruptedException 
    */
-  public void waitForRegionServers()
+  public int waitForRegionServers()
   throws InterruptedException {
     long interval = this.master.getConfiguration().
       getLong("hbase.master.wait.on.regionservers.interval", 3000);
@@ -574,8 +568,20 @@ public class ServerManager {
       }
       oldcount = count;
     }
+    // Count how many regions deployed out on cluster.  If fresh start, it'll
+    // be none but if not a fresh start, we'll have registered servers when
+    // they came in on the {@link #regionServerReport(HServerInfo)} as opposed to
+    // {@link #regionServerStartup(HServerInfo)} and it'll be carrying an
+    // actual server load.
+    int regionCount = 0;
+    for (Map.Entry<String, HServerInfo> e: this.onlineServers.entrySet()) {
+      HServerLoad load = e.getValue().getLoad();
+      if (load != null) regionCount += load.getLoad();
+    }
     LOG.info("Exiting wait on regionserver(s) to checkin; count=" + count +
-      ", stopped=" + this.master.isStopped());
+      ", stopped=" + this.master.isStopped() +
+      ", count of regions out on cluster=" + regionCount);
+    return regionCount;
   }
 
   public List<HServerInfo> getOnlineServersList() {
