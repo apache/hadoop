@@ -73,7 +73,7 @@ public class TestMasterAddressManager {
     zk.registerListener(listener);
 
     // Create the master node with a dummy address
-    String host = "hostname";
+    String host = "localhost";
     int port = 1234;
     HServerAddress dummyAddress = new HServerAddress(host, port);
     LOG.info("Creating master node");
