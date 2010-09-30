@@ -59,11 +59,33 @@ public class RESTServlet implements Constants {
   }
 
   /**
+   * @param conf Existing configuration to use in rest servlet
+   * @return the RESTServlet singleton instance
+   * @throws IOException
+   */
+  public synchronized static RESTServlet getInstance(Configuration conf)
+  throws IOException {
+    if (instance == null) {
+      instance = new RESTServlet(conf);
+    }
+    return instance;
+  }
+
+  /**
    * Constructor
    * @throws IOException
    */
   public RESTServlet() throws IOException {
-    this.conf = HBaseConfiguration.create();
+    this(HBaseConfiguration.create());
+  }
+  
+  /**
+   * Constructor with existing configuration
+   * @param conf existing configuration
+   * @throws IOException.
+   */
+  public RESTServlet(Configuration conf) throws IOException {
+    this.conf = conf;
     this.pool = new HTablePool(conf, 10);
   }
 

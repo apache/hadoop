@@ -558,6 +558,7 @@ Release 0.21.0 - Unreleased
                condition
    HBASE-3057  Race condition when closing regions that causes flakiness in
                TestRestartCluster
+   HBASE-3058  Fix REST tests on trunk
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

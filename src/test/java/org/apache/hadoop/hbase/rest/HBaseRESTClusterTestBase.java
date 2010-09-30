@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.rest;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.jetty.Server;
@@ -53,6 +54,9 @@ public class HBaseRESTClusterTestBase extends HBaseClusterTestCase
       LOG.error("ServletContainer already running");
       return;
     }
+
+    // Inject the conf from the test cluster by being first to make singleton
+    RESTServlet.getInstance(super.conf);
 
     // set up the Jersey servlet container for Jetty
     ServletHolder sh = new ServletHolder(ServletContainer.class);
