@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
@@ -93,7 +94,6 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
-import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServicePlugin;
@@ -165,8 +165,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   protected FSNamesystem namesystem; 
   protected NamenodeRole role;
-  /** RPC server. */
-  protected Server server;
+  /** RPC server. Package-protected for use in tests. */
+  Server server;
   /** RPC server for HDFS Services communication.
       BackupNode, Datanodes and all other services
       should be connecting to this server if it is
@@ -347,13 +347,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     SecurityUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
         DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, socAddr.getHostName());
     int handlerCount = conf.getInt("dfs.namenode.handler.count", 10);
-    
-    // set service-level authorization security policy
-    if (serviceAuthEnabled = 
-          conf.getBoolean(
-            ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, false)) {
-      ServiceAuthorizationManager.refresh(conf, new HDFSPolicyProvider());
-    }
 
     NameNode.initMetrics(conf, this.getRole());
     loadNamesystem(conf);
@@ -373,6 +366,17 @@ public class NameNode implements NamenodeProtocols, FSConstants {
                                 socAddr.getHostName(), socAddr.getPort(),
                                 handlerCount, false, conf, 
                                 namesystem.getDelegationTokenSecretManager());
+
+    // set service-level authorization security policy
+    if (serviceAuthEnabled =
+          conf.getBoolean(
+            CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      this.server.refreshServiceAcl(conf, new HDFSPolicyProvider());
+      if (this.serviceRpcServer != null) {
+        this.serviceRpcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
+      }
+    }
+
     // The rpc-server port can be ephemeral... ensure we have the correct info
     this.rpcAddress = this.server.getListenerAddress(); 
     setRpcServerAddress(conf);
@@ -1434,8 +1438,10 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       throw new AuthorizationException("Service Level Authorization not enabled!");
     }
 
-    ServiceAuthorizationManager.refresh(
-        new Configuration(), new HDFSPolicyProvider());
+    this.server.refreshServiceAcl(new Configuration(), new HDFSPolicyProvider());
+    if (this.serviceRpcServer != null) {
+      this.serviceRpcServer.refreshServiceAcl(new Configuration(), new HDFSPolicyProvider());
+    }
   }
 
   @Override

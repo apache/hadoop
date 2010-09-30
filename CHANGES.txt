@@ -48,6 +48,8 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)
+
     HDFS-1096. fix for prev. commit. (boryas)
 
     HDFS-1096. allow dfsadmin/mradmin refresh of superuser proxy group
@@ -147,6 +149,11 @@ Trunk (unreleased changes)
     HDFS-1407. Change DataTransferProtocol methods to use Block instead 
     of individual elements of Block. (suresh)
 
+    HDFS-1417. Add @Override to SimulatedFSDataset methods that implement
+    FSDatasetInterface methods. (suresh)
+
+    HDFS-1426. Remove unused method BlockInfo#listCount. (hairong)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
@@ -159,6 +166,8 @@ Trunk (unreleased changes)
 
     HDFS-1320. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
     (Erik Steffl via szetszwo)
+
+    HDFS-1368. Add a block counter to DatanodeDescriptor. (hairong)
 
   BUG FIXES
 
@@ -281,7 +290,14 @@ Trunk (unreleased changes)
     HDFS-1419. Federation: Three test cases need minor modification after 
     the new block id change (Tanping Wang via suresh)
 
-Release 0.21.0 - Unreleased
+    HDFS-96. HDFS supports blocks larger than 2 GB.
+    (Patrick Kling via dhruba)
+
+    HDFS-1364. Makes long running HFTP-based applications do relogins
+    if necessary. (Jitendra Pandey via ddas)
+
+    HDFS-1399.  Distinct minicluster services (e.g. NN and JT) overwrite each
+    other's service policies.  (Aaron T. Myers via tomwhite)
 
   INCOMPATIBLE CHANGES
 
@@ -1209,6 +1225,8 @@ Release 0.21.0 - Unreleased
     HDFS-1267. fuse-dfs does not compile. (Devaraj Das via tomwhite)
 
     HDFS-1363. Eliminate second synchronized sections in appendFile(). (shv)
+
+    HDFS-1413. Fix broken links to HDFS Wiki. (shv)
 
 Release 0.20.3 - Unreleased
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 
 /**
@@ -47,5 +48,13 @@ public class NameNodeAdapter {
    */
   public static void refreshBlockCounts(NameNode namenode) {
     namenode.getNamesystem().blockManager.updateState();
+  }
+
+  /**
+   * Get the internal RPC server instance.
+   * @return rpc server
+   */
+  public static Server getRpcServer(NameNode namenode) {
+    return namenode.server;
   }
 }

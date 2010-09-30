@@ -178,6 +178,10 @@ public class HftpFileSystem extends FileSystem {
           break;
         }
       }
+      
+      //Renew TGT if needed
+      ugi.reloginFromKeytab();
+      
       //since we don't already have a token, go get one over https
       if (delegationToken == null) {
         delegationToken = 
@@ -659,6 +663,7 @@ public class HftpFileSystem extends FileSystem {
       final HftpFileSystem fs = weakFs.get();
       if (fs != null) {
         synchronized (fs) {
+          fs.ugi.reloginFromKeytab();
           fs.ugi.doAs(new PrivilegedExceptionAction<Void>() {
 
             @Override

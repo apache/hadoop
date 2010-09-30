@@ -31,7 +31,7 @@
   -->
 
   <tab label="Project" href="http://hadoop.apache.org/hdfs/" />
-  <tab label="Wiki" href="http://wiki.apache.org/hadoop/hdfs" />
+  <tab label="Wiki" href="http://wiki.apache.org/hadoop/HDFS" />
   <tab label="HDFS 0.22 Documentation" dir="" />  
   
 </tabs>

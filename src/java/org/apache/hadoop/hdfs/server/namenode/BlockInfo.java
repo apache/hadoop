@@ -249,14 +249,6 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return head;
   }
 
-  int listCount(DatanodeDescriptor dn) {
-    int count = 0;
-    for(BlockInfo cur = this; cur != null;
-          cur = cur.getNext(cur.findDatanode(dn)))
-      count++;
-    return count;
-  }
-
   boolean listIsConsistent(DatanodeDescriptor dn) {
     // going forward
     int count = 0;

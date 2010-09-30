@@ -48,4 +48,29 @@ public class TestDatanodeDescriptor extends TestCase {
     bc = dd.getInvalidateBlocks(MAX_LIMIT);
     assertEquals(bc.getBlocks().length, REMAINING_BLOCKS);
   }
+  
+  public void testBlocksCounter() throws Exception {
+    DatanodeDescriptor dd = new DatanodeDescriptor();
+    assertEquals(0, dd.numBlocks());
+    BlockInfo blk = new BlockInfo(new Block(1L), 1);
+    BlockInfo blk1 = new BlockInfo(new Block(2L), 2);
+    // add first block
+    assertTrue(dd.addBlock(blk));
+    assertEquals(1, dd.numBlocks());
+    // remove a non-existent block
+    assertFalse(dd.removeBlock(blk1));
+    assertEquals(1, dd.numBlocks());
+    // add an existent block
+    assertFalse(dd.addBlock(blk));
+    assertEquals(1, dd.numBlocks());
+    // add second block
+    assertTrue(dd.addBlock(blk1));
+    assertEquals(2, dd.numBlocks());
+    // remove first block
+    assertTrue(dd.removeBlock(blk));
+    assertEquals(1, dd.numBlocks());
+    // remove second block
+    assertTrue(dd.removeBlock(blk1));
+    assertEquals(0, dd.numBlocks());    
+  }
 }

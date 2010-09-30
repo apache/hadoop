@@ -300,8 +300,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
                          throws IOException {
     // Sends multiple chunks in one packet with a single write().
 
-    int len = Math.min((int) (endOffset - offset),
-                       bytesPerChecksum*maxChunks);
+    int len = (int) Math.min(endOffset - offset,
+                             (((long) bytesPerChecksum) * ((long) maxChunks)));
     int numChunks = (len + bytesPerChecksum - 1)/bytesPerChecksum;
     int packetLen = len + numChunks*checksumSize + 4;
     boolean lastDataPacket = offset + len == endOffset && len > 0;
