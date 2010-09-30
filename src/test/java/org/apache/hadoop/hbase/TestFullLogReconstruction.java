@@ -93,9 +93,7 @@ public class TestFullLogReconstruction {
   @Test
   public void testReconstruction() throws Exception {
 
-    TEST_UTIL.createTable(TABLE_NAME, FAMILY);
-
-    HTable table = new HTable(TABLE_NAME);
+    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
 
     TEST_UTIL.createMultiRegions(table, Bytes.toBytes("family"));
 
