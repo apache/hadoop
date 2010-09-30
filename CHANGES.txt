@@ -556,6 +556,8 @@ Release 0.21.0 - Unreleased
    HBASE-3054  Remore TestEmptyMetaInfo; it doesn't make sense any more.
    HBASE-3056  Fix ordering in ZKWatcher constructor to prevent weird race
                condition
+   HBASE-3057  Race condition when closing regions that causes flakiness in
+               TestRestartCluster
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

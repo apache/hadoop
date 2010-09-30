@@ -115,8 +115,8 @@ public class CloseRegionHandler extends EventHandler {
     try {
       // TODO: If we need to keep updating CLOSING stamp to prevent against
       //       a timeout if this is long-running, need to spin up a thread?
-      this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
       region.close(abort);
+      this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
     } catch (IOException e) {
       LOG.error("IOException closing region for " + regionInfo);
       if (this.zk) deleteClosingState();
