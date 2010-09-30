@@ -303,6 +303,12 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
   public void openRegion(final HRegionInfo region);
 
   /**
+   * Opens the specified regions.
+   * @param regions regions to open
+   */
+  public void openRegions(final List<HRegionInfo> regions);
+
+  /**
    * Closes the specified region.
    * @param region region to close
    * @return true if closing region, false if not

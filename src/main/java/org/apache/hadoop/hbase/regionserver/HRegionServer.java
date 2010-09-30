@@ -1927,6 +1927,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
+  public void openRegions(List<HRegionInfo> regions) {
+    LOG.info("Received request to open " + regions.size() + " region(s)");
+    for (HRegionInfo region: regions) openRegion(region);
+  }
+
+  @Override
   public boolean closeRegion(HRegionInfo region)
   throws NotServingRegionException {
     LOG.info("Received close region: " + region.getRegionNameAsString());
@@ -2453,5 +2459,4 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     new HRegionServerCommandLine(regionServerClass).doMain(args);
   }
-
 }

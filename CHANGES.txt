@@ -958,6 +958,7 @@ Release 0.21.0 - Unreleased
                (dhruba borthakur via Stack)
    HBASE-2646  Compaction requests should be prioritized to prevent blocking
                (Jeff Whiting via Stack)
+   HBASE-3019  Make bulk assignment on cluster startup run faster
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

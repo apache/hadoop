@@ -35,6 +35,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestLogsCleaner {
@@ -79,7 +80,7 @@ public class TestLogsCleaner {
   public void tearDown() throws Exception {
   }
 
-  /* REENALBE -- DISABLED UNTIL REPLICATION BROUGHT UP TO NEW MASTER @Test*/
+  @Ignore @Test /* REENABLE -- DISABLED UNTIL REPLICATION BROUGHT UP TO NEW MASTER */
   public void testLogCleaning() throws Exception{
     Configuration c = TEST_UTIL.getConfiguration();
     Path oldLogDir = new Path(HBaseTestingUtility.getTestDir(),

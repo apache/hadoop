@@ -494,7 +494,7 @@ public class ServerManager {
    * Open should not fail but can if server just crashed.
    * <p>
    * @param server server to open a region
-   * @param regionName region to open
+   * @param region region to open
    */
   public void sendRegionOpen(HServerInfo server, HRegionInfo region) {
     HRegionInterface hri = getServerConnection(server);
@@ -504,6 +504,24 @@ public class ServerManager {
       return;
     }
     hri.openRegion(region);
+  }
+
+  /**
+   * Sends an OPEN RPC to the specified server to open the specified region.
+   * <p>
+   * Open should not fail but can if server just crashed.
+   * <p>
+   * @param server server to open a region
+   * @param regions regions to open
+   */
+  public void sendRegionOpen(HServerInfo server, List<HRegionInfo> regions) {
+    HRegionInterface hri = getServerConnection(server);
+    if (hri == null) {
+      LOG.warn("Attempting to send OPEN RPC to server " + server.getServerName()
+          + " failed because no RPC connection found to this server");
+      return;
+    }
+    hri.openRegions(regions);
   }
 
   /**
