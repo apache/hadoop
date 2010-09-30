@@ -554,6 +554,8 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-3047  If new master crashes, restart is messy
    HBASE-3054  Remore TestEmptyMetaInfo; it doesn't make sense any more.
+   HBASE-3056  Fix ordering in ZKWatcher constructor to prevent weird race
+               condition
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

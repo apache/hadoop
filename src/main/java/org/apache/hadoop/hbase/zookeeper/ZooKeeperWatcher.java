@@ -95,12 +95,12 @@ public class ZooKeeperWatcher implements Watcher {
       Abortable abortable)
   throws IOException {
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
-    this.zooKeeper = ZKUtil.connect(conf, quorum, this, descriptor);
     // Identifier will get the sessionid appended later below down when we
     // handle the syncconnect event.
     this.identifier = descriptor;
     this.abortable = abortable;
     setNodeNames(conf);
+    this.zooKeeper = ZKUtil.connect(conf, quorum, this, descriptor);
     try {
       // Create all the necessary "directories" of znodes
       // TODO: Move this to an init method somewhere so not everyone calls it?
