@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.util.Options;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.bloom.DynamicBloomFilter;
 import org.apache.hadoop.util.bloom.Filter;
@@ -82,78 +83,80 @@ public class BloomMapFile {
     private FileSystem fs;
     private Path dir;
     
+    @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         Class<? extends WritableComparable> keyClass,
         Class<? extends Writable> valClass, CompressionType compress,
         CompressionCodec codec, Progressable progress) throws IOException {
-      super(conf, fs, dirName, keyClass, valClass, compress, codec, progress);
-      this.fs = fs;
-      this.dir = new Path(dirName);
-      initBloomFilter(conf);
+      this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass), 
+           compressionType(compress), compressionCodec(codec), 
+           progressable(progress));
     }
 
+    @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         Class<? extends WritableComparable> keyClass,
         Class valClass, CompressionType compress,
         Progressable progress) throws IOException {
-      super(conf, fs, dirName, keyClass, valClass, compress, progress);
-      this.fs = fs;
-      this.dir = new Path(dirName);
-      initBloomFilter(conf);
+      this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass), 
+           compressionType(compress), progressable(progress));
     }
 
+    @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         Class<? extends WritableComparable> keyClass,
         Class valClass, CompressionType compress)
         throws IOException {
-      super(conf, fs, dirName, keyClass, valClass, compress);
-      this.fs = fs;
-      this.dir = new Path(dirName);
-      initBloomFilter(conf);
+      this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass), 
+           compressionType(compress));
     }
 
+    @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         WritableComparator comparator, Class valClass,
         CompressionType compress, CompressionCodec codec, Progressable progress)
         throws IOException {
-      super(conf, fs, dirName, comparator, valClass, compress, codec, progress);
-      this.fs = fs;
-      this.dir = new Path(dirName);
-      initBloomFilter(conf);
+      this(conf, new Path(dirName), comparator(comparator), 
+           valueClass(valClass), compressionType(compress), 
+           compressionCodec(codec), progressable(progress));
     }
 
+    @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         WritableComparator comparator, Class valClass,
         CompressionType compress, Progressable progress) throws IOException {
-      super(conf, fs, dirName, comparator, valClass, compress, progress);
-      this.fs = fs;
-      this.dir = new Path(dirName);
-      initBloomFilter(conf);
+      this(conf, new Path(dirName), comparator(comparator), 
+           valueClass(valClass), compressionType(compress), 
+           progressable(progress));
     }
 
+    @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         WritableComparator comparator, Class valClass, CompressionType compress)
         throws IOException {
-      super(conf, fs, dirName, comparator, valClass, compress);
-      this.fs = fs;
-      this.dir = new Path(dirName);
-      initBloomFilter(conf);
+      this(conf, new Path(dirName), comparator(comparator), 
+           valueClass(valClass), compressionType(compress));
     }
 
+    @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         WritableComparator comparator, Class valClass) throws IOException {
-      super(conf, fs, dirName, comparator, valClass);
-      this.fs = fs;
-      this.dir = new Path(dirName);
-      initBloomFilter(conf);
+      this(conf, new Path(dirName), comparator(comparator), 
+           valueClass(valClass));
     }
 
+    @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
-        Class<? extends WritableComparable> keyClass,
-        Class valClass) throws IOException {
-      super(conf, fs, dirName, keyClass, valClass);
-      this.fs = fs;
-      this.dir = new Path(dirName);
+                  Class<? extends WritableComparable> keyClass,
+                  Class valClass) throws IOException {
+      this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass));
+    }
+
+    public Writer(Configuration conf, Path dir, 
+                  SequenceFile.Writer.Option... options) throws IOException {
+      super(conf, dir, options);
+      this.fs = dir.getFileSystem(conf);
+      this.dir = dir;
       initBloomFilter(conf);
     }
 
@@ -197,27 +200,34 @@ public class BloomMapFile {
     private DataOutputBuffer buf = new DataOutputBuffer();
     private Key bloomKey = new Key();
 
+    public Reader(Path dir, Configuration conf,
+                  SequenceFile.Reader.Option... options) throws IOException {
+      super(dir, conf, options);
+      initBloomFilter(dir, conf);
+    }
+
+    @Deprecated
     public Reader(FileSystem fs, String dirName, Configuration conf)
         throws IOException {
-      super(fs, dirName, conf);
-      initBloomFilter(fs, dirName, conf);
+      this(new Path(dirName), conf);
     }
 
+    @Deprecated
     public Reader(FileSystem fs, String dirName, WritableComparator comparator,
         Configuration conf, boolean open) throws IOException {
-      super(fs, dirName, comparator, conf, open);
-      initBloomFilter(fs, dirName, conf);
+      this(new Path(dirName), conf, comparator(comparator));
     }
 
+    @Deprecated
     public Reader(FileSystem fs, String dirName, WritableComparator comparator,
         Configuration conf) throws IOException {
-      super(fs, dirName, comparator, conf);
-      initBloomFilter(fs, dirName, conf);
+      this(new Path(dirName), conf, comparator(comparator));
     }
     
-    private void initBloomFilter(FileSystem fs, String dirName,
-        Configuration conf) {
+    private void initBloomFilter(Path dirName, 
+                                 Configuration conf) {
       try {
+        FileSystem fs = dirName.getFileSystem(conf);
         DataInputStream in = fs.open(new Path(dirName, BLOOM_FILE_NAME));
         bloomFilter = new DynamicBloomFilter();
         bloomFilter.readFields(in);

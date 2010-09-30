@@ -42,7 +42,8 @@ public class ArrayFile extends MapFile {
     public Writer(Configuration conf, FileSystem fs,
                   String file, Class<? extends Writable> valClass)
       throws IOException {
-      super(conf, fs, file, LongWritable.class, valClass);
+      super(conf, new Path(file), keyClass(LongWritable.class), 
+            valueClass(valClass));
     }
 
     /** Create the named file for values of the named class. */
@@ -50,7 +51,11 @@ public class ArrayFile extends MapFile {
                   String file, Class<? extends Writable> valClass,
                   CompressionType compress, Progressable progress)
       throws IOException {
-      super(conf, fs, file, LongWritable.class, valClass, compress, progress);
+      super(conf, new Path(file), 
+            keyClass(LongWritable.class), 
+            valueClass(valClass), 
+            compressionType(compress), 
+            progressable(progress));
     }
 
     /** Append a value to the file. */
@@ -65,8 +70,9 @@ public class ArrayFile extends MapFile {
     private LongWritable key = new LongWritable();
 
     /** Construct an array reader for the named file.*/
-    public Reader(FileSystem fs, String file, Configuration conf) throws IOException {
-      super(fs, file, conf);
+    public Reader(FileSystem fs, String file, 
+                  Configuration conf) throws IOException {
+      super(new Path(file), conf);
     }
 
     /** Positions the reader before its <code>n</code>th value. */

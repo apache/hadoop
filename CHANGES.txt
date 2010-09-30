@@ -137,6 +137,8 @@ Trunk (unreleased changes)
     HADOOP-6965. Introduces checks for whether the original tgt is valid 
     in the reloginFromKeytab method.
 
+    HADOOP-6856. Simplify constructors for SequenceFile, and MapFile. (omalley)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

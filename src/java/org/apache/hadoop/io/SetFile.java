@@ -57,7 +57,10 @@ public class SetFile extends MapFile {
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   WritableComparator comparator,
                   SequenceFile.CompressionType compress) throws IOException {
-      super(conf, fs, dirName, comparator, NullWritable.class, compress);
+      super(conf, new Path(dirName), 
+            comparator(comparator), 
+            keyClass(NullWritable.class), 
+            compressionType(compress));
     }
 
     /** Append a key to a set.  The key must be strictly greater than the
@@ -78,7 +81,7 @@ public class SetFile extends MapFile {
     /** Construct a set reader for the named set using the named comparator.*/
     public Reader(FileSystem fs, String dirName, WritableComparator comparator, Configuration conf)
       throws IOException {
-      super(fs, dirName, comparator, conf);
+      super(new Path(dirName), conf, comparator(comparator));
     }
 
     // javadoc inherited

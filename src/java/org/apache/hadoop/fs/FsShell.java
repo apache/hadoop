@@ -372,7 +372,8 @@ public class FsShell extends Configured implements Tool {
     public TextRecordInputStream(FileStatus f) throws IOException {
       final Path fpath = f.getPath();
       final Configuration lconf = getConf();
-      r = new SequenceFile.Reader(fpath.getFileSystem(lconf), fpath, lconf);
+      r = new SequenceFile.Reader(lconf, 
+                                  SequenceFile.Reader.file(fpath));
       key = ReflectionUtils.newInstance(
           r.getKeyClass().asSubclass(WritableComparable.class), lconf);
       val = ReflectionUtils.newInstance(
