@@ -553,6 +553,7 @@ Release 0.21.0 - Unreleased
    HBASE-3038  WALReaderFSDataInputStream.getPos() fails if Filesize > MAX_INT
                (Nicolas Spiegelberg via Stack)
    HBASE-3047  If new master crashes, restart is messy
+   HBASE-3054  Remore TestEmptyMetaInfo; it doesn't make sense any more.
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
