@@ -54,10 +54,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
 
-public class TestReplicationSourceManager {
+public class DISABLEDTestReplicationSourceManager {
 
   private static final Log LOG =
-      LogFactory.getLog(TestReplicationSourceManager.class);
+      LogFactory.getLog(DISABLEDTestReplicationSourceManager.class);
 
   private static Configuration conf;
 
