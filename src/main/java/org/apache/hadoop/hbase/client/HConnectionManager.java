@@ -335,7 +335,8 @@ public class HConnectionManager {
           try {
             this.masterLock.wait(getPauseTime(tries));
           } catch (InterruptedException e) {
-            // continue
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Thread was interrupted while trying to connect to master.");
           }
         }
         this.masterChecked = true;
@@ -728,8 +729,9 @@ public class HConnectionManager {
         }
         try{
           Thread.sleep(getPauseTime(tries));
-        } catch (InterruptedException e){
-          // continue
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IOException("Giving up trying to location region in meta: thread is interrupted.");
         }
       }
     }
@@ -916,7 +918,7 @@ public class HConnectionManager {
      *
      * If ZK has not been initialized yet, this will connect to ZK.
      * @returns zookeeper reference
-     * @throws ZooKeeperConncetionException if there's a problem connecting to zk
+     * @throws ZooKeeperConnectionException if there's a problem connecting to zk
      */
     public synchronized ZooKeeperWatcher getZooKeeperWatcher()
         throws ZooKeeperConnectionException {
@@ -948,7 +950,8 @@ public class HConnectionManager {
         try {
           Thread.sleep(getPauseTime(tries));
         } catch (InterruptedException e) {
-          // continue
+          Thread.currentThread().interrupt();
+          throw new IOException("Giving up trying to get region server: thread is interrupted.");
         }
       }
       return null;

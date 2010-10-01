@@ -562,6 +562,8 @@ Release 0.21.0 - Unreleased
    HBASE-3068  IllegalStateException when new server comes online, is given
                200 regions to open and 200th region gets timed out of regions
                in transition
+   HBASE-3064  Long sleeping in HConnectionManager after thread is interrupted
+               (Bruno Dumon via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
