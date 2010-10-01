@@ -1043,6 +1043,7 @@ public class FSImage extends Storage {
 
     FSNamesystem fsNamesys = getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
+    fsNamesys.setBlockPoolId(this.getBlockPoolID());
 
     //
     // Load in bits

@@ -1528,6 +1528,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return new ExtendedBlock(poolId, blk);
   }
 
+  void setBlockPoolId(String bpid) {
+    poolId = bpid;
+  }
+
   /**
    * The client would like to obtain an additional block for the indicated
    * filename (which is being written-to).  Return an array that consists
@@ -5219,6 +5223,16 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return alivenode.getDfsUsed();
   }
 
+  @Override  // NameNodeMXBean
+  public String getClusterId() {
+    return dir.fsImage.getClusterID();
+  }
+  
+  @Override  // NameNodeMXBean
+  public String getBlockpoolId() {
+    return dir.fsImage.getBlockPoolID();
+  }
+  
   public String getPoolId() {
     return poolId;
   }

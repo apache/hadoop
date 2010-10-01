@@ -63,4 +63,12 @@ public interface DataNodeMXBean {
    * @return the volume info
    */
   public String getVolumeInfo();
+  
+  /**
+   * Gets the cluster id.
+   * 
+   * @return the cluster id
+   */
+  public String getClusterId();
+  
 }

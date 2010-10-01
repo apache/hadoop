@@ -46,6 +46,9 @@ Trunk (unreleased changes)
     HDFS-1400. HDFS federation: DataTransferProtocol uses ExtendedBlockPool to 
     include BlockPoolID in the protocol. (suresh)
 
+    HDFS-1428. HDFS federation : add cluster ID and block pool ID into 
+    Name node web UI(tanping via boryas)
+
   IMPROVEMENTS
 
     HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)

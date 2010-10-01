@@ -44,6 +44,9 @@ public class TestDataNodeMXBean {
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
       ObjectName mxbeanName = new ObjectName("HadoopInfo:type=DataNodeInfo");
+      // get attribute "ClusterId"
+      String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
+      Assert.assertEquals(datanode.getClusterId(), clusterId);
       // get attribute "Version"
       String version = (String)mbs.getAttribute(mxbeanName, "Version");
       Assert.assertEquals(datanode.getVersion(),version);

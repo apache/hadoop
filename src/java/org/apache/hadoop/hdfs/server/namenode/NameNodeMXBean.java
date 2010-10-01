@@ -56,6 +56,7 @@ public interface NameNodeMXBean {
    */
   public long getTotal();
   
+  
   /**
    * Gets the safemode status
    * 
@@ -135,4 +136,18 @@ public interface NameNodeMXBean {
    * @return the decommissioning node information
    */
   public String getDecomNodes();
+  
+  /**
+   * Gets the cluster id.
+   * 
+   * @return the cluster id
+   */
+  public String getClusterId();
+  
+  /**
+   * Gets the block pool id.
+   * 
+   * @return the block pool id
+   */
+  public String getBlockpoolId();
 }

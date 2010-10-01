@@ -132,7 +132,12 @@ class NamenodeJspHelper {
         + "\n  <tr><td id='col1'>Compiled:</td><td>" + VersionInfo.getDate()
         + " by " + VersionInfo.getUser() + " from " + VersionInfo.getBranch()
         + "\n  <tr><td id='col1'>Upgrades:</td><td>"
-        + getUpgradeStatusText(fsn) + "\n</table></div>";
+        + getUpgradeStatusText(fsn) 
+        + "\n  <tr><td id='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
+        + "</td></tr>\n" 
+        + "\n  <tr><td id='col1'>Block Pool ID:</td><td>" + fsn.getBlockpoolId()
+        + "</td></tr>\n" 
+        + "\n</table></div>";
   }
 
   static String getWarningText(FSNamesystem fsn) {

@@ -1976,4 +1976,10 @@ public class DataNode extends Configured
     }
     return JSON.toString(info);
   }
+  
+  @Override // DataNodeMXBean
+  public String getClusterId() {
+    return this.storage.clusterID;
+}
+
 }
