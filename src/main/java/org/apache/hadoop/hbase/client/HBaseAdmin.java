@@ -1007,6 +1007,16 @@ public class HBaseAdmin implements Abortable {
   }
 
   /**
+   * Stop the designated regionserver.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public synchronized void stopRegionServer(final HServerAddress hsa)
+  throws IOException {
+    HRegionInterface rs = this.connection.getHRegionConnection(hsa);
+    rs.stop("Called by admin client " + this.connection.toString());
+  }
+
+  /**
    * @return cluster status
    * @throws IOException if a remote or network exception occurs
    */

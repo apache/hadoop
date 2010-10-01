@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
@@ -269,6 +268,12 @@ public class HConnectionManager {
 
       this.master = null;
       this.masterChecked = false;
+    }
+
+    @Override
+    public String toString() {
+      // Return our zk identifier ... it 'hconnection + zk sessionid'.
+      return this.zooKeeper.toString();
     }
 
     private long getPauseTime(int tries) {
