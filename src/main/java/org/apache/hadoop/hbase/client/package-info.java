@@ -48,7 +48,8 @@ in different formats.
  {@link org.apache.hadoop.hbase.client.HTable#delete(Delete)} to execute.
  </p>
  <p>Puts, Gets and Deletes take out a lock on the target row for the duration of their operation.
- Scans (currently) operate without respect for row locks.
+ Concurrent modifications to a single row are serialized.  Gets and scans run concurrently without
+ interference of the row locks and are guaranteed to not to return half written rows.
  </p>
  <p>Client code accessing a cluster finds the cluster by querying ZooKeeper.
  This means that the ZooKeeper quorum to use must be on the client CLASSPATH.

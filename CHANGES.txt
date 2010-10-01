@@ -961,6 +961,7 @@ Release 0.21.0 - Unreleased
    HBASE-3019  Make bulk assignment on cluster startup run faster
    HBASE-3066  We don't put the port for hregionserver up into znode since
                new master
+   HBASE-2825  Scans respect row locks
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
