@@ -240,16 +240,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   private final long rpcTimeout;
 
-  // Address passed in to constructor. This is not always the address we run
-  // with. For example, if passed port is 0, then we are to pick a port. The
-  // actual address we run with is in the #serverInfo data member.
-  private final HServerAddress address;
-
   // The main region server thread.
   @SuppressWarnings("unused")
   private Thread regionServerThread;
-
-  private final String machineName;
 
   // Instance of the hbase executor service.
   private ExecutorService service;
@@ -265,19 +258,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @throws InterruptedException 
    */
   public HRegionServer(Configuration conf) throws IOException, InterruptedException {
-    this.machineName = DNS.getDefaultHost(conf.get(
-        "hbase.regionserver.dns.interface", "default"), conf.get(
-        "hbase.regionserver.dns.nameserver", "default"));
-    String addressStr = machineName
-        + ":"
-        + conf.get(HConstants.REGIONSERVER_PORT, Integer
-            .toString(HConstants.DEFAULT_REGIONSERVER_PORT));
-    // This is not necessarily the address we will run with. The address we
-    // use will be in #serverInfo data member. For example, we may have been
-    // passed a port of 0 which means we should pick some ephemeral port to bind
-    // to.
-    this.address = new HServerAddress(addressStr);
-
     this.fsOk = true;
     this.conf = conf;
     this.connection = HConnectionManager.getConnection(conf);
@@ -397,6 +377,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.stopped = false;
 
     // Server to handle client requests
+    String machineName = DNS.getDefaultHost(conf.get(
+        "hbase.regionserver.dns.interface", "default"), conf.get(
+        "hbase.regionserver.dns.nameserver", "default"));
+    String addressStr = machineName + ":" +
+      conf.get(HConstants.REGIONSERVER_PORT,
+        Integer.toString(HConstants.DEFAULT_REGIONSERVER_PORT));
+    HServerAddress address = new HServerAddress(addressStr);
     this.server = HBaseRPC.getServer(this,
         new Class<?>[]{HRegionInterface.class, HBaseRPCErrorHandler.class,
         OnlineRegions.class},
@@ -407,8 +394,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.server.setErrorHandler(this);
     this.server.setQosFunction(new QosFunction());
 
-    // Address is giving a default IP for the moment. Will be changed after
-    // calling the master.
+    // HServerInfo can be amended by master.  See below in reportForDuty.
     this.serverInfo = new HServerInfo(new HServerAddress(new InetSocketAddress(
         address.getBindAddress(), this.server.getListenerAddress().getPort())),
         System.currentTimeMillis(), this.conf.getInt(
@@ -1373,7 +1359,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         this.requestCount.set(0);
         lastMsg = System.currentTimeMillis();
         ZKUtil.setAddressAndWatch(zooKeeper, ZKUtil.joinZNode(
-            zooKeeper.rsZNode, ZKUtil.getNodeName(serverInfo)), address);
+            zooKeeper.rsZNode, ZKUtil.getNodeName(serverInfo)),
+            this.serverInfo.getServerAddress());
         this.serverInfo.setLoad(buildServerLoad());
         result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;
