@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.collect.Ordering;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -149,12 +150,18 @@ public class Result implements Writable {
    * @return sorted array of KeyValues
    */
   public KeyValue[] sorted() {
-    if (isEmpty()) {
+    if (isEmpty()) { // used for side effect!
       return null;
     }
-    Arrays.sort(kvs, KeyValue.COMPARATOR);
+    if (!sorted) {
+      assert Ordering.from(KeyValue.COMPARATOR).isOrdered(Arrays.asList(kvs));
+
+      Arrays.sort(kvs, KeyValue.COMPARATOR);
+      sorted = true;
+    }
     return kvs;
   }
+  private boolean sorted = false;
 
   /**
    * Map of families to all versions of its qualifiers and values.
