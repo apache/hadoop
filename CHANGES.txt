@@ -559,6 +559,9 @@ Release 0.21.0 - Unreleased
    HBASE-3057  Race condition when closing regions that causes flakiness in
                TestRestartCluster
    HBASE-3058  Fix REST tests on trunk
+   HBASE-3068  IllegalStateException when new server comes online, is given
+               200 regions to open and 200th region gets timed out of regions
+               in transition
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

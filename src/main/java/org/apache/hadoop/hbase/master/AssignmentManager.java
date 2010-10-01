@@ -34,6 +34,8 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 
 import org.apache.commons.logging.Log;
@@ -92,10 +94,10 @@ public class AssignmentManager extends ZooKeeperListener {
     new TreeMap<String, RegionState>();
 
   /** Plans for region movement. Key is the encoded version of a region name*/
-  // TODO: When do plans get cleaned out?  Ever?
-  // Its cleaned on server shutdown processing -- St.Ack
-  private final Map<String, RegionPlan> regionPlans =
-    new TreeMap<String, RegionPlan>();
+  // TODO: When do plans get cleaned out?  Ever? In server open and in server
+  // shutdown processing -- St.Ack
+  private final ConcurrentNavigableMap<String, RegionPlan> regionPlans =
+    new ConcurrentSkipListMap<String, RegionPlan>();
 
   /** Set of tables that have been disabled. */
   private final Set<String> disabledTables =
@@ -494,6 +496,40 @@ public class AssignmentManager extends ZooKeeperListener {
       this.regions.put(regionInfo, serverInfo);
       addToServers(serverInfo, regionInfo);
     }
+    // Remove plan if one.
+    this.regionPlans.remove(regionInfo.getEncodedName());
+    // Update timers for all regions in transition going against this server.
+    updateTimers(serverInfo);
+  }
+
+  /**
+   * Touch timers for all regions in transition that have the passed
+   * <code>hsi</code> in common.
+   * Call this method whenever a server checks in.  Doing so helps the case where
+   * a new regionserver has joined the cluster and its been given 1k regions to
+   * open.  If this method is tickled every time the region reports in a
+   * successful open then the 1k-th region won't be timed out just because its
+   * sitting behind the open of 999 other regions.  This method is NOT used
+   * as part of bulk assign -- there we have a different mechanism for extending
+   * the regions in transition timer (we turn it off temporarily -- because
+   * there is no regionplan involved when bulk assigning.
+   * @param hsi
+   */
+  private void updateTimers(final HServerInfo hsi) {
+    // This loop could be expensive
+    for (Map.Entry<String, RegionPlan> e: this.regionPlans.entrySet()) {
+      if (e.getValue().getDestination().equals(hsi)) {
+        RegionState rs = null;
+        synchronized (this.regionsInTransition) {
+          rs = this.regionsInTransition.get(e.getKey());
+        }
+        if (rs != null) {
+          synchronized (rs) {
+            rs.update(rs.getState());
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -510,15 +546,7 @@ public class AssignmentManager extends ZooKeeperListener {
         this.regionsInTransition.notifyAll();
       }
     }
-    synchronized(this.regions) {
-      HServerInfo serverInfo = this.regions.remove(regionInfo);
-      if (serverInfo != null) {
-        List<HRegionInfo> serverRegions = this.servers.get(serverInfo);
-        serverRegions.remove(regionInfo);
-      } else {
-        LOG.warn("Asked offline a region that was not online: " + regionInfo);
-      }
-    }
+    setOffline(regionInfo);
   }
 
   /**
@@ -529,10 +557,14 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionInfo
    */
   public void setOffline(HRegionInfo regionInfo) {
-    synchronized(regions) {
-      HServerInfo serverInfo = regions.remove(regionInfo);
-      List<HRegionInfo> serverRegions = servers.get(serverInfo);
-      serverRegions.remove(regionInfo);
+    synchronized (this.regions) {
+      HServerInfo serverInfo = this.regions.remove(regionInfo);
+      if (serverInfo != null) {
+        List<HRegionInfo> serverRegions = this.servers.get(serverInfo);
+        serverRegions.remove(regionInfo);
+      } else {
+        LOG.warn("Asked offline a region that was not online: " + regionInfo);
+      }
     }
   }
 
@@ -602,6 +634,10 @@ public class AssignmentManager extends ZooKeeperListener {
     LOG.debug("Bulk assigning done for " + destination.getServerName());
   }
 
+  /**
+   * @param region
+   * @return
+   */
   private RegionState addToRegionsInTransition(final HRegionInfo region) {
     synchronized (regionsInTransition) {
       return forceRegionStateToOffline(region);
@@ -620,6 +656,9 @@ public class AssignmentManager extends ZooKeeperListener {
     if (state == null) {
       state = new RegionState(region, RegionState.State.OFFLINE);
       this.regionsInTransition.put(encodedName, state);
+    } else {
+      LOG.debug("Forcing OFFLINE; was=" + state);
+      state.update(RegionState.State.OFFLINE);
     }
     return state;
   }
@@ -644,9 +683,7 @@ public class AssignmentManager extends ZooKeeperListener {
         plan.getDestination(), t);
       // Clean out plan we failed execute and one that doesn't look like it'll
       // succeed anyways; we need a new plan!
-      synchronized(regionPlans) {
-        this.regionPlans.remove(state.getRegion().getEncodedName());
-      }
+      this.regionPlans.remove(state.getRegion().getEncodedName());
     }
   }
 
@@ -662,9 +699,8 @@ public class AssignmentManager extends ZooKeeperListener {
       this.master.abort("Unexpected state trying to OFFLINE; " + state,
         new IllegalStateException());
       return false;
-    } else {
-      state.update(RegionState.State.OFFLINE);
     }
+    state.update(RegionState.State.OFFLINE);
     try {
       if(!ZKAssign.createOrForceNodeOffline(master.getZooKeeper(),
           state.getRegion(), master.getServerName())) {
@@ -679,23 +715,28 @@ public class AssignmentManager extends ZooKeeperListener {
     return true;
   }
 
+  /**
+   * @param state
+   * @return Plan for passed <code>state</code> (If none currently, it creates one)
+   */
   RegionPlan getRegionPlan(final RegionState state) {
     // Pickup existing plan or make a new one
     String encodedName = state.getRegion().getEncodedName();
-    RegionPlan plan;
-    synchronized (regionPlans) {
-      plan = regionPlans.get(encodedName);
-      if (plan == null) {
-        LOG.debug("No previous transition plan for " +
-          state.getRegion().getRegionNameAsString() +
-          " so generating a random one; " + serverManager.countOfRegionServers() +
-          " (online=" + serverManager.getOnlineServers().size() + ") available servers");
-        plan = new RegionPlan(state.getRegion(), null,
-          LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
-        regionPlans.put(encodedName, plan);
-      } else {
-        LOG.debug("Using preexisting plan=" + plan);
-      }
+    RegionPlan newPlan = new RegionPlan(state.getRegion(), null,
+      LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
+    RegionPlan existingPlan = regionPlans.putIfAbsent(encodedName, newPlan);
+    RegionPlan plan = null;
+    if (existingPlan == null) {
+      LOG.debug("No previous transition plan for " +
+        state.getRegion().getRegionNameAsString() +
+        " so generated a random one; " + newPlan + "; " +
+        serverManager.countOfRegionServers() +
+        " (online=" + serverManager.getOnlineServers().size() +
+        ") available servers");
+      plan = newPlan;
+    } else {
+      LOG.debug("Using preexisting plan=" + existingPlan);
+      plan = existingPlan;
     }
     return plan;
   }
@@ -1096,9 +1137,16 @@ public class AssignmentManager extends ZooKeeperListener {
                 break;
               case PENDING_OPEN:
               case OPENING:
-                LOG.info("Region has been PENDING_OPEN or OPENING for too " +
+                LOG.info("Region has been PENDING_OPEN  or OPENING for too " +
                   "long, reassigning region=" +
-                   regionInfo.getRegionNameAsString());
+                  regionInfo.getRegionNameAsString());
+                // TODO: Possible RACE in here if RS is right now sending us an
+                // OPENED to handle.  Otherwise, after our call to assign, which
+                // forces zk state to OFFLINE, any actions by RS should cause
+                // it abort its open w/ accompanying LOG.warns coming out of the
+                // handleRegion method below.
+                AssignmentManager.this.setOffline(regionState.getRegion());
+                regionState.update(RegionState.State.OFFLINE);
                 assign(regionState.getRegion());
                 break;
               case OPEN:
@@ -1125,14 +1173,12 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   public void processServerShutdown(final HServerInfo hsi) {
     // Clean out any exisiting assignment plans for this server
-    synchronized (this.regionPlans) {
-      for (Iterator <Map.Entry<String, RegionPlan>> i =
-          this.regionPlans.entrySet().iterator(); i.hasNext();) {
-        Map.Entry<String, RegionPlan> e = i.next();
-        if (e.getValue().getDestination().equals(hsi)) {
-          // Use iterator's remove else we'll get CME
-          i.remove();
-        }
+    for (Iterator <Map.Entry<String, RegionPlan>> i =
+        this.regionPlans.entrySet().iterator(); i.hasNext();) {
+      Map.Entry<String, RegionPlan> e = i.next();
+      if (e.getValue().getDestination().equals(hsi)) {
+        // Use iterator's remove else we'll get CME
+        i.remove();
       }
     }
     // Remove assignment info related to the downed server.  Remove the downed
@@ -1234,9 +1280,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param plan Plan to execute.
    */
   void balance(final RegionPlan plan) {
-    synchronized (this.regionPlans) {
-      this.regionPlans.put(plan.getRegionName(), plan);
-    }
+    this.regionPlans.put(plan.getRegionName(), plan);
     unassign(plan.getRegionInfo());
   }
 
