@@ -60,7 +60,7 @@ public class ServerShutdownHandler extends EventHandler {
     this.server = server;
     this.services = services;
     this.deadServers = deadServers;
-    if (this.deadServers.contains(hsi.getServerName())) {
+    if (!this.deadServers.contains(hsi.getServerName())) {
       LOG.warn(hsi.getServerName() + " is NOT in deadservers; it should be!");
     }
   }

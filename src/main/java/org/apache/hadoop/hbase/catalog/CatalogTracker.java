@@ -382,8 +382,7 @@ public class CatalogTracker {
         throw e;
       }
     }
-    LOG.info("Failed verification of " + Bytes.toString(regionName) +
-      ", assigning anew: " + t);
+    LOG.info("Failed verification of " + Bytes.toString(regionName) + "; " + t);
     return false;
   }
 

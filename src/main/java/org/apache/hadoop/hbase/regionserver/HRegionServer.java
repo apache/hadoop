@@ -539,7 +539,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       } // for
     } catch (Throwable t) {
       if (!checkOOME(t)) {
-        abort("Unhandled exception", t);
+        abort("Unhandled exception: " + t.getMessage(), t);
       }
     }
     this.leases.closeAfterLeasesExpire();
@@ -1247,9 +1247,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   public void abort(String reason, Throwable cause) {
     if (cause != null) {
-      LOG.fatal("Aborting region server " + this + ": " + reason, cause);
+      LOG.fatal("ABORTING region server " + this + ": " + reason, cause);
     } else {
-      LOG.fatal("Aborting region server " + this + ": " + reason);
+      LOG.fatal("ABORTING region server " + this + ": " + reason);
     }
     this.abortRequested = true;
     this.reservedSpace.clear();
@@ -1358,9 +1358,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       try {
         this.requestCount.set(0);
         lastMsg = System.currentTimeMillis();
-        ZKUtil.setAddressAndWatch(zooKeeper, ZKUtil.joinZNode(
-            zooKeeper.rsZNode, ZKUtil.getNodeName(serverInfo)),
-            this.serverInfo.getServerAddress());
+        ZKUtil.setAddressAndWatch(zooKeeper,
+          ZKUtil.joinZNode(zooKeeper.rsZNode, ZKUtil.getNodeName(serverInfo)),
+          this.serverInfo.getServerAddress());
         this.serverInfo.setLoad(buildServerLoad());
         result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;

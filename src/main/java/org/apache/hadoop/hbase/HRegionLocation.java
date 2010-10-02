@@ -45,7 +45,7 @@ public class HRegionLocation implements Comparable<HRegionLocation> {
   @Override
   public String toString() {
     return "address: " + this.serverAddress.toString() + ", regioninfo: " +
-      this.regionInfo;
+      this.regionInfo.getRegionNameAsString();
   }
 
   /**

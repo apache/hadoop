@@ -594,7 +594,7 @@ public class HConnectionManager {
         MetaScanner.metaScan(conf, visitor, tableName, row,
             this.prefetchRegionLimit);
       } catch (IOException e) {
-        LOG.warn("Encounted problems when prefetch META table: ", e);
+        LOG.warn("Encountered problems when prefetch META table: ", e);
       }
     }
 
@@ -627,9 +627,10 @@ public class HConnectionManager {
             + Bytes.toStringBinary(row) + " after " + numRetries + " tries.");
         }
 
+        HRegionLocation metaLocation = null;
         try {
           // locate the root or meta region
-          HRegionLocation metaLocation = locateRegion(parentTable, metaKey);
+          metaLocation = locateRegion(parentTable, metaKey);
           HRegionInterface server =
             getHRegionConnection(metaLocation.getServerAddress());
 
@@ -714,7 +715,10 @@ public class HConnectionManager {
           }
           if (tries < numRetries - 1) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("locateRegionInMeta attempt " + tries + " of " +
+              LOG.debug("locateRegionInMeta parentTable=" +
+                Bytes.toString(parentTable) + ", metaLocation=" +
+                ((metaLocation == null)? "null": metaLocation) + ", attempt=" +
+                tries + " of " +
                 this.numRetries + " failed; retrying after sleep of " +
                 getPauseTime(tries) + " because: " + e.getMessage());
             }
@@ -731,7 +735,8 @@ public class HConnectionManager {
           Thread.sleep(getPauseTime(tries));
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
-          throw new IOException("Giving up trying to location region in meta: thread is interrupted.");
+          throw new IOException("Giving up trying to location region in " +
+            "meta: thread is interrupted.");
         }
       }
     }
