@@ -525,6 +525,7 @@ public class HConnectionManager {
         try {
           HServerAddress hsa =
             this.rootRegionTracker.waitRootRegionLocation(this.rpcTimeout);
+          LOG.debug("Lookedup root region location " + hsa);
           if (hsa == null) return null;
           return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, hsa);
         } catch (InterruptedException e) {
