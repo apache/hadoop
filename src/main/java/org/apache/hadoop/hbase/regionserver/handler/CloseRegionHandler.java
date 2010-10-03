@@ -118,7 +118,7 @@ public class CloseRegionHandler extends EventHandler {
       region.close(abort);
       this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
     } catch (IOException e) {
-      LOG.error("IOException closing region for " + regionInfo);
+      LOG.error("Closing region " + regionInfo.getRegionNameAsString(), e);
       if (this.zk) deleteClosingState();
     }
 

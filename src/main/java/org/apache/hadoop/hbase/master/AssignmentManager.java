@@ -988,6 +988,17 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * @param hri Region to check.
+   * @return Returns null if passed region is not in transition else the current
+   * RegionState
+   */
+  public RegionState isRegionInTransition(final HRegionInfo hri) {
+    synchronized (this.regionsInTransition) {
+      return this.regionsInTransition.get(hri.getEncodedName());
+    }
+  }
+
+  /**
    * Checks if the specified table has been disabled by the user.
    * @param tableName
    * @return

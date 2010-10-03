@@ -27,7 +27,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.util.Threads;
 
 public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
@@ -40,8 +42,24 @@ public class DeleteTableHandler extends TableEventHandler {
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions)
   throws IOException {
-    for(HRegionInfo region : regions) {
-      LOG.debug("Deleting region " + region + " from META and FS");
+    AssignmentManager am = this.masterServices.getAssignmentManager();
+    long waitTime = server.getConfiguration().
+      getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
+    for (HRegionInfo region : regions) {
+      long done = System.currentTimeMillis() + waitTime;
+      while (System.currentTimeMillis() < done) {
+        AssignmentManager.RegionState rs = am.isRegionInTransition(region);
+        if (rs == null) break;
+        Threads.sleep(1000);
+        LOG.debug("Waiting on  region to clear regions in transition; " + rs);
+      }
+      if (am.isRegionInTransition(region) != null) {
+        throw new IOException("Waited hbase.master.wait.on.region (" +
+          waitTime + "ms) for region to leave region " +
+          region.getRegionNameAsString() + " in transitions");
+      }
+      LOG.debug("Deleting region " + region.getRegionNameAsString() +
+        " from META and FS");
       // Remove region from META
       MetaEditor.deleteRegion(this.server.getCatalogTracker(), region);
       // Delete region from FS
