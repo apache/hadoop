@@ -1012,6 +1012,6 @@ public class ZKUtil {
     LOG.debug(zkw.prefix("Retrieved " + ((data == null)? 0: data.length) +
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
-      (data == null? "null": StringUtils.abbreviate(Bytes.toString(data), 128))));
+      (data == null? "null": StringUtils.abbreviate(Bytes.toString(data), 64))));
   }
 }
