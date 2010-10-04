@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -457,8 +458,7 @@ public class ZKUtil {
   throws KeeperException {
     try {
       byte [] data = zkw.getZooKeeper().getData(znode, null, null);
-      LOG.debug(zkw.prefix("Retrieved " + data.length +
-        " bytes of data from znode " + znode));
+      logRetrievedMsg(zkw, znode, data, false);
       return data;
     } catch (KeeperException.NoNodeException e) {
       LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
@@ -490,8 +490,7 @@ public class ZKUtil {
   throws KeeperException {
     try {
       byte [] data = zkw.getZooKeeper().getData(znode, zkw, null);
-      LOG.debug(zkw.prefix("Retrieved " + data.length +
-        " bytes of data from znode " + znode + " and set a watcher"));
+      logRetrievedMsg(zkw, znode, data, true);
       return data;
     } catch (KeeperException.NoNodeException e) {
       LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
@@ -528,8 +527,7 @@ public class ZKUtil {
   throws KeeperException {
     try {
       byte [] data = zkw.getZooKeeper().getData(znode, zkw, stat);
-      LOG.debug(zkw.prefix("Retrieved " + data.length +
-        " bytes of data from znode " + znode));
+      logRetrievedMsg(zkw, znode, data, false);
       return data;
     } catch (KeeperException.NoNodeException e) {
       LOG.debug(zkw.prefix("Unable to get data of znode " + znode + " " +
@@ -1006,5 +1004,14 @@ public class ZKUtil {
     }
     socket.close();
     return res.toArray(new String[res.size()]);
+  }
+
+  private static void logRetrievedMsg(final ZooKeeperWatcher zkw,
+      final String znode, final byte [] data, final boolean watcherSet) {
+    if (!LOG.isDebugEnabled()) return;
+    LOG.debug(zkw.prefix("Retrieved " + ((data == null)? 0: data.length) +
+      " byte(s) of data from znode " + znode +
+      (watcherSet? " and set watcher; ": "; data=") +
+      (data == null? "null": StringUtils.abbreviate(Bytes.toString(data), 128))));
   }
 }

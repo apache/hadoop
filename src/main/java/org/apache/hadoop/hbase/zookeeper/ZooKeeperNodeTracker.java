@@ -137,18 +137,17 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
 
   @Override
   public synchronized void nodeCreated(String path) {
-    if(path.equals(node)) {
-      try {
-        byte [] data = ZKUtil.getDataAndWatch(watcher, node);
-        if(data != null) {
-          this.data = data;
-          notifyAll();
-        } else {
-          nodeDeleted(path);
-        }
-      } catch(KeeperException e) {
-        abortable.abort("Unexpected exception handling nodeCreated event", e);
+    if (!path.equals(node)) return;
+    try {
+      byte [] data = ZKUtil.getDataAndWatch(watcher, node);
+      if (data != null) {
+        this.data = data;
+        notifyAll();
+      } else {
+        nodeDeleted(path);
       }
+    } catch(KeeperException e) {
+      abortable.abort("Unexpected exception handling nodeCreated event", e);
     }
   }
 

@@ -137,12 +137,14 @@ public class TestZooKeeper {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor family = new HColumnDescriptor("fam");
     desc.addFamily(family);
+    LOG.info("Creating table " + tableName);
     admin.createTable(desc);
 
     HTable table = new HTable(conf, tableName);
     Put put = new Put(Bytes.toBytes("testrow"));
     put.add(Bytes.toBytes("fam"),
         Bytes.toBytes("col"), Bytes.toBytes("testdata"));
+    LOG.info("Putting table " + tableName);
     table.put(put);
 
   }
