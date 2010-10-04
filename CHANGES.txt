@@ -296,6 +296,8 @@ Trunk (unreleased changes)
     HDFS-96. HDFS supports blocks larger than 2 GB.
     (Patrick Kling via dhruba)
 
+    HDFS-1433. Fix test failures - TestPread and TestFileLimit. (suresh)
+
     HDFS-1364. Makes long running HFTP-based applications do relogins
     if necessary. (Jitendra Pandey via ddas)
 
@@ -1232,6 +1234,8 @@ Trunk (unreleased changes)
     HDFS-1363. Eliminate second synchronized sections in appendFile(). (shv)
 
     HDFS-1413. Fix broken links to HDFS Wiki. (shv)
+
+    HDFS-1420. Clover build doesn't generate per-test coverage (cos)
 
 Release 0.20.3 - Unreleased
 

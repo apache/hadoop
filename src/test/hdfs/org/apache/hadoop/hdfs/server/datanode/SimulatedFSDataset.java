@@ -66,7 +66,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
                                     "dfs.datanode.simulateddatastorage";
   public static final String CONFIG_PROPERTY_CAPACITY =
                             "dfs.datanode.simulateddatastorage.capacity";
-//  
+  
   public static final long DEFAULT_CAPACITY = 2L<<40; // 1 terabyte
   public static final byte DEFAULT_DATABYTE = 9; // 1 terabyte
   byte simulatedDataByte = DEFAULT_DATABYTE;
@@ -301,6 +301,9 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   
   public SimulatedFSDataset(Configuration conf) throws IOException {
     setConf(conf);
+  }
+  
+  private SimulatedFSDataset() { // real construction when setConf called.. Uggg
   }
   
   public Configuration getConf() {

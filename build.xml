@@ -1305,7 +1305,8 @@
    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
    <mkdir dir="${clover.db.dir}"/>
    <clover-setup initString="${clover.db.dir}/hadoop_coverage.db">
-     <fileset dir="src" includes="java/**/*"/>
+     <fileset dir="${src.dir}" includes="java/**/*"/>
+     <testsources dir="${test.src.dir}" />
    </clover-setup>
    <echo message="HDFS-783: test-libhdfs is disabled for Clover'ed builds" />
 </target>
