@@ -37,7 +37,7 @@ Trunk (unreleased changes)
 
     HDFS-1361. Add -fileStatus operation to NNThroughputBenchmark. (shv)
 
-    HDFS-1365.HDFS federation: propose ClusterID and BlockPoolID format 
+    HDFS-1365. HDFS federation: propose ClusterID and BlockPoolID format 
     (tanping via boryas)
 
     HDFS-1394. modify -format option for namenode to generated new blockpool id 
@@ -290,7 +290,7 @@ Trunk (unreleased changes)
     HDFS-1357. HFTP traffic served by DataNode shouldn't use service port 
     on NameNode. (Kan Zhang via jghoman)
 
-    HDFS-1419. Federation: Three test cases need minor modification after 
+    HDFS-1419. HDFS Federation: Three test cases need minor modification after 
     the new block id change (Tanping Wang via suresh)
 
     HDFS-96. HDFS supports blocks larger than 2 GB.
@@ -342,6 +342,8 @@ Trunk (unreleased changes)
     HDFS-1016. HDFS side change for HADOOP-6569. This jira changes the
     error message on the screen when cat a directory or a 
     non-existent file. (hairong)
+
+    HDFS-1439. HDFS Federation: Fix compilation error in TestFiHftp. (suresh)
 
   NEW FEATURES
 

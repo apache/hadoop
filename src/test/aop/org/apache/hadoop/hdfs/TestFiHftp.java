@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -154,14 +154,14 @@ public class TestFiHftp {
     Assert.assertEquals((filesize - 1)/blocksize + 1,
         locatedblocks.locatedBlockCount());
     final LocatedBlock lb = locatedblocks.get(1);
-    final Block blk = lb.getBlock();
+    final ExtendedBlock blk = lb.getBlock();
     Assert.assertEquals(blocksize, lb.getBlockSize());
     final DatanodeInfo[] datanodeinfos = lb.getLocations();
     Assert.assertEquals(DATANODE_NUM, datanodeinfos.length);
     final DataNode dn = cluster.getDataNode(datanodeinfos[0].getIpcPort());
     LOG.info("dn=" + dn + ", blk=" + blk + " (length=" + blk.getNumBytes() + ")");
     final FSDataset data = (FSDataset)dn.getFSDataset();
-    final File blkfile = data.getBlockFile(blk);
+    final File blkfile = data.getBlockFile(blk.getLocalBlock());
     Assert.assertTrue(blkfile.delete());
 
     //read again by hftp, should get an exception 
