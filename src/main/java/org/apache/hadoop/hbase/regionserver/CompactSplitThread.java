@@ -96,14 +96,16 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
       HRegion r = null;
       try {
         r = compactionQueue.poll(this.frequency, TimeUnit.MILLISECONDS);
-        if (r != null && !this.server.isStopped()) {
+        if (r != null) {
           lock.lock();
           try {
-            // Don't interrupt us while we are working
-            byte [] midKey = r.compactStores();
-            if (shouldSplitRegion() && midKey != null &&
-                !this.server.isStopped()) {
-              split(r, midKey);
+            if(!this.server.isStopped()) {
+              // Don't interrupt us while we are working
+              byte [] midKey = r.compactStores();
+              if (shouldSplitRegion() && midKey != null &&
+                  !this.server.isStopped()) {
+                split(r, midKey);
+              }
             }
           } finally {
             lock.unlock();
@@ -208,7 +210,11 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
    */
   void interruptIfNecessary() {
     if (lock.tryLock()) {
-      this.interrupt();
+      try {
+        this.interrupt();
+      } finally {
+        lock.unlock();
+      }
     }
   }
 

@@ -25,6 +25,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
@@ -33,11 +34,17 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 
 /**
@@ -217,17 +224,94 @@ public class TestCompaction extends HBaseTestCase {
     }
     assertTrue(containsStartRow);
     assertTrue(count == 3);
-    // Do a simple TTL test.
+    
+    // Multiple versions allowed for an entry, so the delete isn't enough
+    // Lower TTL and expire to ensure that all our entries have been wiped
     final int ttlInSeconds = 1;
     for (Store store: this.r.stores.values()) {
       store.ttl = ttlInSeconds * 1000;
     }
     Thread.sleep(ttlInSeconds * 1000);
+
     r.compactStores(true);
     count = count();
     assertTrue(count == 0);
   }
+  
 
+  /**
+   * Verify that you can stop a long-running compaction 
+   * (used during RS shutdown)
+   * @throws Exception
+   */
+  public void testInterruptCompaction() throws Exception {
+    assertEquals(0, count());
+
+    // lower the polling interval for this test
+    int origWI = Store.closeCheckInterval;
+    Store.closeCheckInterval = 10*1000; // 10 KB
+
+    try {
+      // Create a couple store files w/ 15KB (over 10KB interval)
+      int jmax = (int) Math.ceil(15.0/COMPACTION_THRESHOLD);
+      byte [] pad = new byte[1000]; // 1 KB chunk
+      for (int i = 0; i < COMPACTION_THRESHOLD; i++) {
+        HRegionIncommon loader = new HRegionIncommon(r);
+        Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
+        for (int j = 0; j < jmax; j++) {
+          p.add(COLUMN_FAMILY, Bytes.toBytes(j), pad);
+        }
+        addContent(loader, Bytes.toString(COLUMN_FAMILY));
+        loader.put(p);
+        loader.flushcache();
+      }
+      
+      HRegion spyR = spy(r);
+      doAnswer(new Answer() {
+        public Object answer(InvocationOnMock invocation) throws Throwable {
+          r.writestate.writesEnabled = false;
+          return invocation.callRealMethod();
+        }
+      }).when(spyR).doRegionCompactionPrep();
+
+      // force a minor compaction, but not before requesting a stop
+      spyR.compactStores();
+      
+      // ensure that the compaction stopped, all old files are intact, 
+      Store s = r.stores.get(COLUMN_FAMILY);
+      assertEquals(COMPACTION_THRESHOLD, s.getStorefilesCount());
+      assertTrue(s.getStorefilesSize() > 15*1000);
+      // and no new store files persisted past compactStores()
+      FileStatus[] ls = cluster.getFileSystem().listStatus(r.getTmpDir());
+      assertEquals(0, ls.length);
+
+    } finally {
+      // don't mess up future tests
+      r.writestate.writesEnabled = true;
+      Store.closeCheckInterval = origWI;
+
+      // Delete all Store information once done using
+      for (int i = 0; i < COMPACTION_THRESHOLD; i++) {
+        Delete delete = new Delete(Bytes.add(STARTROW, Bytes.toBytes(i)));
+        byte [][] famAndQf = {COLUMN_FAMILY, null};
+        delete.deleteFamily(famAndQf[0]);
+        r.delete(delete, null, true);
+      }
+      r.flushcache();
+
+      // Multiple versions allowed for an entry, so the delete isn't enough
+      // Lower TTL and expire to ensure that all our entries have been wiped
+      final int ttlInSeconds = 1;
+      for (Store store: this.r.stores.values()) {
+        store.ttl = ttlInSeconds * 1000;
+      }
+      Thread.sleep(ttlInSeconds * 1000);
+      
+      r.compactStores(true);
+      assertEquals(0, count());
+    }
+  }
+  
   private int count() throws IOException {
     int count = 0;
     for (StoreFile f: this.r.stores.

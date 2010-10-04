@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.util.AbstractList;
@@ -207,7 +208,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
-  private final WriteState writestate = new WriteState();
+  final WriteState writestate = new WriteState();
 
   final long memstoreFlushSize;
   private volatile long lastFlushTime;
@@ -429,6 +430,12 @@ public class HRegion implements HeapSize { // , Writable{
   public boolean isClosing() {
     return this.closing.get();
   }
+  
+  boolean areWritesEnabled() {
+    synchronized(this.writestate) {
+      return this.writestate.writesEnabled;
+    }
+  }
 
    public ReadWriteConsistencyControl getRWCC() {
      return rwcc;
@@ -624,7 +631,7 @@ public class HRegion implements HeapSize { // , Writable{
    * Do preparation for pending compaction.
    * @throws IOException
    */
-  private void doRegionCompactionPrep() throws IOException {
+  void doRegionCompactionPrep() throws IOException {
   }
 
   /*
@@ -717,16 +724,24 @@ public class HRegion implements HeapSize { // , Writable{
         long startTime = EnvironmentEdgeManager.currentTimeMillis();
         doRegionCompactionPrep();
         long maxSize = -1;
-        for (Store store: stores.values()) {
-          final Store.StoreSize ss = store.compact(majorCompaction);
-          if (ss != null && ss.getSize() > maxSize) {
-            maxSize = ss.getSize();
-            splitRow = ss.getSplitRow();
+        boolean completed = false;
+        try {
+          for (Store store: stores.values()) {
+            final Store.StoreSize ss = store.compact(majorCompaction);
+            if (ss != null && ss.getSize() > maxSize) {
+              maxSize = ss.getSize();
+              splitRow = ss.getSplitRow();
+            }
           }
+          completed = true;
+        } catch (InterruptedIOException iioe) {
+          LOG.info("compaction interrupted by user: ", iioe);
+        } finally {
+          long now = EnvironmentEdgeManager.currentTimeMillis();
+          LOG.info(((completed) ? "completed" : "aborted")
+              + " compaction on region " + this 
+              + " after " + StringUtils.formatTimeDiff(now, startTime));
         }
-        String timeTaken = StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(),
-            startTime);
-        LOG.info("compaction completed on region " + this + " in " + timeTaken);
       } finally {
         synchronized (writestate) {
           writestate.compacting = false;
