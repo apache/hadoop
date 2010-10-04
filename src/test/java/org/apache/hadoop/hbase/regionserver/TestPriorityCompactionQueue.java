@@ -79,7 +79,7 @@ public class TestPriorityCompactionQueue {
   protected void addRegion(PriorityCompactionQueue pq, HRegion r, Priority p) {
     pq.add(r, p);
     try {
-      // Sleep 10 millisecond so 2 things are not put in the queue within the
+      // Sleep 1 millisecond so 2 things are not put in the queue within the
       // same millisecond. The queue breaks ties arbitrarily between two
       // requests inserted at the same time. We want the ordering to
       // be consistent for our unit test.
