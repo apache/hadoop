@@ -969,7 +969,8 @@ Release 0.21.0 - Unreleased
                new master
    HBASE-2825  Scans respect row locks
    HBASE-3070  Add to hbaseadmin means of shutting down a regionserver
-   HBASE-2996  Fix and clean up Maven
+   HBASE-2996  Fix and clean up Maven (Lars Francke via Stack)
+   HBASE-2917  Reseek directly to next row (Pranav Khaitan)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
