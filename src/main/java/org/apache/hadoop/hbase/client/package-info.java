@@ -86,7 +86,7 @@ public class MyLittleHBaseClient {
     // When you create a HBaseConfiguration, it reads in whatever you've set
     // into your hbase-site.xml and in hbase-default.xml, as long as these can
     // be found on the CLASSPATH
-    HBaseConfiguration config = new HBaseConfiguration();
+    Configuration config = HBaseConfiguration.create();
 
     // This instantiates an HTable object that connects you to
     // the "myLittleHBaseTable" table.

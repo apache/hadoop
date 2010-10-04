@@ -141,7 +141,7 @@ public class IndexBuilder {
   }
 
   public static void main(String[] args) throws Exception {
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
     if(otherArgs.length < 3) {
       System.err.println("Only " + otherArgs.length + " arguments supplied, required: 3");
