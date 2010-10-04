@@ -1018,6 +1018,9 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-2838  Replication metrics
    HBASE-3000  Add "hbase classpath" command to dump classpath
+   HBASE-3043  'hbase-daemon.sh stop regionserver' should kill compactions
+               that are in progress
+               (Nicolas Spiegelberg via Stack)
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
