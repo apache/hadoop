@@ -255,6 +255,9 @@ Trunk (unreleased changes)
     HADOOP-6951.  Distinct minicluster services (e.g. NN and JT) overwrite each
     other's service policies.  (Aaron T. Myers via tomwhite)
 
+    HADOOP-6879. Provide SSH based (Jsch) remote execution API for system
+    tests (cos)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
