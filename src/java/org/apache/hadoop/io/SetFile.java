@@ -59,7 +59,7 @@ public class SetFile extends MapFile {
                   SequenceFile.CompressionType compress) throws IOException {
       super(conf, new Path(dirName), 
             comparator(comparator), 
-            keyClass(NullWritable.class), 
+            valueClass(NullWritable.class), 
             compressionType(compress));
     }
 

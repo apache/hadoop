@@ -146,8 +146,8 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
-    HADOOP-6638. try to relogin in a case of failed RPC connection (expired tgt) 
-    only in case the subject is loginUser or proxyUgi.realUser. (boryas)
+    HADOOP-6638. try to relogin in a case of failed RPC connection (expired 
+    tgt) only in case the subject is loginUser or proxyUgi.realUser. (boryas)
 
     HADOOP-6781. security audit log shouldn't have exception in it. (boryas)
 
@@ -156,8 +156,8 @@ Trunk (unreleased changes)
 
     HADOOP-6764. Remove verbose logging from the Groups class. (Boris Shkolnik)
 
-    HADOOP-6730. Bug in FileContext#copy and provide base class for FileContext 
-    tests. (Ravi Phulari via jghoman)
+    HADOOP-6730. Bug in FileContext#copy and provide base class for 
+    FileContext tests. (Ravi Phulari via jghoman)
 
     HADOOP-6669. Respect compression configuration when creating DefaultCodec
     instances. (Koji Noguchi via cdouglas)
@@ -169,7 +169,8 @@ Trunk (unreleased changes)
     glob pattern code less restrictive and more POSIX standard
     compliant. (Luke Lu via eli)
 
-    HADOOP-6649.  login object in UGI should be inside the subject (jnp via boryas)
+    HADOOP-6649.  login object in UGI should be inside the subject (jnp via 
+    boryas)
 
     HADOOP-6687.   user object in the subject in UGI should be reused in case 
     of a relogin. (jnp via boryas)
@@ -186,8 +187,8 @@ Trunk (unreleased changes)
     HADOOP-6682. NetUtils:normalizeHostName does not process hostnames starting
     with [a-f] correctly. (jghoman)
 
-    HADOOP-6652. Removes the unnecessary cache from ShellBasedUnixGroupsMapping.
-    (ddas)
+    HADOOP-6652. Removes the unnecessary cache from 
+    ShellBasedUnixGroupsMapping. (ddas)
 
     HADOOP-6815. refreshSuperUserGroupsConfiguration should use server side 
     configuration for the refresh (boryas)
@@ -216,8 +217,8 @@ Trunk (unreleased changes)
     HADOOP-6715. Fixes AccessControlList.toString() to return a descriptive
     String representation of the ACL. (Ravi Gummadi via amareshwari)
 
-    HADOOP-6885. Fix java doc warnings in Groups and RefreshUserMappingsProtocol.
-    (Eli Collins via jghoman) 
+    HADOOP-6885. Fix java doc warnings in Groups and 
+    RefreshUserMappingsProtocol. (Eli Collins via jghoman) 
 
     HADOOP-6482. GenericOptionsParser constructor that takes Options and 
     String[] ignores options. (Eli Collins via jghoman)
@@ -249,14 +250,17 @@ Trunk (unreleased changes)
     HADOOP-6930. AvroRpcEngine doesn't work with generated Avro code. 
     (sharad)
 
-    HADOOP-6940. RawLocalFileSystem's markSupported method misnamed markSupport.
-    (Tom White via eli).
+    HADOOP-6940. RawLocalFileSystem's markSupported method misnamed 
+    markSupport. (Tom White via eli).
 
     HADOOP-6951.  Distinct minicluster services (e.g. NN and JT) overwrite each
     other's service policies.  (Aaron T. Myers via tomwhite)
 
     HADOOP-6879. Provide SSH based (Jsch) remote execution API for system
     tests (cos)
+
+    HADOOP-6989. Correct the parameter for SetFile to set the value type
+    for SetFile to be NullWritable instead of the key. (jghoman via omalley)
 
 Release 0.21.0 - Unreleased
 
