@@ -260,7 +260,7 @@ Trunk (unreleased changes)
     tests (cos)
 
     HADOOP-6989. Correct the parameter for SetFile to set the value type
-    for SetFile to be NullWritable instead of the key. (jghoman via omalley)
+    for SetFile to be NullWritable instead of the key. (cdouglas via omalley)
 
 Release 0.21.0 - Unreleased
 
