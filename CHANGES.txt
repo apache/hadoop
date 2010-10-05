@@ -172,6 +172,9 @@ Trunk (unreleased changes)
 
     HDFS-1368. Add a block counter to DatanodeDescriptor. (hairong)
 
+    HDFS-1434. Refactor Datanode#startDataNode method into smaller methods.
+    (suresh)
+
   BUG FIXES
 
     HDFS-1039. Adding test for  JspHelper.getUGI(jnp via boryas)
