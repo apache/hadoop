@@ -304,8 +304,12 @@ Trunk (unreleased changes)
     HDFS-1364. Makes long running HFTP-based applications do relogins
     if necessary. (Jitendra Pandey via ddas)
 
-    HDFS-1399.  Distinct minicluster services (e.g. NN and JT) overwrite each
+    HDFS-1399. Distinct minicluster services (e.g. NN and JT) overwrite each
     other's service policies.  (Aaron T. Myers via tomwhite)
+
+    HDFS-1440. Fix TestComputeInvalidateWork failure. (suresh)
+
+Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
 

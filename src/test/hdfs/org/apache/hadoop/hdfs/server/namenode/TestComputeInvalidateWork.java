@@ -44,29 +44,32 @@ public class TestComputeInvalidateWork extends TestCase {
         namesystem.heartbeats.toArray(new DatanodeDescriptor[NUM_OF_DATANODES]);
       assertEquals(nodes.length, NUM_OF_DATANODES);
       
-      synchronized (namesystem) {
-      for (int i=0; i<nodes.length; i++) {
-        for(int j=0; j<3*namesystem.blockInvalidateLimit+1; j++) {
-          Block block = new Block(i*(namesystem.blockInvalidateLimit+1)+j, 0, 
-              GenerationStamp.FIRST_VALID_STAMP);
-          namesystem.blockManager.addToInvalidates(block, nodes[i]);
+      namesystem.writeLock();
+      try {
+        for (int i=0; i<nodes.length; i++) {
+          for(int j=0; j<3*namesystem.blockInvalidateLimit+1; j++) {
+            Block block = new Block(i*(namesystem.blockInvalidateLimit+1)+j, 0, 
+                GenerationStamp.FIRST_VALID_STAMP);
+            namesystem.blockManager.addToInvalidates(block, nodes[i]);
+          }
         }
-      }
-      
-      assertEquals(namesystem.blockInvalidateLimit*NUM_OF_DATANODES, 
-          namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES+1));
-      assertEquals(namesystem.blockInvalidateLimit*NUM_OF_DATANODES, 
-          namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES));
-      assertEquals(namesystem.blockInvalidateLimit*(NUM_OF_DATANODES-1), 
-          namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES-1));
-      int workCount = namesystem.blockManager.computeInvalidateWork(1);
-      if (workCount == 1) {
-        assertEquals(namesystem.blockInvalidateLimit+1, 
-            namesystem.blockManager.computeInvalidateWork(2));
-      } else {
-        assertEquals(workCount, namesystem.blockInvalidateLimit);
-        assertEquals(2, namesystem.blockManager.computeInvalidateWork(2));
-      }
+        
+        assertEquals(namesystem.blockInvalidateLimit*NUM_OF_DATANODES, 
+            namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES+1));
+        assertEquals(namesystem.blockInvalidateLimit*NUM_OF_DATANODES, 
+            namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES));
+        assertEquals(namesystem.blockInvalidateLimit*(NUM_OF_DATANODES-1), 
+            namesystem.blockManager.computeInvalidateWork(NUM_OF_DATANODES-1));
+        int workCount = namesystem.blockManager.computeInvalidateWork(1);
+        if (workCount == 1) {
+          assertEquals(namesystem.blockInvalidateLimit+1, 
+              namesystem.blockManager.computeInvalidateWork(2));
+        } else {
+          assertEquals(workCount, namesystem.blockInvalidateLimit);
+          assertEquals(2, namesystem.blockManager.computeInvalidateWork(2));
+        }
+      } finally {
+        namesystem.writeUnlock();
       }
     } finally {
       cluster.shutdown();
