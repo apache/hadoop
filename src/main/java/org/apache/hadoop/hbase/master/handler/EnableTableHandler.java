@@ -75,5 +75,9 @@ public class EnableTableHandler extends EventHandler {
     for (HRegionInfo region : regions) {
       assignmentManager.assign(region);
     }
+    // Wait on table's regions to clear region in transition.
+    for (HRegionInfo region: regions) {
+      this.assignmentManager.waitOnRegionToClearRegionsInTransition(region);
+    }
   }
 }

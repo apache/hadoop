@@ -76,8 +76,12 @@ public class DisableTableHandler extends EventHandler {
     // TODO: Confirm we have parallel closing going on.
     List<HRegionInfo> regions = assignmentManager.getRegionsOfTable(tableName);
     // Unassign the online regions
-    for(HRegionInfo region : regions) {
+    for(HRegionInfo region: regions) {
       assignmentManager.unassign(region);
+    }
+    // Wait on table's regions to clear region in transition.
+    for (HRegionInfo region: regions) {
+      this.assignmentManager.waitOnRegionToClearRegionsInTransition(region);
     }
   }
 }
