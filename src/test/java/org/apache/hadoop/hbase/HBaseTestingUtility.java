@@ -70,6 +70,7 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
+import org.eclipse.jdt.core.dom.ThisExpression;
 
 import com.google.common.base.Preconditions;
 
@@ -674,9 +675,11 @@ public class HBaseTestingUtility {
     // flush cache of regions
     HConnection conn = table.getConnection();
     conn.clearRegionCache();
-    // assign all the new regions
-    for(HRegionInfo hri : newRegions) {
-      hbaseCluster.getMaster().assignRegion(hri);
+    // assign all the new regions IF table is enabled.
+    if (getHBaseAdmin().isTableEnabled(table.getTableName())) {
+      for(HRegionInfo hri : newRegions) {
+        hbaseCluster.getMaster().assignRegion(hri);
+      }
     }
     return count;
   }
