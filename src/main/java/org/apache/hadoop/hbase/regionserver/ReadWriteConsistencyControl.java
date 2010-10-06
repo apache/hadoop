@@ -114,9 +114,8 @@ public class ReadWriteConsistencyControl {
       }
 
       if (nextReadValue > 0) {
-        memstoreRead = nextReadValue;
-
         synchronized (readWaiters) {
+          memstoreRead = nextReadValue;
           readWaiters.notifyAll();
         }
 
@@ -124,8 +123,8 @@ public class ReadWriteConsistencyControl {
     }
 
     boolean interrupted = false;
-    while (memstoreRead < e.getWriteNumber()) {
-      synchronized (readWaiters) {
+    synchronized (readWaiters) {
+      while (memstoreRead < e.getWriteNumber()) {
         try {
           readWaiters.wait(0);
         } catch (InterruptedException ie) {

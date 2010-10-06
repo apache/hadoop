@@ -565,6 +565,8 @@ Release 0.21.0 - Unreleased
    HBASE-3064  Long sleeping in HConnectionManager after thread is interrupted
                (Bruno Dumon via Stack)
    HBASE-2753  Remove sorted() methods from Result now that Gets are Scans
+   HBASE-3059  TestReadWriteConsistencyControl occasionally hangs (Hairong 
+   	       via Ryan)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
