@@ -41,6 +41,8 @@ import java.util.TreeMap;
 /**
  * Single row result of a {@link Get} or {@link Scan} query.<p>
  *
+ * This class is NOT THREAD SAFE.<p>
+ *
  * Convenience methods are available that return various {@link Map}
  * structures and values directly.<p>
  *
@@ -109,7 +111,7 @@ public class Result implements Writable {
    * Method for retrieving the row that this result is for
    * @return row
    */
-  public synchronized byte [] getRow() {
+  public byte [] getRow() {
     if (this.row == null) {
       if(this.kvs == null) {
         readFields();
@@ -120,8 +122,24 @@ public class Result implements Writable {
   }
 
   /**
-   * Return the unsorted array of KeyValues backing this Result instance.
-   * @return unsorted array of KeyValues
+   * Return the array of KeyValues backing this Result instance.
+   *
+   * The array is sorted from smallest -> largest using the
+   * {@link KeyValue#COMPARATOR}.
+   *
+   * The array only contains what your Get or Scan specifies and no more.
+   * For example if you request column "A" 1 version you will have at most 1
+   * KeyValue in the array. If you request column "A" with 2 version you will
+   * have at most 2 KeyValues, with the first one being the newer timestamp and
+   * the second being the older timestamp (this is the sort order defined by
+   * {@link KeyValue#COMPARATOR}).  If columns don't exist, they won't be
+   * present in the result. Therefore if you ask for 1 version all columns,
+   * it is safe to iterate over this array and expect to see 1 KeyValue for
+   * each column and no more.
+   *
+   * This API is faster than using getFamilyMap() and getMap()
+   *
+   * @return array of KeyValues
    */
   public KeyValue[] raw() {
     if(this.kvs == null) {
@@ -132,6 +150,8 @@ public class Result implements Writable {
 
   /**
    * Create a sorted list of the KeyValue's in this result.
+   *
+   * Since HBase 0.20.5 this is equivalent to raw().
    *
    * @return The sorted list of KeyValue's.
    */
@@ -145,23 +165,134 @@ public class Result implements Writable {
   /**
    * Returns a sorted array of KeyValues in this Result.
    * <p>
-   * Note: Sorting is done in place, so the backing array will be sorted
-   * after calling this method.
+   * Since HBase 0.20.5 this is equivalent to {@link #raw}. Use
+   * {@link #raw} instead.
+   *
    * @return sorted array of KeyValues
+   * @deprecated
    */
   public KeyValue[] sorted() {
-    if (isEmpty()) { // used for side effect!
-      return null;
-    }
+    raw(); // side effect of loading this.kvs
     if (!sorted) {
       assert Ordering.from(KeyValue.COMPARATOR).isOrdered(Arrays.asList(kvs));
 
       Arrays.sort(kvs, KeyValue.COMPARATOR);
       sorted = true;
     }
-    return kvs;
+
+    return raw();
   }
   private boolean sorted = false;
+
+  /**
+   * Return the KeyValues for the specific column.  The KeyValues are sorted in
+   * the {@link KeyValue#COMPARATOR} order.  That implies the first entry in
+   * the list is the most recent column.  If the query (Scan or Get) only
+   * requested 1 version the list will contain at most 1 entry.  If the column
+   * did not exist in the result set (either the column does not exist
+   * or the column was not selected in the query) the list will be empty.
+   *
+   * Also see getColumnLatest which returns just a KeyValue
+   *
+   * @param family the family
+   * @param qualifier
+   * @return a list of KeyValues for this column or empty list if the column
+   * did not exist in the result set
+   */
+  public List<KeyValue> getColumn(byte [] family, byte [] qualifier) {
+    List<KeyValue> result = new ArrayList<KeyValue>();
+
+    KeyValue [] kvs = raw();
+
+    if (kvs == null || kvs.length == 0) {
+      return result;
+    }
+    int pos = binarySearch(kvs, family, qualifier);
+    if (pos == -1) {
+      return result; // cant find it
+    }
+
+    for (int i = pos ; i < kvs.length ; i++ ) {
+      KeyValue kv = kvs[i];
+      if (kv.matchingColumn(family,qualifier)) {
+        result.add(kv);
+      } else {
+        break;
+      }
+    }
+
+    return result;
+  }
+
+  protected int binarySearch(final KeyValue [] kvs,
+                             final byte [] family,
+                             final byte [] qualifier) {
+    KeyValue searchTerm =
+        KeyValue.createFirstOnRow(kvs[0].getRow(),
+            family, qualifier);
+
+    // pos === ( -(insertion point) - 1)
+    int pos = Arrays.binarySearch(kvs, searchTerm, KeyValue.COMPARATOR);
+    if (pos == kvs.length) {
+      return -1; // null/empty result.
+    }
+    // never will exact match
+    if (pos < 0) {
+      pos = (pos+1) * -1;
+      // pos is now insertion point
+    }
+    return pos;
+  }
+
+  /**
+   * The KeyValue for the most recent for a given column. If the column does
+   * not exist in the result set - if it wasn't selected in the query (Get/Scan)
+   * or just does not exist in the row the return value is null.
+   *
+   * @param family
+   * @param qualifier
+   * @return KeyValue for the column or null
+   */
+  public KeyValue getColumnLatest(byte [] family, byte [] qualifier) {
+    KeyValue [] kvs = raw(); // side effect possibly.
+    if (kvs == null || kvs.length == 0) {
+      return null;
+    }
+    int pos = binarySearch(kvs, family, qualifier);
+    if (pos == -1) {
+      return null;
+    }
+    KeyValue kv = kvs[pos];
+    if (kv.matchingColumn(family, qualifier)) {
+      return kv;
+    }
+    return null;
+  }
+
+  /**
+   * Get the latest version of the specified column.
+   * @param family family name
+   * @param qualifier column qualifier
+   * @return value of latest version of column, null if none found
+   */
+  public byte[] getValue(byte [] family, byte [] qualifier) {
+    KeyValue kv = getColumnLatest(family, qualifier);
+    if (kv == null) {
+      return null;
+    }
+    return kv.getValue();
+  }
+
+  /**
+   * Checks for existence of the specified column.
+   * @param family family name
+   * @param qualifier column qualifier
+   * @return true if at least one value exists in the result, false if not
+   */
+  public boolean containsColumn(byte [] family, byte [] qualifier) {
+    KeyValue kv = getColumnLatest(family, qualifier);
+    return kv != null;
+  }
 
   /**
    * Map of families to all versions of its qualifiers and values.
@@ -271,17 +402,6 @@ public class Result implements Writable {
     return returnMap;
   }
 
-  /**
-   * Get the latest version of the specified column.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @return value of latest version of column, null if none found
-   */
-  public byte [] getValue(byte [] family, byte [] qualifier) {
-    Map.Entry<Long,byte[]> entry = getKeyValue(family, qualifier);
-    return entry == null? null: entry.getValue();
-  }
-
   private Map.Entry<Long,byte[]> getKeyValue(byte[] family, byte[] qualifier) {
     if(this.familyMap == null) {
       getMap();
@@ -306,28 +426,6 @@ public class Result implements Writable {
       NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap, byte [] qualifier) {
     return qualifier != null?
       qualifierMap.get(qualifier): qualifierMap.get(new byte[0]);
-  }
-
-  /**
-   * Checks for existence of the specified column.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @return true if at least one value exists in the result, false if not
-   */
-  public boolean containsColumn(byte [] family, byte [] qualifier) {
-    if(this.familyMap == null) {
-      getMap();
-    }
-    if(isEmpty()) {
-      return false;
-    }
-    NavigableMap<byte [], NavigableMap<Long, byte[]>> qualifierMap =
-      familyMap.get(family);
-    if(qualifierMap == null) {
-      return false;
-    }
-    NavigableMap<Long, byte[]> versionMap = getVersionMap(qualifierMap, qualifier);
-    return versionMap != null;
   }
 
   /**

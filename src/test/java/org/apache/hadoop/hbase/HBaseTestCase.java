@@ -194,7 +194,7 @@ public abstract class HBaseTestCase extends TestCase {
     HTableDescriptor htd = new HTableDescriptor(name);
     htd.addFamily(new HColumnDescriptor(fam1, versions,
       HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-      Integer.MAX_VALUE, HConstants.FOREVER, 
+      Integer.MAX_VALUE, HConstants.FOREVER,
       HColumnDescriptor.DEFAULT_BLOOMFILTER,
       HConstants.REPLICATION_SCOPE_LOCAL));
     htd.addFamily(new HColumnDescriptor(fam2, versions,
@@ -669,8 +669,8 @@ public abstract class HBaseTestCase extends TestCase {
     }
   }
 
-  public void assertByteEquals(byte[] expected,
-                               byte[] actual) {
+  public static void assertByteEquals(byte[] expected,
+                                      byte[] actual) {
     if (Bytes.compareTo(expected, actual) != 0) {
       throw new AssertionFailedError("expected:<" +
       Bytes.toString(expected) + "> but was:<" +
