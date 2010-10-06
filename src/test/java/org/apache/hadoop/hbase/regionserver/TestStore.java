@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
+import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
@@ -69,6 +70,7 @@ public class TestStore extends TestCase {
   byte [] family = Bytes.toBytes("family");
 
   byte [] row = Bytes.toBytes("row");
+  byte [] row2 = Bytes.toBytes("row2");
   byte [] qf1 = Bytes.toBytes("qf1");
   byte [] qf2 = Bytes.toBytes("qf2");
   byte [] qf3 = Bytes.toBytes("qf3");
@@ -330,6 +332,62 @@ public class TestStore extends TestCase {
 
     assertEquals(newValue, Bytes.toLong(results.get(0).getValue()));
     assertEquals(oldValue, Bytes.toLong(results.get(1).getValue()));
+  }
+
+  public void testICV_negMemstoreSize()  throws IOException {
+      init(this.getName());
+
+    long time = 100;
+    ManualEnvironmentEdge ee = new ManualEnvironmentEdge();
+    ee.setValue(time);
+    EnvironmentEdgeManagerTestHelper.injectEdge(ee);
+    long newValue = 3L;
+    long size = 0;
+
+
+    size += this.store.add(new KeyValue(Bytes.toBytes("200909091000"), family, qf1,
+        System.currentTimeMillis(),
+        Bytes.toBytes(newValue)));
+    size += this.store.add(new KeyValue(Bytes.toBytes("200909091200"), family, qf1,
+        System.currentTimeMillis(),
+        Bytes.toBytes(newValue)));
+    size += this.store.add(new KeyValue(Bytes.toBytes("200909091300"), family, qf1,
+        System.currentTimeMillis(),
+        Bytes.toBytes(newValue)));
+    size += this.store.add(new KeyValue(Bytes.toBytes("200909091400"), family, qf1,
+        System.currentTimeMillis(),
+        Bytes.toBytes(newValue)));
+    size += this.store.add(new KeyValue(Bytes.toBytes("200909091500"), family, qf1,
+        System.currentTimeMillis(),
+        Bytes.toBytes(newValue)));
+
+
+    for ( int i = 0 ; i < 10000 ; ++i) {
+      newValue++;
+
+      long ret = this.store.updateColumnValue(row, family, qf1, newValue);
+      long ret2 = this.store.updateColumnValue(row2, family, qf1, newValue);
+
+      if (ret != 0) System.out.println("ret: " + ret);
+      if (ret2 != 0) System.out.println("ret2: " + ret2);
+
+      assertTrue("ret: " + ret, ret >= 0);
+      size += ret;
+      assertTrue("ret2: " + ret2, ret2 >= 0);
+      size += ret2;
+
+
+      if (i % 1000 == 0)
+        ee.setValue(++time);
+    }
+
+    long computedSize=0;
+    for (KeyValue kv : this.store.memstore.kvset) {
+      long kvsize = this.store.memstore.heapSizeChange(kv, true);
+      //System.out.println(kv + " size= " + kvsize + " kvsize= " + kv.heapSize());
+      computedSize += kvsize;
+    }
+    assertEquals(computedSize, size);
   }
 
   public void testIncrementColumnValue_SnapshotFlushCombo() throws Exception {

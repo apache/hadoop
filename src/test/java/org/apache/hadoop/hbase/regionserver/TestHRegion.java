@@ -1958,6 +1958,22 @@ public class TestHRegion extends HBaseTestCase {
     assertICV(row, fam1, qual1, value+amount);
   }
 
+  public void testIncrementColumnValue_heapSize() throws IOException {
+    EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
+
+    initHRegion(tableName, getName(), fam1);
+
+    long byAmount = 1L;
+    long size;
+
+    for( int i = 0; i < 1000 ; i++) {
+      region.incrementColumnValue(row, fam1, qual1, byAmount, true);
+
+      size = region.memstoreSize.get();
+      assertTrue("memstore size: " + size, size >= 0);
+    }
+  }
+
   public void testIncrementColumnValue_UpdatingInPlace_Negative()
     throws IOException {
     initHRegion(tableName, getName(), fam1);
