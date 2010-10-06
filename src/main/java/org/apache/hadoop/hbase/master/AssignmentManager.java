@@ -587,6 +587,12 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param regionName server to be assigned
    */
   public void assign(HRegionInfo region) {
+    String tableName = region.getTableDesc().getNameAsString();
+    if (isTableDisabled(tableName)) {
+      LOG.info("Table " + tableName + " disabled; skipping assign of " +
+        region.getRegionNameAsString());
+      return;
+    }
     RegionState state = addToRegionsInTransition(region);
     synchronized (state) {
       assign(state);

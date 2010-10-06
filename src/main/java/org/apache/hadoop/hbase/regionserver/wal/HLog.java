@@ -1513,6 +1513,8 @@ public class HLog implements Syncable {
     Configuration conf = HBaseConfiguration.create();
     for (int i = 1; i < args.length; i++) {
       try {
+        conf.set("fs.default.name", args[i]);
+        conf.set("fs.defaultFS", args[i]);
         Path logPath = new Path(args[i]);
         if (dump) {
           dump(conf, logPath);

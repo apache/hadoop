@@ -296,10 +296,11 @@ public class HLogSplitter {
         "hbase.regionserver.hlog.splitlog.writer.threads", 3);
     boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
     HashMap<byte[], Future> writeFutureResult = new HashMap<byte[], Future>();
-		ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
-		builder.setNameFormat("SplitWriter-%1$d");
+    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
+    builder.setNameFormat("SplitWriter-%1$d");
     ThreadFactory factory = builder.build();
-    ThreadPoolExecutor threadPool = (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, factory);
+    ThreadPoolExecutor threadPool =
+      (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, factory);
     for (final byte[] region : splitLogsMap.keySet()) {
       Callable splitter = createNewSplitter(rootDir, logWriters, splitLogsMap,
           region, fs, conf);
