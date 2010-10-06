@@ -67,9 +67,22 @@ public class MiniHBaseCluster {
    */
   public MiniHBaseCluster(Configuration conf, int numRegionServers)
   throws IOException {
+    this(conf, 1, numRegionServers);
+  }
+
+  /**
+   * Start a MiniHBaseCluster.
+   * @param conf Configuration to be used for cluster
+   * @param numMasters initial number of masters to start.
+   * @param numRegionServers initial number of region servers to start.
+   * @throws IOException
+   */
+  public MiniHBaseCluster(Configuration conf, int numMasters,
+      int numRegionServers)
+  throws IOException {
     this.conf = conf;
     conf.set(HConstants.MASTER_PORT, "0");
-    init(numRegionServers);
+    init(numMasters, numRegionServers);
   }
 
   /**
@@ -203,6 +216,7 @@ public class MiniHBaseCluster {
       }
     }
 
+    @Override
     public void kill() {
       super.kill();
     }
@@ -231,10 +245,11 @@ public class MiniHBaseCluster {
     }
   }
 
-  private void init(final int nRegionNodes) throws IOException {
+  private void init(final int nMasterNodes, final int nRegionNodes)
+  throws IOException {
     try {
       // start up a LocalHBaseCluster
-      hbaseCluster = new LocalHBaseCluster(conf, nRegionNodes,
+      hbaseCluster = new LocalHBaseCluster(conf, nMasterNodes, nRegionNodes,
           MiniHBaseCluster.MiniHBaseClusterMaster.class,
           MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
       hbaseCluster.startup();
@@ -255,21 +270,6 @@ public class MiniHBaseCluster {
     t.start();
     t.waitForServerOnline();
     return t;
-  }
-
-  /**
-   * @return Returns the rpc address actually used by the master server, because
-   * the supplied port is not necessarily the actual port used.
-   */
-  public HServerAddress getHMasterAddress() {
-    return this.hbaseCluster.getMaster().getMasterAddress();
-  }
-
-  /**
-   * @return the HMaster
-   */
-  public HMaster getMaster() {
-    return this.hbaseCluster.getMaster();
   }
 
   /**
@@ -320,6 +320,130 @@ public class MiniHBaseCluster {
    */
   public String waitOnRegionServer(final int serverNumber) {
     return this.hbaseCluster.waitOnRegionServer(serverNumber);
+  }
+
+
+  /**
+   * Starts a master thread running
+   *
+   * @throws IOException
+   * @return New RegionServerThread
+   */
+  public JVMClusterUtil.MasterThread startMaster() throws IOException {
+    JVMClusterUtil.MasterThread t = this.hbaseCluster.addMaster();
+    t.start();
+    t.waitForServerOnline();
+    return t;
+  }
+
+  /**
+   * @return Returns the rpc address actually used by the currently active
+   * master server, because the supplied port is not necessarily the actual port
+   * used.
+   */
+  public HServerAddress getHMasterAddress() {
+    return this.hbaseCluster.getActiveMaster().getMasterAddress();
+  }
+
+  /**
+   * Returns the current active master, if available.
+   * @return the active HMaster, null if none is active.
+   */
+  public HMaster getMaster() {
+    return this.hbaseCluster.getActiveMaster();
+  }
+
+  /**
+   * Returns the master at the specified index, if available.
+   * @return the active HMaster, null if none is active.
+   */
+  public HMaster getMaster(final int serverNumber) {
+    return this.hbaseCluster.getMaster(serverNumber);
+  }
+
+  /**
+   * Cause a master to exit without shutting down entire cluster.
+   * @param serverNumber  Used as index into a list.
+   */
+  public String abortMaster(int serverNumber) {
+    HMaster server = getMaster(serverNumber);
+    LOG.info("Aborting " + server.toString());
+    server.abort("Aborting for tests", new Exception("Trace info"));
+    return server.toString();
+  }
+
+  /**
+   * Shut down the specified master cleanly
+   *
+   * @param serverNumber  Used as index into a list.
+   * @return the region server that was stopped
+   */
+  public JVMClusterUtil.MasterThread stopMaster(int serverNumber) {
+    return stopMaster(serverNumber, true);
+  }
+
+  /**
+   * Shut down the specified master cleanly
+   *
+   * @param serverNumber  Used as index into a list.
+   * @param shutdownFS True is we are to shutdown the filesystem as part of this
+   * master's shutdown.  Usually we do but you do not want to do this if
+   * you are running multiple master in a test and you shut down one
+   * before end of the test.
+   * @return the master that was stopped
+   */
+  public JVMClusterUtil.MasterThread stopMaster(int serverNumber,
+      final boolean shutdownFS) {
+    JVMClusterUtil.MasterThread server =
+      hbaseCluster.getMasters().get(serverNumber);
+    LOG.info("Stopping " + server.toString());
+    server.getMaster().stop("Stopping master " + serverNumber);
+    return server;
+  }
+
+  /**
+   * Wait for the specified master to stop. Removes this thread from list
+   * of running threads.
+   * @param serverNumber
+   * @return Name of master that just went down.
+   */
+  public String waitOnMaster(final int serverNumber) {
+    return this.hbaseCluster.waitOnMaster(serverNumber);
+  }
+
+  /**
+   * Blocks until there is an active master and that master has completed
+   * initialization.
+   *
+   * @return true if an active master becomes available.  false if there are no
+   *         masters left.
+   * @throws InterruptedException
+   */
+  public boolean waitForActiveAndReadyMaster() throws InterruptedException {
+    List<JVMClusterUtil.MasterThread> mts;
+    while ((mts = getMasterThreads()).size() > 0) {
+      for (JVMClusterUtil.MasterThread mt : mts) {
+        if (mt.getMaster().isActiveMaster() && mt.getMaster().isInitialized()) {
+          return true;
+        }
+      }
+      Thread.sleep(200);
+    }
+    return false;
+  }
+
+  /**
+   * @return List of master threads.
+   */
+  public List<JVMClusterUtil.MasterThread> getMasterThreads() {
+    return this.hbaseCluster.getMasters();
+  }
+
+  /**
+   * @return List of live master threads (skips the aborted and the killed)
+   */
+  public List<JVMClusterUtil.MasterThread> getLiveMasterThreads() {
+    return this.hbaseCluster.getLiveMasters();
   }
 
   /**

@@ -255,7 +255,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    *
    * @param conf
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public HRegionServer(Configuration conf) throws IOException, InterruptedException {
     this.fsOk = true;
@@ -282,7 +282,36 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
         HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
 
-    initialize();
+    this.abortRequested = false;
+    this.stopped = false;
+
+    // Server to handle client requests
+    String machineName = DNS.getDefaultHost(conf.get(
+        "hbase.regionserver.dns.interface", "default"), conf.get(
+        "hbase.regionserver.dns.nameserver", "default"));
+    String addressStr = machineName + ":" +
+      conf.get(HConstants.REGIONSERVER_PORT,
+        Integer.toString(HConstants.DEFAULT_REGIONSERVER_PORT));
+    HServerAddress address = new HServerAddress(addressStr);
+    this.server = HBaseRPC.getServer(this,
+        new Class<?>[]{HRegionInterface.class, HBaseRPCErrorHandler.class,
+        OnlineRegions.class},
+        address.getBindAddress(),
+      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+        conf.getInt("hbase.regionserver.metahandler.count", 10),
+        false, conf, QOS_THRESHOLD);
+    this.server.setErrorHandler(this);
+    this.server.setQosFunction(new QosFunction());
+
+    // HServerInfo can be amended by master.  See below in reportForDuty.
+    this.serverInfo = new HServerInfo(new HServerAddress(new InetSocketAddress(
+        address.getBindAddress(), this.server.getListenerAddress().getPort())),
+        System.currentTimeMillis(), this.conf.getInt(
+            "hbase.regionserver.info.port", 60030), machineName);
+    if (this.serverInfo.getServerAddress() == null) {
+      throw new NullPointerException("Server address cannot be null; "
+          + "hbase-958 debugging");
+    }
   }
 
   private static final int NORMAL_QOS = 0;
@@ -370,39 +399,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * call it.
    *
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   private void initialize() throws IOException, InterruptedException {
-    this.abortRequested = false;
-    this.stopped = false;
-
-    // Server to handle client requests
-    String machineName = DNS.getDefaultHost(conf.get(
-        "hbase.regionserver.dns.interface", "default"), conf.get(
-        "hbase.regionserver.dns.nameserver", "default"));
-    String addressStr = machineName + ":" +
-      conf.get(HConstants.REGIONSERVER_PORT,
-        Integer.toString(HConstants.DEFAULT_REGIONSERVER_PORT));
-    HServerAddress address = new HServerAddress(addressStr);
-    this.server = HBaseRPC.getServer(this,
-        new Class<?>[]{HRegionInterface.class, HBaseRPCErrorHandler.class,
-        OnlineRegions.class},
-        address.getBindAddress(),
-      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
-        conf.getInt("hbase.regionserver.metahandler.count", 10),
-        false, conf, QOS_THRESHOLD);
-    this.server.setErrorHandler(this);
-    this.server.setQosFunction(new QosFunction());
-
-    // HServerInfo can be amended by master.  See below in reportForDuty.
-    this.serverInfo = new HServerInfo(new HServerAddress(new InetSocketAddress(
-        address.getBindAddress(), this.server.getListenerAddress().getPort())),
-        System.currentTimeMillis(), this.conf.getInt(
-            "hbase.regionserver.info.port", 60030), machineName);
-    if (this.serverInfo.getServerAddress() == null) {
-      throw new NullPointerException("Server address cannot be null; "
-          + "hbase-958 debugging");
-    }
     initializeZooKeeper();
     initializeThreads();
     int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
@@ -421,7 +420,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private void initializeZooKeeper() throws IOException, InterruptedException {
     // Open connection to zookeeper and set primary watcher
-    zooKeeper = new ZooKeeperWatcher(conf, REGIONSERVER +
+    zooKeeper = new ZooKeeperWatcher(conf, REGIONSERVER + ":" +
       serverInfo.getServerAddress().getPort(), this);
 
     // Create the master address manager, register with zk, and start it.  Then
@@ -437,7 +436,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.clusterStatusTracker.start();
     this.clusterStatusTracker.blockUntilAvailable();
 
-    // Create the catalog tracker and start it; 
+    // Create the catalog tracker and start it;
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
@@ -477,6 +476,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * load/unload instructions.
    */
   public void run() {
+
+    try {
+      // Initialize threads and wait for a master
+      initialize();
+    } catch (Exception e) {
+      abort("Fatal exception during initialization", e);
+    }
+
     this.regionServerThread = Thread.currentThread();
     boolean calledCloseUserRegions = false;
     try {
@@ -622,9 +629,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.serverInfo.setLoad(buildServerLoad());
     this.requestCount.set(0);
     addOutboundMsgs(outboundMessages);
-    HMsg [] msgs = this.hbaseMaster.regionServerReport(this.serverInfo,
-      outboundMessages.toArray(HMsg.EMPTY_HMSG_ARRAY),
-      getMostLoadedRegions());
+    HMsg [] msgs = null;
+    while (!this.stopped) {
+      try {
+        msgs = this.hbaseMaster.regionServerReport(this.serverInfo,
+          outboundMessages.toArray(HMsg.EMPTY_HMSG_ARRAY),
+          getMostLoadedRegions());
+        break;
+      } catch (IOException ioe) {
+        // Couldn't connect to the master, get location from zk and reconnect
+        // Method blocks until new master is found or we are stopped
+        getMaster();
+      }
+    }
     updateOutboundMsgs(outboundMessages);
     outboundMessages.clear();
 
@@ -754,7 +771,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // hack! Maps DFSClient => RegionServer for logs.  HDFS made this
       // config param for task trackers, but we can piggyback off of it.
       if (this.conf.get("mapred.task.id") == null) {
-        this.conf.set("mapred.task.id", 
+        this.conf.set("mapred.task.id",
             "hb_rs_" + this.serverInfo.getServerName() + "_" +
             System.currentTimeMillis());
       }
@@ -1297,18 +1314,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * Method will block until a master is available. You can break from this
    * block by requesting the server stop.
    *
-   * @return
+   * @return master address, or null if server has been stopped
    */
-  private boolean getMaster() {
+  private HServerAddress getMaster() {
     HServerAddress masterAddress = null;
     while ((masterAddress = masterAddressManager.getMasterAddress()) == null) {
       if (stopped) {
-        return false;
+        return null;
       }
       LOG.debug("No master found, will retry");
       sleeper.sleep();
     }
-    LOG.info("Telling master at " + masterAddress + " that we are up");
     HMasterRegionInterface master = null;
     while (!stopped && master == null) {
       try {
@@ -1323,8 +1339,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         sleeper.sleep();
       }
     }
+    LOG.info("Connected to master at " + masterAddress);
     this.hbaseMaster = master;
-    return true;
+    return masterAddress;
   }
 
   /**
@@ -1347,7 +1364,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * us by the master.
    */
   private MapWritable reportForDuty() {
-    while (!stopped && !getMaster()) {
+    HServerAddress masterAddress = null;
+    while (!stopped && (masterAddress = getMaster()) == null) {
       sleeper.sleep();
       LOG.warn("Unable to get master for initialization");
     }
@@ -1362,6 +1380,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           ZKUtil.joinZNode(zooKeeper.rsZNode, ZKUtil.getNodeName(serverInfo)),
           this.serverInfo.getServerAddress());
         this.serverInfo.setLoad(buildServerLoad());
+        LOG.info("Telling master at " + masterAddress + " that we are up");
         result = this.hbaseMaster.regionServerStartup(this.serverInfo);
         break;
       } catch (IOException e) {
@@ -2373,7 +2392,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public CompactionRequestor getCompactionRequester() {
     return this.compactSplitThread;
   }
-  
+
   //
   // Main program and support routines
   //

@@ -70,8 +70,6 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
-import org.eclipse.jdt.core.dom.ThisExpression;
-
 import com.google.common.base.Preconditions;
 
 /**
@@ -268,7 +266,7 @@ public class HBaseTestingUtility {
    * @see {@link #shutdownMiniDFSCluster()}
    */
   public MiniHBaseCluster startMiniCluster() throws Exception {
-    return startMiniCluster(1);
+    return startMiniCluster(1, 1);
   }
 
   /**
@@ -276,17 +274,40 @@ public class HBaseTestingUtility {
    * Modifies Configuration.  Homes the cluster data directory under a random
    * subdirectory in a directory under System property test.build.data.
    * Directory is cleaned up on exit.
-   * @param servers Number of servers to start up.  We'll start this many
-   * datanodes and regionservers.  If servers is > 1, then make sure
+   * @param numSlaves Number of slaves to start up.  We'll start this many
+   * datanodes and regionservers.  If numSlaves is > 1, then make sure
    * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
    * bind errors.
    * @throws Exception
    * @see {@link #shutdownMiniCluster()}
    * @return Mini hbase cluster instance created.
    */
-  public MiniHBaseCluster startMiniCluster(final int servers)
+  public MiniHBaseCluster startMiniCluster(final int numSlaves)
   throws Exception {
-    LOG.info("Starting up minicluster");
+    return startMiniCluster(1, numSlaves);
+  }
+
+  /**
+   * Start up a minicluster of hbase, optionally dfs, and zookeeper.
+   * Modifies Configuration.  Homes the cluster data directory under a random
+   * subdirectory in a directory under System property test.build.data.
+   * Directory is cleaned up on exit.
+   * @param numMasters Number of masters to start up.  We'll start this many
+   * hbase masters.  If numMasters > 1, you can find the active/primary master
+   * with {@link MiniHBaseCluster#getMaster()}.
+   * @param numSlaves Number of slaves to start up.  We'll start this many
+   * datanodes and regionservers.  If numSlaves is > 1, then make sure
+   * hbase.regionserver.info.port is -1 (i.e. no ui per regionserver) otherwise
+   * bind errors.
+   * @throws Exception
+   * @see {@link #shutdownMiniCluster()}
+   * @return Mini hbase cluster instance created.
+   */
+  public MiniHBaseCluster startMiniCluster(final int numMasters,
+      final int numSlaves)
+  throws Exception {
+    LOG.info("Starting up minicluster with " + numMasters + " master(s) and " +
+        numSlaves + " regionserver(s) and datanode(s)");
     // If we already put up a cluster, fail.
     String testBuildPath = conf.get(TEST_DIRECTORY_KEY, null);
     isRunningCluster(testBuildPath);
@@ -300,7 +321,7 @@ public class HBaseTestingUtility {
     System.setProperty(TEST_DIRECTORY_KEY, this.clusterTestBuildDir.getPath());
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
-    startMiniDFSCluster(servers, this.clusterTestBuildDir);
+    startMiniDFSCluster(numSlaves, this.clusterTestBuildDir);
 
     // Mangle conf so fs parameter points to minidfs we just started up
     FileSystem fs = this.dfsCluster.getFileSystem();
@@ -319,7 +340,7 @@ public class HBaseTestingUtility {
     this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
-    this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
+    this.hbaseCluster = new MiniHBaseCluster(this.conf, numMasters, numSlaves);
     // Don't leave here till we've done a successful scan of the .META.
     HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
@@ -853,7 +874,7 @@ public class HBaseTestingUtility {
    * Returns a HBaseAdmin instance.
    *
    * @return The HBaseAdmin instance.
-   * @throws IOException 
+   * @throws IOException
    */
   public HBaseAdmin getHBaseAdmin()
   throws IOException {
@@ -943,7 +964,7 @@ public class HBaseTestingUtility {
   /**
    * @param dir Directory to delete
    * @return True if we deleted it.
-   * @throws IOException 
+   * @throws IOException
    */
   public boolean deleteDir(final Path dir) throws IOException {
     FileSystem fs = getTestFileSystem();

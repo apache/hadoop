@@ -239,9 +239,9 @@ public class ZooKeeperWatcher implements Watcher {
     switch(event.getState()) {
       case SyncConnected:
         // Update our identifier.  Otherwise ignore.
+        LOG.info(this.identifier + " connected");
         this.identifier = this.identifier + "-0x" +
           Long.toHexString(this.zooKeeper.getSessionId());
-        LOG.info(this.identifier + " connected");
         break;
 
       // Abort the server if Disconnected or Expired

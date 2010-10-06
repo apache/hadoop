@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -80,7 +79,6 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
@@ -131,17 +129,17 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // Address of the HMaster
   private final HServerAddress address;
   // file system manager for the master FS operations
-  private final MasterFileSystem fileSystemManager;
+  private MasterFileSystem fileSystemManager;
 
-  private final HConnection connection;
+  private HConnection connection;
 
   // server manager to deal with region server info
-  private final ServerManager serverManager;
+  private ServerManager serverManager;
 
   // manager of assignment nodes in zookeeper
-  final AssignmentManager assignmentManager;
+  AssignmentManager assignmentManager;
   // manager of catalog regions
-  private final CatalogTracker catalogTracker;
+  private CatalogTracker catalogTracker;
   // Cluster status zk tracker and local setter
   private ClusterStatusTracker clusterStatusTracker;
 
@@ -150,6 +148,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private volatile boolean stopped = false;
   // Set on abort -- usually failure of our zk session.
   private volatile boolean abort = false;
+  // flag set after we become the active master (used for testing)
+  protected volatile boolean isActiveMaster = false;
+  // flag set after we complete initialization once active (used for testing)
+  protected volatile boolean isInitialized = false;
 
   // Instance of the hbase executor service.
   ExecutorService executorService;
@@ -163,21 +165,22 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   /**
    * Initializes the HMaster. The steps are as follows:
-   *
+   * <p>
    * <ol>
    * <li>Initialize HMaster RPC and address
-   * <li>Connect to ZooKeeper.  Get count of regionservers still up.
-   * <li>Block until becoming active master
-   * <li>Initialize master components - server manager, region manager,
-   *     region server queue, file system manager, etc
+   * <li>Connect to ZooKeeper.
    * </ol>
+   * <p>
+   * Remaining steps of initialization occur in {@link #run()} so that they
+   * run in their own thread rather than within the context of the constructor.
    * @throws InterruptedException
    */
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
     this.conf = conf;
+
     /*
-     * 1. Determine address and initialize RPC server (but do not start).
+     * Determine address and initialize RPC server (but do not start).
      * The RPC server ports can be ephemeral. Create a ZKW instance.
      */
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
@@ -201,32 +204,136 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         "_" + System.currentTimeMillis());
     }
 
-    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER, this);
+    this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" +
+        address.getPort(), this);
+  }
+
+  /**
+   * Stall startup if we are designated a backup master; i.e. we want someone
+   * else to become the master before proceeding.
+   * @param c
+   * @param amm
+   * @throws InterruptedException
+   */
+  private static void stallIfBackupMaster(final Configuration c,
+      final ActiveMasterManager amm)
+  throws InterruptedException {
+    // If we're a backup master, stall until a primary to writes his address
+    if (!c.getBoolean(HConstants.MASTER_TYPE_BACKUP,
+      HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
+      return;
+    }
+    // This will only be a minute or so while the cluster starts up,
+    // so don't worry about setting watches on the parent znode
+    while (!amm.isActiveMaster()) {
+      LOG.debug("Waiting for master address ZNode to be written " +
+        "(Also watching cluster state node)");
+      Thread.sleep(c.getInt("zookeeper.session.timeout", 60 * 1000));
+    }
+  }
+
+  /**
+   * Main processing loop for the HMaster.
+   * <ol>
+   * <li>Block until becoming active master
+   * <li>Finish initialization via {@link #finishInitialization()}
+   * <li>Enter loop until we are stopped
+   * <li>Stop services and perform cleanup once stopped
+   * </ol>
+   */
+  @Override
+  public void run() {
+    try {
+      /*
+       * Block on becoming the active master.
+       *
+       * We race with other masters to write our address into ZooKeeper.  If we
+       * succeed, we are the primary/active master and finish initialization.
+       *
+       * If we do not succeed, there is another active master and we should
+       * now wait until it dies to try and become the next active master.  If we
+       * do not succeed on our first attempt, this is no longer a cluster startup.
+       */
+      this.activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
+      this.zooKeeper.registerListener(activeMasterManager);
+      stallIfBackupMaster(this.conf, this.activeMasterManager);
+      activeMasterManager.blockUntilBecomingActiveMaster();
+
+      // We are either the active master or we were asked to shutdown
+
+      if (!this.stopped) {
+        // We are active master.  Finish init and loop until we are closed.
+        finishInitialization();
+        loop();
+        // Once we break out of here, we are being shutdown
+
+        // Stop balancer and meta catalog janitor
+        if (this.balancerChore != null) {
+          this.balancerChore.interrupt();
+        }
+        if (this.catalogJanitorChore != null) {
+          this.catalogJanitorChore.interrupt();
+        }
+
+        // Wait for all the remaining region servers to report in IFF we were
+        // running a cluster shutdown AND we were NOT aborting.
+        if (!this.abort && this.serverManager.isClusterShutdown()) {
+          this.serverManager.letRegionServersShutdown();
+        }
+        stopServiceThreads();
+      }
+
+      // Handle either a backup or active master being stopped
+
+      // Stop services started for both backup and active masters
+      this.activeMasterManager.stop();
+      HConnectionManager.deleteConnection(this.conf, true);
+      this.zooKeeper.close();
+      LOG.info("HMaster main thread exiting");
+
+    } catch (Throwable t) {
+      abort("Unhandled exception. Starting shutdown.", t);
+    }
+  }
+
+  private void loop() {
+    // Check if we should stop every second.
+    Sleeper sleeper = new Sleeper(1000, this);
+    while (!this.stopped) {
+      sleeper.sleep();
+    }
+  }
+
+  /**
+   * Finish initialization of HMaster after becoming the primary master.
+   *
+   * <ol>
+   * <li>Initialize master components - file system manager, server manager,
+   *     assignment manager, region server tracker, catalog tracker, etc</li>
+   * <li>Start necessary service threads - rpc server, info server,
+   *     executor services, etc</li>
+   * <li>Set cluster as UP in ZooKeeper</li>
+   * <li>Wait for RegionServers to check-in</li>
+   * <li>Split logs and perform data recovery, if necessary</li>
+   * <li>Ensure assignment of root and meta regions<li>
+   * <li>Handle either fresh cluster start or master failover</li>
+   * </ol>
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws KeeperException
+   */
+  private void finishInitialization()
+  throws IOException, InterruptedException, KeeperException {
+
+    isActiveMaster = true;
 
     /*
-     * 2. Count of regoinservers that are up.
-     */
-    int count = ZKUtil.getNumberOfChildren(zooKeeper, zooKeeper.rsZNode);
-
-    /*
-     * 3. Block on becoming the active master.
-     * We race with other masters to write our address into ZooKeeper.  If we
-     * succeed, we are the primary/active master and finish initialization.
-     *
-     * If we do not succeed, there is another active master and we should
-     * now wait until it dies to try and become the next active master.  If we
-     * do not succeed on our first attempt, this is no longer a cluster startup.
-     */
-    this.activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
-    this.zooKeeper.registerListener(activeMasterManager);
-    stallIfBackupMaster(this.conf, this.activeMasterManager);
-    activeMasterManager.blockUntilBecomingActiveMaster();
-
-    /*
-     * 4. We are active master now... go initialize components we need to run.
+     * We are active master now... go initialize components we need to run.
      * Note, there may be dross in zk from previous runs; it'll get addressed
-     * when we enter {@link #run()} below.
+     * below after we determine if cluster startup or failover.
      */
+
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this);
     this.connection = HConnectionManager.getConnection(conf);
@@ -249,107 +356,49 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // Set the cluster as up.  If new RSs, they'll be waiting on this before
     // going ahead with their startup.
     this.clusterStatusTracker = new ClusterStatusTracker(getZooKeeper(), this);
+    this.clusterStatusTracker.start();
     boolean wasUp = this.clusterStatusTracker.isClusterUp();
     if (!wasUp) this.clusterStatusTracker.setClusterUp();
-    this.clusterStatusTracker.start();
 
     LOG.info("Server active/primary master; " + this.address +
       ", sessionid=0x" +
       Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()) +
-      ", ephemeral nodes still up in zk=" + count +
       ", cluster-up flag was=" + wasUp);
-  }
 
-  /*
-   * Stall startup if we are designated a backup master; i.e. we want someone
-   * else to become the master before proceeding.
-   * @param c
-   * @param amm
-   * @throws InterruptedException
-   */
-  private static void stallIfBackupMaster(final Configuration c,
-      final ActiveMasterManager amm)
-  throws InterruptedException {
-    // If we're a backup master, stall until a primary to writes his address
-    if (!c.getBoolean(HConstants.MASTER_TYPE_BACKUP,
-      HConstants.DEFAULT_MASTER_TYPE_BACKUP)) return;
-    // This will only be a minute or so while the cluster starts up,
-    // so don't worry about setting watches on the parent znode
-    while (!amm.isActiveMaster()) {
-      LOG.debug("Waiting for master address ZNode to be written " +
-        "(Also watching cluster state node)");
-      Thread.sleep(c.getInt("zookeeper.session.timeout", 60 * 1000));
+    // start up all service threads.
+    startServiceThreads();
+
+    // Wait for region servers to report in.  Returns count of regions.
+    int regionCount = this.serverManager.waitForRegionServers();
+
+    // TODO: Should do this in background rather than block master startup
+    this.fileSystemManager.
+      splitLogAfterStartup(this.serverManager.getOnlineServers());
+
+    // Make sure root and meta assigned before proceeding.
+    assignRootAndMeta();
+
+    // Is this fresh start with no regions assigned or are we a master joining
+    // an already-running cluster?  If regionsCount == 0, then for sure a
+    // fresh start.  TOOD: Be fancier.  If regionsCount == 2, perhaps the
+    // 2 are .META. and -ROOT- and we should fall into the fresh startup
+    // branch below.  For now, do processFailover.
+    if (regionCount == 0) {
+      LOG.info("Master startup proceeding: cluster startup");
+      this.assignmentManager.cleanoutUnassigned();
+      this.assignmentManager.assignAllUserRegions();
+    } else {
+      LOG.info("Master startup proceeding: master failover");
+      this.assignmentManager.processFailover();
     }
-  }
 
-  /**
-   * Main processing loop for the HMaster.
-   * <ol>
-   * <li>Handle both fresh cluster start as well as failed over initialization of
-   *    the HMaster</li>
-   * <li>Start the necessary services</li>
-   * <li>Reassign the root region</li>
-   * <li>The master is no longer closed - set "closed" to false</li>
-   * </ol>
-   */
-  @Override
-  public void run() {
-    try {
-      // start up all service threads.
-      startServiceThreads();
+    // Start balancer and meta catalog janitor after meta and regions have
+    // been assigned.
+    this.balancerChore = getAndStartBalancerChore(this);
+    this.catalogJanitorChore =
+      Threads.setDaemonThreadRunning(new CatalogJanitor(this, this));
 
-      // Wait for region servers to report in.  Returns count of regions.
-      int regionCount = this.serverManager.waitForRegionServers();
-
-      // TODO: Should do this in background rather than block master startup
-      // TODO: Do we want to do this before/while/after RSs check in?
-      // It seems that this method looks at active RSs but happens concurrently
-      // with when we expect them to be checking in
-      this.fileSystemManager.
-        splitLogAfterStartup(this.serverManager.getOnlineServers());
-
-      // Make sure root and meta assigned before proceeding.
-      assignRootAndMeta();
-
-      // Is this fresh start with no regions assigned or are we a master joining
-      // an already-running cluster?  If regionsCount == 0, then for sure a
-      // fresh start.  TOOD: Be fancier.  If regionsCount == 2, perhaps the
-      // 2 are .META. and -ROOT- and we should fall into the fresh startup
-      // branch below.  For now, do processFailover.
-      if (regionCount == 0) {
-        this.assignmentManager.cleanoutUnassigned();
-        this.assignmentManager.assignAllUserRegions();
-      } else {
-        this.assignmentManager.processFailover();
-      }
-
-      // Start balancer and meta catalog janitor after meta and regions have
-      // been assigned.
-      this.balancerChore = getAndStartBalancerChore(this);
-      this.catalogJanitorChore =
-        Threads.setDaemonThreadRunning(new CatalogJanitor(this, this));
-
-      // Check if we should stop every second.
-      Sleeper sleeper = new Sleeper(1000, this);
-      while (!this.stopped) sleeper.sleep();
-    } catch (Throwable t) {
-      abort("Unhandled exception. Starting shutdown.", t);
-    }
-    // Stop balancer and meta catalog janitor
-    if (this.balancerChore != null) this.balancerChore.interrupt();
-    if (this.catalogJanitorChore != null) this.catalogJanitorChore.interrupt();
-
-    // Wait for all the remaining region servers to report in IFF we were
-    // running a cluster shutdown AND we were NOT aborting.
-    if (!this.abort && this.serverManager.isClusterShutdown()) {
-      this.serverManager.letRegionServersShutdown();
-    }
-    stopServiceThreads();
-    // Stop services started up in the constructor.
-    this.activeMasterManager.stop();
-    HConnectionManager.deleteConnection(this.conf, true);
-    this.zooKeeper.close();
-    LOG.info("HMaster main thread exiting");
+    isInitialized = true;
   }
 
   /**
@@ -374,7 +423,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       assigned++;
     }
     LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit);
- 
+
     // Work on meta region
     rit = this.assignmentManager.
       processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
@@ -482,11 +531,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       }
     } catch (IOException e) {
       if (e instanceof RemoteException) {
-        try {
-          e = RemoteExceptionHandler.decodeRemoteException((RemoteException) e);
-        } catch (IOException ex) {
-          LOG.warn("thread start", ex);
-        }
+        e = ((RemoteException)e).unwrapRemoteException();
       }
       // Something happened during startup. Shut things down.
       abort("Failed startup", e);
@@ -631,8 +676,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   throws UnknownRegionException {
     Pair<HRegionInfo, HServerInfo> p =
       this.assignmentManager.getAssignment(encodedRegionName);
-    if (p == null) throw new UnknownRegionException(Bytes.toString(encodedRegionName));
-    HServerInfo dest = this.serverManager.getServerInfo(new String(destServerName));
+    if (p == null)
+      throw new UnknownRegionException(Bytes.toString(encodedRegionName));
+    HServerInfo dest =
+      this.serverManager.getServerInfo(new String(destServerName));
     RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
     this.assignmentManager.balance(rp);
   }
@@ -865,11 +912,40 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   public void stop(final String why) {
     LOG.info(why);
     this.stopped = true;
+    // If we are a backup master, we need to interrupt wait
+    synchronized (this.activeMasterManager.clusterHasActiveMaster) {
+      this.activeMasterManager.clusterHasActiveMaster.notifyAll();
+    }
   }
 
   @Override
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  /**
+   * Report whether this master is currently the active master or not.
+   * If not active master, we are parked on ZK waiting to become active.
+   *
+   * This method is used for testing.
+   *
+   * @return true if active master, false if not.
+   */
+  public boolean isActiveMaster() {
+    return isActiveMaster;
+  }
+
+  /**
+   * Report whether this master has completed with its initialization and is
+   * ready.  If ready, the master is also the active master.  A standby master
+   * is never ready.
+   *
+   * This method is used for testing.
+   *
+   * @return true if master is ready to go, false if not.
+   */
+  public boolean isInitialized() {
+    return isInitialized;
   }
 
   public void assignRegion(HRegionInfo hri) {

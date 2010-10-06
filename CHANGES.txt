@@ -1028,6 +1028,8 @@ Release 0.21.0 - Unreleased
                that are in progress
                (Nicolas Spiegelberg via Stack)
    HBASE-3073  New APIs for Result, faster implementation for some calls
+   HBASE-3053  Add ability to have multiple Masters LocalHBaseCluster for
+               test writing
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite
