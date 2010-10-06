@@ -60,7 +60,7 @@ public class SetFile extends MapFile {
       super(conf, new Path(dirName), 
             comparator(comparator), 
             valueClass(NullWritable.class), 
-            compressionType(compress));
+            compression(compress));
     }
 
     /** Append a key to a set.  The key must be strictly greater than the

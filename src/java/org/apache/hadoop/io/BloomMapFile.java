@@ -89,8 +89,7 @@ public class BloomMapFile {
         Class<? extends Writable> valClass, CompressionType compress,
         CompressionCodec codec, Progressable progress) throws IOException {
       this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass), 
-           compressionType(compress), compressionCodec(codec), 
-           progressable(progress));
+           compression(compress, codec), progressable(progress));
     }
 
     @Deprecated
@@ -99,7 +98,7 @@ public class BloomMapFile {
         Class valClass, CompressionType compress,
         Progressable progress) throws IOException {
       this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass), 
-           compressionType(compress), progressable(progress));
+           compression(compress), progressable(progress));
     }
 
     @Deprecated
@@ -108,7 +107,7 @@ public class BloomMapFile {
         Class valClass, CompressionType compress)
         throws IOException {
       this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass), 
-           compressionType(compress));
+           compression(compress));
     }
 
     @Deprecated
@@ -117,8 +116,8 @@ public class BloomMapFile {
         CompressionType compress, CompressionCodec codec, Progressable progress)
         throws IOException {
       this(conf, new Path(dirName), comparator(comparator), 
-           valueClass(valClass), compressionType(compress), 
-           compressionCodec(codec), progressable(progress));
+           valueClass(valClass), compression(compress, codec), 
+           progressable(progress));
     }
 
     @Deprecated
@@ -126,7 +125,7 @@ public class BloomMapFile {
         WritableComparator comparator, Class valClass,
         CompressionType compress, Progressable progress) throws IOException {
       this(conf, new Path(dirName), comparator(comparator), 
-           valueClass(valClass), compressionType(compress), 
+           valueClass(valClass), compression(compress),
            progressable(progress));
     }
 
@@ -135,7 +134,7 @@ public class BloomMapFile {
         WritableComparator comparator, Class valClass, CompressionType compress)
         throws IOException {
       this(conf, new Path(dirName), comparator(comparator), 
-           valueClass(valClass), compressionType(compress));
+           valueClass(valClass), compression(compress));
     }
 
     @Deprecated

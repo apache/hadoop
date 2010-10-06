@@ -253,6 +253,9 @@ Trunk (unreleased changes)
     HADOOP-6989. Correct the parameter for SetFile to set the value type
     for SetFile to be NullWritable instead of the key. (cdouglas via omalley)
 
+    HADOOP-6984. Combine the compress kind and the codec in the same option
+    for SequenceFiles. (cdouglas via omalley)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

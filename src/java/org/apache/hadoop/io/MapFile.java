@@ -113,7 +113,7 @@ public class MapFile {
                   CompressionType compress, 
                   Progressable progress) throws IOException {
       this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass),
-           compressionType(compress), progressable(progress));
+           compression(compress), progressable(progress));
     }
 
     /** Create the named map for keys of the named class. 
@@ -125,8 +125,7 @@ public class MapFile {
                   CompressionType compress, CompressionCodec codec,
                   Progressable progress) throws IOException {
       this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass),
-           compressionType(compress), compressionCodec(codec), 
-           progressable(progress));
+           compression(compress, codec), progressable(progress));
     }
 
     /** Create the named map for keys of the named class. 
@@ -137,7 +136,7 @@ public class MapFile {
                   Class<? extends WritableComparable> keyClass, Class valClass,
                   CompressionType compress) throws IOException {
       this(conf, new Path(dirName), keyClass(keyClass),
-           valueClass(valClass), compressionType(compress));
+           valueClass(valClass), compression(compress));
     }
 
     /** Create the named map using the named key comparator. 
@@ -159,7 +158,7 @@ public class MapFile {
                   WritableComparator comparator, Class valClass,
                   SequenceFile.CompressionType compress) throws IOException {
       this(conf, new Path(dirName), comparator(comparator),
-           valueClass(valClass), compressionType(compress));
+           valueClass(valClass), compression(compress));
     }
 
     /** Create the named map using the named key comparator. 
@@ -171,7 +170,7 @@ public class MapFile {
                   SequenceFile.CompressionType compress,
                   Progressable progress) throws IOException {
       this(conf, new Path(dirName), comparator(comparator),
-           valueClass(valClass), compressionType(compress),
+           valueClass(valClass), compression(compress),
            progressable(progress));
     }
 
@@ -184,8 +183,8 @@ public class MapFile {
                   SequenceFile.CompressionType compress, CompressionCodec codec,
                   Progressable progress) throws IOException {
       this(conf, new Path(dirName), comparator(comparator),
-           valueClass(valClass), compressionType(compress),
-           compressionCodec(codec), progressable(progress));
+           valueClass(valClass), compression(compress, codec),
+           progressable(progress));
     }
     
     // our options are a superset of sequence file writer options
@@ -221,13 +220,14 @@ public class MapFile {
     }
     
     public static 
-    SequenceFile.Writer.Option compressionType(CompressionType value) {
-      return SequenceFile.Writer.compressionType(value);
+    SequenceFile.Writer.Option compression(CompressionType type) {
+      return SequenceFile.Writer.compression(type);
     }
 
     public static 
-    SequenceFile.Writer.Option compressionCodec(CompressionCodec value) {
-      return SequenceFile.Writer.compressionCodec(value);
+    SequenceFile.Writer.Option compression(CompressionType type,
+        CompressionCodec codec) {
+      return SequenceFile.Writer.compression(type, codec);
     }
 
     public static SequenceFile.Writer.Option progressable(Progressable value) {
@@ -274,11 +274,10 @@ public class MapFile {
       this.data = SequenceFile.createWriter(conf, dataOptions);
 
       SequenceFile.Writer.Option[] indexOptions =
-        Options.prependOptions(opts, 
-                               SequenceFile.Writer.file(indexFile),
-                               SequenceFile.Writer.keyClass(keyClass),
-                               SequenceFile.Writer.valueClass(LongWritable.class),
-                               SequenceFile.Writer.compressionType(CompressionType.BLOCK));
+        Options.prependOptions(opts, SequenceFile.Writer.file(indexFile),
+            SequenceFile.Writer.keyClass(keyClass),
+            SequenceFile.Writer.valueClass(LongWritable.class),
+            SequenceFile.Writer.compression(CompressionType.BLOCK));
       this.index = SequenceFile.createWriter(conf, indexOptions);      
     }
 

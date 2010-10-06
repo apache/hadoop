@@ -54,7 +54,7 @@ public class ArrayFile extends MapFile {
       super(conf, new Path(file), 
             keyClass(LongWritable.class), 
             valueClass(valClass), 
-            compressionType(compress), 
+            compression(compress), 
             progressable(progress));
     }
 
