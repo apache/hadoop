@@ -832,7 +832,8 @@ public class HBaseTestingUtility {
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
     zk.close();
     final long sleep = sessionTimeout * 5L;
-    LOG.info("ZK Closed; sleeping=" + sleep);
+    LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID) +
+      "; sleeping=" + sleep);
 
     Thread.sleep(sleep);
 

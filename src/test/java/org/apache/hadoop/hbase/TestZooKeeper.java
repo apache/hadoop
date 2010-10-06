@@ -131,7 +131,6 @@ public class TestZooKeeper {
    * @throws Exception
    */
   public void testSanity() throws Exception{
-
     HBaseAdmin admin = new HBaseAdmin(conf);
     String tableName = "test"+System.currentTimeMillis();
     HTableDescriptor desc = new HTableDescriptor(tableName);
