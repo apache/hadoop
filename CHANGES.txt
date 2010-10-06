@@ -976,6 +976,8 @@ Release 0.21.0 - Unreleased
    HBASE-3070  Add to hbaseadmin means of shutting down a regionserver
    HBASE-2996  Fix and clean up Maven (Lars Francke via Stack)
    HBASE-2917  Reseek directly to next row (Pranav Khaitan)
+   HBASE-2907  [rest/stargate] Improve error response when trying to create a
+               scanner on a nonexistant table
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestScannerResource extends HBaseRESTClusterTestBase {
   static final String TABLE = "TestScannerResource";
+  static final String NONEXISTENT_TABLE = "ThisTableDoesNotExist";
   static final String CFA = "a";
   static final String CFB = "b";
   static final String COLUMN_1 = CFA + ":1";
@@ -265,10 +266,21 @@ public class TestScannerResource extends HBaseRESTClusterTestBase {
     assertEquals(fullTableScan(model), expectedRows2);
   }
 
+  void doTestTableDoesNotExist() throws IOException, JAXBException {
+    ScannerModel model = new ScannerModel();
+    StringWriter writer = new StringWriter();
+    marshaller.marshal(model, writer);
+    byte[] body = Bytes.toBytes(writer.toString());
+    Response response = client.put("/" + NONEXISTENT_TABLE +
+      "/scanner", MIMETYPE_XML, body);
+    assertEquals(response.getCode(), 404);
+  }
+
   public void testScannerResource() throws Exception {
     doTestSimpleScannerXML();
     doTestSimpleScannerPB();
     doTestSimpleScannerBinary();
     doTestFullTableScan();
+    doTestTableDoesNotExist();
   }
 }

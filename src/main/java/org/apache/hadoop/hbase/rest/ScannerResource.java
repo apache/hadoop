@@ -40,6 +40,7 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 
@@ -92,6 +93,11 @@ public class ScannerResource extends ResourceBase {
     } catch (IOException e) {
       throw new WebApplicationException(e,
               Response.Status.SERVICE_UNAVAILABLE);
+    } catch (RuntimeException e) {
+      if (e.getCause() instanceof TableNotFoundException) {
+        throw new WebApplicationException(e, Response.Status.NOT_FOUND);
+      }
+      throw new WebApplicationException(e, Response.Status.BAD_REQUEST);
     } catch (Exception e) {
       throw new WebApplicationException(e, Response.Status.BAD_REQUEST);
     }
