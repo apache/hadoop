@@ -567,6 +567,7 @@ Release 0.21.0 - Unreleased
    HBASE-2753  Remove sorted() methods from Result now that Gets are Scans
    HBASE-3059  TestReadWriteConsistencyControl occasionally hangs (Hairong 
    	       via Ryan)
+   HBASE-2906  [rest/stargate] URI decoding in RowResource
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 
+import javax.ws.rs.Encoded;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
@@ -62,7 +63,9 @@ public class TableResource extends ResourceBase {
 
   @Path("{rowspec: .+}")
   public RowResource getRowResource(
-      final @PathParam("rowspec") String rowspec,
+      // We need the @Encoded decorator so Jersey won't urldecode before
+      // the RowSpec constructor has a chance to parse
+      final @PathParam("rowspec") @Encoded String rowspec,
       final @QueryParam("v") String versions) throws IOException {
     return new RowResource(table, rowspec, versions);
   }

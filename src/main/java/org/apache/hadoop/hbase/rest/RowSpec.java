@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.Collection;
 import java.util.TreeSet;
 
@@ -59,32 +61,29 @@ public class RowSpec {
 
   private int parseRowKeys(final String path, int i)
       throws IllegalArgumentException {
-    StringBuilder startRow = new StringBuilder();
-    StringBuilder endRow = null;
+    String startRow = null, endRow = null;
     try {
+      StringBuilder sb = new StringBuilder();
       char c;
-      boolean doEndRow = false;
       while (i < path.length() && (c = path.charAt(i)) != '/') {
-        if (c == ',') {
-          doEndRow = true;
-          i++;
-          break;
-        }
-        startRow.append(c);
+        sb.append(c);
         i++;
       }
       i++;
-      this.row = Bytes.toBytes(startRow.toString());
-      if (doEndRow) {
-        endRow = new StringBuilder();
-        while ((c = path.charAt(i)) != '/') {
-          endRow.append(c);
-          i++;
-        }
-        i++;
+      startRow = sb.toString();
+      int idx = startRow.indexOf(',');
+      if (idx != -1) {
+        startRow = URLDecoder.decode(startRow.substring(0, idx),
+          HConstants.UTF8_ENCODING);
+        endRow = URLDecoder.decode(startRow.substring(idx + 1),
+          HConstants.UTF8_ENCODING);
+      } else {
+        startRow = URLDecoder.decode(startRow, HConstants.UTF8_ENCODING);
       }
     } catch (IndexOutOfBoundsException e) {
       throw new IllegalArgumentException(e);
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
     }
     // HBase does not support wildcards on row keys so we will emulate a
     // suffix glob by synthesizing appropriate start and end row keys for
@@ -94,7 +93,7 @@ public class RowSpec {
         throw new IllegalArgumentException("invalid path: start row "+
           "specified with wildcard");
       this.row = Bytes.toBytes(startRow.substring(0, 
-                   startRow.lastIndexOf("*")));
+        startRow.lastIndexOf("*")));
       this.endRow = new byte[this.row.length + 1];
       System.arraycopy(this.row, 0, this.endRow, 0, this.row.length);
       this.endRow[this.row.length] = (byte)255;
@@ -115,23 +114,21 @@ public class RowSpec {
     try {
       char c;
       StringBuilder column = new StringBuilder();
-      boolean hasColon = false;
       while (i < path.length() && (c = path.charAt(i)) != '/') {
         if (c == ',') {
           if (column.length() < 1) {
             throw new IllegalArgumentException("invalid path");
           }
-          if (!hasColon) {
-            column.append(':');
+          String s = URLDecoder.decode(column.toString(),
+            HConstants.UTF8_ENCODING);
+          if (!s.contains(":")) {
+            this.columns.add(Bytes.toBytes(s + ":"));
+          } else {
+            this.columns.add(Bytes.toBytes(s));
           }
-          this.columns.add(Bytes.toBytes(column.toString()));
-          column = new StringBuilder();
-          hasColon = false;
+          column.setLength(0);
           i++;
           continue;
-        }
-        if (c == ':') {
-          hasColon = true;
         }
         column.append(c);
         i++;
@@ -139,13 +136,19 @@ public class RowSpec {
       i++;
       // trailing list entry
       if (column.length() > 1) {
-        if (!hasColon) {
-          column.append(':');
+        String s = URLDecoder.decode(column.toString(),
+          HConstants.UTF8_ENCODING);
+        if (!s.contains(":")) {
+          this.columns.add(Bytes.toBytes(s + ":"));
+        } else {
+          this.columns.add(Bytes.toBytes(s));
         }
-        this.columns.add(Bytes.toBytes(column.toString()));
       }
     } catch (IndexOutOfBoundsException e) {
       throw new IllegalArgumentException(e);
+    } catch (UnsupportedEncodingException e) {
+      // shouldn't happen
+      throw new RuntimeException(e);
     }
     return i;
   }
@@ -168,7 +171,8 @@ public class RowSpec {
         i++;
       }
       try {
-        time0 = Long.valueOf(stamp.toString());
+        time0 = Long.valueOf(URLDecoder.decode(stamp.toString(),
+          HConstants.UTF8_ENCODING));
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException(e);
       }
@@ -180,7 +184,8 @@ public class RowSpec {
           i++;
         }
         try {
-          time1 = Long.valueOf(stamp.toString());
+          time1 = Long.valueOf(URLDecoder.decode(stamp.toString(),
+            HConstants.UTF8_ENCODING));
         } catch (NumberFormatException e) {
           throw new IllegalArgumentException(e);
         }
@@ -190,6 +195,9 @@ public class RowSpec {
       }
     } catch (IndexOutOfBoundsException e) {
       throw new IllegalArgumentException(e);
+    } catch (UnsupportedEncodingException e) {
+      // shouldn't happen
+      throw new RuntimeException(e);
     }
     if (time1 != 0) {
       startTime = time0;
@@ -201,32 +209,45 @@ public class RowSpec {
   }
 
   private int parseQueryParams(final String path, int i) {
-    while (i < path.length()) {
-      char c = path.charAt(i);
+    if (i >= path.length()) {
+      return i;
+    }
+    StringBuilder query = new StringBuilder();
+    try {
+      query.append(URLDecoder.decode(path.substring(i), 
+        HConstants.UTF8_ENCODING));
+    } catch (UnsupportedEncodingException e) {
+      // should not happen
+      throw new RuntimeException(e);
+    }
+    i += query.length();
+    int j = 0;
+    while (j < query.length()) {
+      char c = query.charAt(j);
       if (c != '?' && c != '&') {
         break;
       }
-      if (++i > path.length()) {
+      if (++j > query.length()) {
+        throw new IllegalArgumentException("malformed query parameter");
+      }
+      char what = query.charAt(j);
+      if (++j > query.length()) {
         break;
       }
-      char what = path.charAt(i);
-      if (++i > path.length()) {
-        break;
-      }
-      c = path.charAt(i);
+      c = query.charAt(j);
       if (c != '=') {
         throw new IllegalArgumentException("malformed query parameter");
       }
-      if (++i > path.length()) {
+      if (++j > query.length()) {
         break;
       }
       switch (what) {
       case 'm': {
         StringBuilder sb = new StringBuilder();
-        while (i <= path.length()) {
-          c = path.charAt(i);
+        while (j <= query.length()) {
+          c = query.charAt(i);
           if (c < '0' || c > '9') {
-            i--;
+            j--;
             break;
           }
           sb.append(c);
@@ -235,10 +256,10 @@ public class RowSpec {
       } break;
       case 'n': {
         StringBuilder sb = new StringBuilder();
-        while (i <= path.length()) {
-          c = path.charAt(i);
+        while (j <= query.length()) {
+          c = query.charAt(i);
           if (c < '0' || c > '9') {
-            i--;
+            j--;
             break;
           }
           sb.append(c);

@@ -93,11 +93,10 @@ public class Client {
    * @param cluster the cluster definition
    * @param method the transaction method
    * @param headers HTTP header values to send
-   * @param path the path
+   * @param path the properly urlencoded path
    * @return the HTTP response code
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   public int executePathOnly(Cluster cluster, HttpMethod method,
       Header[] headers, String path) throws IOException {
     IOException lastException;
@@ -113,7 +112,7 @@ public class Client {
         sb.append("http://");
         sb.append(cluster.lastHost);
         sb.append(path);
-        URI uri = new URI(sb.toString());
+        URI uri = new URI(sb.toString(), true);
         return executeURI(method, headers, uri.toString());
       } catch (IOException e) {
         lastException = e;
@@ -126,14 +125,13 @@ public class Client {
    * Execute a transaction method given a complete URI.
    * @param method the transaction method
    * @param headers HTTP header values to send
-   * @param uri the URI
+   * @param uri a properly urlencoded URI
    * @return the HTTP response code
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   public int executeURI(HttpMethod method, Header[] headers, String uri)
       throws IOException {
-    method.setURI(new URI(uri));
+    method.setURI(new URI(uri, true));
     if (headers != null) {
       for (Header header: headers) {
         method.addRequestHeader(header);
@@ -156,7 +154,7 @@ public class Client {
    * @param cluster the cluster definition
    * @param method the HTTP method
    * @param headers HTTP header values to send
-   * @param path the path or URI
+   * @param path the properly urlencoded path or URI
    * @return the HTTP response code
    * @throws IOException
    */

@@ -124,7 +124,11 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     path.append(row);
     path.append('/');
     path.append(column);
-    Response response = client.get(path.toString(), MIMETYPE_XML);
+    return getValueXML(path.toString());
+  }
+
+  Response getValueXML(String url) throws IOException {
+    Response response = client.get(url, MIMETYPE_XML);
     return response;
   }
 
@@ -137,7 +141,11 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     path.append(row);
     path.append('/');
     path.append(column);
-    Response response = client.get(path.toString(), MIMETYPE_PROTOBUF); 
+    return getValuePB(path.toString());
+  }
+
+  Response getValuePB(String url) throws IOException {
+    Response response = client.get(url, MIMETYPE_PROTOBUF); 
     return response;
   }
 
@@ -150,6 +158,11 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     path.append(row);
     path.append('/');
     path.append(column);
+    return putValueXML(path.toString(), table, row, column, value);
+  }
+
+  Response putValueXML(String url, String table, String row, String column,
+      String value) throws IOException, JAXBException {
     RowModel rowModel = new RowModel(row);
     rowModel.addCell(new CellModel(Bytes.toBytes(column),
       Bytes.toBytes(value)));
@@ -157,7 +170,7 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     cellSetModel.addRow(rowModel);
     StringWriter writer = new StringWriter();
     marshaller.marshal(cellSetModel, writer);
-    Response response = client.put(path.toString(), MIMETYPE_XML,
+    Response response = client.put(url, MIMETYPE_XML,
       Bytes.toBytes(writer.toString()));
     Thread.yield();
     return response;
@@ -166,6 +179,18 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
   void checkValueXML(String table, String row, String column, String value)
       throws IOException, JAXBException {
     Response response = getValueXML(table, row, column);
+    assertEquals(response.getCode(), 200);
+    CellSetModel cellSet = (CellSetModel)
+      unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
+    RowModel rowModel = cellSet.getRows().get(0);
+    CellModel cell = rowModel.getCells().get(0);
+    assertEquals(Bytes.toString(cell.getColumn()), column);
+    assertEquals(Bytes.toString(cell.getValue()), value);
+  }
+
+  void checkValueXML(String url, String table, String row, String column,
+      String value) throws IOException, JAXBException {
+    Response response = getValueXML(url);
     assertEquals(response.getCode(), 200);
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -184,12 +209,17 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     path.append(row);
     path.append('/');
     path.append(column);
+    return putValuePB(path.toString(), table, row, column, value);
+  }
+
+  Response putValuePB(String url, String table, String row, String column,
+      String value) throws IOException {
     RowModel rowModel = new RowModel(row);
     rowModel.addCell(new CellModel(Bytes.toBytes(column),
       Bytes.toBytes(value)));
     CellSetModel cellSetModel = new CellSetModel();
     cellSetModel.addRow(rowModel);
-    Response response = client.put(path.toString(), MIMETYPE_PROTOBUF,
+    Response response = client.put(url, MIMETYPE_PROTOBUF,
       cellSetModel.createProtobufOutput());
     Thread.yield();
     return response;
@@ -198,6 +228,18 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
   void checkValuePB(String table, String row, String column, String value)
       throws IOException {
     Response response = getValuePB(table, row, column);
+    assertEquals(response.getCode(), 200);
+    CellSetModel cellSet = new CellSetModel();
+    cellSet.getObjectFromMessage(response.getBody());
+    RowModel rowModel = cellSet.getRows().get(0);
+    CellModel cell = rowModel.getCells().get(0);
+    assertEquals(Bytes.toString(cell.getColumn()), column);
+    assertEquals(Bytes.toString(cell.getValue()), value);
+  }
+
+  void checkValuePB(String url, String table, String row, String column,
+      String value) throws IOException {
+    Response response = getValuePB(url);
     assertEquals(response.getCode(), 200);
     CellSetModel cellSet = new CellSetModel();
     cellSet.getObjectFromMessage(response.getBody());
@@ -300,19 +342,23 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     assertEquals(response.getCode(), 200);
   }
 
-  void doTestURLEncodedKey() throws IOException, JAXBException {
-    String encodedKey = URLEncoder.encode("http://www.google.com/", 
-      HConstants.UTF8_ENCODING);
+  public void doTestURLEncodedKey() throws IOException, JAXBException {
+    String urlKey = "http://example.com/foo";
+    StringBuilder path = new StringBuilder();
+    path.append('/');
+    path.append(TABLE);
+    path.append('/');
+    path.append(URLEncoder.encode(urlKey, HConstants.UTF8_ENCODING));
+    path.append('/');
+    path.append(COLUMN_1);
     Response response;
-    response = putValueXML(TABLE, encodedKey, COLUMN_1, VALUE_1);
+    response = putValueXML(path.toString(), TABLE, urlKey, COLUMN_1,
+      VALUE_1);
     assertEquals(response.getCode(), 200);
-    response = putValuePB(TABLE, encodedKey, COLUMN_2, VALUE_2);
-    assertEquals(response.getCode(), 200);
-    checkValuePB(TABLE, encodedKey, COLUMN_1, VALUE_1);
-    checkValueXML(TABLE, encodedKey, COLUMN_2, VALUE_2);
+    checkValueXML(path.toString(), TABLE, urlKey, COLUMN_1, VALUE_1);
   }
 
-  public void testNoSuchCF() throws IOException, JAXBException {
+  public void doTestNoSuchCF() throws IOException, JAXBException {
     final String goodPath = "/" + TABLE + "/" + ROW_1 + "/" + CFA+":";
     final String badPath = "/" + TABLE + "/" + ROW_1 + "/" + "BAD";
     Response response = client.post(goodPath, MIMETYPE_BINARY,
@@ -404,6 +450,7 @@ public class TestRowResource extends HBaseRESTClusterTestBase {
     doTestSingleCellGetPutBinary();
     doTestSingleCellGetJSON();
     doTestURLEncodedKey();
+    doTestNoSuchCF();
     doTestMultiCellGetPutXML();
     doTestMultiCellGetPutPB();
   }
