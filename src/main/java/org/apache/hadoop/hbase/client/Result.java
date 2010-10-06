@@ -233,13 +233,13 @@ public class Result implements Writable {
 
     // pos === ( -(insertion point) - 1)
     int pos = Arrays.binarySearch(kvs, searchTerm, KeyValue.COMPARATOR);
-    if (pos == kvs.length) {
-      return -1; // null/empty result.
-    }
     // never will exact match
     if (pos < 0) {
       pos = (pos+1) * -1;
       // pos is now insertion point
+    }
+    if (pos == kvs.length) {
+      return -1; // doesn't exist
     }
     return pos;
   }
