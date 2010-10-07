@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -42,7 +44,7 @@ import org.apache.hadoop.hbase.rest.client.RemoteHTable;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestRemoteTable extends HBaseRESTClusterTestBase {
-
+  private static final Log LOG = LogFactory.getLog(HBaseRESTClusterTestBase.class);
   static final String TABLE = "TestRemoteTable";
   static final byte[] ROW_1 = Bytes.toBytes("testrow1");
   static final byte[] ROW_2 = Bytes.toBytes("testrow2");
@@ -71,6 +73,7 @@ public class TestRemoteTable extends HBaseRESTClusterTestBase {
     super.setUp();
     
     admin = new HBaseAdmin(conf);
+    LOG.info("Admin Connection=" + admin.getConnection() + ", " + admin.getConnection().getZooKeeperWatcher());
     if (!admin.tableExists(TABLE)) {
       HTableDescriptor htd = new HTableDescriptor(TABLE);
       htd.addFamily(new HColumnDescriptor(COLUMN_1));
@@ -78,6 +81,7 @@ public class TestRemoteTable extends HBaseRESTClusterTestBase {
       htd.addFamily(new HColumnDescriptor(COLUMN_3));
       admin.createTable(htd);
       HTable table = new HTable(conf, TABLE);
+      LOG.info("Table connection=" + table.getConnection() + ", " + admin.getConnection().getZooKeeperWatcher());
       Put put = new Put(ROW_1);
       put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
       table.put(put);

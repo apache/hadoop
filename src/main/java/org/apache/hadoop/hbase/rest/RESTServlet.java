@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -37,25 +36,22 @@ import org.apache.hadoop.hbase.rest.metrics.RESTMetrics;
  * Singleton class encapsulating global REST servlet state and functions.
  */
 public class RESTServlet implements Constants {
-
-  private static RESTServlet instance;
-
-  Configuration conf;
-  HTablePool pool;
-  AtomicBoolean stopping = new AtomicBoolean(false);
-  Map<String,Integer> maxAgeMap = 
+  private static RESTServlet INSTANCE;
+  private final Configuration conf;
+  private final HTablePool pool;
+  private final Map<String,Integer> maxAgeMap = 
     Collections.synchronizedMap(new HashMap<String,Integer>());
-  RESTMetrics metrics = new RESTMetrics();
+  private final RESTMetrics metrics = new RESTMetrics();
 
   /**
    * @return the RESTServlet singleton instance
    * @throws IOException
    */
   public synchronized static RESTServlet getInstance() throws IOException {
-    if (instance == null) {
-      instance = new RESTServlet();
+    if (INSTANCE == null) {
+      INSTANCE = new RESTServlet();
     }
-    return instance;
+    return INSTANCE;
   }
 
   /**
@@ -65,17 +61,21 @@ public class RESTServlet implements Constants {
    */
   public synchronized static RESTServlet getInstance(Configuration conf)
   throws IOException {
-    if (instance == null) {
-      instance = new RESTServlet(conf);
+    if (INSTANCE == null) {
+      INSTANCE = new RESTServlet(conf);
     }
-    return instance;
+    return INSTANCE;
+  }
+
+  public synchronized static void stop() {
+    if (INSTANCE != null)  INSTANCE = null;
   }
 
   /**
    * Constructor
    * @throws IOException
    */
-  public RESTServlet() throws IOException {
+  RESTServlet() throws IOException {
     this(HBaseConfiguration.create());
   }
   
@@ -84,7 +84,7 @@ public class RESTServlet implements Constants {
    * @param conf existing configuration
    * @throws IOException.
    */
-  public RESTServlet(Configuration conf) throws IOException {
+  RESTServlet(Configuration conf) throws IOException {
     this.conf = conf;
     this.pool = new HTablePool(conf, 10);
   }

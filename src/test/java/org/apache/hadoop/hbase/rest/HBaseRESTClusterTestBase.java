@@ -88,6 +88,7 @@ public class HBaseRESTClusterTestBase extends HBaseClusterTestCase
     if (server != null) try {
       server.stop();
       server = null;
+      RESTServlet.stop();
     } catch (Exception e) {
       LOG.warn(StringUtils.stringifyException(e));
     }

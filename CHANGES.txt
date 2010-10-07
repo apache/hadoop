@@ -566,10 +566,13 @@ Release 0.21.0 - Unreleased
                (Bruno Dumon via Stack)
    HBASE-2753  Remove sorted() methods from Result now that Gets are Scans
    HBASE-3059  TestReadWriteConsistencyControl occasionally hangs (Hairong 
-   	       via Ryan)
+               via Ryan)
    HBASE-2906  [rest/stargate] URI decoding in RowResource
    HBASE-3008  Memstore.updateColumnValue passes wrong flag to heapSizeChange
-   	       (Causes memstore size to go negative)
+               (Causes memstore size to go negative)
+   HBASE-3089  REST tests are broken locally and up in hudson
+  
+
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
