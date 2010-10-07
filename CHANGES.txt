@@ -256,6 +256,8 @@ Trunk (unreleased changes)
     HADOOP-6984. Combine the compress kind and the codec in the same option
     for SequenceFiles. (cdouglas via omalley)
 
+    HADOOP-6933. TestListFiles is flaky. (Todd Lipcon via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

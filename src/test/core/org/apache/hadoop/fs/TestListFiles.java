@@ -19,7 +19,9 @@ package org.apache.hadoop.fs;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -135,17 +137,28 @@ public class TestListFiles {
     writeFile(fs, FILE1, FILE_LEN);
     writeFile(fs, FILE3, FILE_LEN);
 
+    Set<Path> filesToFind = new HashSet<Path>();
+    filesToFind.add(fs.makeQualified(FILE1));
+    filesToFind.add(fs.makeQualified(FILE2));
+    filesToFind.add(fs.makeQualified(FILE3));
+
     itor = fs.listFiles(TEST_DIR, true);
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertEquals(fs.makeQualified(FILE2), stat.getPath());
+    assertTrue("Path " + stat.getPath() + " unexpected",
+      filesToFind.remove(stat.getPath()));
+
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertEquals(fs.makeQualified(FILE3), stat.getPath());
+    assertTrue("Path " + stat.getPath() + " unexpected",
+      filesToFind.remove(stat.getPath()));
+
     stat = itor.next();
     assertTrue(stat.isFile());
-    assertEquals(fs.makeQualified(FILE1), stat.getPath());
+    assertTrue("Path " + stat.getPath() + " unexpected",
+      filesToFind.remove(stat.getPath()));
     assertFalse(itor.hasNext());
+    assertTrue(filesToFind.isEmpty());
     
     itor = fs.listFiles(TEST_DIR, false);
     stat = itor.next();
