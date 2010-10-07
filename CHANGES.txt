@@ -275,6 +275,8 @@ Release 0.21.1 - Unreleased
 
     HADOOP-6971. Clover build doesn't generate per-test coverage (cos)
 
+    HADOOP-6993. Broken link on cluster setup page of docs. (eli)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
