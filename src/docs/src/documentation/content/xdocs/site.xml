@@ -66,7 +66,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
     <wiki  href="http://wiki.apache.org/hadoop/Common" />
     <faq  href="http://wiki.apache.org/hadoop/Common/FAQ" />
     
-    <common-default href="http://hadoop.apache.org/common/docs/current/common-default.html" />
+    <core-default href="http://hadoop.apache.org/common/docs/current/core-default.html" />
     <hdfs-default href="http://hadoop.apache.org/hdfs/docs/current/hdfs-default.html" />
     <mapred-default href="http://hadoop.apache.org/mapreduce/docs/current/mapred-default.html" />
     

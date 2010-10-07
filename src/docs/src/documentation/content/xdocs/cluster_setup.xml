@@ -81,7 +81,7 @@
         <ol>
           <li>
             Read-only default configuration - 
-            <a href="ext:common-default">src/core/core-default.xml</a>, 
+            <a href="ext:core-default">src/core/core-default.xml</a>, 
             <a href="ext:hdfs-default">src/hdfs/hdfs-default.xml</a>, 
             <a href="ext:mapred-default">src/mapred/mapred-default.xml</a> and
             <a href="ext:mapred-queues">conf/mapred-queues.xml.template</a>.
