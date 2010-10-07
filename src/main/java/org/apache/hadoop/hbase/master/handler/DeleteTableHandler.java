@@ -29,7 +29,10 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
+import org.apache.zookeeper.KeeperException;
 
 public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
@@ -67,5 +70,9 @@ public class DeleteTableHandler extends TableEventHandler {
     }
     // Delete table from FS
     this.masterServices.getMasterFileSystem().deleteTable(tableName);
+
+    // If entry for this table in zk, and up in AssignmentManager, remove it.
+    // Call to undisableTable does this. TODO: Make a more formal purge table.
+    am.undisableTable(Bytes.toString(tableName));
   }
 }

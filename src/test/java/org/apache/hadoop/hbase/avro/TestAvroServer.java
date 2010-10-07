@@ -152,7 +152,7 @@ public class TestAvroServer {
     GenericArray<AFamilyDescriptor> families = new GenericData.Array<AFamilyDescriptor>(1, familyArraySchema);
     families.add(familyA);
     tableA.families = families;
-    impl.createTable(tableA);    
+    impl.createTable(tableA);
     assertEquals(impl.describeTable(tableAname).families.size(), 1);
 
     impl.disableTable(tableAname);
