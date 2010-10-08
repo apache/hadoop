@@ -32,9 +32,10 @@ import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
-public class TestKillingServersFromMaster {
+public class BROKE_FIX_TestKillingServersFromMaster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
 
@@ -60,7 +61,7 @@ public class TestKillingServersFromMaster {
    * See HBASE-2613
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Ignore @Test (timeout=180000)
   public void testRsReportsWrongStartCode() throws Exception {
     MiniHBaseClusterRegionServer firstServer =
       (MiniHBaseClusterRegionServer)cluster.getRegionServer(0);
@@ -78,7 +79,7 @@ public class TestKillingServersFromMaster {
    * See HBASE-2613
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Ignore @Test (timeout=180000)
   public void testRsReportsWrongAddress() throws Exception {
     MiniHBaseClusterRegionServer firstServer =
       (MiniHBaseClusterRegionServer)cluster.getRegionServer(0);
@@ -93,7 +94,7 @@ public class TestKillingServersFromMaster {
    * See HBASE-2691
    * @throws Exception
    */
-  @Test (timeout=180000)
+  @Ignore @Test (timeout=180000)
   public void testSendYouAreDead() throws Exception {
     cluster.addExceptionToSendRegionServer(0, new YouAreDeadException("bam!"));
     cluster.waitOnRegionServer(0);
