@@ -95,7 +95,6 @@ public class TestMetaReaderEditor {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     admin.disableTable(name);
     admin.deleteTable(name);
-    admin.close();
     assertFalse(MetaReader.tableExists(CT, name));
     assertTrue(MetaReader.tableExists(CT,
       Bytes.toString(HConstants.META_TABLE_NAME)));
