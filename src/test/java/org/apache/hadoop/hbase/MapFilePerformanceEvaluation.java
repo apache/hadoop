@@ -40,7 +40,7 @@ import org.apache.hadoop.io.WritableComparable;
  * </p>
  */
 public class MapFilePerformanceEvaluation {
-  protected final HBaseConfiguration conf;
+  protected final Configuration conf;
   private static final int ROW_LENGTH = 10;
   private static final int ROW_COUNT = 100000;
 
@@ -50,7 +50,7 @@ public class MapFilePerformanceEvaluation {
   /**
    * @param c
    */
-  public MapFilePerformanceEvaluation(final HBaseConfiguration c) {
+  public MapFilePerformanceEvaluation(final Configuration c) {
     super();
     this.conf = c;
   }
@@ -343,7 +343,7 @@ public class MapFilePerformanceEvaluation {
    * @throws IOException
    */
   public static void main(String[] args) throws Exception {
-    new MapFilePerformanceEvaluation(new HBaseConfiguration()).
+    new MapFilePerformanceEvaluation(HBaseConfiguration.create()).
       runBenchmarks();
   }
 }

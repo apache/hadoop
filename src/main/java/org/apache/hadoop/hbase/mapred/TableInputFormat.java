@@ -55,7 +55,7 @@ public class TableInputFormat extends TableInputFormatBase implements
     }
     setInputColumns(m_cols);
     try {
-      setHTable(new HTable(new HBaseConfiguration(job), tableNames[0].getName()));
+      setHTable(new HTable(HBaseConfiguration.create(job), tableNames[0].getName()));
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }

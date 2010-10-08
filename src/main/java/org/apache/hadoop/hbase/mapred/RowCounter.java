@@ -130,8 +130,7 @@ public class RowCounter extends Configured implements Tool {
    * @throws Exception
    */
   public static void main(String[] args) throws Exception {
-    HBaseConfiguration c = new HBaseConfiguration();
-    int errCode = ToolRunner.run(c, new RowCounter(), args);
+    int errCode = ToolRunner.run(HBaseConfiguration.create(), new RowCounter(), args);
     System.exit(errCode);
   }
 }

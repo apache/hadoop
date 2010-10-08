@@ -31,6 +31,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Delete;
@@ -77,7 +78,7 @@ public abstract class HBaseTestCase extends TestCase {
     initialize();
   }
 
-  public volatile HBaseConfiguration conf;
+  public volatile Configuration conf;
 
   /** constructor */
   public HBaseTestCase() {
@@ -94,7 +95,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   private void init() {
-    conf = new HBaseConfiguration();
+    conf = HBaseConfiguration.create();
     try {
       START_KEY = new String(START_KEY_BYTES, HConstants.UTF8_ENCODING);
     } catch (UnsupportedEncodingException e) {
@@ -194,7 +195,7 @@ public abstract class HBaseTestCase extends TestCase {
     HTableDescriptor htd = new HTableDescriptor(name);
     htd.addFamily(new HColumnDescriptor(fam1, versions,
       HColumnDescriptor.DEFAULT_COMPRESSION, false, false,
-      Integer.MAX_VALUE, HConstants.FOREVER,
+      Integer.MAX_VALUE, HConstants.FOREVER, 
       HColumnDescriptor.DEFAULT_BLOOMFILTER,
       HConstants.REPLICATION_SCOPE_LOCAL));
     htd.addFamily(new HColumnDescriptor(fam2, versions,
@@ -670,7 +671,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   public static void assertByteEquals(byte[] expected,
-                                      byte[] actual) {
+                               byte[] actual) {
     if (Bytes.compareTo(expected, actual) != 0) {
       throw new AssertionFailedError("expected:<" +
       Bytes.toString(expected) + "> but was:<" +

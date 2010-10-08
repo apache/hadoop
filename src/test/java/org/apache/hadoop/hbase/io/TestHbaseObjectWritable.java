@@ -51,7 +51,7 @@ public class TestHbaseObjectWritable extends TestCase {
 
   @SuppressWarnings("boxing")
   public void testReadObjectDataInputConfiguration() throws IOException {
-    HBaseConfiguration conf = new HBaseConfiguration();
+    Configuration conf = HBaseConfiguration.create();
     // Do primitive type
     final int COUNT = 101;
     assertTrue(doType(conf, COUNT, int.class).equals(COUNT));

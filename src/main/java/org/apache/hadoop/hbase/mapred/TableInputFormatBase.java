@@ -45,7 +45,7 @@ import org.apache.hadoop.mapred.Reporter;
  *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
  *
  *     public void configure(JobConf job) {
- *       HTable exampleTable = new HTable(new HBaseConfiguration(job),
+ *       HTable exampleTable = new HTable(HBaseConfiguration.create(job),
  *         Bytes.toBytes("exampleTable"));
  *       // mandatory
  *       setHTable(exampleTable);

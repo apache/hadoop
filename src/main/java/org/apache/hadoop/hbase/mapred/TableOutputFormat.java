@@ -85,7 +85,7 @@ FileOutputFormat<ImmutableBytesWritable, Put> {
     String tableName = job.get(OUTPUT_TABLE);
     HTable table = null;
     try {
-      table = new HTable(new HBaseConfiguration(job), tableName);
+      table = new HTable(HBaseConfiguration.create(job), tableName);
     } catch(IOException e) {
       LOG.error(e);
       throw e;

@@ -129,7 +129,7 @@ public class TestTimeRangeMapRed extends HBaseClusterTestCase {
     public void setConf(Configuration configuration) {
       this.conf = configuration;
       try {
-        table = new HTable(new HBaseConfiguration(conf), TABLE_NAME);
+        table = new HTable(HBaseConfiguration.create(conf), TABLE_NAME);
       } catch (IOException e) {
         e.printStackTrace();
       }

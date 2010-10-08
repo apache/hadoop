@@ -48,7 +48,7 @@ implements Partitioner<ImmutableBytesWritable, V2> {
 
   public void configure(JobConf job) {
     try {
-      this.table = new HTable(new HBaseConfiguration(job),
+      this.table = new HTable(HBaseConfiguration.create(job),
         job.get(TableOutputFormat.OUTPUT_TABLE));
     } catch (IOException e) {
       LOG.error(e);

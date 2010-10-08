@@ -981,6 +981,8 @@ Release 0.21.0 - Unreleased
    HBASE-2917  Reseek directly to next row (Pranav Khaitan)
    HBASE-2907  [rest/stargate] Improve error response when trying to create a
                scanner on a nonexistant table
+   HBASE-3092  Replace deprecated "new HBaseConfiguration(...)" calls
+               (Lars Francke)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

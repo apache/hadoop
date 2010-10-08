@@ -106,7 +106,7 @@ public class TableMapReduceUtil {
     job.setOutputValueClass(Put.class);
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      HTable outputTable = new HTable(new HBaseConfiguration(job), table);
+      HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
       int regions = outputTable.getRegionsInfo().size();
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(outputTable.getRegionsInfo().size());
@@ -127,7 +127,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumReduceTasks(String table, JobConf job)
   throws IOException {
-    HTable outputTable = new HTable(new HBaseConfiguration(job), table);
+    HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
     int regions = outputTable.getRegionsInfo().size();
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
@@ -143,7 +143,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumMapTasks(String table, JobConf job)
   throws IOException {
-    HTable outputTable = new HTable(new HBaseConfiguration(job), table);
+    HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
     int regions = outputTable.getRegionsInfo().size();
     if (job.getNumMapTasks() > regions)
       job.setNumMapTasks(regions);
@@ -159,7 +159,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, JobConf job)
   throws IOException {
-    HTable outputTable = new HTable(new HBaseConfiguration(job), table);
+    HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
     int regions = outputTable.getRegionsInfo().size();
     job.setNumReduceTasks(regions);
   }
@@ -174,7 +174,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumMapTasks(String table, JobConf job)
   throws IOException {
-    HTable outputTable = new HTable(new HBaseConfiguration(job), table);
+    HTable outputTable = new HTable(HBaseConfiguration.create(job), table);
     int regions = outputTable.getRegionsInfo().size();
     job.setNumMapTasks(regions);
   }
