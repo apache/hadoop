@@ -515,7 +515,8 @@ public class HConnectionManager {
 
     private HRegionLocation locateRegion(final byte [] tableName,
       final byte [] row, boolean useCache)
-    throws IOException{
+    throws IOException {
+      if (this.closed) throw new IOException("closed");
       if (tableName == null || tableName.length == 0) {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
@@ -525,7 +526,8 @@ public class HConnectionManager {
         try {
           HServerAddress hsa =
             this.rootRegionTracker.waitRootRegionLocation(this.rpcTimeout);
-          LOG.debug("Lookedup root region location with hcm=" + this + "; " + hsa);
+          LOG.debug("Lookedup root region location, connection=" + this +
+            "; hsa=" + hsa);
           if (hsa == null) return null;
           return new HRegionLocation(HRegionInfo.ROOT_REGIONINFO, hsa);
         } catch (InterruptedException e) {
@@ -1030,6 +1032,7 @@ public class HConnectionManager {
         this.zooKeeper.close();
         this.zooKeeper = null;
       }
+      this.closed = true;
     }
 
     private Callable<MultiResponse> createCallable(
@@ -1289,6 +1292,7 @@ public class HConnectionManager {
     public void abort(final String msg, Throwable t) {
       if (t != null) LOG.fatal(msg, t);
       else LOG.fatal(msg);
+      this.closed = true;
     }
   }
 }

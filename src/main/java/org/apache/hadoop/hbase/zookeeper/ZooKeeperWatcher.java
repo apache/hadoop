@@ -249,10 +249,13 @@ public class ZooKeeperWatcher implements Watcher {
       case Disconnected:
         LOG.info(prefix("Received Disconnected from ZooKeeper, ignoring"));
         break;
+
       case Expired:
-        String msg = prefix("Received Expired from ZooKeeper, aborting server");
-        LOG.error(msg);
-        if (abortable != null) abortable.abort(msg, null);
+        String msg = prefix(this.identifier + " received expired from " +
+          "ZooKeeper, aborting");
+        // TODO: One thought is to add call to ZooKeeperListener so say,
+        // ZooKeperNodeTracker can zero out its data values.
+        if (this.abortable != null) this.abortable.abort(msg, null);
         break;
     }
   }

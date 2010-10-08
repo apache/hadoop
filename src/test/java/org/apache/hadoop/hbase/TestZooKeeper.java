@@ -40,8 +40,12 @@ import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.ZooKeeper.States;
+import org.apache.zookeeper.proto.WatcherEvent;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -90,11 +94,11 @@ public class TestZooKeeper {
   @Test
   public void testClientSessionExpired()
       throws IOException, InterruptedException {
-    new HTable(conf, HConstants.META_TABLE_NAME);
-
-    String quorumServers = ZKConfig.getZKQuorumServersString(conf);
+    Configuration c = new Configuration(this.conf);
+    new HTable(c, HConstants.META_TABLE_NAME);
+    String quorumServers = ZKConfig.getZKQuorumServersString(c);
     int sessionTimeout = 5 * 1000; // 5 seconds
-    HConnection connection = HConnectionManager.getConnection(conf);
+    HConnection connection = HConnectionManager.getConnection(c);
     ZooKeeperWatcher connectionZK = connection.getZooKeeperWatcher();
     long sessionID = connectionZK.getZooKeeper().getSessionId();
     byte[] password = connectionZK.getZooKeeper().getSessionPasswd();
@@ -106,7 +110,8 @@ public class TestZooKeeper {
     Thread.sleep(sessionTimeout * 3L);
 
     System.err.println("ZooKeeper should have timed out");
-    connection.relocateRegion(HConstants.ROOT_TABLE_NAME, HConstants.EMPTY_BYTE_ARRAY);
+    Assert.assertTrue(connection.getZooKeeperWatcher().getZooKeeper().
+      getState().equals(States.CLOSED));
   }
   
   @Test
