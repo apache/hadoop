@@ -120,7 +120,6 @@ class CatalogJanitor extends Chore {
    * @return Null if not found (and logs fact that expected COL_REGIONINFO
    * was missing) else deserialized {@link HRegionInfo}
    * @throws IOException
-   * @throws NullPointerException if null cell
    */
   static HRegionInfo getHRegionInfo(final Result result)
   throws IOException {

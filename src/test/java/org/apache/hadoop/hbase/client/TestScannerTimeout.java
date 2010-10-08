@@ -46,6 +46,8 @@ public class TestScannerTimeout {
   private final static byte[] SOME_BYTES = Bytes.toBytes("f");
   private final static byte[] TABLE_NAME = Bytes.toBytes("t");
   private final static int NB_ROWS = 10;
+  // Be careful w/ what you set this timer too... it can get in the way of
+  // the mini cluster coming up -- the verification in particular.
   private final static int SCANNER_TIMEOUT = 10000;
 
    /**
