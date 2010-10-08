@@ -19,6 +19,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -26,14 +29,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 
 /**
  * Test various scanner timeout issues.
@@ -47,8 +46,7 @@ public class TestScannerTimeout {
   private final static byte[] SOME_BYTES = Bytes.toBytes("f");
   private final static byte[] TABLE_NAME = Bytes.toBytes("t");
   private final static int NB_ROWS = 10;
-  private final static int SCANNER_TIMEOUT = 1000;
-  private static HTable table;
+  private final static int SCANNER_TIMEOUT = 10000;
 
    /**
    * @throws java.lang.Exception
@@ -58,7 +56,7 @@ public class TestScannerTimeout {
     Configuration c = TEST_UTIL.getConfiguration();
     c.setInt("hbase.regionserver.lease.period", SCANNER_TIMEOUT);
     TEST_UTIL.startMiniCluster(2);
-    table = TEST_UTIL.createTable(Bytes.toBytes("t"), SOME_BYTES);
+    HTable table = TEST_UTIL.createTable(TABLE_NAME, SOME_BYTES);
      for (int i = 0; i < NB_ROWS; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.add(SOME_BYTES, SOME_BYTES, SOME_BYTES);
@@ -89,6 +87,8 @@ public class TestScannerTimeout {
   @Test
   public void test2481() throws Exception {
     Scan scan = new Scan();
+    HTable table =
+      new HTable(new Configuration(TEST_UTIL.getConfiguration()), TABLE_NAME);
     ResultScanner r = table.getScanner(scan);
     int count = 0;
     try {
@@ -131,6 +131,5 @@ public class TestScannerTimeout {
     Result[] results = r.next(NB_ROWS);
     assertEquals(NB_ROWS, results.length);
     r.close();
-
   }
 }

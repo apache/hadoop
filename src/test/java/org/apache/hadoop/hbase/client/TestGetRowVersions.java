@@ -24,6 +24,7 @@ import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -43,35 +44,34 @@ public class TestGetRowVersions extends HBaseClusterTestCase {
   private static final byte [] VALUE2 = Bytes.toBytes("value2");
   private static final long TIMESTAMP1 = 100L;
   private static final long TIMESTAMP2 = 200L;
-  private HBaseAdmin admin = null;
-  private HTable table = null;
 
   @Override
   public void setUp() throws Exception {
     super.setUp();
     HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
     desc.addFamily(new HColumnDescriptor(CONTENTS));
-    this.admin = new HBaseAdmin(conf);
-    this.admin.createTable(desc);
-    this.table = new HTable(conf, TABLE_NAME);
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    admin.createTable(desc);
   }
 
   /** @throws Exception */
   public void testGetRowMultipleVersions() throws Exception {
     Put put = new Put(ROW, TIMESTAMP1, null);
     put.add(CONTENTS, CONTENTS, VALUE1);
-    this.table.put(put);
+    HTable table = new HTable(new Configuration(conf), TABLE_NAME);
+    table.put(put);
     // Shut down and restart the HBase cluster
     this.cluster.shutdown();
     this.zooKeeperCluster.shutdown();
     LOG.debug("HBase cluster shut down -- restarting");
     this.hBaseClusterSetup();
-    // Make a new connection
-    this.table = new HTable(conf, TABLE_NAME);
+    // Make a new connection.  Use new Configuration instance because old one
+    // is tied to an HConnection that has since gone statle.
+    table = new HTable(new Configuration(conf), TABLE_NAME);
     // Overwrite previous value
     put = new Put(ROW, TIMESTAMP2, null);
     put.add(CONTENTS, CONTENTS, VALUE2);
-    this.table.put(put);
+    table.put(put);
     // Now verify that getRow(row, column, latest) works
     Get get = new Get(ROW);
     // Should get one version by default

@@ -17,25 +17,22 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.*;
-
-import java.util.HashSet;
-import java.util.Set;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
 
 
 public class TestDeadServer {
   @Test public void testIsDead() {
-    Set<String> deadServers = new HashSet<String>();
     DeadServer ds = new DeadServer();
-    final String hostname123 = "one,123,3";
+    final String hostname123 = "127.0.0.1,123,3";
     assertFalse(ds.isDeadServer(hostname123, false));
     assertFalse(ds.isDeadServer(hostname123, true));
-    deadServers.add(hostname123);
+    ds.add(hostname123);
     assertTrue(ds.isDeadServer(hostname123, false));
-    assertFalse(ds.isDeadServer("one:1", true));
-    assertFalse(ds.isDeadServer("one:1234", true));
-    assertTrue(ds.isDeadServer("one:123", true));
+    assertFalse(ds.isDeadServer("127.0.0.1:1", true));
+    assertFalse(ds.isDeadServer("127.0.0.1:1234", true));
+    assertTrue(ds.isDeadServer("127.0.0.1:123", true));
   }
 }

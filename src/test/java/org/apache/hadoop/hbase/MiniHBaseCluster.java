@@ -253,9 +253,12 @@ public class MiniHBaseCluster {
           MiniHBaseCluster.MiniHBaseClusterMaster.class,
           MiniHBaseCluster.MiniHBaseClusterRegionServer.class);
       hbaseCluster.startup();
-    } catch(IOException e) {
+    } catch (IOException e) {
       shutdown();
       throw e;
+    } catch (Throwable t) {
+      shutdown();
+      throw new IOException("Shutting down", t);
     }
   }
 

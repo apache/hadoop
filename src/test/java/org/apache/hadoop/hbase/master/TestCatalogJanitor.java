@@ -168,19 +168,14 @@ public class TestCatalogJanitor {
     // Make a key that does not have a regioninfo value.
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
       HConstants.REGIONINFO_QUALIFIER, f));
-    boolean exception = false;
-    try {
-      CatalogJanitor.getHRegionInfo(new Result(kvs));
-    } catch (Exception ioe) {
-      exception = true;
-    }
-    assertTrue(exception);
+    HRegionInfo hri = CatalogJanitor.getHRegionInfo(new Result(kvs));
+    assertTrue(hri == null);
     // OK, give it what it expects
     kvs.clear();
     kvs.add(new KeyValue(HConstants.EMPTY_BYTE_ARRAY, f,
       HConstants.REGIONINFO_QUALIFIER,
       Writables.getBytes(HRegionInfo.FIRST_META_REGIONINFO)));
-    HRegionInfo hri = CatalogJanitor.getHRegionInfo(new Result(kvs));
+    hri = CatalogJanitor.getHRegionInfo(new Result(kvs));
     assertNotNull(hri);
     assertTrue(hri.equals(HRegionInfo.FIRST_META_REGIONINFO));
   }

@@ -184,7 +184,7 @@ class SplitTransaction {
     assert !this.parent.lock.writeLock().isHeldByCurrentThread() : "Unsafe to hold write lock while performing RPCs";
 
     // If true, no cluster to write meta edits into.
-    boolean testing =
+    boolean testing = server == null? true:
       server.getConfiguration().getBoolean("hbase.testing.nocluster", false);
 
     createSplitDir(this.parent.getFilesystem(), this.splitdir);

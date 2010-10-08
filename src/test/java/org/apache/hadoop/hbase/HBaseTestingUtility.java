@@ -451,12 +451,27 @@ public class HBaseTestingUtility {
    */
   public HTable createTable(byte[] tableName, byte[][] families)
   throws IOException {
+    return createTable(tableName, families,
+        new Configuration(getConfiguration()));
+  }
+
+  /**
+   * Create a table.
+   * @param tableName
+   * @param families
+   * @param c Configuration to use
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(byte[] tableName, byte[][] families,
+      final Configuration c)
+  throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     for(byte[] family : families) {
       desc.addFamily(new HColumnDescriptor(family));
     }
     getHBaseAdmin().createTable(desc);
-    return new HTable(new Configuration(getConfiguration()), tableName);
+    return new HTable(c, tableName);
   }
 
   /**

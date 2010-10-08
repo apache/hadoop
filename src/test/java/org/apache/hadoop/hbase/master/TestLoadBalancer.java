@@ -352,7 +352,7 @@ public class TestLoadBalancer {
       server.getLoad().setNumberOfRegions(numRegions);
       return server;
     }
-    String host = RandomStringUtils.random(16);
+    String host = "127.0.0.1";
     int port = rand.nextInt(60000);
     long startCode = rand.nextLong();
     HServerInfo hsi =

@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -355,6 +356,17 @@ public class CatalogTracker {
       } else {
         throw e;
       }
+    } catch (IOException ioe) {
+      Throwable cause = ioe.getCause();
+      if (cause != null && cause instanceof EOFException) {
+        // Catch. Other end disconnected us.
+      } else if (cause != null && cause.getMessage() != null &&
+        cause.getMessage().toLowerCase().contains("connection reset")) {
+        // Catch. Connection reset.
+      } else {
+        throw ioe;
+      }
+      
     }
     return protocol;
   }

@@ -122,7 +122,7 @@ public class TestFromClientSide {
     byte[] TABLE = Bytes.toBytes("testGetConfiguration");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
     Configuration conf = TEST_UTIL.getConfiguration();
-    HTable table = TEST_UTIL.createTable(TABLE, FAMILIES);
+    HTable table = TEST_UTIL.createTable(TABLE, FAMILIES, conf);
     assertSame(conf, table.getConfiguration());
   }
 

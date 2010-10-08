@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -102,13 +103,13 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     this.zooKeeperCluster = new MiniZooKeeperCluster();
     int clientPort = this.zooKeeperCluster.startup(testDir);
     conf.set("hbase.zookeeper.property.clientPort", Integer.toString(clientPort));
-
+    Configuration c = new Configuration(this.conf);
     // start the mini cluster
-    this.cluster = new MiniHBaseCluster(conf, regionServers);
+    this.cluster = new MiniHBaseCluster(c, regionServers);
 
     if (openMetaTable) {
       // opening the META table ensures that cluster is running
-      new HTable(conf, HConstants.META_TABLE_NAME);
+      new HTable(c, HConstants.META_TABLE_NAME);
     }
   }
 
