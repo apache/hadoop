@@ -18,13 +18,17 @@
 
 package org.apache.hadoop.util;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.TestCase;
-import static org.junit.Assert.assertArrayEquals;
+import org.apache.hadoop.test.UnitTestcaseTimeLimit;
+import org.junit.Test;
 
-public class TestStringUtils extends TestCase {
+public class TestStringUtils extends UnitTestcaseTimeLimit {
   final private static String NULL_STR = null;
   final private static String EMPTY_STR = "";
   final private static String STR_WO_SPECIAL_CHARS = "AB";
@@ -36,6 +40,7 @@ public class TestStringUtils extends TestCase {
   final private static String ESCAPED_STR_WITH_BOTH2 = 
     "\\,A\\\\\\,\\,B\\\\\\\\\\,";
   
+  @Test
   public void testEscapeString() throws Exception {
     assertEquals(NULL_STR, StringUtils.escapeString(NULL_STR));
     assertEquals(EMPTY_STR, StringUtils.escapeString(EMPTY_STR));
@@ -49,6 +54,7 @@ public class TestStringUtils extends TestCase {
         StringUtils.escapeString(STR_WITH_BOTH2));
   }
   
+  @Test
   public void testSplit() throws Exception {
     assertEquals(NULL_STR, StringUtils.split(NULL_STR));
     String[] splits = StringUtils.split(EMPTY_STR);
@@ -78,6 +84,7 @@ public class TestStringUtils extends TestCase {
     assertEquals(ESCAPED_STR_WITH_BOTH2, splits[0]);    
   }
   
+  @Test
   public void testSimpleSplit() throws Exception {
     final String[] TO_TEST = {
         "a/b/c",
@@ -93,6 +100,7 @@ public class TestStringUtils extends TestCase {
     }
   }
 
+  @Test
   public void testUnescapeString() throws Exception {
     assertEquals(NULL_STR, StringUtils.unEscapeString(NULL_STR));
     assertEquals(EMPTY_STR, StringUtils.unEscapeString(EMPTY_STR));
@@ -124,6 +132,7 @@ public class TestStringUtils extends TestCase {
         StringUtils.unEscapeString(ESCAPED_STR_WITH_BOTH2));
   }
   
+  @Test
   public void testTraditionalBinaryPrefix() throws Exception {
     String[] symbol = {"k", "m", "g", "t", "p", "e"};
     long m = 1024;
@@ -138,6 +147,7 @@ public class TestStringUtils extends TestCase {
     assertEquals(956703965184L, StringUtils.TraditionalBinaryPrefix.string2long("891g"));
   }
 
+  @Test
   public void testJoin() {
     List<String> s = new ArrayList<String>();
     s.add("a");
@@ -149,6 +159,7 @@ public class TestStringUtils extends TestCase {
     assertEquals("a:b:c", StringUtils.join(":", s.subList(0, 3)));
   }
   
+  @Test
   public void testGetTrimmedStrings() throws Exception {
     String compactDirList = "/spindle1/hdfs,/spindle2/hdfs,/spindle3/hdfs";
     String spacedDirList = "/spindle1/hdfs, /spindle2/hdfs, /spindle3/hdfs";
@@ -169,6 +180,7 @@ public class TestStringUtils extends TestCase {
     assertArrayEquals(emptyArray, StringUtils.getTrimmedStrings(emptyList2));
   } 
 
+  @Test
   public void testCamelize() {
     // common use cases
     assertEquals("Map", StringUtils.camelize("MAP"));

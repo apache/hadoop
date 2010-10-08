@@ -136,6 +136,9 @@ Trunk (unreleased changes)
 
     HADOOP-6856. Simplify constructors for SequenceFile, and MapFile. (omalley)
 
+    HADOOP-6987. Use JUnit Rule to optionally fail test cases that run more
+    than 10 seconds (jghoman)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
