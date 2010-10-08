@@ -209,6 +209,7 @@ public class HConnectionManager {
       new ConcurrentHashMap<String, HRegionInterface>();
 
     private final RootRegionTracker rootRegionTracker;
+    private final String identifier;
 
     /**
      * Map of table to table {@link HRegionLocation}s.  The table key is made
@@ -259,6 +260,7 @@ public class HConnectionManager {
 
       // initialize zookeeper and master address manager
       this.zooKeeper = getZooKeeperWatcher();
+      this.identifier = this.zooKeeper.toString();
       masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
       zooKeeper.registerListener(masterAddressTracker);
       masterAddressTracker.start();
@@ -272,8 +274,7 @@ public class HConnectionManager {
 
     @Override
     public String toString() {
-      // Return our zk identifier ... it 'hconnection + zk sessionid'.
-      return this.zooKeeper.toString();
+      return this.identifier;
     }
 
     private long getPauseTime(int tries) {
@@ -516,7 +517,7 @@ public class HConnectionManager {
     private HRegionLocation locateRegion(final byte [] tableName,
       final byte [] row, boolean useCache)
     throws IOException {
-      if (this.closed) throw new IOException("closed");
+      if (this.closed) throw new IOException(toString() + " closed");
       if (tableName == null || tableName.length == 0) {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");

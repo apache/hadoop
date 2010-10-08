@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
@@ -91,8 +92,10 @@ public class TestMetaReaderEditor {
     assertFalse(MetaReader.tableExists(CT, name));
     UTIL.createTable(nameBytes, HConstants.CATALOG_FAMILY);
     assertTrue(MetaReader.tableExists(CT, name));
-    UTIL.getHBaseAdmin().disableTable(name);
-    UTIL.getHBaseAdmin().deleteTable(name);
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    admin.disableTable(name);
+    admin.deleteTable(name);
+    admin.close();
     assertFalse(MetaReader.tableExists(CT, name));
     assertTrue(MetaReader.tableExists(CT,
       Bytes.toString(HConstants.META_TABLE_NAME)));

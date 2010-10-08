@@ -83,14 +83,13 @@ import com.google.common.base.Preconditions;
  */
 public class HBaseTestingUtility {
   private final static Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
-  private final Configuration conf;
+  private Configuration conf;
   private MiniZooKeeperCluster zkCluster = null;
   private MiniDFSCluster dfsCluster = null;
   private MiniHBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
   // If non-null, then already a cluster running.
   private File clusterTestBuildDir = null;
-  private HBaseAdmin hbaseAdmin = null;
 
   /**
    * System property key to get test directory value.
@@ -112,6 +111,14 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Returns this classes's instance of {@link Configuration}.  Be careful how
+   * you use the returned Configuration since {@link HConnection} instances
+   * can be shared.  The Map of HConnections is keyed by the Configuration.  If
+   * say, a Connection was being used against a cluster that had been shutdown,
+   * see {@link #shutdownMiniCluster()}, then the Connection will no longer
+   * be wholesome.  Rather than use the return direct, its usually best to
+   * make a copy and use that.  Do
+   * <code>Configuration c = new Configuration(INSTANCE.getConfiguration());</code>
    * @return Instance of Configuration.
    */
   public Configuration getConfiguration() {
@@ -340,9 +347,10 @@ public class HBaseTestingUtility {
     this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
     fs.mkdirs(hbaseRootdir);
     FSUtils.setVersion(fs, hbaseRootdir);
-    this.hbaseCluster = new MiniHBaseCluster(this.conf, numMasters, numSlaves);
+    Configuration c = new Configuration(this.conf);
+    this.hbaseCluster = new MiniHBaseCluster(c, numMasters, numSlaves);
     // Don't leave here till we've done a successful scan of the .META.
-    HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
+    HTable t = new HTable(c, HConstants.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
       continue;
@@ -360,7 +368,7 @@ public class HBaseTestingUtility {
   public void restartHBaseCluster(int servers) throws IOException {
     this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
     // Don't leave here till we've done a successful scan of the .META.
-    HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
+    HTable t = new HTable(new Configuration(this.conf), HConstants.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
       continue;
@@ -447,8 +455,8 @@ public class HBaseTestingUtility {
     for(byte[] family : families) {
       desc.addFamily(new HColumnDescriptor(family));
     }
-    (new HBaseAdmin(getConfiguration())).createTable(desc);
-    return new HTable(getConfiguration(), tableName);
+    getHBaseAdmin().createTable(desc);
+    return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
   /**
@@ -486,8 +494,8 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
     }
-    (new HBaseAdmin(getConfiguration())).createTable(desc);
-    return new HTable(getConfiguration(), tableName);
+    getHBaseAdmin().createTable(desc);
+    return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
   /**
@@ -514,8 +522,8 @@ public class HBaseTestingUtility {
       desc.addFamily(hcd);
       i++;
     }
-    (new HBaseAdmin(getConfiguration())).createTable(desc);
-    return new HTable(getConfiguration(), tableName);
+    getHBaseAdmin().createTable(desc);
+    return new HTable(new Configuration(getConfiguration()), tableName);
   }
 
   /**
@@ -711,7 +719,8 @@ public class HBaseTestingUtility {
    * @throws IOException When reading the rows fails.
    */
   public List<byte[]> getMetaTableRows() throws IOException {
-    HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
+    // TODO: Redo using MetaReader class
+    HTable t = new HTable(new Configuration(this.conf), HConstants.META_TABLE_NAME);
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
@@ -729,7 +738,8 @@ public class HBaseTestingUtility {
    * @throws IOException When reading the rows fails.
    */
   public List<byte[]> getMetaTableRows(byte[] tableName) throws IOException {
-    HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
+    // TODO: Redo using MetaReader.
+    HTable t = new HTable(new Configuration(this.conf), HConstants.META_TABLE_NAME);
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
     for (Result result : s) {
@@ -843,22 +853,23 @@ public class HBaseTestingUtility {
 
   public void expireSession(ZooKeeperWatcher nodeZK, Server server)
   throws Exception {
-    String quorumServers = ZKConfig.getZKQuorumServersString(conf);
+    Configuration c = new Configuration(this.conf);
+    String quorumServers = ZKConfig.getZKQuorumServersString(c);
     int sessionTimeout = 5 * 1000; // 5 seconds
+    ZooKeeper zk = nodeZK.getZooKeeper();
+    byte[] password = zk.getSessionPasswd();
+    long sessionID = zk.getSessionId();
 
-    byte[] password = nodeZK.getZooKeeper().getSessionPasswd();
-    long sessionID = nodeZK.getZooKeeper().getSessionId();
-
-    ZooKeeper zk = new ZooKeeper(quorumServers,
+    ZooKeeper newZK = new ZooKeeper(quorumServers,
         sessionTimeout, EmptyWatcher.instance, sessionID, password);
-    zk.close();
+    newZK.close();
     final long sleep = sessionTimeout * 5L;
     LOG.info("ZK Closed Session 0x" + Long.toHexString(sessionID) +
       "; sleeping=" + sleep);
 
     Thread.sleep(sleep);
 
-    new HTable(conf, HConstants.META_TABLE_NAME);
+    new HTable(new Configuration(conf), HConstants.META_TABLE_NAME);
   }
 
   /**
@@ -878,10 +889,7 @@ public class HBaseTestingUtility {
    */
   public HBaseAdmin getHBaseAdmin()
   throws IOException {
-    if (hbaseAdmin == null) {
-      hbaseAdmin = new HBaseAdmin(getConfiguration());
-    }
-    return hbaseAdmin;
+    return new HBaseAdmin(new Configuration(getConfiguration()));
   }
 
   /**
@@ -976,7 +984,7 @@ public class HBaseTestingUtility {
 
   public void waitTableAvailable(byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    HBaseAdmin admin = getHBaseAdmin();
     long startWait = System.currentTimeMillis();
     while (!admin.isTableAvailable(table)) {
       assertTrue("Timed out waiting for table " + Bytes.toStringBinary(table),

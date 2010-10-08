@@ -1031,6 +1031,13 @@ public class HBaseAdmin implements Abortable {
   }
 
   /**
+   * @return Configuration used by the instance.
+   */
+  public Configuration getConfiguration() {
+    return this.conf;
+  }
+
+  /**
    * Check to see if HBase is running. Throw an exception if not.
    *
    * @param conf system configuration
