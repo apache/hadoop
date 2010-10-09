@@ -380,9 +380,6 @@ public class CatalogTracker {
     }
     Throwable t = null;
     try {
-      // Am expecting only two possible exceptions here; unable
-      // to connect to the regionserver or NotServingRegionException wrapped
-      // in the hadoop rpc RemoteException.
       return metaServer.getRegionInfo(regionName) != null;
     } catch (ConnectException e) {
       t = e;
@@ -390,6 +387,13 @@ public class CatalogTracker {
       IOException ioe = e.unwrapRemoteException();
       if (ioe instanceof NotServingRegionException) {
         t = ioe;
+      } else {
+        throw e;
+      }
+    } catch (IOException e) {
+      Throwable cause = e.getCause();
+      if (cause != null && cause instanceof EOFException) {
+        t = cause;
       } else {
         throw e;
       }
