@@ -40,7 +40,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -181,7 +180,7 @@ public class HConnectionManager {
   }
 
   /* Encapsulates connection to zookeeper and regionservers.*/
-  static class HConnectionImplementation implements HConnection, Abortable {
+  static class HConnectionImplementation implements HConnection {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
     private final Class<? extends HRegionInterface> serverInterfaceClass;
     private final long pause;

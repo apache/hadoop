@@ -71,6 +71,18 @@ public class CatalogTracker {
     HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
 
   /**
+   * Constructs a catalog tracker.  Find current state of catalog tables and
+   * begin active tracking by executing {@link #start()} post construction.
+   * Does not timeout.
+   * @param connection Server connection; if problem, this connections
+   * {@link HConnection#abort(String, Throwable)} will be called.
+   * @throws IOException 
+   */
+  public CatalogTracker(final HConnection connection) throws IOException {
+    this(connection.getZooKeeperWatcher(), connection, connection);
+  }
+
+  /**
    * Constructs the catalog tracker.  Find current state of catalog tables and
    * begin active tracking by executing {@link #start()} post construction.
    * Does not timeout.
@@ -274,7 +286,7 @@ public class CatalogTracker {
    * for up to the specified timeout if not immediately available.  Throws an
    * exception if timed out waiting.  This method differs from {@link #waitForMeta()}
    * in that it will go ahead and verify the location gotten from ZooKeeper by
-   * trying trying to use returned connection.
+   * trying to use returned connection.
    * @param timeout maximum time to wait for meta availability, in milliseconds
    * @return location of meta
    * @throws InterruptedException if interrupted while waiting

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -39,7 +40,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * Cluster connection.
  * {@link HConnectionManager} manages instances of this class.
  */
-public interface HConnection {
+public interface HConnection extends Abortable {
   /**
    * Retrieve ZooKeeperWatcher used by the connection.
    * @return ZooKeeperWatcher handle being used by the connection.

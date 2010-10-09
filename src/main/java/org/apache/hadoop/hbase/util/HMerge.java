@@ -154,7 +154,7 @@ class HMerge {
 
     void process() throws IOException {
       try {
-        for(HRegionInfo[] regionsToMerge = next();
+        for (HRegionInfo[] regionsToMerge = next();
             regionsToMerge != null;
             regionsToMerge = next()) {
           if (!merge(regionsToMerge)) {
@@ -172,7 +172,7 @@ class HMerge {
     }
 
     protected boolean merge(final HRegionInfo[] info) throws IOException {
-      if(info.length < 2) {
+      if (info.length < 2) {
         LOG.info("only one region - nothing to merge");
         return false;
       }
@@ -196,8 +196,8 @@ class HMerge {
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
           // We merge two adjacent regions if their total size is less than
           // one half of the desired maximum size
-          LOG.info("merging regions " + Bytes.toString(currentRegion.getRegionName())
-              + " and " + Bytes.toString(nextRegion.getRegionName()));
+          LOG.info("Merging regions " + currentRegion.getRegionNameAsString() +
+            " and " + nextRegion.getRegionNameAsString());
           HRegion mergedRegion =
             HRegion.mergeAdjacent(currentRegion, nextRegion);
           updateMeta(currentRegion.getRegionName(), nextRegion.getRegionName(),

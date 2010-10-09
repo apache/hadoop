@@ -214,6 +214,11 @@ public class HBaseTestingUtility {
     System.setProperty("test.cache.data", this.clusterTestBuildDir.toString());
     this.dfsCluster = new MiniDFSCluster(0, this.conf, servers, true, true,
       true, null, null, null, null);
+    // Set this just-started cluser as our filesystem.
+    FileSystem fs = this.dfsCluster.getFileSystem();
+    this.conf.set("fs.defaultFS", fs.getUri().toString());
+    // Do old style too just to be safe.
+    this.conf.set("fs.default.name", fs.getUri().toString());
     return this.dfsCluster;
   }
 
@@ -318,7 +323,7 @@ public class HBaseTestingUtility {
     // If we already put up a cluster, fail.
     String testBuildPath = conf.get(TEST_DIRECTORY_KEY, null);
     isRunningCluster(testBuildPath);
-    if(testBuildPath != null) {
+    if (testBuildPath != null) {
       LOG.info("Using passed path: " + testBuildPath);
     }
     // Make a new random dir to home everything in.  Set it as system property.
@@ -329,24 +334,30 @@ public class HBaseTestingUtility {
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
     startMiniDFSCluster(numSlaves, this.clusterTestBuildDir);
-
-    // Mangle conf so fs parameter points to minidfs we just started up
-    FileSystem fs = this.dfsCluster.getFileSystem();
-    this.conf.set("fs.defaultFS", fs.getUri().toString());
-    // Do old style too just to be safe.
-    this.conf.set("fs.default.name", fs.getUri().toString());
     this.dfsCluster.waitClusterUp();
 
     // Start up a zk cluster.
     if (this.zkCluster == null) {
       startMiniZKCluster(this.clusterTestBuildDir);
     }
+    return startMiniHBaseCluster(numMasters, numSlaves);
+  }
 
+  /**
+   * Starts up mini hbase cluster.  Usually used after call to
+   * {@link #startMiniCluster(int, int)} when doing stepped startup of clusters.
+   * Usually you won't want this.  You'll usually want {@link #startMiniCluster()}.
+   * @param numMasters
+   * @param numSlaves
+   * @return Reference to the hbase mini hbase cluster.
+   * @throws IOException
+   * @see {@link #startMiniCluster()}
+   */
+  public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
+      final int numSlaves)
+  throws IOException {
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
-    Path hbaseRootdir = fs.makeQualified(fs.getHomeDirectory());
-    this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
-    fs.mkdirs(hbaseRootdir);
-    FSUtils.setVersion(fs, hbaseRootdir);
+    createRootDir();
     Configuration c = new Configuration(this.conf);
     this.hbaseCluster = new MiniHBaseCluster(c, numMasters, numSlaves);
     // Don't leave here till we've done a successful scan of the .META.
@@ -386,6 +397,7 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Stops mini hbase, zk, and hdfs clusters.
    * @throws IOException
    * @see {@link #startMiniCluster(int)}
    */
@@ -411,6 +423,23 @@ public class HBaseTestingUtility {
       this.clusterTestBuildDir = null;
     }
     LOG.info("Minicluster is down");
+  }
+
+  /**
+   * Creates an hbase rootdir in user home directory.  Also creates hbase
+   * version file.  Normally you won't make use of this method.  Root hbasedir
+   * is created for you as part of mini cluster startup.  You'd only use this
+   * method if you were doing manual operation.
+   * @return Fully qualified path to hbase root dir
+   * @throws IOException
+   */
+  public Path createRootDir() throws IOException {
+    FileSystem fs = FileSystem.get(this.conf);
+    Path hbaseRootdir = fs.makeQualified(fs.getHomeDirectory());
+    this.conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
+    fs.mkdirs(hbaseRootdir);
+    FSUtils.setVersion(fs, hbaseRootdir);
+    return hbaseRootdir;
   }
 
   /**
