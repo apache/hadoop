@@ -571,6 +571,9 @@ Release 0.21.0 - Unreleased
    HBASE-3008  Memstore.updateColumnValue passes wrong flag to heapSizeChange
                (Causes memstore size to go negative)
    HBASE-3089  REST tests are broken locally and up in hudson
+   HBASE-3062  ZooKeeper KeeperException$ConnectionLossException is a
+               "recoverable" exception; we should retry a while on server
+               startup at least.
   
 
 

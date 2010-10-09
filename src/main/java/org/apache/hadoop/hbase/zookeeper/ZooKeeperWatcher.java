@@ -104,7 +104,30 @@ public class ZooKeeperWatcher implements Watcher {
     try {
       // Create all the necessary "directories" of znodes
       // TODO: Move this to an init method somewhere so not everyone calls it?
-      ZKUtil.createAndFailSilent(this, baseZNode);
+
+      // The first call against zk can fail with connection loss.  Seems common.
+      // Apparently this is recoverable.  Retry a while.
+      // See http://wiki.apache.org/hadoop/ZooKeeper/ErrorHandling
+      // TODO: Generalize out in ZKUtil.
+      long wait = conf.getLong("hbase.zookeeper.recoverable.waittime", 10000);
+      long finished = System.currentTimeMillis() + wait;
+      KeeperException ke = null;
+      do {
+        try {
+          ZKUtil.createAndFailSilent(this, baseZNode);
+          ke = null;
+          break;
+        } catch (KeeperException.ConnectionLossException e) {
+          if (LOG.isDebugEnabled() && (isFinishedRetryingRecoverable(finished))) {
+            LOG.debug("Retrying zk create for another " +
+              (finished - System.currentTimeMillis()) +
+              "ms; set 'hbase.zookeeper.recoverable.waittime' to change " +
+              "wait time); " + e.getMessage());
+          }
+          ke = e;
+        }
+      } while (isFinishedRetryingRecoverable(finished));
+      if (ke != null) throw ke;
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, tableZNode);
@@ -112,6 +135,10 @@ public class ZooKeeperWatcher implements Watcher {
       LOG.error(prefix("Unexpected KeeperException creating base node"), e);
       throw new IOException(e);
     }
+  }
+
+  private boolean isFinishedRetryingRecoverable(final long finished) {
+    return System.currentTimeMillis() < finished;
   }
 
   @Override

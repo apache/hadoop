@@ -402,11 +402,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @throws InterruptedException
    */
   private void initialize() throws IOException, InterruptedException {
-    initializeZooKeeper();
-    initializeThreads();
-    int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
-    for (int i = 0; i < nbBlocks; i++) {
-      reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
+    try {
+      initializeZooKeeper();
+      initializeThreads();
+      int nbBlocks = conf.getInt("hbase.regionserver.nbreservationblocks", 4);
+      for (int i = 0; i < nbBlocks; i++) {
+        reservedSpace.add(new byte[HConstants.DEFAULT_SIZE_RESERVATION_BLOCK]);
+      }
+    } catch (Throwable t) {
+      // Call stop if error or process will stick around for ever since server
+      // puts up non-daemon threads.
+      this.server.stop();
     }
   }
 
