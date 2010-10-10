@@ -27,8 +27,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Iterator;
 import java.util.Enumeration;
+import java.util.Arrays;
 import java.util.Hashtable;
+import java.net.URI;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -50,8 +53,6 @@ public abstract class AbstractDaemonCluster {
   private String newConfDir = null;  
   private static final  String CONF_HADOOP_LOCAL_DIR =
       "test.system.hdrc.hadoop.local.confdir"; 
-  private static final  String CONF_HADOOP_MULTI_USER_LIST =
-      "test.system.hdrc.multi-user.list.path";
   private final static Object waitLock = new Object();
   
   /**
@@ -302,27 +303,44 @@ public abstract class AbstractDaemonCluster {
   }
 
   /**
-   * Get the multi users list.
-   * @return ArrayList - users list as a array list.
-   * @throws IOException - if an I/O error occurs.
+   * Get the proxy user definitions from cluster from configuration.
+   * @return ProxyUserDefinitions - proxy users data like groups and hosts.
+   * @throws Exception - if no proxy users found in config.
    */
-  public ArrayList<String> getHadoopMultiUsersList() throws
-     IOException {
-    String hadoopUserListPath = conf.get(CONF_HADOOP_MULTI_USER_LIST);
-    if (hadoopUserListPath == null || hadoopUserListPath.isEmpty()) {
-      LOG.error("Proxy user list path has not been passed for "
-          + CONF_HADOOP_MULTI_USER_LIST);
-      throw new IllegalArgumentException(
-          "Proxy user list hasn't been provided.");
+  public ProxyUserDefinitions getHadoopProxyUsers() throws
+     Exception {
+    Iterator itr = conf.iterator();
+    ArrayList<String> proxyUsers = new ArrayList<String>();
+    while (itr.hasNext()) {
+      if (itr.next().toString().indexOf("hadoop.proxyuser") >= 0 &&
+          itr.next().toString().indexOf("groups=") >= 0) {
+         proxyUsers.add(itr.next().toString().split("\\.")[2]);
+      }
     }
-    File fileObj = new File(hadoopUserListPath);
-    DataInputStream disObj = new DataInputStream(new FileInputStream(fileObj));
-    ArrayList<String> usersList = new ArrayList<String>();
-    String strLine = null;
-    while((strLine = disObj.readLine()) != null){
-      usersList.add(strLine.substring(0,strLine.indexOf(',')));
+    if (proxyUsers.size() == 0) {
+       LOG.error("No proxy users found in the configuration.");
+       throw new Exception("No proxy users found in the configuration.");
     }
-    return usersList;
+
+    ProxyUserDefinitions pud = new ProxyUserDefinitions() {
+      @Override
+      public boolean writeToFile(URI filePath) throws IOException {
+        throw new UnsupportedOperationException("No such method exists.");
+      };
+    };
+
+    for (String userName : proxyUsers) {
+       List<String> groups = Arrays.asList(conf.get("hadoop.proxyuser." +
+           userName + ".groups").split("//,"));
+       List<String> hosts = Arrays.asList(conf.get("hadoop.proxyuser." +
+           userName + ".hosts").split("//,"));
+       ProxyUserDefinitions.GroupsAndHost definitions =
+           pud.new GroupsAndHost();
+       definitions.setGroups(groups);
+       definitions.setHosts(hosts);
+       pud.addProxyUser(userName, definitions);
+    }
+    return pud;
   }
   
   /**

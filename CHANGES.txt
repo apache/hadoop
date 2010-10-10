@@ -282,6 +282,9 @@ Release 0.21.1 - Unreleased
 
     HADOOP-6993. Broken link on cluster setup page of docs. (eli)
 
+    HADOOP-6944. [Herriot] Implement a functionality for getting proxy users
+    definitions like groups and hosts. (Vinay Thota via cos)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
