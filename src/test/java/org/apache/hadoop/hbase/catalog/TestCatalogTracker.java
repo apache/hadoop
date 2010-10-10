@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
@@ -33,11 +35,11 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Result;
@@ -100,6 +102,37 @@ public class TestCatalogTracker {
     CatalogTracker ct = new CatalogTracker(this.watcher, c, this.abortable);
     ct.start();
     return ct;
+  }
+
+  /**
+   * Test interruptable while blocking wait on root and meta.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test public void testInterruptWaitOnMetaAndRoot()
+  throws IOException, InterruptedException {
+    final CatalogTracker ct = constructAndStartCatalogTracker();
+    HServerAddress hsa = ct.getRootLocation();
+    Assert.assertNull(hsa);
+    HServerAddress meta = ct.getMetaLocation();
+    Assert.assertNull(meta);
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          ct.waitForMeta();
+        } catch (InterruptedException e) {
+          throw new RuntimeException("Interrupted", e);
+        }
+      }
+    };
+    t.start();
+    while (!t.isAlive()) Threads.sleep(1);
+    Threads.sleep(1);
+    assertTrue(t.isAlive());
+    ct.stop();
+    // Join the thread... should exit shortly.
+    t.join();
   }
 
   @Test public void testGetMetaServerConnectionFails()
@@ -292,7 +325,7 @@ public class TestCatalogTracker {
       try {
         doWaiting();
       } catch (InterruptedException e) {
-        throw new RuntimeException("Failed wait on root", e);
+        throw new RuntimeException("Failed wait", e);
       }
       LOG.info("Exiting " + getName());
     }

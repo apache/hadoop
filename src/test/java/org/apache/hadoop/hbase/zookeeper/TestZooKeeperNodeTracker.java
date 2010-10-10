@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.Semaphore;
 
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.master.TestActiveMasterManager.NodeDeletionListener;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -60,9 +62,36 @@ public class TestZooKeeperNodeTracker {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
+  /**
+   * Test that we can interrupt a node that is blocked on a wait.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test public void testInterruptible() throws IOException, InterruptedException {
+    Abortable abortable = new StubAbortable();
+    ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+      "testInterruptible", abortable);
+    final TestTracker tracker = new TestTracker(zk, "/xyz", abortable);
+    tracker.start();
+    Thread t = new Thread() {
+      @Override
+      public void run() {
+        try {
+          tracker.blockUntilAvailable();
+        } catch (InterruptedException e) {
+          throw new RuntimeException("Interrupted", e);
+        }
+      }
+    };
+    t.start();
+    while (!t.isAlive()) Threads.sleep(1);
+    tracker.stop();
+    t.join();
+    // If it wasn't interruptible, we'd never get to here.
+  }
+
   @Test
   public void testNodeTracker() throws Exception {
-
     Abortable abortable = new StubAbortable();
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
         "testNodeTracker", abortable);
@@ -209,7 +238,6 @@ public class TestZooKeeperNodeTracker {
   }
 
   public static class TestTracker extends ZooKeeperNodeTracker {
-
     public TestTracker(ZooKeeperWatcher watcher, String node,
         Abortable abortable) {
       super(watcher, node, abortable);

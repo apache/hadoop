@@ -140,6 +140,14 @@ public class HConnectionManager {
   }
 
   /**
+   * Delete connection information for the instance
+   * @param connection configuration
+   */
+  public static void deleteConnection(HConnection connection) {
+    deleteConnection(connection.getConfiguration(), false);
+  }
+
+  /**
    * Delete information for all connections.
    * @param stopProxy stop the proxy as well
    * @throws IOException
@@ -231,17 +239,12 @@ public class HConnectionManager {
     public HConnectionImplementation(Configuration conf)
     throws ZooKeeperConnectionException {
       this.conf = conf;
-
-      String serverClassName =
-        conf.get(HConstants.REGION_SERVER_CLASS,
-            HConstants.DEFAULT_REGION_SERVER_CLASS);
-
+      String serverClassName = conf.get(HConstants.REGION_SERVER_CLASS,
+        HConstants.DEFAULT_REGION_SERVER_CLASS);
       this.closed = false;
-
       try {
         this.serverInterfaceClass =
           (Class<? extends HRegionInterface>) Class.forName(serverClassName);
-
       } catch (ClassNotFoundException e) {
         throw new UnsupportedOperationException(
             "Unable to find region server interface " + serverClassName, e);
@@ -269,6 +272,10 @@ public class HConnectionManager {
 
       this.master = null;
       this.masterChecked = false;
+    }
+
+    public Configuration getConfiguration() {
+      return this.conf;
     }
 
     @Override

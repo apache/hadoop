@@ -26,6 +26,7 @@ import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -50,9 +51,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
  * a particular cell, and write it back to the table.
  */
 public class TestTableMapReduce extends MultiRegionTable {
-
   private static final Log LOG = LogFactory.getLog(TestTableMapReduce.class);
-
   static final String MULTI_REGION_TABLE_NAME = "mrtest";
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
@@ -112,17 +111,16 @@ public class TestTableMapReduce extends MultiRegionTable {
    */
   public void testMultiRegionTable()
   throws IOException, InterruptedException, ClassNotFoundException {
-    runTestOnTable(new HTable(conf, MULTI_REGION_TABLE_NAME));
+    runTestOnTable(new HTable(new Configuration(conf), MULTI_REGION_TABLE_NAME));
   }
 
   private void runTestOnTable(HTable table)
   throws IOException, InterruptedException, ClassNotFoundException {
     MiniMRCluster mrCluster = new MiniMRCluster(2, fs.getUri().toString(), 1);
-
     Job job = null;
     try {
       LOG.info("Before map/reduce startup");
-      job = new Job(conf, "process column contents");
+      job = new Job(table.getConfiguration(), "process column contents");
       job.setNumReduceTasks(1);
       Scan scan = new Scan();
       scan.addFamily(INPUT_FAMILY);
@@ -150,7 +148,7 @@ public class TestTableMapReduce extends MultiRegionTable {
   }
 
   private void verify(String tableName) throws IOException {
-    HTable table = new HTable(conf, tableName);
+    HTable table = new HTable(new Configuration(conf), tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt("hbase.client.retries.number", 5);

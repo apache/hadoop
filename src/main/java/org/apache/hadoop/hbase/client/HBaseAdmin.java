@@ -66,11 +66,6 @@ public class HBaseAdmin implements Abortable {
   private volatile Configuration conf;
   private final long pause;
   private final int numRetries;
-  /**
-   * Lazily instantiated.  Use {@link #getCatalogTracker()} to ensure you get
-   * an instance rather than a null.
-   */
-  private CatalogTracker catalogTracker = null;
 
   /**
    * Constructor
@@ -88,21 +83,32 @@ public class HBaseAdmin implements Abortable {
     this.connection.getMaster();
   }
 
+  /**
+   * @return A new CatalogTracker instance; call {@link #cleanupCatalogTracker(CatalogTracker)}
+   * to cleanup the returned catalog tracker.
+   * @throws ZooKeeperConnectionException
+   * @throws IOException
+   * @see #cleanupCatalogTracker(CatalogTracker);
+   */
   private synchronized CatalogTracker getCatalogTracker()
   throws ZooKeeperConnectionException, IOException {
-    if (this.catalogTracker == null) {
-      this.catalogTracker = new CatalogTracker(this.connection.getZooKeeperWatcher(),
-        HConnectionManager.getConnection(conf), this,
-        this.conf.getInt("hbase.admin.catalog.timeout", 10 * 1000));
-      try {
-        this.catalogTracker.start();
-      } catch (InterruptedException e) {
-        // Let it out as an IOE for now until we redo all so tolerate IEs
-        Thread.currentThread().interrupt();
-        throw new IOException("Interrupted", e);
-      }
+    CatalogTracker ct = null;
+    try {
+      HConnection connection =
+        HConnectionManager.getConnection(new Configuration(this.conf));
+      ct = new CatalogTracker(connection);
+      ct.start();
+    } catch (InterruptedException e) {
+      // Let it out as an IOE for now until we redo all so tolerate IEs
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted", e);
     }
-    return this.catalogTracker;
+    return ct;
+  }
+
+  private void cleanupCatalogTracker(final CatalogTracker ct) {
+    ct.stop();
+    HConnectionManager.deleteConnection(ct.getConnection());
   }
 
   @Override
@@ -142,7 +148,14 @@ public class HBaseAdmin implements Abortable {
    */
   public boolean tableExists(final String tableName)
   throws IOException {
-    return MetaReader.tableExists(getCatalogTracker(), tableName);
+    boolean b = false;
+    CatalogTracker ct = getCatalogTracker();
+    try {
+      b = MetaReader.tableExists(ct, tableName);
+    } finally {
+      cleanupCatalogTracker(ct);
+    }
+    return b;
   }
 
   /**
@@ -718,15 +731,20 @@ public class HBaseAdmin implements Abortable {
    */
   public void closeRegion(final byte [] regionname, final String hostAndPort)
   throws IOException {
-    if (hostAndPort != null) {
-      HServerAddress hsa = new HServerAddress(hostAndPort);
-      Pair<HRegionInfo, HServerAddress> pair =
-        MetaReader.getRegion(getCatalogTracker(), regionname);
-      closeRegion(hsa, pair.getFirst());
-    } else {
-      Pair<HRegionInfo, HServerAddress> pair =
-        MetaReader.getRegion(getCatalogTracker(), regionname);
-      closeRegion(pair.getSecond(), pair.getFirst());
+    CatalogTracker ct = getCatalogTracker();
+    try {
+      if (hostAndPort != null) {
+        HServerAddress hsa = new HServerAddress(hostAndPort);
+        Pair<HRegionInfo, HServerAddress> pair =
+          MetaReader.getRegion(ct, regionname);
+        closeRegion(hsa, pair.getFirst());
+      } else {
+        Pair<HRegionInfo, HServerAddress> pair =
+          MetaReader.getRegion(ct, regionname);
+        closeRegion(pair.getSecond(), pair.getFirst());
+      }
+    } finally {
+      cleanupCatalogTracker(ct);
     }
   }
 
@@ -760,17 +778,22 @@ public class HBaseAdmin implements Abortable {
   public void flush(final byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
     boolean isRegionName = isRegionName(tableNameOrRegionName);
-    if (isRegionName) {
-      Pair<HRegionInfo, HServerAddress> pair =
-        MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
-      flush(pair.getSecond(), pair.getFirst());
-    } else {
-      List<Pair<HRegionInfo, HServerAddress>> pairs =
-        MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
-          Bytes.toString(tableNameOrRegionName));
-      for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+    CatalogTracker ct = getCatalogTracker();
+    try {
+      if (isRegionName) {
+        Pair<HRegionInfo, HServerAddress> pair =
+          MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
         flush(pair.getSecond(), pair.getFirst());
+      } else {
+        List<Pair<HRegionInfo, HServerAddress>> pairs =
+          MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
+              Bytes.toString(tableNameOrRegionName));
+        for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+          flush(pair.getSecond(), pair.getFirst());
+        }
       }
+    } finally {
+      cleanupCatalogTracker(ct);
     }
   }
 
@@ -843,17 +866,22 @@ public class HBaseAdmin implements Abortable {
    */
   private void compact(final byte [] tableNameOrRegionName, final boolean major)
   throws IOException, InterruptedException {
-    if (isRegionName(tableNameOrRegionName)) {
-      Pair<HRegionInfo, HServerAddress> pair =
-        MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
-      compact(pair.getSecond(), pair.getFirst(), major);
-    } else {
-      List<Pair<HRegionInfo, HServerAddress>> pairs =
-        MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
-          Bytes.toString(tableNameOrRegionName));
-      for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+    CatalogTracker ct = getCatalogTracker();
+    try {
+      if (isRegionName(tableNameOrRegionName)) {
+        Pair<HRegionInfo, HServerAddress> pair =
+          MetaReader.getRegion(ct, tableNameOrRegionName);
         compact(pair.getSecond(), pair.getFirst(), major);
+      } else {
+        List<Pair<HRegionInfo, HServerAddress>> pairs =
+          MetaReader.getTableRegionsAndLocations(ct,
+              Bytes.toString(tableNameOrRegionName));
+        for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+          compact(pair.getSecond(), pair.getFirst(), major);
+        }
       }
+    } finally {
+      cleanupCatalogTracker(ct);
     }
   }
 
@@ -920,19 +948,25 @@ public class HBaseAdmin implements Abortable {
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException 
    */
-  public void split(final byte [] tableNameOrRegionName) throws IOException, InterruptedException {
-    if (isRegionName(tableNameOrRegionName)) {
-      // Its a possible region name.
-      Pair<HRegionInfo, HServerAddress> pair =
-        MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
-      split(pair.getSecond(), pair.getFirst());
-    } else {
-      List<Pair<HRegionInfo, HServerAddress>> pairs =
-        MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
-          Bytes.toString(tableNameOrRegionName));
-      for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+  public void split(final byte [] tableNameOrRegionName)
+  throws IOException, InterruptedException {
+    CatalogTracker ct = getCatalogTracker();
+    try {
+      if (isRegionName(tableNameOrRegionName)) {
+        // Its a possible region name.
+        Pair<HRegionInfo, HServerAddress> pair =
+          MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
         split(pair.getSecond(), pair.getFirst());
+      } else {
+        List<Pair<HRegionInfo, HServerAddress>> pairs =
+          MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
+              Bytes.toString(tableNameOrRegionName));
+        for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+          split(pair.getSecond(), pair.getFirst());
+        }
       }
+    } finally {
+      cleanupCatalogTracker(ct);
     }
   }
 

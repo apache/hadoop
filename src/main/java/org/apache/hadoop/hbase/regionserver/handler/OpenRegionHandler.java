@@ -65,7 +65,8 @@ public class OpenRegionHandler extends EventHandler {
 
   @Override
   public void process() throws IOException {
-    LOG.debug("Processing open of " + regionInfo.getRegionNameAsString());
+    final String name = regionInfo.getRegionNameAsString();
+    LOG.debug("Processing open of " + name);
     final String encodedName = regionInfo.getEncodedName();
 
     // TODO: Previously we would check for root region availability (but only that it
@@ -76,7 +77,7 @@ public class OpenRegionHandler extends EventHandler {
     // Check that this region is not already online
     HRegion region = this.rsServices.getFromOnlineRegions(encodedName);
     if (region != null) {
-      LOG.warn("Attempting open of " + regionInfo.getRegionNameAsString() +
+      LOG.warn("Attempting open of " + name +
         " but it's already online on this server");
       return;
     }
@@ -89,22 +90,22 @@ public class OpenRegionHandler extends EventHandler {
     try {
       // Instantiate the region.  This also periodically updates OPENING.
       region = HRegion.openHRegion(regionInfo, this.rsServices.getWAL(),
-          server.getConfiguration(), this.rsServices.getFlushRequester(),
-          new Progressable() {
-            public void progress() {
-              try {
-                int vsn = ZKAssign.retransitionNodeOpening(
-                    server.getZooKeeper(), regionInfo, server.getServerName(),
-                    openingInteger.get());
-                if (vsn == -1) {
-                  throw KeeperException.create(Code.BADVERSION);
-                }
-                openingInteger.set(vsn);
-              } catch (KeeperException e) {
-                server.abort("ZK exception refreshing OPENING node", e);
+        server.getConfiguration(), this.rsServices.getFlushRequester(),
+        new Progressable() {
+          public void progress() {
+            try {
+              int vsn = ZKAssign.retransitionNodeOpening(
+                  server.getZooKeeper(), regionInfo, server.getServerName(),
+                  openingInteger.get());
+              if (vsn == -1) {
+                throw KeeperException.create(Code.BADVERSION);
               }
+              openingInteger.set(vsn);
+            } catch (KeeperException e) {
+              server.abort("ZK exception refreshing OPENING node; " + name, e);
             }
-      });
+          }
+        });
     } catch (IOException e) {
       LOG.error("IOException instantiating region for " + regionInfo +
         "; resetting state of transition node from OPENING to OFFLINE");
@@ -115,29 +116,34 @@ public class OpenRegionHandler extends EventHandler {
         ZKAssign.forceNodeOffline(server.getZooKeeper(), regionInfo,
             server.getServerName());
       } catch (KeeperException e1) {
-        LOG.error("Error forcing node back to OFFLINE from OPENING");
-        return;
+        LOG.error("Error forcing node back to OFFLINE from OPENING; " + name);
       }
       return;
     }
+    // Region is now open. Close it if error.
 
     // Re-transition node to OPENING again to verify no one has stomped on us
     openingVersion = openingInteger.get();
     try {
-      if((openingVersion = ZKAssign.retransitionNodeOpening(
+      if ((openingVersion = ZKAssign.retransitionNodeOpening(
           server.getZooKeeper(), regionInfo, server.getServerName(),
           openingVersion)) == -1) {
-        LOG.warn("Completed the OPEN of a region but when transitioning from " +
-            " OPENING to OPENING got a version mismatch, someone else clashed " +
-            "so now unassigning");
-        region.close();
+        LOG.warn("Completed the OPEN of region " + name +
+          " but when transitioning from " +
+          " OPENING to OPENING got a version mismatch, someone else clashed " +
+          "-- closing region");
+        cleanupFailedOpen(region);
         return;
       }
     } catch (KeeperException e) {
-      LOG.error("Failed transitioning node from OPENING to OPENED", e);
+      LOG.error("Failed transitioning node " + name +
+        " from OPENING to OPENED -- closing region", e);
+      cleanupFailedOpen(region);
       return;
     } catch (IOException e) {
-      LOG.error("Failed to close region after failing to transition", e);
+      LOG.error("Failed to close region " + name +
+        " after failing to transition -- closing region", e);
+      cleanupFailedOpen(region);
       return;
     }
 
@@ -146,33 +152,48 @@ public class OpenRegionHandler extends EventHandler {
       this.rsServices.postOpenDeployTasks(region,
         this.server.getCatalogTracker(), false);
     } catch (IOException e) {
-      // TODO: rollback the open?
-      LOG.error("Error updating region location in catalog table", e);
+      LOG.error("Error updating " + name + " location in catalog table -- " +
+        "closing region", e);
+      cleanupFailedOpen(region);
+      return;
     } catch (KeeperException e) {
       // TODO: rollback the open?
-      LOG.error("ZK Error updating region location in catalog table", e);
+      LOG.error("ZK Error updating " + name + " location in catalog " +
+        "table -- closing region", e);
+      cleanupFailedOpen(region);
+      return;
     }
 
     // Finally, Transition ZK node to OPENED
     try {
       if (ZKAssign.transitionNodeOpened(server.getZooKeeper(), regionInfo,
           server.getServerName(), openingVersion) == -1) {
-        LOG.warn("Completed the OPEN of a region but when transitioning from " +
-            " OPENING to OPENED got a version mismatch, someone else clashed " +
-            "so now unassigning");
-        region.close();
+        LOG.warn("Completed the OPEN of region " + name +
+          " but when transitioning from " +
+          " OPENING to OPENED got a version mismatch, someone else clashed " +
+          "so now unassigning -- closing region");
+        cleanupFailedOpen(region);
         return;
       }
     } catch (KeeperException e) {
-      LOG.error("Failed transitioning node from OPENING to OPENED", e);
+      LOG.error("Failed transitioning node " + name +
+        " from OPENING to OPENED -- closing region", e);
+      cleanupFailedOpen(region);
       return;
     } catch (IOException e) {
-      LOG.error("Failed to close region after failing to transition", e);
+      LOG.error("Failed to close " + name +
+        " after failing to transition -- closing region", e);
+      cleanupFailedOpen(region);
       return;
     }
 
     // Done!  Successful region open
-    LOG.debug("Opened " + region.getRegionNameAsString());
+    LOG.debug("Opened " + name);
+  }
+
+  private void cleanupFailedOpen(final HRegion region) throws IOException {
+    if (region != null) region.close();
+    this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
   }
 
   int transitionZookeeperOfflineToOpening(final String encodedName) {

@@ -41,6 +41,8 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
   /** Used to abort if a fatal error occurs */
   protected final Abortable abortable;
 
+  private boolean stopped = false;
+
   /**
    * Constructs a new ZK node tracker.
    *
@@ -81,6 +83,11 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
     }
   }
 
+  public synchronized void stop() {
+    this.stopped = true;
+    notifyAll();
+  }
+
   /**
    * Gets the data of the node, blocking until the node is available.
    *
@@ -107,7 +114,7 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
     boolean notimeout = timeout == 0;
     long startTime = System.currentTimeMillis();
     long remaining = timeout;
-    while ((notimeout || remaining > 0) && this.data == null) {
+    while (!this.stopped && (notimeout || remaining > 0) && this.data == null) {
       if (notimeout) {
         wait();
         continue;

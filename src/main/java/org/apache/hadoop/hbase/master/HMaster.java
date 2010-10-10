@@ -287,6 +287,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
       // Stop services started for both backup and active masters
       this.activeMasterManager.stop();
+      this.catalogTracker.stop();
       HConnectionManager.deleteConnection(this.conf, true);
       this.zooKeeper.close();
       LOG.info("HMaster main thread exiting");

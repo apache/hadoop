@@ -592,6 +592,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       closeAllScanners();
       LOG.info("stopping server at: " + this.serverInfo.getServerName());
     }
+    // Interrupt catalog tracker here in case any regions being opened out in
+    // handlers are stuck waiting on meta or root.
+    this.catalogTracker.stop();
     waitOnAllRegionsToClose();
 
     // Make sure the proxy is down.
@@ -1240,8 +1243,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         r.hasReferences()? "Region has references on open" :
           "Region has too many store files");
     }
-    // Add to online regions
-    addToOnlineRegions(r);
     // Update ZK, ROOT or META
     if (r.getRegionInfo().isRootRegion()) {
       RootLocationEditor.setRootLocation(getZooKeeper(),
@@ -1256,6 +1257,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         MetaEditor.updateRegionLocation(ct, r.getRegionInfo(), getServerInfo());
       }
     }
+    // Add to online regions if all above was successful.
+    addToOnlineRegions(r);
   }
 
   /**
