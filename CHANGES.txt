@@ -574,6 +574,12 @@ Release 0.21.0 - Unreleased
    HBASE-3062  ZooKeeper KeeperException$ConnectionLossException is a
                "recoverable" exception; we should retry a while on server
                startup at least.
+   HBASE-3074  Zookeeper test failing on hudson
+   HBASE-3089  REST tests are broken locally and up in hudson
+   HBASE-3085  TestSchemaResource broken on TRUNK up on HUDSON
+   HBASE-3080  TestAdmin hanging on hudson
+   HBASE-3063  TestThriftServer failing in TRUNK
+   HBASE-3094  Fixes for miscellaneous broken tests
   
 
 
