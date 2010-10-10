@@ -97,6 +97,7 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
    */
   protected void hBaseClusterSetup() throws Exception {
     File testDir = new File(getUnitTestdir(getName()).toString());
+    if (testDir.exists()) testDir.delete();
 
     // Note that this is done before we create the MiniHBaseCluster because we
     // need to edit the config to add the ZooKeeper servers.
@@ -106,7 +107,6 @@ public abstract class HBaseClusterTestCase extends HBaseTestCase {
     Configuration c = new Configuration(this.conf);
     // start the mini cluster
     this.cluster = new MiniHBaseCluster(c, regionServers);
-
     if (openMetaTable) {
       // opening the META table ensures that cluster is running
       new HTable(c, HConstants.META_TABLE_NAME);
