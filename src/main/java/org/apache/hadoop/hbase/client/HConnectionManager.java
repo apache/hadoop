@@ -216,7 +216,6 @@ public class HConnectionManager {
       new ConcurrentHashMap<String, HRegionInterface>();
 
     private final RootRegionTracker rootRegionTracker;
-    private final String identifier;
 
     /**
      * Map of table to table {@link HRegionLocation}s.  The table key is made
@@ -262,7 +261,6 @@ public class HConnectionManager {
 
       // initialize zookeeper and master address manager
       this.zooKeeper = getZooKeeperWatcher();
-      this.identifier = this.zooKeeper.toString();
       masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
       zooKeeper.registerListener(masterAddressTracker);
       masterAddressTracker.start();
@@ -276,11 +274,6 @@ public class HConnectionManager {
 
     public Configuration getConfiguration() {
       return this.conf;
-    }
-
-    @Override
-    public String toString() {
-      return this.identifier;
     }
 
     private long getPauseTime(int tries) {

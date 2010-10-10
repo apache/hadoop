@@ -129,6 +129,7 @@ public class CatalogTracker {
   public void start() throws IOException, InterruptedException {
     this.rootRegionTracker.start();
     this.metaNodeTracker.start();
+    LOG.debug("Starting catalog tracker " + this);
   }
 
   /**
@@ -136,8 +137,7 @@ public class CatalogTracker {
    * Interrupts any ongoing waits.
    */
   public void stop() {
-    LOG.debug("Stopping catalog tracker " + this.connection.toString() +
-      "; will interrupt blocked waits on root and meta");
+    LOG.debug("Stopping catalog tracker " + this);
     this.stopped = true;
     this.rootRegionTracker.stop();
     this.metaNodeTracker.stop();
