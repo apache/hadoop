@@ -192,6 +192,7 @@ public class TestRegionRebalancing extends HBaseClusterTestCase {
           Thread.sleep(10000);
         } catch (InterruptedException e) {}
 
+        cluster.getMaster().balance();
         continue;
       }
 
