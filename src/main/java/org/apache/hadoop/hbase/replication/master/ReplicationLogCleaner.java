@@ -23,24 +23,21 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
-// REENALBE import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Implementation of a log cleaner that checks if a log is still scheduled for
  * replication before deleting it when its TTL is over.
  */
-public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
+public class ReplicationLogCleaner implements LogCleanerDelegate {
 
   private static final Log LOG =
     LogFactory.getLog(ReplicationLogCleaner.class);
@@ -78,31 +75,30 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
   private boolean refreshHLogsAndSearch(String searchedLog) {
     this.hlogs.clear();
     final boolean lookForLog = searchedLog != null;
-// REENALBE
-//    List<String> rss = zkHelper.getListOfReplicators(this);
-//    if (rss == null) {
-//      LOG.debug("Didn't find any region server that replicates, deleting: " +
-//          searchedLog);
-//      return false;
-//    }
-//    for (String rs: rss) {
-//      List<String> listOfPeers = zkHelper.getListPeersForRS(rs, this);
-//      // if rs just died, this will be null
-//      if (listOfPeers == null) {
-//        continue;
-//      }
-//      for (String id : listOfPeers) {
-//        List<String> peersHlogs = zkHelper.getListHLogsForPeerForRS(rs, id, this);
-//        if (peersHlogs != null) {
-//          this.hlogs.addAll(peersHlogs);
-//        }
-//        // early exit if we found the log
-//        if(lookForLog && this.hlogs.contains(searchedLog)) {
-//          LOG.debug("Found log in ZK, keeping: " + searchedLog);
-//          return true;
-//        }
-//      }
-//    }
+    List<String> rss = zkHelper.getListOfReplicators();
+    if (rss == null) {
+      LOG.debug("Didn't find any region server that replicates, deleting: " +
+          searchedLog);
+      return false;
+    }
+    for (String rs: rss) {
+      List<String> listOfPeers = zkHelper.getListPeersForRS(rs);
+      // if rs just died, this will be null
+      if (listOfPeers == null) {
+        continue;
+      }
+      for (String id : listOfPeers) {
+        List<String> peersHlogs = zkHelper.getListHLogsForPeerForRS(rs, id);
+        if (peersHlogs != null) {
+          this.hlogs.addAll(peersHlogs);
+        }
+        // early exit if we found the log
+        if(lookForLog && this.hlogs.contains(searchedLog)) {
+          LOG.debug("Found log in ZK, keeping: " + searchedLog);
+          return true;
+        }
+      }
+    }
     LOG.debug("Didn't find this log in ZK, deleting: " + searchedLog);
     return false;
   }
@@ -110,15 +106,15 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
-//    try {
-      // REENABLE
-//      this.zkHelper = new ReplicationZookeeperWrapper(
-//          ZooKeeperWrapper.createInstance(this.conf,
-//              HMaster.class.getName()),
-//          this.conf, new AtomicBoolean(true), null);
-//    } catch (IOException e) {
-//      LOG.error(e);
-//    }
+    try {
+      ZooKeeperWatcher zkw =
+          new ZooKeeperWatcher(conf, this.getClass().getName(), null);
+      this.zkHelper = new ReplicationZookeeper(conf, zkw);
+    } catch (KeeperException e) {
+      LOG.error("Error while configuring " + this.getClass().getName(), e);
+    } catch (IOException e) {
+      LOG.error("Error while configuring " + this.getClass().getName(), e);
+    }
     refreshHLogsAndSearch(null);
   }
 
@@ -126,7 +122,4 @@ public class ReplicationLogCleaner implements LogCleanerDelegate, Watcher {
   public Configuration getConf() {
     return conf;
   }
-
-  @Override
-  public void process(WatchedEvent watchedEvent) {}
 }

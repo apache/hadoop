@@ -39,11 +39,11 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
 
 /**
  * This class serves as a helper for all things related to zookeeper
@@ -81,31 +81,39 @@ public class ReplicationZookeeper {
   // Our handle on zookeeper
   private final ZooKeeperWatcher zookeeper;
   // Map of addresses of peer clusters with their ZKW
-  private final Map<String, ReplicationZookeeper> peerClusters;
+  private Map<String, ZooKeeperWatcher> peerClusters;
   // Path to the root replication znode
-  private final String replicationZNode;
+  private String replicationZNode;
   // Path to the peer clusters znode
-  private final String peersZNode;
+  private String peersZNode;
   // Path to the znode that contains all RS that replicates
-  private final String rsZNode;
+  private String rsZNode;
   // Path to this region server's name under rsZNode
-  private final String rsServerNameZnode;
+  private String rsServerNameZnode;
   // Name node if the replicationState znode
-  private final String replicationStateNodeName;
+  private String replicationStateNodeName;
   // If this RS is part of a master cluster
-  private final boolean replicationMaster;
+  private boolean replicationMaster;
   private final Configuration conf;
   // Is this cluster replicating at the moment?
-  private final AtomicBoolean replicating;
+  private AtomicBoolean replicating;
   // Byte (stored as string here) that identifies this cluster
-  private final String clusterId;
+  private String clusterId;
   // Abortable
-  private final Abortable abortable;
+  private Abortable abortable;
+
+  public ReplicationZookeeper(final Configuration conf, final ZooKeeperWatcher zk)
+    throws KeeperException {
+
+    this.conf = conf;
+    this.zookeeper = zk;
+    setZNodes();
+  }
 
   /**
    * Constructor used by region servers, connects to the peer cluster right away.
    *
-   * @param zookeeper
+   * @param server
    * @param replicating    atomic boolean to start/stop replication
    * @throws IOException
    * @throws KeeperException 
@@ -115,6 +123,27 @@ public class ReplicationZookeeper {
     this.abortable = server;
     this.zookeeper = server.getZooKeeper();
     this.conf = server.getConfiguration();
+    setZNodes();
+
+    this.peerClusters = new HashMap<String, ZooKeeperWatcher>();
+    this.replicating = replicating;
+    setReplicating();
+    this.rsServerNameZnode = ZKUtil.joinZNode(rsZNode, server.getServerName());
+    ZKUtil.createWithParents(this.zookeeper, this.rsServerNameZnode);
+    // Set a tracker on replicationStateNodeNode
+    ReplicationStatusTracker tracker =
+        new ReplicationStatusTracker(this.zookeeper, server);
+    tracker.start();
+
+    List<String> znodes = ZKUtil.listChildrenNoWatch(this.zookeeper, this.peersZNode);
+    if (znodes != null) {
+      for (String z : znodes) {
+        connectToPeer(z);
+      }
+    }
+  }
+
+  private void setZNodes() throws KeeperException {
     String replicationZNodeName =
         conf.get("zookeeper.znode.replication", "replication");
     String peersZNodeName =
@@ -130,15 +159,11 @@ public class ReplicationZookeeper {
     String thisCluster = this.conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" +
           this.conf.get("hbase.zookeeper.property.clientPort") + ":" +
           this.conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
-
-    this.peerClusters = new HashMap<String, ReplicationZookeeper>();
     this.replicationZNode =
       ZKUtil.joinZNode(this.zookeeper.baseZNode, replicationZNodeName);
     this.peersZNode = ZKUtil.joinZNode(replicationZNode, peersZNodeName);
     this.rsZNode = ZKUtil.joinZNode(replicationZNode, rsZNodeName);
 
-    this.replicating = replicating;
-    setReplicating();
     String znode = ZKUtil.joinZNode(this.replicationZNode, clusterIdZNodeName);
     byte [] data = ZKUtil.getData(this.zookeeper, znode);
     String idResult = Bytes.toString(data);
@@ -152,24 +177,6 @@ public class ReplicationZookeeper {
     LOG.info("This cluster (" + thisCluster + ") is a " +
       (this.replicationMaster ? "master" : "slave") + " for replication" +
         ", compared with (" + address + ")");
-
-    if (server.getServerName() != null) {
-      this.rsServerNameZnode = ZKUtil.joinZNode(rsZNode, server.getServerName());
-      // Set a tracker on replicationStateNodeNode
-      ReplicationStatusTracker tracker =
-        new ReplicationStatusTracker(this.zookeeper, getRepStateNode(), server);
-      tracker.start();
-
-      List<String> znodes = ZKUtil.listChildrenNoWatch(this.zookeeper, this.peersZNode);
-      if (znodes != null) {
-        for (String z : znodes) {
-          connectToPeer(z);
-        }
-      }
-    } else {
-      this.rsServerNameZnode = null;
-    }
-
   }
 
   /**
@@ -178,47 +185,16 @@ public class ReplicationZookeeper {
    * @param peerClusterId (byte) the cluster to interrogate
    * @return addresses of all region servers
    */
-  public List<HServerAddress> getPeersAddresses(String peerClusterId) {
+  public List<HServerAddress> getPeersAddresses(String peerClusterId)
+      throws KeeperException {
     if (this.peerClusters.size() == 0) {
       return new ArrayList<HServerAddress>(0);
     }
-    ReplicationZookeeper zkw = this.peerClusters.get(peerClusterId);
+    ZooKeeperWatcher zkw = this.peerClusters.get(peerClusterId);
+    
     return zkw == null?
       new ArrayList<HServerAddress>(0):
-      zkw.scanAddressDirectory(this.zookeeper.rsZNode);
-  }
-
-  /**
-   * Scan a directory of address data.
-   * @param znode The parent node
-   * @return The directory contents as HServerAddresses
-   */
-  public List<HServerAddress> scanAddressDirectory(String znode) {
-    List<HServerAddress> list = new ArrayList<HServerAddress>();
-    List<String> nodes = null;
-    try {
-      nodes = ZKUtil.listChildrenNoWatch(this.zookeeper, znode);
-    } catch (KeeperException e) {
-      this.abortable.abort("Scanning " + znode, e);
-    }
-    if (nodes == null) {
-      return list;
-    }
-    for (String node : nodes) {
-      String path = ZKUtil.joinZNode(znode, node);
-      list.add(readAddress(path));
-    }
-    return list;
-  }
-
-  private HServerAddress readAddress(String znode) {
-    byte [] data = null;
-    try {
-      data = ZKUtil.getData(this.zookeeper, znode);
-    } catch (KeeperException e) {
-      this.abortable.abort("Getting address", e);
-    }
-    return new HServerAddress(Bytes.toString(data));
+      ZKUtil.listChildrenAndGetAsAddresses(zkw, zkw.rsZNode);
   }
 
   /**
@@ -239,15 +215,11 @@ public class ReplicationZookeeper {
     otherConf.set(HConstants.ZOOKEEPER_QUORUM, ensemble[0]);
     otherConf.set("hbase.zookeeper.property.clientPort", ensemble[1]);
     otherConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, ensemble[2]);
-    // REENABLE -- FIX!!!!
-    /*
-    ZooKeeperWrapper zkw = ZooKeeperWrapper.createInstance(otherConf,
-        "connection to cluster: " + peerId);
-    zkw.registerListener(new ReplicationStatusWatcher());
+    ZooKeeperWatcher zkw = new ZooKeeperWatcher(otherConf,
+        "connection to cluster: " + peerId, this.abortable);
     this.peerClusters.put(peerId, zkw);
-    this.zookeeperWrapper.ensureExists(this.zookeeperWrapper.getZNode(
+    ZKUtil.createWithParents(this.zookeeper, ZKUtil.joinZNode(
         this.rsServerNameZnode, peerId));
-        */
     LOG.info("Added new peer cluster " + StringUtils.arrayToString(ensemble));
   }
 
@@ -282,7 +254,7 @@ public class ReplicationZookeeper {
     try {
       String znode = ZKUtil.joinZNode(this.rsServerNameZnode, clusterId);
       znode = ZKUtil.joinZNode(znode, filename);
-      ZKUtil.createAndWatch(this.zookeeper, znode, Bytes.toBytes(""));
+      ZKUtil.createWithParents(this.zookeeper, znode);
     } catch (KeeperException e) {
       this.abortable.abort("Failed add log to list", e);
     }
@@ -297,7 +269,7 @@ public class ReplicationZookeeper {
     try {
       String znode = ZKUtil.joinZNode(rsServerNameZnode, clusterId);
       znode = ZKUtil.joinZNode(znode, filename);
-      ZKUtil.deleteChildrenRecursively(this.zookeeper, znode);
+      ZKUtil.deleteNode(this.zookeeper, znode);
     } catch (KeeperException e) {
       this.abortable.abort("Failed remove from list", e);
     }
@@ -316,7 +288,7 @@ public class ReplicationZookeeper {
       String znode = ZKUtil.joinZNode(this.rsServerNameZnode, clusterId);
       znode = ZKUtil.joinZNode(znode, filename);
       // Why serialize String of Long and note Long as bytes?
-      ZKUtil.createAndWatch(this.zookeeper, znode,
+      ZKUtil.setData(this.zookeeper, znode,
         Bytes.toBytes(Long.toString(position)));
     } catch (KeeperException e) {
       this.abortable.abort("Writing replication status", e);
@@ -326,15 +298,18 @@ public class ReplicationZookeeper {
   /**
    * Get a list of all the other region servers in this cluster
    * and set a watch
-   * @param watch the watch to set
    * @return a list of server nanes
    */
-  public List<String> getRegisteredRegionServers(Watcher watch) {
+  public List<String> getRegisteredRegionServers() {
     List<String> result = null;
     try {
-      // TODO: This is rsZNode from zk which is like getListOfReplicators
-      // but maybe these are from different zk instances?
-      result = ZKUtil.listChildrenNoWatch(this.zookeeper, rsZNode);
+      List<ZKUtil.NodeAndData> nads =
+          ZKUtil.watchAndGetNewChildren(this.zookeeper, this.zookeeper.rsZNode);
+      result = new ArrayList<String>(nads.size());
+      for (ZKUtil.NodeAndData nad : nads) {
+        String[] fullPath = nad.getNode().split("/");
+        result.add(fullPath[fullPath.length - 1]);
+      }
     } catch (KeeperException e) {
       this.abortable.abort("Get list of registered region servers", e);
     }
@@ -344,7 +319,6 @@ public class ReplicationZookeeper {
   /**
    * Get the list of the replicators that have queues, they can be alive, dead
    * or simply from a previous run
-   * @param watch the watche to set
    * @return a list of server names
    */
   public List<String> getListOfReplicators() {
@@ -360,7 +334,6 @@ public class ReplicationZookeeper {
   /**
    * Get the list of peer clusters for the specified server names
    * @param rs server names of the rs
-   * @param watch the watch to set
    * @return a list of peer cluster
    */
   public List<String> getListPeersForRS(String rs) {
@@ -378,7 +351,6 @@ public class ReplicationZookeeper {
    * Get the list of hlogs for the specified region server and peer cluster
    * @param rs server names of the rs
    * @param id peer cluster
-   * @param watch the watch to set
    * @return a list of hlogs
    */
   public List<String> getListHLogsForPeerForRS(String rs, String id) {
@@ -401,10 +373,14 @@ public class ReplicationZookeeper {
   public boolean lockOtherRS(String znode) {
     try {
       String parent = ZKUtil.joinZNode(this.rsZNode, znode);
+      if (parent.equals(rsServerNameZnode)) {
+        LOG.warn("Won't lock because this is us, we're dead!");
+        return false;
+      }
       String p = ZKUtil.joinZNode(parent, RS_LOCK_ZNODE);
       ZKUtil.createAndWatch(this.zookeeper, p, Bytes.toBytes(rsServerNameZnode));
     } catch (KeeperException e) {
-      this.abortable.abort("Failed lock other rs", e);
+      LOG.info("Failed lock other rs", e);
     }
     return true;
   }
@@ -468,7 +444,7 @@ public class ReplicationZookeeper {
    */
   public void deleteSource(String peerZnode) {
     try {
-      ZKUtil.deleteChildrenRecursively(this.zookeeper,
+      ZKUtil.deleteNodeRecursively(this.zookeeper,
           ZKUtil.joinZNode(rsServerNameZnode, peerZnode));
     } catch (KeeperException e) {
       this.abortable.abort("Failed delete of " + peerZnode, e);
@@ -481,7 +457,7 @@ public class ReplicationZookeeper {
    */
   public void deleteRsQueues(String znode) {
     try {
-      ZKUtil.deleteChildrenRecursively(this.zookeeper,
+      ZKUtil.deleteNodeRecursively(this.zookeeper,
           ZKUtil.joinZNode(rsZNode, znode));
     } catch (KeeperException e) {
       this.abortable.abort("Failed delete of " + znode, e);
@@ -492,7 +468,12 @@ public class ReplicationZookeeper {
    * Delete this cluster's queues
    */
   public void deleteOwnRSZNode() {
-    deleteRsQueues(this.rsServerNameZnode);
+    try {
+      ZKUtil.deleteNodeRecursively(this.zookeeper,
+          this.rsServerNameZnode);
+    } catch (KeeperException e) {
+      this.abortable.abort("Failed delete of " + this.rsServerNameZnode, e);
+    }
   }
 
   /**
@@ -510,13 +491,8 @@ public class ReplicationZookeeper {
     return data == null || data.length() == 0 ? 0 : Long.parseLong(data);
   }
 
-  /**
-   * Tells if this cluster replicates or not
-   *
-   * @return if this is a master
-   */
-  public boolean isReplicationMaster() {
-    return this.replicationMaster;
+  public void registerRegionServerListener(ZooKeeperListener listener) {
+    this.zookeeper.registerListener(listener);
   }
 
   /**
@@ -532,17 +508,29 @@ public class ReplicationZookeeper {
    * Get a map of all peer clusters
    * @return map of peer cluster, zk address to ZKW
    */
-  public Map<String, ReplicationZookeeper> getPeerClusters() {
+  public Map<String, ZooKeeperWatcher> getPeerClusters() {
     return this.peerClusters;
+  }
+
+  public String getRSZNode() {
+    return rsZNode;
+  }
+
+  /**
+   * 
+   * @return
+   */
+  public ZooKeeperWatcher getZookeeperWatcher() {
+    return this.zookeeper;
   }
 
   /**
    * Tracker for status of the replication
    */
   public class ReplicationStatusTracker extends ZooKeeperNodeTracker {
-    public ReplicationStatusTracker(ZooKeeperWatcher watcher, String node,
+    public ReplicationStatusTracker(ZooKeeperWatcher watcher,
         Abortable abortable) {
-      super(watcher, node, abortable);
+      super(watcher, getRepStateNode(), abortable);
     }
 
     @Override

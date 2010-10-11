@@ -36,8 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
  * This class is responsible to manage all the replication
@@ -104,8 +104,10 @@ public class ReplicationSourceManager {
     this.fs = fs;
     this.logDir = logDir;
     this.oldLogDir = oldLogDir;
+    this.zkHelper.registerRegionServerListener(
+        new OtherRegionServerWatcher(this.zkHelper.getZookeeperWatcher()));
     List<String> otherRSs =
-        this.zkHelper.getRegisteredRegionServers(new OtherRegionServerWatcher());
+        this.zkHelper.getRegisteredRegionServers();
     this.otherRegionServers = otherRSs == null ? new ArrayList<String>() : otherRSs;
   }
 
@@ -145,7 +147,10 @@ public class ReplicationSourceManager {
       ReplicationSourceInterface src = addSource(id);
       src.startup();
     }
-    List<String> currentReplicators = this.zkHelper.getListOfReplicators();
+    List<String> currentReplicators = this.zkHelper.getRegisteredRegionServers();
+    if (currentReplicators == null || currentReplicators.size() == 0) {
+      return;
+    }
     synchronized (otherRegionServers) {
       LOG.info("Current list of replicators: " + currentReplicators
           + " other RSs: " + otherRegionServers);
@@ -322,29 +327,59 @@ public class ReplicationSourceManager {
    * in the local cluster. It initiates the process to transfer the queues
    * if it is able to grab the lock.
    */
-  public class OtherRegionServerWatcher implements Watcher {
-    @Override
-    public void process(WatchedEvent watchedEvent) {
-      LOG.info(" event " + watchedEvent);
-      if (watchedEvent.getType().equals(Event.KeeperState.Expired) ||
-          watchedEvent.getType().equals(Event.KeeperState.Disconnected)) {
+  public class OtherRegionServerWatcher extends ZooKeeperListener {
+
+    /**
+     * Construct a ZooKeeper event listener.
+     */
+    public OtherRegionServerWatcher(ZooKeeperWatcher watcher) {
+      super(watcher);
+    }
+
+    /**
+     * Called when a new node has been created.
+     * @param path full path of the new node
+     */
+    public void nodeCreated(String path) {
+      refreshRegionServersList(path);
+    }
+
+    /**
+     * Called when a node has been deleted
+     * @param path full path of the deleted node
+     */
+    public void nodeDeleted(String path) {
+      boolean cont = refreshRegionServersList(path);
+      if (!cont) {
         return;
       }
+      LOG.info(path + " znode expired, trying to lock it");
+      String[] rsZnodeParts = path.split("/");
+      transferQueues(rsZnodeParts[rsZnodeParts.length-1]);
+    }
 
-      List<String> newRsList = (zkHelper.getRegisteredRegionServers(this));
+    /**
+     * Called when an existing node has a child node added or removed.
+     * @param path full path of the node whose children have changed
+     */
+    public void nodeChildrenChanged(String path) {
+      refreshRegionServersList(path);
+    }
+
+    private boolean refreshRegionServersList(String path) {
+      if (!path.startsWith(zkHelper.getZookeeperWatcher().rsZNode)) {
+        return false;
+      }
+      List<String> newRsList = (zkHelper.getRegisteredRegionServers());
       if (newRsList == null) {
-        return;
+        return false;
       } else {
         synchronized (otherRegionServers) {
           otherRegionServers.clear();
           otherRegionServers.addAll(newRsList);
         }
       }
-      if (watchedEvent.getType().equals(Event.EventType.NodeDeleted)) {
-        LOG.info(watchedEvent.getPath() + " znode expired, trying to lock it");
-        String[] rsZnodeParts = watchedEvent.getPath().split("/");
-        transferQueues(rsZnodeParts[rsZnodeParts.length-1]);
-      }
+      return true;
     }
   }
 

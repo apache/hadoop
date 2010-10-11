@@ -31,15 +31,16 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
-import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
-// REENABLE import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -54,10 +55,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
 
-public class DISABLEDTestReplicationSourceManager {
+public class TestReplicationSourceManager {
 
   private static final Log LOG =
-      LogFactory.getLog(DISABLEDTestReplicationSourceManager.class);
+      LogFactory.getLog(TestReplicationSourceManager.class);
 
   private static Configuration conf;
 
@@ -65,9 +66,11 @@ public class DISABLEDTestReplicationSourceManager {
 
   private static final AtomicBoolean REPLICATING = new AtomicBoolean(false);
 
+  private static Replication replication;
+
   private static ReplicationSourceManager manager;
 
-  // REENALBE private static ZooKeeperWrapper zkw;
+  private static ZooKeeperWatcher zkw;
 
   private static HTableDescriptor htd;
 
@@ -100,26 +103,25 @@ public class DISABLEDTestReplicationSourceManager {
     utility = new HBaseTestingUtility(conf);
     utility.startMiniZKCluster();
 
-    // REENABLE
-//    zkw = ZooKeeperWrapper.createInstance(conf, "test");
-//    zkw.writeZNode("/hbase", "replication", "");
-//    zkw.writeZNode("/hbase/replication", "master",
-//        conf.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-//    conf.get("hbase.zookeeper.property.clientPort")+":/1");
-//    zkw.writeZNode("/hbase/replication/peers", "1",
-//          conf.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-//          conf.get("hbase.zookeeper.property.clientPort")+":/1");
+    zkw = new ZooKeeperWatcher(conf, "test", null);
+    ZKUtil.createWithParents(zkw, "/hbase/replication");
+    ZKUtil.createWithParents(zkw, "/hbase/replication/master");
+    ZKUtil.createWithParents(zkw, "/hbase/replication/peers/1");
+    ZKUtil.setData(zkw, "/hbase/replication/master",
+        Bytes.toBytes(conf.get(HConstants.ZOOKEEPER_QUORUM)+":" +
+        conf.get("hbase.zookeeper.property.clientPort")+":/1"));
+    ZKUtil.setData(zkw, "/hbase/replication/peers/1",Bytes.toBytes(
+          conf.get(HConstants.ZOOKEEPER_QUORUM)+":" +
+          conf.get("hbase.zookeeper.property.clientPort")+":/1"));
 
-    HRegionServer server = new HRegionServer(conf);
-    ReplicationZookeeper helper = new ReplicationZookeeper(server, REPLICATING);
+    replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
+    manager = replication.getReplicationManager();
     fs = FileSystem.get(conf);
     oldLogDir = new Path(utility.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     logDir = new Path(utility.getTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
 
-    manager = new ReplicationSourceManager(helper,
-        conf, server, fs, REPLICATING, logDir, oldLogDir);
     manager.addSource("1");
 
     htd = new HTableDescriptor(test);
@@ -137,7 +139,7 @@ public class DISABLEDTestReplicationSourceManager {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-// REENABLE   manager.join();
+    manager.join();
     utility.shutdownMiniCluster();
   }
 
@@ -152,7 +154,7 @@ public class DISABLEDTestReplicationSourceManager {
     setUp();
   }
 
-  @Ignore @Test
+  @Test
   public void testLogRoll() throws Exception {
     long seq = 0;
     long baseline = 1000;
@@ -160,8 +162,9 @@ public class DISABLEDTestReplicationSourceManager {
     KeyValue kv = new KeyValue(r1, f1, r1);
     WALEdit edit = new WALEdit();
     edit.add(kv);
+
     List<WALObserver> listeners = new ArrayList<WALObserver>();
-// REENABLE    listeners.add(manager);
+    listeners.add(replication);
     HLog hlog = new HLog(fs, logDir, oldLogDir, conf, listeners,
       URLEncoder.encode("regionserver:60020", "UTF8"));
 
@@ -195,17 +198,55 @@ public class DISABLEDTestReplicationSourceManager {
 
     hlog.rollWriter();
 
- // REENABLE     manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
- // REENABLE        "1", 0, false);
+    manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
+        "1", 0, false);
 
     HLogKey key = new HLogKey(hri.getRegionName(),
           test, seq++, System.currentTimeMillis());
     hlog.append(hri, key, edit);
 
- // REENABLE     assertEquals(1, manager.getHLogs().size());
+    assertEquals(1, manager.getHLogs().size());
 
 
     // TODO Need a case with only 2 HLogs and we only want to delete the first one
+  }
+
+  static class DummyServer implements Server {
+
+    @Override
+    public Configuration getConfiguration() {
+      return conf;
+    }
+
+    @Override
+    public ZooKeeperWatcher getZooKeeper() {
+      return zkw;
+    }
+
+    @Override
+    public CatalogTracker getCatalogTracker() {
+      return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public String getServerName() {
+      return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void abort(String why, Throwable e) {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void stop(String why) {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean isStopped() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
   }
 
 }

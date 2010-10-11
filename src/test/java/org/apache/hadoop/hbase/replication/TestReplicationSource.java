@@ -69,7 +69,7 @@ public class TestReplicationSource {
    * time reading logs that are being archived.
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testLogMoving() throws Exception{
     Path logPath = new Path(logDir, "log");
     HLog.Writer writer = HLog.createWriter(fs, logPath, conf);

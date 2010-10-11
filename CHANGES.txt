@@ -580,7 +580,7 @@ Release 0.21.0 - Unreleased
    HBASE-3080  TestAdmin hanging on hudson
    HBASE-3063  TestThriftServer failing in TRUNK
    HBASE-3094  Fixes for miscellaneous broken tests
-  
+   HBASE-3060  [replication] Reenable replication on trunk with unit tests
 
 
   IMPROVEMENTS

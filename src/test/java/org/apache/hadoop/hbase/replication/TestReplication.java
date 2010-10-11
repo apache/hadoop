@@ -42,6 +42,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -54,10 +56,9 @@ public class TestReplication {
 
   private static Configuration conf1;
   private static Configuration conf2;
-/*
-  private static ZooKeeperWrapper zkw1;
-  private static ZooKeeperWrapper zkw2;
-  */
+
+  private static ZooKeeperWatcher zkw1;
+  private static ZooKeeperWatcher zkw2;
 
   private static HTable htable1;
   private static HTable htable2;
@@ -92,15 +93,15 @@ public class TestReplication {
     conf1.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
-    /* REENALBE
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
-    zkw1 = ZooKeeperWrapper.createInstance(conf1, "cluster1");
-    zkw1.writeZNode("/1", "replication", "");
-    zkw1.writeZNode("/1/replication", "master",
+    zkw1 = new ZooKeeperWatcher(conf1, "cluster1", null);
+    ZKUtil.createWithParents(zkw1, "/1/replication/master");
+    ZKUtil.createWithParents(zkw1, "/1/replication/state");
+    ZKUtil.setData(zkw1, "/1/replication/master", Bytes.toBytes(
         conf1.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-            conf1.get("hbase.zookeeper.property.clientPort")+":/1");
+            conf1.get("hbase.zookeeper.property.clientPort")+":/1"));
     setIsReplication(true);
     LOG.info("Setup first Zk");
 
@@ -113,15 +114,13 @@ public class TestReplication {
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
-    zkw2 = ZooKeeperWrapper.createInstance(conf2, "cluster2");
-    zkw2.writeZNode("/2", "replication", "");
-    zkw2.writeZNode("/2/replication", "master",
-        conf1.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-            conf1.get("hbase.zookeeper.property.clientPort")+":/1");
+    zkw2 = new ZooKeeperWatcher(conf2, "cluster2", null);
+    ZKUtil.createWithParents(zkw2, "/2/replication");
 
-    zkw1.writeZNode("/1/replication/peers", "1",
+    ZKUtil.createWithParents(zkw1, "/1/replication/peers/2");
+    ZKUtil.setData(zkw1, "/1/replication/peers/2", Bytes.toBytes(
         conf2.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-            conf2.get("hbase.zookeeper.property.clientPort")+":/2");
+            conf2.get("hbase.zookeeper.property.clientPort")+":/2"));
 
     LOG.info("Setup second Zk");
 
@@ -143,12 +142,12 @@ public class TestReplication {
     htable1 = new HTable(conf1, tableName);
     htable1.setWriteBufferSize(1024);
     htable2 = new HTable(conf2, tableName);
-    */
   }
 
   private static void setIsReplication(boolean rep) throws Exception {
     LOG.info("Set rep " + rep);
-   // REENALBE  zkw1.writeZNode("/1/replication", "state", Boolean.toString(rep));
+    ZKUtil.setData(zkw1,"/1/replication/state",
+        Bytes.toBytes(Boolean.toString(rep)));
     // Takes some ms for ZK to fire the watcher
     Thread.sleep(SLEEP_TIME);
   }
@@ -181,7 +180,7 @@ public class TestReplication {
    * Add a row, check it's replicated, delete it, check's gone
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testSimplePutDelete() throws Exception {
     LOG.info("testSimplePutDelete");
     Put put = new Put(row);
@@ -229,7 +228,7 @@ public class TestReplication {
    * Try a small batch upload using the write buffer, check it's replicated
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testSmallBatch() throws Exception {
     LOG.info("testSmallBatch");
     Put put;
@@ -273,7 +272,7 @@ public class TestReplication {
    * replicated, enable it, try replicating and it should work
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testStartStop() throws Exception {
 
     // Test stopping replication
@@ -342,7 +341,7 @@ public class TestReplication {
    * hlog rolling and other non-trivial code paths
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void loadTesting() throws Exception {
     htable1.setWriteBufferSize(1024);
     htable1.setAutoFlush(false);
@@ -396,7 +395,7 @@ public class TestReplication {
    * the upload. The failover happens internally.
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void queueFailover() throws Exception {
     utility1.createMultiRegions(htable1, famName);
 

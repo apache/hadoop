@@ -47,10 +47,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class DISABLEDTestReplicationSink {
+public class TestReplicationSink {
 
   private static final Log LOG =
-      LogFactory.getLog(DISABLEDTestReplicationSink.class);
+      LogFactory.getLog(TestReplicationSink.class);
 
   private static final int BATCH_SIZE = 10;
 
@@ -128,7 +128,7 @@ public class DISABLEDTestReplicationSink {
    * Insert a whole batch of entries
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testBatchSink() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE];
     for(int i = 0; i < BATCH_SIZE; i++) {
@@ -144,7 +144,7 @@ public class DISABLEDTestReplicationSink {
    * Insert a mix of puts and deletes
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testMixedPutDelete() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE/2];
     for(int i = 0; i < BATCH_SIZE/2; i++) {
@@ -168,7 +168,7 @@ public class DISABLEDTestReplicationSink {
    * Insert to 2 different tables
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testMixedPutTables() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[BATCH_SIZE];
     for(int i = 0; i < BATCH_SIZE; i++) {
@@ -189,7 +189,7 @@ public class DISABLEDTestReplicationSink {
    * Insert then do different types of deletes
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testMixedDeletes() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[3];
     for(int i = 0; i < 3; i++) {
@@ -214,7 +214,7 @@ public class DISABLEDTestReplicationSink {
    * before the actual Put that creates it.
    * @throws Exception
    */
-  @Ignore @Test
+  @Test
   public void testApplyDeleteBeforePut() throws Exception {
     HLog.Entry[] entries = new HLog.Entry[5];
     for(int i = 0; i < 2; i++) {

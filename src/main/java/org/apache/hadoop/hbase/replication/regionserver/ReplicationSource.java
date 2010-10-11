@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Class that handles the source of a replication stream.
@@ -195,7 +196,7 @@ public class ReplicationSource extends Thread
   /**
    * Select a number of peers at random using the ratio. Mininum 1.
    */
-  private void chooseSinks() {
+  private void chooseSinks() throws KeeperException {
     this.currentPeers.clear();
     List<HServerAddress> addresses =
         this.zkHelper.getPeersAddresses(peerClusterId);
@@ -231,8 +232,14 @@ public class ReplicationSource extends Thread
     // If this is recovered, the queue is already full and the first log
     // normally has a position (unless the RS failed between 2 logs)
     if (this.queueRecovered) {
-//      this.position = this.zkHelper.getHLogRepPosition(
-//          this.peerClusterZnode, this.queue.peek().getName());
+      try {
+        this.position = this.zkHelper.getHLogRepPosition(
+            this.peerClusterZnode, this.queue.peek().getName());
+      } catch (KeeperException e) {
+        LOG.error("Couldn't get the position of this recovered queue " +
+            peerClusterZnode, e);
+        this.abort();
+      }
     }
     int sleepMultiplier = 1;
     // Loop until we close down
@@ -380,6 +387,8 @@ public class ReplicationSource extends Thread
         Thread.sleep(this.sleepForRetries);
       } catch (InterruptedException e) {
         LOG.error("Interrupted while trying to connect to sinks", e);
+      } catch (KeeperException e) {
+        LOG.error("Error talking to zookeeper, retrying", e);
       }
     }
   }
@@ -553,6 +562,8 @@ public class ReplicationSource extends Thread
           } while (!this.stopper.isStopped() && down);
         } catch (InterruptedException e) {
           LOG.debug("Interrupted while trying to contact the peer cluster");
+        } catch (KeeperException e) {
+          LOG.error("Error talking to zookeeper, retrying", e);
         }
 
       }
@@ -589,7 +600,7 @@ public class ReplicationSource extends Thread
           }
         };
     Threads.setDaemonThreadRunning(
-        this, n + ".replicationSource," + clusterId, handler);
+        this, n + ".replicationSource," + peerClusterZnode, handler);
   }
 
   /**

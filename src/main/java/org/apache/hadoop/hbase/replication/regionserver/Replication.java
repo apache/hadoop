@@ -45,7 +45,6 @@ import org.apache.zookeeper.KeeperException;
 public class Replication implements WALObserver {
   private final boolean replication;
   private final ReplicationSourceManager replicationManager;
-  private boolean replicationMaster;
   private final AtomicBoolean replicating = new AtomicBoolean(true);
   private final ReplicationZookeeper zkHelper;
   private final Configuration conf;
@@ -70,10 +69,8 @@ public class Replication implements WALObserver {
     this.replication = isReplication(this.conf);
     if (replication) {
       this.zkHelper = new ReplicationZookeeper(server, this.replicating);
-      this.replicationMaster = zkHelper.isReplicationMaster();
-      this.replicationManager = this.replicationMaster ?
-        new ReplicationSourceManager(zkHelper, conf, this.server,
-          fs, this.replicating, logDir, oldLogDir) : null;
+      this.replicationManager = new ReplicationSourceManager(zkHelper, conf,
+          this.server, fs, this.replicating, logDir, oldLogDir) ;
     } else {
       this.replicationManager = null;
       this.zkHelper = null;
@@ -93,10 +90,8 @@ public class Replication implements WALObserver {
    */
   public void join() {
     if (this.replication) {
-      if (this.replicationMaster) {
-        this.replicationManager.join();
-      }
-        this.zkHelper.deleteOwnRSZNode();
+      this.replicationManager.join();
+      this.zkHelper.deleteOwnRSZNode();
     }
   }
 
@@ -106,7 +101,7 @@ public class Replication implements WALObserver {
    * @throws IOException
    */
   public void replicateLogEntries(HLog.Entry[] entries) throws IOException {
-    if (this.replication && !this.replicationMaster) {
+    if (this.replication) {
       this.replicationSink.replicateEntries(entries);
     }
   }
@@ -118,11 +113,8 @@ public class Replication implements WALObserver {
    */
   public void startReplicationServices() throws IOException {
     if (this.replication) {
-      if (this.replicationMaster) {
-        this.replicationManager.init();
-      } else {
-        this.replicationSink = new ReplicationSink(this.conf, this.server);
-      }
+      this.replicationManager.init();
+      this.replicationSink = new ReplicationSink(this.conf, this.server);
     }
   }
 
