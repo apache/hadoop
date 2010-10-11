@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.mapreduce.TestTableInputFormatScan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
@@ -81,6 +82,7 @@ import java.io.DataOutput;
  * @see HBaseAdmin for create, drop, list, enable and disable of tables.
  */
 public class HTable implements HTableInterface {
+  private static final Log LOG = LogFactory.getLog(HTable.class);
   private final HConnection connection;
   private final byte [] tableName;
   protected final int scannerTimeout;
@@ -348,9 +350,14 @@ public class HTable implements HTableInterface {
     final List<byte[]> endKeyList = new ArrayList<byte[]>();
     MetaScannerVisitor visitor = new MetaScannerVisitor() {
       public boolean processRow(Result rowResult) throws IOException {
-        HRegionInfo info = Writables.getHRegionInfo(
-            rowResult.getValue(HConstants.CATALOG_FAMILY,
-                HConstants.REGIONINFO_QUALIFIER));
+        byte [] bytes = rowResult.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER);
+        if (bytes == null) {
+          LOG.warn("Null " + HConstants.REGIONINFO_QUALIFIER + " cell in " +
+            rowResult);
+          return true;
+        }
+        HRegionInfo info = Writables.getHRegionInfo(bytes);
         if (Bytes.equals(info.getTableDesc().getName(), getTableName())) {
           if (!(info.isOffline() || info.isSplit())) {
             startKeyList.add(info.getStartKey());

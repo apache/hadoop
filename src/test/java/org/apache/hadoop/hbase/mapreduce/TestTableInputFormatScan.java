@@ -326,13 +326,12 @@ public class TestTableInputFormatScan {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
-  @SuppressWarnings("deprecation")
   private void testScan(String start, String stop, String last)
   throws IOException, InterruptedException, ClassNotFoundException {
     String jobName = "Scan" + (start != null ? start.toUpperCase() : "Empty") +
     "To" + (stop != null ? stop.toUpperCase() : "Empty");
     LOG.info("Before map/reduce startup - job " + jobName);
-    Configuration c = TEST_UTIL.getConfiguration();
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     Scan scan = new Scan();
     scan.addFamily(INPUT_FAMILY);
     if (start != null) {

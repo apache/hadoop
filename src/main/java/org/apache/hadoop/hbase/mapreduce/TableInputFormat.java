@@ -89,7 +89,7 @@ implements Configurable {
     this.conf = configuration;
     String tableName = conf.get(INPUT_TABLE);
     try {
-      setHTable(new HTable(HBaseConfiguration.create(conf), tableName));
+      setHTable(new HTable(new Configuration(conf), tableName));
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }
