@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -92,6 +93,8 @@ public class Merge extends Configured implements Tool {
       HBaseAdmin.checkHBaseAvailable(getConf());
       LOG.fatal("HBase cluster must be off-line.");
       return -1;
+    } catch (ZooKeeperConnectionException zkce) {
+      // If no zk, presume no master.
     } catch (MasterNotRunningException e) {
       // Expected. Ignore.
     }

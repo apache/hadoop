@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -90,10 +91,11 @@ public class ZooKeeperWatcher implements Watcher {
    * @param descriptor Descriptive string that is added to zookeeper sessionid
    * and used as identifier for this instance.
    * @throws IOException
+   * @throws ZooKeeperConnectionException
    */
   public ZooKeeperWatcher(Configuration conf, String descriptor,
       Abortable abortable)
-  throws IOException {
+  throws IOException, ZooKeeperConnectionException {
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
     // Identifier will get the sessionid appended later below down when we
     // handle the syncconnect event.
@@ -127,7 +129,8 @@ public class ZooKeeperWatcher implements Watcher {
           ke = e;
         }
       } while (isFinishedRetryingRecoverable(finished));
-      if (ke != null) throw ke;
+      // Convert connectionloss exception to ZKCE.
+      if (ke != null) throw new ZooKeeperConnectionException(ke);
       ZKUtil.createAndFailSilent(this, assignmentZNode);
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, tableZNode);

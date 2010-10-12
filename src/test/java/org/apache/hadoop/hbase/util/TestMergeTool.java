@@ -58,6 +58,9 @@ public class TestMergeTool extends HBaseTestCase {
 
   @Override
   public void setUp() throws Exception {
+    // Set the timeout down else this test will take a while to complete.
+    this.conf.setLong("hbase.zookeeper.recoverable.waittime", 1000);
+
     this.conf.set("hbase.hstore.compactionThreshold", "2");
 
     // Create table description
