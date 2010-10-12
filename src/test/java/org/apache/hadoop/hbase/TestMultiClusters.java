@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -46,7 +47,10 @@ public class TestMultiClusters {
    * what we insert in one place doesn't end up in the other.
    * @throws Exception
    */
-  @Test (timeout=100000)
+  // Ignore this test.  HTU needs work so can have two clusters running in
+  // the one test.  Each HTU minicluster needs to run as a different user so
+  // the shutdown will run cleanly.  St.Ack 20101012
+  @Ignore @Test (timeout=100000)
   public void twoClusters() throws Exception{
     Configuration conf1 = HBaseConfiguration.create();
     // Different path for different clusters
