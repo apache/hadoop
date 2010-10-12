@@ -440,9 +440,9 @@ public class Scan implements Writable {
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("startRow=");
-    sb.append(Bytes.toString(this.startRow));
+    sb.append(Bytes.toStringBinary(this.startRow));
     sb.append(", stopRow=");
-    sb.append(Bytes.toString(this.stopRow));
+    sb.append(Bytes.toStringBinary(this.stopRow));
     sb.append(", maxVersions=");
     sb.append(this.maxVersions);
     sb.append(", batch=");
@@ -468,7 +468,7 @@ public class Scan implements Writable {
         sb.append("{");
       }
       sb.append("(family=");
-      sb.append(Bytes.toString(entry.getKey()));
+      sb.append(Bytes.toStringBinary(entry.getKey()));
       sb.append(", columns=");
       if(entry.getValue() == null) {
         sb.append("ALL");
@@ -481,7 +481,7 @@ public class Scan implements Writable {
           } else {
             moreThanOneB = true;
           }
-          sb.append(Bytes.toString(column));
+          sb.append(Bytes.toStringBinary(column));
         }
         sb.append("}");
       }
