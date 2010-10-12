@@ -789,6 +789,10 @@ public class AssignmentManager extends ZooKeeperListener {
     } catch (NotServingRegionException e) {
       LOG.warn("Attempted to close region " + region.getRegionNameAsString() +
         " but got an NSRE", e);
+    } catch (Throwable t) {
+      // For now call abort if unexpected exception -- seeing it up in hudson.
+      // St.Ack 20101012
+      this.master.abort("Unexpected exception", t);
     }
   }
 
