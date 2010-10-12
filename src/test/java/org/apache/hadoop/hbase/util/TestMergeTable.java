@@ -118,7 +118,9 @@ public class TestMergeTable {
         MetaReader.getTableRegions(ct, desc.getName());
       LOG.info("postMergeTableRegions size=" + postMergeTableRegions.size() +
         "; " + postMergeTableRegions);
-      assertTrue(postMergeTableRegions.size() < originalTableRegions.size());
+      assertTrue("originalTableRegions=" + originalTableRegions.size() +
+        ", postMergeTableRegions=" + postMergeTableRegions.size(),
+        postMergeTableRegions.size() < originalTableRegions.size());
     } finally {
       UTIL.shutdownMiniCluster();
     }
