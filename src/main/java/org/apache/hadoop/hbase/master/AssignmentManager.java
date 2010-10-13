@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -786,9 +787,17 @@ public class AssignmentManager extends ZooKeeperListener {
     // Send CLOSE RPC
     try {
       serverManager.sendRegionClose(regions.get(region), state.getRegion());
-    } catch (NotServingRegionException e) {
-      LOG.warn("Attempted to close region " + region.getRegionNameAsString() +
-        " but got an NSRE", e);
+    } catch (IOException e) {
+      if (e instanceof RemoteException) {
+        e = ((RemoteException)e).unwrapRemoteException();
+      }
+      if (e instanceof NotServingRegionException) {
+        LOG.warn("Attempted to close region " + region.getRegionNameAsString() +
+          " but got an NSRE", e);
+      }
+      // For now call abort if unexpected exception -- seeing it up in hudson.
+      // St.Ack 20101012
+      this.master.abort("Remote unexpected exception", e);
     } catch (Throwable t) {
       // For now call abort if unexpected exception -- seeing it up in hudson.
       // St.Ack 20101012

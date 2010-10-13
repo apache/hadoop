@@ -312,9 +312,10 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
    * Closes the specified region.
    * @param region region to close
    * @return true if closing region, false if not
+   * @throws IOException
    */
   public boolean closeRegion(final HRegionInfo region)
-  throws NotServingRegionException;
+  throws IOException;
 
   // Region administrative methods
 

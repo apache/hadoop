@@ -74,6 +74,8 @@ public class TestMergeTable {
 
     // Set maximum regionsize down.
     UTIL.getConfiguration().setLong("hbase.hregion.max.filesize", 64L * 1024L * 1024L);
+    // Make it so we don't compact and then split.
+    UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 30);
     // Startup hdfs.  Its in here we'll be putting our manually made regions.
     UTIL.startMiniDFSCluster(1);
     // Create hdfs hbase rootdir.

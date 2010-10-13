@@ -31,14 +31,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
@@ -50,6 +48,8 @@ import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo,
@@ -542,10 +542,10 @@ public class ServerManager {
    * @param server server to open a region
    * @param regionName region to open
    * @return true if server acknowledged close, false if not
-   * @throws NotServingRegionException
+   * @throws IOException
    */
   public void sendRegionClose(HServerInfo server, HRegionInfo region)
-  throws NotServingRegionException {
+  throws IOException {
     HRegionInterface hri = getServerConnection(server);
     if(hri == null) {
       LOG.warn("Attempting to send CLOSE RPC to server " +

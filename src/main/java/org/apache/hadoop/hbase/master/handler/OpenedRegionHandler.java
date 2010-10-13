@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -35,9 +37,7 @@ import org.apache.zookeeper.KeeperException;
  */
 public class OpenedRegionHandler extends EventHandler implements TotesHRegionInfo {
   private static final Log LOG = LogFactory.getLog(OpenedRegionHandler.class);
-
   private final AssignmentManager assignmentManager;
-  private final RegionTransitionData data;
   private final HRegionInfo regionInfo;
   private final HServerInfo serverInfo;
   private final OpenedPriority priority;
@@ -60,8 +60,12 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
       AssignmentManager assignmentManager, RegionTransitionData data,
       HRegionInfo regionInfo, HServerInfo serverInfo) {
     super(server, EventType.RS_ZK_REGION_OPENED);
+    try {
+      throw new IOException("IGNORE");
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
     this.assignmentManager = assignmentManager;
-    this.data = data;
     this.regionInfo = regionInfo;
     this.serverInfo = serverInfo;
     if(regionInfo.isRootRegion()) {
