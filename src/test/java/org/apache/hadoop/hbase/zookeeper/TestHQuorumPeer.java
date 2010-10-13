@@ -44,13 +44,14 @@ import static org.junit.Assert.*;
  */
 public class TestHQuorumPeer {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static int PORT_NO = 21818;
   private Path dataDir;
 
 
   @Before public void setup() throws IOException {
     // Set it to a non-standard port.
     TEST_UTIL.getConfiguration().setInt("hbase.zookeeper.property.clientPort",
-      21818);
+      PORT_NO);
     this.dataDir = HBaseTestingUtility.getTestDir(this.getClass().getName());
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     if (fs.exists(this.dataDir)) {
@@ -68,7 +69,7 @@ public class TestHQuorumPeer {
     conf.set("hbase.zookeeper.property.dataDir", this.dataDir.toString());
     Properties properties = ZKConfig.makeZKProps(conf);
     assertEquals(dataDir.toString(), (String)properties.get("dataDir"));
-    assertEquals(Integer.valueOf(21810),
+    assertEquals(Integer.valueOf(PORT_NO),
       Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
     assertEquals(null, properties.get("server.1"));
@@ -77,7 +78,8 @@ public class TestHQuorumPeer {
     conf.set(HConstants.ZOOKEEPER_QUORUM, "a.foo.bar,b.foo.bar,c.foo.bar");
     properties = ZKConfig.makeZKProps(conf);
     assertEquals(dataDir.toString(), properties.get("dataDir"));
-    assertEquals(Integer.valueOf(21810), Integer.valueOf(properties.getProperty("clientPort")));
+    assertEquals(Integer.valueOf(PORT_NO),
+      Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("a.foo.bar:2888:3888", properties.get("server.0"));
     assertEquals("b.foo.bar:2888:3888", properties.get("server.1"));
     assertEquals("c.foo.bar:2888:3888", properties.get("server.2"));

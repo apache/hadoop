@@ -634,6 +634,8 @@ public class HConnectionManager {
         try {
           // locate the root or meta region
           metaLocation = locateRegion(parentTable, metaKey);
+          // If null still, go around again.
+          if (metaLocation == null) continue;
           HRegionInterface server =
             getHRegionConnection(metaLocation.getServerAddress());
 
