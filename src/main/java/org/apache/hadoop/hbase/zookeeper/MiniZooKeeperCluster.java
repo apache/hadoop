@@ -48,7 +48,7 @@ public class MiniZooKeeperCluster {
   private static final int CONNECTION_TIMEOUT = 30000;
 
   private boolean started;
-  private int clientPort = 21810; // use non-standard port
+  private int clientPort = 21818; // use non-standard port
 
   private NIOServerCnxn.Factory standaloneServerFactory;
   private int tickTime = 0;

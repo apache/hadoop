@@ -190,7 +190,7 @@
           <configuration>
             <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
             <argLine>-enableassertions</argLine>
-            <argLine>-Xmx1024m</argLine>
+            <argLine>-Xmx1400m</argLine>
             <redirectTestOutputToFile>true</redirectTestOutputToFile>
           </configuration>
         </plugin>
