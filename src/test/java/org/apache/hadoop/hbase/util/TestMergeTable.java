@@ -67,19 +67,25 @@ public class TestMergeTable {
    * up mini cluster, disables the hand-made table and starts in on merging.
    * @throws Exception 
    */
-  @Test public void testMergeTable() throws Exception {
+  @Test (timeout=300000) public void testMergeTable() throws Exception {
     // Table we are manually creating offline.
     HTableDescriptor desc = new HTableDescriptor(Bytes.toBytes("test"));
     desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
 
     // Set maximum regionsize down.
     UTIL.getConfiguration().setLong("hbase.hregion.max.filesize", 64L * 1024L * 1024L);
-    // Make it so we don't compact and then split.
-    UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 30);
+    // Make it so we don't split.
+    UTIL.getConfiguration().setInt("hbase.regionserver.regionSplitLimit", 0);
     // Startup hdfs.  Its in here we'll be putting our manually made regions.
     UTIL.startMiniDFSCluster(1);
     // Create hdfs hbase rootdir.
     Path rootdir = UTIL.createRootDir();
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    if (fs.exists(rootdir)) {
+      if (fs.delete(rootdir, true)) {
+        LOG.info("Cleaned up existing " + rootdir);
+      }
+    }
 
     // Now create three data regions: The first is too large to merge since it
     // will be > 64 MB in size. The second two will be smaller and will be
