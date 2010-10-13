@@ -50,7 +50,7 @@ public class TestHQuorumPeer {
   @Before public void setup() throws IOException {
     // Set it to a non-standard port.
     TEST_UTIL.getConfiguration().setInt("hbase.zookeeper.property.clientPort",
-      21810);
+      21818);
     this.dataDir = HBaseTestingUtility.getTestDir(this.getClass().getName());
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     if (fs.exists(this.dataDir)) {

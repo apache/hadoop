@@ -122,7 +122,7 @@
   </property>
   <property>
     <name>hbase.zookeeper.property.clientPort</name>
-    <value>21810</value>
+    <value>21818</value>
     <description>Property from ZooKeeper's config zoo.cfg.
     The port at which the clients will connect.
     </description>
