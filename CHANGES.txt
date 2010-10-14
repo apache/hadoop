@@ -581,6 +581,10 @@ Release 0.21.0 - Unreleased
    HBASE-3063  TestThriftServer failing in TRUNK
    HBASE-3094  Fixes for miscellaneous broken tests
    HBASE-3060  [replication] Reenable replication on trunk with unit tests
+   HBASE-3041  [replication] ReplicationSink shouldn't kill the whole RS when
+               it fails to replicate
+   HBASE-3044  [replication] ReplicationSource won't cleanup logs if there's
+               nothing to replicate
 
 
   IMPROVEMENTS

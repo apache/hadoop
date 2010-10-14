@@ -320,6 +320,8 @@ public class ReplicationSource extends Thread
       // wait a bit and retry.
       // But if we need to stop, don't bother sleeping
       if (!stopper.isStopped() && (gotIOE || currentNbEntries == 0)) {
+        this.manager.logPositionAndCleanOldLogs(this.currentPath,
+            this.peerClusterZnode, this.position, queueRecovered);
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -527,6 +529,10 @@ public class ReplicationSource extends Thread
    */
   protected void shipEdits() {
     int sleepMultiplier = 1;
+    if (this.currentNbEntries == 0) {
+      LOG.warn("Was given 0 edits to ship");
+      return;
+    }
     while (!this.stopper.isStopped()) {
       try {
         HRegionInterface rrs = getRS();

@@ -146,21 +146,8 @@ public class ReplicationSink {
       this.metrics.appliedBatchesRate.inc(1);
       LOG.info("Total replicated: " + totalReplicated);
     } catch (IOException ex) {
-      if (ex.getCause() instanceof TableNotFoundException) {
-        LOG.warn("Losing edits because: ", ex);
-      } else {
-        // Should we log rejected edits in a file for replay?
-        LOG.error("Unable to accept edit because", ex);
-        this.stopper.stop("Unable to accept edit because " + ex.getMessage());
-        throw ex;
-      }
-    } catch (RuntimeException re) {
-      if (re.getCause() instanceof TableNotFoundException) {
-        LOG.warn("Losing edits because: ", re);
-      } else {
-        this.stopper.stop("Replication stopped us because " + re.getMessage());
-        throw re;
-      }
+      LOG.error("Unable to accept edit because:", ex);
+      throw ex;
     }
   }
 
