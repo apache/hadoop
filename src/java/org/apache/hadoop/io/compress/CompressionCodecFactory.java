@@ -44,9 +44,15 @@ public class CompressionCodecFactory {
    */
   private SortedMap<String, CompressionCodec> codecs = null;
   
+  /**
+   * A map from class names to the codecs
+   */
+  private HashMap<String, CompressionCodec> codecsByClassName = null;
+
   private void addCodec(CompressionCodec codec) {
     String suffix = codec.getDefaultExtension();
     codecs.put(new StringBuilder(suffix).reverse().toString(), codec);
+    codecsByClassName.put(codec.getClass().getCanonicalName(), codec);
   }
   
   /**
@@ -135,6 +141,7 @@ public class CompressionCodecFactory {
    */
   public CompressionCodecFactory(Configuration conf) {
     codecs = new TreeMap<String, CompressionCodec>();
+    codecsByClassName = new HashMap<String, CompressionCodec>();
     List<Class<? extends CompressionCodec>> codecClasses = getCodecClasses(conf);
     if (codecClasses == null) {
       addCodec(new GzipCodec());
@@ -171,6 +178,18 @@ public class CompressionCodecFactory {
     return result;
   }
   
+  /**
+   * Find the relevant compression codec for the codec's canonical class name.
+   * @param classname the canonical class name of the codec
+   * @return the codec object
+   */
+  public CompressionCodec getCodecByClassName(String classname) {
+    if (codecsByClassName == null) {
+      return null;
+    }
+    return codecsByClassName.get(classname);
+  }
+
   /**
    * Removes a suffix from a filename, if it has it.
    * @param filename the filename to strip
