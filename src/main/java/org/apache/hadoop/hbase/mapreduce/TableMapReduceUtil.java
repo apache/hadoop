@@ -180,7 +180,6 @@ public class TableMapReduceUtil {
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(Writable.class);
     if (partitioner == HRegionPartitioner.class) {
-      HBaseConfiguration.addHbaseResources(conf);
       job.setPartitionerClass(HRegionPartitioner.class);
       HTable outputTable = new HTable(conf, table);
       int regions = outputTable.getRegionsInfo().size();
