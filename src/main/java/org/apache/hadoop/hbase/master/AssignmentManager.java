@@ -594,6 +594,11 @@ public class AssignmentManager extends ZooKeeperListener {
         region.getRegionNameAsString());
       return;
     }
+    if (this.serverManager.isClusterShutdown()) {
+      LOG.info("Cluster shutdown is set; skipping assign of " +
+        region.getRegionNameAsString());
+      return;
+    }
     RegionState state = addToRegionsInTransition(region);
     synchronized (state) {
       assign(state);
