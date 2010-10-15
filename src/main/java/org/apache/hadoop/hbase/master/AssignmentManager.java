@@ -682,6 +682,7 @@ public class AssignmentManager extends ZooKeeperListener {
   private void assign(final RegionState state) {
     if (!setOfflineInZooKeeper(state)) return;
     RegionPlan plan = getRegionPlan(state);
+    if (plan == null) return; // Should get reassigned later when RIT times out.
     try {
       LOG.debug("Assigning region " + state.getRegion().getRegionNameAsString() +
         " to " + plan.getDestination().getServerName());
@@ -696,6 +697,10 @@ public class AssignmentManager extends ZooKeeperListener {
       // Clean out plan we failed execute and one that doesn't look like it'll
       // succeed anyways; we need a new plan!
       this.regionPlans.remove(state.getRegion().getEncodedName());
+      // Put in place a new plan and reassign.  Calling getRegionPlan will add
+      // a plan if none exists (We removed it in line above).
+      if (getRegionPlan(state) == null) return;
+      assign(state);
     }
   }
 
@@ -729,14 +734,32 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * @param state
-   * @return Plan for passed <code>state</code> (If none currently, it creates one)
+   * @return Plan for passed <code>state</code> (If none currently, it creates one or
+   * if no servers to assign, it returns null).
    */
   RegionPlan getRegionPlan(final RegionState state) {
+    return getRegionPlan(state, null);
+  }
+
+  /**
+   * @param state
+   * @param serverToExclude Server to exclude (we know its bad). Pass null if
+   * all servers are thought to be assignable.
+   * @return Plan for passed <code>state</code> (If none currently, it creates one or
+   * if no servers to assign, it returns null).
+   */
+  RegionPlan getRegionPlan(final RegionState state,
+      final HServerInfo serverToExclude) {
     // Pickup existing plan or make a new one
     String encodedName = state.getRegion().getEncodedName();
+    List<HServerInfo> servers = this.serverManager.getOnlineServersList();
+    // The remove below hinges on the fact that the call to
+    // serverManager.getOnlineServersList() returns a copy
+    if (serverToExclude != null) servers.remove(serverToExclude);
+    if (servers.size() < 0) return null;
     RegionPlan newPlan = new RegionPlan(state.getRegion(), null,
-      LoadBalancer.randomAssignment(serverManager.getOnlineServersList()));
-    RegionPlan existingPlan = regionPlans.putIfAbsent(encodedName, newPlan);
+      LoadBalancer.randomAssignment(servers));
+    RegionPlan existingPlan = this.regionPlans.putIfAbsent(encodedName, newPlan);
     RegionPlan plan = null;
     if (existingPlan == null) {
       LOG.debug("No previous transition plan for " +
@@ -744,7 +767,7 @@ public class AssignmentManager extends ZooKeeperListener {
         " so generated a random one; " + newPlan + "; " +
         serverManager.countOfRegionServers() +
         " (online=" + serverManager.getOnlineServers().size() +
-        ") available servers");
+        ", exclude=" + serverToExclude + ") available servers");
       plan = newPlan;
     } else {
       LOG.debug("Using preexisting plan=" + existingPlan);
