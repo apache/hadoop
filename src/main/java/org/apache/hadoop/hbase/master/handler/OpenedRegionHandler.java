@@ -60,11 +60,6 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
       AssignmentManager assignmentManager, RegionTransitionData data,
       HRegionInfo regionInfo, HServerInfo serverInfo) {
     super(server, EventType.RS_ZK_REGION_OPENED);
-    try {
-      throw new IOException("IGNORE");
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
     this.assignmentManager = assignmentManager;
     this.regionInfo = regionInfo;
     this.serverInfo = serverInfo;
