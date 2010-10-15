@@ -27,7 +27,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -37,7 +36,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * A base for {@link TableInputFormat}s. Receives a {@link HTable}, an
@@ -189,8 +187,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     return true;
   }
 
-
-
   /**
    * Allows subclasses to get the {@link HTable}.
    */
@@ -235,5 +231,4 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   protected void setTableRecordReader(TableRecordReader tableRecordReader) {
     this.tableRecordReader = tableRecordReader;
   }
-
 }

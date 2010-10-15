@@ -26,17 +26,15 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLDecoder;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
@@ -46,7 +44,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -64,13 +61,15 @@ public class TableMapReduceUtil {
    * @param mapper  The mapper class to use.
    * @param outputKeyClass  The class of the output key.
    * @param outputValueClass  The class of the output value.
-   * @param job  The current job to adjust.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
    * @throws IOException When setting up the details fails.
    */
   public static void initTableMapperJob(String table, Scan scan,
       Class<? extends TableMapper> mapper,
       Class<? extends WritableComparable> outputKeyClass,
-      Class<? extends Writable> outputValueClass, Job job) throws IOException {
+      Class<? extends Writable> outputValueClass, Job job)
+  throws IOException {
     job.setInputFormatClass(TableInputFormat.class);
     if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
     if (outputKeyClass != null) job.setMapOutputKeyClass(outputKeyClass);
@@ -148,10 +147,18 @@ public class TableMapReduceUtil {
    *
    * @param table  The output table.
    * @param reducer  The reducer class to use.
-   * @param job  The current job to adjust.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
    * @param partitioner  Partitioner to use. Pass <code>null</code> to use
    * default partitioner.
-   * @param quorumAddress Distant cluster to write to
+   * @param quorumAddress Distant cluster to write to; default is null for
+   * output to the cluster that is designated in <code>hbase-site.xml</code>.
+   * Set this String to the zookeeper ensemble of an alternate remote cluster
+   * when you would have the reduce write a cluster that is other than the
+   * default; e.g. copying tables between clusters, the source would be
+   * designated by <code>hbase-site.xml</code> and this param would have the
+   * ensemble address of the remote cluster.  The format to pass is particular.
+   * Pass <code> &lt;hbase.zookeeper.quorum> ':' &lt;ZOOKEEPER_ZNODE_PARENT></code>.
    * @param serverClass redefined hbase.regionserver.class
    * @param serverImpl redefined hbase.regionserver.impl
    * @throws IOException When determining the region count fails.
@@ -165,12 +172,14 @@ public class TableMapReduceUtil {
     job.setOutputFormatClass(TableOutputFormat.class);
     if (reducer != null) job.setReducerClass(reducer);
     conf.set(TableOutputFormat.OUTPUT_TABLE, table);
+    // If passed a quorum/ensemble address, pass it on to TableOutputFormat.
     if (quorumAddress != null) {
       if (quorumAddress.split(":").length == 2) {
         conf.set(TableOutputFormat.QUORUM_ADDRESS, quorumAddress);
       } else {
-        throw new IOException("Please specify the peer cluster as " +
-            HConstants.ZOOKEEPER_QUORUM+":"+HConstants.ZOOKEEPER_ZNODE_PARENT);
+        // Not in expected format.
+        throw new IOException("Please specify the peer cluster using the format of " +
+          HConstants.ZOOKEEPER_QUORUM + ":" + HConstants.ZOOKEEPER_ZNODE_PARENT);
       }
     }
     if (serverClass != null && serverImpl != null) {

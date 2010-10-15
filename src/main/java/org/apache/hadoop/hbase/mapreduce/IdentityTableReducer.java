@@ -69,11 +69,10 @@ extends TableReducer<Writable, Writable, Writable> {
    * @throws InterruptedException When the job gets interrupted.
    */
   @Override
-  public void reduce(Writable key, Iterable<Writable> values,
-      Context context) throws IOException, InterruptedException {
+  public void reduce(Writable key, Iterable<Writable> values, Context context)
+  throws IOException, InterruptedException {
     for(Writable putOrDelete : values) {
       context.write(key, putOrDelete);
     }
   }
-
 }

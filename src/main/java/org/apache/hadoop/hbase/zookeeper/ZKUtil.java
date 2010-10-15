@@ -61,12 +61,12 @@ public class ZKUtil {
   private static final char ZNODE_PATH_SEPARATOR = '/';
 
   /**
-   * Creates a new connection to ZooKeeper, pulling settings and quorum config
+   * Creates a new connection to ZooKeeper, pulling settings and ensemble config
    * from the specified configuration object using methods from {@link ZKConfig}.
    *
    * Sets the connection status monitoring watcher to the specified watcher.
    *
-   * @param conf configuration to pull quorum and other settings from
+   * @param conf configuration to pull ensemble and other settings from
    * @param watcher watcher to monitor connection changes
    * @return connection to zookeeper
    * @throws IOException if unable to connect to zk or config problem
@@ -74,26 +74,26 @@ public class ZKUtil {
   public static ZooKeeper connect(Configuration conf, Watcher watcher)
   throws IOException {
     Properties properties = ZKConfig.makeZKProps(conf);
-    String quorum = ZKConfig.getZKQuorumServersString(properties);
-    return connect(conf, quorum, watcher);
+    String ensemble = ZKConfig.getZKQuorumServersString(properties);
+    return connect(conf, ensemble, watcher);
   }
 
-  public static ZooKeeper connect(Configuration conf, String quorum,
+  public static ZooKeeper connect(Configuration conf, String ensemble,
       Watcher watcher)
   throws IOException {
-    return connect(conf, quorum, watcher, "");
+    return connect(conf, ensemble, watcher, "");
   }
 
-  public static ZooKeeper connect(Configuration conf, String quorum,
+  public static ZooKeeper connect(Configuration conf, String ensemble,
       Watcher watcher, final String descriptor)
   throws IOException {
-    if(quorum == null) {
-      throw new IOException("Unable to determine ZooKeeper quorum");
+    if(ensemble == null) {
+      throw new IOException("Unable to determine ZooKeeper ensemble");
     }
     int timeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
-    LOG.info(descriptor + " opening connection to ZooKeeper with quorum (" +
-      quorum + ")");
-    return new ZooKeeper(quorum, timeout, watcher);
+    LOG.info(descriptor + " opening connection to ZooKeeper with ensemble (" +
+        ensemble + ")");
+    return new ZooKeeper(ensemble, timeout, watcher);
   }
 
   //
@@ -164,9 +164,9 @@ public class ZKUtil {
    * @return ensemble key with a name (if any)
    */
   public static String getZooKeeperClusterKey(Configuration conf, String name) {
-    String quorum = conf.get(HConstants.ZOOKEEPER_QUORUM.replaceAll(
+    String ensemble = conf.get(HConstants.ZOOKEEPER_QUORUM.replaceAll(
         "[\\t\\n\\x0B\\f\\r]", ""));
-    StringBuilder builder = new StringBuilder(quorum);
+    StringBuilder builder = new StringBuilder(ensemble);
     builder.append(":");
     builder.append(conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
     if (name != null && !name.isEmpty()) {
