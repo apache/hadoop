@@ -25,5 +25,5 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
  * Thrown by the region server when it is shutting down state.
  */
 @SuppressWarnings("serial")
-public class RegionServerClosedException extends DoNotRetryIOException {
+public class RegionServerStoppedException extends DoNotRetryIOException {
 }

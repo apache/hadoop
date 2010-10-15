@@ -1929,7 +1929,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // Region open/close direct RPCs
 
   @Override
-  public void openRegion(HRegionInfo region) {
+  public void openRegion(HRegionInfo region)
+  throws RegionServerStoppedException {
     LOG.info("Received request to open region: " +
       region.getRegionNameAsString());
     if (this.stopped) throw new RegionServerStoppedException();
@@ -1943,7 +1944,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public void openRegions(List<HRegionInfo> regions) {
+  public void openRegions(List<HRegionInfo> regions)
+  throws RegionServerStoppedException {
     LOG.info("Received request to open " + regions.size() + " region(s)");
     for (HRegionInfo region: regions) openRegion(region);
   }
