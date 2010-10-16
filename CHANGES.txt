@@ -1004,6 +1004,8 @@ Release 0.21.0 - Unreleased
    HBASE-3092  Replace deprecated "new HBaseConfiguration(...)" calls
                (Lars Francke)
    HBASE-2968  No standard family filter provided (Andrey Stepachev)
+   HBASE-3088  TestAvroServer and TestThriftServer broken because use same
+               table in all tests and tests enable/disable/delete
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
