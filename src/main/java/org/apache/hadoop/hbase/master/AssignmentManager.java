@@ -699,7 +699,7 @@ public class AssignmentManager extends ZooKeeperListener {
       this.regionPlans.remove(state.getRegion().getEncodedName());
       // Put in place a new plan and reassign.  Calling getRegionPlan will add
       // a plan if none exists (We removed it in line above).
-      if (getRegionPlan(state) == null) return;
+      if (getRegionPlan(state, plan.getDestination()) == null) return;
       assign(state);
     }
   }

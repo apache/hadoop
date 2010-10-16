@@ -614,6 +614,9 @@ public class ServerManager {
     return regionCount;
   }
 
+  /**
+   * @return A copy of the internal list of online servers.
+   */
   public List<HServerInfo> getOnlineServersList() {
     // TODO: optimize the load balancer call so we don't need to make a new list
     return new ArrayList<HServerInfo>(onlineServers.values());

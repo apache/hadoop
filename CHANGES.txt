@@ -585,6 +585,7 @@ Release 0.21.0 - Unreleased
                it fails to replicate
    HBASE-3044  [replication] ReplicationSource won't cleanup logs if there's
                nothing to replicate
+   HBASE-3113  Don't reassign regions if cluster is being shutdown
 
 
   IMPROVEMENTS
