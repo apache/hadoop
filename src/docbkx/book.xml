@@ -787,7 +787,7 @@
       <title>Configurations</title>
 
       <para>Blooms are enabled by specifying options on a column family in the
-      HBase shell or in </para>
+      HBase shell or in java code as specification on <classname>org.apache.hadoop.hbase.HColumnDescriptor</classname>.</para>
 
       <section>
         <title><code>HColumnDescriptor</code> option</title>
