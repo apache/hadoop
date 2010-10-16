@@ -1003,6 +1003,7 @@ Release 0.21.0 - Unreleased
                scanner on a nonexistant table
    HBASE-3092  Replace deprecated "new HBaseConfiguration(...)" calls
                (Lars Francke)
+   HBASE-2968  No standard family filter provided (Andrey Stepachev)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
