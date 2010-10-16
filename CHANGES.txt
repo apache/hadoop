@@ -588,6 +588,8 @@ Release 0.21.0 - Unreleased
    HBASE-3113  Don't reassign regions if cluster is being shutdown
    HBASE-2933  Skip EOF Errors during Log Recovery
                (Nicolas Spiegelberg via Stack)
+   HBASE-3081  Log Splitting & Replay: Distinguish between Network IOE and
+               Parsing IOE (Nicolas Spiegelberg via Stack)
 
 
   IMPROVEMENTS

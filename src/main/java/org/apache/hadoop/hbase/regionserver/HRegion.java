@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
+import java.text.ParseException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1870,11 +1871,15 @@ public class HRegion implements HeapSize { // , Writable{
           "log spliting, so we have this data in another edit.  " +
           "Continuing, but renaming " + edits + " as " + p, eof);
     } catch (IOException ioe) {
-      if (ioe.getMessage().startsWith("File is corrupt")) {
+      // If the IOE resulted from bad file format,
+      // then this problem is idempotent and retrying won't help
+      if (ioe.getCause() instanceof ParseException) {
         Path p = HLog.moveAsideBadEditsFile(fs, edits);
         LOG.warn("File corruption encountered!  " +
             "Continuing, but renaming " + edits + " as " + p, ioe);
       } else {
+        // other IO errors may be transient (bad network connection, 
+        // checksum exception on one datanode, etc).  throw & retry
         throw ioe;
       }
     }

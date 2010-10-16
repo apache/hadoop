@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.util.FSUtils.recoverFileLease;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -246,12 +247,19 @@ public class HLogSplitter {
               LOG.info("EOF from hlog " + logPath + ".  continuing");
               processedLogs.add(logPath);
           } catch (IOException e) {
-            if (skipErrors) {
-              LOG.warn("Got while parsing hlog " + logPath
-                  + ". Marking as corrupted", e);
-              corruptedLogs.add(logPath);
+            // If the IOE resulted from bad file format,
+            // then this problem is idempotent and retrying won't help
+            if (e.getCause() instanceof ParseException) {
+              LOG.warn("ParseException from hlog " + logPath + ".  continuing");
+              processedLogs.add(logPath);
             } else {
-              throw e;
+              if (skipErrors) {
+                LOG.info("Got while parsing hlog " + logPath +
+                  ". Marking as corrupted", e);
+                corruptedLogs.add(logPath);
+              } else {
+                throw e;
+              }
             }
           }
         }
