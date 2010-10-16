@@ -20,7 +20,9 @@
 package org.apache.hadoop.hbase;
 
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,6 +31,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -60,6 +67,65 @@ public class TestHBaseTestingUtility {
 
   @After
   public void tearDown() throws Exception {
+  }
+
+  /**
+   * Basic sanity test that spins up multiple HDFS and HBase clusters that share
+   * the same ZK ensemble. We then create the same table in both and make sure
+   * that what we insert in one place doesn't end up in the other.
+   * @throws Exception
+   */
+  @Test (timeout=180000)
+  public void multiClusters() throws Exception {
+    // Create three clusters
+
+    // Cluster 1.
+    HBaseTestingUtility htu1 = new HBaseTestingUtility();
+    // Set a different zk path for each cluster
+    htu1.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
+    htu1.startMiniZKCluster();
+
+    // Cluster 2
+    HBaseTestingUtility htu2 = new HBaseTestingUtility();
+    htu2.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
+    htu2.setZkCluster(htu1.getZkCluster());
+
+    // Cluster 3.
+    HBaseTestingUtility htu3 = new HBaseTestingUtility();
+    htu3.getConfiguration().set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/3");
+    htu3.setZkCluster(htu1.getZkCluster());
+
+    try {
+      htu1.startMiniCluster();
+      htu2.startMiniCluster();
+      htu3.startMiniCluster();
+
+      final byte[] TABLE_NAME = Bytes.toBytes("test");
+      final byte[] FAM_NAME = Bytes.toBytes("fam");
+      final byte[] ROW = Bytes.toBytes("row");
+      final byte[] QUAL_NAME = Bytes.toBytes("qual");
+      final byte[] VALUE = Bytes.toBytes("value");
+
+      HTable table1 = htu1.createTable(TABLE_NAME, FAM_NAME);
+      HTable table2 = htu2.createTable(TABLE_NAME, FAM_NAME);
+
+      Put put = new Put(ROW);
+      put.add(FAM_NAME, QUAL_NAME, VALUE);
+      table1.put(put);
+
+      Get get = new Get(ROW);
+      get.addColumn(FAM_NAME, QUAL_NAME);
+      Result res = table1.get(get);
+      assertEquals(1, res.size());
+
+      res = table2.get(get);
+      assertEquals(0, res.size());
+
+    } finally {
+      htu3.shutdownMiniCluster();
+      htu2.shutdownMiniCluster();
+      htu1.shutdownMiniCluster();
+    }
   }
 
   @Test public void testMiniCluster() throws Exception {

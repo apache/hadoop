@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestReplication {
@@ -170,10 +169,8 @@ public class TestReplication {
    */
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
-    /* REENABLE
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
-    */
   }
 
   /**

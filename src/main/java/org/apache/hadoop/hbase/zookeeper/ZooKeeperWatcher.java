@@ -30,6 +30,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -86,6 +88,10 @@ public class ZooKeeperWatcher implements Watcher {
   // znode used for table disabling/enabling
   public String tableZNode;
 
+  private final Configuration conf;
+
+  private final Exception constructorCaller;
+
   /**
    * Instantiate a ZooKeeper connection and watcher.
    * @param descriptor Descriptive string that is added to zookeeper sessionid
@@ -96,6 +102,14 @@ public class ZooKeeperWatcher implements Watcher {
   public ZooKeeperWatcher(Configuration conf, String descriptor,
       Abortable abortable)
   throws IOException, ZooKeeperConnectionException {
+    this.conf = conf;
+    // Capture a stack trace now.  Will print it out later if problem so we can
+    // distingush amongst the myriad ZKWs.
+    try {
+      throw new Exception("ZKW CONSTRUCTOR STACK TRACE FOR DEBUGGING");
+    } catch (Exception e) {
+      this.constructorCaller = e;
+    }
     this.quorum = ZKConfig.getZKQuorumServersString(conf);
     // Identifier will get the sessionid appended later below down when we
     // handle the syncconnect event.
@@ -270,6 +284,20 @@ public class ZooKeeperWatcher implements Watcher {
       case SyncConnected:
         // Update our identifier.  Otherwise ignore.
         LOG.info(this.identifier + " connected");
+        // Now, this callback can be invoked before the this.zookeeper is set.
+        // Wait a little while.
+        long finished = System.currentTimeMillis() +
+          this.conf.getLong("hbase.zookeeper.watcher.sync.connected.wait", 2000);
+        while (System.currentTimeMillis() < finished) {
+          Threads.sleep(1);
+          if (this.zooKeeper != null) break;
+        }
+        if (this.zooKeeper == null) {
+          LOG.error("ZK is null on connection event -- see stack trace " +
+            "for the stack trace when constructor was called on this zkw",
+            this.constructorCaller);
+          throw new NullPointerException("ZK is null");
+        }
         this.identifier = this.identifier + "-0x" +
           Long.toHexString(this.zooKeeper.getSessionId());
         break;

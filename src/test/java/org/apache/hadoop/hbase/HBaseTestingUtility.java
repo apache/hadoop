@@ -85,6 +85,11 @@ public class HBaseTestingUtility {
   private final static Log LOG = LogFactory.getLog(HBaseTestingUtility.class);
   private Configuration conf;
   private MiniZooKeeperCluster zkCluster = null;
+  /**
+   * Set if we were passed a zkCluster.  If so, we won't shutdown zk as
+   * part of general shutdown.
+   */
+  private boolean passedZkCluster = false;
   private MiniDFSCluster dfsCluster = null;
   private MiniHBaseCluster hbaseCluster = null;
   private MiniMRCluster mrCluster = null;
@@ -248,6 +253,7 @@ public class HBaseTestingUtility {
 
   private MiniZooKeeperCluster startMiniZKCluster(final File dir)
   throws Exception {
+    this.passedZkCluster = false;
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
     }
@@ -408,7 +414,7 @@ public class HBaseTestingUtility {
       // Wait till hbase is down before going on to shutdown zk.
       this.hbaseCluster.join();
     }
-    shutdownMiniZKCluster();
+    if (!this.passedZkCluster) shutdownMiniZKCluster();
     if (this.dfsCluster != null) {
       // The below throws an exception per dn, AsynchronousCloseException.
       this.dfsCluster.shutdown();
@@ -985,6 +991,7 @@ public class HBaseTestingUtility {
   }
 
   public void setZkCluster(MiniZooKeeperCluster zkCluster) {
+    this.passedZkCluster = true;
     this.zkCluster = zkCluster;
   }
 
