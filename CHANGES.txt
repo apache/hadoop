@@ -591,6 +591,7 @@ Release 0.21.0 - Unreleased
    HBASE-3081  Log Splitting & Replay: Distinguish between Network IOE and
                Parsing IOE (Nicolas Spiegelberg via Stack)
    HBASE-3098  TestMetaReaderEditor is broken in TRUNK; hangs
+   HBASE-3110  TestReplicationSink failing in TRUNK up on Hudson
 
 
   IMPROVEMENTS
