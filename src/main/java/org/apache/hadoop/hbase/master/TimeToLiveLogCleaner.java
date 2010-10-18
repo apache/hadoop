@@ -29,12 +29,11 @@ import org.apache.commons.logging.LogFactory;
  * be deleted. By default they are allowed to live for 10 minutes.
  */
 public class TimeToLiveLogCleaner implements LogCleanerDelegate {
-
-  static final Log LOG =
-      LogFactory.getLog(TimeToLiveLogCleaner.class.getName());
+  static final Log LOG = LogFactory.getLog(TimeToLiveLogCleaner.class.getName());
   private Configuration conf;
   // Configured time a log can be kept after it was closed
   private long ttl;
+  private boolean stopped = false;
 
   @Override
   public boolean isLogDeletable(Path filePath) {
@@ -66,5 +65,15 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
   @Override
   public Configuration getConf() {
     return conf;
+  }
+
+  @Override
+  public void stop(String why) {
+    this.stopped = true;
+  }
+
+  @Override
+  public boolean isStopped() {
+    return this.stopped;
   }
 }

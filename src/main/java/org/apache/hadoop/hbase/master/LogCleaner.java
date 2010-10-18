@@ -153,4 +153,19 @@ public class LogCleaner extends Chore {
       LOG.warn("Error while cleaning the logs", e);
     }
   }
+
+  @Override
+  public void run() {
+    try {
+      super.run();
+    } finally {
+      for (LogCleanerDelegate lc: this.logCleanersChain) {
+        try {
+          lc.stop("Exiting");
+        } catch (Throwable t) {
+          LOG.warn("Stopping", t);
+        }
+      }
+    }
+  }
 }

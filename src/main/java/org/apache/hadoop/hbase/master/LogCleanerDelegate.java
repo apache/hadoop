@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Stoppable;
 
 /**
  * Interface for the log cleaning function inside the master. By default, three
@@ -30,15 +31,14 @@ import org.apache.hadoop.fs.Path;
  * "hbase.master.logcleaner.plugins", which is a comma-separated list of fully
  * qualified class names. LogsCleaner will add it to the chain.
  *
- * HBase ships with LogsCleaner as the default implementation.
+ * <p>HBase ships with LogsCleaner as the default implementation.
  *
- * This interface extends Configurable, so setConf needs to be called once
+ * <p>This interface extends Configurable, so setConf needs to be called once
  * before using the cleaner.
  * Since LogCleanerDelegates are created in LogsCleaner by reflection. Classes
  * that implements this interface should provide a default constructor.
  */
-public interface LogCleanerDelegate extends Configurable {
-
+public interface LogCleanerDelegate extends Configurable, Stoppable {
   /**
    * Should the master delete the log or keep it?
    * @param filePath full path to log.

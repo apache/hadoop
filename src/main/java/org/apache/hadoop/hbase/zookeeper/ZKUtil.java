@@ -91,7 +91,7 @@ public class ZKUtil {
       throw new IOException("Unable to determine ZooKeeper ensemble");
     }
     int timeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
-    LOG.info(descriptor + " opening connection to ZooKeeper with ensemble (" +
+    LOG.debug(descriptor + " opening connection to ZooKeeper with ensemble (" +
         ensemble + ")");
     return new ZooKeeper(ensemble, timeout, watcher);
   }
@@ -194,7 +194,7 @@ public class ZKUtil {
   throws KeeperException {
     try {
       Stat s = zkw.getZooKeeper().exists(znode, zkw);
-      LOG.info(zkw.prefix("Set watcher on existing znode " + znode));
+      LOG.debug(zkw.prefix("Set watcher on existing znode " + znode));
       return s != null ? true : false;
     } catch (KeeperException e) {
       LOG.warn(zkw.prefix("Unable to set watcher on znode " + znode), e);

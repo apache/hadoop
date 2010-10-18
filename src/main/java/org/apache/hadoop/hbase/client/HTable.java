@@ -60,13 +60,15 @@ import org.apache.hadoop.hbase.util.Writables;
  * 
  * This class is not thread safe for updates; the underlying write buffer can
  * be corrupted if multiple threads contend over a single HTable instance.
- * 
+ *
  * <p>Instances of HTable passed the same {@link Configuration} instance will
- * share connections to master and the zookeeper ensemble as well as caches of
- * region locations.  This happens because they will all share the same
- * {@link HConnection} instance (internally we keep a Map of {@link HConnection}
- * instances keyed by {@link Configuration}).
- * {@link HConnection} will read most of the
+ * share connections to servers out on the cluster and to the zookeeper ensemble
+ * as well as caches of  region locations.  This is usually a *good* thing.
+ * This happens because they will all share the same underlying
+ * {@link HConnection} instance.  See {@link HConnectionManager} for more on
+ * how this mechanism works.
+ *
+ * <p>{@link HConnection} will read most of the
  * configuration it needs from the passed {@link Configuration} on initial
  * construction.  Thereafter, for settings such as
  * <code>hbase.client.pause</code>, <code>hbase.client.retries.number</code>,
@@ -75,8 +77,10 @@ import org.apache.hadoop.hbase.util.Writables;
  * will go unnoticed.  To run with changed values, make a new
  * {@link HTable} passing a new {@link Configuration} instance that has the
  * new configuration.
- * 
+ *
  * @see HBaseAdmin for create, drop, list, enable and disable of tables.
+ * @see HConnection
+ * @see HConnectionManager
  */
 public class HTable implements HTableInterface {
   private static final Log LOG = LogFactory.getLog(HTable.class);

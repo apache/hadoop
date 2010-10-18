@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.io.Writable;
@@ -102,6 +103,12 @@ implements Configurable {
     public void close(TaskAttemptContext context)
     throws IOException {
       table.flushCommits();
+      // The following call will shutdown all connections to the cluster from
+      // this JVM.  It will close out our zk session otherwise zk wil log
+      // expired sessions rather than closed ones.  If any other HTable instance
+      // running in this JVM, this next call will cause it damage.  Presumption
+      // is that the above this.table is only instance.
+      HConnectionManager.deleteAllConnections(true);
     }
 
     /**

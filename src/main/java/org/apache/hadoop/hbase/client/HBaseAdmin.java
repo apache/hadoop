@@ -108,7 +108,7 @@ public class HBaseAdmin implements Abortable {
 
   private void cleanupCatalogTracker(final CatalogTracker ct) {
     ct.stop();
-    HConnectionManager.deleteConnection(ct.getConnection());
+    HConnectionManager.deleteConnection(ct.getConnection().getConfiguration(), true);
   }
 
   @Override

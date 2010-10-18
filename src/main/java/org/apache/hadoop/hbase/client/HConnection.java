@@ -33,13 +33,27 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
- * Cluster connection.
+ * Cluster connection.  Hosts a connection to the ZooKeeper ensemble and
+ * thereafter into the HBase cluster.  Knows how to locate regions out on the cluster,
+ * keeps a cache of locations and then knows how to recalibrate after they move.
  * {@link HConnectionManager} manages instances of this class.
+ *
+ * <p>HConnections are used by {@link HTable} mostly but also by
+ * {@link HBaseAdmin}, {@link CatalogTracker},
+ * and {@link ZooKeeperWatcher}.  HConnection instances can be shared.  Sharing
+ * is usually what you want because rather than each HConnection instance
+ * having to do its own discovery of regions out on the cluster, instead, all
+ * clients get to share the one cache of locations.  Sharing makes cleanup of
+ * HConnections awkward.  See {@link HConnectionManager} for cleanup
+ * discussion.
+ *
+ * @see HConnectionManager
  */
 public interface HConnection extends Abortable {
   /**
@@ -48,7 +62,7 @@ public interface HConnection extends Abortable {
   public Configuration getConfiguration();
 
   /**
-   * Retrieve ZooKeeperWatcher used by the connection.
+   * Retrieve ZooKeeperWatcher used by this connection.
    * @return ZooKeeperWatcher handle being used by the connection.
    * @throws IOException if a remote or network exception occurs
    */

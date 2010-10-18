@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.LogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -38,12 +39,11 @@ import java.util.Set;
  * replication before deleting it when its TTL is over.
  */
 public class ReplicationLogCleaner implements LogCleanerDelegate {
-
-  private static final Log LOG =
-    LogFactory.getLog(ReplicationLogCleaner.class);
+  private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
   private Configuration conf;
   private ReplicationZookeeper zkHelper;
   private Set<String> hlogs = new HashSet<String>();
+  private boolean stopped = false;
 
   /**
    * Instantiates the cleaner, does nothing more.
@@ -105,11 +105,13 @@ public class ReplicationLogCleaner implements LogCleanerDelegate {
 
   @Override
   public void setConf(Configuration conf) {
-    this.conf = conf;
+    // Make my own Configuration.  Then I'll have my own connection to zk that
+    // I can close myself when comes time.
+    this.conf = new Configuration(conf);
     try {
       ZooKeeperWatcher zkw =
-          new ZooKeeperWatcher(conf, this.getClass().getName(), null);
-      this.zkHelper = new ReplicationZookeeper(conf, zkw);
+          new ZooKeeperWatcher(this.conf, "replicationLogCleaner", null);
+      this.zkHelper = new ReplicationZookeeper(this.conf, zkw);
     } catch (KeeperException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     } catch (IOException e) {
@@ -121,5 +123,21 @@ public class ReplicationLogCleaner implements LogCleanerDelegate {
   @Override
   public Configuration getConf() {
     return conf;
+  }
+
+  @Override
+  public void stop(String why) {
+    if (this.stopped) return;
+    this.stopped = true;
+    if (this.zkHelper != null) {
+      LOG.info("Stopping " + this.zkHelper.getZookeeperWatcher());
+      this.zkHelper.getZookeeperWatcher().close();
+    }
+    HConnectionManager.deleteConnection(this.conf, true);
+  }
+
+  @Override
+  public boolean isStopped() {
+    return this.stopped;
   }
 }

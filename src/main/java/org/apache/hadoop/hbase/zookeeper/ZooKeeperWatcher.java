@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -283,7 +282,7 @@ public class ZooKeeperWatcher implements Watcher {
     switch(event.getState()) {
       case SyncConnected:
         // Update our identifier.  Otherwise ignore.
-        LOG.info(this.identifier + " connected");
+        LOG.debug(this.identifier + " connected");
         // Now, this callback can be invoked before the this.zookeeper is set.
         // Wait a little while.
         long finished = System.currentTimeMillis() +

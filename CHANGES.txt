@@ -594,6 +594,8 @@ Release 0.21.0 - Unreleased
    HBASE-3110  TestReplicationSink failing in TRUNK up on Hudson
    HBASE-3101  bin assembly doesn't include -tests or -source jars
    HBASE-3121  [rest] Do not perform cache control when returning results
+   HBASE-2669  HCM.shutdownHook causes data loss with
+               hbase.client.write.buffer != 0
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

@@ -1322,7 +1322,6 @@ public class AssignmentManager extends ZooKeeperListener {
       // If bulkAssign in progress, suspend checks
       if (this.bulkAssign) return;
       synchronized (regionsInTransition) {
-        LOG.debug("Checking for timed out RIT");
         // Iterate all regions in transition checking for time outs
         long now = System.currentTimeMillis();
         for (RegionState regionState : regionsInTransition.values()) {

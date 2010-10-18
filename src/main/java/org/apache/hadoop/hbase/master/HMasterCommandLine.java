@@ -178,7 +178,7 @@ public class HMasterCommandLine extends ServerCommandLine {
   /*
    * Version of master that will shutdown the passed zk cluster on its way out.
    */
-  static class LocalHMaster extends HMaster {
+  public static class LocalHMaster extends HMaster {
     private MiniZooKeeperCluster zkcluster = null;
 
     public LocalHMaster(Configuration conf)

@@ -19,35 +19,34 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Queue;
 
 /**
  * A simple pool of HTable instances.<p>
  *
  * Each HTablePool acts as a pool for all tables.  To use, instantiate an
  * HTablePool and use {@link #getTable(String)} to get an HTable from the pool.
- * Once you are done with it, return it to the pool with {@link #putTable(HTableInterface)}.<p>
- *
- * A pool can be created with a <i>maxSize</i> which defines the most HTable
+ * Once you are done with it, return it to the pool with {@link #putTable(HTableInterface)}.
+ * 
+ * <p>A pool can be created with a <i>maxSize</i> which defines the most HTable
  * references that will ever be retained for each table.  Otherwise the default
- * is {@link Integer#MAX_VALUE}.<p>
+ * is {@link Integer#MAX_VALUE}.
+ *
+ * <p>Pool will manage its own cluster to the cluster. See {@link HConnectionManager}.
  */
 public class HTablePool {
   private final ConcurrentMap<String, LinkedList<HTableInterface>> tables =
     new ConcurrentHashMap<String, LinkedList<HTableInterface>>();
   private final Configuration config;
   private final int maxSize;
-  private HTableInterfaceFactory tableFactory = new HTableFactory();
+  private final HTableInterfaceFactory tableFactory;
 
   /**
    * Default Constructor.  Default HBaseConfiguration and no limit on pool size.
@@ -61,15 +60,17 @@ public class HTablePool {
    * @param config configuration
    * @param maxSize maximum number of references to keep for each table
    */
-  public HTablePool(Configuration config, int maxSize) {
-    this.config = config;
-    this.maxSize = maxSize;
+  public HTablePool(final Configuration config, final int maxSize) {
+    this(config, maxSize, null);
   }
 
-  public HTablePool(Configuration config, int maxSize, HTableInterfaceFactory tableFactory) {
-    this.config = config;
+  public HTablePool(final Configuration config, final int maxSize,
+      final HTableInterfaceFactory tableFactory) {
+    // Make a new configuration instance so I can safely cleanup when
+    // done with the pool.
+    this.config = new Configuration(config);
     this.maxSize = maxSize;
-    this.tableFactory = tableFactory;
+    this.tableFactory = tableFactory == null? new HTableFactory(): tableFactory;
   }
 
   /**
@@ -146,7 +147,7 @@ public class HTablePool {
         table = queue.poll();
       }
     }
-
+    HConnectionManager.deleteConnection(this.config, true);
   }
 
   /**
