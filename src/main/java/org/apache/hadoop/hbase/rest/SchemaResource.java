@@ -148,7 +148,7 @@ public class SchemaResource extends ResourceBase {
             hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
           }
           if (htd.hasFamily(hcd.getName())) {
-            admin.modifyColumn(name, hcd.getName(), hcd);
+            admin.modifyColumn(name, hcd);
           } else {
             admin.addColumn(model.getName(), hcd);            
           }
@@ -169,7 +169,6 @@ public class SchemaResource extends ResourceBase {
   private Response update(final TableSchemaModel model, final boolean replace,
       final UriInfo uriInfo) {
     try {
-      servlet.invalidateMaxAge(tableName);
       byte[] name = Bytes.toBytes(tableName);
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       if (replace || !admin.tableExists(name)) {

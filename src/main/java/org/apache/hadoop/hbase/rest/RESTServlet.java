@@ -21,14 +21,9 @@
 package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.rest.metrics.RESTMetrics;
 
@@ -39,8 +34,6 @@ public class RESTServlet implements Constants {
   private static RESTServlet INSTANCE;
   private final Configuration conf;
   private final HTablePool pool;
-  private final Map<String,Integer> maxAgeMap = 
-    Collections.synchronizedMap(new HashMap<String,Integer>());
   private final RESTMetrics metrics = new RESTMetrics();
 
   /**
@@ -99,45 +92,5 @@ public class RESTServlet implements Constants {
 
   RESTMetrics getMetrics() {
     return metrics;
-  }
-
-  /**
-   * @param tableName the table name
-   * @return the maximum cache age suitable for use with this table, in
-   *  seconds 
-   * @throws IOException
-   */
-  public int getMaxAge(String tableName) throws IOException {
-    Integer i = maxAgeMap.get(tableName);
-    if (i != null) {
-      return i.intValue();
-    }
-    HTableInterface table = pool.getTable(tableName);
-    try {
-      int maxAge = DEFAULT_MAX_AGE;
-      for (HColumnDescriptor family : 
-          table.getTableDescriptor().getFamilies()) {
-        int ttl = family.getTimeToLive();
-        if (ttl < 0) {
-          continue;
-        }
-        if (ttl < maxAge) {
-          maxAge = ttl;
-        }
-      }
-      maxAgeMap.put(tableName, maxAge);
-      return maxAge;
-    } finally {
-      pool.putTable(table);
-    }
-  }
-
-  /**
-   * Signal that a previously calculated maximum cache age has been
-   * invalidated by a schema change.
-   * @param tableName the table name
-   */
-  public void invalidateMaxAge(String tableName) {
-    maxAgeMap.remove(tableName);
   }
 }
