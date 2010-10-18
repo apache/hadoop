@@ -30,10 +30,12 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -118,19 +120,26 @@ public class ServerShutdownHandler extends EventHandler {
     // We should encounter -ROOT- and .META. first in the Set given how its
     // a sorted set.
     for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
-      // If table is not disabled but the region is offlined,
-      HRegionInfo hri = e.getKey();
-      boolean disabled = this.services.getAssignmentManager().
-        isTableDisabled(hri.getTableDesc().getNameAsString());
-      if (disabled) continue;
-      if (hri.isOffline() && hri.isSplit()) {
-        fixupDaughters(hris, e.getValue());
-        continue;
-      }
-      this.services.getAssignmentManager().assign(hri);
+      processDeadRegion(e.getKey(), e.getValue(),
+          this.services.getAssignmentManager(),
+          this.server.getCatalogTracker());
+      this.services.getAssignmentManager().assign(e.getKey());
     }
     this.deadServers.remove(serverName);
     LOG.info("Finished processing of shutdown of " + serverName);
+  }
+
+  public static void processDeadRegion(HRegionInfo hri, Result result,
+      AssignmentManager assignmentManager, CatalogTracker catalogTracker)
+  throws IOException {
+    // If table is not disabled but the region is offlined,
+    boolean disabled = assignmentManager.isTableDisabled(
+        hri.getTableDesc().getNameAsString());
+    if (disabled) return;
+    if (hri.isOffline() && hri.isSplit()) {
+      fixupDaughters(result, assignmentManager, catalogTracker);
+      return;
+    }
   }
 
   /**
@@ -139,31 +148,34 @@ public class ServerShutdownHandler extends EventHandler {
    * @param result The contents of the parent row in .META.
    * @throws IOException
    */
-  void fixupDaughters(final NavigableMap<HRegionInfo, Result> hris,
-      final Result result) throws IOException {
-    fixupDaughter(hris, result, HConstants.SPLITA_QUALIFIER);
-    fixupDaughter(hris, result, HConstants.SPLITB_QUALIFIER);
+  static void fixupDaughters(final Result result,
+      final AssignmentManager assignmentManager,
+      final CatalogTracker catalogTracker) throws IOException {
+    fixupDaughter(result, HConstants.SPLITA_QUALIFIER, assignmentManager,
+        catalogTracker);
+    fixupDaughter(result, HConstants.SPLITB_QUALIFIER, assignmentManager,
+        catalogTracker);
   }
 
   /**
    * Check individual daughter is up in .META.; fixup if its not.
-   * @param hris All regions for this server in meta.
    * @param result The contents of the parent row in .META.
    * @param qualifier Which daughter to check for.
    * @throws IOException
    */
-  void fixupDaughter(final NavigableMap<HRegionInfo, Result> hris,
-      final Result result, final byte [] qualifier)
+  static void fixupDaughter(final Result result, final byte [] qualifier,
+      final AssignmentManager assignmentManager,
+      final CatalogTracker catalogTracker)
   throws IOException {
     byte [] bytes = result.getValue(HConstants.CATALOG_FAMILY, qualifier);
     if (bytes == null || bytes.length <= 0) return;
     HRegionInfo hri = Writables.getHRegionInfo(bytes);
     Pair<HRegionInfo, HServerAddress> pair =
-      MetaReader.getRegion(this.server.getCatalogTracker(), hri.getRegionName());
+      MetaReader.getRegion(catalogTracker, hri.getRegionName());
     if (pair == null || pair.getFirst() == null) {
       LOG.info("Fixup; missing daughter " + hri.getEncodedName());
-      MetaEditor.addDaughter(this.server.getCatalogTracker(), hri, null);
-      this.services.getAssignmentManager().assign(hri);
+      MetaEditor.addDaughter(catalogTracker, hri, null);
+      assignmentManager.assign(hri);
     }
   }
 }

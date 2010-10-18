@@ -613,4 +613,18 @@ public class MiniHBaseCluster {
   throws IOException {
     ((MiniHBaseClusterMaster)getMaster()).addMessage(hrs.getHServerInfo(), msg);
   }
+
+  /**
+   * Counts the total numbers of regions being served by the currently online
+   * region servers by asking each how many regions they have.  Does not look
+   * at META at all.  Count includes catalog tables.
+   * @return number of regions being served by all region servers
+   */
+  public long countServedRegions() {
+    long count = 0;
+    for (JVMClusterUtil.RegionServerThread rst : getLiveRegionServerThreads()) {
+      count += rst.getRegionServer().getNumberOfOnlineRegions();
+    }
+    return count;
+  }
 }

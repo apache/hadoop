@@ -764,6 +764,38 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Create rows in META for regions of the specified table with the specified
+   * start keys.  The first startKey should be a 0 length byte array if you
+   * want to form a proper range of regions.
+   * @param conf
+   * @param htd
+   * @param startKeys
+   * @return list of region info for regions added to meta
+   * @throws IOException
+   */
+  public List<HRegionInfo> createMultiRegionsInMeta(final Configuration conf,
+      final HTableDescriptor htd, byte [][] startKeys)
+  throws IOException {
+    HTable meta = new HTable(conf, HConstants.META_TABLE_NAME);
+    Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
+    List<HRegionInfo> newRegions = new ArrayList<HRegionInfo>(startKeys.length);
+    // add custom ones
+    int count = 0;
+    for (int i = 0; i < startKeys.length; i++) {
+      int j = (i + 1) % startKeys.length;
+      HRegionInfo hri = new HRegionInfo(htd, startKeys[i], startKeys[j]);
+      Put put = new Put(hri.getRegionName());
+      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+        Writables.getBytes(hri));
+      meta.put(put);
+      LOG.info("createMultiRegionsInMeta: inserted " + hri.toString());
+      newRegions.add(hri);
+      count++;
+    }
+    return newRegions;
+  }
+
+  /**
    * Returns all rows from the .META. table.
    *
    * @throws IOException When reading the rows fails.

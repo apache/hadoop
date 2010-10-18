@@ -91,20 +91,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
     LOG.debug("Handling CLOSED event");
     // Check if this table is being disabled or not
     if (assignmentManager.isTableOfRegionDisabled(regionInfo.getRegionName())) {
-      // Disabling so should not be reassigned, just delete the CLOSED node
-      LOG.debug("Table being disabled so deleting ZK node and removing from " +
-          "regions in transition, skipping assignment");
-      try {
-        ZKAssign.deleteClosedNode(server.getZooKeeper(),
-            regionInfo.getEncodedName());
-      } catch (KeeperException.NoNodeException nne) {
-        LOG.warn("Tried to delete closed node for " + data + " but it does " +
-            "not exist");
-        return;
-      } catch (KeeperException e) {
-        server.abort("Error deleting CLOSED node in ZK", e);
-      }
-      assignmentManager.regionOffline(regionInfo);
+      assignmentManager.offlineDisabledRegion(regionInfo);
       return;
     }
     // ZK Node is in CLOSED state, assign it.

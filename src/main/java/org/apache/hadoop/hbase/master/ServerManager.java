@@ -634,4 +634,14 @@ public class ServerManager {
   public boolean isClusterShutdown() {
     return this.clusterShutdown;
   }
+
+  /**
+   * Stop the ServerManager.
+   * <p>
+   * Currently just interrupts the ServerMonitor and LogCleaner chores.
+   */
+  public void stop() {
+    this.serverMonitorThread.interrupt();
+    this.logCleaner.interrupt();
+  }
 }

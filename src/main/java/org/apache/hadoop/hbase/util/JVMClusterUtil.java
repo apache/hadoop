@@ -124,7 +124,7 @@ public class JVMClusterUtil {
     public void waitForServerOnline() {
       // The server is marked online after init begins but before race to become
       // the active master.
-      while (!this.master.isAlive() && !this.master.isStopped()) {
+      while (!this.master.isMasterRunning() && !this.master.isStopped()) {
         try {
           Thread.sleep(1000);
         } catch (InterruptedException e) {

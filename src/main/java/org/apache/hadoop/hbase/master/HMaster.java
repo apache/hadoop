@@ -149,9 +149,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // Set on abort -- usually failure of our zk session.
   private volatile boolean abort = false;
   // flag set after we become the active master (used for testing)
-  protected volatile boolean isActiveMaster = false;
+  private volatile boolean isActiveMaster = false;
   // flag set after we complete initialization once active (used for testing)
-  protected volatile boolean isInitialized = false;
+  private volatile boolean isInitialized = false;
 
   // Instance of the hbase executor service.
   ExecutorService executorService;
@@ -267,13 +267,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         loop();
         // Once we break out of here, we are being shutdown
 
-        // Stop balancer and meta catalog janitor
-        if (this.balancerChore != null) {
-          this.balancerChore.interrupt();
-        }
-        if (this.catalogJanitorChore != null) {
-          this.catalogJanitorChore.interrupt();
-        }
+        // Stop chores
+        stopChores();
 
         // Wait for all the remaining region servers to report in IFF we were
         // running a cluster shutdown AND we were NOT aborting.
@@ -288,6 +283,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // Stop services started for both backup and active masters
       this.activeMasterManager.stop();
       this.catalogTracker.stop();
+      this.serverManager.stop();
+      this.assignmentManager.stop();
       HConnectionManager.deleteConnection(this.conf, true);
       this.zooKeeper.close();
       LOG.info("HMaster main thread exiting");
@@ -399,6 +396,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     this.catalogJanitorChore =
       Threads.setDaemonThreadRunning(new CatalogJanitor(this, this));
 
+    LOG.info("Master has completed initialization");
     isInitialized = true;
   }
 
@@ -567,6 +565,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       }
     };
     return Threads.setDaemonThreadRunning(chore);
+  }
+
+  private void stopChores() {
+    if (this.balancerChore != null) {
+      this.balancerChore.interrupt();
+    }
+    if (this.catalogJanitorChore != null) {
+      this.catalogJanitorChore.interrupt();
+    }
   }
 
   public MapWritable regionServerStartup(final HServerInfo serverInfo)

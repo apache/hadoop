@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.ipc.RemoteException;
 
 /**
  * Reads region and assignment information from <code>.META.</code>.
@@ -124,7 +126,8 @@ public class MetaReader {
    * @return map of regions to their currently assigned server
    * @throws IOException
    */
-  public static Map<HRegionInfo,HServerAddress> fullScan(CatalogTracker catalogTracker)
+  public static Map<HRegionInfo,HServerAddress> fullScan(
+      CatalogTracker catalogTracker)
   throws IOException {
     final Map<HRegionInfo,HServerAddress> regions =
       new TreeMap<HRegionInfo,HServerAddress>();
@@ -134,6 +137,34 @@ public class MetaReader {
         if (r ==  null || r.isEmpty()) return true;
         Pair<HRegionInfo,HServerAddress> region = metaRowToRegionPair(r);
         regions.put(region.getFirst(), region.getSecond());
+        return true;
+      }
+    };
+    fullScan(catalogTracker, v);
+    return regions;
+  }
+
+  /**
+   * Performs a full scan of <code>.META.</code>.
+   * <p>
+   * Returns a map of every region to it's currently assigned server, according
+   * to META.  If the region does not have an assignment it will have a null
+   * value in the map.
+   * <p>
+   * Returns HServerInfo which includes server startcode.
+   *
+   * @return map of regions to their currently assigned server
+   * @throws IOException
+   */
+  public static List<Result> fullScanOfResults(
+      CatalogTracker catalogTracker)
+  throws IOException {
+    final List<Result> regions = new ArrayList<Result>();
+    Visitor v = new Visitor() {
+      @Override
+      public boolean visit(Result r) throws IOException {
+        if (r ==  null || r.isEmpty()) return true;
+        regions.add(r);
         return true;
       }
     };
@@ -214,6 +245,13 @@ public class MetaReader {
       } else {
         throw e;
       }
+    } catch (RemoteException re) {
+      if (re.unwrapRemoteException() instanceof NotServingRegionException) {
+        // Treat this NSRE as unavailable table.  Catch and fall through to
+        // return null below
+      } else {
+        throw re;
+      }
     } catch (IOException e) {
       if (e.getCause() != null && e.getCause() instanceof IOException &&
           e.getCause().getMessage() != null &&
@@ -269,6 +307,31 @@ public class MetaReader {
       return new Pair<HRegionInfo,HServerAddress>(info, server);
     } else {
       return new Pair<HRegionInfo, HServerAddress>(info, null);
+    }
+  }
+
+  /**
+   * @param data A .META. table row.
+   * @return A pair of the regioninfo and the server info from <code>data</code>
+   * (or null for server address if no address set in .META.).
+   * @throws IOException
+   */
+  public static Pair<HRegionInfo, HServerInfo> metaRowToRegionPairWithInfo(
+      Result data) throws IOException {
+    HRegionInfo info = Writables.getHRegionInfo(
+      data.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.REGIONINFO_QUALIFIER));
+    final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
+      HConstants.SERVER_QUALIFIER);
+    if (value != null && value.length > 0) {
+      final long startCode = Bytes.toLong(data.getValue(HConstants.CATALOG_FAMILY,
+          HConstants.STARTCODE_QUALIFIER));
+      HServerAddress server = new HServerAddress(Bytes.toString(value));
+      HServerInfo hsi = new HServerInfo(server, startCode, 0,
+          server.getHostname());
+      return new Pair<HRegionInfo,HServerInfo>(info, hsi);
+    } else {
+      return new Pair<HRegionInfo, HServerInfo>(info, null);
     }
   }
 

@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.util.List;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -241,6 +243,31 @@ public class ZKAssign {
       String regionName)
   throws KeeperException, KeeperException.NoNodeException {
     return deleteNode(zkw, regionName, EventType.RS_ZK_REGION_OPENED);
+  }
+
+  /**
+   * Deletes an existing unassigned node that is in the OFFLINE state for the
+   * specified region.
+   *
+   * <p>If a node does not already exist for this region, a
+   * {@link NoNodeException} will be thrown.
+   *
+   * <p>No watcher is set whether this succeeds or not.
+   *
+   * <p>Returns false if the node was not in the proper state but did exist.
+   *
+   * <p>This method is used during master failover when the regions on an RS
+   * that has died are all set to OFFLINE before being processed.
+   *
+   * @param zkw zk reference
+   * @param region closed region to be deleted from zk
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NoNodeException if node does not exist
+   */
+  public static boolean deleteOfflineNode(ZooKeeperWatcher zkw,
+      String regionName)
+  throws KeeperException, KeeperException.NoNodeException {
+    return deleteNode(zkw, regionName, EventType.M_ZK_REGION_OFFLINE);
   }
 
   /**
@@ -569,12 +596,13 @@ public class ZKAssign {
    * @param zkw zk reference
    * @param region region to be transitioned to opened
    * @param serverName server event originates from
-   * @param beginState state the node must currently be in to do transition
    * @param endState state to transition node to if all checks pass
+   * @param beginState state the node must currently be in to do transition
+   * @param expectedVersion expected version of data before modification, or -1
    * @return version of node after transition, -1 if unsuccessful transition
    * @throws KeeperException if unexpected zookeeper exception
    */
-  private static int transitionNode(ZooKeeperWatcher zkw, HRegionInfo region,
+  public static int transitionNode(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName, EventType beginState, EventType endState,
       int expectedVersion)
   throws KeeperException {
@@ -664,5 +692,40 @@ public class ZKAssign {
       return null;
     }
     return RegionTransitionData.fromBytes(data);
+  }
+
+  /**
+   * Delete the assignment node regardless of its current state.
+   * <p>
+   * Fail silent even if the node does not exist at all.
+   * @param watcher
+   * @param regionInfo
+   * @throws KeeperException
+   */
+  public static void deleteNodeFailSilent(ZooKeeperWatcher watcher,
+      HRegionInfo regionInfo)
+  throws KeeperException {
+    String node = getNodeName(watcher, regionInfo.getEncodedName());
+    ZKUtil.deleteNodeFailSilent(watcher, node);
+  }
+
+  /**
+   * Blocks until there are no node in regions in transition.
+   * @param zkw zk reference
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  public static void blockUntilNoRIT(ZooKeeperWatcher zkw)
+  throws KeeperException, InterruptedException {
+    while (ZKUtil.nodeHasChildren(zkw, zkw.assignmentZNode)) {
+      List<String> znodes =
+        ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.assignmentZNode);
+      if (znodes != null && !znodes.isEmpty()) {
+        for (String znode : znodes) {
+          LOG.debug("ZK RIT -> " + znode);
+        }
+      }
+      Thread.sleep(200);
+    }
   }
 }
