@@ -592,6 +592,7 @@ Release 0.21.0 - Unreleased
                Parsing IOE (Nicolas Spiegelberg via Stack)
    HBASE-3098  TestMetaReaderEditor is broken in TRUNK; hangs
    HBASE-3110  TestReplicationSink failing in TRUNK up on Hudson
+   HBASE-3101  bin assembly doesn't include -tests or -source jars
 
 
   IMPROVEMENTS
