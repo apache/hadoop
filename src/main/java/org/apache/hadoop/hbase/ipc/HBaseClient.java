@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.ObjectWritable;
@@ -484,12 +485,14 @@ public class HBaseClient {
           //for serializing the
           //data to be written
           d = new DataOutputBuffer();
+          d.writeInt(0xdeadbeef); // placeholder for data length
           d.writeInt(call.id);
           call.param.write(d);
           byte[] data = d.getData();
           int dataLength = d.getLength();
-          out.writeInt(dataLength);      //first put the data length
-          out.write(data, 0, dataLength);//write the data
+          // fill in the placeholder
+          Bytes.putInt(data, 0, dataLength - 4);
+          out.write(data, 0, dataLength);
           out.flush();
         }
       } catch(IOException e) {

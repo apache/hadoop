@@ -1013,6 +1013,7 @@ Release 0.21.0 - Unreleased
                table in all tests and tests enable/disable/delete
    HBASE-3097  Merge in hbase-1200 doc on bloomfilters into hbase book
    HBASE-2700  Test of: Handle master failover for regions in transition
+   HBASE-3115  HBaseClient wastes 1 TCP packet per RPC
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
