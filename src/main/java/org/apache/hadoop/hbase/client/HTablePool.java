@@ -68,7 +68,7 @@ public class HTablePool {
       final HTableInterfaceFactory tableFactory) {
     // Make a new configuration instance so I can safely cleanup when
     // done with the pool.
-    this.config = new Configuration(config);
+    this.config = config == null? new Configuration(): new Configuration(config);
     this.maxSize = maxSize;
     this.tableFactory = tableFactory == null? new HTableFactory(): tableFactory;
   }
