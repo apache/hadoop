@@ -68,10 +68,6 @@
 
     <para>This chapter is all about Regions.</para>
 
-    <note>
-      <para>TODO: Review all of the below to ensure it matches what was
-      committed -- St.Ack 20100901</para>
-    </note>
 
     <section>
       <title>Region Size</title>
@@ -118,6 +114,10 @@
 
     <section>
       <title>Region Transitions</title>
+    <note>
+      <para>TODO: Review all of the below to ensure it matches what was
+      committed -- St.Ack 20100901</para>
+    </note>
 
       <para>Regions only transition in a limited set of circumstances.</para>
 
@@ -673,6 +673,15 @@
             </listitem>
           </itemizedlist>
         </section>
+      </section>
+      <section>
+      <title>Region Splits</title>
+      <para>Splits run unaided on the RegionServer; i.e. the Master does not
+      participate. The RegionServer splits
+      a region, offlines the split region and then adds the daughter regions
+      to META, opens daughters on the parent's hosting RegionServer and then
+      reports the split to the master.
+      </para>
       </section>
     </section>
   </chapter>
