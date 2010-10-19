@@ -35,7 +35,7 @@ import java.io.IOException;
  */
 public class CopyTable {
 
-  final static String NAME = "Copy Table";
+  final static String NAME = "copytable";
   static String rsClass = null;
   static String rsImpl = null;
   static long startTime = 0;

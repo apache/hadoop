@@ -597,7 +597,9 @@ Release 0.21.0 - Unreleased
    HBASE-2669  HCM.shutdownHook causes data loss with
                hbase.client.write.buffer != 0
    HBASE-2985  HRegionServer.multi() no longer calls HRegion.put(List) when 
-   	       possible
+               possible
+   HBASE-3031  CopyTable MR job named "Copy Table" in Driver
+
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
