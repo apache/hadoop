@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 
 /**
  * The test makes sure that NameNode detects presense blocks that do not have
@@ -66,7 +67,7 @@ public class TestMissingBlocksAlert extends TestCase {
 
 
       // Corrupt the block
-      String block = DFSTestUtil.getFirstBlock(dfs, corruptFile).getLocalBlock().getBlockName();
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(dfs, corruptFile);
       assertTrue(TestDatanodeBlockScanner.corruptReplica(block, 0));
 
       // read the file so that the corrupt block is reported to NN

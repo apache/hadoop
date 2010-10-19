@@ -32,6 +32,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.junit.Test;
 
 /** A JUnit test for corrupt_files.jsp */
@@ -80,9 +81,8 @@ public class TestCorruptFilesJsp  {
 
       // Now corrupt all the files except for the last one
       for (int idx = 0; idx < filepaths.length - 1; idx++) {
-        String blockName = DFSTestUtil.getFirstBlock(fs, filepaths[idx])
-            .getBlockName();
-        TestDatanodeBlockScanner.corruptReplica(blockName, 0);
+        ExtendedBlock blk = DFSTestUtil.getFirstBlock(fs, filepaths[idx]);
+        TestDatanodeBlockScanner.corruptReplica(blk, 0);
 
         // read the file so that the corrupt block is reported to NN
         FSDataInputStream in = fs.open(filepaths[idx]);

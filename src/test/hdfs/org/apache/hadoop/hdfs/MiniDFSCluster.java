@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -689,20 +690,23 @@ public class MiniDFSCluster {
   /*
    * Corrupt a block on all datanode
    */
-  void corruptBlockOnDataNodes(String blockName) throws Exception{
+  void corruptBlockOnDataNodes(ExtendedBlock block) throws Exception{
     for (int i=0; i < dataNodes.size(); i++)
-      corruptBlockOnDataNode(i,blockName);
+      corruptBlockOnDataNode(i, block);
   }
 
   /*
    * Corrupt a block on a particular datanode
    */
-  boolean corruptBlockOnDataNode(int i, String blockName) throws Exception {
+  boolean corruptBlockOnDataNode(int i, ExtendedBlock blk) throws Exception {
     Random random = new Random();
     boolean corrupted = false;
     File dataDir = new File(getBaseDirectory() + "data");
     if (i < 0 || i >= dataNodes.size())
       return false;
+    
+    // TODO:FEDERATION use blockPoolId
+    String blockName = blk.getBlockName();
     for (int dn = i*2; dn < i*2+2; dn++) {
       File blockFile = new File(dataDir, "data" + (dn+1) + FINALIZED_DIR_NAME +
                                 blockName);

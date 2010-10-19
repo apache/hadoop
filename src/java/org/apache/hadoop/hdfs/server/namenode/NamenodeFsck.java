@@ -311,7 +311,8 @@ public class NamenodeFsck {
       if (isCorrupt) {
         corrupt++;
         res.corruptBlocks++;
-        out.print("\n" + path + ": CORRUPT block " + block.getBlockName()+"\n");
+        out.print("\n" + path + ": CORRUPT blockpool " + block.getPoolId() + 
+            " block " + block.getBlockName()+"\n");
       }
       if (locs.length >= minReplication)
         res.numMinReplicatedBlocks++;

@@ -21,6 +21,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -29,6 +31,8 @@ import org.apache.hadoop.io.WritableFactory;
 /**
  * Identifies a Block uniquely across the block pools
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class ExtendedBlock implements Writable {
   private String poolId;
   private Block block;
@@ -95,8 +99,9 @@ public class ExtendedBlock implements Writable {
     return poolId;
   }
 
+  /** Returns the block file name for the block */
   public String getBlockName() {
-    return poolId + ":" + block;
+    return block.getBlockName();
   }
 
   public long getNumBytes() {
@@ -155,6 +160,6 @@ public class ExtendedBlock implements Writable {
   
   @Override // Object
   public String toString() {
-    return getBlockName();
+    return poolId + ":" + block;
   }
 }

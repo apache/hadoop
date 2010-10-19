@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
@@ -163,7 +164,7 @@ public class TestReplication extends TestCase {
     DFSTestUtil.waitReplication(fs, file1, (short)1);
   
     // Corrupt the block belonging to the created file
-    String block = DFSTestUtil.getFirstBlock(fs, file1).getBlockName();
+    ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
     cluster.corruptBlockOnDataNodes(block);
   
     // Increase replication factor, this should invoke transfer request
@@ -422,7 +423,7 @@ public class TestReplication extends TestCase {
     DFSTestUtil.createFile(fs, fileName, fileLen, REPLICATION_FACTOR, 0);
     DFSTestUtil.waitReplication(fs, fileName, REPLICATION_FACTOR);
 
-    String block = DFSTestUtil.getFirstBlock(fs, fileName).getBlockName();
+    ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
 
     // Change the length of a replica
     for (int i=0; i<cluster.getDataNodes().size(); i++) {

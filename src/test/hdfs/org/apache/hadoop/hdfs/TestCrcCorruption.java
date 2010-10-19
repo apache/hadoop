@@ -31,6 +31,7 @@ import static org.junit.Assert.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
 
 /**
@@ -256,7 +257,7 @@ public class TestCrcCorruption {
       DFSTestUtil.createFile(fs, file, fileSize, (short)numDataNodes, 12345L /*seed*/);
       DFSTestUtil.waitReplication(fs, file, (short)numDataNodes);
 
-      String block = DFSTestUtil.getFirstBlock(fs, file).getBlockName();
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file);
       cluster.corruptBlockOnDataNodes(block);
 
       try {

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Op.REPLACE_BLOCK;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.*;
 
 import java.io.DataInputStream;
@@ -50,7 +49,6 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 /**
  * This class tests if block replacement request to data nodes work correctly.
@@ -159,11 +157,11 @@ public class TestBlockReplacement extends TestCase {
       // start to replace the block
       // case 1: proxySource does not contain the block
       LOG.info("Testcase 1: Proxy " + newNode.getName() 
-          + " does not contain the block " + b.getBlockName() );
+           + " does not contain the block " + b);
       assertFalse(replaceBlock(b, source, newNode, proxies.get(0)));
       // case 2: destination contains the block
       LOG.info("Testcase 2: Destination " + proxies.get(1).getName() 
-          + " contains the block " + b.getBlockName() );
+          + " contains the block " + b);
       assertFalse(replaceBlock(b, source, proxies.get(0), proxies.get(1)));
       // case 3: correct case
       LOG.info("Testcase 3: Proxy=" + source.getName() + " source=" + 

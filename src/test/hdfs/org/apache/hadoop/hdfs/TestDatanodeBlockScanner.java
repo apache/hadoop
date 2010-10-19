@@ -140,10 +140,12 @@ public class TestDatanodeBlockScanner extends TestCase {
     cluster.shutdown();
   }
 
-  public static boolean corruptReplica(String blockName, int replica) throws IOException {
+  public static boolean corruptReplica(ExtendedBlock blk, int replica) throws IOException {
+    String blockName = blk.getLocalBlock().getBlockName();
     Random random = new Random();
     File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
     boolean corrupted = false;
+    // TODO:FEDERATION use BlockPoolId
     for (int i=replica*2; i<replica*2+2; i++) {
       File blockFile = new File(baseDir, "data" + (i+1) + 
           MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
@@ -177,7 +179,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     fs = cluster.getFileSystem();
     Path file1 = new Path("/tmp/testBlockVerification/file1");
     DFSTestUtil.createFile(fs, file1, 1024, (short)3, 0);
-    String block = DFSTestUtil.getFirstBlock(fs, file1).getBlockName();
+    ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
     
     dfsClient = new DFSClient(new InetSocketAddress("localhost", 
                                         cluster.getNameNodePort()), conf);
@@ -289,7 +291,6 @@ public class TestDatanodeBlockScanner extends TestCase {
     Path file1 = new Path("/tmp/testBlockCorruptRecovery/file");
     DFSTestUtil.createFile(fs, file1, 1024, numReplicas, 0);
     ExtendedBlock blk = DFSTestUtil.getFirstBlock(fs, file1);
-    String block = blk.getBlockName();
     
     dfsClient = new DFSClient(new InetSocketAddress("localhost", 
                                         cluster.getNameNodePort()), conf);
@@ -314,7 +315,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     // Corrupt numCorruptReplicas replicas of block 
     int[] corruptReplicasDNIDs = new int[numCorruptReplicas];
     for (int i=0, j=0; (j != numCorruptReplicas) && (i < numDataNodes); i++) {
-      if (corruptReplica(block, i)) 
+      if (corruptReplica(blk, i)) 
         corruptReplicasDNIDs[j++] = i;
     }
     
@@ -393,7 +394,7 @@ public class TestDatanodeBlockScanner extends TestCase {
       DFSTestUtil.createFile(fs, fileName, 1, REPLICATION_FACTOR, 0);
       DFSTestUtil.waitReplication(fs, fileName, REPLICATION_FACTOR);
 
-      String block = DFSTestUtil.getFirstBlock(fs, fileName).getBlockName();
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, fileName);
 
       // Truncate replica of block
       changeReplicaLength(block, 0, -1);
@@ -420,7 +421,9 @@ public class TestDatanodeBlockScanner extends TestCase {
   /**
    * Change the length of a block at datanode dnIndex
    */
-  static boolean changeReplicaLength(String blockName, int dnIndex, int lenDelta) throws IOException {
+  static boolean changeReplicaLength(ExtendedBlock blk, int dnIndex,
+      int lenDelta) throws IOException {
+    String blockName = blk.getBlockName();
     File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
     for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
       File blockFile = new File(baseDir, "data" + (i+1) + 
@@ -435,8 +438,9 @@ public class TestDatanodeBlockScanner extends TestCase {
     return false;
   }
   
-  private static void waitForBlockDeleted(String blockName, int dnIndex) 
+  private static void waitForBlockDeleted(ExtendedBlock blk, int dnIndex) 
   throws IOException, InterruptedException {
+    String blockName = blk.getBlockName();
     File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
     File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1) + 
         MiniDFSCluster.FINALIZED_DIR_NAME + blockName);

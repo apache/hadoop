@@ -309,6 +309,9 @@ Trunk (unreleased changes)
 
     HDFS-1440. Fix TestComputeInvalidateWork failure. (suresh)
 
+    HDFS-1449. Fix test failures - ExtendedBlock must return 
+    block file name in #getBlockName(). (suresh)
+
 Release 0.21.0 - Unreleased
 
   INCOMPATIBLE CHANGES
