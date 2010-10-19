@@ -2330,9 +2330,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // actions in the list.
       Collections.sort(actionsForRegion);
       Row action = null;
+      List<Action> puts = new ArrayList<Action>();
       try {
         for (Action a : actionsForRegion) {
           action = a.getAction();
+          // TODO catch exceptions so we can report them on a per-item basis.
           if (action instanceof Delete) {
             delete(regionName, (Delete) action);
             response.add(regionName, new Pair<Integer, Result>(
@@ -2341,12 +2343,48 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             response.add(regionName, new Pair<Integer, Result>(
                 a.getOriginalIndex(), get(regionName, (Get) action)));
           } else if (action instanceof Put) {
-            put(regionName, (Put) action);
-            response.add(regionName, new Pair<Integer, Result>(
-                a.getOriginalIndex(), new Result()));
+            puts.add(a);
           } else {
             LOG.debug("Error: invalid Action, row must be a Get, Delete or Put.");
             throw new IllegalArgumentException("Invalid Action, row must be a Get, Delete or Put.");
+          }
+        }
+
+        // We do the puts with result.put so we can get the batching efficiency
+        // we so need. All this data munging doesn't seem great, but at least
+        // we arent copying bytes or anything.
+        if (!puts.isEmpty()) {
+          HRegion region = getRegion(regionName);
+          if (!region.getRegionInfo().isMetaTable()) {
+            this.cacheFlusher.reclaimMemStoreMemory();
+          }
+
+          Pair<Put,Integer> [] putsWithLocks = new Pair[puts.size()];
+          int i = 0;
+          for (Action a : puts) {
+            Put p = (Put) a.getAction();
+
+            Integer lock = getLockFromId(p.getLockId());
+            putsWithLocks[i++] = new Pair<Put, Integer>(p, lock);
+          }
+
+          this.requestCount.addAndGet(puts.size());
+
+          OperationStatusCode[] codes = region.put(putsWithLocks);
+          for( i = 0 ; i < codes.length ; i++) {
+            OperationStatusCode code = codes[i];
+
+            Action theAction = puts.get(i);
+            Result result = null;
+
+            if (code == OperationStatusCode.SUCCESS) {
+              result = new Result();
+            }
+            // TODO turning the alternate exception into a different result
+
+            response.add(regionName,
+                new Pair<Integer, Result>(
+                    theAction.getOriginalIndex(), result));
           }
         }
       } catch (IOException ioe) {

@@ -42,8 +42,8 @@ public class MultiResponse implements Writable {
 
   // map of regionName to list of (Results paired to the original index for that
   // Result)
-  private Map<byte[], List<Pair<Integer, Result>>> results = new TreeMap<byte[], List<Pair<Integer, Result>>>(
-      Bytes.BYTES_COMPARATOR);
+  private Map<byte[], List<Pair<Integer, Result>>> results =
+      new TreeMap<byte[], List<Pair<Integer, Result>>>(Bytes.BYTES_COMPARATOR);
 
   public MultiResponse() {
   }
@@ -111,7 +111,7 @@ public class MultiResponse implements Writable {
       for (int j = 0; j < listSize; j++) {
         Integer idx = in.readInt();
         if (idx == -1) {
-          lst.add(null); 
+          lst.add(null);
         } else {
           Result r = (Result) HbaseObjectWritable.readObject(in, null);
           lst.add(new Pair<Integer, Result>(idx, r));

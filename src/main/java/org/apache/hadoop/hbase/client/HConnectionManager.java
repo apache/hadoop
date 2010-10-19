@@ -1068,7 +1068,7 @@ public class HConnectionManager {
     }
 
     private Callable<MultiResponse> createCallable(
-        final HServerAddress address, 
+        final HServerAddress address,
         final MultiAction multi,
         final byte [] tableName) {
   	  final HConnection connection = this;
@@ -1098,11 +1098,11 @@ public class HConnectionManager {
       if (results.length != list.size()) {
         throw new IllegalArgumentException("argument results must be the same size as argument list");
       }
-      
+
       if (list.size() == 0) {
         return;
       }
-      
+
       List<Row> workingList = new ArrayList<Row>(list);
       final boolean singletonList = (list.size() == 1);
       boolean retry = true;
@@ -1114,8 +1114,8 @@ public class HConnectionManager {
         if (tries >= 1) {
           long sleepTime = getPauseTime(tries);
           LOG.debug("Retry " +tries+ ", sleep for " +sleepTime+ "ms!");
-          try { 
-            Thread.sleep(sleepTime); 
+          try {
+            Thread.sleep(sleepTime);
           } catch (InterruptedException ignore) {
             LOG.debug("Interupted");
             Thread.currentThread().interrupt();
@@ -1132,38 +1132,38 @@ public class HConnectionManager {
             HRegionLocation loc = locateRegion(tableName, row.getRow(), true);
             HServerAddress address = loc.getServerAddress();
             byte[] regionName = loc.getRegionInfo().getRegionName();
-  
+
             MultiAction actions = actionsByServer.get(address);
             if (actions == null) {
               actions = new MultiAction();
               actionsByServer.put(address, actions);
             }
-            
-            Action action = new Action(regionName, row, i); 
+
+            Action action = new Action(regionName, row, i);
             actions.add(regionName, action);
           }
         }
-        
+
         // step 2: make the requests
 
-        Map<HServerAddress,Future<MultiResponse>> futures = 
+        Map<HServerAddress,Future<MultiResponse>> futures =
             new HashMap<HServerAddress, Future<MultiResponse>>(actionsByServer.size());
-         
+
         for (Entry<HServerAddress, MultiAction> e : actionsByServer.entrySet()) {
           futures.put(e.getKey(), pool.submit(createCallable(e.getKey(), e.getValue(), tableName)));
         }
-        
+
         // step 3: collect the failures and successes and prepare for retry
 
         for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer : futures.entrySet()) {
           HServerAddress address = responsePerServer.getKey();
-          
+
           try {
             // Gather the results for one server
             Future<MultiResponse> future = responsePerServer.getValue();
 
             // Not really sure what a reasonable timeout value is. Here's a first try.
-            
+
             MultiResponse resp = future.get();
 
             if (resp == null) {
@@ -1176,7 +1176,7 @@ public class HConnectionManager {
                 List<Pair<Integer, Result>> regionResults = e.getValue();
                 for (Pair<Integer, Result> regionResult : regionResults) {
                   if (regionResult == null) {
-                    // failed
+                    // if the first/only record is 'null' the entire region failed.
                     LOG.debug("Failures for region: " + Bytes.toStringBinary(regionName) + ", removing from cache");
                   } else {
                     // success
@@ -1196,12 +1196,12 @@ public class HConnectionManager {
             if (e.getCause() instanceof DoNotRetryIOException) {
               throw (DoNotRetryIOException) e.getCause();
             }
-            
+
             if (singletonList) {
               // be richer for reporting in a 1 row case.
               singleRowCause = e.getCause();
             }
-          } 
+          }
         }
 
         // Find failures (i.e. null Result), and add them to the workingList (in
@@ -1224,7 +1224,7 @@ public class HConnectionManager {
       if (Thread.currentThread().isInterrupted()) {
         throw new IOException("Aborting attempt because of a thread interruption");
       }
-      
+
       if (retry) {
         // ran out of retries and didn't successfully finish everything!
         if (singleRowCause != null) {

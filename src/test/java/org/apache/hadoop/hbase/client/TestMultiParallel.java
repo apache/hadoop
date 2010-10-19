@@ -140,7 +140,7 @@ public class TestMultiParallel {
   /**
    * Only run one Multi test with a forced RegionServer abort. Otherwise, the
    * unit tests will take an unnecessarily long time to run.
-   * 
+   *
    * @throws Exception
    */
   @Test public void testFlushCommitsWithAbort() throws Exception {
@@ -354,17 +354,11 @@ public class TestMultiParallel {
     get.addColumn(BYTES_FAMILY, QUALIFIER);
     actions.add(get);
 
-    // 5 get of the put in #2 (entire family)
-    get = new Get(KEYS[10]);
-    get.addFamily(BYTES_FAMILY);
-    actions.add(get);
+    // There used to be a 'get' of a previous put here, but removed
+    // since this API really cannot guarantee order in terms of mixed
+    // get/puts.
 
-    // 6 get of the delete from #3
-    get = new Get(KEYS[20]);
-    get.addColumn(BYTES_FAMILY, QUALIFIER);
-    actions.add(get);
-
-    // 7 put of new column
+    // 5 put of new column
     put = new Put(KEYS[40]);
     put.add(BYTES_FAMILY, qual2, val2);
     actions.add(put);
@@ -378,10 +372,7 @@ public class TestMultiParallel {
     validateEmpty(results[2]);
     validateEmpty(results[3]);
     validateResult(results[4]);
-    validateResult(results[5]);
-    validateResult(results[5], qual2, val2); // testing second column in #5
-    validateEmpty(results[6]); // deleted
-    validateEmpty(results[7]);
+    validateEmpty(results[5]);
 
     // validate last put, externally from the batch
     get = new Get(KEYS[40]);
