@@ -70,6 +70,31 @@ public class TableMapReduceUtil {
       Class<? extends WritableComparable> outputKeyClass,
       Class<? extends Writable> outputValueClass, Job job)
   throws IOException {
+    initTableMapperJob(table, scan, mapper, outputKeyClass, outputValueClass,
+        job, true);
+  }
+
+  /**
+   * Use this before submitting a TableMap job. It will appropriately set up
+   * the job.
+   *
+   * @param table  The table name to read from.
+   * @param scan  The scan instance with the columns, time range etc.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   * @throws IOException When setting up the details fails.
+   */
+  public static void initTableMapperJob(String table, Scan scan,
+      Class<? extends TableMapper> mapper,
+      Class<? extends WritableComparable> outputKeyClass,
+      Class<? extends Writable> outputValueClass, Job job,
+      boolean addDependencyJars)
+  throws IOException {
     job.setInputFormatClass(TableInputFormat.class);
     if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
     if (outputKeyClass != null) job.setMapOutputKeyClass(outputKeyClass);
@@ -77,7 +102,9 @@ public class TableMapReduceUtil {
     job.getConfiguration().set(TableInputFormat.INPUT_TABLE, table);
     job.getConfiguration().set(TableInputFormat.SCAN,
       convertScanToString(scan));
-    addDependencyJars(job);
+    if (addDependencyJars) {
+      addDependencyJars(job);
+    }
   }
 
   /**
@@ -167,6 +194,38 @@ public class TableMapReduceUtil {
     Class<? extends TableReducer> reducer, Job job,
     Class partitioner, String quorumAddress, String serverClass,
     String serverImpl) throws IOException {
+    initTableReducerJob(table, reducer, job, partitioner, quorumAddress,
+        serverClass, serverImpl, true);
+  }
+
+  /**
+   * Use this before submitting a TableReduce job. It will
+   * appropriately set up the JobConf.
+   *
+   * @param table  The output table.
+   * @param reducer  The reducer class to use.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param partitioner  Partitioner to use. Pass <code>null</code> to use
+   * default partitioner.
+   * @param quorumAddress Distant cluster to write to; default is null for
+   * output to the cluster that is designated in <code>hbase-site.xml</code>.
+   * Set this String to the zookeeper ensemble of an alternate remote cluster
+   * when you would have the reduce write a cluster that is other than the
+   * default; e.g. copying tables between clusters, the source would be
+   * designated by <code>hbase-site.xml</code> and this param would have the
+   * ensemble address of the remote cluster.  The format to pass is particular.
+   * Pass <code> &lt;hbase.zookeeper.quorum> ':' &lt;ZOOKEEPER_ZNODE_PARENT></code>.
+   * @param serverClass redefined hbase.regionserver.class
+   * @param serverImpl redefined hbase.regionserver.impl
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   * @throws IOException When determining the region count fails.
+   */
+  public static void initTableReducerJob(String table,
+    Class<? extends TableReducer> reducer, Job job,
+    Class partitioner, String quorumAddress, String serverClass,
+    String serverImpl, boolean addDependencyJars) throws IOException {
 
     Configuration conf = job.getConfiguration();
     job.setOutputFormatClass(TableOutputFormat.class);
@@ -198,7 +257,10 @@ public class TableMapReduceUtil {
     } else if (partitioner != null) {
       job.setPartitionerClass(partitioner);
     }
-    addDependencyJars(job);
+
+    if (addDependencyJars) {
+      addDependencyJars(job);
+    }
   }
 
   /**

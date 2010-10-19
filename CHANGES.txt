@@ -1014,6 +1014,8 @@ Release 0.21.0 - Unreleased
    HBASE-3097  Merge in hbase-1200 doc on bloomfilters into hbase book
    HBASE-2700  Test of: Handle master failover for regions in transition
    HBASE-3115  HBaseClient wastes 1 TCP packet per RPC
+   HBASE-3076  Allow to disable automatic shipping of dependency jars
+               for mapreduce jobs (Bruno Dumon)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
