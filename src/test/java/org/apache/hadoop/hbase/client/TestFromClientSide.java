@@ -3686,10 +3686,11 @@ public class TestFromClientSide {
     assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
   }
 
-    /**
+  /**
    * For HBASE-2156
    * @throws Exception
    */
+  @Test
   public void testScanVariableReuse() throws Exception {
     Scan scan = new Scan();
     scan.addFamily(FAMILY);
@@ -3700,7 +3701,8 @@ public class TestFromClientSide {
     scan = new Scan();
     scan.addFamily(FAMILY);
 
-    assertTrue(scan.getFamilyMap().get(FAMILY).size() == 0);
+    assertTrue(scan.getFamilyMap().get(FAMILY) == null);
+    assertTrue(scan.getFamilyMap().containsKey(FAMILY));
   }
 
   /**
