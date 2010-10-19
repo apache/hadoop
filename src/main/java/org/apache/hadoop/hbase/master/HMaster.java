@@ -223,6 +223,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
       return;
     }
+    LOG.debug("HMaster started in backup mode.  " +
+      "Stalling until master znode is written.");
     // This will only be a minute or so while the cluster starts up,
     // so don't worry about setting watches on the parent znode
     while (!amm.isActiveMaster()) {
