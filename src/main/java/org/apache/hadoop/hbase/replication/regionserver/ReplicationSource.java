@@ -126,6 +126,9 @@ public class ReplicationSource extends Thread
   private volatile boolean running = true;
   // Metrics for this source
   private ReplicationSourceMetrics metrics;
+  // If source is enabled, replication happens. If disabled, nothing will be
+  // replicated but HLogs will still be queued
+  private AtomicBoolean sourceEnabled = new AtomicBoolean();
 
   /**
    * Instantiation method used by region servers
@@ -199,7 +202,7 @@ public class ReplicationSource extends Thread
   private void chooseSinks() throws KeeperException {
     this.currentPeers.clear();
     List<HServerAddress> addresses =
-        this.zkHelper.getPeersAddresses(peerClusterId);
+        this.zkHelper.getSlavesAddresses(peerClusterId);
     Set<HServerAddress> setOfAddr = new HashSet<HServerAddress>();
     int nbPeers = (int) (Math.ceil(addresses.size() * ratio));
     LOG.info("Getting " + nbPeers +
@@ -236,14 +239,20 @@ public class ReplicationSource extends Thread
         this.position = this.zkHelper.getHLogRepPosition(
             this.peerClusterZnode, this.queue.peek().getName());
       } catch (KeeperException e) {
-        LOG.error("Couldn't get the position of this recovered queue " +
+        this.terminate("Couldn't get the position of this recovered queue " +
             peerClusterZnode, e);
-        this.abort();
       }
     }
     int sleepMultiplier = 1;
     // Loop until we close down
     while (!stopper.isStopped() && this.running) {
+      // Sleep until replication is enabled again
+      if (!this.replicating.get() || !this.sourceEnabled.get()) {
+        if (sleepForRetries("Replication is disabled", sleepMultiplier)) {
+          sleepMultiplier++;
+        }
+        continue;
+      }
       // Get a new path
       if (!getNextPath()) {
         if (sleepForRetries("No log to process", sleepMultiplier)) {
@@ -419,7 +428,7 @@ public class ReplicationSource extends Thread
    */
   protected boolean openReader(int sleepMultiplier) {
     try {
-      LOG.info("Opening log for replication " + this.currentPath.getName() +
+      LOG.debug("Opening log for replication " + this.currentPath.getName() +
           " at " + this.position);
       try {
        this.reader = null;
@@ -445,6 +454,12 @@ public class ReplicationSource extends Thread
           // TODO What happens if the log was missing from every single location?
           // Although we need to check a couple of times as the log could have
           // been moved by the master between the checks
+          // It can also happen if a recovered queue wasn't properly cleaned,
+          // such that the znode pointing to a log exists but the log was
+          // deleted a long time ago.
+          // For the moment, we'll throw the IO and processEndOfFile
+          throw new IOException("File from recovered queue is " +
+              "nowhere to be found", fnfe);
         } else {
           // If the log was archived, continue reading from there
           Path archivedLogLocation =
@@ -590,7 +605,7 @@ public class ReplicationSource extends Thread
       return true;
     } else if (this.queueRecovered) {
       this.manager.closeRecoveredQueue(this);
-      this.abort();
+      this.terminate("Finished recovering the queue");
       return true;
     }
     return false;
@@ -601,25 +616,26 @@ public class ReplicationSource extends Thread
     Thread.UncaughtExceptionHandler handler =
         new Thread.UncaughtExceptionHandler() {
           public void uncaughtException(final Thread t, final Throwable e) {
-            LOG.fatal("Set stop flag in " + t.getName(), e);
-            abort();
+            terminate("Uncaught exception during runtime", new Exception(e));
           }
         };
     Threads.setDaemonThreadRunning(
         this, n + ".replicationSource," + peerClusterZnode, handler);
   }
 
-  /**
-   * Hastily stop the replication, then wait for shutdown
-   */
-  private void abort() {
-    LOG.info("abort");
-    this.running = false;
-    terminate();
+  public void terminate(String reason) {
+    terminate(reason, null);
   }
 
-  public void terminate() {
-    LOG.info("terminate");
+  public void terminate(String reason, Exception cause) {
+    if (cause == null) {
+      LOG.error("Closing source " + this.peerClusterZnode
+          + " because an error occurred: " + reason, cause);
+    } else {
+      LOG.info("Closing source "
+          + this.peerClusterZnode + " because: " + reason);
+    }
+    this.running = false;
     Threads.shutdown(this, this.sleepForRetries);
   }
 
@@ -663,21 +679,20 @@ public class ReplicationSource extends Thread
     return down;
   }
 
-  /**
-   * Get the id that the source is replicating to
-   *
-   * @return peer cluster id
-   */
   public String getPeerClusterZnode() {
     return this.peerClusterZnode;
   }
 
-  /**
-   * Get the path of the current HLog
-   * @return current hlog's path
-   */
+  public String getPeerClusterId() {
+    return this.peerClusterId;
+  }
+
   public Path getCurrentPath() {
     return this.currentPath;
+  }
+
+  public void setSourceEnabled(boolean status) {
+    this.sourceEnabled.set(status);
   }
 
   /**

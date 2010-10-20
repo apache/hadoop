@@ -83,6 +83,10 @@ module Shell
       hbase.table(name, formatter)
     end
 
+    def hbase_replication_admin
+      @hbase_replication_admin ||= hbase.replication_admin(formatter)
+    end
+
     def export_commands(where)
       ::Shell.commands.keys.each do |cmd|
         where.send :instance_eval, <<-EOF
@@ -251,6 +255,20 @@ Shell.load_command_group(
     split
     zk
     zk_dump
+  ]
+)
+
+Shell.load_command_group(
+  'replication',
+  :full_name => 'CLUSTER REPLICATION TOOLS',
+  :comment => "In order to use these tools, hbase.replication must be true. enabling/disabling is currently unsupported",
+  :commands => %w[
+    add_peer
+    remove_peer
+    enable_peer
+    disable_peer
+    start_replication
+    stop_replication
   ]
 )
 

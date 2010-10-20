@@ -68,8 +68,16 @@ public interface ReplicationSourceInterface {
 
   /**
    * End the replication
+   * @param reason why it's terminating
    */
-  public void terminate();
+  public void terminate(String reason);
+
+  /**
+   * End the replication
+   * @param reason why it's terminating
+   * @param cause the error that's causing it
+   */
+  public void terminate(String reason, Exception cause);
 
   /**
    * Get the id that the source is replicating to
@@ -77,4 +85,17 @@ public interface ReplicationSourceInterface {
    * @return peer cluster id
    */
   public String getPeerClusterZnode();
+
+  /**
+   * Get the id that the source is replicating to.
+   *
+   * @return peer cluster id
+   */
+  public String getPeerClusterId();
+
+  /**
+   * Set if this source is enabled or disabled
+   * @param status the new status
+   */
+  public void setSourceEnabled(boolean status);
 }

@@ -63,7 +63,12 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public void terminate() {
+  public void terminate(String reason) {
+
+  }
+
+  @Override
+  public void terminate(String reason, Exception e) {
 
   }
 
@@ -71,4 +76,15 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   public String getPeerClusterZnode() {
     return peerClusterId;
   }
+
+  @Override
+  public String getPeerClusterId() {
+    return peerClusterId;
+  }
+
+  @Override
+  public void setSourceEnabled(boolean status) {
+
+  }
+
 }

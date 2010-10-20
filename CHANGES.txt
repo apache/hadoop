@@ -1072,6 +1072,7 @@ Release 0.21.0 - Unreleased
    HBASE-3073  New APIs for Result, faster implementation for some calls
    HBASE-3053  Add ability to have multiple Masters LocalHBaseCluster for
                test writing
+   HBASE-2201  JRuby shell for replication
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

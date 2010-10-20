@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -58,6 +59,9 @@ public class TestReplication {
 
   private static ZooKeeperWatcher zkw1;
   private static ZooKeeperWatcher zkw2;
+
+  private static ReplicationAdmin admin;
+  private static String slaveClusterKey;
 
   private static HTable htable1;
   private static HTable htable2;
@@ -92,16 +96,12 @@ public class TestReplication {
     conf1.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
+
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
     zkw1 = new ZooKeeperWatcher(conf1, "cluster1", null);
-    ZKUtil.createWithParents(zkw1, "/1/replication/master");
-    ZKUtil.createWithParents(zkw1, "/1/replication/state");
-    ZKUtil.setData(zkw1, "/1/replication/master", Bytes.toBytes(
-        conf1.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-            conf1.get("hbase.zookeeper.property.clientPort")+":/1"));
-    setIsReplication(true);
+    admin = new ReplicationAdmin(conf1);
     LOG.info("Setup first Zk");
 
     conf2 = HBaseConfiguration.create();
@@ -114,12 +114,11 @@ public class TestReplication {
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
     zkw2 = new ZooKeeperWatcher(conf2, "cluster2", null);
-    ZKUtil.createWithParents(zkw2, "/2/replication");
 
-    ZKUtil.createWithParents(zkw1, "/1/replication/peers/2");
-    ZKUtil.setData(zkw1, "/1/replication/peers/2", Bytes.toBytes(
-        conf2.get(HConstants.ZOOKEEPER_QUORUM)+":" +
-            conf2.get("hbase.zookeeper.property.clientPort")+":/2"));
+    slaveClusterKey = conf2.get(HConstants.ZOOKEEPER_QUORUM)+":" +
+            conf2.get("hbase.zookeeper.property.clientPort")+":/2";
+    admin.addPeer("2", slaveClusterKey);
+    setIsReplication(true);
 
     LOG.info("Setup second Zk");
 
@@ -145,9 +144,7 @@ public class TestReplication {
 
   private static void setIsReplication(boolean rep) throws Exception {
     LOG.info("Set rep " + rep);
-    ZKUtil.setData(zkw1,"/1/replication/state",
-        Bytes.toBytes(Boolean.toString(rep)));
-    // Takes some ms for ZK to fire the watcher
+    admin.setReplicating(rep);
     Thread.sleep(SLEEP_TIME);
   }
 
@@ -156,12 +153,31 @@ public class TestReplication {
    */
   @Before
   public void setUp() throws Exception {
-    setIsReplication(false);
     utility1.truncateTable(tableName);
-    utility2.truncateTable(tableName);
-    // If test is flaky, set that sleep higher
-    Thread.sleep(SLEEP_TIME*8);
-    setIsReplication(true);
+    // truncating the table will send on Delete per row to the slave cluster
+    // in an async fashion, which is why we cannot just call truncateTable on
+    // utility2 since late writes could make it to the slave in some way.
+    // Instead, we truncate the first table and wait for all the Deletes to
+    // make it to the slave.
+    Scan scan = new Scan();
+    int lastCount = 0;
+    for (int i = 0; i < NB_RETRIES; i++) {
+      if (i==NB_RETRIES-1) {
+        fail("Waited too much time for truncate");
+      }
+      ResultScanner scanner = htable2.getScanner(scan);
+      Result[] res = scanner.next(NB_ROWS_IN_BATCH);
+      scanner.close();
+      if (res.length != 0) {
+       if (lastCount < res.length) {
+          i--; // Don't increment timeout if we make progress
+        }
+        LOG.info("Still got " + res.length + " rows");
+        Thread.sleep(SLEEP_TIME);
+      } else {
+        break;
+      }
+    }
   }
 
   /**
@@ -186,13 +202,12 @@ public class TestReplication {
     htable1 = new HTable(conf1, tableName);
     htable1.put(put);
 
-    HTable table2 = new HTable(conf2, tableName);
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i==NB_RETRIES-1) {
         fail("Waited too much time for put replication");
       }
-      Result res = table2.get(get);
+      Result res = htable2.get(get);
       if (res.size() == 0) {
         LOG.info("Row not available");
         Thread.sleep(SLEEP_TIME);
@@ -205,13 +220,12 @@ public class TestReplication {
     Delete del = new Delete(row);
     htable1.delete(del);
 
-    table2 = new HTable(conf2, tableName);
     get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i==NB_RETRIES-1) {
         fail("Waited too much time for del replication");
       }
-      Result res = table2.get(get);
+      Result res = htable2.get(get);
       if (res.size() >= 1) {
         LOG.info("Row not deleted");
         Thread.sleep(SLEEP_TIME);
@@ -331,6 +345,59 @@ public class TestReplication {
       }
     }
 
+  }
+
+  /**
+   * Integration test for TestReplicationAdmin, removes and re-add a peer
+   * cluster
+   * @throws Exception
+   */
+  @Test
+  public void testAddAndRemoveClusters() throws Exception {
+    LOG.info("testAddAndRemoveClusters");
+    admin.removePeer("2");
+    Thread.sleep(SLEEP_TIME);
+    byte[] rowKey = Bytes.toBytes("Won't be replicated");
+    Put put = new Put(rowKey);
+    put.add(famName, row, row);
+    htable1.put(put);
+
+    Get get = new Get(rowKey);
+    for (int i = 0; i < NB_RETRIES; i++) {
+      if (i == NB_RETRIES-1) {
+        break;
+      }
+      Result res = htable2.get(get);
+      if (res.size() >= 1) {
+        fail("Not supposed to be replicated");
+      } else {
+        LOG.info("Row not replicated, let's wait a bit more...");
+        Thread.sleep(SLEEP_TIME);
+      }
+    }
+
+    admin.addPeer("2", slaveClusterKey);
+    Thread.sleep(SLEEP_TIME);
+    rowKey = Bytes.toBytes("do rep");
+    put = new Put(rowKey);
+    put.add(famName, row, row);
+    LOG.info("Adding new row");
+    htable1.put(put);
+
+    get = new Get(rowKey);
+    for (int i = 0; i < NB_RETRIES; i++) {
+      if (i==NB_RETRIES-1) {
+        fail("Waited too much time for put replication");
+      }
+      Result res = htable2.get(get);
+      if (res.size() == 0) {
+        LOG.info("Row not available");
+        Thread.sleep(SLEEP_TIME*i);
+      } else {
+        assertArrayEquals(res.value(), row);
+        break;
+      }
+    }
   }
 
   /**

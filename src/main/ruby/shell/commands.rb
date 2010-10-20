@@ -49,6 +49,10 @@ module Shell
         shell.hbase_table(name)
       end
 
+      def replication_admin
+        shell.hbase_replication_admin
+      end
+
       #----------------------------------------------------------------------
 
       def formatter

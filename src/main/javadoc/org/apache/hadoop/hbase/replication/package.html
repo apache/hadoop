@@ -47,7 +47,8 @@ features:
     <li>Replication of scoped families in user tables.</li>
     <li>Start/stop replication stream.</li>
     <li>Supports clusters of different sizes.</li>
-    <li>Handling of partitions longer than 10 minutes</li>
+    <li>Handling of partitions longer than 10 minutes.</li>
+    <li>Ability to add/remove slave clusters at runtime.</li>
 </ol>
 Please report bugs on the project's Jira when found.
 <p>
@@ -80,7 +81,7 @@ Before trying out replication, make sure to review the following requirements:
 <p>
 
 The following steps describe how to enable replication from a cluster
-to another. This must be done with both clusters offlined.
+to another.
 <ol>
     <li>Edit ${HBASE_HOME}/conf/hbase-site.xml on both cluster to add
     the following configurations:
@@ -90,15 +91,13 @@ to another. This must be done with both clusters offlined.
   &lt;value&gt;true&lt;/value&gt;
 &lt;/property&gt;</pre>
     </li>
-    <li>Run the following command on any cluster:
-    <pre>
-$HBASE_HOME/bin/hbase org.jruby.Main $HBASE_HOME/bin/replication/add_peer.tb</pre>
+    <li>Run the following command in the master's shell while it's running
+    <pre>add_peer</pre>
     This will show you the help to setup the replication stream between
     both clusters. If both clusters use the same Zookeeper cluster, you have
     to use a different <b>zookeeper.znode.parent</b> since they can't
     write in the same folder.
     </li>
-    <li>You can now start and stop the clusters with your preferred method.</li>
 </ol>
 
 You can confirm that your setup works by looking at any region server's log
@@ -115,12 +114,11 @@ was chosen for replication.<br><br>
 Should you want to stop the replication while the clusters are running, open
 the shell on the master cluster and issue this command:
 <pre>
-hbase(main):001:0> zk 'set /zookeeper.znode.parent/replication/state false'</pre>
+hbase(main):001:0> stop_replication</pre>
 
-Where you replace the znode parent with the one configured on your master
-cluster. Replication of already queued edits will still happen after you
+Replication of already queued edits will still happen after you
 issued that command but new entries won't be. To start it back, simply replace
-"false" with "true" in the command.
+"false" with "true" in the command. 
 
 <p>
 

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * This class is responsible to manage all the replication
@@ -108,6 +109,9 @@ public class ReplicationSourceManager {
         new OtherRegionServerWatcher(this.zkHelper.getZookeeperWatcher()));
     List<String> otherRSs =
         this.zkHelper.getRegisteredRegionServers();
+    this.zkHelper.registerRegionServerListener(
+        new PeersWatcher(this.zkHelper.getZookeeperWatcher()));
+    this.zkHelper.listPeersIdsAndWatch();
     this.otherRegionServers = otherRSs == null ? new ArrayList<String>() : otherRSs;
   }
 
@@ -144,8 +148,7 @@ public class ReplicationSourceManager {
    */
   public void init() throws IOException {
     for (String id : this.zkHelper.getPeerClusters().keySet()) {
-      ReplicationSourceInterface src = addSource(id);
-      src.startup();
+      addSource(id);
     }
     List<String> currentReplicators = this.zkHelper.getRegisteredRegionServers();
     if (currentReplicators == null || currentReplicators.size() == 0) {
@@ -168,20 +171,24 @@ public class ReplicationSourceManager {
   /**
    * Add a new normal source to this region server
    * @param id the id of the peer cluster
-   * @return the created source
+   * @return the source that was created
    * @throws IOException
    */
   public ReplicationSourceInterface addSource(String id) throws IOException {
     ReplicationSourceInterface src =
         getReplicationSource(this.conf, this.fs, this, stopper, replicating, id);
-    this.sources.add(src);
+    // TODO set it to what's in ZK
+    src.setSourceEnabled(true);
     synchronized (this.hlogs) {
+      this.sources.add(src);
       if (this.hlogs.size() > 0) {
-        this.zkHelper.addLogToList(this.hlogs.first(),
+        // Add the latest hlog to that source's queue
+        this.zkHelper.addLogToList(this.hlogs.last(),
             this.sources.get(0).getPeerClusterZnode());
         src.enqueueLog(this.latestPath);
       }
     }
+    src.startup();
     return src;
   }
 
@@ -193,7 +200,7 @@ public class ReplicationSourceManager {
       this.zkHelper.deleteOwnRSZNode();
     }
     for (ReplicationSourceInterface source : this.sources) {
-      source.terminate();
+      source.terminate("Region server is closing");
     }
   }
 
@@ -214,6 +221,11 @@ public class ReplicationSourceManager {
   }
 
   void logRolled(Path newLog) {
+    if (!this.replicating.get()) {
+      LOG.warn("Replication stopped, won't add new log");
+      return;
+    }
+    
     if (this.sources.size() > 0) {
       this.zkHelper.addLogToList(newLog.getName(),
           this.sources.get(0).getPeerClusterZnode());
@@ -300,10 +312,16 @@ public class ReplicationSourceManager {
       try {
         ReplicationSourceInterface src = getReplicationSource(this.conf,
             this.fs, this, this.stopper, this.replicating, peerId);
+        if (!zkHelper.getPeerClusters().containsKey(src.getPeerClusterId())) {
+          src.terminate("Recovered queue doesn't belong to any current peer");
+          break;
+        }
         this.oldsources.add(src);
         for (String hlog : entry.getValue()) {
           src.enqueueLog(new Path(this.oldLogDir, hlog));
         }
+        // TODO set it to what's in ZK
+        src.setSourceEnabled(true);
         src.startup();
       } catch (IOException e) {
         // TODO manage it
@@ -319,7 +337,46 @@ public class ReplicationSourceManager {
   public void closeRecoveredQueue(ReplicationSourceInterface src) {
     LOG.info("Done with the recovered queue " + src.getPeerClusterZnode());
     this.oldsources.remove(src);
-    this.zkHelper.deleteSource(src.getPeerClusterZnode());
+    this.zkHelper.deleteSource(src.getPeerClusterZnode(), false);
+  }
+
+  /**
+   * Thie method first deletes all the recovered sources for the specified
+   * id, then deletes the normal source (deleting all related data in ZK).
+   * @param id The id of the peer cluster
+   */
+  public void removePeer(String id) {
+    LOG.info("Closing the following queue " + id + ", currently have "
+        + sources.size() + " and another "
+        + oldsources.size() + " that were recovered");
+    ReplicationSourceInterface srcToRemove = null;
+    List<ReplicationSourceInterface> oldSourcesToDelete =
+        new ArrayList<ReplicationSourceInterface>();
+    // First close all the recovered sources for this peer
+    for (ReplicationSourceInterface src : oldsources) {
+      if (id.equals(src.getPeerClusterId())) {
+        oldSourcesToDelete.add(src);
+      }
+    }
+    for (ReplicationSourceInterface src : oldSourcesToDelete) {
+      closeRecoveredQueue((src));
+    }
+    LOG.info("Number of deleted recovered sources for " + id + ": "
+        + oldSourcesToDelete.size());
+    // Now look for the one on this cluster
+    for (ReplicationSourceInterface src : this.sources) {
+      if (id.equals(src.getPeerClusterId())) {
+        srcToRemove = src;
+        break;
+      }
+    }
+    if (srcToRemove == null) {
+      LOG.error("The queue we wanted to close is missing " + id);
+      return;
+    }
+    srcToRemove.terminate("Replication stream was removed by a user");
+    this.sources.remove(srcToRemove);
+    this.zkHelper.deleteSource(id, true);
   }
 
   /**
@@ -354,8 +411,7 @@ public class ReplicationSourceManager {
         return;
       }
       LOG.info(path + " znode expired, trying to lock it");
-      String[] rsZnodeParts = path.split("/");
-      transferQueues(rsZnodeParts[rsZnodeParts.length-1]);
+      transferQueues(zkHelper.getZNodeName(path));
     }
 
     /**
@@ -380,6 +436,70 @@ public class ReplicationSourceManager {
         }
       }
       return true;
+    }
+  }
+
+  /**
+   * Watcher used to follow the creation and deletion of peer clusters.
+   */
+  public class PeersWatcher extends ZooKeeperListener {
+
+    /**
+     * Construct a ZooKeeper event listener.
+     */
+    public PeersWatcher(ZooKeeperWatcher watcher) {
+      super(watcher);
+    }
+
+    /**
+     * Called when a node has been deleted
+     * @param path full path of the deleted node
+     */
+    public void nodeDeleted(String path) {
+      List<String> peers = refreshPeersList(path);
+      if (peers == null) {
+        return;
+      }
+      String id = zkHelper.getZNodeName(path);
+      removePeer(id);
+    }
+
+    /**
+     * Called when an existing node has a child node added or removed.
+     * @param path full path of the node whose children have changed
+     */
+    public void nodeChildrenChanged(String path) {
+      List<String> peers = refreshPeersList(path);
+      if (peers == null) {
+        return;
+      }
+      for (String id : peers) {
+        try {
+          boolean added = zkHelper.connectToPeer(id);
+          if (added) {
+            addSource(id);
+          }
+        } catch (IOException e) {
+          // TODO manage better than that ?
+          LOG.error("Error while adding a new peer", e);
+        } catch (KeeperException e) {
+          LOG.error("Error while adding a new peer", e);
+        }
+      }
+    }
+
+    /**
+     * Verify if this event is meant for us, and if so then get the latest
+     * peers' list from ZK. Also reset the watches.
+     * @param path path to check against
+     * @return A list of peers' identifiers if the event concerns this watcher,
+     * else null.
+     */
+    private List<String> refreshPeersList(String path) {
+      if (!path.startsWith(zkHelper.getPeersZNode())) {
+        return null;
+      }
+      return zkHelper.listPeersIdsAndWatch();
     }
   }
 

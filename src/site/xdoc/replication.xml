@@ -31,7 +31,7 @@
       <p>
         HBase replication is a way to copy data between HBase deployments. It
         can serve as a disaster recovery solution and can contribute to provide
-        higher availability at HBase layer. It can also serve more practically;
+        higher availability at the HBase layer. It can also serve more practically;
         for example, as a way to easily copy edits from a web-facing cluster to a "MapReduce"
         cluster which will process old and new data and ship back the results
         automatically.
@@ -97,10 +97,10 @@
         </p>
         <p>
           Synchronously, the region server that receives the edits reads them
-          sequentially and applies them on its own cluster using the HBase client
-          (HTables managed by a HTablePool) automatically. If consecutive rows
-          belong to the same table, they are inserted together in order to
-          leverage parallel insertions.
+          sequentially and separates each of them into buffers, one per table.
+          Once all edits are read, each buffer is flushed using the normal HBase
+          client (HTables managed by a HTablePool). This is done in order to
+          leverage parallel insertion (MultiPut).
         </p>
         <p>
           Back in the master cluster's region server, the offset for the current
@@ -219,23 +219,6 @@
           the znode in the queue. If the latter, it will register the new offset
           in the log's znode. If the RPC threw an exception, the source will retry
           10 times until trying to find a different sink.
-        </p>
-      </section>
-      <section name="Applying edits">
-        <p>
-          The sink synchronously applies the edits to its local cluster using
-          the native client API. This method is also synchronized between every
-          incoming sources, which means that only one batch of log entries can be
-          replicated at a time by each slave region server.
-        </p>
-        <p>
-          The sink applies the edits one by one, unless it's able to batch
-          sequential Puts that belong to the same table in order to use the
-          parallel puts feature of HConnectionManager. The Put and Delete objects
-          are recreated by inspecting the incoming WALEdit objects and are
-          with the exact same row, family, qualifier, timestamp, and value (for
-          Put). Note that if the master and slave cluster don't have the same
-          time, time-related issues may occur.
         </p>
       </section>
       <section name="Cleaning logs">
@@ -402,10 +385,6 @@
       </p>
       <ol>
         <li>
-            HBASE-2688, master-master replication is disabled in the code, we need
-            to enable and test it.
-        </li>
-        <li>
             HBASE-2611, basically if a region server dies while recovering the
             queues of another dead RS, we will miss the data from the queues
             that weren't copied.
@@ -419,9 +398,8 @@
             carry that data and check it.
         </li>
         <li>
-            HBASE-2200, currently all the replication operations (adding or removing
-            streams for example) are done only when the clusters are offline. This
-            should be possible at runtime.
+            HBASE-3130, the master cluster needs to be restarted if its region
+            servers lose their session with a slave cluster.
         </li>
       </ol>
     </section>

@@ -49,5 +49,10 @@ module Hbase
     def table(table, formatter)
       ::Hbase::Table.new(configuration, table, formatter)
     end
+
+    def replication_admin(formatter)
+      ::Hbase::RepAdmin.new(configuration, formatter)
+    end
+
   end
 end

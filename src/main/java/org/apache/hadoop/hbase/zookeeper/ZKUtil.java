@@ -276,6 +276,27 @@ public class ZKUtil {
   }
 
   /**
+   * List all the children of the specified znode, setting a watch for children
+   * changes and also setting a watch on every individual child in order to get
+   * the NodeCreated and NodeDeleted events.
+   * @param zkw zookeeper reference
+   * @param znode node to get children of and watch
+   * @return list of znode names, null if the node doesn't exist
+   * @throws KeeperException
+   */
+  public static List<String> listChildrenAndWatchThem(ZooKeeperWatcher zkw, 
+      String znode) throws KeeperException {
+    List<String> children = listChildrenAndWatchForNewChildren(zkw, znode);
+    if (children == null) {
+      return null;
+    }
+    for (String child : children) {
+      watchAndCheckExists(zkw, joinZNode(znode, child));
+    }
+    return children;
+  }
+
+  /**
    * Lists the children of the specified znode, retrieving the data of each
    * child as a server address.
    *

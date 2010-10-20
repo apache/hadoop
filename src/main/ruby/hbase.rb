@@ -72,3 +72,4 @@ end
 require 'hbase/hbase'
 require 'hbase/admin'
 require 'hbase/table'
+require 'hbase/replication_admin'
