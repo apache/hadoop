@@ -159,13 +159,12 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
       return;
     }
     r.setForceMajorCompaction(force);
-    if (LOG.isDebugEnabled()) {
+    if (compactionQueue.add(r, priority) && LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
         "requested for region " + r.getRegionNameAsString() +
         (why != null && !why.isEmpty()? " because: " + why: "") +
         "; Priority: " + priority + "; Compaction queue size: " + compactionQueue.size());
     }
-    compactionQueue.add(r, priority);
   }
 
   private void split(final HRegion parent, final byte [] midKey)
