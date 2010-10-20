@@ -138,8 +138,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, checksumSize);
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
       //first time format
-      cluster = new MiniDFSCluster(0, conf, numDataNodes, true,
-                                   true, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
       cluster.waitActive();
       DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                             cluster.getNameNodePort()),
@@ -169,8 +168,10 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
       conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.0f"); 
       
-      cluster = new MiniDFSCluster(0, conf, numDataNodes*2, false,
-                                   true, null, null);
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(numDataNodes * 2)
+                                  .format(false)
+                                  .build();
       cluster.waitActive();
       Set<Block> uniqueBlocks = new HashSet<Block>();
       for (int i=0; i<blocksList.length; ++i) {

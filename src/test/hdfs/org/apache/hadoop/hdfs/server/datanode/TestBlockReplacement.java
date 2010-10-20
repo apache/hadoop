@@ -93,8 +93,9 @@ public class TestBlockReplacement extends TestCase {
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     CONF.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE/2);
     CONF.setLong("dfs.blockreport.intervalMsec",500);
-    cluster = new MiniDFSCluster(
-          CONF, REPLICATION_FACTOR, true, INITIAL_RACKS );
+    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(REPLICATION_FACTOR)
+                                              .racks(INITIAL_RACKS).build();
+
     try {
       cluster.waitActive();
       

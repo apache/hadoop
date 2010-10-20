@@ -72,7 +72,7 @@ public class TestCrcCorruption {
     Random random = new Random();
 
     try {
-      cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
       cluster.waitActive();
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat", replFactor);
@@ -248,7 +248,7 @@ public class TestCrcCorruption {
 
     Configuration conf = new Configuration();
     conf.setInt("dfs.replication", numDataNodes);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
 
     try {
       cluster.waitActive();

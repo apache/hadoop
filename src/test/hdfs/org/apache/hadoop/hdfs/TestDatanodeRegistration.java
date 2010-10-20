@@ -43,7 +43,7 @@ public class TestDatanodeRegistration extends TestCase {
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
     try {
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       fs = cluster.getFileSystem();
 
       InetSocketAddress addr = new InetSocketAddress(

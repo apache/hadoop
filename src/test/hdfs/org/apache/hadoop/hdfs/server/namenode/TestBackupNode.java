@@ -117,7 +117,8 @@ public class TestBackupNode extends TestCase {
     BackupNode backup = null;
 
     try {
-      cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(numDatanodes).build();
       fileSys = cluster.getFileSystem();
       //
       // verify that 'format' really blew away all pre-existing files
@@ -154,7 +155,8 @@ public class TestBackupNode extends TestCase {
       //
       // Restart cluster and verify that file1 still exist.
       //
-      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+                                                .format(false).build();
       fileSys = cluster.getFileSystem();
       // check that file1 still exists
       checkFile(fileSys, file1, replication);
@@ -186,7 +188,7 @@ public class TestBackupNode extends TestCase {
       // Restart cluster and verify that file2 exists and
       // file1 does not exist.
       //
-      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(false).build();
       fileSys = cluster.getFileSystem();
 
       assertTrue(!fileSys.exists(file1));
@@ -214,7 +216,7 @@ public class TestBackupNode extends TestCase {
     BackupNode backup2 = null;
     try {
       // start name-node and backup node 1
-      cluster = new MiniDFSCluster(conf1, 0, true, null);
+      cluster = new MiniDFSCluster.Builder(conf1).numDataNodes(0).build();
       conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY, "0.0.0.0:7771");
       conf1.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "0.0.0.0:7775");
       backup1 = startBackupNode(conf1, StartupOption.BACKUP, 1);

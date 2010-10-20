@@ -50,7 +50,7 @@ public class TestFileCreationClient extends junit.framework.TestCase {
     Configuration conf = new HdfsConfiguration();
     conf.setInt("dfs.datanode.handler.count", 1);
     conf.setInt("dfs.replication", REPLICATION);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION).build();
 
     try {
       final FileSystem fs = cluster.getFileSystem();

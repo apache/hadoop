@@ -95,7 +95,7 @@ public class TestSmallBlock extends TestCase {
       conf.setBoolean("dfs.datanode.simulateddatastorage", true);
     }
     conf.set(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, "1");
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fileSys = cluster.getFileSystem();
     try {
       Path file1 = new Path("smallblocktest.dat");

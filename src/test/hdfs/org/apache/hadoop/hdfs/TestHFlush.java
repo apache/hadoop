@@ -98,7 +98,8 @@ public class TestHFlush {
     final int SECTIONS = 10;
 
     fileContent = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, replicas, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                                               .numDataNodes(replicas).build();
     // Make sure we work with DFS in order to utilize all its functionality
     DistributedFileSystem fileSystem =
         (DistributedFileSystem)cluster.getFileSystem();
@@ -168,7 +169,7 @@ public class TestHFlush {
     final Path p = new Path("/pipelineHeartbeat/foo");
     System.out.println("p=" + p);
     
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
 
     byte[] fileContents = AppendTestUtil.initBuffer(fileLen);

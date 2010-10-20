@@ -71,7 +71,7 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
     conf.set(FsPermission.UMASK_LABEL, "000");
-    cluster = new MiniDFSCluster(conf, 1, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).build();
     fc = FileContext.getFileContext(cluster.getURI());
   }
   

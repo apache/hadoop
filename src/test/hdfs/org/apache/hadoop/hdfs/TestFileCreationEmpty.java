@@ -55,7 +55,7 @@ public class TestFileCreationEmpty extends junit.framework.TestCase {
     conf.setInt("dfs.heartbeat.interval", 1);
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     try {
       cluster.waitActive();
       DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();

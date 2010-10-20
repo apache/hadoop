@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption.IMPORT;
+import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -33,11 +36,9 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
@@ -114,7 +115,9 @@ public class TestStartup extends TestCase {
     SecondaryNameNode sn = null;
     
     try {
-      cluster = new MiniDFSCluster(0, config, 1, true, false, false,  null, null, null, null);
+      cluster = new MiniDFSCluster.Builder(config)
+                                  .manageDataDfsDirs(false)
+                                  .manageNameDfsDirs(false).build();
       cluster.waitActive();
 
       LOG.info("--starting Secondary Node");
@@ -190,7 +193,11 @@ public class TestStartup extends TestCase {
     LOG.info("-- about to start DFS cluster");
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster(0, config, 1, false, false, false,  StartupOption.IMPORT, null, null, null);
+      cluster = new MiniDFSCluster.Builder(config)
+                                  .format(false)
+                                  .manageDataDfsDirs(false)
+                                  .manageNameDfsDirs(false)
+                                  .startupOption(IMPORT).build();
       cluster.waitActive();
       LOG.info("--NN started with checkpoint option");
       NameNode nn = cluster.getNameNode();
@@ -300,7 +307,9 @@ public class TestStartup extends TestCase {
     SecondaryNameNode sn = null;
     NameNode nn = null;
     try {
-      cluster = new MiniDFSCluster(0, config, 1, true, false, false,  null, null, null, null);
+      cluster = new MiniDFSCluster.Builder(config).manageDataDfsDirs(false)
+                                                  .manageNameDfsDirs(false)
+                                                  .build();
       cluster.waitActive();
       nn = cluster.getNameNode();
       assertNotNull(nn);

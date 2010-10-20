@@ -61,7 +61,7 @@ public class TestPipelines {
 
   @Before
   public void startUpCluster() throws IOException {
-    cluster = new MiniDFSCluster(conf, REPL_FACTOR, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
     fs = (DistributedFileSystem) cluster.getFileSystem();
   }
 

@@ -85,7 +85,7 @@ public class TestBalancer extends TestCase {
    */
   private ExtendedBlock[] generateBlocks(Configuration conf, long size,
       short numNodes) throws IOException {
-    cluster = new MiniDFSCluster( conf, numNodes, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numNodes).build();
     try {
       cluster.waitActive();
       client = DFSClient.createNamenode(conf);
@@ -171,8 +171,11 @@ public class TestBalancer extends TestCase {
 
     // restart the cluster: do NOT format the cluster
     conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY, "0.0f"); 
-    cluster = new MiniDFSCluster(0, conf, numDatanodes,
-        false, true, null, racks, capacities);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+                                              .format(false)
+                                              .racks(racks)
+                                              .simulatedCapacities(capacities)
+                                              .build();
     cluster.waitActive();
     client = DFSClient.createNamenode(conf);
 
@@ -209,8 +212,11 @@ public class TestBalancer extends TestCase {
       long newCapacity, String newRack) throws Exception {
     int numOfDatanodes = capacities.length;
     assertEquals(numOfDatanodes, racks.length);
-    cluster = new MiniDFSCluster(0, conf, capacities.length, true, true, null, 
-        racks, capacities);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(capacities.length)
+                                .racks(racks)
+                                .simulatedCapacities(capacities)
+                                .build();
     try {
       cluster.waitActive();
       client = DFSClient.createNamenode(conf);
@@ -348,8 +354,11 @@ public class TestBalancer extends TestCase {
       throws Exception {
     int numOfDatanodes = capacities.length;
     assertEquals(numOfDatanodes, racks.length);
-    cluster = new MiniDFSCluster(0, conf, capacities.length, true, true, null,
-        racks, capacities);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(capacities.length)
+                                .racks(racks)
+                                .simulatedCapacities(capacities)
+                                .build();
     try {
       cluster.waitActive();
       client = DFSClient.createNamenode(conf);

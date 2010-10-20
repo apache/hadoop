@@ -182,8 +182,11 @@ public class TestDFSUpgradeFromImage extends TestCase {
         System.setProperty("test.build.data", "build/test/data");
       }
       conf.setInt("dfs.datanode.scan.period.hours", -1); // block scanning off
-      cluster = new MiniDFSCluster(0, conf, numDataNodes, false, true,
-                                   StartupOption.UPGRADE, null);
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(numDataNodes)
+                                  .format(false)
+                                  .startupOption(StartupOption.UPGRADE)
+                                  .build();
       cluster.waitActive();
       DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
       DFSClient dfsClient = dfs.dfs;

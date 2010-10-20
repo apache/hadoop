@@ -69,7 +69,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
         conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, 512);
         conf.setBoolean("dfs.support.append", true);
         buffersize = conf.getInt("io.file.buffer.size", 4096);
-        cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
         fs = (DistributedFileSystem)cluster.getFileSystem();
       }
     

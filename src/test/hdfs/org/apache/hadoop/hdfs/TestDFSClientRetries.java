@@ -92,7 +92,7 @@ public class TestDFSClientRetries extends TestCase {
     final int bufferSize = 4096;
     conf.setInt("io.file.buffer.size", bufferSize);
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     
     try {
       cluster.waitActive();
@@ -185,7 +185,7 @@ public class TestDFSClientRetries extends TestCase {
     Configuration conf = new Configuration();
     // Set short retry timeout so this test runs faster
     conf.setInt(DFSConfigKeys.DFS_CLIENT_RETRY_WINDOW_BASE, 10);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     try {
       cluster.waitActive();
@@ -384,7 +384,7 @@ public class TestDFSClientRetries extends TestCase {
     conf.setInt("dfs.client.max.block.acquire.failures", retries);
     conf.setInt("dfs.client.retry.window.base", timeWin);
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, replicationFactor, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(replicationFactor).build();
     cluster.waitActive();
     
     FileSystem fs = cluster.getFileSystem();
@@ -538,7 +538,7 @@ public class TestDFSClientRetries extends TestCase {
     final Path p = new Path(f);
 
     final Configuration conf = new Configuration();
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       cluster.waitActive();
 

@@ -210,7 +210,7 @@ public class TestHdfsProxy extends TestCase {
       dfsConf.set("hadoop.proxyuser.users.ip-addresses", "localhost");
       dfsConf.set("hadoop.proxyuser." + System.getProperty("user.name") +
           ".ip-addresses", "localhost");
-      cluster = new MiniDFSCluster(dfsConf, 2, true, null);
+      cluster = new MiniDFSCluster.Builder(dfsConf).numDataNodes(2).build();
       cluster.waitActive();
 
       final FileSystem localfs = FileSystem.get(LOCAL_FS, dfsConf);

@@ -50,7 +50,7 @@ public class TestGlobPaths extends TestCase {
   protected void setUp() throws Exception {
     try {
       Configuration conf = new HdfsConfiguration();
-      dfsCluster = new MiniDFSCluster(conf, 1, true, null);
+      dfsCluster = new MiniDFSCluster.Builder(conf).build();
       fs = FileSystem.get(conf);
     } catch (IOException e) {
       e.printStackTrace();

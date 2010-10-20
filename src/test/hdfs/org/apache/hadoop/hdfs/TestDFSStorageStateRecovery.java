@@ -184,6 +184,15 @@ public class TestDFSStorageStateRecovery extends TestCase {
     }
   }
  
+  private MiniDFSCluster createCluster(Configuration c) throws IOException {
+    return new MiniDFSCluster.Builder(c)
+                             .numDataNodes(0)
+                             .startupOption(StartupOption.REGULAR)
+                             .format(false)
+                             .manageDataDfsDirs(false)
+                             .manageNameDfsDirs(false)
+                             .build();
+  }
   /**
    * This test iterates over the testCases table and attempts
    * to startup the NameNode normally.
@@ -204,12 +213,12 @@ public class TestDFSStorageStateRecovery extends TestCase {
         log("NAME_NODE recovery", numDirs, i, testCase);
         baseDirs = createStorageState(NAME_NODE, testCase);
         if (shouldRecover) {
-          cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
+          cluster = createCluster(conf);
           checkResult(NAME_NODE, baseDirs, curAfterRecover, prevAfterRecover);
           cluster.shutdown();
         } else {
           try {
-            cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
+            cluster = createCluster(conf);
             throw new AssertionError("NameNode should have failed to start");
           } catch (IOException expected) {
             // the exception is expected
@@ -247,7 +256,7 @@ public class TestDFSStorageStateRecovery extends TestCase {
         log("DATA_NODE recovery", numDirs, i, testCase);
         createStorageState(NAME_NODE,
                            new boolean[] {true, true, false, false, false});
-        cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
+        cluster = createCluster(conf);
         baseDirs = createStorageState(DATA_NODE, testCase);
         if (!testCase[0] && !testCase[1] && !testCase[2] && !testCase[3]) {
           // DataNode will create and format current if no directories exist

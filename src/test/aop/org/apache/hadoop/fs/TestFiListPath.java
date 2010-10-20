@@ -56,7 +56,7 @@ public class TestFiListPath {
   public static void setup() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, LIST_LIMIT);
-    cluster = new MiniDFSCluster(conf, 1, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitClusterUp();
     fs = cluster.getFileSystem();
   }

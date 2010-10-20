@@ -79,7 +79,7 @@ public class TestCheckPointForSecurityTokens {
     DistributedFileSystem fs = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
       cluster.waitActive();
       fs = (DistributedFileSystem)(cluster.getFileSystem());
       FSNamesystem namesystem = cluster.getNamesystem();
@@ -118,7 +118,7 @@ public class TestCheckPointForSecurityTokens {
       cluster.shutdown();
       cluster = null;
 
-      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(false).build();
       cluster.waitActive();
       //Should be able to renew & cancel the delegation token after cluster restart
       try {
@@ -139,7 +139,7 @@ public class TestCheckPointForSecurityTokens {
       cluster.shutdown();
       cluster = null;
 
-      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(false).build();
       cluster.waitActive();
 
       namesystem = cluster.getNamesystem();
@@ -162,7 +162,7 @@ public class TestCheckPointForSecurityTokens {
       cluster.shutdown();
       cluster = null;
 
-      cluster = new MiniDFSCluster(conf, numDatanodes, false, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).format(false).build();
       cluster.waitActive();
 
       namesystem = cluster.getNamesystem();

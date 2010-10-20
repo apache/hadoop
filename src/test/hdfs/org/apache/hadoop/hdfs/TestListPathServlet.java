@@ -55,7 +55,7 @@ public class TestListPathServlet {
   @BeforeClass
   public static void setup() throws Exception {
     // start a cluster with single datanode
-    cluster = new MiniDFSCluster(CONF, 1, true, null);
+    cluster = new MiniDFSCluster.Builder(CONF).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
 

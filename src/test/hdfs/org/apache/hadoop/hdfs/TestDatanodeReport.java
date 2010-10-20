@@ -43,7 +43,7 @@ public class TestDatanodeReport extends TestCase {
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500); // 0.5s
     conf.setLong("dfs.heartbeat.interval", 1L);
     MiniDFSCluster cluster = 
-      new MiniDFSCluster(conf, NUM_OF_DATANODES, true, null);
+      new MiniDFSCluster.Builder(conf).numDataNodes(NUM_OF_DATANODES).build();
     try {
       //wait until the cluster is up
       cluster.waitActive();

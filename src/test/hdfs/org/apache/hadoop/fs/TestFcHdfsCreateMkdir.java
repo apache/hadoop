@@ -42,7 +42,7 @@ public class TestFcHdfsCreateMkdir extends
   public static void clusterSetupAtBegining()
                                     throws IOException, LoginException, URISyntaxException  {
     Configuration conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster(conf, 2, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     fc = FileContext.getFileContext(cluster.getURI(), conf);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));

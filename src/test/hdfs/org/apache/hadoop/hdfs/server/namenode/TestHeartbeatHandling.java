@@ -43,7 +43,7 @@ public class TestHeartbeatHandling extends TestCase {
    */
   public void testHeartbeat() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       cluster.waitActive();
       final FSNamesystem namesystem = cluster.getNamesystem();

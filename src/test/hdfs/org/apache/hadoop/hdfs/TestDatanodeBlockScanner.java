@@ -103,7 +103,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     long startTime = System.currentTimeMillis();
     
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     
     FileSystem fs = cluster.getFileSystem();
@@ -115,7 +115,9 @@ public class TestDatanodeBlockScanner extends TestCase {
      */
     DFSTestUtil.createFile(fs, file1, 10, (short)1, 0);
     cluster.shutdown();
-    cluster = new MiniDFSCluster(conf, 1, false, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(1)
+                                .format(false).build();
     cluster.waitActive();
     
     DFSClient dfsClient =  new DFSClient(new InetSocketAddress("localhost", 
@@ -174,7 +176,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     int blockCount = 0;
     int rand = random.nextInt(3);
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     Path file1 = new Path("/tmp/testBlockVerification/file1");
@@ -285,7 +287,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     LocatedBlocks blocks = null;
     int replicaCount = 0;
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     Path file1 = new Path("/tmp/testBlockCorruptRecovery/file");
@@ -386,7 +388,7 @@ public class TestDatanodeBlockScanner extends TestCase {
     final Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = (short)2;
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION_FACTOR, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION_FACTOR).build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     try {
@@ -402,8 +404,10 @@ public class TestDatanodeBlockScanner extends TestCase {
       cluster.shutdown();
 
       // restart the cluster
-      cluster = new MiniDFSCluster(
-          0, conf, REPLICATION_FACTOR, false, true, null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(REPLICATION_FACTOR)
+                                  .format(false)
+                                  .build();
       cluster.startDataNodes(conf, 1, true, null, null);
       cluster.waitActive();  // now we have 3 datanodes
 

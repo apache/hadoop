@@ -86,7 +86,7 @@ public class TestFileAppend2 extends TestCase {
     conf.setInt("dfs.datanode.handler.count", 50);
     conf.setBoolean("dfs.support.append", true);
     fileContents = AppendTestUtil.initBuffer(AppendTestUtil.FILE_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     try {
       { // test appending to a file.
@@ -339,8 +339,9 @@ public class TestFileAppend2 extends TestCase {
     conf.setInt("dfs.datanode.handler.count", 50);
     conf.setBoolean("dfs.support.append", true);
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, 
-                                                true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                                               .numDataNodes(numDatanodes)
+                                               .build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
 

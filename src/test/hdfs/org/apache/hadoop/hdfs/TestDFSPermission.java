@@ -112,7 +112,7 @@ public class TestDFSPermission extends TestCase {
    * setPermission works correctly
    */
   public void testPermissionSetting() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       cluster.waitActive();
       fs = FileSystem.get(conf);
@@ -228,7 +228,7 @@ public class TestDFSPermission extends TestCase {
 
   /* check if the ownership of a file/directory is set correctly */
   public void testOwnership() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       cluster.waitActive();
       testOwnership(OpType.CREATE); // test file creation
@@ -323,7 +323,7 @@ public class TestDFSPermission extends TestCase {
   /* Check if namenode performs permission checking correctly for
    * superuser, file owner, group owner, and other users */
   public void testPermissionChecking() throws Exception {
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     try {
       cluster.waitActive();
       fs = FileSystem.get(conf);

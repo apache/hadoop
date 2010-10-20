@@ -56,7 +56,7 @@ public class TestDiskError extends TestCase {
     // bring up a cluster of 3
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 512L);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     final int dnIndex = 0;
@@ -87,7 +87,7 @@ public class TestDiskError extends TestCase {
   public void testReplicationError() throws Exception {
     // bring up a cluster of 1
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     
@@ -160,7 +160,7 @@ public class TestDiskError extends TestCase {
 
     try {
       // Start the cluster
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
       // Check permissions on directories in 'dfs.data.dir'

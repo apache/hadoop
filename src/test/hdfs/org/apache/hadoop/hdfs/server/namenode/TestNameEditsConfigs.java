@@ -135,8 +135,10 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories
-    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, true, false, true, null,
-                                  null, null, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(NUM_DATA_NODES)
+                                .manageNameDfsDirs(false).build();
+
     cluster.waitActive();
     secondary = startSecondaryNameNode(conf);
     fileSys = cluster.getFileSystem();
@@ -167,8 +169,11 @@ public class TestNameEditsConfigs extends TestCase {
              "," + checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories. Do not format.
-    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true, 
-                                  null, null, null, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES)
+                                              .format(false)
+                                              .manageNameDfsDirs(false)
+                                              .build();
+
     cluster.waitActive();
     secondary = startSecondaryNameNode(conf);
     fileSys = cluster.getFileSystem();
@@ -209,8 +214,12 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_DIR_KEY, checkpointNameDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, checkpointEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
-    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
-                                  null, null, null, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(NUM_DATA_NODES)
+                                .format(false)
+                                .manageNameDfsDirs(false)
+                                .build();
+
     cluster.waitActive();
     secondary = startSecondaryNameNode(conf);
     fileSys = cluster.getFileSystem();
@@ -248,8 +257,11 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_EDITS_DIR_KEY, checkpointEditsDir.getPath() +
         "," + checkpointNameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
-    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
-                                  null, null, null, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(NUM_DATA_NODES)
+                                .format(false)
+                                .manageNameDfsDirs(false)
+                                .build();
     cluster.waitActive();
     secondary = startSecondaryNameNode(conf);
     fileSys = cluster.getFileSystem();
@@ -297,8 +309,10 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories
-    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, true, false, true, null,
-                                  null, null, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(NUM_DATA_NODES)
+                                .manageNameDfsDirs(false)
+                                .build();
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
 
@@ -322,8 +336,11 @@ public class TestNameEditsConfigs extends TestCase {
               "," + newEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     // Manage our own dfs directories. Do not format.
-    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true, 
-                                  null, null, null, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(NUM_DATA_NODES)
+                                .format(false)
+                                .manageNameDfsDirs(false)
+                                .build();
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
 
@@ -344,8 +361,11 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, newNameDir.getPath());
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, newEditsDir.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
-    cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
-                                  null, null, null, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(NUM_DATA_NODES)
+                                .format(false)
+                                .manageNameDfsDirs(false)
+                                .build();
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
 
@@ -368,8 +388,11 @@ public class TestNameEditsConfigs extends TestCase {
     conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     try {
-      cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
-                                  null, null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(NUM_DATA_NODES)
+                                  .format(false)
+                                  .manageNameDfsDirs(false)
+                                  .build();
       assertTrue(false);
     } catch (IOException e) { // expect to fail
       System.out.println("cluster start failed due to missing " +
@@ -385,8 +408,11 @@ public class TestNameEditsConfigs extends TestCase {
              "," + nameAndEdits.getPath());
     replication = (short)conf.getInt("dfs.replication", 3);
     try {
-      cluster = new MiniDFSCluster(0, conf, NUM_DATA_NODES, false, false, true,
-                                   null, null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(NUM_DATA_NODES)
+                                  .format(false)
+                                  .manageNameDfsDirs(false)
+                                  .build();
       assertTrue(false);
     } catch (IOException e) { // expect to fail
       System.out.println("cluster start failed due to missing latest name dir");

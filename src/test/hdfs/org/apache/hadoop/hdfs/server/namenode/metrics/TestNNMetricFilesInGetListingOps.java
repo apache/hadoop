@@ -51,7 +51,7 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
 
   @Override
   protected void setUp() throws Exception {
-    cluster = new MiniDFSCluster(CONF, 1, true, null);
+    cluster = new MiniDFSCluster.Builder(CONF).build();
     cluster.waitActive();
     cluster.getNameNode();
     nnMetrics = NameNode.getNameNodeMetrics();

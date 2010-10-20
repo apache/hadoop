@@ -99,7 +99,12 @@ public class TestDFSFinalize extends TestCase {
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "previous");
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
-      cluster = new MiniDFSCluster(conf, 1, StartupOption.REGULAR);
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .format(false)
+                                  .manageDataDfsDirs(false)
+                                  .manageNameDfsDirs(false)
+                                  .startupOption(StartupOption.REGULAR)
+                                  .build();
       cluster.finalizeCluster(conf);
       checkResult(nameNodeDirs, dataNodeDirs);
 

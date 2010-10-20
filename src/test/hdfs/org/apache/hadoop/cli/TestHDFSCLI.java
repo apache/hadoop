@@ -52,7 +52,10 @@ public class TestHDFSCLI extends CLITestHelper {
                         "/rack2", "/rack3", "/rack4", "/rack4" };
     String [] hosts = {"host1", "host2", "host3", "host4",
                        "host5", "host6", "host7", "host8" };
-    dfsCluster = new MiniDFSCluster(conf, 8, true, racks, hosts);
+    dfsCluster = new MiniDFSCluster.Builder(conf).numDataNodes(8)
+                                                 .racks(racks)
+                                                 .hosts(hosts)
+                                                 .build();
     
     namenode = conf.get(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "file:///");
     

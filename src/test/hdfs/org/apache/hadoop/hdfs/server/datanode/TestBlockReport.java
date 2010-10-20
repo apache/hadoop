@@ -84,7 +84,7 @@ public class TestBlockReport {
   @Before
   public void startUpCluster() throws IOException {
     REPL_FACTOR = 1; //Reset if case a test has modified the value
-    cluster = new MiniDFSCluster(conf, REPL_FACTOR, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
     fs = (DistributedFileSystem) cluster.getFileSystem();
   }
 

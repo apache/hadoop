@@ -33,7 +33,7 @@ public class TestDataNodeMetrics extends TestCase {
   public void testDataNodeMetrics() throws Exception {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       FileSystem fs = cluster.getFileSystem();
       final long LONG_FILE_LEN = Integer.MAX_VALUE+1L; 

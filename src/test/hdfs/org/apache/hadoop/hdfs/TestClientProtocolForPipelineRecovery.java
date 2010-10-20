@@ -41,7 +41,7 @@ public class TestClientProtocolForPipelineRecovery {
     int numDataNodes = 1;
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean("dfs.support.append", true);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
       cluster.waitActive();
       FileSystem fileSys = cluster.getFileSystem();

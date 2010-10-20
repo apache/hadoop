@@ -52,7 +52,7 @@ public class TestMissingBlocksAlert extends TestCase {
       int fileLen = 10*1024;
 
       //start a cluster with single datanode
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
       DistributedFileSystem dfs = 

@@ -71,7 +71,7 @@ public class TestNameNodeMetrics extends TestCase {
   
   @Override
   protected void setUp() throws Exception {
-    cluster = new MiniDFSCluster(CONF, DATANODE_COUNT, true, null);
+    cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(DATANODE_COUNT).build();
     cluster.waitActive();
     namesystem = cluster.getNamesystem();
     fs = (DistributedFileSystem) cluster.getFileSystem();

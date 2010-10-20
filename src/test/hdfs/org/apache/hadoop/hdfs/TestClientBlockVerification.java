@@ -56,7 +56,7 @@ public class TestClientBlockVerification {
     conf = new HdfsConfiguration();
     int numDataNodes = 1;
     conf.setInt("dfs.replication", numDataNodes);
-    cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
 

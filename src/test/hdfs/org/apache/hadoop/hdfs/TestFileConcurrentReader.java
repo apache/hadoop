@@ -85,7 +85,7 @@ public class TestFileConcurrentReader extends junit.framework.TestCase {
     if (cluster != null) {
       cluster.shutdown();
     }
-    cluster = new MiniDFSCluster(conf, 1, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitClusterUp();
     fileSystem = cluster.getFileSystem();
   }

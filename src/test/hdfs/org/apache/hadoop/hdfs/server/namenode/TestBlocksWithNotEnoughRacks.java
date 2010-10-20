@@ -58,7 +58,7 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
     final Path FILE_PATH = new Path(FILE_NAME);
     //All datanodes are on the same rack
     String racks[] = {"/rack1","/rack1","/rack1",} ;
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION_FACTOR, true, racks);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION_FACTOR).racks(racks).build();
     try {
       // create a file with one block with a replication factor of 3
       final FileSystem fs = cluster.getFileSystem();
@@ -112,7 +112,7 @@ public class TestBlocksWithNotEnoughRacks extends TestCase {
     final Path FILE_PATH = new Path(FILE_NAME);
     //All datanodes are on the same rack
     String racks[] = {"/rack1","/rack1","/rack1",} ;
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION_FACTOR, true, racks);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION_FACTOR).racks(racks).build();
     try {
       // create a file with one block with a replication factor of 3
       final FileSystem fs = cluster.getFileSystem();

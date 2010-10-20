@@ -47,7 +47,7 @@ public class TestDatanodeConfig {
   public static void setUp() throws Exception {
     clearBaseDir();
     Configuration conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster(conf, 0, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     cluster.waitActive();
   }
 

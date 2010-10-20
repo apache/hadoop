@@ -164,7 +164,7 @@ public class TestStickyBit extends TestCase {
       Configuration conf = new HdfsConfiguration();
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
       conf.setBoolean("dfs.support.append", true);
-      cluster = new MiniDFSCluster(conf, 4, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
 
       FileSystem hdfs = cluster.getFileSystem();
 
@@ -203,7 +203,7 @@ public class TestStickyBit extends TestCase {
       // Set up cluster for testing
       Configuration conf = new HdfsConfiguration();
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
-      cluster = new MiniDFSCluster(conf, 4, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       FileSystem hdfs = cluster.getFileSystem();
 
       assertTrue(hdfs instanceof DistributedFileSystem);
@@ -249,7 +249,7 @@ public class TestStickyBit extends TestCase {
     try {
       Configuration conf = new HdfsConfiguration();
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
-      cluster = new MiniDFSCluster(conf, 4, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       FileSystem hdfs = cluster.getFileSystem();
 
       assertTrue(hdfs instanceof DistributedFileSystem);
@@ -269,7 +269,7 @@ public class TestStickyBit extends TestCase {
       cluster.shutdown();
 
       // Start file system up again
-      cluster = new MiniDFSCluster(conf, 4, false, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).format(false).build();
       hdfs = cluster.getFileSystem();
 
       assertTrue(hdfs.exists(sbSet));

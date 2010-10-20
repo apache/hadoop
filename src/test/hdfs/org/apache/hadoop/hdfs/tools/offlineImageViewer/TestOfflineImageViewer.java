@@ -103,7 +103,7 @@ public class TestOfflineImageViewer extends TestCase {
     File orig = null;
     try {
       Configuration conf = new HdfsConfiguration();
-      cluster = new MiniDFSCluster(conf, 4, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(4).build();
       FileSystem hdfs = cluster.getFileSystem();
       
       int filesize = 256;

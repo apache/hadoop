@@ -68,7 +68,7 @@ public class TestHftpFileSystem extends TestCase {
     config = new Configuration();
     config.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
 
-    cluster = new MiniDFSCluster(config, 2, true, null);
+    cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     hdfs = cluster.getFileSystem();
     final String hftpuri = 
       "hftp://" + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);

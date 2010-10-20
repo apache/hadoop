@@ -149,7 +149,7 @@ public class TestFileAppend4 {
    */
   @Test(timeout=60000)
   public void testRecoverFinalizedBlock() throws Throwable {
-    cluster = new MiniDFSCluster(conf, 3, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
  
     try {
       cluster.waitActive();
@@ -220,7 +220,7 @@ public class TestFileAppend4 {
    */
   @Test(timeout=60000)
   public void testCompleteOtherLeaseHoldersFile() throws Throwable {
-    cluster = new MiniDFSCluster(conf, 3, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
  
     try {
       cluster.waitActive();

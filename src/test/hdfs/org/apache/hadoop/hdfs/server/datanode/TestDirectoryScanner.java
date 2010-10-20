@@ -212,7 +212,7 @@ public class TestDirectoryScanner extends TestCase {
   }
   
   public void runTest(int parallelism) throws Exception {
-    cluster = new MiniDFSCluster(CONF, 1, true, null);
+    cluster = new MiniDFSCluster.Builder(CONF).build();
     try {
       cluster.waitActive();
       fds = (FSDataset) cluster.getDataNodes().get(0).getFSDataset();

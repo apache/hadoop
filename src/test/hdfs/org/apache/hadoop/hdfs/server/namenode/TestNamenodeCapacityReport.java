@@ -53,7 +53,7 @@ public class TestNamenodeCapacityReport extends TestCase {
     conf.setLong("dfs.datanode.du.reserved", reserved);
     
     try {
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
       
       final FSNamesystem namesystem = cluster.getNamesystem();

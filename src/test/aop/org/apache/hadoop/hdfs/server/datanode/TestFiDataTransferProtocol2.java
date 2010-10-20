@@ -88,7 +88,7 @@ public class TestFiDataTransferProtocol2 {
     FiTestUtil.LOG.info("size=" + size + ", nPackets=" + nPackets
         + ", lastPacketSize=" + lastPacketSize);
 
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION, true, null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION).build();
     final FileSystem dfs = cluster.getFileSystem();
     try {
       final Path p = new Path("/" + methodName + "/foo");

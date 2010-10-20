@@ -51,8 +51,9 @@ public class TestGetBlocks extends TestCase {
     final Random r = new Random();
     
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster(
-          CONF, REPLICATION_FACTOR, true, null );
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
+                                               .numDataNodes(REPLICATION_FACTOR)
+                                               .build();
     try {
       cluster.waitActive();
       

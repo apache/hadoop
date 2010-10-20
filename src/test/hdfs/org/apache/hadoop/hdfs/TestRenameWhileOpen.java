@@ -57,7 +57,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
 
     // create cluster
     System.out.println("Test 1*****************************");
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = null;
     try {
       cluster.waitActive();
@@ -102,16 +102,18 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 
@@ -141,7 +143,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     System.out.println("Test 2************************************");
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = null;
     try {
       cluster.waitActive();
@@ -174,16 +176,18 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 
@@ -214,7 +218,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     System.out.println("Test 3************************************");
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = null;
     try {
       cluster.waitActive();
@@ -239,16 +243,18 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 
@@ -277,7 +283,7 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
     System.out.println("Test 4************************************");
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = null;
     try {
       cluster.waitActive();
@@ -301,16 +307,18 @@ public class TestRenameWhileOpen extends junit.framework.TestCase {
       // This ensures that leases are persisted in fsimage.
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
       // persistent leases from fsimage.
       cluster.shutdown();
       try {Thread.sleep(5000);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 

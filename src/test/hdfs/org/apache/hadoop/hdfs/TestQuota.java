@@ -62,7 +62,7 @@ public class TestQuota extends TestCase {
     // Space quotas
     conf.set(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, "512");
     conf.setBoolean("dfs.support.append", true);
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     final FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                 fs instanceof DistributedFileSystem);
@@ -283,7 +283,7 @@ public class TestQuota extends TestCase {
    *  mkdirs, rename, and delete */
   public void testNamespaceCommands() throws Exception {
     final Configuration conf = new HdfsConfiguration();
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     final FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                 fs instanceof DistributedFileSystem);
@@ -455,7 +455,7 @@ public class TestQuota extends TestCase {
     // diskspace quotas
     conf.set(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, "512");
     conf.setBoolean("dfs.support.append", true);
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     final FileSystem fs = cluster.getFileSystem();
     assertTrue("Not a HDFS: "+fs.getUri(),
                 fs instanceof DistributedFileSystem);

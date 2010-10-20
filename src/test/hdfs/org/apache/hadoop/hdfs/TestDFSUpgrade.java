@@ -98,7 +98,12 @@ public class TestDFSUpgrade extends TestCase {
    */
   void startNameNodeShouldFail(StartupOption operation) {
     try {
-      cluster = new MiniDFSCluster(conf, 0, operation); // should fail
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                                .startupOption(operation)
+                                                .format(false)
+                                                .manageDataDfsDirs(false)
+                                                .manageNameDfsDirs(false)
+                                                .build(); // should fail
       throw new AssertionError("NameNode should have failed to start");
     } catch (Exception expected) {
       // expected
@@ -120,6 +125,19 @@ public class TestDFSUpgrade extends TestCase {
   }
  
   /**
+   * Create an instance of a newly configured cluster for testing that does
+   * not manage its own directories or files
+   */
+  private MiniDFSCluster createCluster() throws IOException {
+    return new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                           .format(false)
+                                           .manageDataDfsDirs(false)
+                                           .manageNameDfsDirs(false)
+                                           .startupOption(StartupOption.UPGRADE)
+                                           .build();
+  }
+  
+  /**
    * This test attempts to upgrade the NameNode and DataNode under
    * a number of valid and invalid conditions.
    */
@@ -136,14 +154,14 @@ public class TestDFSUpgrade extends TestCase {
       
       log("Normal NameNode upgrade", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
-      cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
+      cluster = createCluster();
       checkResult(NAME_NODE, nameNodeDirs);
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("Normal DataNode upgrade", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
-      cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
+      cluster = createCluster();
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
       checkResult(DATA_NODE, dataNodeDirs);
@@ -159,7 +177,7 @@ public class TestDFSUpgrade extends TestCase {
       
       log("DataNode upgrade with existing previous dir", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
-      cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
+      cluster = createCluster();
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
@@ -170,7 +188,7 @@ public class TestDFSUpgrade extends TestCase {
 
       log("DataNode upgrade with future stored layout version in current", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
-      cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
+      cluster = createCluster();
       baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createVersionFile(DATA_NODE, baseDirs,
                                          new StorageInfo(Integer.MIN_VALUE,
@@ -185,7 +203,7 @@ public class TestDFSUpgrade extends TestCase {
       
       log("DataNode upgrade with newer fsscTime in current", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
-      cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
+      cluster = createCluster();
       baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createVersionFile(DATA_NODE, baseDirs,
                                          new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(),

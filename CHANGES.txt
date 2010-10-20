@@ -157,6 +157,9 @@ Trunk (unreleased changes)
 
     HDFS-1426. Remove unused method BlockInfo#listCount. (hairong)
 
+    HDFS-1456. Provide builder for constructing instances of MiniDFSCluster.
+    (jghoman)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)

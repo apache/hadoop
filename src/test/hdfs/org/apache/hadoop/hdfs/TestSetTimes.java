@@ -84,7 +84,9 @@ public class TestSetTimes extends TestCase {
     conf.setInt("dfs.heartbeat.interval", 1);
 
 
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                                               .numDataNodes(numDatanodes)
+                                               .build();
     cluster.waitActive();
     final int nnport = cluster.getNameNodePort();
     InetSocketAddress addr = new InetSocketAddress("localhost", 
@@ -159,8 +161,9 @@ public class TestSetTimes extends TestCase {
       // shutdown cluster and restart
       cluster.shutdown();
       try {Thread.sleep(2*MAX_IDLE_TIME);} catch (InterruptedException e) {}
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true,
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
 
@@ -196,7 +199,9 @@ public class TestSetTimes extends TestCase {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1000);
     conf.setInt("dfs.heartbeat.interval", 1);
     conf.setInt("dfs.datanode.handler.count", 50);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                                               .numDataNodes(numDatanodes)
+                                               .build();
     cluster.waitActive();
     InetSocketAddress addr = new InetSocketAddress("localhost",
                                                      cluster.getNameNodePort());

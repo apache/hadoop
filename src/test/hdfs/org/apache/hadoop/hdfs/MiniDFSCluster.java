@@ -72,6 +72,121 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class MiniDFSCluster {
 
+  /**
+   * Class to construct instances of MiniDFSClusters with specific options.
+   */
+  public static class Builder {
+    private int nameNodePort = 0;
+    private final Configuration conf;
+    private int numDataNodes = 1;
+    private boolean format = true;
+    private boolean manageNameDfsDirs = true;
+    private boolean manageDataDfsDirs = true;
+    private StartupOption option = null;
+    private String[] racks = null; 
+    private String [] hosts = null;
+    private long [] simulatedCapacities = null;
+    
+    public Builder(Configuration conf) {
+      this.conf = conf;
+    }
+    
+    /**
+     * Default: 0
+     */
+    public Builder nameNodePort(int val) {
+      this.nameNodePort = val;
+      return this;
+    }
+
+    /**
+     * Default: 1
+     */
+    public Builder numDataNodes(int val) {
+      this.numDataNodes = val;
+      return this;
+    }
+
+    /**
+     * Default: true
+     */
+    public Builder format(boolean val) {
+      this.format = val;
+      return this;
+    }
+
+    /**
+     * Default: true
+     */
+    public Builder manageNameDfsDirs(boolean val) {
+      this.manageNameDfsDirs = val;
+      return this;
+    }
+
+    /**
+     * Default: true
+     */
+    public Builder manageDataDfsDirs(boolean val) {
+      this.manageDataDfsDirs = val;
+      return this;
+    }
+
+    /**
+     * Default: null
+     */
+    public Builder startupOption(StartupOption val) {
+      this.option = val;
+      return this;
+    }
+
+    /**
+     * Default: null
+     */
+    public Builder racks(String[] val) {
+      this.racks = val;
+      return this;
+    }
+
+    /**
+     * Default: null
+     */
+    public Builder hosts(String[] val) {
+      this.hosts = val;
+      return this;
+    }
+
+    /**
+     * Default: null
+     */
+    public Builder simulatedCapacities(long[] val) {
+      this.simulatedCapacities = val;
+      return this;
+    }
+    
+    /**
+     * Construct the actual MiniDFSCluster
+     */
+    public MiniDFSCluster build() throws IOException {
+      return new MiniDFSCluster(this);
+    }
+  }
+  
+  /**
+   * Used by builder to create and return an instance of MiniDFSCluster
+   */
+  private MiniDFSCluster(Builder builder) throws IOException {
+    initMiniDFSCluster(builder.nameNodePort,
+                       builder.conf,
+                       builder.numDataNodes,
+                       builder.format,
+                       builder.manageNameDfsDirs,
+                       builder.manageDataDfsDirs,
+                       builder.option,
+                       builder.racks,
+                       builder.hosts,
+                       builder.simulatedCapacities);
+  }
+  
   public class DataNodeProperties {
     DataNode datanode;
     Configuration conf;
@@ -117,6 +232,7 @@ public class MiniDFSCluster {
    * @param nameNodeOperation the operation with which to start the servers.  If null
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
    */
+  @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
   public MiniDFSCluster(Configuration conf,
                         int numDataNodes,
                         StartupOption nameNodeOperation) throws IOException {
@@ -137,6 +253,7 @@ public class MiniDFSCluster {
    * @param format if true, format the NameNode and DataNodes before starting up
    * @param racks array of strings indicating the rack that each DataNode is on
    */
+  @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
   public MiniDFSCluster(Configuration conf,
                         int numDataNodes,
                         boolean format,
@@ -158,6 +275,7 @@ public class MiniDFSCluster {
    * @param racks array of strings indicating the rack that each DataNode is on
    * @param hosts array of strings indicating the hostname for each DataNode
    */
+  @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
   public MiniDFSCluster(Configuration conf,
                         int numDataNodes,
                         boolean format,
@@ -183,6 +301,7 @@ public class MiniDFSCluster {
    *          or StartupOption.FORMAT, then StartupOption.REGULAR will be used.
    * @param racks array of strings indicating the rack that each DataNode is on
    */
+  @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
   public MiniDFSCluster(int nameNodePort, 
                         Configuration conf,
                         int numDataNodes,
@@ -213,6 +332,7 @@ public class MiniDFSCluster {
    * @param racks array of strings indicating the rack that each DataNode is on
    * @param simulatedCapacities array of capacities of the simulated data nodes
    */
+  @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
   public MiniDFSCluster(int nameNodePort, 
                         Configuration conf,
                         int numDataNodes,
@@ -247,6 +367,7 @@ public class MiniDFSCluster {
    * @param hosts array of strings indicating the hostnames of each DataNode
    * @param simulatedCapacities array of capacities of the simulated data nodes
    */
+  @Deprecated // in 22 to be removed in 24. Use MiniDFSCluster.Builder instead
   public MiniDFSCluster(int nameNodePort, 
                         Configuration conf,
                         int numDataNodes,
@@ -256,6 +377,15 @@ public class MiniDFSCluster {
                         StartupOption operation,
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
+    initMiniDFSCluster(nameNodePort, conf, numDataNodes, format,
+        manageNameDfsDirs, manageDataDfsDirs, operation, racks, hosts,
+        simulatedCapacities);
+  }
+
+  private void initMiniDFSCluster(int nameNodePort, Configuration conf,
+      int numDataNodes, boolean format, boolean manageNameDfsDirs,
+      boolean manageDataDfsDirs, StartupOption operation, String[] racks,
+      String[] hosts, long[] simulatedCapacities) throws IOException {
     this.conf = conf;
     base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");

@@ -72,7 +72,7 @@ public class TestLeaseRecovery2 {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt("dfs.heartbeat.interval", 1);
 
-    cluster = new MiniDFSCluster(conf, 5, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(5).build();
     cluster.waitActive();
     dfs = (DistributedFileSystem)cluster.getFileSystem();
   }

@@ -175,7 +175,12 @@ public class TestDFSStartupVersions extends TestCase {
     StorageInfo[] versions = initializeVersions();
     UpgradeUtilities.createStorageDirs(
                                        NAME_NODE, conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY), "current");
-    cluster = new MiniDFSCluster(conf, 0, StartupOption.REGULAR);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                              .format(false)
+                                              .manageDataDfsDirs(false)
+                                              .manageNameDfsDirs(false)
+                                              .startupOption(StartupOption.REGULAR)
+                                              .build();
     StorageInfo nameNodeVersion = new StorageInfo(
                                                   UpgradeUtilities.getCurrentLayoutVersion(),
                                                   UpgradeUtilities.getCurrentNamespaceID(cluster),

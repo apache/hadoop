@@ -37,7 +37,7 @@ public class TestDFSClientExcludedNodes {
   @Test
   public void testExcludedNodes() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     FileSystem fs = cluster.getFileSystem();
     Path filePath = new Path("/testExcludedNodes");
 

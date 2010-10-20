@@ -58,7 +58,7 @@ public class TestDistributedFileSystem {
   @Test
   public void testFileSystemCloseAll() throws Exception {
     Configuration conf = getTestConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 0, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
     URI address = FileSystem.getDefaultUri(conf);
 
     try {
@@ -82,7 +82,7 @@ public class TestDistributedFileSystem {
   @Test
   public void testDFSClose() throws Exception {
     Configuration conf = getTestConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     FileSystem fileSys = cluster.getFileSystem();
 
     try {
@@ -103,7 +103,7 @@ public class TestDistributedFileSystem {
     MiniDFSCluster cluster = null;
 
     try {
-      cluster = new MiniDFSCluster(conf, 2, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       final Path filepath = new Path("/test/LeaseChecker/foo");
       final long millis = System.currentTimeMillis();
 
@@ -186,7 +186,7 @@ public class TestDistributedFileSystem {
     int lsLimit = 2;
     final Configuration conf = getTestConfiguration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, lsLimit);
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     try {
       final FileSystem fs = cluster.getFileSystem();
       Path dir = new Path("/test");
@@ -290,7 +290,7 @@ public class TestDistributedFileSystem {
     final Configuration conf = getTestConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "localhost");
 
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     final FileSystem hdfs = cluster.getFileSystem();
     final String hftpuri = "hftp://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     System.out.println("hftpuri=" + hftpuri);

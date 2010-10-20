@@ -172,7 +172,7 @@ public class TestEditLogRace {
 
     AtomicReference<Throwable> caughtErr = new AtomicReference<Throwable>();
     try {
-      cluster = new MiniDFSCluster(conf, NUM_DATA_NODES, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
@@ -240,7 +240,7 @@ public class TestEditLogRace {
 
     AtomicReference<Throwable> caughtErr = new AtomicReference<Throwable>();
     try {
-      cluster = new MiniDFSCluster(conf, NUM_DATA_NODES, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATA_NODES).build();
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();

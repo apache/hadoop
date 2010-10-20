@@ -53,7 +53,7 @@ public class TestCorruptFilesJsp  {
       conf.setInt("dfs.datanode.directoryscan.interval", 1);
       // datanode sends block reports
       conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000);
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
 
       FileSystem fs = cluster.getFileSystem();

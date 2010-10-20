@@ -207,7 +207,7 @@ public class TestLargeDirectoryDelete {
   
   @Test
   public void largeDelete() throws Throwable {
-    mc = new MiniDFSCluster(CONF, 1, true, null);
+    mc = new MiniDFSCluster.Builder(CONF).build();
     try {
       mc.waitActive();
       Assert.assertNotNull("No Namenode in cluster", mc.getNameNode());

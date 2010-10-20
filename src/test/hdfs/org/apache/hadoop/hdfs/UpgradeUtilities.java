@@ -104,7 +104,13 @@ public class UpgradeUtilities {
       
       // format and start NameNode and start DataNode
       GenericTestUtils.formatNamenode(config);
-      cluster = new MiniDFSCluster(config, 1, StartupOption.REGULAR);
+      cluster =  new MiniDFSCluster.Builder(config)
+                                   .numDataNodes(1)
+                                   .startupOption(StartupOption.REGULAR)
+                                   .format(false)
+                                   .manageDataDfsDirs(false)
+                                   .manageNameDfsDirs(false)
+                                   .build();
         
       NameNode namenode = cluster.getNameNode();
       namenodeStorageNamespaceID = namenode.versionRequest().getNamespaceID();

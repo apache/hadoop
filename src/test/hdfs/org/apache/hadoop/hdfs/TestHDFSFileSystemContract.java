@@ -30,7 +30,7 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   @Override
   protected void setUp() throws Exception {
     Configuration conf = new HdfsConfiguration();
-    cluster = new MiniDFSCluster(conf, 2, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
     fs = cluster.getFileSystem();
     defaultWorkingDirectory = "/user/" + 
            UserGroupInformation.getCurrentUser().getShortUserName();

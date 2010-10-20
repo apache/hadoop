@@ -43,7 +43,7 @@ public class TestNodeCount extends TestCase {
     final Configuration conf = new HdfsConfiguration();
     final short REPLICATION_FACTOR = (short)2;
     final MiniDFSCluster cluster = 
-      new MiniDFSCluster(conf, REPLICATION_FACTOR, true, null);
+      new MiniDFSCluster.Builder(conf).numDataNodes(REPLICATION_FACTOR).build();
     try {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final FileSystem fs = cluster.getFileSystem();

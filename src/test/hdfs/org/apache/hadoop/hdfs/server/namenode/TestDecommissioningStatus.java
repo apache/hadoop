@@ -82,7 +82,7 @@ public class TestDecommissioningStatus {
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY, 1);
     writeConfigFile(localFileSys, excludeFile, null);
 
-    cluster = new MiniDFSCluster(conf, numDatanodes, true, null);
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes).build();
     cluster.waitActive();
     fileSys = cluster.getFileSystem();
   }

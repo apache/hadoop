@@ -102,7 +102,7 @@ public class TestPermission extends TestCase {
     FileSystem fs = null;
 
     try {
-      cluster = new MiniDFSCluster(conf, 3, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
       fs = FileSystem.get(conf);
       FsPermission rootPerm = checkPermission(fs, "/", null);
@@ -150,7 +150,7 @@ public class TestPermission extends TestCase {
   public void testFilePermision() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY, true);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
 
     try {

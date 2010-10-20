@@ -38,7 +38,7 @@ public class TestHDFSTrash extends TestTrash {
     TestSetup setup = new TestSetup(new TestSuite(TestHDFSTrash.class)) {
       protected void setUp() throws Exception {
         Configuration conf = new HdfsConfiguration();
-        cluster = new MiniDFSCluster(conf, 2, true, null);
+        cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
       }
       protected void tearDown() throws Exception {
         if (cluster != null) { cluster.shutdown(); }

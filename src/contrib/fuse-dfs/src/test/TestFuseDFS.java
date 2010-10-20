@@ -115,7 +115,7 @@ public class TestFuseDFS extends TestCase {
     try {
       Configuration conf = new HdfsConfiguration();
       conf.setBoolean(DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,false);
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       fileSys = (DistributedFileSystem)cluster.getFileSystem();
       assertTrue(fileSys.getFileStatus(new Path("/")).isDir());
       mount(mpoint, fileSys.getUri());

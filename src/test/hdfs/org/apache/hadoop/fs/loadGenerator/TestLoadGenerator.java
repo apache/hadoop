@@ -150,7 +150,7 @@ public class TestLoadGenerator extends Configured implements Tool {
     writer.write(FILE_STRUCTURE_SECOND_LINE+"\n");
     writer.close();
     
-    MiniDFSCluster cluster = new MiniDFSCluster(CONF, 3, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(3).build();
     cluster.waitActive();
     
     try {

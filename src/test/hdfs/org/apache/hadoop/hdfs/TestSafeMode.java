@@ -58,7 +58,7 @@ public class TestSafeMode extends TestCase {
       Configuration conf = new HdfsConfiguration();
       // disable safemode extension to make the test run faster.
       conf.set(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, "1");
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
       
       fs = (DistributedFileSystem)cluster.getFileSystem();
@@ -74,7 +74,7 @@ public class TestSafeMode extends TestCase {
       cluster.shutdown();
       
       // now bring up just the NameNode.
-      cluster = new MiniDFSCluster(conf, 0, false, null);
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false).build();
       cluster.waitActive();
       fs = (DistributedFileSystem)cluster.getFileSystem();
       

@@ -58,12 +58,14 @@ public class TestDistributedUpgrade extends TestCase {
    */
   void startNameNodeShouldFail(StartupOption operation) {
     try {
-      //cluster = new MiniDFSCluster(conf, 0, operation); // should fail
+      //cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).startupOption(operation).build(); // should fail
       // we set manage dirs to true as NN has to start from untar'ed image with 
       // nn dirs set to name1 and name2
-      cluster = new MiniDFSCluster(0, conf, 0, false, true,
-          operation, null); // Should fail
-      throw new AssertionError("NameNode should have failed to start");
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                              .format(false)
+                                              .startupOption(operation)
+                                              .build(); // should fail
+      throw new AssertionError("Jakob was here. NameNode should have failed to start");
     } catch (Exception expected) {
       expected = null;
       // expected
@@ -111,9 +113,12 @@ public class TestDistributedUpgrade extends TestCase {
     startNameNodeShouldFail(StartupOption.REGULAR);
 
     log("Start NameNode only distributed upgrade", numDirs);
-    // cluster = new MiniDFSCluster(conf, 0, StartupOption.UPGRADE);
-    cluster = new MiniDFSCluster(0, conf, 0, false, true,
-                                  StartupOption.UPGRADE, null);
+    // cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).format(false)
+    // .startupOption(StartupOption.UPGRADE).build();
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
+                                              .format(false)
+                                              .startupOption(StartupOption.UPGRADE)
+                                              .build();
     cluster.shutdown();
 
     log("NameNode start in regular mode when dustributed upgrade has been started", numDirs);
@@ -123,8 +128,11 @@ public class TestDistributedUpgrade extends TestCase {
     startNameNodeShouldFail(StartupOption.ROLLBACK);
 
     log("Normal distributed upgrade for the cluster", numDirs);
-    cluster = new MiniDFSCluster(0, conf, numDNs, false, true,
-                                  StartupOption.UPGRADE, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(numDNs)
+                                .format(false)
+                                .startupOption(StartupOption.UPGRADE)
+                                .build();
     DFSAdmin dfsAdmin = new DFSAdmin();
     dfsAdmin.setConf(conf);
     dfsAdmin.run(new String[] {"-safemode", "wait"});
@@ -132,8 +140,12 @@ public class TestDistributedUpgrade extends TestCase {
 
     // it should be ok to start in regular mode
     log("NameCluster regular startup after the upgrade", numDirs);
-    cluster = new MiniDFSCluster(0, conf, numDNs, false, true,
-                                  StartupOption.REGULAR, null);
+    cluster = new MiniDFSCluster.Builder(conf)
+                                .numDataNodes(numDNs)
+                                .format(false)
+                                .startupOption(StartupOption.REGULAR)
+                                .build();
+
     cluster.waitActive();
     cluster.shutdown();
   }

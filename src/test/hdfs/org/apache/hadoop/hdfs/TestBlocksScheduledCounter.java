@@ -20,13 +20,12 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
+import junit.framework.TestCase;
+
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-
-import junit.framework.TestCase;
+import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
 
 /**
  * This class tests DatanodeDescriptor.getBlocksScheduled() at the
@@ -36,9 +35,9 @@ import junit.framework.TestCase;
 public class TestBlocksScheduledCounter extends TestCase {
 
   public void testBlocksScheduledCounter() throws IOException {
-    
-    MiniDFSCluster cluster = new MiniDFSCluster(new HdfsConfiguration(), 1, 
-                                                true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration())
+                                               .build();
+
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     

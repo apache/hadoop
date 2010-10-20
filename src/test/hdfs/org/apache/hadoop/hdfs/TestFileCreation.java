@@ -106,8 +106,9 @@ public class TestFileCreation extends junit.framework.TestCase {
     conf.setInt(DFSConfigKeys.DFS_CLIENT_WRITE_PACKET_SIZE_KEY, FSConstants.DEFAULT_WRITE_PACKET_SIZE);
     conf.setInt("dfs.replication", FSConstants.DEFAULT_REPLICATION_FACTOR + 1);
     conf.setInt("io.file.buffer.size", FSConstants.DEFAULT_FILE_BUFFER_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster(conf,
-        FSConstants.DEFAULT_REPLICATION_FACTOR + 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                     .numDataNodes(FSConstants.DEFAULT_REPLICATION_FACTOR + 1)
+                     .build();
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     try {
@@ -131,7 +132,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     try {
 
@@ -210,7 +211,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     FileSystem localfs = FileSystem.getLocal(conf);
 
@@ -275,7 +276,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     cluster.waitActive();
     InetSocketAddress addr = new InetSocketAddress("localhost",
@@ -349,7 +350,7 @@ public class TestFileCreation extends junit.framework.TestCase {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
@@ -419,7 +420,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     }
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = null;
     try {
       cluster.waitActive();
@@ -489,8 +490,9 @@ public class TestFileCreation extends junit.framework.TestCase {
         Thread.sleep(2*MAX_IDLE_TIME);
       } catch (InterruptedException e) {
       }
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                               .format(false)
+                                               .build();
       cluster.waitActive();
 
       // restart cluster yet again. This triggers the code to read in
@@ -500,8 +502,9 @@ public class TestFileCreation extends junit.framework.TestCase {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
       }
-      cluster = new MiniDFSCluster(nnport, conf, 1, false, true, 
-                                   null, null, null);
+      cluster = new MiniDFSCluster.Builder(conf).nameNodePort(nnport)
+                                                .format(false)
+                                                .build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
 
@@ -554,7 +557,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     DFSClient dfsclient = dfs.dfs;
@@ -589,7 +592,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     if (simulatedStorage) {
       conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
     }
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     FileSystem fs = cluster.getFileSystem();
     final Path path = new Path("/" + System.currentTimeMillis()
         + "-testFileCreationNonRecursive");
@@ -689,7 +692,7 @@ public class TestFileCreation extends junit.framework.TestCase {
    */
   public void testConcurrentFileCreation() throws IOException {
     Configuration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
 
     try {
       FileSystem fs = cluster.getFileSystem();
@@ -731,7 +734,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     conf.setInt("dfs.heartbeat.interval", 1);
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
@@ -790,7 +793,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     Configuration conf = new HdfsConfiguration();
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();
@@ -821,7 +824,7 @@ public class TestFileCreation extends junit.framework.TestCase {
     conf.setInt("ipc.ping.interval", 10000); // hdfs timeout is now 10 second
 
     // create cluster
-    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
     DistributedFileSystem dfs = null;
     try {
       cluster.waitActive();

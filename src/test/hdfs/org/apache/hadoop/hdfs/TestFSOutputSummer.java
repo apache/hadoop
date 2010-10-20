@@ -113,8 +113,9 @@ public class TestFSOutputSummer extends TestCase {
     Configuration conf = new HdfsConfiguration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, BYTES_PER_CHECKSUM);
-    MiniDFSCluster cluster = new MiniDFSCluster(
-        conf, NUM_OF_DATANODES, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                                               .numDataNodes(NUM_OF_DATANODES)
+                                               .build();
     fileSys = cluster.getFileSystem();
     try {
       Path file = new Path("try.dat");

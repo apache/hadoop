@@ -36,7 +36,7 @@ public class TestAbandonBlock extends junit.framework.TestCase {
       = "/" + TestAbandonBlock.class.getSimpleName() + "_"; 
 
   public void testAbandonBlock() throws IOException {
-    MiniDFSCluster cluster = new MiniDFSCluster(CONF, 2, true, null);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     FileSystem fs = cluster.getFileSystem();
 
     String src = FILE_NAME_PREFIX + "foo";

@@ -55,7 +55,7 @@ public class TestListCorruptFileBlocks extends TestCase {
       Configuration conf = new HdfsConfiguration();
       conf.setInt("dfs.datanode.directoryscan.interval", 1); // datanode scans directories
       conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000); // datanode sends block reports
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
 
       // create two files with one block each
@@ -126,7 +126,7 @@ public class TestListCorruptFileBlocks extends TestCase {
 
     MiniDFSCluster cluster = null;
     try {
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       cluster.waitActive();
       fs = cluster.getFileSystem();
       DFSTestUtil util = new DFSTestUtil("testGetCorruptFiles", 3, 1, 1024);
@@ -213,7 +213,7 @@ public class TestListCorruptFileBlocks extends TestCase {
       Configuration conf = new HdfsConfiguration();
       conf.setInt("dfs.datanode.directoryscan.interval", 15); // datanode scans directories
       conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000); // datanode sends block reports
-      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster = new MiniDFSCluster.Builder(conf).build();
       FileSystem fs = cluster.getFileSystem();
       final int maxCorruptFileBlocks = 
         FSNamesystem.DEFAULT_MAX_CORRUPT_FILEBLOCKS_RETURNED;
