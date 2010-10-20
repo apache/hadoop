@@ -1018,6 +1018,7 @@ Release 0.21.0 - Unreleased
    HBASE-3115  HBaseClient wastes 1 TCP packet per RPC
    HBASE-3076  Allow to disable automatic shipping of dependency jars
                for mapreduce jobs (Bruno Dumon)
+   HBASE-3128  On assign, if ConnectException, reassign another server
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

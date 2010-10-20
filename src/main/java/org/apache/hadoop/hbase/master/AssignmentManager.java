@@ -729,7 +729,7 @@ public class AssignmentManager extends ZooKeeperListener {
     } catch (Throwable t) {
       LOG.warn("Failed assignment of " +
         state.getRegion().getRegionNameAsString() + " to " +
-        plan.getDestination(), t);
+        plan.getDestination() + ", trying to assign elsewhere instead", t);
       // Clean out plan we failed execute and one that doesn't look like it'll
       // succeed anyways; we need a new plan!
       this.regionPlans.remove(state.getRegion().getEncodedName());
@@ -873,18 +873,11 @@ public class AssignmentManager extends ZooKeeperListener {
     try {
       serverManager.sendRegionClose(regions.get(region), state.getRegion());
     } catch (IOException e) {
-      if (e instanceof RemoteException) {
-        e = ((RemoteException)e).unwrapRemoteException();
-      }
-      if (e instanceof NotServingRegionException) {
-        LOG.warn("Attempted to close region " + region.getRegionNameAsString() +
-          " but got an NSRE", e);
-      }
-      // For now call abort if unexpected exception -- seeing it up in hudson.
+      // For now call abort if unexpected exception -- radical, but will get fellas attention.
       // St.Ack 20101012
       this.master.abort("Remote unexpected exception", e);
     } catch (Throwable t) {
-      // For now call abort if unexpected exception -- seeing it up in hudson.
+      // For now call abort if unexpected exception -- radical, but will get fellas attention.
       // St.Ack 20101012
       this.master.abort("Unexpected exception", t);
     }

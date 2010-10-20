@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -558,21 +558,24 @@ public class ServerManager {
     hri.closeRegion(region);
   }
 
-  private HRegionInterface getServerConnection(HServerInfo info) {
-    try {
-      HConnection connection =
-        HConnectionManager.getConnection(this.master.getConfiguration());
-      HRegionInterface hri = serverConnections.get(info.getServerName());
-      if (hri == null) {
-        LOG.debug("New connection to " + info.getServerName());
-        hri = connection.getHRegionConnection(info.getServerAddress(), false);
-        serverConnections.put(info.getServerName(), hri);
-      }
-      return hri;
-    } catch (IOException e) {
-      LOG.error("Error connecting to region server", e);
-      throw new RuntimeException("Fatal error connection to RS", e);
+  /**
+   * @param info
+   * @return
+   * @throws IOException
+   * @throws RetriesExhaustedException wrapping a ConnectException if failed
+   * putting up proxy.
+   */
+  private HRegionInterface getServerConnection(HServerInfo info)
+  throws IOException {
+    HConnection connection =
+      HConnectionManager.getConnection(this.master.getConfiguration());
+    HRegionInterface hri = serverConnections.get(info.getServerName());
+    if (hri == null) {
+      LOG.debug("New connection to " + info.getServerName());
+      hri = connection.getHRegionConnection(info.getServerAddress(), false);
+      this.serverConnections.put(info.getServerName(), hri);
     }
+    return hri;
   }
 
   /**
