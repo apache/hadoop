@@ -150,7 +150,7 @@ public class SchemaResource extends ResourceBase {
           if (htd.hasFamily(hcd.getName())) {
             admin.modifyColumn(name, hcd);
           } else {
-            admin.addColumn(model.getName(), hcd);            
+            admin.addColumn(name, hcd);            
           }
         }
       } catch (IOException e) {

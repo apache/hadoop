@@ -601,6 +601,8 @@ Release 0.21.0 - Unreleased
    HBASE-3031  CopyTable MR job named "Copy Table" in Driver
    HBASE-2658  REST (stargate) TableRegionModel Regions need to be updated to
                work w/ new region naming convention from HBASE-2531
+   HBASE-3140  Rest schema modification throw null pointer exception
+               (David Worms via Stack)
 
 
   IMPROVEMENTS
