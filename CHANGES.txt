@@ -599,6 +599,8 @@ Release 0.21.0 - Unreleased
    HBASE-2985  HRegionServer.multi() no longer calls HRegion.put(List) when 
                possible
    HBASE-3031  CopyTable MR job named "Copy Table" in Driver
+   HBASE-2658  REST (stargate) TableRegionModel Regions need to be updated to
+               work w/ new region naming convention from HBASE-2531
 
 
   IMPROVEMENTS

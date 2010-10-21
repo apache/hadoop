@@ -25,6 +25,8 @@ import java.io.Serializable;
 import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -91,13 +93,11 @@ public class TableRegionModel implements Serializable {
    */
   @XmlAttribute
   public String getName() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(table);
-    sb.append(',');
-    sb.append(Bytes.toString(startKey));
-    sb.append(',');
-    sb.append(id);
-    return sb.toString();
+    byte [] tableNameAsBytes = Bytes.toBytes(this.table);
+    byte [] nameAsBytes = HRegionInfo.createRegionName(tableNameAsBytes,
+      this.startKey, this.id,
+      !HTableDescriptor.isMetaTable(tableNameAsBytes));
+    return Bytes.toString(nameAsBytes);
   }
 
   /**
@@ -137,9 +137,11 @@ public class TableRegionModel implements Serializable {
    */
   public void setName(String name) {
     String split[] = name.split(",");
-    table = split[0];
-    startKey = Bytes.toBytes(split[1]);
-    id = Long.valueOf(split[2]);
+    this.table = split[0];
+    this.startKey = Bytes.toBytes(split[1]);
+    String tail = split[2];
+    split = tail.split("\\.");
+    id = Long.valueOf(split[0]);
   }
 
   /**

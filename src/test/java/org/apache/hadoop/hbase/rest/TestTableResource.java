@@ -170,7 +170,7 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
         HRegionInfo hri = e.getKey();
         String hriRegionName = hri.getRegionNameAsString();
         String regionName = region.getName();
-        if (hriRegionName.startsWith(regionName)) {
+        if (hriRegionName.equals(regionName)) {
           found = true;
           byte[] startKey = hri.getStartKey();
           byte[] endKey = hri.getEndKey();

@@ -261,7 +261,16 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.encodedName = other.getEncodedName();
   }
 
-  private static byte [] createRegionName(final byte [] tableName,
+  /**
+   * Make a region name of passed parameters.
+   * @param tableName
+   * @param startKey Can be null
+   * @param id Region id (Usually timestamp from when region was created).
+   * @param newFormat should we create the region name in the new format
+   *                  (such that it contains its encoded name?).
+   * @return Region name made of passed tableName, startKey and id
+   */
+  public static byte [] createRegionName(final byte [] tableName,
       final byte [] startKey, final long regionid, boolean newFormat) {
     return createRegionName(tableName, startKey, Long.toString(regionid), newFormat);
   }
@@ -270,7 +279,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * Make a region name of passed parameters.
    * @param tableName
    * @param startKey Can be null
-   * @param id Region id.
+   * @param id Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id
@@ -279,11 +288,12 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
       final byte [] startKey, final String id, boolean newFormat) {
     return createRegionName(tableName, startKey, Bytes.toBytes(id), newFormat);
   }
+
   /**
    * Make a region name of passed parameters.
    * @param tableName
    * @param startKey Can be null
-   * @param id Region id
+   * @param id Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id

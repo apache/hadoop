@@ -26,6 +26,8 @@ import java.io.StringWriter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
@@ -75,11 +77,27 @@ public class TestTableRegionModel extends TestCase {
     assertEquals(model.getId(), ID);
     assertEquals(model.getLocation(), LOCATION);
     assertEquals(model.getName(), 
-      TABLE + "," + Bytes.toString(START_KEY) + "," + Long.toString(ID));
+      TABLE + "," + Bytes.toString(START_KEY) + "," + Long.toString(ID) +
+      ".ad9860f031282c46ed431d7af8f94aca.");
   }
 
   public void testBuildModel() throws Exception {
     checkModel(buildTestModel());
+  }
+
+  public void testGetName() {
+    TableRegionModel model = buildTestModel();
+    String modelName = model.getName();
+    HRegionInfo hri = new HRegionInfo(new HTableDescriptor(TABLE),
+      START_KEY, END_KEY, false, ID);
+    assertEquals(modelName, hri.getRegionNameAsString());
+  }
+
+  public void testSetName() {
+    TableRegionModel model = buildTestModel();
+    String name = model.getName();
+    model.setName(name);
+    assertEquals(name, model.getName());
   }
 
   public void testFromXML() throws Exception {
