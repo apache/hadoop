@@ -53,9 +53,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.HbaseMapWritable;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.util.BloomFilter;
+import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
@@ -1944,9 +1948,31 @@ public class HFile {
             if (Bytes.compareTo(e.getKey(), Bytes.toBytes("MAX_SEQ_ID_KEY"))==0) {
               long seqid = Bytes.toLong(e.getValue());
               System.out.println(seqid);
+            } else if (Bytes.compareTo(e.getKey(),
+                Bytes.toBytes("TIMERANGE")) == 0) {
+              TimeRangeTracker timeRangeTracker = new TimeRangeTracker();
+              Writables.copyWritable(e.getValue(), timeRangeTracker);
+              System.out.println(timeRangeTracker.getMinimumTimestamp() +
+                  "...." + timeRangeTracker.getMaximumTimestamp());
+            } else if (Bytes.compareTo(e.getKey(), FileInfo.AVG_KEY_LEN) == 0 ||
+                Bytes.compareTo(e.getKey(), FileInfo.AVG_VALUE_LEN) == 0) {
+              System.out.println(Bytes.toInt(e.getValue()));
             } else {
               System.out.println(Bytes.toStringBinary(e.getValue()));
             }
+          }
+
+          //Printing bloom information
+          ByteBuffer b = reader.getMetaBlock("BLOOM_FILTER_META", false);
+          if (b!= null) {
+            BloomFilter bloomFilter = new ByteBloomFilter(b);
+            System.out.println("BloomSize: " + bloomFilter.getByteSize());
+            System.out.println("No of Keys in bloom: " +
+                bloomFilter.getKeyCount());
+            System.out.println("Max Keys for bloom: " +
+                bloomFilter.getMaxKeys());
+          } else {
+            System.out.println("Could not get bloom data from meta block");
           }
         }
         reader.close();
