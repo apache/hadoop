@@ -132,7 +132,7 @@ module Hbase
         end
 
         # Add column to the table
-        descriptor = hcd(arg)
+        descriptor = hcd(arg, htd)
         if arg[COMPRESSION_COMPACT]
           descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
         end
@@ -219,7 +219,7 @@ module Hbase
 
         # No method parameter, try to use the args as a column definition
         unless method = arg.delete(METHOD)
-          descriptor = hcd(arg)
+          descriptor = hcd(arg, htd)
           if arg[COMPRESSION_COMPACT]
             descriptor.setValue(COMPRESSION_COMPACT, arg[COMPRESSION_COMPACT])
           end
@@ -320,29 +320,26 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Return a new HColumnDescriptor made of passed args
-    def hcd(arg)
+    def hcd(arg, htd)
       # String arg, single parameter constructor
       return HColumnDescriptor.new(arg) if arg.kind_of?(String)
 
-      # TODO: This is brittle code.
-      # Here is current HCD constructor:
-      # public HColumnDescriptor(final byte [] familyName, final int maxVersions,
-      # final String compression, final boolean inMemory,
-      # final boolean blockCacheEnabled, final int blocksize,
-      # final int timeToLive, final boolean bloomFilter, final int scope) {
       raise(ArgumentError, "Column family #{arg} must have a name") unless name = arg[NAME]
 
-      # TODO: What encoding are Strings in jruby?
-      return HColumnDescriptor.new(name.to_java_bytes,
-        # JRuby uses longs for ints. Need to convert.  Also constants are String
-        arg.include?(VERSIONS)? JInteger.new(arg[VERSIONS]): HColumnDescriptor::DEFAULT_VERSIONS,
-        arg.include?(HColumnDescriptor::COMPRESSION)? arg[HColumnDescriptor::COMPRESSION]: HColumnDescriptor::DEFAULT_COMPRESSION,
-        arg.include?(IN_MEMORY)? JBoolean.valueOf(arg[IN_MEMORY]): HColumnDescriptor::DEFAULT_IN_MEMORY,
-        arg.include?(HColumnDescriptor::BLOCKCACHE)? JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE]): HColumnDescriptor::DEFAULT_BLOCKCACHE,
-        arg.include?(HColumnDescriptor::BLOCKSIZE)? JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE]): HColumnDescriptor::DEFAULT_BLOCKSIZE,
-        arg.include?(HColumnDescriptor::TTL)? JInteger.new(arg[HColumnDescriptor::TTL]): HColumnDescriptor::DEFAULT_TTL,
-        arg.include?(HColumnDescriptor::BLOOMFILTER)? arg[HColumnDescriptor::BLOOMFILTER]: HColumnDescriptor::DEFAULT_BLOOMFILTER,
-        arg.include?(HColumnDescriptor::REPLICATION_SCOPE)? JInteger.new(arg[REPLICATION_SCOPE]): HColumnDescriptor::DEFAULT_REPLICATION_SCOPE)
+      family = htd.getFamily(name.to_java_bytes)
+      # create it if it's a new family
+      family ||= HColumnDescriptor.new(name.to_java_bytes)
+
+      family.setBlockCacheEnabled(JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE])) if arg.include?(HColumnDescriptor::BLOCKCACHE)
+      family.setBloomFilterType(arg[HColumnDescriptor::BLOOMFILTER]) if arg.include?(HColumnDescriptor::BLOOMFILTER)
+      family.setScope(JInteger.valueOf(arg[REPLICATION_SCOPE])) if arg.include?(HColumnDescriptor::REPLICATION_SCOPE)
+      family.setInMemory(JBoolean.valueOf(arg[IN_MEMORY])) if arg.include?(HColumnDescriptor::IN_MEMORY)
+      family.setTimeToLive(JInteger.valueOf(arg[HColumnDescriptor::TTL])) if arg.include?(HColumnDescriptor::TTL)
+      family.setCompressionType(arg[HColumnDescriptor::COMPRESSION]) if arg.include?(HColumnDescriptor::COMPRESSION)
+      family.setBlocksize(JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE])) if arg.include?(HColumnDescriptor::BLOCKSIZE)
+      family.setMaxVersions(JInteger.valueOf(arg[VERSIONS])) if arg.include?(HColumnDescriptor::VERSIONS)
+
+      return family
     end
 
     #----------------------------------------------------------------------------------------------

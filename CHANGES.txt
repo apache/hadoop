@@ -606,6 +606,9 @@ Release 0.21.0 - Unreleased
    HBASE-2998  rolling-restart.sh shouldn't rely on zoo.cfg
    HBASE-3145  importtsv fails when the line contains no data
                (Kazuki Ohta via Todd Lipcon)
+   HBASE-2984  [shell] Altering a family shouldn't reset to default unchanged
+               attributes
+   HBASE-3143  Adding the tests' hbase-site.xml to the jar breaks some clients
 
 
   IMPROVEMENTS
