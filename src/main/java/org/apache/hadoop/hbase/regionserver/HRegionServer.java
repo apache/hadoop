@@ -1131,13 +1131,13 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Start executor services
     this.service = new ExecutorService(getServerName());
     this.service.startExecutorService(ExecutorType.RS_OPEN_REGION,
-      conf.getInt("hbase.regionserver.executor.openregion.threads", 5));
+      conf.getInt("hbase.regionserver.executor.openregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_OPEN_ROOT,
       conf.getInt("hbase.regionserver.executor.openroot.threads", 1));
     this.service.startExecutorService(ExecutorType.RS_OPEN_META,
       conf.getInt("hbase.regionserver.executor.openmeta.threads", 1));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_REGION,
-      conf.getInt("hbase.regionserver.executor.closeregion.threads", 5));
+      conf.getInt("hbase.regionserver.executor.closeregion.threads", 3));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_ROOT,
       conf.getInt("hbase.regionserver.executor.closeroot.threads", 1));
     this.service.startExecutorService(ExecutorType.RS_CLOSE_META,

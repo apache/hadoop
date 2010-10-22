@@ -22,11 +22,10 @@ package org.apache.hadoop.hbase.executor;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -41,7 +40,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * threadpool, a queue to which {@link EventHandler.EventType}s can be submitted,
  * and a <code>Runnable</code> that handles the object that is added to the queue.
  *
- * <p>In order to create a new service, create an instance of this class and 
+ * <p>In order to create a new service, create an instance of this class and
  * then do: <code>instance.startExecutorService("myService");</code>.  When done
  * call {@link #shutdown()}.
  *
@@ -170,9 +169,7 @@ public class ExecutorService {
       throw new RuntimeException("An executor service with the name " + name +
       " is already running (2)!");
     }
-    LOG.debug("Starting executor service name=" + name +
-      ", corePoolSize=" + hbes.threadPoolExecutor.getCorePoolSize() +
-      ", maxPoolSize=" + hbes.threadPoolExecutor.getMaximumPoolSize());
+    LOG.debug("Starting executor service name=" + name);
   }
 
   boolean isExecutorServiceRunning(String name) {
@@ -182,7 +179,7 @@ public class ExecutorService {
   public void shutdown() {
     for(Entry<String, Executor> entry: this.executorMap.entrySet()) {
       List<Runnable> wasRunning =
-        entry.getValue().threadPoolExecutor.shutdownNow();
+        entry.getValue().poolExecutor.shutdownNow();
       if (!wasRunning.isEmpty()) {
         LOG.info(entry.getKey() + " had " + wasRunning + " on shutdown");
       }
@@ -243,15 +240,14 @@ public class ExecutorService {
   /**
    * Executor instance.
    */
-  private static class Executor {
-    // default number of threads in the pool
-    private int corePoolSize = 1;
+  static class Executor {
     // how long to retain excess threads
-    private long keepAliveTimeInMillis = 1000;
+    final long keepAliveTimeInMillis = 1000;
     // the thread pool executor that services the requests
-    private final ThreadPoolExecutor threadPoolExecutor;
+    final java.util.concurrent.ExecutorService poolExecutor;
     // work queue to use - unbounded queue
-    BlockingQueue<Runnable> workQueue = new PriorityBlockingQueue<Runnable>();
+    final PriorityBlockingQueue<Runnable> workQueue =
+      new PriorityBlockingQueue<Runnable>();
     private final AtomicInteger threadid = new AtomicInteger(0);
     private final String name;
     private final Map<EventHandler.EventType, EventHandlerListener> eventHandlerListeners;
@@ -261,12 +257,10 @@ public class ExecutorService {
       this.name = name;
       this.eventHandlerListeners = eventHandlerListeners;
       // create the thread pool executor
-      this.threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, maxThreads,
-          keepAliveTimeInMillis, TimeUnit.MILLISECONDS, workQueue);
       // name the threads for this threadpool
       ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
       tfb.setNameFormat(this.name + "-" + this.threadid.incrementAndGet());
-      this.threadPoolExecutor.setThreadFactory(tfb.build());
+      this.poolExecutor = Executors.newFixedThreadPool(maxThreads, tfb.build());
     }
 
     /**
@@ -281,7 +275,7 @@ public class ExecutorService {
       if (listener != null) {
         event.setListener(listener);
       }
-      this.threadPoolExecutor.execute(event);
+      this.poolExecutor.execute(event);
     }
   }
 }
