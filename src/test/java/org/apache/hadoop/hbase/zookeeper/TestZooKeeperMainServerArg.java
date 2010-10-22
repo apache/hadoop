@@ -17,38 +17,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.zookeeper;
 
-import java.util.Properties;
-import java.util.Map.Entry;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.junit.Test;
 
-/**
- * Tool for reading ZooKeeper servers from HBase XML configuration and producing
- * a line-by-line list for use by bash scripts.
- */
-public class ZKServerTool {
-  /**
-   * Run the tool.
-   * @param args Command line arguments.
-   */
-  public static void main(String args[]) {
-    Configuration conf = HBaseConfiguration.create();
-    // Note that we do not simply grab the property
-    // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
-    // user may be using a zoo.cfg file.
-    Properties zkProps = ZKConfig.makeZKProps(conf);
-    for (Entry<Object, Object> entry : zkProps.entrySet()) {
-      String key = entry.getKey().toString().trim();
-      String value = entry.getValue().toString().trim();
-      if (key.startsWith("server.")) {
-        String[] parts = value.split(":");
-        String host = parts[0];
-        System.out.println("ZK host:" + host);
-      }
-    }
+
+public class TestZooKeeperMainServerArg {
+  private final ZooKeeperMainServerArg parser = new ZooKeeperMainServerArg();
+
+  @Test public void test() {
+    Configuration c = HBaseConfiguration.create();
+    assertEquals("localhost:" + c.get("hbase.zookeeper.property.clientPort"),
+      parser.parse(c));
+    final String port = "1234";
+    c.set("hbase.zookeeper.property.clientPort", port);
+    c.set("hbase.zookeeper.quorum", "example.com");
+    assertEquals("example.com:" + port, parser.parse(c));
+    c.set("hbase.zookeeper.quorum", "example1.com,example2.com,example3.com");
+    assertTrue(port, parser.parse(c).matches("example[1-3]\\.com:" + port));
   }
 }

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
@@ -807,6 +808,30 @@ public class ZKUtil {
       zkw.interruptedException(e);
       return -1;
     }
+  }
+
+  /**
+   * Async creates the specified node with the specified data.
+   *
+   * <p>Throws an exception if the node already exists.
+   *
+   * <p>The node created is persistent and open access.
+   *
+   * @param zkw zk reference
+   * @param znode path of node to create
+   * @param data data of node to create
+   * @param cb
+   * @param ctx
+   * @return version of node created
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NodeExistsException if node already exists
+   */
+  public static void asyncCreate(ZooKeeperWatcher zkw,
+      String znode, byte [] data, final AsyncCallback.StringCallback cb,
+      final Object ctx)
+  throws KeeperException, KeeperException.NodeExistsException {
+    zkw.getZooKeeper().create(znode, data, Ids.OPEN_ACL_UNSAFE,
+       CreateMode.PERSISTENT, cb, ctx);
   }
 
   /**

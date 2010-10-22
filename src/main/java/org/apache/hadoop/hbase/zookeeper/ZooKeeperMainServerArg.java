@@ -27,28 +27,42 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
 /**
- * Tool for reading ZooKeeper servers from HBase XML configuration and producing
- * a line-by-line list for use by bash scripts.
+ * Tool for reading a ZooKeeper server from HBase XML configuration producing
+ * the '-server host:port' argument to pass ZooKeeperMain.  This program
+ * emits either '-server HOST:PORT" where HOST is one of the zk ensemble
+ * members plus zk client port OR it emits '' if no zk servers found (Yes,
+ * it emits '-server' too).
  */
-public class ZKServerTool {
-  /**
-   * Run the tool.
-   * @param args Command line arguments.
-   */
-  public static void main(String args[]) {
-    Configuration conf = HBaseConfiguration.create();
+public class ZooKeeperMainServerArg {
+  public String parse(final Configuration c) {
     // Note that we do not simply grab the property
     // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
     // user may be using a zoo.cfg file.
-    Properties zkProps = ZKConfig.makeZKProps(conf);
-    for (Entry<Object, Object> entry : zkProps.entrySet()) {
+    Properties zkProps = ZKConfig.makeZKProps(c);
+    String host = null;
+    String clientPort = null;
+    for (Entry<Object, Object> entry: zkProps.entrySet()) {
       String key = entry.getKey().toString().trim();
       String value = entry.getValue().toString().trim();
-      if (key.startsWith("server.")) {
+      if (key.startsWith("server.") && host == null) {
         String[] parts = value.split(":");
-        String host = parts[0];
-        System.out.println("ZK host:" + host);
+        host = parts[0];
+      } else if (key.endsWith("clientPort")) {
+        clientPort = value;
       }
+      if (host != null && clientPort != null) break;
     }
+    return host != null && clientPort != null? host + ":" + clientPort: null;
+  }
+
+  /**
+   * Run the tool.
+   * @param args Command line arguments. First arg is path to zookeepers file.
+   */
+  public static void main(String args[]) {
+    Configuration conf = HBaseConfiguration.create();
+    String hostport = new ZooKeeperMainServerArg().parse(conf);
+    System.out.println((hostport == null || hostport.length() == 0)? "":
+      "-server " + hostport);
   }
 }

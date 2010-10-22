@@ -603,6 +603,7 @@ Release 0.21.0 - Unreleased
                work w/ new region naming convention from HBASE-2531
    HBASE-3140  Rest schema modification throw null pointer exception
                (David Worms via Stack)
+   HBASE-2998  rolling-restart.sh shouldn't rely on zoo.cfg
 
 
   IMPROVEMENTS

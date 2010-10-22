@@ -47,7 +47,7 @@ import org.apache.zookeeper.ZooKeeper;
  * <p>This class also holds and manages the connection to ZooKeeper.  Code to
  * deal with connection related events and exceptions are handled here.
  */
-public class ZooKeeperWatcher implements Watcher {
+public class ZooKeeperWatcher implements Watcher, Abortable {
   private static final Log LOG = LogFactory.getLog(ZooKeeperWatcher.class);
 
   // Identifiier for this watcher (for logging only).  Its made of the prefix
@@ -371,5 +371,10 @@ public class ZooKeeperWatcher implements Watcher {
       }
     } catch (InterruptedException e) {
     }
+  }
+
+  @Override
+  public void abort(String why, Throwable e) {
+    this.abortable.abort(why, e);
   }
 }

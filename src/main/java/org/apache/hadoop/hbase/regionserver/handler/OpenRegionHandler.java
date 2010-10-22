@@ -67,6 +67,10 @@ public class OpenRegionHandler extends EventHandler {
   public void process() throws IOException {
     final String name = regionInfo.getRegionNameAsString();
     LOG.debug("Processing open of " + name);
+    if (this.server.isStopped()) {
+      LOG.info("Server stopping, skipping open of " + name);
+      return;
+    }
     final String encodedName = regionInfo.getEncodedName();
 
     // TODO: Previously we would check for root region availability (but only that it

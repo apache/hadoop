@@ -74,7 +74,7 @@ hbase_rotate_log ()
 wait_until_done ()
 {
     p=$1
-    cnt=${HBASE_SLAVE_TIMEOUT:-60}
+    cnt=${HBASE_SLAVE_TIMEOUT:-300}
     origcnt=$cnt
     while kill -0 $p > /dev/null 2>&1; do
       if [ $cnt -gt 1 ]; then

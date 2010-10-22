@@ -170,7 +170,9 @@ public class ExecutorService {
       throw new RuntimeException("An executor service with the name " + name +
       " is already running (2)!");
     }
-    LOG.debug("Starting executor service: " + name);
+    LOG.debug("Starting executor service name=" + name +
+      ", corePoolSize=" + hbes.threadPoolExecutor.getCorePoolSize() +
+      ", maxPoolSize=" + hbes.threadPoolExecutor.getMaximumPoolSize());
   }
 
   boolean isExecutorServiceRunning(String name) {

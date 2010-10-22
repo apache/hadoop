@@ -262,7 +262,9 @@ elif [ "$COMMAND" = "zookeeper" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_ZOOKEEPER_OPTS"
   fi
 elif [ "$COMMAND" = "zkcli" ] ; then
-  CLASS='org.apache.zookeeper.ZooKeeperMain'
+  # ZooKeeperMainServerArg returns '-server HOST:PORT' or empty string.
+  SERVER_ARG=`"$bin"/hbase org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServerArg` 
+  CLASS="org.apache.zookeeper.ZooKeeperMain ${SERVER_ARG}"
 elif [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit 0

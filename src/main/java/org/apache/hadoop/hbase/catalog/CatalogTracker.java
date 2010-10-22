@@ -264,7 +264,7 @@ public class CatalogTracker {
         if (!refresh) {
           return current;
         }
-        if (verifyRegionLocation(current, META_REGION)) {
+        if (verifyRegionLocation(current, this.metaLocation, META_REGION)) {
           return current;
         }
         resetMetaLocation();
@@ -278,7 +278,7 @@ public class CatalogTracker {
         return null;
       }
       HRegionInterface newConnection = getCachedConnection(newLocation);
-      if (verifyRegionLocation(newConnection, META_REGION)) {
+      if (verifyRegionLocation(newConnection, this.metaLocation, META_REGION)) {
         setMetaLocation(newLocation);
         return newConnection;
       }
@@ -402,6 +402,7 @@ public class CatalogTracker {
   }
 
   private boolean verifyRegionLocation(HRegionInterface metaServer,
+      final HServerAddress address,
       byte [] regionName)
   throws IOException {
     if (metaServer == null) {
@@ -428,7 +429,8 @@ public class CatalogTracker {
         throw e;
       }
     }
-    LOG.info("Failed verification of " + Bytes.toString(regionName) + "; " + t);
+    LOG.info("Failed verification of " + Bytes.toString(regionName) +
+      " at address=" + address + "; " + t);
     return false;
   }
 
@@ -452,7 +454,8 @@ public class CatalogTracker {
       throw e;
     }
     return (connection == null)? false:
-      verifyRegionLocation(connection, HRegionInfo.ROOT_REGIONINFO.getRegionName());
+      verifyRegionLocation(connection,this.rootRegionTracker.getRootRegionLocation(),
+        HRegionInfo.ROOT_REGIONINFO.getRegionName());
   }
 
   /**
@@ -485,9 +488,7 @@ public class CatalogTracker {
       LOG.info("-ROOT- is not assigned; continuing");
     } else if (hsi.getServerAddress().equals(rootHsa)) {
       result.setFirst(true);
-      LOG.info(hsi.getServerName() + " carrying -ROOT-; deleting " +
-        "-ROOT- location from meta");
-      RootLocationEditor.deleteRootLocation(this.zookeeper);
+      LOG.info(hsi.getServerName() + " carrying -ROOT-; unsetting");
     }
     HServerAddress metaHsa = getMetaLocation();
     if (metaHsa == null) {

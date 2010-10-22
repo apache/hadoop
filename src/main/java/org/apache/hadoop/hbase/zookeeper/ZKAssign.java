@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -145,6 +146,36 @@ public class ZKAssign {
       String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
       ZKUtil.createAndWatch(zkw, node, data.getBytes());
+    }
+  }
+
+  /**
+   * Creates an unassigned node in the OFFLINE state for the specified region.
+   * <p>
+   * Runs asynchronously.  Depends on no pre-existing znode.
+   *
+   * <p>Sets a watcher on the unassigned region node.
+   *
+   * @param zkw zk reference
+   * @param region region to be created as offline
+   * @param serverName server event originates from
+   * @param cb
+   * @param ctx
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws KeeperException.NodeExistsException if node already exists
+   */
+  public static void asyncCreateNodeOffline(ZooKeeperWatcher zkw,
+      HRegionInfo region, String serverName,
+      final AsyncCallback.StringCallback cb, final Object ctx)
+  throws KeeperException {
+    LOG.debug(zkw.prefix("Async create of unassigned node for " +
+      region.getEncodedName() + " with OFFLINE state"));
+    RegionTransitionData data = new RegionTransitionData(
+        EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
+    synchronized(zkw.getNodes()) {
+      String node = getNodeName(zkw, region.getEncodedName());
+      zkw.getNodes().add(node);
+      ZKUtil.asyncCreate(zkw, node, data.getBytes(), cb, ctx);
     }
   }
 

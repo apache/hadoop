@@ -259,41 +259,31 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.activeMasterManager = new ActiveMasterManager(zooKeeper, address, this);
       this.zooKeeper.registerListener(activeMasterManager);
       stallIfBackupMaster(this.conf, this.activeMasterManager);
-      activeMasterManager.blockUntilBecomingActiveMaster();
-
+      this.activeMasterManager.blockUntilBecomingActiveMaster();
       // We are either the active master or we were asked to shutdown
-
       if (!this.stopped) {
-        // We are active master.  Finish init and loop until we are closed.
         finishInitialization();
         loop();
-        // Once we break out of here, we are being shutdown
-
-        // Stop chores
-        stopChores();
-
-        // Wait for all the remaining region servers to report in IFF we were
-        // running a cluster shutdown AND we were NOT aborting.
-        if (!this.abort && this.serverManager.isClusterShutdown()) {
-          this.serverManager.letRegionServersShutdown();
-        }
-        stopServiceThreads();
       }
-
-      // Handle either a backup or active master being stopped
-
+    } catch (Throwable t) {
+      abort("Unhandled exception. Starting shutdown.", t);
+    } finally {
+      stopChores();
+      // Wait for all the remaining region servers to report in IFF we were
+      // running a cluster shutdown AND we were NOT aborting.
+      if (!this.abort && this.serverManager.isClusterShutdown()) {
+        this.serverManager.letRegionServersShutdown();
+      }
+      stopServiceThreads();
       // Stop services started for both backup and active masters
-      this.activeMasterManager.stop();
+      if (this.activeMasterManager != null) this.activeMasterManager.stop();
       this.catalogTracker.stop();
       this.serverManager.stop();
       this.assignmentManager.stop();
       HConnectionManager.deleteConnection(this.conf, true);
       this.zooKeeper.close();
-      LOG.info("HMaster main thread exiting");
-
-    } catch (Throwable t) {
-      abort("Unhandled exception. Starting shutdown.", t);
     }
+    LOG.info("HMaster main thread exiting");
   }
 
   private void loop() {
@@ -543,7 +533,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Stopping service threads");
     }
-    this.rpcServer.stop();
+    if (this.rpcServer != null) this.rpcServer.stop();
     // Clean up and close up shop
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
@@ -553,7 +543,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         ex.printStackTrace();
       }
     }
-    this.executorService.shutdown();
+    if (this.executorService != null) this.executorService.shutdown();
   }
 
   private static Thread getAndStartBalancerChore(final HMaster master) {
