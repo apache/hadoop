@@ -604,6 +604,8 @@ Release 0.21.0 - Unreleased
    HBASE-3140  Rest schema modification throw null pointer exception
                (David Worms via Stack)
    HBASE-2998  rolling-restart.sh shouldn't rely on zoo.cfg
+   HBASE-3145  importtsv fails when the line contains no data
+               (Kazuki Ohta via Todd Lipcon)
 
 
   IMPROVEMENTS

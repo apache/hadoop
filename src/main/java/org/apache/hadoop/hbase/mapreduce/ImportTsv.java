@@ -130,11 +130,17 @@ public class ImportTsv {
           tabOffsets.add(i);
         }
       }
-      tabOffsets.add(length);
-      if (tabOffsets.size() > families.length) {
-        throw new BadTsvLineException("Bad line:\n");
+      if (tabOffsets.isEmpty()) {
+        throw new BadTsvLineException("No delimiter");
       }
 
+      tabOffsets.add(length);
+
+      if (tabOffsets.size() > families.length) {
+        throw new BadTsvLineException("Excessive columns");
+      } else if (tabOffsets.size() <= getRowKeyColumnIndex()) {
+        throw new BadTsvLineException("No row key");
+      }
       return new ParsedLine(tabOffsets, lineBytes);
     }
     
@@ -350,6 +356,12 @@ public class ImportTsv {
     }
     if (rowkeysFound != 1) {
       usage("Must specify exactly one column as " + TsvParser.ROWKEY_COLUMN_SPEC);
+      System.exit(-1);
+    }
+
+    // Make sure one or more columns are specified
+    if (columns.length < 2) {
+      usage("One or more columns in addition to the row key are required");
       System.exit(-1);
     }
 

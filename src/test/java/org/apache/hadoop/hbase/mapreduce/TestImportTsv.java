@@ -36,6 +36,32 @@ import static org.junit.Assert.*;
 
 public class TestImportTsv {
   @Test
+  public void testTsvParserSpecParsing() {
+    TsvParser parser;
+
+    parser = new TsvParser("HBASE_ROW_KEY", "\t");
+    assertNull(parser.getFamily(0));
+    assertNull(parser.getQualifier(0));
+    assertEquals(0, parser.getRowKeyColumnIndex());
+
+    parser = new TsvParser("HBASE_ROW_KEY,col1:scol1", "\t");
+    assertNull(parser.getFamily(0));
+    assertNull(parser.getQualifier(0));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(1));
+    assertBytesEquals(Bytes.toBytes("scol1"), parser.getQualifier(1));
+    assertEquals(0, parser.getRowKeyColumnIndex());
+
+    parser = new TsvParser("HBASE_ROW_KEY,col1:scol1,col1:scol2", "\t");
+    assertNull(parser.getFamily(0));
+    assertNull(parser.getQualifier(0));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(1));
+    assertBytesEquals(Bytes.toBytes("scol1"), parser.getQualifier(1));
+    assertBytesEquals(Bytes.toBytes("col1"), parser.getFamily(2));
+    assertBytesEquals(Bytes.toBytes("scol2"), parser.getQualifier(2));
+    assertEquals(0, parser.getRowKeyColumnIndex());
+  }
+
+  @Test
   public void testTsvParser() throws BadTsvLineException {
     TsvParser parser = new TsvParser("col_a,col_b:qual,HBASE_ROW_KEY,col_d", "\t");
     assertBytesEquals(Bytes.toBytes("col_a"), parser.getFamily(0));
@@ -44,11 +70,11 @@ public class TestImportTsv {
     assertBytesEquals(Bytes.toBytes("qual"), parser.getQualifier(1));
     assertNull(parser.getFamily(2));
     assertNull(parser.getQualifier(2));
+    assertEquals(2, parser.getRowKeyColumnIndex());
     
     byte[] line = Bytes.toBytes("val_a\tval_b\tval_c\tval_d");
     ParsedLine parsed = parser.parse(line, line.length);
     checkParsing(parsed, Splitter.on("\t").split(Bytes.toString(line)));
-    assertEquals(2, parser.getRowKeyColumnIndex());
   }
 
   private void checkParsing(ParsedLine parsed, Iterable<String> expected) {
@@ -67,5 +93,36 @@ public class TestImportTsv {
   
   private void assertBytesEquals(byte[] a, byte[] b) {
     assertEquals(Bytes.toStringBinary(a), Bytes.toStringBinary(b));
+  }
+
+  /**
+   * Test cases that throw BadTsvLineException
+   */
+  @Test(expected=BadTsvLineException.class)
+  public void testTsvParserBadTsvLineExcessiveColumns() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a", "\t");
+    byte[] line = Bytes.toBytes("val_a\tval_b\tval_c");
+    ParsedLine parsed = parser.parse(line, line.length);
+  }
+
+  @Test(expected=BadTsvLineException.class)
+  public void testTsvParserBadTsvLineZeroColumn() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a", "\t");
+    byte[] line = Bytes.toBytes("");
+    ParsedLine parsed = parser.parse(line, line.length);
+  }
+
+  @Test(expected=BadTsvLineException.class)
+  public void testTsvParserBadTsvLineOnlyKey() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("HBASE_ROW_KEY,col_a", "\t");
+    byte[] line = Bytes.toBytes("key_only");
+    ParsedLine parsed = parser.parse(line, line.length);
+  }
+
+  @Test(expected=BadTsvLineException.class)
+  public void testTsvParserBadTsvLineNoRowKey() throws BadTsvLineException {
+    TsvParser parser = new TsvParser("col_a,HBASE_ROW_KEY", "\t");
+    byte[] line = Bytes.toBytes("only_cola_data_and_no_row_key");
+    ParsedLine parsed = parser.parse(line, line.length);
   }
 }
