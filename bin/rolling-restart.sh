@@ -64,7 +64,7 @@ else
   zmaster=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.master`
   if [ "$zmaster" == "null" ]; then zmaster="master"; fi
   zmaster=$zparent/$zmaster
-  echo -n "Waiting for Master ZNode ${zmaster} to expire"
+  echo -n "Waiting for Master ZNode to expire"
   while bin/hbase zkcli stat $zmaster >/dev/null 2>&1; do
     echo -n "."
     sleep 1
@@ -75,27 +75,6 @@ else
   "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" start master 
   "$bin"/hbase-daemons.sh --config "${HBASE_CONF_DIR}" \
     --hosts "${HBASE_BACKUP_MASTERS}" start master-backup
-
-  echo "Wait a minute for master to come up join cluster"
-  sleep 60
-
-  # Master joing cluster will start in cleaning out regions in transition.
-  # Wait until the master has cleaned out regions in transition before
-  # giving it a bunch of work to do; master is vulnerable during startup
-  zunassigned=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.unassigned`
-  if [ "$zunassigned" == "null" ]; then zunassigned="unassigned"; fi
-  zunassigned="$zparent/$zunassigned"
-  echo -n "Waiting for ${zunassigned} to empty"
-  while true ; do
-    unassigned=`$bin/hbase zkcli stat ${zunassigned} 2>&1 |grep -e 'numChildren = '|sed -e 's,numChildren = ,,'`
-    if test 0 -eq ${unassigned}
-    then
-      break
-    else
-      echo -n " ${unassigned}"
-    fi
-    sleep 1
-  done
 
   # unlike the masters, roll all regionservers one-at-a-time
   export HBASE_SLAVE_PARALLEL=false

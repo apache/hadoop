@@ -497,13 +497,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     try {
       // Start the executor service pools
       this.executorService.startExecutorService(ExecutorType.MASTER_OPEN_REGION,
-        conf.getInt("hbase.master.executor.openregion.threads", 5));
+        conf.getInt("hbase.master.executor.openregion.threads", 10));
       this.executorService.startExecutorService(ExecutorType.MASTER_CLOSE_REGION,
-        conf.getInt("hbase.master.executor.closeregion.threads", 5));
+        conf.getInt("hbase.master.executor.closeregion.threads", 10));
       this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
-        conf.getInt("hbase.master.executor.serverops.threads", 3));
+        conf.getInt("hbase.master.executor.serverops.threads", 5));
       this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS,
-        conf.getInt("hbase.master.executor.tableops.threads", 3));
+        conf.getInt("hbase.master.executor.tableops.threads", 5));
 
       // Put up info server.
       int port = this.conf.getInt("hbase.master.info.port", 60010);
