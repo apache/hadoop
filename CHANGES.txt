@@ -609,6 +609,7 @@ Release 0.21.0 - Unreleased
    HBASE-2984  [shell] Altering a family shouldn't reset to default unchanged
                attributes
    HBASE-3143  Adding the tests' hbase-site.xml to the jar breaks some clients
+   HBASE-3139  Server shutdown processor stuck because meta not online
 
 
   IMPROVEMENTS

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,7 +41,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * threadpool, a queue to which {@link EventHandler.EventType}s can be submitted,
  * and a <code>Runnable</code> that handles the object that is added to the queue.
  *
- * <p>In order to create a new service, create an instance of this class and 
+ * <p>In order to create a new service, create an instance of this class and
  * then do: <code>instance.startExecutorService("myService");</code>.  When done
  * call {@link #shutdown()}.
  *
@@ -243,16 +243,13 @@ public class ExecutorService {
   /**
    * Executor instance.
    */
-  private static class Executor {
-    // default number of threads in the pool
-    private int corePoolSize = 1;
+  static class Executor {
     // how long to retain excess threads
-    private long keepAliveTimeInMillis = 1000;
+    final long keepAliveTimeInMillis = 1000;
     // the thread pool executor that services the requests
-    private final ThreadPoolExecutor threadPoolExecutor;
+    final ThreadPoolExecutor threadPoolExecutor;
     // work queue to use - unbounded queue
-    BlockingQueue<Runnable> workQueue = new PriorityBlockingQueue<Runnable>();
-    private final AtomicInteger threadid = new AtomicInteger(0);
+    final BlockingQueue<Runnable> q = new LinkedBlockingQueue<Runnable>();
     private final String name;
     private final Map<EventHandler.EventType, EventHandlerListener> eventHandlerListeners;
 
@@ -261,11 +258,11 @@ public class ExecutorService {
       this.name = name;
       this.eventHandlerListeners = eventHandlerListeners;
       // create the thread pool executor
-      this.threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, maxThreads,
-          keepAliveTimeInMillis, TimeUnit.MILLISECONDS, workQueue);
+      this.threadPoolExecutor = new ThreadPoolExecutor(maxThreads, maxThreads,
+          keepAliveTimeInMillis, TimeUnit.MILLISECONDS, q);
       // name the threads for this threadpool
       ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
-      tfb.setNameFormat(this.name + "-" + this.threadid.incrementAndGet());
+      tfb.setNameFormat(this.name + "-%d");
       this.threadPoolExecutor.setThreadFactory(tfb.build());
     }
 
