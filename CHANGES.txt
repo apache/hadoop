@@ -1032,6 +1032,8 @@ Release 0.21.0 - Unreleased
    HBASE-3133  Only log compaction requests when a request is actually added
                to the queue
    HBASE-3132  Print TimestampRange and BloomFilters in HFile pretty print
+   HBASE-2514  RegionServer should refuse to be assigned a region that use 
+   	       LZO when LZO isn't available
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

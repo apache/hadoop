@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.IOUtils;
@@ -827,20 +828,20 @@ public class HFile {
       String clazzName = Bytes.toString(fi.get(FileInfo.COMPARATOR));
       this.comparator = getComparator(clazzName);
 
-    int allIndexSize = (int)(this.fileSize - this.trailer.dataIndexOffset - FixedFileTrailer.trailerSize());
-    byte[] dataAndMetaIndex = readAllIndex(this.istream, this.trailer.dataIndexOffset, allIndexSize);
+      int allIndexSize = (int)(this.fileSize - this.trailer.dataIndexOffset - FixedFileTrailer.trailerSize());
+      byte[] dataAndMetaIndex = readAllIndex(this.istream, this.trailer.dataIndexOffset, allIndexSize);
 
-    ByteArrayInputStream bis = new ByteArrayInputStream(dataAndMetaIndex);
-    DataInputStream dis = new DataInputStream(bis);
+      ByteArrayInputStream bis = new ByteArrayInputStream(dataAndMetaIndex);
+      DataInputStream dis = new DataInputStream(bis);
 
       // Read in the data index.
-    this.blockIndex =
-      BlockIndex.readIndex(this.comparator, dis, this.trailer.dataIndexCount);
+      this.blockIndex =
+          BlockIndex.readIndex(this.comparator, dis, this.trailer.dataIndexCount);
 
       // Read in the metadata index.
       if (trailer.metaIndexCount > 0) {
-      this.metaIndex = BlockIndex.readIndex(Bytes.BYTES_RAWCOMPARATOR, dis,
-        this.trailer.metaIndexCount);
+        this.metaIndex = BlockIndex.readIndex(Bytes.BYTES_RAWCOMPARATOR, dis,
+            this.trailer.metaIndexCount);
       }
       this.fileInfoLoaded = true;
 
@@ -885,6 +886,9 @@ public class HFile {
       // Set up the codec.
       this.compressAlgo =
         Compression.Algorithm.values()[fft.compressionCodec];
+
+      CompressionTest.testCompression(this.compressAlgo);
+
       return fft;
     }
 

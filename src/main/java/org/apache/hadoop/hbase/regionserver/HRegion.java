@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -432,7 +433,7 @@ public class HRegion implements HeapSize { // , Writable{
   public boolean isClosing() {
     return this.closing.get();
   }
-  
+
   boolean areWritesEnabled() {
     synchronized(this.writestate) {
       return this.writestate.writesEnabled;
@@ -741,7 +742,7 @@ public class HRegion implements HeapSize { // , Writable{
         } finally {
           long now = EnvironmentEdgeManager.currentTimeMillis();
           LOG.info(((completed) ? "completed" : "aborted")
-              + " compaction on region " + this 
+              + " compaction on region " + this
               + " after " + StringUtils.formatTimeDiff(now, startTime));
         }
       } finally {
@@ -1878,7 +1879,7 @@ public class HRegion implements HeapSize { // , Writable{
         LOG.warn("File corruption encountered!  " +
             "Continuing, but renaming " + edits + " as " + p, ioe);
       } else {
-        // other IO errors may be transient (bad network connection, 
+        // other IO errors may be transient (bad network connection,
         // checksum exception on one datanode, etc).  throw & retry
         throw ioe;
       }
@@ -2463,11 +2464,20 @@ public class HRegion implements HeapSize { // , Writable{
    */
   protected HRegion openHRegion(final Progressable reporter)
   throws IOException {
+    checkCompressionCodecs();
+
     long seqid = initialize(reporter);
     if (this.log != null) {
       this.log.setSequenceNumber(seqid);
     }
     return this;
+  }
+
+  private void checkCompressionCodecs() throws IOException {
+    for (HColumnDescriptor fam: regionInfo.getTableDesc().getColumnFamilies()) {
+      CompressionTest.testCompression(fam.getCompression());
+      CompressionTest.testCompression(fam.getCompactionCompression());
+    }
   }
 
   /**

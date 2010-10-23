@@ -19,11 +19,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.io.compress.Compressor;
 
+import java.io.IOException;
 import java.net.URI;
 
 /**
@@ -31,6 +36,59 @@ import java.net.URI;
  * on every node in your cluster.
  */
 public class CompressionTest {
+  static final Log LOG = LogFactory.getLog(CompressionTest.class);
+
+  public static boolean testCompression(String codec) {
+    codec = codec.toLowerCase();
+
+    Compression.Algorithm a;
+
+    try {
+      a = Compression.getCompressionAlgorithmByName(codec);
+    } catch (IllegalArgumentException e) {
+      LOG.warn("Codec type: " + codec + " is not known");
+      return false;
+    }
+
+    try {
+      testCompression(a);
+      return true;
+    } catch (IOException ignored) {
+      LOG.warn("Can't instantiate codec: " + codec, ignored);
+      return false;
+    }
+  }
+
+  private final static Boolean[] compressionTestResults
+      = new Boolean[Compression.Algorithm.values().length];
+  static {
+    for (int i = 0 ; i < compressionTestResults.length ; ++i) {
+      compressionTestResults[i] = null;
+    }
+  }
+
+  public static void testCompression(Compression.Algorithm algo)
+      throws IOException {
+    if (compressionTestResults[algo.ordinal()] != null) {
+      if (compressionTestResults[algo.ordinal()]) {
+        return ; // already passed test, dont do it again.
+      } else {
+        // failed.
+        throw new IOException("Compression algorithm '" + algo.getName() + "'" +
+        " previously failed test.");
+      }
+    }
+
+    try {
+      Compressor c = algo.getCompressor();
+      algo.returnCompressor(c);
+      compressionTestResults[algo.ordinal()] = true; // passes
+    } catch (Throwable t) {
+      compressionTestResults[algo.ordinal()] = false; // failure
+      throw new IOException(t);
+    }
+  }
+
   protected static Path path = new Path(".hfile-comp-test");
 
   public static void usage() {
@@ -51,7 +109,6 @@ public class CompressionTest {
     if (dfs != null) {
       try {
         dfs.close();
-        dfs = null;
       } catch (Exception e) {
         e.printStackTrace();
       }
