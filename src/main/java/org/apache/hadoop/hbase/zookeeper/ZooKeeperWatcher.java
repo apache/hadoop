@@ -318,6 +318,22 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   }
 
   /**
+   * Forces a synchronization of this ZooKeeper client connection.
+   * <p>
+   * Executing this method before running other methods will ensure that the
+   * subsequent operations are up-to-date and consistent as of the time that
+   * the sync is complete.
+   * <p>
+   * This is used for compareAndSwap type operations where we need to read the
+   * data of an existing node and delete or transition that node, utilizing the
+   * previously read version and data.  We want to ensure that the version read
+   * is up-to-date from when we begin the operation.
+   */
+  public void sync(String path) {
+    this.zooKeeper.sync(path, null, null);
+  }
+
+  /**
    * Get the set of already watched unassigned nodes.
    * @return
    */

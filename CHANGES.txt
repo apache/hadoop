@@ -610,6 +610,8 @@ Release 0.21.0 - Unreleased
                attributes
    HBASE-3143  Adding the tests' hbase-site.xml to the jar breaks some clients
    HBASE-3139  Server shutdown processor stuck because meta not online
+   HBASE-3136  Stale reads from ZK can break the atomic CAS operations we
+               have in ZKAssign
 
 
   IMPROVEMENTS

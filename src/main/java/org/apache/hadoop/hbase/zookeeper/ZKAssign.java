@@ -239,6 +239,7 @@ public class ZKAssign {
         EventType.M_ZK_REGION_OFFLINE, region.getRegionName(), serverName);
     synchronized(zkw.getNodes()) {
       String node = getNodeName(zkw, region.getEncodedName());
+      zkw.sync(node);
       zkw.getNodes().add(node);
       int version = ZKUtil.checkExists(zkw, node);
       if(version == -1) {
@@ -380,6 +381,7 @@ public class ZKAssign {
     LOG.debug(zkw.prefix("Deleting existing unassigned " +
       "node for " + regionName + " that is in expected state " + expectedState));
     String node = getNodeName(zkw, regionName);
+    zkw.sync(node);
     Stat stat = new Stat();
     byte [] bytes = ZKUtil.getDataNoWatch(zkw, node, stat);
     if(bytes == null) {
@@ -645,6 +647,7 @@ public class ZKAssign {
     }
 
     String node = getNodeName(zkw, encoded);
+    zkw.sync(node);
 
     // Read existing data of the node
     Stat stat = new Stat();
