@@ -2859,6 +2859,86 @@ public class HRegion implements HeapSize { // , Writable{
     return new Result(result);
   }
 
+  /**
+   * An optimized version of {@link #get(Get)} that checks MemStore first for
+   * the specified query.
+   * <p>
+   * This is intended for use by increment operations where we have the
+   * guarantee that versions are never inserted out-of-order so if a value
+   * exists in MemStore it is the latest value.
+   * <p>
+   * It only makes sense to use this method without a TimeRange and maxVersions
+   * equal to 1.
+   * @param get
+   * @return result
+   * @throws IOException
+   */
+  private List<KeyValue> getLastIncrement(final Get get) throws IOException {
+    InternalScan iscan = new InternalScan(get);
+
+    List<KeyValue> results = new ArrayList<KeyValue>();
+
+    // memstore scan
+    iscan.checkOnlyMemStore();
+    InternalScanner scanner = null;
+    try {
+      scanner = getScanner(iscan);
+      scanner.next(results);
+    } finally {
+      if (scanner != null)
+        scanner.close();
+    }
+
+    // count how many columns we're looking for
+    int expected = 0;
+    Map<byte[], NavigableSet<byte[]>> familyMap = get.getFamilyMap();
+    for (NavigableSet<byte[]> qfs : familyMap.values()) {
+      expected += qfs.size();
+    }
+
+    // found everything we were looking for, done
+    if (results.size() == expected) {
+      return results;
+    }
+
+    // still have more columns to find
+    if (results != null && !results.isEmpty()) {
+      // subtract what was found in memstore
+      for (KeyValue kv : results) {
+        byte [] family = kv.getFamily();
+        NavigableSet<byte[]> qfs = familyMap.get(family);
+        qfs.remove(kv.getQualifier());
+        if (qfs.isEmpty()) familyMap.remove(family);
+        expected--;
+      }
+      // make a new get for just what is left
+      Get newGet = new Get(get.getRow());
+      for (Map.Entry<byte[], NavigableSet<byte[]>> f : familyMap.entrySet()) {
+        byte [] family = f.getKey();
+        for (byte [] qualifier : f.getValue()) {
+          newGet.addColumn(family, qualifier);
+        }
+      }
+      iscan = new InternalScan(newGet);
+    }
+
+    // check store files for what is left
+    List<KeyValue> fileResults = new ArrayList<KeyValue>();
+    iscan.checkOnlyStoreFiles();
+    scanner = null;
+    try {
+      scanner = getScanner(iscan);
+      scanner.next(fileResults);
+    } finally {
+      if (scanner != null)
+        scanner.close();
+    }
+
+    // combine and return
+    results.addAll(fileResults);
+    return results;
+  }
+
   /*
    * Do a get based on the get parameter.
    */
@@ -2905,7 +2985,7 @@ public class HRegion implements HeapSize { // , Writable{
         Get get = new Get(row);
         get.addColumn(family, qualifier);
 
-        List<KeyValue> results = get(get);
+        List<KeyValue> results = getLastIncrement(get);
 
         if (!results.isEmpty()) {
           KeyValue kv = results.get(0);
@@ -2914,7 +2994,7 @@ public class HRegion implements HeapSize { // , Writable{
           result += Bytes.toLong(buffer, valueOffset, Bytes.SIZEOF_LONG);
         }
 
-        // bulid the KeyValue now:
+        // build the KeyValue now:
         KeyValue newKv = new KeyValue(row, family,
             qualifier, EnvironmentEdgeManager.currentTimeMillis(),
             Bytes.toBytes(result));
@@ -2930,7 +3010,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         // Now request the ICV to the store, this will set the timestamp
         // appropriately depending on if there is a value in memcache or not.
-        // returns the
+        // returns the change in the size of the memstore from operation
         long size = store.updateColumnValue(row, family, qualifier, result);
 
         size = this.memstoreSize.addAndGet(size);

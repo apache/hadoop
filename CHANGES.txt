@@ -1037,6 +1037,8 @@ Release 0.21.0 - Unreleased
    HBASE-3132  Print TimestampRange and BloomFilters in HFile pretty print
    HBASE-2514  RegionServer should refuse to be assigned a region that use 
    	       LZO when LZO isn't available
+   HBASE-3082  For ICV gets, first look in MemStore before reading StoreFiles
+               (prakash via stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.client.Scan;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableSet;
 
@@ -149,22 +150,33 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    */
   private List<KeyValueScanner> getScanners(Scan scan,
       final NavigableSet<byte[]> columns) throws IOException {
+    boolean memOnly;
+    boolean filesOnly;
+    if (scan instanceof InternalScan) {
+      InternalScan iscan = (InternalScan)scan;
+      memOnly = iscan.isCheckOnlyMemStore();
+      filesOnly = iscan.isCheckOnlyStoreFiles();
+    } else {
+      memOnly = false;
+      filesOnly = false;
+    }
+    List<KeyValueScanner> scanners = new LinkedList<KeyValueScanner>();
     // First the store file scanners
-    List<StoreFileScanner> sfScanners = StoreFileScanner
+    if (memOnly == false) {
+      List<StoreFileScanner> sfScanners = StoreFileScanner
       .getScannersForStoreFiles(store.getStorefiles(), cacheBlocks, isGet);
-    List<KeyValueScanner> scanners =
-      new ArrayList<KeyValueScanner>(sfScanners.size()+1);
 
-    // include only those scan files which pass all filters
-    for (StoreFileScanner sfs : sfScanners) {
-      if (sfs.shouldSeek(scan, columns)) {
-        scanners.add(sfs);
+      // include only those scan files which pass all filters
+      for (StoreFileScanner sfs : sfScanners) {
+        if (sfs.shouldSeek(scan, columns)) {
+          scanners.add(sfs);
+        }
       }
     }
 
     // Then the memstore scanners
-    if (this.store.memstore.shouldSeek(scan)) {
-      scanners.addAll(this.store.memstore.getScanners());
+    if ((filesOnly == false) && (this.store.memstore.shouldSeek(scan))) {
+        scanners.addAll(this.store.memstore.getScanners());
     }
     return scanners;
   }
