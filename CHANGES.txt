@@ -612,7 +612,7 @@ Release 0.21.0 - Unreleased
    HBASE-3139  Server shutdown processor stuck because meta not online
    HBASE-3136  Stale reads from ZK can break the atomic CAS operations we
                have in ZKAssign
-
+   HBASE-2753  Remove sorted() methods from Result now that Gets are Scans
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

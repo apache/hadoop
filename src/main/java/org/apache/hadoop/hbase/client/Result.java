@@ -159,7 +159,7 @@ public class Result implements Writable {
     if(this.kvs == null) {
       readFields();
     }
-    return isEmpty()? null: Arrays.asList(sorted());
+    return isEmpty()? null: Arrays.asList(raw());
   }
 
   /**
@@ -172,17 +172,8 @@ public class Result implements Writable {
    * @deprecated
    */
   public KeyValue[] sorted() {
-    raw(); // side effect of loading this.kvs
-    if (!sorted) {
-      assert Ordering.from(KeyValue.COMPARATOR).isOrdered(Arrays.asList(kvs));
-
-      Arrays.sort(kvs, KeyValue.COMPARATOR);
-      sorted = true;
-    }
-
-    return raw();
+    return raw(); // side effect of loading this.kvs
   }
-  private boolean sorted = false;
 
   /**
    * Return the KeyValues for the specific column.  The KeyValues are sorted in
