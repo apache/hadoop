@@ -676,8 +676,6 @@ cleanupAndExit () {
     if [ -e "$PATCH_DIR" ] ; then
       mv $PATCH_DIR $BASEDIR
     fi
-  CALLER=`hostname`
-  $CURL $PATCH_ADMIN_URL'&CALLER='$CALLER
   fi
   echo ""
   echo ""
