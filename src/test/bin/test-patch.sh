@@ -16,7 +16,7 @@
 ulimit -n 1024
 
 ### Setup some variables.  
-### JOB_NAME, SVN_REVISION, and BUILD_NUMBER are set by Hudson if it is run by patch process
+### SVN_REVISION and BUILD_URL are set by Hudson if it is run by patch process
 
 ###############################################################################
 parseArgs() {
@@ -24,8 +24,8 @@ parseArgs() {
     HUDSON)
       ### Set HUDSON to true to indicate that this script is being run by Hudson
       HUDSON=true
-      if [[ $# != 19 ]] ; then
-        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <TRIGGER_BUILD> <JIRA_PASSWD> <JAVA5_HOME> <CURL_CMD> <DEFECT> "
+      if [[ $# != 18 ]] ; then
+        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <JIRA_PASSWD> <JAVA5_HOME> <CURL_CMD> <DEFECT> "
         cleanupAndExit 0
       fi
       PATCH_DIR=$2
@@ -41,11 +41,10 @@ parseArgs() {
       ECLIPSE_HOME=${12}
       PYTHON_HOME=${13}
       BASEDIR=${14}
-      TRIGGER_BUILD_URL=${15}
-      JIRA_PASSWD=${16}
-      JAVA5_HOME=${17}
-      CURL=${18}
-      defect=${19}
+      JIRA_PASSWD=${15}
+      JAVA5_HOME=${16}
+      CURL=${17}
+      defect=${18}
 		
       ### Retrieve the defect number
       if [ -z "$defect" ] ; then
@@ -389,7 +388,7 @@ checkReleaseAuditWarnings () {
         echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." > $PATCH_DIR/releaseAuditDiffWarnings.txt
         echo "" > $PATCH_DIR/releaseAuditDiffWarnings.txt
         diff $PATCH_DIR/patchReleaseAuditProblems.txt $PATCH_DIR/trunkReleaseAuditProblems.txt >> $PATCH_DIR/releaseAuditDiffWarnings.txt
-        JIRA_COMMENT_FOOTER="Release audit warnings: http://hudson.zones.apache.org/hudson/job/$JOB_NAME/$BUILD_NUMBER/artifact/trunk/patchprocess/releaseAuditDiffWarnings.txt
+        JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/trunk/patchprocess/releaseAuditDiffWarnings.txt
 $JIRA_COMMENT_FOOTER"
         return 1
       fi
@@ -418,7 +417,7 @@ checkStyle () {
   echo ""
   echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= checkstyle"
   $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= checkstyle
-  JIRA_COMMENT_FOOTER="Checkstyle results: http://hudson.zones.apache.org/hudson/job/$JOB_NAME/$BUILD_NUMBER/artifact/trunk/build/test/checkstyle-errors.html
+  JIRA_COMMENT_FOOTER="Checkstyle results: $BUILD_URL/artifact/trunk/build/test/checkstyle-errors.html
 $JIRA_COMMENT_FOOTER"
   ### TODO: calculate actual patchStyleErrors
 #  patchStyleErrors=0
@@ -454,7 +453,7 @@ checkFindbugsWarnings () {
     -1 findbugs.  The patch appears to cause Findbugs to fail."
     return 1
   fi
-JIRA_COMMENT_FOOTER="Findbugs warnings: http://hudson.zones.apache.org/hudson/job/$JOB_NAME/$BUILD_NUMBER/artifact/trunk/build/test/findbugs/newPatchFindbugsWarnings.html
+JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/build/test/findbugs/newPatchFindbugsWarnings.html
 $JIRA_COMMENT_FOOTER"
   cp $BASEDIR/build/test/findbugs/*.xml $PATCH_DIR/patchFindbugsWarnings.xml
 $FINDBUGS_HOME/bin/setBugDatabaseInfo -timestamp "01/01/1999" \
@@ -697,7 +696,7 @@ cleanupAndExit () {
 ###############################################################################
 
 JIRA_COMMENT=""
-JIRA_COMMENT_FOOTER="Console output: http://hudson.zones.apache.org/hudson/job/$JOB_NAME/$BUILD_NUMBER/console
+JIRA_COMMENT_FOOTER="Console output: $BUILD_URL/console
 
 This message is automatically generated."
 
@@ -709,8 +708,6 @@ checkout
 RESULT=$?
 if [[ $HUDSON == "true" ]] ; then
   if [[ $RESULT != 0 ]] ; then
-    ### Resubmit build.
-    $CURL $TRIGGER_BUILD_URL'&DEFECTNUM='$defect
     exit 100
   fi
 fi
@@ -750,7 +747,7 @@ if [[ $HUDSON == "true" ]] ; then
 fi
 checkInjectSystemFaults
 (( RESULT = RESULT + $? ))
-JIRA_COMMENT_FOOTER="Test results: http://hudson.zones.apache.org/hudson/job/$JOB_NAME/$BUILD_NUMBER/testReport/
+JIRA_COMMENT_FOOTER="Test results: $BUILD_URL/testReport/
 $JIRA_COMMENT_FOOTER"
 
 submitJiraComment $RESULT
