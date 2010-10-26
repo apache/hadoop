@@ -57,6 +57,7 @@ public class MetaNodeTracker extends ZooKeeperNodeTracker {
 
   @Override
   public void nodeDeleted(String path) {
+    super.nodeDeleted(path);
     if (!path.equals(node)) return;
     LOG.info("Detected completed assignment of META, notifying catalog tracker");
     try {

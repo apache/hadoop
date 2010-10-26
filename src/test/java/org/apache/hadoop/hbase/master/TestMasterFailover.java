@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -794,10 +795,35 @@ public class TestMasterFailover {
     cluster.waitForActiveAndReadyMaster();
     log("Master is ready");
 
+    // Let's add some weird states to master in-memory state
+
+    // PENDING_OPEN and enabled
+    region = enabledRegions.remove(0);
+    regionsThatShouldBeOnline.add(region);
+    master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
+        new RegionState(region, RegionState.State.PENDING_OPEN));
+    // PENDING_OPEN and disabled
+    region = disabledRegions.remove(0);
+    regionsThatShouldBeOffline.add(region);
+    master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
+        new RegionState(region, RegionState.State.PENDING_OPEN));
+    // PENDING_CLOSE and enabled
+    region = enabledRegions.remove(0);
+    regionsThatShouldBeOnline.add(region);
+    master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
+        new RegionState(region, RegionState.State.PENDING_CLOSE));
+    // PENDING_CLOSE and disabled
+    region = disabledRegions.remove(0);
+    regionsThatShouldBeOffline.add(region);
+    master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
+        new RegionState(region, RegionState.State.PENDING_CLOSE));
+
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");
     ZKAssign.blockUntilNoRIT(zkw);
-    log("No more RIT in ZK, now doing final test verification");
+    log("No more RIT in ZK");
+    master.assignmentManager.waitUntilNoRegionsInTransition(120000);
+    log("No more RIT in RIT map, doing final test verification");
 
     // Grab all the regions that are online across RSs
     Set<HRegionInfo> onlineRegions = new TreeSet<HRegionInfo>();

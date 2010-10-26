@@ -97,7 +97,7 @@ public class ZKAssign {
    * @param regionName region name
    * @return full path node name
    */
-  private static String getNodeName(ZooKeeperWatcher zkw, String regionName) {
+  public static String getNodeName(ZooKeeperWatcher zkw, String regionName) {
     return ZKUtil.joinZNode(zkw.assignmentZNode, regionName);
   }
 
@@ -761,5 +761,45 @@ public class ZKAssign {
       }
       Thread.sleep(200);
     }
+  }
+
+  /**
+   * Verifies that the specified region is in the specified state in ZooKeeper.
+   * <p>
+   * Returns true if region is in transition and in the specified state in
+   * ZooKeeper.  Returns false if the region does not exist in ZK or is in
+   * a different state.
+   * <p>
+   * Method synchronizes() with ZK so will yield an up-to-date result but is
+   * a slow read.
+   * @param watcher
+   * @param region
+   * @param expectedState
+   * @return true if region exists and is in expected state
+   */
+  public static boolean verifyRegionState(ZooKeeperWatcher zkw,
+      HRegionInfo region, EventType expectedState)
+  throws KeeperException {
+    String encoded = region.getEncodedName();
+
+    String node = getNodeName(zkw, encoded);
+    zkw.sync(node);
+
+    // Read existing data of the node
+    byte [] existingBytes = null;
+    try {
+      existingBytes = ZKUtil.getDataAndWatch(zkw, node);
+    } catch (KeeperException.NoNodeException nne) {
+      return false;
+    } catch (KeeperException e) {
+      throw e;
+    }
+    if (existingBytes == null) return false;
+    RegionTransitionData existingData =
+      RegionTransitionData.fromBytes(existingBytes);
+    if (existingData.getEventType() == expectedState){
+      return true;
+    }
+    return false;
   }
 }

@@ -246,9 +246,12 @@ public class MetaReader {
         throw e;
       }
     } catch (RemoteException re) {
-      if (re.unwrapRemoteException() instanceof NotServingRegionException) {
+      IOException ioe = re.unwrapRemoteException();
+      if (ioe instanceof NotServingRegionException) {
         // Treat this NSRE as unavailable table.  Catch and fall through to
         // return null below
+      } else if (ioe.getMessage().contains("Server not running")) {
+        // Treat as unavailable table.
       } else {
         throw re;
       }

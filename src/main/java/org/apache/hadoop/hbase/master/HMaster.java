@@ -413,7 +413,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.catalogTracker.waitForRoot();
       assigned++;
     }
-    LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit);
+    LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit +
+      ", location=" + catalogTracker.getRootLocation());
 
     // Work on meta region
     rit = this.assignmentManager.
@@ -426,7 +427,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
       assigned++;
     }
-    LOG.info(".META. assigned=" + assigned + ", rit=" + rit);
+    LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
+      ", location=" + catalogTracker.getMetaLocation());
     return assigned;
   }
 
@@ -502,6 +504,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         conf.getInt("hbase.master.executor.closeregion.threads", 5));
       this.executorService.startExecutorService(ExecutorType.MASTER_SERVER_OPERATIONS,
         conf.getInt("hbase.master.executor.serverops.threads", 3));
+      this.executorService.startExecutorService(ExecutorType.MASTER_META_SERVER_OPERATIONS,
+        conf.getInt("hbase.master.executor.serverops.threads", 2));
       this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS,
         conf.getInt("hbase.master.executor.tableops.threads", 3));
 

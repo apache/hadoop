@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -102,6 +101,26 @@ public class TestCatalogTracker {
     CatalogTracker ct = new CatalogTracker(this.watcher, c, this.abortable);
     ct.start();
     return ct;
+  }
+
+  /**
+   * Test that we get notification if .META. moves.
+   * @throws IOException 
+   * @throws InterruptedException 
+   * @throws KeeperException 
+   */
+  @Test public void testThatIfMETAMovesWeAreNotified()
+  throws IOException, InterruptedException, KeeperException {
+    HConnection connection = Mockito.mock(HConnection.class);
+    final CatalogTracker ct = constructAndStartCatalogTracker(connection);
+    try {
+      RootLocationEditor.setRootLocation(this.watcher,
+        new HServerAddress("example.com:1234"));
+    } finally {
+      // Clean out root location or later tests will be confused... they presume
+      // start fresh in zk.
+      RootLocationEditor.deleteRootLocation(this.watcher);
+    }
   }
 
   /**

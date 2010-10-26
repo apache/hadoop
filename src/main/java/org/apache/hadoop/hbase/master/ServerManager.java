@@ -41,15 +41,19 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo,
@@ -490,10 +494,36 @@ public class ServerManager {
       }
       return;
     }
-    this.services.getExecutorService().submit(new ServerShutdownHandler(this.master,
+    CatalogTracker ct = this.master.getCatalogTracker();
+    // Was this server carrying root?
+    boolean carryingRoot;
+    try {
+      HServerAddress address = ct.getRootLocation();
+      carryingRoot = address != null &&
+        hsi.getServerAddress().equals(address);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.info("Interrupted");
+      return;
+    }
+    // Was this server carrying meta?  Can't ask CatalogTracker because it
+    // may have reset the meta location as null already (it may have already
+    // run into fact that meta is dead).  I can ask assignment manager. It
+    // has an inmemory list of who has what.  This list will be cleared as we
+    // process the dead server but should be  find asking it now.
+    HServerAddress address = ct.getMetaLocation();
+    boolean carryingMeta =
+      address != null && hsi.getServerAddress().equals(address);
+    if (carryingRoot || carryingMeta) {
+      this.services.getExecutorService().submit(new MetaServerShutdownHandler(this.master,
+        this.services, this.deadservers, info, carryingRoot, carryingMeta));
+    } else {
+      this.services.getExecutorService().submit(new ServerShutdownHandler(this.master,
         this.services, this.deadservers, info));
+    }
     LOG.debug("Added=" + serverName +
-      " to dead servers, submitted shutdown handler to be executed");
+      " to dead servers, submitted shutdown handler to be executed, root=" +
+        carryingRoot + ", meta=" + carryingMeta);
   }
 
   // RPC methods to region servers
@@ -546,16 +576,17 @@ public class ServerManager {
    * @return true if server acknowledged close, false if not
    * @throws IOException
    */
-  public void sendRegionClose(HServerInfo server, HRegionInfo region)
+  public boolean sendRegionClose(HServerInfo server, HRegionInfo region)
   throws IOException {
+    if (server == null) return false;
     HRegionInterface hri = getServerConnection(server);
     if(hri == null) {
       LOG.warn("Attempting to send CLOSE RPC to server " +
         server.getServerName() + " failed because no RPC connection found " +
         "to this server");
-      return;
+      return false;
     }
-    hri.closeRegion(region);
+    return hri.closeRegion(region);
   }
 
   /**

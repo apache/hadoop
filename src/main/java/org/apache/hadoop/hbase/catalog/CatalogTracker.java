@@ -29,19 +29,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Tracks the availability of the catalog tables <code>-ROOT-</code> and
@@ -63,6 +60,12 @@ public class CatalogTracker {
   private final RootRegionTracker rootRegionTracker;
   private final MetaNodeTracker metaNodeTracker;
   private final AtomicBoolean metaAvailable = new AtomicBoolean(false);
+  /**
+   * Do not clear this address once set.  Let it be cleared by
+   * {@link #setMetaLocation(HServerAddress)} only.  Its needed when we do
+   * server shutdown processing -- we need to know who had .META. last.  If you
+   * want to know if the address is good, rely on {@link #metaAvailable} value.
+   */
   private HServerAddress metaLocation;
   private final int defaultTimeout;
   private boolean stopped = false;
@@ -365,7 +368,6 @@ public class CatalogTracker {
   private void resetMetaLocation() {
     LOG.info("Current cached META location is not valid, resetting");
     this.metaAvailable.set(false);
-    this.metaLocation = null;
   }
 
   private void setMetaLocation(HServerAddress metaLocation) {
@@ -469,37 +471,6 @@ public class CatalogTracker {
   public boolean verifyMetaRegionLocation(final long timeout)
   throws InterruptedException, IOException {
     return getMetaServerConnection(true) != null;
-  }
-
-  /**
-   * Check if <code>hsi</code> was carrying <code>-ROOT-</code> or
-   * <code>.META.</code> and if so, clear out old locations.
-   * @param hsi Server that has crashed/shutdown.
-   * @throws InterruptedException
-   * @throws KeeperException
-   * @return Pair of booleans; if this server was carrying root, then first
-   * boolean is set, if server was carrying meta, then second boolean set.
-   */
-  public Pair<Boolean, Boolean> processServerShutdown(final HServerInfo hsi)
-  throws InterruptedException, KeeperException {
-    Pair<Boolean, Boolean> result = new Pair<Boolean, Boolean>(false, false);
-    HServerAddress rootHsa = getRootLocation();
-    if (rootHsa == null) {
-      LOG.info("-ROOT- is not assigned; continuing");
-    } else if (hsi.getServerAddress().equals(rootHsa)) {
-      result.setFirst(true);
-      LOG.info(hsi.getServerName() + " carrying -ROOT-; unsetting");
-    }
-    HServerAddress metaHsa = getMetaLocation();
-    if (metaHsa == null) {
-      LOG.info(".META. is not assigned; continuing");
-    } else if (hsi.getServerAddress().equals(metaHsa)) {
-      LOG.info(hsi.getServerName() + " carrying .META.; unsetting " +
-        ".META. location");
-      result.setSecond(true);
-      resetMetaLocation();
-    }
-    return result;
   }
 
   MetaNodeTracker getMetaNodeTracker() {

@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -77,6 +76,7 @@ public class ExecutorService {
     MASTER_SERVER_OPERATIONS   (3),
     MASTER_TABLE_OPERATIONS    (4),
     MASTER_RS_SHUTDOWN         (5),
+    MASTER_META_SERVER_OPERATIONS (6),
 
     // RegionServer executor services
     RS_OPEN_REGION             (20),
@@ -114,6 +114,9 @@ public class ExecutorService {
 
       case M_SERVER_SHUTDOWN:
         return ExecutorType.MASTER_SERVER_OPERATIONS;
+
+      case M_META_SERVER_SHUTDOWN:
+        return ExecutorType.MASTER_META_SERVER_OPERATIONS;
 
       case C_M_DELETE_TABLE:
       case C_M_DISABLE_TABLE:

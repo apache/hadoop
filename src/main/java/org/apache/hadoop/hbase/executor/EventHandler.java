@@ -127,7 +127,8 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     M_ZK_REGION_OFFLINE       (50),  // Master adds this region as offline in ZK
 
     // Master controlled events to be executed on the master
-    M_SERVER_SHUTDOWN         (70);  // Master is processing shutdown of a RS
+    M_SERVER_SHUTDOWN         (70),  // Master is processing shutdown of a RS
+    M_META_SERVER_SHUTDOWN    (72);  // Master is processing shutdown of RS hosting a meta region (-ROOT- or .META.).
 
     /**
      * Constructor

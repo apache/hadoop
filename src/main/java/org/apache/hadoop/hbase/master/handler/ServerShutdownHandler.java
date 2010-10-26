@@ -57,7 +57,12 @@ public class ServerShutdownHandler extends EventHandler {
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
       final DeadServer deadServers, final HServerInfo hsi) {
-    super(server, EventType.M_SERVER_SHUTDOWN);
+    this(server, services, deadServers, hsi, EventType.M_SERVER_SHUTDOWN);
+  }
+
+  ServerShutdownHandler(final Server server, final MasterServices services,
+      final DeadServer deadServers, final HServerInfo hsi, EventType type) {
+    super(server, type);
     this.hsi = hsi;
     this.server = server;
     this.services = services;
@@ -67,19 +72,22 @@ public class ServerShutdownHandler extends EventHandler {
     }
   }
 
+  /**
+   * @return True if the server we are processing was carrying <code>-ROOT-</code>
+   */
+  boolean isCarryingRoot() {
+    return false;
+  }
+
+  /**
+   * @return True if the server we are processing was carrying <code>.META.</code>
+   */
+  boolean isCarryingMeta() {
+    return false;
+  }
+
   @Override
   public void process() throws IOException {
-    Pair<Boolean, Boolean> carryingCatalog = null;
-    try {
-      carryingCatalog =
-        this.server.getCatalogTracker().processServerShutdown(this.hsi);
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IOException("Interrupted", e);
-    } catch (KeeperException e) {
-      this.server.abort("In server shutdown processing", e);
-      throw new IOException("Aborting", e);
-    }
     final String serverName = this.hsi.getServerName();
 
     LOG.info("Splitting logs for " + serverName);
@@ -92,7 +100,7 @@ public class ServerShutdownHandler extends EventHandler {
     this.services.getAssignmentManager().processServerShutdown(this.hsi);
 
     // Assign root and meta if we were carrying them.
-    if (carryingCatalog.getFirst()) { // -ROOT-
+    if (isCarryingRoot()) { // -ROOT-
       try {
         this.services.getAssignmentManager().assignRoot();
       } catch (KeeperException e) {
@@ -100,9 +108,9 @@ public class ServerShutdownHandler extends EventHandler {
         throw new IOException("Aborting", e);
       }
     }
-    if (carryingCatalog.getSecond()) { // .META.
-      this.services.getAssignmentManager().assignMeta();
-    }
+
+    // Carrying meta?
+    if (isCarryingMeta()) this.services.getAssignmentManager().assignMeta();
 
     // Wait on meta to come online; we need it to progress.
     try {
