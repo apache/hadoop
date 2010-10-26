@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,8 +36,9 @@ import org.junit.Test;
 public class TestFileUtil {
   private static final Log LOG = LogFactory.getLog(TestFileUtil.class);
 
-  final static private File TEST_DIR = new File(System.getProperty(
-      "test.build.data", "/tmp"), "fu");
+  private static final String TEST_ROOT_DIR = System.getProperty(
+      "test.build.data", "/tmp") + "/fu";
+  private static final File TEST_DIR = new File(TEST_ROOT_DIR);
   private static String FILE = "x";
   private static String LINK = "y";
   private static String DIR = "dir";
@@ -41,9 +46,10 @@ public class TestFileUtil {
   private File tmp = new File(TEST_DIR, "tmp");
   private File dir1 = new File(del, DIR + "1");
   private File dir2 = new File(del, DIR + "2");
+  private File partitioned = new File(TEST_DIR, "partitioned");
 
   /**
-   * Creates directories del and tmp for testing.
+   * Creates multiple directories for testing.
    * 
    * Contents of them are
    * dir:tmp: 
@@ -54,12 +60,17 @@ public class TestFileUtil {
    *   dir: dir2 : file:x
    *   link: y to tmp/x
    *   link: tmpDir to tmp
+   * dir:partitioned:
+   *   file: part-r-00000, contents: "foo"
+   *   file: part-r-00001, contents: "bar"
    */
   private void setupDirs() throws IOException {
     Assert.assertFalse(del.exists());
     Assert.assertFalse(tmp.exists());
+    Assert.assertFalse(partitioned.exists());
     del.mkdirs();
     tmp.mkdirs();
+    partitioned.mkdirs();
     new File(del, FILE).createNewFile();
     File tmpFile = new File(tmp, FILE);
     tmpFile.createNewFile();
@@ -78,12 +89,39 @@ public class TestFileUtil {
     File linkDir = new File(del, "tmpDir");
     FileUtil.symLink(tmp.toString(), linkDir.toString());
     Assert.assertEquals(5, del.listFiles().length);
+
+    // create files in partitioned directories
+    createFile(partitioned, "part-r-00000", "foo");
+    createFile(partitioned, "part-r-00001", "bar");
+  }
+
+  /**
+   * Creates a new file in the specified directory, with the specified name and
+   * the specified file contents.  This method will add a newline terminator to
+   * the end of the contents string in the destination file.
+   * @param directory File non-null destination directory.
+   * @param name String non-null file name.
+   * @param contents String non-null file contents.
+   * @throws IOException if an I/O error occurs.
+   */
+  private void createFile(File directory, String name, String contents)
+      throws IOException {
+    File newFile = new File(directory, name);
+    PrintWriter pw = new PrintWriter(newFile);
+
+    try {
+      pw.println(contents);
+    }
+    finally {
+      pw.close();
+    }
   }
 
   @After
   public void tearDown() throws IOException {
     FileUtil.fullyDelete(del);
     FileUtil.fullyDelete(tmp);
+    FileUtil.fullyDelete(partitioned);
   }
 
   @Test
@@ -311,5 +349,59 @@ public class TestFileUtil {
     setupDirsAndNonWritablePermissions();
     boolean ret = FileUtil.fullyDeleteContents(new MyFile(del));
     validateAndSetWritablePermissions(ret);
+  }
+
+  @Test
+  public void testCopyMergeSingleDirectory() throws IOException {
+    setupDirs();
+    boolean copyMergeResult = copyMerge("partitioned", "tmp/merged");
+    Assert.assertTrue("Expected successful copyMerge result.", copyMergeResult);
+    File merged = new File(TEST_DIR, "tmp/merged");
+    Assert.assertTrue("File tmp/merged must exist after copyMerge.",
+        merged.exists());
+    BufferedReader rdr = new BufferedReader(new FileReader(merged));
+
+    try {
+      Assert.assertEquals("Line 1 of merged file must contain \"foo\".",
+          "foo", rdr.readLine());
+      Assert.assertEquals("Line 2 of merged file must contain \"bar\".",
+          "bar", rdr.readLine());
+      Assert.assertNull("Expected end of file reading merged file.",
+          rdr.readLine());
+    }
+    finally {
+      rdr.close();
+    }
+  }
+
+  /**
+   * Calls FileUtil.copyMerge using the specified source and destination paths.
+   * Both source and destination are assumed to be on the local file system.
+   * The call will not delete source on completion and will not add an
+   * additional string between files.
+   * @param src String non-null source path.
+   * @param dst String non-null destination path.
+   * @return boolean true if the call to FileUtil.copyMerge was successful.
+   * @throws IOException if an I/O error occurs.
+   */
+  private boolean copyMerge(String src, String dst)
+      throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem fs = FileSystem.getLocal(conf);
+    final boolean result;
+
+    try {
+      Path srcPath = new Path(TEST_ROOT_DIR, src);
+      Path dstPath = new Path(TEST_ROOT_DIR, dst);
+      boolean deleteSource = false;
+      String addString = null;
+      result = FileUtil.copyMerge(fs, srcPath, fs, dstPath, deleteSource, conf,
+          addString);
+    }
+    finally {
+      fs.close();
+    }
+
+    return result;
   }
 }

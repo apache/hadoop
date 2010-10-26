@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.*;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -279,13 +280,14 @@ public class FileUtil {
                                   Configuration conf, String addString) throws IOException {
     dstFile = checkDest(srcDir.getName(), dstFS, dstFile, false);
 
-    if (srcFS.getFileStatus(srcDir).isDirectory())
+    if (!srcFS.getFileStatus(srcDir).isDirectory())
       return false;
    
     OutputStream out = dstFS.create(dstFile);
     
     try {
       FileStatus contents[] = srcFS.listStatus(srcDir);
+      Arrays.sort(contents);
       for (int i = 0; i < contents.length; i++) {
         if (contents[i].isFile()) {
           InputStream in = srcFS.open(contents[i].getPath());
