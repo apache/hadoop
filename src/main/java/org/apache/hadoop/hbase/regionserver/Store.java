@@ -1386,6 +1386,30 @@ public class Store implements HeapSize {
     }
   }
 
+  /**
+   * Adds or replaces the specified KeyValues.
+   * <p>
+   * For each KeyValue specified, if a cell with the same row, family, and
+   * qualifier exists in MemStore, it will be replaced.  Otherwise, it will just
+   * be inserted to MemStore.
+   * <p>
+   * This operation is atomic on each KeyValue (row/family/qualifier) but not
+   * necessarily atomic across all of them.
+   * @param kvs
+   * @return memstore size delta
+   * @throws IOException
+   */
+  public long upsert(List<KeyValue> kvs)
+      throws IOException {
+    this.lock.readLock().lock();
+    try {
+      // TODO: Make this operation atomic w/ RWCC
+      return this.memstore.upsert(kvs);
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
   public StoreFlusher getStoreFlusher(long cacheFlushId) {
     return new StoreFlusherImpl(cacheFlushId);
   }

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
 import org.apache.hadoop.hbase.client.MultiAction;
@@ -191,13 +192,15 @@ public class HbaseObjectWritable implements Writable, Configurable {
 
     addToMap(NavigableSet.class, code++);
     addToMap(ColumnPrefixFilter.class, code++);
-    
+
     // Multi
     addToMap(Row.class, code++);
     addToMap(Action.class, code++);
     addToMap(MultiAction.class, code++);
     addToMap(MultiResponse.class, code++);
-    
+
+    addToMap(Increment.class, code++);
+
   }
 
   private Class<?> declaredClass;

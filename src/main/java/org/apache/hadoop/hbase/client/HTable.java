@@ -650,6 +650,22 @@ public class HTable implements HTableInterface {
   }
 
   @Override
+  public Result increment(final Increment increment) throws IOException {
+    if (!increment.hasFamilies()) {
+      throw new IOException(
+          "Invalid arguments to increment, no columns specified");
+    }
+    return connection.getRegionServerWithRetries(
+        new ServerCallable<Result>(connection, tableName, increment.getRow()) {
+          public Result call() throws IOException {
+            return server.increment(
+                location.getRegionInfo().getRegionName(), increment);
+          }
+        }
+    );
+  }
+
+  @Override
   public long incrementColumnValue(final byte [] row, final byte [] family,
       final byte [] qualifier, final long amount)
   throws IOException {

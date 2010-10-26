@@ -19,12 +19,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Used to communicate with a single HBase table.
@@ -231,7 +231,7 @@ public interface HTableInterface {
 
   /**
    * Atomically checks if a row/family/qualifier value matches the expected
-   * value. If it does, it adds the delete.  If the passed value is null, the 
+   * value. If it does, it adds the delete.  If the passed value is null, the
    * check is for the lack of column (ie: non-existance)
    *
    * @param row to check
@@ -244,6 +244,21 @@ public interface HTableInterface {
    */
   boolean checkAndDelete(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Delete delete) throws IOException;
+
+  /**
+   * Increments one or more columns within a single row.
+   * <p>
+   * This operation does not appear atomic to readers.  Increments are done
+   * under a single row lock, so write operations to a row are synchronized, but
+   * readers do not take row locks so get and scan operations can see this
+   * operation partially completed.
+   *
+   * @param increment object that specifies the columns and amounts to be used
+   *                  for the increment operations
+   * @throws IOException e
+   * @return values of columns after the increment
+   */
+  public Result increment(final Increment increment) throws IOException;
 
   /**
    * Atomically increments a column value.

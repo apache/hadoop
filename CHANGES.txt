@@ -1096,6 +1096,8 @@ Release 0.21.0 - Unreleased
    HBASE-3053  Add ability to have multiple Masters LocalHBaseCluster for
                test writing
    HBASE-2201  JRuby shell for replication
+   HBASE-2946  Increment multiple columns in a row at once
+
 
   OPTIMIZATIONS
    HBASE-410   [testing] Speed up the test suite

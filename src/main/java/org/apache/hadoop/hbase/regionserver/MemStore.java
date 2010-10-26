@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.rmi.UnexpectedException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -370,8 +371,6 @@ public class MemStore implements HeapSize {
     try {
       KeyValue firstKv = KeyValue.createFirstOnRow(
           row, family, qualifier);
-      // create a new KeyValue with 'now' and a 0 memstoreTS == immediately visible
-      KeyValue newKv;
       // Is there a KeyValue in 'snapshot' with the same TS? If so, upgrade the timestamp a bit.
       SortedSet<KeyValue> snSs = snapshot.tailSet(firstKv);
       if (!snSs.isEmpty()) {
@@ -410,46 +409,95 @@ public class MemStore implements HeapSize {
         }
       }
 
-
-      // add the new value now. this might have the same TS as an existing KV, thus confusing
-      // readers slightly for a MOMENT until we erase the old one (and thus old value).
-      newKv = new KeyValue(row, family, qualifier,
-          now,
-          Bytes.toBytes(newValue));
-      long addedSize = add(newKv);
-
-      // remove extra versions.
-      ss = kvset.tailSet(firstKv);
-      it = ss.iterator();
-      while ( it.hasNext() ) {
-        KeyValue kv = it.next();
-
-        if (kv == newKv) {
-          // ignore the one i just put in (heh)
-          continue;
-        }
-
-        // if this isnt the row we are interested in, then bail:
-        if (!firstKv.matchingColumn(family,qualifier) || !firstKv.matchingRow(kv)) {
-          break; // rows dont match, bail.
-        }
-
-        // if the qualifier matches and it's a put, just RM it out of the kvset.
-        if (firstKv.matchingQualifier(kv)) {
-          // to be extra safe we only remove Puts that have a memstoreTS==0
-          if (kv.getType() == KeyValue.Type.Put.getCode()) {
-            // false means there was a change, so give us the size.
-            addedSize -= heapSizeChange(kv, true);
-
-            it.remove();
-          }
-        }
-      }
-
-      return addedSize;
+      // create or update (upsert) a new KeyValue with
+      // 'now' and a 0 memstoreTS == immediately visible
+      return upsert(Arrays.asList(new KeyValue [] {
+          new KeyValue(row, family, qualifier, now,
+              Bytes.toBytes(newValue))
+      }));
     } finally {
       this.lock.readLock().unlock();
     }
+  }
+
+  /**
+   * Update or insert the specified KeyValues.
+   * <p>
+   * For each KeyValue, insert into MemStore.  This will atomically upsert the
+   * value for that row/family/qualifier.  If a KeyValue did already exist,
+   * it will then be removed.
+   * <p>
+   * Currently the memstoreTS is kept at 0 so as each insert happens, it will
+   * be immediately visible.  May want to change this so it is atomic across
+   * all KeyValues.
+   * <p>
+   * This is called under row lock, so Get operations will still see updates
+   * atomically.  Scans will only see each KeyValue update as atomic.
+   *
+   * @param kvs
+   * @return change in memstore size
+   */
+  public long upsert(List<KeyValue> kvs) {
+   this.lock.readLock().lock();
+    try {
+      long size = 0;
+      for (KeyValue kv : kvs) {
+        kv.setMemstoreTS(0);
+        size += upsert(kv);
+      }
+      return size;
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Inserts the specified KeyValue into MemStore and deletes any existing
+   * versions of the same row/family/qualifier as the specified KeyValue.
+   * <p>
+   * First, the specified KeyValue is inserted into the Memstore.
+   * <p>
+   * If there are any existing KeyValues in this MemStore with the same row,
+   * family, and qualifier, they are removed.
+   * @param kv
+   * @return change in size of MemStore
+   */
+  private long upsert(KeyValue kv) {
+    // Add the KeyValue to the MemStore
+    long addedSize = add(kv);
+
+    // Iterate the KeyValues after the one just inserted, cleaning up any
+    // other KeyValues with the same row/family/qualifier
+    SortedSet<KeyValue> ss = kvset.tailSet(kv);
+    Iterator<KeyValue> it = ss.iterator();
+    while ( it.hasNext() ) {
+      KeyValue cur = it.next();
+
+      if (kv == cur) {
+        // ignore the one just put in
+        continue;
+      }
+      // if this isn't the row we are interested in, then bail
+      if (!kv.matchingRow(cur)) {
+        break;
+      }
+
+      // if the qualifier matches and it's a put, remove it
+      if (kv.matchingQualifier(cur)) {
+
+        // to be extra safe we only remove Puts that have a memstoreTS==0
+        if (kv.getType() == KeyValue.Type.Put.getCode() &&
+            kv.getMemstoreTS() == 0) {
+          // false means there was a change, so give us the size.
+          addedSize -= heapSizeChange(kv, true);
+          it.remove();
+        }
+      } else {
+        // past the column, done
+        break;
+      }
+    }
+    return addedSize;
   }
 
   /*

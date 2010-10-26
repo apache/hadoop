@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
@@ -54,14 +55,15 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowLock;
@@ -2956,6 +2958,102 @@ public class HRegion implements HeapSize { // , Writable{
         scanner.close();
     }
     return results;
+  }
+
+  /**
+   * Perform one or more increment operations on a row.
+   * <p>
+   * Increments performed are done under row lock but reads do not take locks
+   * out so this can be seen partially complete by gets and scans.
+   * @param increment
+   * @param lockid
+   * @param writeToWAL
+   * @return new keyvalues after increment
+   * @throws IOException
+   */
+  public Result increment(Increment increment, Integer lockid,
+      boolean writeToWAL)
+  throws IOException {
+    // TODO: Use RWCC to make this set of increments atomic to reads
+    byte [] row = increment.getRow();
+    checkRow(row);
+    boolean flush = false;
+    WALEdit walEdits = null;
+    List<KeyValue> allKVs = new ArrayList<KeyValue>(increment.numColumns());
+    List<KeyValue> kvs = new ArrayList<KeyValue>(increment.numColumns());
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long size = 0;
+
+    // Lock row
+    startRegionOperation();
+    try {
+      Integer lid = getLock(lockid, row, true);
+      try {
+        // Process each family
+        for (Map.Entry<byte [], NavigableMap<byte [], Long>> family :
+          increment.getFamilyMap().entrySet()) {
+
+          Store store = stores.get(family.getKey());
+
+          // Get previous values for all columns in this family
+          Get get = new Get(row);
+          for (Map.Entry<byte [], Long> column : family.getValue().entrySet()) {
+            get.addColumn(family.getKey(), column.getKey());
+          }
+          List<KeyValue> results = getLastIncrement(get);
+
+          // Iterate the input columns and update existing values if they were
+          // found, otherwise add new column initialized to the increment amount
+          int idx = 0;
+          for (Map.Entry<byte [], Long> column : family.getValue().entrySet()) {
+            long amount = column.getValue();
+            if (idx < results.size() &&
+                results.get(idx).matchingQualifier(column.getKey())) {
+              amount += Bytes.toLong(results.get(idx).getValue());
+              idx++;
+            }
+
+            // Append new incremented KeyValue to list
+            KeyValue newKV = new KeyValue(row, family.getKey(), column.getKey(),
+                now, Bytes.toBytes(amount));
+            kvs.add(newKV);
+
+            // Append update to WAL
+            if (writeToWAL) {
+              if (walEdits == null) {
+                walEdits = new WALEdit();
+              }
+              walEdits.add(newKV);
+            }
+          }
+
+          // Write the KVs for this family into the store
+          size += store.upsert(kvs);
+          allKVs.addAll(kvs);
+          kvs.clear();
+        }
+
+        // Actually write to WAL now
+        if (writeToWAL) {
+          this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
+            walEdits, now);
+        }
+
+        size = this.memstoreSize.addAndGet(size);
+        flush = isFlushSize(size);
+      } finally {
+        releaseRowLock(lid);
+      }
+    } finally {
+      closeRegionOperation();
+    }
+
+    if (flush) {
+      // Request a cache flush.  Do it outside update lock.
+      requestFlush();
+    }
+
+    return new Result(allKVs);
   }
 
   /**

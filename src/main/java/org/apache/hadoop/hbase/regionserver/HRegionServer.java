@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
 import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
@@ -2291,6 +2292,26 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   public HServerInfo getServerInfo() {
     return this.serverInfo;
+  }
+
+
+  @Override
+  public Result increment(byte[] regionName, Increment increment)
+  throws IOException {
+    checkOpen();
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to increment " +
+      "regionName is null");
+    }
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      return region.increment(increment, getLockFromId(increment.getLockId()),
+          increment.getWriteToWAL());
+    } catch (IOException e) {
+      checkFileSystem();
+      throw e;
+    }
   }
 
   /** {@inheritDoc} */

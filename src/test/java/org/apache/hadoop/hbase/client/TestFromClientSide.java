@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -60,6 +59,7 @@ import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -261,7 +261,7 @@ public class TestFromClientSide {
    * logs to ensure that we're not scanning more regions that we're supposed to.
    * Related to the TestFilterAcrossRegions over in the o.a.h.h.filter package.
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   @Test
   public void testFilterAcrossMultipleRegions()
@@ -1506,7 +1506,7 @@ public class TestFromClientSide {
     get.addFamily(FAMILIES[0]);
     get.setMaxVersions(Integer.MAX_VALUE);
     result = ht.get(get);
-    assertNResult(result, ROW, FAMILIES[0], QUALIFIER, 
+    assertNResult(result, ROW, FAMILIES[0], QUALIFIER,
         new long [] {ts[1], ts[2], ts[3]},
         new byte[][] {VALUES[1], VALUES[2], VALUES[3]},
         0, 2);
@@ -2631,6 +2631,23 @@ public class TestFromClientSide {
     assertTrue("Expected value [" + Bytes.toString(value) + "] " +
         "Got value [" + Bytes.toString(key.getValue()) + "]",
         equals(value, key.getValue()));
+  }
+
+  private void assertIncrementKey(KeyValue key, byte [] row, byte [] family,
+      byte [] qualifier, long value)
+  throws Exception {
+    assertTrue("Expected row [" + Bytes.toString(row) + "] " +
+        "Got row [" + Bytes.toString(key.getRow()) +"]",
+        equals(row, key.getRow()));
+    assertTrue("Expected family [" + Bytes.toString(family) + "] " +
+        "Got family [" + Bytes.toString(key.getFamily()) + "]",
+        equals(family, key.getFamily()));
+    assertTrue("Expected qualifier [" + Bytes.toString(qualifier) + "] " +
+        "Got qualifier [" + Bytes.toString(key.getQualifier()) + "]",
+        equals(qualifier, key.getQualifier()));
+    assertTrue("Expected value [" + value + "] " +
+        "Got value [" + Bytes.toLong(key.getValue()) + "]",
+        Bytes.toLong(key.getValue()) == value);
   }
 
   private void assertNumKeys(Result result, int n) throws Exception {
@@ -3800,7 +3817,7 @@ public class TestFromClientSide {
     table.getConnection().clearRegionCache();
     assertEquals("Clearing cache should have 0 cached ", 0,
         HConnectionManager.getCachedRegionCount(conf, TABLENAME));
-    
+
     // A Get is suppose to do a region lookup request
     Get g = new Get(Bytes.toBytes("aaa"));
     table.get(g);
@@ -3847,6 +3864,77 @@ public class TestFromClientSide {
         HConnectionManager.getCachedRegionCount(conf, TABLENAME));
 
     LOG.info("Finishing testRegionCachePreWarm");
+  }
+
+  @Test
+  public void testIncrement() throws Exception {
+    LOG.info("Starting testIncrement");
+    final byte [] TABLENAME = Bytes.toBytes("testIncrement");
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+
+    byte [][] ROWS = new byte [][] {
+        Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
+        Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
+        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i")
+    };
+    byte [][] QUALIFIERS = new byte [][] {
+        Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
+        Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
+        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i")
+    };
+
+    // Do some simple single-column increments
+
+    // First with old API
+    ht.incrementColumnValue(ROW, FAMILY, QUALIFIERS[0], 1);
+    ht.incrementColumnValue(ROW, FAMILY, QUALIFIERS[1], 2);
+    ht.incrementColumnValue(ROW, FAMILY, QUALIFIERS[2], 3);
+    ht.incrementColumnValue(ROW, FAMILY, QUALIFIERS[3], 4);
+
+    // Now increment things incremented with old and do some new
+    Increment inc = new Increment(ROW);
+    inc.addColumn(FAMILY, QUALIFIERS[1], 1);
+    inc.addColumn(FAMILY, QUALIFIERS[3], 1);
+    inc.addColumn(FAMILY, QUALIFIERS[4], 1);
+    ht.increment(inc);
+
+    // Verify expected results
+    Result r = ht.get(new Get(ROW));
+    KeyValue [] kvs = r.raw();
+    assertEquals(5, kvs.length);
+    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 1);
+    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 3);
+    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 3);
+    assertIncrementKey(kvs[3], ROW, FAMILY, QUALIFIERS[3], 5);
+    assertIncrementKey(kvs[4], ROW, FAMILY, QUALIFIERS[4], 1);
+
+    // Now try multiple columns by different amounts
+    inc = new Increment(ROWS[0]);
+    for (int i=0;i<QUALIFIERS.length;i++) {
+      inc.addColumn(FAMILY, QUALIFIERS[i], i+1);
+    }
+    ht.increment(inc);
+    // Verify
+    r = ht.get(new Get(ROWS[0]));
+    kvs = r.raw();
+    assertEquals(QUALIFIERS.length, kvs.length);
+    for (int i=0;i<QUALIFIERS.length;i++) {
+      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], i+1);
+    }
+
+    // Re-increment them
+    inc = new Increment(ROWS[0]);
+    for (int i=0;i<QUALIFIERS.length;i++) {
+      inc.addColumn(FAMILY, QUALIFIERS[i], i+1);
+    }
+    ht.increment(inc);
+    // Verify
+    r = ht.get(new Get(ROWS[0]));
+    kvs = r.raw();
+    assertEquals(QUALIFIERS.length, kvs.length);
+    for (int i=0;i<QUALIFIERS.length;i++) {
+      assertIncrementKey(kvs[i], ROWS[0], FAMILY, QUALIFIERS[i], 2*(i+1));
+    }
   }
 }
 
