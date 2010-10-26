@@ -1559,7 +1559,6 @@ public class AssignmentManager extends ZooKeeperListener {
       Map.Entry<String, RegionPlan> e = i.next();
       if (e.getValue().getDestination().equals(hsi)) {
         // Use iterator's remove else we'll get CME
-        LOG.info("REMOVING PLAN " + e.getValue());
         i.remove();
       }
     }
