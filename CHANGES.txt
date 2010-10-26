@@ -59,6 +59,9 @@ Release 0.20.3 - Unreleased
     HDFS-1404. TestNodeCount logic incorrect in branch-0.20.
     (Todd Lipcon via Eli Collins)
 
+    HADOOP-6724. IPC doesn't properly handle IOEs thrown by socket factory.
+    (Todd Lipcon via Eli Collins)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match

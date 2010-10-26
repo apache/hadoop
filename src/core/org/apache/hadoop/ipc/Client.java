@@ -347,10 +347,12 @@ public class Client {
     private void handleConnectionFailure(
         int curRetries, int maxRetries, IOException ioe) throws IOException {
       // close the current connection
-      try {
-        socket.close();
-      } catch (IOException e) {
-        LOG.warn("Not able to close a socket", e);
+      if (socket != null) {
+        try {
+          socket.close();
+        } catch (IOException e) {
+          LOG.warn("Not able to close a socket", e);
+        }
       }
       // set socket to null so that the next call to setupIOstreams
       // can start the process of connect all over again.
