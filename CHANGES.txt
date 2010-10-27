@@ -617,6 +617,8 @@ Release 0.21.0 - Unreleased
                timeout handling but nothing happens
    HBASE-3158  Bloom File Writes Broken if keySize is large
                (Nicolas Spiegelberg via Stack)
+   HBASE-3155  HFile.appendMetaBlock() uses wrong comparator
+               (Nicolas Spiegelberg via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

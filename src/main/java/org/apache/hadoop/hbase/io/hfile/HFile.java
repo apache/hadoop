@@ -218,7 +218,7 @@ public class HFile {
     private long valuelength = 0;
 
     // Used to ensure we write in order.
-    private final RawComparator<byte []> rawComparator;
+    private final RawComparator<byte []> comparator;
 
     // A stream made per block written.
     private DataOutputStream out;
@@ -338,7 +338,7 @@ public class HFile {
       this.outputStream = ostream;
       this.closeOutputStream = false;
       this.blocksize = blocksize;
-      this.rawComparator = c == null? Bytes.BYTES_RAWCOMPARATOR: c;
+      this.comparator = c == null? Bytes.BYTES_RAWCOMPARATOR: c;
       this.name = this.outputStream.toString();
       this.compressAlgo = compress == null?
         DEFAULT_COMPRESSION_ALGORITHM: compress;
@@ -440,8 +440,8 @@ public class HFile {
       for (i = 0; i < metaNames.size(); ++i) {
         // stop when the current key is greater than our own
         byte[] cur = metaNames.get(i);
-        if (this.rawComparator.compare(cur, 0, cur.length, key, 0, key.length)
-            > 0) {
+        if (Bytes.BYTES_RAWCOMPARATOR.compare(cur, 0, cur.length, 
+            key, 0, key.length) > 0) {
           break;
         }
       }
@@ -571,7 +571,7 @@ public class HFile {
           MAXIMUM_KEY_LENGTH);
       }
       if (this.lastKeyBuffer != null) {
-        int keyComp = this.rawComparator.compare(this.lastKeyBuffer, this.lastKeyOffset,
+        int keyComp = this.comparator.compare(this.lastKeyBuffer, this.lastKeyOffset,
             this.lastKeyLength, key, offset, length);
         if (keyComp > 0) {
           throw new IOException("Added a key not lexically larger than" +
@@ -682,7 +682,7 @@ public class HFile {
       appendFileInfo(this.fileinfo, FileInfo.AVG_VALUE_LEN,
         Bytes.toBytes(avgValueLen), false);
       appendFileInfo(this.fileinfo, FileInfo.COMPARATOR,
-        Bytes.toBytes(this.rawComparator.getClass().getName()), false);
+        Bytes.toBytes(this.comparator.getClass().getName()), false);
       long pos = o.getPos();
       this.fileinfo.write(o);
       return pos;
