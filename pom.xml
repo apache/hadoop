@@ -360,9 +360,9 @@
                              package="org.apache.hadoop.hbase.generated.regionserver"
                              webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
 
-                <!--<exec executable="sh">
+                <exec executable="sh">
                   <arg line="${basedir}/src/saveVersion.sh ${project.version} ${generated.sources}"/>
-                </exec>-->
+                </exec>
               </tasks>
             </configuration>
             <goals>
