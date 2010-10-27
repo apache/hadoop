@@ -169,12 +169,47 @@ public class ZKUtil {
         "[\\t\\n\\x0B\\f\\r]", ""));
     StringBuilder builder = new StringBuilder(ensemble);
     builder.append(":");
+    builder.append(conf.get("hbase.zookeeper.property.clientPort"));
+    builder.append(":");
     builder.append(conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
     if (name != null && !name.isEmpty()) {
       builder.append(",");
       builder.append(name);
     }
     return builder.toString();
+  }
+
+  /**
+   * Apply the settings in the given key to the given configuration, this is
+   * used to communicate with distant clusters
+   * @param conf configuration object to configure
+   * @param key string that contains the 3 required configuratins
+   * @throws IOException
+   */
+  public static void applyClusterKeyToConf(Configuration conf, String key)
+      throws IOException{
+    String[] parts = transformClusterKey(key);
+    conf.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
+    conf.set("hbase.zookeeper.property.clientPort", parts[1]);
+    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parts[2]);
+  }
+
+  /**
+   * Separate the given key into the three configurations it should contain:
+   * hbase.zookeeper.quorum, hbase.zookeeper.client.port
+   * and zookeeper.znode.parent
+   * @param key
+   * @return the three configuration in the described order
+   * @throws IOException
+   */
+  public static String[] transformClusterKey(String key) throws IOException {
+    String[] parts = key.split(":");
+    if (parts.length != 3) {
+      throw new IOException("Cluster key invalid, the format should be:" +
+          HConstants.ZOOKEEPER_QUORUM + ":hbase.zookeeper.client.port:"
+          + HConstants.ZOOKEEPER_ZNODE_PARENT);
+    }
+    return parts;
   }
 
   //

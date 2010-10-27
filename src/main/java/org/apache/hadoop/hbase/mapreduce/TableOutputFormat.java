@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -186,10 +187,7 @@ implements Configurable {
     String serverImpl = conf.get(REGION_SERVER_IMPL);
     try {
       if (address != null) {
-        // Check is done in TMRU
-        String[] parts = address.split(":");
-        conf.set(HConstants.ZOOKEEPER_QUORUM, parts[0]);
-        conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, parts[1]);
+        ZKUtil.applyClusterKeyToConf(conf, address);
       }
       if (serverClass != null) {
         conf.set(HConstants.REGION_SERVER_CLASS, serverClass);

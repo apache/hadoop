@@ -157,9 +157,7 @@ public class ReplicationZookeeper {
         conf.get("zookeeper.znode.replication.clusterId", "clusterId");
     String rsZNodeName =
         conf.get("zookeeper.znode.replication.rs", "rs");
-    this.ourClusterKey = this.conf.get(HConstants.ZOOKEEPER_QUORUM) + ":" +
-          this.conf.get("hbase.zookeeper.property.clientPort") + ":" +
-          this.conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT);
+    this.ourClusterKey = ZKUtil.getZooKeeperClusterKey(this.conf);
     this.replicationZNode =
       ZKUtil.joinZNode(this.zookeeper.baseZNode, replicationZNodeName);
     this.peersZNode = ZKUtil.joinZNode(replicationZNode, peersZNodeName);
@@ -275,17 +273,15 @@ public class ReplicationZookeeper {
       LOG.debug("Not connecting to " + peerId + " because it's us");
       return null;
     }
-    String[] ensemble = otherClusterKey.split(":");
-    if (ensemble.length != 3) {
-      LOG.warn("Wrong format of cluster address: " +
-        Bytes.toStringBinary(data));
-      return null;
-    }
     // Construct the connection to the new peer
     Configuration otherConf = new Configuration(this.conf);
-    otherConf.set(HConstants.ZOOKEEPER_QUORUM, ensemble[0]);
-    otherConf.set("hbase.zookeeper.property.clientPort", ensemble[1]);
-    otherConf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, ensemble[2]);
+    try {
+      ZKUtil.applyClusterKeyToConf(otherConf, otherClusterKey);
+    } catch (IOException e) {
+      LOG.error("Can't get peer because:", e);
+      return null;
+    }
+
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(otherConf,
         "connection to cluster: " + peerId, this.abortable);
     return new ReplicationPeer(otherConf, peerId,

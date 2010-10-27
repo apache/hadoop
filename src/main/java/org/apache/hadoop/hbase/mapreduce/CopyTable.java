@@ -100,7 +100,7 @@ public class CopyTable {
     System.err.println(" endtime      end of the time range");
     System.err.println(" new.name     new table's name");
     System.err.println(" peer.adr     Address of the peer cluster given in the format");
-    System.err.println("              hbase.zookeeer.quorum:zookeeper.znode.parent");
+    System.err.println("              hbase.zookeeer.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent");
     System.err.println(" families     comma-seperated list of families to copy");
     System.err.println();
     System.err.println("Args:");
@@ -111,7 +111,7 @@ public class CopyTable {
     System.err.println(" $ bin/hbase " +
         "org.apache.hadoop.hbase.mapreduce.CopyTable --rs.class=org.apache.hadoop.hbase.ipc.ReplicationRegionInterface " +
         "--rs.impl=org.apache.hadoop.hbase.regionserver.replication.ReplicationRegionServer --starttime=1265875194289 --endtime=1265878794289 " +
-        "--peer.adr=server1,server2,server3:/hbase TestTable ");
+        "--peer.adr=server1,server2,server3:2181:/hbase TestTable ");
   }
 
   private static boolean doCommandLine(final String[] args) {

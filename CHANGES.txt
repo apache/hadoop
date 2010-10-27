@@ -619,6 +619,7 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-3155  HFile.appendMetaBlock() uses wrong comparator
                (Nicolas Spiegelberg via Stack)
+   HBASE-3012  TOF doesn't take zk client port for remote clusters
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable

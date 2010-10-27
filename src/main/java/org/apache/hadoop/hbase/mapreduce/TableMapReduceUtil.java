@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
@@ -185,7 +186,8 @@ public class TableMapReduceUtil {
    * default; e.g. copying tables between clusters, the source would be
    * designated by <code>hbase-site.xml</code> and this param would have the
    * ensemble address of the remote cluster.  The format to pass is particular.
-   * Pass <code> &lt;hbase.zookeeper.quorum> ':' &lt;ZOOKEEPER_ZNODE_PARENT></code>.
+   * Pass <code> &lt;hbase.zookeeper.quorum>:&lt;hbase.zookeeper.client.port>:&lt;zookeeper.znode.parent>
+   * </code> such as <code>server,server2,server3:2181:/hbase</code>.
    * @param serverClass redefined hbase.regionserver.class
    * @param serverImpl redefined hbase.regionserver.impl
    * @throws IOException When determining the region count fails.
@@ -215,7 +217,8 @@ public class TableMapReduceUtil {
    * default; e.g. copying tables between clusters, the source would be
    * designated by <code>hbase-site.xml</code> and this param would have the
    * ensemble address of the remote cluster.  The format to pass is particular.
-   * Pass <code> &lt;hbase.zookeeper.quorum> ':' &lt;ZOOKEEPER_ZNODE_PARENT></code>.
+   * Pass <code> &lt;hbase.zookeeper.quorum>:&lt;hbase.zookeeper.client.port>:&lt;zookeeper.znode.parent>
+   * </code> such as <code>server,server2,server3:2181:/hbase</code>.
    * @param serverClass redefined hbase.regionserver.class
    * @param serverImpl redefined hbase.regionserver.impl
    * @param addDependencyJars upload HBase jars and jars for any of the configured
@@ -233,13 +236,9 @@ public class TableMapReduceUtil {
     conf.set(TableOutputFormat.OUTPUT_TABLE, table);
     // If passed a quorum/ensemble address, pass it on to TableOutputFormat.
     if (quorumAddress != null) {
-      if (quorumAddress.split(":").length == 2) {
-        conf.set(TableOutputFormat.QUORUM_ADDRESS, quorumAddress);
-      } else {
-        // Not in expected format.
-        throw new IOException("Please specify the peer cluster using the format of " +
-          HConstants.ZOOKEEPER_QUORUM + ":" + HConstants.ZOOKEEPER_ZNODE_PARENT);
-      }
+      // Calling this will validate the format
+      ZKUtil.transformClusterKey(quorumAddress);
+      conf.set(TableOutputFormat.QUORUM_ADDRESS,quorumAddress);
     }
     if (serverClass != null && serverImpl != null) {
       conf.set(TableOutputFormat.REGION_SERVER_CLASS, serverClass);

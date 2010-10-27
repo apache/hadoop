@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
@@ -194,5 +195,32 @@ public class TestZooKeeper {
     assertNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2/l3/l4", null));
     ZKUtil.deleteNode(zkw, "/l1");
     assertNull(ZKUtil.getDataNoWatch(zkw, "/l1/l2", null));
+  }
+
+  @Test
+  public void testClusterKey() throws Exception {
+    testKey("server", "2181", "hbase");
+    testKey("server1,server2,server3", "2181", "hbase");
+    try {
+      ZKUtil.transformClusterKey("2181:hbase");
+    } catch (IOException ex) {
+      // OK
+    }
+  }
+
+  private void testKey(String ensemble, String port, String znode)
+      throws IOException {
+    Configuration conf = new Configuration();
+    String key = ensemble+":"+port+":"+znode;
+    String[] parts = ZKUtil.transformClusterKey(key);
+    assertEquals(ensemble, parts[0]);
+    assertEquals(port, parts[1]);
+    assertEquals(znode, parts[2]);
+    ZKUtil.applyClusterKeyToConf(conf, key);
+    assertEquals(parts[0], conf.get(HConstants.ZOOKEEPER_QUORUM));
+    assertEquals(parts[1], conf.get("hbase.zookeeper.property.clientPort"));
+    assertEquals(parts[2], conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+    String reconstructedKey = ZKUtil.getZooKeeperClusterKey(conf);
+    assertEquals(key, reconstructedKey);
   }
 }
