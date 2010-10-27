@@ -83,6 +83,7 @@ public class StoreFile {
   // Config keys.
   static final String IO_STOREFILE_BLOOM_ERROR_RATE = "io.storefile.bloom.error.rate";
   static final String IO_STOREFILE_BLOOM_MAX_FOLD = "io.storefile.bloom.max.fold";
+  static final String IO_STOREFILE_BLOOM_MAX_KEYS = "io.storefile.bloom.max.keys";
   static final String IO_STOREFILE_BLOOM_ENABLED = "io.storefile.bloom.enabled";
   static final String HFILE_BLOCK_CACHE_SIZE_KEY = "hfile.block.cache.size";
 
@@ -691,6 +692,9 @@ public class StoreFile {
 
       this.kvComparator = comparator;
 
+      BloomFilter bloom = null;
+      BloomType bt = BloomType.NONE;
+
       if (bloomType != BloomType.NONE && conf != null) {
         float err = conf.getFloat(IO_STOREFILE_BLOOM_ERROR_RATE, (float)0.01);
         // Since in row+col blooms we have 2 calls to shouldSeek() instead of 1
@@ -701,15 +705,31 @@ public class StoreFile {
           err /= 2;
         }
         int maxFold = conf.getInt(IO_STOREFILE_BLOOM_MAX_FOLD, 7);
-
-        this.bloomFilter = new ByteBloomFilter(maxKeys, err,
-            Hash.getHashType(conf), maxFold);
-        this.bloomFilter.allocBloom();
-        this.bloomType = bloomType;
-      } else {
-        this.bloomFilter = null;
-        this.bloomType = BloomType.NONE;
+        int tooBig = conf.getInt(IO_STOREFILE_BLOOM_MAX_KEYS, 128*1000*1000);
+        
+        if (maxKeys < tooBig) { 
+          try {
+            bloom = new ByteBloomFilter(maxKeys, err,
+                Hash.getHashType(conf), maxFold);
+            bloom.allocBloom();
+            bt = bloomType;
+          } catch (IllegalArgumentException iae) {
+            LOG.warn(String.format(
+              "Parse error while creating bloom for %s (%d, %f)", 
+              path, maxKeys, err), iae);
+            bloom = null;
+            bt = BloomType.NONE;
+          }
+        } else {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Skipping bloom filter because max keysize too large: " 
+                + maxKeys);
+          }
+        }
       }
+
+      this.bloomFilter = bloom;
+      this.bloomType = bt;
     }
 
     /**
@@ -819,6 +839,10 @@ public class StoreFile {
 
     public Path getPath() {
       return this.writer.getPath();
+    }
+    
+    boolean hasBloom() { 
+      return this.bloomFilter != null;
     }
 
     public void append(final byte [] key, final byte [] value) throws IOException {

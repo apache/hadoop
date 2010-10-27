@@ -52,7 +52,7 @@ public class ByteBloomFilter implements BloomFilter {
   public static final int VERSION = 1;
 
   /** Bytes (B) in the array */
-  protected int byteSize;
+  protected long byteSize;
   /** Number of hash functions */
   protected final int hashCount;
   /** Hash type */
@@ -134,11 +134,11 @@ public class ByteBloomFilter implements BloomFilter {
      *
      * The probability of false positives is minimized when k = m/n ln(2).
      */
-    int bitSize = (int)Math.ceil(maxKeys * (Math.log(errorRate) / Math.log(0.6185)));
+    long bitSize = (long)Math.ceil(maxKeys * (Math.log(errorRate) / Math.log(0.6185)));
     int functionCount = (int)Math.ceil(Math.log(2) * (bitSize / maxKeys));
 
     // increase byteSize so folding is possible
-    int byteSize = (bitSize + 7) / 8;
+    long byteSize = (bitSize + 7) / 8;
     int mask = (1 << foldFactor) - 1;
     if ( (mask & byteSize) != 0) {
       byteSize >>= foldFactor;
@@ -161,13 +161,13 @@ public class ByteBloomFilter implements BloomFilter {
     if (this.bloom != null) {
       throw new IllegalArgumentException("can only create bloom once.");
     }
-    this.bloom = ByteBuffer.allocate(this.byteSize);
+    this.bloom = ByteBuffer.allocate((int)this.byteSize);
     assert this.bloom.hasArray();
   }
 
   void sanityCheck() throws IllegalArgumentException {
-    if(this.byteSize <= 0) {
-      throw new IllegalArgumentException("maxValue must be > 0");
+    if(0 >= this.byteSize || this.byteSize > Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("Invalid byteSize: " + this.byteSize);
     }
 
     if(this.hashCount <= 0) {
@@ -205,7 +205,7 @@ public class ByteBloomFilter implements BloomFilter {
     int hash2 = this.hash.hash(buf, offset, len, hash1);
 
     for (int i = 0; i < this.hashCount; i++) {
-      int hashLoc = Math.abs((hash1 + i * hash2) % (this.byteSize * 8));
+      long hashLoc = Math.abs((hash1 + i * hash2) % (this.byteSize * 8));
       set(hashLoc);
     }
 
@@ -243,7 +243,7 @@ public class ByteBloomFilter implements BloomFilter {
     int hash2 = this.hash.hash(buf, offset, length, hash1);
 
     for (int i = 0; i < this.hashCount; i++) {
-      int hashLoc = Math.abs((hash1 + i * hash2) % (this.byteSize * 8));
+      long hashLoc = Math.abs((hash1 + i * hash2) % (this.byteSize * 8));
       if (!get(hashLoc, theBloom) ) {
         return false;
       }
@@ -259,9 +259,9 @@ public class ByteBloomFilter implements BloomFilter {
    *
    * @param pos index of bit
    */
-  void set(int pos) {
-    int bytePos = pos / 8;
-    int bitPos = pos % 8;
+  void set(long pos) {
+    int bytePos = (int)(pos / 8);
+    int bitPos = (int)(pos % 8);
     byte curByte = bloom.get(bytePos);
     curByte |= bitvals[bitPos];
     bloom.put(bytePos, curByte);
@@ -273,9 +273,9 @@ public class ByteBloomFilter implements BloomFilter {
    * @param pos index of bit
    * @return true if bit at specified index is 1, false if 0.
    */
-  static boolean get(int pos, ByteBuffer theBloom) {
-    int bytePos = pos / 8;
-    int bitPos = pos % 8;
+  static boolean get(long pos, ByteBuffer theBloom) {
+    int bytePos = (int)(pos / 8);
+    int bitPos = (int)(pos % 8);
     byte curByte = theBloom.get(bytePos);
     curByte &= bitvals[bitPos];
     return (curByte != 0);
@@ -293,7 +293,7 @@ public class ByteBloomFilter implements BloomFilter {
 
   @Override
   public int getByteSize() {
-    return this.byteSize;
+    return (int)this.byteSize;
   }
 
   @Override
@@ -301,7 +301,7 @@ public class ByteBloomFilter implements BloomFilter {
     // see if the actual size is exponentially smaller than expected.
     if (this.keyCount > 0 && this.bloom.hasArray()) {
       int pieces = 1;
-      int newByteSize = this.byteSize;
+      int newByteSize = (int)this.byteSize;
       int newMaxKeys = this.maxKeys;
 
       // while exponentially smaller & folding is lossless
@@ -367,7 +367,7 @@ public class ByteBloomFilter implements BloomFilter {
     @Override
     public void write(DataOutput out) throws IOException {
       out.writeInt(VERSION);
-      out.writeInt(byteSize);
+      out.writeInt((int)byteSize);
       out.writeInt(hashCount);
       out.writeInt(hashType);
       out.writeInt(keyCount);

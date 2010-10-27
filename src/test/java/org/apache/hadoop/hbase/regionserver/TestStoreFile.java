@@ -40,7 +40,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Hash;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.mockito.Mockito;
 
@@ -322,18 +324,11 @@ public class TestStoreFile extends HBaseTestCase {
   private static String ROOT_DIR =
     HBaseTestingUtility.getTestDir("TestStoreFile").toString();
   private static String localFormatter = "%010d";
-
-  public void testBloomFilter() throws Exception {
-    FileSystem fs = FileSystem.getLocal(conf);
-    conf.setFloat("io.hfile.bloom.error.rate", (float)0.01);
-    conf.setBoolean("io.hfile.bloom.enabled", true);
-
-    // write the file
-    Path f = new Path(ROOT_DIR, getName());
-    StoreFile.Writer writer = new StoreFile.Writer(fs, f,
-        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
-        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000);
-
+  
+  private void bloomWriteRead(StoreFile.Writer writer, FileSystem fs) 
+  throws Exception {
+    float err = conf.getFloat(StoreFile.IO_STOREFILE_BLOOM_ERROR_RATE, 0);
+    Path f = writer.getPath();
     long now = System.currentTimeMillis();
     for (int i = 0; i < 2000; i += 2) {
       String row = String.format(localFormatter, i);
@@ -370,14 +365,31 @@ public class TestStoreFile extends HBaseTestCase {
     System.out.println("False negatives: " + falseNeg);
     assertEquals(0, falseNeg);
     System.out.println("False positives: " + falsePos);
-    assertTrue(falsePos < 2);
+    if (!(falsePos <= 2* 2000 * err)) {
+      System.out.println("WTFBBQ! " + falsePos + ", " + (2* 2000 * err) );
+    }
+    assertTrue(falsePos <= 2* 2000 * err);    
+  }
+
+  public void testBloomFilter() throws Exception {
+    FileSystem fs = FileSystem.getLocal(conf);
+    conf.setFloat(StoreFile.IO_STOREFILE_BLOOM_ERROR_RATE, (float)0.01);
+    conf.setBoolean(StoreFile.IO_STOREFILE_BLOOM_ENABLED, true);
+
+    // write the file
+    Path f = new Path(ROOT_DIR, getName());
+    StoreFile.Writer writer = new StoreFile.Writer(fs, f,
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000);
+
+    bloomWriteRead(writer, fs);
   }
 
   public void testBloomTypes() throws Exception {
     float err = (float) 0.01;
     FileSystem fs = FileSystem.getLocal(conf);
-    conf.setFloat("io.hfile.bloom.error.rate", err);
-    conf.setBoolean("io.hfile.bloom.enabled", true);
+    conf.setFloat(StoreFile.IO_STOREFILE_BLOOM_ERROR_RATE, err);
+    conf.setBoolean(StoreFile.IO_STOREFILE_BLOOM_ENABLED, true);
 
     int rowCount = 50;
     int colCount = 10;
@@ -453,6 +465,45 @@ public class TestStoreFile extends HBaseTestCase {
       assertEquals(0, falseNeg);
       assertTrue(falsePos < 2*expErr[x]);
     }
+  }
+  
+  public void testBloomEdgeCases() throws Exception {
+    float err = (float)0.005;
+    FileSystem fs = FileSystem.getLocal(conf);
+    Path f = new Path(ROOT_DIR, getName());
+    conf.setFloat(StoreFile.IO_STOREFILE_BLOOM_ERROR_RATE, err);
+    conf.setBoolean(StoreFile.IO_STOREFILE_BLOOM_ENABLED, true);
+    conf.setInt(StoreFile.IO_STOREFILE_BLOOM_MAX_KEYS, 1000);
+    
+    // this should not create a bloom because the max keys is too small
+    StoreFile.Writer writer = new StoreFile.Writer(fs, f,
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 2000);
+    assertFalse(writer.hasBloom());
+    writer.close();
+    fs.delete(f, true);
+    
+    conf.setInt(StoreFile.IO_STOREFILE_BLOOM_MAX_KEYS, Integer.MAX_VALUE);
+
+    // TODO: commented out because we run out of java heap space on trunk
+    /*
+    // the below config caused IllegalArgumentException in our production cluster
+    // however, the resulting byteSize is < MAX_INT, so this should work properly
+    writer = new StoreFile.Writer(fs, f,
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, 272446963);
+    assertTrue(writer.hasBloom());
+    bloomWriteRead(writer, fs);
+    */
+    
+    // this, however, is too large and should not create a bloom
+    // because Java can't create a contiguous array > MAX_INT
+    writer = new StoreFile.Writer(fs, f,
+        StoreFile.DEFAULT_BLOCKSIZE_SMALL, HFile.DEFAULT_COMPRESSION_ALGORITHM,
+        conf, KeyValue.COMPARATOR, StoreFile.BloomType.ROW, Integer.MAX_VALUE);
+    assertFalse(writer.hasBloom());
+    writer.close();
+    fs.delete(f, true);
   }
   
   public void testFlushTimeComparator() {

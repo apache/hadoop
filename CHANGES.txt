@@ -615,6 +615,8 @@ Release 0.21.0 - Unreleased
    HBASE-2753  Remove sorted() methods from Result now that Gets are Scans
    HBASE-3147  Regions stuck in transition after rolling restart, perpetual
                timeout handling but nothing happens
+   HBASE-3158  Bloom File Writes Broken if keySize is large
+               (Nicolas Spiegelberg via Stack)
 
   IMPROVEMENTS
    HBASE-1760  Cleanup TODOs in HTable
