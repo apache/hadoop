@@ -49,6 +49,8 @@ import java.util.TreeSet;
  * To scan everything for each row, instantiate a Scan object.
  * <p>
  * To modify scanner caching for just this scan, use {@link #setCaching(int) setCaching}.
+ * If caching is NOT set, we will use the caching value of the hosting
+ * {@link HTable}.  See {@link HTable#setScannerCaching(int)}.
  * <p>
  * To further define the scope of what to get when scanning, perform additional
  * methods as outlined below.
@@ -82,6 +84,9 @@ public class Scan implements Writable {
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
   private int batch = -1;
+  /*
+   * -1 means no caching
+   */
   private int caching = -1;
   private boolean cacheBlocks = true;
   private Filter filter = null;
