@@ -94,11 +94,18 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
     return digest(data, 0, data.length);
   }
 
+  /**
+   * Create a thread local MD5 digester
+   */
+  public static MessageDigest getDigester() {
+    return DIGESTER_FACTORY.get();
+  }
+
   /** Construct a hash value for the content from the InputStream. */
   public static MD5Hash digest(InputStream in) throws IOException {
     final byte[] buffer = new byte[4*1024]; 
 
-    final MessageDigest digester = DIGESTER_FACTORY.get();
+    final MessageDigest digester = getDigester();
     for(int n; (n = in.read(buffer)) != -1; ) {
       digester.update(buffer, 0, n);
     }
@@ -109,7 +116,7 @@ public class MD5Hash implements WritableComparable<MD5Hash> {
   /** Construct a hash value for a byte array. */
   public static MD5Hash digest(byte[] data, int start, int len) {
     byte[] digest;
-    MessageDigest digester = DIGESTER_FACTORY.get();
+    MessageDigest digester = getDigester();
     digester.update(data, start, len);
     digest = digester.digest();
     return new MD5Hash(digest);
