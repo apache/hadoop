@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
@@ -91,6 +92,10 @@ public class Export {
     long startTime = args.length > 3? Long.parseLong(args[3]): 0L;
     long endTime = args.length > 4? Long.parseLong(args[4]): Long.MAX_VALUE;
     s.setTimeRange(startTime, endTime);
+    s.setCacheBlocks(false);
+    if (conf.get(TableInputFormat.SCAN_COLUMN_FAMILY) != null) {
+      s.addFamily(Bytes.toBytes(conf.get(TableInputFormat.SCAN_COLUMN_FAMILY)));
+    }
     LOG.info("verisons=" + versions + ", starttime=" + startTime +
       ", endtime=" + endTime);
     TableMapReduceUtil.initTableMapperJob(tableName, s, Exporter.class, null,
@@ -111,8 +116,16 @@ public class Export {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    System.err.println("Usage: Export <tablename> <outputdir> [<versions> " +
-      "[<starttime> [<endtime>]]]");
+    System.err.println("Usage: Export [-D <property=value>]* <tablename> <outputdir> [<versions> " +
+      "[<starttime> [<endtime>]]]\n");
+    System.err.println("  Note: -D properties will be applied to the conf used. ");
+    System.err.println("  For example: ");
+    System.err.println("   -D mapred.output.compress=true");
+    System.err.println("   -D mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCodec");
+    System.err.println("   -D mapred.output.compression.type=BLOCK");
+    System.err.println("  Additionally, the following SCAN properties can be specified");
+    System.err.println("  to control/limit what is exported..");
+    System.err.println("   -D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=<familyName>");
   }
 
   /**

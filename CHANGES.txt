@@ -1049,6 +1049,9 @@ Release 0.21.0 - Unreleased
    	       LZO when LZO isn't available
    HBASE-3082  For ICV gets, first look in MemStore before reading StoreFiles
                (prakash via jgray)
+   HBASE-3167  HBase Export: Add ability to export specific Column Family;
+               Turn Block Cache off during export; improve usage doc
+               (Kannan Muthukkaruppan via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
