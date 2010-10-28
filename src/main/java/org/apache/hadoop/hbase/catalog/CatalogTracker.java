@@ -427,6 +427,8 @@ public class CatalogTracker {
       Throwable cause = e.getCause();
       if (cause != null && cause instanceof EOFException) {
         t = cause;
+      } else if (cause.getMessage().contains("Connection reset")) {
+        t = cause;
       } else {
         throw e;
       }

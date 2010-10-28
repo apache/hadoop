@@ -244,11 +244,22 @@ public class ZKAssign {
       int version = ZKUtil.checkExists(zkw, node);
       if(version == -1) {
         ZKUtil.createAndWatch(zkw, node, data.getBytes());
-        return true;
       } else {
-        return ZKUtil.setData(zkw, node, data.getBytes(), version);
+        if (!ZKUtil.setData(zkw, node, data.getBytes(), version)) {
+          return false;
+        } else {
+          // We successfully forced to OFFLINE, reset watch and handle if
+          // the state changed in between our set and the watch
+          RegionTransitionData curData =
+            ZKAssign.getData(zkw, region.getEncodedName());
+          if (curData.getEventType() != data.getEventType()) {
+            // state changed, need to process
+            return false;
+          }
+        }
       }
     }
+    return true;
   }
 
   /**
@@ -404,6 +415,8 @@ public class ZKAssign {
             "after verifying it was in OPENED state, we got a version mismatch"));
         return false;
       }
+      LOG.debug(zkw.prefix("Successfully deleted unassigned node for region " +
+          regionName + " in expected state " + expectedState));
       return true;
     }
   }
@@ -745,6 +758,8 @@ public class ZKAssign {
 
   /**
    * Blocks until there are no node in regions in transition.
+   * <p>
+   * Used in testing only.
    * @param zkw zk reference
    * @throws KeeperException
    * @throws InterruptedException
@@ -759,7 +774,27 @@ public class ZKAssign {
           LOG.debug("ZK RIT -> " + znode);
         }
       }
-      Thread.sleep(200);
+      Thread.sleep(100);
+    }
+  }
+
+  /**
+   * Blocks until there is at least one node in regions in transition.
+   * <p>
+   * Used in testing only.
+   * @param zkw zk reference
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  public static void blockUntilRIT(ZooKeeperWatcher zkw)
+  throws KeeperException, InterruptedException {
+    while (!ZKUtil.nodeHasChildren(zkw, zkw.assignmentZNode)) {
+      List<String> znodes =
+        ZKUtil.listChildrenAndWatchForNewChildren(zkw, zkw.assignmentZNode);
+      if (znodes == null || znodes.isEmpty()) {
+        LOG.debug("No RIT in ZK");
+      }
+      Thread.sleep(100);
     }
   }
 

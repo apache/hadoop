@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Handles CLOSED region event on Master.
@@ -88,7 +86,7 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
 
   @Override
   public void process() {
-    LOG.debug("Handling CLOSED event");
+    LOG.debug("Handling CLOSED event for " + regionInfo.getEncodedName());
     // Check if this table is being disabled or not
     if (assignmentManager.isTableOfRegionDisabled(regionInfo.getRegionName())) {
       assignmentManager.offlineDisabledRegion(regionInfo);

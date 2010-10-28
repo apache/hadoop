@@ -96,7 +96,7 @@ public class ServerManager {
   // Reporting to track master metrics.
   private final MasterMetrics metrics;
 
-  private final DeadServer deadservers = new DeadServer();
+  final DeadServer deadservers = new DeadServer();
 
   /**
    * Dumps into log current stats on dead servers and number of servers

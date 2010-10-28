@@ -239,6 +239,33 @@ public class LocalHBaseCluster {
   }
 
   /**
+   * Wait for the specified region server to stop
+   * Removes this thread from list of running threads.
+   * @param serverNumber
+   * @return Name of region server that just went down.
+   */
+  public String waitOnRegionServer(JVMClusterUtil.RegionServerThread rst) {
+    while (rst.isAlive()) {
+      try {
+        LOG.info("Waiting on " +
+          rst.getRegionServer().getHServerInfo().toString());
+        rst.join();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+    for (int i=0;i<regionThreads.size();i++) {
+      if (regionThreads.get(i) == rst) {
+        regionThreads.remove(i);
+        break;
+      }
+    }
+    return rst.getName();
+  }
+
+  /**
    * @param serverNumber
    * @return the HMaster thread
    */
@@ -300,6 +327,31 @@ public class LocalHBaseCluster {
         masterThread.join();
       } catch (InterruptedException e) {
         e.printStackTrace();
+      }
+    }
+    return masterThread.getName();
+  }
+
+  /**
+   * Wait for the specified master to stop
+   * Removes this thread from list of running threads.
+   * @param serverNumber
+   * @return Name of master that just went down.
+   */
+  public String waitOnMaster(JVMClusterUtil.MasterThread masterThread) {
+    while (masterThread.isAlive()) {
+      try {
+        LOG.info("Waiting on " +
+          masterThread.getMaster().getServerName().toString());
+        masterThread.join();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+    for (int i=0;i<masterThreads.size();i++) {
+      if (masterThreads.get(i) == masterThread) {
+        masterThreads.remove(i);
+        break;
       }
     }
     return masterThread.getName();

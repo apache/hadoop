@@ -425,6 +425,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
+      LOG.error("Stopping HRS because failed initialize", t);
       this.server.stop();
     }
   }
@@ -812,6 +813,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       this.metrics = new RegionServerMetrics();
       startServiceThreads();
       LOG.info("Serving as " + this.serverInfo.getServerName() +
+        ", RPC listening on " + this.server.getListenerAddress() +
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
       isOnline = true;

@@ -715,6 +715,30 @@ public class HBaseTestingUtility {
     return createMultiRegions(c, table, columnFamily, KEYS);
   }
 
+  /**
+   * Creates the specified number of regions in the specified table.
+   * @param c
+   * @param table
+   * @param columnFamily
+   * @param startKeys
+   * @return
+   * @throws IOException
+   */
+  public int createMultiRegions(final Configuration c, final HTable table,
+      final byte [] family, int numRegions)
+  throws IOException {
+    if (numRegions < 3) throw new IOException("Must create at least 3 regions");
+    byte [] startKey = Bytes.toBytes("aaaaa");
+    byte [] endKey = Bytes.toBytes("zzzzz");
+    byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+    byte [][] regionStartKeys = new byte[splitKeys.length+1][];
+    for (int i=0;i<splitKeys.length;i++) {
+      regionStartKeys[i+1] = splitKeys[i];
+    }
+    regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
+    return createMultiRegions(c, table, family, regionStartKeys);
+  }
+  
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
