@@ -255,6 +255,10 @@
           <xincludeSupported>true</xincludeSupported>
           <chunkedOutput>true</chunkedOutput>
           <useIdAsFilename>true</useIdAsFilename>
+          <baseDir>book-</baseDir>
+          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
+          <sectionAutolabel>true</sectionAutolabel>
+          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
           <targetDirectory>${basedir}/target/site/</targetDirectory>
         </configuration>
       </plugin>

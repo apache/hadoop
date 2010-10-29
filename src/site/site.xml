@@ -38,7 +38,6 @@
       <item name="Cluster replication"      href="replication.html" />
       <item name="Pseudo-Distributed HBase"      href="pseudo-distributed.html" />
       <item name="HBase Book"      href="book.html" />
-      <item name="Example Docbook Article"      href="sample_article.html" />
     </menu>
   </body>
     <skin>

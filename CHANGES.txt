@@ -626,6 +626,7 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-3172  Reverse order of AssignmentManager and MetaNodeTracker in
                ZooKeeperWatcher
+   HBASE-2406  Define semantics of cell timestamps/versions
 
 
   IMPROVEMENTS

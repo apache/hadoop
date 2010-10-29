@@ -23,17 +23,373 @@
     </revhistory>
   </info>
 
+  <chapter xml:id="introduction">
+    <title>Introduction</title>
+
+    <para>This book aims to be the official guide for the <link
+    xlink:href="http://hbase.apache.org/">HBase</link> version it ships with.
+    This document describes HBase version <emphasis><?eval ${project.version}?></emphasis>.
+    Herein you will find either the definitive documentation on an HBase topic
+    as of its standing when the referenced HBase version shipped, or failing
+    that, this book will point to the location in <link
+    xlink:href="http://hbase.apache.org/docs/current/api/index.html">javadoc</link>,
+    <link xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>
+    or <link xlink:href="http://wiki.apache.org/hadoop/Hbase">wiki</link>
+    where the pertinent information can be found.</para>
+
+    <para>This book is a work in progress. It is lacking in many areas but we
+    hope to fill in the holes with time. Feel free to add to this book should
+    you feel so inclined by adding a patch to an issue up in the HBase <link
+    xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
+  </chapter>
+
   <chapter xml:id="getting_started">
     <title>Getting Started</title>
 
-    <section>
-      <title>Requirements</title>
+    <section xml:id="quickstart">
+      <title>Quick Start</title>
 
-      <para>First...</para>
+      <para><itemizedlist>
+          <para>Here is a quick guide to starting up a standalone HBase
+          instance, inserting rows into a table via the <link
+          linkend="shell">HBase Shell</link>, and then clean up and shutting
+          down your instance.</para>
+
+          <listitem>
+            <para>Download and unpack the latest stable release.</para>
+
+            <para>Choose a download source from <link
+            xlink:href="http://www.apache.org/dyn/closer.cgi/hbase/">Apache
+            Download Mirrors</link>. Click on it. This will take you to a
+            mirror of the <emphasis>HBase Releases</emphasis> page. Click on
+            the folder named <filename>stable</filename> and then download the
+            file <filename><?eval ${project.version}?>.tar.gz</filename>.</para>
+
+            <para>Decompress and untar your download. Then change into the
+            unpacked directory and startHBase</para>
+
+            <para><programlisting>$ tar xfz <?eval ${project.version}?>.tar.gz
+$ cd <?eval ${project.version}
+$ ./bin/start-hbase.sh
+starting master, logging to logs/hbase-user-master-example.org.out?></programlisting></para>
+
+            <para>You now have a running HBase instance. HBase logs can be
+            found in the <filename>logs</filename> subdirectory. Check them
+            out.</para>
+          </listitem>
+
+          <listitem>
+            <para>Connect to your running HBase via the HBase Shell</para>
+
+            <para><programlisting>$ ./bin/hbase shell
+HBase Shell; enter 'help&lt;RETURN&gt;' for list of supported commands.
+Type "exit&lt;RETURN&gt;" to leave the HBase Shell
+Version: 0.89.20100924, r1001068, Fri Sep 24 13:55:42 PDT 2010
+
+hbase(main):001:0&gt; </programlisting></para>
+
+            <para>Type <command>help</command> to see a listing of shell
+            commands and options. Browse at least the paragraphs at the end of
+            the help emission for the gist of how variables are entered in the
+            HBase shell; in particular note how table names, rows, and
+            columns, etc., must be quoted.</para>
+          </listitem>
+
+          <listitem>
+            <para>Create a table named <filename>test</filename> with a single
+            colum family named <filename>cf.</filename></para>
+
+            <para><programlisting>hbase(main):003:0&gt; create 'test', 'cf'
+0 row(s) in 1.2200 seconds</programlisting></para>
+          </listitem>
+
+          <listitem>
+            <para>Insert some values into the table
+            <varname>test</varname>.</para>
+
+            <para>Below we insert 3 values. The first insert is at
+            <varname>row1</varname>, column <varname>cf:a</varname> -- columns
+            have a column family prefix delimited by the colon character --
+            with a value of <varname>value1</varname>.</para>
+
+            <para><programlisting>hbase(main):004:0&gt; put 'test', 'row1', 'cf:a', 'value1'
+0 row(s) in 0.0560 seconds
+hbase(main):005:0&gt; put 'test', 'row2', 'cf:b', 'value2'
+0 row(s) in 0.0370 seconds
+hbase(main):006:0&gt; put 'test', 'row3', 'cf:c', 'value3'
+0 row(s) in 0.0450 seconds</programlisting></para>
+          </listitem>
+
+          <listitem>
+            <para>Verify the table content</para>
+
+            <para>Run a scan of the table by doing the following</para>
+
+            <para><programlisting>hbase(main):007:0&gt; scan 'test'
+ROW    COLUMN+CELL
+row1   column=cf:a, timestamp=1288380727188, value=value1
+row2   column=cf:b, timestamp=1288380738440, value=value2
+row3   column=cf:c, timestamp=1288380747365, value=value3
+3 row(s) in 0.0590 seconds</programlisting></para>
+
+            <para>Get a single row as follows</para>
+
+            <para><programlisting>hbase(main):008:0&gt; get 'test', 'row1'
+COLUMN  CELL
+cf:a    timestamp=1288380727188, value=value1
+1 row(s) in 0.0400 seconds</programlisting></para>
+          </listitem>
+
+          <listitem>
+            <para>Now, disable and drop your table. This will clean up all
+            done above.</para>
+
+            <para><programlisting>hbase(main):012:0&gt; disable 'test'
+0 row(s) in 1.0930 seconds
+hbase(main):013:0&gt; drop 'test'
+0 row(s) in 0.0770 seconds </programlisting></para>
+          </listitem>
+
+          <listitem>
+            <para>Exit the shell by typing exit.</para>
+
+            <para><programlisting>hbase(main):014:0&gt; exit
+$ </programlisting></para>
+          </listitem>
+
+          <listitem>
+            <para>Stop your hbase instance by running the stop script.</para>
+
+            <para><programlisting>$ ./bin/stop-hbase.sh
+stopping hbase...............</programlisting></para>
+          </listitem>
+        </itemizedlist></para>
+    </section>
+
+    <section xml:id="notsoquick">
+      <title>Not-so-quick Start</title>
+
+      <para>The HBase API overview document contains a detailed <link
+      xlink:href="http://hbase.apache.org/docs/current/api/overview-summary.html#overview_description">Getting
+      Started</link> with a list of requirements and description of the
+      different HBase run modes: standalone, what is described above in <link
+      linkend="quickstart">Quick Start,</link> pseudo-distributed where all
+      daemons run on a single server, and distributed.</para>
     </section>
   </chapter>
 
-  <chapter>
+  <chapter xml:id="datamodel">
+    <title>Data Model</title>
+
+    <section>
+      <title>Table</title>
+
+      <para></para>
+    </section>
+
+    <section>
+      <title>Row</title>
+
+      <para></para>
+    </section>
+
+    <section>
+      <title>Column Family</title>
+
+      <para></para>
+    </section>
+
+    <section xml:id="versions">
+      <title>Versions</title>
+
+      <para>A <emphasis>{row, column, version} </emphasis>tuple exactly
+      specifies a <literal>cell</literal> in HBase. Its possible to have an
+      unbounded number of cells where the row and column are the same but the
+      cell address differs only in its version dimension.</para>
+
+      <para>While rows and column keys are expressed as bytes, the version is
+      specified using a long integer. Typically this long contains time
+      instances such as those returned by
+      <code>java.util.Date.getTime()</code> or
+      <code>System.currentTimeMillis()</code>, that is: <quote>the difference,
+      measured in milliseconds, between the current time and midnight, January
+      1, 1970 UTC</quote>.</para>
+
+      <para>The HBase version dimension is stored in decreasing order, so that
+      when reading from a store file, the most recent values are found
+      first.</para>
+
+      <para>There is a lot of confusion over the semantics of
+      <literal>cell</literal> versions, in HBase. In particular, a couple
+      questions that often come up are:<itemizedlist>
+          <listitem>
+            <para>If multiple writes to a cell have the same version, are all
+            versions maintained or just the last?<footnote>
+                <para>Currently, only the last written is fetchable.</para>
+              </footnote></para>
+          </listitem>
+
+          <listitem>
+            <para>Is it OK to write cells in a non-increasing version
+            order?<footnote>
+                <para>Yes</para>
+              </footnote></para>
+          </listitem>
+        </itemizedlist></para>
+
+      <para>Below we describe how the version dimension in HBase currently
+      works<footnote>
+          <para>See <link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-2406">HBASE-2406</link>
+          for discussion of HBase versions. <link
+          xlink:href="http://outerthought.org/blog/417-ot.html">Bending time
+          in HBase</link> makes for a good read on the version, or time,
+          dimension in HBase. It has more detail on versioning than is
+          provided here. As of this writing, the limiitation
+          <emphasis>Overwriting values at existing timestamps</emphasis>
+          mentioned in the article no longer holds in HBase. This section is
+          basically a synopsis of this article by Bruno Dumon.</para>
+        </footnote>.</para>
+
+      <section>
+        <title>Versions and HBase Operations</title>
+
+        <para>In this section we look at the behavior of the version dimension
+        for each of the core HBase operations.</para>
+
+        <section>
+          <title>Get/Scan</title>
+
+          <para>Gets are implemented on top of Scans. The below discussion of
+          Get applies equally to Scans.</para>
+
+          <para>By default, i.e. if you specify no explicit version, when
+          doing a <literal>get</literal>, the cell whose version has the
+          largest value is returned (which may or may not be the latest one
+          written, see later). The default behavior can be modified in the
+          following ways:</para>
+
+          <itemizedlist>
+            <listitem>
+              <para>to return more than one version, see <link
+              xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()">Get.setMaxVersions()</link></para>
+            </listitem>
+
+            <listitem>
+              <para>to return versions other than the latest, see <link
+              xlink:href="???">Get.setTimeRange()</link></para>
+
+              <para>To retrieve the latest version that is less than or equal
+              to a given value, thus giving the 'latest' state of the record
+              at a certain point in time, just use a range from 0 to the
+              desired version and set the max versions to 1.</para>
+            </listitem>
+          </itemizedlist>
+        </section>
+
+        <section>
+          <title>Put</title>
+
+          <para>Doing a put always creates a new version of a
+          <literal>cell</literal>, at a certain timestamp. By default the
+          system uses the server's <literal>currentTimeMillis</literal>, but
+          you can specify the version (= the long integer) yourself, on a
+          per-column level. This means you could assign a time in the past or
+          the future, or use the long value for non-time purposes.</para>
+
+          <para>To overwrite an existing value, do a put at exactly the same
+          row, column, and version as that of the cell you would
+          overshadow.</para>
+        </section>
+
+        <section>
+          <title>Delete</title>
+
+          <para>When performing a delete operation in HBase, there are two
+          ways to specify the versions to be deleted</para>
+
+          <itemizedlist>
+            <listitem>
+              <para>Delete all versions older than a certain timestamp</para>
+            </listitem>
+
+            <listitem>
+              <para>Delete the version at a specific timestamp</para>
+            </listitem>
+          </itemizedlist>
+
+          <para>A delete can apply to a complete row, a complete column
+          family, or to just one column. It is only in the last case that you
+          can delete explicit versions. For the deletion of a row or all the
+          columns within a family, it always works by deleting all cells older
+          than a certain version.</para>
+
+          <para>Deletes work by creating <emphasis>tombstone</emphasis>
+          markers. For example, let's suppose we want to delete a row. For
+          this you can specify a version, or else by default the
+          <literal>currentTimeMillis</literal> is used. What this means is
+          <quote>delete all cells where the version is less than or equal to
+          this version</quote>. HBase never modifies data in place, so for
+          example a delete will not immediately delete (or mark as deleted)
+          the entries in the storage file that correspond to the delete
+          condition. Rather, a so-called <emphasis>tombstone</emphasis> is
+          written, which will mask the deleted values<footnote>
+              <para>When HBase does a major compaction, the tombstones are
+              processed to actually remove the dead values, together with the
+              tombstones themselves.</para>
+            </footnote>. If the version you specified when deleting a row is
+          larger than the version of any value in the row, then you can
+          consider the complete row to be deleted.</para>
+        </section>
+      </section>
+
+      <section>
+        <title>Current Limitations</title>
+
+        <para>There are still some bugs (or at least 'undecided behavior')
+        with the version dimension that will be addressed by later HBase
+        releases.</para>
+
+        <section>
+          <title>Deletes mask Puts</title>
+
+          <para>Deletes mask puts, even puts that happened after the delete
+          was entered<footnote>
+              <para><link
+              xlink:href="https://issues.apache.org/jira/browse/HBASE-2256">HBASE-2256</link></para>
+            </footnote>. Remember that a delete writes a tombstone, which only
+          disappears after then next major compaction has run. Suppose you do
+          a delete of everything &lt;= T. After this you do a new put with a
+          timestamp &lt;= T. This put, even if it happened after the delete,
+          will be masked by the delete tombstone. Performing the put will not
+          fail, but when you do a get you will notice the put did have no
+          effect. It will start working again after the major compaction has
+          run. These issues should not be a problem if you use
+          always-increasing versions for new puts to a row. But they can occur
+          even if you do not care about time: just do delete and put
+          immediately after each other, and there is some chance they happen
+          within the same millisecond.</para>
+        </section>
+
+        <section>
+          <title>Major compactions change query results</title>
+
+          <para><quote>...create three cell versions at t1, t2 and t3, with a
+          maximum-versions setting of 2. So when getting all versions, only
+          the values at t2 and t3 will be returned. But if you delete the
+          version at t2 or t3, the one at t1 will appear again. Obviously,
+          once a major compaction has run, such behavior will not be the case
+          anymore...<footnote>
+              <para>See <emphasis>Garbage Collection</emphasis> in <link
+              xlink:href="http://outerthought.org/blog/417-ot.html">Bending
+              time in HBase</link> </para>
+            </footnote></quote></para>
+        </section>
+      </section>
+    </section>
+  </chapter>
+
+  <chapter xml:id="shell">
     <title>The HBase Shell</title>
 
     <para></para>
@@ -63,11 +419,14 @@
     </section>
   </chapter>
 
-  <chapter>
+  <chapter xml:id="regions">
     <title>Regions</title>
 
     <para>This chapter is all about Regions.</para>
 
+    <note>
+      <para>Does this belong in the data model chapter?</para>
+    </note>
 
     <section>
       <title>Region Size</title>
@@ -114,10 +473,11 @@
 
     <section>
       <title>Region Transitions</title>
-    <note>
-      <para>TODO: Review all of the below to ensure it matches what was
-      committed -- St.Ack 20100901</para>
-    </note>
+
+      <note>
+        <para>TODO: Review all of the below to ensure it matches what was
+        committed -- St.Ack 20100901</para>
+      </note>
 
       <para>Regions only transition in a limited set of circumstances.</para>
 
@@ -674,20 +1034,21 @@
           </itemizedlist>
         </section>
       </section>
+
       <section>
-      <title>Region Splits</title>
-      <para>Splits run unaided on the RegionServer; i.e. the Master does not
-      participate. The RegionServer splits
-      a region, offlines the split region and then adds the daughter regions
-      to META, opens daughters on the parent's hosting RegionServer and then
-      reports the split to the master.
-      </para>
+        <title>Region Splits</title>
+
+        <para>Splits run unaided on the RegionServer; i.e. the Master does not
+        participate. The RegionServer splits a region, offlines the split
+        region and then adds the daughter regions to META, opens daughters on
+        the parent's hosting RegionServer and then reports the split to the
+        master.</para>
       </section>
     </section>
   </chapter>
 
   <chapter>
-    <title>The WAL</title>
+    <title xml:id="wal">The WAL</title>
 
     <subtitle>HBase's<link
     xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging"> Write-Ahead
@@ -767,7 +1128,7 @@
   </chapter>
 
   <chapter>
-    <title>Bloom Filters</title>
+    <title xml:id="blooms">Bloom Filters</title>
 
     <para>Bloom filters were developed over in <link
     xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBase-1200
@@ -796,7 +1157,8 @@
       <title>Configurations</title>
 
       <para>Blooms are enabled by specifying options on a column family in the
-      HBase shell or in java code as specification on <classname>org.apache.hadoop.hbase.HColumnDescriptor</classname>.</para>
+      HBase shell or in java code as specification on
+      <classname>org.apache.hadoop.hbase.HColumnDescriptor</classname>.</para>
 
       <section>
         <title><code>HColumnDescriptor</code> option</title>
@@ -885,9 +1247,25 @@
   </chapter>
 
   <appendix>
-    <title>Tools</title>
+    <title xml:id="tools">Tools</title>
 
     <para>Here we list HBase tools for administration, analysis, fixup, and
     debugging.</para>
   </appendix>
+
+  <glossary xml:id="glossary">
+    <title xml:id="glossary">HBase Glossary</title>
+
+    <glossentry>
+      <glossterm xml:id="cf">column family</glossterm>
+
+      <acronym>cf</acronym>
+
+      <abbrev>cf</abbrev>
+
+      <glossdef>
+        <para>Define a column family</para>
+      </glossdef>
+    </glossentry>
+  </glossary>
 </book>
