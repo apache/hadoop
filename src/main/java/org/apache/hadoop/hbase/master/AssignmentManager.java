@@ -292,8 +292,17 @@ public class AssignmentManager extends ZooKeeperListener {
         // Region is opened, insert into RIT and handle it
         regionsInTransition.put(encodedRegionName, new RegionState(
             regionInfo, RegionState.State.OPENING, data.getStamp()));
-        new OpenedRegionHandler(master, this, data, regionInfo,
-            serverManager.getServerInfo(data.getServerName())).process();
+        HServerInfo hsi = serverManager.getServerInfo(data.getServerName());
+        // hsi could be null if this server is no longer online.  If
+        // that the case, just let this RIT timeout; it'll be assigned
+        // to new server then.
+        if (hsi == null) {
+          LOG.warn("Region in transition " + regionInfo.getEncodedName() +
+            " references a server no longer up " + data.getServerName() +
+            "; letting RIT timeout so will be assigned elsewhere");
+          break;
+        }
+        new OpenedRegionHandler(master, this, data, regionInfo, hsi).process();
         break;
       }
     }

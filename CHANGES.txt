@@ -1056,6 +1056,8 @@ Release 0.21.0 - Unreleased
                (Kannan Muthukkaruppan via Stack)
    HBASE-3102  Enhance HBase rMetrics for Long-running Stats
                (Nicolas Spiegelberg via Stack)
+   HBASE-3169  NPE when master joins running cluster if a RIT references
+               a RS no longer present
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
