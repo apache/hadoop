@@ -342,7 +342,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.catalogTracker, this.executorService);
-    zooKeeper.registerListener(assignmentManager);
+    zooKeeper.registerListenerFirst(assignmentManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
       this.serverManager);

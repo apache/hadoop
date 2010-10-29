@@ -624,6 +624,8 @@ Release 0.21.0 - Unreleased
                and assorted fixes around this + TestRollingRestart added
    HBASE-3160  Use more intelligent priorities for PriorityCompactionQueue
                (Nicolas Spiegelberg via Stack)
+   HBASE-3172  Reverse order of AssignmentManager and MetaNodeTracker in
+               ZooKeeperWatcher
 
 
   IMPROVEMENTS

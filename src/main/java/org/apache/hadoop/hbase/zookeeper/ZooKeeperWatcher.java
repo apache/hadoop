@@ -21,8 +21,9 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -64,8 +65,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   private Abortable abortable;
 
   // listeners to be notified
-  private final Set<ZooKeeperListener> listeners =
-    new CopyOnWriteArraySet<ZooKeeperListener>();
+  private final List<ZooKeeperListener> listeners =
+    new CopyOnWriteArrayList<ZooKeeperListener>();
 
   // set of unassigned nodes watched
   private Set<String> unassignedNodes = new HashSet<String>();
@@ -198,6 +199,15 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
    */
   public void registerListener(ZooKeeperListener listener) {
     listeners.add(listener);
+  }
+
+  /**
+   * Register the specified listener to receive ZooKeeper events and add it as
+   * the first in the list of current listeners.
+   * @param listener
+   */
+  public void registerListenerFirst(ZooKeeperListener listener) {
+    listeners.add(0, listener);
   }
 
   /**
