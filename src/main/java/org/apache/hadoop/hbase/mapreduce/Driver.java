@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.util.ProgramDriver;
 
 /**
@@ -41,6 +42,10 @@ public class Driver {
                  "Complete a bulk data load.");
     pgd.addClass(CopyTable.NAME, CopyTable.class,
         "Export a table from local cluster to peer cluster");
+    pgd.addClass(VerifyReplication.NAME, VerifyReplication.class, "Compare" +
+        " the data from tables in two different clusters. WARNING: It" +
+        " doesn't work for incrementColumnValues'd cells since the" +
+        " timestamp is changed after being appended to the log.");
     pgd.driver(args);
   }
 }

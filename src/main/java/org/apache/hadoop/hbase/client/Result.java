@@ -615,4 +615,31 @@ public class Result implements Writable {
     }
     return results;
   }
+
+  /**
+   * Does a deep comparison of two Results, down to the byte arrays.
+   * @param res1 first result to compare
+   * @param res2 second result to compare
+   * @throws Exception Every difference is throwing an exception
+   */
+  public static void compareResults(Result res1, Result res2)
+      throws Exception {
+    if (res2 == null) {
+      throw new Exception("There wasn't enough rows, we stopped at "
+          + Bytes.toString(res1.getRow()));
+    }
+    if (res1.size() != res2.size()) {
+      throw new Exception("This row doesn't have the same number of KVs: "
+          + res1.toString() + " compared to " + res2.toString());
+    }
+    KeyValue[] ourKVs = res1.sorted();
+    KeyValue[] replicatedKVs = res2.sorted();
+    for (int i = 0; i < res1.size(); i++) {
+      if (!ourKVs[i].equals(replicatedKVs[i]) &&
+          !Bytes.equals(ourKVs[i].getValue(), replicatedKVs[i].getValue())) {
+        throw new Exception("This result was different: "
+            + res1.toString() + " compared to " + res2.toString());
+      }
+    }
+  }
 }

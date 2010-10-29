@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -41,10 +42,11 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
+import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.mapreduce.Job;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -452,6 +454,56 @@ public class TestReplication {
         break;
       }
     }
+  }
+
+  /**
+   * Do a small loading into a table, make sure the data is really the same,
+   * then run the VerifyReplication job to check the results. Do a second
+   * comparison where all the cells are different.
+   * @throws Exception
+   */
+  @Test
+  public void testVerifyRepJob() throws Exception {
+    // Populate the tables, at the same time it guarantees that the tables are
+    // identical since it does the check
+    testSmallBatch();
+
+    String[] args = new String[] {"2", Bytes.toString(tableName)};
+    Job job = VerifyReplication.createSubmittableJob(conf1, args);
+    if (job == null) {
+      fail("Job wasn't created, see the log");
+    }
+    if (!job.waitForCompletion(true)) {
+      fail("Job failed, see the log");
+    }
+    assertEquals(NB_ROWS_IN_BATCH, job.getCounters().
+        findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
+    assertEquals(0, job.getCounters().
+        findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
+
+    Scan scan = new Scan();
+    ResultScanner rs = htable2.getScanner(scan);
+    Put put = null;
+    for (Result result : rs) {
+      put = new Put(result.getRow());
+      KeyValue firstVal = result.raw()[0];
+      put.add(firstVal.getFamily(),
+          firstVal.getQualifier(), Bytes.toBytes("diff data"));
+      htable2.put(put);
+    }
+    Delete delete = new Delete(put.getRow());
+    htable2.delete(delete);
+    job = VerifyReplication.createSubmittableJob(conf1, args);
+    if (job == null) {
+      fail("Job wasn't created, see the log");
+    }
+    if (!job.waitForCompletion(true)) {
+      fail("Job failed, see the log");
+    }
+    assertEquals(0, job.getCounters().
+            findCounter(VerifyReplication.Verifier.Counters.GOODROWS).getValue());
+        assertEquals(NB_ROWS_IN_BATCH, job.getCounters().
+            findCounter(VerifyReplication.Verifier.Counters.BADROWS).getValue());
   }
 
   /**

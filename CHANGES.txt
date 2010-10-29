@@ -1108,6 +1108,7 @@ Release 0.21.0 - Unreleased
                test writing
    HBASE-2201  JRuby shell for replication
    HBASE-2946  Increment multiple columns in a row at once
+   HBASE-3013  Tool to verify data in two clusters
 
 
   OPTIMIZATIONS

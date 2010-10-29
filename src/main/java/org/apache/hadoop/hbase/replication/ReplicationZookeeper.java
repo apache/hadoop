@@ -265,7 +265,7 @@ public class ReplicationZookeeper {
    * @throws IOException
    * @throws KeeperException
    */
-  private ReplicationPeer getPeer(String peerId) throws IOException, KeeperException{
+  public ReplicationPeer getPeer(String peerId) throws IOException, KeeperException{
     String znode = ZKUtil.joinZNode(this.peersZNode, peerId);
     byte [] data = ZKUtil.getData(this.zookeeper, znode);
     String otherClusterKey = Bytes.toString(data);

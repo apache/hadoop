@@ -31,6 +31,7 @@ This package provides replication between HBase clusters.
     <li><a href="#status">Status</a></li>
     <li><a href="#requirements">Requirements</a></li>
     <li><a href="#deployment">Deployment</a></li>
+    <li><a href="#verify">Verifying Replicated Data</a></li>
 </ol>
 
 <p>
@@ -49,6 +50,7 @@ features:
     <li>Supports clusters of different sizes.</li>
     <li>Handling of partitions longer than 10 minutes.</li>
     <li>Ability to add/remove slave clusters at runtime.</li>
+    <li>MapReduce job to compare tables on two clusters</li>
 </ol>
 Please report bugs on the project's Jira when found.
 <p>
@@ -121,6 +123,20 @@ issued that command but new entries won't be. To start it back, simply replace
 "false" with "true" in the command. 
 
 <p>
+
+<a name="verify">
+<h2>Verifying Replicated Data</h2>
+</a>
+<p>
+Verifying the replicated data on two clusters is easy to do in the shell when
+looking only at a few rows, but doing a systematic comparison requires more
+computing power. This is why the VerifyReplication MR job was created, it has
+to be run on the master cluster and needs to be provided with a peer id (the
+one provided when establishing a replication stream) and a table name. Other
+options let you specify a time range and specific families. This job's short
+name is "verifyrep" and needs to be provided when pointing "hadoop jar" to the
+hbase jar.
+</p>
 
 </body>
 </html>
