@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -128,6 +129,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private final HBaseServer rpcServer;
   // Address of the HMaster
   private final HServerAddress address;
+  // Metrics for the HMaster
+  private final MasterMetrics metrics;
   // file system manager for the master FS operations
   private MasterFileSystem fileSystemManager;
 
@@ -206,6 +209,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     this.zooKeeper = new ZooKeeperWatcher(conf, MASTER + ":" +
         address.getPort(), this);
+
+    this.metrics = new MasterMetrics(getServerName());
   }
 
   /**
@@ -325,11 +330,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      */
 
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
-    this.fileSystemManager = new MasterFileSystem(this);
+    this.fileSystemManager = new MasterFileSystem(this, metrics);
     this.connection = HConnectionManager.getConnection(conf);
     this.executorService = new ExecutorService(getServerName());
 
-    this.serverManager = new ServerManager(this, this);
+    this.serverManager = new ServerManager(this, this, metrics);
 
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, conf.getInt("hbase.master.catalog.timeout", Integer.MAX_VALUE));

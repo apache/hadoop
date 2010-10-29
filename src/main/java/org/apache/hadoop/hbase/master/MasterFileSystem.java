@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -54,6 +55,8 @@ public class MasterFileSystem {
   Configuration conf;
   // master status
   Server master;
+  // metrics for master
+  MasterMetrics metrics;
   // Keep around for convenience.
   private final FileSystem fs;
   // Is the fileystem ok?
@@ -65,9 +68,11 @@ public class MasterFileSystem {
   // create the split log lock
   final Lock splitLogLock = new ReentrantLock();
 
-  public MasterFileSystem(Server master) throws IOException {
+  public MasterFileSystem(Server master, MasterMetrics metrics)
+  throws IOException {
     this.conf = master.getConfiguration();
     this.master = master;
+    this.metrics = metrics;
     // Set filesystem to be that of this.rootdir else we get complaints about
     // mismatched filesystems if hbase.rootdir is hdfs and fs.defaultFS is
     // default localfs.  Presumption is that rootdir is fully-qualified before
@@ -181,14 +186,20 @@ public class MasterFileSystem {
 
   public void splitLog(final String serverName) {
     this.splitLogLock.lock();
+    long splitTime = 0, splitLogSize = 0;
     Path logDir = new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
     try {
       HLogSplitter splitter = HLogSplitter.createLogSplitter(conf);
       splitter.splitLog(this.rootdir, logDir, oldLogDir, this.fs, conf);
+      splitTime = splitter.getTime();
+      splitLogSize = splitter.getSize();
     } catch (IOException e) {
       LOG.error("Failed splitting " + logDir.toString(), e);
     } finally {
       this.splitLogLock.unlock();
+    }
+    if (this.metrics != null) {
+      this.metrics.addSplit(splitTime, splitLogSize);
     }
   }
 

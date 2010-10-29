@@ -123,15 +123,17 @@ public class ServerManager {
    * Constructor.
    * @param master
    * @param services
+   * @param metrics 
    * @param freshClusterStartup True if we are original master on a fresh
    * cluster startup else if false, we are joining an already running cluster.
    */
-  public ServerManager(final Server master, final MasterServices services) {
+  public ServerManager(final Server master, final MasterServices services,
+      MasterMetrics metrics) {
     this.master = master;
     this.services = services;
+    this.metrics = metrics;
     Configuration c = master.getConfiguration();
     int monitorInterval = c.getInt("hbase.master.monitor.interval", 60 * 1000);
-    this.metrics = new MasterMetrics(master.getServerName());
     this.serverMonitorThread = new ServerMonitor(monitorInterval, master);
     String n = Thread.currentThread().getName();
     Threads.setDaemonThreadRunning(this.serverMonitorThread, n + ".serverMonitor");

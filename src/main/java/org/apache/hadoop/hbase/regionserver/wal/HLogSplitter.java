@@ -68,6 +68,9 @@ public class HLogSplitter {
 
   static final Log LOG = LogFactory.getLog(HLogSplitter.class);
 
+  private long splitTime = 0;
+  private long splitSize = 0;
+
   /**
    * Name of file that holds recovered edits written by the wal log splitting
    * code, one per region
@@ -132,7 +135,7 @@ public class HLogSplitter {
       Path oldLogDir, final FileSystem fs, final Configuration conf)
       throws IOException {
 
-    long millis = System.currentTimeMillis();
+    long startTime = System.currentTimeMillis();
     List<Path> splits = null;
     if (!fs.exists(srcDir)) {
       // Nothing to do
@@ -168,12 +171,26 @@ public class HLogSplitter {
       io.initCause(e);
       throw io;
     }
-    long endMillis = System.currentTimeMillis();
-    LOG.info("hlog file splitting completed in " + (endMillis - millis)
-        + " millis for " + srcDir.toString());
+    splitTime = System.currentTimeMillis() - startTime;
+    LOG.info("hlog file splitting completed in " + splitTime +
+        " ms for " + srcDir.toString());
     return splits;
   }
   
+  /**
+   * @return time that this split took
+   */
+  public long getTime() {
+    return this.splitTime;
+  }
+  
+  /**
+   * @return aggregate size of hlogs that were split
+   */
+  public long getSize() {
+    return this.splitSize;
+  }
+   
   /**
    * Sorts the HLog edits in the given list of logfiles (that are a mix of edits
    * on multiple regions) by region and then splits them per region directories,
@@ -223,6 +240,8 @@ public class HLogSplitter {
     int logFilesPerStep = conf.getInt("hbase.hlog.split.batch.size", 3);
     boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
 
+    splitSize = 0;
+    
     try {
       int i = -1;
       while (i < logfiles.length) {
@@ -236,6 +255,7 @@ public class HLogSplitter {
           FileStatus log = logfiles[i];
           Path logPath = log.getPath();
           long logLength = log.getLen();
+          splitSize += logLength;
           LOG.debug("Splitting hlog " + (i + 1) + " of " + logfiles.length
               + ": " + logPath + ", length=" + logLength);
           try {

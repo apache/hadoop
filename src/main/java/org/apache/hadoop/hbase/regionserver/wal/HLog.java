@@ -235,7 +235,7 @@ public class HLog implements Syncable {
   // For measuring latency of syncs
   private static volatile long syncOps;
   private static volatile long syncTime;
-
+  
   public static long getWriteOps() {
     long ret = writeOps;
     writeOps = 0;

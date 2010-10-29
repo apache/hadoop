@@ -91,6 +91,7 @@ public class Store implements HeapSize {
   protected long ttl;
   private long majorCompactionTime;
   private int maxFilesToCompact;
+  private long lastCompactSize = 0;
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0; 
   private final long desiredMaxFileSize;
@@ -605,6 +606,8 @@ public class Store implements HeapSize {
     boolean forceSplit = this.region.shouldSplit(false);
     boolean majorcompaction = mc;
     synchronized (compactLock) {
+      this.lastCompactSize = 0;
+
       // filesToCompact are sorted oldest to newest.
       List<StoreFile> filesToCompact = this.storefiles;
       if (filesToCompact.isEmpty()) {
@@ -688,6 +691,7 @@ public class Store implements HeapSize {
             " file(s), size: " + skipped);
         }
       }
+      this.lastCompactSize = totalSize - skipped;
 
       // Ready to go.  Have list of files to compact.
       LOG.info("Started compaction of " + filesToCompact.size() + " file(s) in " +
@@ -1255,6 +1259,11 @@ public class Store implements HeapSize {
     }
     return null;
   }
+  
+  /** @return aggregate size of all HStores used in the last compaction */
+  public long getLastCompactSize() {
+    return this.lastCompactSize;
+  }
 
   /** @return aggregate size of HStore */
   public long getSize() {
@@ -1459,7 +1468,7 @@ public class Store implements HeapSize {
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (15 * ClassSize.REFERENCE) +
-      (4 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + (Bytes.SIZEOF_BOOLEAN * 2));
+      (5 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_INT) + (Bytes.SIZEOF_BOOLEAN * 2));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +

@@ -120,7 +120,7 @@ public class TestCatalogJanitor {
     private final MasterFileSystem mfs;
 
     MockMasterServices(final Server server) throws IOException {
-      this.mfs = new MasterFileSystem(server);
+      this.mfs = new MasterFileSystem(server, null);
     }
 
     @Override

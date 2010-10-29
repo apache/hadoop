@@ -1052,6 +1052,8 @@ Release 0.21.0 - Unreleased
    HBASE-3167  HBase Export: Add ability to export specific Column Family;
                Turn Block Cache off during export; improve usage doc
                (Kannan Muthukkaruppan via Stack)
+   HBASE-3102  Enhance HBase rMetrics for Long-running Stats
+               (Nicolas Spiegelberg via Stack)
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

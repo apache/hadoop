@@ -102,6 +102,9 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
             if(!this.server.isStopped()) {
               // Don't interrupt us while we are working
               byte [] midKey = r.compactStores();
+              if (r.getLastCompactInfo() != null) {  // compaction aborted?
+                this.server.getMetrics().addCompaction(r.getLastCompactInfo());
+              }
               if (shouldSplitRegion() && midKey != null &&
                   !this.server.isStopped()) {
                 split(r, midKey);
