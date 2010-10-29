@@ -622,6 +622,8 @@ Release 0.21.0 - Unreleased
    HBASE-3012  TOF doesn't take zk client port for remote clusters
    HBASE-3159  Double play of OpenedRegionHandler for a single region
                and assorted fixes around this + TestRollingRestart added
+   HBASE-3160  Use more intelligent priorities for PriorityCompactionQueue
+               (Nicolas Spiegelberg via Stack)
 
 
   IMPROVEMENTS

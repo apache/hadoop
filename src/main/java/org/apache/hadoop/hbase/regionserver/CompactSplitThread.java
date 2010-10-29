@@ -43,33 +43,10 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
   private final PriorityCompactionQueue compactionQueue =
     new PriorityCompactionQueue();
 
-  /** The priorities for a compaction request. */
-  public enum Priority implements Comparable<Priority> {
-    //NOTE: All priorities should be numbered consecutively starting with 1.
-    //The highest priority should be 1 followed by all lower priorities.
-    //Priorities can be changed at anytime without requiring any changes to the
-    //queue.
-
-    /** HIGH_BLOCKING should only be used when an operation is blocked until a
-     * compact / split is done (e.g. a MemStore can't flush because it has
-     * "too many store files" and is blocking until a compact / split is done)
-     */
-    HIGH_BLOCKING(1),
-    /** A normal compaction / split request */
-    NORMAL(2),
-    /** A low compaction / split request -- not currently used */
-    LOW(3);
-
-    int value;
-
-    Priority(int value) {
-      this.value = value;
-    }
-
-    int getInt() {
-      return value;
-    }
-  }
+  /* The default priority for user-specified compaction requests.
+   * The user gets top priority unless we have blocking compactions. (Pri <= 0)
+   */
+  public static final int PRIORITY_USER = 1;
 
   /**
    * Splitting should not take place if the total number of regions exceed this.
@@ -138,17 +115,12 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
 
   public synchronized void requestCompaction(final HRegion r,
       final String why) {
-    requestCompaction(r, false, why, Priority.NORMAL);
+    requestCompaction(r, false, why, r.getCompactPriority());
   }
 
   public synchronized void requestCompaction(final HRegion r,
-      final String why, Priority p) {
+      final String why, int p) {
     requestCompaction(r, false, why, p);
-  }
-
-  public synchronized void requestCompaction(final HRegion r,
-      final boolean force, final String why) {
-    requestCompaction(r, force, why, Priority.NORMAL);
   }
 
   /**
@@ -157,11 +129,14 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
    * @param why Why compaction requested -- used in debug messages
    */
   public synchronized void requestCompaction(final HRegion r,
-      final boolean force, final String why, Priority priority) {
+      final boolean force, final String why, int priority) {
     if (this.server.isStopped()) {
       return;
     }
-    r.setForceMajorCompaction(force);
+    // tell the region to major-compact (and don't downgrade it)
+    if (force) {
+      r.setForceMajorCompaction(force);
+    }
     if (compactionQueue.add(r, priority) && LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
         "requested for region " + r.getRegionNameAsString() +

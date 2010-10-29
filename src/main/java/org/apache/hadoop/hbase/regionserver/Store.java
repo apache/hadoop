@@ -95,6 +95,7 @@ public class Store implements HeapSize {
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0; 
   private final long desiredMaxFileSize;
+  private final int blockingStoreFileCount;
   private volatile long storeSize = 0L;
   private final Object flushLock = new Object();
   final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -186,6 +187,8 @@ public class Store implements HeapSize {
         HConstants.DEFAULT_MAX_FILE_SIZE);
     }
     this.desiredMaxFileSize = maxFileSize;
+    this.blockingStoreFileCount =
+      conf.getInt("hbase.hstore.blockingStoreFiles", -1);
 
     this.majorCompactionTime =
       conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 86400000);
@@ -1330,6 +1333,13 @@ public class Store implements HeapSize {
       size += r.indexSize();
     }
     return size;
+  }
+  
+  /**
+   * @return The priority that this store should have in the compaction queue
+   */
+  int getCompactPriority() {
+    return this.blockingStoreFileCount - this.storefiles.size();
   }
 
   /**

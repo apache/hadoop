@@ -2023,7 +2023,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // force a compaction, split will be side-effect
     // TODO: flush/compact/split refactor will make it trivial to do this
     // sync/async (and won't require us to do a compaction to split!)
-    compactSplitThread.requestCompaction(region, "User-triggered split");
+    compactSplitThread.requestCompaction(region, "User-triggered split",
+        CompactSplitThread.PRIORITY_USER);
   }
 
   @Override
@@ -2033,7 +2034,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     region.flushcache();
     region.shouldSplit(true);
     compactSplitThread.requestCompaction(region, major, "User-triggered "
-        + (major ? "major " : "") + "compaction");
+        + (major ? "major " : "") + "compaction",
+        CompactSplitThread.PRIORITY_USER);
   }
 
   /** @return the info server */

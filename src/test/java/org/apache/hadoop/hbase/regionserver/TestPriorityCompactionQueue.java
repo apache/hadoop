@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.regionserver.CompactSplitThread.Priority;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -76,7 +75,7 @@ public class TestPriorityCompactionQueue {
     }
   }
 
-  protected void addRegion(PriorityCompactionQueue pq, HRegion r, Priority p) {
+  protected void addRegion(PriorityCompactionQueue pq, HRegion r, int p) {
     pq.add(r, p);
     try {
       // Sleep 1 millisecond so 2 things are not put in the queue within the
@@ -105,11 +104,11 @@ public class TestPriorityCompactionQueue {
 
     // test 1
     // check fifo w/priority
-    addRegion(pq, r1, Priority.HIGH_BLOCKING);
-    addRegion(pq, r2, Priority.HIGH_BLOCKING);
-    addRegion(pq, r3, Priority.HIGH_BLOCKING);
-    addRegion(pq, r4, Priority.HIGH_BLOCKING);
-    addRegion(pq, r5, Priority.HIGH_BLOCKING);
+    addRegion(pq, r1, CompactSplitThread.PRIORITY_BLOCKING);
+    addRegion(pq, r2, CompactSplitThread.PRIORITY_BLOCKING);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_BLOCKING);
+    addRegion(pq, r4, CompactSplitThread.PRIORITY_BLOCKING);
+    addRegion(pq, r5, CompactSplitThread.PRIORITY_BLOCKING);
 
     getAndCheckRegion(pq, r1);
     getAndCheckRegion(pq, r2);
@@ -118,55 +117,41 @@ public class TestPriorityCompactionQueue {
     getAndCheckRegion(pq, r5);
 
     // test 2
-    // check fifo
-    addRegion(pq, r1, null);
-    addRegion(pq, r2, null);
-    addRegion(pq, r3, null);
-    addRegion(pq, r4, null);
-    addRegion(pq, r5, null);
+    // check fifo w/mixed priority
+    addRegion(pq, r1, CompactSplitThread.PRIORITY_BLOCKING);
+    addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_BLOCKING);
+    addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, CompactSplitThread.PRIORITY_BLOCKING);
 
     getAndCheckRegion(pq, r1);
-    getAndCheckRegion(pq, r2);
     getAndCheckRegion(pq, r3);
-    getAndCheckRegion(pq, r4);
     getAndCheckRegion(pq, r5);
+    getAndCheckRegion(pq, r2);
+    getAndCheckRegion(pq, r4);
 
     // test 3
     // check fifo w/mixed priority
-    addRegion(pq, r1, Priority.HIGH_BLOCKING);
-    addRegion(pq, r2, Priority.NORMAL);
-    addRegion(pq, r3, Priority.HIGH_BLOCKING);
-    addRegion(pq, r4, Priority.NORMAL);
-    addRegion(pq, r5, Priority.HIGH_BLOCKING);
+    addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, CompactSplitThread.PRIORITY_BLOCKING);
 
-    getAndCheckRegion(pq, r1);
-    getAndCheckRegion(pq, r3);
     getAndCheckRegion(pq, r5);
+    getAndCheckRegion(pq, r1);
     getAndCheckRegion(pq, r2);
+    getAndCheckRegion(pq, r3);
     getAndCheckRegion(pq, r4);
 
     // test 4
-    // check fifo w/mixed priority
-    addRegion(pq, r1, Priority.NORMAL);
-    addRegion(pq, r2, Priority.NORMAL);
-    addRegion(pq, r3, Priority.NORMAL);
-    addRegion(pq, r4, Priority.NORMAL);
-    addRegion(pq, r5, Priority.HIGH_BLOCKING);
-
-    getAndCheckRegion(pq, r5);
-    getAndCheckRegion(pq, r1);
-    getAndCheckRegion(pq, r2);
-    getAndCheckRegion(pq, r3);
-    getAndCheckRegion(pq, r4);
-
-    // test 5
     // check fifo w/mixed priority elevation time
-    addRegion(pq, r1, Priority.NORMAL);
-    addRegion(pq, r2, Priority.HIGH_BLOCKING);
-    addRegion(pq, r3, Priority.NORMAL);
+    addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r2, CompactSplitThread.PRIORITY_BLOCKING);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
     Thread.sleep(1000);
-    addRegion(pq, r4, Priority.NORMAL);
-    addRegion(pq, r5, Priority.HIGH_BLOCKING);
+    addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, CompactSplitThread.PRIORITY_BLOCKING);
 
     getAndCheckRegion(pq, r2);
     getAndCheckRegion(pq, r5);
@@ -177,15 +162,15 @@ public class TestPriorityCompactionQueue {
     // reset the priority compaction queue back to a normal queue
     pq = new PriorityCompactionQueue();
 
-    // test 7
+    // test 5
     // test that lower priority are removed from the queue when a high priority
     // is added
-    addRegion(pq, r1, Priority.NORMAL);
-    addRegion(pq, r2, Priority.NORMAL);
-    addRegion(pq, r3, Priority.NORMAL);
-    addRegion(pq, r4, Priority.NORMAL);
-    addRegion(pq, r5, Priority.NORMAL);
-    addRegion(pq, r3, Priority.HIGH_BLOCKING);
+    addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_BLOCKING);
 
     getAndCheckRegion(pq, r3);
     getAndCheckRegion(pq, r1);
@@ -195,24 +180,38 @@ public class TestPriorityCompactionQueue {
 
     Assert.assertTrue("Queue should be empty.", pq.size() == 0);
 
-    // test 8
+    // test 6
     // don't add the same region more than once
-    addRegion(pq, r1, Priority.NORMAL);
-    addRegion(pq, r2, Priority.NORMAL);
-    addRegion(pq, r3, Priority.NORMAL);
-    addRegion(pq, r4, Priority.NORMAL);
-    addRegion(pq, r5, Priority.NORMAL);
-    addRegion(pq, r1, Priority.NORMAL);
-    addRegion(pq, r2, Priority.NORMAL);
-    addRegion(pq, r3, Priority.NORMAL);
-    addRegion(pq, r4, Priority.NORMAL);
-    addRegion(pq, r5, Priority.NORMAL);
+    addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, CompactSplitThread.PRIORITY_USER);
 
     getAndCheckRegion(pq, r1);
     getAndCheckRegion(pq, r2);
     getAndCheckRegion(pq, r3);
     getAndCheckRegion(pq, r4);
     getAndCheckRegion(pq, r5);
+
+    Assert.assertTrue("Queue should be empty.", pq.size() == 0);
+    
+    // test 7
+    // we can handle negative priorities
+    addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r2, -1);
+    addRegion(pq, r3, CompactSplitThread.PRIORITY_BLOCKING);
+    addRegion(pq, r4, -2);
+
+    getAndCheckRegion(pq, r4);
+    getAndCheckRegion(pq, r2);
+    getAndCheckRegion(pq, r3);
+    getAndCheckRegion(pq, r1);
 
     Assert.assertTrue("Queue should be empty.", pq.size() == 0);
   }

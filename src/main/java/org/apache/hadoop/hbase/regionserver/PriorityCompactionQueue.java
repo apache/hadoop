@@ -28,7 +28,6 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.regionserver.CompactSplitThread.Priority;
 
 /**
  * This class delegates to the BlockingQueue but wraps all HRegions in
@@ -47,20 +46,16 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
    */
   private class CompactionRequest implements Comparable<CompactionRequest> {
     private final HRegion r;
-    private final Priority p;
+    private final int p;
     private final Date date;
 
-    public CompactionRequest(HRegion r, Priority p) {
+    public CompactionRequest(HRegion r, int p) {
       this(r, p, null);
     }
 
-    public CompactionRequest(HRegion r, Priority p, Date d) {
+    public CompactionRequest(HRegion r, int p, Date d) {
       if (r == null) {
         throw new NullPointerException("HRegion cannot be null");
-      }
-
-      if (p == null) {
-        p = Priority.NORMAL; //the default priority
       }
 
       if (d == null) {
@@ -91,7 +86,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
       }
       int compareVal;
 
-      compareVal = p.compareTo(request.p); //compare priority
+      compareVal = p - request.p; //compare priority
       if (compareVal != 0) {
         return compareVal;
       }
@@ -111,7 +106,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
     }
 
     /** Gets the priority for the request */
-    Priority getPriority() {
+    int getPriority() {
       return p;
     }
 
@@ -140,13 +135,13 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
    * @param p If null it will use the default priority
    * @return returns a compaction request if it isn't already in the queue
    */
-  protected CompactionRequest addToRegionsInQueue(HRegion r, Priority p) {
+  protected CompactionRequest addToRegionsInQueue(HRegion r, int p) {
     CompactionRequest queuedRequest = null;
     CompactionRequest newRequest = new CompactionRequest(r, p);
     synchronized (regionsInQueue) {
       queuedRequest = regionsInQueue.get(r);
       if (queuedRequest == null ||
-          newRequest.getPriority().compareTo(queuedRequest.getPriority()) < 0) {
+          newRequest.getPriority() < queuedRequest.getPriority()) {
         LOG.trace("Inserting region in queue. " + newRequest);
         regionsInQueue.put(r, newRequest);
       } else {
@@ -189,7 +184,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
     }
   }
 
-  public boolean add(HRegion e, Priority p) {
+  public boolean add(HRegion e, int p) {
     CompactionRequest request = this.addToRegionsInQueue(e, p);
     if (request != null) {
       boolean result = queue.add(request);
@@ -201,20 +196,20 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
 
   @Override
   public boolean add(HRegion e) {
-    return add(e, null);
+    return add(e, e.getCompactPriority());
   }
 
-  public boolean offer(HRegion e, Priority p) {
+  public boolean offer(HRegion e, int p) {
     CompactionRequest request = this.addToRegionsInQueue(e, p);
     return (request != null)? queue.offer(request): false;
   }
 
   @Override
   public boolean offer(HRegion e) {
-    return offer(e, null);
+    return offer(e, e.getCompactPriority());
   }
 
-  public void put(HRegion e, Priority p) throws InterruptedException {
+  public void put(HRegion e, int p) throws InterruptedException {
     CompactionRequest request = this.addToRegionsInQueue(e, p);
     if (request != null) {
       queue.put(request);
@@ -223,10 +218,10 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
 
   @Override
   public void put(HRegion e) throws InterruptedException {
-    put(e, null);
+    put(e, e.getCompactPriority());
   }
 
-  public boolean offer(HRegion e, Priority p, long timeout, TimeUnit unit)
+  public boolean offer(HRegion e, int p, long timeout, TimeUnit unit)
   throws InterruptedException {
     CompactionRequest request = this.addToRegionsInQueue(e, p);
     return (request != null)? queue.offer(request, timeout, unit): false;
@@ -235,7 +230,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   @Override
   public boolean offer(HRegion e, long timeout, TimeUnit unit)
   throws InterruptedException {
-    return offer(e, null, timeout, unit);
+    return offer(e, e.getCompactPriority(), timeout, unit);
   }
 
   @Override

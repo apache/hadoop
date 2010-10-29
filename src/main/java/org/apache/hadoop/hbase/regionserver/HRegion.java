@@ -3280,6 +3280,17 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
+   * @return The priority that this region should have in the compaction queue
+   */
+  public int getCompactPriority() {
+    int count = Integer.MAX_VALUE;
+    for(Store store : stores.values()) {
+      count = Math.min(count, store.getCompactPriority());
+    }
+    return count;
+  }
+
+  /**
    * Checks every store to see if one has too many
    * store files
    * @return true if any store has too many store files
