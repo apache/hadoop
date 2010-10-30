@@ -635,6 +635,8 @@ Release 0.21.0 - Unreleased
                znode location not deleted yet, and try to update META
                location in ROOT
    HBASE-2006  Documentation of hbase-site.xml parameters
+   HBASE-2672  README.txt should contain basic information like how to run
+               or build HBase
 
 
   IMPROVEMENTS
