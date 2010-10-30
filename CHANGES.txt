@@ -1076,6 +1076,7 @@ Release 0.21.0 - Unreleased
    HBASE-2253  Show Block cache hit ratio for requests where
                cacheBlocks=true
    HBASE-3126  Force use of 'mv -f' when moving aside hbase logfiles
+   HBASE-3176  Remove compile warnings in HRegionServer
 
 
   NEW FEATURES
