@@ -629,6 +629,8 @@ Release 0.21.0 - Unreleased
    HBASE-2406  Define semantics of cell timestamps/versions
    HBASE-3175  Commit of HBASE-3160 broke TestPriorityCompactionQueue up on
                hudson (nicolas via jgray)
+   HBASE-3163  If we timeout PENDING_CLOSE and send another closeRegion RPC,
+               need to handle NSRE from RS (comes as a RemoteException)
 
 
   IMPROVEMENTS

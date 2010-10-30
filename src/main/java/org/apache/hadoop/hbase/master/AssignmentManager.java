@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
@@ -987,30 +988,35 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     // Send CLOSE RPC
     try {
-      if(!serverManager.sendRegionClose(regions.get(region),
+      // TODO: We should consider making this look more like it does for the
+      //       region open where we catch all throwables and never abort
+      if(serverManager.sendRegionClose(regions.get(region),
           state.getRegion())) {
-        throw new NotServingRegionException("Server failed to close region");
+        LOG.debug("Sent CLOSE to " + regions.get(region) + " for region " +
+            region.getRegionNameAsString());
+        return;
       }
     } catch (NotServingRegionException nsre) {
-      // Did not CLOSE, so set region offline and assign it
-      LOG.debug("Attempted to send CLOSE to " + regions.get(region) +
-          " for region " + region.getRegionNameAsString() + " but failed, " +
-          "setting region as OFFLINE and reassigning");
-      synchronized (regionsInTransition) {
-        forceRegionStateToOffline(region);
-        assign(region);
+      // Failed to close, so pass through and reassign
+    } catch (RemoteException re) {
+      if (re.unwrapRemoteException() instanceof NotServingRegionException) {
+        // Failed to close, so pass through and reassign
+      } else {
+        this.master.abort("Remote unexpected exception",
+            re.unwrapRemoteException());
       }
-    } catch (IOException e) {
-      // For now call abort if unexpected exception -- radical, but will get fellas attention.
-      // St.Ack 20101012
-      // I don't think IOE can happen anymore, only NSRE IOE is used here
-      // should be able to remove this at least.  jgray 20101024
-      // I lied, we actually get RemoteException wrapping our NSRE, need to unwrap
-      this.master.abort("Remote unexpected exception", e);
     } catch (Throwable t) {
       // For now call abort if unexpected exception -- radical, but will get fellas attention.
       // St.Ack 20101012
       this.master.abort("Remote unexpected exception", t);
+    }
+    // Did not CLOSE, so set region offline and assign it
+    LOG.debug("Attempted to send CLOSE to " + regions.get(region) +
+        " for region " + region.getRegionNameAsString() + " but failed, " +
+        "setting region as OFFLINE and reassigning");
+    synchronized (regionsInTransition) {
+      forceRegionStateToOffline(region);
+      assign(region);
     }
   }
 
