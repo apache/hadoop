@@ -64,10 +64,10 @@ hbase_rotate_log ()
     if [ -f "$log" ]; then # rotate logs
     while [ $num -gt 1 ]; do
         prev=`expr $num - 1`
-        [ -f "$log.$prev" ] && mv "$log.$prev" "$log.$num"
+        [ -f "$log.$prev" ] && mv -f "$log.$prev" "$log.$num"
         num=$prev
     done
-    mv "$log" "$log.$num";
+    mv -f "$log" "$log.$num";
     fi
 }
 
