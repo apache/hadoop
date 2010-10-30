@@ -627,6 +627,8 @@ Release 0.21.0 - Unreleased
    HBASE-3172  Reverse order of AssignmentManager and MetaNodeTracker in
                ZooKeeperWatcher
    HBASE-2406  Define semantics of cell timestamps/versions
+   HBASE-3175  Commit of HBASE-3160 broke TestPriorityCompactionQueue up on
+               hudson (nicolas via jgray)
 
 
   IMPROVEMENTS

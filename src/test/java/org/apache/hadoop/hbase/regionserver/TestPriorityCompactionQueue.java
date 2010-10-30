@@ -104,11 +104,11 @@ public class TestPriorityCompactionQueue {
 
     // test 1
     // check fifo w/priority
-    addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r5, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r1, 0);
+    addRegion(pq, r2, 0);
+    addRegion(pq, r3, 0);
+    addRegion(pq, r4, 0);
+    addRegion(pq, r5, 0);
 
     getAndCheckRegion(pq, r1);
     getAndCheckRegion(pq, r2);
@@ -118,11 +118,11 @@ public class TestPriorityCompactionQueue {
 
     // test 2
     // check fifo w/mixed priority
-    addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r1, 0);
     addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, 0);
     addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r5, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, 0);
 
     getAndCheckRegion(pq, r1);
     getAndCheckRegion(pq, r3);
@@ -136,7 +136,7 @@ public class TestPriorityCompactionQueue {
     addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
     addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
     addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r5, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, 0);
 
     getAndCheckRegion(pq, r5);
     getAndCheckRegion(pq, r1);
@@ -147,11 +147,11 @@ public class TestPriorityCompactionQueue {
     // test 4
     // check fifo w/mixed priority elevation time
     addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r2, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r2, 0);
     addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
     Thread.sleep(1000);
     addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r5, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r5, 0);
 
     getAndCheckRegion(pq, r2);
     getAndCheckRegion(pq, r5);
@@ -170,7 +170,7 @@ public class TestPriorityCompactionQueue {
     addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
     addRegion(pq, r4, CompactSplitThread.PRIORITY_USER);
     addRegion(pq, r5, CompactSplitThread.PRIORITY_USER);
-    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, 0);
 
     getAndCheckRegion(pq, r3);
     getAndCheckRegion(pq, r1);
@@ -205,14 +205,14 @@ public class TestPriorityCompactionQueue {
     // we can handle negative priorities
     addRegion(pq, r1, CompactSplitThread.PRIORITY_USER);
     addRegion(pq, r2, -1);
-    addRegion(pq, r3, CompactSplitThread.PRIORITY_USER);
+    addRegion(pq, r3, 0);    
     addRegion(pq, r4, -2);
-
+    
     getAndCheckRegion(pq, r4);
     getAndCheckRegion(pq, r2);
     getAndCheckRegion(pq, r3);
     getAndCheckRegion(pq, r1);
-
+    
     Assert.assertTrue("Queue should be empty.", pq.size() == 0);
   }
 }
