@@ -231,6 +231,30 @@
 
     <plugins>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>xml-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <goals>
+              <goal>transform</goal>
+            </goals>
+            <phase>pre-site</phase>
+          </execution>
+        </executions>
+        <configuration>
+          <transformationSets>
+            <transformationSet>
+              <dir>${basedir}/src/main/resources/</dir>
+              <includes>
+                <include>hbase-default.xml</include>
+              </includes>
+              <stylesheet>${basedir}/src/main/xslt/configuration_to_docbook_section.xsl</stylesheet>
+              <outputDir>${basedir}/target/site/</outputDir>
+            </transformationSet>
+          </transformationSets>
+        </configuration>
+      </plugin>
+      <plugin>
         <groupId>com.agilejava.docbkx</groupId>
         <artifactId>docbkx-maven-plugin</artifactId>
         <version>2.0.11</version>
@@ -238,7 +262,6 @@
           <execution>
             <goals>
               <goal>generate-html</goal>
-              <goal>generate-pdf</goal>
             </goals>
             <phase>pre-site</phase>
           </execution>
@@ -255,7 +278,6 @@
           <xincludeSupported>true</xincludeSupported>
           <chunkedOutput>true</chunkedOutput>
           <useIdAsFilename>true</useIdAsFilename>
-          <baseDir>book-</baseDir>
           <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
           <sectionAutolabel>true</sectionAutolabel>
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>

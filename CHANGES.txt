@@ -634,6 +634,7 @@ Release 0.21.0 - Unreleased
    HBASE-3164  Handle case where we open META, ROOT has been closed but
                znode location not deleted yet, and try to update META
                location in ROOT
+   HBASE-2006  Documentation of hbase-site.xml parameters
 
 
   IMPROVEMENTS

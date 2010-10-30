@@ -1,4 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * Copyright 2010 The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+-->
 <book version="5.0" xmlns="http://docbook.org/ns/docbook"
       xmlns:xlink="http://www.w3.org/1999/xlink"
       xmlns:xi="http://www.w3.org/2001/XInclude"
@@ -7,24 +28,41 @@
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
   <info>
-    <title>The <link xlink:href="http://www.hbase.org">HBase</link>
+    <title>The Apache <link xlink:href="http://www.hbase.org">HBase</link>
     Book</title>
+      <copyright><year>2010</year><holder>Apache Software Foundation</holder></copyright>
+      <abstract>
+    <para>This is the official book of
+    <link xlink:href="http://www.hbase.org">Apache HBase</link>,
+    a distributed column-oriented database built on top of
+    Apache Hadoop <link xlink:href="http://hadoop.apache.org/">Common and HDFS</link>.
+      </para>
+      </abstract>
 
     <revhistory>
       <revision>
         <date />
 
-        <revdescription>Initial layout</revdescription>
-
+        <revdescription>Adding first cuts at Configuration, Getting Started, Data Model</revdescription>
         <revnumber>
           <?eval ${project.version}?>
+        </revnumber>
+      </revision>
+      <revision>
+        <date>
+        5 October 2010
+        </date>
+        <authorinitials>stack</authorinitials>
+        <revdescription>Initial layout</revdescription>
+        <revnumber>
+          0.89.20100924
         </revnumber>
       </revision>
     </revhistory>
   </info>
 
-  <chapter xml:id="introduction">
-    <title>Introduction</title>
+  <preface xml:id="preface">
+    <title>Preface</title>
 
     <para>This book aims to be the official guide for the <link
     xlink:href="http://hbase.apache.org/">HBase</link> version it ships with.
@@ -41,7 +79,7 @@
     hope to fill in the holes with time. Feel free to add to this book should
     you feel so inclined by adding a patch to an issue up in the HBase <link
     xlink:href="https://issues.apache.org/jira/browse/HBASE">JIRA</link>.</para>
-  </chapter>
+  </preface>
 
   <chapter xml:id="getting_started">
     <title>Getting Started</title>
@@ -180,6 +218,21 @@ stopping hbase...............</programlisting></para>
 
   <chapter xml:id="datamodel">
     <title>Data Model</title>
+  <para>The HBase data model resembles that a traditional RDBMS.
+  Applications store data into HBase <emphasis>tables</emphasis>.
+      Tables are made of rows and columns. Table cells
+      -- the intersection of row and column
+      coordinates -- are versioned. By default, their
+      <emphasis>version</emphasis> is a timestamp
+      auto-assigned by HBase at the time of cell insertion. A cell’s content
+      is an uninterpreted array of bytes.
+  </para>
+      <para>Table row keys are also byte arrays so almost anything can
+      serve as a row key from strings to binary representations of longs or
+      even serialized data structures. Rows in HBase tables
+      are sorted by row key. The sort is byte-ordered. All table accesses are
+      via the table row key -- its primary key.
+</para>
 
     <section>
       <title>Table</title>
@@ -200,7 +253,7 @@ stopping hbase...............</programlisting></para>
     </section>
 
     <section xml:id="versions">
-      <title>Versions</title>
+      <title>Versions<indexterm><primary>Versions</primary></indexterm></title>
 
       <para>A <emphasis>{row, column, version} </emphasis>tuple exactly
       specifies a <literal>cell</literal> in HBase. Its possible to have an
@@ -1252,20 +1305,130 @@ stopping hbase...............</programlisting></para>
     <para>Here we list HBase tools for administration, analysis, fixup, and
     debugging.</para>
   </appendix>
+  <appendix xml:id="compression">
+    <title >Compression</title>
+
+    <para>TODO: Compression in hbase...</para>
+    <section>
+    <title>
+    LZO
+    </title>
+    <para>
+    Running with LZO enabled is recommended though HBase does not ship with
+    LZO because of licensing issues.  To install LZO and verify its installation
+    and that its available to HBase, do the following...
+    </para>
+    </section>
+
+    <section id="hbase.regionserver.codec">
+    <title>
+    <varname>
+    hbase.regionserver.codec
+    </varname>
+    </title>
+    <para>
+    To have a RegionServer test a set of codecs and fail-to-start if any
+    code is missing or misinstalled, add the configuration
+    <varname>
+    hbase.regionserver.codec
+    </varname>
+    to your <filename>hbase-site.xml</filename> with a value of
+    codecs to test on startup.  For example if the 
+    <varname>
+    hbase.regionserver.codec
+    </varname> value is <code>lzo,gz</code> and if lzo is not present
+    or improperly installed, the misconfigured RegionServer will fail
+    to start.
+    </para>
+    <para>
+    Administrators might make use of this facility to guard against
+    the case where a new server is added to cluster but the cluster
+    requires install of a particular coded.
+    </para>
+
+    </section>
+  </appendix>
+  <appendix id="configuration">
+    <title xml:id="configuration">Configuration</title>
+    <para>
+    </para>
+
+    <section>
+    <title><filename>hbase-site.xml</filename> and <filename>hbase-default.xml</filename></title>
+    <para>What are these?
+    </para>
+
+    <para>
+    Not all configuration options make it out to
+    <filename>hbase-default.xml</filename>.  Configuration
+    that it thought rare anyone would change can exist only
+    in code; the only way to turn up the configurations is
+    via a reading of the source code.
+    </para>
+
+    <!--The file hbase-default.xml is generated as part of
+    the build of the hbase site.  See the hbase pom.xml.
+    The generated file is a docbook section with a glossary
+    in it-->
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude"
+      href="../../target/site/hbase-default.xml" />
+      </section>
+
+      <section>
+      <title><filename>hbase-env.sh</filename></title>
+      <para></para>
+      </section>
+      <section>
+      <title><filename>log4j.properties</filename></title>
+      <para></para>
+      </section>
+      <section>
+      <title>Noteworthy Configuration</title>
+      <para>Below we review a couple of the key configurations.
+      We'll list those you must to change to suit your context
+      and others that you should review and consider moving on
+      from defaults after guaging your deploys load and query profiles.
+      </para>
+      </section>
+  </appendix>
 
   <glossary xml:id="glossary">
     <title xml:id="glossary">HBase Glossary</title>
 
     <glossentry>
       <glossterm xml:id="cf">column family</glossterm>
+      <glossterm xml:id="cfqualifier">column family qualifier</glossterm>
 
       <acronym>cf</acronym>
 
       <abbrev>cf</abbrev>
 
       <glossdef>
-        <para>Define a column family</para>
+        <para>
+      Columns in HBase are grouped into <emphasis>column families</emphasis>.
+      All column members of a column family have a common prefix.  For example, the
+      columns <emphasis>courses:history</emphasis> and
+      <emphasis>courses:math</emphasis> are both members of the
+      <emphasis>courses</emphasis> column family.
+          The colon character (<literal
+          moreinfo="none">:</literal>) delimits the column family from the
+          column family <emphasis>qualifier</emphasis>.
+        The column family prefix must be composed of
+      <emphasis>printable</emphasis> characters. The qualifying tail, the
+      column family <emphasis>qualifier</emphasis>, can be made of any
+      arbitrary bytes. Column families must be declared up front
+      at schema definition time whereas columns do not need to be
+      defined at schema time but can be conjured on the fly while
+      the table is up an running.</para>
+      <para>Physically, all column family members are stored together on the
+      filesystem.  Because tunings and
+      storage specifications are done at the column family level, it is
+      advised that all column family members have the same general access
+      pattern and size characteristics.</para>
       </glossdef>
     </glossentry>
   </glossary>
+  <index>
+  <title>Index</title>
+  </index>
 </book>

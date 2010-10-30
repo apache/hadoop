@@ -4,7 +4,7 @@
 <xsl:template match="configuration">
 <!--
 /**
- * Copyright 2009 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -25,28 +25,41 @@
 
 This stylesheet is used making an html version of hbase-default.xml.
 -->
-<document>
-  <header>
-    <title> 
-      HBase Default Configuration
-    </title>
-  </header>
-  <body>
-<table border="1">
-<tr>
- <td><b>property</b></td>
- <td><b>default value</b></td>
- <td><b>description</b></td>
-</tr>
+<section version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+<title>HBase Default Configuration</title>
+<para>
+</para>
+
+<glossary xmlns='http://docbook.org/ns/docbook' xml:id="hbase.default.configuration">
+<title>HBase Default Configuration</title>
+<para>
+This documentation is generated using the default hbase configuration file,
+<filename>hbase-default.xml</filename>, as source.
+</para>
+
 <xsl:for-each select="property">
-<tr>
-  <td><a name="{name}"><xsl:value-of select="name"/></a></td>
-  <td><xsl:value-of select="value"/></td>
-  <td><xsl:value-of select="description"/></td>
-</tr>
+<glossentry>
+  <xsl:attribute name="id">
+    <xsl:value-of select="name" />
+  </xsl:attribute>
+  <glossterm>
+    <varname><xsl:value-of select="name"/></varname>
+  </glossterm>
+  <glossdef>
+  <para><xsl:value-of select="description"/></para>
+  <para>Default: <varname><xsl:value-of select="value"/></varname></para>
+  </glossdef>
+</glossentry>
 </xsl:for-each>
-</table>
-</body>
-</document>
+
+</glossary>
+
+</section>
 </xsl:template>
 </xsl:stylesheet>
