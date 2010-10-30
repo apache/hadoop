@@ -66,7 +66,7 @@ public class SimpleBlockCache implements BlockCache {
     return cache.size();
   }
 
-  public synchronized ByteBuffer getBlock(String blockName) {
+  public synchronized ByteBuffer getBlock(String blockName, boolean caching) {
     processQueue(); // clear out some crap.
     Ref ref = cache.get(blockName);
     if (ref == null)

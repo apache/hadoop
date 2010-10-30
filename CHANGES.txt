@@ -1072,6 +1072,9 @@ Release 0.21.0 - Unreleased
                caching
    HBASE-3162  Add TimeRange support into Increment to optimize for counters
                that are partitioned on time
+   HBASE-2253  Show Block cache hit ratio for requests where
+               cacheBlocks=true
+
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

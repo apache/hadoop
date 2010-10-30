@@ -950,7 +950,8 @@ public class HFile {
         metaLoads++;
         // Check cache for block.  If found return.
         if (cache != null) {
-          ByteBuffer cachedBuf = cache.getBlock(name + "meta" + block);
+          ByteBuffer cachedBuf = cache.getBlock(name + "meta" + block,
+              cacheBlock);
           if (cachedBuf != null) {
             // Return a distinct 'shallow copy' of the block,
             // so pos doesnt get messed by the scanner
@@ -1009,7 +1010,7 @@ public class HFile {
         blockLoads++;
         // Check cache for block.  If found return.
         if (cache != null) {
-          ByteBuffer cachedBuf = cache.getBlock(name + block);
+          ByteBuffer cachedBuf = cache.getBlock(name + block, cacheBlock);
           if (cachedBuf != null) {
             // Return a distinct 'shallow copy' of the block,
             // so pos doesnt get messed by the scanner

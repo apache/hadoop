@@ -90,6 +90,12 @@ public class RegionServerMetrics implements Updater {
    */
   public final MetricsIntValue blockCacheHitRatio = new MetricsIntValue("blockCacheHitRatio", registry);
 
+  /**
+   * Block hit caching ratio.  This only includes the requests to the block
+   * cache where caching was turned on.  See HBASE-2253.
+   */
+  public final MetricsIntValue blockCacheHitCachingRatio = new MetricsIntValue("blockCacheHitCachingRatio", registry);
+
   /*
    * Count of requests to the regionservers since last call to metrics update
    */
@@ -170,14 +176,14 @@ public class RegionServerMetrics implements Updater {
 
     // export for JMX
     statistics = new RegionServerStatistics(this.registry, name);
-    
+
     // get custom attributes
     try {
       Object m = ContextFactory.getFactory().getAttribute("hbase.extendedperiod");
       if (m instanceof String) {
         this.extendedPeriod = Long.parseLong((String) m)*1000;
       }
-    } catch (IOException ioe) { 
+    } catch (IOException ioe) {
       LOG.info("Couldn't load ContextFactory for Metrics config info");
     }
 
@@ -199,7 +205,7 @@ public class RegionServerMetrics implements Updater {
       this.lastUpdate = System.currentTimeMillis();
 
       // has the extended period for long-living stats elapsed?
-      if (this.extendedPeriod > 0 && 
+      if (this.extendedPeriod > 0 &&
           this.lastUpdate - this.lastExtUpdate >= this.extendedPeriod) {
         this.lastExtUpdate = this.lastUpdate;
         this.compactionTime.resetMinMaxAvg();
@@ -208,7 +214,7 @@ public class RegionServerMetrics implements Updater {
         this.flushSize.resetMinMaxAvg();
         this.resetAllMinMax();
       }
-      
+
       this.stores.pushMetric(this.metricsRecord);
       this.storefiles.pushMetric(this.metricsRecord);
       this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
@@ -220,6 +226,7 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheFree.pushMetric(this.metricsRecord);
       this.blockCacheCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
+      this.blockCacheHitCachingRatio.pushMetric(this.metricsRecord);
 
       // Mix in HFile and HLog metrics
       // Be careful. Here is code for MTVR from up in hadoop:
@@ -265,10 +272,10 @@ public class RegionServerMetrics implements Updater {
   public float getRequests() {
     return this.requests.getPreviousIntervalValue();
   }
-  
+
   /**
    * @param compact history in <time, size>
-   */ 
+   */
   public synchronized void addCompaction(final Pair<Long,Long> compact) {
      this.compactionTime.inc(compact.getFirst());
      this.compactionSize.inc(compact.getSecond());
@@ -283,7 +290,7 @@ public class RegionServerMetrics implements Updater {
       this.flushSize.inc(f.getSecond());
     }
   }
-  
+
   /**
    * @param inc How much to add to requests.
    */
@@ -328,6 +335,8 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheCount.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheHitRatio.getName(),
         Long.valueOf(this.blockCacheHitRatio.get()));
+    sb = Strings.appendKeyValue(sb, this.blockCacheHitCachingRatio.getName(),
+        Long.valueOf(this.blockCacheHitCachingRatio.get()));
     return sb.toString();
   }
 }
