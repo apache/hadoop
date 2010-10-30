@@ -124,7 +124,7 @@ public class MetaEditor {
       HRegionInfo regionInfo, HServerInfo serverInfo)
   throws IOException, ConnectException {
     HRegionInterface server = catalogTracker.waitForRootServerConnectionDefault();
-    if (server == null) throw new NullPointerException("No server for -ROOT-");
+    if (server == null) throw new IOException("No server for -ROOT-");
     updateLocation(server, CatalogTracker.ROOT_REGION, regionInfo, serverInfo);
   }
 

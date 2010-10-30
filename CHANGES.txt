@@ -631,6 +631,9 @@ Release 0.21.0 - Unreleased
                hudson (nicolas via jgray)
    HBASE-3163  If we timeout PENDING_CLOSE and send another closeRegion RPC,
                need to handle NSRE from RS (comes as a RemoteException)
+   HBASE-3164  Handle case where we open META, ROOT has been closed but
+               znode location not deleted yet, and try to update META
+               location in ROOT
 
 
   IMPROVEMENTS
