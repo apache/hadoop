@@ -27,6 +27,7 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
@@ -48,6 +49,7 @@ public class Increment implements Writable {
   private byte [] row = null;
   private long lockId = -1L;
   private boolean writeToWAL = true;
+  private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableMap<byte [], Long>> familyMap =
     new TreeMap<byte [], NavigableMap<byte [], Long>>(Bytes.BYTES_COMPARATOR);
 
@@ -140,6 +142,34 @@ public class Increment implements Writable {
    */
   public Increment setWriteToWAL(boolean writeToWAL) {
     this.writeToWAL = writeToWAL;
+    return this;
+  }
+
+  /**
+   * Gets the TimeRange used for this increment.
+   * @return TimeRange
+   */
+  public TimeRange getTimeRange() {
+    return this.tr;
+  }
+
+  /**
+   * Sets the TimeRange to be used on the Get for this increment.
+   * <p>
+   * This is useful for when you have counters that only last for specific
+   * periods of time (ie. counters that are partitioned by time).  By setting
+   * the range of valid times for this increment, you can potentially gain
+   * some performance with a more optimal Get operation.
+   * <p>
+   * This range is used as [minStamp, maxStamp).
+   * @param minStamp minimum timestamp value, inclusive
+   * @param maxStamp maximum timestamp value, exclusive
+   * @throws IOException if invalid time range
+   * @return this
+   */
+  public Increment setTimeRange(long minStamp, long maxStamp)
+  throws IOException {
+    tr = new TimeRange(minStamp, maxStamp);
     return this;
   }
 
@@ -241,6 +271,8 @@ public class Increment implements Writable {
       throw new IOException("unsupported version");
     }
     this.row = Bytes.readByteArray(in);
+    this.tr = new TimeRange();
+    tr.readFields(in);
     this.lockId = in.readLong();
     int numFamilies = in.readInt();
     if (numFamilies == 0) {
@@ -270,6 +302,7 @@ public class Increment implements Writable {
   throws IOException {
     out.writeByte(INCREMENT_VERSION);
     Bytes.writeByteArray(out, this.row);
+    tr.write(out);
     out.writeLong(this.lockId);
     if (familyMap.size() == 0) {
       throw new IOException("At least one column required");

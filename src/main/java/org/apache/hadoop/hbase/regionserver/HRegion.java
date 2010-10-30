@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -2946,6 +2947,8 @@ public class HRegion implements HeapSize { // , Writable{
           newGet.addColumn(family, qualifier);
         }
       }
+      newGet.setTimeRange(get.getTimeRange().getMin(),
+          get.getTimeRange().getMax());
       iscan = new InternalScan(newGet);
     }
 
@@ -3002,6 +3005,7 @@ public class HRegion implements HeapSize { // , Writable{
     // TODO: Use RWCC to make this set of increments atomic to reads
     byte [] row = increment.getRow();
     checkRow(row);
+    TimeRange tr = increment.getTimeRange();
     boolean flush = false;
     WALEdit walEdits = null;
     List<KeyValue> allKVs = new ArrayList<KeyValue>(increment.numColumns());
@@ -3025,6 +3029,7 @@ public class HRegion implements HeapSize { // , Writable{
           for (Map.Entry<byte [], Long> column : family.getValue().entrySet()) {
             get.addColumn(family.getKey(), column.getKey());
           }
+          get.setTimeRange(tr.getMin(), tr.getMax());
           List<KeyValue> results = getLastIncrement(get);
 
           // Iterate the input columns and update existing values if they were

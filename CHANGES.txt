@@ -1065,6 +1065,8 @@ Release 0.21.0 - Unreleased
                a RS no longer present
    HBASE-3174  Add ability for Get operations to enable/disable use of block
                caching
+   HBASE-3162  Add TimeRange support into Increment to optimize for counters
+               that are partitioned on time
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
