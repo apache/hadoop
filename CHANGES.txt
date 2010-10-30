@@ -1063,6 +1063,8 @@ Release 0.21.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-3169  NPE when master joins running cluster if a RIT references
                a RS no longer present
+   HBASE-3174  Add ability for Get operations to enable/disable use of block
+               caching
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

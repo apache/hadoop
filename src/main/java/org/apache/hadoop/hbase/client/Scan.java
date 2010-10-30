@@ -163,6 +163,7 @@ public class Scan implements Writable {
     this.startRow = get.getRow();
     this.stopRow = get.getRow();
     this.filter = get.getFilter();
+    this.cacheBlocks = get.getCacheBlocks();
     this.maxVersions = get.getMaxVersions();
     this.tr = get.getTimeRange();
     this.familyMap = get.getFamilyMap();
