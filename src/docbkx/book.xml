@@ -34,7 +34,7 @@
       <abstract>
     <para>This is the official book of
     <link xlink:href="http://www.hbase.org">Apache HBase</link>,
-    a distributed column-oriented database built on top of
+    a distributed, versioned, column-oriented database built on top of
     Apache Hadoop <link xlink:href="http://hadoop.apache.org/">Common and HDFS</link>.
       </para>
       </abstract>
@@ -89,35 +89,49 @@
 
       <para><itemizedlist>
           <para>Here is a quick guide to starting up a standalone HBase
-          instance, inserting rows into a table via the <link
-          linkend="shell">HBase Shell</link>, and then clean up and shutting
-          down your instance.</para>
+          instance, inserting rows into a table via the
+          <link linkend="shell">HBase Shell</link>, and then cleaning up and shutting
+          down your running instance.</para>
 
           <listitem>
             <para>Download and unpack the latest stable release.</para>
 
-            <para>Choose a download source from <link
+            <para>Choose a download site from this list of <link
             xlink:href="http://www.apache.org/dyn/closer.cgi/hbase/">Apache
             Download Mirrors</link>. Click on it. This will take you to a
-            mirror of the <emphasis>HBase Releases</emphasis> page. Click on
+            mirror of <emphasis>HBase Releases</emphasis>. Click on
             the folder named <filename>stable</filename> and then download the
-            file <filename><?eval ${project.version}?>.tar.gz</filename>.</para>
+            file that ends in <filename>.tar.gz</filename>;
+            e.g. <filename>hbase-<?eval ${project.version}?>.tar.gz</filename>.</para>
 
-            <para>Decompress and untar your download. Then change into the
-            unpacked directory and startHBase</para>
+            <para>Decompress and untar your download and then change into the
+            unpacked directory and start HBase</para>
 
-            <para><programlisting>$ tar xfz <?eval ${project.version}?>.tar.gz
-$ cd <?eval ${project.version}
+            <para><programlisting>$ tar xfz hbase-<?eval ${project.version}?>.tar.gz
+$ cd hbase-<?eval ${project.version}?>
 $ ./bin/start-hbase.sh
-starting master, logging to logs/hbase-user-master-example.org.out?></programlisting></para>
+starting master, logging to logs/hbase-user-master-example.org.out</programlisting></para>
 
             <para>You now have a running HBase instance. HBase logs can be
             found in the <filename>logs</filename> subdirectory. Check them
-            out.</para>
+            out especially if HBase had trouble starting.</para>
+
+            <note>
+            <title>Is <application>java</application> installed?</title>
+            <para>The above presumes a 1.6 version of Oracle java is installed on your
+            machine and available on your path; i.e. when you type
+            <application>java</application>, you see output that describes the options
+            the java program takes.  If this is not the case, HBase will not start.
+            Install java, edit <filename>conf/hbase-env.sh</filename>, uncommenting the
+            <envar>JAVA_HOME</envar> line pointing it  to your java install.  Then,
+            retry the steps above.</para>
+            </note>
+            
           </listitem>
 
           <listitem>
-            <para>Connect to your running HBase via the HBase Shell</para>
+            <para>Connect to your running HBase via the 
+          <link linkend="shell">HBase Shell</link>.</para>
 
             <para><programlisting>$ ./bin/hbase shell
 HBase Shell; enter 'help&lt;RETURN&gt;' for list of supported commands.
@@ -126,7 +140,8 @@ Version: 0.89.20100924, r1001068, Fri Sep 24 13:55:42 PDT 2010
 
 hbase(main):001:0&gt; </programlisting></para>
 
-            <para>Type <command>help</command> to see a listing of shell
+            <para>Type <command>help</command> and then <command>&lt;RETURN&gt;</command>
+            to see a listing of shell
             commands and options. Browse at least the paragraphs at the end of
             the help emission for the gist of how variables are entered in the
             HBase shell; in particular note how table names, rows, and
@@ -135,27 +150,21 @@ hbase(main):001:0&gt; </programlisting></para>
 
           <listitem>
             <para>Create a table named <filename>test</filename> with a single
-            colum family named <filename>cf.</filename></para>
-
+            column family named <filename>cf.</filename> and then insert some
+            values.</para>
             <para><programlisting>hbase(main):003:0&gt; create 'test', 'cf'
-0 row(s) in 1.2200 seconds</programlisting></para>
-          </listitem>
-
-          <listitem>
-            <para>Insert some values into the table
-            <varname>test</varname>.</para>
-
-            <para>Below we insert 3 values. The first insert is at
-            <varname>row1</varname>, column <varname>cf:a</varname> -- columns
-            have a column family prefix delimited by the colon character --
-            with a value of <varname>value1</varname>.</para>
-
-            <para><programlisting>hbase(main):004:0&gt; put 'test', 'row1', 'cf:a', 'value1'
+0 row(s) in 1.2200 seconds
+hbase(main):004:0&gt; put 'test', 'row1', 'cf:a', 'value1'
 0 row(s) in 0.0560 seconds
 hbase(main):005:0&gt; put 'test', 'row2', 'cf:b', 'value2'
 0 row(s) in 0.0370 seconds
 hbase(main):006:0&gt; put 'test', 'row3', 'cf:c', 'value3'
 0 row(s) in 0.0450 seconds</programlisting></para>
+
+            <para>Above we inserted 3 values, one at a time. The first insert is at
+            <varname>row1</varname>, column <varname>cf:a</varname> -- columns
+            have a column family prefix delimited by the colon character --
+            with a value of <varname>value1</varname>.</para>
           </listitem>
 
           <listitem>
@@ -164,17 +173,17 @@ hbase(main):006:0&gt; put 'test', 'row3', 'cf:c', 'value3'
             <para>Run a scan of the table by doing the following</para>
 
             <para><programlisting>hbase(main):007:0&gt; scan 'test'
-ROW    COLUMN+CELL
-row1   column=cf:a, timestamp=1288380727188, value=value1
-row2   column=cf:b, timestamp=1288380738440, value=value2
-row3   column=cf:c, timestamp=1288380747365, value=value3
+ROW        COLUMN+CELL
+row1       column=cf:a, timestamp=1288380727188, value=value1
+row2       column=cf:b, timestamp=1288380738440, value=value2
+row3       column=cf:c, timestamp=1288380747365, value=value3
 3 row(s) in 0.0590 seconds</programlisting></para>
 
             <para>Get a single row as follows</para>
 
             <para><programlisting>hbase(main):008:0&gt; get 'test', 'row1'
-COLUMN  CELL
-cf:a    timestamp=1288380727188, value=value1
+COLUMN      CELL
+cf:a        timestamp=1288380727188, value=value1
 1 row(s) in 0.0400 seconds</programlisting></para>
           </listitem>
 
@@ -191,8 +200,7 @@ hbase(main):013:0&gt; drop 'test'
           <listitem>
             <para>Exit the shell by typing exit.</para>
 
-            <para><programlisting>hbase(main):014:0&gt; exit
-$ </programlisting></para>
+            <para><programlisting>hbase(main):014:0&gt; exit</programlisting></para>
           </listitem>
 
           <listitem>
@@ -214,6 +222,64 @@ stopping hbase...............</programlisting></para>
       linkend="quickstart">Quick Start,</link> pseudo-distributed where all
       daemons run on a single server, and distributed.</para>
     </section>
+  </chapter>
+
+  <chapter xml:id="configuration">
+    <title>Configuration</title>
+    <para>
+    </para>
+
+    <section>
+    <title><filename>hbase-site.xml</filename> and <filename>hbase-default.xml</filename></title>
+    <para>What are these?
+    </para>
+
+    <para>
+    Not all configuration options make it out to
+    <filename>hbase-default.xml</filename>.  Configuration
+    that it thought rare anyone would change can exist only
+    in code; the only way to turn up the configurations is
+    via a reading of the source code.
+    </para>
+
+    <!--The file hbase-default.xml is generated as part of
+    the build of the hbase site.  See the hbase pom.xml.
+    The generated file is a docbook section with a glossary
+    in it-->
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude"
+      href="../../target/site/hbase-default.xml" />
+      </section>
+
+      <section>
+      <title><filename>hbase-env.sh</filename></title>
+      <para></para>
+      </section>
+      <section>
+      <title><filename>log4j.properties</filename></title>
+      <para></para>
+      </section>
+      <section>
+      <title>Noteworthy Configuration</title>
+      <para>Below we review a couple of the key configurations.
+      We'll list those you must to change to suit your context
+      and others that you should review and consider moving on
+      from defaults after guaging your deploys load and query profiles.
+      </para>
+      <section>
+      <title>LZO compression</title>
+      <para>You should consider enabling LZO compression.  Its
+      near-frictionless and in most all cases boosts performance.
+      To enable LZO, TODO...
+      </para>
+      </section>
+
+      </section>
+  </chapter>
+
+  <chapter xml:id="shell">
+    <title>The HBase Shell</title>
+
+    <para></para>
   </chapter>
 
   <chapter xml:id="datamodel">
@@ -246,8 +312,29 @@ stopping hbase...............</programlisting></para>
       <para></para>
     </section>
 
-    <section>
-      <title>Column Family</title>
+    <section xml:id="columnfamily">
+      <title>Column Family<indexterm><primary>Column Family</primary></indexterm></title>
+        <para>
+      Columns in HBase are grouped into <emphasis>column families</emphasis>.
+      All column members of a column family have a common prefix.  For example, the
+      columns <emphasis>courses:history</emphasis> and
+      <emphasis>courses:math</emphasis> are both members of the
+      <emphasis>courses</emphasis> column family.
+          The colon character (<literal
+          moreinfo="none">:</literal>) delimits the column family from the
+          column family <emphasis>qualifier</emphasis>.
+        The column family prefix must be composed of
+      <emphasis>printable</emphasis> characters. The qualifying tail, the
+      <indexterm>column family <emphasis>qualifier</emphasis><primary>Column Family Qualifier</primary></indexterm>, can be made of any
+      arbitrary bytes. Column families must be declared up front
+      at schema definition time whereas columns do not need to be
+      defined at schema time but can be conjured on the fly while
+      the table is up an running.</para>
+      <para>Physically, all column family members are stored together on the
+      filesystem.  Because tunings and
+      storage specifications are done at the column family level, it is
+      advised that all column family members have the same general access
+      pattern and size characteristics.</para>
 
       <para></para>
     </section>
@@ -442,11 +529,6 @@ stopping hbase...............</programlisting></para>
     </section>
   </chapter>
 
-  <chapter xml:id="shell">
-    <title>The HBase Shell</title>
-
-    <para></para>
-  </chapter>
 
   <chapter xml:id="filesystem">
     <title>Filesystem Format</title>
@@ -472,7 +554,9 @@ stopping hbase...............</programlisting></para>
     </section>
   </chapter>
 
-  <chapter xml:id="regions">
+  <chapter xml:id="architecture">
+    <title>Architecture</title>
+    <section>
     <title>Regions</title>
 
     <para>This chapter is all about Regions.</para>
@@ -1098,6 +1182,7 @@ stopping hbase...............</programlisting></para>
         master.</para>
       </section>
     </section>
+    </section>
   </chapter>
 
   <chapter>
@@ -1348,86 +1433,8 @@ stopping hbase...............</programlisting></para>
 
     </section>
   </appendix>
-  <appendix id="configuration">
-    <title xml:id="configuration">Configuration</title>
-    <para>
-    </para>
 
-    <section>
-    <title><filename>hbase-site.xml</filename> and <filename>hbase-default.xml</filename></title>
-    <para>What are these?
-    </para>
 
-    <para>
-    Not all configuration options make it out to
-    <filename>hbase-default.xml</filename>.  Configuration
-    that it thought rare anyone would change can exist only
-    in code; the only way to turn up the configurations is
-    via a reading of the source code.
-    </para>
-
-    <!--The file hbase-default.xml is generated as part of
-    the build of the hbase site.  See the hbase pom.xml.
-    The generated file is a docbook section with a glossary
-    in it-->
-    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude"
-      href="../../target/site/hbase-default.xml" />
-      </section>
-
-      <section>
-      <title><filename>hbase-env.sh</filename></title>
-      <para></para>
-      </section>
-      <section>
-      <title><filename>log4j.properties</filename></title>
-      <para></para>
-      </section>
-      <section>
-      <title>Noteworthy Configuration</title>
-      <para>Below we review a couple of the key configurations.
-      We'll list those you must to change to suit your context
-      and others that you should review and consider moving on
-      from defaults after guaging your deploys load and query profiles.
-      </para>
-      </section>
-  </appendix>
-
-  <glossary xml:id="glossary">
-    <title xml:id="glossary">HBase Glossary</title>
-
-    <glossentry>
-      <glossterm xml:id="cf">column family</glossterm>
-      <glossterm xml:id="cfqualifier">column family qualifier</glossterm>
-
-      <acronym>cf</acronym>
-
-      <abbrev>cf</abbrev>
-
-      <glossdef>
-        <para>
-      Columns in HBase are grouped into <emphasis>column families</emphasis>.
-      All column members of a column family have a common prefix.  For example, the
-      columns <emphasis>courses:history</emphasis> and
-      <emphasis>courses:math</emphasis> are both members of the
-      <emphasis>courses</emphasis> column family.
-          The colon character (<literal
-          moreinfo="none">:</literal>) delimits the column family from the
-          column family <emphasis>qualifier</emphasis>.
-        The column family prefix must be composed of
-      <emphasis>printable</emphasis> characters. The qualifying tail, the
-      column family <emphasis>qualifier</emphasis>, can be made of any
-      arbitrary bytes. Column families must be declared up front
-      at schema definition time whereas columns do not need to be
-      defined at schema time but can be conjured on the fly while
-      the table is up an running.</para>
-      <para>Physically, all column family members are stored together on the
-      filesystem.  Because tunings and
-      storage specifications are done at the column family level, it is
-      advised that all column family members have the same general access
-      pattern and size characteristics.</para>
-      </glossdef>
-    </glossentry>
-  </glossary>
   <index>
   <title>Index</title>
   </index>
