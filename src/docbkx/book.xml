@@ -89,7 +89,7 @@
 
       <para><itemizedlist>
           <para>Here is a quick guide to starting up a standalone HBase
-          instance, inserting rows into a table via the
+          instance, creating a table and inserting rows into a table via the
           <link linkend="shell">HBase Shell</link>, and then cleaning up and shutting
           down your running instance.</para>
 
@@ -101,7 +101,7 @@
             Download Mirrors</link>. Click on it. This will take you to a
             mirror of <emphasis>HBase Releases</emphasis>. Click on
             the folder named <filename>stable</filename> and then download the
-            file that ends in <filename>.tar.gz</filename>;
+            file that ends in <filename>.tar.gz</filename> to your local filesystem;
             e.g. <filename>hbase-<?eval ${project.version}?>.tar.gz</filename>.</para>
 
             <para>Decompress and untar your download and then change into the
@@ -112,16 +112,20 @@ $ cd hbase-<?eval ${project.version}?>
 $ ./bin/start-hbase.sh
 starting master, logging to logs/hbase-user-master-example.org.out</programlisting></para>
 
-            <para>You now have a running HBase instance. HBase logs can be
-            found in the <filename>logs</filename> subdirectory. Check them
+            <para>You now have a running standalone HBase instance. In standalone mode, HBase runs
+            all daemons in the the one JVM; i.e. the master, regionserver, and zookeeper daemons.
+            Also by default, HBase in standalone mode writes data to <filename>/tmp/hbase-${USERID}</filename>.
+            HBase logs can be found in the <filename>logs</filename> subdirectory. Check them
             out especially if HBase had trouble starting.</para>
 
             <note>
             <title>Is <application>java</application> installed?</title>
-            <para>The above presumes a 1.6 version of Oracle java is installed on your
+            <para>The above presumes a 1.6 version of Oracle
+            <application>java</application> is installed on your
             machine and available on your path; i.e. when you type
             <application>java</application>, you see output that describes the options
-            the java program takes.  If this is not the case, HBase will not start.
+            the java program takes (HBase like Hadoop requires java 6).  If this is
+            not the case, HBase will not start.
             Install java, edit <filename>conf/hbase-env.sh</filename>, uncommenting the
             <envar>JAVA_HOME</envar> line pointing it  to your java install.  Then,
             retry the steps above.</para>
@@ -150,10 +154,14 @@ hbase(main):001:0&gt; </programlisting></para>
 
           <listitem>
             <para>Create a table named <filename>test</filename> with a single
-            column family named <filename>cf.</filename> and then insert some
+            column family named <filename>cf.</filename>.  Verify its creation by
+            listing all tables and then insert some
             values.</para>
             <para><programlisting>hbase(main):003:0&gt; create 'test', 'cf'
 0 row(s) in 1.2200 seconds
+hbase(main):003:0&gt; list 'table'
+test
+1 row(s) in 0.0550 seconds
 hbase(main):004:0&gt; put 'test', 'row1', 'cf:a', 'value1'
 0 row(s) in 0.0560 seconds
 hbase(main):005:0&gt; put 'test', 'row2', 'cf:b', 'value2'
@@ -210,6 +218,7 @@ hbase(main):013:0&gt; drop 'test'
 stopping hbase...............</programlisting></para>
           </listitem>
         </itemizedlist></para>
+        <para>To learn how to set up a HBase in distributed mode, see the next section.</para>
     </section>
 
     <section xml:id="notsoquick">
