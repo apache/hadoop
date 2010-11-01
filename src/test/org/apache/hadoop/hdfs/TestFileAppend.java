@@ -22,6 +22,9 @@ import java.io.*;
 import java.net.*;
 import java.util.List;
 
+import org.apache.commons.logging.impl.Log4JLogger;
+import org.apache.log4j.Level;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,6 +44,11 @@ import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
  * support HDFS appends.
  */
 public class TestFileAppend extends TestCase {
+  {
+    ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   static final int blockSize = 1024;
   static final int numBlocks = 10;
   static final int fileSize = numBlocks * blockSize + 1;
@@ -123,7 +131,7 @@ public class TestFileAppend extends TestCase {
 
   private void checkFullFile(FileSystem fs, Path name) throws IOException {
     FSDataInputStream stm = fs.open(name);
-    byte[] actual = new byte[fileSize];
+    byte[] actual = new byte[fileContents.length];
     stm.readFully(0, actual);
     checkData(actual, 0, fileContents, "Read 2");
     stm.close();
@@ -307,4 +315,59 @@ public class TestFileAppend extends TestCase {
       cluster.shutdown();
     }
   }
+  
+
+  /** This creates a slow writer and check to see
+   * if pipeline heartbeats work fine
+   */
+  public void testPipelineHeartbeat() throws Exception {
+    final int DATANODE_NUM = 2;
+    final int fileLen = 6;
+    Configuration conf = new Configuration();
+    final int timeout = 2000;
+    conf.setInt("dfs.socket.timeout",timeout);
+
+    final Path p = new Path("/pipelineHeartbeat/foo");
+    System.out.println("p=" + p);
+
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, DATANODE_NUM, true, null);
+    DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
+
+    initBuffer(fileLen);
+
+    try {
+    	// create a new file.
+    	FSDataOutputStream stm = createFile(fs, p, DATANODE_NUM);
+
+    	stm.write(fileContents, 0, 1);
+    	Thread.sleep(timeout);
+    	stm.sync();
+    	System.out.println("Wrote 1 byte and hflush " + p);
+
+    	// write another byte
+    	Thread.sleep(timeout);
+    	stm.write(fileContents, 1, 1);
+    	stm.sync();
+
+    	stm.write(fileContents, 2, 1);
+    	Thread.sleep(timeout);
+    	stm.sync();
+
+    	stm.write(fileContents, 3, 1);
+    	Thread.sleep(timeout);
+    	stm.write(fileContents, 4, 1);
+    	stm.sync();
+
+    	stm.write(fileContents, 5, 1);
+    	Thread.sleep(timeout);
+    	stm.close();
+
+    	// verify that entire file is good
+    	checkFullFile(fs, p);
+    } finally {
+      fs.close();
+      cluster.shutdown();
+    }
+  }
+
 }

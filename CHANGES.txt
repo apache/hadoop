@@ -82,6 +82,9 @@ Release 0.20-append - Unreleased
 
     HDFS-1346. DFSClient receives out of order packet ack. (hairong)
 
+    HDFS-724.  Use a bidirectional heartbeat to detect stuck
+    pipeline. (hairong)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES

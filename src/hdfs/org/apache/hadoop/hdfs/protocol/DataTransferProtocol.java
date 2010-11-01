@@ -34,15 +34,10 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 14:
-   *    OP_REPLACE_BLOCK is sent from the Balancer server to the destination,
-   *    including the block id, source, and proxy.
-   *    OP_COPY_BLOCK is sent from the destination to the proxy, which contains
-   *    only the block id.
-   *    A reply to OP_COPY_BLOCK sends the block content.
-   *    A reply to OP_REPLACE_BLOCK includes an operation status.
+   * Version 15:
+   * A heartbeat is sent from the client to pipeline and then acked back
    */
-  public static final int DATA_TRANSFER_VERSION = 14;
+  public static final int DATA_TRANSFER_VERSION = 15;
 
   // Processed at datanode stream-handler
   public static final byte OP_WRITE_BLOCK = (byte) 80;
@@ -66,8 +61,7 @@ public interface DataTransferProtocol {
   public static class PipelineAck {
     private long seqno;
     private short replies[];
-    final public static PipelineAck HEART_BEAT =
-      new PipelineAck(HEARTBEAT_SEQNO, new short[0]);
+    final public static long UNKOWN_SEQNO = -2; 
 
     /** default constructor **/
     public PipelineAck() {
