@@ -240,7 +240,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // A sleeper that sleeps for msgInterval.
   private final Sleeper sleeper;
 
-  private final long rpcTimeout;
+  private final int rpcTimeout;
 
   // The main region server thread.
   @SuppressWarnings("unused")
@@ -292,9 +292,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.numRegionsToReport = conf.getInt(
         "hbase.regionserver.numregionstoreport", 10);
 
-    this.rpcTimeout = conf.getLong(
-        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-        HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+    this.rpcTimeout = conf.getInt(
+        HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
     this.abortRequested = false;
     this.stopped = false;
@@ -1363,7 +1363,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         master = (HMasterRegionInterface) HBaseRPC.waitForProxy(
             HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
             masterAddress.getInetSocketAddress(), this.conf, -1,
-            this.rpcTimeout);
+            this.rpcTimeout, this.rpcTimeout);
       } catch (IOException e) {
         LOG.warn("Unable to connect to master. Retrying. Error was:", e);
         sleeper.sleep();

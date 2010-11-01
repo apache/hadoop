@@ -224,7 +224,7 @@ public class HConnectionManager {
     private final long pause;
     private final int numRetries;
     private final int maxRPCAttempts;
-    private final long rpcTimeout;
+    private final int rpcTimeout;
     private final int prefetchRegionLimit;
 
     private final Object masterLock = new Object();
@@ -282,9 +282,9 @@ public class HConnectionManager {
       this.pause = conf.getLong("hbase.client.pause", 1000);
       this.numRetries = conf.getInt("hbase.client.retries.number", 10);
       this.maxRPCAttempts = conf.getInt("hbase.client.rpc.maxattempts", 1);
-      this.rpcTimeout = conf.getLong(
-          HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY,
-          HConstants.DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD);
+      this.rpcTimeout = conf.getInt(
+          HConstants.HBASE_RPC_TIMEOUT_KEY,
+          HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
       this.prefetchRegionLimit = conf.getInt("hbase.client.prefetch.limit",
           10);
@@ -341,7 +341,7 @@ public class HConnectionManager {
 
             HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
                 HMasterInterface.class, HBaseRPCProtocolVersion.versionID,
-                masterLocation.getInetSocketAddress(), this.conf);
+                masterLocation.getInetSocketAddress(), this.conf, this.rpcTimeout);
 
             if (tryMaster.isMasterRunning()) {
               this.master = tryMaster;
@@ -936,7 +936,7 @@ public class HConnectionManager {
             server = (HRegionInterface)HBaseRPC.waitForProxy(
                 serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
                 regionServer.getInetSocketAddress(), this.conf,
-                this.maxRPCAttempts, this.rpcTimeout);
+                this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
           } catch (RemoteException e) {
             LOG.warn("Remove exception connecting to RS", e);
             throw RemoteExceptionHandler.decodeRemoteException(e);

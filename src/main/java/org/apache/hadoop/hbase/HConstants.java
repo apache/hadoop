@@ -365,6 +365,16 @@ public final class HConstants {
    * Default value of {@link #HBASE_REGIONSERVER_LEASE_PERIOD_KEY}.
    */
   public static long DEFAULT_HBASE_REGIONSERVER_LEASE_PERIOD = 60000;
+  
+  /**
+   * timeout for each RPC
+   */
+  public static String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
+  
+  /**
+   * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
+   */
+  public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
 
   public static final String
       REPLICATION_ENABLE_KEY = "hbase.replication";

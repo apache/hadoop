@@ -1079,6 +1079,7 @@ Release 0.21.0 - Unreleased
                cacheBlocks=true
    HBASE-3126  Force use of 'mv -f' when moving aside hbase logfiles
    HBASE-3176  Remove compile warnings in HRegionServer
+   HBASE-3154  HBase RPC should support timeout (Hairong via jgray)
 
 
   NEW FEATURES

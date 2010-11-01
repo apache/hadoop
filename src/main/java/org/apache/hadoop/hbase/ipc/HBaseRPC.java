@@ -231,6 +231,7 @@ public class HBaseRPC {
     private UserGroupInformation ticket;
     private HBaseClient client;
     private boolean isClosed = false;
+    final private int rpcTimeout;
 
     /**
      * @param address address for invoker
@@ -239,10 +240,11 @@ public class HBaseRPC {
      * @param factory socket factory
      */
     public Invoker(InetSocketAddress address, UserGroupInformation ticket,
-                   Configuration conf, SocketFactory factory) {
+                   Configuration conf, SocketFactory factory, int rpcTimeout) {
       this.address = address;
       this.ticket = ticket;
       this.client = CLIENTS.getClient(conf, factory);
+      this.rpcTimeout = rpcTimeout;
     }
 
     public Object invoke(Object proxy, Method method, Object[] args)
@@ -253,7 +255,7 @@ public class HBaseRPC {
         startTime = System.currentTimeMillis();
       }
       HbaseObjectWritable value = (HbaseObjectWritable)
-        client.call(new Invocation(method, args), address, ticket);
+        client.call(new Invocation(method, args), address, ticket, rpcTimeout);
       if (logDebug) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
@@ -324,6 +326,7 @@ public class HBaseRPC {
    * @param addr address of remote service
    * @param conf configuration
    * @param maxAttempts max attempts
+   * @param rpcTimeout timeout for each RPC
    * @param timeout timeout in milliseconds
    * @return proxy
    * @throws IOException e
@@ -334,6 +337,7 @@ public class HBaseRPC {
                                                InetSocketAddress addr,
                                                Configuration conf,
                                                int maxAttempts,
+                                               int rpcTimeout,
                                                long timeout
                                                ) throws IOException {
     // HBase does limited number of reconnects which is different from hadoop.
@@ -342,7 +346,7 @@ public class HBaseRPC {
     int reconnectAttempts = 0;
     while (true) {
       try {
-        return getProxy(protocol, clientVersion, addr, conf);
+        return getProxy(protocol, clientVersion, addr, conf, rpcTimeout);
       } catch(ConnectException se) {  // namenode has not been started
         ioe = se;
         if (maxAttempts >= 0 && ++reconnectAttempts >= maxAttempts) {
@@ -379,13 +383,15 @@ public class HBaseRPC {
    * @param addr remote address
    * @param conf configuration
    * @param factory socket factory
+   * @param rpcTimeout timeout for each RPC
    * @return proxy
    * @throws IOException e
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
-      SocketFactory factory) throws IOException {
-    return getProxy(protocol, clientVersion, addr, null, conf, factory);
+      SocketFactory factory, int rpcTimeout) throws IOException {
+    return getProxy(protocol, clientVersion, addr, null, conf, factory,
+        rpcTimeout);
   }
 
   /**
@@ -398,17 +404,18 @@ public class HBaseRPC {
    * @param ticket ticket
    * @param conf configuration
    * @param factory socket factory
+   * @param rpcTimeout timeout for each RPC
    * @return proxy
    * @throws IOException e
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
       long clientVersion, InetSocketAddress addr, UserGroupInformation ticket,
-      Configuration conf, SocketFactory factory)
+      Configuration conf, SocketFactory factory, int rpcTimeout)
   throws IOException {
     VersionedProtocol proxy =
         (VersionedProtocol) Proxy.newProxyInstance(
             protocol.getClassLoader(), new Class[] { protocol },
-            new Invoker(addr, ticket, conf, factory));
+            new Invoker(addr, ticket, conf, factory, rpcTimeout));
     long serverVersion = proxy.getProtocolVersion(protocol.getName(),
                                                   clientVersion);
     if (serverVersion == clientVersion) {
@@ -425,15 +432,17 @@ public class HBaseRPC {
    * @param clientVersion version we are expecting
    * @param addr remote address
    * @param conf configuration
+   * @param rpcTimeout timeout for each RPC
    * @return a proxy instance
    * @throws IOException e
    */
   public static VersionedProtocol getProxy(Class<?> protocol,
-      long clientVersion, InetSocketAddress addr, Configuration conf)
+      long clientVersion, InetSocketAddress addr, Configuration conf,
+      int rpcTimeout)
       throws IOException {
 
     return getProxy(protocol, clientVersion, addr, conf, NetUtils
-        .getDefaultSocketFactory(conf));
+        .getDefaultSocketFactory(conf), rpcTimeout);
   }
 
   /**

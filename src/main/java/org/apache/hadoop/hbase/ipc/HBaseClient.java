@@ -79,7 +79,7 @@ public class HBaseClient {
   final protected long failureSleep; // Time to sleep before retry on failure.
   protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
-  protected final int pingInterval; // how often sends ping to the server in msecs
+  protected int pingInterval; // how often sends ping to the server in msecs
 
   protected final SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
@@ -194,7 +194,7 @@ public class HBaseClient {
     private IOException closeException; // close reason
 
     public Connection(InetSocketAddress address) throws IOException {
-      this(new ConnectionId(address, null));
+      this(new ConnectionId(address, null, 0));
     }
 
     public Connection(ConnectionId remoteId) throws IOException {
@@ -245,7 +245,8 @@ public class HBaseClient {
        * otherwise, throw the timeout exception.
        */
       private void handleTimeout(SocketTimeoutException e) throws IOException {
-        if (shouldCloseConnection.get() || !running.get()) {
+        if (shouldCloseConnection.get() || !running.get() || 
+            remoteId.rpcTimeout > 0) {
           throw e;
         }
         sendPing();
@@ -308,6 +309,9 @@ public class HBaseClient {
             this.socket.setKeepAlive(tcpKeepAlive);
             // connection time out is 20s
             NetUtils.connect(this.socket, remoteId.getAddress(), 20000);
+            if (remoteId.rpcTimeout > 0) {
+              pingInterval = remoteId.rpcTimeout; // overwrite pingInterval
+            }
             this.socket.setSoTimeout(pingInterval);
             break;
           } catch (SocketTimeoutException toe) {
@@ -718,14 +722,14 @@ public class HBaseClient {
    */
   public Writable call(Writable param, InetSocketAddress address)
   throws IOException {
-      return call(param, address, null);
+      return call(param, address, null, 0);
   }
 
   public Writable call(Writable param, InetSocketAddress addr,
-                       UserGroupInformation ticket)
+                       UserGroupInformation ticket, int rpcTimeout)
                        throws IOException {
     Call call = new Call(param);
-    Connection connection = getConnection(addr, ticket, call);
+    Connection connection = getConnection(addr, ticket, rpcTimeout, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
     //noinspection SynchronizationOnLocalVariableOrMethodParameter
@@ -808,7 +812,7 @@ public class HBaseClient {
       for (int i = 0; i < params.length; i++) {
         ParallelCall call = new ParallelCall(params[i], results, i);
         try {
-          Connection connection = getConnection(addresses[i], null, call);
+          Connection connection = getConnection(addresses[i], null, 0, call);
           connection.sendParam(call);             // send each parameter
         } catch (IOException e) {
           // log errors
@@ -831,6 +835,7 @@ public class HBaseClient {
    * pool.  Connections to a given host/port are reused. */
   private Connection getConnection(InetSocketAddress addr,
                                    UserGroupInformation ticket,
+                                   int rpcTimeout,
                                    Call call)
                                    throws IOException {
     if (!running.get()) {
@@ -842,7 +847,7 @@ public class HBaseClient {
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
-    ConnectionId remoteId = new ConnectionId(addr, ticket);
+    ConnectionId remoteId = new ConnectionId(addr, ticket, rpcTimeout);
     do {
       synchronized (connections) {
         connection = connections.get(remoteId);
@@ -868,10 +873,13 @@ public class HBaseClient {
   private static class ConnectionId {
     final InetSocketAddress address;
     final UserGroupInformation ticket;
+    final private int rpcTimeout;
 
-    ConnectionId(InetSocketAddress address, UserGroupInformation ticket) {
+    ConnectionId(InetSocketAddress address, UserGroupInformation ticket,
+        int rpcTimeout) {
       this.address = address;
       this.ticket = ticket;
+      this.rpcTimeout = rpcTimeout;
     }
 
     InetSocketAddress getAddress() {
@@ -885,7 +893,8 @@ public class HBaseClient {
     public boolean equals(Object obj) {
      if (obj instanceof ConnectionId) {
        ConnectionId id = (ConnectionId) obj;
-       return address.equals(id.address) && ticket == id.ticket;
+       return address.equals(id.address) && ticket == id.ticket && 
+       rpcTimeout == id.rpcTimeout;
        //Note : ticket is a ref comparision.
      }
      return false;
@@ -893,7 +902,7 @@ public class HBaseClient {
 
     @Override
     public int hashCode() {
-      return address.hashCode() ^ System.identityHashCode(ticket);
+      return address.hashCode() ^ System.identityHashCode(ticket) ^ rpcTimeout;
     }
   }
 }
