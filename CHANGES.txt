@@ -639,6 +639,7 @@ Release 0.21.0 - Unreleased
                or build HBase
    HBASE-3179  Enable ReplicationLogsCleaner only if replication is,
                and fix its test
+   HBASE-3185  User-triggered compactions are triggering splits!
 
 
   IMPROVEMENTS

@@ -2035,8 +2035,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public void compactRegion(HRegionInfo regionInfo, boolean major)
       throws NotServingRegionException, IOException {
     HRegion region = getRegion(regionInfo.getRegionName());
-    region.flushcache();
-    region.shouldSplit(true);
     compactSplitThread.requestCompaction(region, major, "User-triggered "
         + (major ? "major " : "") + "compaction",
         CompactSplitThread.PRIORITY_USER);
