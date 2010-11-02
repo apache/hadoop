@@ -31,8 +31,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-
 public class ExistsResource extends ResourceBase {
 
   static CacheControl cacheControl;
@@ -42,16 +40,16 @@ public class ExistsResource extends ResourceBase {
     cacheControl.setNoTransform(false);
   }
 
-  String tableName;
+  TableResource tableResource;
 
   /**
    * Constructor
-   * @param table
+   * @param tableResource
    * @throws IOException
    */
-  public ExistsResource(String table) throws IOException {
+  public ExistsResource(TableResource tableResource) throws IOException {
     super();
-    this.tableName = table;
+    this.tableResource = tableResource;
   }
 
   @GET
@@ -59,8 +57,7 @@ public class ExistsResource extends ResourceBase {
     MIMETYPE_BINARY})
   public Response get(final @Context UriInfo uriInfo) {
     try {
-      HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
-      if (!admin.tableExists(tableName)) {
+      if (!tableResource.exists()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
     } catch (IOException e) {

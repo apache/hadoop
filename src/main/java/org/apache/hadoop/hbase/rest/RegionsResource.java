@@ -55,17 +55,22 @@ public class RegionsResource extends ResourceBase {
     cacheControl.setNoTransform(false);
   }
 
-  String tableName;
+  TableResource tableResource;
 
-  public RegionsResource(String table) throws IOException {
+  /**
+   * Constructor
+   * @param tableResource
+   * @throws IOException
+   */
+  public RegionsResource(TableResource tableResource) throws IOException {
     super();
-    this.tableName = table;
+    this.tableResource = tableResource;
   }
 
   private Map<HRegionInfo,HServerAddress> getTableRegions()
       throws IOException {
     HTablePool pool = servlet.getTablePool();
-    HTableInterface table = pool.getTable(tableName);
+    HTableInterface table = pool.getTable(tableResource.getName());
     try {
       return ((HTable)table).getRegionsInfo();
     } finally {
@@ -81,6 +86,7 @@ public class RegionsResource extends ResourceBase {
     }
     servlet.getMetrics().incrementRequests(1);
     try {
+      String tableName = tableResource.getName();
       TableInfoModel model = new TableInfoModel(tableName);
       Map<HRegionInfo,HServerAddress> regions = getTableRegions();
       for (Map.Entry<HRegionInfo,HServerAddress> e: regions.entrySet()) {

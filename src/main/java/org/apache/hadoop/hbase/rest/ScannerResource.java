@@ -51,16 +51,16 @@ public class ScannerResource extends ResourceBase {
   static final Map<String,ScannerInstanceResource> scanners =
    Collections.synchronizedMap(new HashMap<String,ScannerInstanceResource>());
 
-  String tableName;
+  TableResource tableResource;
 
   /**
    * Constructor
-   * @param table
+   * @param tableResource
    * @throws IOException
    */
-  public ScannerResource(String table) throws IOException {
+  public ScannerResource(TableResource tableResource)throws IOException {
     super();
-    this.tableName = table;
+    this.tableResource = tableResource;
   }
 
   static void delete(final String id) {
@@ -78,10 +78,11 @@ public class ScannerResource extends ResourceBase {
       model.getColumns(), model.getStartTime(), model.getEndTime(), 1);
     try {
       Filter filter = ScannerResultGenerator.buildFilterFromModel(model);
-      ScannerResultGenerator gen = 
+      String tableName = tableResource.getName();
+      ScannerResultGenerator gen =
         new ScannerResultGenerator(tableName, spec, filter);
       String id = gen.getID();
-      ScannerInstanceResource instance = 
+      ScannerInstanceResource instance =
         new ScannerInstanceResource(tableName, id, gen, model.getBatch());
       scanners.put(id, instance);
       if (LOG.isDebugEnabled()) {

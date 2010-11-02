@@ -62,22 +62,22 @@ public class SchemaResource extends ResourceBase {
     cacheControl.setNoTransform(false);
   }
 
-  String tableName;
+  TableResource tableResource;
 
   /**
    * Constructor
-   * @param table
+   * @param tableResource
    * @throws IOException
    */
-  public SchemaResource(String table) throws IOException {
+  public SchemaResource(TableResource tableResource) throws IOException {
     super();
-    this.tableName = table;
+    this.tableResource = tableResource;
   }
 
   private HTableDescriptor getTableSchema() throws IOException,
       TableNotFoundException {
     HTablePool pool = servlet.getTablePool();
-    HTableInterface table = pool.getTable(tableName);
+    HTableInterface table = pool.getTable(tableResource.getName());
     try {
       return table.getTableDescriptor();
     } finally {
@@ -131,7 +131,7 @@ public class SchemaResource extends ResourceBase {
       }
       return Response.created(uriInfo.getAbsolutePath()).build();
     } catch (IOException e) {
-      throw new WebApplicationException(e, 
+      throw new WebApplicationException(e,
             Response.Status.SERVICE_UNAVAILABLE);
     }      
   } 
@@ -150,14 +150,14 @@ public class SchemaResource extends ResourceBase {
           if (htd.hasFamily(hcd.getName())) {
             admin.modifyColumn(name, hcd);
           } else {
-            admin.addColumn(name, hcd);            
+            admin.addColumn(name, hcd);
           }
         }
       } catch (IOException e) {
-        throw new WebApplicationException(e, 
+        throw new WebApplicationException(e,
             Response.Status.INTERNAL_SERVER_ERROR);
       } finally {
-        admin.enableTable(tableName);
+        admin.enableTable(tableResource.getName());
       }
       return Response.ok().build();
     } catch (IOException e) {
@@ -169,7 +169,7 @@ public class SchemaResource extends ResourceBase {
   private Response update(final TableSchemaModel model, final boolean replace,
       final UriInfo uriInfo) {
     try {
-      byte[] name = Bytes.toBytes(tableName);
+      byte[] name = Bytes.toBytes(tableResource.getName());
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       if (replace || !admin.tableExists(name)) {
         return replace(name, model, uriInfo, admin);
@@ -214,7 +214,7 @@ public class SchemaResource extends ResourceBase {
       HBaseAdmin admin = new HBaseAdmin(servlet.getConfiguration());
       boolean success = false;
       for (int i = 0; i < 10; i++) try {
-        admin.disableTable(tableName);
+        admin.disableTable(tableResource.getName());
         success = true;
         break;
       } catch (IOException e) {
@@ -222,7 +222,7 @@ public class SchemaResource extends ResourceBase {
       if (!success) {
         throw new IOException("could not disable table");
       }
-      admin.deleteTable(tableName);
+      admin.deleteTable(tableResource.getName());
       return Response.ok().build();
     } catch (TableNotFoundException e) {
       throw new WebApplicationException(Response.Status.NOT_FOUND);

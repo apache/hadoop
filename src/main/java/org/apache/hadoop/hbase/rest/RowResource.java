@@ -48,30 +48,27 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.hadoop.hbase.rest.transform.Transform;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class RowResource extends ResourceBase {
   private static final Log LOG = LogFactory.getLog(RowResource.class);
 
-  String tableName;
+  TableResource tableResource;
   RowSpec rowspec;
 
   /**
    * Constructor
-   * @param table
+   * @param tableResource
    * @param rowspec
    * @param versions
    * @throws IOException
    */
-  public RowResource(String table, String rowspec, String versions)
-      throws IOException {
+  public RowResource(TableResource tableResource, String rowspec,
+      String versions) throws IOException {
     super();
-    this.tableName = table;
+    this.tableResource = tableResource;
     this.rowspec = new RowSpec(rowspec);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("new RowResource: table=" + this.tableName + "rowspec=" +
-        this.rowspec);
-    }
     if (versions != null) {
       this.rowspec.setMaxVersions(Integer.valueOf(versions));
     }
@@ -86,7 +83,7 @@ public class RowResource extends ResourceBase {
     servlet.getMetrics().incrementRequests(1);
     try {
       ResultGenerator generator =
-        ResultGenerator.fromRowSpec(tableName, rowspec, null);
+        ResultGenerator.fromRowSpec(tableResource.getName(), rowspec, null);
       if (!generator.hasNext()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
@@ -101,9 +98,12 @@ public class RowResource extends ResourceBase {
           rowKey = value.getRow();
           rowModel = new RowModel(rowKey);
         }
-        rowModel.addCell(
-          new CellModel(value.getFamily(), value.getQualifier(), 
-              value.getTimestamp(), value.getValue()));
+        byte[] family = value.getFamily();
+        byte[] qualifier = value.getQualifier();
+        byte[] data = tableResource.transform(family, qualifier,
+          value.getValue(), Transform.Direction.OUT);
+        rowModel.addCell(new CellModel(family, qualifier,
+          value.getTimestamp(), data));
         if (++count > rowspec.getMaxValues()) {
           break;
         }
@@ -131,12 +131,16 @@ public class RowResource extends ResourceBase {
     }
     try {
       ResultGenerator generator =
-        ResultGenerator.fromRowSpec(tableName, rowspec, null);
+        ResultGenerator.fromRowSpec(tableResource.getName(), rowspec, null);
       if (!generator.hasNext()) {
         throw new WebApplicationException(Response.Status.NOT_FOUND);
       }
       KeyValue value = generator.next();
-      ResponseBuilder response = Response.ok(value.getValue());
+      byte[] family = value.getFamily();
+      byte[] qualifier = value.getQualifier();
+      byte[] data = tableResource.transform(family, qualifier,
+        value.getValue(), Transform.Direction.OUT);
+      ResponseBuilder response = Response.ok(data);
       response.header("X-Timestamp", value.getTimestamp());
       return response.build();
     } catch (IOException e) {
@@ -151,7 +155,7 @@ public class RowResource extends ResourceBase {
     HTableInterface table = null;
     try {
       List<RowModel> rows = model.getRows();
-      table = pool.getTable(tableName);
+      table = pool.getTable(tableResource.getName());
       ((HTable)table).setAutoFlush(false);
       for (RowModel row: rows) {
         byte[] key = row.getKey();
@@ -159,9 +163,13 @@ public class RowResource extends ResourceBase {
         for (CellModel cell: row.getCells()) {
           byte [][] parts = KeyValue.parseColumn(cell.getColumn());
           if (parts.length == 2 && parts[1].length > 0) {
-            put.add(parts[0], parts[1], cell.getTimestamp(), cell.getValue());
+            put.add(parts[0], parts[1], cell.getTimestamp(),
+              tableResource.transform(parts[0], parts[1], cell.getValue(),
+                Transform.Direction.IN));
           } else {
-            put.add(parts[0], null, cell.getTimestamp(), cell.getValue());
+            put.add(parts[0], null, cell.getTimestamp(),
+              tableResource.transform(parts[0], null, cell.getValue(),
+                Transform.Direction.IN));
           }
         }
         table.put(put);
@@ -215,11 +223,15 @@ public class RowResource extends ResourceBase {
       Put put = new Put(row);
       byte parts[][] = KeyValue.parseColumn(column);
       if (parts.length == 2 && parts[1].length > 0) {
-        put.add(parts[0], parts[1], timestamp, message);
+        put.add(parts[0], parts[1], timestamp,
+          tableResource.transform(parts[0], parts[1], message,
+            Transform.Direction.IN));
       } else {
-        put.add(parts[0], null, timestamp, message);
+        put.add(parts[0], null, timestamp,
+          tableResource.transform(parts[0], null, message,
+            Transform.Direction.IN));
       }
-      table = pool.getTable(tableName);
+      table = pool.getTable(tableResource.getName());
       table.put(put);
       if (LOG.isDebugEnabled()) {
         LOG.debug("PUT " + put.toString());
@@ -306,7 +318,7 @@ public class RowResource extends ResourceBase {
     HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
-      table = pool.getTable(tableName);
+      table = pool.getTable(tableResource.getName());
       table.delete(delete);
       if (LOG.isDebugEnabled()) {
         LOG.debug("DELETE " + delete.toString());
