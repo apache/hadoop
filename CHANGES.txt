@@ -1088,6 +1088,8 @@ Release 0.21.0 - Unreleased
    HBASE-3120  [rest] Content transcoding
    HBASE-3181  Review, document, and fix up Regions-in-Transition timeout
                logic
+   HBASE-3180  Review periodic master logging, especially ServerManager once
+               a minute
 
 
   NEW FEATURES

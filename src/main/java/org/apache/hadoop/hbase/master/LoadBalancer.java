@@ -155,12 +155,10 @@ public class LoadBalancer {
     if(serversByLoad.lastKey().getLoad().getNumberOfRegions() <= max &&
        serversByLoad.firstKey().getLoad().getNumberOfRegions() >= min) {
       // Skipped because no server outside (min,max) range
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Skipping load balancing.  servers=" + numServers + " " +
-            "regions=" + numRegions + " average=" + average + " " +
-            "mostloaded=" + serversByLoad.lastKey().getLoad().getNumberOfRegions() +
-            " leastloaded=" + serversByLoad.lastKey().getLoad().getNumberOfRegions());
-      }
+      LOG.info("Skipping load balancing.  servers=" + numServers + " " +
+          "regions=" + numRegions + " average=" + average + " " +
+          "mostloaded=" + serversByLoad.lastKey().getLoad().getNumberOfRegions() +
+          " leastloaded=" + serversByLoad.lastKey().getLoad().getNumberOfRegions());
       return null;
     }
 
@@ -394,6 +392,7 @@ public class LoadBalancer {
    * @return ordered list of hosts holding blocks of the specified region
    * @throws IOException if any filesystem errors
    */
+  @SuppressWarnings("unused")
   private List<String> getTopBlockLocations(FileSystem fs, HRegionInfo region)
   throws IOException {
     String encodedName = region.getEncodedName();

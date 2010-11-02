@@ -110,8 +110,13 @@ class CatalogJanitor extends Chore {
     for (Map.Entry<HRegionInfo, Result> e : splitParents.entrySet()) {
       if (cleanParent(e.getKey(), e.getValue())) cleaned++;
     }
-    LOG.info("Scanned " + count.get() + " catalog row(s) and gc'd " + cleaned +
+    if (cleaned != 0) {
+      LOG.info("Scanned " + count.get() + " catalog row(s) and gc'd " + cleaned +
+        " unreferenced parent region(s)");
+    } else if (LOG.isDebugEnabled()) {
+      LOG.debug("Scanned " + count.get() + " catalog row(s) and gc'd " + cleaned +
       " unreferenced parent region(s)");
+    }
   }
 
   /**

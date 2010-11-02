@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -50,10 +48,7 @@ import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo,
@@ -89,8 +84,6 @@ public class ServerManager {
   private final Server master;
   private final MasterServices services;
 
-  private final ServerMonitor serverMonitorThread;
-
   private final LogCleaner logCleaner;
 
   // Reporting to track master metrics.
@@ -99,31 +92,10 @@ public class ServerManager {
   final DeadServer deadservers = new DeadServer();
 
   /**
-   * Dumps into log current stats on dead servers and number of servers
-   * TODO: Make this a metric; dump metrics into log.
-   */
-  class ServerMonitor extends Chore {
-    ServerMonitor(final int period, final Stoppable stopper) {
-      super("ServerMonitor", period, stopper);
-    }
-
-    @Override
-    protected void chore() {
-      int numServers = countOfRegionServers();
-      int numDeadServers = deadservers.size();
-      double averageLoad = getAverageLoad();
-      String deadServersList = deadservers.toString();
-      LOG.info("regionservers=" + numServers +
-        ", averageload=" + StringUtils.limitDecimalTo2(averageLoad) +
-        ((numDeadServers > 0)?  (", deadservers=" + deadServersList): ""));
-    }
-  }
-
-  /**
    * Constructor.
    * @param master
    * @param services
-   * @param metrics 
+   * @param metrics
    * @param freshClusterStartup True if we are original master on a fresh
    * cluster startup else if false, we are joining an already running cluster.
    */
@@ -133,10 +105,7 @@ public class ServerManager {
     this.services = services;
     this.metrics = metrics;
     Configuration c = master.getConfiguration();
-    int monitorInterval = c.getInt("hbase.master.monitor.interval", 60 * 1000);
-    this.serverMonitorThread = new ServerMonitor(monitorInterval, master);
     String n = Thread.currentThread().getName();
-    Threads.setDaemonThreadRunning(this.serverMonitorThread, n + ".serverMonitor");
     this.logCleaner =
       new LogCleaner(c.getInt("hbase.master.cleaner.interval", 60 * 1000),
         master, c, this.services.getMasterFileSystem().getFileSystem(),
@@ -538,7 +507,7 @@ public class ServerManager {
    * @param server server to open a region
    * @param region region to open
    */
-  public void sendRegionOpen(HServerInfo server, HRegionInfo region) 
+  public void sendRegionOpen(HServerInfo server, HRegionInfo region)
   throws IOException {
     HRegionInterface hri = getServerConnection(server);
     if (hri == null) {
@@ -618,7 +587,7 @@ public class ServerManager {
   /**
    * Waits for the regionservers to report in.
    * @return Count of regions out on cluster
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public int waitForRegionServers()
   throws InterruptedException {
@@ -681,7 +650,6 @@ public class ServerManager {
    * Currently just interrupts the ServerMonitor and LogCleaner chores.
    */
   public void stop() {
-    this.serverMonitorThread.interrupt();
     this.logCleaner.interrupt();
   }
 }
