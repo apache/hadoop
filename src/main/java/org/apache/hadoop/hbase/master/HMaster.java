@@ -751,7 +751,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       region.getLog().closeAndDelete();
 
       // 4. Trigger immediate assignment of this region
-      assignmentManager.assign(region.getRegionInfo());
+      assignmentManager.assign(region.getRegionInfo(), true);
     }
 
     // 5. If sync, wait for assignment of regions
@@ -958,7 +958,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   public void assignRegion(HRegionInfo hri) {
-    assignmentManager.assign(hri);
+    assignmentManager.assign(hri, true);
   }
 
   /**

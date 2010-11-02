@@ -498,9 +498,9 @@ public class MetaReader {
       Result result;
       while((result = metaServer.next(scannerid)) != null) {
         if (result != null && result.size() > 0) {
-          Pair<HRegionInfo, HServerAddress> pair = metaRowToRegionPair(result);
-          if (pair.getSecond() == null ||
-              !pair.getSecond().equals(hsi.getServerAddress())) {
+          Pair<HRegionInfo, HServerInfo> pair =
+            metaRowToRegionPairWithInfo(result);
+          if (pair.getSecond() == null || !pair.getSecond().equals(hsi)) {
             continue;
           }
           hris.put(pair.getFirst(), result);

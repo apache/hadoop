@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 
 /**
@@ -51,38 +53,50 @@ public class TestRollingRestart {
     // Start a cluster with 2 masters and 4 regionservers
     final int NUM_MASTERS = 2;
     final int NUM_RS = 3;
-    final int NUM_REGIONS_TO_CREATE = 27;
+    final int NUM_REGIONS_TO_CREATE = 20;
 
     int expectedNumRS = 3;
 
     // Start the cluster
-    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    log("Starting cluster");
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
+    conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 5000);
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    log("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
-    Configuration conf = TEST_UTIL.getConfiguration();
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testRollingRestart",
         null);
+    HMaster master = cluster.getMaster();
 
     // Create a table with regions
     byte [] table = Bytes.toBytes("tableRestart");
     byte [] family = Bytes.toBytes("family");
+    log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
     HTable ht = TEST_UTIL.createTable(table, family);
     int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family,
         NUM_REGIONS_TO_CREATE);
     numRegions += 2; // catalogs
-    LOG.debug("\n\nWaiting for no more RIT\n");
-    ZKAssign.blockUntilNoRIT(zkw);
-    LOG.debug("\n\nDisabling table\n");
+    log("Waiting for no more RIT\n");
+    blockUntilNoRIT(zkw, master);
+    log("Disabling table\n");
     TEST_UTIL.getHBaseAdmin().disableTable(table);
-    LOG.debug("\n\nWaiting for no more RIT\n");
-    ZKAssign.blockUntilNoRIT(zkw);
-    LOG.debug("\n\nEnabling table\n");
-    TEST_UTIL.getHBaseAdmin().enableTable(table);
-    LOG.debug("\n\nWaiting for no more RIT\n");
-    ZKAssign.blockUntilNoRIT(zkw);
-    LOG.debug("\n\nVerifying there are " + numRegions + " assigned on cluster\n");
+    log("Waiting for no more RIT\n");
+    blockUntilNoRIT(zkw, master);
     NavigableSet<String> regions = getAllOnlineRegions(cluster);
+    log("Verifying only catalog regions are assigned\n");
+    if (regions.size() != 2) {
+      for (String oregion : regions) log("Region still online: " + oregion);
+    }
+    assertEquals(2, regions.size());
+    log("Enabling table\n");
+    TEST_UTIL.getHBaseAdmin().enableTable(table);
+    log("Waiting for no more RIT\n");
+    blockUntilNoRIT(zkw, master);
+    log("Verifying there are " + numRegions + " assigned on cluster\n");
+    regions = getAllOnlineRegions(cluster);
     assertRegionsAssigned(cluster, regions);
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
 
@@ -93,7 +107,7 @@ public class TestRollingRestart {
     restarted.waitForServerOnline();
     log("Additional RS is online");
     log("Waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
+    blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
@@ -112,22 +126,23 @@ public class TestRollingRestart {
     }
 
     // Bring down the backup master
-    LOG.debug("\n\nStopping backup master\n\n");
+    log("Stopping backup master\n\n");
     backupMaster.getMaster().stop("Stop of backup during rolling restart");
     cluster.hbaseCluster.waitOnMaster(backupMaster);
 
     // Bring down the primary master
-    LOG.debug("\n\nStopping primary master\n\n");
+    log("Stopping primary master\n\n");
     activeMaster.getMaster().stop("Stop of active during rolling restart");
     cluster.hbaseCluster.waitOnMaster(activeMaster);
 
     // Start primary master
-    LOG.debug("\n\nRestarting primary master\n\n");
+    log("Restarting primary master\n\n");
     activeMaster = cluster.startMaster();
     cluster.waitForActiveAndReadyMaster();
+    master = activeMaster.getMaster();
 
     // Start backup master
-    LOG.debug("\n\nRestarting backup master\n\n");
+    log("Restarting backup master\n\n");
     backupMaster = cluster.startMaster();
 
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
@@ -148,7 +163,7 @@ public class TestRollingRestart {
       log("Waiting for RS shutdown to be handled by master");
       waitForRSShutdownToStartAndFinish(activeMaster, serverName);
       log("RS shutdown done, waiting for no more RIT");
-      ZKAssign.blockUntilNoRIT(zkw);
+      blockUntilNoRIT(zkw, master);
       log("Verifying there are " + numRegions + " assigned on cluster");
       assertRegionsAssigned(cluster, regions);
       expectedNumRS--;
@@ -159,7 +174,7 @@ public class TestRollingRestart {
       expectedNumRS++;
       log("Region server " + num + " is back online");
       log("Waiting for no more RIT");
-      ZKAssign.blockUntilNoRIT(zkw);
+      blockUntilNoRIT(zkw, master);
       log("Verifying there are " + numRegions + " assigned on cluster");
       assertRegionsAssigned(cluster, regions);
       assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
@@ -192,7 +207,7 @@ public class TestRollingRestart {
     waitForRSShutdownToStartAndFinish(activeMaster,
         metaServer.getRegionServer().getServerName());
     log("Waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
+    blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
@@ -208,7 +223,7 @@ public class TestRollingRestart {
     waitForRSShutdownToStartAndFinish(activeMaster,
         metaServer.getRegionServer().getServerName());
     log("RS shutdown done, waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
+    blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
     assertEquals(expectedNumRS, cluster.getRegionServerThreads().size());
@@ -219,7 +234,7 @@ public class TestRollingRestart {
     cluster.startRegionServer().waitForServerOnline();
     Thread.sleep(1000);
     log("Waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
+    blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
     // Shutdown server hosting META
@@ -232,7 +247,7 @@ public class TestRollingRestart {
     waitForRSShutdownToStartAndFinish(activeMaster,
         metaServer.getRegionServer().getServerName());
     log("RS shutdown done, waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
+    blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
 
@@ -246,7 +261,7 @@ public class TestRollingRestart {
     waitForRSShutdownToStartAndFinish(activeMaster,
         metaServer.getRegionServer().getServerName());
     log("RS shutdown done, waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
+    blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
 
@@ -260,7 +275,7 @@ public class TestRollingRestart {
     waitForRSShutdownToStartAndFinish(activeMaster,
         metaServer.getRegionServer().getServerName());
     log("RS shutdown done, waiting for no more RIT");
-    ZKAssign.blockUntilNoRIT(zkw);
+    blockUntilNoRIT(zkw, master);
     log("Verifying there are " + numRegions + " assigned on cluster");
     assertRegionsAssigned(cluster, regions);
 
@@ -278,6 +293,12 @@ public class TestRollingRestart {
 
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  private void blockUntilNoRIT(ZooKeeperWatcher zkw, HMaster master)
+  throws KeeperException, InterruptedException {
+    ZKAssign.blockUntilNoRIT(zkw);
+    master.assignmentManager.waitUntilNoRegionsInTransition(60000);
   }
 
   private void waitForRSShutdownToStartAndFinish(MasterThread activeMaster,
@@ -298,7 +319,7 @@ public class TestRollingRestart {
   }
 
   private void log(String msg) {
-    LOG.debug("\n\n" + msg + "\n");
+    LOG.debug("\n\nTRR: " + msg + "\n");
   }
 
   private RegionServerThread getServerHostingMeta(MiniHBaseCluster cluster) {
@@ -325,14 +346,23 @@ public class TestRollingRestart {
     for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
       numFound += rst.getRegionServer().getNumberOfOnlineRegions();
     }
-    if (expectedRegions.size() != numFound) {
-      LOG.debug("Expected to find " + expectedRegions.size() + " but only found"
+    if (expectedRegions.size() > numFound) {
+      log("Expected to find " + expectedRegions.size() + " but only found"
           + " " + numFound);
       NavigableSet<String> foundRegions = getAllOnlineRegions(cluster);
       for (String region : expectedRegions) {
         if (!foundRegions.contains(region)) {
-          LOG.debug("Missing region: " + region);
+          log("Missing region: " + region);
         }
+      }
+      assertEquals(expectedRegions.size(), numFound);
+    } else if (expectedRegions.size() < numFound) {
+      int doubled = numFound - expectedRegions.size();
+      log("Expected to find " + expectedRegions.size() + " but found"
+          + " " + numFound + " (" + doubled + " double assignments?)");
+      NavigableSet<String> doubleRegions = getDoubleAssignedRegions(cluster);
+      for (String region : doubleRegions) {
+        log("Region is double assigned: " + region);
       }
       assertEquals(expectedRegions.size(), numFound);
     } else {
@@ -348,6 +378,20 @@ public class TestRollingRestart {
       }
     }
     return online;
+  }
+
+  private NavigableSet<String> getDoubleAssignedRegions(
+      MiniHBaseCluster cluster) {
+    NavigableSet<String> online = new TreeSet<String>();
+    NavigableSet<String> doubled = new TreeSet<String>();
+    for (RegionServerThread rst : cluster.getLiveRegionServerThreads()) {
+      for (HRegionInfo region : rst.getRegionServer().getOnlineRegions()) {
+        if(!online.add(region.getRegionNameAsString())) {
+          doubled.add(region.getRegionNameAsString());
+        }
+      }
+    }
+    return doubled;
   }
 
 }

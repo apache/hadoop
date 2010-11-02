@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
@@ -55,8 +54,8 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   };
 
   public OpenedRegionHandler(Server server,
-      AssignmentManager assignmentManager, RegionTransitionData data,
-      HRegionInfo regionInfo, HServerInfo serverInfo) {
+      AssignmentManager assignmentManager, HRegionInfo regionInfo,
+      HServerInfo serverInfo) {
     super(server, EventType.RS_ZK_REGION_OPENED);
     this.assignmentManager = assignmentManager;
     this.regionInfo = regionInfo;

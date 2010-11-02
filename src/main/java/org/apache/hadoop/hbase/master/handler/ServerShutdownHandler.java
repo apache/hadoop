@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
@@ -97,7 +98,8 @@ public class ServerShutdownHandler extends EventHandler {
     // doing after log splitting.  Could do some states before -- OPENING?
     // OFFLINE? -- and then others after like CLOSING that depend on log
     // splitting.
-    this.services.getAssignmentManager().processServerShutdown(this.hsi);
+    List<HRegionInfo> regionsInTransition =
+      this.services.getAssignmentManager().processServerShutdown(this.hsi);
 
     // Assign root and meta if we were carrying them.
     if (isCarryingRoot()) { // -ROOT-
@@ -113,41 +115,66 @@ public class ServerShutdownHandler extends EventHandler {
     if (isCarryingMeta()) this.services.getAssignmentManager().assignMeta();
 
     // Wait on meta to come online; we need it to progress.
-    try {
-      this.server.getCatalogTracker().waitForMeta();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new IOException("Interrupted", e);
+    // TODO: Best way to hold strictly here?  We should build this retry logic
+    //       into the MetaReader operations themselves.
+    NavigableMap<HRegionInfo, Result> hris = null;
+    while (!this.server.isStopped()) {
+      try {
+        this.server.getCatalogTracker().waitForMeta();
+        hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
+            this.hsi);
+        break;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException("Interrupted", e);
+      } catch (IOException ioe) {
+        LOG.info("Received exception accessing META during server shutdown of " +
+            serverName + ", retrying META read");
+      }
     }
 
-    NavigableMap<HRegionInfo, Result> hris =
-      MetaReader.getServerUserRegions(this.server.getCatalogTracker(), this.hsi);
-    LOG.info("Reassigning the " + hris.size() + " region(s) that " + serverName +
-      " was carrying");
+    // Remove regions that were in transition
+    for (HRegionInfo rit : regionsInTransition) hris.remove(rit);
+    LOG.info("Reassigning the " + hris.size() + " region(s) that " + serverName
+        + " was carrying (skipping " + regionsInTransition.size() +
+        " regions(s) that are in transition)");
 
-    // We should encounter -ROOT- and .META. first in the Set given how its
-    // a sorted set.
+    // Iterate regions that were on this server and assign them
     for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
-      processDeadRegion(e.getKey(), e.getValue(),
+      if (processDeadRegion(e.getKey(), e.getValue(),
           this.services.getAssignmentManager(),
-          this.server.getCatalogTracker());
-      this.services.getAssignmentManager().assign(e.getKey());
+          this.server.getCatalogTracker())) {
+        this.services.getAssignmentManager().assign(e.getKey(), true);
+      }
     }
     this.deadServers.remove(serverName);
     LOG.info("Finished processing of shutdown of " + serverName);
   }
 
-  public static void processDeadRegion(HRegionInfo hri, Result result,
+  /**
+   * Process a dead region from a dead RS.  Checks if the region is disabled
+   * or if the region has a partially completed split.
+   * <p>
+   * Returns true if specified region should be assigned, false if not.
+   * @param hri
+   * @param result
+   * @param assignmentManager
+   * @param catalogTracker
+   * @return
+   * @throws IOException
+   */
+  public static boolean processDeadRegion(HRegionInfo hri, Result result,
       AssignmentManager assignmentManager, CatalogTracker catalogTracker)
   throws IOException {
     // If table is not disabled but the region is offlined,
     boolean disabled = assignmentManager.isTableDisabled(
         hri.getTableDesc().getNameAsString());
-    if (disabled) return;
+    if (disabled) return false;
     if (hri.isOffline() && hri.isSplit()) {
       fixupDaughters(result, assignmentManager, catalogTracker);
-      return;
+      return false;
     }
+    return true;
   }
 
   /**
@@ -183,7 +210,7 @@ public class ServerShutdownHandler extends EventHandler {
     if (pair == null || pair.getFirst() == null) {
       LOG.info("Fixup; missing daughter " + hri.getEncodedName());
       MetaEditor.addDaughter(catalogTracker, hri, null);
-      assignmentManager.assign(hri);
+      assignmentManager.assign(hri, true);
     }
   }
 }

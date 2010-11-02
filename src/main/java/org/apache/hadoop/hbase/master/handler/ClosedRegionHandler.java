@@ -24,7 +24,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
-import org.apache.hadoop.hbase.executor.RegionTransitionData;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 
 /**
@@ -39,7 +38,6 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
   private static final Log LOG = LogFactory.getLog(ClosedRegionHandler.class);
 
   private final AssignmentManager assignmentManager;
-  private final RegionTransitionData data;
   private final HRegionInfo regionInfo;
 
   private final ClosedPriority priority;
@@ -58,12 +56,10 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
     }
   };
 
-  public ClosedRegionHandler(Server server,
-      AssignmentManager assignmentManager, RegionTransitionData data,
+  public ClosedRegionHandler(Server server, AssignmentManager assignmentManager,
       HRegionInfo regionInfo) {
     super(server, EventType.RS_ZK_REGION_CLOSED);
     this.assignmentManager = assignmentManager;
-    this.data = data;
     this.regionInfo = regionInfo;
     if(regionInfo.isRootRegion()) {
       priority = ClosedPriority.ROOT;
@@ -94,6 +90,6 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
     }
     // ZK Node is in CLOSED state, assign it.
     assignmentManager.setOffline(regionInfo);
-    assignmentManager.assign(regionInfo);
+    assignmentManager.assign(regionInfo, true);
   }
 }

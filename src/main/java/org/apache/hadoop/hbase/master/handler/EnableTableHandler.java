@@ -77,7 +77,7 @@ public class EnableTableHandler extends EventHandler {
     assignmentManager.undisableTable(this.tableNameStr);
     // Verify all regions of table are disabled
     for (HRegionInfo region : regions) {
-      assignmentManager.assign(region);
+      assignmentManager.assign(region, true);
     }
     // Wait on table's regions to clear region in transition.
     for (HRegionInfo region: regions) {

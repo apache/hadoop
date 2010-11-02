@@ -339,17 +339,22 @@ public class TestMasterFailover {
      * ZK = CLOSING
      */
 
-    // Region of enabled table being closed but not complete
-    // Region is already assigned, don't say anything to RS but set ZK closing
-    region = enabledAndAssignedRegions.remove(0);
-    regionsThatShouldBeOnline.add(region);
-    ZKAssign.createNodeClosing(zkw, region, serverName);
-
-    // Region of disabled table being closed but not complete
-    // Region is already assigned, don't say anything to RS but set ZK closing
-    region = disabledAndAssignedRegions.remove(0);
-    regionsThatShouldBeOffline.add(region);
-    ZKAssign.createNodeClosing(zkw, region, serverName);
+//    Disabled test of CLOSING.  This case is invalid after HBASE-3181.
+//    How can an RS stop a CLOSING w/o deleting the node?  If it did ever fail
+//    and left the node in CLOSING, the RS would have aborted and we'd process
+//    these regions in server shutdown
+//
+//    // Region of enabled table being closed but not complete
+//    // Region is already assigned, don't say anything to RS but set ZK closing
+//    region = enabledAndAssignedRegions.remove(0);
+//    regionsThatShouldBeOnline.add(region);
+//    ZKAssign.createNodeClosing(zkw, region, serverName);
+//
+//    // Region of disabled table being closed but not complete
+//    // Region is already assigned, don't say anything to RS but set ZK closing
+//    region = disabledAndAssignedRegions.remove(0);
+//    regionsThatShouldBeOffline.add(region);
+//    ZKAssign.createNodeClosing(zkw, region, serverName);
 
     /*
      * ZK = CLOSED
@@ -797,26 +802,32 @@ public class TestMasterFailover {
 
     // Let's add some weird states to master in-memory state
 
+    // After HBASE-3181, we need to have some ZK state if we're PENDING_OPEN
+    // b/c it is impossible for us to get into this state w/o a zk node
+    // this is not true of PENDING_CLOSE
+
     // PENDING_OPEN and enabled
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_OPEN));
+        new RegionState(region, RegionState.State.PENDING_OPEN, 0));
+    ZKAssign.createNodeOffline(zkw, region, master.getServerName());
     // PENDING_OPEN and disabled
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_OPEN));
+        new RegionState(region, RegionState.State.PENDING_OPEN, 0));
+    ZKAssign.createNodeOffline(zkw, region, master.getServerName());
     // PENDING_CLOSE and enabled
     region = enabledRegions.remove(0);
     regionsThatShouldBeOnline.add(region);
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_CLOSE));
+        new RegionState(region, RegionState.State.PENDING_CLOSE, 0));
     // PENDING_CLOSE and disabled
     region = disabledRegions.remove(0);
     regionsThatShouldBeOffline.add(region);
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_CLOSE));
+        new RegionState(region, RegionState.State.PENDING_CLOSE, 0));
 
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");

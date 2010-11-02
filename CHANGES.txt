@@ -1085,6 +1085,9 @@ Release 0.21.0 - Unreleased
    HBASE-3184  Xmx setting in pom to use for tests/surefire does not appear
                to work
    HBASE-3120  [rest] Content transcoding
+   HBASE-3181  Review, document, and fix up Regions-in-Transition timeout
+               logic
+
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

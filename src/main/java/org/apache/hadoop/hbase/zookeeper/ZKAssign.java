@@ -742,6 +742,33 @@ public class ZKAssign {
   }
 
   /**
+   * Gets the current data in the unassigned node for the specified region name
+   * or fully-qualified path.
+   *
+   * <p>Returns null if the region does not currently have a node.
+   *
+   * <p>Does not set a watch.
+   *
+   * @param watcher zk reference
+   * @param pathOrRegionName fully-specified path or region name
+   * @param stat object to store node info into on getData call
+   * @return data for the unassigned node
+   * @throws KeeperException
+   * @throws KeeperException if unexpected zookeeper exception
+   */
+  public static RegionTransitionData getDataNoWatch(ZooKeeperWatcher zkw,
+      String pathOrRegionName, Stat stat)
+  throws KeeperException {
+    String node = pathOrRegionName.startsWith("/") ?
+        pathOrRegionName : getNodeName(zkw, pathOrRegionName);
+    byte [] data = ZKUtil.getDataNoWatch(zkw, node, stat);
+    if(data == null) {
+      return null;
+    }
+    return RegionTransitionData.fromBytes(data);
+  }
+
+  /**
    * Delete the assignment node regardless of its current state.
    * <p>
    * Fail silent even if the node does not exist at all.
