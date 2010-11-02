@@ -91,7 +91,11 @@
           <para>Here is a quick guide to starting up a standalone HBase
           instance, creating a table and inserting rows into a table via the
           <link linkend="shell">HBase Shell</link>, and then cleaning up and shutting
-          down your running instance.</para>
+          down your running instance.
+      </para>
+          <para>Be warned that the HBase started using these
+              instructions is for play only.  See the next section for how to
+              set up a non-toy HBase deploy.</para>
 
           <listitem>
             <para>Download and unpack the latest stable release.</para>
@@ -217,13 +221,12 @@ hbase(main):013:0&gt; drop 'test'
             <para><programlisting>$ ./bin/stop-hbase.sh
 stopping hbase...............</programlisting></para>
           </listitem>
-        </itemizedlist></para>
-        <para>To learn how to set up a HBase in distributed mode, see the next section.</para>
+        </itemizedlist>
+      </para>
     </section>
 
     <section xml:id="notsoquick">
       <title>Not-so-quick Start</title>
-
       <para>The HBase API overview document contains a detailed <link
       xlink:href="http://hbase.apache.org/docs/current/api/overview-summary.html#overview_description">Getting
       Started</link> with a list of requirements and description of the
@@ -237,6 +240,13 @@ stopping hbase...............</programlisting></para>
   <chapter xml:id="configuration">
     <title>Configuration</title>
     <para>
+        HBase uses the same configuration system as Hadoop.
+        To configure a deploy, edit a file of environment variables
+        in <filename>conf/hbase-env.sh</filename> -- this configuration
+        is used mostly by the launcher shell scripts getting the cluster
+        off the ground -- and then add configuration to an xml file to
+        do things like override HBase defaults, tell HBase what Filesystem to
+        use, and the location of the ZooKeeper ensemble.
     </para>
 
     <section>
@@ -277,7 +287,8 @@ stopping hbase...............</programlisting></para>
 
       <section xml:id="required_configuration"><title>Required Configurations</title>
       <para>Here are some configurations you must configure to suit
-      your deploy.
+          your deploy.  Failure to do so will almost certainly result in
+          <emphasis>data loss</emphasis>.
       </para>
       <section xml:id="ulimit">
       <title><varname>ulimit</varname></title>
@@ -290,7 +301,10 @@ stopping hbase...............</programlisting></para>
       2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
       </programlisting>
       Do yourself a favor and change the upper bound on the number of file descriptors.
-      Set it to north of 10k.  See the above referenced FAQ for how.</para>
+      Set it to north of 10k.  See the above referenced FAQ for how. Verify this change
+      has taken effect by checking the first line in your HBase logs.  It'll print out
+      the ulimit available to the running process  (A frequent mistake is upping the ulimit
+      for a user other than the user running the HBase process).</para>
       <para>To be clear, upping the file descriptors for the user who is
       running the HBase process is an operating system configuration, not an
       HBase configuration.
@@ -309,6 +323,13 @@ stopping hbase...............</programlisting></para>
         &lt;value&gt;2047&lt;/value&gt;
       &lt;/property&gt;
       </programlisting>
+      <footnote>
+      <para>
+          For background see
+          <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A5">Problem: "xceiverCount 258 exceeds the limit of concurrent xcievers 256"</link>.
+</para>
+      </footnote>
+
       </para>
       </section>
       </section>
@@ -336,8 +357,6 @@ stopping hbase...............</programlisting></para>
       </para>
       </section>
       </section>
-
-
 
       </section>
   </chapter>
