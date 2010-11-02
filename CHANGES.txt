@@ -640,6 +640,8 @@ Release 0.21.0 - Unreleased
    HBASE-3179  Enable ReplicationLogsCleaner only if replication is,
                and fix its test
    HBASE-3185  User-triggered compactions are triggering splits!
+   HBASE-1932  Encourage use of 'lzo' compression... add the wiki page to
+               getting started
 
 
   IMPROVEMENTS
