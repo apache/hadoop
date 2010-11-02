@@ -637,6 +637,8 @@ Release 0.21.0 - Unreleased
    HBASE-2006  Documentation of hbase-site.xml parameters
    HBASE-2672  README.txt should contain basic information like how to run
                or build HBase
+   HBASE-3179  Enable ReplicationLogsCleaner only if replication is,
+               and fix its test
 
 
   IMPROVEMENTS

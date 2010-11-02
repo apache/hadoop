@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.LogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
@@ -52,6 +53,11 @@ public class ReplicationLogCleaner implements LogCleanerDelegate {
 
   @Override
   public boolean isLogDeletable(Path filePath) {
+    // all members of this class are null if replication is disabled, and we
+    // return true since false would render the LogsCleaner useless
+    if (this.conf == null) {
+      return true;
+    }
     String log = filePath.getName();
     // If we saw the hlog previously, let's consider it's still used
     // At some point in the future we will refresh the list and it will be gone
@@ -105,6 +111,10 @@ public class ReplicationLogCleaner implements LogCleanerDelegate {
 
   @Override
   public void setConf(Configuration conf) {
+    // If replication is disabled, keep all members null
+    if (!conf.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false)) {
+      return;
+    }
     // Make my own Configuration.  Then I'll have my own connection to zk that
     // I can close myself when comes time.
     this.conf = new Configuration(conf);

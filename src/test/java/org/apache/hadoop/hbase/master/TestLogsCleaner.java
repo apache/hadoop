@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -29,20 +31,17 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
-import org.junit.After;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestLogsCleaner {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
-  private ReplicationZookeeper zkHelper;
 
   /**
    * @throws java.lang.Exception
@@ -60,48 +59,20 @@ public class TestLogsCleaner {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    /* TODO REENABLE
-    zkHelper = new ReplicationZookeeperWrapper(
-        ZooKeeperWrapper.createInstance(conf, HRegionServer.class.getName()),
-        conf, new AtomicBoolean(true), "test-cluster");
-        */
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
-  }
-
-  @Ignore @Test /* REENABLE -- DISABLED UNTIL REPLICATION BROUGHT UP TO NEW MASTER */
+  @Test
   public void testLogCleaning() throws Exception{
-    Configuration c = TEST_UTIL.getConfiguration();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+    Server server = new DummyServer();
+    ReplicationZookeeper zkHelper =
+        new ReplicationZookeeper(server, new AtomicBoolean(true));
+
     Path oldLogDir = new Path(HBaseTestingUtility.getTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
-    String fakeMachineName = URLEncoder.encode("regionserver:60020", "UTF8");
+    String fakeMachineName = URLEncoder.encode(server.getServerName(), "UTF8");
 
-    FileSystem fs = FileSystem.get(c);
-    Stoppable stoppable = new Stoppable() {
-      private volatile boolean stopped = false;
-
-      @Override
-      public void stop(String why) {
-        this.stopped = true;
-      }
-
-      @Override
-      public boolean isStopped() {
-        return this.stopped;
-      }
-    };
-    LogCleaner cleaner  = new LogCleaner(1000, stoppable, c, fs, oldLogDir);
+    FileSystem fs = FileSystem.get(conf);
+    LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir);
 
     // Create 2 invalid files, 1 "recent" file, 1 very new file and 30 old files
     long now = System.currentTimeMillis();
@@ -125,7 +96,7 @@ public class TestLogsCleaner {
       // (TimeToLiveLogCleaner) but would be rejected by the second
       // (ReplicationLogCleaner)
       if (i % (30/3) == 0) {
-// REENABLE        zkHelper.addLogToList(fileName.getName(), fakeMachineName);
+        zkHelper.addLogToList(fileName.getName(), fakeMachineName);
         System.out.println("Replication log file: " + fileName);
       }
     }
@@ -153,7 +124,46 @@ public class TestLogsCleaner {
     assertEquals(5, fs.listStatus(oldLogDir).length);
 
     for (FileStatus file : fs.listStatus(oldLogDir)) {
-      System.out.println("Keeped log files: " + file.getPath().getName());
+      System.out.println("Kept log files: " + file.getPath().getName());
+    }
+  }
+
+  static class DummyServer implements Server {
+
+    @Override
+    public Configuration getConfiguration() {
+      return TEST_UTIL.getConfiguration();
+    }
+
+    @Override
+    public ZooKeeperWatcher getZooKeeper() {
+      try {
+        return new ZooKeeperWatcher(getConfiguration(), "dummy server", this);
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      return null;
+    }
+
+    @Override
+    public CatalogTracker getCatalogTracker() {
+      return null;
+    }
+
+    @Override
+    public String getServerName() {
+      return "regionserver,60020,000000";
+    }
+
+    @Override
+    public void abort(String why, Throwable e) {}
+
+    @Override
+    public void stop(String why) {}
+
+    @Override
+    public boolean isStopped() {
+      return false;
     }
   }
 }
