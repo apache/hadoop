@@ -205,7 +205,7 @@ public class MetaEditor {
     catalogTracker.waitForMetaServerConnectionDefault().
       delete(CatalogTracker.META_REGION, delete);
     LOG.info("Deleted daughter " + daughter.getRegionNameAsString() +
-      " " + Bytes.toString(qualifier) + " from parent " +
+      " " + Bytes.toString(qualifier) + " reference in parent " +
       parent.getRegionNameAsString());
   }
 

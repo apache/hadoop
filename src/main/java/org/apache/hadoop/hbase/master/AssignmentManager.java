@@ -519,9 +519,6 @@ public class AssignmentManager extends ZooKeeperListener {
         this.regionsInTransition.remove(regionInfo.getEncodedName());
       if (rs != null) {
         this.regionsInTransition.notifyAll();
-      } else {
-        LOG.warn("Asked online a region that was not in " +
-          "regionsInTransition: " + rs);
       }
     }
     synchronized (this.regions) {
@@ -597,7 +594,10 @@ public class AssignmentManager extends ZooKeeperListener {
       HServerInfo serverInfo = this.regions.remove(regionInfo);
       if (serverInfo != null) {
         List<HRegionInfo> serverRegions = this.servers.get(serverInfo);
-        serverRegions.remove(regionInfo);
+        if (!serverRegions.remove(regionInfo)) {
+          LOG.warn("Asked offline a region that was not on expected server: " +
+            regionInfo + ", " + serverInfo.getServerName());
+        }
       } else {
         LOG.warn("Asked offline a region that was not online: " + regionInfo);
       }
@@ -1104,9 +1104,9 @@ public class AssignmentManager extends ZooKeeperListener {
     // First experiment at synchronous assignment
     // Simpler because just wait for no regions in transition
 
-    // Scan META for all user regions
+    // Scan META for all user regions; do not include offlined regions in list.
     List<HRegionInfo> allRegions =
-      MetaScanner.listAllRegions(master.getConfiguration());
+      MetaScanner.listAllRegions(master.getConfiguration(), false);
     if (allRegions == null || allRegions.isEmpty()) return;
 
     // Get all available servers

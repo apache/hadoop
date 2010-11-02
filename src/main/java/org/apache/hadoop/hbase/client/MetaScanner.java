@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -40,6 +42,7 @@ import org.apache.hadoop.hbase.util.Writables;
  * minor releases.
  */
 public class MetaScanner {
+  private static final Log LOG = LogFactory.getLog(MetaScanner.class);
   /**
    * Scans the meta table and calls a visitor on each RowResult and uses a empty
    * start row value as table name.
@@ -93,7 +96,8 @@ public class MetaScanner {
     // if row is not null, we want to use the startKey of the row's region as
     // the startRow for the meta scan.
     byte[] startRow;
-    if (row != null) {
+    // row could be non-null but empty -- the HConstants.EMPTY_START_ROW
+    if (row != null && row.length > 0) {
       // Scan starting at a particular row in a particular table
       assert tableName != null;
       byte[] searchRow =
@@ -118,7 +122,9 @@ public class MetaScanner {
       byte[] rowBefore = regionInfo.getStartKey();
       startRow = HRegionInfo.createRegionName(tableName, rowBefore,
           HConstants.ZEROES, false);
-    } else if (tableName == null || tableName.length == 0) {
+    } else if (row == null ||
+        (row != null && Bytes.equals(HConstants.EMPTY_START_ROW, row)) ||
+        (tableName == null || tableName.length == 0)) {
       // Full META scan
       startRow = HConstants.EMPTY_START_ROW;
     } else {
@@ -133,8 +139,12 @@ public class MetaScanner {
         configuration.getInt("hbase.meta.scanner.caching", 100));
     do {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
-      callable = new ScannerCallable(connection, HConstants.META_TABLE_NAME,
-          scan);
+      byte [] metaTableName = Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)?
+        HConstants.ROOT_TABLE_NAME: HConstants.META_TABLE_NAME;
+      LOG.debug("Scanning " + Bytes.toString(metaTableName) +
+        " starting at row=" + Bytes.toString(startRow) + " for max=" +
+        rowUpperLimit + " rows");
+      callable = new ScannerCallable(connection, metaTableName, scan);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
 
@@ -172,10 +182,24 @@ public class MetaScanner {
 
   /**
    * Lists all of the regions currently in META.
-   * @return
+   * @param conf
+   * @return List of all user-space regions.
    * @throws IOException
    */
   public static List<HRegionInfo> listAllRegions(Configuration conf)
+  throws IOException {
+    return listAllRegions(conf, true);
+  }
+
+  /**
+   * Lists all of the regions currently in META.
+   * @param conf
+   * @param offlined True if we are to include offlined regions, false and we'll
+   * leave out offlined regions from returned list.
+   * @return List of all user-space regions.
+   * @throws IOException
+   */
+  public static List<HRegionInfo> listAllRegions(Configuration conf, final boolean offlined)
   throws IOException {
     final List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
     MetaScannerVisitor visitor =
@@ -185,9 +209,15 @@ public class MetaScanner {
           if (result == null || result.isEmpty()) {
             return true;
           }
-          HRegionInfo regionInfo = Writables.getHRegionInfo(
-              result.getValue(HConstants.CATALOG_FAMILY,
-                  HConstants.REGIONINFO_QUALIFIER));
+          byte [] bytes = result.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER);
+          if (bytes == null) {
+            LOG.warn("Null REGIONINFO_QUALIFIER: " + result);
+            return true;
+          }
+          HRegionInfo regionInfo = Writables.getHRegionInfo(bytes);
+          // If region offline AND we are not to include offlined regions, return.
+          if (regionInfo.isOffline() && !offlined) return true;
           regions.add(regionInfo);
           return true;
         }

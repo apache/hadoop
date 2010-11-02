@@ -136,6 +136,7 @@ public class MetaReader {
       public boolean visit(Result r) throws IOException {
         if (r ==  null || r.isEmpty()) return true;
         Pair<HRegionInfo,HServerAddress> region = metaRowToRegionPair(r);
+        if (region == null) return true;
         regions.put(region.getFirst(), region.getSecond());
         return true;
       }
@@ -296,13 +297,16 @@ public class MetaReader {
   /**
    * @param data A .META. table row.
    * @return A pair of the regioninfo and the server address from <code>data</code>
-   * (or null for server address if no address set in .META.).
+   * or null for server address if no address set in .META. or null for a result
+   * if no HRegionInfo found.
    * @throws IOException
    */
   public static Pair<HRegionInfo, HServerAddress> metaRowToRegionPair(
       Result data) throws IOException {
-    HRegionInfo info = Writables.getHRegionInfo(
-      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
+    byte [] bytes =
+      data.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+    if (bytes == null) return null;
+    HRegionInfo info = Writables.getHRegionInfo(bytes);
     final byte[] value = data.getValue(HConstants.CATALOG_FAMILY,
       HConstants.SERVER_QUALIFIER);
     if (value != null && value.length > 0) {
@@ -463,6 +467,7 @@ public class MetaReader {
       while((data = metaServer.next(scannerid)) != null) {
         if (data != null && data.size() > 0) {
           Pair<HRegionInfo, HServerAddress> region = metaRowToRegionPair(data);
+          if (region == null) continue;
           if (region.getFirst().getTableDesc().getNameAsString().equals(
               tableName)) {
             regions.add(region);

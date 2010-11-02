@@ -98,6 +98,7 @@ class CatalogJanitor extends Chore {
         if (r == null || r.isEmpty()) return true;
         count.incrementAndGet();
         HRegionInfo info = getHRegionInfo(r);
+        if (info == null) return true; // Keep scanning
         if (info.isSplitParent()) splitParents.put(info, r);
         // Returning true means "keep scanning"
         return true;
@@ -157,7 +158,7 @@ class CatalogJanitor extends Chore {
     boolean hasReferencesB =
       checkDaughter(parent, rowContent, HConstants.SPLITB_QUALIFIER);
     if (!hasReferencesA && !hasReferencesB) {
-      LOG.info("Deleting region " + parent.getRegionNameAsString() +
+      LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
       Path rootdir = this.services.getMasterFileSystem().getRootDir();
