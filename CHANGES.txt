@@ -645,6 +645,8 @@ Release 0.21.0 - Unreleased
    HBASE-3151  NPE when trying to read regioninfo from .META.
    HBASE-3191  FilterList with MUST_PASS_ONE and SCVF isn't working
                (Stefan Seelmann via Stack)
+   HBASE-2471  Splitting logs, we'll make an output file though the
+               region no longer exists
 
 
   IMPROVEMENTS

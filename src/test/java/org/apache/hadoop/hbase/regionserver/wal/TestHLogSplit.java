@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -31,6 +32,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -57,6 +60,8 @@ import org.junit.Test;
  */
 public class TestHLogSplit {
 
+  private final static Log LOG = LogFactory.getLog(TestHLogSplit.class);
+
   private Configuration conf;
   private FileSystem fs;
 
@@ -81,7 +86,8 @@ public class TestHLogSplit {
   private static final String HLOG_FILE_PREFIX = "hlog.dat.";
   private static List<String> regions;
   private static final String HBASE_SKIP_ERRORS = "hbase.hlog.split.skip.errors";
-
+  private static final Path tabledir =
+      new Path(hbaseDir, Bytes.toString(TABLE_NAME));
 
   static enum Corruptions {
     INSERT_GARBAGE_ON_FIRST_LINE,
@@ -137,11 +143,15 @@ public class TestHLogSplit {
   @Test public void testRecoveredEditsPathForMeta() throws IOException {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
+    Path tdir = new Path(hbaseDir, Bytes.toString(HConstants.META_TABLE_NAME));
+    Path regiondir = new Path(tdir,
+        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    fs.mkdirs(regiondir);
     long now = System.currentTimeMillis();
     HLog.Entry entry =
       new HLog.Entry(new HLogKey(encoded, HConstants.META_TABLE_NAME, 1, now),
       new WALEdit());
-    Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, new Path("/"));
+    Path p = HLogSplitter.getRegionSplitEditsPath(fs, entry, hbaseDir);
     String parentOfParent = p.getParent().getParent().getName();
     assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
   }
@@ -498,10 +508,14 @@ public class TestHLogSplit {
 
     fs.initialize(fs.getUri(), conf);
 
-    InstrumentedSequenceFileLogWriter.activateFailure = false;
-    appendEntry(writer[4], TABLE_NAME, Bytes.toBytes("break"), ("r" + 999).getBytes(), FAMILY, QUALIFIER, VALUE, 0);
-    writer[4].close();
+    String region = "break";
+    Path regiondir = new Path(tabledir, region);
+    fs.mkdirs(regiondir);
 
+    InstrumentedSequenceFileLogWriter.activateFailure = false;
+    appendEntry(writer[4], TABLE_NAME, Bytes.toBytes(region),
+        ("r" + 999).getBytes(), FAMILY, QUALIFIER, VALUE, 0);
+    writer[4].close();
 
     try {
       InstrumentedSequenceFileLogWriter.activateFailure = true;
@@ -543,6 +557,25 @@ public class TestHLogSplit {
     assertEquals(0, compareHLogSplitDirs(firstSplitPath, splitPath));
   }
 
+  @Test
+  public void testSplitDeletedRegion() throws IOException {
+    regions.removeAll(regions);
+    String region = "region_that_splits";
+    regions.add(region);
+
+    generateHLogs(1);
+
+    fs.initialize(fs.getUri(), conf);
+
+    Path regiondir = new Path(tabledir, region);
+    fs.delete(regiondir, true);
+
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    
+    assertFalse(fs.exists(regiondir));
+  }
+
   /**
    * This thread will keep writing to the file after the split process has started
    * It simulates a region server that was considered dead but woke up and wrote
@@ -567,8 +600,10 @@ public class TestHLogSplit {
       flushToConsole("starting");
       while (true) {
         try {
-
-          appendEntry(lastLogWriter, TABLE_NAME, "juliet".getBytes(),
+          String region = "juliet";
+          
+          fs.mkdirs(new Path(new Path(hbaseDir, region), region));
+          appendEntry(lastLogWriter, TABLE_NAME, region.getBytes(),
                   ("r" + editsCount).getBytes(), FAMILY, QUALIFIER, VALUE, 0);
           lastLogWriter.sync();
           editsCount.incrementAndGet();
@@ -631,9 +666,10 @@ public class TestHLogSplit {
         flushToConsole("Juliet: split not started, sleeping a bit...");
         Threads.sleep(100);
       }
-
+      String region = "juliet";
       Path julietLog = new Path(hlogDir, HLOG_FILE_PREFIX + ".juliet");
       try {
+        fs.mkdirs(new Path(new Path(hbaseDir, region), region));
         HLog.Writer writer = HLog.createWriter(fs,
                 julietLog, conf);
         appendEntry(writer, "juliet".getBytes(), ("juliet").getBytes(),
@@ -657,6 +693,9 @@ public class TestHLogSplit {
   }
 
   private void generateHLogs(int writers, int entries, int leaveOpen) throws IOException {
+    for (String region : regions) {
+      fs.mkdirs(new Path(tabledir, region));
+    }
     for (int i = 0; i < writers; i++) {
       writer[i] = HLog.createWriter(fs, new Path(hlogDir, HLOG_FILE_PREFIX + i), conf);
       for (int j = 0; j < entries; j++) {

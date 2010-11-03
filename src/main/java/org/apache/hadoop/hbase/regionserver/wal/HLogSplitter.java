@@ -430,6 +430,12 @@ public class HLogSplitter {
         .getTablename());
     Path regiondir = HRegion.getRegionDir(tableDir,
         Bytes.toString(logEntry.getKey().getEncodedRegionName()));
+    if (!fs.exists(regiondir)) {
+      LOG.info("This region's directory doesn't exist: "
+          + regiondir.toString() + ". It is very likely that it was" +
+          " already split so it's safe to discard those edits.");
+      return null;
+    }
     Path dir = HLog.getRegionDirRecoveredEditsDir(regiondir);
     if (!fs.exists(dir)) {
       if (!fs.mkdirs(dir)) LOG.warn("mkdir failed on " + dir);
@@ -526,6 +532,10 @@ public class HLogSplitter {
           for (Entry logEntry : entries) {
             if (wap == null) {
               Path regionedits = getRegionSplitEditsPath(fs, logEntry, rootDir);
+              if (regionedits == null) {
+                // we already print a message if it's null in getRegionSplitEditsPath
+                break;
+              }
               if (fs.exists(regionedits)) {
                 LOG.warn("Found existing old edits file. It could be the "
                     + "result of a previous failed split attempt. Deleting "

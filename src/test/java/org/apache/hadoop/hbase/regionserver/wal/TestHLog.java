@@ -132,13 +132,17 @@ public class TestHLog  {
 
     final byte [] tableName = Bytes.toBytes(getName());
     final byte [] rowName = tableName;
-    Path logdir = new Path(dir, HConstants.HREGION_LOGDIR_NAME);
+    Path logdir = new Path(hbaseDir, HConstants.HREGION_LOGDIR_NAME);
     HLog log = new HLog(fs, logdir, oldLogDir, conf);
     final int howmany = 3;
     HRegionInfo[] infos = new HRegionInfo[3];
+    Path tabledir = new Path(hbaseDir, getName());
+    fs.mkdirs(tabledir);
     for(int i = 0; i < howmany; i++) {
       infos[i] = new HRegionInfo(new HTableDescriptor(tableName),
                 Bytes.toBytes("" + i), Bytes.toBytes("" + (i+1)), false);
+      fs.mkdirs(new Path(tabledir, infos[i].getEncodedName()));
+      LOG.info("allo " + new Path(tabledir, infos[i].getEncodedName()).toString());
     }
     // Add edits for three regions.
     try {
@@ -160,10 +164,9 @@ public class TestHLog  {
         log.rollWriter();
       }
       log.close();
-      Path splitsdir = new Path(this.dir, "splits");
       HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
       List<Path> splits =
-        logSplitter.splitLog(splitsdir, logdir,
+        logSplitter.splitLog(hbaseDir, logdir,
           this.oldLogDir, this.fs, conf);
       verifySplits(splits, howmany);
       log = null;
