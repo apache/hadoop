@@ -54,6 +54,8 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Used to communicate with a single HBase table.
@@ -201,8 +203,12 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    */
   int getCurrentNrHRS() throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(this.configuration);
-    return admin.getClusterStatus().getServers();
+    try {
+      return ZKUtil.getNumberOfChildren(this.connection.getZooKeeperWatcher(),
+          this.connection.getZooKeeperWatcher().rsZNode);
+    } catch (KeeperException ke) {
+      throw new IOException("Unexpected ZooKeeper exception", ke);
+    }
   }
 
   /**
