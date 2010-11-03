@@ -424,12 +424,14 @@ stopping hbase...............</programlisting></para>
         <section><title>Debug</title>
             <section><title>Shell debug switch</title>
                 <para>You can set a debug switch in the shell to see more output
+                    -- e.g. more of the stack trace on exception --
                     when you run a command:
                     <programlisting>hbase> debug &lt;RETURN&gt;</programlisting>
                  </para>
             </section>
             <section><title>DEBUG log level</title>
-                <para>To enable DEBUG level logging in the shell, launch it with the <command>-d</command> option.
+                <para>To enable DEBUG level logging in the shell,
+                    launch it with the <command>-d</command> option.
                     <programlisting>$ ./bin/hbase shell -d</programlisting>
                </para>
             </section>
