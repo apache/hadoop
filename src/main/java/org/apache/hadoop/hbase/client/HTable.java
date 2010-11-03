@@ -197,13 +197,13 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * TODO Might want to change this to public, would be nice if the number
-   * of threads would automatically change when servers were added and removed
    * @return the number of region servers that are currently running
    * @throws IOException if a remote or network exception occurs
    */
-  int getCurrentNrHRS() throws IOException {
+  public int getCurrentNrHRS() throws IOException {
     try {
+      // We go to zk rather than to master to get count of regions to avoid
+      // HTable having a Master dependency.  See HBase-2828
       return ZKUtil.getNumberOfChildren(this.connection.getZooKeeperWatcher(),
           this.connection.getZooKeeperWatcher().rsZNode);
     } catch (KeeperException ke) {
