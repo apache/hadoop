@@ -643,6 +643,8 @@ Release 0.21.0 - Unreleased
    HBASE-1932  Encourage use of 'lzo' compression... add the wiki page to
                getting started
    HBASE-3151  NPE when trying to read regioninfo from .META.
+   HBASE-3191  FilterList with MUST_PASS_ONE and SCVF isn't working
+               (Stefan Seelmann via Stack)
 
 
   IMPROVEMENTS

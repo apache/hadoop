@@ -161,6 +161,8 @@ public class FilterList implements Filter {
 
   @Override
   public ReturnCode filterKeyValue(KeyValue v) {
+    ReturnCode rc = operator == Operator.MUST_PASS_ONE?
+        ReturnCode.SKIP: ReturnCode.INCLUDE;
     for (Filter filter : filters) {
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining()) {
@@ -180,15 +182,15 @@ public class FilterList implements Filter {
 
         switch (filter.filterKeyValue(v)) {
         case INCLUDE:
-          return ReturnCode.INCLUDE;
+          rc = ReturnCode.INCLUDE;
+          // must continue here to evaluate all filters
         case NEXT_ROW:
         case SKIP:
           // continue;
         }
       }
     }
-    return operator == Operator.MUST_PASS_ONE?
-      ReturnCode.SKIP: ReturnCode.INCLUDE;
+    return rc;
   }
 
   @Override
