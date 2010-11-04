@@ -284,7 +284,10 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   /**
    * Called when there is a connection-related event via the Watcher callback.
    *
-   * If Disconnected or Expired, this should shutdown the cluster.
+   * If Disconnected or Expired, this should shutdown the cluster. But, since
+   * we send a KeeperException.SessionExpiredException along with the abort
+   * call, it's possible for the Abortable to catch it and try to create a new
+   * session with ZooKeeper. This is what the client does in HCM.
    *
    * @param event
    */
@@ -322,7 +325,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
           "ZooKeeper, aborting");
         // TODO: One thought is to add call to ZooKeeperListener so say,
         // ZooKeperNodeTracker can zero out its data values.
-        if (this.abortable != null) this.abortable.abort(msg, null);
+        if (this.abortable != null) this.abortable.abort(msg,
+            new KeeperException.SessionExpiredException());
         break;
     }
   }

@@ -235,17 +235,17 @@ public class HConnectionManager {
     private ZooKeeperWatcher zooKeeper;
     // ZooKeeper-based master address tracker
     private MasterAddressTracker masterAddressTracker;
-
+    private RootRegionTracker rootRegionTracker;
+    
     private final Object metaRegionLock = new Object();
+
     private final Object userRegionLock = new Object();
 
     private final Configuration conf;
-
     // Known region HServerAddress.toString() -> HRegionInterface
+
     private final Map<String, HRegionInterface> servers =
       new ConcurrentHashMap<String, HRegionInterface>();
-
-    private final RootRegionTracker rootRegionTracker;
 
     /**
      * Map of table to table {@link HRegionLocation}s.  The table key is made
@@ -289,6 +289,14 @@ public class HConnectionManager {
       this.prefetchRegionLimit = conf.getInt("hbase.client.prefetch.limit",
           10);
 
+      setupZookeeperTrackers();
+
+      this.master = null;
+      this.masterChecked = false;
+    }
+
+    private synchronized void setupZookeeperTrackers()
+        throws ZooKeeperConnectionException{
       // initialize zookeeper and master address manager
       this.zooKeeper = getZooKeeperWatcher();
       masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
@@ -297,9 +305,17 @@ public class HConnectionManager {
 
       this.rootRegionTracker = new RootRegionTracker(this.zooKeeper, this);
       this.rootRegionTracker.start();
+    }
 
-      this.master = null;
-      this.masterChecked = false;
+    private synchronized void resetZooKeeperTrackers()
+        throws ZooKeeperConnectionException {
+      LOG.info("Trying to reconnect to zookeeper");
+      masterAddressTracker.stop();
+      masterAddressTracker = null;
+      rootRegionTracker.stop();
+      rootRegionTracker = null;
+      this.zooKeeper = null;
+      setupZookeeperTrackers();
     }
 
     public Configuration getConfiguration() {
@@ -1322,6 +1338,21 @@ public class HConnectionManager {
 
     @Override
     public void abort(final String msg, Throwable t) {
+      if (t instanceof KeeperException.SessionExpiredException) {
+        try {
+          LOG.info("This client just lost it's session with ZooKeeper, trying" +
+              " to reconnect.");
+          resetZooKeeperTrackers();
+          LOG.info("Reconnected successfully. This disconnect could have been" +
+              " caused by a network partition or a long-running GC pause," +
+              " either way it's recommended that you verify your environment.");
+          return;
+        } catch (ZooKeeperConnectionException e) {
+          LOG.error("Could not reconnect to ZooKeeper after session" +
+              " expiration, aborting");
+          t = e;
+        }
+      }
       if (t != null) LOG.fatal(msg, t);
       else LOG.fatal(msg);
       this.closed = true;
