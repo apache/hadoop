@@ -135,6 +135,10 @@ public class HLog implements Syncable {
   private static Class<? extends Writer> logWriterClass;
   private static Class<? extends Reader> logReaderClass;
 
+  static void resetLogReaderClass() {
+    HLog.logReaderClass = null;
+  }
+
   private OutputStream hdfs_out;     // OutputStream associated with the current SequenceFile.writer
   private int initialReplication;    // initial replication factor of SequenceFile.writer
   private Method getNumCurrentReplicas; // refers to DFSOutputStream.getNumCurrentReplicas
@@ -557,10 +561,13 @@ public class HLog implements Syncable {
     final Path path, Configuration conf)
   throws IOException {
     try {
+
       if (logReaderClass == null) {
+
         logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
             SequenceFileLogReader.class, Reader.class);
       }
+
 
       HLog.Reader reader = logReaderClass.newInstance();
       reader.init(fs, path, conf);

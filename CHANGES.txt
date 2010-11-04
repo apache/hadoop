@@ -648,6 +648,8 @@ Release 0.21.0 - Unreleased
    HBASE-2471  Splitting logs, we'll make an output file though the
                region no longer exists
    HBASE-3095  Client needs to reconnect if it expires its zk session
+   HBASE-2935  Refactor "Corrupt Data" Tests in TestHLogSplit
+               (Alex Newman via Stack)
 
 
   IMPROVEMENTS

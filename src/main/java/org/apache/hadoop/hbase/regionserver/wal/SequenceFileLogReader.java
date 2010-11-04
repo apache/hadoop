@@ -50,7 +50,7 @@ public class SequenceFileLogReader implements HLog.Reader {
    *         this.end = in.getPos() + length;
    *
    */
-  private static class WALReader extends SequenceFile.Reader {
+  static class WALReader extends SequenceFile.Reader {
 
     WALReader(final FileSystem fs, final Path p, final Configuration c)
     throws IOException {
@@ -131,7 +131,7 @@ public class SequenceFileLogReader implements HLog.Reader {
   int edit = 0;
   long entryStart = 0;
 
-  private Class<? extends HLogKey> keyClass;
+  protected Class<? extends HLogKey> keyClass;
 
   /**
    * Default constructor.
@@ -217,7 +217,7 @@ public class SequenceFileLogReader implements HLog.Reader {
     return reader.getPosition();
   }
 
-  private IOException addFileInfoToException(final IOException ioe)
+  protected IOException addFileInfoToException(final IOException ioe)
   throws IOException {
     long pos = -1;
     try {

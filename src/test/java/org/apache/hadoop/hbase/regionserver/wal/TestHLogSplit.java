@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -310,29 +311,91 @@ public class TestHLogSplit {
     }
   }
 
-  // TODO: fix this test (HBASE-2935)
-  //@Test
+  @Test
   public void testCorruptedFileGetsArchivedIfSkipErrors() throws IOException {
     conf.setBoolean(HBASE_SKIP_ERRORS, true);
+    Class<?> backupClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
+        Reader.class);
+    InstrumentedSequenceFileLogWriter.activateFailure = false;
+    HLog.resetLogReaderClass();
 
+    try {
     Path c1 = new Path(hlogDir, HLOG_FILE_PREFIX + "0");
-    Path c2 = new Path(hlogDir, HLOG_FILE_PREFIX + "5");
-    Path c3 = new Path(hlogDir, HLOG_FILE_PREFIX + (NUM_WRITERS - 1));
-    generateHLogs(-1);
-    corruptHLog(c1, Corruptions.INSERT_GARBAGE_IN_THE_MIDDLE, false, fs);
-    corruptHLog(c2, Corruptions.APPEND_GARBAGE, true, fs);
-    corruptHLog(c3, Corruptions.INSERT_GARBAGE_ON_FIRST_LINE, true, fs);
+      conf.setClass("hbase.regionserver.hlog.reader.impl",
+          FaultySequenceFileLogReader.class, HLog.Reader.class);
+      String[] failureTypes = { "begin", "middle", "end" };
+      for (FaultySequenceFileLogReader.FailureType  failureType : FaultySequenceFileLogReader.FailureType.values()) {
+        conf.set("faultysequencefilelogreader.failuretype", failureType.name());
+        generateHLogs(1, ENTRIES, -1);
+        fs.initialize(fs.getUri(), conf);
+        HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+        logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+        FileStatus[] archivedLogs = fs.listStatus(corruptDir);
+        assertEquals("expected a different file", c1.getName(), archivedLogs[0]
+            .getPath().getName());
+        assertEquals(archivedLogs.length, 1);
+        fs.delete(new Path(oldLogDir, HLOG_FILE_PREFIX + "0"), false);
+      }
+    } finally {
+      conf.setClass("hbase.regionserver.hlog.reader.impl", backupClass,
+          Reader.class);
+      HLog.resetLogReaderClass();
+    }
+  }
 
+  @Test(expected = IOException.class)
+  public void testTrailingGarbageCorruptionLogFileSkipErrorsFalseThrows()
+      throws IOException {
+    conf.setBoolean(HBASE_SKIP_ERRORS, false);
+    Class<?> backupClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
+        Reader.class);
+    InstrumentedSequenceFileLogWriter.activateFailure = false;
+    HLog.resetLogReaderClass();
+
+    try {
+      conf.setClass("hbase.regionserver.hlog.reader.impl",
+          FaultySequenceFileLogReader.class, HLog.Reader.class);
+      conf.set("faultysequencefilelogreader.failuretype", FaultySequenceFileLogReader.FailureType.BEGINNING.name());
+      generateHLogs(Integer.MAX_VALUE);
     fs.initialize(fs.getUri(), conf);
     HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
     logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+    } finally {
+      conf.setClass("hbase.regionserver.hlog.reader.impl", backupClass,
+          Reader.class);
+      HLog.resetLogReaderClass();
+    }
 
-    FileStatus[] archivedLogs = fs.listStatus(corruptDir);
+  }
 
-    assertEquals("expected a different file", c1.getName(), archivedLogs[0].getPath().getName());
-    assertEquals("expected a different file", c2.getName(), archivedLogs[1].getPath().getName());
-    assertEquals("expected a different file", c3.getName(), archivedLogs[2].getPath().getName());
-    assertEquals(archivedLogs.length, 3);
+  @Test
+  public void testCorruptedLogFilesSkipErrorsFalseDoesNotTouchLogs()
+      throws IOException {
+    conf.setBoolean(HBASE_SKIP_ERRORS, false);
+    Class<?> backupClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
+        Reader.class);
+    InstrumentedSequenceFileLogWriter.activateFailure = false;
+    HLog.resetLogReaderClass();
+
+    try {
+      conf.setClass("hbase.regionserver.hlog.reader.impl",
+          FaultySequenceFileLogReader.class, HLog.Reader.class);
+      conf.set("faultysequencefilelogreader.failuretype", FaultySequenceFileLogReader.FailureType.BEGINNING.name());
+      generateHLogs(-1);
+      fs.initialize(fs.getUri(), conf);
+      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
+      try {
+        logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
+      } catch (IOException e) {
+        assertEquals(
+            "if skip.errors is false all files should remain in place",
+            NUM_WRITERS, fs.listStatus(hlogDir).length);
+      }
+    } finally {
+      conf.setClass("hbase.regionserver.hlog.reader.impl", backupClass,
+          Reader.class);
+      HLog.resetLogReaderClass();
+    }
 
   }
 
@@ -381,39 +444,6 @@ public class TestHLogSplit {
 
     assertEquals("wrong number of files in the archive log", NUM_WRITERS, archivedLogs.length);
   }
-
-
-
-  // TODO: fix this test (HBASE-2935)
-  //@Test(expected = IOException.class)
-  public void testTrailingGarbageCorruptionLogFileSkipErrorsFalseThrows() throws IOException {
-    conf.setBoolean(HBASE_SKIP_ERRORS, false);
-    generateHLogs(Integer.MAX_VALUE);
-    corruptHLog(new Path(hlogDir, HLOG_FILE_PREFIX + "5"),
-            Corruptions.APPEND_GARBAGE, true, fs);
-
-    fs.initialize(fs.getUri(), conf);
-    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
-    logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
-  }
-
-  // TODO: fix this test (HBASE-2935)
-  //@Test
-  public void testCorruptedLogFilesSkipErrorsFalseDoesNotTouchLogs() throws IOException {
-    conf.setBoolean(HBASE_SKIP_ERRORS, false);
-    generateHLogs(-1);
-    corruptHLog(new Path(hlogDir, HLOG_FILE_PREFIX + "5"),
-            Corruptions.APPEND_GARBAGE, true, fs);
-    fs.initialize(fs.getUri(), conf);
-    try {
-      HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
-      logSplitter.splitLog(hbaseDir, hlogDir, oldLogDir, fs, conf);
-    } catch (IOException e) {/* expected */}
-
-    assertEquals("if skip.errors is false all files should remain in place",
-            NUM_WRITERS, fs.listStatus(hlogDir).length);
-  }
-
 
   @Test
   public void testSplit() throws IOException {
