@@ -799,11 +799,12 @@ public class Store implements HeapSize {
     }
     
     if (ret > 0) {
-      // default = +/- 4 hrs
-      long jitter =  conf.getLong("hbase.hregion.majorcompaction.jitter", 
-          1000*60*60*4);
-      if (jitter > 0) {
-        ret += jitter - Math.round(jitter * 2 * Math.random());
+      // default = 20% = +/- 4.8 hrs
+      double jitterPct =  conf.getFloat("hbase.hregion.majorcompaction.jitter",
+          0.20F);
+      if (jitterPct > 0) {
+        long jitter = Math.round(ret * jitterPct);
+        ret += jitter - Math.round(2L * jitter * Math.random());
       }
     }
     return ret;
