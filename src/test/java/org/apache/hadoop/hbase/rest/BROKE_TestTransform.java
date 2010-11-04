@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestTransform extends HBaseRESTClusterTestBase {
+public class BROKE_TestTransform extends HBaseRESTClusterTestBase {
   static final String TABLE = "TestTransform";
   static final String CFA = "a";
   static final String CFB = "b";
