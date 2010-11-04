@@ -51,73 +51,11 @@
 <li><a href="#related" >Related Documentation</a></li>
 </ul>
 
-<h2><a name="requirements">Requirements</a></h2>
-<ul>
-  <li>Java 1.6.x, preferably from <a href="http://www.java.com/download/">Sun</a>. Use the latest version available except u18 (u19 is fine).</li>
-  <li>This version of HBase will only run on <a href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</a>.
- HBase will lose data unless it is running on an HDFS that has a durable sync operation.
- Currently only the <a href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</a>
- branch has this attribute.  No official releases have been made from this branch as of this writing
- so you will have to build your own Hadoop from the tip of this branch
- (or install Cloudera's <a href="http://archive.cloudera.com/docs/">CDH3</a> (as of this writing, it is in beta); it has the
- 0.20-append patches needed to add a durable sync).
- See <a href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/CHANGES.txt">CHANGES.txt</a>
- in branch-0.20.-append to see list of patches involved.</li>
-  <li>
-    <em>ssh</em> must be installed and <em>sshd</em> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
-   You must be able to ssh to all nodes, including your local node, using passwordless login
-   (Google "ssh passwordless login").
-  </li>
-  <li>
-    HBase depends on <a href="http://hadoop.apache.org/zookeeper/">ZooKeeper</a> as of release 0.20.0.
-    HBase keeps the location of its root table, who the current master is, and what regions are
-    currently participating in the cluster in ZooKeeper.
-    Clients and Servers now must know their <em>ZooKeeper Quorum locations</em> before
-    they can do anything else (Usually they pick up this information from configuration
-    supplied on their CLASSPATH). By default, HBase will manage a single ZooKeeper instance for you.
-    In <em>standalone</em> and <em>pseudo-distributed</em> modes this is usually enough, but for
-    <em>fully-distributed</em> mode you should configure a ZooKeeper quorum (more info below).
-  </li>
-  <li>Hosts must be able to resolve the fully-qualified domain name of the master.</li>
-  <li>
-    The clocks on cluster members should be in basic alignments. Some skew is tolerable but
-    wild skew could generate odd behaviors. Run <a href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</a>
-    on your cluster, or an equivalent.
-  </li>
-  <li>
-    The default <b>ulimit -n</b> of 1024 on *nix systems will be insufficient.
-    Any significant amount of loading will lead you to
-    <a href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</a>.
-    You will also notice errors like:
-    <pre>
-2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
-2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
-    </pre>
-    Do yourself a favor and change this to more than 10k. See the FAQ in the hbase wiki for how.
-    Also, HDFS has an upper bound of files that it can serve at the same time,
-    called xcievers (yes, this is <em>misspelled</em>). Again, before doing any loading,
-    make sure you configured Hadoop's conf/hdfs-site.xml with this:
-    <pre>
-&lt;property&gt;
-  &lt;name&gt;dfs.datanode.max.xcievers&lt;/name&gt;
-  &lt;value&gt;2047&lt;/value&gt;
-&lt;/property&gt;
-    </pre>
-    See the background of this issue here: <a href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A5">Problem: "xceiverCount 258 exceeds the limit of concurrent xcievers 256"</a>.
-    Failure to follow these instructions will result in <b>data loss</b>.
-  </li>
-</ul>
-
-<h3><a name="windows">Windows</a></h3>
-If you are running HBase on Windows, you must install
-<a href="http://cygwin.com/">Cygwin</a>
-to have a *nix-like environment for the shell scripts. The full details
-are explained in 
-the <a href="../cygwin.html">Windows Installation</a>
-guide.
-
 
 <h2><a name="getting_started" >Getting Started</a></h2>
+<p>First review the <a href="http://hbase.apache.org/docs/current/book.html#requirements">requirements</a>
+section of the HBase Book.  A careful reading will save you grief down the road.</p>
+
 <p>What follows presumes you have obtained a copy of HBase,
 see <a href="http://hadoop.apache.org/hbase/releases.html">Releases</a>, and are installing
 for the first time. If upgrading your HBase instance, see <a href="#upgrading">Upgrading</a>.</p>
@@ -408,6 +346,14 @@ the HBase version. It does not change your install unless you explicitly ask it 
 <p>For sample Java code, see <a href="org/apache/hadoop/hbase/client/package-summary.html#package_description">org.apache.hadoop.hbase.client</a> documentation.</p>
 
 <p>If your client is NOT Java, consider the Thrift or REST libraries.</p>
+
+<h2><a name="windows">Windows</a></h2>
+If you are running HBase on Windows, you must install
+<a href="http://cygwin.com/">Cygwin</a>
+to have a *nix-like environment for the shell scripts. The full details
+are explained in 
+the <a href="../cygwin.html">Windows Installation</a>
+guide.
 
 <h2><a name="related" >Related Documentation</a></h2>
 <ul>

@@ -226,14 +226,196 @@ stopping hbase...............</programlisting></para>
     </section>
 
     <section xml:id="notsoquick">
-      <title>Not-so-quick Start</title>
-      <para>The HBase API overview document contains a detailed <link
-      xlink:href="http://hbase.apache.org/docs/current/api/overview-summary.html#overview_description">Getting
-      Started</link> with a list of requirements and description of the
-      different HBase run modes: standalone, what is described above in <link
-      linkend="quickstart">Quick Start,</link> pseudo-distributed where all
-      daemons run on a single server, and distributed.</para>
-      <para>Be sure to read the <link linkend="important_configurations">Important Configurations</link>.</para>
+      <title>Not-so-quick Start Guide</title>
+      <section xml:id="requirements"><title>Requirements</title>
+      <para>HBase has the following requirements.  Please read the
+      section below carefully and ensure that all requirements have been
+      satisfied.  Failure to do so will cause you (and us) grief debugging
+      strange errors and/or data loss.
+      </para>
+
+  <section xml:id="java"><title>java</title>
+<para>
+  Just like Hadoop, HBase requires java 6 from <link xlink:href="http://www.java.com/download/">Oracle</link>.
+Usually you'll want to use the latest version available except the problematic u18  (u22 is the latest version as of this writing).</para>
+</section>
+  <section xml:id="hadoop"><title><link xlink:href="http://hadoop.apache.org">hadoop</link></title>
+<para>This version of HBase will only run on <link xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</link>.
+ HBase will lose data unless it is running on an HDFS that has a durable sync.
+ Currently only the <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
+ branch has this attribute.  No official releases have been made from this branch as of this writing
+ so you will have to build your own Hadoop from the tip of this branch
+ (or install Cloudera's <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link> (as of this writing, it is in beta); it has the
+ 0.20-append patches needed to add a durable sync).
+ See <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/CHANGES.txt">CHANGES.txt</link>
+ in branch-0.20.-append to see list of patches involved.</para>
+  </section>
+<section xml:id="ssh"> <title>ssh</title>
+<para><command>ssh</command> must be installed and <command>sshd</command> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
+   You must be able to ssh to all nodes, including your local node, using passwordless login (Google "ssh passwordless login").
+  </para>
+</section>
+  <section><title>DNS</title>
+<para>Basic name resolving must be working correctly on your cluster.
+</para>
+</section>
+  <section><title>NTP</title>
+<para>
+    The clocks on cluster members should be in basic alignments. Some skew is tolerable but
+    wild skew could generate odd behaviors. Run <link xlink:href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</link>
+    on your cluster, or an equivalent.
+  </para>
+</section>
+
+      <section xml:id="ulimit">
+      <title><varname>ulimit</varname></title>
+      <para>HBase is a database, it uses a lot of files at the same time.
+      The default ulimit -n of 1024 on *nix systems is insufficient.
+      Any significant amount of loading will lead you to 
+      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</link>.
+      You will also notice errors like:
+      <programlisting>2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
+      2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
+      </programlisting>
+      Do yourself a favor and change the upper bound on the number of file descriptors.
+      Set it to north of 10k.  See the above referenced FAQ for how.</para>
+      <para>To be clear, upping the file descriptors for the user who is
+      running the HBase process is an operating system configuration, not an
+      HBase configuration.
+      </para>
+      </section>
+
+      <section xml:id="dfs.datanode.max.xcievers">
+      <title><varname>dfs.datanode.max.xcievers</varname></title>
+      <para>
+      Hadoop HDFS has an upper bound of files that it will serve at one same time,
+      called <varname>xcievers</varname> (yes, this is misspelled). Again, before
+      doing any loading, make sure you have configured Hadoop's <filename>conf/hdfs-site.xml</filename>
+      setting the <varname>xceivers</varname> value to at least the following:
+      <programlisting>
+      &lt;property&gt;
+        &lt;name&gt;dfs.datanode.max.xcievers&lt;/name&gt;
+        &lt;value&gt;2047&lt;/value&gt;
+      &lt;/property&gt;
+      </programlisting>
+      </para>
+      </section>
+      </section>
+
+      <section><title>HBase run modes: Standalone, Pseudo-distributed, and Distributed</title>
+      <para>HBase has three different run modes: standalone, this is what is described above in
+      <link linkend="quickstart">Quick Start,</link> pseudo-distributed mode where all
+      daemons run on a single server, and distributed, where each of the daemons runs
+      on different cluster node.</para>
+      <section><title>Standalone HBase</title>
+      <para>TODO</para>
+      </section>
+      <section><title>Pseudo-distributed</title>
+      <para>TODO</para>
+      </section>
+      <section><title>Distributed</title>
+      <para>TODO</para>
+      </section>
+      </section>
+      <section><title>Client configuration and dependencies connecting to an HBase cluster</title>
+      <para>TODO</para>
+      </section>
+
+    <section><title>Example Configurations</title>
+    <para>In this section we provide a few sample configurations.</para>
+    <section><title>Basic Distributed HBase Install</title>
+    <para>Here is example basic configuration of a ten node cluster running in
+    distributed mode.  The nodes
+are named <varname>example0</varname>, <varname>example1</varname>, etc., through
+node <varname>example9</varname>  in this example.  The HBase Master and the HDFS namenode 
+are running on the node <varname>example0</varname>.  RegionServers run on nodes
+<varname>example1</varname>-<varname>example9</varname>.
+A 3-node zookeeper ensemble runs on <varname>example1</varname>, <varname>example2</varname>, and <varname>example3</varname>.
+Below we show what the main configuration files
+-- <filename>hbase-site.xml</filename>, <filename>regionservers</filename>, and
+<filename>hbase-env.sh</filename> -- found in the <filename>conf</filename> directory
+might look like.
+</para>
+    <section><title><filename>hbase-site.xml</filename></title>
+    <programlisting>
+<![CDATA[
+<configuration>
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>example1,example2,example3</value>
+    <description>The directory shared by region servers.
+    </description>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.dataDir</name>
+    <value>/export/stack/zookeeper</value>
+    <description>Property from ZooKeeper's config zoo.cfg.
+    The directory where the snapshot is stored.
+    </description>
+  </property>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://example1:9000/hbase</value>
+    <description>The directory shared by region servers.
+    </description>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>true</value>
+    <description>The mode the cluster will be in. Possible values are
+      false: standalone and pseudo-distributed setups with managed Zookeeper
+      true: fully-distributed with unmanaged Zookeeper Quorum (see hbase-env.sh)
+    </description>
+  </property>
+</configuration>
+]]>
+    </programlisting>
+    </section>
+
+    <section><title><filename>regionservers</filename></title>
+    <para>In this file you list the nodes that will run regionservers.  In
+    our case we run regionservers on all but the head node example1 which is
+    carrying the HBase master and the HDFS namenode</para>
+    <programlisting>
+    example1
+    example3
+    example4
+    example5
+    example6
+    example7
+    example8
+    example9
+    </programlisting>
+    </section>
+
+    <section><title><filename>hbase-env.sh</filename></title>
+    <para>Below we use a <command>diff</command> to show the differences from 
+    default in the <filename>hbase-env.sh</filename> file. Here we are setting
+the HBase heap to be 4G instead of the default 1G.
+    </para>
+    <programlisting>
+    <![CDATA[
+$ git diff hbase-env.sh
+diff --git a/conf/hbase-env.sh b/conf/hbase-env.sh
+index e70ebc6..96f8c27 100644
+--- a/conf/hbase-env.sh
++++ b/conf/hbase-env.sh
+@@ -31,7 +31,7 @@ export JAVA_HOME=/usr/lib//jvm/java-6-sun/
+ # export HBASE_CLASSPATH=
+ 
+ # The maximum amount of heap to use, in MB. Default is 1000.
+-# export HBASE_HEAPSIZE=1000
++export HBASE_HEAPSIZE=4096
+ 
+ # Extra Java runtime options.
+ # Below are what we set by default.  May only work with SUN JVM.
+]]>
+    </programlisting>
+    </section>
+
+    </section>
+    
+    </section>
     </section>
   </chapter>
 
@@ -286,52 +468,11 @@ stopping hbase...............</programlisting></para>
 
 
       <section xml:id="required_configuration"><title>Required Configurations</title>
-      <para>Here are some configurations you must configure to suit
-          your deploy.  Failure to do so will almost certainly result in
-          <emphasis>data loss</emphasis>.
+      <para>See the <link linkend="requirements">Requirements</link> section.
+      It lists at least two required configurations needed running HBase bearing
+      load: i.e. <link linkend="ulimit">file descriptors <varname>ulimit</varname></link> and
+      <link linkend="dfs.datanode.max.xcievers"><varname>dfs.datanode.max.xcievers</varname></link>.
       </para>
-      <section xml:id="ulimit">
-      <title><varname>ulimit</varname></title>
-      <para>HBase is a database, it uses a lot of files at the same time.
-      The default ulimit -n of 1024 on *nix systems is insufficient.
-      Any significant amount of loading will lead you to 
-      <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</link>.
-      You will also notice errors like:
-      <programlisting>2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
-      2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
-      </programlisting>
-      Do yourself a favor and change the upper bound on the number of file descriptors.
-      Set it to north of 10k.  See the above referenced FAQ for how. Verify this change
-      has taken effect by checking the first line in your HBase logs.  It'll print out
-      the ulimit available to the running process  (A frequent mistake is upping the ulimit
-      for a user other than the user running the HBase process).</para>
-      <para>To be clear, upping the file descriptors for the user who is
-      running the HBase process is an operating system configuration, not an
-      HBase configuration.
-      </para>
-      </section>
-      <section xml:id="dfs.datanode.max.xcievers">
-      <title><varname>dfs.datanode.max.xcievers</varname></title>
-      <para>
-      Hadoop HDFS has an upper bound of files that it will serve at one same time,
-      called <varname>xcievers</varname> (yes, this is misspelled). Again, before
-      doing any loading, make sure you have configured Hadoop's <filename>conf/hdfs-site.xml</filename>
-      setting the <varname>xceivers</varname> value to at least the following:
-      <programlisting>
-      &lt;property&gt;
-        &lt;name&gt;dfs.datanode.max.xcievers&lt;/name&gt;
-        &lt;value&gt;2047&lt;/value&gt;
-      &lt;/property&gt;
-      </programlisting>
-      <footnote>
-      <para>
-          For background see
-          <link xlink:href="http://wiki.apache.org/hadoop/Hbase/Troubleshooting#A5">Problem: "xceiverCount 258 exceeds the limit of concurrent xcievers 256"</link>.
-</para>
-      </footnote>
-
-      </para>
-      </section>
       </section>
 
       <section xml:id="recommended_configurations"><title>Recommended Configuations</title>
