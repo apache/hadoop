@@ -96,8 +96,7 @@ public class MetaScanner {
     // if row is not null, we want to use the startKey of the row's region as
     // the startRow for the meta scan.
     byte[] startRow;
-    // row could be non-null but empty -- the HConstants.EMPTY_START_ROW
-    if (row != null && row.length > 0) {
+    if (row != null) {
       // Scan starting at a particular row in a particular table
       assert tableName != null;
       byte[] searchRow =
@@ -122,9 +121,7 @@ public class MetaScanner {
       byte[] rowBefore = regionInfo.getStartKey();
       startRow = HRegionInfo.createRegionName(tableName, rowBefore,
           HConstants.ZEROES, false);
-    } else if (row == null ||
-        (row != null && Bytes.equals(HConstants.EMPTY_START_ROW, row)) ||
-        (tableName == null || tableName.length == 0)) {
+    } else if (tableName == null || tableName.length == 0) {
       // Full META scan
       startRow = HConstants.EMPTY_START_ROW;
     } else {
