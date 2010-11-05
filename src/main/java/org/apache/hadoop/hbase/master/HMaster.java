@@ -862,6 +862,11 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
   }
 
+  public void clearFromTransition(HRegionInfo hri) {
+    if (this.assignmentManager.isRegionInTransition(hri) != null) {
+      this.assignmentManager.clearRegionFromTransition(hri);
+    }
+  }
   /**
    * @return cluster status
    */

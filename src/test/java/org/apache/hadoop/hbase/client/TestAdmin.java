@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.client;
 
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -45,8 +46,10 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -79,6 +82,15 @@ public class TestAdmin {
   @Before
   public void setUp() throws Exception {
     this.admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+  }
+
+  @Test
+  public void testHBaseFsck() throws IOException {
+    HBaseFsck fsck =
+      new HBaseFsck(TEST_UTIL.getMiniHBaseCluster().getConfiguration());
+    fsck.displayFullReport();
+    int result = fsck.doWork();
+    assertEquals(0, result);
   }
 
   @Test

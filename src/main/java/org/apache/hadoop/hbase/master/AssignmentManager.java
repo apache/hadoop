@@ -1199,6 +1199,7 @@ public class AssignmentManager extends ZooKeeperListener {
     for (Result result : results) {
       Pair<HRegionInfo,HServerInfo> region =
         MetaReader.metaRowToRegionPairWithInfo(result);
+      if (region == null) continue;
       HServerInfo regionLocation = region.getSecond();
       HRegionInfo regionInfo = region.getFirst();
       if (regionLocation == null) {
@@ -1322,6 +1323,34 @@ public class AssignmentManager extends ZooKeeperListener {
   public RegionState isRegionInTransition(final HRegionInfo hri) {
     synchronized (this.regionsInTransition) {
       return this.regionsInTransition.get(hri.getEncodedName());
+    }
+  }
+
+  /**
+   * Clears the specified region from being in transition.
+   * <p>
+   * Used only by HBCK tool.
+   * @param hri
+   */
+  public void clearRegionFromTransition(HRegionInfo hri) {
+    synchronized (this.regionsInTransition) {
+      this.regionsInTransition.remove(hri.getEncodedName());
+    }
+    synchronized (this.regions) {
+      this.regions.remove(hri);
+    }
+    synchronized (this.regionPlans) {
+      this.regionPlans.remove(hri.getEncodedName());
+    }
+    synchronized (this.servers) {
+      for (List<HRegionInfo> regions : this.servers.values()) {
+        for (int i=0;i<regions.size();i++) {
+          if (regions.get(i).equals(hri)) {
+            regions.remove(i);
+            break;
+          }
+        }
+      }
     }
   }
 

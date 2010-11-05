@@ -345,64 +345,67 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     @Override
     public Integer apply(Writable from) {
-      if (from instanceof HBaseRPC.Invocation) {
-        HBaseRPC.Invocation inv = (HBaseRPC.Invocation) from;
+      if (!(from instanceof HBaseRPC.Invocation)) return NORMAL_QOS;
 
-        String methodName = inv.getMethodName();
+      HBaseRPC.Invocation inv = (HBaseRPC.Invocation) from;
+      String methodName = inv.getMethodName();
 
-        // scanner methods...
-        if (methodName.equals("next") || methodName.equals("close")) {
-          // translate!
-          Long scannerId;
-          try {
-            scannerId = (Long) inv.getParameters()[0];
-          } catch (ClassCastException ignored) {
-            //LOG.debug("Low priority: " + from);
-            return NORMAL_QOS; // doh.
-          }
-          String scannerIdString = Long.toString(scannerId);
-          InternalScanner scanner = scanners.get(scannerIdString);
-          if (scanner instanceof HRegion.RegionScanner) {
-            HRegion.RegionScanner rs = (HRegion.RegionScanner) scanner;
-            HRegionInfo regionName = rs.getRegionName();
-            if (regionName.isMetaRegion()) {
-              //LOG.debug("High priority scanner request: " + scannerId);
-              return HIGH_QOS;
-            }
-          }
+      // scanner methods...
+      if (methodName.equals("next") || methodName.equals("close")) {
+        // translate!
+        Long scannerId;
+        try {
+          scannerId = (Long) inv.getParameters()[0];
+        } catch (ClassCastException ignored) {
+          // LOG.debug("Low priority: " + from);
+          return NORMAL_QOS; // doh.
         }
-        else if (methodName.equals("getHServerInfo") ||
-            methodName.equals("getRegionsAssignment") ||
-            methodName.equals("unlockRow") ||
-            methodName.equals("getProtocolVersion") ||
-            methodName.equals("getClosestRowBefore")) {
-          //LOG.debug("High priority method: " + methodName);
-          return HIGH_QOS;
-        }
-        else if (inv.getParameterClasses()[0] == byte[].class) {
-          // first arg is byte array, so assume this is a regionname:
-          if (isMetaRegion((byte[]) inv.getParameters()[0])) {
-            //LOG.debug("High priority with method: " + methodName + " and region: "
-            //    + Bytes.toString((byte[]) inv.getParameters()[0]));
+        String scannerIdString = Long.toString(scannerId);
+        InternalScanner scanner = scanners.get(scannerIdString);
+        if (scanner instanceof HRegion.RegionScanner) {
+          HRegion.RegionScanner rs = (HRegion.RegionScanner) scanner;
+          HRegionInfo regionName = rs.getRegionName();
+          if (regionName.isMetaRegion()) {
+            // LOG.debug("High priority scanner request: " + scannerId);
             return HIGH_QOS;
           }
         }
-        else if (inv.getParameterClasses()[0] == MultiAction.class) {
-          MultiAction ma = (MultiAction) inv.getParameters()[0];
-          Set<byte[]> regions = ma.getRegions();
-          // ok this sucks, but if any single of the actions touches a meta, the whole
-          // thing gets pingged high priority.  This is a dangerous hack because people
-          // can get their multi action tagged high QOS by tossing a Get(.META.) AND this
-          // regionserver hosts META/-ROOT-
-          for (byte[] region: regions) {
-            if (isMetaRegion(region)) {
-              //LOG.debug("High priority multi with region: " + Bytes.toString(region));
-              return HIGH_QOS; // short circuit for the win.
-            }
+      } else if (methodName.equals("getHServerInfo")
+          || methodName.equals("getRegionsAssignment")
+          || methodName.equals("unlockRow")
+          || methodName.equals("getProtocolVersion")
+          || methodName.equals("getClosestRowBefore")) {
+        // LOG.debug("High priority method: " + methodName);
+        return HIGH_QOS;
+      } else if (inv.getParameterClasses().length == 0) {
+       // Just let it through.  This is getOnlineRegions, etc.
+      } else if (inv.getParameterClasses()[0] == byte[].class) {
+        // first arg is byte array, so assume this is a regionname:
+        if (isMetaRegion((byte[]) inv.getParameters()[0])) {
+          // LOG.debug("High priority with method: " + methodName +
+          // " and region: "
+          // + Bytes.toString((byte[]) inv.getParameters()[0]));
+          return HIGH_QOS;
+        }
+      } else if (inv.getParameterClasses()[0] == MultiAction.class) {
+        MultiAction ma = (MultiAction) inv.getParameters()[0];
+        Set<byte[]> regions = ma.getRegions();
+        // ok this sucks, but if any single of the actions touches a meta, the
+        // whole
+        // thing gets pingged high priority. This is a dangerous hack because
+        // people
+        // can get their multi action tagged high QOS by tossing a Get(.META.)
+        // AND this
+        // regionserver hosts META/-ROOT-
+        for (byte[] region : regions) {
+          if (isMetaRegion(region)) {
+            // LOG.debug("High priority multi with region: " +
+            // Bytes.toString(region));
+            return HIGH_QOS; // short circuit for the win.
           }
         }
       }
-      //LOG.debug("Low priority: " + from.toString());
+      // LOG.debug("Low priority: " + from.toString());
       return NORMAL_QOS;
     }
   }
@@ -1974,16 +1977,20 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public boolean closeRegion(HRegionInfo region)
   throws NotServingRegionException {
+    return closeRegion(region, true);
+  }
+
+  @Override
+  public boolean closeRegion(HRegionInfo region, final boolean zk)
+  throws NotServingRegionException {
     LOG.info("Received close region: " + region.getRegionNameAsString());
-    // TODO: Need to check if this is being served here but currently undergoing
-    // a split (so master needs to retry close after split is complete)
     if (!onlineRegions.containsKey(region.getEncodedName())) {
       LOG.warn("Received close for region we are not serving; " +
         region.getEncodedName());
       throw new NotServingRegionException("Received close for "
           + region.getRegionNameAsString() + " but we are not serving it");
     }
-    return closeRegion(region, false, true);
+    return closeRegion(region, false, zk);
   }
 
   /**
@@ -2066,14 +2073,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   @Override
-  public NavigableSet<HRegionInfo> getOnlineRegions() {
-    NavigableSet<HRegionInfo> sortedset = new TreeSet<HRegionInfo>();
+  public List<HRegionInfo> getOnlineRegions() {
+    List<HRegionInfo> list = new ArrayList<HRegionInfo>();
     synchronized(this.onlineRegions) {
       for (Map.Entry<String,HRegion> e: this.onlineRegions.entrySet()) {
-        sortedset.add(e.getValue().getRegionInfo());
+        list.add(e.getValue().getRegionInfo());
       }
     }
-    return sortedset;
+    return list;
   }
 
   public int getNumberOfOnlineRegions() {

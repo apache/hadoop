@@ -737,11 +737,21 @@ public class HBaseAdmin implements Abortable {
         HServerAddress hsa = new HServerAddress(hostAndPort);
         Pair<HRegionInfo, HServerAddress> pair =
           MetaReader.getRegion(ct, regionname);
-        closeRegion(hsa, pair.getFirst());
+        if (pair == null || pair.getSecond() == null) {
+          LOG.info("No server in .META. for " +
+            Bytes.toString(regionname) + "; pair=" + pair);
+        } else {
+          closeRegion(hsa, pair.getFirst());
+        }
       } else {
         Pair<HRegionInfo, HServerAddress> pair =
           MetaReader.getRegion(ct, regionname);
-        closeRegion(pair.getSecond(), pair.getFirst());
+        if (pair == null || pair.getSecond() == null) {
+          LOG.info("No server in .META. for " +
+            Bytes.toString(regionname) + "; pair=" + pair);
+        } else {
+          closeRegion(pair.getSecond(), pair.getFirst());
+        }
       }
     } finally {
       cleanupCatalogTracker(ct);
@@ -783,12 +793,18 @@ public class HBaseAdmin implements Abortable {
       if (isRegionName) {
         Pair<HRegionInfo, HServerAddress> pair =
           MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
-        flush(pair.getSecond(), pair.getFirst());
+        if (pair == null || pair.getSecond() == null) {
+          LOG.info("No server in .META. for " +
+            Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
+        } else {
+          flush(pair.getSecond(), pair.getFirst());
+        }
       } else {
         List<Pair<HRegionInfo, HServerAddress>> pairs =
           MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
               Bytes.toString(tableNameOrRegionName));
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+          if (pair.getSecond() == null) continue;
           flush(pair.getSecond(), pair.getFirst());
         }
       }
@@ -871,12 +887,18 @@ public class HBaseAdmin implements Abortable {
       if (isRegionName(tableNameOrRegionName)) {
         Pair<HRegionInfo, HServerAddress> pair =
           MetaReader.getRegion(ct, tableNameOrRegionName);
-        compact(pair.getSecond(), pair.getFirst(), major);
+        if (pair == null || pair.getSecond() == null) {
+          LOG.info("No server in .META. for " +
+            Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
+        } else {
+          compact(pair.getSecond(), pair.getFirst(), major);
+        }
       } else {
         List<Pair<HRegionInfo, HServerAddress>> pairs =
           MetaReader.getTableRegionsAndLocations(ct,
               Bytes.toString(tableNameOrRegionName));
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+          if (pair.getSecond() == null) continue;
           compact(pair.getSecond(), pair.getFirst(), major);
         }
       }
@@ -956,12 +978,19 @@ public class HBaseAdmin implements Abortable {
         // Its a possible region name.
         Pair<HRegionInfo, HServerAddress> pair =
           MetaReader.getRegion(getCatalogTracker(), tableNameOrRegionName);
-        split(pair.getSecond(), pair.getFirst());
+        if (pair == null || pair.getSecond() == null) {
+          LOG.info("No server in .META. for " +
+            Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
+        } else {
+          split(pair.getSecond(), pair.getFirst());
+        }
       } else {
         List<Pair<HRegionInfo, HServerAddress>> pairs =
           MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
               Bytes.toString(tableNameOrRegionName));
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+          // May not be a server for a particular row
+          if (pair.getSecond() == null) continue;
           split(pair.getSecond(), pair.getFirst());
         }
       }

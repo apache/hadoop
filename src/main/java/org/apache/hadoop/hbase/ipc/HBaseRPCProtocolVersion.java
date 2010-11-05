@@ -80,5 +80,5 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * <li>Version 26: New master and Increment, 0.90 version bump.</li>
    * </ul>
    */
-  public static final long versionID = 25L; // Setting it to 25 temporarily to see if hudson passes.  #1608 hudson failed because of version mismatch 25 vs 26.
+  public static final long versionID = 26L;
 }

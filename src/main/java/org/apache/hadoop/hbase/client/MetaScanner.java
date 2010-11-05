@@ -63,13 +63,14 @@ public class MetaScanner {
    *
    * @param configuration config
    * @param visitor visitor object
-   * @param tableName table name
+   * @param userTableName User table name in meta table to start scan at.  Pass
+   * null if not interested in a particular table.
    * @throws IOException e
    */
   public static void metaScan(Configuration configuration,
-      MetaScannerVisitor visitor, byte[] tableName)
+      MetaScannerVisitor visitor, byte [] userTableName)
   throws IOException {
-    metaScan(configuration, visitor, tableName, null, Integer.MAX_VALUE);
+    metaScan(configuration, visitor, userTableName, null, Integer.MAX_VALUE);
   }
 
   /**
@@ -79,7 +80,8 @@ public class MetaScanner {
    *
    * @param configuration HBase configuration.
    * @param visitor Visitor object.
-   * @param tableName User table name.
+   * @param userTableName User table name in meta table to start scan at.  Pass
+   * null if not interested in a particular table.
    * @param row Name of the row at the user table. The scan will start from
    * the region row where the row resides.
    * @param rowLimit Max of processed rows. If it is less than 0, it
@@ -87,8 +89,32 @@ public class MetaScanner {
    * @throws IOException e
    */
   public static void metaScan(Configuration configuration,
-      MetaScannerVisitor visitor, byte[] tableName, byte[] row,
+      MetaScannerVisitor visitor, byte [] userTableName, byte[] row,
       int rowLimit)
+  throws IOException {
+    metaScan(configuration, visitor, userTableName, row, rowLimit,
+      HConstants.META_TABLE_NAME);
+  }
+
+  /**
+   * Scans the meta table and calls a visitor on each RowResult. Uses a table
+   * name and a row name to locate meta regions. And it only scans at most
+   * <code>rowLimit</code> of rows.
+   *
+   * @param configuration HBase configuration.
+   * @param visitor Visitor object.
+   * @param userTableName User table name in meta table to start scan at.  Pass
+   * null if not interested in a particular table.
+   * @param row Name of the row at the user table. The scan will start from
+   * the region row where the row resides.
+   * @param rowLimit Max of processed rows. If it is less than 0, it
+   * will be set to default value <code>Integer.MAX_VALUE</code>.
+   * @param metaTableName Meta table to scan, root or meta.
+   * @throws IOException e
+   */
+  public static void metaScan(Configuration configuration,
+      MetaScannerVisitor visitor, byte [] tableName, byte[] row,
+      int rowLimit, final byte [] metaTableName)
   throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
 
@@ -136,8 +162,6 @@ public class MetaScanner {
         configuration.getInt("hbase.meta.scanner.caching", 100));
     do {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
-      byte [] metaTableName = Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)?
-        HConstants.ROOT_TABLE_NAME: HConstants.META_TABLE_NAME;
       LOG.debug("Scanning " + Bytes.toString(metaTableName) +
         " starting at row=" + Bytes.toString(startRow) + " for max=" +
         rowUpperLimit + " rows");
