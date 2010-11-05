@@ -20,18 +20,24 @@
 
 package org.apache.hadoop.hbase.rest.client;
 
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.rest.HBaseRESTClusterTestBase;
+import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestRemoteAdmin extends HBaseRESTClusterTestBase {
+import static org.junit.Assert.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-  static final String TABLE_1 = "TestRemoteAdmin_Table_1";
-  static final String TABLE_2 = "TestRemoteAdmin_Table_2";
-  static final byte[] COLUMN_1 = Bytes.toBytes("a");
+public class TestRemoteAdmin {
+
+  private static final String TABLE_1 = "TestRemoteAdmin_Table_1";
+  private static final String TABLE_2 = "TestRemoteAdmin_Table_2";
+  private static final byte[] COLUMN_1 = Bytes.toBytes("a");
 
   static final HTableDescriptor DESC_1;
   static {
@@ -44,17 +50,20 @@ public class TestRemoteAdmin extends HBaseRESTClusterTestBase {
     DESC_2.addFamily(new HColumnDescriptor(COLUMN_1));
   }
 
-  Client client;
-  HBaseAdmin localAdmin;
-  RemoteAdmin remoteAdmin;
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+  private static HBaseAdmin localAdmin;
+  private static RemoteAdmin remoteAdmin;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    localAdmin = new HBaseAdmin(conf);
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
+    REST_TEST_UTIL.startServletContainer();
+    localAdmin = TEST_UTIL.getHBaseAdmin();
     remoteAdmin = new RemoteAdmin(new Client(
-        new Cluster().add("localhost", testServletPort)),
-      conf);
+      new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),
+      TEST_UTIL.getConfiguration());
     if (localAdmin.tableExists(TABLE_1)) {
       localAdmin.disableTable(TABLE_1);
       localAdmin.deleteTable(TABLE_1);
@@ -64,17 +73,20 @@ public class TestRemoteAdmin extends HBaseRESTClusterTestBase {
     }
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    super.tearDown();
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    REST_TEST_UTIL.shutdownServletContainer();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Test
   public void testCreateTable() throws Exception {
     assertFalse(remoteAdmin.isTableAvailable(TABLE_1));
     remoteAdmin.createTable(DESC_1);
     assertTrue(remoteAdmin.isTableAvailable(TABLE_1));
   }
 
+  @Test
   public void testDeleteTable() throws Exception {
     assertTrue(remoteAdmin.isTableAvailable(TABLE_2));
     remoteAdmin.deleteTable(TABLE_2);

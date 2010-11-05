@@ -28,6 +28,7 @@ import javax.xml.bind.JAXBException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -35,34 +36,40 @@ import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 import org.apache.hadoop.hbase.rest.model.VersionModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import static org.junit.Assert.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
-public class TestVersionResource extends HBaseRESTClusterTestBase {
-  static final Log LOG = LogFactory.getLog(TestVersionResource.class);
+public class TestVersionResource {
+  private static final Log LOG = LogFactory.getLog(TestVersionResource.class);
 
-  Client client;
-  JAXBContext context;
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+  private static Client client;
+  private static JAXBContext context;
 
-  public TestVersionResource() throws JAXBException {
-    super();
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
+    REST_TEST_UTIL.startServletContainer();
+    client = new Client(new Cluster().add("localhost", 
+      REST_TEST_UTIL.getServletPort()));
     context = JAXBContext.newInstance(
       VersionModel.class,
       StorageClusterVersionModel.class);
   }
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    client = new Client(new Cluster().add("localhost", testServletPort));
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    REST_TEST_UTIL.shutdownServletContainer();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    client.shutdown();
-    super.tearDown();
-  }
-
-  void validate(VersionModel model) {
+  private static void validate(VersionModel model) {
     assertNotNull(model);
     assertNotNull(model.getRESTVersion());
     assertEquals(model.getRESTVersion(), RESTServlet.VERSION_STRING);
@@ -83,8 +90,9 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
       .getImplementationVersion());
   }
 
-  void doTestGetStargateVersionText() throws IOException {
-    Response response = client.get("/version", MIMETYPE_TEXT);
+  @Test
+  public void testGetStargateVersionText() throws IOException {
+    Response response = client.get("/version", Constants.MIMETYPE_TEXT);
     assertTrue(response.getCode() == 200);
     String body = Bytes.toString(response.getBody());
     assertTrue(body.length() > 0);
@@ -99,8 +107,9 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
       .getImplementationVersion()));
   }
 
-  void doTestGetStargateVersionXML() throws IOException, JAXBException {
-    Response response = client.get("/version", MIMETYPE_XML);
+  @Test
+  public void testGetStargateVersionXML() throws IOException, JAXBException {
+    Response response = client.get("/version", Constants.MIMETYPE_XML);
     assertTrue(response.getCode() == 200);
     VersionModel model = (VersionModel)
       context.createUnmarshaller().unmarshal(
@@ -109,13 +118,15 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
     LOG.info("success retrieving Stargate version as XML");
   }
 
-  void doTestGetStargateVersionJSON() throws IOException {
-    Response response = client.get("/version", MIMETYPE_JSON);
+  @Test
+  public void testGetStargateVersionJSON() throws IOException {
+    Response response = client.get("/version", Constants.MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
   }
 
-  void doTestGetStargateVersionPB() throws IOException {
-    Response response = client.get("/version", MIMETYPE_PROTOBUF);
+  @Test
+  public void testGetStargateVersionPB() throws IOException {
+    Response response = client.get("/version", Constants.MIMETYPE_PROTOBUF);
     assertTrue(response.getCode() == 200);
     VersionModel model = new VersionModel();
     model.getObjectFromMessage(response.getBody());
@@ -123,14 +134,17 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
     LOG.info("success retrieving Stargate version as protobuf");
   }
 
-  void doTestGetStorageClusterVersionText() throws IOException {
-    Response response = client.get("/version/cluster", MIMETYPE_TEXT);
+  @Test
+  public void testGetStorageClusterVersionText() throws IOException {
+    Response response = client.get("/version/cluster", 
+      Constants.MIMETYPE_TEXT);
     assertTrue(response.getCode() == 200);
   }
 
-  void doTestGetStorageClusterVersionXML() throws IOException,
+  @Test
+  public void testGetStorageClusterVersionXML() throws IOException,
       JAXBException {
-    Response response = client.get("/version/cluster", MIMETYPE_XML);
+    Response response = client.get("/version/cluster",Constants.MIMETYPE_XML);
     assertTrue(response.getCode() == 200);
     StorageClusterVersionModel clusterVersionModel = 
       (StorageClusterVersionModel)
@@ -141,18 +155,9 @@ public class TestVersionResource extends HBaseRESTClusterTestBase {
     LOG.info("success retrieving storage cluster version as XML");
   }
 
-  void doTestGetStorageClusterVersionJSON() throws IOException {
-    Response response = client.get("/version/cluster", MIMETYPE_JSON);
+  @Test
+  public void doTestGetStorageClusterVersionJSON() throws IOException {
+    Response response = client.get("/version/cluster", Constants.MIMETYPE_JSON);
     assertTrue(response.getCode() == 200);
-  }
-
-  public void testVersionResource() throws Exception {
-    doTestGetStargateVersionText();
-    doTestGetStargateVersionXML();
-    doTestGetStargateVersionJSON();
-    doTestGetStargateVersionPB();
-    doTestGetStorageClusterVersionText();
-    doTestGetStorageClusterVersionXML();
-    doTestGetStorageClusterVersionJSON();
   }
 }

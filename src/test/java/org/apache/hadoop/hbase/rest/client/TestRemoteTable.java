@@ -26,6 +26,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -37,51 +38,57 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.rest.HBaseRESTClusterTestBase;
+import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.RemoteHTable;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestRemoteTable extends HBaseRESTClusterTestBase {
-  private static final Log LOG = LogFactory.getLog(HBaseRESTClusterTestBase.class);
-  static final String TABLE = "TestRemoteTable";
-  static final byte[] ROW_1 = Bytes.toBytes("testrow1");
-  static final byte[] ROW_2 = Bytes.toBytes("testrow2");
-  static final byte[] ROW_3 = Bytes.toBytes("testrow3");
-  static final byte[] ROW_4 = Bytes.toBytes("testrow4");
-  static final byte[] COLUMN_1 = Bytes.toBytes("a");
-  static final byte[] COLUMN_2 = Bytes.toBytes("b");
-  static final byte[] COLUMN_3 = Bytes.toBytes("c");
-  static final byte[] QUALIFIER_1 = Bytes.toBytes("1");
-  static final byte[] QUALIFIER_2 = Bytes.toBytes("2");
-  static final byte[] QUALIFIER_3 = Bytes.toBytes("3");
-  static final byte[] VALUE_1 = Bytes.toBytes("testvalue1");
-  static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
-  static final byte[] VALUE_3 = Bytes.toBytes("testvalue3");
+import static org.junit.Assert.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-  static final long ONE_HOUR = 60 * 60 * 1000;
-  static final long TS_2 = System.currentTimeMillis();
-  static final long TS_1 = TS_2 - ONE_HOUR;
+public class TestRemoteTable {
+  private static final Log LOG = LogFactory.getLog(TestRemoteTable.class);
+  private static final String TABLE = "TestRemoteTable";
+  private static final byte[] ROW_1 = Bytes.toBytes("testrow1");
+  private static final byte[] ROW_2 = Bytes.toBytes("testrow2");
+  private static final byte[] ROW_3 = Bytes.toBytes("testrow3");
+  private static final byte[] ROW_4 = Bytes.toBytes("testrow4");
+  private static final byte[] COLUMN_1 = Bytes.toBytes("a");
+  private static final byte[] COLUMN_2 = Bytes.toBytes("b");
+  private static final byte[] COLUMN_3 = Bytes.toBytes("c");
+  private static final byte[] QUALIFIER_1 = Bytes.toBytes("1");
+  private static final byte[] QUALIFIER_2 = Bytes.toBytes("2");
+  private static final byte[] VALUE_1 = Bytes.toBytes("testvalue1");
+  private static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
 
-  Client client;
-  HBaseAdmin admin;
-  RemoteHTable remoteTable;
+  private static final long ONE_HOUR = 60 * 60 * 1000;
+  private static final long TS_2 = System.currentTimeMillis();
+  private static final long TS_1 = TS_2 - ONE_HOUR;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    
-    admin = new HBaseAdmin(conf);
-    LOG.info("Admin Connection=" + admin.getConnection() + ", " + admin.getConnection().getZooKeeperWatcher());
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+  private static RemoteHTable remoteTable;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
+    REST_TEST_UTIL.startServletContainer();
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    LOG.info("Admin Connection=" + admin.getConnection() + ", " + 
+      admin.getConnection().getZooKeeperWatcher());
     if (!admin.tableExists(TABLE)) {
       HTableDescriptor htd = new HTableDescriptor(TABLE);
       htd.addFamily(new HColumnDescriptor(COLUMN_1));
       htd.addFamily(new HColumnDescriptor(COLUMN_2));
       htd.addFamily(new HColumnDescriptor(COLUMN_3));
       admin.createTable(htd);
-      HTable table = new HTable(conf, TABLE);
-      LOG.info("Table connection=" + table.getConnection() + ", " + admin.getConnection().getZooKeeperWatcher());
+      HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+      LOG.info("Table connection=" + table.getConnection() + ", " +
+        admin.getConnection().getZooKeeperWatcher());
       Put put = new Put(ROW_1);
       put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
       table.put(put);
@@ -93,21 +100,26 @@ public class TestRemoteTable extends HBaseRESTClusterTestBase {
       table.flushCommits();
     }
     remoteTable = new RemoteHTable(
-      new Client(new Cluster().add("localhost", testServletPort)),
-        conf, TABLE, null);
+      new Client(new Cluster().add("localhost", 
+          REST_TEST_UTIL.getServletPort())),
+        TEST_UTIL.getConfiguration(), TABLE, null);
   }
 
-  @Override
-  protected void tearDown() throws Exception {
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
     remoteTable.close();
-    super.tearDown();
+    REST_TEST_UTIL.shutdownServletContainer();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Test
   public void testGetTableDescriptor() throws IOException {
-    HTableDescriptor local = new HTable(conf, TABLE).getTableDescriptor();
+    HTableDescriptor local = new HTable(TEST_UTIL.getConfiguration(),
+      TABLE).getTableDescriptor();
     assertEquals(remoteTable.getTableDescriptor(), local);
   }
 
+  @Test
   public void testGet() throws IOException {
     Get get = new Get(ROW_1);
     Result result = remoteTable.get(get);
@@ -210,6 +222,7 @@ public class TestRemoteTable extends HBaseRESTClusterTestBase {
     assertEquals(2, count);
   }
 
+  @Test
   public void testPut() throws IOException {
     Put put = new Put(ROW_3);
     put.add(COLUMN_1, QUALIFIER_1, VALUE_1);

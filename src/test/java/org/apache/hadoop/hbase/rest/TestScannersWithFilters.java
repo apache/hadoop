@@ -33,6 +33,7 @@ import javax.xml.bind.Unmarshaller;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -66,48 +67,59 @@ import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
+import static org.junit.Assert.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-  static final Log LOG = LogFactory.getLog(TestScannersWithFilters.class);
+public class TestScannersWithFilters {
 
-  static final byte [][] ROWS_ONE = {
+  private static final Log LOG = LogFactory.getLog(TestScannersWithFilters.class);
+
+  private static final String TABLE = "TestScannersWithFilters";
+
+  private static final byte [][] ROWS_ONE = {
     Bytes.toBytes("testRowOne-0"), Bytes.toBytes("testRowOne-1"),
     Bytes.toBytes("testRowOne-2"), Bytes.toBytes("testRowOne-3")
   };
 
-  static final byte [][] ROWS_TWO = {
+  private static final byte [][] ROWS_TWO = {
     Bytes.toBytes("testRowTwo-0"), Bytes.toBytes("testRowTwo-1"),
     Bytes.toBytes("testRowTwo-2"), Bytes.toBytes("testRowTwo-3")
   };
 
-  static final byte [][] FAMILIES = {
+  private static final byte [][] FAMILIES = {
     Bytes.toBytes("testFamilyOne"), Bytes.toBytes("testFamilyTwo")
   };
 
-  static final byte [][] QUALIFIERS_ONE = {
+  private static final byte [][] QUALIFIERS_ONE = {
     Bytes.toBytes("testQualifierOne-0"), Bytes.toBytes("testQualifierOne-1"),
     Bytes.toBytes("testQualifierOne-2"), Bytes.toBytes("testQualifierOne-3")
   };
 
-  static final byte [][] QUALIFIERS_TWO = {
+  private static final byte [][] QUALIFIERS_TWO = {
     Bytes.toBytes("testQualifierTwo-0"), Bytes.toBytes("testQualifierTwo-1"),
     Bytes.toBytes("testQualifierTwo-2"), Bytes.toBytes("testQualifierTwo-3")
   };
 
-  static final byte [][] VALUES = {
+  private static final byte [][] VALUES = {
     Bytes.toBytes("testValueOne"), Bytes.toBytes("testValueTwo")
   };
 
-  Client client;
-  JAXBContext context;
-  Marshaller marshaller;
-  Unmarshaller unmarshaller;
-  long numRows = ROWS_ONE.length + ROWS_TWO.length;
-  long colsPerRow = FAMILIES.length * QUALIFIERS_ONE.length;
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+  private static Client client;
+  private static JAXBContext context;
+  private static Marshaller marshaller;
+  private static Unmarshaller unmarshaller;
+  private static long numRows = ROWS_ONE.length + ROWS_TWO.length;
+  private static long colsPerRow = FAMILIES.length * QUALIFIERS_ONE.length;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
+    REST_TEST_UTIL.startServletContainer();
     context = JAXBContext.newInstance(
         CellModel.class,
         CellSetModel.class,
@@ -115,14 +127,15 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
         ScannerModel.class);
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
-    client = new Client(new Cluster().add("localhost", testServletPort));
-    HBaseAdmin admin = new HBaseAdmin(conf);
-    if (!admin.tableExists(getName())) {
-      HTableDescriptor htd = new HTableDescriptor(getName());
+    client = new Client(new Cluster().add("localhost", 
+      REST_TEST_UTIL.getServletPort()));
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    if (!admin.tableExists(TABLE)) {
+      HTableDescriptor htd = new HTableDescriptor(TABLE);
       htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
       htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
       admin.createTable(htd);
-      HTable table = new HTable(conf, getName());
+      HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
       // Insert first half
       for(byte [] ROW : ROWS_ONE) {
         Put p = new Put(ROW);
@@ -187,13 +200,13 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     }
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    client.shutdown();
-    super.tearDown();
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    REST_TEST_UTIL.shutdownServletContainer();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
-  void verifyScan(Scan s, long expectedRows, long expectedKeys) 
+  private static void verifyScan(Scan s, long expectedRows, long expectedKeys) 
       throws Exception {
     ScannerModel model = ScannerModel.fromScan(s);
     model.setBatch(Integer.MAX_VALUE); // fetch it all at once
@@ -201,14 +214,14 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     marshaller.marshal(model, writer);
     LOG.debug(writer.toString());
     byte[] body = Bytes.toBytes(writer.toString());
-    Response response = client.put("/" + getName() + "/scanner", MIMETYPE_XML,
-      body);
+    Response response = client.put("/" + TABLE + "/scanner", 
+      Constants.MIMETYPE_XML, body);
     assertEquals(response.getCode(), 201);
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
-    response = client.get(scannerURI, MIMETYPE_XML);
+    response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
     CellSetModel cells = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -227,21 +240,22 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     assertEquals(response.getCode(), 200);
   }
 
-  void verifyScanFull(Scan s, KeyValue [] kvs) throws Exception {
+  private static void verifyScanFull(Scan s, KeyValue [] kvs) 
+      throws Exception {
     ScannerModel model = ScannerModel.fromScan(s);
     model.setBatch(Integer.MAX_VALUE); // fetch it all at once
     StringWriter writer = new StringWriter();
     marshaller.marshal(model, writer);
     LOG.debug(writer.toString());
     byte[] body = Bytes.toBytes(writer.toString());
-    Response response = client.put("/" + getName() + "/scanner", MIMETYPE_XML,
-      body);
+    Response response = client.put("/" + TABLE + "/scanner", 
+      Constants.MIMETYPE_XML, body);
     assertEquals(response.getCode(), 201);
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
-    response = client.get(scannerURI, MIMETYPE_XML);
+    response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -279,22 +293,22 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
       kvs.length, idx);
   }
 
-  void verifyScanNoEarlyOut(Scan s, long expectedRows, long expectedKeys) 
-      throws Exception {
+  private static void verifyScanNoEarlyOut(Scan s, long expectedRows,
+      long expectedKeys) throws Exception {
     ScannerModel model = ScannerModel.fromScan(s);
     model.setBatch(Integer.MAX_VALUE); // fetch it all at once
     StringWriter writer = new StringWriter();
     marshaller.marshal(model, writer);
     LOG.debug(writer.toString());
     byte[] body = Bytes.toBytes(writer.toString());
-    Response response = client.put("/" + getName() + "/scanner", MIMETYPE_XML,
-      body);
+    Response response = client.put("/" + TABLE + "/scanner", 
+      Constants.MIMETYPE_XML, body);
     assertEquals(response.getCode(), 201);
     String scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
-    response = client.get(scannerURI, MIMETYPE_XML);
+    response = client.get(scannerURI, Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
     CellSetModel cellSet = (CellSetModel)
       unmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
@@ -320,10 +334,11 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
       " rows", expectedRows, j);
   }
 
-  void doTestNoFilter() throws Exception {
+  @Test
+  public void testNoFilter() throws Exception {
     // No filter
-    long expectedRows = this.numRows;
-    long expectedKeys = this.colsPerRow;
+    long expectedRows = numRows;
+    long expectedKeys = colsPerRow;
     
     // Both families
     Scan s = new Scan();
@@ -335,16 +350,18 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     verifyScan(s, expectedRows, expectedKeys/2);
   }
 
-  void doTestPrefixFilter() throws Exception {
+  @Test
+  public void testPrefixFilter() throws Exception {
     // Grab rows from group one (half of total)
-    long expectedRows = this.numRows / 2;
-    long expectedKeys = this.colsPerRow;
+    long expectedRows = numRows / 2;
+    long expectedKeys = colsPerRow;
     Scan s = new Scan();
     s.setFilter(new PrefixFilter(Bytes.toBytes("testRowOne")));
     verifyScan(s, expectedRows, expectedKeys);
   }
 
-  void doTestPageFilter() throws Exception {
+  @Test
+  public void testPageFilter() throws Exception {
     // KVs in first 6 rows
     KeyValue [] expectedKVs = {
       // testRowOne-0
@@ -393,7 +410,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Grab all 6 rows
     long expectedRows = 6;
-    long expectedKeys = this.colsPerRow;
+    long expectedKeys = colsPerRow;
     Scan s = new Scan();
     s.setFilter(new PageFilter(expectedRows));
     verifyScan(s, expectedRows, expectedKeys);
@@ -402,7 +419,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Grab first 4 rows (6 cols per row)
     expectedRows = 4;
-    expectedKeys = this.colsPerRow;
+    expectedKeys = colsPerRow;
     s = new Scan();
     s.setFilter(new PageFilter(expectedRows));
     verifyScan(s, expectedRows, expectedKeys);
@@ -411,7 +428,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Grab first 2 rows
     expectedRows = 2;
-    expectedKeys = this.colsPerRow;
+    expectedKeys = colsPerRow;
     s = new Scan();
     s.setFilter(new PageFilter(expectedRows));
     verifyScan(s, expectedRows, expectedKeys);
@@ -420,7 +437,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
 
     // Grab first row
     expectedRows = 1;
-    expectedKeys = this.colsPerRow;
+    expectedKeys = colsPerRow;
     s = new Scan();
     s.setFilter(new PageFilter(expectedRows));
     verifyScan(s, expectedRows, expectedKeys);
@@ -428,18 +445,19 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     verifyScanFull(s, Arrays.copyOf(expectedKVs, 6));    
   }
 
-  void doTestInclusiveStopFilter() throws Exception {
+  @Test
+  public void testInclusiveStopFilter() throws Exception {
     // Grab rows from group one
     
     // If we just use start/stop row, we get total/2 - 1 rows
-    long expectedRows = (this.numRows / 2) - 1;
-    long expectedKeys = this.colsPerRow;
+    long expectedRows = (numRows / 2) - 1;
+    long expectedKeys = colsPerRow;
     Scan s = new Scan(Bytes.toBytes("testRowOne-0"), 
         Bytes.toBytes("testRowOne-3"));
     verifyScan(s, expectedRows, expectedKeys);
     
     // Now use start row with inclusive stop filter
-    expectedRows = this.numRows / 2;
+    expectedRows = numRows / 2;
     s = new Scan(Bytes.toBytes("testRowOne-0"));
     s.setFilter(new InclusiveStopFilter(Bytes.toBytes("testRowOne-3")));
     verifyScan(s, expectedRows, expectedKeys);
@@ -447,23 +465,23 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     // Grab rows from group two
     
     // If we just use start/stop row, we get total/2 - 1 rows
-    expectedRows = (this.numRows / 2) - 1;
-    expectedKeys = this.colsPerRow;
+    expectedRows = (numRows / 2) - 1;
+    expectedKeys = colsPerRow;
     s = new Scan(Bytes.toBytes("testRowTwo-0"), 
         Bytes.toBytes("testRowTwo-3"));
     verifyScan(s, expectedRows, expectedKeys);
     
     // Now use start row with inclusive stop filter
-    expectedRows = this.numRows / 2;
+    expectedRows = numRows / 2;
     s = new Scan(Bytes.toBytes("testRowTwo-0"));
     s.setFilter(new InclusiveStopFilter(Bytes.toBytes("testRowTwo-3")));
     verifyScan(s, expectedRows, expectedKeys);
-
   }
-  
-  void doTestQualifierFilter() throws Exception {
+
+  @Test
+  public void testQualifierFilter() throws Exception {
     // Match two keys (one from each family) in half the rows
-    long expectedRows = this.numRows / 2;
+    long expectedRows = numRows / 2;
     long expectedKeys = 2;
     Filter f = new QualifierFilter(CompareOp.EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
@@ -473,7 +491,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match keys less than same qualifier
     // Expect only two keys (one from each family) in half the rows
-    expectedRows = this.numRows / 2;
+    expectedRows = numRows / 2;
     expectedKeys = 2;
     f = new QualifierFilter(CompareOp.LESS,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
@@ -483,7 +501,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match keys less than or equal
     // Expect four keys (two from each family) in half the rows
-    expectedRows = this.numRows / 2;
+    expectedRows = numRows / 2;
     expectedKeys = 4;
     f = new QualifierFilter(CompareOp.LESS_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
@@ -494,7 +512,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     // Match keys not equal
     // Expect four keys (two from each family)
     // Only look in first group of rows
-    expectedRows = this.numRows / 2;
+    expectedRows = numRows / 2;
     expectedKeys = 4;
     f = new QualifierFilter(CompareOp.NOT_EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
@@ -505,7 +523,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     // Match keys greater or equal
     // Expect four keys (two from each family)
     // Only look in first group of rows
-    expectedRows = this.numRows / 2;
+    expectedRows = numRows / 2;
     expectedKeys = 4;
     f = new QualifierFilter(CompareOp.GREATER_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
@@ -516,7 +534,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     // Match keys greater
     // Expect two keys (one from each family)
     // Only look in first group of rows
-    expectedRows = this.numRows / 2;
+    expectedRows = numRows / 2;
     expectedKeys = 2;
     f = new QualifierFilter(CompareOp.GREATER,
         new BinaryComparator(Bytes.toBytes("testQualifierOne-2")));
@@ -615,11 +633,12 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     };
     verifyScanFull(s, kvs);
   }
-  
-  void doTestRowFilter() throws Exception {
+
+  @Test
+  public void testRowFilter() throws Exception {
     // Match a single row, all keys
     long expectedRows = 1;
-    long expectedKeys = this.colsPerRow;
+    long expectedKeys = colsPerRow;
     Filter f = new RowFilter(CompareOp.EQUAL,
         new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     Scan s = new Scan();
@@ -628,7 +647,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match a two rows, one from each group, using regex
     expectedRows = 2;
-    expectedKeys = this.colsPerRow;
+    expectedKeys = colsPerRow;
     f = new RowFilter(CompareOp.EQUAL,
         new RegexStringComparator("testRow.+-2"));
     s = new Scan();
@@ -638,7 +657,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     // Match rows less than
     // Expect all keys in one row
     expectedRows = 1;
-    expectedKeys = this.colsPerRow;
+    expectedKeys = colsPerRow;
     f = new RowFilter(CompareOp.LESS,
         new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     s = new Scan();
@@ -648,7 +667,7 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     // Match rows less than or equal
     // Expect all keys in two rows
     expectedRows = 2;
-    expectedKeys = this.colsPerRow;
+    expectedKeys = colsPerRow;
     f = new RowFilter(CompareOp.LESS_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     s = new Scan();
@@ -657,8 +676,8 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match rows not equal
     // Expect all keys in all but one row
-    expectedRows = this.numRows - 1;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows - 1;
+    expectedKeys = colsPerRow;
     f = new RowFilter(CompareOp.NOT_EQUAL,
         new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     s = new Scan();
@@ -667,8 +686,8 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match keys greater or equal
     // Expect all keys in all but one row
-    expectedRows = this.numRows - 1;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows - 1;
+    expectedKeys = colsPerRow;
     f = new RowFilter(CompareOp.GREATER_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     s = new Scan();
@@ -677,8 +696,8 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match keys greater
     // Expect all keys in all but two rows
-    expectedRows = this.numRows - 2;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows - 2;
+    expectedKeys = colsPerRow;
     f = new RowFilter(CompareOp.GREATER,
         new BinaryComparator(Bytes.toBytes("testRowOne-2")));
     s = new Scan();
@@ -758,11 +777,12 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     };
     verifyScanFull(s, kvs);
   }
-  
-  void doTestValueFilter() throws Exception {
+
+  @Test
+  public void testValueFilter() throws Exception {
     // Match group one rows
-    long expectedRows = this.numRows / 2;
-    long expectedKeys = this.colsPerRow;
+    long expectedRows = numRows / 2;
+    long expectedKeys = colsPerRow;
     Filter f = new ValueFilter(CompareOp.EQUAL,
         new BinaryComparator(Bytes.toBytes("testValueOne")));
     Scan s = new Scan();
@@ -770,27 +790,27 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
 
     // Match group two rows
-    expectedRows = this.numRows / 2;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows / 2;
+    expectedKeys = colsPerRow;
     f = new ValueFilter(CompareOp.EQUAL,
         new BinaryComparator(Bytes.toBytes("testValueTwo")));
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match all values using regex
-    expectedRows = this.numRows;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows;
+    expectedKeys = colsPerRow;
     f = new ValueFilter(CompareOp.EQUAL,
         new RegexStringComparator("testValue((One)|(Two))"));
     s = new Scan();
     s.setFilter(f);
     verifyScanNoEarlyOut(s, expectedRows, expectedKeys);
-    
+
     // Match values less than
     // Expect group one rows
-    expectedRows = this.numRows / 2;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows / 2;
+    expectedKeys = colsPerRow;
     f = new ValueFilter(CompareOp.LESS,
         new BinaryComparator(Bytes.toBytes("testValueTwo")));
     s = new Scan();
@@ -799,8 +819,8 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match values less than or equal
     // Expect all rows
-    expectedRows = this.numRows;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows;
+    expectedKeys = colsPerRow;
     f = new ValueFilter(CompareOp.LESS_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testValueTwo")));
     s = new Scan();
@@ -809,8 +829,8 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
 
     // Match values less than or equal
     // Expect group one rows
-    expectedRows = this.numRows / 2;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows / 2;
+    expectedKeys = colsPerRow;
     f = new ValueFilter(CompareOp.LESS_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testValueOne")));
     s = new Scan();
@@ -819,8 +839,8 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match values not equal
     // Expect half the rows
-    expectedRows = this.numRows / 2;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows / 2;
+    expectedKeys = colsPerRow;
     f = new ValueFilter(CompareOp.NOT_EQUAL,
         new BinaryComparator(Bytes.toBytes("testValueOne")));
     s = new Scan();
@@ -829,8 +849,8 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match values greater or equal
     // Expect all rows
-    expectedRows = this.numRows;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows;
+    expectedKeys = colsPerRow;
     f = new ValueFilter(CompareOp.GREATER_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes("testValueOne")));
     s = new Scan();
@@ -839,8 +859,8 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     
     // Match values greater
     // Expect half rows
-    expectedRows = this.numRows / 2;
-    expectedKeys = this.colsPerRow;
+    expectedRows = numRows / 2;
+    expectedKeys = colsPerRow;
     f = new ValueFilter(CompareOp.GREATER,
         new BinaryComparator(Bytes.toBytes("testValueOne")));
     s = new Scan();
@@ -880,8 +900,9 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     };
     verifyScanFull(s, kvs);
   }
-  
-  void doTestSkipFilter() throws Exception {
+
+  @Test
+  public void testSkipFilter() throws Exception {
     // Test for qualifier regex: "testQualifierOne-2"
     // Should only get rows from second group, and all keys
     Filter f = new SkipFilter(new QualifierFilter(CompareOp.NOT_EQUAL,
@@ -914,8 +935,9 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     };
     verifyScanFull(s, kvs);
   }
-    
-  void doTestFilterList() throws Exception {
+
+  @Test
+  public void testFilterList() throws Exception {
     // Test getting a single row, single key using Row, Qualifier, and Value 
     // regular expression and substring filters
     // Use must pass all
@@ -947,10 +969,11 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
     f = new FilterList(Operator.MUST_PASS_ONE, filters);
     s = new Scan();
     s.setFilter(f);
-    verifyScanNoEarlyOut(s, this.numRows, this.colsPerRow);    
+    verifyScanNoEarlyOut(s, numRows, colsPerRow);
   }
-  
-  void doTestFirstKeyOnlyFilter() throws Exception {
+
+  @Test
+  public void testFirstKeyOnlyFilter() throws Exception {
     Scan s = new Scan();
     s.setFilter(new FirstKeyOnlyFilter());
     // Expected KVs, the first KV from each of the remaining 6 rows
@@ -963,18 +986,5 @@ public class TestScannersWithFilters extends HBaseRESTClusterTestBase {
         new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1])
     };
     verifyScanFull(s, kvs);
-  }
-  
-  public void testScannersWithFilters() throws Exception {
-    doTestNoFilter();
-    doTestPrefixFilter();
-    doTestPageFilter();
-    doTestInclusiveStopFilter();
-    doTestQualifierFilter();
-    doTestRowFilter();
-    doTestValueFilter();
-    doTestSkipFilter();
-    doTestFilterList();
-    doTestFirstKeyOnlyFilter();
   }
 }

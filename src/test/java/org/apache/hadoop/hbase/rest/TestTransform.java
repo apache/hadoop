@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.rest;
 
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Get;
@@ -31,25 +32,34 @@ import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.util.Bytes;
 
-public class BROKE_TestTransform extends HBaseRESTClusterTestBase {
-  static final String TABLE = "TestTransform";
-  static final String CFA = "a";
-  static final String CFB = "b";
-  static final String COLUMN_1 = CFA + ":1";
-  static final String COLUMN_2 = CFB + ":2";
-  static final String ROW_1 = "testrow1";
-  static final byte[] VALUE_1 = Bytes.toBytes("testvalue1");
-  static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
-  static final byte[] VALUE_2_BASE64 = Bytes.toBytes("dGVzdHZhbHVlMg==");
+import static org.junit.Assert.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-  Client client;
-  HBaseAdmin admin;
+public class TestTransform {
+  private static final String TABLE = "TestTransform";
+  private static final String CFA = "a";
+  private static final String CFB = "b";
+  private static final String COLUMN_1 = CFA + ":1";
+  private static final String COLUMN_2 = CFB + ":2";
+  private static final String ROW_1 = "testrow1";
+  private static final byte[] VALUE_1 = Bytes.toBytes("testvalue1");
+  private static final byte[] VALUE_2 = Bytes.toBytes("testvalue2");
+  private static final byte[] VALUE_2_BASE64 = Bytes.toBytes("dGVzdHZhbHVlMg==");
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    client = new Client(new Cluster().add("localhost", testServletPort));
-    admin = new HBaseAdmin(conf);
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+  private static Client client;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
+    REST_TEST_UTIL.startServletContainer();
+    client = new Client(new Cluster().add("localhost", 
+      REST_TEST_UTIL.getServletPort()));
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       return;
     }
@@ -61,22 +71,23 @@ public class BROKE_TestTransform extends HBaseRESTClusterTestBase {
     admin.createTable(htd);
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    client.shutdown();
-    super.tearDown();
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    REST_TEST_UTIL.shutdownServletContainer();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Test
   public void testTransform() throws Exception {
     String path1 = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_1;
     String path2 = "/" + TABLE + "/" + ROW_1 + "/" + COLUMN_2;
 
     // store value 1
-    Response response = client.put(path1, MIMETYPE_BINARY, VALUE_1);
+    Response response = client.put(path1, Constants.MIMETYPE_BINARY, VALUE_1);
     assertEquals(response.getCode(), 200);
 
     // store value 2 (stargate should transform into base64)
-    response = client.put(path2, MIMETYPE_BINARY, VALUE_2);
+    response = client.put(path2, Constants.MIMETYPE_BINARY, VALUE_2);
     assertEquals(response.getCode(), 200);
 
     // get the table contents directly
@@ -96,7 +107,7 @@ public class BROKE_TestTransform extends HBaseRESTClusterTestBase {
     table.close();
 
     // stargate should decode the transformed value back to original bytes
-    response = client.get(path2, MIMETYPE_BINARY);
+    response = client.get(path2, Constants.MIMETYPE_BINARY);
     assertEquals(response.getCode(), 200);
     value = response.getBody();
     assertTrue(Bytes.equals(value, VALUE_2));

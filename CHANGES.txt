@@ -1101,6 +1101,7 @@ Release 0.21.0 - Unreleased
    HBASE-3180  Review periodic master logging, especially ServerManager once
                a minute
    HBASE-3189  Stagger Major Compactions (Nicolas Spiegelberg via Stack)
+   HBASE-2564  [rest] Tests use deprecated foundation
 
 
   NEW FEATURES

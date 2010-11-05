@@ -31,6 +31,7 @@ import javax.xml.bind.JAXBException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -49,35 +50,44 @@ import org.apache.hadoop.hbase.rest.model.TableRegionModel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
-public class TestTableResource extends HBaseRESTClusterTestBase {
-  static final Log LOG = LogFactory.getLog(TestTableResource.class);
+import static org.junit.Assert.*;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
-  static String TABLE = "TestTableResource";
-  static String COLUMN_FAMILY = "test";
-  static String COLUMN = COLUMN_FAMILY + ":qualifier";
-  static Map<HRegionInfo,HServerAddress> regionMap;
+public class TestTableResource {
+  private static final Log LOG = LogFactory.getLog(TestTableResource.class);
 
-  Client client;
-  JAXBContext context;
-  HBaseAdmin admin;
+  private static String TABLE = "TestTableResource";
+  private static String COLUMN_FAMILY = "test";
+  private static String COLUMN = COLUMN_FAMILY + ":qualifier";
+  private static Map<HRegionInfo,HServerAddress> regionMap;
 
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+  private static Client client;
+  private static JAXBContext context;
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.startMiniCluster(3);
+    REST_TEST_UTIL.startServletContainer();
+    client = new Client(new Cluster().add("localhost", 
+      REST_TEST_UTIL.getServletPort()));
     context = JAXBContext.newInstance(
         TableModel.class,
         TableInfoModel.class,
         TableListModel.class,
         TableRegionModel.class);
-    client = new Client(new Cluster().add("localhost", testServletPort));
-    admin = new HBaseAdmin(conf);
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       return;
     }
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
     admin.createTable(htd);
-    HTable table = new HTable(conf, TABLE);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
     byte[] k = new byte[3];
     byte [][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(COLUMN));
     for (byte b1 = 'a'; b1 < 'z'; b1++) {
@@ -112,13 +122,13 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
     LOG.info("regions: " + regionMap);
   }
 
-  @Override
-  protected void tearDown() throws Exception {
-    client.shutdown();
-    super.tearDown();
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    REST_TEST_UTIL.shutdownServletContainer();
+    TEST_UTIL.shutdownMiniCluster();
   }
 
-  void checkTableList(TableListModel model) {
+  private static void checkTableList(TableListModel model) {
     boolean found = false;
     Iterator<TableModel> tables = model.getTables().iterator();
     assertTrue(tables.hasNext());
@@ -132,34 +142,7 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
     assertTrue(found);
   }
 
-  void doTestTableListText() throws IOException {
-    Response response = client.get("/", MIMETYPE_TEXT);
-    assertEquals(response.getCode(), 200);
-  }
-
-  void doTestTableListXML() throws IOException, JAXBException {
-    Response response = client.get("/", MIMETYPE_XML);
-    assertEquals(response.getCode(), 200);
-    TableListModel model = (TableListModel)
-      context.createUnmarshaller()
-        .unmarshal(new ByteArrayInputStream(response.getBody()));
-    checkTableList(model);
-  }
-
-  void doTestTableListJSON() throws IOException {
-    Response response = client.get("/", MIMETYPE_JSON);
-    assertEquals(response.getCode(), 200);
-  }
-
-  void doTestTableListPB() throws IOException, JAXBException {
-    Response response = client.get("/", MIMETYPE_PROTOBUF);
-    assertEquals(response.getCode(), 200);
-    TableListModel model = new TableListModel();
-    model.getObjectFromMessage(response.getBody());
-    checkTableList(model);
-  }
-
-  public void checkTableInfo(TableInfoModel model) {
+  void checkTableInfo(TableInfoModel model) {
     assertEquals(model.getName(), TABLE);
     Iterator<TableRegionModel> regions = model.getRegions().iterator();
     assertTrue(regions.hasNext());
@@ -188,13 +171,48 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
     }
   }
 
-  void doTestTableInfoText() throws IOException {
-    Response response = client.get("/" + TABLE + "/regions", MIMETYPE_TEXT);
+  @Test
+  public void testTableListText() throws IOException {
+    Response response = client.get("/", Constants.MIMETYPE_TEXT);
     assertEquals(response.getCode(), 200);
   }
 
-  void doTestTableInfoXML() throws IOException, JAXBException {
-    Response response = client.get("/" + TABLE + "/regions", MIMETYPE_XML);
+  @Test
+  public void testTableListXML() throws IOException, JAXBException {
+    Response response = client.get("/", Constants.MIMETYPE_XML);
+    assertEquals(response.getCode(), 200);
+    TableListModel model = (TableListModel)
+      context.createUnmarshaller()
+        .unmarshal(new ByteArrayInputStream(response.getBody()));
+    checkTableList(model);
+  }
+
+  @Test
+  public void testTableListJSON() throws IOException {
+    Response response = client.get("/", Constants.MIMETYPE_JSON);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testTableListPB() throws IOException, JAXBException {
+    Response response = client.get("/", Constants.MIMETYPE_PROTOBUF);
+    assertEquals(response.getCode(), 200);
+    TableListModel model = new TableListModel();
+    model.getObjectFromMessage(response.getBody());
+    checkTableList(model);
+  }
+
+  @Test
+  public void testTableInfoText() throws IOException {
+    Response response = client.get("/" + TABLE + "/regions",
+      Constants.MIMETYPE_TEXT);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
+  public void testTableInfoXML() throws IOException, JAXBException {
+    Response response = client.get("/" + TABLE + "/regions", 
+      Constants.MIMETYPE_XML);
     assertEquals(response.getCode(), 200);
     TableInfoModel model = (TableInfoModel)
       context.createUnmarshaller()
@@ -202,28 +220,20 @@ public class TestTableResource extends HBaseRESTClusterTestBase {
     checkTableInfo(model);
   }
 
-  void doTestTableInfoJSON() throws IOException {
-    Response response = client.get("/" + TABLE + "/regions", MIMETYPE_JSON);
+  @Test
+  public void testTableInfoJSON() throws IOException {
+    Response response = client.get("/" + TABLE + "/regions", 
+      Constants.MIMETYPE_JSON);
     assertEquals(response.getCode(), 200);
   }
 
-  void doTestTableInfoPB() throws IOException, JAXBException {
-    Response response = 
-      client.get("/" + TABLE + "/regions", MIMETYPE_PROTOBUF);
+  @Test
+  public void testTableInfoPB() throws IOException, JAXBException {
+    Response response = client.get("/" + TABLE + "/regions",
+      Constants.MIMETYPE_PROTOBUF);
     assertEquals(response.getCode(), 200);
     TableInfoModel model = new TableInfoModel();
     model.getObjectFromMessage(response.getBody());
     checkTableInfo(model);
-  }
-
-  public void testTableResource() throws Exception {
-    doTestTableListText();
-    doTestTableListXML();
-    doTestTableListJSON();
-    doTestTableListPB();
-    doTestTableInfoText();
-    doTestTableInfoXML();
-    doTestTableInfoJSON();
-    doTestTableInfoPB();
   }
 }

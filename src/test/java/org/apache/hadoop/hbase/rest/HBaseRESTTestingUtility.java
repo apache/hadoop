@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.rest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.util.StringUtils;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -30,33 +29,30 @@ import org.mortbay.jetty.servlet.ServletHolder;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
-public class HBaseRESTClusterTestBase extends HBaseClusterTestCase 
-    implements Constants {
+public class HBaseRESTTestingUtility {
 
-  static final Log LOG =
-    LogFactory.getLog(HBaseRESTClusterTestBase.class);
+  static final Log LOG = LogFactory.getLog(HBaseRESTTestingUtility.class);
 
-  protected int testServletPort;
-  Server server;
+  private Configuration conf;
+  private int testServletPort;
+  private Server server;
 
-  protected void setUp() throws Exception {
-    super.setUp();
-    startServletContainer();
+  public HBaseRESTTestingUtility(Configuration conf) {
+    this.conf = conf;
   }
 
-  protected void tearDown() throws Exception {
-    stopServletContainer();
-    super.tearDown();
+  public int getServletPort() {
+    return testServletPort;
   }
 
-  private void startServletContainer() throws Exception {
+  public void startServletContainer() throws Exception {
     if (server != null) {
       LOG.error("ServletContainer already running");
       return;
     }
 
-    // Inject the conf from the test cluster by being first to make singleton
-    RESTServlet.getInstance(super.conf);
+    // Inject the conf for the test by being first to make singleton
+    RESTServlet.getInstance(conf);
 
     // set up the Jersey servlet container for Jetty
     ServletHolder sh = new ServletHolder(ServletContainer.class);
@@ -84,7 +80,7 @@ public class HBaseRESTClusterTestBase extends HBaseClusterTestCase
       testServletPort);
   }
 
-  private void stopServletContainer() {
+  public void shutdownServletContainer() {
     if (server != null) try {
       server.stop();
       server = null;
