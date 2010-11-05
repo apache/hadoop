@@ -35,12 +35,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -56,6 +54,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -70,7 +69,6 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
@@ -137,6 +135,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   // shutdown. Also set by call to stop when debugging or running unit tests
   // of HRegionServer in isolation.
   protected volatile boolean stopped = false;
+
+  // A state before we go into stopped state.  At this stage we're closing user
+  // space regions.
+  private boolean stopping = false;
 
   // Go down hard. Used if file system becomes unavailable and also in
   // debugging and unit tests.
@@ -467,7 +469,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   /**
-   * @return True if cluster shutdown in progress
+   * @return False if cluster shutdown in progress
    */
   private boolean isClusterUp() {
     return this.clusterStatusTracker.isClusterUp();
@@ -509,7 +511,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     this.regionServerThread = Thread.currentThread();
-    boolean calledCloseUserRegions = false;
     try {
       while (!this.stopped) {
         if (tryReportForDuty()) break;
@@ -521,9 +522,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         if (!isClusterUp()) {
           if (this.onlineRegions.isEmpty()) {
             stop("Exiting; cluster shutdown set and not carrying any regions");
-          } else if (!calledCloseUserRegions) {
+          } else if (!this.stopping) {
             closeUserRegions(this.abortRequested);
-            calledCloseUserRegions = true;
+            this.stopping = true;
           }
         }
         // Try to get the root region location from zookeeper.
@@ -1235,7 +1236,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return true;
   }
 
-  /** @return the HLog */
+  @Override
   public HLog getWAL() {
     return this.hlog;
   }
@@ -2057,6 +2058,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  @Override
+  public boolean isStopping() {
+    return this.stopping;
   }
 
   /**

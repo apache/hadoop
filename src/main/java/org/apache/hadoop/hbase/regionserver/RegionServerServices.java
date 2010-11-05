@@ -30,6 +30,12 @@ import org.apache.zookeeper.KeeperException;
  * Services provided by {@link HRegionServer}
  */
 public interface RegionServerServices extends OnlineRegions {
+  /**
+   * @return True if this regionserver is stopping.
+   */
+  public boolean isStopping();
+
+  /** @return the HLog */
   public HLog getWAL();
 
   /**

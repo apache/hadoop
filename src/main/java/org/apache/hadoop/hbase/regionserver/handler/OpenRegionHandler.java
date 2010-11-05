@@ -67,8 +67,8 @@ public class OpenRegionHandler extends EventHandler {
   public void process() throws IOException {
     final String name = regionInfo.getRegionNameAsString();
     LOG.debug("Processing open of " + name);
-    if (this.server.isStopped()) {
-      LOG.info("Server stopping, skipping open of " + name);
+    if (this.server.isStopped() || this.rsServices.isStopping()) {
+      LOG.info("Server stopping or stopped, skipping open of " + name);
       return;
     }
     final String encodedName = regionInfo.getEncodedName();

@@ -418,8 +418,14 @@ public class ServerManager {
   void letRegionServersShutdown() {
     synchronized (onlineServers) {
       while (onlineServers.size() > 0) {
-        LOG.info("Waiting on following regionserver(s) to go down " +
-          this.onlineServers.values());
+        StringBuilder sb = new StringBuilder();
+        for (String key: this.onlineServers.keySet()) {
+          if (sb.length() > 0) {
+            sb.append(", ");
+          }
+          sb.append(key);
+        }
+        LOG.info("Waiting on regionserver(s) to go down " + sb.toString());
         try {
           this.onlineServers.wait(1000);
         } catch (InterruptedException e) {

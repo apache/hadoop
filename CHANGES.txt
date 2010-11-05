@@ -653,6 +653,8 @@ Release 0.21.0 - Unreleased
    HBASE-3202  Closing a region, if we get a ConnectException, handle
                it rather than abort
    HBASE-3198  Log rolling archives files prematurely
+   HBASE-3203  We can get an order to open a region while shutting down
+               and it'll hold up regionserver shutdown
 
 
   IMPROVEMENTS

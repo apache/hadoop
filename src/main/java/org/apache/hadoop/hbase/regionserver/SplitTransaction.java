@@ -181,6 +181,9 @@ class SplitTransaction {
       final RegionServerServices services)
   throws IOException {
     LOG.info("Starting split of region " + this.parent);
+    if (server.isStopped() || services.isStopping()) {
+      throw new IOException("Server is stopped or stopping");
+    }
     assert !this.parent.lock.writeLock().isHeldByCurrentThread() : "Unsafe to hold write lock while performing RPCs";
 
     // If true, no cluster to write meta edits into.
