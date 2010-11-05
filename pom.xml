@@ -232,6 +232,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
+        <version>1.0-beta-3</version>
         <executions>
           <execution>
             <goals>
