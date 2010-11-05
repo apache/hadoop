@@ -876,8 +876,8 @@ public class HConnectionManager {
           HRegionLocation rl = getCachedLocation(tableName, row);
           if (rl != null) {
             tableLocations.remove(rl.getRegionInfo().getStartKey());
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Removed " +
+            if (LOG.isInfoEnabled()) {
+              LOG.info("Removed " +
                 rl.getRegionInfo().getRegionNameAsString() +
                 " for tableName=" + Bytes.toString(tableName) +
                 " from cache " + "because of " + Bytes.toStringBinary(row));
@@ -1075,7 +1075,7 @@ public class HConnectionManager {
         }
       }
       if (this.zooKeeper != null) {
-        LOG.debug("Closed zookeeper sessionid=0x" +
+        LOG.info("Closed zookeeper sessionid=0x" +
           Long.toHexString(this.zooKeeper.getZooKeeper().getSessionId()));
         this.zooKeeper.close();
         this.zooKeeper = null;

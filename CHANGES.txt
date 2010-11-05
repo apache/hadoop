@@ -1103,6 +1103,8 @@ Release 0.21.0 - Unreleased
    HBASE-3189  Stagger Major Compactions (Nicolas Spiegelberg via Stack)
    HBASE-2564  [rest] Tests use deprecated foundation
    HBASE-2819  hbck should have the ability to repair basic problems
+   HBASE-3200  Make is so can disable DEBUG logging on HConnectionImplemenation
+               without losing important messages
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
