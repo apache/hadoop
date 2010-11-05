@@ -506,6 +506,7 @@ public class MetaReader {
         if (result != null && result.size() > 0) {
           Pair<HRegionInfo, HServerInfo> pair =
             metaRowToRegionPairWithInfo(result);
+          if (pair == null) continue;
           if (pair.getSecond() == null || !pair.getSecond().equals(hsi)) {
             continue;
           }

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,6 +77,8 @@ public class HBaseFsck {
   private boolean fix = false; // do we want to try fixing the errors?
   private boolean rerun = false; // if we tried to fix something rerun hbck
   private static boolean summary = false; // if we want to print less output
+  // Empty regioninfo qualifiers in .META.
+  private TreeSet<Result> emptyRegionInfoQualifiers = new TreeSet<Result>();
 
   /**
    * Constructor
@@ -105,6 +108,8 @@ public class HBaseFsck {
     // Make sure regionInfo is empty before starting
     regionInfo.clear();
     tablesInfo.clear();
+    emptyRegionInfoQualifiers.clear();
+
 
     // get a list of all regions from the master. This involves
     // scanning the META table
@@ -165,6 +170,15 @@ public class HBaseFsck {
 
     // Determine what's on HDFS
     checkHdfs();
+
+    // Empty cells in .META.?
+    errors.print("Number of empty REGIONINFO_QUALIFIER rows in .META.: " +
+      emptyRegionInfoQualifiers.size());
+    if (details) {
+      for (Result r: emptyRegionInfoQualifiers) {
+        errors.print("  " + r);
+      }
+    }
 
     // Check consistency
     checkConsistency();
@@ -626,14 +640,15 @@ public class HBaseFsck {
           long ts =  Collections.max(result.list(), comp).getTimestamp();
 
           // record region details
-          byte[] value = result.getValue(HConstants.CATALOG_FAMILY,
-                                         HConstants.REGIONINFO_QUALIFIER);
-          HRegionInfo info = null;
+          byte [] value = result.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER);
+          if (value == null || value.length == 0) {
+            emptyRegionInfoQualifiers.add(result);
+            return true;
+          }
+          HRegionInfo info = Writables.getHRegionInfo(value);
           HServerAddress server = null;
           byte[] startCode = null;
-          if (value != null) {
-            info = Writables.getHRegionInfo(value);
-          }
 
           // record assigned region server
           value = result.getValue(HConstants.CATALOG_FAMILY,

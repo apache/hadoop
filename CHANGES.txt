@@ -1105,6 +1105,8 @@ Release 0.21.0 - Unreleased
    HBASE-2819  hbck should have the ability to repair basic problems
    HBASE-3200  Make is so can disable DEBUG logging on HConnectionImplemenation
                without losing important messages
+   HBASE-3201  Add accounting of empty regioninfo_qualifier rows in meta to
+               hbasefsck.
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts
