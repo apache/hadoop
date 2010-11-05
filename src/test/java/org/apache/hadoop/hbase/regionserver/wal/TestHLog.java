@@ -600,7 +600,7 @@ public class TestHLog  {
     HLog log = new HLog(fs, dir, oldLogDir, conf);
     HRegionInfo hri = new HRegionInfo(new HTableDescriptor(tableName),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-    HRegionInfo hri2 = new HRegionInfo(new HTableDescriptor(tableName),
+    HRegionInfo hri2 = new HRegionInfo(new HTableDescriptor(tableName2),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
 
     // Add a single edit and make sure that rolling won't remove the file
