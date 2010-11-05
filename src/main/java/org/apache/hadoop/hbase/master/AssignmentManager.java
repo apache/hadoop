@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1024,7 +1025,11 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.debug("Server " + server + " region CLOSE RPC returned false");
     } catch (NotServingRegionException nsre) {
       // Failed to close, so pass through and reassign
-      LOG.debug("Server " + server + " returned NotServingRegionException");
+      LOG.info("Server " + server + " returned NotServingRegionException");
+    } catch (ConnectException e) {
+      // Failed to connect, so pass through and reassign
+      LOG.info("Server " + server + " returned ConnectException " +
+        e.getMessage());
     } catch (RemoteException re) {
       if (re.unwrapRemoteException() instanceof NotServingRegionException) {
         // Failed to close, so pass through and reassign

@@ -650,6 +650,8 @@ Release 0.21.0 - Unreleased
    HBASE-3095  Client needs to reconnect if it expires its zk session
    HBASE-2935  Refactor "Corrupt Data" Tests in TestHLogSplit
                (Alex Newman via Stack)
+   HBASE-3202  Closing a region, if we get a ConnectException, handle
+               it rather than abort
 
 
   IMPROVEMENTS
