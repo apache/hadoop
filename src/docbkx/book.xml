@@ -109,11 +109,34 @@
             e.g. <filename>hbase-<?eval ${project.version}?>.tar.gz</filename>.</para>
 
             <para>Decompress and untar your download and then change into the
-            unpacked directory and start HBase</para>
+            unpacked directory.</para>
 
             <para><programlisting>$ tar xfz hbase-<?eval ${project.version}?>.tar.gz
 $ cd hbase-<?eval ${project.version}?>
-$ ./bin/start-hbase.sh
+</programlisting></para>
+
+<para>
+   At this point, you are ready to start HBase. But before starting it,
+   edit <filename>conf/hbase-site.xml</filename> and set the directory
+   you want HBase to write to, <varname>hbase.rootdir</varname>.
+   <programlisting>
+<![CDATA[
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>file:///DIRECTORY/hbase</value>
+  </property>
+</configuration>
+]]>
+</programlisting>
+Replace <varname>DIRECTORY</varname> in the above with a path to a directory where you want
+HBase to store its data.  By default, <varname>hbase.rootdir</varname> is set to <filename>/tmp/hbase-${user.name}</filename> 
+which means you'll lose all your data whenever your server reboots.
+</para>
+
+            <para>Now start HBase:<programlisting>$ ./bin/start-hbase.sh
 starting master, logging to logs/hbase-user-master-example.org.out</programlisting></para>
 
             <para>You now have a running standalone HBase instance. In standalone mode, HBase runs
@@ -223,6 +246,13 @@ stopping hbase...............</programlisting></para>
           </listitem>
         </itemizedlist>
       </para>
+      <section><title>Where to go next
+      </title>
+      <para>Move on to the next section, the <link linkend="notsoquick">Not-so-quick Start Guide</link>
+      where we'll go into depth on the different HBase run modes, requirements and critical
+      configurations needed setting up a distributed HBase deploy.
+      </para>
+      </section>
     </section>
 
     <section xml:id="notsoquick">
@@ -339,6 +369,8 @@ might look like.
     <section><title><filename>hbase-site.xml</filename></title>
     <programlisting>
 <![CDATA[
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
   <property>
     <name>hbase.zookeeper.quorum</name>
