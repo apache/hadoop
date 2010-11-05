@@ -652,6 +652,7 @@ Release 0.21.0 - Unreleased
                (Alex Newman via Stack)
    HBASE-3202  Closing a region, if we get a ConnectException, handle
                it rather than abort
+   HBASE-3198  Log rolling archives files prematurely
 
 
   IMPROVEMENTS
