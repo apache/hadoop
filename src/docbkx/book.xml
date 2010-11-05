@@ -868,7 +868,7 @@ index e70ebc6..96f8c27 100644
     <section>
       <title>HFile</title>
 
-      <section>
+      <section xml:id="hfile_tool">
         <title>HFile Tool</title>
 
         <para>To view a textualized version of hfile content, you can do use
@@ -1573,26 +1573,6 @@ index e70ebc6..96f8c27 100644
       </section>
     </section>
 
-    <section>
-      <title>WAL Tools</title>
-
-      <section>
-        <title><classname>HLog</classname> tool</title>
-
-        <para>The main method on <classname>HLog</classname> offers manual
-        split and dump facilities. Pass it WALs or the product of a split, the
-        content of the <filename>recovered.edits</filename>. directory.</para>
-
-        <para>You can get a textual dump of a WAL file content by doing the
-        following:<programlisting> <code>$ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --dump hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</code> </programlisting>The
-        return code will be non-zero if issues with the file so you can test
-        wholesomeness of file by redirecting <varname>STDOUT</varname> to
-        <code>/dev/null</code> and testing the program return.</para>
-
-        <para>Similarily you can force a split of a log file directory by
-        doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
-      </section>
-    </section>
   </chapter>
 
   <chapter>
@@ -1714,11 +1694,46 @@ index e70ebc6..96f8c27 100644
     </section>
   </chapter>
 
-  <appendix>
-    <title xml:id="tools">Tools</title>
+  <appendix xml:id="tools">
+    <title >Tools</title>
 
     <para>Here we list HBase tools for administration, analysis, fixup, and
     debugging.</para>
+    <section xml:id="hbck">
+        <title>HBase <application>hbck</application></title>
+        <subtitle>An <emphasis>fsck</emphasis> for your HBase install</subtitle>
+        <para>To run <application>hbck</application> against your HBase cluster run
+        <programlisting>$ ./bin/hbase hbck</programlisting>
+        At the end of the commands output it prints <emphasis>OK</emphasis>
+        or <emphasis>INCONSISTENCY</emphasis>. If your cluster reports
+        inconsistencies, pass <command>-details</command> to see more detail emitted.
+        Passing <command>-fix</command> may correct the inconsistency (This latter
+        is an experimental feature).
+        </para>
+    </section>
+    <section><title>HFile Tool</title>
+        <para>See <link linkend="hfile_tool" >HFile Tool</link>.</para>
+    </section>
+    <section xml:id="wal_tools">
+      <title>WAL Tools</title>
+
+      <section xml:id="hlog_tool">
+        <title><classname>HLog</classname> tool</title>
+
+        <para>The main method on <classname>HLog</classname> offers manual
+        split and dump facilities. Pass it WALs or the product of a split, the
+        content of the <filename>recovered.edits</filename>. directory.</para>
+
+        <para>You can get a textual dump of a WAL file content by doing the
+        following:<programlisting> <code>$ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --dump hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</code> </programlisting>The
+        return code will be non-zero if issues with the file so you can test
+        wholesomeness of file by redirecting <varname>STDOUT</varname> to
+        <code>/dev/null</code> and testing the program return.</para>
+
+        <para>Similarily you can force a split of a log file directory by
+        doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
+      </section>
+    </section>
   </appendix>
   <appendix xml:id="compression">
     <title >Compression</title>
