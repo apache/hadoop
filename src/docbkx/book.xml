@@ -1707,6 +1707,9 @@ index e70ebc6..96f8c27 100644
         At the end of the commands output it prints <emphasis>OK</emphasis>
         or <emphasis>INCONSISTENCY</emphasis>. If your cluster reports
         inconsistencies, pass <command>-details</command> to see more detail emitted.
+        If inconsistencies, run <command>hbck</command> a few times because the
+        inconsistency may be transient (e.g. cluster is starting up or a region is
+        splitting).
         Passing <command>-fix</command> may correct the inconsistency (This latter
         is an experimental feature).
         </para>
