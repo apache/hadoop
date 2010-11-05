@@ -162,9 +162,11 @@ public class MetaScanner {
         configuration.getInt("hbase.meta.scanner.caching", 100));
     do {
       final Scan scan = new Scan(startRow).addFamily(HConstants.CATALOG_FAMILY);
-      LOG.debug("Scanning " + Bytes.toString(metaTableName) +
-        " starting at row=" + Bytes.toString(startRow) + " for max=" +
-        rowUpperLimit + " rows");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Scanning " + Bytes.toString(metaTableName) +
+          " starting at row=" + Bytes.toString(startRow) + " for max=" +
+          rowUpperLimit + " rows");
+      }
       callable = new ScannerCallable(connection, metaTableName, scan);
       // Open scanner
       connection.getRegionServerWithRetries(callable);
