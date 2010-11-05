@@ -27,9 +27,9 @@ import org.apache.hadoop.classification.InterfaceStability;
  * An interface for the implementation of a user-to-groups mapping service
  * used by {@link Groups}.
  */
-@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
-interface GroupMappingServiceProvider {
+public interface GroupMappingServiceProvider {
   
   /**
    * Get all various group memberships of a given user.
