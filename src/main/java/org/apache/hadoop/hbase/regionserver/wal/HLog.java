@@ -872,8 +872,13 @@ public class HLog implements Syncable {
       this.numEntries.incrementAndGet();
     }
 
-    // sync txn to file system
-    this.sync(regionInfo.isMetaRegion());
+    // Sync if catalog region, and if not then check if that table supports
+    // deferred log flushing
+    if (regionInfo.isMetaRegion() ||
+        !regionInfo.getTableDesc().isDeferredLogFlush()) {
+      // sync txn to file system
+      this.sync();
+    }
   }
 
   /**
@@ -924,8 +929,13 @@ public class HLog implements Syncable {
       // Only count 1 row as an unflushed entry.
       this.unflushedEntries.incrementAndGet();
     }
-    // sync txn to file system
-    this.sync(info.isMetaRegion());
+    // Sync if catalog region, and if not then check if that table supports
+    // deferred log flushing
+    if (info.isMetaRegion() ||
+        !info.getTableDesc().isDeferredLogFlush()) {
+      // sync txn to file system
+      this.sync();
+    }
   }
 
   /**
