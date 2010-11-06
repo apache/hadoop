@@ -91,7 +91,7 @@ public class TestTransform {
     assertEquals(response.getCode(), 200);
 
     // get the table contents directly
-    HTable table = new HTable(TABLE);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
     Get get = new Get(Bytes.toBytes(ROW_1));
     get.addFamily(Bytes.toBytes(CFA));
     get.addFamily(Bytes.toBytes(CFB));
