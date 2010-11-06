@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 
 /**
@@ -51,7 +52,7 @@ import org.apache.hadoop.hbase.HServerInfo;
  *
  * <p>On cluster startup, {@link #bulkAssignment} can be used to determine
  * locations for all Regions in a cluster.
- * 
+ *
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
 public class LoadBalancer {
@@ -337,11 +338,12 @@ public class LoadBalancer {
   }
 
   /**
-   * Generates a bulk assignment plan to be used on cluster startup.
-   *
+   * Generates a bulk assignment plan to be used on cluster startup using a
+   * simple round-robin assignment.
+   * <p>
    * Takes a list of all the regions and all the servers in the cluster and
    * returns a map of each server to the regions that it should be assigned.
-   *
+   * <p>
    * Currently implemented as a round-robin assignment.  Same invariant as
    * load balancing, all servers holding floor(avg) or ceiling(avg).
    *
@@ -352,7 +354,7 @@ public class LoadBalancer {
    * @return map of server to the regions it should take, or null if no
    *         assignment is possible (ie. no regions or no servers)
    */
-  public static Map<HServerInfo,List<HRegionInfo>> bulkAssignment(
+  public static Map<HServerInfo,List<HRegionInfo>> roundRobinAssignment(
       List<HRegionInfo> regions, List<HServerInfo> servers) {
     if(regions.size() == 0 || servers.size() == 0) {
       return null;
@@ -370,6 +372,45 @@ public class LoadBalancer {
       }
       assignments.put(server, serverRegions);
       serverIdx++;
+    }
+    return assignments;
+  }
+
+  /**
+   * Generates a bulk assignment startup plan, attempting to reuse the existing
+   * assignment information from META, but adjusting for the specified list of
+   * available/online servers available for assignment.
+   * <p>
+   * Takes a map of all regions to their existing assignment from META.  Also
+   * takes a list of online servers for regions to be assigned to.  Attempts to
+   * retain all assignment, so in some instances initial assignment will not be
+   * completely balanced.
+   * <p>
+   * Any leftover regions without an existing server to be assigned to will be
+   * assigned randomly to available servers.
+   * @param regions regions and existing assignment from meta
+   * @param servers available servers
+   * @return map of servers and regions to be assigned to them
+   */
+  public static Map<HServerInfo, List<HRegionInfo>> retainAssignment(
+      Map<HRegionInfo, HServerAddress> regions, List<HServerInfo> servers) {
+    Map<HServerInfo, List<HRegionInfo>> assignments =
+      new TreeMap<HServerInfo, List<HRegionInfo>>();
+    // Build a map of server addresses to server info so we can match things up
+    Map<HServerAddress, HServerInfo> serverMap =
+      new TreeMap<HServerAddress, HServerInfo>();
+    for (HServerInfo server : servers) {
+      serverMap.put(server.getServerAddress(), server);
+      assignments.put(server, new ArrayList<HRegionInfo>());
+    }
+    for (Map.Entry<HRegionInfo, HServerAddress> region : regions.entrySet()) {
+      HServerInfo server = serverMap.get(region.getValue());
+      if (server != null) {
+        assignments.get(server).add(region.getKey());
+      } else {
+        assignments.get(servers.get(rand.nextInt(assignments.size()))).add(
+            region.getKey());
+      }
     }
     return assignments;
   }
@@ -573,7 +614,7 @@ public class LoadBalancer {
     public String getRegionName() {
       return this.hri.getEncodedName();
     }
- 
+
     public HRegionInfo getRegionInfo() {
       return this.hri;
     }

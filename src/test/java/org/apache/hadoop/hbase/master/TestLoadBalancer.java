@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -28,11 +29,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -239,7 +240,7 @@ public class TestLoadBalancer {
       List<HRegionInfo> regions = randomRegions(mock[0]);
       List<HServerInfo> servers = randomServers(mock[1], 0);
       Map<HServerInfo,List<HRegionInfo>> assignments =
-        LoadBalancer.bulkAssignment(regions, servers);
+        LoadBalancer.roundRobinAssignment(regions, servers);
       float average = (float)regions.size()/servers.size();
       int min = (int)Math.floor(average);
       int max = (int)Math.ceil(average);
@@ -250,6 +251,80 @@ public class TestLoadBalancer {
       }
       returnRegions(regions);
       returnServers(servers);
+    }
+  }
+
+  /**
+   * Test the cluster startup bulk assignment which attempts to retain
+   * assignment info.
+   * @throws Exception
+   */
+  @Test
+  public void testRetainAssignment() throws Exception {
+    // Test simple case where all same servers are there
+    List<HServerInfo> servers = randomServers(10, 10);
+    List<HRegionInfo> regions = randomRegions(100);
+    Map<HRegionInfo, HServerAddress> existing =
+      new TreeMap<HRegionInfo, HServerAddress>();
+    for (int i=0;i<regions.size();i++) {
+      existing.put(regions.get(i),
+          servers.get(i % servers.size()).getServerAddress());
+    }
+    Map<HServerInfo, List<HRegionInfo>> assignment =
+      LoadBalancer.retainAssignment(existing, servers);
+    assertRetainedAssignment(existing, servers, assignment);
+
+    // Include two new servers that were not there before
+    List<HServerInfo> servers2 = new ArrayList<HServerInfo>(servers);
+    servers2.add(randomServer(10));
+    servers2.add(randomServer(10));
+    assignment = LoadBalancer.retainAssignment(existing, servers2);
+    assertRetainedAssignment(existing, servers2, assignment);
+
+    // Remove two of the servers that were previously there
+    List<HServerInfo> servers3 = new ArrayList<HServerInfo>(servers);
+    servers3.remove(servers3.size()-1);
+    servers3.remove(servers3.size()-2);
+    assignment = LoadBalancer.retainAssignment(existing, servers3);
+    assertRetainedAssignment(existing, servers3, assignment);
+  }
+
+  /**
+   * Asserts a valid retained assignment plan.
+   * <p>
+   * Must meet the following conditions:
+   * <ul>
+   *   <li>Every input region has an assignment, and to an online server
+   *   <li>If a region had an existing assignment to a server with the same
+   *       address a a currently online server, it will be assigned to it
+   * </ul>
+   * @param existing
+   * @param servers
+   * @param assignment
+   */
+  private void assertRetainedAssignment(
+      Map<HRegionInfo, HServerAddress> existing, List<HServerInfo> servers,
+      Map<HServerInfo, List<HRegionInfo>> assignment) {
+    // Verify condition 1, every region assigned, and to online server
+    Set<HServerInfo> onlineServerSet = new TreeSet<HServerInfo>(servers);
+    Set<HRegionInfo> assignedRegions = new TreeSet<HRegionInfo>();
+    for (Map.Entry<HServerInfo, List<HRegionInfo>> a : assignment.entrySet()) {
+      assertTrue("Region assigned to server that was not listed as online",
+          onlineServerSet.contains(a.getKey()));
+      for (HRegionInfo r : a.getValue()) assignedRegions.add(r);
+    }
+    assertEquals(existing.size(), assignedRegions.size());
+
+    // Verify condition 2, if server had existing assignment, must have same
+    Set<HServerAddress> onlineAddresses = new TreeSet<HServerAddress>();
+    for (HServerInfo s : servers) onlineAddresses.add(s.getServerAddress());
+    for (Map.Entry<HServerInfo, List<HRegionInfo>> a : assignment.entrySet()) {
+      for (HRegionInfo r : a.getValue()) {
+        HServerAddress address = existing.get(r);
+        if (address != null && onlineAddresses.contains(address)) {
+          assertTrue(a.getKey().getServerAddress().equals(address));
+        }
+      }
     }
   }
 

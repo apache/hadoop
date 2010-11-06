@@ -46,6 +46,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
-import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
@@ -1106,22 +1106,32 @@ public class AssignmentManager extends ZooKeeperListener {
    * should be shutdown.
    */
   public void assignAllUserRegions() throws IOException {
-    // First experiment at synchronous assignment
-    // Simpler because just wait for no regions in transition
 
-    // Scan META for all user regions; do not include offlined regions in list.
-    List<HRegionInfo> allRegions =
-      MetaScanner.listAllRegions(master.getConfiguration(), false);
-    if (allRegions == null || allRegions.isEmpty()) return;
+    Map<HServerInfo, List<HRegionInfo>> bulkPlan = null;
 
     // Get all available servers
     List<HServerInfo> servers = serverManager.getOnlineServersList();
+
+    // Scan META for all user regions, skipping any disabled tables
+    Map<HRegionInfo,HServerAddress> allRegions =
+      MetaReader.fullScan(catalogTracker, disabledTables);
+    if (allRegions == null || allRegions.isEmpty()) return;
+
+    // Determine what type of assignment to do on startup
+    boolean retainAssignment = master.getConfiguration().getBoolean(
+        "hbase.master.startup.retainassign", true);
+
+    if (retainAssignment) {
+      // Reuse existing assignment info
+      bulkPlan = LoadBalancer.retainAssignment(allRegions, servers);
+    } else {
+      // Generate a round-robin bulk assignment plan
+      bulkPlan = LoadBalancer.roundRobinAssignment(
+          new ArrayList<HRegionInfo>(allRegions.keySet()), servers);
+    }
+
     LOG.info("Bulk assigning " + allRegions.size() + " region(s) across " +
       servers.size() + " server(s)");
-
-    // Generate a cluster startup region placement plan
-    Map<HServerInfo, List<HRegionInfo>> bulkPlan =
-      LoadBalancer.bulkAssignment(allRegions, servers);
 
     // Make a fixed thread count pool to run bulk assignments.  Thought is that
     // if a 1k cluster, running 1k bulk concurrent assignment threads will kill

@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -129,6 +131,25 @@ public class MetaReader {
   public static Map<HRegionInfo,HServerAddress> fullScan(
       CatalogTracker catalogTracker)
   throws IOException {
+    return fullScan(catalogTracker, new TreeSet<String>());
+  }
+
+  /**
+   * Performs a full scan of <code>.META.</code>, skipping regions from any
+   * tables in the specified set of disabled tables.
+   * <p>
+   * Returns a map of every region to it's currently assigned server, according
+   * to META.  If the region does not have an assignment it will have a null
+   * value in the map.
+   *
+   * @param catalogTracker
+   * @param disabledTables set of disabled tables that will not be returned
+   * @return map of regions to their currently assigned server
+   * @throws IOException
+   */
+  public static Map<HRegionInfo,HServerAddress> fullScan(
+      CatalogTracker catalogTracker, final Set<String> disabledTables)
+  throws IOException {
     final Map<HRegionInfo,HServerAddress> regions =
       new TreeMap<HRegionInfo,HServerAddress>();
     Visitor v = new Visitor() {
@@ -137,6 +158,8 @@ public class MetaReader {
         if (r ==  null || r.isEmpty()) return true;
         Pair<HRegionInfo,HServerAddress> region = metaRowToRegionPair(r);
         if (region == null) return true;
+        if (disabledTables.contains(
+            region.getFirst().getTableDesc().getNameAsString())) return true;
         regions.put(region.getFirst(), region.getSecond());
         return true;
       }
