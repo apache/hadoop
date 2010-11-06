@@ -101,12 +101,15 @@ public class TestSocketIOWithTimeout extends TestCase {
       
       byte[] writeBytes = TEST_STRING.getBytes();
       byte[] readBytes = new byte[writeBytes.length];
+      byte byteWithHighBit = (byte)0x80;
       
       out.write(writeBytes);
+      out.write(byteWithHighBit);
       doIO(null, out);
       
       in.read(readBytes);
       assertTrue(Arrays.equals(writeBytes, readBytes));
+      assertEquals(byteWithHighBit & 0xff, in.read());
       doIO(in, null);
       
       /*
