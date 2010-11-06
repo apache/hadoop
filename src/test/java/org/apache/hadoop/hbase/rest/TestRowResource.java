@@ -66,7 +66,7 @@ public class TestRowResource {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
-    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+    new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
   private static Marshaller marshaller;
@@ -75,7 +75,7 @@ public class TestRowResource {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    REST_TEST_UTIL.startServletContainer();
+    REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
     context = JAXBContext.newInstance(
         CellModel.class,
         CellSetModel.class,

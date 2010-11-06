@@ -656,6 +656,7 @@ Release 0.21.0 - Unreleased
    HBASE-3203  We can get an order to open a region while shutting down
                and it'll hold up regionserver shutdown
    HBASE-3204  Reenable deferred log flush
+   HBASE-3195  [rest] Fix TestTransform breakage on Hudson
 
 
   IMPROVEMENTS
@@ -1113,6 +1114,7 @@ Release 0.21.0 - Unreleased
                without losing important messages
    HBASE-3201  Add accounting of empty regioninfo_qualifier rows in meta to
                hbasefsck.
+
 
   NEW FEATURES
    HBASE-1961  HBase EC2 scripts

@@ -23,7 +23,6 @@ package org.apache.hadoop.hbase.rest;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.rest.metrics.RESTMetrics;
 
@@ -41,9 +40,7 @@ public class RESTServlet implements Constants {
    * @throws IOException
    */
   public synchronized static RESTServlet getInstance() throws IOException {
-    if (INSTANCE == null) {
-      INSTANCE = new RESTServlet();
-    }
+    assert(INSTANCE != null);
     return INSTANCE;
   }
 
@@ -62,14 +59,6 @@ public class RESTServlet implements Constants {
 
   public synchronized static void stop() {
     if (INSTANCE != null)  INSTANCE = null;
-  }
-
-  /**
-   * Constructor
-   * @throws IOException
-   */
-  RESTServlet() throws IOException {
-    this(HBaseConfiguration.create());
   }
   
   /**

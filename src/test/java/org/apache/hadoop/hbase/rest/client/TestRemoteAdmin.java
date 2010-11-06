@@ -52,14 +52,14 @@ public class TestRemoteAdmin {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
-    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+    new HBaseRESTTestingUtility();
   private static HBaseAdmin localAdmin;
   private static RemoteAdmin remoteAdmin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
-    REST_TEST_UTIL.startServletContainer();
+    REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
     localAdmin = TEST_UTIL.getHBaseAdmin();
     remoteAdmin = new RemoteAdmin(new Client(
       new Cluster().add("localhost", REST_TEST_UTIL.getServletPort())),

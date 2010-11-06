@@ -44,16 +44,15 @@ public class TestStatusResource {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
-    new HBaseRESTTestingUtility(TEST_UTIL.getConfiguration());
+    new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
   
   private static void validate(StorageClusterStatusModel model) {
     assertNotNull(model);
-    assertTrue(model.getRegions() >= 2);
+    assertTrue(model.getRegions() >= 1);
     assertTrue(model.getRequests() >= 0);
-    // TODO: testing average load is flaky but not a stargate issue, revisit
-    // assertTrue(model.getAverageLoad() >= 1.0);
+    assertTrue(model.getAverageLoad() >= 0.0);
     assertNotNull(model.getLiveNodes());
     assertNotNull(model.getDeadNodes());
     assertFalse(model.getLiveNodes().isEmpty());
@@ -62,7 +61,6 @@ public class TestStatusResource {
       assertNotNull(node.getName());
       assertTrue(node.getStartCode() > 0L);
       assertTrue(node.getRequests() >= 0);
-      assertFalse(node.getRegions().isEmpty());
       for (StorageClusterStatusModel.Node.Region region: node.getRegions()) {
         if (Bytes.equals(region.getName(), ROOT_REGION_NAME)) {
           foundRoot = true;
@@ -77,8 +75,8 @@ public class TestStatusResource {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster(2); // some tests depend on having only 2 RS
-    REST_TEST_UTIL.startServletContainer();
+    TEST_UTIL.startMiniCluster(3);
+    REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
     client = new Client(new Cluster().add("localhost", 
       REST_TEST_UTIL.getServletPort()));
     context = JAXBContext.newInstance(StorageClusterStatusModel.class);

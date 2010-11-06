@@ -33,19 +33,14 @@ public class HBaseRESTTestingUtility {
 
   static final Log LOG = LogFactory.getLog(HBaseRESTTestingUtility.class);
 
-  private Configuration conf;
   private int testServletPort;
   private Server server;
-
-  public HBaseRESTTestingUtility(Configuration conf) {
-    this.conf = conf;
-  }
 
   public int getServletPort() {
     return testServletPort;
   }
 
-  public void startServletContainer() throws Exception {
+  public void startServletContainer(Configuration conf) throws Exception {
     if (server != null) {
       LOG.error("ServletContainer already running");
       return;

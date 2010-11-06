@@ -28,6 +28,8 @@ import org.apache.commons.cli.PosixParser;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 
 import java.util.Arrays;
 import java.util.List;
@@ -97,7 +99,8 @@ public class Main implements Constants {
 
     // set up Jetty and run the embedded server
 
-    RESTServlet servlet = RESTServlet.getInstance();
+    Configuration conf = HBaseConfiguration.create();
+    RESTServlet servlet = RESTServlet.getInstance(conf);
     port = servlet.getConfiguration().getInt("hbase.rest.port", port);
 
     Server server = new Server(port);
