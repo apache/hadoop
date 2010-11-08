@@ -657,6 +657,7 @@ Release 0.90.0 - Unreleased
                and it'll hold up regionserver shutdown
    HBASE-3204  Reenable deferred log flush
    HBASE-3195  [rest] Fix TestTransform breakage on Hudson
+   HBASE-3205  TableRecordReaderImpl.restart NPEs when first next is restarted
 
 
   IMPROVEMENTS

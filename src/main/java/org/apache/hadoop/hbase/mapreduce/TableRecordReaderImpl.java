@@ -132,6 +132,13 @@ public class TableRecordReaderImpl {
       value = this.scanner.next();
     } catch (IOException e) {
       LOG.debug("recovered from " + StringUtils.stringifyException(e));
+      if (lastRow == null) {
+        LOG.warn("We are restarting the first next() invocation," +
+            " if your mapper's restarted a few other times like this" +
+            " then you should consider killing this job and investigate" +
+            " why it's taking so long.");
+        lastRow = scan.getStartRow();
+      }
       restart(lastRow);
       scanner.next();    // skip presumed already mapped row
       value = scanner.next();
