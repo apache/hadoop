@@ -1115,6 +1115,9 @@ Release 0.90.0 - Unreleased
    HBASE-3201  Add accounting of empty regioninfo_qualifier rows in meta to
                hbasefsck.
    HBASE-3048  unify code for major/minor compactions (Amit via jgray)
+   HBASE-3083  Major compaction check should use new timestamp meta
+               information in HFiles (rather than dfs timestamp) along with
+               TTL to allow major even if single file
 
 
   NEW FEATURES

@@ -785,19 +785,23 @@ public class Store implements HeapSize {
         majorCompactionTime == 0) {
       return result;
     }
+    // TODO: Use better method for determining stamp of last major (HBASE-2990)
     long lowTimestamp = getLowestTimestamp(fs,
       filesToCompact.get(0).getPath().getParent());
     long now = System.currentTimeMillis();
     if (lowTimestamp > 0l && lowTimestamp < (now - this.majorCompactionTime)) {
       // Major compaction time has elapsed.
-      long elapsedTime = now - lowTimestamp;
-      if (filesToCompact.size() == 1 &&
-          filesToCompact.get(0).isMajorCompaction() &&
-          (this.ttl == HConstants.FOREVER || elapsedTime < this.ttl)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skipping major compaction of " + this.storeNameStr +
-            " because one (major) compacted file only and elapsedTime " +
-            elapsedTime + "ms is < ttl=" + this.ttl);
+      if (filesToCompact.size() == 1) {
+        // Single file
+        StoreFile sf = filesToCompact.get(0);
+        long oldest = now - sf.getReader().timeRangeTracker.minimumTimestamp;
+        if (sf.isMajorCompaction() &&
+            (this.ttl == HConstants.FOREVER || oldest < this.ttl)) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Skipping major compaction of " + this.storeNameStr +
+                " because one (major) compacted file only and oldestTime " +
+                oldest + "ms is < ttl=" + this.ttl);
+          }
         }
       } else {
         if (LOG.isDebugEnabled()) {
