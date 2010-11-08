@@ -1,5 +1,5 @@
 HBase Change Log
-Release 0.21.0 - Unreleased
+Release 0.90.0 - Unreleased
   INCOMPATIBLE CHANGES
    HBASE-1822  Remove the deprecated APIs
    HBASE-1848  Fixup shell for HBASE-1822
@@ -1114,6 +1114,7 @@ Release 0.21.0 - Unreleased
                without losing important messages
    HBASE-3201  Add accounting of empty regioninfo_qualifier rows in meta to
                hbasefsck.
+   HBASE-3048  unify code for major/minor compactions (Amit via jgray)
 
 
   NEW FEATURES

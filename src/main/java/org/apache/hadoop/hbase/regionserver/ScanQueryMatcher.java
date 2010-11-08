@@ -45,6 +45,7 @@ public class ScanQueryMatcher {
 
   /** Keeps track of deletes */
   protected DeleteTracker deletes;
+  protected boolean retainDeletesInOutput;
 
   /** Keeps track of columns and versions */
   protected ColumnTracker columns;
@@ -71,7 +72,8 @@ public class ScanQueryMatcher {
    */
   public ScanQueryMatcher(Scan scan, byte [] family,
       NavigableSet<byte[]> columns, long ttl,
-      KeyValue.KeyComparator rowComparator, int maxVersions) {
+      KeyValue.KeyComparator rowComparator, int maxVersions,
+      boolean retainDeletesInOutput) {
     this.tr = scan.getTimeRange();
     this.oldestStamp = System.currentTimeMillis() - ttl;
     this.rowComparator = rowComparator;
@@ -79,6 +81,7 @@ public class ScanQueryMatcher {
     this.stopRow = scan.getStopRow();
     this.startKey = KeyValue.createFirstOnRow(scan.getStartRow());
     this.filter = scan.getFilter();
+    this.retainDeletesInOutput = retainDeletesInOutput;
 
     // Single branch to deal with two types of reads (columns vs all in family)
     if (columns == null || columns.size() == 0) {
@@ -89,6 +92,13 @@ public class ScanQueryMatcher {
       // between rows, not between storefiles.
       this.columns = new ExplicitColumnTracker(columns,maxVersions);
     }
+  }
+  public ScanQueryMatcher(Scan scan, byte [] family,
+      NavigableSet<byte[]> columns, long ttl,
+      KeyValue.KeyComparator rowComparator, int maxVersions) {
+      /* By default we will not include deletes */
+      /* deletes are included explicitly (for minor compaction) */
+      this(scan, family, columns, ttl, rowComparator, maxVersions, false);
   }
 
   /**
@@ -159,7 +169,12 @@ public class ScanQueryMatcher {
         this.deletes.add(bytes, offset, qualLength, timestamp, type);
         // Can't early out now, because DelFam come before any other keys
       }
-      return MatchCode.SKIP;
+      if (retainDeletesInOutput) {
+        return MatchCode.INCLUDE;
+      }
+      else {
+        return MatchCode.SKIP;
+      }
     }
 
     if (!this.deletes.isEmpty() &&

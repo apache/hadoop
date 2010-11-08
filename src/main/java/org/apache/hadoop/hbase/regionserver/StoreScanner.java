@@ -58,12 +58,14 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @param columns which columns we are scanning
    * @throws IOException
    */
-  StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns) throws IOException {
+  StoreScanner(Store store, Scan scan, final NavigableSet<byte[]> columns)
+                              throws IOException {
     this.store = store;
     this.cacheBlocks = scan.getCacheBlocks();
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         columns, store.ttl, store.comparator.getRawComparator(),
-        store.versionsToReturn(scan.getMaxVersions()));
+        store.versionsToReturn(scan.getMaxVersions()), 
+        false);
 
     this.isGet = scan.isGetScan();
     // pass columns = try to filter out unnecessary ScanFiles
@@ -89,14 +91,15 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
    * @param scan the spec
    * @param scanners ancilliary scanners
    */
-  StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners)
-      throws IOException {
+  StoreScanner(Store store, Scan scan, List<? extends KeyValueScanner> scanners,
+      boolean retainDeletesInOutput)
+  throws IOException {
     this.store = store;
     this.cacheBlocks = false;
     this.isGet = false;
     matcher = new ScanQueryMatcher(scan, store.getFamily().getName(),
         null, store.ttl, store.comparator.getRawComparator(),
-        store.versionsToReturn(scan.getMaxVersions()));
+        store.versionsToReturn(scan.getMaxVersions()), retainDeletesInOutput);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {
@@ -117,7 +120,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     this.isGet = false;
     this.cacheBlocks = scan.getCacheBlocks();
     this.matcher = new ScanQueryMatcher(scan, colFamily, columns, ttl,
-        comparator.getRawComparator(), scan.getMaxVersions());
+        comparator.getRawComparator(), scan.getMaxVersions(), false);
 
     // Seek all scanners to the initial key
     for(KeyValueScanner scanner : scanners) {

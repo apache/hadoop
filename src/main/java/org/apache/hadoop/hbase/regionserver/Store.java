@@ -710,6 +710,28 @@ public class Store implements HeapSize {
   }
 
   /*
+   * Compact the most recent N files. Essentially a hook for testing.
+   */
+  protected void compactRecent(int N) throws IOException {
+    synchronized(compactLock) {
+      List<StoreFile> filesToCompact = this.storefiles;
+      int count = filesToCompact.size();
+      if (N > count) {
+        throw new RuntimeException("Not enough files");
+      }
+
+      filesToCompact = new ArrayList<StoreFile>(filesToCompact.subList(count-N, count));
+      long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
+      boolean majorcompaction = (N == count);
+
+      // Ready to go.  Have list of files to compact.
+      StoreFile.Writer writer = compact(filesToCompact, majorcompaction, maxId);
+      // Move the compaction into place.
+      StoreFile sf = completeCompaction(filesToCompact, writer);
+    }
+  }
+
+  /*
    * @param files
    * @return True if any of the files in <code>files</code> are References.
    */
@@ -843,13 +865,12 @@ public class Store implements HeapSize {
     // where all source cells are expired or deleted.
     StoreFile.Writer writer = null;
     try {
-    // NOTE: the majority of the time for a compaction is spent in this section
-    if (majorCompaction) {
       InternalScanner scanner = null;
       try {
         Scan scan = new Scan();
         scan.setMaxVersions(family.getMaxVersions());
-        scanner = new StoreScanner(this, scan, scanners);
+        /* include deletes, unless we are doing a major compaction */
+        scanner = new StoreScanner(this, scan, scanners, !majorCompaction);
         int bytesWritten = 0;
         // since scanner.next() can return 'false' but still be delivering data,
         // we have to use a do/while loop.
@@ -888,39 +909,6 @@ public class Store implements HeapSize {
           scanner.close();
         }
       }
-    } else {
-      MinorCompactingStoreScanner scanner = null;
-      try {
-        scanner = new MinorCompactingStoreScanner(this, scanners);
-        if (scanner.peek() != null) {
-          writer = createWriterInTmp(maxKeyCount);
-          int bytesWritten = 0;
-          while (scanner.peek() != null) {
-            KeyValue kv = scanner.next();
-            writer.append(kv);
-
-            // check periodically to see if a system stop is requested
-            if (Store.closeCheckInterval > 0) {
-              bytesWritten += kv.getLength();
-              if (bytesWritten > Store.closeCheckInterval) {
-                bytesWritten = 0;
-                if (!this.region.areWritesEnabled()) {
-                  writer.close();
-                  fs.delete(writer.getPath(), false);
-                  throw new InterruptedIOException(
-                      "Aborting compaction of store " + this + 
-                      " in region " + this.region + 
-                      " because user requested stop.");
-                }
-              }
-            }
-          }
-        }
-      } finally {
-        if (scanner != null)
-          scanner.close();
-      }
-    }
     } finally {
       if (writer != null) {
         writer.appendMetadata(maxId, majorCompaction);
