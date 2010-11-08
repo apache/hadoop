@@ -190,6 +190,15 @@ public class Path implements Comparable {
   }
 
   /**
+   * Is an absolute path (ie a slash relative path part)
+   *  AND  a scheme is null AND  authority is null.
+   */
+  public boolean isAbsoluteAndSchemeAuthorityNull() {
+    return  (isUriPathAbsolute() && 
+        uri.getScheme() == null && uri.getAuthority() == null);
+  }
+  
+  /**
    *  True if the path component (i.e. directory) of this URI is absolute.
    */
   public boolean isUriPathAbsolute() {

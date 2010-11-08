@@ -34,7 +34,7 @@ public class UnsupportedFileSystemException extends IOException {
    * Constructs exception with the specified detail message. 
    * @param message exception message.
    */
-  UnsupportedFileSystemException(final String message) {
+  public UnsupportedFileSystemException(final String message) {
     super(message);
   }
 }
