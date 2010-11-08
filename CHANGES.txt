@@ -658,6 +658,8 @@ Release 0.90.0 - Unreleased
    HBASE-3204  Reenable deferred log flush
    HBASE-3195  [rest] Fix TestTransform breakage on Hudson
    HBASE-3205  TableRecordReaderImpl.restart NPEs when first next is restarted
+   HBASE-3208  HLog.findMemstoresWithEditsOlderThan needs to look for edits
+               that are equal to too
 
 
   IMPROVEMENTS

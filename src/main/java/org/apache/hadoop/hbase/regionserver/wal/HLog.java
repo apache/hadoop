@@ -642,7 +642,7 @@ public class HLog implements Syncable {
     if (logCount > this.maxLogs && this.outputfiles != null &&
         this.outputfiles.size() > 0) {
       // This is an array of encoded region names.
-      regions = findMemstoresWithEditsOlderThan(this.outputfiles.firstKey(),
+      regions = findMemstoresWithEditsEqualOrOlderThan(this.outputfiles.firstKey(),
         this.lastSeqWritten);
       StringBuilder sb = new StringBuilder();
       for (int i = 0; i < regions.length; i++) {
@@ -657,19 +657,19 @@ public class HLog implements Syncable {
   }
 
   /**
-   * Return regions (memstores) that have edits that are less than the passed
-   * <code>oldestWALseqid</code>.
+   * Return regions (memstores) that have edits that are equal or less than
+   * the passed <code>oldestWALseqid</code>.
    * @param oldestWALseqid
    * @param regionsToSeqids
    * @return All regions whose seqid is < than <code>oldestWALseqid</code> (Not
    * necessarily in order).  Null if no regions found.
    */
-  static byte [][] findMemstoresWithEditsOlderThan(final long oldestWALseqid,
+  static byte [][] findMemstoresWithEditsEqualOrOlderThan(final long oldestWALseqid,
       final Map<byte [], Long> regionsToSeqids) {
     //  This method is static so it can be unit tested the easier.
     List<byte []> regions = null;
     for (Map.Entry<byte [], Long> e: regionsToSeqids.entrySet()) {
-      if (e.getValue().longValue() < oldestWALseqid) {
+      if (e.getValue().longValue() <= oldestWALseqid) {
         if (regions == null) regions = new ArrayList<byte []>();
         regions.add(e.getKey());
       }
