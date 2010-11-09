@@ -94,6 +94,7 @@ public abstract class HBaseServer {
 
   protected static final ThreadLocal<HBaseServer> SERVER =
     new ThreadLocal<HBaseServer>();
+  private volatile boolean started = false;
 
   /** Returns the server instance called under or null.  May be called under
    * {@link #call(Writable, long)} implementations, and under {@link Writable}
@@ -1022,6 +1023,8 @@ public abstract class HBaseServer {
           UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
           UserGroupInformation.setCurrentUser(call.connection.ticket);
           try {
+            if (!started)
+              throw new ServerNotRunningException("Server is not running yet");
             value = call(call.param, call.timestamp);             // make the call
           } catch (Throwable e) {
             LOG.debug(getName()+", call "+call+": error: " + e, e);
@@ -1158,7 +1161,23 @@ public abstract class HBaseServer {
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 
   /** Starts the service.  Must be called before any calls will be handled. */
-  public synchronized void start() {
+  public void start() {
+    startThreads();
+    openServer();
+  }
+
+  /**
+   * Open a previously started server.
+   */
+  public void openServer() {
+    started = true;
+  }
+
+  /**
+   * Starts the service threads but does not allow requests to be responded yet.
+   * Client will get {@link ServerNotRunningException} instead.
+   */
+  public synchronized void startThreads() {
     responder.start();
     listener.start();
     handlers = new Handler[handlerCount];

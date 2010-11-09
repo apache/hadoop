@@ -200,6 +200,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // set the thread name now we have an address
     setName(MASTER + "-" + this.address);
 
+    this.rpcServer.startThreads();
+
     // Hack! Maps DFSClient => Master for logs.  HDFS made this
     // config param for task trackers, but we can piggyback off of it.
     if (this.conf.get("mapred.task.id") == null) {
@@ -522,10 +524,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         this.infoServer.setAttribute(MASTER, this);
         this.infoServer.start();
       }
-
-      // Start the server last so everything else is running before we start
-      // receiving requests.
-      this.rpcServer.start();
+      // Start allowing requests to happen.
+      this.rpcServer.openServer();
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started service threads");
       }
