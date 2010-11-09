@@ -51,9 +51,6 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class MiniDFSCluster {
 
-  public static final File BASE_DIR =
-    new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
-  
   public class DataNodeProperties {
     DataNode datanode;
     Configuration conf;
@@ -242,7 +239,7 @@ public class MiniDFSCluster {
       ioe.initCause(e);
       throw ioe;
     }
-    base_dir = BASE_DIR;
+    base_dir = getBaseDir();
     data_dir = new File(base_dir, "data");
     
     // Setup the NameNode configuration
@@ -838,5 +835,10 @@ public class MiniDFSCluster {
    */
   public String getDataDirectory() {
     return data_dir.getAbsolutePath();
+  }
+
+  public static File getBaseDir() {
+    return new File(System.getProperty(
+      "test.build.data", "build/test/data"), "dfs/");
   }
 }

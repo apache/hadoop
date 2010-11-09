@@ -62,6 +62,9 @@ Release 0.20.3 - Unreleased
     HADOOP-6724. IPC doesn't properly handle IOEs thrown by socket factory.
     (Todd Lipcon via Eli Collins)
 
+    HDFS-1240. TestDFSShell failing in branch-20.
+    (Todd Lipcon via Eli Collins)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
