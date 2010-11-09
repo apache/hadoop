@@ -287,7 +287,7 @@ public class TestEditLogRace extends TestCase {
  
   private Configuration getConf() {
     Configuration conf = new Configuration();
-    conf.set("dfs.name.dir", MiniDFSCluster.BASE_DIR + "/data");
+    conf.set("dfs.name.dir", MiniDFSCluster.getBaseDir() + "/data");
     conf.setBoolean("dfs.permissions", false);
     return conf;
   }
