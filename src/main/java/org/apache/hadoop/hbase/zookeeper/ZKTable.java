@@ -239,6 +239,24 @@ public class ZKTable {
     }
   }
 
+  /**
+   * Go to zookeeper and see if state of table is {@link TableState#DISABLING}
+   * of {@link TableState#DISABLED}.
+   * This method does not use cache as {@link #isEnabledTable(String)} does.
+   * This method is for clients other than {@link AssignmentManager}.
+   * @param zkw
+   * @param tableName
+   * @return True if table is enabled.
+   * @throws KeeperException
+   */
+  public static boolean isDisablingOrDisabledTable(final ZooKeeperWatcher zkw,
+      final String tableName)
+  throws KeeperException {
+    TableState state = getTableState(zkw, tableName);
+    return isTableState(TableState.DISABLING, state) ||
+      isTableState(TableState.DISABLED, state);
+  }
+
   public boolean isEnabledOrDisablingTable(final String tableName) {
     synchronized (this.cache) {
       return isEnabledTable(tableName) || isDisablingTable(tableName);
