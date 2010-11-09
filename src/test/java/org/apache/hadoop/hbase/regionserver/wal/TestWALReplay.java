@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -179,10 +181,10 @@ public class TestWALReplay {
   @Test
   public void testRegionMadeOfBulkLoadedFilesOnly()
   throws IOException, SecurityException, IllegalArgumentException,
-      NoSuchFieldException, IllegalAccessException {
+      NoSuchFieldException, IllegalAccessException, InterruptedException {
     final String tableNameStr = "testReplayEditsWrittenViaHRegion";
-    HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
-    Path basedir = new Path(this.hbaseRootDir, tableNameStr);
+    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
+    final Path basedir = new Path(this.hbaseRootDir, tableNameStr);
     deleteDir(basedir);
     HLog wal = createWAL(this.conf);
     HRegion region = HRegion.openHRegion(hri, wal, this.conf);
@@ -198,18 +200,24 @@ public class TestWALReplay {
     wal.sync();
 
     // Now 'crash' the region by stealing its wal
-    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf,
+    final Configuration newConf = HBaseConfiguration.create(this.conf);
+    User user = HBaseTestingUtility.getDifferentUser(newConf,
         tableNameStr);
-    runWALSplit(newConf);
-    HLog wal2 = createWAL(newConf);
-    HRegion region2 = new HRegion(basedir, wal2, FileSystem.get(newConf),
-      newConf, hri, null);
-    long seqid2 = region2.initialize();
-    assertTrue(seqid2 > -1);
+    user.runAs(new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        runWALSplit(newConf);
+        HLog wal2 = createWAL(newConf);
+        HRegion region2 = new HRegion(basedir, wal2, FileSystem.get(newConf),
+          newConf, hri, null);
+        long seqid2 = region2.initialize();
+        assertTrue(seqid2 > -1);
 
-    // I can't close wal1.  Its been appropriated when we split.
-    region2.close();
-    wal2.closeAndDelete();
+        // I can't close wal1.  Its been appropriated when we split.
+        region2.close();
+        wal2.closeAndDelete();
+        return null;
+      }
+    });
   }
 
   /**
@@ -224,10 +232,10 @@ public class TestWALReplay {
   @Test
   public void testReplayEditsWrittenViaHRegion()
   throws IOException, SecurityException, IllegalArgumentException,
-      NoSuchFieldException, IllegalAccessException {
+      NoSuchFieldException, IllegalAccessException, InterruptedException {
     final String tableNameStr = "testReplayEditsWrittenViaHRegion";
-    HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
-    Path basedir = new Path(this.hbaseRootDir, tableNameStr);
+    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
+    final Path basedir = new Path(this.hbaseRootDir, tableNameStr);
     deleteDir(basedir);
     final byte[] rowName = Bytes.toBytes(tableNameStr);
     final int countPerFamily = 10;
@@ -250,7 +258,7 @@ public class TestWALReplay {
       }
     }
     // Now assert edits made it in.
-    Get g = new Get(rowName);
+    final Get g = new Get(rowName);
     Result result = region.get(g, null);
     assertEquals(countPerFamily * hri.getTableDesc().getFamilies().size(),
       result.size());
@@ -280,39 +288,45 @@ public class TestWALReplay {
       addRegionEdits(rowName, hcd.getName(), countPerFamily, this.ee, region2, "y");
     }
     // Get count of edits.
-    Result result2 = region2.get(g, null);
+    final Result result2 = region2.get(g, null);
     assertEquals(2 * result.size(), result2.size());
     wal2.sync();
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
     // long gone.
     HBaseTestingUtility.setMaxRecoveryErrorCount(wal2.getOutputStream(), 1);
-    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf,
+    final Configuration newConf = HBaseConfiguration.create(this.conf);
+    User user = HBaseTestingUtility.getDifferentUser(newConf,
       tableNameStr);
-    runWALSplit(newConf);
-    FileSystem newFS = FileSystem.get(newConf);
-    // Make a new wal for new region open.
-    HLog wal3 = createWAL(newConf);
-    final AtomicInteger countOfRestoredEdits = new AtomicInteger(0);
-    HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, hri, null) {
-      @Override
-      protected boolean restoreEdit(Store s, KeyValue kv) {
-        boolean b = super.restoreEdit(s, kv);
-        countOfRestoredEdits.incrementAndGet();
-        return b;
-      }
-    };
-    long seqid3 = region3.initialize();
-    // HRegionServer usually does this. It knows the largest seqid across all regions.
-    wal3.setSequenceNumber(seqid3);
-    Result result3 = region3.get(g, null);
-    // Assert that count of cells is same as before crash.
-    assertEquals(result2.size(), result3.size());
-    assertEquals(hri.getTableDesc().getFamilies().size() * countPerFamily,
-      countOfRestoredEdits.get());
+    user.runAs(new PrivilegedExceptionAction() {
+      public Object run() throws Exception {
+        runWALSplit(newConf);
+        FileSystem newFS = FileSystem.get(newConf);
+        // Make a new wal for new region open.
+        HLog wal3 = createWAL(newConf);
+        final AtomicInteger countOfRestoredEdits = new AtomicInteger(0);
+        HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, hri, null) {
+          @Override
+          protected boolean restoreEdit(Store s, KeyValue kv) {
+            boolean b = super.restoreEdit(s, kv);
+            countOfRestoredEdits.incrementAndGet();
+            return b;
+          }
+        };
+        long seqid3 = region3.initialize();
+        // HRegionServer usually does this. It knows the largest seqid across all regions.
+        wal3.setSequenceNumber(seqid3);
+        Result result3 = region3.get(g, null);
+        // Assert that count of cells is same as before crash.
+        assertEquals(result2.size(), result3.size());
+        assertEquals(hri.getTableDesc().getFamilies().size() * countPerFamily,
+          countOfRestoredEdits.get());
 
-    // I can't close wal1.  Its been appropriated when we split.
-    region3.close();
-    wal3.closeAndDelete();
+        // I can't close wal1.  Its been appropriated when we split.
+        region3.close();
+        wal3.closeAndDelete();
+        return null;
+      }
+    });
   }
 
   /**
@@ -323,11 +337,11 @@ public class TestWALReplay {
   @Test
   public void testReplayEditsWrittenIntoWAL() throws Exception {
     final String tableNameStr = "testReplayEditsWrittenIntoWAL";
-    HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
-    Path basedir = new Path(hbaseRootDir, tableNameStr);
+    final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableNameStr);
+    final Path basedir = new Path(hbaseRootDir, tableNameStr);
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
-    HLog wal = createWAL(this.conf);
+    final HLog wal = createWAL(this.conf);
     final byte[] tableName = Bytes.toBytes(tableNameStr);
     final byte[] rowName = tableName;
     final byte[] regionName = hri.getEncodedNameAsBytes();
@@ -363,39 +377,45 @@ public class TestWALReplay {
     HBaseTestingUtility.setMaxRecoveryErrorCount(wal.getOutputStream(), 1);
     // Make a new conf and a new fs for the splitter to run on so we can take
     // over old wal.
-    Configuration newConf = HBaseTestingUtility.setDifferentUser(this.conf,
+    final Configuration newConf = HBaseConfiguration.create(this.conf);
+    User user = HBaseTestingUtility.getDifferentUser(newConf,
       ".replay.wal.secondtime");
-    runWALSplit(newConf);
-    FileSystem newFS = FileSystem.get(newConf);
-    // 100k seems to make for about 4 flushes during HRegion#initialize.
-    newConf.setInt("hbase.hregion.memstore.flush.size", 1024 * 100);
-    // Make a new wal for new region.
-    HLog newWal = createWAL(newConf);
-    final AtomicInteger flushcount = new AtomicInteger(0);
-    try {
-      final HRegion region = new HRegion(basedir, newWal, newFS, newConf, hri,
-          null) {
-        protected boolean internalFlushcache(HLog wal, long myseqid)
-        throws IOException {
-          boolean b = super.internalFlushcache(wal, myseqid);
-          flushcount.incrementAndGet();
-          return b;
-        };
-      };
-      long seqid = region.initialize();
-      // We flushed during init.
-      assertTrue(flushcount.get() > 0);
-      assertTrue(seqid > wal.getSequenceNumber());
+    user.runAs(new PrivilegedExceptionAction(){
+      public Object run() throws Exception {
+        runWALSplit(newConf);
+        FileSystem newFS = FileSystem.get(newConf);
+        // 100k seems to make for about 4 flushes during HRegion#initialize.
+        newConf.setInt("hbase.hregion.memstore.flush.size", 1024 * 100);
+        // Make a new wal for new region.
+        HLog newWal = createWAL(newConf);
+        final AtomicInteger flushcount = new AtomicInteger(0);
+        try {
+          final HRegion region = new HRegion(basedir, newWal, newFS, newConf, hri,
+              null) {
+            protected boolean internalFlushcache(HLog wal, long myseqid)
+            throws IOException {
+              boolean b = super.internalFlushcache(wal, myseqid);
+              flushcount.incrementAndGet();
+              return b;
+            };
+          };
+          long seqid = region.initialize();
+          // We flushed during init.
+          assertTrue(flushcount.get() > 0);
+          assertTrue(seqid > wal.getSequenceNumber());
 
-      Get get = new Get(rowName);
-      Result result = region.get(get, -1);
-      // Make sure we only see the good edits
-      assertEquals(countPerFamily * (hri.getTableDesc().getFamilies().size() - 1),
-        result.size());
-      region.close();
-    } finally {
-      newWal.closeAndDelete();
-    }
+          Get get = new Get(rowName);
+          Result result = region.get(get, -1);
+          // Make sure we only see the good edits
+          assertEquals(countPerFamily * (hri.getTableDesc().getFamilies().size() - 1),
+            result.size());
+          region.close();
+        } finally {
+          newWal.closeAndDelete();
+        }
+        return null;
+      }
+    });
   }
 
   // Flusher used in this test.  Keep count of how often we are called and

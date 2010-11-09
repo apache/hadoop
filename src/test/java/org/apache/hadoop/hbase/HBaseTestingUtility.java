@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ReadWriteConsistencyControl;
 import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -67,10 +68,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.mapred.MiniMRCluster;
-import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
-import com.google.common.base.Preconditions;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -357,11 +355,12 @@ public class HBaseTestingUtility {
    * @param numSlaves
    * @return Reference to the hbase mini hbase cluster.
    * @throws IOException
+   * @throws InterruptedException 
    * @see {@link #startMiniCluster()}
    */
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
       final int numSlaves)
-  throws IOException {
+  throws IOException, InterruptedException {
     // Now do the mini hbase cluster.  Set the hbase.rootdir in config.
     createRootDir();
     Configuration c = new Configuration(this.conf);
@@ -382,7 +381,7 @@ public class HBaseTestingUtility {
    * @param servers number of region servers
    * @throws IOException
    */
-  public void restartHBaseCluster(int servers) throws IOException {
+  public void restartHBaseCluster(int servers) throws IOException, InterruptedException {
     this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
     // Don't leave here till we've done a successful scan of the .META.
     HTable t = new HTable(new Configuration(this.conf), HConstants.META_TABLE_NAME);
@@ -574,6 +573,16 @@ public class HBaseTestingUtility {
     }
     getHBaseAdmin().createTable(desc);
     return new HTable(new Configuration(getConfiguration()), tableName);
+  }
+
+  /**
+   * Drop an existing table
+   * @param tableName existing table
+   */
+  public void deleteTable(byte[] tableName) throws IOException {
+    HBaseAdmin admin = new HBaseAdmin(getConfiguration());
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
   }
 
   /**
@@ -1127,20 +1136,20 @@ public class HBaseTestingUtility {
    * @return A new configuration instance with a different user set into it.
    * @throws IOException
    */
-  public static Configuration setDifferentUser(final Configuration c,
+  public static User getDifferentUser(final Configuration c,
     final String differentiatingSuffix)
   throws IOException {
     FileSystem currentfs = FileSystem.get(c);
-    Preconditions.checkArgument(currentfs instanceof DistributedFileSystem);
+    if (!(currentfs instanceof DistributedFileSystem)) {
+      return User.getCurrent();
+    }
     // Else distributed filesystem.  Make a new instance per daemon.  Below
     // code is taken from the AppendTestUtil over in hdfs.
-    Configuration c2 = new Configuration(c);
-    String username = UserGroupInformation.getCurrentUGI().getUserName() +
+    String username = User.getCurrent().getName() +
       differentiatingSuffix;
-    UnixUserGroupInformation.saveToConf(c2,
-      UnixUserGroupInformation.UGI_PROPERTY_NAME,
-      new UnixUserGroupInformation(username, new String[]{"supergroup"}));
-    return c2;
+    User user = User.createUserForTesting(c, username,
+        new String[]{"supergroup"});
+    return user;
   }
 
   /**

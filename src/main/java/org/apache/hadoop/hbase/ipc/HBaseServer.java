@@ -1020,8 +1020,6 @@ public abstract class HBaseServer {
           Writable value = null;
 
           CurCall.set(call);
-          UserGroupInformation previous = UserGroupInformation.getCurrentUGI();
-          UserGroupInformation.setCurrentUser(call.connection.ticket);
           try {
             if (!started)
               throw new ServerNotRunningException("Server is not running yet");
@@ -1031,7 +1029,6 @@ public abstract class HBaseServer {
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           }
-          UserGroupInformation.setCurrentUser(previous);
           CurCall.set(null);
 
           if (buf.size() > buffersize) {

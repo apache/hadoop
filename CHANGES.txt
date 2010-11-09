@@ -1122,6 +1122,8 @@ Release 0.90.0 - Unreleased
    HBASE-3083  Major compaction check should use new timestamp meta
                information in HFiles (rather than dfs timestamp) along with
                TTL to allow major even if single file
+   HBASE-3194  HBase should run on both secure and vanilla versions of Hadoop 0.20
+               (Gary Helmling via Stack)
 
 
   NEW FEATURES

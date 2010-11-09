@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.lang.ref.SoftReference;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -50,12 +51,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 
 import com.google.common.base.Joiner;
 
@@ -460,45 +461,49 @@ public class TestStore extends TestCase {
   public void testHandleErrorsInFlush() throws Exception {
     LOG.info("Setting up a faulty file system that cannot write");
 
-    Configuration conf = HBaseConfiguration.create();
-    // Set a different UGI so we don't get the same cached LocalFS instance
-    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        "testhandleerrorsinflush,foo");
+    final Configuration conf = HBaseConfiguration.create();
+    User user = User.createUserForTesting(conf,
+        "testhandleerrorsinflush", new String[]{"foo"});
     // Inject our faulty LocalFileSystem
     conf.setClass("fs.file.impl", FaultyFileSystem.class,
         FileSystem.class);
-    // Make sure it worked (above is sensitive to caching details in hadoop core)
-    FileSystem fs = FileSystem.get(conf);
-    assertEquals(FaultyFileSystem.class, fs.getClass());
+    user.runAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws Exception {
+        // Make sure it worked (above is sensitive to caching details in hadoop core)
+        FileSystem fs = FileSystem.get(conf);
+        assertEquals(FaultyFileSystem.class, fs.getClass());
 
-    // Initialize region
-    init(getName(), conf);
+        // Initialize region
+        init(getName(), conf);
 
-    LOG.info("Adding some data");
-    this.store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
-    this.store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
+        LOG.info("Adding some data");
+        store.add(new KeyValue(row, family, qf1, 1, (byte[])null));
+        store.add(new KeyValue(row, family, qf2, 1, (byte[])null));
+        store.add(new KeyValue(row, family, qf3, 1, (byte[])null));
 
-    LOG.info("Before flush, we should have no files");
-    FileStatus[] files = fs.listStatus(store.getHomedir());
-    Path[] paths = FileUtil.stat2Paths(files);
-    System.err.println("Got paths: " + Joiner.on(",").join(paths));
-    assertEquals(0, paths.length);
+        LOG.info("Before flush, we should have no files");
+        FileStatus[] files = fs.listStatus(store.getHomedir());
+        Path[] paths = FileUtil.stat2Paths(files);
+        System.err.println("Got paths: " + Joiner.on(",").join(paths));
+        assertEquals(0, paths.length);
 
-    //flush
-    try {
-      LOG.info("Flushing");
-      flush(1);
-      fail("Didn't bubble up IOE!");
-    } catch (IOException ioe) {
-      assertTrue(ioe.getMessage().contains("Fault injected"));
-    }
+        //flush
+        try {
+          LOG.info("Flushing");
+          flush(1);
+          fail("Didn't bubble up IOE!");
+        } catch (IOException ioe) {
+          assertTrue(ioe.getMessage().contains("Fault injected"));
+        }
 
-    LOG.info("After failed flush, we should still have no files!");
-    files = fs.listStatus(store.getHomedir());
-    paths = FileUtil.stat2Paths(files);
-    System.err.println("Got paths: " + Joiner.on(",").join(paths));
-    assertEquals(0, paths.length);
+        LOG.info("After failed flush, we should still have no files!");
+        files = fs.listStatus(store.getHomedir());
+        paths = FileUtil.stat2Paths(files);
+        System.err.println("Got paths: " + Joiner.on(",").join(paths));
+        assertEquals(0, paths.length);
+        return null;
+      }
+    });
   }
 
 

@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -29,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 
@@ -148,6 +150,7 @@ public class LocalHBaseCluster {
     this.regionServerClass =
       (Class<? extends HRegionServer>)conf.getClass(HConstants.REGION_SERVER_IMPL,
        regionServerClass);
+
     for (int i = 0; i < noRegionServers; i++) {
       addRegionServer(i);
     }
@@ -169,6 +172,17 @@ public class LocalHBaseCluster {
     return rst;
   }
 
+  public JVMClusterUtil.RegionServerThread addRegionServer(
+      final int index, User user)
+  throws IOException, InterruptedException {
+    return user.runAs(
+        new PrivilegedExceptionAction<JVMClusterUtil.RegionServerThread>() {
+          public JVMClusterUtil.RegionServerThread run() throws Exception {
+            return addRegionServer(index);
+          }
+        });
+  }
+
   public JVMClusterUtil.MasterThread addMaster() throws IOException {
     return addMaster(this.masterThreads.size());
   }
@@ -183,6 +197,17 @@ public class LocalHBaseCluster {
         this.masterClass, index);
     this.masterThreads.add(mt);
     return mt;
+  }
+
+  public JVMClusterUtil.MasterThread addMaster(
+      final int index, User user)
+  throws IOException, InterruptedException {
+    return user.runAs(
+        new PrivilegedExceptionAction<JVMClusterUtil.MasterThread>() {
+          public JVMClusterUtil.MasterThread run() throws Exception {
+            return addMaster(index);
+          }
+        });
   }
 
   /**
