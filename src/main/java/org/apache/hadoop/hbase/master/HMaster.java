@@ -795,13 +795,13 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   public void enableTable(final byte [] tableName) throws IOException {
-    new EnableTableHandler(this, tableName, catalogTracker, assignmentManager)
-      .process();
+    this.executorService.submit(new EnableTableHandler(this, tableName,
+      catalogTracker, assignmentManager));
   }
 
   public void disableTable(final byte [] tableName) throws IOException {
-    new DisableTableHandler(this, tableName, catalogTracker, assignmentManager)
-      .process();
+    this.executorService.submit(new DisableTableHandler(this, tableName,
+      catalogTracker, assignmentManager));
   }
 
   /**
@@ -857,7 +857,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (!MetaReader.tableExists(getCatalogTracker(), tableNameStr)) {
       throw new TableNotFoundException(tableNameStr);
     }
-    if (!getAssignmentManager().isTableDisabled(Bytes.toString(tableName))) {
+    if (!getAssignmentManager().getZKTable().
+        isDisabledTable(Bytes.toString(tableName))) {
       throw new TableNotDisabledException(tableName);
     }
   }

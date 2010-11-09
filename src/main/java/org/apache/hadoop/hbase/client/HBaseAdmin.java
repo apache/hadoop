@@ -333,7 +333,7 @@ public class HBaseAdmin implements Abortable {
     try {
       getMaster().createTable(desc, splitKeys);
     } catch (RemoteException e) {
-      throw RemoteExceptionHandler.decodeRemoteException(e);
+      throw e.unwrapRemoteException();
     }
   }
 
@@ -427,37 +427,27 @@ public class HBaseAdmin implements Abortable {
     LOG.info("Deleted " + Bytes.toString(tableName));
   }
 
-
-
-  /**
-   * Brings a table on-line (enables it).
-   * Synchronous operation.
-   *
-   * @param tableName name of the table
-   * @throws IOException if a remote or network exception occurs
-   */
-  public void enableTable(final String tableName) throws IOException {
+  public void enableTable(final String tableName)
+  throws IOException {
     enableTable(Bytes.toBytes(tableName));
   }
 
   /**
-   * Brings a table on-line (enables it).
-   * Synchronous operation.
-   *
+   * Enable a table.  May timeout.  Use {@link #enableTableAsync(byte[])}
+   * and {@link #isTableEnabled(byte[])} instead.
    * @param tableName name of the table
    * @throws IOException if a remote or network exception occurs
+   * @see {@link #isTableEnabled(byte[])}
+   * @see {@link #disableTable(byte[])}
+   * @see {@link #enableTableAsync(byte[])}
    */
-  public void enableTable(final byte [] tableName) throws IOException {
-    isMasterRunning();
-
+  public void enableTable(final byte [] tableName)
+  throws IOException {
+    enableTableAsync(tableName);
+ 
     // Wait until all regions are enabled
     boolean enabled = false;
     for (int tries = 0; tries < this.numRetries; tries++) {
-      try {
-        getMaster().enableTable(tableName);
-      } catch (RemoteException e) {
-        throw RemoteExceptionHandler.decodeRemoteException(e);
-      }
       enabled = isTableEnabled(tableName);
       if (enabled) {
         break;
@@ -470,11 +460,10 @@ public class HBaseAdmin implements Abortable {
       try {
         Thread.sleep(sleep);
       } catch (InterruptedException e) {
-        // continue
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Wake. Waiting for all regions to be enabled from " +
-          Bytes.toString(tableName));
+        Thread.currentThread().interrupt();
+        // Do this conversion rather than let it out because do not want to
+        // change the method signature.
+        throw new IOException("Interrupted", e);
       }
     }
     if (!enabled) {
@@ -485,52 +474,83 @@ public class HBaseAdmin implements Abortable {
   }
 
   /**
-   * Disables a table (takes it off-line) If it is being served, the master
-   * will tell the servers to stop serving it.
-   * Synchronous operation.
-   *
+   * Brings a table on-line (enables it).  Method returns immediately though
+   * enable of table may take some time to complete, especially if the table
+   * is large (All regions are opened as part of enabling process).  Check
+   * {@link #isTableEnabled(byte[])} to learn when table is fully online.  If
+   * table is taking too long to online, check server logs.
+   * @param tableName
+   * @throws IOException
+   * @since 0.90.0
+   */
+  public void enableTableAsync(final byte [] tableName)
+  throws IOException {
+    isMasterRunning();
+    try {
+      getMaster().enableTable(tableName);
+    } catch (RemoteException e) {
+      throw e.unwrapRemoteException();
+    }
+    LOG.info("Started enable of " + Bytes.toString(tableName));
+  }
+
+  /**
+   * Starts the disable of a table.  If it is being served, the master
+   * will tell the servers to stop serving it.  This method returns immediately.
+   * The disable of a table can take some time if the table is large (all
+   * regions are closed as part of table disable operation).
+   * Call {@link #isTableDisabled(byte[])} to check for when disable completes.
+   * If table is taking too long to online, check server logs.
    * @param tableName name of table
    * @throws IOException if a remote or network exception occurs
+   * @see {@link #isTableDisabled(byte[])}
+   * @see {@link #isTableEnabled(byte[])}
+   * @since 0.90.0
    */
-  public void disableTable(final String tableName) throws IOException {
+  public void disableTableAsync(final byte [] tableName) throws IOException {
+    isMasterRunning();
+    try {
+      getMaster().disableTable(tableName);
+    } catch (RemoteException e) {
+      throw e.unwrapRemoteException();
+    }
+    LOG.info("Started disable of " + Bytes.toString(tableName));
+  }
+
+  public void disableTable(final String tableName)
+  throws IOException {
     disableTable(Bytes.toBytes(tableName));
   }
 
   /**
-   * Disables a table (takes it off-line) If it is being served, the master
-   * will tell the servers to stop serving it.
-   * Synchronous operation.
-   *
-   * @param tableName name of table
-   * @throws IOException if a remote or network exception occurs
+   * Disable table and wait on completion.  May timeout.  Use
+   * {@link #disableTableAsync(byte[])} and {@link #isTableDisabled(String)}
+   * instead.
+   * @param tableName
+   * @throws IOException
    */
-  public void disableTable(final byte [] tableName) throws IOException {
-    isMasterRunning();
-
-    // Wait until all regions are disabled
+  public void disableTable(final byte [] tableName)
+  throws IOException {
+    disableTableAsync(tableName);
+    // Wait until table is disabled
     boolean disabled = false;
     for (int tries = 0; tries < this.numRetries; tries++) {
-      try {
-        getMaster().disableTable(tableName);
-      } catch (RemoteException e) {
-        throw RemoteExceptionHandler.decodeRemoteException(e);
-      }
       disabled = isTableDisabled(tableName);
       if (disabled) {
         break;
       }
+      long sleep = getPauseTime(tries);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Sleep. Waiting for all regions to be disabled from " +
-          Bytes.toString(tableName));
+        LOG.debug("Sleeping= " + sleep + "ms, waiting for all regions to be " +
+          "disabled in " + Bytes.toString(tableName));
       }
       try {
-        Thread.sleep(getPauseTime(tries));
+        Thread.sleep(sleep);
       } catch (InterruptedException e) {
-        // continue
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Wake. Waiting for all regions to be disabled from " +
-          Bytes.toString(tableName));
+        // Do this conversion rather than let it out because do not want to
+        // change the method signature.
+        Thread.currentThread().interrupt();
+        throw new IOException("Interrupted", e);
       }
     }
     if (!disabled) {
@@ -555,6 +575,15 @@ public class HBaseAdmin implements Abortable {
    */
   public boolean isTableEnabled(byte[] tableName) throws IOException {
     return connection.isTableEnabled(tableName);
+  }
+
+  /**
+   * @param tableName name of table to check
+   * @return true if table is off-line
+   * @throws IOException if a remote or network exception occurs
+   */
+  public boolean isTableDisabled(final String tableName) throws IOException {
+    return isTableDisabled(Bytes.toBytes(tableName));
   }
 
   /**

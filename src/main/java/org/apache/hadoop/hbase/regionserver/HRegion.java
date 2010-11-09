@@ -55,12 +55,12 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -73,7 +73,6 @@ import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -2534,47 +2533,6 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       meta.releaseRowLock(lid);
     }
-  }
-
-  /**
-   * Utility method used by HMaster marking regions offlined.
-   * @param srvr META server to be updated
-   * @param metaRegionName Meta region name
-   * @param info HRegion to update in <code>meta</code>
-   *
-   * @throws IOException
-   */
-  public static void offlineRegionInMETA(final HRegionInterface srvr,
-    final byte [] metaRegionName, final HRegionInfo info)
-  throws IOException {
-    // Puts and Deletes used to be "atomic" here.  We can use row locks if
-    // we need to keep that property, or we can expand Puts and Deletes to
-    // allow them to be committed at once.
-    byte [] row = info.getRegionName();
-    Put put = new Put(row);
-    info.setOffline(true);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(info));
-    srvr.put(metaRegionName, put);
-    cleanRegionInMETA(srvr, metaRegionName, info);
-  }
-
-  /**
-   * Clean COL_SERVER and COL_STARTCODE for passed <code>info</code> in
-   * <code>.META.</code>
-   * @param srvr
-   * @param metaRegionName
-   * @param info
-   * @throws IOException
-   */
-  public static void cleanRegionInMETA(final HRegionInterface srvr,
-    final byte [] metaRegionName, final HRegionInfo info)
-  throws IOException {
-    Delete del = new Delete(info.getRegionName());
-    del.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-    del.deleteColumns(HConstants.CATALOG_FAMILY,
-        HConstants.STARTCODE_QUALIFIER);
-    srvr.delete(metaRegionName, del);
   }
 
   /**

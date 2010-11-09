@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 
@@ -324,7 +324,8 @@ public class TestMasterFailover {
     log("Beginning to mock scenarios");
 
     // Disable the disabledTable in ZK
-    ZKTableDisable.disableTable(zkw, Bytes.toString(disabledTable));
+    ZKTable zktable = new ZKTable(zkw);
+    zktable.setDisabledTable(Bytes.toString(disabledTable));
 
     /*
      *  ZK = OFFLINE
@@ -652,7 +653,8 @@ public class TestMasterFailover {
     log("Beginning to mock scenarios");
 
     // Disable the disabledTable in ZK
-    ZKTableDisable.disableTable(zkw, Bytes.toString(disabledTable));
+    ZKTable zktable = new ZKTable(zkw);
+    zktable.setDisabledTable(Bytes.toString(disabledTable));
 
     /*
      * ZK = CLOSING

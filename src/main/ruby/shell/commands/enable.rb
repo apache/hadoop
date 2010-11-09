@@ -23,7 +23,7 @@ module Shell
     class Enable < Command
       def help
         return <<-EOF
-          Enable the named table: e.g. "hbase> enable 't1'"
+          Start enable of named table: e.g. "hbase> enable 't1'"
         EOF
       end
 

@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 
-import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -46,10 +45,8 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -82,6 +79,45 @@ public class TestAdmin {
   @Before
   public void setUp() throws Exception {
     this.admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+  }
+
+  @Test
+  public void testDisableAndEnableTable() throws IOException {
+    final byte [] row = Bytes.toBytes("row");
+    final byte [] qualifier = Bytes.toBytes("qualifier");
+    final byte [] value = Bytes.toBytes("value");
+    final byte [] table = Bytes.toBytes("testDisableAndEnableTable");
+    HTable ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
+    Put put = new Put(row);
+    put.add(HConstants.CATALOG_FAMILY, qualifier, value);
+    ht.put(put);
+    Get get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    ht.get(get);
+
+    this.admin.disableTable(table);
+
+    // Test that table is disabled
+    get = new Get(row);
+    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
+    boolean ok = false;
+    try {
+      ht.get(get);
+    } catch (NotServingRegionException e) {
+      ok = true;
+    } catch (RetriesExhaustedException e) {
+      ok = true;
+    }
+    assertTrue(ok);
+    this.admin.enableTable(table);
+
+    // Test that table is enabled
+    try {
+      ht.get(get);
+    } catch (RetriesExhaustedException e) {
+      ok = false;
+    }
+    assertTrue(ok);
   }
 
   @Test
@@ -427,45 +463,6 @@ public class TestAdmin {
     } catch(IllegalArgumentException iae) {
       // Expected
     }
-  }
-
-  @Test
-  public void testDisableAndEnableTable() throws IOException {
-    final byte [] row = Bytes.toBytes("row");
-    final byte [] qualifier = Bytes.toBytes("qualifier");
-    final byte [] value = Bytes.toBytes("value");
-    final byte [] table = Bytes.toBytes("testDisableAndEnableTable");
-    HTable ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
-    Put put = new Put(row);
-    put.add(HConstants.CATALOG_FAMILY, qualifier, value);
-    ht.put(put);
-    Get get = new Get(row);
-    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
-    ht.get(get);
-
-    this.admin.disableTable(table);
-
-    // Test that table is disabled
-    get = new Get(row);
-    get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
-    boolean ok = false;
-    try {
-      ht.get(get);
-    } catch (NotServingRegionException e) {
-      ok = true;
-    } catch (RetriesExhaustedException e) {
-      ok = true;
-    }
-    assertTrue(ok);
-    this.admin.enableTable(table);
-
-    //Test that table is enabled
-    try {
-      ht.get(get);
-    } catch (RetriesExhaustedException e) {
-      ok = false;
-    }
-    assertTrue(ok);
   }
 
   @Test

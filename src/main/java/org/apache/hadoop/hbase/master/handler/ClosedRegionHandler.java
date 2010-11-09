@@ -36,10 +36,8 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
  */
 public class ClosedRegionHandler extends EventHandler implements TotesHRegionInfo {
   private static final Log LOG = LogFactory.getLog(ClosedRegionHandler.class);
-
   private final AssignmentManager assignmentManager;
   private final HRegionInfo regionInfo;
-
   private final ClosedPriority priority;
 
   private enum ClosedPriority {
@@ -84,7 +82,8 @@ public class ClosedRegionHandler extends EventHandler implements TotesHRegionInf
   public void process() {
     LOG.debug("Handling CLOSED event for " + regionInfo.getEncodedName());
     // Check if this table is being disabled or not
-    if (assignmentManager.isTableOfRegionDisabled(regionInfo.getRegionName())) {
+    if (this.assignmentManager.getZKTable().
+        isDisabledTable(this.regionInfo.getTableDesc().getNameAsString())) {
       assignmentManager.offlineDisabledRegion(regionInfo);
       return;
     }

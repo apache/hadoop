@@ -217,8 +217,10 @@ Shell.load_command_group(
     create
     describe
     disable
+    is_disabled
     drop
     enable
+    is_enabled
     exists
     list
   ]

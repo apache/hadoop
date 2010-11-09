@@ -62,7 +62,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.RootRegionTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
@@ -477,19 +477,20 @@ public class HConnectionManager {
     /*
      * @param True if table is online
      */
-    private boolean testTableOnlineState(byte[] tableName, boolean online)
+    private boolean testTableOnlineState(byte [] tableName, boolean online)
     throws IOException {
       if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
         // The root region is always enabled
-        return true;
+        return online;
       }
+      String tableNameStr = Bytes.toString(tableName);
       try {
-        List<String> tables = ZKTableDisable.getDisabledTables(this.zooKeeper);
-        String searchStr = Bytes.toString(tableName);
-        boolean disabled = tables.contains(searchStr);
-        return online? !disabled: disabled;
+        if (online) {
+          return ZKTable.isEnabledTable(this.zooKeeper, tableNameStr);
+        }
+        return ZKTable.isDisabledTable(this.zooKeeper, tableNameStr);
       } catch (KeeperException e) {
-        throw new IOException("Failed listing disabled tables", e);
+        throw new IOException("Enable/Disable failed", e);
       }
     }
 

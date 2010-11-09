@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Base class for performing operations against tables.
@@ -42,6 +43,7 @@ public abstract class TableEventHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(TableEventHandler.class);
   protected final MasterServices masterServices;
   protected final byte [] tableName;
+  protected final String tableNameStr;
 
   public TableEventHandler(EventType eventType, byte [] tableName, Server server,
       MasterServices masterServices)
@@ -50,6 +52,7 @@ public abstract class TableEventHandler extends EventHandler {
     this.masterServices = masterServices;
     this.tableName = tableName;
     this.masterServices.checkTableModifiable(tableName);
+    this.tableNameStr = Bytes.toString(this.tableName);
   }
 
   @Override
@@ -62,11 +65,12 @@ public abstract class TableEventHandler extends EventHandler {
           tableName);
       handleTableOperation(hris);
     } catch (IOException e) {
-      LOG.error("Error trying to delete the table " + Bytes.toString(tableName),
-          e);
+      LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
+    } catch (KeeperException e) {
+      LOG.error("Error manipulating table " + Bytes.toString(tableName), e);
     }
   }
 
   protected abstract void handleTableOperation(List<HRegionInfo> regions)
-  throws IOException;
+  throws IOException, KeeperException;
 }

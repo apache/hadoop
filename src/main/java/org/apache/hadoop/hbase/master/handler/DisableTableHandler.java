@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,12 +32,15 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.BulkAssigner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.zookeeper.KeeperException;
 
-
+/**
+ * Handler to run disable of a table.
+ */
 public class DisableTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(DisableTableHandler.class);
-
   private final byte [] tableName;
   private final String tableNameStr;
   private final AssignmentManager assignmentManager;
@@ -52,7 +56,7 @@ public class DisableTableHandler extends EventHandler {
     // TODO: do we want to keep this in-memory as well?  i guess this is
     //       part of old master rewrite, schema to zk to check for table
     //       existence and such
-    if(!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
+    if (!MetaReader.tableExists(catalogTracker, this.tableNameStr)) {
       throw new TableNotFoundException(Bytes.toString(tableName));
     }
   }
@@ -60,32 +64,90 @@ public class DisableTableHandler extends EventHandler {
   @Override
   public void process() {
     try {
-      LOG.info("Attemping to disable the table " + this.tableNameStr);
+      LOG.info("Attemping to disable table " + this.tableNameStr);
       handleDisableTable();
     } catch (IOException e) {
-      LOG.error("Error trying to disable the table " + this.tableNameStr, e);
+      LOG.error("Error trying to disable table " + this.tableNameStr, e);
+    } catch (KeeperException e) {
+      LOG.error("Error trying to disable table " + this.tableNameStr, e);
     }
   }
 
-  private void handleDisableTable() throws IOException {
-    if (this.assignmentManager.isTableDisabled(this.tableNameStr)) {
-      LOG.info("Table " + tableNameStr + " is already disabled; skipping disable");
+  private void handleDisableTable() throws IOException, KeeperException {
+    if (this.assignmentManager.getZKTable().isDisabledTable(this.tableNameStr)) {
+      LOG.info("Table " + tableNameStr + " already disabled; skipping disable");
       return;
     }
-    // Set the table as disabled so it doesn't get re-onlined
-    assignmentManager.disableTable(this.tableNameStr);
-    // Get the online regions of this table.
-    // TODO: What if region splitting at the time we get this listing?
-    // TODO: Remove offline flag from HRI
-    // TODO: Confirm we have parallel closing going on.
-    List<HRegionInfo> regions = assignmentManager.getRegionsOfTable(tableName);
-    // Unassign the online regions
-    for(HRegionInfo region: regions) {
-      assignmentManager.unassign(region);
+    // Set table disabling flag up in zk.
+    this.assignmentManager.getZKTable().setDisablingTable(this.tableNameStr);
+    boolean done = false;
+    while (true) {
+      // Get list of online regions that are of this table.  Regions that are
+      // already closed will not be included in this list; i.e. the returned
+      // list is not ALL regions in a table, its all online regions according to
+      // the in-memory state on this master.
+      final List<HRegionInfo> regions =
+        this.assignmentManager.getRegionsOfTable(tableName);
+      if (regions.size() == 0) {
+        done = true;
+        break;
+      }
+      LOG.info("Offlining " + regions.size() + " regions.");
+      BulkDisabler bd = new BulkDisabler(this.server, regions);
+      try {
+        if (bd.bulkAssign()) {
+          done = true;
+          break;
+        }
+      } catch (InterruptedException e) {
+        LOG.warn("Disable was interrupted");
+        // Preserve the interrupt.
+        Thread.currentThread().interrupt();
+        break;
+      }
     }
-    // Wait on table's regions to clear region in transition.
-    for (HRegionInfo region: regions) {
-      this.assignmentManager.waitOnRegionToClearRegionsInTransition(region);
+    // Flip the table to disabled if success.
+    if (done) this.assignmentManager.getZKTable().setDisabledTable(this.tableNameStr);
+    LOG.info("Disabled table is done=" + done);
+  }
+
+  /**
+   * Run bulk disable.
+   */
+  class BulkDisabler extends BulkAssigner {
+    private final List<HRegionInfo> regions;
+
+    BulkDisabler(final Server server, final List<HRegionInfo> regions) {
+      super(server);
+      this.regions = regions;
+    }
+
+    @Override
+    protected void populatePool(ExecutorService pool) {
+      for (HRegionInfo region: regions) {
+        if (assignmentManager.isRegionInTransition(region) != null) continue;
+        final HRegionInfo hri = region;
+        pool.execute(new Runnable() {
+          public void run() {
+            assignmentManager.unassign(hri);
+          }
+        });
+      }
+    }
+
+    @Override
+    protected boolean waitUntilDone(long timeout)
+    throws InterruptedException {
+      long startTime = System.currentTimeMillis();
+      long remaining = timeout;
+      List<HRegionInfo> regions = null;
+      while (!server.isStopped() && remaining > 0) {
+        Thread.sleep(1000);
+        regions = assignmentManager.getRegionsOfTable(tableName);
+        if (regions.isEmpty()) break;
+        remaining = timeout - (System.currentTimeMillis() - startTime);
+      }
+      return regions != null && regions.isEmpty();
     }
   }
 }

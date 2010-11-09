@@ -31,20 +31,20 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
 import org.apache.zookeeper.KeeperException;
 
 public class DeleteTableHandler extends TableEventHandler {
   private static final Log LOG = LogFactory.getLog(DeleteTableHandler.class);
 
   public DeleteTableHandler(byte [] tableName, Server server,
-      final MasterServices masterServices) throws IOException {
+      final MasterServices masterServices)
+  throws IOException {
     super(EventType.C_M_DELETE_TABLE, tableName, server, masterServices);
   }
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions)
-  throws IOException {
+  throws IOException, KeeperException {
     AssignmentManager am = this.masterServices.getAssignmentManager();
     long waitTime = server.getConfiguration().
       getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
@@ -73,6 +73,6 @@ public class DeleteTableHandler extends TableEventHandler {
 
     // If entry for this table in zk, and up in AssignmentManager, remove it.
     // Call to undisableTable does this. TODO: Make a more formal purge table.
-    am.undisableTable(Bytes.toString(tableName));
+    am.getZKTable().setEnabledTable(Bytes.toString(tableName));
   }
 }

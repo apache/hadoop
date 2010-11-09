@@ -22,12 +22,9 @@ package org.apache.hadoop.hbase.master;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.net.ConnectException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +35,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -56,9 +52,9 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
@@ -67,19 +63,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKTableDisable;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Manages and performs region assignment.
@@ -115,9 +109,7 @@ public class AssignmentManager extends ZooKeeperListener {
   final ConcurrentNavigableMap<String, RegionPlan> regionPlans =
     new ConcurrentSkipListMap<String, RegionPlan>();
 
-  /** Set of tables that have been disabled. */
-  private final Set<String> disabledTables =
-    Collections.synchronizedSet(new HashSet<String>());
+  private final ZKTable zkTable;
 
   /**
    * Server to regions assignment map.
@@ -150,9 +142,11 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param serverManager
    * @param catalogTracker
    * @param service
+   * @throws KeeperException 
    */
   public AssignmentManager(Server master, ServerManager serverManager,
-      CatalogTracker catalogTracker, final ExecutorService service) {
+      CatalogTracker catalogTracker, final ExecutorService service)
+  throws KeeperException {
     super(master.getZooKeeper());
     this.master = master;
     this.serverManager = serverManager;
@@ -160,11 +154,21 @@ public class AssignmentManager extends ZooKeeperListener {
     this.executorService = service;
     Configuration conf = master.getConfiguration();
     this.timeoutMonitor = new TimeoutMonitor(
-        conf.getInt("hbase.master.assignment.timeoutmonitor.period", 10000),
-        master,
-        conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 30000));
+      conf.getInt("hbase.master.assignment.timeoutmonitor.period", 10000),
+      master,
+      conf.getInt("hbase.master.assignment.timeoutmonitor.timeout", 30000));
     Threads.setDaemonThreadRunning(timeoutMonitor,
-        master.getServerName() + ".timeoutMonitor");
+      master.getServerName() + ".timeoutMonitor");
+    this.zkTable = new ZKTable(this.master.getZooKeeper());
+  }
+
+  /**
+   * @return Instance of ZKTable.
+   */
+  public ZKTable getZKTable() {
+    // These are 'expensive' to make involving trip to zk ensemble so allow
+    // sharing.
+    return this.zkTable;
   }
 
   /**
@@ -200,8 +204,6 @@ public class AssignmentManager extends ZooKeeperListener {
     // Returns servers who have not checked in (assumed dead) and their regions
     Map<HServerInfo,List<Pair<HRegionInfo,Result>>> deadServers =
       rebuildUserRegions();
-    // Pickup any disabled tables from ZK
-    rebuildDisabledTables();
     // Process list of dead servers
     processDeadServers(deadServers);
     // Check existing regions in transition
@@ -593,14 +595,10 @@ public class AssignmentManager extends ZooKeeperListener {
   public void setOffline(HRegionInfo regionInfo) {
     synchronized (this.regions) {
       HServerInfo serverInfo = this.regions.remove(regionInfo);
-      if (serverInfo != null) {
-        List<HRegionInfo> serverRegions = this.servers.get(serverInfo);
-        if (!serverRegions.remove(regionInfo)) {
-          LOG.warn("Asked offline a region that was not on expected server: " +
-            regionInfo + ", " + serverInfo.getServerName());
-        }
-      } else {
-        LOG.warn("Asked offline a region that was not online: " + regionInfo);
+      if (serverInfo == null) return;
+      List<HRegionInfo> serverRegions = this.servers.get(serverInfo);
+      if (!serverRegions.remove(regionInfo)) {
+        LOG.warn("No " + regionInfo + " on " + serverInfo);
       }
     }
   }
@@ -651,9 +649,10 @@ public class AssignmentManager extends ZooKeeperListener {
   public void assign(HRegionInfo region, boolean setOfflineInZK,
       boolean forceNewPlan) {
     String tableName = region.getTableDesc().getNameAsString();
-    if (isTableDisabled(tableName)) {
-      LOG.info("Table " + tableName + " disabled; skipping assign of " +
-        region.getRegionNameAsString());
+    boolean disabled = this.zkTable.isDisabledTable(tableName);
+    if (disabled || this.zkTable.isDisablingTable(tableName)) {
+      LOG.info("Table " + tableName + (disabled? " disabled;": " disabling;") +
+        " skipping assign of " + region.getRegionNameAsString());
       offlineDisabledRegion(region);
       return;
     }
@@ -674,7 +673,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param destination
    * @param regions Regions to assign.
    */
-  public void assign(final HServerInfo destination,
+  void assign(final HServerInfo destination,
       final List<HRegionInfo> regions) {
     LOG.debug("Bulk assigning " + regions.size() + " region(s) to " +
       destination.getServerName());
@@ -958,7 +957,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * Updates the RegionState and sends the CLOSE RPC.
    * <p>
    * If a RegionPlan is already set, it will remain.  If this is being used
-   * to disable a table, be sure to use {@link #disableTable(String)} to ensure
+   * to disable a table, be sure to use {@link #setDisabledTable(String)} to ensure
    * regions are not onlined after being closed.
    *
    * @param regionName server to be unassigned
@@ -973,7 +972,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * Updates the RegionState and sends the CLOSE RPC.
    * <p>
    * If a RegionPlan is already set, it will remain.  If this is being used
-   * to disable a table, be sure to use {@link #disableTable(String)} to ensure
+   * to disable a table, be sure to use {@link #setDisabledTable(String)} to ensure
    * regions are not onlined after being closed.
    *
    * @param regionName server to be unassigned
@@ -1104,23 +1103,23 @@ public class AssignmentManager extends ZooKeeperListener {
    * This is a synchronous call and will return once every region has been
    * assigned.  If anything fails, an exception is thrown and the cluster
    * should be shutdown.
+   * @throws InterruptedException
+   * @throws IOException
    */
-  public void assignAllUserRegions() throws IOException {
-
-    Map<HServerInfo, List<HRegionInfo>> bulkPlan = null;
-
+  public void assignAllUserRegions() throws IOException, InterruptedException {
     // Get all available servers
     List<HServerInfo> servers = serverManager.getOnlineServersList();
 
     // Scan META for all user regions, skipping any disabled tables
     Map<HRegionInfo,HServerAddress> allRegions =
-      MetaReader.fullScan(catalogTracker, disabledTables);
+      MetaReader.fullScan(catalogTracker, this.zkTable.getDisabledTables());
     if (allRegions == null || allRegions.isEmpty()) return;
 
     // Determine what type of assignment to do on startup
-    boolean retainAssignment = master.getConfiguration().getBoolean(
-        "hbase.master.startup.retainassign", true);
+    boolean retainAssignment = master.getConfiguration().
+      getBoolean("hbase.master.startup.retainassign", true);
 
+    Map<HServerInfo, List<HRegionInfo>> bulkPlan = null;
     if (retainAssignment) {
       // Reuse existing assignment info
       bulkPlan = LoadBalancer.retainAssignment(allRegions, servers);
@@ -1129,69 +1128,105 @@ public class AssignmentManager extends ZooKeeperListener {
       bulkPlan = LoadBalancer.roundRobinAssignment(
           new ArrayList<HRegionInfo>(allRegions.keySet()), servers);
     }
-
     LOG.info("Bulk assigning " + allRegions.size() + " region(s) across " +
-      servers.size() + " server(s)");
+      servers.size() + " server(s), retainAssignment=" + retainAssignment);
 
-    // Make a fixed thread count pool to run bulk assignments.  Thought is that
-    // if a 1k cluster, running 1k bulk concurrent assignment threads will kill
-    // master, HDFS or ZK?
-    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
-    builder.setDaemon(true);
-    builder.setNameFormat(this.master.getServerName() + "-BulkAssigner-%1$d");
-    builder.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-      @Override
-      public void uncaughtException(Thread t, Throwable e) {
-        // Abort if exception of any kind.
-        master.abort("Uncaught exception bulk assigning in " + t.getName(), e);
-      }
-    });
-    int threadCount =
-      this.master.getConfiguration().getInt("hbase.bulk.assignment.threadpool.size", 20);
-    java.util.concurrent.ExecutorService pool =
-      Executors.newFixedThreadPool(threadCount, builder.build());
-    // Disable timing out regions in transition up in zk while bulk assigning.
-    this.timeoutMonitor.bulkAssign(true);
-    try {
-      for (Map.Entry<HServerInfo, List<HRegionInfo>> e: bulkPlan.entrySet()) {
-        pool.execute(new SingleServerBulkAssigner(e.getKey(), e.getValue()));
-      }
-      // Wait for no regions to be in transition
-      try {
-        // How long to wait on empty regions-in-transition.  When we timeout,
-        // we'll put back in place the monitor of R-I-T.  It should do fixup
-        // if server crashed during bulk assign, etc.
-        long timeout =
-          this.master.getConfiguration().getInt("hbase.bulk.assignment.waiton.empty.rit", 10 * 60 * 1000);
-        waitUntilNoRegionsInTransition(timeout);
-      } catch (InterruptedException e) {
-        LOG.error("Interrupted waiting for regions to be assigned", e);
-        throw new IOException(e);
-      }
-    } finally {
-      // We're done with the pool.  It'll exit when its done all in queue.
-      pool.shutdown();
-      // Reenable timing out regions in transition up in zi.
-      this.timeoutMonitor.bulkAssign(false);
-    }
+    // Use fixed count thread pool assigning.
+    BulkAssigner ba = new BulkStartupAssigner(this.master, bulkPlan, this);
+    ba.bulkAssign();
     LOG.info("Bulk assigning done");
+  }
+
+  /**
+   * Run bulk assign on startup.
+   */
+  static class BulkStartupAssigner extends BulkAssigner {
+    private final Map<HServerInfo, List<HRegionInfo>> bulkPlan;
+    private final AssignmentManager assignmentManager;
+
+    BulkStartupAssigner(final Server server,
+        final Map<HServerInfo, List<HRegionInfo>> bulkPlan,
+        final AssignmentManager am) {
+      super(server);
+      this.bulkPlan = bulkPlan;
+      this.assignmentManager = am;
+    }
+
+    @Override
+    public boolean bulkAssign() throws InterruptedException {
+      // Disable timing out regions in transition up in zk while bulk assigning.
+      this.assignmentManager.timeoutMonitor.bulkAssign(true);
+      try {
+        return super.bulkAssign();
+      } finally {
+        // Reenable timing out regions in transition up in zi.
+        this.assignmentManager.timeoutMonitor.bulkAssign(false);
+      }
+    }
+
+    @Override
+   protected String getThreadNamePrefix() {
+    return super.getThreadNamePrefix() + "-startup";
+   }
+
+    @Override
+    protected void populatePool(java.util.concurrent.ExecutorService pool) {
+      for (Map.Entry<HServerInfo, List<HRegionInfo>> e: this.bulkPlan.entrySet()) {
+        pool.execute(new SingleServerBulkAssigner(e.getKey(), e.getValue(),
+          this.assignmentManager));
+      }
+    }
+
+    protected boolean waitUntilDone(final long timeout)
+    throws InterruptedException {
+      return this.assignmentManager.waitUntilNoRegionsInTransition(timeout);
+    }
   }
 
   /**
    * Manage bulk assigning to a server.
    */
-  class SingleServerBulkAssigner implements Runnable {
+  static class SingleServerBulkAssigner implements Runnable {
     private final HServerInfo regionserver;
     private final List<HRegionInfo> regions;
+    private final AssignmentManager assignmentManager;
+
     SingleServerBulkAssigner(final HServerInfo regionserver,
-        final List<HRegionInfo> regions) {
+        final List<HRegionInfo> regions, final AssignmentManager am) {
       this.regionserver = regionserver;
       this.regions = regions;
+      this.assignmentManager = am;
     }
     @Override
     public void run() {
-      assign(this.regionserver, this.regions);
+      this.assignmentManager.assign(this.regionserver, this.regions);
     }
+  }
+
+  /**
+   * Wait until no regions in transition.
+   * @param timeout How long to wait.
+   * @return True if nothing in regions in transition.
+   * @throws InterruptedException
+   */
+  boolean waitUntilNoRegionsInTransition(final long timeout)
+  throws InterruptedException {
+    // Blocks until there are no regions in transition. It is possible that
+    // there
+    // are regions in transition immediately after this returns but guarantees
+    // that if it returns without an exception that there was a period of time
+    // with no regions in transition from the point-of-view of the in-memory
+    // state of the Master.
+    long startTime = System.currentTimeMillis();
+    long remaining = timeout;
+    synchronized (regionsInTransition) {
+      while (regionsInTransition.size() > 0 && !this.master.isStopped()
+          && remaining > 0) {
+        regionsInTransition.wait(remaining);
+        remaining = timeout - (System.currentTimeMillis() - startTime);
+      }
+    }
+    return regionsInTransition.isEmpty();
   }
 
   /**
@@ -1291,28 +1326,6 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Blocks until there are no regions in transition.  It is possible that there
-   * are regions in transition immediately after this returns but guarantees
-   * that if it returns without an exception that there was a period of time
-   * with no regions in transition from the point-of-view of the in-memory
-   * state of the Master.
-   * @param timeout How long to wait on empty regions-in-transition.
-   * @throws InterruptedException
-   */
-  public void waitUntilNoRegionsInTransition(final long timeout)
-  throws InterruptedException {
-    long startTime = System.currentTimeMillis();
-    long remaining = timeout;
-    synchronized (this.regionsInTransition) {
-      while(this.regionsInTransition.size() > 0 &&
-          !this.master.isStopped() && remaining > 0) {
-        this.regionsInTransition.wait(remaining);
-        remaining = timeout - (System.currentTimeMillis() - startTime);
-      }
-    }
-  }
-
-  /**
    * @return A copy of the Map of regions currently in transition.
    */
   public NavigableMap<String, RegionState> getRegionsInTransition() {
@@ -1370,18 +1383,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Checks if the specified table has been disabled by the user.
-   * @param tableName
-   * @return
-   */
-  public boolean isTableDisabled(String tableName) {
-    synchronized(disabledTables) {
-      return disabledTables.contains(tableName);
-    }
-  }
-
-  /**
-   * Wait on regions to clean regions-in-transition.
+   * Wait on region to clear regions-in-transition.
    * @param hri Region to wait on.
    * @throws IOException
    */
@@ -1401,82 +1403,22 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
-  /**
-   * Checks if the table of the specified region has been disabled by the user.
-   * @param regionName
-   * @return
-   */
-  public boolean isTableOfRegionDisabled(byte [] regionName) {
-    return isTableDisabled(Bytes.toString(
-        HRegionInfo.getTableName(regionName)));
-  }
-
-  /**
-   * Sets the specified table to be disabled.
-   * @param tableName table to be disabled
-   */
-  public void disableTable(String tableName) {
-    synchronized(disabledTables) {
-      if(!isTableDisabled(tableName)) {
-        disabledTables.add(tableName);
-        try {
-          ZKTableDisable.disableTable(master.getZooKeeper(), tableName);
-        } catch (KeeperException e) {
-          LOG.warn("ZK error setting table as disabled", e);
-        }
-      }
-    }
-  }
-
-  /**
-   * Unsets the specified table from being disabled.
-   * <p>
-   * This operation only acts on the in-memory
-   * @param tableName table to be undisabled
-   */
-  public void undisableTable(String tableName) {
-    synchronized(disabledTables) {
-      if(isTableDisabled(tableName)) {
-        disabledTables.remove(tableName);
-        try {
-          ZKTableDisable.undisableTable(master.getZooKeeper(), tableName);
-        } catch (KeeperException e) {
-          LOG.warn("ZK error setting table as disabled", e);
-        }
-      }
-    }
-  }
-
-  /**
-   * Rebuild the set of disabled tables from zookeeper.  Used during master
-   * failover.
-   */
-  private void rebuildDisabledTables() {
-    synchronized(disabledTables) {
-      List<String> disabledTables;
-      try {
-        disabledTables = ZKTableDisable.getDisabledTables(master.getZooKeeper());
-      } catch (KeeperException e) {
-        LOG.warn("ZK error getting list of disabled tables", e);
-        return;
-      }
-      if(!disabledTables.isEmpty()) {
-        LOG.info("Rebuilt list of " + disabledTables.size() + " disabled " +
-            "tables from zookeeper");
-        this.disabledTables.addAll(disabledTables);
-      }
-    }
-  }
 
   /**
    * Gets the online regions of the specified table.
+   * This method looks at the in-memory state.  It does not go to <code>.META.</code>.
+   * Only returns <em>online</em> regions.  If a region on this table has been
+   * closed during a disable, etc., it will be included in the returned list.
+   * So, the returned list may not necessarily be ALL regions in this table, its
+   * all the ONLINE regions in the table.
    * @param tableName
-   * @return
+   * @return Online regions from <code>tableName</code>
    */
   public List<HRegionInfo> getRegionsOfTable(byte[] tableName) {
     List<HRegionInfo> tableRegions = new ArrayList<HRegionInfo>();
-    for(HRegionInfo regionInfo : regions.tailMap(new HRegionInfo(
-        new HTableDescriptor(tableName), null, null)).keySet()) {
+    HRegionInfo boundary =
+      new HRegionInfo(new HTableDescriptor(tableName), null, null);
+    for (HRegionInfo regionInfo: this.regions.tailMap(boundary).keySet()) {
       if(Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
         tableRegions.add(regionInfo);
       } else {

@@ -87,6 +87,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Is table disabled?
+    def disabled?(table_name)
+      @admin.isTableDisabled(table_name)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Drops a table
     def drop(table_name)
       raise ArgumentError, "Table #{table_name} does not exist.'" unless exists?(table_name)

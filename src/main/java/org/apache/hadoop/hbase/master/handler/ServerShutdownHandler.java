@@ -167,7 +167,7 @@ public class ServerShutdownHandler extends EventHandler {
       AssignmentManager assignmentManager, CatalogTracker catalogTracker)
   throws IOException {
     // If table is not disabled but the region is offlined,
-    boolean disabled = assignmentManager.isTableDisabled(
+    boolean disabled = assignmentManager.getZKTable().isDisabledTable(
         hri.getTableDesc().getNameAsString());
     if (disabled) return false;
     if (hri.isOffline() && hri.isSplit()) {

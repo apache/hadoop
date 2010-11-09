@@ -713,6 +713,23 @@ public class ZKUtil {
   }
 
   /**
+   * Set data into node creating node if it doesn't yet exist.
+   * Does not set watch.
+   * @param zkw zk reference
+   * @param znode path of node
+   * @param data data to set for node
+   * @throws KeeperException 
+   */
+  public static void createSetData(final ZooKeeperWatcher zkw, final String znode,
+      final byte [] data)
+  throws KeeperException {
+    if (checkExists(zkw, znode) != -1) {
+      ZKUtil.createWithParents(zkw, znode);
+    }
+    ZKUtil.setData(zkw, znode, data);
+  }
+
+  /**
    * Sets the data of the existing znode to be the specified data.  The node
    * must exist but no checks are done on the existing data or version.
    *
@@ -902,8 +919,7 @@ public class ZKUtil {
    * @param znode path of node
    * @throws KeeperException if unexpected zookeeper exception
    */
-  public static void createWithParents(ZooKeeperWatcher zkw,
-      String znode)
+  public static void createWithParents(ZooKeeperWatcher zkw, String znode)
   throws KeeperException {
     try {
       if(znode == null) {

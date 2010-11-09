@@ -404,7 +404,8 @@ public class LoadBalancer {
       assignments.put(server, new ArrayList<HRegionInfo>());
     }
     for (Map.Entry<HRegionInfo, HServerAddress> region : regions.entrySet()) {
-      HServerInfo server = serverMap.get(region.getValue());
+      HServerAddress hsa = region.getValue();
+      HServerInfo server = hsa == null? null: serverMap.get(hsa);
       if (server != null) {
         assignments.get(server).add(region.getKey());
       } else {
