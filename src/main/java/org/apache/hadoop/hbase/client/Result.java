@@ -24,6 +24,7 @@ import com.google.common.collect.Ordering;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.SplitKeyValue;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 
@@ -65,7 +66,7 @@ import java.util.TreeMap;
  * through {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
  * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.
  */
-public class Result implements Writable {
+public class Result implements Writable, WritableWithSize {
   private static final byte RESULT_VERSION = (byte)1;
 
   private KeyValue [] kvs = null;
@@ -523,6 +524,20 @@ public class Result implements Writable {
     this.kvs = kvs.toArray(new KeyValue[kvs.size()]);
   }
 
+  public long getWritableSize() {
+    if (isEmpty())
+      return Bytes.SIZEOF_INT; // int size = 0
+
+    long size = Bytes.SIZEOF_INT; // totalLen
+
+    for (KeyValue kv : kvs) {
+      size += kv.getLength();
+      size += Bytes.SIZEOF_INT; // kv.getLength
+    }
+
+    return size;
+  }
+
   public void write(final DataOutput out)
   throws IOException {
     if(isEmpty()) {
@@ -538,6 +553,29 @@ public class Result implements Writable {
         out.write(kv.getBuffer(), kv.getOffset(), kv.getLength());
       }
     }
+  }
+
+  public static long getWriteArraySize(Result [] results) {
+    long size = Bytes.SIZEOF_BYTE; // RESULT_VERSION
+    if (results == null || results.length == 0) {
+      size += Bytes.SIZEOF_INT;
+      return size;
+    }
+
+    size += Bytes.SIZEOF_INT; // results.length
+    size += Bytes.SIZEOF_INT; // bufLen
+    for (Result result : results) {
+      size += Bytes.SIZEOF_INT; // either 0 or result.size()
+      if (result == null || result.isEmpty())
+        continue;
+
+      for (KeyValue kv : result.raw()) {
+        size += Bytes.SIZEOF_INT; // kv.getLength();
+        size += kv.getLength();
+      }
+    }
+
+    return size;
   }
 
   public static void writeArray(final DataOutput out, Result [] results)

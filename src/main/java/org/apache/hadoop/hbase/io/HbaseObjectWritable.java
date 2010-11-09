@@ -96,7 +96,7 @@ import org.apache.hadoop.io.WritableFactories;
  * name and reflection to instantiate class was costing in excess of the cell
  * handling).
  */
-public class HbaseObjectWritable implements Writable, Configurable {
+public class HbaseObjectWritable implements Writable, WritableWithSize, Configurable {
   protected final static Log LOG = LogFactory.getLog(HbaseObjectWritable.class);
 
   // Here we maintain two static maps of classes to code and vice versa.
@@ -260,6 +260,10 @@ public class HbaseObjectWritable implements Writable, Configurable {
     writeObject(out, instance, declaredClass, conf);
   }
 
+  public long getWritableSize() {
+    return getWritableSize(instance, declaredClass, conf);
+  }
+
   private static class NullInstance extends Configured implements Writable {
     Class<?> declaredClass;
     /** default constructor for writable */
@@ -314,6 +318,27 @@ public class HbaseObjectWritable implements Writable, Configurable {
     out.writeByte(code);
   }
 
+
+  public static long getWritableSize(Object instance, Class declaredClass,
+                                     Configuration conf) {
+    long size = Bytes.SIZEOF_BYTE; // code
+    if (instance == null) {
+      return 0L;
+    }
+
+    if (declaredClass.isArray()) {
+      if (declaredClass.equals(Result[].class)) {
+
+        return size + Result.getWriteArraySize((Result[])instance);
+      }
+    }
+    if (declaredClass.equals(Result.class)) {
+      Result r = (Result) instance;
+      // one extra class code for writable instance.
+      return r.getWritableSize() + size + Bytes.SIZEOF_BYTE;
+    }
+    return 0L; // no hint is the default.
+  }
   /**
    * Write a {@link Writable}, {@link String}, primitive type, or an array of
    * the preceding.
