@@ -116,15 +116,16 @@ public class CloseRegionHandler extends EventHandler {
       // TODO: If we need to keep updating CLOSING stamp to prevent against
       //       a timeout if this is long-running, need to spin up a thread?
       region.close(abort);
-      this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
     } catch (IOException e) {
-      LOG.error("Closing region " + regionInfo.getRegionNameAsString(), e);
-      if (this.zk) deleteClosingState();
+      LOG.error("Unrecoverable exception while closing region " +
+          regionInfo.getRegionNameAsString() + ", still finishing close", e);
     }
+
+    this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
 
     if (this.zk) setClosedState(expectedVersion, region);
 
-    // Done!  Successful region open
+    // Done!  Region is closed on this RS
     LOG.debug("Closed region " + region.getRegionNameAsString());
   }
 
@@ -151,18 +152,6 @@ public class CloseRegionHandler extends EventHandler {
     } catch (IOException e) {
       LOG.error("Failed to close region after failing to transition", e);
       return;
-    }
-  }
-
-  /**
-   * @return True if succeeded, false otherwise.
-   */
-  private void deleteClosingState() {
-    try {
-      ZKAssign.deleteClosingNode(server.getZooKeeper(),
-          this.regionInfo.getEncodedName()); 
-    } catch (KeeperException e1) {
-      LOG.error("Error deleting CLOSING node");
     }
   }
 

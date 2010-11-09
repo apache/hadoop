@@ -662,6 +662,8 @@ Release 0.90.0 - Unreleased
                that are equal to too
    HBASE-3141  Master RPC server needs to be started before an RS can check in
    HBASE-3112  Enable and disable of table needs a bit of loving in new master
+   HBASE-3207  If we get IOException when closing a region, we should still
+               remove it from online regions and complete the close in ZK
 
 
   IMPROVEMENTS
