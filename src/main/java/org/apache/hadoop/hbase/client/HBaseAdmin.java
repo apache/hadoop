@@ -473,6 +473,11 @@ public class HBaseAdmin implements Abortable {
     LOG.info("Enabled table " + Bytes.toString(tableName));
   }
 
+  public void enableTableAsync(final String tableName)
+  throws IOException {
+    enableTableAsync(Bytes.toBytes(tableName));
+  }
+
   /**
    * Brings a table on-line (enables it).  Method returns immediately though
    * enable of table may take some time to complete, especially if the table
@@ -492,6 +497,10 @@ public class HBaseAdmin implements Abortable {
       throw e.unwrapRemoteException();
     }
     LOG.info("Started enable of " + Bytes.toString(tableName));
+  }
+
+  public void disableTableAsync(final String tableName) throws IOException {
+    disableTableAsync(Bytes.toBytes(tableName));
   }
 
   /**
