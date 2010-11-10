@@ -2373,7 +2373,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  @Override
   public HRegionInfo[] getRegionsAssignment() throws IOException {
     HRegionInfo[] regions = new HRegionInfo[onlineRegions.size()];
     Iterator<HRegion> ite = onlineRegions.values().iterator();
