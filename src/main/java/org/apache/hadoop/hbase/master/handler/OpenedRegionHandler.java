@@ -92,7 +92,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
           regionInfo.getEncodedName() + ")", e);
     }
     this.assignmentManager.regionOnline(regionInfo, serverInfo);
-    if (this.assignmentManager.getZKTable().isDisabledTable(
+    if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
         regionInfo.getTableDesc().getNameAsString())) {
       LOG.debug("Opened region " + regionInfo.getRegionNameAsString() + " but "
           + "this table is disabled, triggering close of region");

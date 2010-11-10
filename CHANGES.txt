@@ -665,6 +665,8 @@ Release 0.90.0 - Unreleased
    HBASE-3207  If we get IOException when closing a region, we should still
                remove it from online regions and complete the close in ZK
    HBASE-3199  large response handling: some fixups and cleanups
+   HBASE-3212  More testing of enable/disable uncovered base condition not in
+               place; i.e. that only one enable/disable runs at a time
 
 
   IMPROVEMENTS
