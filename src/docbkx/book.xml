@@ -89,14 +89,13 @@
 
       <para><itemizedlist>
           <para>Here is a quick guide to starting up a standalone HBase
-          instance, creating a table and inserting rows into a table via the
+          instance (an HBase instance that uses the local filesystem rather than
+          Hadoop HDFS), creating a table and inserting rows into a table via the
           <link linkend="shell">HBase Shell</link>, and then cleaning up and shutting
-          down your running instance.
+          down your running instance. The below exercise should take no more than
+          ten minutes (not including download time).
       </para>
-          <para>Be warned that the HBase started using these
-              instructions is for play only.  See the next section for how to
-              set up a non-toy HBase deploy.</para>
-
+          
           <listitem>
             <para>Download and unpack the latest stable release.</para>
 
@@ -248,7 +247,8 @@ stopping hbase...............</programlisting></para>
       </para>
       <section><title>Where to go next
       </title>
-      <para>Move on to the next section, the <link linkend="notsoquick">Not-so-quick Start Guide</link>
+      <para>The above described standalone setup is good for testing and experiments only.
+      Move on to the next section, the <link linkend="notsoquick">Not-so-quick Start Guide</link>
       where we'll go into depth on the different HBase run modes, requirements and critical
       configurations needed setting up a distributed HBase deploy.
       </para>
