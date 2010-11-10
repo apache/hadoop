@@ -671,6 +671,8 @@ Release 0.90.0 - Unreleased
    	       corrupted data
    HBASE-3213  If do abort of backup master will get NPE instead of graceful
                abort
+   HBASE-3214  TestMasterFailover.testMasterFailoverWithMockedRITOnDeadRS is
+               failing (Gary via jgray)
 
 
   IMPROVEMENTS

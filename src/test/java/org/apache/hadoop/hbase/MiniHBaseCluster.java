@@ -265,9 +265,10 @@ public class MiniHBaseCluster {
 
       // manually add the regionservers as other users
       for (int i=0; i<nRegionNodes; i++) {
-        User user = HBaseTestingUtility.getDifferentUser(conf,
+        Configuration rsConf = HBaseConfiguration.create(conf);
+        User user = HBaseTestingUtility.getDifferentUser(rsConf,
             ".hfs."+index++);
-        hbaseCluster.addRegionServer(i, user);
+        hbaseCluster.addRegionServer(rsConf, i, user);
       }
 
       hbaseCluster.startup();
@@ -289,16 +290,13 @@ public class MiniHBaseCluster {
    */
   public JVMClusterUtil.RegionServerThread startRegionServer()
       throws IOException {
+    final Configuration newConf = HBaseConfiguration.create(conf);
     User rsUser =
-        HBaseTestingUtility.getDifferentUser(conf, ".hfs."+index++);
+        HBaseTestingUtility.getDifferentUser(newConf, ".hfs."+index++);
     JVMClusterUtil.RegionServerThread t =  null;
     try {
-      t = rsUser.runAs(
-          new PrivilegedExceptionAction<JVMClusterUtil.RegionServerThread>() {
-            public JVMClusterUtil.RegionServerThread run() throws Exception {
-              return hbaseCluster.addRegionServer();
-            }
-      });
+      t = hbaseCluster.addRegionServer(
+          newConf, hbaseCluster.getRegionServers().size(), rsUser);
       t.start();
       t.waitForServerOnline();
     } catch (InterruptedException ie) {
@@ -365,9 +363,18 @@ public class MiniHBaseCluster {
    * @return New RegionServerThread
    */
   public JVMClusterUtil.MasterThread startMaster() throws IOException {
-    JVMClusterUtil.MasterThread t = this.hbaseCluster.addMaster();
-    t.start();
-    t.waitForServerOnline();
+    Configuration c = HBaseConfiguration.create(conf);
+    User user =
+        HBaseTestingUtility.getDifferentUser(c, ".hfs."+index++);
+
+    JVMClusterUtil.MasterThread t = null;
+    try {
+      t = hbaseCluster.addMaster(c, hbaseCluster.getMasters().size(), user);
+      t.start();
+      t.waitForServerOnline();
+    } catch (InterruptedException ie) {
+      throw new IOException("Interrupted executing UserGroupInformation.doAs()", ie);
+    }
     return t;
   }
 

@@ -144,7 +144,7 @@ public class LocalHBaseCluster {
       (Class<? extends HMaster>)conf.getClass(HConstants.MASTER_IMPL,
           masterClass);
     for (int i = 0; i < noMasters; i++) {
-      addMaster(i);
+      addMaster(new Configuration(conf), i);
     }
     // Start the HRegionServers.
     this.regionServerClass =
@@ -152,60 +152,62 @@ public class LocalHBaseCluster {
        regionServerClass);
 
     for (int i = 0; i < noRegionServers; i++) {
-      addRegionServer(i);
+      addRegionServer(new Configuration(conf), i);
     }
   }
 
-  public JVMClusterUtil.RegionServerThread addRegionServer() throws IOException {
-    return addRegionServer(this.regionThreads.size());
+  public JVMClusterUtil.RegionServerThread addRegionServer()
+      throws IOException {
+    return addRegionServer(new Configuration(conf), this.regionThreads.size());
   }
 
-  public JVMClusterUtil.RegionServerThread addRegionServer(final int index)
+  public JVMClusterUtil.RegionServerThread addRegionServer(
+      Configuration config, final int index)
   throws IOException {
     // Create each regionserver with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
     JVMClusterUtil.RegionServerThread rst =
-      JVMClusterUtil.createRegionServerThread(new Configuration(this.conf),
-        this.regionServerClass, index);
+      JVMClusterUtil.createRegionServerThread(config,
+          this.regionServerClass, index);
     this.regionThreads.add(rst);
     return rst;
   }
 
   public JVMClusterUtil.RegionServerThread addRegionServer(
-      final int index, User user)
+      final Configuration config, final int index, User user)
   throws IOException, InterruptedException {
     return user.runAs(
         new PrivilegedExceptionAction<JVMClusterUtil.RegionServerThread>() {
           public JVMClusterUtil.RegionServerThread run() throws Exception {
-            return addRegionServer(index);
+            return addRegionServer(config, index);
           }
         });
   }
 
   public JVMClusterUtil.MasterThread addMaster() throws IOException {
-    return addMaster(this.masterThreads.size());
+    return addMaster(new Configuration(conf), this.masterThreads.size());
   }
 
-  public JVMClusterUtil.MasterThread addMaster(final int index)
+  public JVMClusterUtil.MasterThread addMaster(Configuration c, final int index)
   throws IOException {
     // Create each master with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
     JVMClusterUtil.MasterThread mt =
-      JVMClusterUtil.createMasterThread(new Configuration(this.conf),
+      JVMClusterUtil.createMasterThread(c,
         this.masterClass, index);
     this.masterThreads.add(mt);
     return mt;
   }
 
   public JVMClusterUtil.MasterThread addMaster(
-      final int index, User user)
+      final Configuration c, final int index, User user)
   throws IOException, InterruptedException {
     return user.runAs(
         new PrivilegedExceptionAction<JVMClusterUtil.MasterThread>() {
           public JVMClusterUtil.MasterThread run() throws Exception {
-            return addMaster(index);
+            return addMaster(c, index);
           }
         });
   }
