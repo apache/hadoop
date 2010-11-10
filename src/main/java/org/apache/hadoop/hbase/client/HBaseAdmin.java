@@ -57,7 +57,9 @@ import org.apache.hadoop.ipc.RemoteException;
  * administrative functions.  Use HBaseAdmin to create, drop, list, enable and 
  * disable tables. Use it also to add and drop table column families. 
  * 
- * See {@link HTable} to add, update, and delete data from an individual table.
+ * <p>See {@link HTable} to add, update, and delete data from an individual table.
+ * <p>Currently HBaseAdmin instances are not expected to be long-lived.  For
+ * example, an HBaseAdmin instance will not ride over a Master restart.
  */
 public class HBaseAdmin implements Abortable {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
