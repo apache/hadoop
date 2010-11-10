@@ -23,8 +23,8 @@ module Shell
     class Truncate < Command
       def help
         return <<-EOF
-          Disables, drops and recreates the specified table.
-        EOF
+  Disables, drops and recreates the specified table.
+EOF
       end
 
       def command(table)

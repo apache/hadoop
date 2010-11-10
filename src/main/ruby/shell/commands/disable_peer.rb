@@ -23,15 +23,15 @@ module Shell
     class DisablePeer< Command
       def help
         return <<-EOF
-          Stops the replication stream to the specified cluster, but still
-          keeps track of new edits to replicate.
+Stops the replication stream to the specified cluster, but still
+keeps track of new edits to replicate.
 
-          CURRENTLY UNSUPPORTED
+CURRENTLY UNSUPPORTED
 
-          Examples:
+Examples:
 
-            hbase> disable_peer '1'
-        EOF
+  hbase> disable_peer '1'
+EOF
       end
 
       def command(id)

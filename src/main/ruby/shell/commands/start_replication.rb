@@ -23,14 +23,14 @@ module Shell
     class StartReplication < Command
       def help
         return <<-EOF
-          Restarts all the replication features. The state in which each
-          stream starts in is undetermined.
-          WARNING:
-          start/stop replication is only meant to be used in critical load situations.
-          Examples:
+Restarts all the replication features. The state in which each
+stream starts in is undetermined.
+WARNING:
+start/stop replication is only meant to be used in critical load situations.
+Examples:
 
-            hbase> start_replication
-        EOF
+  hbase> start_replication
+EOF
       end
 
       def command

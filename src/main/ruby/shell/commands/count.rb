@@ -23,19 +23,19 @@ module Shell
     class Count < Command
       def help
         return <<-EOF
-          Count the number of rows in a table. This operation may take a LONG
-          time (Run '$HADOOP_HOME/bin/hadoop jar hbase.jar rowcount' to run a
-          counting mapreduce job). Current count is shown every 1000 rows by
-          default. Count interval may be optionally specified. Scan caching
-          is enabled on count scans by default. Default cache size is 10 rows.
-          If your rows are small in size, you may want to increase this
-          parameter. Examples:
+Count the number of rows in a table. This operation may take a LONG
+time (Run '$HADOOP_HOME/bin/hadoop jar hbase.jar rowcount' to run a
+counting mapreduce job). Current count is shown every 1000 rows by
+default. Count interval may be optionally specified. Scan caching
+is enabled on count scans by default. Default cache size is 10 rows.
+If your rows are small in size, you may want to increase this
+parameter. Examples:
 
-          hbase> count 't1'
-          hbase> count 't1', INTERVAL => 100000
-          hbase> count 't1', CACHE => 1000
-          hbase> count 't1', INTERVAL => 10, CACHE => 1000
-        EOF
+ hbase> count 't1'
+ hbase> count 't1', INTERVAL => 100000
+ hbase> count 't1', CACHE => 1000
+ hbase> count 't1', INTERVAL => 10, CACHE => 1000
+EOF
       end
 
       def command(table, params = {})

@@ -23,14 +23,14 @@ module Shell
     class StopReplication < Command
       def help
         return <<-EOF
-          Stops all the replication features. The state in which each
-          stream stops in is undetermined.
-          WARNING:
-          start/stop replication is only meant to be used in critical load situations.
-          Examples:
+Stops all the replication features. The state in which each
+stream stops in is undetermined.
+WARNING:
+start/stop replication is only meant to be used in critical load situations.
+Examples:
 
-            hbase> stop_replication
-        EOF
+  hbase> stop_replication
+EOF
       end
 
       def command

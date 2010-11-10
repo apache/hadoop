@@ -23,8 +23,8 @@ module Shell
     class Disable < Command
       def help
         return <<-EOF
-          Start disable of named table: e.g. "hbase> disable 't1'"
-        EOF
+Start disable of named table: e.g. "hbase> disable 't1'"
+EOF
       end
 
       def command(table)

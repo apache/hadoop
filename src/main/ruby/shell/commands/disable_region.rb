@@ -23,10 +23,10 @@ module Shell
     class DisableRegion < Command
       def help
         return <<-EOF
-          Disable a single region. For example:
+Disable a single region. For example:
 
-            hbase> disable_region 'REGIONNAME'
-        EOF
+  hbase> disable_region 'REGIONNAME'
+EOF
       end
 
       def command(region_name)

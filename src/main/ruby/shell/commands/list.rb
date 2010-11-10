@@ -23,12 +23,12 @@ module Shell
     class List < Command
       def help
         return <<-EOF
-          List all tables in hbase. Optional regular expression parameter could
-          be used to filter the output. Examples:
+List all tables in hbase. Optional regular expression parameter could
+be used to filter the output. Examples:
 
-            hbase> list
-            hbase> list 'abc.*'
-        EOF
+  hbase> list
+  hbase> list 'abc.*'
+EOF
       end
 
       def command(regex = ".*")

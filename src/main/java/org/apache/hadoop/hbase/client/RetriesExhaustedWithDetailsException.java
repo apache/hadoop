@@ -114,6 +114,7 @@ public class RetriesExhaustedWithDetailsException extends RetriesExhaustedExcept
   public static Map<String, Integer> classifyExs(List<Throwable> ths) {
     Map<String, Integer> cls = new HashMap<String, Integer>();
     for (Throwable t : ths) {
+      if (t == null) continue;
       String name = t.getClass().getSimpleName();
       Integer i = cls.get(name);
       if (i == null) {

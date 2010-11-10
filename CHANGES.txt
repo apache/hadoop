@@ -1144,6 +1144,7 @@ Release 0.90.0 - Unreleased
    HBASE-3090  Don't include hbase-default in conf/ assembly
    HBASE-3161  Provide option for Stargate to only serve GET requests
                (Bennett Neale via Stack)
+   HBASE-3218  Shell help cleanup/cosmetics/edit
 
 
   NEW FEATURES

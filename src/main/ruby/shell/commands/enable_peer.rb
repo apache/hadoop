@@ -23,15 +23,15 @@ module Shell
     class EnablePeer< Command
       def help
         return <<-EOF
-          Restarts the replication to the specified peer cluster,
-          continuing from where it was disabled.
+Restarts the replication to the specified peer cluster,
+continuing from where it was disabled.
 
-          CURRENTLY UNSUPPORTED
+CURRENTLY UNSUPPORTED
 
-          Examples:
+Examples:
 
-            hbase> enable_peer '1'
-        EOF
+  hbase> enable_peer '1'
+EOF
       end
 
       def command(id)

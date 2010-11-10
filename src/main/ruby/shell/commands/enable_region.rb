@@ -23,10 +23,10 @@ module Shell
     class EnableRegion < Command
       def help
         return <<-EOF
-          Enable a single region. For example:
+Enable a single region. For example:
 
-            hbase> enable_region 'REGIONNAME'
-        EOF
+  hbase> enable_region 'REGIONNAME'
+EOF
       end
 
       def command(region_name)

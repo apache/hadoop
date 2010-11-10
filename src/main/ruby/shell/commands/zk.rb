@@ -23,9 +23,9 @@ module Shell
     class Zk < Command
       def help
         return <<-EOF
-          Low level ZooKeeper surgery tools. Type "zk 'help'" for more
-          information (Yes, you must quote 'help').
-        EOF
+Low level ZooKeeper surgery tools. Type "zk 'help'" for more
+information (Yes, you must quote 'help').
+EOF
       end
 
       def command(*args)

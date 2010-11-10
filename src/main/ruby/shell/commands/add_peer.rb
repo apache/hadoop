@@ -23,15 +23,15 @@ module Shell
     class AddPeer< Command
       def help
         return <<-EOF
-          Add a peer cluster to replicate to, the id must be a short and
-          the cluster key is composed like this:
-          hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
-          This gives a full path for HBase to connect to another cluster.
-          Examples:
+Add a peer cluster to replicate to, the id must be a short and
+the cluster key is composed like this:
+hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent
+This gives a full path for HBase to connect to another cluster.
+Examples:
 
-            hbase> add_peer '1', "server1.cie.com:2181:/hbase"
-            hbase> add_peer '2', "zk1,zk2,zk3:2182:/hbase-prod"
-        EOF
+  hbase> add_peer '1', "server1.cie.com:2181:/hbase"
+  hbase> add_peer '2', "zk1,zk2,zk3:2182:/hbase-prod"
+EOF
       end
 
       def command(id, cluster_key)

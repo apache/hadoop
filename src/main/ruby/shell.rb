@@ -109,22 +109,26 @@ module Shell
     def print_banner
       puts "HBase Shell; enter 'help<RETURN>' for list of supported commands."
       puts 'Type "exit<RETURN>" to leave the HBase Shell'
+      print 'Version '
       command('version')
       puts
     end
 
-    def help_command(command)
-      puts "COMMAND: #{command}"
+    def help_multi_command(command)
+      puts "Command: #{command}"
       puts command_instance(command).help
       puts
       return nil
     end
 
+    def help_command(command)
+      puts command_instance(command).help
+      return nil
+    end
+
     def help_group(group_name)
       group = ::Shell.command_groups[group_name.to_s]
-      puts group[:full_name]
-      puts '-' * 80
-      group[:commands].sort.each { |cmd| help_command(cmd) }
+      group[:commands].sort.each { |cmd| help_multi_command(cmd) }
       if group[:comment]
         puts '-' * 80
         puts
@@ -135,7 +139,6 @@ module Shell
     end
 
     def help(command = nil)
-      puts
       if command
         return help_command(command) if ::Shell.commands[command.to_s]
         return help_group(command) if ::Shell.command_groups[command.to_s]
@@ -145,32 +148,30 @@ module Shell
 
       puts help_header
       puts
-      puts '-' * 80
-      puts
+      puts 'COMMAND GROUPS:'
       ::Shell.command_groups.each do |name, group|
-        puts "  " + group[:full_name] + ": "
-        puts "    group name: " + name
-        puts "    commands: " + group[:command_names].sort.join(', ')
+        puts "  Group name: " + name
+        puts "  Commands: " + group[:command_names].sort.join(', ')
         puts
       end
-      puts
       unless command
-        puts '-' * 80
-        puts
+        puts 'SHELL USAGE:'
         help_footer
-        puts
       end
       return nil
     end
 
     def help_header
-      return "Enter, help 'COMMAND_GROUP', (e.g. help 'general') to get help on all commands in a group\n" +
-             "Enter, help 'COMMAND', (e.g. help 'get') to get help on a specific command"
+      return "HBase Shell, version #{org.apache.hadoop.hbase.util.VersionInfo.getVersion()}, " +
+             "r#{org.apache.hadoop.hbase.util.VersionInfo.getRevision()}, " +
+             "#{org.apache.hadoop.hbase.util.VersionInfo.getDate()}" + "\n" +
+        "Type 'help \"COMMAND\"', (e.g. 'help \"get\"' -- the quotes are necessary) for help on a specific command.\n" +
+        "Commands are grouped. Type 'help \"COMMAND_GROUP\"', (e.g. 'help \"general\"') for help on a command group."
     end
 
     def help_footer
       puts <<-HERE
-Quote all names in HBase shell such as table and column names.  Commas delimit
+Quote all names in HBase Shell such as table and column names.  Commas delimit
 command parameters.  Type <RETURN> after entering a command to run it.
 Dictionaries of configuration used in the creation and alteration of tables are
 Ruby Hashes. They look like this:
@@ -190,7 +191,7 @@ double-quote'd hexadecimal representation. For example:
   hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
 
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
-For more on the HBase Shell, see http://wiki.apache.org/hadoop/Hbase/Shell
+For more on the HBase Shell, see http://hbase.apache.org/docs/current/book.html
       HERE
     end
   end

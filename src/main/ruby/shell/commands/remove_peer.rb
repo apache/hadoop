@@ -23,12 +23,11 @@ module Shell
     class RemovePeer< Command
       def help
         return <<-EOF
-          Stops the specified replication stream and deletes all the meta
-          information kept about it.
-          Examples:
+Stops the specified replication stream and deletes all the meta
+information kept about it. Examples:
 
-            hbase> remove_peer '1'
-        EOF
+  hbase> remove_peer '1'
+EOF
       end
 
       def command(id)

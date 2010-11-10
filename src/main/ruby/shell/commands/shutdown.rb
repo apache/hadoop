@@ -23,8 +23,8 @@ module Shell
     class Shutdown < Command
       def help
         return <<-EOF
-          Shut down the cluster.
-        EOF
+Shut down the cluster.
+EOF
       end
 
       def command

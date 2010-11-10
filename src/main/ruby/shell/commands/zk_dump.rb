@@ -23,8 +23,8 @@ module Shell
     class ZkDump < Command
       def help
         return <<-EOF
-          Dump status of HBase cluster as seen by ZooKeeper.
-        EOF
+Dump status of HBase cluster as seen by ZooKeeper.
+EOF
       end
 
       def command
