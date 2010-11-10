@@ -669,6 +669,8 @@ Release 0.90.0 - Unreleased
                place; i.e. that only one enable/disable runs at a time
    HBASE-2898  MultiPut makes proper error handling impossible and leads to 
    	       corrupted data
+   HBASE-3213  If do abort of backup master will get NPE instead of graceful
+               abort
 
 
   IMPROVEMENTS

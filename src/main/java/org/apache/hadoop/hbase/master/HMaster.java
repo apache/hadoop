@@ -279,7 +279,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       stopChores();
       // Wait for all the remaining region servers to report in IFF we were
       // running a cluster shutdown AND we were NOT aborting.
-      if (!this.abort && this.serverManager.isClusterShutdown()) {
+      if (!this.abort && this.serverManager != null &&
+          this.serverManager.isClusterShutdown()) {
         this.serverManager.letRegionServersShutdown();
       }
       stopServiceThreads();
