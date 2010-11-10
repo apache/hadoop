@@ -23,6 +23,9 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 
 /**
  * Thrown by the region server when it is shutting down state.
+ *
+ * Should NEVER be thrown to HBase clients, they will abort the call chain
+ * and not retry even though regions will transition to new servers.
  */
 @SuppressWarnings("serial")
 public class RegionServerStoppedException extends DoNotRetryIOException {

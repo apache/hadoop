@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -243,45 +242,25 @@ public interface HConnection extends Abortable {
   /**
    * Process a mixed batch of Get, Put and Delete actions. All actions for a
    * RegionServer are forwarded in one RPC call.
-   * 
+   *
+   *
    * @param actions The collection of actions.
    * @param tableName Name of the hbase table
    * @param pool thread pool for parallel execution
    * @param results An empty array, same size as list. If an exception is thrown,
    * you can test here for partial results, and to determine which actions
    * processed successfully.
-   * @throws IOException
+   * @throws IOException if there are problems talking to META. Per-item
+   * exceptions are stored in the results array.
    */
   public void processBatch(List<Row> actions, final byte[] tableName,
-      ExecutorService pool, Result[] results)
-  throws IOException;
-
-  /**
-   * Process a batch of Puts. Does the retries.
-   * @param list A batch of Puts to process.
-   * @param tableName The name of the table
-   * @return Count of committed Puts.  On fault, < list.size().
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Use HConnectionManager::processBatch instead.
-   */
-  public int processBatchOfRows(ArrayList<Put> list, byte[] tableName, ExecutorService pool)
-  throws IOException;
-
-  /**
-   * Process a batch of Deletes. Does the retries.
-   * @param list A batch of Deletes to process.
-   * @param tableName The name of the table
-   * @return Count of committed Deletes. On fault, < list.size().
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Use HConnectionManager::processBatch instead.
-   */
-  public int processBatchOfDeletes(List<Delete> list, byte[] tableName, ExecutorService pool)
-  throws IOException;
+      ExecutorService pool, Object[] results)
+      throws IOException, InterruptedException;
 
   /**
    * Process a batch of Puts.
    *
-   * @param list The collection of actions. The list is mutated: all successful Puts 
+   * @param list The collection of actions. The list is mutated: all successful Puts
    * are removed from the list.
    * @param tableName Name of the hbase table
    * @param pool Thread pool for parallel execution
@@ -289,7 +268,8 @@ public interface HConnection extends Abortable {
    * @deprecated Use HConnectionManager::processBatch instead.
    */
   public void processBatchOfPuts(List<Put> list,
-                                 final byte[] tableName, ExecutorService pool) throws IOException;
+                                 final byte[] tableName, ExecutorService pool)
+      throws IOException;
 
   /**
    * Enable or disable region cache prefetch for the table. It will be

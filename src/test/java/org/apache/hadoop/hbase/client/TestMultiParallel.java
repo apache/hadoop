@@ -35,6 +35,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.junit.Assert.*;
+
 public class TestMultiParallel {
   private static final Log LOG = LogFactory.getLog(TestMultiParallel.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -137,6 +139,35 @@ public class TestMultiParallel {
     }
   }
 
+  @Test
+  public void testBadFam() throws Exception {
+    LOG.info("test=testBadFam");
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+
+    List<Row> actions = new ArrayList<Row>();
+    Put p = new Put(Bytes.toBytes("row1"));
+    p.add(Bytes.toBytes("bad_family"), Bytes.toBytes("qual"), Bytes.toBytes("value"));
+    actions.add(p);
+    p = new Put(Bytes.toBytes("row2"));
+    p.add(BYTES_FAMILY, Bytes.toBytes("qual"), Bytes.toBytes("value"));
+    actions.add(p);
+
+    // row1 and row2 should be in the same region.
+
+    Object [] r = new Object[actions.size()];
+    try {
+      table.batch(actions, r);
+      fail();
+    } catch (RetriesExhaustedWithDetailsException ex) {
+      LOG.debug(ex);
+      // good!
+      assertFalse(ex.mayHaveClusterIssues());
+    }
+    assertEquals(2, r.length);
+    assertTrue(r[0] instanceof Throwable);
+    assertTrue(r[1] instanceof Result);
+  }
+
   /**
    * Only run one Multi test with a forced RegionServer abort. Otherwise, the
    * unit tests will take an unnecessarily long time to run.
@@ -208,7 +239,7 @@ public class TestMultiParallel {
     // put multiple rows using a batch
     List<Row> puts = constructPutRequests();
 
-    Result[] results = table.batch(puts);
+    Object[] results = table.batch(puts);
     validateSizeAndEmpty(results, KEYS.length);
 
     if (true) {
@@ -228,7 +259,7 @@ public class TestMultiParallel {
 
     // Load some data
     List<Row> puts = constructPutRequests();
-    Result[] results = table.batch(puts);
+    Object[] results = table.batch(puts);
     validateSizeAndEmpty(results, KEYS.length);
 
     // Deletes
@@ -256,7 +287,7 @@ public class TestMultiParallel {
 
     // Load some data
     List<Row> puts = constructPutRequests();
-    Result[] results = table.batch(puts);
+    Object[] results = table.batch(puts);
     validateSizeAndEmpty(results, KEYS.length);
 
     // Deletes
@@ -289,7 +320,7 @@ public class TestMultiParallel {
       put.add(BYTES_FAMILY, qual, VALUE);
       puts.add(put);
     }
-    Result[] results = table.batch(puts);
+    Object[] results = table.batch(puts);
 
     // validate
     validateSizeAndEmpty(results, 100);
@@ -303,10 +334,10 @@ public class TestMultiParallel {
       gets.add(get);
     }
 
-    Result[] multiRes = table.batch(gets);
+    Object[] multiRes = table.batch(gets);
 
     int idx = 0;
-    for (Result r : multiRes) {
+    for (Object r : multiRes) {
       byte[] qual = Bytes.toBytes("column" + idx);
       validateResult(r, qual, VALUE);
       idx++;
@@ -319,7 +350,7 @@ public class TestMultiParallel {
     HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // Load some data to start
-    Result[] results = table.batch(constructPutRequests());
+    Object[] results = table.batch(constructPutRequests());
     validateSizeAndEmpty(results, KEYS.length);
 
     // Batch: get, get, put(new col), delete, get, get of put, get of deleted,
@@ -383,11 +414,13 @@ public class TestMultiParallel {
 
   // // Helper methods ////
 
-  private void validateResult(Result r) {
+  private void validateResult(Object r) {
     validateResult(r, QUALIFIER, VALUE);
   }
 
-  private void validateResult(Result r, byte[] qual, byte[] val) {
+  private void validateResult(Object r1, byte[] qual, byte[] val) {
+    // TODO provide nice assert here or something.
+    Result r = (Result)r1;
     Assert.assertTrue(r.containsColumn(BYTES_FAMILY, qual));
     Assert.assertEquals(0, Bytes.compareTo(val, r.getValue(BYTES_FAMILY, qual)));
   }
@@ -415,16 +448,17 @@ public class TestMultiParallel {
     }
   }
 
-  private void validateEmpty(Result result) {
+  private void validateEmpty(Object r1) {
+    Result result = (Result)r1;
     Assert.assertTrue(result != null);
     Assert.assertTrue(result.getRow() == null);
     Assert.assertEquals(0, result.raw().length);
   }
 
-  private void validateSizeAndEmpty(Result[] results, int expectedSize) {
+  private void validateSizeAndEmpty(Object[] results, int expectedSize) {
     // Validate got back the same number of Result objects, all empty
     Assert.assertEquals(expectedSize, results.length);
-    for (Result result : results) {
+    for (Object result : results) {
       validateEmpty(result);
     }
   }

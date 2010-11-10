@@ -46,12 +46,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -1884,7 +1886,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     String lockName = String.valueOf(lockId);
     Integer rl = rowlocks.get(lockName);
     if (rl == null) {
-      throw new IOException("Invalid row lock");
+      throw new UnknownRowLockException("Invalid row lock");
     }
     this.leases.renewLease(lockName);
     return rl;
@@ -2374,7 +2376,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @SuppressWarnings("unchecked")
   @Override
   public MultiResponse multi(MultiAction multi) throws IOException {
+
     MultiResponse response = new MultiResponse();
+
     for (Map.Entry<byte[], List<Action>> e : multi.actions.entrySet()) {
       byte[] regionName = e.getKey();
       List<Action> actionsForRegion = e.getValue();
@@ -2382,71 +2386,81 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // end of a region, so that we don't have to try the rest of the
       // actions in the list.
       Collections.sort(actionsForRegion);
-      Row action = null;
+      Row action;
       List<Action> puts = new ArrayList<Action>();
-      try {
-        for (Action a : actionsForRegion) {
-          action = a.getAction();
-          // TODO catch exceptions so we can report them on a per-item basis.
+      for (Action a : actionsForRegion) {
+        action = a.getAction();
+        int originalIndex = a.getOriginalIndex();
+
+        try {
           if (action instanceof Delete) {
             delete(regionName, (Delete) action);
-            response.add(regionName, new Pair<Integer, Result>(
-                a.getOriginalIndex(), new Result()));
+            response.add(regionName, originalIndex, new Result());
           } else if (action instanceof Get) {
-            response.add(regionName, new Pair<Integer, Result>(
-                a.getOriginalIndex(), get(regionName, (Get) action)));
+            response.add(regionName, originalIndex, get(regionName, (Get) action));
           } else if (action instanceof Put) {
-            puts.add(a);
+            puts.add(a);  // wont throw.
           } else {
             LOG.debug("Error: invalid Action, row must be a Get, Delete or Put.");
-            throw new IllegalArgumentException("Invalid Action, row must be a Get, Delete or Put.");
+            throw new DoNotRetryIOException("Invalid Action, row must be a Get, Delete or Put.");
           }
+        } catch (IOException ex) {
+          response.add(regionName, originalIndex, ex);
         }
+      }
 
-        // We do the puts with result.put so we can get the batching efficiency
-        // we so need. All this data munging doesn't seem great, but at least
-        // we arent copying bytes or anything.
-        if (!puts.isEmpty()) {
+      // We do the puts with result.put so we can get the batching efficiency
+      // we so need. All this data munging doesn't seem great, but at least
+      // we arent copying bytes or anything.
+      if (!puts.isEmpty()) {
+        try {
           HRegion region = getRegion(regionName);
+
           if (!region.getRegionInfo().isMetaTable()) {
             this.cacheFlusher.reclaimMemStoreMemory();
           }
 
-          Pair<Put,Integer> [] putsWithLocks = new Pair[puts.size()];
-          int i = 0;
+          List<Pair<Put,Integer>> putsWithLocks =
+              Lists.newArrayListWithCapacity(puts.size());
           for (Action a : puts) {
             Put p = (Put) a.getAction();
 
-            Integer lock = getLockFromId(p.getLockId());
-            putsWithLocks[i++] = new Pair<Put, Integer>(p, lock);
+            Integer lock;
+            try {
+              lock = getLockFromId(p.getLockId());
+            } catch (UnknownRowLockException ex) {
+              response.add(regionName, a.getOriginalIndex(), ex);
+              continue;
+            }
+            putsWithLocks.add(new Pair<Put, Integer>(p, lock));
           }
 
           this.requestCount.addAndGet(puts.size());
 
-          OperationStatusCode[] codes = region.put(putsWithLocks);
-          for( i = 0 ; i < codes.length ; i++) {
+          OperationStatusCode[] codes =
+              region.put(putsWithLocks.toArray(new Pair[]{}));
+
+          for( int i = 0 ; i < codes.length ; i++) {
             OperationStatusCode code = codes[i];
 
             Action theAction = puts.get(i);
-            Result result = null;
+            Object result = null;
 
             if (code == OperationStatusCode.SUCCESS) {
               result = new Result();
+            } else if (code == OperationStatusCode.BAD_FAMILY) {
+              result = new NoSuchColumnFamilyException();
             }
-            // TODO turning the alternate exception into a different result
+            // FAILURE && NOT_RUN becomes null, aka: need to run again.
 
-            response.add(regionName,
-                new Pair<Integer, Result>(
-                    theAction.getOriginalIndex(), result));
+            response.add(regionName, theAction.getOriginalIndex(), result);
+          }
+        } catch (IOException ioe) {
+          // fail all the puts with the ioe in question.
+          for (Action a: puts) {
+            response.add(regionName, a.getOriginalIndex(), ioe);
           }
         }
-      } catch (IOException ioe) {
-        if (multi.size() == 1) throw ioe;
-        LOG.debug("Exception processing " +
-          org.apache.commons.lang.StringUtils.abbreviate(action.toString(), 64) +
-          "; " + ioe.getMessage());
-        response.add(regionName,null);
-        // stop processing on this region, continue to the next.
       }
     }
     return response;

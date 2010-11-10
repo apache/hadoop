@@ -25,10 +25,14 @@ import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.DataInput;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -42,8 +46,8 @@ public class MultiResponse implements Writable {
 
   // map of regionName to list of (Results paired to the original index for that
   // Result)
-  private Map<byte[], List<Pair<Integer, Result>>> results =
-      new TreeMap<byte[], List<Pair<Integer, Result>>>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], List<Pair<Integer, Object>>> results =
+      new TreeMap<byte[], List<Pair<Integer, Object>>>(Bytes.BYTES_COMPARATOR);
 
   public MultiResponse() {
   }
@@ -68,32 +72,52 @@ public class MultiResponse implements Writable {
    *          (request). Second item is the Result. Result will be empty for
    *          successful Put and Delete actions.
    */
-  public void add(byte[] regionName, Pair<Integer, Result> r) {
-    List<Pair<Integer, Result>> rs = results.get(regionName);
+  public void add(byte[] regionName, Pair<Integer, Object> r) {
+    List<Pair<Integer, Object>> rs = results.get(regionName);
     if (rs == null) {
-      rs = new ArrayList<Pair<Integer, Result>>();
+      rs = new ArrayList<Pair<Integer, Object>>();
       results.put(regionName, rs);
     }
     rs.add(r);
   }
 
-  public Map<byte[], List<Pair<Integer, Result>>> getResults() {
+  public void add(byte []regionName, int originalIndex, Object resOrEx) {
+    add(regionName, new Pair<Integer,Object>(originalIndex, resOrEx));
+  }
+
+  public Map<byte[], List<Pair<Integer, Object>>> getResults() {
     return results;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(results.size());
-    for (Map.Entry<byte[], List<Pair<Integer, Result>>> e : results.entrySet()) {
+    for (Map.Entry<byte[], List<Pair<Integer, Object>>> e : results.entrySet()) {
       Bytes.writeByteArray(out, e.getKey());
-      List<Pair<Integer, Result>> lst = e.getValue();
+      List<Pair<Integer, Object>> lst = e.getValue();
       out.writeInt(lst.size());
-      for (Pair<Integer, Result> r : lst) {
+      for (Pair<Integer, Object> r : lst) {
         if (r == null) {
           out.writeInt(-1); // Cant have index -1; on other side we recognize -1 as 'null'
         } else {
           out.writeInt(r.getFirst()); // Can this can npe!?!
-          HbaseObjectWritable.writeObject(out, r.getSecond(), Result.class, null);
+          Object obj = r.getSecond();
+          if (obj instanceof Throwable) {
+            out.writeBoolean(true); // true, Throwable/exception.
+
+            Throwable t = (Throwable) obj;
+            // serialize exception
+            WritableUtils.writeString(out, t.getClass().getName());
+            WritableUtils.writeString(out,
+                StringUtils.stringifyException(t));
+
+          } else {
+            out.writeBoolean(false); // no exception
+
+            if (! (obj instanceof Writable))
+              obj = null; // squash all non-writables to null.
+            HbaseObjectWritable.writeObject(out, obj, Result.class, null);
+          }
         }
       }
     }
@@ -106,15 +130,33 @@ public class MultiResponse implements Writable {
     for (int i = 0; i < mapSize; i++) {
       byte[] key = Bytes.readByteArray(in);
       int listSize = in.readInt();
-      List<Pair<Integer, Result>> lst = new ArrayList<Pair<Integer, Result>>(
+      List<Pair<Integer, Object>> lst = new ArrayList<Pair<Integer, Object>>(
           listSize);
       for (int j = 0; j < listSize; j++) {
         Integer idx = in.readInt();
         if (idx == -1) {
           lst.add(null);
         } else {
-          Result r = (Result) HbaseObjectWritable.readObject(in, null);
-          lst.add(new Pair<Integer, Result>(idx, r));
+          boolean isException = in.readBoolean();
+          Object o = null;
+          if (isException) {
+            String klass = WritableUtils.readString(in);
+            String desc = WritableUtils.readString(in);
+            try {
+              // the type-unsafe insertion, but since we control what klass is..
+              Class<? extends Throwable> c = (Class<? extends Throwable>) Class.forName(klass);
+              Constructor<? extends Throwable> cn = c.getDeclaredConstructor(String.class);
+              o = cn.newInstance(desc);
+            } catch (ClassNotFoundException ignored) {
+            } catch (NoSuchMethodException ignored) {
+            } catch (InvocationTargetException ignored) {
+            } catch (InstantiationException ignored) {
+            } catch (IllegalAccessException ignored) {
+            }
+          } else {
+            o = HbaseObjectWritable.readObject(in, null);
+          }
+          lst.add(new Pair<Integer, Object>(idx, o));
         }
       }
       results.put(key, lst);

@@ -553,8 +553,22 @@ public class HTable implements HTableInterface {
   }
 
    public Result[] get(List<Get> gets) throws IOException {
-    return batch((List) gets);
-  }
+     try {
+       Object [] r1 = batch((List)gets);
+
+       // translate.
+       Result [] results = new Result[r1.length];
+       int i=0;
+       for (Object o : r1) {
+         // batch ensures if there is a failure we get an exception instead
+         results[i++] = (Result) o;
+       }
+
+       return results;
+     } catch (InterruptedException e) {
+       throw new IOException(e);
+     }
+   }
 
   /**
    * Method that does a batch call on Deletes, Gets and Puts.  The ordering of
@@ -563,13 +577,15 @@ public class HTable implements HTableInterface {
    * guaranteed that the Get returns what the Put had put.
    *
    * @param actions list of Get, Put, Delete objects
-   * @param results Empty Result[], same size as actions. Provides access to partial
-   * results, in case an exception is thrown. A null in the result array means that
-   * the call for that action failed, even after retries
+   * @param results Empty Result[], same size as actions. Provides access to
+   * partial results, in case an exception is thrown. If there are any failures,
+   * there will be a null or Throwable will be in the results array, AND an
+   * exception will be thrown.
    * @throws IOException
    */
   @Override
-  public synchronized void batch(final List<Row> actions, final Result[] results) throws IOException {
+  public synchronized void batch(final List<Row> actions, final Object[] results)
+      throws InterruptedException, IOException {
     connection.processBatch(actions, tableName, pool, results);
   }
 
@@ -582,8 +598,8 @@ public class HTable implements HTableInterface {
    * @throws IOException
    */
   @Override
-  public synchronized Result[] batch(final List<Row> actions) throws IOException {
-    Result[] results = new Result[actions.size()];
+  public synchronized Object[] batch(final List<Row> actions) throws InterruptedException, IOException {
+    Object[] results = new Object[actions.size()];
     connection.processBatch(actions, tableName, pool, results);
     return results;
   }
@@ -616,20 +632,25 @@ public class HTable implements HTableInterface {
    * the {@code deletes} argument will contain the {@link Delete} instances
    * that have not be successfully applied.
    * @since 0.20.1
+   * @see {@link #batch(java.util.List, Object[])}
    */
   @Override
   public void delete(final List<Delete> deletes)
   throws IOException {
-    Result[] results = new Result[deletes.size()];
-    connection.processBatch((List) deletes, tableName, pool, results);
-
-    // mutate list so that it is empty for complete success, or contains only failed records
-    // results are returned in the same order as the requests in list
-    // walk the list backwards, so we can remove from list without impacting the indexes of earlier members
-    for (int i = results.length - 1; i>=0; i--) {
-      // if result is not null, it succeeded
-      if (results[i] != null) {
-        deletes.remove(i);
+    Object[] results = new Object[deletes.size()];
+    try {
+      connection.processBatch((List) deletes, tableName, pool, results);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    } finally {
+      // mutate list so that it is empty for complete success, or contains only failed records
+      // results are returned in the same order as the requests in list
+      // walk the list backwards, so we can remove from list without impacting the indexes of earlier members
+      for (int i = results.length - 1; i>=0; i--) {
+        // if result is not null, it succeeded
+        if (results[i] instanceof Result) {
+          deletes.remove(i);
+        }
       }
     }
   }
@@ -806,7 +827,7 @@ public class HTable implements HTableInterface {
   }
 
   @Override
-  public void close() throws IOException{
+  public void close() throws IOException {
     flushCommits();
   }
 
