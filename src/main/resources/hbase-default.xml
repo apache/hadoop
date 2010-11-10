@@ -560,4 +560,18 @@
     </description>
   </property>
   <!-- End of properties that are directly mapped from ZooKeeper's zoo.cfg -->
+  <property>
+    <name>hbase.rest.port</name>
+    <value>8080</value>
+    <description>The port for the HBase REST server.</description>
+  </property>
+  <property>
+    <name>hbase.rest.readonly</name>
+    <value>false</value>
+    <description>
+    Defines the mode the REST server will be started in. Possible values are:
+    false: All HTTP methods are permitted - GET/PUT/POST/DELETE.
+    true: Only the GET method is permitted.
+    </description>
+  </property>
 </configuration>

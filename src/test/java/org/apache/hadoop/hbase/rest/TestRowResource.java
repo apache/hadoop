@@ -31,6 +31,7 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
 import org.apache.commons.httpclient.Header;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -71,11 +72,13 @@ public class TestRowResource {
   private static JAXBContext context;
   private static Marshaller marshaller;
   private static Unmarshaller unmarshaller;
+  private static Configuration conf;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(3);
-    REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
+    REST_TEST_UTIL.startServletContainer(conf);
     context = JAXBContext.newInstance(
         CellModel.class,
         CellSetModel.class,
@@ -274,6 +277,33 @@ public class TestRowResource {
   }
 
   @Test
+  public void testForbidden() throws IOException, JAXBException {
+    Response response;
+
+    conf.set("hbase.rest.readonly", "true");
+
+    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 403);
+    response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 403);
+    response = deleteValue(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 403);
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 403);
+
+    conf.set("hbase.rest.readonly", "false");
+
+    response = putValueXML(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    response = putValuePB(TABLE, ROW_1, COLUMN_1, VALUE_1);
+    assertEquals(response.getCode(), 200);
+    response = deleteValue(TABLE, ROW_1, COLUMN_1);
+    assertEquals(response.getCode(), 200);
+    response = deleteRow(TABLE, ROW_1);
+    assertEquals(response.getCode(), 200);
+  }
+
+  @Test
   public void testSingleCellGetPutXML() throws IOException, JAXBException {
     Response response = getValueXML(TABLE, ROW_1, COLUMN_1);
     assertEquals(response.getCode(), 404);
@@ -286,7 +316,7 @@ public class TestRowResource {
     checkValueXML(TABLE, ROW_1, COLUMN_1, VALUE_2);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);    
+    assertEquals(response.getCode(), 200);
   }
 
   @Test
@@ -306,7 +336,7 @@ public class TestRowResource {
     checkValuePB(TABLE, ROW_1, COLUMN_1, VALUE_2);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);    
+    assertEquals(response.getCode(), 200);
   }
 
   @Test
@@ -412,7 +442,7 @@ public class TestRowResource {
     checkValueXML(TABLE, ROW_2, COLUMN_2, VALUE_4);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);    
+    assertEquals(response.getCode(), 200);
     response = deleteRow(TABLE, ROW_2);
     assertEquals(response.getCode(), 200);
   }
@@ -449,7 +479,7 @@ public class TestRowResource {
     checkValuePB(TABLE, ROW_2, COLUMN_2, VALUE_4);
 
     response = deleteRow(TABLE, ROW_1);
-    assertEquals(response.getCode(), 200);    
+    assertEquals(response.getCode(), 200);
     response = deleteRow(TABLE, ROW_2);
     assertEquals(response.getCode(), 200);
   }

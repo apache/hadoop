@@ -70,9 +70,12 @@ public class ScannerResource extends ResourceBase {
     }
   }
 
-  Response update(final ScannerModel model, final boolean replace, 
+  Response update(final ScannerModel model, final boolean replace,
       final UriInfo uriInfo) {
     servlet.getMetrics().incrementRequests(1);
+    if (servlet.isReadOnly()) {
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
+    }
     byte[] endRow = model.hasEndRow() ? model.getEndRow() : null;
     RowSpec spec = new RowSpec(model.getStartRow(), endRow,
       model.getColumns(), model.getStartTime(), model.getEndTime(), 1);

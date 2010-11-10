@@ -151,6 +151,9 @@ public class RowResource extends ResourceBase {
 
   Response update(final CellSetModel model, final boolean replace) {
     servlet.getMetrics().incrementRequests(1);
+    if (servlet.isReadOnly()) {
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
+    }
     HTablePool pool = servlet.getTablePool();
     HTableInterface table = null;
     try {
@@ -195,8 +198,11 @@ public class RowResource extends ResourceBase {
   Response updateBinary(final byte[] message, final HttpHeaders headers,
       final boolean replace) {
     servlet.getMetrics().incrementRequests(1);
+    if (servlet.isReadOnly()) {
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
+    }
     HTablePool pool = servlet.getTablePool();
-    HTableInterface table = null;    
+    HTableInterface table = null;
     try {
       byte[] row = rowspec.getRow();
       byte[][] columns = rowspec.getColumns();
@@ -293,6 +299,9 @@ public class RowResource extends ResourceBase {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
+    if (servlet.isReadOnly()) {
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
+    }
     Delete delete = null;
     if (rowspec.hasTimestamp())
       delete = new Delete(rowspec.getRow(), rowspec.getTimestamp(), null);

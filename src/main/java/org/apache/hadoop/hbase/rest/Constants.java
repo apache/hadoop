@@ -28,6 +28,8 @@ public interface Constants {
 
   public static final int DEFAULT_MAX_AGE = 60 * 60 * 4;  // 4 hours
 
+  public static final int DEFAULT_LISTEN_PORT = 8080;
+
   public static final String MIMETYPE_TEXT = "text/plain";
   public static final String MIMETYPE_HTML = "text/html";
   public static final String MIMETYPE_XML = "text/xml";

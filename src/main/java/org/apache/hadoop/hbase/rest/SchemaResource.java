@@ -107,6 +107,9 @@ public class SchemaResource extends ResourceBase {
 
   private Response replace(final byte[] name, final TableSchemaModel model,
       final UriInfo uriInfo, final HBaseAdmin admin) {
+    if (servlet.isReadOnly()) {
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
+    }
     try {
       HTableDescriptor htd = new HTableDescriptor(name);
       for (Map.Entry<QName,Object> e: model.getAny().entrySet()) {
@@ -133,11 +136,14 @@ public class SchemaResource extends ResourceBase {
     } catch (IOException e) {
       throw new WebApplicationException(e,
             Response.Status.SERVICE_UNAVAILABLE);
-    }      
-  } 
+    }
+  }
 
   private Response update(final byte[] name, final TableSchemaModel model,
       final UriInfo uriInfo, final HBaseAdmin admin) {
+    if (servlet.isReadOnly()) {
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
+    }
     try {
       HTableDescriptor htd = admin.getTableDescriptor(name);
       admin.disableTable(name);

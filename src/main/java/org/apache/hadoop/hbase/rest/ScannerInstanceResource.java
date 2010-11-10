@@ -159,6 +159,9 @@ public class ScannerInstanceResource extends ResourceBase {
       LOG.debug("DELETE " + uriInfo.getAbsolutePath());
     }
     servlet.getMetrics().incrementRequests(1);
+    if (servlet.isReadOnly()) {
+      throw new WebApplicationException(Response.Status.FORBIDDEN);
+    }
     ScannerResource.delete(id);
     return Response.ok().build();
   }

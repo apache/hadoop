@@ -27,6 +27,7 @@ import java.io.StringWriter;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.client.Client;
@@ -47,16 +48,18 @@ public class TestSchemaResource {
   private static String TABLE2 = "TestSchemaResource2";
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
+  private static Configuration conf;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(3);
-    REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost", 
+    REST_TEST_UTIL.startServletContainer(conf);
+    client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
     context = JAXBContext.newInstance(
       ColumnSchemaModel.class,
@@ -96,6 +99,11 @@ public class TestSchemaResource {
     response = client.put(schemaPath, Constants.MIMETYPE_XML, toXML(model));
     assertEquals(response.getCode(), 201);
 
+    // recall the same put operation but in read-only mode
+    conf.set("hbase.rest.readonly", "true");
+    response = client.put(schemaPath, Constants.MIMETYPE_XML, toXML(model));
+    assertEquals(response.getCode(), 403);
+
     // make sure HBase concurs, and wait for the table to come online
     admin.enableTable(TABLE1);
 
@@ -110,6 +118,9 @@ public class TestSchemaResource {
 
     // make sure HBase concurs
     assertFalse(admin.tableExists(TABLE1));
+
+    // return read-only setting back to default
+    conf.set("hbase.rest.readonly", "false");
   }
 
   @Test
@@ -128,6 +139,12 @@ public class TestSchemaResource {
       model.createProtobufOutput());
     assertEquals(response.getCode(), 201);
 
+    // recall the same put operation but in read-only mode
+    conf.set("hbase.rest.readonly", "true");
+    response = client.put(schemaPath, Constants.MIMETYPE_PROTOBUF,
+      model.createProtobufOutput());
+    assertEquals(response.getCode(), 403);
+
     // make sure HBase concurs, and wait for the table to come online
     admin.enableTable(TABLE2);
 
@@ -143,5 +160,8 @@ public class TestSchemaResource {
 
     // make sure HBase concurs
     assertFalse(admin.tableExists(TABLE2));
+
+    // return read-only setting back to default
+    conf.set("hbase.rest.readonly", "false");
   }
 }

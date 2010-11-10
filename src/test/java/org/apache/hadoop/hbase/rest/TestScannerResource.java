@@ -32,6 +32,7 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 
 import org.apache.commons.httpclient.Header;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -70,6 +71,7 @@ public class TestScannerResource {
   private static Unmarshaller unmarshaller;
   private static int expectedRows1;
   private static int expectedRows2;
+  private static Configuration conf;
 
   private static int insertData(String tableName, String column, double prob)
       throws IOException {
@@ -146,9 +148,10 @@ public class TestScannerResource {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(3);
-    REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost", 
+    REST_TEST_UTIL.startServletContainer(conf);
+    client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
     context = JAXBContext.newInstance(
       CellModel.class,
@@ -174,7 +177,7 @@ public class TestScannerResource {
     REST_TEST_UTIL.shutdownServletContainer();
     TEST_UTIL.shutdownMiniCluster();
   }
-  
+
   @Test
   public void testSimpleScannerXML() throws IOException, JAXBException {
     final int BATCH_SIZE = 5;
@@ -185,10 +188,21 @@ public class TestScannerResource {
     StringWriter writer = new StringWriter();
     marshaller.marshal(model, writer);
     byte[] body = Bytes.toBytes(writer.toString());
+
+    // test put operation is forbidden in read-only mode
+    conf.set("hbase.rest.readonly", "true");
     Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_XML, body);
-    assertEquals(response.getCode(), 201);
+    assertEquals(response.getCode(), 403);
     String scannerURI = response.getLocation();
+    assertNull(scannerURI);
+
+    // recall previous put operation with read-only off
+    conf.set("hbase.rest.readonly", "false");
+    response = client.put("/" + TABLE + "/scanner", Constants.MIMETYPE_XML,
+      body);
+    assertEquals(response.getCode(), 201);
+    scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
@@ -199,7 +213,13 @@ public class TestScannerResource {
     // confirm batch size conformance
     assertEquals(countCellSet(cellSet), BATCH_SIZE);
 
-    // delete the scanner
+    // test delete scanner operation is forbidden in read-only mode
+    conf.set("hbase.rest.readonly", "true");
+    response = client.delete(scannerURI);
+    assertEquals(response.getCode(), 403);
+
+    // recall previous delete scanner operation with read-only off
+    conf.set("hbase.rest.readonly", "false");
     response = client.delete(scannerURI);
     assertEquals(response.getCode(), 200);
   }
@@ -211,10 +231,21 @@ public class TestScannerResource {
     ScannerModel model = new ScannerModel();
     model.setBatch(BATCH_SIZE);
     model.addColumn(Bytes.toBytes(COLUMN_1));
+
+    // test put operation is forbidden in read-only mode
+    conf.set("hbase.rest.readonly", "true");
     Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-    assertEquals(response.getCode(), 201);
+    assertEquals(response.getCode(), 403);
     String scannerURI = response.getLocation();
+    assertNull(scannerURI);
+
+    // recall previous put operation with read-only off
+    conf.set("hbase.rest.readonly", "false");
+    response = client.put("/" + TABLE + "/scanner",
+      Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    assertEquals(response.getCode(), 201);
+    scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell set
@@ -225,7 +256,13 @@ public class TestScannerResource {
     // confirm batch size conformance
     assertEquals(countCellSet(cellSet), BATCH_SIZE);
 
-    // delete the scanner
+    // test delete scanner operation is forbidden in read-only mode
+    conf.set("hbase.rest.readonly", "true");
+    response = client.delete(scannerURI);
+    assertEquals(response.getCode(), 403);
+
+    // recall previous delete scanner operation with read-only off
+    conf.set("hbase.rest.readonly", "false");
     response = client.delete(scannerURI);
     assertEquals(response.getCode(), 200);
   }
@@ -236,10 +273,21 @@ public class TestScannerResource {
     ScannerModel model = new ScannerModel();
     model.setBatch(1);
     model.addColumn(Bytes.toBytes(COLUMN_1));
+
+    // test put operation is forbidden in read-only mode
+    conf.set("hbase.rest.readonly", "true");
     Response response = client.put("/" + TABLE + "/scanner",
       Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
-    assertEquals(response.getCode(), 201);
+    assertEquals(response.getCode(), 403);
     String scannerURI = response.getLocation();
+    assertNull(scannerURI);
+
+    // recall previous put operation with read-only off
+    conf.set("hbase.rest.readonly", "false");
+    response = client.put("/" + TABLE + "/scanner",
+      Constants.MIMETYPE_PROTOBUF, model.createProtobufOutput());
+    assertEquals(response.getCode(), 201);
+    scannerURI = response.getLocation();
     assertNotNull(scannerURI);
 
     // get a cell
@@ -263,7 +311,13 @@ public class TestScannerResource {
     assertTrue(foundColumnHeader);
     assertTrue(foundTimestampHeader);
 
-    // delete the scanner
+    // test delete scanner operation is forbidden in read-only mode
+    conf.set("hbase.rest.readonly", "true");
+    response = client.delete(scannerURI);
+    assertEquals(response.getCode(), 403);
+
+    // recall previous delete scanner operation with read-only off
+    conf.set("hbase.rest.readonly", "false");
     response = client.delete(scannerURI);
     assertEquals(response.getCode(), 200);
   }

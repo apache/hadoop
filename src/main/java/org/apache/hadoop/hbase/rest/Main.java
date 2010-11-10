@@ -21,18 +21,18 @@
 package org.apache.hadoop.hbase.rest;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.commons.cli.ParseException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
-import java.util.Arrays;
 import java.util.List;
+import java.util.ArrayList;
 
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
@@ -42,54 +42,79 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 /**
  * Main class for launching REST gateway as a servlet hosted by Jetty.
- * <p> 
+ * <p>
  * The following options are supported:
  * <ul>
- * <li>-p: service port</li>
+ * <li>-p --port : service port</li>
+ * <li>-ro --readonly : server mode</li>
  * </ul>
  */
 public class Main implements Constants {
-  private static final String DEFAULT_LISTEN_PORT = "8080";
 
   private static void printUsageAndExit(Options options, int exitCode) {
     HelpFormatter formatter = new HelpFormatter();
-    formatter.printHelp("REST", null, options,
-      "To start the REST server run 'bin/hbase-daemon.sh start rest'\n" +
-      "To shutdown the REST server run 'bin/hbase-daemon.sh stop rest' or" +
-      " send a kill signal to the rest server pid",
-      true);
+    formatter.printHelp("bin/hbase rest start", "", options,
+      "\nTo run the REST server as a daemon, execute " +
+      "bin/hbase-daemon.sh start|stop rest [-p <port>] [-ro]\n", true);
     System.exit(exitCode);
   }
 
+  /**
+   * The main method for the HBase rest server.
+   * @param args command-line arguments
+   * @throws Exception exception
+   */
   public static void main(String[] args) throws Exception {
     Log LOG = LogFactory.getLog("RESTServer");
+
+    Configuration conf = HBaseConfiguration.create();
+    RESTServlet servlet = RESTServlet.getInstance(conf);
+
     Options options = new Options();
     options.addOption("p", "port", true, "Port to bind to [default:" +
       DEFAULT_LISTEN_PORT + "]");
-    CommandLineParser parser = new PosixParser();
-    CommandLine cmd = parser.parse(options, args);
-    /**
-     * This is so complicated to please both bin/hbase and bin/hbase-daemon.
-     * hbase-daemon provides "start" and "stop" arguments
-     * hbase should print the help if no argument is provided
-     */
-    List<String> commandLine = Arrays.asList(args);
-    boolean stop = commandLine.contains("stop");
-    boolean start = commandLine.contains("start");
-    if (cmd.hasOption("help") || !start || stop) {
-      printUsageAndExit(options, 1);
-    }
-    // Get port to bind to
-    int port = 0;
+    options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
+      "method requests [default: false]");
+
+    CommandLine commandLine = null;
     try {
-      port = Integer.parseInt(cmd.getOptionValue("port", DEFAULT_LISTEN_PORT));
-    } catch (NumberFormatException e) {
-      LOG.error("Could not parse the value provided for the port option", e);
+      commandLine = new PosixParser().parse(options, args);
+    } catch (ParseException e) {
+      LOG.error("Could not parse: ", e);
       printUsageAndExit(options, -1);
     }
 
-    // set up the Jersey servlet container for Jetty
+    // check for user-defined port setting, if so override the conf
+    if (commandLine != null && commandLine.hasOption("port")) {
+      String val = commandLine.getOptionValue("port");
+      servlet.getConfiguration()
+          .setInt("hbase.rest.port", Integer.valueOf(val));
+      LOG.debug("port set to " + val);
+    }
 
+    // check if server should only process GET requests, if so override the conf
+    if (commandLine != null && commandLine.hasOption("readonly")) {
+      servlet.getConfiguration().setBoolean("hbase.rest.readonly", true);
+      LOG.debug("readonly set to true");
+    }
+
+    @SuppressWarnings("unchecked")
+    List<String> remainingArgs = commandLine != null ?
+        commandLine.getArgList() : new ArrayList<String>();
+    if (remainingArgs.size() != 1) {
+      printUsageAndExit(options, 1);
+    }
+
+    String command = remainingArgs.get(0);
+    if ("start".equals(command)) {
+      // continue and start container
+    } else if ("stop".equals(command)) {
+      System.exit(1);
+    } else {
+      printUsageAndExit(options, 1);
+    }
+
+    // set up the Jersey servlet container for Jetty
     ServletHolder sh = new ServletHolder(ServletContainer.class);
     sh.setInitParameter(
       "com.sun.jersey.config.property.resourceConfigClass",
@@ -99,9 +124,8 @@ public class Main implements Constants {
 
     // set up Jetty and run the embedded server
 
-    Configuration conf = HBaseConfiguration.create();
-    RESTServlet servlet = RESTServlet.getInstance(conf);
-    port = servlet.getConfiguration().getInt("hbase.rest.port", port);
+    int port = servlet.getConfiguration().getInt("hbase.rest.port",
+        DEFAULT_LISTEN_PORT);
 
     Server server = new Server(port);
     server.setSendServerVersion(false);

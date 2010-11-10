@@ -1141,6 +1141,8 @@ Release 0.90.0 - Unreleased
    HBASE-3168  Sanity date and time check when a region server joins the
                cluster (Jeff Whiting and jgray)
    HBASE-3090  Don't include hbase-default in conf/ assembly
+   HBASE-3161  Provide option for Stargate to only serve GET requests
+               (Bennett Neale via Stack)
 
 
   NEW FEATURES

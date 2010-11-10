@@ -60,7 +60,7 @@ public class RESTServlet implements Constants {
   public synchronized static void stop() {
     if (INSTANCE != null)  INSTANCE = null;
   }
-  
+
   /**
    * Constructor with existing configuration
    * @param conf existing configuration
@@ -81,5 +81,14 @@ public class RESTServlet implements Constants {
 
   RESTMetrics getMetrics() {
     return metrics;
+  }
+
+  /**
+   * Helper method to determine if server should
+   * only respond to GET HTTP method requests.
+   * @return boolean for server read-only state
+   */
+  boolean isReadOnly() {
+    return getConfiguration().getBoolean("hbase.rest.readonly", false);
   }
 }
