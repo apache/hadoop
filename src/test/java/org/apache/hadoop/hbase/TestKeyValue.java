@@ -322,4 +322,34 @@ public class TestKeyValue extends TestCase {
     assertKVLess(c, kvA_1, lastOnRowA);
     assertKVLess(c, firstOnRowA, lastOnRowA);
   }
+
+  public void testConvertToKeyOnly() throws Exception {
+    long ts = 1;
+    byte [] value = Bytes.toBytes("a real value");
+    byte [] evalue = new byte[0]; // empty value
+
+    // verify key with a non-empty value works
+    KeyValue kv1 = new KeyValue(rowA, family, qualA, ts, value);
+    KeyValue kv1ko = kv1.clone();
+    assertTrue(kv1.equals(kv1ko));
+    kv1ko.convertToKeyOnly();
+    // keys are still the same
+    assertTrue(kv1.equals(kv1ko));
+    // but values are not
+    assertTrue(kv1.getValue().length != 0);
+    assertTrue(kv1ko.getValue().length == 0);
+
+    // verify key with an already-empty value works
+    KeyValue kv2 = new KeyValue(rowA, family, qualA, ts, evalue);
+    KeyValue kv2ko = kv2.clone();
+    assertTrue(kv2.equals(kv2ko));
+    kv2ko.convertToKeyOnly();
+    // they should still be equal
+    assertTrue(kv2.equals(kv2ko));
+    // but they should have different underlying byte arrays
+    assertFalse(kv2.getBuffer() == kv2ko.getBuffer());
+    // both with 0 length values
+    assertTrue(kv2.getValue().length == 0);
+    assertTrue(kv2ko.getValue().length == 0);
+  }
 }

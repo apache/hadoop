@@ -1255,8 +1255,6 @@ public class TestFilter extends HBaseTestCase {
         " rows", expectedRows, i);
   }
 
-
-
   private void verifyScanNoEarlyOut(Scan s, long expectedRows,
       long expectedKeys)
   throws IOException {
@@ -1305,6 +1303,42 @@ public class TestFilter extends HBaseTestCase {
             Bytes.equals(kv.getQualifier(), kvs[idx].getQualifier()));
         assertTrue("Value mismatch",
             Bytes.equals(kv.getValue(), kvs[idx].getValue()));
+        idx++;
+      }
+      results.clear();
+    }
+    LOG.info("Looked at " + row + " rows with " + idx + " keys");
+    assertEquals("Expected " + kvs.length + " total keys but scanned " + idx,
+        kvs.length, idx);
+  }
+
+  private void verifyScanFullNoValues(Scan s, KeyValue [] kvs)
+  throws IOException {
+    InternalScanner scanner = this.region.getScanner(s);
+    List<KeyValue> results = new ArrayList<KeyValue>();
+    int row = 0;
+    int idx = 0;
+    for (boolean done = true; done; row++) {
+      done = scanner.next(results);
+      Arrays.sort(results.toArray(new KeyValue[results.size()]),
+          KeyValue.COMPARATOR);
+      if(results.isEmpty()) break;
+      assertTrue("Scanned too many keys! Only expected " + kvs.length +
+          " total but already scanned " + (results.size() + idx) +
+          (results.isEmpty() ? "" : "(" + results.get(0).toString() + ")"),
+          kvs.length >= idx + results.size());
+      for(KeyValue kv : results) {
+        LOG.info("row=" + row + ", result=" + kv.toString() +
+            ", match=" + kvs[idx].toString());
+        assertTrue("Row mismatch",
+            Bytes.equals(kv.getRow(), kvs[idx].getRow()));
+        assertTrue("Family mismatch",
+            Bytes.equals(kv.getFamily(), kvs[idx].getFamily()));
+        assertTrue("Qualifier mismatch",
+            Bytes.equals(kv.getQualifier(), kvs[idx].getQualifier()));
+        assertFalse("Value match (expecting no value in result)",
+            Bytes.equals(kv.getValue(), kvs[idx].getValue()));
+        assertTrue("Value in result is not empty", kv.getValue().length == 0);
         idx++;
       }
       results.clear();
@@ -1406,4 +1440,61 @@ public class TestFilter extends HBaseTestCase {
       verifyScan(s, expectedRows, 0);
       this.verifyScanFull(s, expectedKVs4);
     }
+
+  public void testKeyOnlyFilter() throws Exception {
+
+    // KVs in first 6 rows
+    KeyValue [] expectedKVs = {
+      // testRowOne-0
+      new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+      new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[0], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+      new KeyValue(ROWS_ONE[0], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
+      new KeyValue(ROWS_ONE[0], FAMILIES[1], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[0], FAMILIES[1], QUALIFIERS_ONE[3], VALUES[0]),
+      // testRowOne-2
+      new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+      new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[2], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+      new KeyValue(ROWS_ONE[2], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
+      new KeyValue(ROWS_ONE[2], FAMILIES[1], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[2], FAMILIES[1], QUALIFIERS_ONE[3], VALUES[0]),
+      // testRowOne-3
+      new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]),
+      new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[3], FAMILIES[0], QUALIFIERS_ONE[3], VALUES[0]),
+      new KeyValue(ROWS_ONE[3], FAMILIES[1], QUALIFIERS_ONE[0], VALUES[0]),
+      new KeyValue(ROWS_ONE[3], FAMILIES[1], QUALIFIERS_ONE[2], VALUES[0]),
+      new KeyValue(ROWS_ONE[3], FAMILIES[1], QUALIFIERS_ONE[3], VALUES[0]),
+      // testRowTwo-0
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[0], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
+      // testRowTwo-2
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[2], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1]),
+      // testRowTwo-3
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[0], QUALIFIERS_TWO[3], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[0], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[2], VALUES[1]),
+      new KeyValue(ROWS_TWO[3], FAMILIES[1], QUALIFIERS_TWO[3], VALUES[1])
+    };
+
+    // Grab all 6 rows
+    long expectedRows = 6;
+    long expectedKeys = this.colsPerRow;
+    Scan s = new Scan();
+    s.setFilter(new KeyOnlyFilter());
+    verifyScan(s, expectedRows, expectedKeys);
+    verifyScanFullNoValues(s, expectedKVs);
+  }
 }

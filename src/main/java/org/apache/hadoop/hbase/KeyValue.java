@@ -1189,6 +1189,25 @@ public class KeyValue implements Writable, HeapSize {
   }
 
   /**
+   * Converts this KeyValue to only contain the key portion (the value is
+   * changed to be null).  This method does a full copy of the backing byte
+   * array and does not modify the original byte array of this KeyValue.
+   * <p>
+   * This method is used by {@link KeyOnlyFilter} and is an advanced feature of
+   * KeyValue, proceed with caution.
+   */
+  public void convertToKeyOnly() {
+    // KV format:  <keylen/4><valuelen/4><key/keylen><value/valuelen>
+    // Rebuild as: <keylen/4><0/4><key/keylen>
+    byte [] newBuffer = new byte[getKeyLength() + (2 * Bytes.SIZEOF_INT)];
+    System.arraycopy(this.bytes, this.offset, newBuffer, 0, newBuffer.length);
+    Bytes.putInt(newBuffer, Bytes.SIZEOF_INT, 0);
+    this.bytes = newBuffer;
+    this.offset = 0;
+    this.length = newBuffer.length;
+  }
+
+  /**
    * Splits a column in family:qualifier form into separate byte arrays.
    * <p>
    * Not recommend to be used as this is old-style API.

@@ -1205,6 +1205,7 @@ Release 0.90.0 - Unreleased
    HBASE-3013  Tool to verify data in two clusters
    HBASE-2896  Retain assignment information between cluster
                shutdown/startup
+   HBASE-3211  Key (Index) Only Fetches
 
 
   OPTIMIZATIONS
