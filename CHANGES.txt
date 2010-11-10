@@ -1128,6 +1128,8 @@ Release 0.90.0 - Unreleased
                TTL to allow major even if single file
    HBASE-3194  HBase should run on both secure and vanilla versions of Hadoop 0.20
                (Gary Helmling via Stack)
+   HBASE-3209  HBASE-3209 : New Compaction Algorithm
+               (Nicolas Spiegelberg via Stack)
 
 
   NEW FEATURES
