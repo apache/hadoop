@@ -673,6 +673,7 @@ Release 0.90.0 - Unreleased
                abort
    HBASE-3214  TestMasterFailover.testMasterFailoverWithMockedRITOnDeadRS is
                failing (Gary via jgray)
+   HBASE-3216  Move HBaseFsck from client to util
 
 
   IMPROVEMENTS

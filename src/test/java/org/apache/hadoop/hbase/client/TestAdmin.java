@@ -121,15 +121,6 @@ public class TestAdmin {
   }
 
   @Test
-  public void testHBaseFsck() throws IOException {
-    HBaseFsck fsck =
-      new HBaseFsck(TEST_UTIL.getMiniHBaseCluster().getConfiguration());
-    fsck.displayFullReport();
-    int result = fsck.doWork();
-    assertEquals(0, result);
-  }
-
-  @Test
   public void testCreateTable() throws IOException {
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
