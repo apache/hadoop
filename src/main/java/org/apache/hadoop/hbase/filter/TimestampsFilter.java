@@ -13,9 +13,9 @@ import org.apache.hadoop.hbase.KeyValue;
  * in the specified list of timestamps (versions).
  * <p>
  * Note: Use of this filter overrides any time range/time stamp
- * options specified using {@link Get#setTimeRange(long, long)},
- * {@link Scan#setTimeRange(long, long)}, {@link Get#setTimeStamp(long)},
- * or {@link Scan#setTimeStamp(long)}.
+ * options specified using {@link org.apache.hadoop.hbase.client.Get#setTimeRange(long, long)},
+ * {@link org.apache.hadoop.hbase.client.Scan#setTimeRange(long, long)}, {@link org.apache.hadoop.hbase.client.Get#setTimeStamp(long)},
+ * or {@link org.apache.hadoop.hbase.client.Scan#setTimeStamp(long)}.
  */
 public class TimestampsFilter extends FilterBase {
 

@@ -103,7 +103,7 @@ public class MetaScanner {
    *
    * @param configuration HBase configuration.
    * @param visitor Visitor object.
-   * @param userTableName User table name in meta table to start scan at.  Pass
+   * @param tableName User table name in meta table to start scan at.  Pass
    * null if not interested in a particular table.
    * @param row Name of the row at the user table. The scan will start from
    * the region row where the row resides.

@@ -885,7 +885,7 @@ public class HRegion implements HeapSize { // , Writable{
    * flush file.
    * @return true if the region needs compacting
    * @throws IOException
-   * @see {@link #internalFlushcache()}
+   * @see #internalFlushcache()
    */
   protected boolean internalFlushcache(final HLog wal, final long myseqid)
   throws IOException {
@@ -2435,7 +2435,6 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Open a Region.
    * @param info Info for region to be opened.
-   * @param rootDir Root directory for HBase instance
    * @param wal HLog for region to use. This method will call
    * HLog#setSequenceNumber(long) passing the result of the call to
    * HRegion#getMinSequenceId() to ensure the log id is properly kept

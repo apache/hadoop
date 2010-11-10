@@ -65,10 +65,10 @@ public class RegionTransitionData implements Writable {
    * assignment.
    *
    * <p>Since only the master uses this constructor, the type should always be
-   * {@link EventType#M2ZK_REGION_OFFLINE}.
+   * {@link EventType#M_ZK_REGION_OFFLINE}.
    *
    * @param eventType type of event
-   * @param regionName name of region as per {@link HRegionInfo#getRegionName()}
+   * @param regionName name of region as per <code>HRegionInfo#getRegionName()</code>
    */
   public RegionTransitionData(EventType eventType, byte [] regionName) {
     this(eventType, regionName, null);
@@ -80,12 +80,12 @@ public class RegionTransitionData implements Writable {
    *
    * <p>Used when the server name is known (a regionserver is setting it).
    *
-   * <p>Valid types for this constructor are {@link EventType#RS2ZK_REGION_CLOSING},
-   * {@link EventType#RS2ZK_REGION_CLOSED}, {@link EventType#RS2ZK_REGION_OPENING},
-   * and {@link EventType#RS2ZK_REGION_OPENED}.
+   * <p>Valid types for this constructor are {@link EventType#RS_ZK_REGION_CLOSING},
+   * {@link EventType#RS_ZK_REGION_CLOSED}, {@link EventType#RS_ZK_REGION_OPENING},
+   * and {@link EventType#RS_ZK_REGION_OPENED}.
    *
    * @param eventType type of event
-   * @param regionName name of region as per {@link HRegionInfo#getRegionName()}
+   * @param regionName name of region as per <code>HRegionInfo#getRegionName()</code>
    * @param serverName name of server setting data
    */
   public RegionTransitionData(EventType eventType, byte [] regionName,
@@ -101,11 +101,11 @@ public class RegionTransitionData implements Writable {
    *
    * <p>One of:
    * <ul>
-   * <li>{@link EventType#M2ZK_REGION_OFFLINE}
-   * <li>{@link EventType#RS2ZK_REGION_CLOSING}
-   * <li>{@link EventType#RS2ZK_REGION_CLOSED}
-   * <li>{@link EventType#RS2ZK_REGION_OPENING}
-   * <li>{@link EventType#RS2ZK_REGION_OPENED}
+   * <li>{@link EventType#M_ZK_REGION_OFFLINE}
+   * <li>{@link EventType#RS_ZK_REGION_CLOSING}
+   * <li>{@link EventType#RS_ZK_REGION_CLOSED}
+   * <li>{@link EventType#RS_ZK_REGION_OPENING}
+   * <li>{@link EventType#RS_ZK_REGION_OPENED}
    * </ul>
    * @return type of region transition event
    */
@@ -117,7 +117,7 @@ public class RegionTransitionData implements Writable {
    * Gets the name of the region being transitioned.
    *
    * <p>Region name is required so this never returns null.
-   * @return region name, the result of a call to {@link HRegionInfo#getRegionName()}
+   * @return region name, the result of a call to <code>HRegionInfo#getRegionName()</code>
    */
   public byte [] getRegionName() {
     return regionName;

@@ -632,7 +632,7 @@ public class HTable implements HTableInterface {
    * the {@code deletes} argument will contain the {@link Delete} instances
    * that have not be successfully applied.
    * @since 0.20.1
-   * @see batch(java.util.List, Object[])
+   * @see #batch(java.util.List, Object[])
    */
   @Override
   public void delete(final List<Delete> deletes)

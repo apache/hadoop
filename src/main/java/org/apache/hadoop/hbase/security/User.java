@@ -65,7 +65,7 @@ public abstract class User {
   /**
    * Returns the full user name.  For Kerberos principals this will include
    * the host and realm portions of the principal name.
-   * @return
+   * @return User full name.
    */
   public String getName() {
     return ugi.getUserName();

@@ -98,7 +98,8 @@ public class DynamicByteBloomFilter implements BloomFilter {
   /**
    * Normal write constructor.  Note that this doesn't allocate bloom data by
    * default.  Instead, call allocBloom() before adding entries.
-   * @param hashType type of the hashing function (see {@link org.apache.hadoop.util.hash.Hash}).
+   * @param errorRate
+   * @param hashType type of the hashing function (see <code>org.apache.hadoop.util.hash.Hash</code>).
    * @param keyInterval Maximum number of keys to record per Bloom filter row.
    * @throws IllegalArgumentException The input parameters were invalid
    */

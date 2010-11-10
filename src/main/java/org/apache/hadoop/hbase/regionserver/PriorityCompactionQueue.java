@@ -160,7 +160,7 @@ public class PriorityCompactionQueue implements BlockingQueue<HRegion> {
   }
 
   /** Removes the request from the regions in queue
-   * @param p If null it will use the default priority
+   * @param remove
    */
   protected CompactionRequest removeFromRegionsInQueue(CompactionRequest remove) {
     if (remove == null) return null;

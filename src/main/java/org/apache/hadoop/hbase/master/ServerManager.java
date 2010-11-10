@@ -96,8 +96,6 @@ public class ServerManager {
    * @param master
    * @param services
    * @param metrics
-   * @param freshClusterStartup True if we are original master on a fresh
-   * cluster startup else if false, we are joining an already running cluster.
    */
   public ServerManager(final Server master, final MasterServices services,
       MasterMetrics metrics) {
@@ -564,7 +562,7 @@ public class ServerManager {
    * A region server could reject the close request because it either does not
    * have the specified region or the region is being split.
    * @param server server to open a region
-   * @param regionName region to open
+   * @param region region to open
    * @return true if server acknowledged close, false if not
    * @throws IOException
    */

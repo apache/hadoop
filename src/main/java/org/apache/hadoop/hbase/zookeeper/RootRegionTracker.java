@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Tracks the root region server location node in zookeeper.
  * Root region location is set by {@link RootLocationEditor} usually called
- * out of {@link RegionServerServices#postOpenDeployTasks(org.apache.hadoop.hbase.regionserver.HRegion, org.apache.hadoop.hbase.catalog.CatalogTracker)}.
+ * out of <code>RegionServerServices</code>.
  * This class has a watcher on the root location and notices changes.
  */
 public class RootRegionTracker extends ZooKeeperNodeTracker {
@@ -64,8 +64,7 @@ public class RootRegionTracker extends ZooKeeperNodeTracker {
   /**
    * Gets the root region location, if available, and waits for up to the
    * specified timeout if not immediately available.
-   * @param timeout maximum time to wait, in millis, use {@link ZooKeeperNodeTracker#NO_TIMEOUT} for
-   * forever
+   * @param timeout maximum time to wait, in millis
    * @return server address for server hosting root region, null if timed out
    * @throws InterruptedException if interrupted while waiting
    */

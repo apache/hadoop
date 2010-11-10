@@ -292,7 +292,7 @@ public class HLog implements Syncable {
    * @param conf configuration to use
    * @param listeners Listeners on WAL events. Listeners passed here will
    * be registered before we do anything else; e.g. the
-   * Constructor {@link #rollWriter().
+   * Constructor {@link #rollWriter()}.
    * @param prefix should always be hostname and port in distributed env and
    *        it will be URL encoded before being used.
    *        If prefix is null, "hlog" will be used
@@ -317,7 +317,7 @@ public class HLog implements Syncable {
    * @param conf configuration to use
    * @param listeners Listeners on WAL events. Listeners passed here will
    * be registered before we do anything else; e.g. the
-   * Constructor {@link #rollWriter().
+   * Constructor {@link #rollWriter()}.
    * @param failIfLogDirExists If true IOException will be thrown if dir already exists.
    * @param prefix should always be hostname and port in distributed env and
    *        it will be URL encoded before being used.
@@ -541,7 +541,7 @@ public class HLog implements Syncable {
    * @param fs
    * @param path
    * @param conf
-   * @return
+   * @return Writer instance
    * @throws IOException
    */
   protected Writer createWriterInstance(final FileSystem fs, final Path path,
@@ -752,7 +752,7 @@ public class HLog implements Syncable {
   /**
    * This is a convenience method that computes a new filename with a given
    * file-number.
-   * @param file-number to use
+   * @param filenum to use
    * @return Path
    */
   protected Path computeFilename(long filenum) {

@@ -47,8 +47,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * <p>In order to use the service created above, call
  * {@link #submit(EventHandler)}. Register pre- and post- processing listeners
  * by registering your implementation of {@link EventHandler.EventHandlerListener}
- * with {@link #registerListener(EventType, EventHandlerListener)}.  Be sure
- * to deregister your listener when done via {@link #unregisterListener(EventType)}.
+ * with {@link #registerListener(EventHandler.EventType, EventHandler.EventHandlerListener)}.  Be sure
+ * to deregister your listener when done via {@link #unregisterListener(EventHandler.EventType)}.
  */
 public class ExecutorService {
   private static final Log LOG = LogFactory.getLog(ExecutorService.class);
@@ -151,7 +151,7 @@ public class ExecutorService {
 
   /**
    * Default constructor.
-   * @param Name of the hosting server.
+   * @param servername Name of the hosting server.
    */
   public ExecutorService(final String servername) {
     super();
@@ -226,7 +226,6 @@ public class ExecutorService {
    * event type.
    * @param type Type of event we're registering listener for
    * @param listener The listener to run.
-   * @return The <code>listener</code> that was passed
    */
   public void registerListener(final EventHandler.EventType type,
       final EventHandlerListener listener) {

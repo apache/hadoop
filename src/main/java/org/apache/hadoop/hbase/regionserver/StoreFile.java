@@ -443,7 +443,7 @@ public class StoreFile {
   /**
    * @return Current reader.  Must call createReader first else returns null.
    * @throws IOException
-   * @see {@link #createReader()}
+   * @see #createReader()
    */
   public Reader getReader() {
     return this.reader;

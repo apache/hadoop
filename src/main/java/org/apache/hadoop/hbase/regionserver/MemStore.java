@@ -360,7 +360,7 @@ public class MemStore implements HeapSize {
    * @param qualifier
    * @param newValue
    * @param now
-   * @return
+   * @return  Timestamp
    */
   public long updateColumnValue(byte[] row,
                                 byte[] family,

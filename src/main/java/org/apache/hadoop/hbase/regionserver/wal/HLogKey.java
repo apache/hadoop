@@ -59,7 +59,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * A regionName is always a sub-table object.
    *
    * @param encodedRegionName Encoded name of the region as returned by
-   * {@link HRegionInfo#getEncodedNameAsBytes()}.
+   * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
    * @param tablename   - name of table
    * @param logSeqNum   - log sequence number
    * @param now Time at which this edit was written.
@@ -101,7 +101,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   /**
    * Get the id of the original cluster
-   * @return
+   * @return Cluster id.
    */
   public byte getClusterId() {
     return clusterId;

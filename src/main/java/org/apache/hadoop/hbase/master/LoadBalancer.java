@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.HServerInfo;
  * the Master needs to handle closed regions that it currently does not have
  * a destination set for.  This can happen during master failover.
  *
- * <p>On cluster startup, {@link #bulkAssignment} can be used to determine
+ * <p>On cluster startup, bulk assignment can be used to determine
  * locations for all Regions in a cluster.
  *
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
@@ -122,7 +122,7 @@ public class LoadBalancer {
    *       Does this mean we need HeapSize on HMaster?  Or just careful monitor?
    *       (current thinking is we will hold all assignments in memory)
    *
-   * @param serverInfo map of regionservers and their load/region information to
+   * @param clusterState Map of regionservers and their load/region information to
    *                   a list of their most loaded regions
    * @return a list of regions to be moved, including source and destination,
    *         or null if cluster is already balanced

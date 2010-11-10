@@ -317,7 +317,7 @@ public interface HTableInterface {
    * Executes all the buffered {@link Put} operations.
    * <p>
    * This method gets called once automatically for every {@link Put} or batch
-   * of {@link Put}s (when {@link #put(List<Put>)} is used) when
+   * of {@link Put}s (when <code>put(List<Put>)</code> is used) when
    * {@link #isAutoFlush} is {@code true}.
    * @throws IOException if a remote or network exception occurs.
    */

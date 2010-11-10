@@ -75,7 +75,7 @@ Writing MapReduce jobs that read or write HBase, you'll probably want to subclas
 {@link org.apache.hadoop.hbase.mapred.TableReduce TableReduce}.  See the do-nothing
 pass-through classes {@link org.apache.hadoop.hbase.mapred.IdentityTableMap IdentityTableMap} and
 {@link org.apache.hadoop.hbase.mapred.IdentityTableReduce IdentityTableReduce} for basic usage.  For a more
-involved example, see {@link org.apache.hadoop.hbase.mapred.BuildTableIndex BuildTableIndex}
+involved example, see <code>BuildTableIndex</code>
 or review the <code>org.apache.hadoop.hbase.mapred.TestTableMapReduce</code> unit test.
 </p>
 

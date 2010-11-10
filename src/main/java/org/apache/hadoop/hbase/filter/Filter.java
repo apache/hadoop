@@ -124,10 +124,9 @@ public interface Filter extends Writable {
   public void filterRow(List<KeyValue> kvs);
 
   /**
-   * Return whether or not this filter actively uses filterRow(List)
+   * @return True if this filter actively uses filterRow(List).
    * Primarily used to check for conflicts with scans(such as scans
    * that do not read a full row at a time)
-   * @return
    */
   public boolean hasFilterRow();
 

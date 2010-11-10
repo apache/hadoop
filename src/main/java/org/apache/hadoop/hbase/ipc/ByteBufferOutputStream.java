@@ -51,7 +51,7 @@ public class ByteBufferOutputStream extends OutputStream {
 
   /**
    * This flips the underlying BB so be sure to use it _last_!
-   * @return
+   * @return ByteBuffer
    */
   public ByteBuffer getByteBuffer() {
     buf.flip();

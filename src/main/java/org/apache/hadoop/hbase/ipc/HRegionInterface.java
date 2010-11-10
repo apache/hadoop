@@ -312,16 +312,14 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
   /**
    * Opens the specified region.
    * @param region region to open
-   * @param RegionServerStoppedException
-   * @param IOException
+   * @throws IOException
    */
   public void openRegion(final HRegionInfo region) throws IOException;
 
   /**
    * Opens the specified regions.
    * @param regions regions to open
-   * @param RegionServerStoppedException
-   * @param IOException
+   * @throws IOException
    */
   public void openRegions(final List<HRegionInfo> regions) throws IOException;
 

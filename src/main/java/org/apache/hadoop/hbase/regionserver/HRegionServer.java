@@ -2017,7 +2017,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @param zk True if we are to update zk about the region close; if the close
    * was orchestrated by master, then update zk.  If the close is being run by
    * the regionserver because its going down, don't update zk.
-   * @return
+   * @return True if closed a region.
    */
   protected boolean closeRegion(HRegionInfo region, final boolean abort,
       final boolean zk) {

@@ -30,8 +30,6 @@ import java.util.List;
  *
  * If you could instantiate FilterBase, it would end up being a "null" filter -
  * that is one that never filters anything.
- *
- * @inheritDoc
  */
 public abstract class FilterBase implements Filter {
 
@@ -101,7 +99,7 @@ public abstract class FilterBase implements Filter {
 
   /**
    * Filters that never filter by rows based on previously gathered state from
-   * @{link #filterKeyValue(KeyValue)} can inherit this implementation that
+   * {@link #filterKeyValue(KeyValue)} can inherit this implementation that
    * never filters a row.
    *
    * @inheritDoc

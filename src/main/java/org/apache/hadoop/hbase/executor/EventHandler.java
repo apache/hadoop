@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.Server;
  * method gets called).  Implement
  * {@link EventHandlerListener}s, and registering using
  * {@link #setListener(EventHandlerListener)}.
- * @see {@link ExecutorService}
+ * @see ExecutorService
  */
 public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   private static final Log LOG = LogFactory.getLog(EventHandler.class);
@@ -76,12 +76,12 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
   public interface EventHandlerListener {
     /**
      * Called before any event is processed
-     * @param The event handler whose process method is about to be called.
+     * @param event The event handler whose process method is about to be called.
      */
     public void beforeProcess(EventHandler event);
     /**
      * Called after any event is processed
-     * @param The event handler whose process method is about to be called.
+     * @param event The event handler whose process method is about to be called.
      */
     public void afterProcess(EventHandler event);
   }
@@ -164,7 +164,7 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
 
   /**
    * Return the event type
-   * @return
+   * @return The event type.
    */
   public EventType getEventType() {
     return this.eventType;

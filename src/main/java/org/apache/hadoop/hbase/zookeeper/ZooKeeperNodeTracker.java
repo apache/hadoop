@@ -63,8 +63,8 @@ public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
   /**
    * Starts the tracking of the node in ZooKeeper.
    *
-   * <p>Use {@link blockUntilAvailable()} to block until the node is available
-   * or {@link getData()} to get the data of the node if it is available.
+   * <p>Use {@link #blockUntilAvailable()} to block until the node is available
+   * or {@link #getData()} to get the data of the node if it is available.
    */
   public synchronized void start() {
     this.watcher.registerListener(this);

@@ -36,7 +36,7 @@ public interface Transform {
   /**
    * Transform data from one representation to another according to
    * transfer direction.
-   * @param in input data
+   * @param data input data
    * @param direction IN or OUT
    * @return the transformed data
    */

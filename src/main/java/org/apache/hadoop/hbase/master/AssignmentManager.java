@@ -136,9 +136,7 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Constructs a new assignment manager.
    *
-   * <p>This manager must be started with {@link #start()}.
-   *
-   * @param status master status
+   * @param master
    * @param serverManager
    * @param catalogTracker
    * @param service
@@ -574,7 +572,6 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * Used when a region has been closed and should remain closed.
    * @param regionInfo
-   * @param serverInfo
    */
   public void regionOffline(final HRegionInfo regionInfo) {
     synchronized(this.regionsInTransition) {
@@ -638,7 +635,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * chosen server is up and running (It may have just crashed!).  If the
    * in-memory checks pass, the zk node is forced to OFFLINE before assigning.
    *
-   * @param regionName server to be assigned
+   * @param region server to be assigned
    * @param setOfflineInZK whether ZK node should be created/transitioned to an
    *                       OFFLINE state before assigning the region
    */
@@ -956,11 +953,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * Updates the RegionState and sends the CLOSE RPC.
    * <p>
-   * If a RegionPlan is already set, it will remain.  If this is being used
-   * to disable a table, be sure to use {@link #setDisabledTable(String)} to ensure
-   * regions are not onlined after being closed.
+   * If a RegionPlan is already set, it will remain.
    *
-   * @param regionName server to be unassigned
+   * @param region server to be unassigned
    */
   public void unassign(HRegionInfo region) {
     unassign(region, false);
@@ -971,11 +966,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * Updates the RegionState and sends the CLOSE RPC.
    * <p>
-   * If a RegionPlan is already set, it will remain.  If this is being used
-   * to disable a table, be sure to use {@link #setDisabledTable(String)} to ensure
-   * regions are not onlined after being closed.
+   * If a RegionPlan is already set, it will remain.
    *
-   * @param regionName server to be unassigned
+   * @param region server to be unassigned
    * @param force if region should be closed even if already closing
    */
   public void unassign(HRegionInfo region, boolean force) {

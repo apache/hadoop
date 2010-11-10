@@ -54,7 +54,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
- * @see usage()
+ * @see #usage()
  */
 public class LoadIncrementalHFiles extends Configured implements Tool {
 

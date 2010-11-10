@@ -434,6 +434,7 @@ public class Store implements HeapSize {
    * previously.
    * @param logCacheFlushId flush sequence number
    * @param snapshot
+   * @param snapshotTimeRangeTracker
    * @return true if a compaction is needed
    * @throws IOException
    */

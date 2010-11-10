@@ -37,7 +37,6 @@ public abstract class BulkAssigner {
 
   /**
    * @param server An instance of Server
-   * @param regionsInTransition A reference to {@link AssignmentManager#regionsInTransition}
    */
   public BulkAssigner(final Server server) {
     this.server = server;

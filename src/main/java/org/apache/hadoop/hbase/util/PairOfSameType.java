@@ -27,7 +27,7 @@ import org.apache.commons.lang.NotImplementedException;
 /**
  * A generic, immutable class for pairs of objects both of type <code>T</code>.
  * @param <T>
- * @See {@link Pair} if Types differ.
+ * @see Pair if Types differ.
  */
 public class PairOfSameType<T> implements Iterable<T> {
   private final T first;

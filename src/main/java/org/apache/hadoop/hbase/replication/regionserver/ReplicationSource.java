@@ -491,7 +491,7 @@ public class ReplicationSource extends Thread
    * Do the sleeping logic
    * @param msg Why we sleep
    * @param sleepMultiplier by how many times the default sleeping time is augmented
-   * @return
+   * @return True if <code>sleepMultiplier</code> is &lt; <code>maxRetriesMultiplier</code>
    */
   protected boolean sleepForRetries(String msg, int sleepMultiplier) {
     try {

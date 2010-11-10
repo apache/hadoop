@@ -45,7 +45,7 @@ the hadoop cluster before it'll notice your HBase additions.</p>
 <p>As of 0.90.x, HBase will just add its dependency jars to the job
 configuration; the dependencies just need to be available on the local
 <code>CLASSPATH</code>.  For example, to run the bundled HBase
-{@link RowCounter} mapreduce job against a table named <code>usertable</code>,
+{@link org.apache.hadoop.hbase.mapreduce.RowCounter} mapreduce job against a table named <code>usertable</code>,
 type:
 
 <blockquote><pre>

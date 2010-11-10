@@ -154,13 +154,11 @@ public class ServerShutdownHandler extends EventHandler {
   /**
    * Process a dead region from a dead RS.  Checks if the region is disabled
    * or if the region has a partially completed split.
-   * <p>
-   * Returns true if specified region should be assigned, false if not.
    * @param hri
    * @param result
    * @param assignmentManager
    * @param catalogTracker
-   * @return
+   * @return Returns true if specified region should be assigned, false if not.
    * @throws IOException
    */
   public static boolean processDeadRegion(HRegionInfo hri, Result result,

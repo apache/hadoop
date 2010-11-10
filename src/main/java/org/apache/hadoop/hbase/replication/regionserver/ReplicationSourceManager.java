@@ -521,7 +521,7 @@ public class ReplicationSourceManager {
 
   /**
    * Get the handle on the local file system
-   * @returnthe handle on the local file system
+   * @return Handle on the local file system
    */
   public FileSystem getFs() {
     return this.fs;

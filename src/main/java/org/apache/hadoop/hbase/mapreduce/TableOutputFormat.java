@@ -57,7 +57,7 @@ implements Configurable {
    * Optional job parameter to specify a peer cluster.
    * Used specifying remote cluster when copying between hbase clusters (the
    * source is picked up from <code>hbase-site.xml</code>).
-   * @see {@link TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job, Class, String, String, String)}
+   * @see TableMapReduceUtil#initTableReducerJob(String, Class, org.apache.hadoop.mapreduce.Job, Class, String, String, String)
    */
   public static final String QUORUM_ADDRESS = "hbase.mapred.output.quorum";
 

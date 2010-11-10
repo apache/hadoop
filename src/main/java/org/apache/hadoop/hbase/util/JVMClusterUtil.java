@@ -166,8 +166,8 @@ public class JVMClusterUtil {
   /**
    * Start the cluster.  Waits until there is a primary master and returns its
    * address.
-   * @param m
-   * @param regionServers
+   * @param masters
+   * @param regionservers
    * @return Address to use contacting primary master.
    */
   public static String startup(final List<JVMClusterUtil.MasterThread> masters,
@@ -201,7 +201,7 @@ public class JVMClusterUtil {
   }
 
   /**
-   * @param master
+   * @param masters
    * @param regionservers
    */
   public static void shutdown(final List<MasterThread> masters,

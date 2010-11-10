@@ -243,7 +243,7 @@ public class ZKConfig {
 
   /**
    * Return the ZK Quorum servers string given the specified configuration.
-   * @param properties
+   * @param conf
    * @return Quorum servers
    */
   public static String getZKQuorumServersString(Configuration conf) {
