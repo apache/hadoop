@@ -37,7 +37,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
 
 /**
  * Implementation of {@link HLog.Writer} that delegates to
- * {@link SequenceFile.Writer}.
+ * SequenceFile.Writer.
  */
 public class SequenceFileLogWriter implements HLog.Writer {
   private final Log LOG = LogFactory.getLog(this.getClass());

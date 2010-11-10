@@ -523,7 +523,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @param toggle bloom filter type
+   * @param bt bloom filter type
    */
   public void setBloomFilterType(final StoreFile.BloomType bt) {
     setValue(BLOOMFILTER, bt.toString());

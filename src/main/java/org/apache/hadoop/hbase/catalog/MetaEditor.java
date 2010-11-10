@@ -45,7 +45,7 @@ public class MetaEditor {
 
   /**
    * Adds a META row for the specified new region.
-   * @param info region information
+   * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
    */
   public static void addRegionToMeta(CatalogTracker catalogTracker,

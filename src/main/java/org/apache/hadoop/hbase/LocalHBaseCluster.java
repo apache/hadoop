@@ -266,7 +266,7 @@ public class LocalHBaseCluster {
   /**
    * Wait for the specified region server to stop
    * Removes this thread from list of running threads.
-   * @param serverNumber
+   * @param rst
    * @return Name of region server that just went down.
    */
   public String waitOnRegionServer(JVMClusterUtil.RegionServerThread rst) {
@@ -360,7 +360,7 @@ public class LocalHBaseCluster {
   /**
    * Wait for the specified master to stop
    * Removes this thread from list of running threads.
-   * @param serverNumber
+   * @param masterThread
    * @return Name of master that just went down.
    */
   public String waitOnMaster(JVMClusterUtil.MasterThread masterThread) {

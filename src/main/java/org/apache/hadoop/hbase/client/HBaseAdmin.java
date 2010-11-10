@@ -439,9 +439,9 @@ public class HBaseAdmin implements Abortable {
    * and {@link #isTableEnabled(byte[])} instead.
    * @param tableName name of the table
    * @throws IOException if a remote or network exception occurs
-   * @see {@link #isTableEnabled(byte[])}
-   * @see {@link #disableTable(byte[])}
-   * @see {@link #enableTableAsync(byte[])}
+   * @see isTableEnabled(byte[])
+   * @see disableTable(byte[])
+   * @see enableTableAsync(byte[])
    */
   public void enableTable(final byte [] tableName)
   throws IOException {
@@ -514,8 +514,8 @@ public class HBaseAdmin implements Abortable {
    * If table is taking too long to online, check server logs.
    * @param tableName name of table
    * @throws IOException if a remote or network exception occurs
-   * @see {@link #isTableDisabled(byte[])}
-   * @see {@link #isTableEnabled(byte[])}
+   * @see isTableDisabled(byte[])
+   * @see isTableEnabled(byte[])
    * @since 0.90.0
    */
   public void disableTableAsync(final byte [] tableName) throws IOException {

@@ -369,7 +369,7 @@ public class MetaReader {
   /**
    * Checks if the specified table exists.  Looks at the META table hosted on
    * the specified server.
-   * @param metaServer server hosting meta
+   * @param catalogTracker
    * @param tableName table to check
    * @return true if the table exists in meta, false if not
    * @throws IOException

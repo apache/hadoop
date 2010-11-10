@@ -286,7 +286,7 @@ public class ZKUtil {
    *
    * @param zkw zk reference
    * @param znode path of node to list and watch children of
-   * @returns list of children of the specified node, an empty list if the node
+   * @return list of children of the specified node, an empty list if the node
    *          exists but has no children, and null if the node does not exist
    * @throws KeeperException if unexpected zookeeper exception
    */
@@ -874,7 +874,6 @@ public class ZKUtil {
    * @param data data of node to create
    * @param cb
    * @param ctx
-   * @return version of node created
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NodeExistsException if node already exists
    */
@@ -970,7 +969,7 @@ public class ZKUtil {
   /**
    * Deletes the specified node.  Fails silent if the node does not exist.
    * @param zkw
-   * @param joinZNode
+   * @param node
    * @throws KeeperException
    */
   public static void deleteNodeFailSilent(ZooKeeperWatcher zkw, String node)

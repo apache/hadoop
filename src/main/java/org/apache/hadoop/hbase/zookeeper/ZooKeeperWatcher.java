@@ -220,7 +220,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
 
   /**
    * Get the quorum address of this instance.
-   * @returns quorum string of this zookeeper connection instance
+   * @return quorum string of this zookeeper connection instance
    */
   public String getQuorum() {
     return quorum;
@@ -349,7 +349,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
 
   /**
    * Get the set of already watched unassigned nodes.
-   * @return
+   * @return Set of Nodes.
    */
   public Set<String> getNodes() {
     return unassignedNodes;

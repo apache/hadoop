@@ -268,7 +268,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * Make a region name of passed parameters.
    * @param tableName
    * @param startKey Can be null
-   * @param id Region id (Usually timestamp from when region was created).
+   * @param regionid Region id (Usually timestamp from when region was created).
    * @param newFormat should we create the region name in the new format
    *                  (such that it contains its encoded name?).
    * @return Region name made of passed tableName, startKey and id
@@ -347,7 +347,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   /**
    * Gets the table name from the specified region name.
    * @param regionName
-   * @return
+   * @return Table name.
    */
   public static byte [] getTableName(byte [] regionName) {
     int offset = -1;

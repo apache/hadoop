@@ -183,7 +183,7 @@ public class ZKConfig {
    * Return the ZK Quorum servers string given zk properties returned by
    * makeZKProps
    * @param properties
-   * @return
+   * @return Quorum servers String
    */
   public static String getZKQuorumServersString(Properties properties) {
     String clientPort = null;
@@ -244,7 +244,7 @@ public class ZKConfig {
   /**
    * Return the ZK Quorum servers string given the specified configuration.
    * @param properties
-   * @return
+   * @return Quorum servers
    */
   public static String getZKQuorumServersString(Configuration conf) {
     return getZKQuorumServersString(makeZKProps(conf));

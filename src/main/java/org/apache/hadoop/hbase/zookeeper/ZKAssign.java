@@ -278,7 +278,7 @@ public class ZKAssign {
    * of the specified regions transition.
    *
    * @param zkw zk reference
-   * @param region opened region to be deleted from zk
+   * @param regionName opened region to be deleted from zk
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
@@ -303,7 +303,7 @@ public class ZKAssign {
    * that has died are all set to OFFLINE before being processed.
    *
    * @param zkw zk reference
-   * @param region closed region to be deleted from zk
+   * @param regionName closed region to be deleted from zk
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
@@ -329,7 +329,7 @@ public class ZKAssign {
    * of the specified regions transition to being closed.
    *
    * @param zkw zk reference
-   * @param region closed region to be deleted from zk
+   * @param regionName closed region to be deleted from zk
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
@@ -355,7 +355,7 @@ public class ZKAssign {
    * of the specified regions transition to being closed.
    *
    * @param zkw zk reference
-   * @param region closing region to be deleted from zk
+   * @param regionName closing region to be deleted from zk
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
@@ -723,10 +723,9 @@ public class ZKAssign {
    *
    * <p>Sets a watch on the node if the node exists.
    *
-   * @param watcher zk reference
+   * @param zkw zk reference
    * @param pathOrRegionName fully-specified path or region name
    * @return data for the unassigned node
-   * @throws KeeperException
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static RegionTransitionData getData(ZooKeeperWatcher zkw,
@@ -749,11 +748,10 @@ public class ZKAssign {
    *
    * <p>Does not set a watch.
    *
-   * @param watcher zk reference
+   * @param zkw zk reference
    * @param pathOrRegionName fully-specified path or region name
    * @param stat object to store node info into on getData call
    * @return data for the unassigned node
-   * @throws KeeperException
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static RegionTransitionData getDataNoWatch(ZooKeeperWatcher zkw,
@@ -834,7 +832,7 @@ public class ZKAssign {
    * <p>
    * Method synchronizes() with ZK so will yield an up-to-date result but is
    * a slow read.
-   * @param watcher
+   * @param zkw
    * @param region
    * @param expectedState
    * @return true if region exists and is in expected state

@@ -34,8 +34,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * <p>
  * Utilizes {@link ZooKeeperNodeTracker} for zk interactions.
  * <p>
- * You can get the current master via {@link #getMasterAddress()} or the
- * blocking method {@link #waitMasterAddress()}.
+ * You can get the current master via {@link #getMasterAddress()}
  */
 public class MasterAddressTracker extends ZooKeeperNodeTracker {
   /**
@@ -57,8 +56,6 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * Get the address of the current master if one is available.  Returns null
    * if no current master.
    *
-   * Use {@link #waitMasterAddress} if you want to block until the master is
-   * available.
    * @return server address of current active master, or null if none available
    */
   public HServerAddress getMasterAddress() {
