@@ -1138,6 +1138,7 @@ Release 0.90.0 - Unreleased
                (Nicolas Spiegelberg via Stack)
    HBASE-3168  Sanity date and time check when a region server joins the
                cluster (Jeff Whiting and jgray)
+   HBASE-3090  Don't include hbase-default in conf/ assembly
 
 
   NEW FEATURES

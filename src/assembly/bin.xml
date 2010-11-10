@@ -40,13 +40,6 @@
       <directory>target/site</directory>
       <outputDirectory>docs</outputDirectory>
     </fileSet>
-    <fileSet>
-      <directory>src/main/resources/</directory>
-      <outputDirectory>conf</outputDirectory>
-      <includes>
-        <include>hbase-default.xml</include>
-      </includes>
-    </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>
