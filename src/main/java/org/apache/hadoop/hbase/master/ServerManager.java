@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * The ServerManager class manages info about region servers - HServerInfo,
@@ -84,12 +84,12 @@ public class ServerManager {
   private final Server master;
   private final MasterServices services;
 
-  private final LogCleaner logCleaner;
-
   // Reporting to track master metrics.
   private final MasterMetrics metrics;
 
   final DeadServer deadservers = new DeadServer();
+
+  private final long maxSkew;
 
   /**
    * Constructor.
@@ -105,20 +105,16 @@ public class ServerManager {
     this.services = services;
     this.metrics = metrics;
     Configuration c = master.getConfiguration();
-    String n = Thread.currentThread().getName();
-    this.logCleaner =
-      new LogCleaner(c.getInt("hbase.master.cleaner.interval", 60 * 1000),
-        master, c, this.services.getMasterFileSystem().getFileSystem(),
-        this.services.getMasterFileSystem().getOldLogDir());
-    Threads.setDaemonThreadRunning(logCleaner, n + ".oldLogCleaner");
+    maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
   }
 
   /**
    * Let the server manager know a new regionserver has come online
    * @param serverInfo
+   * @param serverCurrentTime The current time of the region server in ms
    * @throws IOException
    */
-  void regionServerStartup(final HServerInfo serverInfo)
+  void regionServerStartup(final HServerInfo serverInfo, long serverCurrentTime)
   throws IOException {
     // Test for case where we get a region startup message from a regionserver
     // that has been quickly restarted but whose znode expiration handler has
@@ -130,6 +126,7 @@ public class ServerManager {
     HServerInfo info = new HServerInfo(serverInfo);
     checkIsDead(info.getServerName(), "STARTUP");
     checkAlreadySameHostPort(info);
+    checkClockSkew(info, serverCurrentTime);
     recordNewServer(info, false, null);
   }
 
@@ -165,6 +162,24 @@ public class ServerManager {
       }
     }
     return null;
+  }
+
+  /**
+   * Checks if the clock skew between the server and the master. If the clock
+   * skew is too much it will throw an Exception.
+   * @throws ClockOutOfSyncException
+   */
+  private void checkClockSkew(final HServerInfo serverInfo,
+      final long serverCurrentTime)
+  throws ClockOutOfSyncException {
+    long skew = System.currentTimeMillis() - serverCurrentTime;
+    if (skew > maxSkew) {
+      String message = "Server " + serverInfo.getServerName() + " has been " +
+        "rejected; Reported time is too far out of sync with master.  " +
+        "Time difference of " + skew + "ms > max allowed of " + maxSkew + "ms";
+      LOG.warn(message);
+      throw new ClockOutOfSyncException(message);
+    }
   }
 
   /**
@@ -651,11 +666,9 @@ public class ServerManager {
   }
 
   /**
-   * Stop the ServerManager.
-   * <p>
-   * Currently just interrupts the ServerMonitor and LogCleaner chores.
+   * Stop the ServerManager.  Currently does nothing.
    */
   public void stop() {
-    this.logCleaner.interrupt();
+
   }
 }

@@ -40,11 +40,13 @@ public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
   /**
    * Called when a region server first starts
    * @param info server info
+   * @param serverCurrentTime The current time of the region server in ms
    * @throws IOException e
    * @return Configuration for the regionserver to use: e.g. filesystem,
    * hbase rootdir, etc.
    */
-  public MapWritable regionServerStartup(HServerInfo info) throws IOException;
+  public MapWritable regionServerStartup(HServerInfo info,
+    long serverCurrentTime) throws IOException;
 
   /**
    * Called to renew lease, tell master what the region server is doing and to

@@ -78,7 +78,9 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * <li>Version 24: HBASE-2473, create table with regions.</li>
    * <li>Version 25: Added openRegion and Stoppable/Abortable to API.</li>
    * <li>Version 26: New master and Increment, 0.90 version bump.</li>
+   * <li>Version 27: HBASE-3168, Added serverCurrentTime to regionServerStartup
+   * in HMasterRegionInterface.</li>
    * </ul>
    */
-  public static final long versionID = 26L;
+  public static final long versionID = 27L;
 }

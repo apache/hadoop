@@ -165,6 +165,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private volatile boolean balanceSwitch = true;
 
   private Thread catalogJanitorChore;
+  private LogCleaner logCleaner;
 
   /**
    * Initializes the HMaster. The steps are as follows:
@@ -518,6 +519,14 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // tables.
       this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
 
+      // Start log cleaner thread
+      String n = Thread.currentThread().getName();
+      this.logCleaner =
+        new LogCleaner(conf.getInt("hbase.master.cleaner.interval", 60 * 1000),
+          this, conf, getMasterFileSystem().getFileSystem(),
+          getMasterFileSystem().getOldLogDir());
+      Threads.setDaemonThreadRunning(logCleaner, n + ".oldLogCleaner");
+
       // Put up info server.
       int port = this.conf.getInt("hbase.master.info.port", 60010);
       if (port >= 0) {
@@ -546,6 +555,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
     if (this.rpcServer != null) this.rpcServer.stop();
     // Clean up and close up shop
+    this.logCleaner.interrupt();
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {
@@ -579,7 +589,9 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
   }
 
-  public MapWritable regionServerStartup(final HServerInfo serverInfo)
+  @Override
+  public MapWritable regionServerStartup(final HServerInfo serverInfo,
+    final long serverCurrentTime)
   throws IOException {
     // Set the ip into the passed in serverInfo.  Its ip is more than likely
     // not the ip that the master sees here.  See at end of this method where
@@ -591,7 +603,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     serverInfo.setServerAddress(new HServerAddress(rsAddress,
       serverInfo.getServerAddress().getPort()));
     // Register with server manager
-    this.serverManager.regionServerStartup(serverInfo);
+    this.serverManager.regionServerStartup(serverInfo, serverCurrentTime);
     // Send back some config info
     MapWritable mw = createConfigurationSubset();
      mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));

@@ -1134,6 +1134,8 @@ Release 0.90.0 - Unreleased
                (Gary Helmling via Stack)
    HBASE-3209  HBASE-3209 : New Compaction Algorithm
                (Nicolas Spiegelberg via Stack)
+   HBASE-3168  Sanity date and time check when a region server joins the
+               cluster (Jeff Whiting and jgray)
 
 
   NEW FEATURES

@@ -53,6 +53,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
@@ -110,6 +112,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
@@ -120,6 +123,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
@@ -1399,7 +1403,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * Let the master know we're here Run initialization using parameters passed
    * us by the master.
    */
-  private MapWritable reportForDuty() {
+  private MapWritable reportForDuty() throws IOException {
     HServerAddress masterAddress = null;
     while (!stopped && (masterAddress = getMaster()) == null) {
       sleeper.sleep();
@@ -1417,8 +1421,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           this.serverInfo.getServerAddress());
         this.serverInfo.setLoad(buildServerLoad());
         LOG.info("Telling master at " + masterAddress + " that we are up");
-        result = this.hbaseMaster.regionServerStartup(this.serverInfo);
+        result = this.hbaseMaster.regionServerStartup(this.serverInfo,
+            EnvironmentEdgeManager.currentTimeMillis());
         break;
+      } catch (RemoteException e) {
+        IOException ioe = e.unwrapRemoteException();
+        if (ioe instanceof ClockOutOfSyncException) {
+          LOG.fatal("Master rejected startup because clock is out of sync",
+              ioe);
+          // Re-throw IOE will cause RS to abort
+          throw ioe;
+        } else {
+          LOG.warn("remote error telling master we are up", e);
+        }
       } catch (IOException e) {
         LOG.warn("error telling master we are up", e);
       } catch (KeeperException e) {
