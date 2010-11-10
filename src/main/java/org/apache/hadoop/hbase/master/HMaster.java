@@ -516,8 +516,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // We depend on there being only one instance of this executor running
       // at a time.  To do concurrency, would need fencing of enable/disable of
       // tables.
-      this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS,
-        conf.getInt("hbase.master.executor.tableops.threads", 1));
+      this.executorService.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
 
       // Put up info server.
       int port = this.conf.getInt("hbase.master.info.port", 60010);
