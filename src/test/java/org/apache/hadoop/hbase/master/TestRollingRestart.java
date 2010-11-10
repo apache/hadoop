@@ -307,7 +307,7 @@ public class TestRollingRestart {
     // First wait for it to be in dead list
     while (!sm.deadservers.isDeadServer(serverName)) {
       log("Waiting for [" + serverName + "] to be listed as dead in master");
-      Thread.sleep(100);
+      Thread.sleep(1);
     }
     log("Server [" + serverName + "] marked as dead, waiting for it to " +
         "finish dead processing");
