@@ -1420,8 +1420,10 @@ public class HRegion implements HeapSize { // , Writable{
         lastIndexExclusive++;
         numReadyToWrite++;
       }
+      // Nothing to put -- an exception in the above such as NoSuchColumnFamily? 
+      if (numReadyToWrite <= 0) return 0L;
+
       // We've now grabbed as many puts off the list as we can
-      assert numReadyToWrite > 0;
 
       // ------------------------------------
       // STEP 2. Update any LATEST_TIMESTAMP timestamps

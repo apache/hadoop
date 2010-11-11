@@ -1148,6 +1148,7 @@ Release 0.90.0 - Unreleased
    HBASE-3161  Provide option for Stargate to only serve GET requests
                (Bennett Neale via Stack)
    HBASE-3218  Shell help cleanup/cosmetics/edit
+   HBASE-3079  Shell displaying uninformative exceptions
 
 
   NEW FEATURES
