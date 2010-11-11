@@ -18,7 +18,7 @@
     e.printStackTrace();
   }
   RegionServerMetrics metrics = regionServer.getMetrics();
-  Collection<HRegionInfo> onlineRegions = regionServer.getOnlineRegions();
+  List<HRegionInfo> onlineRegions = regionServer.getOnlineRegions();
   int interval = regionServer.getConfiguration().getInt("hbase.regionserver.msginterval", 3000)/1000;
 
 %><?xml version="1.0" encoding="UTF-8" ?>
@@ -49,7 +49,9 @@
 <% if (onlineRegions != null && onlineRegions.size() > 0) { %>
 <table>
 <tr><th>Region Name</th><th>Start Key</th><th>End Key</th><th>Metrics</th></tr>
-<%   for (HRegionInfo r: onlineRegions) { 
+<%   
+  Collections.sort(onlineRegions);
+  for (HRegionInfo r: onlineRegions) { 
         HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
  %>
 <tr><td><%= r.getRegionNameAsString() %></td>
