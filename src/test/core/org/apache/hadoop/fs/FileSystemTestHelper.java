@@ -20,8 +20,10 @@ package org.apache.hadoop.fs;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
+import java.net.URI;
 
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 
@@ -39,6 +41,11 @@ public final class FileSystemTestHelper {
 
   /** Hidden constructor */
   private FileSystemTestHelper() {}
+  
+  public static void addFileSystemForTesting(URI uri, Configuration conf,
+      FileSystem fs) throws IOException {
+    FileSystem.addFileSystemForTesting(uri, conf, fs);
+  }
   
   public static int getDefaultBlockSize() {
     return DEFAULT_BLOCK_SIZE;

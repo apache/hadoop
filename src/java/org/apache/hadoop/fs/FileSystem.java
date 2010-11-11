@@ -104,6 +104,19 @@ public abstract class FileSystem extends Configured implements Closeable {
   private Set<Path> deleteOnExit = new TreeSet<Path>();
   
   /**
+   * This method adds a file system for testing so that we can find it later. It
+   * is only for testing.
+   * @param uri the uri to store it under
+   * @param conf the configuration to store it under
+   * @param fs the file system to store
+   * @throws IOException
+   */
+  static void addFileSystemForTesting(URI uri, Configuration conf,
+      FileSystem fs) throws IOException {
+    CACHE.map.put(new Cache.Key(uri, conf), fs);
+  }
+
+  /**
    * Get a filesystem instance based on the uri, the passed
    * configuration and the user
    * @param uri
