@@ -1620,6 +1620,16 @@ public class AssignmentManager extends ZooKeeperListener {
     regionOffline(parent);
     regionOnline(a, hsi);
     regionOnline(b, hsi);
+
+    // There's a possibility that the region was splitting while a user asked
+    // the master to disable, we need to make sure we close those regions in
+    // that case. This is not racing with the region server itself since RS
+    // report is done after the split transaction completed.
+    if (this.zkTable.isDisablingOrDisabledTable(
+        parent.getTableDesc().getNameAsString())) {
+      unassign(a);
+      unassign(b);
+    }
   }
 
   /**

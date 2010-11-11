@@ -676,6 +676,7 @@ Release 0.90.0 - Unreleased
    HBASE-3216  Move HBaseFsck from client to util
    HBASE-3219  Split parents are reassigned on restart and on disable/enable
    HBASE-3222  Regionserver region listing in UI is no longer ordered
+   HBASE-3221  Race between splitting and disabling
 
 
   IMPROVEMENTS
