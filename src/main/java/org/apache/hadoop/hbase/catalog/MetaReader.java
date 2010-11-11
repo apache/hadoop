@@ -150,6 +150,28 @@ public class MetaReader {
   public static Map<HRegionInfo,HServerAddress> fullScan(
       CatalogTracker catalogTracker, final Set<String> disabledTables)
   throws IOException {
+    return fullScan(catalogTracker, disabledTables, false);
+  }
+
+  /**
+   * Performs a full scan of <code>.META.</code>, skipping regions from any
+   * tables in the specified set of disabled tables.
+   * <p>
+   * Returns a map of every region to it's currently assigned server, according
+   * to META.  If the region does not have an assignment it will have a null
+   * value in the map.
+   *
+   * @param catalogTracker
+   * @param disabledTables set of disabled tables that will not be returned
+   * @param excludeOfflinedSplitParents If true, do not include offlined split
+   * parents in the return.
+   * @return map of regions to their currently assigned server
+   * @throws IOException
+   */
+  public static Map<HRegionInfo,HServerAddress> fullScan(
+      CatalogTracker catalogTracker, final Set<String> disabledTables,
+      final boolean excludeOfflinedSplitParents)
+  throws IOException {
     final Map<HRegionInfo,HServerAddress> regions =
       new TreeMap<HRegionInfo,HServerAddress>();
     Visitor v = new Visitor() {
@@ -158,9 +180,12 @@ public class MetaReader {
         if (r ==  null || r.isEmpty()) return true;
         Pair<HRegionInfo,HServerAddress> region = metaRowToRegionPair(r);
         if (region == null) return true;
+        HRegionInfo hri = region.getFirst();
         if (disabledTables.contains(
-            region.getFirst().getTableDesc().getNameAsString())) return true;
-        regions.put(region.getFirst(), region.getSecond());
+            hri.getTableDesc().getNameAsString())) return true;
+        // Are we to include split parents in the list?
+        if (excludeOfflinedSplitParents && hri.isSplitParent()) return true;
+        regions.put(hri, region.getSecond());
         return true;
       }
     };
@@ -416,6 +441,21 @@ public class MetaReader {
   public static List<HRegionInfo> getTableRegions(CatalogTracker catalogTracker,
       byte [] tableName)
   throws IOException {
+    return getTableRegions(catalogTracker, tableName, false);
+  }
+
+  /**
+   * Gets all of the regions of the specified table.
+   * @param catalogTracker
+   * @param tableName
+   * @param excludeOfflinedSplitParents If true, do not include offlined split
+   * parents in the return.
+   * @return Ordered list of {@link HRegionInfo}.
+   * @throws IOException
+   */
+  public static List<HRegionInfo> getTableRegions(CatalogTracker catalogTracker,
+      byte [] tableName, final boolean excludeOfflinedSplitParents)
+  throws IOException {
     if (Bytes.equals(tableName, HConstants.ROOT_TABLE_NAME)) {
       // If root, do a bit of special handling.
       List<HRegionInfo> list = new ArrayList<HRegionInfo>();
@@ -446,6 +486,8 @@ public class MetaReader {
               data.getValue(HConstants.CATALOG_FAMILY,
                   HConstants.REGIONINFO_QUALIFIER));
           if (info.getTableDesc().getNameAsString().equals(tableString)) {
+            // Are we to include split parents in the list?
+            if (excludeOfflinedSplitParents && info.isSplitParent()) continue;
             regions.add(info);
           } else {
             break;

@@ -1105,7 +1105,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     // Scan META for all user regions, skipping any disabled tables
     Map<HRegionInfo,HServerAddress> allRegions =
-      MetaReader.fullScan(catalogTracker, this.zkTable.getDisabledTables());
+      MetaReader.fullScan(catalogTracker, this.zkTable.getDisabledTables(), true);
     if (allRegions == null || allRegions.isEmpty()) return;
 
     // Determine what type of assignment to do on startup
