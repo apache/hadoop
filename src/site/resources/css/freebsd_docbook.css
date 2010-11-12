@@ -1,0 +1,208 @@
+/*
+ * Copyright (c) 2001, 2003, 2010 The FreeBSD Documentation Project
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ * $FreeBSD: doc/share/misc/docbook.css,v 1.15 2010/03/20 04:15:01 hrs Exp $
+ */
+
+BODY ADDRESS {
+	line-height: 1.3;
+	margin: .6em 0;
+}
+
+BODY BLOCKQUOTE {
+	margin-top: .75em;
+	line-height: 1.5;
+	margin-bottom: .75em;
+}
+
+HTML BODY {
+	margin: 1em 8% 1em 10%;
+	line-height: 1.2;
+}
+
+.LEGALNOTICE {
+	font-size: small;
+	font-variant: small-caps;
+}
+
+BODY DIV {
+	margin: 0;
+}
+
+DL {
+	margin: .8em 0;
+	line-height: 1.2;
+}
+
+BODY FORM {
+	margin: .6em 0;
+}
+
+H1, H2, H3, H4, H5, H6,
+DIV.EXAMPLE P B,
+.QUESTION,
+DIV.TABLE P B,
+DIV.PROCEDURE P B {
+	color: #990000;
+}
+
+BODY H1, BODY H2, BODY H3, BODY H4, BODY H5, BODY H6 {
+	line-height: 1.3;
+	margin-left: 0;
+}
+
+BODY H1, BODY H2 {
+	margin: .8em 0 0 -4%;
+}
+
+BODY H3, BODY H4 {
+	margin: .8em 0 0 -3%;
+}
+
+BODY H5 {
+	margin: .8em 0 0 -2%;
+}
+
+BODY H6 {
+	margin: .8em 0 0 -1%;
+}
+
+BODY HR {
+	margin: .6em;
+	border-width: 0 0 1px 0;
+	border-style: solid;
+	border-color: #cecece;
+}
+
+BODY IMG.NAVHEADER {
+	margin: 0 0 0 -4%;
+}
+
+OL {
+	margin: 0 0 0 5%;
+	line-height: 1.2;
+}
+
+BODY PRE {
+	margin: .75em 0;
+	line-height: 1.0;
+	font-family: monospace;
+}
+
+BODY TD, BODY TH {
+	line-height: 1.2;
+}
+
+UL, BODY DIR, BODY MENU {
+	margin: 0 0 0 5%;
+	line-height: 1.2;
+}
+
+HTML {
+	margin: 0; 
+	padding: 0;
+}
+
+BODY P B.APPLICATION {
+	color: #000000;
+}
+
+.FILENAME {
+	color: #007a00;
+}
+
+.GUIMENU, .GUIMENUITEM, .GUISUBMENU,
+.GUILABEL, .INTERFACE,
+.SHORTCUT, .SHORTCUT .KEYCAP {
+	font-weight: bold;
+}
+
+.GUIBUTTON {
+	background-color: #CFCFCF;
+	padding: 2px;
+}
+
+.ACCEL {
+	background-color: #F0F0F0;
+	text-decoration: underline;
+} 
+
+.SCREEN {
+	padding: 1ex;
+}
+
+.PROGRAMLISTING {
+	padding: 1ex;
+	background-color: #eee;
+	border: 1px solid #ccc;
+}
+
+@media screen {  /* hide from IE3 */
+	a[href]:hover { background: #ffa }
+}
+
+BLOCKQUOTE.NOTE {
+	color: #222;
+	background: #eee;
+	border: 1px solid #ccc;
+	padding: 0.4em 0.4em;
+	width: 85%;
+}
+
+BLOCKQUOTE.TIP {
+	color: #004F00;
+	background: #d8ecd6;
+	border: 1px solid green;
+	padding: 0.2em 2em;
+	width: 85%;
+}
+
+BLOCKQUOTE.IMPORTANT {
+	font-style:italic;
+	border: 1px solid #a00;
+	border-left: 12px solid #c00;
+	padding: 0.1em 1em;
+}
+
+BLOCKQUOTE.WARNING {
+	color: #9F1313;
+	background: #f8e8e8;
+	border: 1px solid #e59595;
+	padding: 0.2em 2em;
+	width: 85%;
+}
+
+.EXAMPLE {
+	background: #fefde6;
+	border: 1px solid #f1bb16;
+	margin: 1em 0;
+	padding: 0.2em 2em;
+	width: 90%;
+}
+
+.INFORMALTABLE TABLE.CALSTABLE TR TD {
+        padding-left: 1em;
+        padding-right: 1em;
+}

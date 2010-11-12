@@ -282,6 +282,7 @@
           <sectionAutolabel>true</sectionAutolabel>
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
           <targetDirectory>${basedir}/target/site/</targetDirectory>
+          <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
         </configuration>
       </plugin>
       <plugin>

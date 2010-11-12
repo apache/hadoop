@@ -279,6 +279,7 @@ stopping hbase...............</programlisting></para>
   Just like Hadoop, HBase requires java 6 from <link xlink:href="http://www.java.com/download/">Oracle</link>.
 Usually you'll want to use the latest version available except the problematic u18  (u22 is the latest version as of this writing).</para>
 </section>
+
   <section xml:id="hadoop"><title><link xlink:href="http://hadoop.apache.org">hadoop</link></title>
 <para>This version of HBase will only run on <link xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</link>.
     It will not run on hadoop 0.21.x as of this writing.
@@ -286,10 +287,10 @@ Usually you'll want to use the latest version available except the problematic u
  Currently only the <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
  branch has this attribute.  No official releases have been made from this branch as of this writing
  so you will have to build your own Hadoop from the tip of this branch
- (or install Cloudera's <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link> (as of this writing, it is in beta); it has the
- 0.20-append patches needed to add a durable sync).
+ (or install Cloudera's <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link> (as of this writing, it is in beta);
+ CDH has the 0.20-append patches needed to add a durable sync).
  See <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/CHANGES.txt">CHANGES.txt</link>
- in branch-0.20.-append to see list of patches involved.</para>
+ in branch-0.20-append to see list of patches involved.</para>
   </section>
 <section xml:id="ssh"> <title>ssh</title>
 <para><command>ssh</command> must be installed and <command>sshd</command> must be running to use Hadoop's scripts to manage remote Hadoop daemons.
@@ -297,8 +298,13 @@ Usually you'll want to use the latest version available except the problematic u
   </para>
 </section>
   <section><title>DNS</title>
-<para>Basic name resolving must be working correctly on your cluster.
-</para>
+    <para>HBase uses the local hostname to self-report it's IP address. Both forward and reverse DNS resolving should work.</para>
+    <para>If your machine has multiple interfaces, HBase will use the interface that the primary hostname resolves to.</para>
+    <para>If this is insufficient, you can set <varname>hbase.regionserver.dns.interface</varname> to indicate the primary interface.
+    This only works if your cluster
+    configuration is consistent and every host has the same network interface configuration.</para>
+    <para>Another alternative is setting <varname>hbase.regionserver.dns.nameserver</varname> to choose a different nameserver than the
+    system wide default.</para>
 </section>
   <section><title>NTP</title>
 <para>
@@ -306,6 +312,7 @@ Usually you'll want to use the latest version available except the problematic u
     wild skew could generate odd behaviors. Run <link xlink:href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</link>
     on your cluster, or an equivalent.
   </para>
+    <para>If you are having problems querying data, or "weird" cluster operations, check system time!</para>
 </section>
 
 
@@ -316,22 +323,47 @@ Usually you'll want to use the latest version available except the problematic u
       Any significant amount of loading will lead you to 
       <link xlink:href="http://wiki.apache.org/hadoop/Hbase/FAQ#A6">FAQ: Why do I see "java.io.IOException...(Too many open files)" in my logs?</link>.
       You will also notice errors like:
-      <programlisting>2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
+      <programlisting>
+      2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
       2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
       </programlisting>
       Do yourself a favor and change the upper bound on the number of file descriptors.
       Set it to north of 10k.  See the above referenced FAQ for how.</para>
       <para>To be clear, upping the file descriptors for the user who is
       running the HBase process is an operating system configuration, not an
-      HBase configuration.
+      HBase configuration. Also, a common mistake is that administrators
+      will up the file descriptors for a user but for whatever reason,
+      HBase is running as some other users.  HBase prints in its logs
+      as the first line the ulimit its seeing.  Ensure its whats expected.
       </para>
+        <section xml:id="ulimit_ubuntu">
+          <title><varname>ulimit</varname> on Ubuntu</title>
+        <para>
+          If you are on Ubuntu you will need to make the following changes:</para>
+        <para>
+          In the file <filename>/etc/security/limits.conf</filename> add a line like:
+          <programlisting>hadoop  -       nofile  32768
+          </programlisting>
+          Replace 'hadoop' with whatever user is running hadoop and hbase. If you have
+          separate users, you will need 2 entries, one for each user.
+        </para>
+        <para>
+          In the file <filename>/etc/pam.d/common-session</filename> add as the last line in the file:
+          <programlisting>session required  pam_limits.so
+          </programlisting>
+          Otherwise the changes in <filename>/etc/security/limits.conf</filename> won't be applied.
+        </para>
+        <para>
+          Don't forget to log out and back in again for the changes to take place!
+        </para>
+          </section>
       </section>
 
       <section xml:id="dfs.datanode.max.xcievers">
       <title><varname>dfs.datanode.max.xcievers</varname></title>
       <para>
-      Hadoop HDFS has an upper bound of files that it will serve at one same time,
-      called <varname>xcievers</varname> (yes, this is misspelled). Again, before
+      Hadoop HDFS datanodes have an upper bound on the number of files that it will serve at one same time.
+      The upper bound parameter is called <varname>xcievers</varname> (yes, this is misspelled). Again, before
       doing any loading, make sure you have configured Hadoop's <filename>conf/hdfs-site.xml</filename>
       setting the <varname>xceivers</varname> value to at least the following:
       <programlisting>
@@ -341,6 +373,8 @@ Usually you'll want to use the latest version available except the problematic u
       &lt;/property&gt;
       </programlisting>
       </para>
+      <para>Be sure to restart your HDFS after making the above configuration change so its picked
+      up by datanodes.</para>
       </section>
 
 <section xml:id="windows">
@@ -349,7 +383,7 @@ Usually you'll want to use the latest version available except the problematic u
 If you are running HBase on Windows, you must install
 <link xlink:href="http://cygwin.com/">Cygwin</link>
 to have a *nix-like environment for the shell scripts. The full details
-are explained in the <link xlink:href="../cygwin.html">Windows Installation</link>
+are explained in the <link xlink:href="cygwin.html">Windows Installation</link>
 guide.
 </para>
 </section>
@@ -366,23 +400,29 @@ set the heapsize for HBase, etc. At a minimum, set <code>JAVA_HOME</code> to poi
 your Java installation.</para>
 
       <section xml:id="standalone"><title>Standalone HBase</title>
-          <para>This mode is what <link linkend="quickstart">Quick Start</link> covered;
-          all daemons are run in the one JVM and HBase writes the local filesystem.</para>
+        <para>This is the default mode straight out of the box. Standalone mode is
+        what is described in the <link linkend="quickstart">quickstart</link>
+        section.  In standalone mode, HBase does not use HDFS -- it uses the local
+        filesystem instead -- and it runs all HBase daemons and a local zookeeper
+        all up in the same JVM.  Zookeeper binds to a well known port so clients may
+        talk to HBase.
+      </para>
       </section>
       <section><title>Distributed</title>
           <para>Distributed mode can be subdivided into distributed but all daemons run on a
-          single node AND distibuted with daemons spread across all nodes in the cluster.</para>
+          single node -- i.e. <emphasis>pseudo-distributed</emphasis> mode -- AND
+          <emphasis>cluster distibuted</emphasis> with daemons spread across all
+          nodes in the cluster.</para>
       <para>
-          Distributed modes require an instance of the <emphasis>Hadoop Distributed File System</emphasis> (HDFS).
-See the Hadoop <link xlink:href="http://hadoop.apache.org/common/docs/current/api/overview-summary.html#overview_description">
-requirements and instructions</link> for how to set up a HDFS.
+          Distributed modes require an instance of the
+          <emphasis>Hadoop Distributed File System</emphasis> (HDFS).  See the
+          Hadoop <link xlink:href="http://hadoop.apache.org/common/docs/current/api/overview-summary.html#overview_description">
+          requirements and instructions</link> for how to set up a HDFS.
       </para>
-
-
 
       <section xml:id="pseudo"><title>Pseudo-distributed</title>
 <para>A pseudo-distributed mode is simply a distributed mode run on a single host.
-Use this configuration testing and prototyping on hbase.  Do not use this configuration
+Use this configuration testing and prototyping on HBase.  Do not use this configuration
 for production nor for evaluating HBase performance.
 </para>
 <para>Once you have confirmed your HDFS setup, configuring HBase for use on one host requires modification of
@@ -417,23 +457,31 @@ it should run with one replica only (recommended for pseudo-distributed mode):</
 </programlisting>
 
 <note>
-<para>Let HBase create the directory. If you don't, you'll get warning saying HBase
-needs a migration run because the directory is missing files expected by HBase (it'll
+<para>Let HBase create the <varname>hbase.rootdir</varname>
+directory. If you don't, you'll get warning saying HBase
+needs a migration run because the directory is missing files
+expected by HBase (it'll
 create them if you let it).</para>
 </note>
 
 <note>
-<para>Above we bind to localhost.  This means that a remote client cannot
-connect.  Amend accordingly, if you want to connect from a remote location.</para>
+<para>Above we bind to <varname>localhost</varname>.
+This means that a remote client cannot
+connect.  Amend accordingly, if you want to
+connect from a remote location.</para>
 </note>
-      </section>
+<section>
+<title>Starting extra masters and regionservers when running pseudo-distributed</title>
+<para>See <link xlink:href="pseudo-distributed.html">Pseudo-distributed mode extras</link>.</para>
+</section>
+</section>
 
-      <section><title>Distributed across multiple machines</title>
+      <section><title>Cluster Distributed</title>
 
 
 <para>For running a fully-distributed operation on more than one host, the following
 configurations must be made <emphasis>in addition</emphasis> to those described in the
-<link linkend="pseudo">pseudo-distributed operation</link> section above.</para>
+<link linkend="pseudo">pseudo-distributed</link> section above.</para>
 
 <para>In <filename>hbase-site.xml</filename>, set <varname>hbase.cluster.distributed</varname> to <varname>true</varname>.</para>
 <programlisting>
@@ -503,7 +551,7 @@ to <filename>false</filename> so that HBase doesn't mess with your ZooKeeper set
 </programlisting>
 
 <para>As an example, to have HBase manage a ZooKeeper quorum on nodes
-<empahsis>rs{1,2,3,4,5}.example.com</empahsis>, bound to port 2222 (the default is 2181), use:</para>
+<emphasis>rs{1,2,3,4,5}.example.com</emphasis>, bound to port 2222 (the default is 2181), use:</para>
 <programlisting>
   ${HBASE_HOME}/conf/hbase-env.sh:
 
@@ -546,7 +594,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 </programlisting>
 
 <para>If you do let HBase manage ZooKeeper for you, make sure you configure
-where it's data is stored. By default, it will be stored in /tmp which is
+where it's data is stored. By default, it will be stored in <filename>/tmp</filename> which is
 sometimes cleaned in live systems. Do modify this configuration:</para>
 <programlisting>
     &lt;property&gt;
@@ -568,7 +616,7 @@ the ZooKeeper <link xlink:href="http://hadoop.apache.org/zookeeper/docs/current/
 HBase currently uses ZooKeeper version 3.3.2, so any cluster setup with a
 3.x.x version of ZooKeeper should work.</para>
 
-<para>Of note, if you have made <em>HDFS client configuration</em> on your Hadoop cluster, HBase will not
+<para>Of note, if you have made <emphasis>HDFS client configuration</emphasis> on your Hadoop cluster, HBase will not
 see this configuration unless you do one of the following:</para>
 <orderedlist>
   <listitem><para>Add a pointer to your <varname>HADOOP_CONF_DIR</varname> to <varname>CLASSPATH</varname> in <filename>hbase-env.sh</filename>.</para></listitem>
@@ -646,8 +694,30 @@ http server at 60030).</para>
 
 
       <section><title>Client configuration and dependencies connecting to an HBase cluster</title>
-      <para>TODO</para>
-      </section>
+
+      <para>
+        Since the HBase master may move around, clients bootstrap from Zookeeper.  Thus clients
+        require the Zookeeper quorum information in a <filename>hbase-site.xml</filename> that
+        is on their classpath.  If you are configuring an IDE to run a HBase client, you should
+        include the <filename>conf/</filename> directory on your classpath.
+      </para>
+        <para>
+          An example basic <filename>hbase-site.xml</filename> for client only:
+          <programlisting><![CDATA[
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>example1,example2,example3</value>
+    <description>The directory shared by region servers.
+    </description>
+  </property>
+</configuration>
+]]>
+          </programlisting>
+        </para>
+    </section>
 
 
       <section xml:id="upgrading">
@@ -932,6 +1002,24 @@ index e70ebc6..96f8c27 100644
             </section>
          </section>
     </section>
+  </chapter>
+
+  <chapter xml:id="mapreduce">
+  <title>HBase and MapReduce</title>
+  <para>See <link xlink:href="apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">HBase and MapReduce</link>
+  up in javadocs.</para>
+  </chapter>
+
+  <chapter xml:id="hbase_metrics">
+  <title>Metrics</title>
+  <para>See <link xlink:href="metrics.html">Metrics</link>.
+  </para>
+  </chapter>
+
+  <chapter xml:id="cluster_replication">
+  <title>Cluster Replication</title>
+  <para>See <link xlink:href="replication.html">Cluster Replication</link>.
+  </para>
   </chapter>
 
   <chapter xml:id="datamodel">
