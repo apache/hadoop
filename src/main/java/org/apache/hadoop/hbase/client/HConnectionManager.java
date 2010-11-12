@@ -335,7 +335,7 @@ public class HConnectionManager {
 
       // Check if we already have a good master connection
       if (master != null) {
-        if(master.isMasterRunning()) {
+        if (master.isMasterRunning()) {
           return master;
         }
       }
@@ -877,8 +877,8 @@ public class HConnectionManager {
           HRegionLocation rl = getCachedLocation(tableName, row);
           if (rl != null) {
             tableLocations.remove(rl.getRegionInfo().getStartKey());
-            if (LOG.isInfoEnabled()) {
-              LOG.info("Removed " +
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Removed " +
                 rl.getRegionInfo().getRegionNameAsString() +
                 " for tableName=" + Bytes.toString(tableName) +
                 " from cache " + "because of " + Bytes.toStringBinary(row));

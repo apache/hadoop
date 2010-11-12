@@ -1150,6 +1150,7 @@ Release 0.90.0 - Unreleased
                (Bennett Neale via Stack)
    HBASE-3218  Shell help cleanup/cosmetics/edit
    HBASE-3079  Shell displaying uninformative exceptions
+   HBASE-3227  Edit of log messages before branching.
 
 
   NEW FEATURES

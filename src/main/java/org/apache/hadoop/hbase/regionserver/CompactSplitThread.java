@@ -139,9 +139,9 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
     }
     if (compactionQueue.add(r, priority) && LOG.isDebugEnabled()) {
       LOG.debug("Compaction " + (force? "(major) ": "") +
-        "requested for region " + r.getRegionNameAsString() +
-        (why != null && !why.isEmpty()? " because: " + why: "") +
-        "; Priority: " + priority + "; Compaction queue size: " + compactionQueue.size());
+        "requested for " + r.getRegionNameAsString() +
+        (why != null && !why.isEmpty()? " because " + why: "") +
+        "; priority=" + priority + ", compaction queue size=" + compactionQueue.size());
     }
   }
 

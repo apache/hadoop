@@ -503,8 +503,7 @@ public class Store implements HeapSize {
       LOG.info("Added " + sf + ", entries=" + r.getEntries() +
         ", sequenceid=" + logCacheFlushId +
         ", memsize=" + StringUtils.humanReadableInt(flushed) +
-        ", filesize=" + StringUtils.humanReadableInt(r.length()) +
-        " to " + this.region.regionInfo.getRegionNameAsString());
+        ", filesize=" + StringUtils.humanReadableInt(r.length()));
     }
     return sf;
   }
@@ -579,7 +578,7 @@ public class Store implements HeapSize {
    */
   void deleteChangedReaderObserver(ChangedReadersObserver o) {
     if (!this.changedReaderObservers.remove(o)) {
-      LOG.warn("Not in set" + o);
+      LOG.warn("Not in set (double-remove?) " + o);
     }
   }
 
@@ -700,9 +699,9 @@ public class Store implements HeapSize {
         if (end - start < this.compactionThreshold) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Skipped compaction of " + this.storeNameStr
-              + ".  Only " + (end - start) + " file(s) of size "
+              + " because only " + (end - start) + " file(s) of size "
               + StringUtils.humanReadableInt(totalSize)
-              + " are meet compaction criteria.");
+              + " meet compaction criteria.");
           }
           return checkSplit(forceSplit);
         }
@@ -726,8 +725,8 @@ public class Store implements HeapSize {
       long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
 
       // Ready to go.  Have list of files to compact.
-      LOG.info("Started compaction of " + filesToCompact.size() + " file(s) in " +
-          this.storeNameStr + " of " + this.region.getRegionInfo().getRegionNameAsString() +
+      LOG.info("Started compaction of " + filesToCompact.size() + " file(s) in cf=" +
+          this.storeNameStr +
         (references? ", hasReferences=true,": " ") + " into " +
           region.getTmpDir() + ", seqid=" + maxId +
           ", totalSize=" + StringUtils.humanReadableInt(totalSize));
@@ -736,9 +735,8 @@ public class Store implements HeapSize {
       StoreFile sf = completeCompaction(filesToCompact, writer);
       if (LOG.isInfoEnabled()) {
         LOG.info("Completed" + (majorcompaction? " major ": " ") +
-          "compaction of " + filesToCompact.size() + " file(s) in " +
-          this.storeNameStr + " of " + this.region.getRegionInfo().getRegionNameAsString() +
-          "; new storefile name=" + (sf == null? "none": sf.toString()) +
+          "compaction of " + filesToCompact.size() +
+          " file(s), new file=" + (sf == null? "none": sf.toString()) +
           ", size=" + (sf == null? "none": StringUtils.humanReadableInt(sf.getReader().length())) +
           "; total size for store is " + StringUtils.humanReadableInt(storeSize));
       }
@@ -897,10 +895,10 @@ public class Store implements HeapSize {
           ? r.getFilterEntries() : r.getEntries();
         maxKeyCount += keyCount;
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Compacting: " + file +
-            "; keyCount = " + keyCount +
-            "; Bloom Type = " + r.getBloomFilterType().toString() +
-            "; Size = " + StringUtils.humanReadableInt(r.length()) );
+          LOG.debug("Compacting " + file +
+            ", keycount=" + keyCount +
+            ", bloomtype=" + r.getBloomFilterType().toString() +
+            ", size=" + StringUtils.humanReadableInt(r.length()) );
         }
       }
     }

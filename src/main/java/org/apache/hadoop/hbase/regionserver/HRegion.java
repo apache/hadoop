@@ -898,8 +898,8 @@ public class HRegion implements HeapSize { // , Writable{
       return false;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Started memstore flush for region " + this +
-        "; current region memstore size " +
+      LOG.debug("Started memstore flush for " + this +
+        ", current region memstore size " +
         StringUtils.humanReadableInt(this.memstoreSize.get()) +
         ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
     }
