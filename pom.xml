@@ -2,6 +2,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+  <!--To build a release I do this:
+
+    $ mvn clean site install assembly:single
+   -->
 
   <parent>
     <groupId>org.apache</groupId>
@@ -11,8 +15,8 @@
     pom not being found.  To fix, I've downloaded apache's pom
     from here https://repository.apache.org/content/repositories/releases/org/apache/apache/7/apache-7.pom
     saving it as 'pom.xml' into a directory named 'apache-7.pom'.  I then uncommented the below.
-    -->
     <relativePath>../apache-7.pom/</relativePath>
+    -->
   </parent>
 
   <groupId>org.apache.hbase</groupId>
