@@ -11,14 +11,14 @@
     pom not being found.  To fix, I've downloaded apache's pom
     from here https://repository.apache.org/content/repositories/releases/org/apache/apache/7/apache-7.pom
     saving it as 'pom.xml' into a directory named 'apache-7.pom'.  I then uncommented the below.
-    <relativePath>../apache-7.pom/</relativePath>
     -->
+    <relativePath>../apache-7.pom/</relativePath>
   </parent>
 
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.90.0-SNAPSHOT</version>
+  <version>0.90.0</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -307,8 +307,7 @@
         <configuration>
           <tarLongFileMode>gnu</tarLongFileMode>
           <descriptors>
-            <descriptor>src/assembly/bin.xml</descriptor>
-            <descriptor>src/assembly/src.xml</descriptor>
+            <descriptor>src/assembly/all.xml</descriptor>
           </descriptors>
         </configuration>
       </plugin>
