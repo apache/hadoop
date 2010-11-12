@@ -117,18 +117,13 @@ public abstract class FileContextSymlinkBaseTest {
   }
   
   @Test
-  /** Test setWorkingDirectory resolves symlinks */
-  public void testSetWDResolvesLinks() throws IOException {
+  /** Test setWorkingDirectory not resolves symlinks */
+  public void testSetWDNotResolvesLinks() throws IOException {
     Path dir       = new Path(testBaseDir1());
     Path linkToDir = new Path(testBaseDir1()+"/link");
     fc.createSymlink(dir, linkToDir, false);
     fc.setWorkingDirectory(linkToDir);
-    // Local file system does not resolve symlinks, others do.
-    if ("file".equals(getScheme())) {
-      assertEquals(linkToDir.getName(), fc.getWorkingDirectory().getName());
-    } else {
-      assertEquals(dir.getName(), fc.getWorkingDirectory().getName());
-    }
+    assertEquals(linkToDir.getName(), fc.getWorkingDirectory().getName());
   }
   
   @Test

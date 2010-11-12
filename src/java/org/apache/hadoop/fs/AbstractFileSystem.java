@@ -25,7 +25,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
@@ -77,7 +76,7 @@ public abstract class AbstractFileSystem {
   
   private final URI myUri;
   
-  protected Statistics getStatistics() {
+  public Statistics getStatistics() {
     return statistics;
   }
   
@@ -135,7 +134,7 @@ public abstract class AbstractFileSystem {
    * @throws UnsupportedFileSystemException file system for <code>uri</code> is
    *           not found
    */
-  private static AbstractFileSystem createFileSystem(URI uri, Configuration conf)
+  public static AbstractFileSystem createFileSystem(URI uri, Configuration conf)
       throws UnsupportedFileSystemException {
     Class<?> clazz = conf.getClass("fs.AbstractFileSystem." + 
                                 uri.getScheme() + ".impl", null);
@@ -152,7 +151,7 @@ public abstract class AbstractFileSystem {
    * @param cls the class to lookup
    * @return a statistics object
    */
-  protected static synchronized Statistics getStatistics(String scheme,
+  public static synchronized Statistics getStatistics(String scheme,
       Class<? extends AbstractFileSystem> cls) {
     Statistics result = STATISTICS_TABLE.get(cls);
     if (result == null) {
@@ -162,13 +161,13 @@ public abstract class AbstractFileSystem {
     return result;
   }
   
-  protected static synchronized void clearStatistics() {
+  public static synchronized void clearStatistics() {
     for(Statistics stat: STATISTICS_TABLE.values()) {
       stat.reset();
     }
   }
 
-  protected static synchronized void printStatistics() {
+  public static synchronized void printStatistics() {
     for (Map.Entry<Class<? extends AbstractFileSystem>, Statistics> pair: 
             STATISTICS_TABLE.entrySet()) {
       System.out.println("  FileSystem " + pair.getKey().getName() + 
@@ -193,7 +192,7 @@ public abstract class AbstractFileSystem {
    * @throws UnsupportedFileSystemException if the file system for
    *           <code>uri</code> is not supported.
    */
-  static AbstractFileSystem get(final URI uri, final Configuration conf)
+  public static AbstractFileSystem get(final URI uri, final Configuration conf)
       throws UnsupportedFileSystemException {
     return createFileSystem(uri, conf);
   }
@@ -208,14 +207,19 @@ public abstract class AbstractFileSystem {
    *
    * @throws URISyntaxException <code>uri</code> has syntax error
    */
-  protected AbstractFileSystem(final URI uri, final String supportedScheme,
+  public AbstractFileSystem(final URI uri, final String supportedScheme,
       final boolean authorityNeeded, final int defaultPort)
       throws URISyntaxException {
     myUri = getUri(uri, supportedScheme, authorityNeeded, defaultPort);
     statistics = getStatistics(supportedScheme, getClass()); 
   }
   
-  protected void checkScheme(URI uri, String supportedScheme) {
+  /**
+   * Check that the Uri's scheme matches
+   * @param uri
+   * @param supportedScheme
+   */
+  public void checkScheme(URI uri, String supportedScheme) {
     String scheme = uri.getScheme();
     if (scheme == null) {
       throw new HadoopIllegalArgumentException("Uri without scheme: " + uri);
@@ -272,14 +276,14 @@ public abstract class AbstractFileSystem {
    * @return default port of this file system's Uri scheme
    *         A uri with a port of -1 => default port;
    */
-  protected abstract int getUriDefaultPort();
+  public abstract int getUriDefaultPort();
 
   /**
    * Returns a URI whose scheme and authority identify this FileSystem.
    * 
    * @return the uri of this file system.
    */
-  protected URI getUri() {
+  public URI getUri() {
     return myUri;
   }
   
@@ -292,7 +296,7 @@ public abstract class AbstractFileSystem {
    * 
    * @throws InvalidPathException if the path is invalid
    */
-  protected void checkPath(Path path) {
+  public void checkPath(Path path) {
     URI uri = path.toUri();
     String thatScheme = uri.getScheme();
     String thatAuthority = uri.getAuthority();
@@ -340,7 +344,7 @@ public abstract class AbstractFileSystem {
    * 
    * @return path-part of the Path p
    */
-  protected String getUriPath(final Path p) {
+  public String getUriPath(final Path p) {
     checkPath(p);
     String s = p.toUri().getPath();
     if (!isValidName(s)) {
@@ -351,6 +355,16 @@ public abstract class AbstractFileSystem {
   }
   
   /**
+   * Make the path fully qualified to this file system
+   * @param path
+   * @return the qualified path
+   */
+  public Path makeQualified(Path path) {
+    checkPath(path);
+    return path.makeQualified(this.getUri(), null);
+  }
+  
+  /**
    * Some file systems like LocalFileSystem have an initial workingDir
    * that is used as the starting workingDir. For other file systems
    * like HDFS there is no built in notion of an initial workingDir.
@@ -358,7 +372,7 @@ public abstract class AbstractFileSystem {
    * @return the initial workingDir if the file system has such a notion
    *         otherwise return a null.
    */
-  protected Path getInitialWorkingDirectory() {
+  public Path getInitialWorkingDirectory() {
     return null;
   }
   
@@ -368,7 +382,7 @@ public abstract class AbstractFileSystem {
    * 
    * @return current user's home directory.
    */
-  protected Path getHomeDirectory() {
+  public Path getHomeDirectory() {
     return new Path("/user/"+System.getProperty("user.name")).makeQualified(
                                                                 getUri(), null);
   }
@@ -380,7 +394,7 @@ public abstract class AbstractFileSystem {
    * 
    * @throws IOException an I/O error occurred
    */
-  protected abstract FsServerDefaults getServerDefaults() throws IOException; 
+  public abstract FsServerDefaults getServerDefaults() throws IOException; 
 
   /**
    * The specification of this method matches that of
@@ -388,7 +402,7 @@ public abstract class AbstractFileSystem {
    * that the Path f must be fully qualified and the permission is absolute
    * (i.e. umask has been applied).
    */
-  protected final FSDataOutputStream create(final Path f,
+  public final FSDataOutputStream create(final Path f,
       final EnumSet<CreateFlag> createFlag, Options.CreateOpts... opts)
       throws AccessControlException, FileAlreadyExistsException,
       FileNotFoundException, ParentNotDirectoryException,
@@ -491,7 +505,7 @@ public abstract class AbstractFileSystem {
    * {@link #create(Path, EnumSet, Options.CreateOpts...)} except that the opts
    * have been declared explicitly.
    */
-  protected abstract FSDataOutputStream createInternal(Path f,
+  public abstract FSDataOutputStream createInternal(Path f,
       EnumSet<CreateFlag> flag, FsPermission absolutePermission,
       int bufferSize, short replication, long blockSize, Progressable progress,
       int bytesPerChecksum, boolean createParent)
@@ -505,7 +519,7 @@ public abstract class AbstractFileSystem {
    * f must be fully qualified and the permission is absolute (i.e. 
    * umask has been applied).
    */
-  protected abstract void mkdir(final Path dir, final FsPermission permission,
+  public abstract void mkdir(final Path dir, final FsPermission permission,
       final boolean createParent) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
       UnresolvedLinkException, IOException;
@@ -515,7 +529,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#delete(Path, boolean)} except that Path f must be for
    * this file system.
    */
-  protected abstract boolean delete(final Path f, final boolean recursive)
+  public abstract boolean delete(final Path f, final boolean recursive)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
 
@@ -524,7 +538,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#open(Path)} except that Path f must be for this
    * file system.
    */
-  protected FSDataInputStream open(final Path f) throws AccessControlException,
+  public FSDataInputStream open(final Path f) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
     return open(f, getServerDefaults().getFileBufferSize());
   }
@@ -534,7 +548,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#open(Path, int)} except that Path f must be for this
    * file system.
    */
-  protected abstract FSDataInputStream open(final Path f, int bufferSize)
+  public abstract FSDataInputStream open(final Path f, int bufferSize)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
 
@@ -543,7 +557,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#setReplication(Path, short)} except that Path f must be
    * for this file system.
    */
-  protected abstract boolean setReplication(final Path f,
+  public abstract boolean setReplication(final Path f,
       final short replication) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;
 
@@ -552,7 +566,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#rename(Path, Path, Options.Rename...)} except that Path
    * f must be for this file system.
    */
-  protected final void rename(final Path src, final Path dst,
+  public final void rename(final Path src, final Path dst,
       final Options.Rename... options) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnresolvedLinkException, IOException {
@@ -576,7 +590,7 @@ public abstract class AbstractFileSystem {
    * method and can take advantage of the default impl of the other
    * {@link #renameInternal(Path, Path, boolean)}
    */
-  protected abstract void renameInternal(final Path src, final Path dst)
+  public abstract void renameInternal(final Path src, final Path dst)
       throws AccessControlException, FileAlreadyExistsException,
       FileNotFoundException, ParentNotDirectoryException,
       UnresolvedLinkException, IOException;
@@ -586,7 +600,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#rename(Path, Path, Options.Rename...)} except that Path
    * f must be for this file system.
    */
-  protected void renameInternal(final Path src, final Path dst,
+  public void renameInternal(final Path src, final Path dst,
       boolean overwrite) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnresolvedLinkException, IOException {
@@ -640,7 +654,7 @@ public abstract class AbstractFileSystem {
   /**
    * Returns true if the file system supports symlinks, false otherwise.
    */
-  protected boolean supportsSymlinks() {
+  public boolean supportsSymlinks() {
     return false;
   }
   
@@ -648,7 +662,7 @@ public abstract class AbstractFileSystem {
    * The specification of this method matches that of  
    * {@link FileContext#createSymlink(Path, Path, boolean)};
    */
-  protected void createSymlink(final Path target, final Path link,
+  public void createSymlink(final Path target, final Path link,
       final boolean createParent) throws IOException, UnresolvedLinkException {
     throw new IOException("File system does not support symlinks");    
   }
@@ -657,7 +671,7 @@ public abstract class AbstractFileSystem {
    * The specification of this method matches that of  
    * {@link FileContext#getLinkTarget(Path)};
    */
-  protected Path getLinkTarget(final Path f) throws IOException {
+  public Path getLinkTarget(final Path f) throws IOException {
     /* We should never get here. Any file system that threw an
      * UnresolvedLinkException, causing this function to be called,
      * needs to override this method.
@@ -670,7 +684,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#setPermission(Path, FsPermission)} except that Path f
    * must be for this file system.
    */
-  protected abstract void setPermission(final Path f,
+  public abstract void setPermission(final Path f,
       final FsPermission permission) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;
 
@@ -679,7 +693,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#setOwner(Path, String, String)} except that Path f must
    * be for this file system.
    */
-  protected abstract void setOwner(final Path f, final String username,
+  public abstract void setOwner(final Path f, final String username,
       final String groupname) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;
 
@@ -688,7 +702,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#setTimes(Path, long, long)} except that Path f must be
    * for this file system.
    */
-  protected abstract void setTimes(final Path f, final long mtime,
+  public abstract void setTimes(final Path f, final long mtime,
     final long atime) throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
 
@@ -697,7 +711,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#getFileChecksum(Path)} except that Path f must be for
    * this file system.
    */
-  protected abstract FileChecksum getFileChecksum(final Path f)
+  public abstract FileChecksum getFileChecksum(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
   
@@ -707,7 +721,7 @@ public abstract class AbstractFileSystem {
    * except that an UnresolvedLinkException may be thrown if a symlink is 
    * encountered in the path.
    */
-  protected abstract FileStatus getFileStatus(final Path f)
+  public abstract FileStatus getFileStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
 
@@ -719,7 +733,7 @@ public abstract class AbstractFileSystem {
    * If the file system does not support symlinks then the behavior is
    * equivalent to {@link AbstractFileSystem#getFileStatus(Path)}.
    */
-  protected FileStatus getFileLinkStatus(final Path f)
+  public FileStatus getFileLinkStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnsupportedFileSystemException, IOException {
     return getFileStatus(f);
@@ -730,7 +744,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#getFileBlockLocations(Path, long, long)} except that
    * Path f must be for this file system.
    */
-  protected abstract BlockLocation[] getFileBlockLocations(final Path f,
+  public abstract BlockLocation[] getFileBlockLocations(final Path f,
       final long start, final long len) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException;
 
@@ -739,7 +753,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#getFsStatus(Path)} except that Path f must be for this
    * file system.
    */
-  protected FsStatus getFsStatus(final Path f) throws AccessControlException,
+  public FsStatus getFsStatus(final Path f) throws AccessControlException,
       FileNotFoundException, UnresolvedLinkException, IOException {
     // default impl gets FsStatus of root
     return getFsStatus();
@@ -749,7 +763,7 @@ public abstract class AbstractFileSystem {
    * The specification of this method matches that of
    * {@link FileContext#getFsStatus(Path)}.
    */
-  protected abstract FsStatus getFsStatus() throws AccessControlException,
+  public abstract FsStatus getFsStatus() throws AccessControlException,
       FileNotFoundException, IOException;
 
   /**
@@ -757,7 +771,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#listStatus(Path)} except that Path f must be for this
    * file system.
    */
-  protected RemoteIterator<FileStatus> listStatusIterator(final Path f)
+  public RemoteIterator<FileStatus> listStatusIterator(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
     return new RemoteIterator<FileStatus>() {
@@ -784,7 +798,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#listLocatedStatus(Path)} except that Path f 
    * must be for this file system.
    */
-  protected RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
+  public RemoteIterator<LocatedFileStatus> listLocatedStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException {
     return new RemoteIterator<LocatedFileStatus>() {
@@ -816,7 +830,7 @@ public abstract class AbstractFileSystem {
    * {@link FileContext.Util#listStatus(Path)} except that Path f must be 
    * for this file system.
    */
-  protected abstract FileStatus[] listStatus(final Path f)
+  public abstract FileStatus[] listStatus(final Path f)
       throws AccessControlException, FileNotFoundException,
       UnresolvedLinkException, IOException;
 
@@ -825,6 +839,6 @@ public abstract class AbstractFileSystem {
    * {@link FileContext#setVerifyChecksum(boolean, Path)} except that Path f
    * must be for this file system.
    */
-  protected abstract void setVerifyChecksum(final boolean verifyChecksum)
+  public abstract void setVerifyChecksum(final boolean verifyChecksum)
       throws AccessControlException, IOException;
 }

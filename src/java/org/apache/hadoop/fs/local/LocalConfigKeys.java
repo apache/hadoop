@@ -44,7 +44,7 @@ public class LocalConfigKeys extends CommonConfigurationKeys {
                                                 "file.client-write-packet-size";
   public static final int CLIENT_WRITE_PACKET_SIZE_DEFAULT = 64*1024;
 
-  protected static FsServerDefaults getServerDefaults() throws IOException {
+  public static FsServerDefaults getServerDefaults() throws IOException {
     return new FsServerDefaults(
         BLOCK_SIZE_DEFAULT,
         BYTES_PER_CHECKSUM_DEFAULT,

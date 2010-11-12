@@ -33,4 +33,11 @@ public interface FsConstants {
   
   // URI scheme for FTP
   public static final String FTP_SCHEME = "ftp";
+  
+  
+  /**
+   * ViewFs: viewFs file system (ie the mount file system on client side)
+   */
+  public static final URI VIEWFS_URI = URI.create("viewfs:///");
+  public static final String VIEWFS_SCHEME = "viewfs";
 }

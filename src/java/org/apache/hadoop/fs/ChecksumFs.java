@@ -358,7 +358,7 @@ public abstract class ChecksumFs extends FilterFs {
   }
 
   @Override
-  protected FSDataOutputStream createInternal(Path f,
+  public FSDataOutputStream createInternal(Path f,
       EnumSet<CreateFlag> createFlag, FsPermission absolutePermission,
       int bufferSize, short replication, long blockSize, Progressable progress,
       int bytesPerChecksum, boolean createParent) throws IOException {
@@ -481,7 +481,7 @@ public abstract class ChecksumFs extends FilterFs {
   }
 
   @Override
-  protected FileStatus[] listStatus(Path f) throws IOException,
+  public FileStatus[] listStatus(Path f) throws IOException,
       UnresolvedLinkException {
     ArrayList<FileStatus> results = new ArrayList<FileStatus>();
     FileStatus[] listing = getMyFs().listStatus(f);

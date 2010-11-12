@@ -56,22 +56,27 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
-  protected Statistics getStatistics() {
+  public Statistics getStatistics() {
     return myFs.getStatistics();
+  }
+  
+  @Override
+  public Path makeQualified(Path path) {
+    return myFs.makeQualified(path);
   }
 
   @Override
-  protected Path getInitialWorkingDirectory() {
+  public Path getInitialWorkingDirectory() {
     return myFs.getInitialWorkingDirectory();
   }
   
   @Override
-  protected Path getHomeDirectory() {
+  public Path getHomeDirectory() {
     return myFs.getHomeDirectory();
   }
   
   @Override
-  protected FSDataOutputStream createInternal(Path f,
+  public FSDataOutputStream createInternal(Path f,
     EnumSet<CreateFlag> flag, FsPermission absolutePermission, int bufferSize,
     short replication, long blockSize, Progressable progress,
     int bytesPerChecksum, boolean createParent) 
@@ -82,85 +87,85 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
-  protected boolean delete(Path f, boolean recursive) 
+  public boolean delete(Path f, boolean recursive) 
       throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.delete(f, recursive);
   }
 
   @Override
-  protected BlockLocation[] getFileBlockLocations(Path f, long start, long len)
+  public BlockLocation[] getFileBlockLocations(Path f, long start, long len)
       throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.getFileBlockLocations(f, start, len);
   }
 
   @Override
-  protected FileChecksum getFileChecksum(Path f) 
+  public FileChecksum getFileChecksum(Path f) 
       throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.getFileChecksum(f);
   }
 
   @Override
-  protected FileStatus getFileStatus(Path f) 
+  public FileStatus getFileStatus(Path f) 
       throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.getFileStatus(f);
   }
 
   @Override
-  protected FileStatus getFileLinkStatus(final Path f) 
+  public FileStatus getFileLinkStatus(final Path f) 
     throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.getFileLinkStatus(f);
   }
   
   @Override
-  protected FsStatus getFsStatus(final Path f) throws AccessControlException,
+  public FsStatus getFsStatus(final Path f) throws AccessControlException,
     FileNotFoundException, UnresolvedLinkException, IOException {
     return myFs.getFsStatus(f);
   }
 
   @Override
-  protected FsStatus getFsStatus() throws IOException {
+  public FsStatus getFsStatus() throws IOException {
     return myFs.getFsStatus();
   }
 
   @Override
-  protected FsServerDefaults getServerDefaults() throws IOException {
+  public FsServerDefaults getServerDefaults() throws IOException {
     return myFs.getServerDefaults();
   }
 
   @Override
-  protected int getUriDefaultPort() {
+  public int getUriDefaultPort() {
     return myFs.getUriDefaultPort();
   }
 
   @Override
-  protected URI getUri() {
+  public URI getUri() {
     return myFs.getUri();
   }
   
   @Override
-  protected void checkPath(Path path) {
+  public void checkPath(Path path) {
     myFs.checkPath(path);
   }
   
   @Override
-  protected String getUriPath(final Path p) {
+  public String getUriPath(final Path p) {
     return myFs.getUriPath(p);
   }
   
   @Override
-  protected FileStatus[] listStatus(Path f) 
+  public FileStatus[] listStatus(Path f) 
       throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.listStatus(f);
   }
 
   @Override
-  protected void mkdir(Path dir, FsPermission permission, boolean createParent)
+  public void mkdir(Path dir, FsPermission permission, boolean createParent)
     throws IOException, UnresolvedLinkException {
     checkPath(dir);
     myFs.mkdir(dir, permission, createParent);
@@ -168,21 +173,21 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
-  protected FSDataInputStream open(final Path f) throws AccessControlException,
+  public FSDataInputStream open(final Path f) throws AccessControlException,
     FileNotFoundException, UnresolvedLinkException, IOException {
     checkPath(f);
     return myFs.open(f);
   }
 
   @Override
-  protected FSDataInputStream open(Path f, int bufferSize) 
+  public FSDataInputStream open(Path f, int bufferSize) 
     throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.open(f, bufferSize);
   }
 
   @Override
-  protected void renameInternal(Path src, Path dst) 
+  public void renameInternal(Path src, Path dst) 
     throws IOException, UnresolvedLinkException {
     checkPath(src);
     checkPath(dst);
@@ -190,7 +195,7 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
-  protected void renameInternal(final Path src, final Path dst,
+  public void renameInternal(final Path src, final Path dst,
       boolean overwrite) throws AccessControlException,
       FileAlreadyExistsException, FileNotFoundException,
       ParentNotDirectoryException, UnresolvedLinkException, IOException {
@@ -198,7 +203,7 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
   
   @Override
-  protected void setOwner(Path f, String username, String groupname)
+  public void setOwner(Path f, String username, String groupname)
     throws IOException, UnresolvedLinkException {
     checkPath(f);
     myFs.setOwner(f, username, groupname);
@@ -206,45 +211,45 @@ public abstract class FilterFs extends AbstractFileSystem {
   }
 
   @Override
-  protected void setPermission(Path f, FsPermission permission)
+  public void setPermission(Path f, FsPermission permission)
     throws IOException, UnresolvedLinkException {
     checkPath(f);
     myFs.setPermission(f, permission);
   }
 
   @Override
-  protected boolean setReplication(Path f, short replication)
+  public boolean setReplication(Path f, short replication)
     throws IOException, UnresolvedLinkException {
     checkPath(f);
     return myFs.setReplication(f, replication);
   }
 
   @Override
-  protected void setTimes(Path f, long mtime, long atime) 
+  public void setTimes(Path f, long mtime, long atime) 
       throws IOException, UnresolvedLinkException {
     checkPath(f);
     myFs.setTimes(f, mtime, atime);
   }
 
   @Override
-  protected void setVerifyChecksum(boolean verifyChecksum) 
+  public void setVerifyChecksum(boolean verifyChecksum) 
       throws IOException, UnresolvedLinkException {
     myFs.setVerifyChecksum(verifyChecksum);
   }
 
   @Override
-  protected boolean supportsSymlinks() {
+  public boolean supportsSymlinks() {
     return myFs.supportsSymlinks();
   }
 
   @Override
-  protected void createSymlink(Path target, Path link, boolean createParent) 
+  public void createSymlink(Path target, Path link, boolean createParent) 
     throws IOException, UnresolvedLinkException {
     myFs.createSymlink(target, link, createParent);
   }
 
   @Override
-  protected Path getLinkTarget(final Path f) throws IOException {
+  public Path getLinkTarget(final Path f) throws IOException {
     return myFs.getLinkTarget(f);
   }
 }
