@@ -2219,6 +2219,18 @@ index e70ebc6..96f8c27 100644
             </answer>
         </qandaentry>
     </qandadiv>
+        <qandadiv><title>Building HBase</title>
+        <qandaentry>
+            <question><para>
+When I build, why do I always get <code>Unable to find resource 'VM_global_library.vm'</code>?
+            </para></question>
+            <answer>
+                <para>
+                    Ignore it.  Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
+                </para>
+            </answer>
+        </qandaentry>
+    </qandadiv>
     </qandaset>
   </appendix>
 
