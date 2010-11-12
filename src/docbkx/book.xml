@@ -508,6 +508,15 @@ index e70ebc6..96f8c27 100644
       </section>
 
       <section xml:id="recommended_configurations"><title>Recommended Configuations</title>
+      <section xml:id="big_memory">
+        <title>Configuration for large memory machines</title>
+        <para>
+          HBase ships with a reasonable configuration that will work on nearly all
+          machine types that people might want to test with. If you have larger
+          machines you might the following configuration options helpful.
+        </para>
+
+      </section>
       <section xml:id="lzo">
       <title>LZO compression</title>
       <para>You should consider enabling LZO compression.  Its

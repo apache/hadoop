@@ -229,6 +229,10 @@ public class HalfStoreFileReader extends StoreFile.Reader {
             return 1;
           }
         }
+        if (atEnd) {
+          // skip the 'reseek' and just return 1.
+          return 1;
+        }
         return delegate.reseekTo(key, offset, length);
       }
 
