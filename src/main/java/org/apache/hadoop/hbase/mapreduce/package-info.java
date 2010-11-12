@@ -62,7 +62,7 @@ is set to the HBase <code>CLASSPATH</code> via backticking the command
 etc., dependencies on the passed
 </code>HADOOP_CLASSPATH</code> and adds the found jars to the mapreduce
 job configuration. See the source at
-{@link TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)}
+<code>TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)</code>
 for how this is done.
 </p>
 <p>The above may not work if you are running your HBase from its build directory;

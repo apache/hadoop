@@ -15,7 +15,7 @@
   <version position="right" />
   <publishDate position="right" />
   <body>
-    <menu name="HBase">
+    <menu name="HBase Project">
       <item name="Overview" href="index.html"/>
       <item name="License" href="license.html" />
       <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hbase/" />
@@ -23,21 +23,22 @@
       <item name="Issue Tracking" href="issue-tracking.html" />
       <item name="Mailing Lists" href="mail-lists.html" />
       <item name="Source Repository" href="source-repository.html" />
-      <item name="FAQ" href="faq.html" />
-      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
       <item name="Team" href="team-list.html" />
     </menu>
     <menu name="Documentation">
-        <item name="Getting Started" href="apidocs/overview-summary.html#overview_description" />
+      <item name="Getting Started: Quick" href="quickstart.html" />
+      <item name="Getting Started: Detailed" href="notsoquick.html" />
       <item name="API" href="apidocs/index.html" />
       <item name="X-Ref" href="xref/index.html" />
+      <item name="Book"      href="book.html" />
+      <item name="FAQ" href="faq.html" />
+      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
       <item name="ACID Semantics" href="acid-semantics.html" />
       <item name="Bulk Loads" href="bulk-loads.html" />
       <item name="Metrics"      href="metrics.html" />
       <item name="HBase on Windows"      href="cygwin.html" />
       <item name="Cluster replication"      href="replication.html" />
-      <item name="Pseudo-Distributed HBase"      href="pseudo-distributed.html" />
-      <item name="HBase Book"      href="book.html" />
+      <item name="Pseudo-Dist. Extras"      href="pseudo-distributed.html" />
     </menu>
   </body>
     <skin>
@@ -45,4 +46,3 @@
       <artifactId>maven-stylus-skin</artifactId>
     </skin>
 </project>
-

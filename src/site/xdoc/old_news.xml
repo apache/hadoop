@@ -28,6 +28,8 @@
   </properties>
   <body>
   <section name="Old News">
+      <p>June 30th, <a href="http://www.meetup.com/hbaseusergroup/calendar/13562846/">HBase Contributor Workshop</a> (Day after Hadoop Summit)</p>
+      <p>May 10th, 2010: HBase graduates from Hadoop sub-project to Apache Top Level Project </p>
       <p>Signup for <a href="http://www.meetup.com/hbaseusergroup/calendar/12689490/">HBase User Group Meeting, HUG10</a> hosted by Trend Micro, April 19th, 2010</p>
 
       <p><a href="http://www.meetup.com/hbaseusergroup/calendar/12689351/">HBase User Group Meeting, HUG9</a> hosted by Mozilla, March 10th, 2010</p>

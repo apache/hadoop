@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Gateway to Replication.  Used by {@link HRegionServer}.
+ * Gateway to Replication.  Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
  */
 public class Replication implements WALObserver {
   private final boolean replication;

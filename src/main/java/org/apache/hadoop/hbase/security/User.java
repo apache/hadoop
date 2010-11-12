@@ -74,7 +74,7 @@ public abstract class User {
   /**
    * Returns the shortened version of the user name -- the portion that maps
    * to an operating system user name.
-   * @return
+   * @return Short name
    */
   public abstract String getShortName();
 
