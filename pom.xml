@@ -479,7 +479,7 @@
     <slf4j.version>1.5.8</slf4j.version><!-- newer version available -->
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.2.0</thrift.version><!-- newer version available -->
-    <zookeeper.version>3.3.2</zookeeper.version>
+    <zookeeper.version>3.3.1</zookeeper.version>
   </properties>
 
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
