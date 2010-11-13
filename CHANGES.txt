@@ -678,6 +678,7 @@ Release 0.90.0 - Unreleased
    HBASE-3222  Regionserver region listing in UI is no longer ordered
    HBASE-3221  Race between splitting and disabling
    HBASE-3224  NPE in KeyValue$KVComparator.compare when compacting
+   HBASE-3233  Fix Long Running Stats
 
 
   IMPROVEMENTS

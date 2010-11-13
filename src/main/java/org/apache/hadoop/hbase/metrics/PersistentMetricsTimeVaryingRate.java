@@ -82,6 +82,7 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
     if (reset) {
       // use the previous avg as our starting min/max/avg
       super.inc(getPreviousIntervalAverageTime());
+      reset = false;
     } else {
       // maintain the stats that pushMetric() cleared
       maintainStats();
