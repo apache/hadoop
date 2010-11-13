@@ -148,7 +148,7 @@
     <repository>
       <id>temp-hadoop</id>
       <name>Hadoop 0.20-append</name>
-      <url>http://people.apache.org/~stack/m2/</url>
+      <url>http://people.apache.org/~rawson/repo/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -468,7 +468,7 @@
     at revision 1034499 with this hdfs-895 patch:
     https://issues.apache.org/jira/secure/attachment/12459473/hdfs-895-branch-20-append.txt
     -->
-    <hadoop.version>0.20.3-append-r1034499-895</hadoop.version>
+    <hadoop.version>0.20.3-append-r1034575-895</hadoop.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.1</jaxb-api.version>
     <jetty.version>6.1.25</jetty.version>
