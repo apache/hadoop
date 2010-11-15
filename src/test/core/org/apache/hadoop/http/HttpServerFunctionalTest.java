@@ -36,7 +36,7 @@ public class HttpServerFunctionalTest extends Assert {
   /** JVM property for the webapp test dir : {@value} */
   public static final String TEST_BUILD_WEBAPPS = "test.build.webapps";
   /** expected location of the test.build.webapps dir: {@value} */
-  private static final String BUILD_WEBAPPS_DIR = "build/webapps";
+  private static final String BUILD_WEBAPPS_DIR = "build/test/webapps";
   
   /** name of the test webapp: {@value} */
   private static final String TEST = "test";
@@ -78,13 +78,9 @@ public class HttpServerFunctionalTest extends Assert {
   protected static void prepareTestWebapp() {
     String webapps = System.getProperty(TEST_BUILD_WEBAPPS, BUILD_WEBAPPS_DIR);
     File testWebappDir = new File(webapps +
-        File.pathSeparator + TEST);
+        File.separatorChar + TEST);
     if (!testWebappDir.exists()) {
-      assertTrue("Unable to create the test dir " + testWebappDir,
-          testWebappDir.mkdirs());
-    } else {
-      assertTrue("Not a directory " + testWebappDir,
-          testWebappDir.isDirectory());
+      fail("Test webapp dir " + testWebappDir + " missing");
     }
   }
 
