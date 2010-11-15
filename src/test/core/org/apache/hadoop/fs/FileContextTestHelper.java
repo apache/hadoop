@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs;
 
-
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
@@ -127,9 +126,23 @@ public final class FileContextTestHelper {
     Path path = getTestRootPath(fc, name);
     createFileNonRecursive(fc, path);
   }
+
   public static void createFileNonRecursive(FileContext fc, Path path)
       throws IOException {
     createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.donotCreateParent());
+  }
+
+  public static void appendToFile(FileContext fc, Path path, int numBlocks,
+      CreateOpts... options) throws IOException {
+    BlockSize blockSizeOpt =
+      (BlockSize) CreateOpts.getOpt(CreateOpts.BlockSize.class, options);
+    long blockSize = blockSizeOpt != null ? blockSizeOpt.getValue()
+        : DEFAULT_BLOCK_SIZE;
+    FSDataOutputStream out;
+    out = fc.create(path, EnumSet.of(CreateFlag.APPEND));
+    byte[] data = getFileData(numBlocks, blockSize);
+    out.write(data, 0, data.length);
+    out.close();
   }
 
   public static boolean exists(FileContext fc, Path p) throws IOException {
@@ -161,7 +174,7 @@ public final class FileContextTestHelper {
   }
   
   public static void writeFile(FileContext fc, Path path, byte b[])
-      throws Exception {
+      throws IOException {
     FSDataOutputStream out = 
       fc.create(path,EnumSet.of(CreateFlag.CREATE), CreateOpts.createParent());
     out.write(b);
@@ -169,13 +182,14 @@ public final class FileContextTestHelper {
   }
   
   public static byte[] readFile(FileContext fc, Path path, int len)
-      throws Exception {
+      throws IOException {
     DataInputStream dis = fc.open(path);
     byte[] buffer = new byte[len];
     IOUtils.readFully(dis, buffer, 0, len);
     dis.close();
     return buffer;
   }
+
   public static FileStatus containsPath(FileContext fc, Path path,
       FileStatus[] dirList)
     throws IOException {

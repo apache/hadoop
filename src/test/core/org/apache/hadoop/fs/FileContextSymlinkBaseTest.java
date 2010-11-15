@@ -19,8 +19,6 @@ package org.apache.hadoop.fs;
 
 import java.io.*;
 import java.net.URI;
-import java.util.Iterator;
-import java.util.Random;
 import java.util.EnumSet;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Options.CreateOpts;
@@ -29,7 +27,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.junit.Assert.*;
 
@@ -46,10 +43,10 @@ public abstract class FileContextSymlinkBaseTest {
   static final int  fileSize  = 16384;
  
   protected static FileContext fc;
-  
+
   abstract protected String getScheme();
-  abstract protected String testBaseDir1();
-  abstract protected String testBaseDir2();
+  abstract protected String testBaseDir1() throws IOException;
+  abstract protected String testBaseDir2() throws IOException;
   abstract protected URI testURI();
 
   protected IOException unwrapException(IOException e) {
@@ -58,64 +55,47 @@ public abstract class FileContextSymlinkBaseTest {
 
   protected static void createAndWriteFile(FileContext fc, Path p) 
       throws IOException {
-    FSDataOutputStream out;
-    out = fc.create(p, EnumSet.of(CreateFlag.CREATE),
-                    CreateOpts.createParent(),
-                    CreateOpts.repFac((short) 1),
-                    CreateOpts.blockSize(blockSize));
-    byte[] buf = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buf);
-    out.write(buf);
-    out.close();
+    createFile(fc, p, fileSize / blockSize,
+        CreateOpts.createParent(),
+        CreateOpts.repFac((short) 1),
+        CreateOpts.blockSize(blockSize));
   }
-  
+
   protected static void createAndWriteFile(Path p) throws IOException {
     createAndWriteFile(fc, p);
   }
 
-  protected void readFile(Path p) throws IOException {
-    FSDataInputStream out = fc.open(p);
-    byte[] actual = new byte[fileSize];
-    out.readFully(actual);
-    out.close();
+  protected static void readFile(Path p) throws IOException {
+    FileContextTestHelper.readFile(fc, p, fileSize);
   }
 
-  protected void readFile(FileContext fc, Path p) throws IOException {
-    FSDataInputStream out = fc.open(p);
-    byte[] actual = new byte[fileSize];
-    out.readFully(actual);
-    out.close();
+  protected static void readFile(FileContext fc, Path p) throws IOException {
+    FileContextTestHelper.readFile(fc, p, fileSize);
   }
-  
-  protected void appendToFile(Path p) throws IOException {
-    FSDataOutputStream out;
-    out = fc.create(p, EnumSet.of(CreateFlag.APPEND));
-    byte[] buf = new byte[fileSize];
-    Random rand = new Random(seed);
-    rand.nextBytes(buf);
-    out.write(buf);
-    out.close();
+
+  protected static void appendToFile(Path p) throws IOException {
+    FileContextTestHelper.appendToFile(fc, p, fileSize / blockSize, 
+        CreateOpts.blockSize(blockSize));
   }
-  
+
   @Before
   public void setUp() throws Exception {
     fc.mkdir(new Path(testBaseDir1()), FileContext.DEFAULT_PERM, true);
     fc.mkdir(new Path(testBaseDir2()), FileContext.DEFAULT_PERM, true);
   }
-  
+
   @After
   public void tearDown() throws Exception { 
     fc.delete(new Path(testBaseDir1()), true);
     fc.delete(new Path(testBaseDir2()), true);
   } 
-  
+
   @Test
   /** The root is not a symlink */
   public void testStatRoot() throws IOException {
     assertFalse(fc.getFileLinkStatus(new Path("/")).isSymlink());    
   }
-  
+
   @Test
   /** Test setWorkingDirectory not resolves symlinks */
   public void testSetWDNotResolvesLinks() throws IOException {
@@ -125,7 +105,7 @@ public abstract class FileContextSymlinkBaseTest {
     fc.setWorkingDirectory(linkToDir);
     assertEquals(linkToDir.getName(), fc.getWorkingDirectory().getName());
   }
-  
+
   @Test
   /** Test create a dangling link */
   public void testCreateDanglingLink() throws IOException {

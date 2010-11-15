@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileUtil;
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.junit.Assert.*;
 import org.junit.Test;
 import org.junit.Before;
@@ -38,12 +39,12 @@ public class TestLocalFSFileContextSymlink extends FileContextSymlinkBaseTest {
     return "file";
   }
 
-  protected String testBaseDir1() {
-    return "/tmp/test1";
+  protected String testBaseDir1() throws IOException {
+    return getAbsoluteTestRootDir(fc)+"/test1";
   }
   
-  protected String testBaseDir2() {
-    return "/tmp/test2";
+  protected String testBaseDir2() throws IOException {
+    return getAbsoluteTestRootDir(fc)+"/test2";
   }
 
   protected URI testURI() {
@@ -158,7 +159,7 @@ public class TestLocalFSFileContextSymlink extends FileContextSymlinkBaseTest {
     // RawLocalFs only maintains the path part, not the URI, and
     // therefore does not support links to other file systems.
     Path anotherFs = new Path("hdfs://host:1000/dir/file");
-    FileUtil.fullyDelete(new File("/tmp/test2/linkToFile"));
+    FileUtil.fullyDelete(new File(linkNew.toString()));
     try {
       fc.createSymlink(anotherFs, linkNew, false);
       fail("Created a local fs link to a non-local fs");
