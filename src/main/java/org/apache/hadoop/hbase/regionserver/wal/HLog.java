@@ -1148,8 +1148,14 @@ public class HLog implements Syncable {
       writeTime += took;
       writeOps++;
       if (took > 1000) {
-        LOG.warn(Thread.currentThread().getName() + " took " + took +
-          "ms appending an edit to hlog; editcount=" + this.numEntries.get());
+        long len = 0;
+        for(KeyValue kv : logEdit.getKeyValues()) { 
+          len += kv.getLength(); 
+        }
+        LOG.warn(String.format(
+          "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
+          Thread.currentThread().getName(), took, this.numEntries.get(), 
+          StringUtils.humanReadableInt(len)));
       }
     } catch (IOException e) {
       LOG.fatal("Could not append. Requesting close of hlog", e);
