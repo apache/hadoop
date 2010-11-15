@@ -328,28 +328,20 @@ public class TestKeyValue extends TestCase {
     byte [] value = Bytes.toBytes("a real value");
     byte [] evalue = new byte[0]; // empty value
 
-    // verify key with a non-empty value works
-    KeyValue kv1 = new KeyValue(rowA, family, qualA, ts, value);
-    KeyValue kv1ko = kv1.clone();
-    assertTrue(kv1.equals(kv1ko));
-    kv1ko.convertToKeyOnly();
-    // keys are still the same
-    assertTrue(kv1.equals(kv1ko));
-    // but values are not
-    assertTrue(kv1.getValue().length != 0);
-    assertTrue(kv1ko.getValue().length == 0);
-
-    // verify key with an already-empty value works
-    KeyValue kv2 = new KeyValue(rowA, family, qualA, ts, evalue);
-    KeyValue kv2ko = kv2.clone();
-    assertTrue(kv2.equals(kv2ko));
-    kv2ko.convertToKeyOnly();
-    // they should still be equal
-    assertTrue(kv2.equals(kv2ko));
-    // but they should have different underlying byte arrays
-    assertFalse(kv2.getBuffer() == kv2ko.getBuffer());
-    // both with 0 length values
-    assertTrue(kv2.getValue().length == 0);
-    assertTrue(kv2ko.getValue().length == 0);
+    for (byte[] val : new byte[][]{value, evalue}) {
+      for (boolean useLen : new boolean[]{false,true}) {
+        KeyValue kv1 = new KeyValue(rowA, family, qualA, ts, val);
+        KeyValue kv1ko = kv1.clone();
+        assertTrue(kv1.equals(kv1ko));
+        kv1ko.convertToKeyOnly(useLen);
+        // keys are still the same
+        assertTrue(kv1.equals(kv1ko));
+        // but values are not
+        assertTrue(kv1ko.getValue().length == (useLen?Bytes.SIZEOF_INT:0));
+        if (useLen) {
+          assertEquals(kv1.getValueLength(), Bytes.toInt(kv1ko.getValue()));
+        }
+      }
+    }
   }
 }

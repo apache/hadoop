@@ -679,6 +679,7 @@ Release 0.90.0 - Unreleased
    HBASE-3221  Race between splitting and disabling
    HBASE-3224  NPE in KeyValue$KVComparator.compare when compacting
    HBASE-3233  Fix Long Running Stats
+   HBASE-3232 : Fix KeyOnlyFilter + Add Value Length (Nicolas via Ryan)
 
 
   IMPROVEMENTS

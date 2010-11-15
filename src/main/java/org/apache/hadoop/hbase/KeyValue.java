@@ -1195,13 +1195,19 @@ public class KeyValue implements Writable, HeapSize {
    * <p>
    * This method is used by <code>KeyOnlyFilter</code> and is an advanced feature of
    * KeyValue, proceed with caution.
+   * @param lenAsVal replace value with the actual value length (false=empty)
    */
-  public void convertToKeyOnly() {
-    // KV format:  <keylen/4><valuelen/4><key/keylen><value/valuelen>
-    // Rebuild as: <keylen/4><0/4><key/keylen>
-    byte [] newBuffer = new byte[getKeyLength() + (2 * Bytes.SIZEOF_INT)];
-    System.arraycopy(this.bytes, this.offset, newBuffer, 0, newBuffer.length);
-    Bytes.putInt(newBuffer, Bytes.SIZEOF_INT, 0);
+  public void convertToKeyOnly(boolean lenAsVal) {
+    // KV format:  <keylen:4><valuelen:4><key:keylen><value:valuelen>
+    // Rebuild as: <keylen:4><0:4><key:keylen>
+    int dataLen = lenAsVal? Bytes.SIZEOF_INT : 0;
+    byte [] newBuffer = new byte[getKeyLength() + (2 * Bytes.SIZEOF_INT) + dataLen];
+    System.arraycopy(this.bytes, this.offset, newBuffer, 0, 
+        Math.min(newBuffer.length,this.length));
+    Bytes.putInt(newBuffer, Bytes.SIZEOF_INT, dataLen);
+    if (lenAsVal) {
+      Bytes.putInt(newBuffer, newBuffer.length - dataLen, this.getValueLength());
+    }
     this.bytes = newBuffer;
     this.offset = 0;
     this.length = newBuffer.length;

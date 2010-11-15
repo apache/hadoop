@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * A filter that will only return the key component of each KV (the value will
@@ -33,15 +34,21 @@ import org.apache.hadoop.hbase.KeyValue;
  */
 public class KeyOnlyFilter extends FilterBase {
 
-  public KeyOnlyFilter() {}
+  boolean lenAsVal;
+  public KeyOnlyFilter() { this(false); }
+  public KeyOnlyFilter(boolean lenAsVal) { this.lenAsVal = lenAsVal; }
 
   @Override
   public ReturnCode filterKeyValue(KeyValue kv) {
-    kv.convertToKeyOnly();
+    kv.convertToKeyOnly(this.lenAsVal);
     return ReturnCode.INCLUDE;
   }
 
-  public void write(DataOutput out) throws IOException {}
+  public void write(DataOutput out) throws IOException {
+    out.writeBoolean(this.lenAsVal);
+  }
 
-  public void readFields(DataInput in) throws IOException {}
+  public void readFields(DataInput in) throws IOException {
+    this.lenAsVal = in.readBoolean();
+  }
 }

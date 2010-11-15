@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
@@ -479,6 +480,39 @@ public class TestFromClientSide {
     scanner.close();
   }
 
+  @Test
+  public void testKeyOnlyFilter() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testKeyOnlyFilter");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    byte [][] ROWS = makeN(ROW, 10);
+    byte [][] QUALIFIERS = {
+        Bytes.toBytes("col0-<d2v1>-<d3v2>"), Bytes.toBytes("col1-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col2-<d2v1>-<d3v2>"), Bytes.toBytes("col3-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col4-<d2v1>-<d3v2>"), Bytes.toBytes("col5-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col6-<d2v1>-<d3v2>"), Bytes.toBytes("col7-<d2v1>-<d3v2>"),
+        Bytes.toBytes("col8-<d2v1>-<d3v2>"), Bytes.toBytes("col9-<d2v1>-<d3v2>")
+    };
+    for(int i=0;i<10;i++) {
+      Put put = new Put(ROWS[i]);
+      put.add(FAMILY, QUALIFIERS[i], VALUE);
+      ht.put(put);
+    }
+    Scan scan = new Scan();
+    scan.addFamily(FAMILY);
+    Filter filter = new KeyOnlyFilter(true);
+    scan.setFilter(filter);
+    ResultScanner scanner = ht.getScanner(scan);
+    int count = 0;
+    for(Result result : ht.getScanner(scan)) {
+      assertEquals(result.size(), 1);
+      assertEquals(result.raw()[0].getValueLength(), Bytes.SIZEOF_INT);
+      assertEquals(Bytes.toInt(result.raw()[0].getValue()), VALUE.length);
+      count++;
+    }
+    assertEquals(count, 10);
+    scanner.close();
+  }
+  
   /**
    * Test simple table and non-existent row cases.
    */

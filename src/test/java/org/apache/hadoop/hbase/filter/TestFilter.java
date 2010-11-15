@@ -1312,14 +1312,14 @@ public class TestFilter extends HBaseTestCase {
         kvs.length, idx);
   }
 
-  private void verifyScanFullNoValues(Scan s, KeyValue [] kvs)
+  private void verifyScanFullNoValues(Scan s, KeyValue [] kvs, boolean useLen)
   throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
     List<KeyValue> results = new ArrayList<KeyValue>();
     int row = 0;
     int idx = 0;
-    for (boolean done = true; done; row++) {
-      done = scanner.next(results);
+    for (boolean more = true; more; row++) {
+      more = scanner.next(results);
       Arrays.sort(results.toArray(new KeyValue[results.size()]),
           KeyValue.COMPARATOR);
       if(results.isEmpty()) break;
@@ -1336,9 +1336,20 @@ public class TestFilter extends HBaseTestCase {
             Bytes.equals(kv.getFamily(), kvs[idx].getFamily()));
         assertTrue("Qualifier mismatch",
             Bytes.equals(kv.getQualifier(), kvs[idx].getQualifier()));
-        assertFalse("Value match (expecting no value in result)",
+        assertFalse("Should not have returned whole value",
             Bytes.equals(kv.getValue(), kvs[idx].getValue()));
-        assertTrue("Value in result is not empty", kv.getValue().length == 0);
+        if (useLen) {
+          assertEquals("Value in result is not SIZEOF_INT", 
+                     kv.getValue().length, Bytes.SIZEOF_INT);
+          LOG.info("idx = "  + idx + ", len=" + kvs[idx].getValueLength()
+              + ", actual=" +  Bytes.toInt(kv.getValue()));
+          assertEquals("Scan value should be the length of the actual value. ",
+                     kvs[idx].getValueLength(), Bytes.toInt(kv.getValue()) );
+          LOG.info("good");
+        } else {
+          assertEquals("Value in result is not empty", 
+                     kv.getValue().length, 0);
+        }
         idx++;
       }
       results.clear();
@@ -1492,9 +1503,11 @@ public class TestFilter extends HBaseTestCase {
     // Grab all 6 rows
     long expectedRows = 6;
     long expectedKeys = this.colsPerRow;
-    Scan s = new Scan();
-    s.setFilter(new KeyOnlyFilter());
-    verifyScan(s, expectedRows, expectedKeys);
-    verifyScanFullNoValues(s, expectedKVs);
+    for (boolean useLen : new boolean[]{false,true}) {
+      Scan s = new Scan();
+      s.setFilter(new KeyOnlyFilter(useLen));
+      verifyScan(s, expectedRows, expectedKeys);
+      verifyScanFullNoValues(s, expectedKVs, useLen);
+    }
   }
 }
