@@ -120,14 +120,9 @@ public interface DataTransferProtocol {
       assert numRepliesExpected > 0;
 
       seqno = in.readLong();
-      if (seqno == HEARTBEAT_SEQNO) {
-        // Heartbeat doesn't forward any replies
-        replies = new short[0];
-      } else {
-        replies = new short[numRepliesExpected];
-        for (int i=0; i < replies.length; i++) {
-          replies[i] = in.readShort();
-        }
+      replies = new short[numRepliesExpected];
+      for (int i=0; i < replies.length; i++) {
+    	  replies[i] = in.readShort();
       }
     }
 
