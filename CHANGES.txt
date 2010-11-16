@@ -67,6 +67,9 @@ Release 0.20.3 - Unreleased
 
     HDFS-727. bug setting block size hdfsOpenFile (Eli Collins via cos)
 
+    HDFS-908. TestDistributedFileSystem fails with Wrong FS on weird hosts. 
+    (Todd Lipcon via eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
