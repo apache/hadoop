@@ -466,9 +466,13 @@ public class MemStore implements HeapSize {
     // Add the KeyValue to the MemStore
     long addedSize = add(kv);
 
-    // Iterate the KeyValues after the one just inserted, cleaning up any
-    // other KeyValues with the same row/family/qualifier
-    SortedSet<KeyValue> ss = kvset.tailSet(kv);
+    // Get the KeyValues for the row/family/qualifier regardless of timestamp.
+    // For this case we want to clean up any other puts
+    KeyValue firstKv = KeyValue.createFirstOnRow(
+        kv.getBuffer(), kv.getRowOffset(), kv.getRowLength(),
+        kv.getBuffer(), kv.getFamilyOffset(), kv.getFamilyLength(),
+        kv.getBuffer(), kv.getQualifierOffset(), kv.getQualifierLength());
+    SortedSet<KeyValue> ss = kvset.tailSet(firstKv);
     Iterator<KeyValue> it = ss.iterator();
     while ( it.hasNext() ) {
       KeyValue cur = it.next();

@@ -61,6 +61,8 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
@@ -2064,6 +2066,59 @@ public class TestHRegion extends HBaseTestCase {
 
     // ensure that this gets to disk.
     assertICV(row, fam1, qual3, amount);
+  }
+
+  /**
+   * Added for HBASE-3235.
+   *
+   * When the initial put and an ICV update were arriving with the same timestamp,
+   * the initial Put KV was being skipped during {@link MemStore#upsert(KeyValue)}
+   * causing the iteration for matching KVs, causing the update-in-place to not
+   * happen and the ICV put to effectively disappear.
+   * @throws IOException
+   */
+  public void testIncrementColumnValue_UpdatingInPlace_TimestampClobber() throws IOException {
+    initHRegion(tableName, getName(), fam1);
+
+    long value = 1L;
+    long amount = 3L;
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    ManualEnvironmentEdge mock = new ManualEnvironmentEdge();
+    mock.setValue(now);
+    EnvironmentEdgeManagerTestHelper.injectEdge(mock);
+
+    // verify we catch an ICV on a put with the same timestamp
+    Put put = new Put(row);
+    put.add(fam1, qual1, now, Bytes.toBytes(value));
+    region.put(put);
+
+    long result = region.incrementColumnValue(row, fam1, qual1, amount, true);
+
+    assertEquals(value+amount, result);
+
+    Store store = region.getStore(fam1);
+    // ICV should update the existing Put with the same timestamp
+    assertEquals(1, store.memstore.kvset.size());
+    assertTrue(store.memstore.snapshot.isEmpty());
+
+    assertICV(row, fam1, qual1, value+amount);
+
+    // verify we catch an ICV even when the put ts > now
+    put = new Put(row);
+    put.add(fam1, qual2, now+1, Bytes.toBytes(value));
+    region.put(put);
+
+    result = region.incrementColumnValue(row, fam1, qual2, amount, true);
+
+    assertEquals(value+amount, result);
+
+    store = region.getStore(fam1);
+    // ICV should update the existing Put with the same timestamp
+    assertEquals(2, store.memstore.kvset.size());
+    assertTrue(store.memstore.snapshot.isEmpty());
+
+    assertICV(row, fam1, qual2, value+amount);
+    EnvironmentEdgeManagerTestHelper.reset();
   }
 
   private void assertICV(byte [] row,
