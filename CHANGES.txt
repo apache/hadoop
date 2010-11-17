@@ -6,6 +6,18 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+  IMPROVEMENTS
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.22.0 - Unreleased
+
+  INCOMPATIBLE CHANGES
+
+  NEW FEATURES
+
     HADOOP-6791.  Refresh for proxy superuser config
     (common part for HDFS-1096) (boryas)
 
