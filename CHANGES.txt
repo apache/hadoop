@@ -1,6 +1,6 @@
 Hadoop Change Log
 
-Trunk (unreleased changes)
+Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
 
