@@ -38,6 +38,9 @@ Trunk (unreleased changes)
     HADOOP-6996. Allow CodecFactory to return a codec object given a codec'
     class name. (hairong)
 
+    HADOOP-7013. Add boolean field isCorrupt to BlockLocation. 
+    (Patrick Kling via hairong)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
