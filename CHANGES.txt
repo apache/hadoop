@@ -682,6 +682,10 @@ Release 0.90.0 - Unreleased
    HBASE-3232  Fix KeyOnlyFilter + Add Value Length (Nicolas via Ryan)
    HBASE-3235  Intermittent incrementColumnValue failure in TestHRegion 
    	       (Gary via Ryan)
+   HBASE-3241  check to see if we exceeded hbase.regionserver.maxlogs limit is
+               incorrect (Kannan Muthukkaruppan via JD)
+   HBASE-3239  Handle null regions to flush in HLog.cleanOldLogs (Kannan
+               Muthukkaruppan via JD)
 
 
   IMPROVEMENTS
