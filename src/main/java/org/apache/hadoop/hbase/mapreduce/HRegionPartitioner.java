@@ -36,6 +36,11 @@ import org.apache.hadoop.mapreduce.Partitioner;
  * Keys are grouped according to the regions that currently exist
  * so that each reducer fills a single region so load is distributed.
  *
+ * <p>This class is not suitable as partitioner creating hfiles
+ * for incremental bulk loads as region spread will likely change between time of
+ * hfile creation and load time. See {@link LoadIncrementalHFiles}
+ * and <a href="http://hbase.apache.org/docs/current/bulk-loads.html">Bulk Load</a>.
+ *
  * @param <KEY>  The type of the key.
  * @param <VALUE>  The type of the value.
  */

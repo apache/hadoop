@@ -336,6 +336,11 @@ Usually you'll want to use the latest version available except the problematic u
       will up the file descriptors for a user but for whatever reason,
       HBase is running as some other users.  HBase prints in its logs
       as the first line the ulimit its seeing.  Ensure its whats expected.
+    <footnote>
+    <para>A useful read setting config on you hadoop cluster isAaron Kimballs'
+    <link xlink:ref="http://www.cloudera.com/blog/2009/03/configuration-parameters-what-can-you-just-ignore/">Configuration Parameters: What can you just ignore?</link>
+    </para>
+    </footnote>
       </para>
         <section xml:id="ulimit_ubuntu">
           <title><varname>ulimit</varname> on Ubuntu</title>
