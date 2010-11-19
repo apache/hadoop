@@ -283,7 +283,7 @@
     qualified class name here. Without special reason, you should always add
     the above default log cleaners in the list.
     </description>
-  </property>  
+  </property>
   <property>
     <name>hbase.regionserver.global.memstore.upperLimit</name>
     <value>0.4</value>
@@ -429,6 +429,13 @@
     <value>murmur</value>
     <description>The hashing algorithm for use in HashFunction. Two values are
     supported now: murmur (MurmurHash) and jenkins (JenkinsHash).
+    </description>
+  </property>
+  <property>
+    <name>hbase.rpc.engine</name>
+    <value>org.apache.hadoop.hbase.ipc.WritableRpcEngine</value>
+    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcEngine to be
+    used for client / server RPC call marshalling.
     </description>
   </property>
   <property>

@@ -80,7 +80,9 @@ public interface HBaseRPCProtocolVersion extends VersionedProtocol {
    * <li>Version 26: New master and Increment, 0.90 version bump.</li>
    * <li>Version 27: HBASE-3168, Added serverCurrentTime to regionServerStartup
    * in HMasterRegionInterface.</li>
+   * <li>Version 28: HBASE-2321, add protocol class name to connection setup
+   * for verification and future authorization</li>
    * </ul>
    */
-  public static final long versionID = 27L;
+  public static final long versionID = 28L;
 }

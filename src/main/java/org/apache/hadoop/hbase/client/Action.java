@@ -32,12 +32,12 @@ import org.apache.hadoop.io.Writable;
  * {@link HTable::batch} to associate the action with it's region and maintain 
  * the index from the original request. 
  */
-public class Action implements Writable, Comparable {
+public class Action<R> implements Writable, Comparable {
 
   private byte[] regionName;
   private Row action;
   private int originalIndex;
-  private Result result;
+  private R result;
 
   public Action() {
     super();
@@ -58,11 +58,11 @@ public class Action implements Writable, Comparable {
     this.regionName = regionName;
   }
 
-  public Result getResult() {
+  public R getResult() {
     return result;
   }
 
-  public void setResult(Result result) {
+  public void setResult(R result) {
     this.result = result;
   }
 
@@ -87,14 +87,15 @@ public class Action implements Writable, Comparable {
     Bytes.writeByteArray(out, regionName);
     HbaseObjectWritable.writeObject(out, action, Row.class, null);
     out.writeInt(originalIndex);
-    HbaseObjectWritable.writeObject(out, result, Result.class, null);
+    HbaseObjectWritable.writeObject(out, result,
+        result != null ? result.getClass() : Writable.class, null);
   }
 
   public void readFields(final DataInput in) throws IOException {
     this.regionName = Bytes.readByteArray(in);
     this.action = (Row) HbaseObjectWritable.readObject(in, null);
     this.originalIndex = in.readInt();
-    this.result = (Result) HbaseObjectWritable.readObject(in, null);
+    this.result = (R) HbaseObjectWritable.readObject(in, null);
   }
 
 }

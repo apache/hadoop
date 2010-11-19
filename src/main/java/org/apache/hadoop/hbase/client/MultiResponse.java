@@ -116,7 +116,8 @@ public class MultiResponse implements Writable {
 
             if (! (obj instanceof Writable))
               obj = null; // squash all non-writables to null.
-            HbaseObjectWritable.writeObject(out, obj, Result.class, null);
+            HbaseObjectWritable.writeObject(out, r.getSecond(),
+                obj != null ? obj.getClass() : Writable.class, null);
           }
         }
       }

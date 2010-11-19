@@ -39,6 +39,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +47,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -78,6 +80,8 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Action;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.coprocessor.Exec;
+import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -93,12 +97,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
-import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.ipc.HBaseServer;
-import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.ipc.*;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
@@ -125,9 +124,8 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.common.base.Function;
 
 /**
  * HRegionServer makes a set of HRegions available to clients. It checks in with
@@ -187,7 +185,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   // Server to handle client requests. Default access so can be accessed by
   // unit tests.
-  HBaseServer server;
+  RpcServer server;
 
   // Leases
   private Leases leases;
@@ -353,9 +351,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     @Override
     public Integer apply(Writable from) {
-      if (!(from instanceof HBaseRPC.Invocation)) return NORMAL_QOS;
+      if (!(from instanceof Invocation)) return NORMAL_QOS;
 
-      HBaseRPC.Invocation inv = (HBaseRPC.Invocation) from;
+      Invocation inv = (Invocation) from;
       String methodName = inv.getMethodName();
 
       // scanner methods...
@@ -2390,13 +2388,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   @SuppressWarnings("unchecked")
   @Override
-  public MultiResponse multi(MultiAction multi) throws IOException {
-
+  public <R> MultiResponse multi(MultiAction<R> multi) throws IOException {
     MultiResponse response = new MultiResponse();
-
-    for (Map.Entry<byte[], List<Action>> e : multi.actions.entrySet()) {
+    for (Map.Entry<byte[], List<Action<R>>> e : multi.actions.entrySet()) {
       byte[] regionName = e.getKey();
-      List<Action> actionsForRegion = e.getValue();
+      List<Action<R>> actionsForRegion = e.getValue();
       // sort based on the row id - this helps in the case where we reach the
       // end of a region, so that we don't have to try the rest of the
       // actions in the list.
@@ -2415,9 +2411,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
             response.add(regionName, originalIndex, get(regionName, (Get) action));
           } else if (action instanceof Put) {
             puts.add(a);  // wont throw.
+          } else if (action instanceof Exec) {
+            ExecResult result = execCoprocessor(regionName, (Exec)action);
+            response.add(regionName, new Pair<Integer, Object>(
+                a.getOriginalIndex(), result.getValue()
+            ));
           } else {
-            LOG.debug("Error: invalid Action, row must be a Get, Delete or Put.");
-            throw new DoNotRetryIOException("Invalid Action, row must be a Get, Delete or Put.");
+            LOG.debug("Error: invalid Action, row must be a Get, Delete, " +
+                "Put or Exec.");
+            throw new DoNotRetryIOException("Invalid Action, row must be a " +
+                "Get, Delete or Put.");
           }
         } catch (IOException ex) {
           response.add(regionName, originalIndex, ex);
@@ -2497,6 +2500,36 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     return resp;
+  }
+
+  /**
+   * Executes a single {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}
+   * method using the registered protocol handlers.
+   * {@link CoprocessorProtocol} implementations must be registered per-region
+   * via the
+   * {@link org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)}
+   * method before they are available.
+   *
+   * @param regionName name of the region against which the invocation is executed
+   * @param call an {@code Exec} instance identifying the protocol, method name,
+   *     and parameters for the method invocation
+   * @return an {@code ExecResult} instance containing the region name of the
+   *     invocation and the return value
+   * @throws IOException if no registered protocol handler is found or an error
+   *     occurs during the invocation
+   * @see org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)
+   */
+  @Override
+  public ExecResult execCoprocessor(byte[] regionName, Exec call)
+      throws IOException {
+    checkOpen();
+    requestCount.incrementAndGet();
+    try {
+      HRegion region = getRegion(regionName);
+      return region.exec(call);
+    } catch (Throwable t) {
+      throw convertThrowableToIOE(cleanup(t));
+    }
   }
 
   public String toString() {
@@ -2586,7 +2619,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     if (this.replicationHandler == null) return;
     this.replicationHandler.replicateLogEntries(entries);
   }
-
 
   /**
    * @see org.apache.hadoop.hbase.regionserver.HRegionServerCommandLine

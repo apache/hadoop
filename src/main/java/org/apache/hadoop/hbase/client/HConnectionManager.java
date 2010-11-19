@@ -20,15 +20,10 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.lang.reflect.Proxy;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -53,10 +48,8 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
-import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
@@ -1051,27 +1044,27 @@ public class HConnectionManager {
       this.closed = true;
     }
 
-    private Callable<MultiResponse> createCallable(
+    private <R> Callable<MultiResponse> createCallable(
         final HServerAddress address,
-        final MultiAction multi,
+        final MultiAction<R> multi,
         final byte [] tableName) {
       final HConnection connection = this;
       return new Callable<MultiResponse>() {
-        public MultiResponse call() throws IOException {
-          return getRegionServerWithoutRetries(
-              new ServerCallable<MultiResponse>(connection, tableName, null) {
-                public MultiResponse call() throws IOException {
-                  return server.multi(multi);
-                }
-                @Override
-                public void instantiateServer(boolean reload) throws IOException {
-                  server = connection.getHRegionConnection(address);
-                }
-              }
-          );
-        }
-      };
-    }
+       public MultiResponse call() throws IOException {
+         return getRegionServerWithoutRetries(
+             new ServerCallable<MultiResponse>(connection, tableName, null) {
+               public MultiResponse call() throws IOException {
+                 return server.multi(multi);
+               }
+               @Override
+               public void instantiateServer(boolean reload) throws IOException {
+                 server = connection.getHRegionConnection(address);
+               }
+             }
+         );
+       }
+     };
+   }
 
     public void processBatch(List<Row> list,
         final byte[] tableName,
@@ -1083,8 +1076,97 @@ public class HConnectionManager {
         throw new IllegalArgumentException("argument results must be the same size as argument list");
       }
 
+      processBatchCallback(list, tableName, pool, results, null);
+    }
+
+    /**
+     * Executes the given
+     * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call}
+     * callable for each row in the
+     * given list and invokes
+     * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
+     * for each result returned.
+     *
+     * @param protocol the protocol interface being called
+     * @param rows a list of row keys for which the callable should be invoked
+     * @param tableName table name for the coprocessor invoked
+     * @param pool ExecutorService used to submit the calls per row
+     * @param callable instance on which to invoke
+     * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
+     * for each row
+     * @param callback instance on which to invoke
+     * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
+     * for each result
+     * @param <T> the protocol interface type
+     * @param <R> the callable's return type
+     * @throws IOException
+     */
+    public <T extends CoprocessorProtocol,R> void processExecs(
+        final Class<T> protocol,
+        List<byte[]> rows,
+        final byte[] tableName,
+        ExecutorService pool,
+        final Batch.Call<T,R> callable,
+        final Batch.Callback<R> callback)
+      throws IOException, Throwable {
+
+      Map<byte[],Future<R>> futures =
+          new TreeMap<byte[],Future<R>>(Bytes.BYTES_COMPARATOR);
+      for (final byte[] r : rows) {
+        final ExecRPCInvoker invoker =
+            new ExecRPCInvoker(conf, this, protocol, tableName, r);
+        Future<R> future = pool.submit(
+            new Callable<R>() {
+              public R call() throws Exception {
+                T instance = (T)Proxy.newProxyInstance(conf.getClassLoader(),
+                    new Class[]{protocol},
+                    invoker);
+                R result = callable.call(instance);
+                byte[] region = invoker.getRegionName();
+                if (callback != null) {
+                  callback.update(region, r, result);
+                }
+                return result;
+              }
+            });
+        futures.put(r, future);
+      }
+      for (Map.Entry<byte[],Future<R>> e : futures.entrySet()) {
+        try {
+          e.getValue().get();
+        } catch (ExecutionException ee) {
+          LOG.warn("Error executing for row "+Bytes.toStringBinary(e.getKey()), ee);
+          throw ee.getCause();
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          throw new IOException("Interrupted executing for row " +
+              Bytes.toStringBinary(e.getKey()), ie);
+        }
+      }
+    }
+
+    /**
+     * Parameterized batch processing, allowing varying return types for
+     * different {@link Row} implementations.
+     */
+    public <R> void processBatchCallback(
+        List<? extends Row> list,
+        byte[] tableName,
+        ExecutorService pool,
+        Object[] results,
+        Batch.Callback<R> callback)
+    throws IOException, InterruptedException {
+
+      // results must be the same size as list
+      if (results.length != list.size()) {
+        throw new IllegalArgumentException(
+            "argument results must be the same size as argument list");
+      }
       if (list.size() == 0) {
         return;
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("expecting "+results.length+" results");
       }
 
       // Keep track of the most recent servers for any given item for better
@@ -1102,10 +1184,9 @@ public class HConnectionManager {
           LOG.debug("Retry " +tries+ ", sleep for " +sleepTime+ "ms!");
           Thread.sleep(sleepTime);
         }
-
         // step 1: break up into regionserver-sized chunks and build the data structs
-
-        Map<HServerAddress, MultiAction> actionsByServer = new HashMap<HServerAddress, MultiAction>();
+        Map<HServerAddress, MultiAction<R>> actionsByServer =
+          new HashMap<HServerAddress, MultiAction<R>>();
         for (int i = 0; i < workingList.size(); i++) {
           Row row = workingList.get(i);
           if (row != null) {
@@ -1113,13 +1194,13 @@ public class HConnectionManager {
             HServerAddress address = loc.getServerAddress();
             byte[] regionName = loc.getRegionInfo().getRegionName();
 
-            MultiAction actions = actionsByServer.get(address);
+            MultiAction<R> actions = actionsByServer.get(address);
             if (actions == null) {
-              actions = new MultiAction();
+              actions = new MultiAction<R>();
               actionsByServer.put(address, actions);
             }
 
-            Action action = new Action(regionName, row, i);
+            Action<R> action = new Action<R>(regionName, row, i);
             lastServers[i] = address;
             actions.add(regionName, action);
           }
@@ -1128,15 +1209,18 @@ public class HConnectionManager {
         // step 2: make the requests
 
         Map<HServerAddress,Future<MultiResponse>> futures =
-            new HashMap<HServerAddress, Future<MultiResponse>>(actionsByServer.size());
+            new HashMap<HServerAddress, Future<MultiResponse>>(
+                actionsByServer.size());
 
-        for (Entry<HServerAddress, MultiAction> e : actionsByServer.entrySet()) {
+        for (Entry<HServerAddress, MultiAction<R>> e
+             : actionsByServer.entrySet()) {
           futures.put(e.getKey(), pool.submit(createCallable(e.getKey(), e.getValue(), tableName)));
         }
 
         // step 3: collect the failures and successes and prepare for retry
 
-        for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer : futures.entrySet()) {
+        for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer
+             : futures.entrySet()) {
           HServerAddress address = responsePerServer.getKey();
 
           try {
@@ -1161,6 +1245,11 @@ public class HConnectionManager {
                 } else {
                   // Result might be an Exception, including DNRIOE
                   results[regionResult.getFirst()] = regionResult.getSecond();
+                  if (callback != null && !(regionResult.getSecond() instanceof Throwable)) {
+                    callback.update(e.getKey(),
+                        list.get(regionResult.getFirst()).getRow(),
+                        (R)regionResult.getSecond());
+                  }
                 }
               }
             }

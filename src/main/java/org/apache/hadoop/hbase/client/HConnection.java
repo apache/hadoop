@@ -33,6 +33,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -256,6 +258,46 @@ public interface HConnection extends Abortable {
   public void processBatch(List<Row> actions, final byte[] tableName,
       ExecutorService pool, Object[] results)
       throws IOException, InterruptedException;
+
+  /**
+   * Parameterized batch processing, allowing varying return types for different
+   * {@link Row} implementations.
+   */
+  public <R> void processBatchCallback(List<? extends Row> list,
+      byte[] tableName,
+      ExecutorService pool,
+      Object[] results,
+      Batch.Callback<R> callback) throws IOException, InterruptedException;
+
+
+  /**
+   * Executes the given
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call}
+   * callable for each row in the given list and invokes
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
+   * for each result returned.
+   *
+   * @param protocol the protocol interface being called
+   * @param rows a list of row keys for which the callable should be invoked
+   * @param tableName table name for the coprocessor invoked
+   * @param pool ExecutorService used to submit the calls per row
+   * @param call instance on which to invoke
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
+   * for each row
+   * @param callback instance on which to invoke
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Callback#update(byte[], byte[], Object)}
+   * for each result
+   * @param <T> the protocol interface type
+   * @param <R> the callable's return type
+   * @throws IOException
+   */
+  public <T extends CoprocessorProtocol,R> void processExecs(
+      final Class<T> protocol,
+      List<byte[]> rows,
+      final byte[] tableName,
+      ExecutorService pool,
+      final Batch.Call<T,R> call,
+      final Batch.Callback<R> callback) throws IOException, Throwable;
 
   /**
    * Process a batch of Puts.

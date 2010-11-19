@@ -41,13 +41,9 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -60,6 +56,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -75,15 +72,12 @@ import com.google.common.base.Function;
  *
  * @see HBaseClient
  */
-public abstract class HBaseServer {
+public abstract class HBaseServer implements RpcServer {
 
   /**
    * The first four bytes of Hadoop RPC connections
    */
   public static final ByteBuffer HEADER = ByteBuffer.wrap("hrpc".getBytes());
-
-  // 1 : Introduce ping and server does not throw away RPCs
-  // 3 : RPC was refactored in 0.19
   public static final byte CURRENT_VERSION = 3;
 
   /**
@@ -102,17 +96,35 @@ public abstract class HBaseServer {
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.ipc.HBaseServer");
 
-  protected static final ThreadLocal<HBaseServer> SERVER =
-    new ThreadLocal<HBaseServer>();
+  protected static final ThreadLocal<RpcServer> SERVER =
+    new ThreadLocal<RpcServer>();
   private volatile boolean started = false;
 
+  private static final Map<String, Class<? extends VersionedProtocol>>
+      PROTOCOL_CACHE =
+      new ConcurrentHashMap<String, Class<? extends VersionedProtocol>>();
+
+  static Class<? extends VersionedProtocol> getProtocolClass(
+      String protocolName, Configuration conf)
+  throws ClassNotFoundException {
+    Class<? extends VersionedProtocol> protocol =
+        PROTOCOL_CACHE.get(protocolName);
+
+    if (protocol == null) {
+      protocol = (Class<? extends VersionedProtocol>)
+          conf.getClassByName(protocolName);
+      PROTOCOL_CACHE.put(protocolName, protocol);
+    }
+    return protocol;
+  }
+
   /** Returns the server instance called under or null.  May be called under
-   * {@link #call(Writable, long)} implementations, and under {@link Writable}
+   * {@link #call(Class, Writable, long)} implementations, and under {@link Writable}
    * methods of paramters and return values.  Permits applications to access
    * the server context.
    * @return HBaseServer
    */
-  public static HBaseServer get() {
+  public static RpcServer get() {
     return SERVER.get();
   }
 
@@ -825,6 +837,8 @@ public abstract class HBaseServer {
     // disconnected, we can say where it used to connect to.
     private String hostAddress;
     private int remotePort;
+    ConnectionHeader header = new ConnectionHeader();
+    Class<? extends VersionedProtocol> protocol;
     protected UserGroupInformation ticket = null;
 
     public Connection(SocketChannel channel, long lastContact) {
@@ -953,14 +967,21 @@ public abstract class HBaseServer {
       }
     }
 
-    /// Reads the header following version
+    /// Reads the connection header following version
     private void processHeader() throws IOException {
-      /* In the current version, it is just a ticket.
-       * Later we could introduce a "ConnectionHeader" class.
-       */
       DataInputStream in =
         new DataInputStream(new ByteArrayInputStream(data.array()));
-      ticket = (UserGroupInformation) ObjectWritable.readObject(in, conf);
+      header.readFields(in);
+      try {
+        String protocolClassName = header.getProtocol();
+        if (protocolClassName != null) {
+          protocol = getProtocolClass(header.getProtocol(), conf);
+        }
+      } catch (ClassNotFoundException cnfe) {
+        throw new IOException("Unknown protocol: " + header.getProtocol());
+      }
+
+      ticket = header.getUgi();
     }
 
     private void processData() throws  IOException, InterruptedException {
@@ -1033,7 +1054,7 @@ public abstract class HBaseServer {
           try {
             if (!started)
               throw new ServerNotRunningException("Server is not running yet");
-            value = call(call.param, call.timestamp);             // make the call
+            value = call(call.connection.protocol, call.param, call.timestamp);             // make the call
           } catch (Throwable e) {
             LOG.debug(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
@@ -1111,6 +1132,7 @@ public abstract class HBaseServer {
    * @return priority, higher is better
    */
   private Function<Writable,Integer> qosFunction = null;
+  @Override
   public void setQosFunction(Function<Writable, Integer> newFunc) {
     qosFunction = newFunc;
   }
@@ -1186,9 +1208,11 @@ public abstract class HBaseServer {
   /** Sets the socket buffer size used for responding to RPCs.
    * @param size send size
    */
+  @Override
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 
   /** Starts the service.  Must be called before any calls will be handled. */
+  @Override
   public void start() {
     startThreads();
     openServer();
@@ -1197,6 +1221,7 @@ public abstract class HBaseServer {
   /**
    * Open a previously started server.
    */
+  @Override
   public void openServer() {
     started = true;
   }
@@ -1205,6 +1230,7 @@ public abstract class HBaseServer {
    * Starts the service threads but does not allow requests to be responded yet.
    * Client will get {@link ServerNotRunningException} instead.
    */
+  @Override
   public synchronized void startThreads() {
     responder.start();
     listener.start();
@@ -1225,6 +1251,7 @@ public abstract class HBaseServer {
   }
 
   /** Stops the service.  No new calls will be handled after this is called. */
+  @Override
   public synchronized void stop() {
     LOG.info("Stopping server on " + port);
     running = false;
@@ -1256,6 +1283,7 @@ public abstract class HBaseServer {
    *  See {@link #stop()}.
    * @throws InterruptedException e
    */
+  @Override
   public synchronized void join() throws InterruptedException {
     while (running) {
       wait();
@@ -1266,23 +1294,16 @@ public abstract class HBaseServer {
    * Return the socket (ip+port) on which the RPC server is listening to.
    * @return the socket (ip+port) on which the RPC server is listening to.
    */
+  @Override
   public synchronized InetSocketAddress getListenerAddress() {
     return listener.getAddress();
   }
-
-  /** Called for each call.
-   * @param param writable parameter
-   * @param receiveTime time
-   * @return Writable
-   * @throws IOException e
-   */
-  public abstract Writable call(Writable param, long receiveTime)
-                                                throws IOException;
 
   /**
    * The number of open RPC conections
    * @return the number of open rpc connections
    */
+  @Override
   public int getNumOpenConnections() {
     return numConnections;
   }
@@ -1291,6 +1312,7 @@ public abstract class HBaseServer {
    * The number of rpc calls in the queue.
    * @return The number of rpc calls in the queue.
    */
+  @Override
   public int getCallQueueLen() {
     return callQueue.size();
   }
@@ -1299,6 +1321,7 @@ public abstract class HBaseServer {
    * Set the handler for calling out of RPC for error conditions.
    * @param handler the handler implementation
    */
+  @Override
   public void setErrorHandler(HBaseRPCErrorHandler handler) {
     this.errorHandler = handler;
   }

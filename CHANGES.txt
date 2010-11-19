@@ -33,7 +33,9 @@ Release 0.90.0 - Unreleased
    HBASE-2641  HBASE-2641 Refactor HLog splitLog, hbase-2437 continued;
                break out split code as new classes
                (James Kennedy via Stack)
-               
+   HBASE-2002  Coprocessors: Client side support; Support RPC interface
+               changes at runtime (Gary Helmling via Andrew Purtell)
+
 
   BUG FIXES
    HBASE-1791  Timeout in IndexRecordWriter (Bradford Stephens via Andrew

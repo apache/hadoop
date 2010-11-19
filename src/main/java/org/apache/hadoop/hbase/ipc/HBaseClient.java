@@ -26,10 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -182,6 +182,7 @@ public class HBaseClient {
    * socket connected to a remote address.  Calls are multiplexed through this
    * socket: responses may be delivered out of order. */
   private class Connection extends Thread {
+    private ConnectionHeader header;              // connection header
     private ConnectionId remoteId;
     private Socket socket = null;                 // connected socket
     private DataInputStream in;
@@ -193,10 +194,6 @@ public class HBaseClient {
     protected final AtomicBoolean shouldCloseConnection = new AtomicBoolean();  // indicate if the connection is closed
     private IOException closeException; // close reason
 
-    public Connection(InetSocketAddress address) throws IOException {
-      this(new ConnectionId(address, null, 0));
-    }
-
     public Connection(ConnectionId remoteId) throws IOException {
       if (remoteId.getAddress().isUnresolved()) {
         throw new UnknownHostException("unknown host: " +
@@ -204,6 +201,11 @@ public class HBaseClient {
       }
       this.remoteId = remoteId;
       UserGroupInformation ticket = remoteId.getTicket();
+      Class<? extends VersionedProtocol> protocol = remoteId.getProtocol();
+
+      header = new ConnectionHeader(
+          protocol == null ? null : protocol.getName(), ticket);
+
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
         remoteId.getAddress().toString() +
         ((ticket==null)?" from an unknown user": (" from " + ticket.getUserName())));
@@ -390,8 +392,8 @@ public class HBaseClient {
       out.write(HBaseServer.CURRENT_VERSION);
       //When there are more fields we can have ConnectionHeader Writable.
       DataOutputBuffer buf = new DataOutputBuffer();
-      ObjectWritable.writeObject(buf, remoteId.getTicket(),
-                                 UserGroupInformation.class, conf);
+      header.write(buf);
+
       int bufLen = buf.getLength();
       out.writeInt(bufLen);
       out.write(buf.getData(), 0, bufLen);
@@ -721,15 +723,27 @@ public class HBaseClient {
    * @throws IOException e
    */
   public Writable call(Writable param, InetSocketAddress address)
-  throws IOException {
+  throws IOException, InterruptedException {
       return call(param, address, null, 0);
   }
 
   public Writable call(Writable param, InetSocketAddress addr,
                        UserGroupInformation ticket, int rpcTimeout)
-                       throws IOException {
+                       throws IOException, InterruptedException {
+    return call(param, addr, null, ticket, rpcTimeout);
+  }
+
+  /** Make a call, passing <code>param</code>, to the IPC server running at
+   * <code>address</code> which is servicing the <code>protocol</code> protocol,
+   * with the <code>ticket</code> credentials, returning the value.
+   * Throws exceptions if there are network problems or if the remote code
+   * threw an exception. */
+  public Writable call(Writable param, InetSocketAddress addr,
+                       Class<? extends VersionedProtocol> protocol,
+                       UserGroupInformation ticket, int rpcTimeout)
+      throws InterruptedException, IOException {
     Call call = new Call(param);
-    Connection connection = getConnection(addr, ticket, rpcTimeout, call);
+    Connection connection = getConnection(addr, protocol, ticket, rpcTimeout, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
     //noinspection SynchronizationOnLocalVariableOrMethodParameter
@@ -800,9 +814,22 @@ public class HBaseClient {
    * @param addresses socket addresses
    * @return  Writable[]
    * @throws IOException e
+   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], Class, UserGroupInformation)} instead
    */
+  @Deprecated
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
-    throws IOException {
+    throws IOException, InterruptedException {
+    return call(params, addresses, null, null);
+  }
+
+  /** Makes a set of calls in parallel.  Each parameter is sent to the
+   * corresponding address.  When all values are available, or have timed out
+   * or errored, the collected results are returned in an array.  The array
+   * contains nulls for calls that timed out or errored.  */
+  public Writable[] call(Writable[] params, InetSocketAddress[] addresses,
+                         Class<? extends VersionedProtocol> protocol,
+                         UserGroupInformation ticket)
+      throws IOException, InterruptedException {
     if (addresses.length == 0) return new Writable[0];
 
     ParallelResults results = new ParallelResults(params.length);
@@ -812,7 +839,8 @@ public class HBaseClient {
       for (int i = 0; i < params.length; i++) {
         ParallelCall call = new ParallelCall(params[i], results, i);
         try {
-          Connection connection = getConnection(addresses[i], null, 0, call);
+          Connection connection =
+              getConnection(addresses[i], protocol, ticket, 0, call);
           connection.sendParam(call);             // send each parameter
         } catch (IOException e) {
           // log errors
@@ -834,6 +862,7 @@ public class HBaseClient {
   /* Get a connection from the pool, or create a new one and add it to the
    * pool.  Connections to a given host/port are reused. */
   private Connection getConnection(InetSocketAddress addr,
+                                   Class<? extends VersionedProtocol> protocol,
                                    UserGroupInformation ticket,
                                    int rpcTimeout,
                                    Call call)
@@ -847,7 +876,7 @@ public class HBaseClient {
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
-    ConnectionId remoteId = new ConnectionId(addr, ticket, rpcTimeout);
+    ConnectionId remoteId = new ConnectionId(addr, protocol, ticket, rpcTimeout);
     do {
       synchronized (connections) {
         connection = connections.get(remoteId);
@@ -874,9 +903,14 @@ public class HBaseClient {
     final InetSocketAddress address;
     final UserGroupInformation ticket;
     final private int rpcTimeout;
+    Class<? extends VersionedProtocol> protocol;
+    private static final int PRIME = 16777619;
 
-    ConnectionId(InetSocketAddress address, UserGroupInformation ticket,
+    ConnectionId(InetSocketAddress address,
+        Class<? extends VersionedProtocol> protocol,
+        UserGroupInformation ticket,
         int rpcTimeout) {
+      this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
       this.rpcTimeout = rpcTimeout;
@@ -885,6 +919,11 @@ public class HBaseClient {
     InetSocketAddress getAddress() {
       return address;
     }
+
+    Class<? extends VersionedProtocol> getProtocol() {
+      return protocol;
+    }
+
     UserGroupInformation getTicket() {
       return ticket;
     }
@@ -893,16 +932,19 @@ public class HBaseClient {
     public boolean equals(Object obj) {
      if (obj instanceof ConnectionId) {
        ConnectionId id = (ConnectionId) obj;
-       return address.equals(id.address) && ticket == id.ticket && 
-       rpcTimeout == id.rpcTimeout;
+       return address.equals(id.address) && protocol == id.protocol &&
+           ticket == id.ticket && rpcTimeout == id.rpcTimeout;
        //Note : ticket is a ref comparision.
      }
      return false;
     }
 
-    @Override
+    @Override  // simply use the default Object#hashcode() ?
     public int hashCode() {
-      return address.hashCode() ^ System.identityHashCode(ticket) ^ rpcTimeout;
+      return (address.hashCode() + PRIME * (
+                  PRIME * System.identityHashCode(protocol) ^
+                  System.identityHashCode(ticket)
+                )) ^ rpcTimeout;
     }
   }
 }

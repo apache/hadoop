@@ -19,9 +19,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.IOException;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -51,6 +52,9 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.ExecRPCInvoker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
@@ -1325,4 +1329,77 @@ public class HTable implements HTableInterface {
     return HConnectionManager.getConnection(HBaseConfiguration.create()).
     getRegionCachePrefetch(tableName);
   }
+
+  @Override
+  public <T extends CoprocessorProtocol> T coprocessorProxy(
+      Class<T> protocol, byte[] row) {
+    return (T)Proxy.newProxyInstance(this.getClass().getClassLoader(),
+        new Class[]{protocol},
+        new ExecRPCInvoker(configuration,
+            connection,
+            protocol,
+            tableName,
+            row));
+  }
+
+  @Override
+  public <T extends CoprocessorProtocol, R> Map<byte[],R> coprocessorExec(
+      Class<T> protocol, byte[] startKey, byte[] endKey,
+      Batch.Call<T,R> callable)
+      throws IOException, Throwable {
+
+    final Map<byte[],R> results = new TreeMap<byte[],R>(
+        Bytes.BYTES_COMPARATOR);
+    coprocessorExec(protocol, startKey, endKey, callable,
+        new Batch.Callback<R>(){
+      public void update(byte[] region, byte[] row, R value) {
+        results.put(region, value);
+      }
+    });
+    return results;
+  }
+
+  @Override
+  public <T extends CoprocessorProtocol, R> void coprocessorExec(
+      Class<T> protocol, byte[] startKey, byte[] endKey,
+      Batch.Call<T,R> callable, Batch.Callback<R> callback)
+      throws IOException, Throwable {
+
+    // get regions covered by the row range
+    List<byte[]> keys = getStartKeysInRange(startKey, endKey);
+    connection.processExecs(protocol, keys, tableName, pool, callable,
+        callback);
+  }
+
+  private List<byte[]> getStartKeysInRange(byte[] start, byte[] end)
+  throws IOException {
+    Pair<byte[][],byte[][]> startEndKeys = getStartEndKeys();
+    byte[][] startKeys = startEndKeys.getFirst();
+    byte[][] endKeys = startEndKeys.getSecond();
+
+    if (start == null) {
+      start = HConstants.EMPTY_START_ROW;
+    }
+    if (end == null) {
+      end = HConstants.EMPTY_END_ROW;
+    }
+
+    List<byte[]> rangeKeys = new ArrayList<byte[]>();
+    for (int i=0; i<startKeys.length; i++) {
+      if (Bytes.compareTo(start, startKeys[i]) >= 0 ) {
+        if (Bytes.equals(endKeys[i], HConstants.EMPTY_END_ROW) ||
+            Bytes.compareTo(start, endKeys[i]) < 0) {
+          rangeKeys.add(start);
+        }
+      } else if (Bytes.equals(end, HConstants.EMPTY_END_ROW) ||
+          Bytes.compareTo(startKeys[i], end) <= 0) {
+        rangeKeys.add(startKeys[i]);
+      } else {
+        break; // past stop
+      }
+    }
+
+    return rangeKeys;
+  }
+
 }

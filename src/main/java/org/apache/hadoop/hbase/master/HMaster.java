@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
@@ -126,7 +127,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   private RegionServerTracker regionServerTracker;
 
   // RPC server for the HMaster
-  private final HBaseServer rpcServer;
+  private final RpcServer rpcServer;
   // Address of the HMaster
   private final HServerAddress address;
   // Metrics for the HMaster

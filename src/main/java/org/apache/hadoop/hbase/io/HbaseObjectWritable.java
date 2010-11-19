@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
@@ -200,6 +201,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(MultiAction.class, code++);
     addToMap(MultiResponse.class, code++);
 
+    // coprocessor execution
+    addToMap(Exec.class, code++);
     addToMap(Increment.class, code++);
 
     addToMap(KeyOnlyFilter.class, code++);

@@ -32,6 +32,9 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.conf.Configuration;
@@ -618,4 +621,26 @@ public class RemoteHTable implements HTableInterface {
     throw new IOException("get(List<Get>) not supported");
   }
 
+  @Override
+  public <T extends CoprocessorProtocol> T coprocessorProxy(Class<T> protocol,
+      byte[] row) {
+    throw new
+    UnsupportedOperationException("coprocessorProxy not implemented");
+  }
+
+  @Override
+  public <T extends CoprocessorProtocol, R> Map<byte[], R> coprocessorExec(
+      Class<T> protocol, byte[] startKey, byte[] endKey,
+      Batch.Call<T, R> callable)
+      throws IOException, Throwable {
+    throw new UnsupportedOperationException("coprocessorExec not implemented");
+  }
+
+  @Override
+  public <T extends CoprocessorProtocol, R> void coprocessorExec(
+      Class<T> protocol, byte[] startKey, byte[] endKey,
+      Batch.Call<T, R> callable, Batch.Callback<R> callback)
+      throws IOException, Throwable {
+    throw new UnsupportedOperationException("coprocessorExec not implemented");
+  }
 }

@@ -24,6 +24,8 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.text.ParseException;
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -43,6 +45,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.google.common.collect.ClassToInstanceMap;
+import com.google.common.collect.MutableClassToInstanceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -62,6 +66,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.coprocessor.Exec;
+import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
@@ -73,6 +79,9 @@ import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.ipc.HBaseRPC;
+import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -150,6 +159,10 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected final Map<byte [], Store> stores =
     new ConcurrentSkipListMap<byte [], Store>(Bytes.BYTES_RAWCOMPARATOR);
+
+  // Registered region protocol handlers
+  private ClassToInstanceMap<CoprocessorProtocol>
+      protocolHandlers = MutableClassToInstanceMap.create();
 
   //These variable are just used for getting data out of the region, to test on
   //client side
@@ -3133,7 +3146,7 @@ public class HRegion implements HeapSize { // , Writable{
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
       (4 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN +
-      (20 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
+      (21 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +
@@ -3170,6 +3183,100 @@ public class HRegion implements HeapSize { // , Writable{
       "passed region.");
     System.out.println("Default outputs scan of passed region.");
     System.exit(1);
+  }
+
+  /**
+   * Registers a new CoprocessorProtocol subclass and instance to
+   * be available for handling {@link HRegion#exec(Exec)} calls.
+   *
+   * <p>
+   * Only a single protocol type/handler combination may be registered per
+   * region.
+   * After the first registration, subsequent calls with the same protocol type
+   * will fail with a return value of {@code false}.
+   * </p>
+   * @param protocol a {@code CoprocessorProtocol} subinterface defining the
+   * protocol methods
+   * @param handler an instance implementing the interface
+   * @param <T> the protocol type
+   * @return {@code true} if the registration was successful, {@code false}
+   * otherwise
+   */
+  public <T extends CoprocessorProtocol> boolean registerProtocol(
+      Class<T> protocol, T handler) {
+
+    /* No stacking of protocol handlers is currently allowed.  The
+     * first to claim wins!
+     */
+    if (protocolHandlers.containsKey(protocol)) {
+      LOG.error("Protocol "+protocol.getName()+
+          " already registered, rejecting request from "+
+          handler
+      );
+      return false;
+    }
+
+    protocolHandlers.putInstance(protocol, handler);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Registered protocol handler: region="+
+          Bytes.toStringBinary(getRegionName())+" protocol="+protocol.getName());
+    }
+    return true;
+  }
+
+  /**
+   * Executes a single {@link org.apache.hadoop.hbase.ipc.CoprocessorProtocol}
+   * method using the registered protocol handlers.
+   * {@link CoprocessorProtocol} implementations must be registered via the
+   * {@link org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)}
+   * method before they are available.
+   *
+   * @param call an {@code Exec} instance identifying the protocol, method name,
+   *     and parameters for the method invocation
+   * @return an {@code ExecResult} instance containing the region name of the
+   *     invocation and the return value
+   * @throws IOException if no registered protocol handler is found or an error
+   *     occurs during the invocation
+   * @see org.apache.hadoop.hbase.regionserver.HRegion#registerProtocol(Class, org.apache.hadoop.hbase.ipc.CoprocessorProtocol)
+   */
+  public ExecResult exec(Exec call)
+      throws IOException {
+    Class<? extends CoprocessorProtocol> protocol = call.getProtocol();
+    if (!protocolHandlers.containsKey(protocol)) {
+      throw new HBaseRPC.UnknownProtocolException(protocol,
+          "No matching handler for protocol "+protocol.getName()+
+          " in region "+Bytes.toStringBinary(getRegionName()));
+    }
+
+    CoprocessorProtocol handler = protocolHandlers.getInstance(protocol);
+    Object value;
+    Class<?> returnType;
+
+    try {
+      Method method = protocol.getMethod(
+          call.getMethodName(), call.getParameterClasses());
+      method.setAccessible(true);
+      returnType = method.getReturnType();
+
+      value = method.invoke(handler, call.getParameters());
+    } catch (InvocationTargetException e) {
+      Throwable target = e.getTargetException();
+      if (target instanceof IOException) {
+        throw (IOException)target;
+      }
+      IOException ioe = new IOException(target.toString());
+      ioe.setStackTrace(target.getStackTrace());
+      throw ioe;
+    } catch (Throwable e) {
+      if (!(e instanceof IOException)) {
+        LOG.error("Unexpected throwable object ", e);
+      }
+      IOException ioe = new IOException(e.toString());
+      ioe.setStackTrace(e.getStackTrace());
+      throw ioe;
+    }
+
+    return new ExecResult(getRegionName(), returnType, value);
   }
 
   /*

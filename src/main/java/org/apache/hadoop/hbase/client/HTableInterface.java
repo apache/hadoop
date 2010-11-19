@@ -25,6 +25,10 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+
+import java.util.Map;
 
 /**
  * Used to communicate with a single HBase table.
@@ -350,4 +354,83 @@ public interface HTableInterface {
    * @see #unlockRow
    */
   void unlockRow(RowLock rl) throws IOException;
+
+  /**
+   * Creates and returns a proxy to the CoprocessorProtocol instance running in the
+   * region containing the specified row.  The row given does not actually have
+   * to exist.  Whichever region would contain the row based on start and end keys will
+   * be used.  Note that the {@code row} parameter is also not passed to the
+   * coprocessor handler registered for this protocol, unless the {@code row}
+   * is separately passed as an argument in a proxy method call.  The parameter
+   * here is just used to locate the region used to handle the call.
+   *
+   * @param protocol The class or interface defining the remote protocol
+   * @param row The row key used to identify the remote region location
+   * @return
+   */
+  <T extends CoprocessorProtocol> T coprocessorProxy(Class<T> protocol, byte[] row);
+
+  /**
+   * Invoke the passed
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call} against
+   * the {@link CoprocessorProtocol} instances running in the selected regions.
+   * All regions beginning with the region containing the <code>startKey</code>
+   * row, through to the region containing the <code>endKey</code> row (inclusive)
+   * will be used.  If <code>startKey</code> or <code>endKey</code> is
+   * <code>null</code>, the first and last regions in the table, respectively,
+   * will be used in the range selection.
+   *
+   * @param protocol the CoprocessorProtocol implementation to call
+   * @param startKey start region selection with region containing this row
+   * @param endKey select regions up to and including the region containing
+   * this row
+   * @param callable wraps the CoprocessorProtocol implementation method calls
+   * made per-region
+   * @param <T> CoprocessorProtocol subclass for the remote invocation
+   * @param <R> Return type for the
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
+   * method
+   * @return a <code>Map</code> of region names to
+   * {@link Batch.Call#call(Object)} return values
+   */
+  <T extends CoprocessorProtocol, R> Map<byte[],R> coprocessorExec(
+      Class<T> protocol, byte[] startKey, byte[] endKey, Batch.Call<T,R> callable)
+      throws IOException, Throwable;
+
+  /**
+   * Invoke the passed
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call} against
+   * the {@link CoprocessorProtocol} instances running in the selected regions.
+   * All regions beginning with the region containing the <code>startKey</code>
+   * row, through to the region containing the <code>endKey</code> row
+   * (inclusive)
+   * will be used.  If <code>startKey</code> or <code>endKey</code> is
+   * <code>null</code>, the first and last regions in the table, respectively,
+   * will be used in the range selection.
+   *
+   * <p>
+   * For each result, the given
+   * {@link Batch.Callback#update(byte[], byte[], Object)}
+   * method will be called.
+   *</p>
+   *
+   * @param protocol the CoprocessorProtocol implementation to call
+   * @param startKey start region selection with region containing this row
+   * @param endKey select regions up to and including the region containing
+   * this row
+   * @param callable wraps the CoprocessorProtocol implementation method calls
+   * made per-region
+   * @param callback an instance upon which
+   * {@link Batch.Callback#update(byte[], byte[], Object)} with the
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
+   * return value for each region
+   * @param <T> CoprocessorProtocol subclass for the remote invocation
+   * @param <R> Return type for the
+   * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call(Object)}
+   * method
+   */
+  <T extends CoprocessorProtocol, R> void coprocessorExec(
+      Class<T> protocol, byte[] startKey, byte[] endKey,
+      Batch.Call<T,R> callable, Batch.Callback<R> callback)
+      throws IOException, Throwable;
 }
