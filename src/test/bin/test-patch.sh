@@ -18,7 +18,7 @@ ulimit -n 1024
 ### Setup some variables.  
 ### SVN_REVISION and BUILD_URL are set by Hudson if it is run by patch process
 ### Read variables from properties file
-. `dirname $0`/test-patch.properties
+. `dirname $0`/../test-patch.properties
 
 ###############################################################################
 parseArgs() {
@@ -433,6 +433,7 @@ $JIRA_COMMENT_FOOTER"
 ###############################################################################
 ### Check there are no changes in the number of Findbugs warnings
 checkFindbugsWarnings () {
+  findbugs_version=`${FINDBUGS_HOME}/bin/findbugs -version`
   echo ""
   echo ""
   echo "======================================================================"
@@ -447,7 +448,7 @@ checkFindbugsWarnings () {
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 findbugs.  The patch appears to cause Findbugs to fail."
+    -1 findbugs.  The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
     return 1
   fi
 JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/build/test/findbugs/newPatchFindbugsWarnings.html
@@ -468,12 +469,12 @@ $JIRA_COMMENT_FOOTER"
   if [[ $findbugsWarnings > $OK_FINDBUGS_WARNINGS ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 findbugs.  The patch appears to introduce `expr $(($findbugsWarnings-$OK_FINDBUGS_WARNINGS))` new Findbugs warnings."
+    -1 findbugs.  The patch appears to introduce `expr $(($findbugsWarnings-$OK_FINDBUGS_WARNINGS))` new Findbugs (version ${findbugs_version}) warnings."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    +1 findbugs.  The patch does not introduce any new Findbugs warnings."
+    +1 findbugs.  The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
   return 0
 }
 
@@ -500,9 +501,11 @@ runCoreTests () {
   echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME -Djava5.home=$JAVA5_HOME $PreTestTarget test-core"
   $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME -Djava5.home=$JAVA5_HOME $PreTestTarget test-core
   if [[ $? != 0 ]] ; then
+    failed_tests=`grep -l "<failure" build/test/*.xml | sed -e "s|build/test/TEST-|                  |g" | sed -e "s|\.xml||g"`
     JIRA_COMMENT="$JIRA_COMMENT
 
-    -1 core tests.  The patch failed core unit tests."
+    -1 core tests.  The patch failed these core unit tests:
+$failed_tests"
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT

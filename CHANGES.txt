@@ -8,6 +8,9 @@ Trunk (unreleased changes)
 
   IMPROVEMENTS
 
+    HADOOP-7042. Updates to test-patch.sh to include failed test names and
+    improve other messaging. (nigel)
+
   OPTIMIZATIONS
 
   BUG FIXES
