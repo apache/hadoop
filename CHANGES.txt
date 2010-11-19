@@ -15,6 +15,10 @@ Trunk (unreleased changes)
 
   BUG FIXES
 
+    HADOOP-7015. RawLocalFileSystem#listStatus does not deal with a directory
+    whose entries are changing (e.g. in a multi-thread or multi-process
+    environment). (Sanjay Radia via eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

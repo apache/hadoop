@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.StringTokenizer;
 
@@ -319,10 +320,20 @@ public class RawLocalFileSystem extends FileSystem {
       return null;
     }
     results = new FileStatus[names.length];
+    int j = 0;
     for (int i = 0; i < names.length; i++) {
-      results[i] = getFileStatus(new Path(f, names[i]));
+      try {
+        results[j] = getFileStatus(new Path(f, names[i]));
+        j++;
+      } catch (FileNotFoundException e) {
+        // ignore the files not found since the dir list may have have changed
+        // since the names[] list was generated.
+      }
     }
-    return results;
+    if (j == names.length) {
+      return results;
+    }
+    return Arrays.copyOf(results, j);
   }
 
   /**
