@@ -118,6 +118,11 @@ public class TestZooKeeperNodeTracker {
     // Verify the thread doesn't have a node
     assertFalse(thread.hasData);
 
+    // Now, start a new ZKNT with the node already available
+    TestTracker secondTracker = new TestTracker(zk, node, null);
+    secondTracker.start();
+    zk.registerListener(secondTracker);
+
     // Put up an additional zk listener so we know when zk event is done
     TestingZKListener zkListener = new TestingZKListener(zk, node);
     zk.registerListener(zkListener);
@@ -143,11 +148,6 @@ public class TestZooKeeperNodeTracker {
     assertTrue(thread.hasData);
     assertTrue(Bytes.equals(thread.tracker.getData(), dataOne));
     LOG.info("Successfully got data one");
-
-    // Now, start a new ZKNT with the node already available
-    TestTracker secondTracker = new TestTracker(zk, node, null);
-    secondTracker.start();
-    zk.registerListener(secondTracker);
 
     // Make sure it's available and with the expected data
     assertNotNull(secondTracker.getData());
