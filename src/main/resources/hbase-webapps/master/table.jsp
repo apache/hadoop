@@ -46,28 +46,20 @@
 <p><hr><p>
 <%
   if (action.equals("split")) {
-  /*
     if (key != null && key.length() > 0) {
-      Writable[] arr = new Writable[1];
-      arr[0] = new ImmutableBytesWritable(Bytes.toBytes(key));
-      master.modifyTable(Bytes.toBytes(tableName), HConstants.Modify.TABLE_SPLIT, arr);
+      hbadmin.split(key);
     } else {
-      master.modifyTable(Bytes.toBytes(tableName), HConstants.Modify.TABLE_SPLIT);
+      hbadmin.split(tableName);
     }
-    */
     
-    %> Split request accepted -- BUT CURRENTLY A NOOP -- FIX!. <%
+    %> Split request accepted. <%
   } else if (action.equals("compact")) {
-  /*
     if (key != null && key.length() > 0) {
-      Writable[] arr = new Writable[1];
-      arr[0] = new ImmutableBytesWritable(Bytes.toBytes(key));
-      master.modifyTable(Bytes.toBytes(tableName), HConstants.Modify.TABLE_COMPACT, arr);
+      hbadmin.compact(key);
     } else {
-      master.modifyTable(Bytes.toBytes(tableName), HConstants.Modify.TABLE_COMPACT, null);
+      hbadmin.compact(tableName);
     }
-    */
-    %> Compact request accepted  -- BUT CURRENTLY A NOOP -- FIX! <%
+    %> Compact request accepted. <%
   }
 %>
 <p>Reload.

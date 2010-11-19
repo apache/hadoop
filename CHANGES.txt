@@ -686,6 +686,7 @@ Release 0.90.0 - Unreleased
                incorrect (Kannan Muthukkaruppan via JD)
    HBASE-3239  Handle null regions to flush in HLog.cleanOldLogs (Kannan
                Muthukkaruppan via JD)
+   HBASE-3237  Split request accepted -- BUT CURRENTLY A NOOP
 
 
   IMPROVEMENTS
