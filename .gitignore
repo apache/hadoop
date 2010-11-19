@@ -17,6 +17,10 @@
 .classpath
 .project
 .settings
+*.iml
+*.ipr
+*.iws
+.idea
 .svn
 build/
 build-fi/
