@@ -169,7 +169,7 @@ setup () {
     echo "Please define the following properties in test-patch.properties file"
 	 echo  "OK_FINDBUGS_WARNINGS"
 	 echo  "OK_RELEASEAUDIT_WARNINGS"
-	 echo  "OK_JAVAFINDBUGS_WARNINGS"
+	 echo  "OK_JAVADOC_WARNINGS"
     cleanupAndExit 1
   fi
   echo ""
