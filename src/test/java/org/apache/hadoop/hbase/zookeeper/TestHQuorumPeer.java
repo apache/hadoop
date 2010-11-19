@@ -91,7 +91,11 @@ public class TestHQuorumPeer {
     String s =
       "dataDir=" + this.dataDir.toString() + "\n" +
       "clientPort=2181\n" +
-      "server.0=${hbase.master.hostname}:2888:3888\n";
+      "initLimit=2\n" +
+      "syncLimit=2\n" +
+      "server.0=${hbase.master.hostname}:2888:3888\n" +
+      "server.1=server1:2888:3888\n" +
+      "server.2=server2:2888:3888\n";
 
     System.setProperty("hbase.master.hostname", "localhost");
     InputStream is = new ByteArrayInputStream(s.getBytes());
@@ -103,13 +107,14 @@ public class TestHQuorumPeer {
       Integer.valueOf(properties.getProperty("clientPort")));
     assertEquals("localhost:2888:3888", properties.get("server.0"));
 
+    HQuorumPeer.writeMyID(properties);
     QuorumPeerConfig config = new QuorumPeerConfig();
     config.parseProperties(properties);
 
     assertEquals(this.dataDir.toString(), config.getDataDir());
     assertEquals(2181, config.getClientPortAddress().getPort());
     Map<Long,QuorumServer> servers = config.getServers();
-    assertEquals(1, servers.size());
+    assertEquals(3, servers.size());
     assertTrue(servers.containsKey(Long.valueOf(0)));
     QuorumServer server = servers.get(Long.valueOf(0));
     assertEquals("localhost", server.addr.getHostName());
