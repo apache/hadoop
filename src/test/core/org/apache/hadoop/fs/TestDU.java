@@ -65,7 +65,10 @@ public class TestDU extends TestCase {
    * @throws InterruptedException
    */
   public void testDU() throws IOException, InterruptedException {
-    int writtenSize = 32*1024;   // writing 32K
+    final int writtenSize = 32*1024;   // writing 32K
+    // Allow for extra 4K on-disk slack for local file systems
+    // that may store additional file metadata (eg ext attrs).
+    final int slack = 4*1024;
     File file = new File(DU_DIR, "data");
     createFile(file, writtenSize);
 
@@ -76,7 +79,9 @@ public class TestDU extends TestCase {
     long duSize = du.getUsed();
     du.shutdown();
 
-    assertEquals(writtenSize, duSize);
+    assertTrue("Invalid on-disk size",
+        duSize >= writtenSize &&
+        writtenSize <= (duSize + slack));
     
     //test with 0 interval, will not launch thread 
     du = new DU(file, 0);
@@ -84,12 +89,16 @@ public class TestDU extends TestCase {
     duSize = du.getUsed();
     du.shutdown();
     
-    assertEquals(writtenSize, duSize);  
+    assertTrue("Invalid on-disk size",
+        duSize >= writtenSize &&
+        writtenSize <= (duSize + slack));
     
     //test without launching thread 
     du = new DU(file, 10000);
     duSize = du.getUsed();
-    
-    assertEquals(writtenSize, duSize);     
+
+    assertTrue("Invalid on-disk size",
+        duSize >= writtenSize &&
+        writtenSize <= (duSize + slack));
   }
 }

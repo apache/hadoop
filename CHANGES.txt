@@ -19,6 +19,9 @@ Trunk (unreleased changes)
     whose entries are changing (e.g. in a multi-thread or multi-process
     environment). (Sanjay Radia via eli)
 
+    HADOOP-7045. TestDU fails on systems with local file systems with 
+    extended attributes. (eli)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
