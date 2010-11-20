@@ -1550,8 +1550,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
+      if (region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().preExists(get);
+      }
       Result r = region.get(get, getLockFromId(get.getLockId()));
-      return r != null && !r.isEmpty();
+      boolean result = r != null && !r.isEmpty();
+      if (region.getCoprocessorHost() != null) {
+        result = region.getCoprocessorHost().postExists(get, result);
+      }
+      return result;
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1640,8 +1647,23 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public boolean checkAndPut(final byte[] regionName, final byte[] row,
       final byte[] family, final byte[] qualifier, final byte[] value,
       final Put put) throws IOException {
-    return checkAndMutate(regionName, row, family, qualifier, value, put,
-        getLockFromId(put.getLockId()));
+    checkOpen();
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to checkAndPut "
+          + "regionName is null");
+    }
+    HRegion region = getRegion(regionName);
+    if (region.getCoprocessorHost() != null) {
+      region.getCoprocessorHost().preCheckAndPut(row, family, qualifier,
+        value, put);
+    }
+    boolean result = checkAndMutate(regionName, row, family, qualifier,
+      value, put, getLockFromId(put.getLockId()));
+    if (region.getCoprocessorHost() != null) {
+      result = region.getCoprocessorHost().postCheckAndPut(row, family,
+        qualifier, value, put, result);
+    }
+    return result;
   }
 
   /**
@@ -1659,8 +1681,24 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public boolean checkAndDelete(final byte[] regionName, final byte[] row,
       final byte[] family, final byte[] qualifier, final byte[] value,
       final Delete delete) throws IOException {
-    return checkAndMutate(regionName, row, family, qualifier, value, delete,
-        getLockFromId(delete.getLockId()));
+    checkOpen();
+
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to checkAndDelete "
+          + "regionName is null");
+    }
+    HRegion region = getRegion(regionName);
+    if (region.getCoprocessorHost() != null) {
+      region.getCoprocessorHost().preCheckAndDelete(row, family, qualifier,
+        value, delete);
+    }
+    boolean result = checkAndMutate(regionName, row, family, qualifier, value,
+      delete, getLockFromId(delete.getLockId()));
+    if (region.getCoprocessorHost() != null) {
+      result = region.getCoprocessorHost().postCheckAndDelete(row, family,
+        qualifier, value, delete, result);
+    }
+    return result;
   }
 
   //
@@ -2341,8 +2379,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      return region.increment(increment, getLockFromId(increment.getLockId()),
+      Increment incVal = increment;
+      Result resVal;
+      if (region.getCoprocessorHost() != null) {
+        incVal = region.getCoprocessorHost().preIncrement(incVal);
+      }
+      resVal = region.increment(incVal, getLockFromId(increment.getLockId()),
           increment.getWriteToWAL());
+      if (region.getCoprocessorHost() != null) {
+        resVal = region.getCoprocessorHost().postIncrement(incVal, resVal);
+      }
+      return resVal;
     } catch (IOException e) {
       checkFileSystem();
       throw e;
@@ -2362,9 +2409,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
+      long amountVal = amount;
+      if (region.getCoprocessorHost() != null) {
+        amountVal = region.getCoprocessorHost().preIncrementColumnValue(row,
+          family, qualifier, amountVal, writeToWAL);
+      }
       long retval = region.incrementColumnValue(row, family, qualifier, amount,
           writeToWAL);
-
+      if (region.getCoprocessorHost() != null) {
+        retval = region.getCoprocessorHost().postIncrementColumnValue(row,
+          family, qualifier, amountVal, writeToWAL, retval);
+      }
       return retval;
     } catch (IOException e) {
       checkFileSystem();
@@ -2558,6 +2613,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public CompactionRequestor getCompactionRequester() {
     return this.compactSplitThread;
+  }
+
+  @Override
+  public ZooKeeperWatcher getZooKeeperWatcher() {
+    return this.zooKeeper;
   }
 
   //

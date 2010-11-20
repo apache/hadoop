@@ -94,7 +94,7 @@ public class OpenRegionHandler extends EventHandler {
     try {
       // Instantiate the region.  This also periodically updates OPENING.
       region = HRegion.openHRegion(regionInfo, this.rsServices.getWAL(),
-        server.getConfiguration(), this.rsServices.getFlushRequester(),
+        server.getConfiguration(), this.rsServices,
         new Progressable() {
           public void progress() {
             try {

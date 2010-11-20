@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -39,10 +40,20 @@ public interface RegionServerServices extends OnlineRegions {
   public HLog getWAL();
 
   /**
+   * @return Implementation of {@link CatalogTracker} or null.
+   */
+  public CatalogTracker getCatalogTracker();
+
+  /*
+   * @return Implementation of {@link ZooKeeperWatcher} or null.
+   */
+  public ZooKeeperWatcher getZooKeeperWatcher();
+
+  /**
    * @return Implementation of {@link CompactionRequestor} or null.
    */
   public CompactionRequestor getCompactionRequester();
-  
+
   /**
    * @return Implementation of {@link FlushRequester} or null.
    */
