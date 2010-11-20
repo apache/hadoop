@@ -157,6 +157,17 @@
       </releases>
     </repository>
     <repository>
+      <id>temp-thrift</id>
+      <name>Thrift 0.2.0</name>
+      <url>http://people.apache.org/~rawson/repo/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
       <id>apache-rsync</id>
       <name>Apache ibiblio rsync repository</name>
       <url>http://people.apache.org/repo/m2-ibiblio-rsync-repository/</url>
@@ -483,7 +494,7 @@
     <slf4j.version>1.5.8</slf4j.version><!-- newer version available -->
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.2.0</thrift.version><!-- newer version available -->
-    <zookeeper.version>3.3.1</zookeeper.version>
+    <zookeeper.version>3.3.2</zookeeper.version>
   </properties>
 
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
