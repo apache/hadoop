@@ -25,7 +25,8 @@
 
 This stylesheet is used making an html version of hbase-default.xml.
 -->
-<section version="5.0" xmlns="http://docbook.org/ns/docbook"
+<section xml:id="hbase_default_configurations"
+version="5.0" xmlns="http://docbook.org/ns/docbook"
       xmlns:xlink="http://www.w3.org/1999/xlink"
       xmlns:xi="http://www.w3.org/2001/XInclude"
       xmlns:svg="http://www.w3.org/2000/svg"

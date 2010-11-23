@@ -25,48 +25,59 @@
   <property>
     <name>hbase.rootdir</name>
     <value>file:///tmp/hbase-${user.name}/hbase</value>
-    <description>The directory shared by region servers.
-    Should be fully-qualified to include the filesystem to use.
-    E.g: hdfs://NAMENODE_SERVER:PORT/HBASE_ROOTDIR
+    <description>The directory shared by region servers and into
+    which HBase persists.  The URL should be 'fully-qualified'
+    to include the filesystem scheme.  For example, to specify the
+    HDFS directory '/hbase' where the HDFS instance's namenode is
+    running at namenode.example.org on port 9000, set this value to:
+    hdfs://namenode.example.org:9000/hbase.  By default HBase writes
+    into /tmp.  Change this configuration else all data will be lost
+    on machine restart.
     </description>
   </property>
   <property>
     <name>hbase.master.port</name>
     <value>60000</value>
-    <description>The port master should bind to.</description>
+    <description>The port the HBase Master should bind to.</description>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
     <value>false</value>
     <description>The mode the cluster will be in. Possible values are
-      false: standalone and pseudo-distributed setups with managed Zookeeper
-      true: fully-distributed with unmanaged Zookeeper Quorum (see hbase-env.sh)
+      false for standalone mode and true for distributed mode.  If
+      false, startup will run all HBase and ZooKeeper daemons together
+      in the one JVM.
     </description>
   </property>
   <property>
     <name>hbase.tmp.dir</name>
     <value>/tmp/hbase-${user.name}</value>
-    <description>Temporary directory on the local filesystem.</description>
+    <description>Temporary directory on the local filesystem.
+    Change this setting to point to a location more permanent
+    than '/tmp' (The '/tmp' directory is often cleared on
+    machine restart).
+    </description>
   </property>
   <property>
     <name>hbase.master.info.port</name>
     <value>60010</value>
-    <description>The port for the hbase master web UI
-    Set to -1 if you do not want the info server to run.
+    <description>The port for the HBase Master web UI.
+    Set to -1 if you do not want a UI instance run.
     </description>
   </property>
   <property>
     <name>hbase.master.info.bindAddress</name>
     <value>0.0.0.0</value>
-    <description>The address for the hbase master web UI
+    <description>The bind address for the HBase Master web UI
     </description>
   </property>
   <property>
     <name>hbase.client.write.buffer</name>
     <value>2097152</value>
-    <description>Size of the write buffer in bytes. A bigger buffer takes more
-    memory -- on both the client and server side since server instantiates
-    the passed write buffer to process it -- but reduces the number of RPC.
+    <description>Default size of the HTable clien write buffer in bytes.
+    A bigger buffer takes more memory -- on both the client and server
+    side since server instantiates the passed write buffer to process
+    it -- but a larger buffer size reduces the number of RPCs made.
     For an estimate of server-side memory-used, evaluate
     hbase.client.write.buffer * hbase.regionserver.handler.count
     </description>
@@ -74,20 +85,21 @@
   <property>
     <name>hbase.regionserver.port</name>
     <value>60020</value>
-    <description>The port an HBase region server binds to.
+    <description>The port the HBase RegionServer binds to.
     </description>
   </property>
   <property>
     <name>hbase.regionserver.info.port</name>
     <value>60030</value>
-    <description>The port for the hbase regionserver web UI
-    Set to -1 if you do not want the info server to run.
+    <description>The port for the HBase RegionServer web UI
+    Set to -1 if you do not want the RegionServer UI to run.
     </description>
   </property>
   <property>
     <name>hbase.regionserver.info.port.auto</name>
     <value>false</value>
-    <description>Info server auto port bind. Enables automatic port
+    <description>Whether or not the Master or RegionServer
+    UI should search for a port to bind to. Enables automatic port
     search if hbase.regionserver.info.port is already in use.
     Useful for testing, turned off by default.
     </description>
@@ -95,14 +107,14 @@
   <property>
     <name>hbase.regionserver.info.bindAddress</name>
     <value>0.0.0.0</value>
-    <description>The address for the hbase regionserver web UI
+    <description>The address for the HBase RegionServer web UI
     </description>
   </property>
   <property>
     <name>hbase.regionserver.class</name>
     <value>org.apache.hadoop.hbase.ipc.HRegionInterface</value>
-    <description>An interface that is assignable to HRegionInterface.  Used in HClient for
-    opening proxy to remote region server.
+    <description>The RegionServer interface to use.
+    Used by the client opening proxy to remote region server.
     </description>
   </property>
   <property>
@@ -124,9 +136,11 @@
     <name>hbase.client.scanner.caching</name>
     <value>1</value>
     <description>Number of rows that will be fetched when calling next
-    on a scanner if it is not served from memory. Higher caching values
-    will enable faster scanners but will eat up more memory and some
-    calls of next may take longer and longer times when the cache is empty.
+    on a scanner if it is not served from (local, client) memory. Higher
+    caching values will enable faster scanners but will eat up more memory
+    and some calls of next may take longer and longer times when the cache is empty.
+    Do not set this value such that the time between invocations is greater
+    than the scanner timeout; i.e. hbase.regionserver.lease.period
     </description>
   </property>
   <property>
@@ -151,21 +165,21 @@
     <name>hbase.regionserver.handler.count</name>
     <value>25</value>
     <description>Count of RPC Server instances spun up on RegionServers
-    Same property is used by the HMaster for count of master handlers.
+    Same property is used by the Master for count of master handlers.
     Default is 25.
     </description>
   </property>
   <property>
     <name>hbase.regionserver.msginterval</name>
     <value>3000</value>
-    <description>Interval between messages from the RegionServer to HMaster
+    <description>Interval between messages from the RegionServer to Master
     in milliseconds.
     </description>
   </property>
   <property>
     <name>hbase.regionserver.flushlogentries</name>
     <value>1</value>
-    <description>Sync the HLog to the HDFS when it has accumulated this many
+    <description>Sync the HLog to HDFS when it has accumulated this many
     entries. Default 1. Value is checked on every HLog.hflush
     </description>
   </property>
@@ -183,13 +197,14 @@
     <description>Limit for the number of regions after which no more region
     splitting should take place. This is not a hard limit for the number of
     regions but acts as a guideline for the regionserver to stop splitting after
-    a certain limit. Default is set to MAX_INT.
+    a certain limit. Default is set to MAX_INT; i.e. do not block splitting.
     </description>
   </property>
   <property>
     <name>hbase.regionserver.logroll.period</name>
     <value>3600000</value>
-    <description>Period at which we will roll the commit log.</description>
+    <description>Period at which we will roll the commit log regardless
+    of how many edits it has.</description>
   </property>
   <property>
     <name>hbase.regionserver.hlog.reader.impl</name>
@@ -210,8 +225,8 @@
   <property>
     <name>hbase.regionserver.nbreservationblocks</name>
     <value>4</value>
-    <description>The number of reservation blocks which are used to prevent
-    unstable region servers caused by an OOME.
+    <description>The number of resevoir blocks of memory release on
+    OOME so we can cleanup properly before server shutdown.
     </description>
   </property>
   <property>
@@ -263,25 +278,25 @@
     <name>hbase.master.balancer.period
     </name>
     <value>300000</value>
-    <description>Period at which the balancer runs in the master.
+    <description>Period at which the region balancer runs in the Master.
     </description>
   </property>
   <property>
     <name>hbase.master.logcleaner.ttl</name>
     <value>600000</value>
-    <description>Maximum time a log can stay in the .oldlogdir directory,
-    after which it will be cleaned by a master thread.
+    <description>Maximum time a HLog can stay in the .oldlogdir directory,
+    after which it will be cleaned by a Master thread.
     </description>
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
     <value>org.apache.hadoop.hbase.master.TimeToLiveLogCleaner,org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner</value>
-    <description>A comma-separated list of LogCleanerDelegate that are used
-    in LogsCleaner. These log cleaners are called in order, so put the log
-    cleaner that prunes the most log files in the front. To implement your own
-    LogCleanerDelegate, just put it in HBase's classpath and add the fully
-    qualified class name here. Without special reason, you should always add
-    the above default log cleaners in the list.
+    <description>A comma-separated list of LogCleanerDelegate invoked by
+    the LogsCleaner service. These WAL/HLog cleaners are called in order,
+    so put the HLog cleaner that prunes the most HLog files in front. To
+    implement your own LogCleanerDelegate, just put it in HBase's classpath
+    and add the fully qualified class name here. Always add the above
+    default log cleaners in the list.
     </description>
   </property>
   <property>
@@ -295,7 +310,7 @@
     <name>hbase.regionserver.global.memstore.lowerLimit</name>
     <value>0.35</value>
     <description>When memstores are being forced to flush to make room in
-      memory, keep flushing until we hit this mark. Defaults to 30% of heap.
+      memory, keep flushing until we hit this mark. Defaults to 35% of heap.
       This value equal to hbase.regionserver.global.memstore.upperLimit causes
       the minimum possible flushing to occur when updates are blocked due to
       memstore limiting.
@@ -324,9 +339,9 @@
       If the memstores in a region are this size or larger when we go
       to close, run a "pre-flush" to clear out memstores before we put up
       the region closed flag and take the region offline.  On close,
-      a flush is run under the close flag up to empty memory.  During
+      a flush is run under the close flag to empty memory.  During
       this time the region is offline and we are not taking on any writes.
-      If the memstore content large, this flush could take a long time to
+      If the memstore content is large, this flush could take a long time to
       complete.  The preflush is meant to clean out the bulk of the memstore
       before putting up the close flag and taking the region offline so the
       flush that runs under the close flag has little to do.
@@ -361,11 +376,6 @@
     (one HStoreFile is written per flush of memstore) then a compaction
     is run to rewrite all HStoreFiles files as one.  Larger numbers
     put off compaction but when it runs, it takes longer to complete.
-    During a compaction, updates cannot be flushed to disk.  Long
-    compactions require memory sufficient to carry the logging of
-    all updates across the duration of the compaction.
-
-    If too large, clients timeout during compaction.
     </description>
   </property>
   <property>
@@ -429,6 +439,7 @@
     <value>murmur</value>
     <description>The hashing algorithm for use in HashFunction. Two values are
     supported now: murmur (MurmurHash) and jenkins (JenkinsHash).
+    Used by bloom filters.
     </description>
   </property>
   <property>
