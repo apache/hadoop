@@ -705,6 +705,7 @@ Release 0.90.0 - Unreleased
    HBASE-3258  EOF when version file is empty
    HBASE-3259  Can't kill the region servers when they wait on the master or
                the cluster state znode
+   HBASE-3249  Typing 'help shutdown' in the shell shouldn't shutdown the cluster
 
 
   IMPROVEMENTS

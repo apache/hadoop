@@ -104,12 +104,6 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Shuts hbase down
-    def shutdown
-      @admin.shutdown
-    end
-
-    #----------------------------------------------------------------------------------------------
     # Returns ZooKeeper status dump
     def zk_dump
       @zk_wrapper.dump
