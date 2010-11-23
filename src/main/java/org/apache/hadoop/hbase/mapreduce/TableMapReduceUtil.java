@@ -315,7 +315,6 @@ public class TableMapReduceUtil {
     try {
       addDependencyJars(job.getConfiguration(),
           org.apache.zookeeper.ZooKeeper.class,
-          com.google.common.base.Function.class,
           job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(),
           job.getInputFormatClass(),

@@ -53,8 +53,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import com.google.common.base.Preconditions;
-
 /**
  * Writes HFiles. Passed KeyValues must arrive in order.
  * Currently, can only write files to a single column family at a
@@ -183,7 +181,9 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    */
   private static void writePartitions(Configuration conf, Path partitionsPath,
       List<ImmutableBytesWritable> startKeys) throws IOException {
-    Preconditions.checkArgument(!startKeys.isEmpty(), "No regions passed");
+    if (startKeys.isEmpty()) {
+      throw new IllegalArgumentException("No regions passed");
+    }
 
     // We're generating a list of split points, and we don't ever
     // have keys < the first region (which has an empty start key)
@@ -193,10 +193,11 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       new TreeSet<ImmutableBytesWritable>(startKeys);
 
     ImmutableBytesWritable first = sorted.first();
-    Preconditions.checkArgument(
-        first.equals(HConstants.EMPTY_BYTE_ARRAY),
-        "First region of table should have empty start key. Instead has: %s",
-        Bytes.toStringBinary(first.get()));
+    if (!first.equals(HConstants.EMPTY_BYTE_ARRAY)) {
+      throw new IllegalArgumentException(
+          "First region of table should have empty start key. Instead has: "
+          + Bytes.toStringBinary(first.get()));
+    }
     sorted.remove(first);
     
     // Write the actual file
