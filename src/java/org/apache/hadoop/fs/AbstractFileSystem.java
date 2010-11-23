@@ -835,6 +835,18 @@ public abstract class AbstractFileSystem {
       UnresolvedLinkException, IOException;
 
   /**
+   * @return a list in which each entry describes a corrupt file/block
+   * @throws IOException
+   */
+  public CorruptFileBlocks listCorruptFileBlocks(String path,
+                                                 String cookie)
+    throws IOException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+                                            " does not support" +
+                                            " listCorruptFileBlocks");
+  }
+
+  /**
    * The specification of this method matches that of
    * {@link FileContext#setVerifyChecksum(boolean, Path)} except that Path f
    * must be for this file system.

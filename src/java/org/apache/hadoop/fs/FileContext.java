@@ -1296,6 +1296,23 @@ public final class FileContext {
       }
     }.resolve(this, absF);
   }
+
+  /**
+   * @return a list in which each entry describes a corrupt file/block
+   * @throws IOException
+   */
+  public CorruptFileBlocks listCorruptFileBlocks(final String path,
+                                                 final String cookie)
+    throws IOException {
+    final Path absF = fixRelativePart(new Path(path));
+    return new FSLinkResolver<CorruptFileBlocks>() {
+      @Override
+      public CorruptFileBlocks next(final AbstractFileSystem fs, final Path p) 
+        throws IOException, UnresolvedLinkException {
+        return fs.listCorruptFileBlocks(p.toUri().getPath(), cookie);
+      }
+    }.resolve(this, absF);
+  }
   
   /**
    * List the statuses of the files/directories in the given path if the path is

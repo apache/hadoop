@@ -165,7 +165,17 @@ public class FilterFileSystem extends FileSystem {
   public FileStatus[] listStatus(Path f) throws IOException {
     return fs.listStatus(f);
   }
-  
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public CorruptFileBlocks listCorruptFileBlocks(String path,
+                                                 String cookie)
+    throws IOException {
+    return fs.listCorruptFileBlocks(path, cookie);
+  }
+
   /** List files and its block locations in a directory. */
   public RemoteIterator<LocatedFileStatus> listLocatedStatus(Path f)
   throws IOException {

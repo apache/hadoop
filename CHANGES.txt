@@ -6,6 +6,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HADOOP-7023. Add listCorruptFileBlocks to Filesysem. (Patrick Kling
+    via hairong)
+
   IMPROVEMENTS
 
     HADOOP-7042. Updates to test-patch.sh to include failed test names and

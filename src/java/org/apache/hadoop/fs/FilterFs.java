@@ -164,6 +164,16 @@ public abstract class FilterFs extends AbstractFileSystem {
     return myFs.listStatus(f);
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public CorruptFileBlocks listCorruptFileBlocks(String path,
+                                                 String cookie)
+    throws IOException {
+    return myFs.listCorruptFileBlocks(path, cookie);
+  }
+
   @Override
   public void mkdir(Path dir, FsPermission permission, boolean createParent)
     throws IOException, UnresolvedLinkException {

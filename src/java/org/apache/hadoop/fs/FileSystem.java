@@ -1091,6 +1091,18 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * @return a list in which each entry describes a corrupt file/block
+   * @throws IOException
+   */
+  public CorruptFileBlocks listCorruptFileBlocks(String path,
+                                                 String cookie)
+    throws IOException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+                                            " does not support" +
+                                            " listCorruptFileBlocks");
+  }
+
+  /**
    * Filter files/directories in the given path using the user-supplied path
    * filter.
    * 
