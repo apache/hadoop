@@ -275,7 +275,7 @@
     </description>
   </property>
   <property>
-    <name>hbase.master.balancer.period
+    <name>hbase.balancer.period
     </name>
     <value>300000</value>
     <description>Period at which the region balancer runs in the Master.
@@ -458,22 +458,6 @@
       "The client sends a requested timeout, the server responds with the
       timeout that it can give the client. "
       In milliseconds.
-    </description>
-  </property>
-  <property>
-    <name>zookeeper.retries</name>
-    <value>5</value>
-    <description>How many times to retry connections to ZooKeeper. Used for
-      reading/writing root region location.  Used together with ${zookeeper.pause}
-      in an exponential backoff fashion when making queries to ZooKeeper.
-    </description>
-  </property>
-  <property>
-    <name>zookeeper.pause</name>
-    <value>2000</value>
-    <description>Sleep time between retries to ZooKeeper. In milliseconds. Used
-      together with ${zookeeper.retries} in an exponential backoff fashion when
-      making queries to ZooKeeper.
     </description>
   </property>
   <property>

@@ -192,7 +192,7 @@ public class Store implements HeapSize {
     }
     this.desiredMaxFileSize = maxFileSize;
     this.blockingStoreFileCount =
-      conf.getInt("hbase.hstore.blockingStoreFiles", -1);
+      conf.getInt("hbase.hstore.blockingStoreFiles", 7);
 
     this.majorCompactionTime = getNextMajorCompactTime();
 

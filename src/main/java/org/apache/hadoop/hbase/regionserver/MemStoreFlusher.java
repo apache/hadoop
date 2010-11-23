@@ -67,7 +67,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
   protected final long globalMemStoreLimitLowMark;
 
   private static final float DEFAULT_UPPER = 0.4f;
-  private static final float DEFAULT_LOWER = 0.25f;
+  private static final float DEFAULT_LOWER = 0.35f;
   private static final String UPPER_KEY =
     "hbase.regionserver.global.memstore.upperLimit";
   private static final String LOWER_KEY =
@@ -96,7 +96,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     }
     this.globalMemStoreLimitLowMark = lower;
     this.blockingStoreFilesNumber =
-      conf.getInt("hbase.hstore.blockingStoreFiles", -1);
+      conf.getInt("hbase.hstore.blockingStoreFiles", 7);
     if (this.blockingStoreFilesNumber == -1) {
       this.blockingStoreFilesNumber = 1 +
         conf.getInt("hbase.hstore.compactionThreshold", 3);

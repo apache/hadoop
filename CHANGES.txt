@@ -707,6 +707,7 @@ Release 0.90.0 - Unreleased
                the cluster state znode
    HBASE-3249  Typing 'help shutdown' in the shell shouldn't shutdown the cluster
    HBASE-3262  TestHMasterRPCException uses non-ephemeral port for master
+   HBASE-3272  Remove no longer used options
 
 
   IMPROVEMENTS

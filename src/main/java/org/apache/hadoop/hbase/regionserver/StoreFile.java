@@ -337,7 +337,7 @@ public class StoreFile {
   public static synchronized BlockCache getBlockCache(Configuration conf) {
     if (hfileBlockCache != null) return hfileBlockCache;
 
-    float cachePercentage = conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
+    float cachePercentage = conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.2f);
     // There should be a better way to optimize this. But oh well.
     if (cachePercentage == 0L) return null;
     if (cachePercentage > 1.0) {

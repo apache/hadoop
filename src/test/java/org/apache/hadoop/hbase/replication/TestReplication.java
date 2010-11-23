@@ -94,7 +94,6 @@ public class TestReplication {
     conf1.setInt("hbase.regionserver.maxlogs", 10);
     conf1.setLong("hbase.master.logcleaner.ttl", 10);
     conf1.setLong("hbase.client.retries.number", 5);
-    conf1.setLong("hbase.regions.percheckin", 1);
     conf1.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf1.setBoolean("dfs.support.append", true);
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
@@ -111,7 +110,6 @@ public class TestReplication {
     conf2.setInt("hbase.client.retries.number", 6);
     conf2.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
     conf2.setBoolean("dfs.support.append", true);
-    conf2.setLong("hbase.regions.percheckin", 1);
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);

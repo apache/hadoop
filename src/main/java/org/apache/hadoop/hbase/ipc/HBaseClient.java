@@ -659,7 +659,7 @@ public class HBaseClient {
     this.maxIdleTime =
       conf.getInt("hbase.ipc.client.connection.maxidletime", 10000); //10s
     this.maxRetries = conf.getInt("hbase.ipc.client.connect.max.retries", 0);
-    this.failureSleep = conf.getInt("hbase.client.pause", 2000);
+    this.failureSleep = conf.getInt("hbase.client.pause", 1000);
     this.tcpNoDelay = conf.getBoolean("hbase.ipc.client.tcpnodelay", false);
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.client.tcpkeepalive", true);
     this.pingInterval = getPingInterval(conf);

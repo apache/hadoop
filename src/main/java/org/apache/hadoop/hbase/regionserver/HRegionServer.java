@@ -285,10 +285,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
 
     // Config'ed params
-    this.numRetries = conf.getInt("hbase.client.retries.number", 2);
+    this.numRetries = conf.getInt("hbase.client.retries.number", 10);
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
-    this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 1 * 1000);
+    this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
 
     sleeper = new Sleeper(this.msgInterval, this);
 
@@ -318,7 +318,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         new Class<?>[]{HRegionInterface.class, HBaseRPCErrorHandler.class,
         OnlineRegions.class},
         address.getBindAddress(),
-      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 25),
         conf.getInt("hbase.regionserver.metahandler.count", 10),
         false, conf, QOS_THRESHOLD);
     this.server.setErrorHandler(this);

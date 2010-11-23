@@ -80,8 +80,8 @@ public class HBaseAdmin implements Abortable {
   throws MasterNotRunningException, ZooKeeperConnectionException {
     this.connection = HConnectionManager.getConnection(conf);
     this.conf = conf;
-    this.pause = conf.getLong("hbase.client.pause", 30 * 1000);
-    this.numRetries = conf.getInt("hbase.client.retries.number", 5);
+    this.pause = conf.getLong("hbase.client.pause", 1000);
+    this.numRetries = conf.getInt("hbase.client.retries.number", 10);
     this.connection.getMaster();
   }
 

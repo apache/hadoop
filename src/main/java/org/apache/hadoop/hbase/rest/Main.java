@@ -71,8 +71,7 @@ public class Main implements Constants {
     RESTServlet servlet = RESTServlet.getInstance(conf);
 
     Options options = new Options();
-    options.addOption("p", "port", true, "Port to bind to [default:" +
-      DEFAULT_LISTEN_PORT + "]");
+    options.addOption("p", "port", true, "Port to bind to [default: 8080]");
     options.addOption("ro", "readonly", false, "Respond only to GET HTTP " +
       "method requests [default: false]");
 
@@ -124,8 +123,7 @@ public class Main implements Constants {
 
     // set up Jetty and run the embedded server
 
-    int port = servlet.getConfiguration().getInt("hbase.rest.port",
-        DEFAULT_LISTEN_PORT);
+    int port = servlet.getConfiguration().getInt("hbase.rest.port", 8080);
 
     Server server = new Server(port);
     server.setSendServerVersion(false);

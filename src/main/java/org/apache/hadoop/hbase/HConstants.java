@@ -93,16 +93,6 @@ public final class HConstants {
   /** Name of ZooKeeper config file in conf/ directory. */
   public static final String ZOOKEEPER_CONFIG_NAME = "zoo.cfg";
 
-  /** Parameter name for number of times to retry writes to ZooKeeper. */
-  public static final String ZOOKEEPER_RETRIES = "zookeeper.retries";
-  /** Default number of times to retry writes to ZooKeeper. */
-  public static final int DEFAULT_ZOOKEEPER_RETRIES = 5;
-
-  /** Parameter name for ZooKeeper pause between retries. In milliseconds. */
-  public static final String ZOOKEEPER_PAUSE = "zookeeper.pause";
-  /** Default ZooKeeper pause value. In milliseconds. */
-  public static final int DEFAULT_ZOOKEEPER_PAUSE = 2 * 1000;
-
   /** default client port that the zookeeper listens on */
   public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
 
@@ -138,12 +128,6 @@ public final class HConstants {
   /** Default value for thread wake frequency */
   public static final int DEFAULT_THREAD_WAKE_FREQUENCY = 10 * 1000;
   
-  /** Number of retries for the client */
-  public static final String NUM_CLIENT_RETRIES = "hbase.client.retries.number";
-
-  /** Default number of retries for the client */
-  public static final int DEFAULT_NUM_CLIENT_RETRIES = 2;
-
   /** Parameter name for how often a region should should perform a major compaction */
   public static final String MAJOR_COMPACTION_PERIOD = "hbase.hregion.majorcompaction";
 
@@ -287,11 +271,6 @@ public final class HConstants {
    * Seconds in a week
    */
   public static final int WEEK_IN_SECONDS = 7 * 24 * 3600;
-
-  //TODO: HBASE_CLIENT_RETRIES_NUMBER_KEY is only used by TestMigrate. Move it
-  //      there.
-  public static final String HBASE_CLIENT_RETRIES_NUMBER_KEY =
-    "hbase.client.retries.number";
 
   //TODO: although the following are referenced widely to format strings for
   //      the shell. They really aren't a part of the public API. It would be

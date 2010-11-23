@@ -189,7 +189,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
      * The RPC server ports can be ephemeral. Create a ZKW instance.
      */
     HServerAddress a = new HServerAddress(getMyAddress(this.conf));
-    int numHandlers = conf.getInt("hbase.regionserver.handler.count", 10);
+    int numHandlers = conf.getInt("hbase.regionserver.handler.count", 25);
     this.rpcServer = HBaseRPC.getServer(this,
       new Class<?>[]{HMasterInterface.class, HMasterRegionInterface.class},
       a.getBindAddress(), a.getPort(),
