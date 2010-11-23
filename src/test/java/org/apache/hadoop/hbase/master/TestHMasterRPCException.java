@@ -20,21 +20,18 @@
 
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.avro.generated.HBase;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
-import org.apache.hadoop.hbase.ipc.ServerNotRunningException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.Test;
-
-import java.lang.reflect.UndeclaredThrowableException;
-
-import static org.junit.Assert.*;
 
 public class TestHMasterRPCException {
 
@@ -42,16 +39,17 @@ public class TestHMasterRPCException {
   public void testRPCException() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     TEST_UTIL.startMiniZKCluster();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    conf.set(HConstants.MASTER_PORT, "0");
 
-    HMaster hm = new HMaster(TEST_UTIL.getConfiguration());
+    HMaster hm = new HMaster(conf);
 
     HServerAddress hma = hm.getMasterAddress();
     try {
       HMasterInterface inf =
           (HMasterInterface) HBaseRPC.getProxy(
               HMasterInterface.class,  HBaseRPCProtocolVersion.versionID,
-              hma.getInetSocketAddress(), TEST_UTIL.getConfiguration(),
-              100);
+              hma.getInetSocketAddress(), conf, 100);
       inf.isMasterRunning();
       fail();
     } catch (RemoteException ex) {
