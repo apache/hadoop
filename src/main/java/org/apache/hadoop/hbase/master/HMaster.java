@@ -557,7 +557,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     }
     if (this.rpcServer != null) this.rpcServer.stop();
     // Clean up and close up shop
-    this.logCleaner.interrupt();
+    if (this.logCleaner!= null) this.logCleaner.interrupt();
     if (this.infoServer != null) {
       LOG.info("Stopping infoServer");
       try {

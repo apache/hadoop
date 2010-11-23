@@ -119,6 +119,7 @@ import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
@@ -456,20 +457,36 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Create the master address manager, register with zk, and start it.  Then
     // block until a master is available.  No point in starting up if no master
     // running.
-    this.masterAddressManager = new MasterAddressTracker(zooKeeper, this);
+    this.masterAddressManager = new MasterAddressTracker(this.zooKeeper, this);
     this.masterAddressManager.start();
-    this.masterAddressManager.blockUntilAvailable();
+    blockAndCheckIfStopped(this.masterAddressManager);
 
     // Wait on cluster being up.  Master will set this flag up in zookeeper
     // when ready.
     this.clusterStatusTracker = new ClusterStatusTracker(this.zooKeeper, this);
     this.clusterStatusTracker.start();
-    this.clusterStatusTracker.blockUntilAvailable();
+    blockAndCheckIfStopped(this.clusterStatusTracker);
 
     // Create the catalog tracker and start it;
     this.catalogTracker = new CatalogTracker(this.zooKeeper, this.connection,
       this, this.conf.getInt("hbase.regionserver.catalog.timeout", Integer.MAX_VALUE));
     catalogTracker.start();
+  }
+
+  /**
+   * Utilty method to wait indefinitely on a znode availability while checking
+   * if the region server is shut down
+   * @param tracker znode tracker to use
+   * @throws IOException any IO exception, plus if the RS is stopped
+   * @throws InterruptedException
+   */
+  private void blockAndCheckIfStopped(ZooKeeperNodeTracker tracker)
+      throws IOException, InterruptedException {
+    while (tracker.blockUntilAvailable(this.msgInterval) == null) {
+      if (this.stopped) {
+        throw new IOException("Received the shutdown message while waiting.");
+      }
+    }
   }
 
   /**

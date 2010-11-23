@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.SequenceFile;
 
 import java.io.DataInputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -149,6 +150,8 @@ public class FSUtils {
         fs.open(versionFile);
       try {
         version = DataInputStream.readUTF(s);
+      } catch (EOFException eof) {
+        LOG.warn("Version file was empty, odd, will try to set it.");
       } finally {
         s.close();
       }

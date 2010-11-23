@@ -702,6 +702,9 @@ Release 0.90.0 - Unreleased
    HBASE-3252  TestZooKeeperNodeTracker sometimes fails due to a race condition
                in test notification (Gary Helmling via Andrew Purtell)
    HBASE-3253  Thrift's missing from all the repositories in pom.xml
+   HBASE-3258  EOF when version file is empty
+   HBASE-3259  Can't kill the region servers when they wait on the master or
+               the cluster state znode
 
 
   IMPROVEMENTS
