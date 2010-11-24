@@ -83,7 +83,7 @@ module Hbase
     # Disables a table
     def disable(table_name)
       return unless enabled?(table_name)
-      @admin.disableTableAsync(table_name)
+      @admin.disableTable(table_name)
     end
 
     #----------------------------------------------------------------------------------------------
