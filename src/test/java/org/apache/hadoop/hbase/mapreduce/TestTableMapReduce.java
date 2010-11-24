@@ -251,6 +251,5 @@ public class TestTableMapReduce extends MultiRegionTable {
 
     System.err.println("tmpjars: " + tmpjars);
     assertTrue(tmpjars.contains("zookeeper"));
-    assertTrue(tmpjars.contains("guava"));
   }
 }
