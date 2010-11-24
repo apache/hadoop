@@ -14,6 +14,9 @@ Trunk (unreleased changes)
     HADOOP-7042. Updates to test-patch.sh to include failed test names and
     improve other messaging. (nigel)
 
+    HADOOP-7001.  Configuration changes can occur via the Reconfigurable
+    interface. (Patrick Kline via dhruba)
+
   OPTIMIZATIONS
 
   BUG FIXES
