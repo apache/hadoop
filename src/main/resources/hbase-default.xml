@@ -451,7 +451,7 @@
   </property>
   <property>
     <name>zookeeper.session.timeout</name>
-    <value>60000</value>
+    <value>180000</value>
     <description>ZooKeeper session timeout.
       HBase passes this to the zk quorum as suggested maximum time for a
       session.  See http://hadoop.apache.org/zookeeper/docs/current/zookeeperProgrammers.html#ch_zkSessions

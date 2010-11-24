@@ -299,7 +299,10 @@ Usually you'll want to use the latest version available except the problematic u
  in branch-0.20-append to see list of patches involved.</para>
  <para>HBase bundles the Apache branch-0.20-append Hadoop.
  Replace the Hadoop jar bundled with HBase with that you have
- installed on your cluster to avoid version mismatch issues.
+ installed on your cluster to avoid version mismatch issues;
+ for example, versions of CDH do not have HDFS-724 whereas
+ Hadoops branch-0.20-append branch does have HDFS-724. This
+ patch changes the RPC version because protocol was changed.
  </para>
   </section>
 <section xml:id="ssh"> <title>ssh</title>
@@ -984,6 +987,28 @@ to ensure well-formedness of your document after an edit session.
       </section>
 
       <section xml:id="recommended_configurations"><title>Recommended Configuations</title>
+          <section xml:id="zookeeper.session.timeout"><title><varname>zookeeper.session.timeout</varname></title>
+          <para>The default timeout is three minutes (specified in milliseconds). This means
+              that if a server crashes, it will be three minutes before the Master notices
+              the crash and starts recovery. You might like to tune the timeout down to
+              a minute or even less so the Master notices failures the sooner.
+              Before changing this value, be sure you have your JVM garbage collection
+              configuration under control otherwise, a long garbage collection that lasts
+              beyond the zookeeper session timeout will take out
+              your RegionServer (You might be fine with this -- you probably want recovery to start
+          on the server if a RegionServer has been in GC for a long period of time).</para> 
+
+      <para>To change this configuration, edit <filename>hbase-site.xml</filename>,
+          copy the changed file around the cluster and restart.</para>
+
+          <para>We set this value high to save our having to field noob questions up on the mailing lists asking
+              why a RegionServer went down during a massive import.  The usual cause is that their JVM is untuned and
+              they are running into long GC pauses.  Our thinking is that
+              while users are  getting familiar with HBase, we'd save them having to know all of its
+              intricacies.  Later when they've built some confidence, then they can play
+              with configuration such as this.
+          </para>
+      </section>
       <section xml:id="big_memory">
         <title>Configuration for large memory machines</title>
         <para>

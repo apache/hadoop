@@ -91,7 +91,7 @@ public class ZKUtil {
     if(ensemble == null) {
       throw new IOException("Unable to determine ZooKeeper ensemble");
     }
-    int timeout = conf.getInt("zookeeper.session.timeout", 60 * 1000);
+    int timeout = conf.getInt("zookeeper.session.timeout", 180 * 1000);
     LOG.debug(descriptor + " opening connection to ZooKeeper with ensemble (" +
         ensemble + ")");
     return new ZooKeeper(ensemble, timeout, watcher);

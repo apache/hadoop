@@ -1186,6 +1186,7 @@ Release 0.90.0 - Unreleased
    HBASE-3230  Refresh our hadoop jar and update zookeeper to
                just-released 3.3.2
    HBASE-3231  Update to zookeeper 3.3.2.
+   HBASE-3273  Set the ZK default timeout to 3 minutes
 
 
   NEW FEATURES

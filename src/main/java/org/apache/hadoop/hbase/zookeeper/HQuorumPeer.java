@@ -125,6 +125,10 @@ public class HQuorumPeer {
       }
     }
 
+    // Set the max session timeout from the provided client-side timeout
+    properties.setProperty("maxSessionTimeout",
+        conf.get("zookeeper.session.timeout", "180000"));
+
     if (myId == -1) {
       throw new IOException("Could not find my address: " + myAddress +
                             " in list of ZooKeeper quorum servers");

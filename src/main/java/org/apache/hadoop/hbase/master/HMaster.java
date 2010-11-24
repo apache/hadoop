@@ -239,7 +239,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     while (!amm.isActiveMaster()) {
       LOG.debug("Waiting for master address ZNode to be written " +
         "(Also watching cluster state node)");
-      Thread.sleep(c.getInt("zookeeper.session.timeout", 60 * 1000));
+      Thread.sleep(c.getInt("zookeeper.session.timeout", 180 * 1000));
     }
   }
 
