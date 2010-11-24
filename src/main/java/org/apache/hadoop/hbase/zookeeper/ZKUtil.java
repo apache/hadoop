@@ -1027,33 +1027,32 @@ public class ZKUtil {
   public static String dump(ZooKeeperWatcher zkw) {
     StringBuilder sb = new StringBuilder();
     try {
-      sb.append("\nHBase tree in ZooKeeper is rooted at ").append(zkw.baseZNode);
-      sb.append("\n  Cluster up? ").append(checkExists(zkw, zkw.clusterStateZNode));
-      sb.append("\n  Master address: ").append(
+      sb.append("HBase is rooted at ").append(zkw.baseZNode);
+      sb.append("\nMaster address: ").append(
           getDataAsAddress(zkw, zkw.masterAddressZNode));
-      sb.append("\n  Region server holding ROOT: ").append(
+      sb.append("\nRegion server holding ROOT: ").append(
           getDataAsAddress(zkw, zkw.rootServerZNode));
-      sb.append("\n  Region servers:");
+      sb.append("\nRegion servers:");
       for (HServerAddress address : listChildrenAndGetAsAddresses(zkw,
           zkw.rsZNode)) {
-        sb.append("\n    - ").append(address);
+        sb.append("\n ").append(address);
       }
-      sb.append("\n  Quorum Server Statistics:");
+      sb.append("\nQuorum Server Statistics:");
       String[] servers = zkw.getQuorum().split(",");
       for (String server : servers) {
-        sb.append("\n    - ").append(server);
+        sb.append("\n ").append(server);
         try {
           String[] stat = getServerStats(server);
           for (String s : stat) {
-            sb.append("\n        ").append(s);
+            sb.append("\n  ").append(s);
           }
         } catch (Exception e) {
-          sb.append("\n        ERROR: ").append(e.getMessage());
+          sb.append("\n  ERROR: ").append(e.getMessage());
         }
       }
     } catch(KeeperException ke) {
-      sb.append("\n  FATAL ZooKeeper Exception!\n");
-      sb.append("\n  " + ke.getMessage());
+      sb.append("\nFATAL ZooKeeper Exception!\n");
+      sb.append("\n" + ke.getMessage());
     }
     return sb.toString();
   }

@@ -106,7 +106,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Returns ZooKeeper status dump
     def zk_dump
-      @zk_wrapper.dump
+      org.apache.hadoop.hbase.zookeeper.ZKUtil::dump(@zk_wrapper)
     end
 
     #----------------------------------------------------------------------------------------------
