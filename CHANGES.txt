@@ -711,6 +711,7 @@ Release 0.90.0 - Unreleased
    HBASE-3269  HBase table truncate semantics seems broken as "disable" table
                is now async by default
    HBASE-3275  [rest] No gzip/deflate content encoding support
+   HBASE-3261  NPE out of HRS.run at startup when clock is out of sync
 
 
   IMPROVEMENTS

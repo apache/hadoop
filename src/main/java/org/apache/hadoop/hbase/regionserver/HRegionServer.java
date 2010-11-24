@@ -613,12 +613,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive? If OOME could have exited already
-    cacheFlusher.interruptIfNecessary();
-    compactSplitThread.interruptIfNecessary();
-    hlogRoller.interruptIfNecessary();
-    this.majorCompactionChecker.interrupt();
+    if (this.cacheFlusher != null) this.cacheFlusher.interruptIfNecessary();
+    if (this.compactSplitThread != null) this.compactSplitThread.interruptIfNecessary();
+    if (this.hlogRoller != null) this.hlogRoller.interruptIfNecessary();
+    if (this.majorCompactionChecker != null) this.majorCompactionChecker.interrupt();
 
-    if (killed) {
+    if (this.killed) {
       // Just skip out w/o closing regions.
     } else if (abortRequested) {
       if (this.fsOk) {
@@ -634,7 +634,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
-    this.catalogTracker.stop();
+    if (this.catalogTracker != null) this.catalogTracker.stop();
     waitOnAllRegionsToClose();
 
     // Make sure the proxy is down.
