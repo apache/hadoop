@@ -76,7 +76,7 @@ module Hbase
     # Enables a table
     def enable(table_name)
       return if enabled?(table_name)
-      @admin.enableTableAsync(table_name)
+      @admin.enableTable(table_name)
     end
 
     #----------------------------------------------------------------------------------------------
