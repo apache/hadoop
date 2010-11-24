@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.servlet.GzipFilter;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
@@ -132,6 +133,7 @@ public class Main implements Constants {
       // set up context
     Context context = new Context(server, "/", Context.SESSIONS);
     context.addServlet(sh, "/*");
+    context.addFilter(GzipFilter.class, "/*", 0);
 
     server.start();
     server.join();

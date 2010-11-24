@@ -710,6 +710,7 @@ Release 0.90.0 - Unreleased
    HBASE-3272  Remove no longer used options
    HBASE-3269  HBase table truncate semantics seems broken as "disable" table
                is now async by default
+   HBASE-3275  [rest] No gzip/deflate content encoding support
 
 
   IMPROVEMENTS
