@@ -211,14 +211,15 @@ public class AvroRpcEngine implements RpcEngine {
   /** Construct a server for a protocol implementation instance listening on a
    * port and address. */
   public RPC.Server getServer(Class<?> iface, Object impl, String bindAddress,
-                              int port, int numHandlers, boolean verbose,
+                              int port, int numHandlers, int numReaders,
+                              int queueSizePerHandler, boolean verbose,
                               Configuration conf, 
                        SecretManager<? extends TokenIdentifier> secretManager
                               ) throws IOException {
     return ENGINE.getServer(TunnelProtocol.class,
                             new TunnelResponder(iface, impl),
-                            bindAddress, port, numHandlers, verbose, conf, 
-                            secretManager);
+                            bindAddress, port, numHandlers, numReaders,
+                            queueSizePerHandler, verbose, conf, secretManager);
   }
 
 }

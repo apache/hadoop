@@ -1451,16 +1451,18 @@ public abstract class Server {
                   Configuration conf)
     throws IOException 
   {
-    this(bindAddress, port, paramClass, handlerCount,  conf, Integer.toString(port), null);
+    this(bindAddress, port, paramClass, handlerCount, -1, -1, conf, Integer.toString(port), null);
   }
+  
   /** Constructs a server listening on the named port and address.  Parameters passed must
    * be of the named class.  The <code>handlerCount</handlerCount> determines
    * the number of handler threads that will be used to process calls.
-   * 
+   * If queueSizePerHandler or numReaders are not -1 they will be used instead of parameters
+   * from configuration. Otherwise the configuration will be picked up.
    */
   @SuppressWarnings("unchecked")
   protected Server(String bindAddress, int port, 
-                  Class<? extends Writable> paramClass, int handlerCount, 
+                  Class<? extends Writable> paramClass, int handlerCount, int numReaders, int queueSizePerHandler,
                   Configuration conf, String serverName, SecretManager<? extends TokenIdentifier> secretManager) 
     throws IOException {
     this.bindAddress = bindAddress;
@@ -1469,15 +1471,23 @@ public abstract class Server {
     this.paramClass = paramClass;
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
-    this.maxQueueSize = handlerCount * conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
-        CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+    if (queueSizePerHandler != -1) {
+      this.maxQueueSize = queueSizePerHandler;
+    } else {
+      this.maxQueueSize = handlerCount * conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
+          CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);      
+    }
     this.maxRespSize = conf.getInt(
         CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
         CommonConfigurationKeys.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);
-    this.readThreads = conf.getInt(
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
-        CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
+    if (numReaders != -1) {
+      this.readThreads = numReaders;
+    } else {
+      this.readThreads = conf.getInt(
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
+          CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);      
+    }
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
     this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
@@ -1691,7 +1701,22 @@ public abstract class Server {
     return callQueue.size();
   }
   
-  
+  /**
+   * The maximum size of the rpc call queue of this server.
+   * @return The maximum size of the rpc call queue.
+   */
+  public int getMaxQueueSize() {
+    return maxQueueSize;
+  }
+
+  /**
+   * The number of reader threads for this server.
+   * @return The number of reader threads.
+   */
+  public int getNumReaders() {
+    return readThreads;
+  }
+
   /**
    * When the read or write buffer size is larger than this limit, i/o will be 
    * done in chunks of this size. Most RPC requests and responses would be

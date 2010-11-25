@@ -285,11 +285,12 @@ public class WritableRpcEngine implements RpcEngine {
    * port and address. */
   public Server getServer(Class<?> protocol,
                           Object instance, String bindAddress, int port,
-                          int numHandlers, boolean verbose, Configuration conf,
+                          int numHandlers, int numReaders, int queueSizePerHandler,
+                          boolean verbose, Configuration conf,
                       SecretManager<? extends TokenIdentifier> secretManager) 
     throws IOException {
     return new Server(instance, conf, bindAddress, port, numHandlers, 
-        verbose, secretManager);
+        numReaders, queueSizePerHandler, verbose, secretManager);
   }
 
   /** An RPC Server. */
@@ -305,7 +306,7 @@ public class WritableRpcEngine implements RpcEngine {
      */
     public Server(Object instance, Configuration conf, String bindAddress, int port) 
       throws IOException {
-      this(instance, conf,  bindAddress, port, 1, false, null);
+      this(instance, conf,  bindAddress, port, 1, -1, -1, false, null);
     }
     
     private static String classNameBase(String className) {
@@ -325,10 +326,11 @@ public class WritableRpcEngine implements RpcEngine {
      * @param verbose whether each call should be logged
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
-                  int numHandlers, boolean verbose, 
+                  int numHandlers, int numReaders, int queueSizePerHandler, boolean verbose, 
                   SecretManager<? extends TokenIdentifier> secretManager) 
         throws IOException {
-      super(bindAddress, port, Invocation.class, numHandlers, conf, 
+      super(bindAddress, port, Invocation.class, numHandlers, numReaders,
+          queueSizePerHandler, conf,
           classNameBase(instance.getClass().getName()), secretManager);
       this.instance = instance;
       this.verbose = verbose;

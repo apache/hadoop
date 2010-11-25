@@ -50,7 +50,8 @@ public interface RpcEngine {
 
   /** Construct a server for a protocol implementation instance. */
   RPC.Server getServer(Class<?> protocol, Object instance, String bindAddress,
-                       int port, int numHandlers, boolean verbose,
+                       int port, int numHandlers, int numReaders,
+                       int queueSizePerHandler, boolean verbose,
                        Configuration conf, 
                        SecretManager<? extends TokenIdentifier> secretManager
                        ) throws IOException;

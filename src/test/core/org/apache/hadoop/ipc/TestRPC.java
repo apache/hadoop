@@ -190,6 +190,28 @@ public class TestRPC extends TestCase {
       }
     }
   }
+  
+  public void testConfRpc() throws Exception {
+    Server server = RPC.getServer(TestProtocol.class,
+                                  new TestImpl(), ADDRESS, 0, 1, false, conf, null);
+    // Just one handler
+    int confQ = conf.getInt(
+              CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
+              CommonConfigurationKeys.IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+    assertEquals(confQ, server.getMaxQueueSize());
+
+    int confReaders = conf.getInt(
+              CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_KEY,
+              CommonConfigurationKeys.IPC_SERVER_RPC_READ_THREADS_DEFAULT);
+    assertEquals(confReaders, server.getNumReaders());
+    server.stop();
+    
+    server = RPC.getServer(TestProtocol.class,
+                                  new TestImpl(), ADDRESS, 0, 1, 3, 200, false, conf, null);
+    assertEquals(3, server.getNumReaders());
+    assertEquals(200, server.getMaxQueueSize());
+    server.stop();    
+  }
 
   public void testSlowRpc() throws Exception {
     System.out.println("Testing Slow RPC");
@@ -233,6 +255,10 @@ public class TestRPC extends TestCase {
       }
       System.out.println("Down slow rpc testing");
     }
+  }
+  
+  public void testRPCConf(Configuration conf) throws Exception {
+    
   }
 
   public void testCalls(Configuration conf) throws Exception {

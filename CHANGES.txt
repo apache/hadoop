@@ -15,7 +15,10 @@ Trunk (unreleased changes)
     improve other messaging. (nigel)
 
     HADOOP-7001.  Configuration changes can occur via the Reconfigurable
-    interface. (Patrick Kline via dhruba)
+    interface. (Patrick Kling via dhruba)
+
+    HADOOP-6764. Add number of reader threads and queue length as
+    configuration parameters in RPC.getServer. (Dmytro Molkov via hairong)
 
   OPTIMIZATIONS
 
