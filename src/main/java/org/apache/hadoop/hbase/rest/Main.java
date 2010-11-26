@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -37,7 +38,6 @@ import java.util.ArrayList;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.servlet.GzipFilter;
 
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 

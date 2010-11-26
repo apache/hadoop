@@ -73,16 +73,20 @@ public class Response {
     return headers;
   }
 
-  /**
-   * @return the value of the Location header
-   */
-  public String getLocation() {
+  public String getHeader(String key) {
     for (Header header: headers) {
-      if (header.getName().equals("Location")) {
+      if (header.getName().equalsIgnoreCase(key)) {
         return header.getValue();
       }
     }
     return null;
+  }
+
+  /**
+   * @return the value of the Location header
+   */
+  public String getLocation() {
+    return getHeader("Location");
   }
 
   /**
