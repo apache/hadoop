@@ -644,7 +644,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     }
 
     // Are regions of same table?
-    int result = this.tableDesc.compareTo(o.tableDesc);
+    int result = Bytes.compareTo(this.tableDesc.getName(), o.tableDesc.getName());
     if (result != 0) {
       return result;
     }

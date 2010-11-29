@@ -974,12 +974,14 @@ public class AssignmentManager extends ZooKeeperListener {
   public void unassign(HRegionInfo region, boolean force) {
     LOG.debug("Starting unassignment of region " +
       region.getRegionNameAsString() + " (offlining)");
-    // Check if this region is currently assigned
-    if (!regions.containsKey(region)) {
-      LOG.debug("Attempted to unassign region " +
-        region.getRegionNameAsString() + " but it is not " +
-        "currently assigned anywhere");
-      return;
+    synchronized (this.regions) { 
+      // Check if this region is currently assigned
+      if (!regions.containsKey(region)) {
+        LOG.debug("Attempted to unassign region " +
+          region.getRegionNameAsString() + " but it is not " +
+          "currently assigned anywhere");
+        return;
+      }
     }
     String encodedName = region.getEncodedName();
     // Grab the state of this region and synchronize on it
@@ -1359,9 +1361,6 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     synchronized (this.regions) {
       this.regions.remove(hri);
-    }
-    clearRegionPlan(hri.getEncodedName());
-    synchronized (this.servers) {
       for (List<HRegionInfo> regions : this.servers.values()) {
         for (int i=0;i<regions.size();i++) {
           if (regions.get(i).equals(hri)) {
@@ -1371,6 +1370,7 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
+    clearRegionPlan(hri.getEncodedName());
   }
 
   /**
@@ -1418,11 +1418,13 @@ public class AssignmentManager extends ZooKeeperListener {
     List<HRegionInfo> tableRegions = new ArrayList<HRegionInfo>();
     HRegionInfo boundary =
       new HRegionInfo(new HTableDescriptor(tableName), null, null);
-    for (HRegionInfo regionInfo: this.regions.tailMap(boundary).keySet()) {
-      if(Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
-        tableRegions.add(regionInfo);
-      } else {
-        break;
+    synchronized (this.regions) {
+      for (HRegionInfo regionInfo: this.regions.tailMap(boundary).keySet()) {
+        if(Bytes.equals(regionInfo.getTableDesc().getName(), tableName)) {
+          tableRegions.add(regionInfo);
+        } else {
+          break;
+        }
       }
     }
     return tableRegions;
