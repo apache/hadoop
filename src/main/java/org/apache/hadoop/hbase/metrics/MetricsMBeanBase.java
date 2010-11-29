@@ -71,7 +71,7 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
   private static MetricsRegistry copyMinusHBaseMetrics(final MetricsRegistry mr) {
     MetricsRegistry copy = new MetricsRegistry();
     for (MetricsBase metric : mr.getMetricsList()) {
-      if (metric instanceof org.apache.hadoop.hbase.metrics.MetricsRate) {
+      if (metric instanceof MetricsRate || metric instanceof MetricsString) {
         continue;
       }
       copy.add(metric.getName(), metric);

@@ -1194,6 +1194,8 @@ Release 0.90.0 - Unreleased
    HBASE-3273  Set the ZK default timeout to 3 minutes
    HBASE-3279  [rest] Filter for gzip content encoding that wraps both input
                and output side.
+   HBASE-3223  Get VersionInfo for Running HBase Process
+               (Nicolas Spiegelberg via Stack)
 
 
   NEW FEATURES
