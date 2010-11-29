@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
 import org.apache.hadoop.metrics.ContextFactory;
@@ -69,6 +70,7 @@ public class MasterMetrics implements Updater {
     metricsRecord.setTag("Master", name);
     context.registerUpdater(this);
     JvmMetrics.init("Master", name);
+    HBaseInfo.init();
 
     // expose the MBean for metrics
     masterStatistics = new MasterStatistics(this.registry);

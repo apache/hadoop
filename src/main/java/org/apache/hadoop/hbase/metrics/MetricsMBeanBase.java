@@ -95,14 +95,20 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
         continue;
 
       // add on custom HBase metric types
-      if (metric instanceof org.apache.hadoop.hbase.metrics.MetricsRate) {
+      if (metric instanceof MetricsRate) {
         attributes.add( new MBeanAttributeInfo(metric.getName(),
             "java.lang.Float", metric.getDescription(), true, false, false) );
         extendedAttributes.put(metric.getName(), metric);
+      } else if (metric instanceof MetricsString) {
+        attributes.add( new MBeanAttributeInfo(metric.getName(),
+            "java.lang.String", metric.getDescription(), true, false, false) );
+        extendedAttributes.put(metric.getName(), metric);
+        LOG.info("MetricsString added: " + metric.getName());
       }
       // else, its probably a hadoop metric already registered. Skip it.
     }
 
+    LOG.info("new MBeanInfo");
     this.extendedInfo = new MBeanInfo( this.getClass().getName(),
         this.description, attributes.toArray( new MBeanAttributeInfo[0] ),
         parentInfo.getConstructors(), parentInfo.getOperations(),
@@ -140,6 +146,8 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
       if (metric != null) {
         if (metric instanceof MetricsRate) {
           return ((MetricsRate) metric).getPreviousIntervalValue();
+        } else if (metric instanceof MetricsString) {
+          return ((MetricsString)metric).getValue();
         } else {
           LOG.warn( String.format("unknown metrics type %s for attribute %s",
                         metric.getClass().getName(), name) );

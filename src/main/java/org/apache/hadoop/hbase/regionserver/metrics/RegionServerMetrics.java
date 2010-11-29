@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.metrics.HBaseInfo;
 import org.apache.hadoop.hbase.metrics.MetricsRate;
 import org.apache.hadoop.hbase.metrics.PersistentMetricsTimeVaryingRate;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -173,6 +174,8 @@ public class RegionServerMetrics implements Updater {
     context.registerUpdater(this);
     // Add jvmmetrics.
     JvmMetrics.init("RegionServer", name);
+    // Add Hbase Info metrics
+    HBaseInfo.init();
 
     // export for JMX
     statistics = new RegionServerStatistics(this.registry, name);
