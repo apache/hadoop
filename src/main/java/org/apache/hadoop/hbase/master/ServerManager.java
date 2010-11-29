@@ -87,7 +87,7 @@ public class ServerManager {
   // Reporting to track master metrics.
   private final MasterMetrics metrics;
 
-  final DeadServer deadservers = new DeadServer();
+  private final DeadServer deadservers;
 
   private final long maxSkew;
 
@@ -104,6 +104,8 @@ public class ServerManager {
     this.metrics = metrics;
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
+    this.deadservers =
+      new DeadServer(c.getInt("hbase.master.maxdeadservers", 100));
   }
 
   /**
@@ -397,6 +399,14 @@ public class ServerManager {
 
   public Set<String> getDeadServers() {
     return this.deadservers.clone();
+  }
+
+  /**
+   * Checks if any dead servers are currently in progress.
+   * @return true if any RS are being processed as dead, false if not
+   */
+  public boolean areDeadServersInProgress() {
+    return this.deadservers.areDeadServersInProgress();
   }
 
   /**

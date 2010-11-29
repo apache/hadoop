@@ -664,7 +664,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
             abbreviate(this.assignmentManager.getRegionsInTransition().toString(), 256));
         return false;
       }
-      if (!this.serverManager.getDeadServers().isEmpty()) {
+      if (!this.serverManager.areDeadServersInProgress()) {
         LOG.debug("Not running balancer because dead regionserver processing");
       }
       Map<HServerInfo, List<HRegionInfo>> assignments =

@@ -147,7 +147,7 @@ public class ServerShutdownHandler extends EventHandler {
         this.services.getAssignmentManager().assign(e.getKey(), true);
       }
     }
-    this.deadServers.remove(serverName);
+    this.deadServers.finish(serverName);
     LOG.info("Finished processing of shutdown of " + serverName);
   }
 

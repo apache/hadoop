@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.master;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -40,6 +42,20 @@ public class DeadServer implements Set<String> {
    */
   private final Set<String> deadServers = new HashSet<String>();
 
+  /** Linked list of dead servers used to bound size of dead server set */
+  private final List<String> deadServerList = new LinkedList<String>();
+
+  /** Maximum number of dead servers to keep track of */
+  private final int maxDeadServers;
+
+  /** Number of dead servers currently being processed */
+  private int numProcessing;
+
+  public DeadServer(int maxDeadServers) {
+    super();
+    this.maxDeadServers = maxDeadServers;
+    this.numProcessing = 0;
+  }
 
   /**
    * @param serverName
@@ -61,10 +77,34 @@ public class DeadServer implements Set<String> {
     return HServerInfo.isServer(this, serverName, hostAndPortOnly);
   }
 
+  /**
+   * Checks if there are currently any dead servers being processed by the
+   * master.  Returns true if at least one region server is currently being
+   * processed as dead.
+   * @return true if any RS are being processed as dead
+   */
+  public boolean areDeadServersInProgress() {
+    return numProcessing != 0;
+  }
+
   public synchronized Set<String> clone() {
     Set<String> clone = new HashSet<String>(this.deadServers.size());
     clone.addAll(this.deadServers);
     return clone;
+  }
+
+  public synchronized boolean add(String e) {
+    this.numProcessing++;
+    // Check to see if we are at capacity for dead servers
+    if (deadServerList.size() == this.maxDeadServers) {
+      deadServers.remove(deadServerList.remove(0));
+    }
+    deadServerList.add(e);
+    return deadServers.add(e);
+  }
+
+  public synchronized void finish(String e) {
+    this.numProcessing--;
   }
 
   public synchronized int size() {
@@ -91,12 +131,8 @@ public class DeadServer implements Set<String> {
     return deadServers.toArray(a);
   }
 
-  public synchronized boolean add(String e) {
-    return deadServers.add(e);
-  }
-
   public synchronized boolean remove(Object o) {
-    return deadServers.remove(o);
+    throw new UnsupportedOperationException();
   }
 
   public synchronized boolean containsAll(Collection<?> c) {

@@ -305,14 +305,14 @@ public class TestRollingRestart {
       String serverName) throws InterruptedException {
     ServerManager sm = activeMaster.getMaster().getServerManager();
     // First wait for it to be in dead list
-    while (!sm.deadservers.isDeadServer(serverName)) {
+    while (!sm.getDeadServers().contains(serverName)) {
       log("Waiting for [" + serverName + "] to be listed as dead in master");
       Thread.sleep(1);
     }
     log("Server [" + serverName + "] marked as dead, waiting for it to " +
         "finish dead processing");
-    while (sm.deadservers.isDeadServer(serverName)) {
-      log("Server [" + serverName + "] still marked as dead, waiting");
+    while (sm.areDeadServersInProgress()) {
+      log("Server [" + serverName + "] still being processed, waiting");
       Thread.sleep(100);
     }
     log("Server [" + serverName + "] done with server shutdown processing");
