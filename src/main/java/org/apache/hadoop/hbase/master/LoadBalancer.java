@@ -293,7 +293,10 @@ public class LoadBalancer {
 
     long endTime = System.currentTimeMillis();
 
-    assert(regionidx == regionsToMove.size());
+    assert(regionidx == regionsToMove.size()): "clusterState=" + clusterState +
+      ", regionidx=" + regionidx + ", regionsToMove=" + regionsToMove +
+      ", numServers=" + numServers + ", serversOverloaded=" + serversOverloaded +
+      ", serversUnderloaded=" + serversUnderloaded;
     assert(neededRegions == 0);
 
     // All done!
