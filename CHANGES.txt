@@ -720,6 +720,7 @@ Release 0.90.0 - Unreleased
    HBASE-3277  HBase Shell zk_dump command broken
    HBASE-3267  close_region shell command breaks region
    HBASE-3265  Regionservers waiting for ROOT while Master waiting for RegionServers
+   HBASE-3263  Stack overflow in AssignmentManager
 
 
   IMPROVEMENTS
