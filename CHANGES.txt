@@ -9,6 +9,8 @@ Release 0.91.0 - Unreleased
    HBASE-3280  YouAreDeadException being swallowed in HRS getMaster
    HBASE-3282  Need to retain DeadServers to ensure we don't allow
                previously expired RS instances to rejoin cluster
+   HBASE-3283  NPE in AssignmentManager if processing shutdown of RS who
+               doesn't have any regions assigned to it
 
   IMPROVEMENTS
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via

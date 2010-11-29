@@ -1597,8 +1597,14 @@ public class AssignmentManager extends ZooKeeperListener {
     // Remove this server from map of servers to regions, and remove all regions
     // of this server from online map of regions.
     Set<HRegionInfo> deadRegions = null;
+    List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
     synchronized (this.regions) {
-      deadRegions = new TreeSet<HRegionInfo>(this.servers.remove(hsi));
+      List<HRegionInfo> assignedRegions = this.servers.remove(hsi);
+      if (assignedRegions == null || assignedRegions.isEmpty()) {
+        // No regions on this server, we are done, return empty list of RITs
+        return rits;
+      }
+      deadRegions = new TreeSet<HRegionInfo>(assignedRegions);
       for (HRegionInfo region : deadRegions) {
         this.regions.remove(region);
       }
@@ -1606,7 +1612,6 @@ public class AssignmentManager extends ZooKeeperListener {
     // See if any of the regions that were online on this server were in RIT
     // If they are, normal timeouts will deal with them appropriately so
     // let's skip a manual re-assignment.
-    List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
     synchronized (regionsInTransition) {
       for (RegionState region : this.regionsInTransition.values()) {
         if (deadRegions.remove(region.getRegion())) {
