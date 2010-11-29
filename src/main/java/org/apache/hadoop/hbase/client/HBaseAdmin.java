@@ -751,7 +751,8 @@ public class HBaseAdmin implements Abortable {
   }
 
   /**
-   * Close a region. For expert-admins.
+   * Close a region. For expert-admins.  Runs close on the regionserver.  The
+   * master will not be informed of the close.
    * @param regionname region name to close
    * @param hostAndPort If supplied, we'll use this location rather than
    * the one currently in <code>.META.</code>
@@ -763,7 +764,8 @@ public class HBaseAdmin implements Abortable {
   }
 
   /**
-   * Close a region.  For expert-admins.
+   * Close a region.  For expert-admins  Runs close on the regionserver.  The
+   * master will not be informed of the close.
    * @param regionname region name to close
    * @param hostAndPort If supplied, we'll use this location rather than
    * the one currently in <code>.META.</code>
@@ -801,7 +803,8 @@ public class HBaseAdmin implements Abortable {
   private void closeRegion(final HServerAddress hsa, final HRegionInfo hri)
   throws IOException {
     HRegionInterface rs = this.connection.getHRegionConnection(hsa);
-    rs.closeRegion(hri);
+    // Close the region without updating zk state.
+    rs.closeRegion(hri, false);
   }
 
   /**
@@ -956,8 +959,14 @@ public class HBaseAdmin implements Abortable {
 
   /**
    * Move the region <code>r</code> to <code>dest</code>.
-   * @param encodedRegionName The encoded region name.
-   * @param destServerName The servername of the destination regionserver
+   * @param encodedRegionName The encoded region name; i.e. the hash that makes
+   * up the region name suffix: e.g. if regionname is
+   * <code>TestTable,0094429456,1289497600452.527db22f95c8a9e0116f0cc13c680396.</code>,
+   * then the encoded region name is: <code>527db22f95c8a9e0116f0cc13c680396</code>.
+   * @param destServerName The servername of the destination regionserver.  If
+   * passed the empty byte array we'll assign to a random server.  A server name
+   * is made of host, port and startcode.  Here is an example:
+   * <code> host187.example.com,60020,1289493121758</code>.
    * @throws UnknownRegionException Thrown if we can't find a region named
    * <code>encodedRegionName</code>
    * @throws ZooKeeperConnectionException 
@@ -966,6 +975,36 @@ public class HBaseAdmin implements Abortable {
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
   throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
     getMaster().move(encodedRegionName, destServerName);
+  }
+
+  /**
+   * @param regionName Region name to assign.
+   * @param force True to force assign.
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
+   * @throws IOException
+   */
+  public void assign(final byte [] regionName, final boolean force)
+  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+    getMaster().assign(regionName, force);
+  }
+
+  /**
+   * Unassign a region from current hosting regionserver.  Region will then be
+   * assigned to a regionserver chosen at random.  Region could be reassigned
+   * back to the same server.  Use {@link #move(byte[], byte[])} if you want
+   * to control the region movement.
+   * @param regionName Region to unassign. Will clear any existing RegionPlan
+   * if one found.
+   * @param force If true, force unassign (Will remove region from
+   * regions-in-transition too if present).
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException
+   * @throws IOException
+   */
+  public void unassign(final byte [] regionName, final boolean force)
+  throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+    getMaster().unassign(regionName, force);
   }
 
   /**

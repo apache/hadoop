@@ -20,16 +20,19 @@
 
 module Shell
   module Commands
-    class Zk < Command
+    class BalanceSwitch < Command
       def help
         return <<-EOF
-Low level ZooKeeper surgery tools. Type "zk 'help'" for more
-information (Yes, you must quote 'help').
+Enable/Disable balancer. Returns previous balancer state.
 EOF
       end
 
-      def command(*args)
-        admin.zk(args)
+      def command(enableDisable)
+        format_simple_command do
+          formatter.row([
+            admin.balance_switch(enableDisable)? "true" : "false"
+          ])
+        end
       end
     end
   end

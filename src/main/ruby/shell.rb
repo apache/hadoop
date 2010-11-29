@@ -248,14 +248,16 @@ Shell.load_command_group(
   :full_name => 'HBASE SURGERY TOOLS',
   :comment => "WARNING: Above commands are for 'experts'-only as misuse can damage an install",
   :commands => %w[
+    assign
+    balancer
+    balance_switch
     close_region
     compact
-    disable_region
-    enable_region
     flush
     major_compact
+    move
     split
-    zk
+    unassign
     zk_dump
   ]
 )

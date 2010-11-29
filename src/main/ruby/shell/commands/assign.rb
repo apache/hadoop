@@ -20,24 +20,18 @@
 
 module Shell
   module Commands
-    class CloseRegion < Command
+    class Assign < Command
       def help
         return <<-EOF
-Close a single region. Optionally specify regionserver. Connects to the
-regionserver and runs close on hosting regionserver.  The close is done
-without the master's involvement (It will not know of the close).  Once
-closed, region will stay closed.  Use assign to reopen/reassign.  Use
-unassign or move to assign the region elsewhere on cluster. Use with
-caution.  For experts only.  Examples:
-
-  hbase> close_region 'REGIONNAME'
-  hbase> close_region 'REGIONNAME', 'REGIONSERVER_IP:PORT'
+Assign a region.  Add 'true' to force assign of a region. Use with caution.
+If region already assigned, this command will just go ahead and reassign
+the region anyways. For experts only.
 EOF
       end
 
-      def command(region_name, server = nil)
+      def command(region_name, force = 'false')
         format_simple_command do
-          admin.close_region(region_name, server)
+          admin.assign(region_name, force)
         end
       end
     end

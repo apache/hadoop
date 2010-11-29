@@ -1360,9 +1360,7 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (this.regions) {
       this.regions.remove(hri);
     }
-    synchronized (this.regionPlans) {
-      this.regionPlans.remove(hri.getEncodedName());
-    }
+    clearRegionPlan(hri.getEncodedName());
     synchronized (this.servers) {
       for (List<HRegionInfo> regions : this.servers.values()) {
         for (int i=0;i<regions.size();i++) {
@@ -1372,6 +1370,15 @@ public class AssignmentManager extends ZooKeeperListener {
           }
         }
       }
+    }
+  }
+
+  /**
+   * @param encodedRegionName Region whose plan we are to clear.
+   */
+  void clearRegionPlan(final String encodedRegionName) {
+    synchronized (this.regionPlans) {
+      this.regionPlans.remove(encodedRegionName);
     }
   }
 

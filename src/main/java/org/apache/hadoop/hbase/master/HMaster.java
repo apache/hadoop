@@ -703,10 +703,19 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.getAssignment(encodedRegionName);
     if (p == null)
       throw new UnknownRegionException(Bytes.toString(encodedRegionName));
-    HServerInfo dest =
-      this.serverManager.getServerInfo(new String(destServerName));
-    RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
-    this.assignmentManager.balance(rp);
+    HRegionInfo hri = p.getFirst();
+    HServerInfo dest = null;
+    if (destServerName == null || destServerName.length == 0) {
+      LOG.info("Passed destination servername is null/empty so " +
+        "choosing a server at random");
+      this.assignmentManager.clearRegionPlan(hri.getEncodedName());
+      // Unassign will reassign it elsewhere choosing random server.
+      this.assignmentManager.unassign(hri);
+    } else {
+      dest = this.serverManager.getServerInfo(new String(destServerName));
+      RegionPlan rp = new RegionPlan(p.getFirst(), p.getSecond(), dest);
+      this.assignmentManager.balance(rp);
+    }
   }
 
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
@@ -979,8 +988,28 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return isInitialized;
   }
 
+  @Override
+  public void assign(final byte [] regionName, final boolean force)
+  throws IOException {
+    Pair<HRegionInfo, HServerAddress> pair =
+      MetaReader.getRegion(this.catalogTracker, regionName);
+    if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
+    assignRegion(pair.getFirst());
+  }
+
   public void assignRegion(HRegionInfo hri) {
     assignmentManager.assign(hri, true);
+  }
+
+  @Override
+  public void unassign(final byte [] regionName, final boolean force)
+  throws IOException {
+    Pair<HRegionInfo, HServerAddress> pair =
+      MetaReader.getRegion(this.catalogTracker, regionName);
+    if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
+    HRegionInfo hri = pair.getFirst();
+    if (force) this.assignmentManager.clearRegionFromTransition(hri);
+    this.assignmentManager.unassign(hri, force);
   }
 
   /**

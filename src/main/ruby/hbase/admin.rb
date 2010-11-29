@@ -25,6 +25,7 @@ java_import org.apache.zookeeper.ZooKeeperMain
 java_import org.apache.hadoop.hbase.HColumnDescriptor
 java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.HRegionInfo
+java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.zookeeper.ZooKeeper
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
@@ -70,6 +71,20 @@ module Hbase
     # Requests a table or region split
     def split(table_or_region_name)
       @admin.split(table_or_region_name)
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Requests a cluster balance
+    # Returns true if balancer ran
+    def balancer()
+      @admin.balancer()
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Enable/disable balancer
+    # Returns previous balancer switch setting.
+    def balance_switch(enableDisable)
+      @admin.balanceSwitch(java.lang.Boolean::valueOf(enableDisable))
     end
 
     #----------------------------------------------------------------------------------------------
@@ -150,15 +165,21 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Enables a region
-    def enable_region(region_name)
-      online(region_name, false)
+    # Assign a region
+    def assign(region_name, force)
+      @admin.assign(Bytes::toBytes(region_name), java.lang.Boolean::valueOf(force))
     end
 
     #----------------------------------------------------------------------------------------------
-    # Disables a region
-    def disable_region(region_name)
-      online(region_name, true)
+    # Unassign a region
+    def unassign(region_name, force)
+      @admin.unassign(Bytes::toBytes(region_name), java.lang.Boolean::valueOf(force))
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Move a region
+    def move(encoded_region_name, server = nil)
+      @admin.move(encoded_region_name, server ? [server].to_java: nil)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -363,13 +384,6 @@ module Hbase
       put = Put.new(region_bytes)
       put.add(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER, Writables.getBytes(hri))
       meta.put(put)
-    end
-    #----------------------------------------------------------------------------------------------
-    # Invoke a ZooKeeper maintenance command
-    def zk(args)
-      line = args.join(' ')
-      line = 'help' if line.empty?
-      @zk_main.executeLine(line)
     end
   end
 end

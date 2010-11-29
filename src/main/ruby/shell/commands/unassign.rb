@@ -20,18 +20,22 @@
 
 module Shell
   module Commands
-    class EnableRegion < Command
+    class Unassign < Command
       def help
         return <<-EOF
-Enable a single region. For example:
+Unassign a region. Unassign will close region in current location and then
+reopen it again.  Pass 'true' to force the unassignment ('force' will clear
+all in-memory state in master before the reassign).  Use with caution.  For
+expert use only.  Examples:
 
-  hbase> enable_region 'REGIONNAME'
+  hbase> unassign 'REGIONNAME'
+  hbase> unassign 'REGIONNAME', true
 EOF
       end
 
-      def command(region_name)
+      def command(region_name, force = 'false')
         format_simple_command do
-          admin.enable_region(region_name)
+          admin.unassign(region_name, force)
         end
       end
     end

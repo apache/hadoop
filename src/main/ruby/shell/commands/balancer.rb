@@ -20,18 +20,19 @@
 
 module Shell
   module Commands
-    class DisableRegion < Command
+    class Balancer < Command
       def help
         return <<-EOF
-Disable a single region. For example:
-
-  hbase> disable_region 'REGIONNAME'
+Trigger the cluster balancer. Returns true if balancer ran.  Otherwise
+false (Will not run if regions in transition).
 EOF
       end
 
-      def command(region_name)
+      def command()
         format_simple_command do
-          admin.disable_region(region_name)
+          formatter.row([
+            admin.balancer()? "true": "false"
+          ])
         end
       end
     end
