@@ -290,6 +290,15 @@ public class LruBlockCache implements BlockCache, HeapSize {
     return cb.getBuffer();
   }
 
+
+  @Override
+  public boolean evictBlock(String blockName) {
+    CachedBlock cb = map.get(blockName);
+    if (cb == null) return false;
+    evictBlock(cb);
+    return true;
+  }
+
   protected long evictBlock(CachedBlock block) {
     map.remove(block.getName());
     size.addAndGet(-1 * block.heapSize());

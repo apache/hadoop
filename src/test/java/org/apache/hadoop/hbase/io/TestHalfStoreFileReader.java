@@ -71,7 +71,7 @@ public class TestHalfStoreFileReader {
     }
     w.close();
 
-    HFile.Reader r = new HFile.Reader(fs, p, null, false);
+    HFile.Reader r = new HFile.Reader(fs, p, null, false, false);
     r.loadFileInfo();
     byte [] midkey = r.midkey();
     KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);

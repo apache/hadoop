@@ -127,7 +127,7 @@ public class CompressionTest {
       writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
       writer.close();
 
-      HFile.Reader reader = new HFile.Reader(dfs, path, null, false);
+      HFile.Reader reader = new HFile.Reader(dfs, path, null, false, false);
       reader.loadFileInfo();
       byte[] key = reader.getFirstKey();
       boolean rc = Bytes.toString(key).equals("testkey");

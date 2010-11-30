@@ -60,7 +60,7 @@ public class TestReseekTo {
     fout.close();
 
     HFile.Reader reader = new HFile.Reader(TEST_UTIL.getTestFileSystem(),
-        ncTFile, null, false);
+        ncTFile, null, false, false);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
 

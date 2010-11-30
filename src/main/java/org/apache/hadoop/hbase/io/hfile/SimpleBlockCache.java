@@ -25,6 +25,8 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
+
 
 /**
  * Simple one RFile soft reference cache.
@@ -83,7 +85,18 @@ public class SimpleBlockCache implements BlockCache {
     cache.put(blockName, new Ref(blockName, buf, q));
   }
 
+  @Override
+  public boolean evictBlock(String blockName) {
+    return cache.remove(blockName) != null;
+  }
+
   public void shutdown() {
     // noop
+  }
+
+  @Override
+  public CacheStats getStats() {
+    // TODO: implement this if we ever actually use this block cache
+    return null;
   }
 }

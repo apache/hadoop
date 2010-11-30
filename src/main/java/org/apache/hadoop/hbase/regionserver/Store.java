@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -324,7 +325,7 @@ public class Store implements HeapSize {
       LOG.info("Validating hfile at " + srcPath + " for inclusion in "
           + "store " + this + " region " + this.region);
       reader = new HFile.Reader(srcPath.getFileSystem(conf),
-          srcPath, null, false);
+          srcPath, null, false, false);
       reader.loadFileInfo();
 
       byte[] firstKey = reader.getFirstRowKey();
@@ -527,7 +528,8 @@ public class Store implements HeapSize {
   throws IOException {
     return StoreFile.createWriter(this.fs, region.getTmpDir(), this.blocksize,
         compression, this.comparator, this.conf,
-        this.family.getBloomFilterType(), maxKeyCount);
+        this.family.getBloomFilterType(), maxKeyCount,
+        conf.getBoolean("hbase.rs.cacheblocksonwrite", false));
   }
 
   /*

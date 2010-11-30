@@ -155,8 +155,8 @@ public class TestHFileSeek extends TestCase {
     int miss = 0;
     long totalBytes = 0;
     FSDataInputStream fsdis = fs.open(path);
-    Reader reader =
-      new Reader(fsdis, fs.getFileStatus(path).getLen(), null, false);
+    Reader reader = new Reader(path, fsdis, fs.getFileStatus(path).getLen(),
+        null, false, false);
     reader.loadFileInfo();
     KeySampler kSampler =
         new KeySampler(rng, reader.getFirstKey(), reader.getLastKey(),

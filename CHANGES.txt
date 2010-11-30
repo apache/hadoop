@@ -16,6 +16,10 @@ Release 0.91.0 - Unreleased
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
                Andrew Purtell)
 
+  NEW FEATURES
+   HBASE-3287  Add option to cache blocks on hfile write and evict blocks on
+               hfile close
+
 
 Release 0.90.0 - Unreleased
   INCOMPATIBLE CHANGES

@@ -65,7 +65,7 @@ public class TestHFile extends HBaseTestCase {
     Path f = new Path(ROOT_DIR, getName());
     Writer w = new Writer(this.fs, f);
     w.close();
-    Reader r = new Reader(fs, f, null, false);
+    Reader r = new Reader(fs, f, null, false, false);
     r.loadFileInfo();
     assertNull(r.getFirstKey());
     assertNull(r.getLastKey());
@@ -140,8 +140,8 @@ public class TestHFile extends HBaseTestCase {
     writeRecords(writer);
     fout.close();
     FSDataInputStream fin = fs.open(ncTFile);
-    Reader reader = new Reader(fs.open(ncTFile),
-      fs.getFileStatus(ncTFile).getLen(), null, false);
+    Reader reader = new Reader(ncTFile, fs.open(ncTFile),
+      fs.getFileStatus(ncTFile).getLen(), null, false, false);
     // Load up the index.
     reader.loadFileInfo();
     // Get a scanner that caches and that does not use pread.
@@ -215,8 +215,8 @@ public class TestHFile extends HBaseTestCase {
     writer.close();
     fout.close();
     FSDataInputStream fin = fs.open(mFile);
-    Reader reader = new Reader(fs.open(mFile), this.fs.getFileStatus(mFile)
-        .getLen(), null, false);
+    Reader reader = new Reader(mFile, fs.open(mFile),
+        this.fs.getFileStatus(mFile).getLen(), null, false, false);
     reader.loadFileInfo();
     // No data -- this should return false.
     assertFalse(reader.getScanner(false, false).seekTo());
@@ -240,7 +240,7 @@ public class TestHFile extends HBaseTestCase {
     writer.append("foo".getBytes(), "value".getBytes());
     writer.close();
     fout.close();
-    Reader reader = new Reader(fs, mFile, null, false);
+    Reader reader = new Reader(fs, mFile, null, false, false);
     reader.loadFileInfo();
     assertNull(reader.getMetaBlock("non-existant", false));
   }

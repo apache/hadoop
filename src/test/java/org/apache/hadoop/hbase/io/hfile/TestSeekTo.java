@@ -49,7 +49,7 @@ public class TestSeekTo extends HBaseTestCase {
   }
   public void testSeekBefore() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = new HFile.Reader(fs, p, null, false);
+    HFile.Reader reader = new HFile.Reader(fs, p, null, false, false);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
     assertEquals(false, scanner.seekBefore(Bytes.toBytes("a")));
@@ -82,7 +82,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   public void testSeekTo() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = new HFile.Reader(fs, p, null, false);
+    HFile.Reader reader = new HFile.Reader(fs, p, null, false, false);
     reader.loadFileInfo();
     assertEquals(2, reader.blockIndex.count);
     HFileScanner scanner = reader.getScanner(false, true);
@@ -102,7 +102,7 @@ public class TestSeekTo extends HBaseTestCase {
 
   public void testBlockContainingKey() throws Exception {
     Path p = makeNewFile();
-    HFile.Reader reader = new HFile.Reader(fs, p, null, false);
+    HFile.Reader reader = new HFile.Reader(fs, p, null, false, false);
     reader.loadFileInfo();
     System.out.println(reader.blockIndex.toString());
     // falls before the start of the file.
