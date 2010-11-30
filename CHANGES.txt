@@ -721,6 +721,7 @@ Release 0.90.0 - Unreleased
    HBASE-3267  close_region shell command breaks region
    HBASE-3265  Regionservers waiting for ROOT while Master waiting for RegionServers
    HBASE-3263  Stack overflow in AssignmentManager
+   HBASE-3234  hdfs-724 "breaks" TestHBaseTestingUtility multiClusters
 
 
   IMPROVEMENTS
