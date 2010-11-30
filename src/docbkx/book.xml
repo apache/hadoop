@@ -564,7 +564,7 @@ that you would have running <application>HRegionServer</application>s, one host 
 listed in this file will be started and stopped when HBase cluster start or stop is run.</para>
 </section>
 
-<section xml:id="zookeeper"><title><indexterm><primary>ZooKeeper</primary></indexterm></title>
+<section xml:id="zookeeper"><title>ZooKeeper<indexterm><primary>ZooKeeper</primary></indexterm></title>
 <para>A distributed HBase depends on a running ZooKeeper cluster.
 All participating nodes and clients
 need to be able to access the running ZooKeeper ensemble.
