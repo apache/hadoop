@@ -838,6 +838,7 @@ public class AssignmentManager extends ZooKeeperListener {
         state.update(RegionState.State.PENDING_OPEN);
         // Send OPEN RPC. This can fail if the server on other end is is not up.
         serverManager.sendRegionOpen(plan.getDestination(), state.getRegion());
+        break;
       } catch (Throwable t) {
         LOG.warn("Failed assignment of " +
           state.getRegion().getRegionNameAsString() + " to " +
