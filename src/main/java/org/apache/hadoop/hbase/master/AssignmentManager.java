@@ -96,7 +96,7 @@ public class AssignmentManager extends ZooKeeperListener {
   /*
    * Maximum times we recurse an assignment.  See below in {@link #assign()}.
    */
-  private final int maximumAssignmentRecursions;
+  private final int maximumAssignmentAttempts;
 
   /**
    * Regions currently in transition.  Map of encoded region names to the master
@@ -163,8 +163,8 @@ public class AssignmentManager extends ZooKeeperListener {
     Threads.setDaemonThreadRunning(timeoutMonitor,
       master.getServerName() + ".timeoutMonitor");
     this.zkTable = new ZKTable(this.master.getZooKeeper());
-    this.maximumAssignmentRecursions =
-      this.master.getConfiguration().getInt("hbase.assignment.maximum.recursions", 10);
+    this.maximumAssignmentAttempts =
+      this.master.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10);
   }
 
   /**
@@ -823,51 +823,37 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private void assign(final RegionState state, final boolean setOfflineInZK,
       final boolean forceNewPlan) {
-    assign(state, setOfflineInZK, forceNewPlan, new AtomicInteger(0));
-  }
-
-  /**
-   * Caller must hold lock on the passed <code>state</code> object.
-   * @param state
-   * @param setOfflineInZK
-   * @param forceNewPlan
-   * @param recursions Keep a count so can have upper bound on recursions.
-   */
-  private void assign(final RegionState state, final boolean setOfflineInZK,
-      final boolean forceNewPlan, final int recursions) {
-    if (setOfflineInZK && !setOfflineInZooKeeper(state)) return;
-    if (this.master.isStopped()) {
-      LOG.debug("Server stopped; skipping assign of " + state);
-      return;
-    }
-    RegionPlan plan = getRegionPlan(state, forceNewPlan);
-    if (plan == null) return; // Should get reassigned later when RIT times out.
-    try {
-      LOG.debug("Assigning region " + state.getRegion().getRegionNameAsString() +
-        " to " + plan.getDestination().getServerName());
-      // Transition RegionState to PENDING_OPEN
-      state.update(RegionState.State.PENDING_OPEN);
-      // Send OPEN RPC. This can fail if the server on other end is is not up.
-      serverManager.sendRegionOpen(plan.getDestination(), state.getRegion());
-    } catch (Throwable t) {
-      LOG.warn("Failed assignment of " +
-        state.getRegion().getRegionNameAsString() + " to " +
-        plan.getDestination() + ", trying to assign elsewhere instead; retry=" +
-        recursions, t);
-      // Clean out plan we failed execute and one that doesn't look like it'll
-      // succeed anyways; we need a new plan!
-      // Transition back to OFFLINE
-      state.update(RegionState.State.OFFLINE);
-      // Force a new plan and reassign.  Will return null if no servers.
-      if (getRegionPlan(state, plan.getDestination(), true) == null) {
-        LOG.warn("Unable to find a viable location to assign region " +
-          state.getRegion().getRegionNameAsString());
+    for (int i = 0; i < this.maximumAssignmentAttempts; i++) {
+      if (setOfflineInZK && !setOfflineInZooKeeper(state)) return;
+      if (this.master.isStopped()) {
+        LOG.debug("Server stopped; skipping assign of " + state);
         return;
       }
-      if (recursions < this.maximumAssignmentRecursions) {
-        assign(state, false, false, recursions + 1);
+      RegionPlan plan = getRegionPlan(state, forceNewPlan);
+      if (plan == null) return; // Should get reassigned later when RIT times out.
+      try {
+        LOG.debug("Assigning region " + state.getRegion().getRegionNameAsString() +
+          " to " + plan.getDestination().getServerName());
+        // Transition RegionState to PENDING_OPEN
+        state.update(RegionState.State.PENDING_OPEN);
+        // Send OPEN RPC. This can fail if the server on other end is is not up.
+        serverManager.sendRegionOpen(plan.getDestination(), state.getRegion());
+      } catch (Throwable t) {
+        LOG.warn("Failed assignment of " +
+          state.getRegion().getRegionNameAsString() + " to " +
+          plan.getDestination() + ", trying to assign elsewhere instead; " +
+          "retry=" + i, t);
+        // Clean out plan we failed execute and one that doesn't look like it'll
+        // succeed anyways; we need a new plan!
+        // Transition back to OFFLINE
+        state.update(RegionState.State.OFFLINE);
+        // Force a new plan and reassign.  Will return null if no servers.
+        if (getRegionPlan(state, plan.getDestination(), true) == null) {
+          LOG.warn("Unable to find a viable location to assign region " +
+            state.getRegion().getRegionNameAsString());
+          return;
+        }
       }
-      // Else Just leave the region in RIT.  On timeout, we'll retry later.
     }
   }
 
