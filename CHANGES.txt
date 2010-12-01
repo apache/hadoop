@@ -731,6 +731,7 @@ Release 0.90.0 - Unreleased
                of .META.
    HBASE-3294  WARN org.apache.hadoop.hbase.regionserver.Store: Not in set
                (double-remove?) org.apache.hadoop.hbase.regionserver.StoreScanner@76607d3d
+   HBASE-3299   If failed open, we don't output the IOE
 
 
   IMPROVEMENTS

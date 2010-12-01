@@ -111,8 +111,8 @@ public class OpenRegionHandler extends EventHandler {
           }
         });
     } catch (IOException e) {
-      LOG.error("IOException instantiating region for " + regionInfo +
-        "; resetting state of transition node from OPENING to OFFLINE");
+      LOG.error("Failed open of " + regionInfo +
+        "; resetting state of transition node from OPENING to OFFLINE", e);
       try {
         // TODO: We should rely on the master timing out OPENING instead of this
         // TODO: What if this was a split open?  The RS made the OFFLINE
