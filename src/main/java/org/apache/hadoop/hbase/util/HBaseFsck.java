@@ -26,6 +26,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -81,7 +83,7 @@ public class HBaseFsck {
   private boolean rerun = false; // if we tried to fix something rerun hbck
   private static boolean summary = false; // if we want to print less output
   // Empty regioninfo qualifiers in .META.
-  private TreeSet<Result> emptyRegionInfoQualifiers = new TreeSet<Result>();
+  private Set<Result> emptyRegionInfoQualifiers = new HashSet<Result>();
 
   /**
    * Constructor
