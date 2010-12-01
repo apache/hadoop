@@ -729,6 +729,8 @@ Release 0.90.0 - Unreleased
    HBASE-3286  Master passes IP and not hostname back to region server
    HBASE-3297  If rows in .META. with no HRegionInfo cell, then hbck fails read
                of .META.
+   HBASE-3294  WARN org.apache.hadoop.hbase.regionserver.Store: Not in set
+               (double-remove?) org.apache.hadoop.hbase.regionserver.StoreScanner@76607d3d
 
 
   IMPROVEMENTS

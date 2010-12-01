@@ -204,8 +204,8 @@ public class MetaEditor {
     delete.deleteColumns(HConstants.CATALOG_FAMILY, qualifier);
     catalogTracker.waitForMetaServerConnectionDefault().
       delete(CatalogTracker.META_REGION, delete);
-    LOG.info("Deleted daughter " + daughter.getRegionNameAsString() +
-      " " + Bytes.toString(qualifier) + " reference in parent " +
+    LOG.info("Deleted daughter reference " + daughter.getRegionNameAsString() +
+      ", qualifier=" + Bytes.toString(qualifier) + ", from parent " +
       parent.getRegionNameAsString());
   }
 

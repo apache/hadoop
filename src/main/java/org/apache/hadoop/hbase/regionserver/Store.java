@@ -579,9 +579,8 @@ public class Store implements HeapSize {
    * @param o Observer no longer interested in changes in set of Readers.
    */
   void deleteChangedReaderObserver(ChangedReadersObserver o) {
-    if (!this.changedReaderObservers.remove(o)) {
-      LOG.warn("Not in set (double-remove?) " + o);
-    }
+    // We don't check if observer present; it may not be (legitimately)
+    this.changedReaderObservers.remove(o);
   }
 
   //////////////////////////////////////////////////////////////////////////////
