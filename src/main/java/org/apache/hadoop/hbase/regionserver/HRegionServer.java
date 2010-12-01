@@ -801,32 +801,23 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   protected void handleReportForDutyResponse(final MapWritable c) throws IOException {
     try {
       for (Map.Entry<Writable, Writable> e : c.entrySet()) {
+
         String key = e.getKey().toString();
+        // Use the address the master passed us
+        if (key.equals("hbase.regionserver.address")) {
+          HServerAddress hsa = (HServerAddress) e.getValue();
+          LOG.info("Master passed us address to use. Was="
+            + this.serverInfo.getServerAddress() + ", Now=" + hsa.toString());
+          this.serverInfo.setServerAddress(hsa);
+          continue;
+        }
         String value = e.getValue().toString();
         if (LOG.isDebugEnabled()) {
           LOG.debug("Config from master: " + key + "=" + value);
         }
         this.conf.set(key, value);
       }
-      // Master may have sent us a new address with the other configs.
-      // Update our address in this case. See HBASE-719
-      String hra = conf.get("hbase.regionserver.address");
-      // TODO: The below used to be this.address != null. Was broken by what
-      // looks like a mistake in:
-      //
-      // HBASE-1215 migration; metautils scan of meta region was broken;
-      // wouldn't see first row
-      // ------------------------------------------------------------------------
-      // r796326 | stack | 2009-07-21 07:40:34 -0700 (Tue, 21 Jul 2009) | 38
-      // lines
-      if (hra != null) {
-        HServerAddress hsa = new HServerAddress(hra, this.serverInfo
-            .getServerAddress().getPort());
-        LOG.info("Master passed us address to use. Was="
-            + this.serverInfo.getServerAddress() + ", Now=" + hsa.toString());
-        this.serverInfo.setServerAddress(hsa);
-      }
-
+      
       // hack! Maps DFSClient => RegionServer for logs.  HDFS made this
       // config param for task trackers, but we can piggyback off of it.
       if (this.conf.get("mapred.task.id") == null) {

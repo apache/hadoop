@@ -62,7 +62,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
     String host = hostAndPort.substring(0, colonIndex);
     int port = Integer.parseInt(hostAndPort.substring(colonIndex + 1));
     this.address = new InetSocketAddress(host, port);
-    this.stringValue = hostAndPort;
+    this.stringValue = address.getHostName() + ":" + port;
     checkBindAddressCanBeResolved();
   }
 
@@ -72,7 +72,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
    */
   public HServerAddress(String bindAddress, int port) {
     this.address = new InetSocketAddress(bindAddress, port);
-    this.stringValue = bindAddress + ":" + port;
+    this.stringValue = address.getHostName() + ":" + port;
     checkBindAddressCanBeResolved();
   }
 
@@ -156,15 +156,15 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
   //
 
   public void readFields(DataInput in) throws IOException {
-    String bindAddress = in.readUTF();
+    String hostname = in.readUTF();
     int port = in.readInt();
 
-    if (bindAddress == null || bindAddress.length() == 0) {
+    if (hostname == null || hostname.length() == 0) {
       address = null;
       stringValue = null;
     } else {
-      address = new InetSocketAddress(bindAddress, port);
-      stringValue = bindAddress + ":" + port;
+      address = new InetSocketAddress(hostname, port);
+      stringValue = hostname + ":" + port;
       checkBindAddressCanBeResolved();
     }
   }
@@ -174,7 +174,7 @@ public class HServerAddress implements WritableComparable<HServerAddress> {
       out.writeUTF("");
       out.writeInt(0);
     } else {
-      out.writeUTF(address.getAddress().getHostAddress());
+      out.writeUTF(address.getAddress().getHostName());
       out.writeInt(address.getPort());
     }
   }

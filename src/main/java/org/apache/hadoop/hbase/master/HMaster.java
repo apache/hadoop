@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -599,16 +600,18 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // not the ip that the master sees here.  See at end of this method where
     // we pass it back to the regionserver by setting "hbase.regionserver.address"
     // Everafter, the HSI combination 'server name' is what uniquely identifies
-    // the incoming RegionServer.  No more DNS meddling of this little messing
-    // belose.
-    String rsAddress = HBaseServer.getRemoteAddress();
-    serverInfo.setServerAddress(new HServerAddress(rsAddress,
-      serverInfo.getServerAddress().getPort()));
+    // the incoming RegionServer.
+    InetSocketAddress address = new InetSocketAddress(
+        HBaseServer.getRemoteIp().getHostName(),
+        serverInfo.getServerAddress().getPort());
+    serverInfo.setServerAddress(new HServerAddress(address));
+
     // Register with server manager
     this.serverManager.regionServerStartup(serverInfo, serverCurrentTime);
     // Send back some config info
     MapWritable mw = createConfigurationSubset();
-     mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
+     mw.put(new Text("hbase.regionserver.address"),
+         serverInfo.getServerAddress());
     return mw;
   }
 
