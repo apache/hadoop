@@ -954,7 +954,7 @@ public class AssignmentManager extends ZooKeeperListener {
         this.regionPlans.put(encodedName, randomPlan);
         return randomPlan;
       }
-      LOG.debug("Using pre-exisitng plan for region " +
+      LOG.debug("Using pre-existing plan for region " +
           state.getRegion().getRegionNameAsString() + "; plan=" + existingPlan);
       return existingPlan;
     }
