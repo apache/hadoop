@@ -93,7 +93,8 @@ libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libhadoop_la_DEPENDENCIES =
 am_libhadoop_la_OBJECTS = ZlibCompressor.lo ZlibDecompressor.lo \
-	getGroup.lo JniBasedUnixGroupsMapping.lo
+	getGroup.lo JniBasedUnixGroupsMapping.lo file_descriptor.lo \
+	errno_enum.lo NativeIO.lo
 libhadoop_la_OBJECTS = $(am_libhadoop_la_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I.
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -222,7 +223,8 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 AM_CPPFLAGS = @JNI_CPPFLAGS@ -I$(HADOOP_NATIVE_SRCDIR)/src \
               -Isrc/org/apache/hadoop/io/compress/zlib \
-              -Isrc/org/apache/hadoop/security
+              -Isrc/org/apache/hadoop/security \
+              -Isrc/org/apache/hadoop/io/nativeio/
 
 AM_LDFLAGS = @JNI_LDFLAGS@ -m$(JVM_DATA_MODEL)
 AM_CFLAGS = -g -Wall -fPIC -O2 -m$(JVM_DATA_MODEL)
@@ -230,9 +232,12 @@ lib_LTLIBRARIES = libhadoop.la
 libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
                        src/org/apache/hadoop/io/compress/zlib/ZlibDecompressor.c \
                        src/org/apache/hadoop/security/getGroup.c \
-                       src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c
+                       src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c \
+                       src/org/apache/hadoop/io/nativeio/file_descriptor.c \
+                       src/org/apache/hadoop/io/nativeio/errno_enum.c \
+                       src/org/apache/hadoop/io/nativeio/NativeIO.c
 
-libhadoop_la_LDFLAGS = -version-info 1:0:0
+libhadoop_la_LDFLAGS = -version-info 1:0:0 $(AM_LDFLAGS)
 libhadoop_la_LIBADD = -ldl -ljvm
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -326,8 +331,11 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/JniBasedUnixGroupsMapping.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/NativeIO.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ZlibCompressor.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ZlibDecompressor.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/errno_enum.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/file_descriptor.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getGroup.Plo@am__quote@
 
 .c.o:
@@ -378,6 +386,27 @@ JniBasedUnixGroupsMapping.lo: src/org/apache/hadoop/security/JniBasedUnixGroupsM
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c' object='JniBasedUnixGroupsMapping.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o JniBasedUnixGroupsMapping.lo `test -f 'src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c' || echo '$(srcdir)/'`src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c
+
+file_descriptor.lo: src/org/apache/hadoop/io/nativeio/file_descriptor.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT file_descriptor.lo -MD -MP -MF "$(DEPDIR)/file_descriptor.Tpo" -c -o file_descriptor.lo `test -f 'src/org/apache/hadoop/io/nativeio/file_descriptor.c' || echo '$(srcdir)/'`src/org/apache/hadoop/io/nativeio/file_descriptor.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/file_descriptor.Tpo" "$(DEPDIR)/file_descriptor.Plo"; else rm -f "$(DEPDIR)/file_descriptor.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/org/apache/hadoop/io/nativeio/file_descriptor.c' object='file_descriptor.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o file_descriptor.lo `test -f 'src/org/apache/hadoop/io/nativeio/file_descriptor.c' || echo '$(srcdir)/'`src/org/apache/hadoop/io/nativeio/file_descriptor.c
+
+errno_enum.lo: src/org/apache/hadoop/io/nativeio/errno_enum.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT errno_enum.lo -MD -MP -MF "$(DEPDIR)/errno_enum.Tpo" -c -o errno_enum.lo `test -f 'src/org/apache/hadoop/io/nativeio/errno_enum.c' || echo '$(srcdir)/'`src/org/apache/hadoop/io/nativeio/errno_enum.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/errno_enum.Tpo" "$(DEPDIR)/errno_enum.Plo"; else rm -f "$(DEPDIR)/errno_enum.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/org/apache/hadoop/io/nativeio/errno_enum.c' object='errno_enum.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o errno_enum.lo `test -f 'src/org/apache/hadoop/io/nativeio/errno_enum.c' || echo '$(srcdir)/'`src/org/apache/hadoop/io/nativeio/errno_enum.c
+
+NativeIO.lo: src/org/apache/hadoop/io/nativeio/NativeIO.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT NativeIO.lo -MD -MP -MF "$(DEPDIR)/NativeIO.Tpo" -c -o NativeIO.lo `test -f 'src/org/apache/hadoop/io/nativeio/NativeIO.c' || echo '$(srcdir)/'`src/org/apache/hadoop/io/nativeio/NativeIO.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/NativeIO.Tpo" "$(DEPDIR)/NativeIO.Plo"; else rm -f "$(DEPDIR)/NativeIO.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/org/apache/hadoop/io/nativeio/NativeIO.c' object='NativeIO.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o NativeIO.lo `test -f 'src/org/apache/hadoop/io/nativeio/NativeIO.c' || echo '$(srcdir)/'`src/org/apache/hadoop/io/nativeio/NativeIO.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
