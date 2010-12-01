@@ -38,6 +38,7 @@ AC_INIT(src/org_apache_hadoop.h)
 AC_CONFIG_SRCDIR([src/org_apache_hadoop.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config.h])
+AC_SYS_LARGEFILE
 
 AM_INIT_AUTOMAKE(hadoop,1.0.0)
 
@@ -94,6 +95,9 @@ AC_C_CONST
 
 # Checks for library functions.
 AC_CHECK_FUNCS([memset])
+
+# Check for nonstandard STRERROR_R
+AC_FUNC_STRERROR_R
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
