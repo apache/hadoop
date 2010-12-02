@@ -301,6 +301,15 @@ public class SplitTransaction {
   void openDaughterRegion(final Server server,
       final RegionServerServices services, final HRegion daughter)
   throws IOException, KeeperException {
+    if (server.isStopped() || services.isStopping()) {
+      MetaEditor.addDaughter(server.getCatalogTracker(),
+        daughter.getRegionInfo(), null);
+      LOG.info("Not opening daughter " +
+        daughter.getRegionInfo().getRegionNameAsString() +
+        " because stopping=" + services.isStopping() + ", stopped=" +
+        server.isStopped());
+      return;
+    }
     HRegionInfo hri = daughter.getRegionInfo();
     LoggingProgressable reporter =
       new LoggingProgressable(hri, server.getConfiguration());

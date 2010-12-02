@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -170,10 +171,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   /**
    * Map of regions currently being served by this region server. Key is the
-   * encoded region name.
+   * encoded region name.  All access should be synchronized.
    */
   protected final Map<String, HRegion> onlineRegions =
-    new ConcurrentHashMap<String, HRegion>();
+    new HashMap<String, HRegion>();
 
   protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   private final LinkedBlockingQueue<HMsg> outboundMsgs = new LinkedBlockingQueue<HMsg>();
@@ -546,11 +547,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // The main run loop.
       for (int tries = 0; !this.stopped && isHealthy();) {
         if (!isClusterUp()) {
-          if (this.onlineRegions.isEmpty()) {
+          if (isOnlineRegionsEmpty()) {
             stop("Exiting; cluster shutdown set and not carrying any regions");
           } else if (!this.stopping) {
-            closeUserRegions(this.abortRequested);
             this.stopping = true;
+            closeUserRegions(this.abortRequested);
           }
         }
         long now = System.currentTimeMillis();
@@ -660,16 +661,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   private void waitOnAllRegionsToClose() {
     // Wait till all regions are closed before going out.
     int lastCount = -1;
-    while (!this.onlineRegions.isEmpty()) {
-      int count = this.onlineRegions.size();
+    while (!isOnlineRegionsEmpty()) {
+      int count = getNumberOfOnlineRegions();
       // Only print a message if the count of regions has changed.
       if (count != lastCount) {
         lastCount = count;
         LOG.info("Waiting on " + count + " regions to close");
         // Only print out regions still closing if a small number else will
         // swamp the log.
-        if (count < 10) {
-          LOG.debug(this.onlineRegions);
+        if (count < 10 && LOG.isDebugEnabled()) {
+          synchronized (this.onlineRegions) {
+            LOG.debug(this.onlineRegions);
+          }
         }
       }
       Threads.sleep(1000);
@@ -721,8 +724,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HServerLoad hsl = new HServerLoad(requestCount.get(),
       (int)(memory.getUsed() / 1024 / 1024),
       (int) (memory.getMax() / 1024 / 1024));
-    for (HRegion r : this.onlineRegions.values()) {
-      hsl.addRegionInfo(createRegionLoad(r));
+    synchronized (this.onlineRegions) {
+      for (HRegion r : this.onlineRegions.values()) {
+        hsl.addRegionInfo(createRegionLoad(r));
+      }
     }
     return hsl;
   }
@@ -884,7 +889,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @throws IOException
    */
   public HServerLoad.RegionLoad createRegionLoad(final String encodedRegionName) {
-    return createRegionLoad(this.onlineRegions.get(encodedRegionName));
+    HRegion r = null;
+    synchronized (this.onlineRegions) {
+      r = this.onlineRegions.get(encodedRegionName);
+    }
+    return createRegionLoad(r);
   }
 
   /*
@@ -1000,15 +1009,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
     @Override
     protected void chore() {
-      for (HRegion r : this.instance.onlineRegions.values()) {
-        try {
-          if (r != null && r.isMajorCompaction()) {
-            // Queue a compaction. Will recognize if major is needed.
-            this.instance.compactSplitThread.requestCompaction(r, getName()
+      synchronized (this.instance.onlineRegions) {
+        for (HRegion r : this.instance.onlineRegions.values()) {
+          try {
+            if (r != null && r.isMajorCompaction()) {
+              // Queue a compaction. Will recognize if major is needed.
+              this.instance.compactSplitThread.requestCompaction(r, getName()
                 + " requests major compaction");
+            }
+          } catch (IOException e) {
+            LOG.warn("Failed major compaction check on " + r, e);
           }
-        } catch (IOException e) {
-          LOG.warn("Failed major compaction check on " + r, e);
         }
       }
     }
@@ -1491,14 +1502,16 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     HRegion root = null;
     this.lock.writeLock().lock();
     try {
-      for (Map.Entry<String, HRegion> e: onlineRegions.entrySet()) {
-        HRegionInfo hri = e.getValue().getRegionInfo();
-        if (hri.isRootRegion()) {
-          root = e.getValue();
-        } else if (hri.isMetaRegion()) {
-          meta = e.getValue();
+      synchronized (this.onlineRegions) {
+        for (Map.Entry<String, HRegion> e: onlineRegions.entrySet()) {
+          HRegionInfo hri = e.getValue().getRegionInfo();
+          if (hri.isRootRegion()) {
+            root = e.getValue();
+          } else if (hri.isMetaRegion()) {
+            meta = e.getValue();
+          }
+          if (meta != null && root != null) break;
         }
-        if (meta != null && root != null) break;
       }
     } finally {
       this.lock.writeLock().unlock();
@@ -2056,11 +2069,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public boolean closeRegion(HRegionInfo region, final boolean zk)
   throws NotServingRegionException {
     LOG.info("Received close region: " + region.getRegionNameAsString());
-    if (!onlineRegions.containsKey(region.getEncodedName())) {
-      LOG.warn("Received close for region we are not serving; " +
-        region.getEncodedName());
-      throw new NotServingRegionException("Received close for "
+    synchronized (this.onlineRegions) {
+      boolean hasit = this.onlineRegions.containsKey(region.getEncodedName());
+      if (!hasit) {
+        LOG.warn("Received close for region we are not serving; " +
+          region.getEncodedName());
+        throw new NotServingRegionException("Received close for "
           + region.getRegionNameAsString() + " but we are not serving it");
+      }
     }
     return closeRegion(region, false, zk);
   }
@@ -2162,7 +2178,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   public int getNumberOfOnlineRegions() {
-    return onlineRegions.size();
+    int size = -1;
+    synchronized (this.onlineRegions) {
+      size = this.onlineRegions.size();
+    }
+    return size;
+  }
+
+  boolean isOnlineRegionsEmpty() {
+    synchronized (this.onlineRegions) {
+      return this.onlineRegions.isEmpty();
+    }
   }
 
   /**
@@ -2172,14 +2198,19 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    * @see #getOnlineRegions()
    */
   public Collection<HRegion> getOnlineRegionsLocalContext() {
-    return Collections.unmodifiableCollection(this.onlineRegions.values());
+    synchronized (this.onlineRegions) {
+      Collection<HRegion> regions = this.onlineRegions.values();
+      return Collections.unmodifiableCollection(regions);
+    }
   }
 
   @Override
   public void addToOnlineRegions(HRegion region) {
     lock.writeLock().lock();
     try {
-      onlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+      synchronized (this.onlineRegions) {
+        this.onlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+      }
     } finally {
       lock.writeLock().unlock();
     }
@@ -2190,7 +2221,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.lock.writeLock().lock();
     HRegion toReturn = null;
     try {
-      toReturn = onlineRegions.remove(encodedName);
+      synchronized (this.onlineRegions) {
+        toReturn = this.onlineRegions.remove(encodedName);
+      }
     } finally {
       this.lock.writeLock().unlock();
     }
@@ -2220,7 +2253,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   @Override
   public HRegion getFromOnlineRegions(final String encodedRegionName) {
-    return onlineRegions.get(encodedRegionName);
+    HRegion r = null;
+    synchronized (this.onlineRegions) {
+      r = this.onlineRegions.get(encodedRegionName);
+    }
+    return r;
   }
 
   /**
@@ -2313,7 +2350,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // TODO: is this locking necessary?
     lock.readLock().lock();
     try {
-      regionsToCheck.addAll(this.onlineRegions.values());
+      synchronized (this.onlineRegions) {
+        regionsToCheck.addAll(this.onlineRegions.values());
+      }
     } finally {
       lock.readLock().unlock();
     }
@@ -2446,12 +2485,14 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   public HRegionInfo[] getRegionsAssignment() throws IOException {
-    HRegionInfo[] regions = new HRegionInfo[onlineRegions.size()];
-    Iterator<HRegion> ite = onlineRegions.values().iterator();
-    for (int i = 0; ite.hasNext(); i++) {
-      regions[i] = ite.next().getRegionInfo();
+    synchronized (this.onlineRegions) {
+      HRegionInfo [] regions = new HRegionInfo[getNumberOfOnlineRegions()];
+      Iterator<HRegion> ite = onlineRegions.values().iterator();
+      for (int i = 0; ite.hasNext(); i++) {
+        regions[i] = ite.next().getRegionInfo();
+      }
+      return regions;
     }
-    return regions;
   }
 
   /** {@inheritDoc} */
