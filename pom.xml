@@ -115,8 +115,8 @@
       <name>Lars George</name>
       <email>larsgeorge@apache.org</email>
       <timezone>+1</timezone>
-      <organization>WorldLingo</organization>
-      <organizationUrl>http://www.worldlingo.com/</organizationUrl>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com/</organizationUrl>
     </developer>
     <developer>
       <id>nspiegelberg</id>
