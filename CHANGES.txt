@@ -736,6 +736,8 @@ Release 0.90.0 - Unreleased
    HBASE-3291  If split happens while regionserver is going down, we can stick open.
    HBASE-3295  Dropping a 1k+ regions table likely ends in a client socket timeout
                and it's very confusing
+   HBASE-3301  Treat java.net.SocketTimeoutException same as ConnectException
+               assigning/unassigning regions
 
 
   IMPROVEMENTS

@@ -1031,11 +1031,13 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.debug("Server " + server + " region CLOSE RPC returned false");
     } catch (NotServingRegionException nsre) {
       // Failed to close, so pass through and reassign
-      LOG.info("Server " + server + " returned NotServingRegionException");
+      LOG.info("Server " + server + " returned " + nsre);
     } catch (ConnectException e) {
       // Failed to connect, so pass through and reassign
-      LOG.info("Server " + server + " returned ConnectException " +
-        e.getMessage());
+      LOG.info("Server " + server + " returned " + e.getMessage());
+    } catch (java.net.SocketTimeoutException e) {
+      // Failed to connect, so pass through and reassign
+      LOG.info("Server " + server + " returned " + e.getMessage());
     } catch (RemoteException re) {
       if (re.unwrapRemoteException() instanceof NotServingRegionException) {
         // Failed to close, so pass through and reassign
