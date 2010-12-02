@@ -1036,7 +1036,7 @@ to ensure well-formedness of your document after an edit session.
       fixup on the new machine.  In versions since HBase 0.90.0, we should
       fail in a way that makes it plain what the problem is, but maybe not.
       Remember you read this paragraph<footnote><para>See
-      <link linkend="hbase.regionserver.codec">hbase.regionserver.codec</link>
+      <link linkend="hbase.regionserver.codecs">hbase.regionserver.codecs</link>
       for a feature to help protect against failed LZO install</para></footnote>.
       </para>
       </section>
@@ -1791,22 +1791,22 @@ to ensure well-formedness of your document after an edit session.
     </para>
     </section>
 
-    <section id="hbase.regionserver.codec">
+    <section id="hbase.regionserver.codecs">
     <title>
     <varname>
-    hbase.regionserver.codec
+    hbase.regionserver.codecs
     </varname>
     </title>
     <para>
     To have a RegionServer test a set of codecs and fail-to-start if any
     code is missing or misinstalled, add the configuration
     <varname>
-    hbase.regionserver.codec
+    hbase.regionserver.codecs
     </varname>
     to your <filename>hbase-site.xml</filename> with a value of
     codecs to test on startup.  For example if the 
     <varname>
-    hbase.regionserver.codec
+    hbase.regionserver.codecs
     </varname> value is <code>lzo,gz</code> and if lzo is not present
     or improperly installed, the misconfigured RegionServer will fail
     to start.
