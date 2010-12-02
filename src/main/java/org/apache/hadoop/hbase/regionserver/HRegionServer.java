@@ -552,6 +552,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           } else if (!this.stopping) {
             this.stopping = true;
             closeUserRegions(this.abortRequested);
+          } else if (this.stopping && LOG.isDebugEnabled()) {
+            LOG.debug("Waiting on " + getOnlineRegionsAsPrintableString());
           }
         }
         long now = System.currentTimeMillis();
@@ -653,6 +655,17 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       join();
     }
     LOG.info(Thread.currentThread().getName() + " exiting");
+  }
+
+  String getOnlineRegionsAsPrintableString() {
+    StringBuilder sb = new StringBuilder();
+    synchronized (this.onlineRegions) {
+      for (HRegion r: this.onlineRegions.values()) {
+        if (sb.length() > 0) sb.append(", ");
+        sb.append(r.getRegionInfo().getEncodedName());
+      }
+    }
+    return sb.toString();
   }
 
   /**
