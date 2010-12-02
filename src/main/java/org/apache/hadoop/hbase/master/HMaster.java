@@ -804,7 +804,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   public void deleteTable(final byte [] tableName) throws IOException {
-    new DeleteTableHandler(tableName, this, this).process();
+    this.executorService.submit(new DeleteTableHandler(tableName, this, this));
   }
 
   public void addColumn(byte [] tableName, HColumnDescriptor column)

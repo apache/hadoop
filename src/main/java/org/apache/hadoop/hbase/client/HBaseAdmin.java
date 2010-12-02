@@ -68,6 +68,10 @@ public class HBaseAdmin implements Abortable {
   private volatile Configuration conf;
   private final long pause;
   private final int numRetries;
+  // Some operations can take a long time such as disable of big table.
+  // numRetries is for 'normal' stuff... Mutliply by this factor when
+  // want to wait a long time.
+  private final int retryLongerMultiplier;
 
   /**
    * Constructor
@@ -82,6 +86,7 @@ public class HBaseAdmin implements Abortable {
     this.conf = conf;
     this.pause = conf.getLong("hbase.client.pause", 1000);
     this.numRetries = conf.getInt("hbase.client.retries.number", 10);
+    this.retryLongerMultiplier = conf.getInt("hbase.client.retries.longer.multiplier", 10);
     this.connection.getMaster();
   }
 
@@ -367,11 +372,11 @@ public class HBaseAdmin implements Abortable {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
     final int batchCount = this.conf.getInt("hbase.admin.scanner.caching", 10);
-    // Wait until first region is deleted
+    // Wait until all regions deleted
     HRegionInterface server =
       connection.getHRegionConnection(firstMetaServer.getServerAddress());
     HRegionInfo info = new HRegionInfo();
-    for (int tries = 0; tries < numRetries; tries++) {
+    for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       long scannerId = -1L;
       try {
         Scan scan = new Scan().addColumn(HConstants.CATALOG_FAMILY,
@@ -449,7 +454,7 @@ public class HBaseAdmin implements Abortable {
  
     // Wait until all regions are enabled
     boolean enabled = false;
-    for (int tries = 0; tries < this.numRetries; tries++) {
+    for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       enabled = isTableEnabled(tableName);
       if (enabled) {
         break;
@@ -534,7 +539,7 @@ public class HBaseAdmin implements Abortable {
   }
 
   /**
-   * Disable table and wait on completion.  May timeout.  Use
+   * Disable table and wait on completion.  May timeout eventually.  Use
    * {@link #disableTableAsync(byte[])} and {@link #isTableDisabled(String)}
    * instead.
    * @param tableName
@@ -545,7 +550,7 @@ public class HBaseAdmin implements Abortable {
     disableTableAsync(tableName);
     // Wait until table is disabled
     boolean disabled = false;
-    for (int tries = 0; tries < this.numRetries; tries++) {
+    for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       disabled = isTableDisabled(tableName);
       if (disabled) {
         break;
