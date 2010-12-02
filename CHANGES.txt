@@ -738,6 +738,7 @@ Release 0.90.0 - Unreleased
                and it's very confusing
    HBASE-3301  Treat java.net.SocketTimeoutException same as ConnectException
                assigning/unassigning regions
+   HBASE-3296  Newly created table ends up disabled instead of assigned
 
 
   IMPROVEMENTS

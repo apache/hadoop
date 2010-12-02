@@ -767,18 +767,27 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       throw new TableExistsException(tableName);
     }
     for(HRegionInfo newRegion : newRegions) {
-      // 1. Create HRegion
+
+      // 1. Set table enabling flag up in zk.
+      try {
+        assignmentManager.getZKTable().setEnabledTable(tableName);
+      } catch (KeeperException e) {
+        throw new IOException("Unable to ensure that the table will be" +
+            " enabled because of a ZooKeeper issue", e);
+      }
+
+      // 2. Create HRegion
       HRegion region = HRegion.createHRegion(newRegion,
           fileSystemManager.getRootDir(), conf);
 
-      // 2. Insert into META
+      // 3. Insert into META
       MetaEditor.addRegionToMeta(catalogTracker, region.getRegionInfo());
 
-      // 3. Close the new region to flush to disk.  Close log file too.
+      // 4. Close the new region to flush to disk.  Close log file too.
       region.close();
       region.getLog().closeAndDelete();
 
-      // 4. Trigger immediate assignment of this region
+      // 5. Trigger immediate assignment of this region
       assignmentManager.assign(region.getRegionInfo(), true);
     }
 
