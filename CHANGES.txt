@@ -1220,6 +1220,7 @@ Release 0.90.0 - Unreleased
                and output side.
    HBASE-3223  Get VersionInfo for Running HBase Process
                (Nicolas Spiegelberg via Stack)
+   HBASE-3303  Lower hbase.regionserver.handler.count from 25 back to 10
 
 
   NEW FEATURES

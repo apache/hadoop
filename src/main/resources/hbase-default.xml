@@ -163,10 +163,10 @@
   </property>
   <property>
     <name>hbase.regionserver.handler.count</name>
-    <value>25</value>
+    <value>10</value>
     <description>Count of RPC Server instances spun up on RegionServers
     Same property is used by the Master for count of master handlers.
-    Default is 25.
+    Default is 10.
     </description>
   </property>
   <property>
