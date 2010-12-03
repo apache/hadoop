@@ -173,17 +173,6 @@
       </releases>
     </repository>
     <repository>
-      <id>apache-rsync</id>
-      <name>Apache ibiblio rsync repository</name>
-      <url>http://people.apache.org/repo/m2-ibiblio-rsync-repository/</url>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <repository>
       <id>java.net</id>
       <name>Java.Net</name>
       <url>http://download.java.net/maven/2/</url>
