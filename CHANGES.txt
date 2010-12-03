@@ -742,6 +742,7 @@ Release 0.90.0 - Unreleased
                assigning/unassigning regions
    HBASE-3296  Newly created table ends up disabled instead of assigned
    HBASE-3304  Get spurious master fails during bootup
+   HBASE-3298  Regionserver can close during a split causing double assignment
 
 
   IMPROVEMENTS

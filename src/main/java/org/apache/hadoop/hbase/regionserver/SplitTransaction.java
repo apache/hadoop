@@ -200,6 +200,15 @@ public class SplitTransaction {
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
 
     List<StoreFile> hstoreFilesToSplit = this.parent.close(false);
+    if (hstoreFilesToSplit == null) {
+      // The region was closed by a concurrent thread.  We can't continue
+      // with the split, instead we must just abandon the split.  If we
+      // reopen or split this could cause problems because the region has
+      // probably already been moved to a different server, or is in the
+      // process of moving to a different server.
+      throw new IOException("Failed to close region: already closed by " +
+        "another thread");
+    }
     this.journal.add(JournalEntry.CLOSED_PARENT_REGION);
 
     if (!testing) {

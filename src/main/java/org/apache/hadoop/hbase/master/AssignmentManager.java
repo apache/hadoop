@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -108,11 +108,9 @@ public class AssignmentManager extends ZooKeeperListener {
   /** Plans for region movement. Key is the encoded version of a region name*/
   // TODO: When do plans get cleaned out?  Ever? In server open and in server
   // shutdown processing -- St.Ack
-  // TODO: Better to just synchronize access around regionPlans?  I think that
-  //       would be better than a concurrent structure since we do more than
-  //       one operation at a time -- jgray
-  final ConcurrentNavigableMap<String, RegionPlan> regionPlans =
-    new ConcurrentSkipListMap<String, RegionPlan>();
+  // All access to this Map must be synchronized.
+  final NavigableMap<String, RegionPlan> regionPlans =
+    new TreeMap<String, RegionPlan>();
 
   private final ZKTable zkTable;
 
@@ -538,7 +536,7 @@ public class AssignmentManager extends ZooKeeperListener {
       addToServers(serverInfo, regionInfo);
     }
     // Remove plan if one.
-    this.regionPlans.remove(regionInfo.getEncodedName());
+    clearRegionPlan(regionInfo);
     // Update timers for all regions in transition going against this server.
     updateTimers(serverInfo);
   }
@@ -557,18 +555,23 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param hsi
    */
   private void updateTimers(final HServerInfo hsi) {
-    // This loop could be expensive
-    for (Map.Entry<String, RegionPlan> e: this.regionPlans.entrySet()) {
-      if (e.getValue().getDestination().equals(hsi)) {
-        RegionState rs = null;
-        synchronized (this.regionsInTransition) {
-          rs = this.regionsInTransition.get(e.getKey());
-        }
-        if (rs != null) {
-          synchronized (rs) {
-            rs.update(rs.getState());
-          }
-        }
+    // This loop could be expensive.
+    // First make a copy of current regionPlan rather than hold sync while
+    // looping because holding sync can cause deadlock.  Its ok in this loop
+    // if the Map we're going against is a little stale
+    Map<String, RegionPlan> copy = new HashMap<String, RegionPlan>();
+    synchronized(this.regionPlans) {
+      copy.putAll(this.regionPlans);
+    }
+    for (Map.Entry<String, RegionPlan> e: copy.entrySet()) {
+      if (!e.getValue().getDestination().equals(hsi)) continue;
+      RegionState rs = null;
+      synchronized (this.regionsInTransition) {
+        rs = this.regionsInTransition.get(e.getKey());
+      }
+      if (rs == null) continue;
+      synchronized (rs) {
+        rs.update(rs.getState());
       }
     }
   }
@@ -586,6 +589,8 @@ public class AssignmentManager extends ZooKeeperListener {
         this.regionsInTransition.notifyAll();
       }
     }
+    // remove the region plan as well just in case.
+    clearRegionPlan(regionInfo);
     setOffline(regionInfo);
   }
 
@@ -681,6 +686,7 @@ public class AssignmentManager extends ZooKeeperListener {
       final List<HRegionInfo> regions) {
     LOG.debug("Bulk assigning " + regions.size() + " region(s) to " +
       destination.getServerName());
+
     List<RegionState> states = new ArrayList<RegionState>(regions.size());
     synchronized (this.regionsInTransition) {
       for (HRegionInfo region: regions) {
@@ -941,23 +947,28 @@ public class AssignmentManager extends ZooKeeperListener {
     if (servers.isEmpty()) return null;
     RegionPlan randomPlan = new RegionPlan(state.getRegion(), null,
       LoadBalancer.randomAssignment(servers));
+    boolean newPlan = false;
+    RegionPlan existingPlan = null;
     synchronized (this.regionPlans) {
-      RegionPlan existingPlan = this.regionPlans.get(encodedName);
+      existingPlan = this.regionPlans.get(encodedName);
       if (existingPlan == null || forceNewPlan ||
           existingPlan.getDestination().equals(serverToExclude)) {
-        LOG.debug("No previous transition plan was found (or we are ignoring " +
-            "an existing plan) for " + state.getRegion().getRegionNameAsString()
-            + " so generated a random one; " + randomPlan + "; " +
-            serverManager.countOfRegionServers() +
-            " (online=" + serverManager.getOnlineServers().size() +
-            ", exclude=" + serverToExclude + ") available servers");
+        newPlan = true;
         this.regionPlans.put(encodedName, randomPlan);
+      }
+    }
+    if (newPlan) {
+      LOG.debug("No previous transition plan was found (or we are ignoring " +
+        "an existing plan) for " + state.getRegion().getRegionNameAsString() +
+        " so generated a random one; " + randomPlan + "; " +
+        serverManager.countOfRegionServers() +
+        " (online=" + serverManager.getOnlineServers().size() +
+        ", exclude=" + serverToExclude + ") available servers");
         return randomPlan;
       }
       LOG.debug("Using pre-existing plan for region " +
-          state.getRegion().getRegionNameAsString() + "; plan=" + existingPlan);
+        state.getRegion().getRegionNameAsString() + "; plan=" + existingPlan);
       return existingPlan;
-    }
   }
 
   /**
@@ -1384,15 +1395,15 @@ public class AssignmentManager extends ZooKeeperListener {
         }
       }
     }
-    clearRegionPlan(hri.getEncodedName());
+    clearRegionPlan(hri);
   }
 
   /**
-   * @param encodedRegionName Region whose plan we are to clear.
+   * @param region Region whose plan we are to clear.
    */
-  void clearRegionPlan(final String encodedRegionName) {
+  void clearRegionPlan(final HRegionInfo region) {
     synchronized (this.regionPlans) {
-      this.regionPlans.remove(encodedRegionName);
+      this.regionPlans.remove(region.getEncodedName());
     }
   }
 
@@ -1646,6 +1657,24 @@ public class AssignmentManager extends ZooKeeperListener {
   public void handleSplitReport(final HServerInfo hsi, final HRegionInfo parent,
       final HRegionInfo a, final HRegionInfo b) {
     regionOffline(parent);
+    // Remove any CLOSING node, if exists, due to race between master & rs
+    // for close & split.  Not putting into regionOffline method because it is
+    // called from various locations.
+    try {
+      RegionTransitionData node = ZKAssign.getDataNoWatch(this.watcher,
+        parent.getEncodedName(), null);
+      if (node != null) {
+        if (node.getEventType().equals(EventType.RS_ZK_REGION_CLOSING)) {
+          ZKAssign.deleteClosingNode(this.watcher, parent);
+        } else {
+          LOG.warn("Split report has RIT node (shouldnt have one): " +
+            parent + " node: " + node);
+        }
+      }
+    } catch (KeeperException e) {
+      LOG.warn("Exception while validating RIT during split report", e);
+    }
+
     regionOnline(a, hsi);
     regionOnline(b, hsi);
 
@@ -1706,7 +1735,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * @param plan Plan to execute.
    */
   void balance(final RegionPlan plan) {
-    this.regionPlans.put(plan.getRegionName(), plan);
+    synchronized (this.regionPlans) {
+      this.regionPlans.put(plan.getRegionName(), plan);
+    }
     unassign(plan.getRegionInfo());
   }
 

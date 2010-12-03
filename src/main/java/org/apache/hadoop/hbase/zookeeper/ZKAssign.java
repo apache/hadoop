@@ -355,13 +355,14 @@ public class ZKAssign {
    * of the specified regions transition to being closed.
    *
    * @param zkw zk reference
-   * @param regionName closing region to be deleted from zk
+   * @param region closing region to be deleted from zk
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
   public static boolean deleteClosingNode(ZooKeeperWatcher zkw,
-      String regionName)
+      HRegionInfo region)
   throws KeeperException, KeeperException.NoNodeException {
+    String regionName = region.getEncodedName();
     return deleteNode(zkw, regionName, EventType.RS_ZK_REGION_CLOSING);
   }
 
@@ -381,7 +382,7 @@ public class ZKAssign {
    * of the specified regions transition to being closed.
    *
    * @param zkw zk reference
-   * @param region region to be deleted from zk
+   * @param regionName region to be deleted from zk
    * @param expectedState state region must be in for delete to complete
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
@@ -467,9 +468,11 @@ public class ZKAssign {
   throws KeeperException, KeeperException.NodeExistsException {
     LOG.debug(zkw.prefix("Creating unassigned node for " +
       region.getEncodedName() + " in a CLOSING state"));
+
     RegionTransitionData data = new RegionTransitionData(
         EventType.RS_ZK_REGION_CLOSING, region.getRegionName(), serverName);
-    synchronized(zkw.getNodes()) {
+
+    synchronized (zkw.getNodes()) {
       String node = getNodeName(zkw, region.getEncodedName());
       zkw.getNodes().add(node);
       return ZKUtil.createAndWatch(zkw, node, data.getBytes());

@@ -711,7 +711,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     if (destServerName == null || destServerName.length == 0) {
       LOG.info("Passed destination servername is null/empty so " +
         "choosing a server at random");
-      this.assignmentManager.clearRegionPlan(hri.getEncodedName());
+      this.assignmentManager.clearRegionPlan(hri);
       // Unassign will reassign it elsewhere choosing random server.
       this.assignmentManager.unassign(hri);
     } else {

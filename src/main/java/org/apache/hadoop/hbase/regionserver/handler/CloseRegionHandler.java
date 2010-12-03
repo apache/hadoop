@@ -114,11 +114,18 @@ public class CloseRegionHandler extends EventHandler {
     // Close the region
     try {
       // TODO: If we need to keep updating CLOSING stamp to prevent against
-      //       a timeout if this is long-running, need to spin up a thread?
-      region.close(abort);
+      // a timeout if this is long-running, need to spin up a thread?
+      if (region.close(abort) == null) {
+        // This region got closed.  Most likely due to a split. So instead
+        // of doing the setClosedState() below, let's just ignore and continue.
+        // The split message will clean up the master state.
+        LOG.warn("Can't close region: was already closed during close(): " +
+          regionInfo.getRegionNameAsString());
+        return;
+      }
     } catch (IOException e) {
       LOG.error("Unrecoverable exception while closing region " +
-          regionInfo.getRegionNameAsString() + ", still finishing close", e);
+        regionInfo.getRegionNameAsString() + ", still finishing close", e);
     }
 
     this.rsServices.removeFromOnlineRegions(regionInfo.getEncodedName());
@@ -164,12 +171,12 @@ public class CloseRegionHandler extends EventHandler {
     try {
       if ((expectedVersion = ZKAssign.createNodeClosing(
           server.getZooKeeper(), regionInfo, server.getServerName())) == FAILED) {
-        LOG.warn("Error creating node in CLOSING state, aborting close of "
-            + regionInfo.getRegionNameAsString());
+        LOG.warn("Error creating node in CLOSING state, aborting close of " +
+          regionInfo.getRegionNameAsString());
       }
     } catch (KeeperException e) {
-      LOG.warn("Error creating node in CLOSING state, aborting close of "
-          + regionInfo.getRegionNameAsString());
+      LOG.warn("Error creating node in CLOSING state, aborting close of " +
+        regionInfo.getRegionNameAsString());
     }
     return expectedVersion;
   }
