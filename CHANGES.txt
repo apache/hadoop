@@ -34,6 +34,9 @@ Trunk (unreleased changes)
     HADOOP-7045. TestDU fails on systems with local file systems with 
     extended attributes. (eli)
 
+    HADOOP-6939. Inconsistent lock ordering in
+    AbstractDelegationTokenSecretManager. (Todd Lipcon via tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

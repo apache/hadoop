@@ -95,11 +95,13 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   /** should be called before this object is used */
-  public synchronized void startThreads() throws IOException {
+  public void startThreads() throws IOException {
     updateCurrentKey();
-    running = true;
-    tokenRemoverThread = new Daemon(new ExpiredTokenRemover());
-    tokenRemoverThread.start();
+    synchronized (this) {
+      running = true;
+      tokenRemoverThread = new Daemon(new ExpiredTokenRemover());
+      tokenRemoverThread.start();
+    }
   }
   
   /** 
