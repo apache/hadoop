@@ -287,22 +287,25 @@ Usually you'll want to use the latest version available except the problematic u
 
   <section xml:id="hadoop"><title><link xlink:href="http://hadoop.apache.org">hadoop</link></title>
 <para>This version of HBase will only run on <link xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</link>.
-    It will not run on hadoop 0.21.x as of this writing.
+    It will not run on hadoop 0.21.x (nor 0.22.x) as of this writing.
     HBase will lose data unless it is running on an HDFS that has a durable <code>sync</code>.
  Currently only the <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
  branch has this attribute.  No official releases have been made from this branch as of this writing
- so you will have to build your own Hadoop from the tip of this branch
- or install Cloudera's <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link>.
+ so you will have to build your own Hadoop from the tip of this branch or you could use
+ Cloudera's <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link>.
  CDH has the 0.20-append patches needed to add a durable sync (As of this writing
  CDH3 is still in beta.  Either CDH3b2 or CDH3b3 will suffice).
  See <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/CHANGES.txt">CHANGES.txt</link>
  in branch-0.20-append to see list of patches involved.</para>
- <para>HBase bundles the Apache branch-0.20-append Hadoop.
- Replace the Hadoop jar bundled with HBase with that you have
- installed on your cluster to avoid version mismatch issues;
- for example, versions of CDH do not have HDFS-724 whereas
+ <para>Because HBase depends on Hadoop, it bundles an Hadoop instance under its <filename>lib</filename> directory.
+ The bundled Hadoop was made from the Apache branch-0.20-append branch.
+ If you want to run HBase on an Hadoop cluster that is other than a version made from branch-0.20.append,
+ you must replace the hadoop jar found in the HBase <filename>lib</filename> directory with the
+ hadoop jar you are running out on your cluster to avoid version mismatch issues.
+ For example, versions of CDH do not have HDFS-724 whereas
  Hadoops branch-0.20-append branch does have HDFS-724. This
  patch changes the RPC version because protocol was changed.
+ Version mismatch issues have various manifestations but often all looks like its hung up.
  </para>
   </section>
 <section xml:id="ssh"> <title>ssh</title>
