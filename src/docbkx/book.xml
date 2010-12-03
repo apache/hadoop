@@ -1009,6 +1009,33 @@ to ensure well-formedness of your document after an edit session.
               with configuration such as this.
           </para>
       </section>
+          <section xml:id="hbase.regionserver.handler.count"><title><varname>hbase.regionserver.handler.count</varname></title>
+          <para>
+          This setting defines the number of threads that are kept open to answer
+          incoming requests to user tables. The default of 10 is rather low in order to
+          prevent users from killing their region servers when using large write buffers
+          with a high number of concurrent clients. The rule of thumb is to keep this
+          number low when the payload per request approaches the MB (big puts, scans using
+          a large cache) and high when the payload is small (gets, small puts, ICVs, deletes).
+          </para>
+          <para>
+          It is safe to set that number to the
+          maximum number of incoming clients if their payload is small, the typical example
+          being a cluster that serves a website since puts aren't typically buffered
+          and most of the operations are gets.
+          </para>
+          <para>
+          The reason why it is dangerous to keep this setting high is that the aggregate
+          size of all the puts that are currently happening in a region server may impose
+          too much pressure on its memory, or even trigger an OutOfMemoryError. A region server
+          running on low memory will trigger its JVM's garbage collector to run more frequently
+          up to a point where GC pauses become noticeable (the reason being that all the memory
+          used to keep all the requests' payloads cannot be trashed, no matter how hard the
+          garbage collector tries). After some time, the overall cluster
+          throughput is affected since every request that hits that region server will take longer,
+          which exacerbates the problem even more.
+          </para>
+          </section>
       <section xml:id="big_memory">
         <title>Configuration for large memory machines</title>
         <para>
