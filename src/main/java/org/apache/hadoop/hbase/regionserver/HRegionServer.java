@@ -324,7 +324,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         new Class<?>[]{HRegionInterface.class, HBaseRPCErrorHandler.class,
         OnlineRegions.class},
         address.getBindAddress(),
-      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 10),
+      address.getPort(), conf.getInt("hbase.regionserver.handler.count", 25),
         conf.getInt("hbase.regionserver.metahandler.count", 10),
         false, conf, QOS_THRESHOLD);
     this.server.setErrorHandler(this);
