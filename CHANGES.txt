@@ -1220,6 +1220,8 @@ Release 0.90.0 - Unreleased
                and output side.
    HBASE-3223  Get VersionInfo for Running HBase Process
                (Nicolas Spiegelberg via Stack)
+   HBASE-2375  Make decision to split based on aggregate size of all StoreFiles
+               and revisit related config param
 
 
   NEW FEATURES
