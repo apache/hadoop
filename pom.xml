@@ -95,6 +95,14 @@
       <organizationUrl>http://www.trendmicro.com</organizationUrl>
     </developer>
     <developer>
+      <id>garyh</id>
+      <name>Gary Helmling</name>
+      <email>garyh@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Trend Micro</organization>
+      <organizationUrl>http://www.trendmicro.com</organizationUrl>
+    </developer>
+    <developer>
       <id>jdcryans</id>
       <name>Jean-Daniel Cryans</name>
       <email>jdcryans@apache.org</email>
