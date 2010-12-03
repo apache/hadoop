@@ -25,6 +25,9 @@ Release 0.20-append - Unreleased
     HDFS-1202.  DataBlockScanner throws NPE when updated before 
     initialized. (Todd Lipcon via dhruba)
 
+    HDFS-895. Allow hflush/sync to occur in parallel with new writes to
+    the file. (Todd Lipcon via hairong)
+
   IMPROVEMENTS
 
   BUG FIXES
