@@ -453,6 +453,8 @@ public class CatalogTracker {
       connection = waitForRootServerConnection(timeout);
     } catch (NotAllMetaRegionsOnlineException e) {
       // Pass
+    } catch (org.apache.hadoop.hbase.ipc.ServerNotRunningException e) {
+      // Pass -- remote server is not up so can't be carrying root
     } catch (IOException e) {
       // Unexpected exception
       throw e;
