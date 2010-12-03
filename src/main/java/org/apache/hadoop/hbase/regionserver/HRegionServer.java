@@ -94,6 +94,7 @@ import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
@@ -1161,6 +1162,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       this.metrics.blockCacheCount.set(lruBlockCache.size());
       this.metrics.blockCacheFree.set(lruBlockCache.getFreeSize());
       this.metrics.blockCacheSize.set(lruBlockCache.getCurrentSize());
+      CacheStats cacheStats = lruBlockCache.getStats();
+      this.metrics.blockCacheHitCount.set(cacheStats.getHitCount());
+      this.metrics.blockCacheMissCount.set(cacheStats.getMissCount());
+      this.metrics.blockCacheEvictedCount.set(lruBlockCache.getEvictedCount());
       double ratio = lruBlockCache.getStats().getHitRatio();
       int percent = (int) (ratio * 100);
       this.metrics.blockCacheHitRatio.set(percent);

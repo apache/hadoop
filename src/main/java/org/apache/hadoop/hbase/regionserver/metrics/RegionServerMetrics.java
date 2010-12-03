@@ -87,6 +87,21 @@ public class RegionServerMetrics implements Updater {
   public final MetricsLongValue blockCacheCount = new MetricsLongValue("blockCacheCount", registry);
 
   /**
+   * Block cache hit count.
+   */
+  public final MetricsLongValue blockCacheHitCount = new MetricsLongValue("blockCacheHitCount", registry);
+
+  /**
+   * Block cache miss count.
+   */
+  public final MetricsLongValue blockCacheMissCount = new MetricsLongValue("blockCacheMissCount", registry);
+
+  /**
+   * Block cache evict count.
+   */
+  public final MetricsLongValue blockCacheEvictedCount = new MetricsLongValue("blockCacheEvictedCount", registry);
+
+  /**
    * Block hit ratio.
    */
   public final MetricsIntValue blockCacheHitRatio = new MetricsIntValue("blockCacheHitRatio", registry);
@@ -228,6 +243,9 @@ public class RegionServerMetrics implements Updater {
       this.blockCacheSize.pushMetric(this.metricsRecord);
       this.blockCacheFree.pushMetric(this.metricsRecord);
       this.blockCacheCount.pushMetric(this.metricsRecord);
+      this.blockCacheHitCount.pushMetric(this.metricsRecord);
+      this.blockCacheMissCount.pushMetric(this.metricsRecord);
+      this.blockCacheEvictedCount.pushMetric(this.metricsRecord);
       this.blockCacheHitRatio.pushMetric(this.metricsRecord);
       this.blockCacheHitCachingRatio.pushMetric(this.metricsRecord);
 
@@ -336,6 +354,12 @@ public class RegionServerMetrics implements Updater {
         Long.valueOf(this.blockCacheFree.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheCount.getName(),
         Long.valueOf(this.blockCacheCount.get()));
+    sb = Strings.appendKeyValue(sb, this.blockCacheHitCount.getName(),
+        Long.valueOf(this.blockCacheHitCount.get()));
+    sb = Strings.appendKeyValue(sb, this.blockCacheMissCount.getName(),
+        Long.valueOf(this.blockCacheMissCount.get()));
+    sb = Strings.appendKeyValue(sb, this.blockCacheEvictedCount.getName(),
+        Long.valueOf(this.blockCacheEvictedCount.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheHitRatio.getName(),
         Long.valueOf(this.blockCacheHitRatio.get()));
     sb = Strings.appendKeyValue(sb, this.blockCacheHitCachingRatio.getName(),

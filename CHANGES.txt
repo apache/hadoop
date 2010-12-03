@@ -16,6 +16,8 @@ Release 0.91.0 - Unreleased
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
                Andrew Purtell)
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
+   HBASE-3292  Expose block cache hit/miss/evict counts into region server
+               metrics
 
   NEW FEATURES
    HBASE-3287  Add option to cache blocks on hfile write and evict blocks on
