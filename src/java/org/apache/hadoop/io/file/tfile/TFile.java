@@ -41,16 +41,18 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.file.tfile.BCFile.Reader.BlockReader;
 import org.apache.hadoop.io.file.tfile.BCFile.Writer.BlockAppender;
 import org.apache.hadoop.io.file.tfile.Chunk.ChunkDecoder;
 import org.apache.hadoop.io.file.tfile.Chunk.ChunkEncoder;
-import org.apache.hadoop.io.file.tfile.CompareUtils.BytesComparator;
-import org.apache.hadoop.io.file.tfile.CompareUtils.MemcmpRawComparator;
+import org.apache.hadoop.io.file.tfile.Compression.Algorithm;
+import org.apache.hadoop.io.serial.lib.MemcmpRawComparator;
 import org.apache.hadoop.io.file.tfile.Utils.Version;
-import org.apache.hadoop.io.serializer.JavaSerializationComparator;
+import org.apache.hadoop.io.serial.RawComparator;
+import org.apache.hadoop.io.serial.lib.DeserializationRawComparator;
+import org.apache.hadoop.util.Options;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A TFile is a container of key-value pairs. Both keys and values are type-less
@@ -165,16 +167,56 @@ public class TFile {
   public static final String COMPARATOR_MEMCMP = "memcmp";
   /** comparator prefix: java class */
   public static final String COMPARATOR_JCLASS = "jclass:";
+  /** user-managed comparator */
+  public static final String COMPARATOR_USER_MANAGED = "user";
 
   /**
-   * Make a raw comparator from a string name.
-   * 
-   * @param name
-   *          Comparator name
-   * @return A RawComparable comparator.
+   * A constant that is used to represent memcmp sort order in the tfile.
    */
-  static public Comparator<RawComparable> makeComparator(String name) {
-    return TFileMeta.makeComparator(name);
+  public static final RawComparator MEMCMP = new MemcmpRawComparator();
+
+  /**
+   * The kinds of comparators that tfile supports.
+   */
+  public static enum ComparatorKind {
+    NONE(""), MEMCMP(COMPARATOR_MEMCMP), USER_MANAGED(COMPARATOR_USER_MANAGED);
+    
+    private String name;
+
+    ComparatorKind(String name) {
+      this.name = name;
+    }
+
+    @Override
+    public String toString() {
+      return name;
+    }
+
+    public static ComparatorKind fromString(String val) {
+      if (val == null || val.length() == 0) {
+        return NONE;
+      }
+      for (ComparatorKind kind: values()) {
+        if (kind.name.equals(val)) {
+          return kind;
+        }
+      }
+      if (val.startsWith(COMPARATOR_JCLASS)) {
+        return USER_MANAGED;
+      }
+      throw new IllegalArgumentException("Comparator kind " + val + 
+                                         " unknown.");
+    }
+
+    static ComparatorKind fromComparator(RawComparator comparator) {
+      if (comparator == null) {
+        return NONE;
+      } else if (comparator.getClass() == MemcmpRawComparator.class){
+        return MEMCMP;
+      } else {
+        return USER_MANAGED;
+      }
+    }
   }
 
   // Prevent the instantiation of TFiles
@@ -242,9 +284,10 @@ public class TFile {
     State state = State.READY;
     Configuration conf;
     long errorCount = 0;
+    private final RawComparator comparator;
 
     /**
-     * Constructor
+     * Constructor for a TFile Writer.
      * 
      * @param fsdos
      *          output stream for writing. Must be at position 0.
@@ -255,7 +298,7 @@ public class TFile {
      * @param compressName
      *          Name of the compression algorithm. Must be one of the strings
      *          returned by {@link TFile#getSupportedCompressionAlgorithms()}.
-     * @param comparator
+     * @param comparatorName
      *          Leave comparator as null or empty string if TFile is not sorted.
      *          Otherwise, provide the string name for the comparison algorithm
      *          for keys. Two kinds of comparators are supported.
@@ -269,7 +312,7 @@ public class TFile {
      *          constructed through the default constructor (with no
      *          parameters). Parameterized RawComparators such as
      *          {@link WritableComparator} or
-     *          {@link JavaSerializationComparator} may not be directly used.
+     *          {@link DeserializationRawComparator} may not be directly used.
      *          One should write a wrapper class that inherits from such classes
      *          and use its default constructor to perform proper
      *          initialization.
@@ -277,15 +320,156 @@ public class TFile {
      * @param conf
      *          The configuration object.
      * @throws IOException
+     * @deprecated Use Writer(Configuration,Option...) instead.
      */
     public Writer(FSDataOutputStream fsdos, int minBlockSize,
-        String compressName, String comparator, Configuration conf)
-        throws IOException {
-      sizeMinBlock = minBlockSize;
-      tfileMeta = new TFileMeta(comparator);
-      tfileIndex = new TFileIndex(tfileMeta.getComparator());
+                  String compressName, String comparatorName, 
+                  Configuration conf) throws IOException {
+      this(conf, stream(fsdos), blockSize(minBlockSize),
+           compress(Compression.getCompressionAlgorithmByName(compressName)),
+           comparatorName(comparatorName));
+    }
 
-      writerBCF = new BCFile.Writer(fsdos, compressName, conf);
+    /**
+     * Marker class for all of the Writer options.
+     */
+    public static interface Option {}
+
+    /**
+     * Create an option with a output stream.
+     * @param value output stream for writing. Must be at position 0.
+     * @return the new option
+     */
+    public static Option stream(FSDataOutputStream value) {
+      return new StreamOption(value);
+    }
+
+    /**
+     * Create an option for the compression algorithm.
+     * @param value the compression algorithm to use.
+     * @return the new option
+     */
+    public static Option compress(Algorithm value) {
+      return new CompressOption(value);
+    }
+    
+    /**
+     * Create an option for the minimum block size.
+     * @param value the minimum number of bytes that a compression block will
+     *        contain.
+     * @return the new option
+     */
+    public static Option blockSize(int value) {
+      return new BlockSizeOption(value);
+    }
+    
+    /**
+     * Create an option for specifying the comparator.
+     * @param value the comparator for indexing and searching the file
+     * @return the new option
+     */
+    public static Option comparator(RawComparator value) {
+      return new ComparatorOption(value);
+    }
+
+    /**
+     * Create an option for the comparator from a string. This is intended to
+     * support old clients that specified the comparator name and expected 
+     * the reader to be able to read it.
+     * @param value 
+     * @return the new option
+     */
+    public static Option comparatorName(String value) {
+      return new ComparatorNameOption(value);
+    }
+
+    private static class StreamOption extends Options.FSDataOutputStreamOption
+                                      implements Option {
+      StreamOption(FSDataOutputStream value) {
+        super(value);
+      }
+    }
+ 
+    private static class CompressOption implements Option {
+      private Algorithm value;
+      CompressOption(Algorithm value) {
+        this.value = value;
+      }
+      Algorithm getValue() {
+        return value;
+      }
+    }
+
+    private static class BlockSizeOption extends Options.IntegerOption 
+                                         implements Option {
+      BlockSizeOption(int value) {
+        super(value);
+      }
+    }
+    
+    private static class ComparatorOption implements Option {
+      private RawComparator value;
+      ComparatorOption(RawComparator value) {
+        this.value = value;
+      }
+      RawComparator getValue() {
+        return value;
+      }
+    }
+
+    private static class ComparatorNameOption extends Options.StringOption 
+                                              implements Option {
+      ComparatorNameOption(String value) {
+        super(value);
+      }
+    }
+
+    /**
+     * Constructor
+     * 
+     * @param conf
+     *          The configuration object.
+     * @param options
+     *          the options for controlling the file.
+     * @throws IOException
+     */
+    public Writer(Configuration conf, Option... options) throws IOException {
+      BlockSizeOption blockSize = Options.getOption(BlockSizeOption.class, 
+                                                    options);
+      ComparatorOption comparatorOpt = Options.getOption(ComparatorOption.class, 
+                                                         options);
+      ComparatorNameOption comparatorNameOpt = 
+        Options.getOption(ComparatorNameOption.class, options);
+      CompressOption compressOpt = Options.getOption(CompressOption.class,
+                                                     options);
+      StreamOption stream = Options.getOption(StreamOption.class, options);
+      
+      if (stream == null) {
+        throw new IllegalArgumentException("Must provide a stream");
+      }
+      if (comparatorOpt != null && comparatorNameOpt != null) {
+        throw new IllegalArgumentException("Can only provide one comparator" +
+                                           " option");
+      }
+
+      sizeMinBlock = blockSize == null ? 1048576 : blockSize.getValue();
+      String comparatorName;
+      if (comparatorOpt != null) {
+        comparator = comparatorOpt.getValue();
+        comparatorName = ComparatorKind.fromComparator(comparator).toString();
+      } else if (comparatorNameOpt != null) {
+        comparatorName = comparatorNameOpt.getValue();
+        comparator = makeComparator(comparatorName);
+      } else {
+        comparator = null;
+        comparatorName = null;
+      }
+      tfileMeta = new TFileMeta(comparatorName);
+      tfileIndex = new TFileIndex(comparator);
+      Algorithm compress = 
+        compressOpt == null ? Algorithm.NONE : compressOpt.getValue();
+
+      writerBCF = new BCFile.Writer(stream.getValue(), compress, conf);
       currentKeyBufferOS = new BoundedByteArrayOutputStream(MAX_KEY_SIZE);
       lastKeyBufferOS = new BoundedByteArrayOutputStream(MAX_KEY_SIZE);
       this.conf = conf;
@@ -455,8 +639,8 @@ public class TFile {
           if (tfileMeta.isSorted() && tfileMeta.getRecordCount()>0) {
             byte[] lastKey = lastKeyBufferOS.getBuffer();
             int lastLen = lastKeyBufferOS.size();
-            if (tfileMeta.getComparator().compare(key, 0, len, lastKey, 0,
-                lastLen) < 0) {
+            // check sort order unless this is the first key
+            if (comparator.compare(key, 0, len, lastKey, 0, lastLen) < 0) {
               throw new IOException("Keys are not added in sorted order");
             }
           }
@@ -687,7 +871,7 @@ public class TFile {
     // TFile index, it is loaded lazily.
     TFileIndex tfileIndex = null;
     final TFileMeta tfileMeta;
-    final BytesComparator comparator;
+    private RawComparator comparator = null;
 
     // global begin and end locations.
     private final Location begin;
@@ -784,6 +968,17 @@ public class TFile {
         if (recordIndex != other.recordIndex) return false;
         return true;
       }
+      
+      @Override
+      public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Location(");
+        builder.append(blockIndex);
+        builder.append(", ");
+        builder.append(recordIndex);
+        builder.append(")");
+        return builder.toString();
+      }
     }
 
     /**
@@ -798,8 +993,8 @@ public class TFile {
      * @param conf
      * @throws IOException
      */
-    public Reader(FSDataInputStream fsdis, long fileLength, Configuration conf)
-        throws IOException {
+    public Reader(FSDataInputStream fsdis, long fileLength, Configuration conf
+                  ) throws IOException {
       readerBCF = new BCFile.Reader(fsdis, fileLength, conf);
 
       // first, read TFile meta
@@ -809,11 +1004,27 @@ public class TFile {
       } finally {
         brMeta.close();
       }
+      comparator = makeComparator(tfileMeta.getComparatorName());
 
-      comparator = tfileMeta.getComparator();
       // Set begin and end locations.
       begin = new Location(0, 0);
       end = new Location(readerBCF.getBlockCount(), 0);
+    }
+
+    /**
+     * Set the comparator for reading this file. May only be called once for
+     * each Reader.
+     * @param comparator a comparator for this file.
+     */
+    public void setComparator(RawComparator comparator) {
+      ComparatorKind kind = ComparatorKind.fromComparator(comparator);
+      if (kind != tfileMeta.getComparatorKind()) {
+        throw new IllegalArgumentException("Illegal comparator for this tfile: "
+                                           + kind +
+                                           " instead of " + 
+                                           tfileMeta.getComparatorKind());        
+      }
+      this.comparator = comparator;
     }
 
     /**
@@ -844,6 +1055,14 @@ public class TFile {
     }
 
     /**
+     * Get the version of the tfile format.
+     * @return the version of the file
+     */
+    public Version getFileVersion() {
+      return tfileMeta.getVersion();
+    }
+
+    /**
      * Get the string representation of the comparator.
      * 
      * @return If the TFile is not sorted by keys, an empty string will be
@@ -851,7 +1070,15 @@ public class TFile {
      *         provided during the TFile creation time will be returned.
      */
     public String getComparatorName() {
-      return tfileMeta.getComparatorString();
+      return tfileMeta.getComparatorKind().toString();
+    }
+
+    /**
+     * Get the compression algorithm.
+     * @return the compression algorithm used
+     */
+    public Algorithm getCompression() {
+      return readerBCF.getDefaultCompression();
     }
 
     /**
@@ -882,8 +1109,7 @@ public class TFile {
         BlockReader brIndex = readerBCF.getMetaBlock(TFileIndex.BLOCK_NAME);
         try {
           tfileIndex =
-              new TFileIndex(readerBCF.getBlockCount(), brIndex, tfileMeta
-                  .getComparator());
+              new TFileIndex(readerBCF.getBlockCount(), brIndex, comparator);
         } finally {
           brIndex.close();
         }
@@ -947,7 +1173,7 @@ public class TFile {
      * 
      * @return a Comparator that can compare RawComparable's.
      */
-    public Comparator<RawComparable> getComparator() {
+    public RawComparator getComparator() {
       return comparator;
     }
 
@@ -1006,6 +1232,10 @@ public class TFile {
       if (!isSorted()) {
         throw new RuntimeException("Cannot compare keys for unsorted TFiles.");
       }
+      if (comparator == null) {
+        throw new 
+           RuntimeException("Cannot compare keys until comparator is set");
+      }
       return comparator.compare(a, o1, l1, b, o2, l2);
     }
 
@@ -1013,7 +1243,12 @@ public class TFile {
       if (!isSorted()) {
         throw new RuntimeException("Cannot compare keys for unsorted TFiles.");
       }
-      return comparator.compare(a, b);
+      if (comparator == null) {
+        throw new 
+           RuntimeException("Cannot compare keys until comparator is set");
+      }
+      return comparator.compare(a.buffer(), a.offset(), a.size(), 
+                                b.buffer(), b.offset(), b.size());
     }
 
     /**
@@ -1028,7 +1263,9 @@ public class TFile {
      */
     Location getLocationNear(long offset) {
       int blockIndex = readerBCF.getBlockIndexNear(offset);
-      if (blockIndex == -1) return end;
+      if (blockIndex == -1) {
+        return end;
+      }
       return new Location(blockIndex, 0);
     }
 
@@ -1089,7 +1326,8 @@ public class TFile {
      *         contains zero key-value pairs even if length is positive.
      * @throws IOException
      */
-    public Scanner createScannerByByteRange(long offset, long length) throws IOException {
+    public Scanner createScannerByByteRange(long offset,
+                                            long length) throws IOException {
       return new Scanner(this, offset, offset + length);
     }
 
@@ -2032,20 +2270,20 @@ public class TFile {
   /**
    * Data structure representing "TFile.meta" meta block.
    */
-  static final class TFileMeta {
+  private static final class TFileMeta {
     final static String BLOCK_NAME = "TFile.meta";
-    final Version version;
+    private final Version version;
     private long recordCount;
-    private final String strComparator;
-    private final BytesComparator comparator;
+    private final ComparatorKind comparatorKind;
+    private final String comparatorName;
 
     // ctor for writes
-    public TFileMeta(String comparator) {
+    public TFileMeta(String comparatorName) {
       // set fileVersion to API version when we create it.
       version = TFile.API_VERSION;
       recordCount = 0;
-      strComparator = (comparator == null) ? "" : comparator;
-      this.comparator = makeComparator(strComparator);
+      this.comparatorKind = ComparatorKind.fromString(comparatorName);
+      this.comparatorName = comparatorName;
     }
 
     // ctor for reads
@@ -2055,42 +2293,14 @@ public class TFile {
         throw new RuntimeException("Incompatible TFile fileVersion.");
       }
       recordCount = Utils.readVLong(in);
-      strComparator = Utils.readString(in);
-      comparator = makeComparator(strComparator);
-    }
-
-    @SuppressWarnings("unchecked")
-    static BytesComparator makeComparator(String comparator) {
-      if (comparator.length() == 0) {
-        // unsorted keys
-        return null;
-      }
-      if (comparator.equals(COMPARATOR_MEMCMP)) {
-        // default comparator
-        return new BytesComparator(new MemcmpRawComparator());
-      } else if (comparator.startsWith(COMPARATOR_JCLASS)) {
-        String compClassName =
-            comparator.substring(COMPARATOR_JCLASS.length()).trim();
-        try {
-          Class compClass = Class.forName(compClassName);
-          // use its default ctor to create an instance
-          return new BytesComparator((RawComparator<Object>) compClass
-              .newInstance());
-        } catch (Exception e) {
-          throw new IllegalArgumentException(
-              "Failed to instantiate comparator: " + comparator + "("
-                  + e.toString() + ")");
-        }
-      } else {
-        throw new IllegalArgumentException("Unsupported comparator: "
-            + comparator);
-      }
+      comparatorName = Utils.readString(in);
+      comparatorKind = ComparatorKind.fromString(comparatorName);
     }
 
     public void write(DataOutput out) throws IOException {
       TFile.API_VERSION.write(out);
       Utils.writeVLong(out, recordCount);
-      Utils.writeString(out, strComparator);
+      Utils.writeString(out, comparatorName);
     }
 
     public long getRecordCount() {
@@ -2102,19 +2312,19 @@ public class TFile {
     }
 
     public boolean isSorted() {
-      return !strComparator.equals("");
+      return comparatorKind != ComparatorKind.NONE;
     }
 
-    public String getComparatorString() {
-      return strComparator;
-    }
-
-    public BytesComparator getComparator() {
-      return comparator;
+    public ComparatorKind getComparatorKind() {
+      return comparatorKind;
     }
 
     public Version getVersion() {
       return version;
+    }
+    
+    public String getComparatorName() {
+      return comparatorName;
     }
   } // END: class MetaTFileMeta
 
@@ -2126,7 +2336,7 @@ public class TFile {
     private ByteArray firstKey;
     private final ArrayList<TFileIndexEntry> index;
     private final ArrayList<Long> recordNumIndex;
-    private final BytesComparator comparator;
+    private final RawComparator comparator;
     private long sum = 0;
     
     /**
@@ -2134,7 +2344,7 @@ public class TFile {
      * 
      * @throws IOException
      */
-    public TFileIndex(int entryCount, DataInput in, BytesComparator comparator)
+    public TFileIndex(int entryCount, DataInput in, RawComparator comparator)
         throws IOException {
       index = new ArrayList<TFileIndexEntry>(entryCount);
       recordNumIndex = new ArrayList<Long>(entryCount);
@@ -2217,7 +2427,7 @@ public class TFile {
     /**
      * For writing to file.
      */
-    public TFileIndex(BytesComparator comparator) {
+    public TFileIndex(RawComparator comparator) {
       index = new ArrayList<TFileIndexEntry>();
       recordNumIndex = new ArrayList<Long>();
       this.comparator = comparator;
@@ -2328,6 +2538,58 @@ public class TFile {
       Utils.writeVInt(out, key.length);
       out.write(key, 0, key.length);
       Utils.writeVLong(out, kvEntries);
+    }
+  }
+
+  /**
+   * Make a raw comparator from a string name.
+   * 
+   * @param name
+   *          Comparator name
+   * @return A RawComparable comparator.
+   */
+  static RawComparator makeComparator(String comparator) {
+    if (comparator == null || comparator.length() == 0) {
+      // unsorted keys
+      return null;
+    }
+    if (comparator.equals(COMPARATOR_MEMCMP)) {
+      // default comparator
+      return MEMCMP;
+    } else if (comparator.equals(COMPARATOR_USER_MANAGED)) {
+      // the user needs to set it explicitly
+      return null;
+    } else if (comparator.startsWith(COMPARATOR_JCLASS)) {
+      // if it is a jclass string, we try to create it for them
+      // this only happens in old tfiles
+      String compClassName =
+        comparator.substring(COMPARATOR_JCLASS.length()).trim();
+      try {
+        Class<?> compClass = Class.forName(compClassName);
+        // use its default ctor to create an instance
+        return (RawComparator) ReflectionUtils.newInstance(compClass, null);
+      } catch (ClassNotFoundException cnfe) {
+        throw new IllegalArgumentException("Comparator class " + compClassName 
+                                           + " not found.");
+      }
+    } else {
+      throw new IllegalArgumentException("Unsupported comparator: "
+                                         + comparator);
+    }
+  }
+
+  /**
+   * Create a stringification of a given comparator
+   * @param comparator the comparator to stringify, may be null
+   * @return the string identifying this comparator
+   */
+  static String stringifyComparator(RawComparator comparator) {
+    if (comparator == null) {
+      return "";
+    } else if (comparator.getClass() == MemcmpRawComparator.class){
+      return COMPARATOR_MEMCMP;
+    } else {
+      return COMPARATOR_USER_MANAGED;
     }
   }
 

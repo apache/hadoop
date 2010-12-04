@@ -37,9 +37,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.serializer.Deserializer;
-import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.Serializer;
+import org.apache.hadoop.io.serial.SerializationFactory;
+import org.apache.hadoop.io.serial.Serialization;
+import org.apache.hadoop.io.serial.lib.WritableSerialization;
 
 /**
  * General reflection utils
@@ -49,7 +49,6 @@ import org.apache.hadoop.io.serializer.Serializer;
 public class ReflectionUtils {
     
   private static final Class<?>[] EMPTY_ARRAY = new Class[]{};
-  volatile private static SerializationFactory serialFactory = null;
 
   /** 
    * Cache of constructors for each class. Pins the classes so they
@@ -257,43 +256,59 @@ public class ReflectionUtils {
       }
     };
 
-  private static SerializationFactory getFactory(Configuration conf) {
-    if (serialFactory == null) {
-      serialFactory = new SerializationFactory(conf);
-    }
-    return serialFactory;
-  }
-  
   /**
-   * Make a copy of the writable object using serialization to a buffer
+   * Make a copy of the object using serialization to a buffer
    * @param dst the object to copy from
    * @param src the object to copy into, which is destroyed
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
   public static <T> T copy(Configuration conf, 
-                                T src, T dst) throws IOException {
+                           T src, T dst) throws IOException {
+    SerializationFactory factory = SerializationFactory.getInstance(conf);
+    Class<T> cls = (Class<T>) src.getClass();
+    Serialization<T> serializer = 
+      (Serialization<T>) factory.getSerializationByType(cls);
+    return copy(conf, src, dst, serializer);
+  }
+  
+  /**
+   * Make a copy of the object with the given serialization.
+   * @param <T> the type to copy
+   * @param conf the configuration to initialize the new object with
+   * @param src the object to copy
+   * @param dst the object to copy into, which can be null
+   * @param serial the serialization to use
+   * @return the new object that was copied into
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T copy(Configuration conf, T src, T dst, 
+                           Serialization<T> serial) throws IOException {
     CopyInCopyOutBuffer buffer = cloneBuffers.get();
     buffer.outBuffer.reset();
-    SerializationFactory factory = getFactory(conf);
+    SerializationFactory factory = SerializationFactory.getInstance(conf);
     Class<T> cls = (Class<T>) src.getClass();
-    Serializer<T> serializer = factory.getSerializer(cls);
-    serializer.open(buffer.outBuffer);
-    serializer.serialize(src);
+    Serialization<T> serializer = 
+      (Serialization<T>) factory.getSerializationByType(cls);
+    serializer.serialize(buffer.outBuffer, src);
     buffer.moveData();
-    Deserializer<T> deserializer = factory.getDeserializer(cls);
-    deserializer.open(buffer.inBuffer);
-    dst = deserializer.deserialize(dst);
-    return dst;
+    return serializer.deserialize(buffer.inBuffer, dst, conf);
   }
 
+  private static Configuration defaultConfiguration = null;
+  private static synchronized Configuration getDefaultConfiguration() {
+    if (defaultConfiguration == null) {
+      defaultConfiguration = new Configuration();
+    }
+    return defaultConfiguration;
+  }
+  
   @Deprecated
   public static void cloneWritableInto(Writable dst, 
                                        Writable src) throws IOException {
-    CopyInCopyOutBuffer buffer = cloneBuffers.get();
-    buffer.outBuffer.reset();
-    src.write(buffer.outBuffer);
-    buffer.moveData();
-    dst.readFields(buffer.inBuffer);
+    WritableSerialization serial = new WritableSerialization();
+    serial.setSpecificType(src.getClass());
+    copy(getDefaultConfiguration(), src, dst, serial);
   }
 }

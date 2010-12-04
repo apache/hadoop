@@ -193,6 +193,16 @@
      </Match>
 
      <Match>
+       <Class name="org.apache.hadoop.io.RawComparator" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
+
+     <Match>
+       <Class name="org.apache.hadoop.io.serializer.avro.AvroReflectSerializable" />
+       <Bug pattern="NM_SAME_SIMPLE_NAME_AS_INTERFACE" />
+     </Match>
+
+     <Match>
        <Class name="org.apache.hadoop.security.AccessControlException" />
        <Bug pattern="NM_SAME_SIMPLE_NAME_AS_SUPERCLASS" />
      </Match>

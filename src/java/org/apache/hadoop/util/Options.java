@@ -22,6 +22,8 @@ import java.util.Arrays;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.serial.RawComparator;
+import org.apache.hadoop.io.serial.Serialization;
 
 /**
  * This class allows generic access to variable length type-safe parameter
@@ -79,6 +81,16 @@ public class Options {
     }
   }
 
+  public static abstract class SerializationOption {
+    private final Serialization<?> value;
+    protected SerializationOption(Serialization<?> value) {
+      this.value = value;
+    }
+    public Serialization<?> getValue() {
+      return value;
+    }
+  }
+  
   public static abstract class PathOption {
     private final Path value;
     protected PathOption(Path value) {
@@ -119,6 +131,16 @@ public class Options {
     }
   }
 
+  public static abstract class ComparatorOption {
+    private final RawComparator value;
+    protected ComparatorOption(RawComparator value) {
+      this.value = value;
+    }
+    public RawComparator getValue() {
+      return value;
+    }
+  }
+
   /**
    * Find the first option of the required class.
    * @param <T> the static class to find
@@ -129,8 +151,7 @@ public class Options {
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  public static <base, T extends base> T getOption(Class<T> cls, base [] opts
-                                                   ) throws IOException {
+  public static <base, T extends base> T getOption(Class<T> cls, base [] opts) {
     for(base o: opts) {
       if (o.getClass() == cls) {
         return (T) o;

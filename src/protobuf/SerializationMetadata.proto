@@ -1,0 +1,15 @@
+package org.apache.hadoop.io.serial.lib;
+
+message TypedSerializationMetadata {
+  optional string typename = 1;
+}
+
+message AvroMetadata {
+  optional string schema = 1;
+  optional Kind kind = 2;
+  enum Kind {
+    SPECIFIC = 1;
+    GENERIC = 2;
+    REFLECTION = 3;
+  }
+}

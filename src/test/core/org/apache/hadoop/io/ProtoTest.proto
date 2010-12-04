@@ -1,0 +1,11 @@
+package org.apache.hadoop.io;
+
+option optimize_for = SPEED;
+
+message ProtoKey {
+  required int32 value = 1;
+}
+
+message ProtoValue {
+  required string value = 2;
+}

@@ -33,9 +33,13 @@ import org.apache.hadoop.io.RawComparator;
  * </p>
  * @param <T>
  * @see JavaSerialization
+ * @deprecated Use 
+ *    {@link org.apache.hadoop.io.serial.lib.DeserializationRawComparator}
+ *    instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@Deprecated
 public class JavaSerializationComparator<T extends Serializable&Comparable<T>>
   extends DeserializerComparator<T> {
 

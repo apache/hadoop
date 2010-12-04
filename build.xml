@@ -96,7 +96,7 @@
   <property name="test.all.tests.file" value="${test.src.dir}/all-tests"/>
 
   <property name="javadoc.link.java"
-	    value="http://java.sun.com/javase/6/docs/api/"/>
+	    value="http://download.oracle.com/javase/6/docs/api"/>
   <property name="javadoc.packages" value="org.apache.hadoop.*"/>
   <property name="javadoc.maxmemory" value="512m" />
 

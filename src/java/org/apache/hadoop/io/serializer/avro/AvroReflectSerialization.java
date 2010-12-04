@@ -35,11 +35,13 @@ import org.apache.hadoop.classification.InterfaceStability;
  * serialization, it must either be in the package list configured via 
  * <code>avro.reflect.pkgs</code> or implement 
  * {@link AvroReflectSerializable} interface.
- *
+ * @deprecated Use {@link org.apache.hadoop.io.serial.lib.avro.AvroSerialization}
+ *    instead.
  */
 @SuppressWarnings("unchecked")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public class AvroReflectSerialization extends AvroSerialization<Object>{
 
   /**

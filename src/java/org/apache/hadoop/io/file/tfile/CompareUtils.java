@@ -19,8 +19,7 @@ package org.apache.hadoop.io.file.tfile;
 import java.io.Serializable;
 import java.util.Comparator;
 
-import org.apache.hadoop.io.RawComparator;
-import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.io.serial.RawComparator;
 
 class CompareUtils {
   /**
@@ -36,9 +35,9 @@ class CompareUtils {
    */
   public static final class BytesComparator implements
       Comparator<RawComparable> {
-    private RawComparator<Object> cmp;
+    private RawComparator cmp;
 
-    public BytesComparator(RawComparator<Object> cmp) {
+    public BytesComparator(RawComparator cmp) {
       this.cmp = cmp;
     }
 
@@ -73,7 +72,9 @@ class CompareUtils {
     }
   }
 
-  public static final class ScalarComparator implements Comparator<Scalar>, Serializable {
+  @SuppressWarnings("serial")
+  public static final class ScalarComparator 
+                      implements Comparator<Scalar>, Serializable {
     @Override
     public int compare(Scalar o1, Scalar o2) {
       long diff = o1.magnitude() - o2.magnitude();
@@ -83,16 +84,4 @@ class CompareUtils {
     }
   }
 
-  public static final class MemcmpRawComparator implements
-      RawComparator<Object>, Serializable {
-    @Override
-    public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2) {
-      return WritableComparator.compareBytes(b1, s1, l1, b2, s2, l2);
-    }
-
-    @Override
-    public int compare(Object o1, Object o2) {
-      throw new RuntimeException("Object comparison not supported");
-    }
-  }
 }

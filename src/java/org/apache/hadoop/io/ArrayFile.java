@@ -40,7 +40,7 @@ public class ArrayFile extends MapFile {
 
     /** Create the named file for values of the named class. */
     public Writer(Configuration conf, FileSystem fs,
-                  String file, Class<? extends Writable> valClass)
+                  String file, Class<?> valClass)
       throws IOException {
       super(conf, new Path(file), keyClass(LongWritable.class), 
             valueClass(valClass));
@@ -48,7 +48,7 @@ public class ArrayFile extends MapFile {
 
     /** Create the named file for values of the named class. */
     public Writer(Configuration conf, FileSystem fs,
-                  String file, Class<? extends Writable> valClass,
+                  String file, Class<?> valClass,
                   CompressionType compress, Progressable progress)
       throws IOException {
       super(conf, new Path(file), 
@@ -59,7 +59,7 @@ public class ArrayFile extends MapFile {
     }
 
     /** Append a value to the file. */
-    public synchronized void append(Writable value) throws IOException {
+    public synchronized void append(Object value) throws IOException {
       super.append(count, value);                 // add to map
       count.set(count.get()+1);                   // increment count
     }
@@ -81,20 +81,31 @@ public class ArrayFile extends MapFile {
       seek(key);
     }
 
-    /** Read and return the next value in the file. */
+    @Deprecated
     public synchronized Writable next(Writable value) throws IOException {
-      return next(key, value) ? value : null;
+      return (Writable) next((Object) value);
+    }
+
+    /** Read and return the next value in the file. */
+    public synchronized Object next(Object value) throws IOException {
+      key = (LongWritable) nextKey(key);
+      return key == null? null : getCurrentValue(value);
     }
 
     /** Returns the key associated with the most recent call to {@link
-     * #seek(long)}, {@link #next(Writable)}, or {@link
-     * #get(long,Writable)}. */
+     * #seek(long)}, {@link #next(Object)}, or {@link
+     * #get(long,Object)}. */
     public synchronized long key() throws IOException {
       return key.get();
     }
 
+    @Deprecated
+    public synchronized Writable get(long n, Writable value) throws IOException{
+      return (Writable) get(n, (Object) value);
+    }
+
     /** Return the <code>n</code>th value in the file. */
-    public synchronized Writable get(long n, Writable value)
+    public synchronized Object get(long n, Object value)
       throws IOException {
       key.set(n);
       return get(key, value);

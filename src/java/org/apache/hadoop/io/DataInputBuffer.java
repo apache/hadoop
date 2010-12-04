@@ -93,4 +93,20 @@ public class DataInputBuffer extends DataInputStream {
   /** Returns the length of the input. */
   public int getLength() { return buffer.getLength(); }
 
+  public String toString() {
+    StringBuilder sb = new StringBuilder(3 * buffer.getLength() + 10);
+    byte[] bytes = getData();
+    for(int i=0; i < buffer.getLength(); i++) {
+      sb.append(' ');
+      String num = Integer.toHexString(0xff & bytes[i]);
+      // if it is only one digit, add a leading 0.
+      if (num.length() < 2) {
+        sb.append('0');
+      }
+      sb.append(num);
+    }
+    sb.append("; pos=");
+    sb.append(buffer.getPosition());
+    return sb.toString();
+  }
 }

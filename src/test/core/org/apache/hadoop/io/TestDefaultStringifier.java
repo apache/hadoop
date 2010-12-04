@@ -26,6 +26,9 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.serial.lib.JavaSerialization;
+import org.apache.hadoop.io.serial.lib.WritableSerialization;
 
 public class TestDefaultStringifier extends TestCase {
 
@@ -36,7 +39,8 @@ public class TestDefaultStringifier extends TestCase {
 
   public void testWithWritable() throws Exception {
 
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.WritableSerialization");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SERIALIZATIONS_KEY, 
+             WritableSerialization.class.getName());
 
     LOG.info("Testing DefaultStringifier with Text");
 
@@ -51,7 +55,8 @@ public class TestDefaultStringifier extends TestCase {
         builder.append(alphabet[random.nextInt(alphabet.length)]);
       }
       Text text = new Text(builder.toString());
-      DefaultStringifier<Text> stringifier = new DefaultStringifier<Text>(conf, Text.class);
+      DefaultStringifier<Text> stringifier = 
+        new DefaultStringifier<Text>(conf, Text.class);
 
       String str = stringifier.toString(text);
       Text claimedText = stringifier.fromString(str);
@@ -62,13 +67,15 @@ public class TestDefaultStringifier extends TestCase {
   }
 
   public void testWithJavaSerialization() throws Exception {
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SERIALIZATIONS_KEY, 
+             JavaSerialization.class.getName());
 
     LOG.info("Testing DefaultStringifier with Serializable Integer");
 
     //Integer implements Serializable
     Integer testInt = Integer.valueOf(42);
-    DefaultStringifier<Integer> stringifier = new DefaultStringifier<Integer>(conf, Integer.class);
+    DefaultStringifier<Integer> stringifier = 
+      new DefaultStringifier<Integer>(conf, Integer.class);
 
     String str = stringifier.toString(testInt);
     Integer claimedInt = stringifier.fromString(str);
@@ -80,7 +87,8 @@ public class TestDefaultStringifier extends TestCase {
   public void testStoreLoad() throws IOException {
 
     LOG.info("Testing DefaultStringifier#store() and #load()");
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.WritableSerialization");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SERIALIZATIONS_KEY, 
+             WritableSerialization.class.getName());
     Text text = new Text("uninteresting test string");
     String keyName = "test.defaultstringifier.key1";
 
@@ -94,7 +102,8 @@ public class TestDefaultStringifier extends TestCase {
 
   public void testStoreLoadArray() throws IOException {
     LOG.info("Testing DefaultStringifier#storeArray() and #loadArray()");
-    conf.set("io.serializations", "org.apache.hadoop.io.serializer.JavaSerialization");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SERIALIZATIONS_KEY, 
+             JavaSerialization.class.getName());
 
     String keyName = "test.defaultstringifier.key2";
 

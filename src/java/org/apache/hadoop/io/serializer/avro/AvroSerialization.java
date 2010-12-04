@@ -37,9 +37,12 @@ import org.apache.hadoop.io.serializer.Serializer;
 
 /**
  * Base class for providing serialization to Avro types.
+ * @deprecated Use {@link org.apache.hadoop.io.serial.lib.avro.AvroSerialization}
+ *    instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public abstract class AvroSerialization<T> extends Configured 
 	implements Serialization<T>{
   

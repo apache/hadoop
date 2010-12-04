@@ -43,6 +43,7 @@ public class TestTFileJClassComparatorByteArrays extends TestTFileByteArrays {
   }
 }
 
+@SuppressWarnings("serial")
 class MyComparator implements RawComparator<byte[]>, Serializable {
 
   @Override
@@ -54,6 +55,6 @@ class MyComparator implements RawComparator<byte[]>, Serializable {
   public int compare(byte[] o1, byte[] o2) {
     return WritableComparator.compareBytes(o1, 0, o1.length, o2, 0, o2.length);
   }
-  
+
 }
 

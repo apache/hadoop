@@ -106,7 +106,7 @@ class TFileDumper {
       int blockCnt = reader.readerBCF.getBlockCount();
       int metaBlkCnt = reader.readerBCF.metaIndex.index.size();
       properties.put("BCFile Version", reader.readerBCF.version.toString());
-      properties.put("TFile Version", reader.tfileMeta.version.toString());
+      properties.put("TFile Version", reader.getFileVersion().toString());
       properties.put("File Length", Long.toString(length));
       properties.put("Data Compression", reader.readerBCF
           .getDefaultCompressionName());

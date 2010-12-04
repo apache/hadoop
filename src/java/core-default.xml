@@ -155,8 +155,8 @@
 </property>
 
 <property>
-  <name>io.serializations</name>
-  <value>org.apache.hadoop.io.serializer.WritableSerialization,org.apache.hadoop.io.serializer.avro.AvroSpecificSerialization,org.apache.hadoop.io.serializer.avro.AvroReflectSerialization</value>
+  <name>hadoop.serializations</name>
+  <value>org.apache.hadoop.io.serial.lib.WritableSerialization,org.apache.hadoop.io.serial.lib.protobuf.ProtoBufSerialization,org.apache.hadoop.io.serial.lib.thrift.ThriftSerialization,org.apache.hadoop.io.serial.lib.avro.AvroSerialization,org.apache.hadoop.io.serial.lib.CompatibilitySerialization</value>
   <description>A list of serialization classes that can be used for
   obtaining serializers and deserializers.</description>
 </property>

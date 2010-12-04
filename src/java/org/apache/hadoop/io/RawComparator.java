@@ -22,7 +22,6 @@ import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.serializer.DeserializerComparator;
 
 /**
  * <p>
@@ -30,12 +29,15 @@ import org.apache.hadoop.io.serializer.DeserializerComparator;
  * objects.
  * </p>
  * @param <T>
- * @see DeserializerComparator
+ * @deprecated Use {@link org.apache.hadoop.io.serial.RawComparator} instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public interface RawComparator<T> extends Comparator<T> {
+@Deprecated
+public interface RawComparator<T> 
+     extends Comparator<T>, org.apache.hadoop.io.serial.RawComparator {
 
+  @Override
   public int compare(byte[] b1, int s1, int l1, byte[] b2, int s2, int l2);
 
 }

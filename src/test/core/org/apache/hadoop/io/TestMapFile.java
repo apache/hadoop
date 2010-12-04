@@ -36,10 +36,13 @@ public class TestMapFile extends TestCase {
       getName() + ".mapfile"); 
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(dirName);
+    fs.delete(qualifiedDirName, true);
     // Make an index entry for every third insertion.
     MapFile.Writer.setIndexInterval(conf, 3);
-    MapFile.Writer writer = new MapFile.Writer(conf, fs,
-      qualifiedDirName.toString(), Text.class, Text.class);
+    MapFile.Writer writer = 
+      new MapFile.Writer(conf, qualifiedDirName, 
+                         MapFile.Writer.keyClass(Text.class), 
+                         MapFile.Writer.valueClass(Text.class));
     // Assert that the index interval is 1
     assertEquals(3, writer.getIndexInterval());
     // Add entries up to 100 in intervals of ten.
@@ -51,8 +54,7 @@ public class TestMapFile extends TestCase {
     }
     writer.close();
     // Now do getClosest on created mapfile.
-    MapFile.Reader reader = new MapFile.Reader(fs, qualifiedDirName.toString(),
-      conf);
+    MapFile.Reader reader = new MapFile.Reader(qualifiedDirName, conf);
     Text key = new Text("55");
     Text value = new Text();
     Text closest = (Text)reader.getClosest(key, value);
@@ -94,14 +96,16 @@ public class TestMapFile extends TestCase {
       getName() + ".mapfile"); 
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(dirName);
+    fs.delete(qualifiedDirName, true);
  
-    MapFile.Writer writer = new MapFile.Writer(conf, fs,
-      qualifiedDirName.toString(), IntWritable.class, IntWritable.class);
+    MapFile.Writer writer = 
+      new MapFile.Writer(conf, qualifiedDirName, 
+                         MapFile.Writer.keyClass(IntWritable.class), 
+                         MapFile.Writer.valueClass(IntWritable.class));
     writer.append(new IntWritable(1), new IntWritable(1));
     writer.close();
     // Now do getClosest on created mapfile.
-    MapFile.Reader reader = new MapFile.Reader(fs, qualifiedDirName.toString(),
-      conf);
+    MapFile.Reader reader = new MapFile.Reader(qualifiedDirName, conf);
     assertEquals(new IntWritable(1), reader.midKey());
   }
 
@@ -112,13 +116,15 @@ public class TestMapFile extends TestCase {
       getName() + ".mapfile"); 
     FileSystem fs = FileSystem.getLocal(conf);
     Path qualifiedDirName = fs.makeQualified(dirName);
+    fs.delete(qualifiedDirName, true);
  
-    MapFile.Writer writer = new MapFile.Writer(conf, fs,
-      qualifiedDirName.toString(), IntWritable.class, IntWritable.class);
+    MapFile.Writer writer =
+      new MapFile.Writer(conf, qualifiedDirName, 
+                         MapFile.Writer.keyClass(IntWritable.class), 
+                         MapFile.Writer.valueClass(IntWritable.class));
     writer.close();
     // Now do getClosest on created mapfile.
-    MapFile.Reader reader = new MapFile.Reader(fs, qualifiedDirName.toString(),
-      conf);
+    MapFile.Reader reader = new MapFile.Reader(qualifiedDirName, conf);
     assertEquals(null, reader.midKey());
   }
 }

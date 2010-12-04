@@ -138,9 +138,11 @@ public class CommonConfigurationKeysPublic {
   public static final String  IO_SORT_FACTOR_KEY = "io.sort.factor";
   /** Default value for IO_SORT_FACTOR_DEFAULT */
   public static final int     IO_SORT_FACTOR_DEFAULT = 100;
-  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  /** Defines the list of the deprecated serializations. */
   public static final String  IO_SERIALIZATIONS_KEY = "io.serializations";
-
+  /** Defines the list of serializations */
+  public static final String  HADOOP_SERIALIZATIONS_KEY = "hadoop.serializations";
+  
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  TFILE_IO_CHUNK_SIZE_KEY = "tfile.io.chunk.size";
   /** Default value for TFILE_IO_CHUNK_SIZE_DEFAULT */

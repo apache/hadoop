@@ -39,7 +39,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * Compression related stuff.
  */
-final class Compression {
+final public class Compression {
   static final Log LOG = LogFactory.getLog(Compression.class);
 
   /**
@@ -71,7 +71,7 @@ final class Compression {
   /**
    * Compression algorithms.
    */
-  static enum Algorithm {
+  public static enum Algorithm {
     LZO(TFile.COMPRESSION_LZO) {
       private transient boolean checked = false;
       private static final String defaultClazz =
@@ -99,7 +99,7 @@ final class Compression {
       }
 
       @Override
-      CompressionCodec getCodec() throws IOException {
+      synchronized CompressionCodec getCodec() throws IOException {
         if (!isSupported()) {
           throw new IOException(
               "LZO codec class not specified. Did you forget to set property "
@@ -160,7 +160,7 @@ final class Compression {
       private transient DefaultCodec codec;
 
       @Override
-      CompressionCodec getCodec() {
+      synchronized CompressionCodec getCodec() {
         if (codec == null) {
           codec = new DefaultCodec();
           codec.setConf(conf);

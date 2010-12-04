@@ -269,6 +269,22 @@
       <exclude module="jetty"/>
       <exclude module="slf4j-simple"/>
     </dependency>
+    <dependency org="com.google.protobuf"
+      name="protobuf-java"
+      rev="${protobuf.version}"
+      conf="common->default"/>
+    <dependency org="org.apache.hadoop"
+      name="libthrift"
+      rev="${thrift.version}"
+      conf="common->default">
+      <exclude module="servlet-api"/>
+      <exclude module="slf4j-api"/>
+      <exclude module="slf4j-log4j12"/>
+    </dependency>
+    <dependency org="org.yaml"
+      name="snakeyaml"
+      rev="${snakeyaml.version}"
+      conf="common->default"/>
     <dependency org="org.codehaus.jackson"
       name="jackson-mapper-asl"
       rev="${jackson.version}"

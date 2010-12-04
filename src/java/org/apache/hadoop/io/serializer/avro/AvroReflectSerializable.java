@@ -25,9 +25,13 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Tag interface for Avro 'reflect' serializable classes. Classes implementing 
  * this interface can be serialized/deserialized using 
  * {@link AvroReflectSerialization}.
+ * @deprecated Use {@link org.apache.hadoop.io.serial.lib.avro.AvroReflectSerializable}
+ *    instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface AvroReflectSerializable {
+@Deprecated
+public interface AvroReflectSerializable 
+  extends org.apache.hadoop.io.serial.lib.avro.AvroReflectSerializable {
 
 }

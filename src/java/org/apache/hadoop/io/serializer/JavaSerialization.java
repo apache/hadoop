@@ -24,20 +24,21 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.RawComparator;
 
 /**
  * <p>
  * An experimental {@link Serialization} for Java {@link Serializable} classes.
  * </p>
  * @see JavaSerializationComparator
+ * @deprecated Use {@link org.apache.hadoop.io.serial.lib.JavaSerialization}
+ *    instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
+@Deprecated
 public class JavaSerialization implements Serialization<Serializable> {
 
   static class JavaSerializationDeserializer<T extends Serializable>

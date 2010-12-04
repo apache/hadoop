@@ -39,7 +39,7 @@ public class RandomDatum implements WritableComparable {
   
   public void write(DataOutput out) throws IOException {
     out.writeInt(length);
-    out.write(data);
+    out.write(data, 0, length);
   }
 
   public void readFields(DataInput in) throws IOException {

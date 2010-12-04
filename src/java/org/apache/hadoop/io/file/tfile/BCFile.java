@@ -198,7 +198,6 @@ final class BCFile {
     public class BlockAppender extends DataOutputStream {
       private final BlockRegister blockRegister;
       private final WBlockState wBlkState;
-      @SuppressWarnings("hiding")
       private boolean closed = false;
 
       /**
@@ -282,7 +281,24 @@ final class BCFile {
      * @throws IOException
      * @see Compression#getSupportedAlgorithms
      */
+    @Deprecated
     public Writer(FSDataOutputStream fout, String compressionName,
+        Configuration conf) throws IOException {
+      this(fout, Compression.getCompressionAlgorithmByName(compressionName),
+           conf);
+    }
+    
+    /**
+     * Constructor
+     * 
+     * @param fout
+     *          FS output stream.
+     * @param compression
+     *          The compression algorithm, which will be used for all
+     *          data blocks.
+     * @throws IOException
+     */
+    public Writer(FSDataOutputStream fout, Algorithm compression,
         Configuration conf) throws IOException {
       if (fout.getPos() != 0) {
         throw new IOException("Output file not at zero offset.");
@@ -290,7 +306,7 @@ final class BCFile {
 
       this.out = fout;
       this.conf = conf;
-      dataIndex = new DataIndex(compressionName);
+      dataIndex = new DataIndex(compression);
       metaIndex = new MetaIndex();
       fsOutputBuffer = new BytesWritable();
       Magic.write(fout);
@@ -651,6 +667,14 @@ final class BCFile {
     }
 
     /**
+     * Get the default compression algorithm.
+     * @return the default compression algorithm
+     */
+    public Algorithm getDefaultCompression() {
+      return dataIndex.getDefaultCompressionAlgorithm();
+    }
+
+    /**
      * Get version of BCFile file being read.
      * 
      * @return version of BCFile file being read.
@@ -870,12 +894,16 @@ final class BCFile {
       }
     }
 
-    // for write
-    public DataIndex(String defaultCompressionAlgorithmName) {
-      this.defaultCompressionAlgorithm =
-          Compression
-              .getCompressionAlgorithmByName(defaultCompressionAlgorithmName);
+    public DataIndex(Algorithm defaultCompression) {
+      this.defaultCompressionAlgorithm = defaultCompression;
       listRegions = new ArrayList<BlockRegion>();
+    }
+
+    // for write
+    @Deprecated
+    public DataIndex(String defaultCompressionAlgorithmName) {
+      this(Compression
+              .getCompressionAlgorithmByName(defaultCompressionAlgorithmName));
     }
 
     public Algorithm getDefaultCompressionAlgorithm() {

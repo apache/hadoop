@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.util.Options;
+import org.apache.hadoop.io.serial.Serialization;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.bloom.DynamicBloomFilter;
 import org.apache.hadoop.util.bloom.Filter;
@@ -42,7 +42,7 @@ import org.apache.hadoop.util.hash.Hash;
  * This class extends {@link MapFile} and provides very much the same
  * functionality. However, it uses dynamic Bloom filters to provide
  * quick membership test for keys, and it offers a fast version of 
- * {@link Reader#get(WritableComparable, Writable)} operation, especially in
+ * {@link Reader#get(Object, Object)} operation, especially in
  * case of sparsely populated MapFile-s.
  */
 @InterfaceAudience.Public
@@ -82,7 +82,9 @@ public class BloomMapFile {
     private DataOutputBuffer buf = new DataOutputBuffer();
     private FileSystem fs;
     private Path dir;
+    private final Serialization<Object> keySerialization;
     
+    @SuppressWarnings("unchecked")
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         Class<? extends WritableComparable> keyClass,
@@ -92,6 +94,7 @@ public class BloomMapFile {
            compression(compress, codec), progressable(progress));
     }
 
+    @SuppressWarnings("unchecked")
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         Class<? extends WritableComparable> keyClass,
@@ -101,6 +104,7 @@ public class BloomMapFile {
            compression(compress), progressable(progress));
     }
 
+    @SuppressWarnings("unchecked")
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         Class<? extends WritableComparable> keyClass,
@@ -110,6 +114,7 @@ public class BloomMapFile {
            compression(compress));
     }
 
+    @SuppressWarnings("unchecked")
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         WritableComparator comparator, Class valClass,
@@ -120,6 +125,7 @@ public class BloomMapFile {
            progressable(progress));
     }
 
+    @SuppressWarnings("unchecked")
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         WritableComparator comparator, Class valClass,
@@ -129,6 +135,7 @@ public class BloomMapFile {
            progressable(progress));
     }
 
+    @SuppressWarnings("unchecked")
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         WritableComparator comparator, Class valClass, CompressionType compress)
@@ -137,6 +144,7 @@ public class BloomMapFile {
            valueClass(valClass), compression(compress));
     }
 
+    @SuppressWarnings("unchecked")
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
         WritableComparator comparator, Class valClass) throws IOException {
@@ -144,6 +152,7 @@ public class BloomMapFile {
            valueClass(valClass));
     }
 
+    @SuppressWarnings("unchecked")
     @Deprecated
     public Writer(Configuration conf, FileSystem fs, String dirName,
                   Class<? extends WritableComparable> keyClass,
@@ -151,12 +160,14 @@ public class BloomMapFile {
       this(conf, new Path(dirName), keyClass(keyClass), valueClass(valClass));
     }
 
+    @SuppressWarnings("unchecked")
     public Writer(Configuration conf, Path dir, 
                   SequenceFile.Writer.Option... options) throws IOException {
       super(conf, dir, options);
       this.fs = dir.getFileSystem(conf);
       this.dir = dir;
       initBloomFilter(conf);
+      keySerialization = (Serialization<Object>) getKeySerialization();
     }
 
     private synchronized void initBloomFilter(Configuration conf) {
@@ -174,11 +185,10 @@ public class BloomMapFile {
     }
 
     @Override
-    public synchronized void append(WritableComparable key, Writable val)
-        throws IOException {
+    public synchronized void append(Object key, Object val) throws IOException {
       super.append(key, val);
       buf.reset();
-      key.write(buf);
+      keySerialization.serialize(buf, key);
       bloomKey.set(byteArrayForBloomKey(buf), 1.0);
       bloomFilter.add(bloomKey);
     }
@@ -198,11 +208,14 @@ public class BloomMapFile {
     private DynamicBloomFilter bloomFilter;
     private DataOutputBuffer buf = new DataOutputBuffer();
     private Key bloomKey = new Key();
+    private final Serialization<Object> keySerialization;
 
+    @SuppressWarnings("unchecked")
     public Reader(Path dir, Configuration conf,
                   SequenceFile.Reader.Option... options) throws IOException {
       super(dir, conf, options);
       initBloomFilter(dir, conf);
+      keySerialization = (Serialization<Object>) getKeySerialization();
     }
 
     @Deprecated
@@ -245,26 +258,40 @@ public class BloomMapFile {
      * @return  false iff key doesn't exist, true if key probably exists.
      * @throws IOException
      */
-    public boolean probablyHasKey(WritableComparable key) throws IOException {
+    public boolean probablyHasKey(Object key) throws IOException {
       if (bloomFilter == null) {
         return true;
       }
       buf.reset();
-      key.write(buf);
+      keySerialization.serialize(buf, key);
       bloomKey.set(byteArrayForBloomKey(buf), 1.0);
       return bloomFilter.membershipTest(bloomKey);
     }
     
     /**
      * Fast version of the
-     * {@link MapFile.Reader#get(WritableComparable, Writable)} method. First
+     * {@link MapFile.Reader#get(Object, Object)} method. First
+     * it checks the Bloom filter for the existence of the key, and only if
+     * present it performs the real get operation. This yields significant
+     * performance improvements for get operations on sparsely populated files.
+     */
+    @SuppressWarnings("unchecked")
+    @Deprecated
+    @Override
+    public synchronized Writable get(WritableComparable key,
+                                     Writable value) throws IOException {
+      return (Writable) get((Object) key, (Object) value);
+    }
+
+    /**
+     * Fast version of the
+     * {@link MapFile.Reader#get(Object, Object)} method. First
      * it checks the Bloom filter for the existence of the key, and only if
      * present it performs the real get operation. This yields significant
      * performance improvements for get operations on sparsely populated files.
      */
     @Override
-    public synchronized Writable get(WritableComparable key, Writable val)
-        throws IOException {
+    public synchronized Object get(Object key, Object val) throws IOException {
       if (!probablyHasKey(key)) {
         return null;
       }

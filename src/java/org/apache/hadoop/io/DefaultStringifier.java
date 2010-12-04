@@ -26,17 +26,15 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.serializer.Deserializer;
-import org.apache.hadoop.io.serializer.Serialization;
-import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.Serializer;
+import org.apache.hadoop.io.serial.Serialization;
+import org.apache.hadoop.io.serial.SerializationFactory;
 import org.apache.hadoop.util.GenericsUtil;
 
 /**
  * DefaultStringifier is the default implementation of the {@link Stringifier}
  * interface which stringifies the objects using base64 encoding of the
- * serialized version of the objects. The {@link Serializer} and
- * {@link Deserializer} are obtained from the {@link SerializationFactory}.
+ * serialized version of the objects. The {@link Serialization}
+ * is obtained from the {@link SerializationFactory}.
  * <br>
  * DefaultStringifier offers convenience methods to store/load objects to/from
  * the configuration.
@@ -49,43 +47,37 @@ public class DefaultStringifier<T> implements Stringifier<T> {
 
   private static final String SEPARATOR = ",";
 
-  private Serializer<T> serializer;
+  private final Serialization<T> serialization;
 
-  private Deserializer<T> deserializer;
+  private final DataInputBuffer inBuf;
 
-  private DataInputBuffer inBuf;
+  private final DataOutputBuffer outBuf;
+  private final Configuration conf;
 
-  private DataOutputBuffer outBuf;
-
+  @SuppressWarnings("unchecked")
   public DefaultStringifier(Configuration conf, Class<T> c) {
 
-    SerializationFactory factory = new SerializationFactory(conf);
-    this.serializer = factory.getSerializer(c);
-    this.deserializer = factory.getDeserializer(c);
+    SerializationFactory factory = SerializationFactory.getInstance(conf);
     this.inBuf = new DataInputBuffer();
     this.outBuf = new DataOutputBuffer();
-    try {
-      serializer.open(outBuf);
-      deserializer.open(inBuf);
-    } catch (IOException ex) {
-      throw new RuntimeException(ex);
-    }
+    this.conf = conf;
+    this.serialization = (Serialization<T>) factory.getSerializationByType(c);
   }
 
   public T fromString(String str) throws IOException {
     try {
       byte[] bytes = Base64.decodeBase64(str.getBytes("UTF-8"));
       inBuf.reset(bytes, bytes.length);
-      T restored = deserializer.deserialize(null);
+      T restored = serialization.deserialize(inBuf, null, conf);
       return restored;
     } catch (UnsupportedCharsetException ex) {
-      throw new IOException(ex.toString());
+      throw new IOException("problem finding utf-8", ex);
     }
   }
 
   public String toString(T obj) throws IOException {
     outBuf.reset();
-    serializer.serialize(obj);
+    serialization.serialize(outBuf, obj);
     byte[] buf = new byte[outBuf.getLength()];
     System.arraycopy(outBuf.getData(), 0, buf, 0, buf.length);
     return new String(Base64.encodeBase64(buf));
@@ -94,8 +86,6 @@ public class DefaultStringifier<T> implements Stringifier<T> {
   public void close() throws IOException {
     inBuf.close();
     outBuf.close();
-    deserializer.close();
-    serializer.close();
   }
 
   /**

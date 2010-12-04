@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.*;
 public class SetFile extends MapFile {
 
   protected SetFile() {}                            // no public ctor
+  private static final NullWritable NULL_WRITABLE = NullWritable.get();
 
   /** 
    * Write a new set file.
@@ -41,8 +42,10 @@ public class SetFile extends MapFile {
      *  @deprecated pass a Configuration too
      */
     public Writer(FileSystem fs, String dirName,
-	Class<? extends WritableComparable> keyClass) throws IOException {
-      super(new Configuration(), fs, dirName, keyClass, NullWritable.class);
+                	Class<? extends WritableComparable> keyClass
+                	) throws IOException {
+      super(new Configuration(), new Path(dirName),
+            keyClass(keyClass), valueClass(NullWritable.class));
     }
 
     /** Create a set naming the element class and compression type. */
@@ -59,6 +62,7 @@ public class SetFile extends MapFile {
                   SequenceFile.CompressionType compress) throws IOException {
       super(conf, new Path(dirName), 
             comparator(comparator), 
+            keyClass(comparator.getKeyClass()),
             valueClass(NullWritable.class), 
             compression(compress));
     }
@@ -66,7 +70,7 @@ public class SetFile extends MapFile {
     /** Append a key to a set.  The key must be strictly greater than the
      * previous key added to the set. */
     public void append(WritableComparable key) throws IOException{
-      append(key, NullWritable.get());
+      append(key, NULL_WRITABLE);
     }
   }
 
@@ -94,7 +98,7 @@ public class SetFile extends MapFile {
      * true if such a key exists and false when at the end of the set. */
     public boolean next(WritableComparable key)
       throws IOException {
-      return next(key, NullWritable.get());
+      return next(key, NULL_WRITABLE);
     }
 
     /** Read the matching key from a set into <code>key</code>.

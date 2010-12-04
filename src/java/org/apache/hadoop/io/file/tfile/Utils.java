@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.serial.RawComparator;
 
 /**
  * Supporting Utility classes used by TFile, and shared by users of TFile.
@@ -414,15 +415,16 @@ public final class Utils {
    * @return The index to the desired element if it exists; or list.size()
    *         otherwise.
    */
-  public static <T> int lowerBound(List<? extends T> list, T key,
-      Comparator<? super T> cmp) {
+  public static <T extends RawComparable> 
+  int lowerBound(List<? extends T> list, T key, RawComparator cmp) {
     int low = 0;
     int high = list.size();
 
     while (low < high) {
       int mid = (low + high) >>> 1;
       T midVal = list.get(mid);
-      int ret = cmp.compare(midVal, key);
+      int ret = cmp.compare(midVal.buffer(), midVal.offset(), midVal.size(), 
+                            key.buffer(), key.offset(), key.size());
       if (ret < 0)
         low = mid + 1;
       else high = mid;
@@ -445,15 +447,16 @@ public final class Utils {
    * @return The index to the desired element if it exists; or list.size()
    *         otherwise.
    */
-  public static <T> int upperBound(List<? extends T> list, T key,
-      Comparator<? super T> cmp) {
+  public static <T extends RawComparable> 
+  int upperBound(List<? extends T> list, T key, RawComparator cmp) {
     int low = 0;
     int high = list.size();
 
     while (low < high) {
       int mid = (low + high) >>> 1;
       T midVal = list.get(mid);
-      int ret = cmp.compare(midVal, key);
+      int ret = cmp.compare(midVal.buffer(), midVal.offset(), midVal.size(),
+                            key.buffer(), key.offset(), key.size());
       if (ret <= 0)
         low = mid + 1;
       else high = mid;
@@ -483,6 +486,35 @@ public final class Utils {
       int mid = (low + high) >>> 1;
       Comparable<? super T> midVal = list.get(mid);
       int ret = midVal.compareTo(key);
+      if (ret < 0)
+        low = mid + 1;
+      else high = mid;
+    }
+    return low;
+  }
+
+  /**
+   * Lower bound binary search. Find the index to the first element in the list
+   * that compares greater than or equal to key.
+   * 
+   * @param <T>
+   *          Type of the input key.
+   * @param list
+   *          The list
+   * @param key
+   *          The input key.
+   * @return The index to the desired element if it exists; or list.size()
+   *         otherwise.
+   */
+  public static <T> int lowerBound(List<? extends T> list,
+                                   T key, Comparator<? super T> cmp) {
+    int low = 0;
+    int high = list.size();
+
+    while (low < high) {
+      int mid = (low + high) >>> 1;
+      T midVal = list.get(mid);
+      int ret = cmp.compare(midVal, key);
       if (ret < 0)
         low = mid + 1;
       else high = mid;

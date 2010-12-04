@@ -38,9 +38,13 @@ import org.apache.hadoop.io.RawComparator;
  * on byte representations.
  * </p>
  * @param <T>
+ * @deprecated Use 
+ *    {@link org.apache.hadoop.io.serial.lib.DeserializationRawComparator}
+ *    instead.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
+@Deprecated
 public abstract class DeserializerComparator<T> implements RawComparator<T> {
   
   private InputBuffer buffer = new InputBuffer();

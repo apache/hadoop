@@ -23,7 +23,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -36,9 +35,13 @@ import org.apache.hadoop.util.ReflectionUtils;
  * A {@link Serialization} for {@link Writable}s that delegates to
  * {@link Writable#write(java.io.DataOutput)} and
  * {@link Writable#readFields(java.io.DataInput)}.
+ * @deprecated Use 
+ *    {@link org.apache.hadoop.io.serial.lib.WritableSerialization}
+ *    instead.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
+@Deprecated
 public class WritableSerialization extends Configured
 	implements Serialization<Writable> {
   static class WritableDeserializer extends Configured

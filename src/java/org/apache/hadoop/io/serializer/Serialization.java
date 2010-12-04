@@ -26,9 +26,13 @@ import org.apache.hadoop.classification.InterfaceStability;
  * Encapsulates a {@link Serializer}/{@link Deserializer} pair.
  * </p>
  * @param <T>
+ * @deprecated Use 
+ *    {@link org.apache.hadoop.io.serial.Serialization}
+ *    instead.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
+@Deprecated
 public interface Serialization<T> {
   
   /**

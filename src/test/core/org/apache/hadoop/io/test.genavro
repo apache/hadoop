@@ -1,0 +1,10 @@
+@namespace("org.apache.hadoop.io")
+protocol AvroTest {
+  record AvroKey {
+    int value;
+  }
+
+  record AvroValue {
+    string value;
+  }
+}

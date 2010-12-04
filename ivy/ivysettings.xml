@@ -30,6 +30,9 @@
  <resolvers>
    <!--ibiblio resolvers-->
     <ibiblio name="maven2" root="${repo.maven.org}" m2compatible="true"/>
+    <ibiblio name="apache" 
+       root="https://repository.apache.org/content/repositories/releases" 
+       m2compatible="true"/>
 
     <filesystem name="fs" m2compatible="true" force="true">
        <artifact pattern="${repo.dir}/[organisation]/[module]/[revision]/[module]-[revision].[ext]"/>
@@ -37,6 +40,7 @@
     </filesystem>
 
     <chain name="default" dual="true">
+      <resolver ref="apache"/>
       <resolver ref="maven2"/>
     </chain>
 

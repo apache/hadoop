@@ -22,7 +22,7 @@ import java.util.Comparator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.io.RawComparator;
+import org.apache.hadoop.io.serial.RawComparator;
 
 /**
  * Interface for objects that can be compared through {@link RawComparator}.

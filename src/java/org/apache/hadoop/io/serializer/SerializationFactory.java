@@ -36,9 +36,13 @@ import org.apache.hadoop.util.StringUtils;
  * <p>
  * A factory for {@link Serialization}s.
  * </p>
+ * @deprecated Use 
+ *    {@link org.apache.hadoop.io.serial.SerializationFactory}
+ *    instead.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
+@Deprecated
 public class SerializationFactory extends Configured {
   
   private static final Log LOG =
