@@ -244,12 +244,14 @@ public class HBaseFsck {
         // This is special case if a region is left after split
         hbi.onlyEdits = true;
         FileStatus[] subDirs = fs.listStatus(regionDir.getPath());
-        Path ePath = HLog.getRegionDirRecoveredEditsDir(regionDir.getPath());
-        for (FileStatus subDir : subDirs) {
-          String sdName = subDir.getPath().getName();
-          if (!sdName.startsWith(".") && !sdName.equals(ePath.getName())) {
-            hbi.onlyEdits = false;
-            break;
+        if (subDirs != null) {
+          Path ePath = HLog.getRegionDirRecoveredEditsDir(regionDir.getPath());
+          for (FileStatus subDir : subDirs) {
+            String sdName = subDir.getPath().getName();
+            if (!sdName.startsWith(".") && !sdName.equals(ePath.getName())) {
+              hbi.onlyEdits = false;
+              break;
+            }
           }
         }
       }
@@ -324,15 +326,16 @@ public class HBaseFsck {
    * Check consistency of all regions that have been found in previous phases.
    */
   void checkConsistency() throws IOException {
-    for (HbckInfo hbi : regionInfo.values()) {
-      doConsistencyCheck(hbi);
+    for (java.util.Map.Entry<String, HbckInfo> e: regionInfo.entrySet()) {
+      doConsistencyCheck(e.getKey(), e.getValue());
     }
   }
 
   /**
    * Check a single region for consistency and correct deployment.
    */
-  void doConsistencyCheck(HbckInfo hbi) throws IOException {
+  void doConsistencyCheck(final String key, final HbckInfo hbi)
+  throws IOException {
     String descriptiveName = hbi.toString();
 
     boolean inMeta = hbi.metaEntry != null;
@@ -366,7 +369,7 @@ public class HBaseFsck {
       // We shouldn't have record of this region at all then!
       assert false : "Entry for region with no data";
     } else if (!inMeta && !inHdfs && isDeployed) {
-      errors.reportError("Region " + descriptiveName + " not on HDFS or in META but " +
+      errors.reportError("Region " + descriptiveName + ", key=" + key + ", not on HDFS or in META but " +
         "deployed on " + Joiner.on(", ").join(hbi.deployedOn));
     } else if (!inMeta && inHdfs && !isDeployed) {
       errors.reportError("Region " + descriptiveName + " on HDFS, but not listed in META " +
@@ -391,7 +394,7 @@ public class HBaseFsck {
         HBaseFsckRepair.fixUnassigned(this.conf, hbi.metaEntry);
       }
     } else if (inMeta && inHdfs && isDeployed && !shouldBeDeployed) {
-      errors.reportError("Region " + descriptiveName + " has should not be deployed according " +
+      errors.reportError("Region " + descriptiveName + " should not be deployed according " +
         "to META, but is deployed on " + Joiner.on(", ").join(hbi.deployedOn));
     } else if (inMeta && inHdfs && isMultiplyDeployed) {
       errors.reportError("Region " + descriptiveName + " is listed in META on region server " +
@@ -732,7 +735,7 @@ public class HBaseFsck {
       } else if (foundRegionDir != null) {
         return foundRegionDir.getPath().toString();
       } else {
-        return "unknown region on " + Joiner.on(", ").join(deployedOn);
+        return "UNKNOWN_REGION on " + Joiner.on(", ").join(deployedOn);
       }
     }
   }
