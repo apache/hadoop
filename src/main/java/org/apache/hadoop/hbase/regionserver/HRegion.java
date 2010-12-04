@@ -3284,7 +3284,7 @@ public class HRegion implements HeapSize { // , Writable{
       (22 * ClassSize.REFERENCE) + ClassSize.OBJECT + Bytes.SIZEOF_INT);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
-      ClassSize.OBJECT + (2 * ClassSize.ATOMIC_BOOLEAN) +
+      (ClassSize.OBJECT * 2) + (2 * ClassSize.ATOMIC_BOOLEAN) +
       ClassSize.ATOMIC_LONG + ClassSize.ATOMIC_INTEGER +
 
       // Using TreeMap for TreeSet
