@@ -1033,19 +1033,21 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     try {
       // TODO: We should consider making this look more like it does for the
-      //       region open where we catch all throwables and never abort
-      if(serverManager.sendRegionClose(server, state.getRegion())) {
+      // region open where we catch all throwables and never abort
+      if (serverManager.sendRegionClose(server, state.getRegion())) {
         LOG.debug("Sent CLOSE to " + server + " for region " +
-            region.getRegionNameAsString());
+          region.getRegionNameAsString());
         return;
       }
       LOG.debug("Server " + server + " region CLOSE RPC returned false");
     } catch (NotServingRegionException nsre) {
       // Failed to close, so pass through and reassign
-      LOG.info("Server " + server + " returned " + nsre);
+      LOG.info("Server " + server + " returned " + nsre + " for " +
+        region.getEncodedName());
     } catch (ConnectException e) {
       // Failed to connect, so pass through and reassign
-      LOG.info("Server " + server + " returned " + e.getMessage());
+      LOG.info("Server " + server + " returned " + e.getMessage() + " for " +
+        region.getEncodedName());
     } catch (java.net.SocketTimeoutException e) {
       // Failed to connect, so pass through and reassign
       LOG.info("Server " + server + " returned " + e.getMessage());
@@ -1055,21 +1057,29 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.debug("Server " + server + " returned NotServingRegionException");
       } else {
         this.master.abort("Remote unexpected exception",
-            re.unwrapRemoteException());
+          re.unwrapRemoteException());
       }
     } catch (Throwable t) {
-      // For now call abort if unexpected exception -- radical, but will get fellas attention.
-      // St.Ack 20101012
+      // For now call abort if unexpected exception -- radical, but will get
+      // fellas attention. St.Ack 20101012
       this.master.abort("Remote unexpected exception", t);
     }
+    /* This looks way wrong at least for the case where close failed because
+     * it was being concurrently split.  It also looks wrong for case where
+     * we cannot connect to remote server.  In that case, let the server
+     * expiration do the fixup.  I'm leaving this code here commented out for
+     * the moment in case I've missed something and this code is actually needed.
+     * St.Ack 12/04/2010.
+     * 
     // Did not CLOSE, so set region offline and assign it
     LOG.debug("Attempted to send CLOSE to " + server +
-        " for region " + region.getRegionNameAsString() + " but failed, " +
-        "setting region as OFFLINE and reassigning");
+      " for region " + region.getRegionNameAsString() + " but failed, " +
+      "setting region as OFFLINE and reassigning");
     synchronized (regionsInTransition) {
       forceRegionStateToOffline(region);
     }
     assign(region, true);
+    */
   }
 
   /**
