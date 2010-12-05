@@ -501,14 +501,14 @@ public class HBaseFsck {
         // Check if chain is broken
         if (!edges.containsKey(last)) {
           errors.detail("Chain of regions in table " + tableName +
-                        " is broken.");
+            " is broken; edges does not contain " + Bytes.toString(last));
           return false;
         }
         next = edges.get(last);
         // Found a cycle
         if (visited.contains(next)) {
           errors.detail("Chain of regions in table " + tableName +
-                        " has a cycle.");
+            " has a cycle around " + Bytes.toString(next));
           return false;
         }
         // Mark next node as visited
@@ -518,7 +518,8 @@ public class HBaseFsck {
           // If we have visited all elements we are fine
           if (edges.size() != visited.size()) {
             errors.detail("Chain of regions in table " + tableName +
-                          " contains less elements than are listed in META.");
+              " contains less elements than are listed in META; visited=" + visited.size() +
+              ", edges=" + edges.size());
             return false;
           }
           return true;
@@ -748,8 +749,7 @@ public class HBaseFsck {
     for (TInfo tInfo : tablesInfo.values()) {
       if (tInfo.check()) {
         System.out.println("  " + tInfo.getName() + " is okay.");
-      }
-      else {
+      } else {
         System.out.println("Table " + tInfo.getName() + " is inconsistent.");
       }
       System.out.println("    Number of regions: " + tInfo.getNumRegions());
