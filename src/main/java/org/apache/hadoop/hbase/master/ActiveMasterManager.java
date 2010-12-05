@@ -126,13 +126,14 @@ class ActiveMasterManager extends ZooKeeperListener {
           this.watcher.masterAddressZNode, this.address)) {
         // We are the master, return
         this.clusterHasActiveMaster.set(true);
+        LOG.info("Master=" + this.address);
         return cleanSetOfActiveMaster;
       }
+      cleanSetOfActiveMaster = false;
 
       // There is another active master running elsewhere or this is a restart
       // and the master ephemeral node has not expired yet.
       this.clusterHasActiveMaster.set(true);
-      cleanSetOfActiveMaster = false;
       HServerAddress currentMaster =
         ZKUtil.getDataAsAddress(this.watcher, this.watcher.masterAddressZNode);
       if (currentMaster != null && currentMaster.equals(this.address)) {

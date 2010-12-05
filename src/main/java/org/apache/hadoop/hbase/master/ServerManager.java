@@ -578,17 +578,13 @@ public class ServerManager {
    */
   public boolean sendRegionClose(HServerInfo server, HRegionInfo region)
   throws IOException {
-    if (server == null) {
-      LOG.debug("Unable to send region close because server is null; region=" +
-          region.getRegionNameAsString());
-      return false;
-    }
+    if (server == null) throw new NullPointerException("Passed server is null");
     HRegionInterface hri = getServerConnection(server);
-    if(hri == null) {
-      LOG.warn("Attempting to send CLOSE RPC to server " +
-        server.getServerName() + " for region " + region.getRegionNameAsString()
-        + " failed because no RPC connection found to this server");
-      return false;
+    if (hri == null) {
+      throw new IOException("Attempting to send CLOSE RPC to server " +
+        server.getServerName() + " for region " +
+        region.getRegionNameAsString() +
+        " failed because no RPC connection found to this server");
     }
     return hri.closeRegion(region);
   }

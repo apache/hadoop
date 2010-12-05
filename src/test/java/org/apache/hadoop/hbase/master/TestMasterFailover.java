@@ -230,12 +230,11 @@ public class TestMasterFailover {
 
     // Create a ZKW to use in the test
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "unittest", new Abortable() {
-          @Override
-          public void abort(String why, Throwable e) {
-            LOG.error("Fatal ZK Error: " + why, e);
-            org.junit.Assert.assertFalse("Fatal ZK error", true);
-          }
+      "unittest", new Abortable() {
+        @Override
+        public void abort(String why, Throwable e) {
+          throw new RuntimeException("Fatal ZK error, why=" + why, e);
+        }
     });
 
     // get all the master threads
@@ -820,22 +819,40 @@ public class TestMasterFailover {
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
         new RegionState(region, RegionState.State.PENDING_OPEN, 0));
     ZKAssign.createNodeOffline(zkw, region, master.getServerName());
+    // This test is bad.  It puts up a PENDING_CLOSE but doesn't say what
+    // server we were PENDING_CLOSE against -- i.e. an entry in
+    // AssignmentManager#regions.  W/o a server, we NPE trying to resend close.
+    // In past, there was wonky logic that had us reassign region if no server
+    // at tail of the unassign.  This was removed.  Commenting out for now.
+    // TODO: Remove completely.
+    /*
     // PENDING_CLOSE and enabled
     region = enabledRegions.remove(0);
+    LOG.info("Setting PENDING_CLOSE enabled " + region.getEncodedName());
     regionsThatShouldBeOnline.add(region);
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_CLOSE, 0));
+      new RegionState(region, RegionState.State.PENDING_CLOSE, 0));
     // PENDING_CLOSE and disabled
     region = disabledRegions.remove(0);
+    LOG.info("Setting PENDING_CLOSE disabled " + region.getEncodedName());
     regionsThatShouldBeOffline.add(region);
     master.assignmentManager.regionsInTransition.put(region.getEncodedName(),
-        new RegionState(region, RegionState.State.PENDING_CLOSE, 0));
+      new RegionState(region, RegionState.State.PENDING_CLOSE, 0));
+      */
 
     // Failover should be completed, now wait for no RIT
     log("Waiting for no more RIT");
     ZKAssign.blockUntilNoRIT(zkw);
     log("No more RIT in ZK");
-    master.assignmentManager.waitUntilNoRegionsInTransition(120000);
+    long now = System.currentTimeMillis();
+    final long maxTime = 120000;
+    boolean done = master.assignmentManager.waitUntilNoRegionsInTransition(maxTime);
+    if (!done) {
+      LOG.info("rit=" + master.assignmentManager.getRegionsInTransition());
+    }
+    long elapsed = System.currentTimeMillis() - now;
+    assertTrue("Elapsed=" + elapsed + ", maxTime=" + maxTime + ", done=" + done,
+      elapsed < maxTime);
     log("No more RIT in RIT map, doing final test verification");
 
     // Grab all the regions that are online across RSs
@@ -847,7 +864,7 @@ public class TestMasterFailover {
 
     // Now, everything that should be online should be online
     for (HRegionInfo hri : regionsThatShouldBeOnline) {
-      assertTrue(onlineRegions.contains(hri));
+      assertTrue("region=" + hri.getRegionNameAsString(), onlineRegions.contains(hri));
     }
 
     // Everything that should be offline should not be online

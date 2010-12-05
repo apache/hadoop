@@ -294,8 +294,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
   private void connectionEvent(WatchedEvent event) {
     switch(event.getState()) {
       case SyncConnected:
-        // Update our identifier.  Otherwise ignore.
-        LOG.debug(this.identifier + " connected");
         // Now, this callback can be invoked before the this.zookeeper is set.
         // Wait a little while.
         long finished = System.currentTimeMillis() +
@@ -312,6 +310,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
         }
         this.identifier = this.identifier + "-0x" +
           Long.toHexString(this.zooKeeper.getSessionId());
+        // Update our identifier.  Otherwise ignore.
+        LOG.debug(this.identifier + " connected");
         break;
 
       // Abort the server if Disconnected or Expired

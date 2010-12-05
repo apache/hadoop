@@ -156,7 +156,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // flag set after we become the active master (used for testing)
   private volatile boolean isActiveMaster = false;
   // flag set after we complete initialization once active (used for testing)
-  private volatile boolean isInitialized = false;
+  private volatile boolean initialized = false;
 
   // Instance of the hbase executor service.
   ExecutorService executorService;
@@ -400,7 +400,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       Threads.setDaemonThreadRunning(new CatalogJanitor(this, this));
 
     LOG.info("Master has completed initialization");
-    isInitialized = true;
+    initialized = true;
   }
 
   /**
@@ -998,7 +998,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
    * @return true if master is ready to go, false if not.
    */
   public boolean isInitialized() {
-    return isInitialized;
+    return initialized;
   }
 
   @Override

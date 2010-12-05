@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +54,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
@@ -333,6 +333,10 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private void handleRegion(final RegionTransitionData data) {
     synchronized(regionsInTransition) {
+      if (data == null || data.getServerName() == null) {
+        LOG.warn("Unexpected NULL input " + data);
+        return;
+      }
       // Verify this is a known server
       if (!serverManager.isServerOnline(data.getServerName()) &&
           !this.master.getServerName().equals(data.getServerName())) {
@@ -1039,47 +1043,39 @@ public class AssignmentManager extends ZooKeeperListener {
           region.getRegionNameAsString());
         return;
       }
-      LOG.debug("Server " + server + " region CLOSE RPC returned false");
+      // This never happens. Currently regionserver close always return true.
+      LOG.debug("Server " + server + " region CLOSE RPC returned false for " +
+        region.getEncodedName());
     } catch (NotServingRegionException nsre) {
-      // Failed to close, so pass through and reassign
       LOG.info("Server " + server + " returned " + nsre + " for " +
         region.getEncodedName());
+      // Presume that master has stale data.  Presume remote side just split.
+      // Presume that the split message when it comes in will fix up the master's
+      // in memory cluster state.
+      return;
     } catch (ConnectException e) {
-      // Failed to connect, so pass through and reassign
+      LOG.info("Failed connect to " + server + ", message=" + e.getMessage() +
+        ", region=" + region.getEncodedName());
+      // Presume that regionserver just failed and we haven't got expired
+      // server from zk yet.  Let expired server deal with clean up.
+    } catch (java.net.SocketTimeoutException e) {
       LOG.info("Server " + server + " returned " + e.getMessage() + " for " +
         region.getEncodedName());
-    } catch (java.net.SocketTimeoutException e) {
-      // Failed to connect, so pass through and reassign
-      LOG.info("Server " + server + " returned " + e.getMessage());
+      // Presume retry or server will expire.
     } catch (RemoteException re) {
-      if (re.unwrapRemoteException() instanceof NotServingRegionException) {
+      IOException ioe = re.unwrapRemoteException();
+      if (ioe instanceof NotServingRegionException) {
         // Failed to close, so pass through and reassign
-        LOG.debug("Server " + server + " returned NotServingRegionException");
+        LOG.debug("Server " + server + " returned " + ioe + " for " +
+          region.getEncodedName());
       } else {
-        this.master.abort("Remote unexpected exception",
-          re.unwrapRemoteException());
+        this.master.abort("Remote unexpected exception", ioe);
       }
     } catch (Throwable t) {
       // For now call abort if unexpected exception -- radical, but will get
       // fellas attention. St.Ack 20101012
       this.master.abort("Remote unexpected exception", t);
     }
-    /* This looks way wrong at least for the case where close failed because
-     * it was being concurrently split.  It also looks wrong for case where
-     * we cannot connect to remote server.  In that case, let the server
-     * expiration do the fixup.  I'm leaving this code here commented out for
-     * the moment in case I've missed something and this code is actually needed.
-     * St.Ack 12/04/2010.
-     * 
-    // Did not CLOSE, so set region offline and assign it
-    LOG.debug("Attempted to send CLOSE to " + server +
-      " for region " + region.getRegionNameAsString() + " but failed, " +
-      "setting region as OFFLINE and reassigning");
-    synchronized (regionsInTransition) {
-      forceRegionStateToOffline(region);
-    }
-    assign(region, true);
-    */
   }
 
   /**
@@ -1555,8 +1551,8 @@ public class AssignmentManager extends ZooKeeperListener {
                   // Attempt to transition node into OFFLINE
                   try {
                     data = new RegionTransitionData(
-                        EventType.M_ZK_REGION_OFFLINE,
-                        regionInfo.getRegionName());
+                      EventType.M_ZK_REGION_OFFLINE, regionInfo.getRegionName(),
+                      master.getServerName());
                     if (ZKUtil.setData(watcher, node, data.getBytes(),
                         stat.getVersion())) {
                       // Node is now OFFLINE, let's trigger another assignment
