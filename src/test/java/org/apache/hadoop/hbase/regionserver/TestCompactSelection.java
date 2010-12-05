@@ -139,20 +139,24 @@ public class TestCompactSelection extends TestCase {
     return ret;
   }
 
-  void compactEquals(List<StoreFile> actual, long ... expected)
+  long[] getSizes(List<StoreFile> sfList) {
+    long[] aNums = new long[sfList.size()];
+    for (int i=0; i <sfList.size(); ++i) {
+      aNums[i] = sfList.get(i).getReader().length();
+    }
+    return aNums;
+  }
+  
+  void compactEquals(List<StoreFile> candidates, long ... expected) 
   throws IOException {
-    compactEquals(actual, false, expected);
+    compactEquals(candidates, false, expected);
   }
 
-  void compactEquals(List<StoreFile> actual, boolean forcemajor,
+  void compactEquals(List<StoreFile> candidates, boolean forcemajor, 
       long ... expected)
   throws IOException {
-    List<StoreFile> result = store.compactSelection(actual, forcemajor);
-    long[] aNums = new long[result.size()];
-    for (int i=0; i <result.size(); ++i) {
-      aNums[i] = result.get(i).getReader().length();
-    }
-    assertEquals(Arrays.toString(expected), Arrays.toString(aNums));
+    List<StoreFile> actual = store.compactSelection(candidates, forcemajor);
+    assertEquals(Arrays.toString(expected), Arrays.toString(getSizes(actual)));
   }
 
   public void testCompactionRatio() throws IOException {
@@ -173,32 +177,44 @@ public class TestCompactSelection extends TestCase {
     compactEquals(sfCreate(tooBig, tooBig, 700,700) /* empty */);
     // small files = don't care about ratio
     compactEquals(sfCreate(8,3,1), 8,3,1);
+    /* TODO: add sorting + unit test back in when HBASE-2856 is fixed 
     // sort first so you don't include huge file the tail end
     // happens with HFileOutputFormat bulk migration
     compactEquals(sfCreate(100,50,23,12,12, 500), 23, 12, 12);
+     */
     // don't exceed max file compact threshold
     assertEquals(maxFiles,
         store.compactSelection(sfCreate(7,6,5,4,3,2,1), false).size());
 
     /* MAJOR COMPACTION */
     // if a major compaction has been forced, then compact everything
-    compactEquals(sfCreate(100,50,25,12,12), true, 100, 50, 25, 12, 12);
+    compactEquals(sfCreate(50,25,12,12), true, 50, 25, 12, 12);
     // also choose files < threshold on major compaction
     compactEquals(sfCreate(12,12), true, 12, 12);
-    // unless one of those files is too big
-    compactEquals(sfCreate(tooBig, 12,12), true, 12, 12);
+    // even if one of those files is too big
+    compactEquals(sfCreate(tooBig, 12,12), true, tooBig, 12, 12);
     // don't exceed max file compact threshold, even with major compaction
     assertEquals(maxFiles,
         store.compactSelection(sfCreate(7,6,5,4,3,2,1), true).size());
+    // if we exceed maxCompactSize, downgrade to minor
+    // if not, it creates a 'snowball effect' when files >> maxCompactSize:
+    // the last file in compaction is the aggregate of all previous compactions
+    compactEquals(sfCreate(100,50,23,12,12), true, 23, 12, 12);
+    // trigger an aged major compaction
+    store.majorCompactionTime = 1; 
+    compactEquals(sfCreate(50,25,12,12), 50, 25, 12, 12);
+    // major sure exceeding maxCompactSize also downgrades aged minors
+    store.majorCompactionTime = 1; 
+    compactEquals(sfCreate(100,50,23,12,12), 23, 12, 12);
 
     /* REFERENCES == file is from a region that was split */
     // treat storefiles that have references like a major compaction
-    compactEquals(sfCreate(true, 100,50,25,12,12), true, 100, 50, 25, 12, 12);
+    compactEquals(sfCreate(true, 100,50,25,12,12), 100, 50, 25, 12, 12);
     // reference files shouldn't obey max threshold
-    compactEquals(sfCreate(true, tooBig, 12,12), true, tooBig, 12, 12);
+    compactEquals(sfCreate(true, tooBig, 12,12), tooBig, 12, 12);
     // reference files should obey max file compact to avoid OOM
     assertEquals(maxFiles,
-        store.compactSelection(sfCreate(true, 7,6,5,4,3,2,1), true).size());
+        store.compactSelection(sfCreate(true, 7,6,5,4,3,2,1), false).size());
 
     // empty case
     compactEquals(new ArrayList<StoreFile>() /* empty */);

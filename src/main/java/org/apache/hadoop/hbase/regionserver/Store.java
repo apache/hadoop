@@ -92,7 +92,7 @@ public class Store implements HeapSize {
   final Configuration conf;
   // ttl in milliseconds.
   protected long ttl;
-  private long majorCompactionTime;
+  long majorCompactionTime;
   private final int minFilesToCompact;
   private final int maxFilesToCompact;
   private final long minCompactSize;
@@ -204,7 +204,7 @@ public class Store implements HeapSize {
     this.minCompactSize = conf.getLong("hbase.hstore.compaction.min.size",
       this.region.memstoreFlushSize);
     this.maxCompactSize
-      = conf.getLong("hbase.hstore.compaction.max.size", 0);
+      = conf.getLong("hbase.hstore.compaction.max.size", Long.MAX_VALUE);
     this.compactRatio = conf.getFloat("hbase.hstore.compaction.ratio", 1.2F);
 
     if (Store.closeCheckInterval == 0) {
@@ -840,23 +840,19 @@ public class Store implements HeapSize {
      */
     List<StoreFile> filesToCompact = new ArrayList<StoreFile>(candidates);
 
-    // Do not compact files above a configurable max filesize unless they are
-    // references. We MUST compact these
-    if (this.maxCompactSize > 0) {
-      final long msize = this.maxCompactSize;
-      filesToCompact.removeAll(Collections2.filter(filesToCompact,
-        new Predicate<StoreFile>() {
-          public boolean apply(StoreFile sf) {
-            // NOTE: keep all references. we must compact them
-            return sf.getReader().length() > msize && !sf.isReference();
-          }
-        }));
+    if (!forcemajor) {
+      // do not compact old files above a configurable threshold
+      // save all references. we MUST compact them
+      int pos = 0;
+      while (pos < filesToCompact.size() && 
+             filesToCompact.get(pos).getReader().length() > maxCompactSize &&
+             !filesToCompact.get(pos).isReference()) ++pos;
+      filesToCompact.subList(0, pos).clear();
     }
-
+    
     // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction = forcemajor ||
-      (isMajorCompaction(filesToCompact) &&
-       filesToCompact.size() > this.maxFilesToCompact);
+    boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
+      && filesToCompact.size() < this.maxFilesToCompact;
 
     if (filesToCompact.isEmpty()) {
       LOG.debug(this.storeNameStr + ": no store files to compact");
@@ -868,26 +864,10 @@ public class Store implements HeapSize {
       int start = 0;
       double r = this.compactRatio;
 
+      /* TODO: add sorting + unit test back in when HBASE-2856 is fixed 
       // Sort files by size to correct when normal skew is altered by bulk load.
-      //
-      // So, technically, order is important for optimizations like the TimeStamp
-      // filter. However, realistically this isn't a problem because our normal
-      // skew always decreases in filesize over time.  The only place where our
-      // skew doesn't decrease is for files that have been recently flushed.
-      // However, all those will be unconditionally compacted because they will
-      // be lower than "hbase.hstore.compaction.min.size".  
-      //
-      // The sorting is to handle an interesting issue that popped up for us
-      // during migration: we're bulk loading StoreFiles of extremely variable
-      // size (are we migrating 1k users or 10M?) and they will all appear at
-      // the end of the StoreFile list.  How do we determine when it is
-      // efficient to compact them?  The easiest option was to sort the compact
-      // list and handle bulk files by relative size instead of making some
-      // custom compaction selection algorithm just for bulk inclusion.  It
-      // seems like any other companies that will incrementally migrate data
-      // into HBase would hit the same issue.  Nicolas.
-      //
       Collections.sort(filesToCompact, StoreFile.Comparators.FILE_SIZE);
+       */
 
       // get store file sizes for incremental compacting selection.
       int countOfFiles = filesToCompact.size();
