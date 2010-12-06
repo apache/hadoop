@@ -167,19 +167,19 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Assign a region
     def assign(region_name, force)
-      @admin.assign(Bytes::toBytes(region_name), java.lang.Boolean::valueOf(force))
+      @admin.assign(Bytes.toBytes(region_name), java.lang.Boolean::valueOf(force))
     end
 
     #----------------------------------------------------------------------------------------------
     # Unassign a region
     def unassign(region_name, force)
-      @admin.unassign(Bytes::toBytes(region_name), java.lang.Boolean::valueOf(force))
+      @admin.unassign(Bytes.toBytes(region_name), java.lang.Boolean::valueOf(force))
     end
 
     #----------------------------------------------------------------------------------------------
     # Move a region
     def move(encoded_region_name, server = nil)
-      @admin.move(encoded_region_name, server ? [server].to_java: nil)
+      @admin.move(Bytes.toBytes(encoded_region_name), server ? Bytes.toBytes(server): nil)
     end
 
     #----------------------------------------------------------------------------------------------

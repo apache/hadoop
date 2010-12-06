@@ -744,6 +744,7 @@ Release 0.90.0 - Unreleased
    HBASE-3304  Get spurious master fails during bootup
    HBASE-3298  Regionserver can close during a split causing double assignment
    HBASE-3309  " Not running balancer because dead regionserver processing" is a lie
+   HBASE-3314  [shell] 'move' is broken
 
 
   IMPROVEMENTS
