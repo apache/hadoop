@@ -668,7 +668,8 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         return false;
       }
       if (this.serverManager.areDeadServersInProgress()) {
-        LOG.debug("Not running balancer because dead regionserver processing");
+        LOG.debug("Not running balancer because processing dead regionserver(s): ";
+          this.serverManager.getDeadServers());
         return false;
       }
       Map<HServerInfo, List<HRegionInfo>> assignments =
