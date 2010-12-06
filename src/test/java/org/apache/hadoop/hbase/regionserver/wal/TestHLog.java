@@ -341,7 +341,7 @@ public class TestHLog  {
       wal.append(regioninfo, tableName, kvs, System.currentTimeMillis());
     }
     // Now call sync to send the data to HDFS datanodes
-    wal.sync(true);
+    wal.sync();
      int namenodePort = cluster.getNameNodePort();
     final Path walPath = wal.computeFilename();
     

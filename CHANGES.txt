@@ -1227,6 +1227,7 @@ Release 0.90.0 - Unreleased
    HBASE-3223  Get VersionInfo for Running HBase Process
                (Nicolas Spiegelberg via Stack)
    HBASE-3303  Lower hbase.regionserver.handler.count from 25 back to 10
+   HBASE-2467  Concurrent flushers in HLog sync using HDFS-895
 
 
   NEW FEATURES
