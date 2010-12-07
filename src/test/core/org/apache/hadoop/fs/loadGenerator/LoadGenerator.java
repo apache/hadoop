@@ -26,16 +26,19 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -110,7 +113,7 @@ public class LoadGenerator extends Configured implements Tool {
   
   private volatile boolean shouldRun = true;
   private Path root = DataGenerator.DEFAULT_ROOT;
-  private FileSystem fs;
+  private FileContext fc;
   private int maxDelayBetweenOps = 0;
   private int numOfThreads = 200;
   private long [] durations = {0};
@@ -230,7 +233,7 @@ public class LoadGenerator extends Configured implements Tool {
     private void read() throws IOException {
       String fileName = files.get(r.nextInt(files.size()));
       long startTime = System.currentTimeMillis();
-      InputStream in = fs.open(new Path(fileName));
+      InputStream in = fc.open(new Path(fileName));
       executionTime[OPEN] += (System.currentTimeMillis()-startTime);
       totalNumOfOps[OPEN]++;
       while (in.read(buffer) != -1) {}
@@ -252,7 +255,7 @@ public class LoadGenerator extends Configured implements Tool {
       while ((fileSize = r.nextGaussian()+2)<=0) {}
       genFile(file, (long)(fileSize*BLOCK_SIZE));
       long startTime = System.currentTimeMillis();
-      fs.delete(file, true);
+      fc.delete(file, true);
       executionTime[DELETE] += (System.currentTimeMillis()-startTime);
       totalNumOfOps[DELETE]++;
     }
@@ -263,7 +266,7 @@ public class LoadGenerator extends Configured implements Tool {
     private void list() throws IOException {
       String dirName = dirs.get(r.nextInt(dirs.size()));
       long startTime = System.currentTimeMillis();
-      fs.listStatus(new Path(dirName));
+      fc.listStatus(new Path(dirName));
       executionTime[LIST] += (System.currentTimeMillis()-startTime);
       totalNumOfOps[LIST]++;
     }
@@ -352,7 +355,7 @@ public class LoadGenerator extends Configured implements Tool {
   /** Parse the command line arguments and initialize the data */
   private int init(String[] args) throws IOException {
     try {
-      fs = FileSystem.get(getConf());
+      fc = FileContext.getFileContext(getConf());
     } catch (IOException ioe) {
       System.err.println("Can not initialize the file system: " + 
           ioe.getLocalizedMessage());
@@ -546,7 +549,7 @@ public class LoadGenerator extends Configured implements Tool {
    * whose name starts with "_file_".
    */
   private void initFileDirTables(Path path) throws IOException {
-    FileStatus[] stats = fs.listStatus(path);
+    FileStatus[] stats = fc.util().listStatus(path);
 
     for (FileStatus stat : stats) {
       if (stat.isDirectory()) {
@@ -581,10 +584,9 @@ public class LoadGenerator extends Configured implements Tool {
    */
   private void genFile(Path file, long fileSize) throws IOException {
     long startTime = System.currentTimeMillis();
-    FSDataOutputStream out = fs.create(file, true, 
-        getConf().getInt("io.file.buffer.size", 4096),
-        (short)getConf().getInt("dfs.replication", 3),
-        fs.getDefaultBlockSize());
+    FSDataOutputStream out = fc.create(file, EnumSet.of(CreateFlag.OVERWRITE),
+        CreateOpts.createParent(), CreateOpts.bufferSize(4096),
+        CreateOpts.repFac((short) 3));
     executionTime[CREATE] += (System.currentTimeMillis()-startTime);
     totalNumOfOps[CREATE]++;
 

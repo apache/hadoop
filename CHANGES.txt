@@ -23,6 +23,9 @@ Trunk (unreleased changes)
     HADOOP-7049. TestReconfiguration should be junit v4.
     (Patrick Kling via eli)
 
+    HADOOP-7054 Change NN LoadGenerator to use FileContext APIs
+	(Sanjay Radia)
+
   OPTIMIZATIONS
 
   BUG FIXES
