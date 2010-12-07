@@ -18,9 +18,15 @@
 
 package org.apache.hadoop.hbase.io;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -206,6 +212,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Increment.class, code++);
 
     addToMap(KeyOnlyFilter.class, code++);
+    
+    // serializable
+    addToMap(Serializable.class, code++);
 
   }
 
@@ -309,6 +318,9 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       }
       else if (Writable.class.isAssignableFrom(c)) {
         code = CLASS_TO_CODE.get(Writable.class);
+      }
+      else if (Serializable.class.isAssignableFrom(c)){
+        code = CLASS_TO_CODE.get(Serializable.class);
       }
     }
     if (code == null) {
@@ -426,6 +438,28 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
         writeClassCode(out, c);
       }
       ((Writable)instanceObj).write(out);
+    } else if (Serializable.class.isAssignableFrom(declClass)) {
+      Class <?> c = instanceObj.getClass();
+      Byte code = CLASS_TO_CODE.get(c);
+      if (code == null) {
+        out.writeByte(NOT_ENCODED);
+        Text.writeString(out, c.getName());
+      } else {
+        writeClassCode(out, c);
+      }
+      ByteArrayOutputStream bos = null;
+      ObjectOutputStream oos = null;
+      try{
+        bos = new ByteArrayOutputStream();
+        oos = new ObjectOutputStream(bos);
+        oos.writeObject(instanceObj);
+        byte[] value = bos.toByteArray();
+        out.writeInt(value.length);
+        out.write(value);
+      } finally {
+        if(bos!=null) bos.close();
+        if(oos!=null) oos.close();
+      }
     } else {
       throw new IOException("Can't write: "+instanceObj+" as "+declClass);
     }
@@ -505,7 +539,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     } else if (declaredClass.isEnum()) {         // enum
       instance = Enum.valueOf((Class<? extends Enum>) declaredClass,
         Text.readString(in));
-    } else {                                      // Writable
+    } else {                                      // Writable or Serializable
       Class instanceClass = null;
       Byte b = in.readByte();
       if (b.byteValue() == NOT_ENCODED) {
@@ -519,17 +553,36 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       } else {
         instanceClass = CODE_TO_CLASS.get(b);
       }
-      Writable writable = WritableFactories.newInstance(instanceClass, conf);
-      try {
-        writable.readFields(in);
-      } catch (Exception e) {
-        LOG.error("Error in readFields", e);
-        throw new IOException("Error in readFields" , e);
-      }
-      instance = writable;
-      if (instanceClass == NullInstance.class) {  // null
-        declaredClass = ((NullInstance)instance).declaredClass;
-        instance = null;
+      if(Writable.class.isAssignableFrom(instanceClass)){
+        Writable writable = WritableFactories.newInstance(instanceClass, conf);
+        try {
+          writable.readFields(in);
+        } catch (Exception e) {
+          LOG.error("Error in readFields", e);
+          throw new IOException("Error in readFields" , e);
+        }
+        instance = writable;
+        if (instanceClass == NullInstance.class) {  // null
+          declaredClass = ((NullInstance)instance).declaredClass;
+          instance = null;
+        }
+      } else {
+        int length = in.readInt();
+        byte[] objectBytes = new byte[length];
+        in.readFully(objectBytes);
+        ByteArrayInputStream bis = null;
+        ObjectInputStream ois = null;
+        try { 
+          bis = new ByteArrayInputStream(objectBytes);
+          ois = new ObjectInputStream(bis);
+          instance = ois.readObject();
+        } catch (ClassNotFoundException e) {
+          LOG.error("Error in readFields", e);
+          throw new IOException("Error in readFields", e);
+        } finally {
+          if(bis!=null) bis.close();
+          if(ois!=null) ois.close();
+        }
       }
     }
     if (objectWritable != null) {                 // store values

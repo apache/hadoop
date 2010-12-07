@@ -63,7 +63,7 @@ public class TestHbaseObjectWritable extends TestCase {
     // Do unsupported type.
     boolean exception = false;
     try {
-      doType(conf, new File("a"), File.class);
+      doType(conf, new Object(), Object.class);
     } catch (UnsupportedOperationException uoe) {
       exception = true;
     }
@@ -121,6 +121,17 @@ public class TestHbaseObjectWritable extends TestCase {
     assertTrue(child instanceof CustomFilter);
     assertEquals("mykey", ((CustomFilter)child).getKey());
   }
+  
+  public void testCustomSerializable() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+
+    // test proper serialization of un-encoded serialized java objects
+    CustomSerializable custom = new CustomSerializable("test phrase");
+    Object obj = doType(conf, custom, CustomSerializable.class);
+    assertTrue(obj instanceof Serializable);
+    assertTrue(obj instanceof CustomSerializable);
+    assertEquals("test phrase", ((CustomSerializable)obj).getValue());
+  }
 
   private Object doType(final Configuration conf, final Object value,
       final Class<?> clazz)
@@ -135,6 +146,27 @@ public class TestHbaseObjectWritable extends TestCase {
     Object product = HbaseObjectWritable.readObject(dis, conf);
     dis.close();
     return product;
+  }
+  
+  public static class CustomSerializable implements Serializable {
+    private static final long serialVersionUID = 1048445561865740632L;
+    private String value = null;
+    
+    public CustomSerializable() {
+    }
+    
+    public CustomSerializable(String value) {
+      this.value = value;
+    }
+    
+    public String getValue() {
+      return value;
+    }
+    
+    public void setValue(String value) {
+      this.value = value;
+    }
+    
   }
 
   public static class CustomWritable implements Writable {

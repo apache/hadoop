@@ -23,6 +23,8 @@ Release 0.91.0 - Unreleased
    HBASE-3292  Expose block cache hit/miss/evict counts into region server
                metrics
    HBASE-2936  Differentiate between daemon & restart sleep periods
+   HBASE-3316  Add support for Java Serialization to HbaseObjectWritable
+               (Ed Kohlwey via Stack)
 
   NEW FEATURES
    HBASE-3287  Add option to cache blocks on hfile write and evict blocks on
