@@ -293,11 +293,20 @@ public class LoadBalancer {
 
     long endTime = System.currentTimeMillis();
 
-    assert(regionidx == regionsToMove.size()): "clusterState=" + clusterState +
-      ", regionidx=" + regionidx + ", regionsToMove=" + regionsToMove +
+    if (regionidx != regionsToMove.size() || neededRegions != 0) {
+      // Emit data so can diagnose how balancer went astray.
+      LOG.warn("regionidx=" + regionidx + ", regionsToMove=" + regionsToMove.size() +
       ", numServers=" + numServers + ", serversOverloaded=" + serversOverloaded +
-      ", serversUnderloaded=" + serversUnderloaded;
-    assert(neededRegions == 0);
+      ", serversUnderloaded=" + serversUnderloaded);
+      StringBuilder sb = new StringBuilder();
+      for (Map.Entry<HServerInfo, List<HRegionInfo>> e: clusterState.entrySet()) {
+        if (sb.length() > 0) sb.append(", ");
+        sb.append(e.getKey().getServerName());
+        sb.append(" ");
+        sb.append(e.getValue().size());
+      }
+      LOG.warn("Input " + sb.toString());
+    }
 
     // All done!
     LOG.info("Calculated a load balance in " + (endTime-startTime) + "ms. " +
@@ -636,7 +645,7 @@ public class LoadBalancer {
     public String toString() {
       return "hri=" + this.hri.getRegionNameAsString() + ", src=" +
         (this.source == null? "": this.source.getServerName()) +
-        ", dest=" + this.dest.getServerName();
+        ", dest=" + (this.dest == null? "": this.dest.getServerName());
     }
   }
 }
