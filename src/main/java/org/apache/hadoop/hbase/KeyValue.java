@@ -36,35 +36,35 @@ import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.Writable;
 
 /**
- * An HBase Key/Value.
+ * An HBase Key/Value.  This is the fundamental HBase Type.
  *
  * <p>If being used client-side, the primary methods to access individual fields
  * are {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()},
  * {@link #getTimestamp()}, and {@link #getValue()}.  These methods allocate new
- * byte arrays and return copies so they should be avoided server-side.
+ * byte arrays and return copies. Avoid their use server-side.
  *
- * <p>Instances of this class are immutable.  They are not
- * comparable but Comparators are provided.  Comparators change with context,
- * whether user table or a catalog table comparison context.  Its
- * important that you use the appropriate comparator comparing rows in
- * particular.  There are Comparators for KeyValue instances and then for
- * just the Key portion of a KeyValue used mostly in {@link HFile}.
+ * <p>Instances of this class are immutable.  They do not implement Comparable
+ * but Comparators are provided.  Comparators change with context,
+ * whether user table or a catalog table comparison.  Its critical you use the
+ * appropriate comparator.  There are Comparators for KeyValue instances and
+ * then for just the Key portion of a KeyValue used mostly by {@link HFile}.
  *
- * <p>KeyValue wraps a byte array and has offset and length for passed array
- * at where to start interpreting the content as a KeyValue blob.  The KeyValue
- * blob format inside the byte array is:
+ * <p>KeyValue wraps a byte array and takes offsets and lengths into passed
+ * array at where to start interpreting the content as KeyValue.  The KeyValue
+ * format inside a byte array is:
  * <code>&lt;keylength> &lt;valuelength> &lt;key> &lt;value></code>
- * Key is decomposed as:
+ * Key is further decomposed as:
  * <code>&lt;rowlength> &lt;row> &lt;columnfamilylength> &lt;columnfamily> &lt;columnqualifier> &lt;timestamp> &lt;keytype></code>
- * Rowlength maximum is Short.MAX_SIZE, column family length maximum is
- * Byte.MAX_SIZE, and column qualifier + key length must be < Integer.MAX_SIZE.
- * The column does not contain the family/qualifier delimiter.
- *
- * <p>TODO: Group Key-only comparators and operations into a Key class, just
- * for neatness sake, if can figure what to call it.
+ * The <code>rowlength</code> maximum is <code>Short.MAX_SIZE</code>,
+ * column family length maximum is
+ * <code>Byte.MAX_SIZE</code>, and column qualifier + key length must
+ * be < <code>Integer.MAX_SIZE</code>.
+ * The column does not contain the family/qualifier delimiter, {@link #COLUMN_FAMILY_DELIMITER}
  */
 public class KeyValue implements Writable, HeapSize {
   static final Log LOG = LogFactory.getLog(KeyValue.class);
+  // TODO: Group Key-only comparators and operations into a Key class, just
+  // for neatness sake, if can figure what to call it.
 
   /**
    * Colon character in UTF-8
@@ -1293,7 +1293,7 @@ public class KeyValue implements Writable, HeapSize {
   public static int getDelimiter(final byte [] b, int offset, final int length,
       final int delimiter) {
     if (b == null) {
-      throw new NullPointerException();
+      throw new IllegalArgumentException("Passed buffer is null");
     }
     int result = -1;
     for (int i = offset; i < length + offset; i++) {
@@ -1314,7 +1314,7 @@ public class KeyValue implements Writable, HeapSize {
   public static int getDelimiterInReverse(final byte [] b, final int offset,
       final int length, final int delimiter) {
     if (b == null) {
-      throw new NullPointerException();
+      throw new IllegalArgumentException("Passed buffer is null");
     }
     int result = -1;
     for (int i = (offset + length) - 1; i >= offset; i--) {

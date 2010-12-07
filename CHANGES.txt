@@ -17,6 +17,8 @@ Release 0.91.0 - Unreleased
                the HBase shell (Igor Ranitovic via Stack)
    HBASE-3317  Javadoc and Throws Declaration for Bytes.incrementBytes() is
                Wrong (Ed Kohlwey via Stack)
+   HBASE-1888  KeyValue methods throw NullPointerException instead of
+               IllegalArgumentException during parameter sanity check
 
   IMPROVEMENTS
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
