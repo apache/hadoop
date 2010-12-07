@@ -27,6 +27,8 @@ java_import org.apache.hadoop.hbase.HTableDescriptor
 java_import org.apache.hadoop.hbase.HRegionInfo
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.zookeeper.ZooKeeper
+java_import org.apache.hadoop.hbase.io.hfile.Compression
+java_import org.apache.hadoop.hbase.regionserver.StoreFile
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -352,14 +354,28 @@ module Hbase
       family ||= HColumnDescriptor.new(name.to_java_bytes)
 
       family.setBlockCacheEnabled(JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE])) if arg.include?(HColumnDescriptor::BLOCKCACHE)
-      family.setBloomFilterType(arg[HColumnDescriptor::BLOOMFILTER]) if arg.include?(HColumnDescriptor::BLOOMFILTER)
       family.setScope(JInteger.valueOf(arg[REPLICATION_SCOPE])) if arg.include?(HColumnDescriptor::REPLICATION_SCOPE)
       family.setInMemory(JBoolean.valueOf(arg[IN_MEMORY])) if arg.include?(HColumnDescriptor::IN_MEMORY)
       family.setTimeToLive(JInteger.valueOf(arg[HColumnDescriptor::TTL])) if arg.include?(HColumnDescriptor::TTL)
       family.setCompressionType(arg[HColumnDescriptor::COMPRESSION]) if arg.include?(HColumnDescriptor::COMPRESSION)
       family.setBlocksize(JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE])) if arg.include?(HColumnDescriptor::BLOCKSIZE)
       family.setMaxVersions(JInteger.valueOf(arg[VERSIONS])) if arg.include?(HColumnDescriptor::VERSIONS)
-
+      if arg.include?(HColumnDescriptor::BLOOMFILTER)
+        bloomtype = arg[HColumnDescriptor::BLOOMFILTER].upcase
+        unless StoreFile::BloomType.constants.include?(bloomtype)      
+          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + StoreFile::BloomType.constants.join(" ")) 
+        else 
+          family.setBloomFilterType(StoreFile::BloomType.valueOf(bloomtype))
+        end
+      end
+      if arg.include?(HColumnDescriptor::COMPRESSION)
+        compression = arg[HColumnDescriptor::COMPRESSION].upcase
+        unless Compression::Algorithm.constants.include?(compression)      
+          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + Compression::Algorithm.constants.join(" ")) 
+        else 
+          family.setCompressionType(Compression::Algorithm.valueOf(compression))
+        end
+      end
       return family
     end
 

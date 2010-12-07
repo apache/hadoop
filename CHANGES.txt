@@ -11,6 +11,10 @@ Release 0.91.0 - Unreleased
                previously expired RS instances to rejoin cluster
    HBASE-3283  NPE in AssignmentManager if processing shutdown of RS who
                doesn't have any regions assigned to it
+   HBASE-3173  HBase 2984 breaks ability to specify BLOOMFILTER &
+               COMPRESSION via shell
+   HBASE-3310  Failing creating/altering table with compression agrument from
+               the HBase shell (Igor Ranitovic via Stack)
 
   IMPROVEMENTS
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
