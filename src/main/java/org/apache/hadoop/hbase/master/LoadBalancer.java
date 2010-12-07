@@ -259,12 +259,13 @@ public class LoadBalancer {
     for(Map.Entry<HServerInfo, List<HRegionInfo>> server :
       serversByLoad.entrySet()) {
       int regionCount = server.getKey().getLoad().getNumberOfRegions();
+      if (regionCount >= min) break;
       BalanceInfo balanceInfo = serverBalanceInfo.get(server.getKey());
       if(balanceInfo != null) {
         regionCount += balanceInfo.getNumRegionsAdded();
       }
       if(regionCount >= min) {
-        break;
+        continue;
       }
       int numToTake = min - regionCount;
       int numTaken = 0;
