@@ -956,7 +956,7 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (this.regionPlans) {
       existingPlan = this.regionPlans.get(encodedName);
       if (existingPlan == null || forceNewPlan ||
-          existingPlan.getDestination().equals(serverToExclude)) {
+          (existingPlan != null && existingPlan.getDestination().equals(serverToExclude))) {
         newPlan = true;
         this.regionPlans.put(encodedName, randomPlan);
       }
