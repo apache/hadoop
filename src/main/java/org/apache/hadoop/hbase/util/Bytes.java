@@ -1178,10 +1178,9 @@ public class Bytes {
    * @param value - array of bytes containing long (length <= SIZEOF_LONG)
    * @param amount value will be incremented on (deincremented if negative)
    * @return array of bytes containing incremented long (length == SIZEOF_LONG)
-   * @throws IOException - if value.length > SIZEOF_LONG
    */
   public static byte [] incrementBytes(byte[] value, long amount)
-  throws IOException {
+  {
     byte[] val = value;
     if (val.length < SIZEOF_LONG) {
       // Hopefully this doesn't happen too often.

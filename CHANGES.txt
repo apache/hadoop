@@ -15,6 +15,8 @@ Release 0.91.0 - Unreleased
                COMPRESSION via shell
    HBASE-3310  Failing creating/altering table with compression agrument from
                the HBase shell (Igor Ranitovic via Stack)
+   HBASE-3317  Javadoc and Throws Declaration for Bytes.incrementBytes() is
+               Wrong (Ed Kohlwey via Stack)
 
   IMPROVEMENTS
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
