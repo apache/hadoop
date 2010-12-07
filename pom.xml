@@ -315,6 +315,7 @@
         <artifactId>maven-assembly-plugin</artifactId>
         <configuration>
           <tarLongFileMode>gnu</tarLongFileMode>
+          <appendAssemblyId>false</appendAssemblyId>
           <descriptors>
             <descriptor>src/assembly/all.xml</descriptor>
           </descriptors>
