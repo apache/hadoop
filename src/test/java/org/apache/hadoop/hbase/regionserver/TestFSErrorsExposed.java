@@ -151,6 +151,10 @@ public class TestFSErrorsExposed {
   @Test
   public void testFullSystemBubblesFSErrors() throws Exception {
     try {
+      // We set it not to run or it will trigger server shutdown while sync'ing
+      // because all the datanodes are bad
+      util.getConfiguration().setInt(
+          "hbase.regionserver.optionallogflushinterval", Integer.MAX_VALUE);
       util.startMiniCluster(1);
       byte[] tableName = Bytes.toBytes("table");
       byte[] fam = Bytes.toBytes("fam");
