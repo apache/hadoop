@@ -399,6 +399,12 @@ be running to use Hadoop's scripts to manage remote Hadoop and HBase daemons.
       </para>
       <para>Be sure to restart your HDFS after making the above
       configuration.</para>
+      <para>Not having this configuration in place makes for strange looking
+          failures. Eventually you'll see a complain in the datanode logs
+          complaining about the xcievers exceeded, but on the run up to this
+          one manifestation is complaint about missing blocks.  For example:
+          <code>10/12/08 20:10:31 INFO hdfs.DFSClient: Could not obtain block blk_XXXXXXXXXXXXXXXXXXXXXX_YYYYYYYY from any node: java.io.IOException: No live nodes contain current block. Will get new block locations from namenode and retry...</code>
+      </para>
       </section>
 
 <section xml:id="windows">
