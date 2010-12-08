@@ -30,6 +30,8 @@ Release 0.91.0 - Unreleased
    HBASE-3316  Add support for Java Serialization to HbaseObjectWritable
                (Ed Kohlwey via Stack)
    HBASE-1861  Multi-Family support for bulk upload tools
+   HBASE-3308  SplitTransaction.splitStoreFiles slows splits a lot
+
 
   NEW FEATURES
    HBASE-3287  Add option to cache blocks on hfile write and evict blocks on
@@ -759,6 +761,8 @@ Release 0.90.0 - Unreleased
    HBASE-3314  [shell] 'move' is broken
    HBASE-3315  Add debug output for when balancer makes bad balance
    HBASE-3278  AssertionError in LoadBalancer
+   HBASE-3318  Split rollback leaves parent with writesEnabled=false
+
 
 
   IMPROVEMENTS

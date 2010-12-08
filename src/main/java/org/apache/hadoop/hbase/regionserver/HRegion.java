@@ -376,10 +376,7 @@ public class HRegion implements HeapSize { // , Writable{
     SplitTransaction.cleanupAnySplitDetritus(this);
     FSUtils.deleteDirectory(this.fs, new Path(regiondir, MERGEDIR));
 
-    // See if region is meant to run read-only.
-    if (this.regionInfo.getTableDesc().isReadOnly()) {
-      this.writestate.setReadOnly(true);
-    }
+    this.writestate.setReadOnly(this.regionInfo.getTableDesc().isReadOnly());
 
     this.writestate.compacting = false;
     this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
