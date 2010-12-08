@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Emits sorted Puts.
@@ -46,21 +48,37 @@ public class PutSortReducer extends
               ImmutableBytesWritable, KeyValue>.Context context)
       throws java.io.IOException, InterruptedException
   {
-    TreeSet<KeyValue> map = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
-  
-    for (Put p : puts) {
-      for (List<KeyValue> kvs : p.getFamilyMap().values()) {
-        for (KeyValue kv : kvs) {
-          map.add(kv.clone());
+    // although reduce() is called per-row, handle pathological case
+    long threshold = context.getConfiguration().getLong(
+        "putsortreducer.row.threshold", 2L * (1<<30));
+    Iterator<Put> iter = puts.iterator();
+    while (iter.hasNext()) {
+      TreeSet<KeyValue> map = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+      long curSize = 0;
+      // stop at the end or the RAM threshold
+      while (iter.hasNext() && curSize < threshold) {
+        Put p = iter.next();
+        for (List<KeyValue> kvs : p.getFamilyMap().values()) {
+          for (KeyValue kv : kvs) {
+            map.add(kv);
+            curSize += kv.getValueLength();
+          }
         }
       }
-    }
-    context.setStatus("Read " + map.getClass());
-    int index = 0;
-    for (KeyValue kv : map) {
-      context.write(row, kv);
-      if (index > 0 && index % 100 == 0)
-        context.setStatus("Wrote " + index);
+      context.setStatus("Read " + map.size() + " entries of " + map.getClass()
+          + "(" + StringUtils.humanReadableInt(curSize) + ")");
+      int index = 0;
+      for (KeyValue kv : map) {
+        context.write(row, kv);
+        if (index > 0 && index % 100 == 0)
+          context.setStatus("Wrote " + index);
+      }
+
+      // if we have more entries to process
+      if (iter.hasNext()) {
+        // force flush because we cannot guarantee intra-row sorted order
+        context.write(null, null);
+      }
     }
   }
 }

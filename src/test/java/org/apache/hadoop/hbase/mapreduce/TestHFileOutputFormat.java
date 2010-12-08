@@ -41,6 +41,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -65,7 +68,9 @@ import org.mockito.Mockito;
 public class TestHFileOutputFormat  {
   private final static int ROWSPERSPLIT = 1024;
 
-  private static final byte[] FAMILY_NAME = PerformanceEvaluation.FAMILY_NAME;
+  private static final byte[][] FAMILIES
+    = { Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-A"))
+      , Bytes.add(PerformanceEvaluation.FAMILY_NAME, Bytes.toBytes("-B"))};
   private static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
   
   private HBaseTestingUtility util = new HBaseTestingUtility();
@@ -119,9 +124,11 @@ public class TestHFileOutputFormat  {
         random.nextBytes(valBytes);
         ImmutableBytesWritable key = new ImmutableBytesWritable(keyBytes);
 
-        KeyValue kv = new KeyValue(keyBytes, PerformanceEvaluation.FAMILY_NAME,
-            PerformanceEvaluation.QUALIFIER_NAME, valBytes);
-        context.write(key, kv);
+        for (byte[] family : TestHFileOutputFormat.FAMILIES) {
+          KeyValue kv = new KeyValue(keyBytes, family,
+              PerformanceEvaluation.QUALIFIER_NAME, valBytes);
+          context.write(key, kv);
+        }
       }
     }
   }
@@ -268,14 +275,12 @@ public class TestHFileOutputFormat  {
     try {
       util.startMiniCluster();
       HBaseAdmin admin = new HBaseAdmin(conf);
-      HTable table = util.createTable(TABLE_NAME, FAMILY_NAME);
-      int numRegions = util.createMultiRegions(
-          util.getConfiguration(), table, FAMILY_NAME,
-          startKeys);
-      assertEquals("Should make 5 regions",
-          numRegions, 5);
+      HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table",
           0, util.countRows(table));
+      int numRegions = util.createMultiRegions(
+          util.getConfiguration(), table, FAMILIES[0], startKeys);
+      assertEquals("Should make 5 regions", numRegions, 5);
 
       // Generate the bulk load files
       util.startMiniMapReduceCluster();
@@ -284,6 +289,19 @@ public class TestHFileOutputFormat  {
       assertEquals("HFOF should not touch actual table",
           0, util.countRows(table));
   
+
+      // Make sure that a directory was created for every CF
+      int dir = 0;
+      for (FileStatus f : testDir.getFileSystem(conf).listStatus(testDir)) {
+        for (byte[] family : FAMILIES) {
+          if (Bytes.toString(family).equals(f.getPath().getName())) {
+            ++dir;
+          }
+        }
+      }
+      assertEquals("Column family not found in FS.", FAMILIES.length, dir);
+
+      // handle the split case
       if (shouldChangeRegions) {
         LOG.info("Changing regions in table");
         admin.disableTable(table.getTableName());
@@ -293,8 +311,8 @@ public class TestHFileOutputFormat  {
           LOG.info("Waiting on table to finish disabling");
         }
         byte[][] newStartKeys = generateRandomStartKeys(15);
-        util.createMultiRegions(util.getConfiguration(),
-            table, FAMILY_NAME, newStartKeys);
+        util.createMultiRegions(
+            util.getConfiguration(), table, FAMILIES[0], newStartKeys);
         admin.enableTable(table.getTableName());
         while (table.getRegionsInfo().size() != 15 ||
             !admin.isTableAvailable(table.getTableName())) {
@@ -310,6 +328,19 @@ public class TestHFileOutputFormat  {
       int expectedRows = conf.getInt("mapred.map.tasks", 1) * ROWSPERSPLIT;
       assertEquals("LoadIncrementalHFiles should put expected data in table",
           expectedRows, util.countRows(table));
+      Scan scan = new Scan();
+      ResultScanner results = table.getScanner(scan);
+      int count = 0;
+      for (Result res : results) {
+        count++;
+        assertEquals(FAMILIES.length, res.raw().length);
+        KeyValue first = res.raw()[0];
+        for (KeyValue kv : res.raw()) {
+          assertTrue(KeyValue.COMPARATOR.matchingRows(first, kv));
+          assertTrue(Bytes.equals(first.getValue(), kv.getValue()));
+        }
+      }
+      results.close();
       String tableDigestBefore = util.checksumRows(table);
             
       // Cause regions to reopen
@@ -351,11 +382,11 @@ public class TestHFileOutputFormat  {
     util = new HBaseTestingUtility(conf);
     if ("newtable".equals(args[0])) {
       byte[] tname = args[1].getBytes();
-      HTable table = util.createTable(tname, FAMILY_NAME);
+      HTable table = util.createTable(tname, FAMILIES);
       HBaseAdmin admin = new HBaseAdmin(conf);
       admin.disableTable(tname);
-      util.createMultiRegions(conf, table, FAMILY_NAME,
-          generateRandomStartKeys(5));
+      byte[][] startKeys = generateRandomStartKeys(5);
+      util.createMultiRegions(conf, table, FAMILIES[0], startKeys);
       admin.enableTable(tname);
     } else if ("incremental".equals(args[0])) {
       byte[] tname = args[1].getBytes();
