@@ -139,6 +139,13 @@ abstract public class FSOutputSummer extends OutputStream {
       }
     }
   }
+
+  /**
+   * Return the number of valid bytes currently in the buffer.
+   */
+  protected synchronized int getBufferedDataSize() {
+    return count;
+  }
   
   /** Generate checksum for the data chunk and output data chunk & checksum
    * to the underlying output stream. If keep is true then keep the

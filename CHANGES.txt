@@ -29,6 +29,9 @@ Trunk (unreleased changes)
     HADOOP-7060. A more elegant FileSystem#listCorruptFileBlocks API.
     (Patrick Kling via hairong)
 
+    HADOOP-7058. Expose number of bytes in FSOutputSummer buffer to
+    implementatins. (Todd Lipcon via hairong)
+
   OPTIMIZATIONS
 
   BUG FIXES
