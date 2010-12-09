@@ -170,10 +170,9 @@ public class FilterFileSystem extends FileSystem {
    * {@inheritDoc}
    */
   @Override
-  public CorruptFileBlocks listCorruptFileBlocks(String path,
-                                                 String cookie)
+  public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
-    return fs.listCorruptFileBlocks(path, cookie);
+    return fs.listCorruptFileBlocks(path);
   }
 
   /** List files and its block locations in a directory. */

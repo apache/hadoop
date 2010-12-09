@@ -24,7 +24,10 @@ Trunk (unreleased changes)
     (Patrick Kling via eli)
 
     HADOOP-7054 Change NN LoadGenerator to use FileContext APIs
-	(Sanjay Radia)
+	  (Sanjay Radia)
+
+    HADOOP-7060. A more elegant FileSystem#listCorruptFileBlocks API.
+    (Patrick Kling via hairong)
 
   OPTIMIZATIONS
 

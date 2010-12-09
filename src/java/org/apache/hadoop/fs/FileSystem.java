@@ -1091,11 +1091,11 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * @return a list in which each entry describes a corrupt file/block
+   * @return an iterator over the corrupt files under the given path
+   * (may contain duplicates if a file has more than one corrupt block)
    * @throws IOException
    */
-  public CorruptFileBlocks listCorruptFileBlocks(String path,
-                                                 String cookie)
+  public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
     throw new UnsupportedOperationException(getClass().getCanonicalName() +
                                             " does not support" +

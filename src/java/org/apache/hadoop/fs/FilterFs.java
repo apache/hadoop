@@ -168,10 +168,9 @@ public abstract class FilterFs extends AbstractFileSystem {
    * {@inheritDoc}
    */
   @Override
-  public CorruptFileBlocks listCorruptFileBlocks(String path,
-                                                 String cookie)
+  public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
-    return myFs.listCorruptFileBlocks(path, cookie);
+    return myFs.listCorruptFileBlocks(path);
   }
 
   @Override

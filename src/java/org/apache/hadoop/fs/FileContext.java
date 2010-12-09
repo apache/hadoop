@@ -1298,18 +1298,19 @@ public final class FileContext {
   }
 
   /**
-   * @return a list in which each entry describes a corrupt file/block
+   * @return an iterator over the corrupt files under the given path
+   * (may contain duplicates if a file has more than one corrupt block)
    * @throws IOException
    */
-  public CorruptFileBlocks listCorruptFileBlocks(final String path,
-                                                 final String cookie)
+  public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
-    final Path absF = fixRelativePart(new Path(path));
-    return new FSLinkResolver<CorruptFileBlocks>() {
+    final Path absF = fixRelativePart(path);
+    return new FSLinkResolver<RemoteIterator<Path>>() {
       @Override
-      public CorruptFileBlocks next(final AbstractFileSystem fs, final Path p) 
+      public RemoteIterator<Path> next(final AbstractFileSystem fs,
+                                       final Path p) 
         throws IOException, UnresolvedLinkException {
-        return fs.listCorruptFileBlocks(p.toUri().getPath(), cookie);
+        return fs.listCorruptFileBlocks(p);
       }
     }.resolve(this, absF);
   }
