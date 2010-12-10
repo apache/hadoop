@@ -762,6 +762,7 @@ Release 0.90.0 - Unreleased
    HBASE-3315  Add debug output for when balancer makes bad balance
    HBASE-3278  AssertionError in LoadBalancer
    HBASE-3318  Split rollback leaves parent with writesEnabled=false
+   HBASE-3334  Refresh our hadoop jar because of HDFS-1520
 
 
 
