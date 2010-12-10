@@ -195,8 +195,6 @@ public class SplitTransaction {
       throw new IOException("Server is stopped or stopping");
     }
     assert !this.parent.lock.writeLock().isHeldByCurrentThread() : "Unsafe to hold write lock while performing RPCs";
-    this.fileSplitTimeout = server.getConfiguration().getLong(
-        "hbase.regionserver.fileSplitTimeout", this.fileSplitTimeout);
 
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
@@ -206,6 +204,9 @@ public class SplitTransaction {
     // If true, no cluster to write meta edits into.
     boolean testing = server == null? true:
       server.getConfiguration().getBoolean("hbase.testing.nocluster", false);
+    this.fileSplitTimeout = testing ? this.fileSplitTimeout :
+        server.getConfiguration().getLong(
+            "hbase.regionserver.fileSplitTimeout", this.fileSplitTimeout);
 
     createSplitDir(this.parent.getFilesystem(), this.splitdir);
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
