@@ -71,7 +71,8 @@ public interface CompressionCodec {
   Compressor createCompressor();
   
   /**
-   * Create a stream decompressor that will read from the given input stream.
+   * Create a {@link CompressionInputStream} that will read from the given
+   * input stream.
    * 
    * @param in the stream to read compressed bytes from
    * @return a stream to read uncompressed bytes from

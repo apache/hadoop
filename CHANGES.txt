@@ -32,6 +32,8 @@ Trunk (unreleased changes)
     HADOOP-7058. Expose number of bytes in FSOutputSummer buffer to
     implementatins. (Todd Lipcon via hairong)
 
+    HADOOP-7061. unprecise javadoc for CompressionCodec. (Jingguo Yao via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES
