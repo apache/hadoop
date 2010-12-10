@@ -346,6 +346,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7057. IOUtils.readFully and IOUtils.skipFully have typo in
     exception creation's message. (cos)
 
+    HADOOP-7038. saveVersion script includes an additional \r while running
+    whoami under windows. (Wang Xu via cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

@@ -23,7 +23,7 @@ unset LC_CTYPE
 unset LC_TIME
 version=$1
 build_dir=$2
-user=`whoami`
+user=`whoami | tr '\n\r' '\n'`
 date=`date`
 cwd=`pwd`
 if [ -d .git ]; then
