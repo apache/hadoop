@@ -40,9 +40,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 41: saveNamespace introduced.
+   * 42: Introduce a lightweight recoverLease RPC
    */
-  public static final long versionID = 41L;
+  public static final long versionID = 42L;
   
   ///////////////////////////////////////
   // File contents
@@ -122,6 +122,14 @@ public interface ClientProtocol extends VersionedProtocol {
    * @throws IOException if other errors occur.
    */
   public LocatedBlock append(String src, String clientName) throws IOException;
+  
+  /**
+   * Trigger lease recovery to happen
+   * @param src path of the file to trigger lease recovery
+   * @param clientName name of the current client
+   * @throws IOException
+   */
+  public void recoverLease(String src, String clientName) throws IOException;
 
   /**
    * Set replication for an existing file.
