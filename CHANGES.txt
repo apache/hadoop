@@ -70,6 +70,8 @@ Release 0.20.3 - Unreleased
     HDFS-908. TestDistributedFileSystem fails with Wrong FS on weird hosts. 
     (Todd Lipcon via eli)
 
+    HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
