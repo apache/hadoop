@@ -34,6 +34,8 @@ Trunk (unreleased changes)
 
     HADOOP-7061. unprecise javadoc for CompressionCodec. (Jingguo Yao via eli)
 
+    HADOOP-7059. Remove "unused" warning in native code.  (Noah Watkins via eli)
+
   OPTIMIZATIONS
 
   BUG FIXES

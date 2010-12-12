@@ -75,7 +75,8 @@
  * @return returns the address where the symbol is loaded in memory, 
  *         <code>NULL</code> on error.
  */
-static void *do_dlsym(JNIEnv *env, void *handle, const char *symbol) {
+static __attribute__ ((unused))
+void *do_dlsym(JNIEnv *env, void *handle, const char *symbol) {
   if (!env || !handle || !symbol) {
   	THROW(env, "java/lang/InternalError", NULL);
   	return NULL;
