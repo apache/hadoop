@@ -763,6 +763,8 @@ Release 0.90.0 - Unreleased
    HBASE-3278  AssertionError in LoadBalancer
    HBASE-3318  Split rollback leaves parent with writesEnabled=false
    HBASE-3334  Refresh our hadoop jar because of HDFS-1520
+   HBASE-3347  Can't truncate/disable table that has rows in .META. that have empty
+               info:regioninfo column
 
 
 

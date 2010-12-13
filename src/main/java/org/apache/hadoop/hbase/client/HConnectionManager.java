@@ -495,9 +495,10 @@ public class HConnectionManager {
           this.tableName = tableName;
         }
         public boolean processRow(Result rowResult) throws IOException {
-          HRegionInfo info = Writables.getHRegionInfo(
+          HRegionInfo info = Writables.getHRegionInfoOrNull(
               rowResult.getValue(HConstants.CATALOG_FAMILY,
                   HConstants.REGIONINFO_QUALIFIER));
+          if (info == null) return true;
           HTableDescriptor desc = info.getTableDesc();
           if (Bytes.compareTo(desc.getName(), tableName) == 0) {
             result = desc;
