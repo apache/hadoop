@@ -91,7 +91,6 @@ public class Replication implements WALObserver {
   public void join() {
     if (this.replication) {
       this.replicationManager.join();
-      this.zkHelper.deleteOwnRSZNode();
     }
   }
 
