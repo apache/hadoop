@@ -766,6 +766,7 @@ Release 0.90.0 - Unreleased
    HBASE-3347  Can't truncate/disable table that has rows in .META. that have empty
                info:regioninfo column
    HBASE-3321  Replication.join shouldn't clear the logs znode
+   HBASE-3352  enabling a non-existent table from shell prints no error
 
 
   IMPROVEMENTS

@@ -92,6 +92,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Enables a table
     def enable(table_name)
+      tableExists(table_name)
       return if enabled?(table_name)
       @admin.enableTable(table_name)
     end
@@ -99,8 +100,15 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Disables a table
     def disable(table_name)
+      tableExists(table_name)
       return if disabled?(table_name)
       @admin.disableTable(table_name)
+    end
+
+    #---------------------------------------------------------------------------------------------
+    # Throw exception if table doesn't exist
+    def tableExists(table_name)
+      raise ArgumentError, "Table #{table_name} does not exist.'" unless exists?(table_name)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -112,7 +120,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Drops a table
     def drop(table_name)
-      raise ArgumentError, "Table #{table_name} does not exist.'" unless exists?(table_name)
+      tableExists(table_name)
       raise ArgumentError, "Table #{table_name} is enabled. Disable it first.'" if enabled?(table_name)
 
       @admin.deleteTable(table_name)
