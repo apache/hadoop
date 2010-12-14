@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.http.HttpServer;
 import org.mortbay.jetty.handler.ContextHandlerCollection;
 import org.mortbay.jetty.servlet.Context;
@@ -50,7 +51,7 @@ public class InfoServer extends HttpServer {
    */
   public InfoServer(String name, String bindAddress, int port, boolean findPort)
   throws IOException {
-    super(name, bindAddress, port, findPort);
+    super(name, bindAddress, port, findPort, HBaseConfiguration.create());
     webServer.addHandler(new ContextHandlerCollection());
   }
 
