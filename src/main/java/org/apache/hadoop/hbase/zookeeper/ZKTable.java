@@ -313,4 +313,39 @@ public class ZKTable {
     }
     return disabledTables;
   }
+
+  /**
+   * Gets a list of all the tables set as disabled in zookeeper.
+   * @return Set of disabled tables, empty Set if none
+   * @throws KeeperException 
+   */
+  public static Set<String> getDisabledTables(ZooKeeperWatcher zkw)
+  throws KeeperException {
+    Set<String> disabledTables = new HashSet<String>();
+    List<String> children =
+      ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
+    for (String child: children) {
+      TableState state = getTableState(zkw, child);
+      if (state == TableState.DISABLED) disabledTables.add(child);
+    }
+    return disabledTables;
+  }
+
+  /**
+   * Gets a list of all the tables set as disabled in zookeeper.
+   * @return Set of disabled tables, empty Set if none
+   * @throws KeeperException 
+   */
+  public static Set<String> getDisabledOrDisablingTables(ZooKeeperWatcher zkw)
+  throws KeeperException {
+    Set<String> disabledTables = new HashSet<String>();
+    List<String> children =
+      ZKUtil.listChildrenNoWatch(zkw, zkw.tableZNode);
+    for (String child: children) {
+      TableState state = getTableState(zkw, child);
+      if (state == TableState.DISABLED || state == TableState.DISABLING)
+        disabledTables.add(child);
+    }
+    return disabledTables;
+  }
 }

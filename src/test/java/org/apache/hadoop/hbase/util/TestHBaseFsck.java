@@ -19,7 +19,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
+import static org.junit.Assert.assertEquals;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,8 +36,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
 public class TestHBaseFsck {
 
   final Log LOG = LogFactory.getLog(getClass());
@@ -53,7 +51,7 @@ public class TestHBaseFsck {
   }
 
   @Test
-  public void testHBaseFsck() throws IOException {
+  public void testHBaseFsck() throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf);
     fsck.displayFullReport();
     fsck.setTimeLag(0);
@@ -71,7 +69,7 @@ public class TestHBaseFsck {
     // point to a different region server
     HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getName());
     ResultScanner scanner = meta.getScanner(new Scan());
-    
+
     resforloop : for (Result res : scanner) {
       long startCode = Bytes.toLong(res.getValue(HConstants.CATALOG_FAMILY,
           HConstants.STARTCODE_QUALIFIER));
@@ -100,6 +98,7 @@ public class TestHBaseFsck {
     // Fixed or not, it still reports inconsistencies
     assertEquals(-1, result);
 
+    Thread.sleep(15000);
     // Disabled, won't work because the region stays unassigned, see HBASE-3217
     // new HTable(conf, TABLE).getScanner(new Scan());
   }

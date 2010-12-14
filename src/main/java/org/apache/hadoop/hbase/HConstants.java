@@ -358,6 +358,9 @@ public final class HConstants {
   public static final String
       REPLICATION_ENABLE_KEY = "hbase.replication";
 
+  /** HBCK special code name used as server name when manipulating ZK nodes */
+  public static final String HBCK_CODE_NAME = "HBCKServerName";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

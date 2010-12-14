@@ -26,99 +26,83 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 public class HBaseFsckRepair {
 
+  /**
+   * Fix dupe assignment by doing silent closes on each RS hosting the region
+   * and then force ZK unassigned node to OFFLINE to trigger assignment by
+   * master.
+   * @param conf
+   * @param region
+   * @param servers
+   * @throws IOException
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
   public static void fixDupeAssignment(Configuration conf, HRegionInfo region,
       List<HServerAddress> servers)
-  throws IOException {
+  throws IOException, KeeperException, InterruptedException {
 
     HRegionInfo actualRegion = new HRegionInfo(region);
 
-    // Clear status in master and zk
-    clearInMaster(conf, actualRegion);
-    clearInZK(conf, actualRegion);
-
-    // Close region on the servers
+    // Close region on the servers silently
     for(HServerAddress server : servers) {
-      closeRegion(conf, server, actualRegion);
+      closeRegionSilentlyAndWait(conf, server, actualRegion);
     }
 
-    // It's unassigned so fix it as such
-    fixUnassigned(conf, actualRegion);
+    // Force ZK node to OFFLINE so master assigns
+    forceOfflineInZK(conf, actualRegion);
   }
 
+  /**
+   * Fix unassigned by creating/transition the unassigned ZK node for this
+   * region to OFFLINE state with a special flag to tell the master that this
+   * is a forced operation by HBCK.
+   * @param conf
+   * @param region
+   * @throws IOException
+   * @throws KeeperException
+   */
   public static void fixUnassigned(Configuration conf, HRegionInfo region)
-  throws IOException {
-
+  throws IOException, KeeperException {
     HRegionInfo actualRegion = new HRegionInfo(region);
 
-    // Clear status in master and zk
-    clearInMaster(conf, actualRegion);
-    clearInZK(conf, actualRegion);
-
-    // Clear assignment in META or ROOT
-    clearAssignment(conf, actualRegion);
+    // Force ZK node to OFFLINE so master assigns
+    forceOfflineInZK(conf, actualRegion);
   }
 
-  private static void clearInMaster(Configuration conf, HRegionInfo region)
-  throws IOException {
-    System.out.println("Region being cleared in master: " + region);
-    HMasterInterface master = HConnectionManager.getConnection(conf).getMaster();
-    long masterVersion =
-      master.getProtocolVersion("org.apache.hadoop.hbase.ipc.HMasterInterface", 25);
-    System.out.println("Master protocol version: " + masterVersion);
-    try {
-      // TODO: Do we want to do it this way?
-      //       Better way is to tell master to fix the issue itself?
-      //       That way it can use in-memory state to determine best plan
-//      master.clearFromTransition(region);
-    } catch (Exception e) {}
+  private static void forceOfflineInZK(Configuration conf, HRegionInfo region)
+  throws ZooKeeperConnectionException, KeeperException, IOException {
+    ZKAssign.createOrForceNodeOffline(
+        HConnectionManager.getConnection(conf).getZooKeeperWatcher(),
+        region, HConstants.HBCK_CODE_NAME);
   }
 
-  private static void clearInZK(Configuration conf, HRegionInfo region)
-  throws IOException {
-    ZooKeeperWatcher zkw =
-      HConnectionManager.getConnection(conf).getZooKeeperWatcher();
-    try {
-      ZKAssign.deleteNodeFailSilent(zkw, region);
-    } catch (KeeperException e) {
-      throw new IOException("Unexpected ZK exception", e);
-    }
-  }
-
-  private static void closeRegion(Configuration conf, HServerAddress server,
-      HRegionInfo region)
-  throws IOException {
+  private static void closeRegionSilentlyAndWait(Configuration conf,
+      HServerAddress server, HRegionInfo region)
+  throws IOException, InterruptedException {
     HRegionInterface rs =
       HConnectionManager.getConnection(conf).getHRegionConnection(server);
     rs.closeRegion(region, false);
-  }
-
-  private static void clearAssignment(Configuration conf,
-      HRegionInfo region)
-  throws IOException {
-    HTable ht = null;
-    if (region.isMetaTable()) {
-      // Clear assignment in ROOT
-      ht = new HTable(conf, HConstants.ROOT_TABLE_NAME);
+    long timeout = conf.getLong("hbase.hbck.close.timeout", 120000);
+    long expiration = timeout + System.currentTimeMillis();
+    while (System.currentTimeMillis() < expiration) {
+      try {
+        HRegionInfo rsRegion = rs.getRegionInfo(region.getRegionName());
+        if (rsRegion == null) throw new NotServingRegionException();
+      } catch (Exception e) {
+        return;
+      }
+      Thread.sleep(1000);
     }
-    else {
-      // Clear assignment in META
-      ht = new HTable(conf, HConstants.META_TABLE_NAME);
-    }
-    Delete del = new Delete(region.getRegionName());
-    del.deleteColumns(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-    del.deleteColumns(HConstants.CATALOG_FAMILY,
-        HConstants.STARTCODE_QUALIFIER);
-    ht.delete(del);
+    throw new IOException("Region " + region + " failed to close within" +
+        " timeout " + timeout);
   }
 }

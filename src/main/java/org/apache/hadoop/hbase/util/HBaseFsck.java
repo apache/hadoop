@@ -23,11 +23,11 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -49,19 +49,21 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKTable;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
 /**
- * Check consistency among the in-memory states of the master and the 
+ * Check consistency among the in-memory states of the master and the
  * region server(s) and the state of data in HDFS.
  */
 public class HBaseFsck {
@@ -75,6 +77,8 @@ public class HBaseFsck {
 
   private TreeMap<String, HbckInfo> regionInfo = new TreeMap<String, HbckInfo>();
   private TreeMap<String, TInfo> tablesInfo = new TreeMap<String, TInfo>();
+  private TreeSet<byte[]> disabledTables =
+    new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
   ErrorReporter errors = new PrintingErrorReporter();
 
   private static boolean details = false; // do we display the full report
@@ -92,7 +96,7 @@ public class HBaseFsck {
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
-  public HBaseFsck(Configuration conf) 
+  public HBaseFsck(Configuration conf)
     throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     this.conf = conf;
 
@@ -105,8 +109,10 @@ public class HBaseFsck {
    * Contacts the master and prints out cluster-wide information
    * @throws IOException if a remote or network exception occurs
    * @return 0 on success, non-zero on failure
+   * @throws KeeperException
+   * @throws InterruptedException
    */
-  int doWork() throws IOException {
+  int doWork() throws IOException, KeeperException, InterruptedException {
     // print hbase server version
     errors.print("Version: " + status.getHBaseVersion());
 
@@ -114,7 +120,7 @@ public class HBaseFsck {
     regionInfo.clear();
     tablesInfo.clear();
     emptyRegionInfoQualifiers.clear();
-
+    disabledTables.clear();
 
     // get a list of all regions from the master. This involves
     // scanning the META table
@@ -152,7 +158,7 @@ public class HBaseFsck {
 
     // From the master, get a list of all known live region servers
     Collection<HServerInfo> regionServers = status.getServerInfo();
-    errors.print("Number of live region servers: " + 
+    errors.print("Number of live region servers: " +
                        regionServers.size());
     if (details) {
       for (HServerInfo rsinfo: regionServers) {
@@ -162,7 +168,7 @@ public class HBaseFsck {
 
     // From the master, get a list of all dead region servers
     Collection<String> deadRegionServers = status.getDeadServerNames();
-    errors.print("Number of dead region servers: " + 
+    errors.print("Number of dead region servers: " +
                        deadRegionServers.size());
     if (details) {
       for (String name: deadRegionServers) {
@@ -185,6 +191,9 @@ public class HBaseFsck {
       }
     }
 
+    // Get disabled tables from ZooKeeper
+    loadDisabledTables();
+
     // Check consistency
     checkConsistency();
 
@@ -195,6 +204,31 @@ public class HBaseFsck {
     printTableSummary();
 
     return errors.summarize();
+  }
+
+  /**
+   * Load the list of disabled tables in ZK into local set.
+   * @throws ZooKeeperConnectionException
+   * @throws IOException
+   * @throws KeeperException
+   */
+  private void loadDisabledTables()
+  throws ZooKeeperConnectionException, IOException, KeeperException {
+    ZooKeeperWatcher zkw =
+      HConnectionManager.getConnection(conf).getZooKeeperWatcher();
+    for (String tableName : ZKTable.getDisabledOrDisablingTables(zkw)) {
+      disabledTables.add(Bytes.toBytes(tableName));
+    }
+  }
+
+  /**
+   * Check if the specified region's table is disabled.
+   * @throws ZooKeeperConnectionException
+   * @throws IOException
+   * @throws KeeperException
+   */
+  private boolean isTableDisabled(HRegionInfo regionInfo) {
+    return disabledTables.contains(regionInfo.getTableDesc().getName());
   }
 
   /**
@@ -280,7 +314,7 @@ public class HBaseFsck {
     regionInfo.put(rootLocation.getRegionInfo().getEncodedName(), hbInfo);
     return true;
   }
-  
+
   /**
    * Contacts each regionserver and fetches metadata about regions.
    * @param regionServerList - the list of region servers to connect to
@@ -315,7 +349,7 @@ public class HBaseFsck {
           HbckInfo hbi = getOrCreateInfo(r.getEncodedName());
           hbi.deployedOn.add(rsinfo.getServerAddress());
         }
-      } catch (IOException e) {          // unable to connect to the region server. 
+      } catch (IOException e) {          // unable to connect to the region server.
         errors.reportError("\nRegionServer:" + rsinfo.getServerName() +
                            " Unable to fetch region information. " + e);
       }
@@ -324,8 +358,11 @@ public class HBaseFsck {
 
   /**
    * Check consistency of all regions that have been found in previous phases.
+   * @throws KeeperException
+   * @throws InterruptedException
    */
-  void checkConsistency() throws IOException {
+  void checkConsistency()
+  throws IOException, KeeperException, InterruptedException {
     for (java.util.Map.Entry<String, HbckInfo> e: regionInfo.entrySet()) {
       doConsistencyCheck(e.getKey(), e.getValue());
     }
@@ -333,9 +370,11 @@ public class HBaseFsck {
 
   /**
    * Check a single region for consistency and correct deployment.
+   * @throws KeeperException
+   * @throws InterruptedException
    */
   void doConsistencyCheck(final String key, final HbckInfo hbi)
-  throws IOException {
+  throws IOException, KeeperException, InterruptedException {
     String descriptiveName = hbi.toString();
 
     boolean inMeta = hbi.metaEntry != null;
@@ -346,7 +385,7 @@ public class HBaseFsck {
     boolean deploymentMatchesMeta =
       hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
       hbi.metaEntry.regionServer.equals(hbi.deployedOn.get(0));
-    boolean shouldBeDeployed = inMeta && !hbi.metaEntry.isOffline();
+    boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry);
     boolean recentlyModified = hbi.foundRegionDir != null &&
       hbi.foundRegionDir.getModificationTime() + timelag > System.currentTimeMillis();
 
@@ -533,8 +572,8 @@ public class HBaseFsck {
   /**
    * Return a list of user-space table names whose metadata have not been
    * modified in the last few milliseconds specified by timelag
-   * if any of the REGIONINFO_QUALIFIER, SERVER_QUALIFIER, STARTCODE_QUALIFIER, 
-   * SPLITA_QUALIFIER, SPLITB_QUALIFIER have not changed in the last 
+   * if any of the REGIONINFO_QUALIFIER, SERVER_QUALIFIER, STARTCODE_QUALIFIER,
+   * SPLITA_QUALIFIER, SPLITB_QUALIFIER have not changed in the last
    * milliseconds specified by timelag, then the table is a candidate to be returned.
    * @param regionList - all entries found in .META
    * @return tables that have not been modified recently
@@ -580,8 +619,11 @@ public class HBaseFsck {
     * If there are inconsistencies (i.e. zero or more than one regions
     * pretend to be holding the .META.) try to fix that and report an error.
     * @throws IOException from HBaseFsckRepair functions
+   * @throws KeeperException
+   * @throws InterruptedException
     */
-  boolean checkMetaEntries() throws IOException {
+  boolean checkMetaEntries()
+  throws IOException, KeeperException, InterruptedException {
     List <HbckInfo> metaRegions = Lists.newArrayList();
     for (HbckInfo value : regionInfo.values()) {
       if (value.metaEntry.isMetaTable()) {
@@ -709,7 +751,7 @@ public class HBaseFsck {
     HServerAddress regionServer;   // server hosting this region
     long modTime;          // timestamp of most recent modification metadata
 
-    public MetaEntry(HRegionInfo rinfo, HServerAddress regionServer, 
+    public MetaEntry(HRegionInfo rinfo, HServerAddress regionServer,
                      byte[] startCode, long modTime) {
       super(rinfo);
       this.regionServer = regionServer;
@@ -883,16 +925,16 @@ public class HBaseFsck {
   /**
    * Main program
    * @param args
+   * @throws Exception
    */
-  public static void main(String [] args) 
-    throws IOException, MasterNotRunningException {
+  public static void main(String [] args) throws Exception {
 
     // create a fsck object
     Configuration conf = HBaseConfiguration.create();
     conf.set("fs.defaultFS", conf.get("hbase.rootdir"));
     HBaseFsck fsck = new HBaseFsck(conf);
 
-    // Process command-line args. 
+    // Process command-line args.
     for (int i = 0; i < args.length; i++) {
       String cmd = args[i];
       if (cmd.equals("-details")) {
