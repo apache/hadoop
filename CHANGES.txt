@@ -767,6 +767,7 @@ Release 0.90.0 - Unreleased
                info:regioninfo column
    HBASE-3321  Replication.join shouldn't clear the logs znode
    HBASE-3352  enabling a non-existent table from shell prints no error
+   HBASE-3353  table.jsp doesn't handle entries in META without server info
 
 
   IMPROVEMENTS

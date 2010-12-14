@@ -13,3 +13,7 @@ div.warning {
   font-size: 110%;
   font-weight: bold;
 }
+
+td.undeployed-region {
+  background-color: #faa;
+}
