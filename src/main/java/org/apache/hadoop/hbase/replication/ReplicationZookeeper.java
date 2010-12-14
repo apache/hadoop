@@ -612,6 +612,10 @@ public class ReplicationZookeeper {
       ZKUtil.deleteNodeRecursively(this.zookeeper,
           this.rsServerNameZnode);
     } catch (KeeperException e) {
+      // if the znode is already expired, don't bother going further
+      if (e instanceof KeeperException.SessionExpiredException) {
+        return;
+      }
       this.abortable.abort("Failed delete of " + this.rsServerNameZnode, e);
     }
   }

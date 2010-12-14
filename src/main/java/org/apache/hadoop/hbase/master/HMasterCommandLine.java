@@ -157,6 +157,9 @@ public class HMasterCommandLine extends ServerCommandLine {
   private int stopMaster() {
     HBaseAdmin adm = null;
     try {
+      Configuration conf = getConf();
+      // Don't try more than once
+      conf.setInt("hbase.client.retries.number", 1);
       adm = new HBaseAdmin(getConf());
     } catch (MasterNotRunningException e) {
       LOG.error("Master not running");

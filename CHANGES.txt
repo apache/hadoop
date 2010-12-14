@@ -775,6 +775,8 @@ Release 0.90.0 - Unreleased
    HBASE-3351  ReplicationZookeeper goes to ZK every time a znode is modified
    HBASE-3326  Replication state's znode should be created else it 
                defaults to false
+   HBASE-3355  Stopping a stopped cluster leaks an HMaster
+   HBASE-3356  Add more checks in replication if RS is stopped
 
 
   IMPROVEMENTS

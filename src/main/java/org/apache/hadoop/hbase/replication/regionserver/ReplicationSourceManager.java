@@ -150,7 +150,7 @@ public class ReplicationSourceManager {
     for (String id : this.zkHelper.getPeerClusters().keySet()) {
       addSource(id);
     }
-    List<String> currentReplicators = this.zkHelper.getRegisteredRegionServers();
+    List<String> currentReplicators = this.zkHelper.getListOfReplicators();
     if (currentReplicators == null || currentReplicators.size() == 0) {
       return;
     }
@@ -406,6 +406,9 @@ public class ReplicationSourceManager {
      * @param path full path of the deleted node
      */
     public void nodeDeleted(String path) {
+      if (stopper.isStopped()) {
+        return;
+      }
       boolean cont = refreshRegionServersList(path);
       if (!cont) {
         return;
@@ -419,6 +422,9 @@ public class ReplicationSourceManager {
      * @param path full path of the node whose children have changed
      */
     public void nodeChildrenChanged(String path) {
+      if (stopper.isStopped()) {
+        return;
+      }
       refreshRegionServersList(path);
     }
 
