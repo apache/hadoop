@@ -291,7 +291,11 @@ Usually you'll want to use the latest version available except the problematic u
     HBase will lose data unless it is running on an HDFS that has a durable <code>sync</code>.
  Currently only the <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
  branch has this attribute.  No official releases have been made from this branch as of this writing
- so you will have to build your own Hadoop from the tip of this branch or you could use
+ so you will have to build your own Hadoop from the tip of this branch <footnote>
+     <para>Scroll down in the Hadoop <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">How To Release</link> to the section
+         Build Requirements for instruction on how to build Hadoop.
+     </para>
+ </footnote> or you could use
  Cloudera's <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link>.
  CDH has the 0.20-append patches needed to add a durable sync (As of this writing
  CDH3 is still in beta.  Either CDH3b2 or CDH3b3 will suffice).
