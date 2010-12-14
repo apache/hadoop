@@ -21,6 +21,8 @@ Release 0.91.0 - Unreleased
                IllegalArgumentException during parameter sanity check
    HBASE-3337  Restore HBCK fix of unassignment and dupe assignment for new
                master
+   HBASE-3332  Regions stuck in transition after RS failure
+
 
   IMPROVEMENTS
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via

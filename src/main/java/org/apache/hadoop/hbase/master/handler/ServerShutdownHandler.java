@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.AssignmentManager.RegionState;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.zookeeper.KeeperException;
@@ -98,7 +99,7 @@ public class ServerShutdownHandler extends EventHandler {
     // doing after log splitting.  Could do some states before -- OPENING?
     // OFFLINE? -- and then others after like CLOSING that depend on log
     // splitting.
-    List<HRegionInfo> regionsInTransition =
+    List<RegionState> regionsInTransition =
       this.services.getAssignmentManager().processServerShutdown(this.hsi);
 
     // Assign root and meta if we were carrying them.
@@ -133,11 +134,16 @@ public class ServerShutdownHandler extends EventHandler {
       }
     }
 
-    // Remove regions that were in transition
-    for (HRegionInfo rit : regionsInTransition) hris.remove(rit);
-    LOG.info("Reassigning the " + hris.size() + " region(s) that " + serverName
+    // Skip regions that were in transition unless CLOSING or PENDING_CLOSE
+    for (RegionState rit : regionsInTransition) {
+      if (!rit.isClosing() && !rit.isPendingClose()) {
+        hris.remove(rit.getRegion());
+      }
+    }
+
+    LOG.info("Reassigning " + hris.size() + " region(s) that " + serverName
         + " was carrying (skipping " + regionsInTransition.size() +
-        " regions(s) that are in transition)");
+        " regions(s) that are already in transition)");
 
     // Iterate regions that were on this server and assign them
     for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {

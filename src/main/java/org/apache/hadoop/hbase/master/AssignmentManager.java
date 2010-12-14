@@ -1654,9 +1654,9 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Process shutdown server removing any assignments.
    * @param hsi Server that went down.
-   * @return set of regions on this server that are not in transition
+   * @return list of regions in transition on this server
    */
-  public List<HRegionInfo> processServerShutdown(final HServerInfo hsi) {
+  public List<RegionState> processServerShutdown(final HServerInfo hsi) {
     // Clean out any existing assignment plans for this server
     synchronized (this.regionPlans) {
       for (Iterator <Map.Entry<String, RegionPlan>> i =
@@ -1672,7 +1672,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // Remove this server from map of servers to regions, and remove all regions
     // of this server from online map of regions.
     Set<HRegionInfo> deadRegions = null;
-    List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
+    List<RegionState> rits = new ArrayList<RegionState>();
     synchronized (this.regions) {
       List<HRegionInfo> assignedRegions = this.servers.remove(hsi);
       if (assignedRegions == null || assignedRegions.isEmpty()) {
@@ -1690,7 +1690,7 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (regionsInTransition) {
       for (RegionState region : this.regionsInTransition.values()) {
         if (deadRegions.remove(region.getRegion())) {
-          rits.add(region.getRegion());
+          rits.add(region);
         }
       }
     }
