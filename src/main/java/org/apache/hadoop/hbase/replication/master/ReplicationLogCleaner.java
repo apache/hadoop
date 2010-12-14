@@ -23,6 +23,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.LogCleanerDelegate;
@@ -39,7 +40,7 @@ import java.util.Set;
  * Implementation of a log cleaner that checks if a log is still scheduled for
  * replication before deleting it when its TTL is over.
  */
-public class ReplicationLogCleaner implements LogCleanerDelegate {
+public class ReplicationLogCleaner implements LogCleanerDelegate, Abortable {
   private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
   private Configuration conf;
   private ReplicationZookeeper zkHelper;
@@ -53,6 +54,16 @@ public class ReplicationLogCleaner implements LogCleanerDelegate {
 
   @Override
   public boolean isLogDeletable(Path filePath) {
+
+    try {
+      if (!zkHelper.getReplication()) {
+        return false;
+      }
+    } catch (KeeperException e) {
+      abort("Cannot get the state of replication", e);
+      return false;
+    }
+
     // all members of this class are null if replication is disabled, and we
     // return true since false would render the LogsCleaner useless
     if (this.conf == null) {
@@ -121,7 +132,7 @@ public class ReplicationLogCleaner implements LogCleanerDelegate {
     try {
       ZooKeeperWatcher zkw =
           new ZooKeeperWatcher(this.conf, "replicationLogCleaner", null);
-      this.zkHelper = new ReplicationZookeeper(this.conf, zkw);
+      this.zkHelper = new ReplicationZookeeper(this, this.conf, zkw);
     } catch (KeeperException e) {
       LOG.error("Error while configuring " + this.getClass().getName(), e);
     } catch (IOException e) {
@@ -149,5 +160,11 @@ public class ReplicationLogCleaner implements LogCleanerDelegate {
   @Override
   public boolean isStopped() {
     return this.stopped;
+  }
+
+  @Override
+  public void abort(String why, Throwable e) {
+    LOG.warn("Aborting ReplicationLogCleaner because " + why, e);
+    stop(why);
   }
 }

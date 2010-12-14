@@ -27,12 +27,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
@@ -106,9 +108,9 @@ public class VerifyReplication {
               endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
         }
         try {
-          ReplicationZookeeper zk = new ReplicationZookeeper(conf,
-              HConnectionManager.getConnection(conf).
-          getZooKeeperWatcher());
+          HConnection conn = HConnectionManager.getConnection(conf);
+          ReplicationZookeeper zk = new ReplicationZookeeper(conn, conf,
+              conn.getZooKeeperWatcher());
           ReplicationPeer peer = zk.getPeer(conf.get(NAME+".peerId"));
           HTable replicatedTable = new HTable(peer.getConfiguration(),
               conf.get(NAME+".tableName"));
@@ -150,8 +152,9 @@ public class VerifyReplication {
       throw new IOException("Replication needs to be enabled to verify it.");
     }
     try {
-      ReplicationZookeeper zk = new ReplicationZookeeper(conf,
-          HConnectionManager.getConnection(conf).getZooKeeperWatcher());
+      HConnection conn = HConnectionManager.getConnection(conf);
+      ReplicationZookeeper zk = new ReplicationZookeeper(conn, conf,
+          conn.getZooKeeperWatcher());
       // Just verifying it we can connect
       ReplicationPeer peer = zk.getPeer(peerId);
       if (peer == null) {

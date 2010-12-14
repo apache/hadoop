@@ -130,6 +130,11 @@ public class LogCleaner extends Chore {
         Path filePath = file.getPath();
         if (HLog.validateHLogFilename(filePath.getName())) {
           for (LogCleanerDelegate logCleaner : logCleanersChain) {
+            if (logCleaner.isStopped()) {
+              LOG.warn("A log cleaner is stopped, won't delete any log.");
+              return;
+            }
+
             if (!logCleaner.isLogDeletable(filePath) ) {
               // this log is not deletable, continue to process next log file
               continue FILE;

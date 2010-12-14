@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -65,6 +66,7 @@ import org.apache.zookeeper.KeeperException;
 public class ReplicationAdmin {
 
   private final ReplicationZookeeper replicationZk;
+  private final HConnection connection;
 
   /**
    * Constructor that creates a connection to the local ZooKeeper ensemble.
@@ -77,10 +79,10 @@ public class ReplicationAdmin {
       throw new RuntimeException("hbase.replication isn't true, please " +
           "enable it in order to use replication");
     }
-    ZooKeeperWatcher zkw = HConnectionManager.getConnection(conf).
-        getZooKeeperWatcher();
+    this.connection = HConnectionManager.getConnection(conf);
+    ZooKeeperWatcher zkw = this.connection.getZooKeeperWatcher();
     try {
-      this.replicationZk = new ReplicationZookeeper(conf, zkw);
+      this.replicationZk = new ReplicationZookeeper(this.connection, conf, zkw);
     } catch (KeeperException e) {
       throw new IOException("Unable setup the ZooKeeper connection", e);
     }
@@ -150,8 +152,13 @@ public class ReplicationAdmin {
    * @return the previous state
    */
   public boolean setReplicating(boolean newState) throws IOException {
-    boolean prev = getReplicating();
-    this.replicationZk.setReplicating(newState);
+    boolean prev = true;
+    try {
+      prev = getReplicating();
+      this.replicationZk.setReplicating(newState);
+    } catch (KeeperException e) {
+      throw new IOException("Unable to set the replication state", e);
+    }
     return prev;
   }
 

@@ -768,6 +768,9 @@ Release 0.90.0 - Unreleased
    HBASE-3321  Replication.join shouldn't clear the logs znode
    HBASE-3352  enabling a non-existent table from shell prints no error
    HBASE-3353  table.jsp doesn't handle entries in META without server info
+   HBASE-3351  ReplicationZookeeper goes to ZK every time a znode is modified
+   HBASE-3326  Replication state's znode should be created else it 
+               defaults to false
 
 
   IMPROVEMENTS

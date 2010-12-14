@@ -100,6 +100,7 @@ public class ReplicationZookeeper {
   private String ourClusterKey;
   // Abortable
   private Abortable abortable;
+  private ReplicationStatusTracker statusTracker;
 
   /**
    * Constructor used by clients of replication (like master and HBase clients)
@@ -107,12 +108,14 @@ public class ReplicationZookeeper {
    * @param zk    zk connection to use
    * @throws IOException
    */
-  public ReplicationZookeeper(final Configuration conf, final ZooKeeperWatcher zk)
+  public ReplicationZookeeper(final Abortable abortable, final Configuration conf,
+                              final ZooKeeperWatcher zk)
     throws KeeperException {
 
     this.conf = conf;
     this.zookeeper = zk;
-    setZNodes();
+    this.replicating = new AtomicBoolean();
+    setZNodes(abortable);
   }
 
   /**
@@ -128,23 +131,18 @@ public class ReplicationZookeeper {
     this.abortable = server;
     this.zookeeper = server.getZooKeeper();
     this.conf = server.getConfiguration();
-    setZNodes();
+    this.replicating = replicating;
+    setZNodes(server);
 
     this.peerClusters = new HashMap<String, ReplicationPeer>();
-    this.replicating = replicating;
     ZKUtil.createWithParents(this.zookeeper,
         ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName));
-    readReplicationStateZnode();
     this.rsServerNameZnode = ZKUtil.joinZNode(rsZNode, server.getServerName());
     ZKUtil.createWithParents(this.zookeeper, this.rsServerNameZnode);
-    // Set a tracker on replicationStateNodeNode
-    ReplicationStatusTracker tracker =
-        new ReplicationStatusTracker(this.zookeeper, server);
-    tracker.start();
     connectExistingPeers();
   }
 
-  private void setZNodes() throws KeeperException {
+  private void setZNodes(Abortable abortable) throws KeeperException {
     String replicationZNodeName =
         conf.get("zookeeper.znode.replication", "replication");
     String peersZNodeName =
@@ -170,6 +168,11 @@ public class ReplicationZookeeper {
     String idResult = Bytes.toString(data);
     this.clusterId = idResult == null?
       Byte.toString(HConstants.DEFAULT_CLUSTER_ID): idResult;
+    // Set a tracker on replicationStateNodeNode
+    this.statusTracker =
+        new ReplicationStatusTracker(this.zookeeper, abortable);
+    statusTracker.start();
+    readReplicationStateZnode();
   }
 
   private void connectExistingPeers() throws IOException, KeeperException {
@@ -292,16 +295,12 @@ public class ReplicationZookeeper {
    * Set the new replication state for this cluster
    * @param newState
    */
-  public void setReplicating(boolean newState) throws IOException {
-    try {
-      ZKUtil.createWithParents(this.zookeeper,
+  public void setReplicating(boolean newState) throws KeeperException {
+    ZKUtil.createWithParents(this.zookeeper,
         ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName));
-      ZKUtil.setData(this.zookeeper,
-          ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName),
-          Bytes.toBytes(Boolean.toString(newState)));
-    } catch (KeeperException e) {
-      throw new IOException("Unable to set the replication state", e);
-    }
+    ZKUtil.setData(this.zookeeper,
+        ZKUtil.joinZNode(this.replicationZNode, this.replicationStateNodeName),
+        Bytes.toBytes(Boolean.toString(newState)));
   }
 
   /**
@@ -368,8 +367,18 @@ public class ReplicationZookeeper {
     }
   }
 
+  /**
+   * Get the replication status of this cluster. If the state znode doesn't
+   * exist it will also create it and set it true.
+   * @return returns true when it's enabled, else false
+   * @throws KeeperException
+   */
   public boolean getReplication() throws KeeperException {
-    byte [] data = ZKUtil.getDataAndWatch(this.zookeeper, getRepStateNode());
+    byte [] data = this.statusTracker.getData();
+    if (data == null || data.length == 0) {
+      setReplicating(true);
+      return true;
+    }
     return Boolean.parseBoolean(Bytes.toString(data));
   }
 
@@ -681,8 +690,10 @@ public class ReplicationZookeeper {
 
     @Override
     public synchronized void nodeDataChanged(String path) {
-      super.nodeDataChanged(path);
-      readReplicationStateZnode();
+      if (path.equals(node)) {
+        super.nodeDataChanged(path);
+        readReplicationStateZnode();
+      }
     }
   }
 }
