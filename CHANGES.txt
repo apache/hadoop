@@ -36,6 +36,8 @@ Release 0.91.0 - Unreleased
    HBASE-1861  Multi-Family support for bulk upload tools
    HBASE-3308  SplitTransaction.splitStoreFiles slows splits a lot
    HBASE-3328  Added Admin API to specify explicit split points
+   HBASE-3345  Coprocessors: Allow observers to completely override base
+               function
 
 
   NEW FEATURES

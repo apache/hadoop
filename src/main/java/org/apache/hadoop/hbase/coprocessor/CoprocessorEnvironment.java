@@ -45,27 +45,17 @@ public interface CoprocessorEnvironment {
    */
   public HTableInterface getTable(byte[] tableName) throws IOException;
 
-  // environment variables
+  /* Control flow changes */
 
   /**
-   * Get an environment variable
-   * @param key the key
-   * @return the object corresponding to the environment variable, if set
+   * Causes framework to bypass default actions and return with the results
+   * from a preXXX chain.
    */
-  public Object get(Object key);
+  public void bypass();
 
   /**
-   * Set an environment variable
-   * @param key the key
-   * @param value the value
+   * Mark coprocessor chain processing as complete. Causes framework to return
+   * immediately without calling any additional chained coprocessors.
    */
-  public void put(Object key, Object value);
-
-  /**
-   * Remove an environment variable
-   * @param key the key
-   * @return the object corresponding to the environment variable, if set
-   */
-  public Object remove(Object key);
-
+  public void complete();
 }

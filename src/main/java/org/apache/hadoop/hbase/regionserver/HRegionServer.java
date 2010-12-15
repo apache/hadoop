@@ -1599,7 +1599,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     try {
       HRegion region = getRegion(regionName);
       if (region.getCoprocessorHost() != null) {
-        region.getCoprocessorHost().preExists(get);
+        Boolean result = region.getCoprocessorHost().preExists(get);
+        if (result != null) {
+          return result.booleanValue();
+        }
       }
       Result r = region.get(get, getLockFromId(get.getLockId()));
       boolean result = r != null && !r.isEmpty();
@@ -1702,8 +1705,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     HRegion region = getRegion(regionName);
     if (region.getCoprocessorHost() != null) {
-      region.getCoprocessorHost().preCheckAndPut(row, family, qualifier,
-        value, put);
+      Boolean result = region.getCoprocessorHost()
+        .preCheckAndPut(row, family, qualifier, value, put);
+      if (result != null) {
+        return result.booleanValue();
+      }
     }
     boolean result = checkAndMutate(regionName, row, family, qualifier,
       value, put, getLockFromId(put.getLockId()));
@@ -1737,8 +1743,11 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     HRegion region = getRegion(regionName);
     if (region.getCoprocessorHost() != null) {
-      region.getCoprocessorHost().preCheckAndDelete(row, family, qualifier,
-        value, delete);
+      Boolean result = region.getCoprocessorHost().preCheckAndDelete(row,
+        family, qualifier, value, delete);
+      if (result != null) {
+        return result.booleanValue();
+      }
     }
     boolean result = checkAndMutate(regionName, row, family, qualifier, value,
       delete, getLockFromId(delete.getLockId()));
@@ -2462,12 +2471,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       Increment incVal = increment;
       Result resVal;
       if (region.getCoprocessorHost() != null) {
-        incVal = region.getCoprocessorHost().preIncrement(incVal);
+        resVal = region.getCoprocessorHost().preIncrement(incVal);
+        if (resVal != null) {
+          return resVal;
+        }
       }
       resVal = region.increment(incVal, getLockFromId(increment.getLockId()),
           increment.getWriteToWAL());
       if (region.getCoprocessorHost() != null) {
-        resVal = region.getCoprocessorHost().postIncrement(incVal, resVal);
+        region.getCoprocessorHost().postIncrement(incVal, resVal);
       }
       return resVal;
     } catch (IOException e) {
@@ -2489,16 +2501,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     requestCount.incrementAndGet();
     try {
       HRegion region = getRegion(regionName);
-      long amountVal = amount;
       if (region.getCoprocessorHost() != null) {
-        amountVal = region.getCoprocessorHost().preIncrementColumnValue(row,
-          family, qualifier, amountVal, writeToWAL);
+        Long amountVal = region.getCoprocessorHost().preIncrementColumnValue(row,
+          family, qualifier, amount, writeToWAL);
+        if (amountVal != null) {
+          return amountVal.longValue();
+        }
       }
       long retval = region.incrementColumnValue(row, family, qualifier, amount,
-          writeToWAL);
+        writeToWAL);
       if (region.getCoprocessorHost() != null) {
         retval = region.getCoprocessorHost().postIncrementColumnValue(row,
-          family, qualifier, amountVal, writeToWAL, retval);
+          family, qualifier, amount, writeToWAL, retval);
       }
       return retval;
     } catch (IOException e) {

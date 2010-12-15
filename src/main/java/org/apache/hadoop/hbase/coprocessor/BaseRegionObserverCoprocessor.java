@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+
 import java.io.IOException;
 
 /**
@@ -71,70 +73,65 @@ public abstract class BaseRegionObserverCoprocessor implements Coprocessor,
 
   @Override
   public void preGetClosestRowBefore(final CoprocessorEnvironment e,
-      final byte [] row, final byte [] family)
+      final byte [] row, final byte [] family, final Result result)
     throws IOException {
   }
 
   @Override
-  public Result postGetClosestRowBefore(final CoprocessorEnvironment e,
-      byte[] row, byte[] family, final Result result)
-    throws IOException {
-    return result;
-  }
-
-  @Override
-  public Get preGet(final CoprocessorEnvironment e, final Get get)
-    throws IOException {
-    return get;
-  }
-
-  @Override
-  public List<KeyValue> postGet(final CoprocessorEnvironment e, final Get get,
-      List<KeyValue> results) throws IOException {
-    return results;
-  }
-
-  @Override
-  public Get preExists(final CoprocessorEnvironment e, final Get get)
+  public void postGetClosestRowBefore(final CoprocessorEnvironment e,
+      final byte [] row, final byte [] family, final Result result)
       throws IOException {
-    return get;
   }
 
   @Override
-  public boolean postExists(final CoprocessorEnvironment e,
-      final Get get, boolean exists)
-      throws IOException {
+  public void preGet(final CoprocessorEnvironment e, final Get get,
+      final List<KeyValue> results) throws IOException {
+  }
+
+  @Override
+  public void postGet(final CoprocessorEnvironment e, final Get get,
+      final List<KeyValue> results) throws IOException {
+  }
+
+  @Override
+  public boolean preExists(final CoprocessorEnvironment e, final Get get,
+      final boolean exists) throws IOException {
     return exists;
   }
 
   @Override
-  public Map<byte[], List<KeyValue>> prePut(final CoprocessorEnvironment e,
-      final Map<byte[], List<KeyValue>> familyMap) throws IOException {
-    return familyMap;
+  public boolean postExists(final CoprocessorEnvironment e, final Get get,
+      boolean exists) throws IOException {
+    return exists;
   }
 
   @Override
-  public void postPut(final CoprocessorEnvironment e,
-      final Map<byte[], List<KeyValue>> familyMap)
-    throws IOException {
+  public void prePut(final CoprocessorEnvironment e, final Map<byte[],
+      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
   }
 
   @Override
-  public Map<byte[], List<KeyValue>> preDelete(final CoprocessorEnvironment e,
-      final Map<byte[], List<KeyValue>> familyMap) throws IOException {
-    return familyMap;
+  public void postPut(final CoprocessorEnvironment e, final Map<byte[],
+      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
   }
 
   @Override
-  public void postDelete(CoprocessorEnvironment e,
-      Map<byte[], List<KeyValue>> familyMap) throws IOException {
+  public void preDelete(final CoprocessorEnvironment e, final Map<byte[],
+      List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
   }
 
   @Override
-  public Put preCheckAndPut(final CoprocessorEnvironment e,
+  public void postDelete(final CoprocessorEnvironment e,
+      final Map<byte[], List<KeyValue>> familyMap, final boolean writeToWAL)
+      throws IOException {
+  }
+
+  @Override
+  public boolean preCheckAndPut(final CoprocessorEnvironment e,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Put put) throws IOException {
-    return put;
+      final byte [] value, final Put put, final boolean result)
+      throws IOException {
+    return result;
   }
 
   @Override
@@ -146,18 +143,18 @@ public abstract class BaseRegionObserverCoprocessor implements Coprocessor,
   }
 
   @Override
-  public Delete preCheckAndDelete(final CoprocessorEnvironment e,
+  public boolean preCheckAndDelete(final CoprocessorEnvironment e,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Delete delete)
-    throws IOException {
-    return delete;
+      final byte [] value, final Delete delete, final boolean result)
+      throws IOException {
+    return result;
   }
 
   @Override
   public boolean postCheckAndDelete(final CoprocessorEnvironment e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final byte [] value, final Delete delete, final boolean result)
-    throws IOException {
+      throws IOException {
     return result;
   }
 
@@ -172,54 +169,53 @@ public abstract class BaseRegionObserverCoprocessor implements Coprocessor,
   public long postIncrementColumnValue(final CoprocessorEnvironment e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final long amount, final boolean writeToWAL, long result)
-  throws IOException {
-    return result;
-  }
-
-  @Override
-  public Increment preIncrement(final CoprocessorEnvironment e,
-      final Increment increment)
-  throws IOException {
-    return increment;
-  }
-
-  @Override
-  public Result postIncrement(final CoprocessorEnvironment e,
-      final Increment increment,
-      final Result result) throws IOException {
-    return result;
-  }
-
-  @Override
-  public Scan preScannerOpen(final CoprocessorEnvironment e, final Scan scan)
-    throws IOException {
-    return scan;
-  }
-
-  @Override
-  public void postScannerOpen(final CoprocessorEnvironment e,
-      final Scan scan,
-      final long scannerId) throws IOException { }
-
-  @Override
-  public void preScannerNext(final CoprocessorEnvironment e,
-      final long scannerId) throws IOException {
-  }
-
-  @Override
-  public List<KeyValue> postScannerNext(final CoprocessorEnvironment e,
-      final long scannerId, final List<KeyValue> results)
       throws IOException {
-    return results;
+    return result;
+  }
+
+  @Override
+  public void preIncrement(final CoprocessorEnvironment e,
+      final Increment increment, final Result result) throws IOException {
+  }
+
+  @Override
+  public void postIncrement(final CoprocessorEnvironment e,
+      final Increment increment, final Result result) throws IOException {
+  }
+
+  @Override
+  public InternalScanner preScannerOpen(final CoprocessorEnvironment e,
+      final Scan scan, final InternalScanner s) throws IOException {
+    return s;
+  }
+
+  @Override
+  public InternalScanner postScannerOpen(final CoprocessorEnvironment e,
+      final Scan scan, final InternalScanner s) throws IOException {
+    return s;
+  }
+
+  @Override
+  public boolean preScannerNext(final CoprocessorEnvironment e,
+      final InternalScanner s, final List<KeyValue> results,
+      final int limit, final boolean hasMore) throws IOException {
+    return hasMore;
+  }
+
+  @Override
+  public boolean postScannerNext(final CoprocessorEnvironment e,
+      final InternalScanner s, final List<KeyValue> results, final int limit,
+      final boolean hasMore) throws IOException {
+    return hasMore;
   }
 
   @Override
   public void preScannerClose(final CoprocessorEnvironment e,
-      final long scannerId)
-    throws IOException { }
+      final InternalScanner s) throws IOException {
+  }
 
   @Override
   public void postScannerClose(final CoprocessorEnvironment e,
-      final long scannerId)
-    throws IOException { }
+      final InternalScanner s) throws IOException {
+  }
 }

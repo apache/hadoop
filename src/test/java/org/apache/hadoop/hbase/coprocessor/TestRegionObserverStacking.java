@@ -46,8 +46,9 @@ public class TestRegionObserverStacking extends TestCase {
   public static class ObserverA extends BaseRegionObserverCoprocessor {
     long id;
     @Override
-    public void postPut(final CoprocessorEnvironment e,
-        Map<byte[], List<KeyValue>> familyMap) {
+    public void postPut(final CoprocessorEnvironment e, final Map<byte[],
+        List<KeyValue>> familyMap, final boolean writeToWAL)
+        throws IOException {
       id = System.currentTimeMillis();
       try {
         Thread.sleep(10);
@@ -59,8 +60,9 @@ public class TestRegionObserverStacking extends TestCase {
   public static class ObserverB extends BaseRegionObserverCoprocessor {
     long id;
     @Override
-    public void postPut(final CoprocessorEnvironment e,
-        Map<byte[], List<KeyValue>> familyMap) {
+    public void postPut(final CoprocessorEnvironment e, final Map<byte[],
+        List<KeyValue>> familyMap, final boolean writeToWAL)
+        throws IOException {
       id = System.currentTimeMillis();
       try {
         Thread.sleep(10);
@@ -73,8 +75,9 @@ public class TestRegionObserverStacking extends TestCase {
     long id;
 
     @Override
-    public void postPut(final CoprocessorEnvironment e,
-        Map<byte[], List<KeyValue>> familyMap) {
+    public void postPut(final CoprocessorEnvironment e, final Map<byte[],
+        List<KeyValue>> familyMap, final boolean writeToWAL)
+        throws IOException {
       id = System.currentTimeMillis();
       try {
         Thread.sleep(10);
