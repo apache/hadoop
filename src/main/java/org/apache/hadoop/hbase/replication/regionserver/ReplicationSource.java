@@ -605,7 +605,8 @@ public class ReplicationSource extends Thread
       return true;
     } else if (this.queueRecovered) {
       this.manager.closeRecoveredQueue(this);
-      this.terminate("Finished recovering the queue");
+      LOG.info("Finished recovering the queue");
+      this.running = false;
       return true;
     }
     return false;

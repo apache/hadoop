@@ -777,6 +777,8 @@ Release 0.90.0 - Unreleased
                defaults to false
    HBASE-3355  Stopping a stopped cluster leaks an HMaster
    HBASE-3356  Add more checks in replication if RS is stopped
+   HBASE-3358  Recovered replication queue wait on themselves when terminating
+   HBASE-3359  LogRoller not added as a WAL listener when replication is enabled
 
 
   IMPROVEMENTS
