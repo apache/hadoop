@@ -1047,8 +1047,8 @@ public class HBaseAdmin implements Abortable {
   }
 
   /**
-   * Split a table or an individual region.
-   * Asynchronous operation.
+   * Split a table or an individual region.  Implicitly finds an optimal split
+   * point.  Asynchronous operation.
    *
    * @param tableNameOrRegionName table to region to split
    * @throws IOException if a remote or network exception occurs
@@ -1056,6 +1056,20 @@ public class HBaseAdmin implements Abortable {
    */
   public void split(final byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
+    split(tableNameOrRegionName, null);
+  }
+
+  /**
+   * Split a table or an individual region.
+   * Asynchronous operation.
+   *
+   * @param tableNameOrRegionName table to region to split
+   * @param splitPoint the explicit position to split on
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException interrupt exception occurred
+   */
+  public void split(final byte [] tableNameOrRegionName,
+      final byte [] splitPoint) throws IOException, InterruptedException {
     CatalogTracker ct = getCatalogTracker();
     try {
       if (isRegionName(tableNameOrRegionName)) {
@@ -1066,7 +1080,7 @@ public class HBaseAdmin implements Abortable {
           LOG.info("No server in .META. for " +
             Bytes.toString(tableNameOrRegionName) + "; pair=" + pair);
         } else {
-          split(pair.getSecond(), pair.getFirst());
+          split(pair.getSecond(), pair.getFirst(), splitPoint);
         }
       } else {
         List<Pair<HRegionInfo, HServerAddress>> pairs =
@@ -1075,7 +1089,12 @@ public class HBaseAdmin implements Abortable {
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
           // May not be a server for a particular row
           if (pair.getSecond() == null) continue;
-          split(pair.getSecond(), pair.getFirst());
+          if (splitPoint != null) {
+            // if a split point given, only split that particular region
+            HRegionInfo r = pair.getFirst();
+            if (!r.containsRow(splitPoint)) continue;
+          }
+          split(pair.getSecond(), pair.getFirst(), splitPoint);
         }
       }
     } finally {
@@ -1083,10 +1102,10 @@ public class HBaseAdmin implements Abortable {
     }
   }
 
-  private void split(final HServerAddress hsa, final HRegionInfo hri)
-  throws IOException {
+  private void split(final HServerAddress hsa, final HRegionInfo hri,
+      byte[] splitPoint) throws IOException {
     HRegionInterface rs = this.connection.getHRegionConnection(hsa);
-    rs.splitRegion(hri);
+    rs.splitRegion(hri, splitPoint);
   }
 
   /**

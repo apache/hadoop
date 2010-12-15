@@ -2133,9 +2133,15 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   public void splitRegion(HRegionInfo regionInfo)
       throws NotServingRegionException, IOException {
+    splitRegion(regionInfo, null);
+  }
+
+  @Override
+  public void splitRegion(HRegionInfo regionInfo, byte[] splitPoint)
+      throws NotServingRegionException, IOException {
     HRegion region = getRegion(regionInfo.getRegionName());
     region.flushcache();
-    region.shouldSplit(true);
+    region.forceSplit(splitPoint);
     // force a compaction, split will be side-effect
     // TODO: flush/compact/split refactor will make it trivial to do this
     // sync/async (and won't require us to do a compaction to split!)

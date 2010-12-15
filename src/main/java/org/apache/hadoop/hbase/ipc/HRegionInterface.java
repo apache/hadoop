@@ -372,6 +372,20 @@ public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Ab
   throws NotServingRegionException, IOException;
 
   /**
+   * Splits the specified region.
+   * <p>
+   * This method currently flushes the region and then forces a compaction which
+   * will then trigger a split.  The flush is done synchronously but the
+   * compaction is asynchronous.
+   * @param regionInfo region to split
+   * @param splitPoint the explicit row to split on
+   * @throws NotServingRegionException
+   * @throws IOException
+   */
+  void splitRegion(HRegionInfo regionInfo, byte[] splitPoint)
+  throws NotServingRegionException, IOException;
+
+  /**
    * Compacts the specified region.  Performs a major compaction if specified.
    * <p>
    * This method is asynchronous.
