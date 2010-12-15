@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
+
 /**
  * This Chore, everytime it runs, will clear the wal logs in the old logs folder
  * that are deletable for each log cleaner in the chain, in order to limit the
@@ -79,7 +81,7 @@ public class LogCleaner extends Chore {
    * ReplicationLogCleaner and SnapshotLogCleaner.
    */
   private void initLogCleanersChain() {
-    String[] logCleaners = conf.getStrings("hbase.master.logcleaner.plugins");
+    String[] logCleaners = conf.getStrings(HBASE_MASTER_LOGCLEANER_PLUGINS);
     if (logCleaners != null) {
       for (String className : logCleaners) {
         LogCleanerDelegate logCleaner = newLogCleaner(className, conf);

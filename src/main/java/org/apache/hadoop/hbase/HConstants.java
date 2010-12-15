@@ -361,6 +361,9 @@ public final class HConstants {
   /** HBCK special code name used as server name when manipulating ZK nodes */
   public static final String HBCK_CODE_NAME = "HBCKServerName";
 
+  public static final String HBASE_MASTER_LOGCLEANER_PLUGINS =
+      "hbase.master.logcleaner.plugins";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
@@ -36,8 +35,13 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
+
+import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_ENABLE_KEY;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_LOCAL;
 
 /**
  * Gateway to Replication.  Used by {@link org.apache.hadoop.hbase.regionserver.HRegionServer}.
@@ -82,7 +86,7 @@ public class Replication implements WALObserver {
    * @return True if replication is enabled.
    */
   public static boolean isReplication(final Configuration c) {
-    return c.getBoolean(HConstants.REPLICATION_ENABLE_KEY, false);
+    return c.getBoolean(REPLICATION_ENABLE_KEY, false);
   }
 
   /**
@@ -134,7 +138,7 @@ public class Replication implements WALObserver {
     for (KeyValue kv : logEdit.getKeyValues()) {
       family = kv.getFamily();
       int scope = info.getTableDesc().getFamily(family).getScope();
-      if (scope != HConstants.REPLICATION_SCOPE_LOCAL &&
+      if (scope != REPLICATION_SCOPE_LOCAL &&
           !scopes.containsKey(family)) {
         scopes.put(family, scope);
       }
@@ -147,6 +151,22 @@ public class Replication implements WALObserver {
   @Override
   public void logRolled(Path p) {
     getReplicationManager().logRolled(p);
+  }
+
+  /**
+   * This method modifies the master's configuration in order to inject
+   * replication-related features
+   * @param conf
+   */
+  public static void decorateMasterConfiguration(Configuration conf) {
+    if (!isReplication(conf)) {
+      return;
+    }
+    String plugins = conf.get(HBASE_MASTER_LOGCLEANER_PLUGINS);
+    if (!plugins.contains(ReplicationLogCleaner.class.toString())) {
+      conf.set(HBASE_MASTER_LOGCLEANER_PLUGINS,
+          plugins + "," + ReplicationLogCleaner.class.getCanonicalName());
+    }
   }
 
   @Override

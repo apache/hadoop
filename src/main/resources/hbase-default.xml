@@ -290,7 +290,7 @@
   </property>
   <property>
     <name>hbase.master.logcleaner.plugins</name>
-    <value>org.apache.hadoop.hbase.master.TimeToLiveLogCleaner,org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner</value>
+    <value>org.apache.hadoop.hbase.master.TimeToLiveLogCleaner</value>
     <description>A comma-separated list of LogCleanerDelegate invoked by
     the LogsCleaner service. These WAL/HLog cleaners are called in order,
     so put the HLog cleaner that prunes the most HLog files in front. To

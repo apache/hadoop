@@ -782,6 +782,7 @@ Release 0.90.0 - Unreleased
    HBASE-3356  Add more checks in replication if RS is stopped
    HBASE-3358  Recovered replication queue wait on themselves when terminating
    HBASE-3359  LogRoller not added as a WAL listener when replication is enabled
+   HBASE-3360  ReplicationLogCleaner is enabled by default in 0.90 -- causes NPE
 
 
   IMPROVEMENTS
