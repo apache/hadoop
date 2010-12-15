@@ -89,7 +89,7 @@
         </p>
         <p>
           In a separate thread, the edit is read from the log (as part of a batch)
-          and only the KVs that are replicable are kept (that is, that are part
+          and only the KVs that are replicable are kept (that is, that they are part
           of a family scoped GLOBAL in the family's schema and non-catalog so not
           .META. or -ROOT-). When the buffer is filled, or the reader hits the
           end of the file, the buffer is sent to a random region server on the
@@ -143,7 +143,7 @@
         <p>
           When a master cluster RS initiates a replication source to a slave cluster,
           it first connects to the slave's ZooKeeper ensemble using the provided
-          cluster key (taht key is composed of the value of hbase.zookeeper.quorum,
+          cluster key (that key is composed of the value of hbase.zookeeper.quorum,
           zookeeper.znode.parent and hbase.zookeeper.property.clientPort). It
           then scans the "rs" directory to discover all the available sinks
           (region servers that are accepting incoming streams of edits to replicate)
@@ -166,7 +166,7 @@
           are created), and each of these contain a queue
           of HLogs to process. Each of these queues will track the HLogs created
           by that RS, but they can differ in size. For example, if one slave
-          cluster becomes unavailable for some time then the HLogs cannot be,
+          cluster becomes unavailable for some time then the HLogs should not be deleted,
           thus they need to stay in the queue (while the others are processed).
           See the section named "Region server failover" for an example.
         </p>
@@ -371,7 +371,7 @@
           bulk copy data.
         </p>
       </section>
-      <section name="Is it a mistake that WALEdit doesn't carry Put and Delete objects, that we have to reinstantiate not only replicating but when replaying edits?">
+      <section name="Is it a mistake that WALEdit doesn't carry Put and Delete objects, that we have to reinstantiate not only when replicating but when replaying edits also?">
         <p>
           Yes, this behavior would help a lot but it's not currently available
           in HBase (BatchUpdate had that, but it was lost in the new API).

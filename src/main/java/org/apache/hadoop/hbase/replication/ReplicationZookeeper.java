@@ -517,6 +517,7 @@ public class ReplicationZookeeper {
       ZKUtil.createAndWatch(this.zookeeper, p, Bytes.toBytes(rsServerNameZnode));
     } catch (KeeperException e) {
       LOG.info("Failed lock other rs", e);
+      return false;
     }
     return true;
   }
