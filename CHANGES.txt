@@ -211,8 +211,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7009. MD5Hash provides a public factory method that creates an
     instance of thread local MessageDigest. (hairong)
 
-    HADOOP-7008. Enable test-patch.sh to have a configured number of acceptable 
-    findbugs and javadoc warnings. (nigel and gkesavan)
+    HADOOP-7008. Enable test-patch.sh to have a configured number of 
+    acceptable findbugs and javadoc warnings. (nigel and gkesavan)
 
     HADOOP-6818. Provides a JNI implementation of group resolution. (ddas)
 
@@ -227,16 +227,21 @@ Release 0.22.0 - Unreleased
     HADOOP-7024. Create a test method for adding file systems during tests.
     (Kan Zhang via jghoman)
 
-    HADOOP-6903. Make AbstractFSileSystem methods and some FileContext methods to be public. (Sanjay Radia via Sanjay Radia)
+    HADOOP-6903. Make AbstractFSileSystem methods and some FileContext methods
+    to be public. (Sanjay Radia)
 
-    HADOOP-7034. Add TestPath tests to cover dot, dot dot, and slash normalization. (eli)
+    HADOOP-7034. Add TestPath tests to cover dot, dot dot, and slash 
+    normalization. (eli)
 
     HADOOP-7032. Assert type constraints in the FileStatus constructor. (eli)
 
-    HADOOP-6562. FileContextSymlinkBaseTest should use FileContextTestHelper. (eli)
+    HADOOP-6562. FileContextSymlinkBaseTest should use FileContextTestHelper. 
+    (eli)
 
     HADOOP-7028. ant eclipse does not include requisite ant.jar in the 
     classpath. (Patrick Angeles via eli)
+
+    HADOOP-6298. Add copyBytes to Text and BytesWritable. (omalley)
 
   OPTIMIZATIONS
 
