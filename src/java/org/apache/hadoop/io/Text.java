@@ -35,8 +35,6 @@ import java.util.Arrays;
 
 import org.apache.avro.reflect.Stringable;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -54,7 +52,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Stable
 public class Text extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
-  private static final Log LOG= LogFactory.getLog(Text.class);
   
   private static ThreadLocal<CharsetEncoder> ENCODER_FACTORY =
     new ThreadLocal<CharsetEncoder>() {
@@ -101,8 +98,19 @@ public class Text extends BinaryComparable
   }
   
   /**
+   * Get a copy of the bytes that is exactly the length of the data.
+   * See {@link #getBytes()} for faster access to the underlying array.
+   */
+  public byte[] copyBytes() {
+    byte[] result = new byte[length];
+    System.arraycopy(bytes, 0, result, 0, length);
+    return result;
+  }
+  
+  /**
    * Returns the raw bytes; however, only data up to {@link #getLength()} is
-   * valid.
+   * valid. Please use {@link #copyBytes()} if you
+   * need the returned array to be precisely the length of the data.
    */
   public byte[] getBytes() {
     return bytes;

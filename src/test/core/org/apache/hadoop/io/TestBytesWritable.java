@@ -40,6 +40,8 @@ public class TestBytesWritable extends TestCase {
     for(int i=0; i < size*2; ++i) {
       assertEquals(hadoop[i%size], buf.getBytes()[i]);
     }
+    // ensure that copyBytes is exactly the right length
+    assertEquals(size*4, buf.copyBytes().length);
     // shrink the buffer
     buf.setCapacity(1);
     // make sure the size has been cut down too

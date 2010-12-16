@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -37,7 +35,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Stable
 public class BytesWritable extends BinaryComparable
     implements WritableComparable<BinaryComparable> {
-  private static final Log LOG = LogFactory.getLog(BytesWritable.class);
   private static final int LENGTH_BYTES = 4;
   private static final byte[] EMPTY_BYTES = {};
 
@@ -59,7 +56,18 @@ public class BytesWritable extends BinaryComparable
   }
   
   /**
-   * Get the data from the BytesWritable.
+   * Get a copy of the bytes that is exactly the length of the data.
+   * See {@link #getBytes()} for faster access to the underlying array.
+   */
+  public byte[] copyBytes() {
+    byte[] result = new byte[size];
+    System.arraycopy(bytes, 0, result, 0, size);
+    return result;
+  }
+  
+  /**
+   * Get the data backing the BytesWritable. Please use {@link #copyBytes()}
+   * if you need the returned array to be precisely the length of the data.
    * @return The data is only valid between 0 and getLength() - 1.
    */
   public byte[] getBytes() {

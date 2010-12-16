@@ -215,6 +215,10 @@ public class TestText extends TestCase {
     a.append("xdefgxxx".getBytes(), 1, 4);
     assertEquals("modified aliased string", "abc", b.toString());
     assertEquals("appended string incorrectly", "abcdefg", a.toString());
+    // add an extra byte so that capacity = 14 and length = 8
+    a.append(new byte[]{'d'}, 0, 1);
+    assertEquals(14, a.getBytes().length);
+    assertEquals(8, a.copyBytes().length);
   }
   
   private class ConcurrentEncodeDecodeThread extends Thread {
