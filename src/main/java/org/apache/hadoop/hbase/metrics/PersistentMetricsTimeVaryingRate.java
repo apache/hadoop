@@ -128,7 +128,7 @@ public class PersistentMetricsTimeVaryingRate extends MetricsTimeVaryingRate {
     if (curOps > 0) {
       long curTime = this.getPreviousIntervalAverageTime();
       long totalTime = curTime * curOps;
-      if (totalTime / curTime == curOps) {
+      if (curTime == 0 || totalTime / curTime == curOps) {
         super.inc(curOps, totalTime);
       } else {
         LOG.info("Stats for " + this.getName() + " overflowed! resetting");
