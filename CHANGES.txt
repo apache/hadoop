@@ -784,6 +784,7 @@ Release 0.90.0 - Unreleased
    HBASE-3359  LogRoller not added as a WAL listener when replication is enabled
    HBASE-3360  ReplicationLogCleaner is enabled by default in 0.90 -- causes NPE
    HBASE-3363  ReplicationSink should batch delete
+   HBASE-3365  EOFE contacting crashed RS causes Master abort
 
 
   IMPROVEMENTS

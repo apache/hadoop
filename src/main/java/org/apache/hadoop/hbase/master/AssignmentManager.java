@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.EOFException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -1103,6 +1104,10 @@ public class AssignmentManager extends ZooKeeperListener {
       // Presume that regionserver just failed and we haven't got expired
       // server from zk yet.  Let expired server deal with clean up.
     } catch (java.net.SocketTimeoutException e) {
+      LOG.info("Server " + server + " returned " + e.getMessage() + " for " +
+        region.getEncodedName());
+      // Presume retry or server will expire.
+    } catch (EOFException e) {
       LOG.info("Server " + server + " returned " + e.getMessage() + " for " +
         region.getEncodedName());
       // Presume retry or server will expire.
