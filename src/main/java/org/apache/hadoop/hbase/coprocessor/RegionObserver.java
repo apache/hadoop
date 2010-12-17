@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 
 import java.io.IOException;
@@ -35,7 +36,80 @@ import java.io.IOException;
  * Coprocessors implement this interface to observe and mediate client actions
  * on the region.
  */
-public interface RegionObserver {
+public interface RegionObserver extends Coprocessor {
+
+  /**
+   * Called before the region is reported as open to the master.
+   * @param e the environment provided by the region server
+   */
+  public void preOpen(final CoprocessorEnvironment e);
+
+  /**
+   * Called after the region is reported as open to the master.
+   * @param e the environment provided by the region server
+   */
+  public void postOpen(final CoprocessorEnvironment e);
+
+  /**
+   * Called before the memstore is flushed to disk.
+   * @param e the environment provided by the region server
+   */
+  public void preFlush(final CoprocessorEnvironment e);
+
+  /**
+   * Called after the memstore is flushed to disk.
+   * @param e the environment provided by the region server
+   */
+  public void postFlush(final CoprocessorEnvironment e);
+
+  /**
+   * Called before compaction.
+   * @param e the environment provided by the region server
+   * @param willSplit true if compaction will result in a split, false
+   * otherwise
+   */
+  public void preCompact(final CoprocessorEnvironment e,
+    final boolean willSplit);
+
+  /**
+   * Called after compaction.
+   * @param e the environment provided by the region server
+   * @param willSplit true if compaction will result in a split, false
+   * otherwise
+   */
+  public void postCompact(final CoprocessorEnvironment e,
+    final boolean willSplit);
+
+  /**
+   * Called before the region is split.
+   * @param e the environment provided by the region server
+   * (e.getRegion() returns the parent region)
+   */
+  public void preSplit(final CoprocessorEnvironment e);
+
+  /**
+   * Called after the region is split.
+   * @param e the environment provided by the region server
+   * (e.getRegion() returns the parent region)
+   * @param l the left daughter region
+   * @param r the right daughter region
+   */
+  public void postSplit(final CoprocessorEnvironment e, final HRegion l,
+    final HRegion r);
+
+  /**
+   * Called before the region is reported as closed to the master.
+   * @param e the environment provided by the region server
+   * @param abortRequested true if the region server is aborting
+   */
+  public void preClose(final CoprocessorEnvironment e, boolean abortRequested);
+
+  /**
+   * Called after the region is reported as closed to the master.
+   * @param e the environment provided by the region server
+   * @param abortRequested true if the region server is aborting
+   */
+  public void postClose(final CoprocessorEnvironment e, boolean abortRequested);
 
   /**
    * Called before a client makes a GetClosestRowBefore request.

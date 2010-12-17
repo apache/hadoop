@@ -49,8 +49,10 @@ public class TestCoprocessorInterface extends HBaseTestCase {
   private static final HBaseTestingUtility TEST_UTIL =
     new HBaseTestingUtility();
 
-  public static class CoprocessorImpl implements Coprocessor {
+  public static class CoprocessorImpl extends BaseRegionObserverCoprocessor {
 
+    private boolean startCalled;
+    private boolean stopCalled;
     private boolean preOpenCalled;
     private boolean postOpenCalled;
     private boolean preCloseCalled;
@@ -61,6 +63,16 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     private boolean postFlushCalled;
     private boolean preSplitCalled;
     private boolean postSplitCalled;
+
+    @Override
+    public void start(CoprocessorEnvironment e) {
+      startCalled = true;
+    }
+
+    @Override
+    public void stop(CoprocessorEnvironment e) {
+      stopCalled = true;
+    }
 
     @Override
     public void preOpen(CoprocessorEnvironment e) {
@@ -103,22 +115,24 @@ public class TestCoprocessorInterface extends HBaseTestCase {
       postSplitCalled = true;
     }
 
+    boolean wasStarted() {
+      return startCalled;
+    }
+    boolean wasStopped() {
+      return stopCalled;
+    }
     boolean wasOpened() {
       return (preOpenCalled && postOpenCalled);
     }
-
     boolean wasClosed() {
       return (preCloseCalled && postCloseCalled);
     }
-
     boolean wasFlushed() {
       return (preFlushCalled && postFlushCalled);
     }
-
     boolean wasCompacted() {
       return (preCompactCalled && postCompactCalled);
     }
-
     boolean wasSplit() {
       return (preSplitCalled && postSplitCalled);
     }
@@ -145,6 +159,8 @@ public class TestCoprocessorInterface extends HBaseTestCase {
 
     Coprocessor c = region.getCoprocessorHost()
       .findCoprocessor(CoprocessorImpl.class.getName());
+    assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
+    assertTrue("Coprocessor not stopped", ((CoprocessorImpl)c).wasStopped());
     assertTrue(((CoprocessorImpl)c).wasOpened());
     assertTrue(((CoprocessorImpl)c).wasClosed());
     assertTrue(((CoprocessorImpl)c).wasFlushed());
@@ -156,6 +172,8 @@ public class TestCoprocessorInterface extends HBaseTestCase {
       regions[i].getLog().closeAndDelete();
       c = region.getCoprocessorHost()
             .findCoprocessor(CoprocessorImpl.class.getName());
+      assertTrue("Coprocessor not started", ((CoprocessorImpl)c).wasStarted());
+      assertTrue("Coprocessor not stopped", ((CoprocessorImpl)c).wasStopped());
       assertTrue(((CoprocessorImpl)c).wasOpened());
       assertTrue(((CoprocessorImpl)c).wasClosed());
       assertTrue(((CoprocessorImpl)c).wasCompacted());
@@ -204,6 +222,9 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     r.setCoprocessorHost(host);
 
     host.load(implClass, Priority.USER);
+
+    Coprocessor c = host.findCoprocessor(implClass.getName());
+    assertNotNull(c);
 
     // Here we have to call pre and postOpen explicitly.
     host.preOpen();

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -45,6 +46,16 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
 
   boolean beforeDelete = true;
   boolean scannerOpened = false;
+  boolean hadPreOpen;
+  boolean hadPostOpen;
+  boolean hadPreClose;
+  boolean hadPostClose;
+  boolean hadPreFlush;
+  boolean hadPostFlush;
+  boolean hadPreSplit;
+  boolean hadPostSplit;
+  boolean hadPreCompact;
+  boolean hadPostCompact;
   boolean hadPreGet = false;
   boolean hadPostGet = false;
   boolean hadPrePut = false;
@@ -55,6 +66,76 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   boolean hadPostGetClosestRowBefore = false;
   boolean hadPreIncrement = false;
   boolean hadPostIncrement = false;
+
+  @Override
+  public void preOpen(CoprocessorEnvironment e) {
+    hadPreOpen = true;
+  }
+
+  @Override
+  public void postOpen(CoprocessorEnvironment e) {
+    hadPostOpen = true;
+  }
+
+  public boolean wasOpened() {
+    return hadPreOpen && hadPostOpen;
+  }
+
+  @Override
+  public void preClose(CoprocessorEnvironment e, boolean abortRequested) {
+    hadPreClose = true;
+  }
+
+  @Override
+  public void postClose(CoprocessorEnvironment e, boolean abortRequested) {
+    hadPostClose = true;
+  }
+
+  public boolean wasClosed() {
+    return hadPreClose && hadPostClose;
+  }
+
+  @Override
+  public void preFlush(CoprocessorEnvironment e) {
+    hadPreFlush = true;
+  }
+
+  @Override
+  public void postFlush(CoprocessorEnvironment e) {
+    hadPostFlush = true;
+  }
+
+  public boolean wasFlushed() {
+    return hadPreFlush && hadPostFlush;
+  }
+
+  @Override
+  public void preSplit(CoprocessorEnvironment e) {
+    hadPreSplit = true;
+  }
+
+  @Override
+  public void postSplit(CoprocessorEnvironment e, HRegion l, HRegion r) {
+    hadPostSplit = true;
+  }
+
+  public boolean wasSplit() {
+    return hadPreSplit && hadPostSplit;
+  }
+
+  @Override
+  public void preCompact(CoprocessorEnvironment e, boolean willSplit) {
+    hadPreCompact = true;
+  }
+
+  @Override
+  public void postCompact(CoprocessorEnvironment e, boolean willSplit) {
+    hadPostCompact = true;
+  }
+
+  public boolean wasCompacted() {
+    return hadPreCompact && hadPostCompact;
+  }
 
   @Override
   public void preGet(final CoprocessorEnvironment e, final Get get,
