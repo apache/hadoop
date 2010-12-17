@@ -716,32 +716,55 @@ public class Store implements HeapSize {
   }
 
   /*
-   * Gets lowest timestamp from files in a dir
+   * Gets lowest timestamp from candidate StoreFiles
    *
    * @param fs
    * @param dir
    * @throws IOException
    */
-  private static long getLowestTimestamp(FileSystem fs, Path dir) throws IOException {
-    FileStatus[] stats = fs.listStatus(dir);
+  private static long getLowestTimestamp(FileSystem fs, 
+      final List<StoreFile> candidates) throws IOException {
+    long minTs = Long.MAX_VALUE;
+    if (candidates.isEmpty()) {
+      return minTs; 
+    }
+    Path[] p = new Path[candidates.size()];
+    for (int i = 0; i < candidates.size(); ++i) {
+      p[i] = candidates.get(i).getPath();
+    }
+    
+    FileStatus[] stats = fs.listStatus(p);
     if (stats == null || stats.length == 0) {
-      return 0l;
+      return minTs;
     }
-    long lowTimestamp = Long.MAX_VALUE;
-    for (int i = 0; i < stats.length; i++) {
-      long timestamp = stats[i].getModificationTime();
-      if (timestamp < lowTimestamp){
-        lowTimestamp = timestamp;
-      }
+    for (FileStatus s : stats) {
+      minTs = Math.min(minTs, s.getModificationTime());
     }
-    return lowTimestamp;
+    return minTs;
   }
 
   /*
    * @return True if we should run a major compaction.
    */
   boolean isMajorCompaction() throws IOException {
-    return isMajorCompaction(storefiles);
+    for (StoreFile sf : this.storefiles) {
+      if (sf.getReader() == null) {
+        LOG.debug("StoreFile " + sf + " has null Reader");
+        return false;
+      }
+    }
+    
+    List<StoreFile> candidates = new ArrayList<StoreFile>(this.storefiles);
+
+    // exclude files above the max compaction threshold
+    // except: save all references. we MUST compact them
+    int pos = 0;
+    while (pos < candidates.size() && 
+           candidates.get(pos).getReader().length() > this.maxCompactSize &&
+           !candidates.get(pos).isReference()) ++pos;
+    candidates.subList(0, pos).clear();
+
+    return isMajorCompaction(candidates);
   }
 
   /*
@@ -755,8 +778,7 @@ public class Store implements HeapSize {
       return result;
         }
     // TODO: Use better method for determining stamp of last major (HBASE-2990)
-    long lowTimestamp = getLowestTimestamp(fs,
-        filesToCompact.get(0).getPath().getParent());
+    long lowTimestamp = getLowestTimestamp(fs, filesToCompact);
     long now = System.currentTimeMillis();
     if (lowTimestamp > 0l && lowTimestamp < (now - this.majorCompactionTime)) {
       // Major compaction time has elapsed.
@@ -778,7 +800,6 @@ public class Store implements HeapSize {
               "; time since last major compaction " + (now - lowTimestamp) + "ms");
         }
         result = true;
-        this.majorCompactionTime = getNextMajorCompactTime();
       }
     }
     return result;
@@ -849,14 +870,17 @@ public class Store implements HeapSize {
              !filesToCompact.get(pos).isReference()) ++pos;
       filesToCompact.subList(0, pos).clear();
     }
-    
-    // major compact on user action or age (caveat: we have too many files)
-    boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
-      && filesToCompact.size() < this.maxFilesToCompact;
 
     if (filesToCompact.isEmpty()) {
       LOG.debug(this.storeNameStr + ": no store files to compact");
       return filesToCompact;
+    }
+    
+    // major compact on user action or age (caveat: we have too many files)
+    boolean majorcompaction = (forcemajor || isMajorCompaction(filesToCompact))
+      && filesToCompact.size() < this.maxFilesToCompact;
+    if (majorcompaction) {
+      this.majorCompactionTime = getNextMajorCompactTime();
     }
 
     if (!majorcompaction && !hasReferences(filesToCompact)) {

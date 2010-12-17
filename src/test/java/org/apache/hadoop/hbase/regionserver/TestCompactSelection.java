@@ -51,6 +51,7 @@ public class TestCompactSelection extends TestCase {
   private Store store;
   private static final String DIR
     = HBaseTestingUtility.getTestDir() + "/TestCompactSelection/";
+  private static Path TEST_FILE;
 
   private static final int minFiles = 3;
   private static final int maxFiles = 5;
@@ -86,6 +87,8 @@ public class TestCompactSelection extends TestCase {
     HRegion region = new HRegion(basedir, hlog, fs, conf, info, null);
 
     store = new Store(basedir, region, hcd, fs, conf);
+    TEST_FILE = StoreFile.getRandomFilename(fs, store.getHomedir());
+    fs.create(TEST_FILE);
   }
 
   // used so our tests don't deal with actual StoreFiles
@@ -94,7 +97,7 @@ public class TestCompactSelection extends TestCase {
     boolean isRef = false;
 
     MockStoreFile(long length, boolean isRef) throws IOException {
-      super(TEST_UTIL.getTestFileSystem(), new Path("_"), false,
+      super(TEST_UTIL.getTestFileSystem(), TEST_FILE, false,
             TEST_UTIL.getConfiguration(), BloomType.NONE, false);
       this.length = length;
       this.isRef  = isRef;
