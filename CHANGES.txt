@@ -787,6 +787,8 @@ Release 0.90.0 - Unreleased
    HBASE-3365  EOFE contacting crashed RS causes Master abort
    HBASE-3362  If .META. offline between OPENING and OPENED, then wrong server
                location in .META. is possible
+   HBASE-3368  Split message can come in before region opened message; results
+               in 'Region has been PENDING_CLOSE for too long' cycle
 
 
   IMPROVEMENTS

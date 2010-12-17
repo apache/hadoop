@@ -160,6 +160,9 @@ class CatalogJanitor extends Chore {
     if (!hasReferencesA && !hasReferencesB) {
       LOG.debug("Deleting region " + parent.getRegionNameAsString() +
         " because daughter splits no longer hold references");
+      // This latter regionOffline should not be necessary but is done for now
+      // until we let go of regionserver to master heartbeats.  See HBASE-3368.
+      this.services.getAssignmentManager().regionOffline(parent);
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
       Path rootdir = this.services.getMasterFileSystem().getRootDir();
       HRegion.deleteRegion(fs, rootdir, parent);
