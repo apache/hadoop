@@ -785,6 +785,8 @@ Release 0.90.0 - Unreleased
    HBASE-3360  ReplicationLogCleaner is enabled by default in 0.90 -- causes NPE
    HBASE-3363  ReplicationSink should batch delete
    HBASE-3365  EOFE contacting crashed RS causes Master abort
+   HBASE-3362  If .META. offline between OPENING and OPENED, then wrong server
+               location in .META. is possible
 
 
   IMPROVEMENTS
