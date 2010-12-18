@@ -438,17 +438,20 @@ public class ReplicationSource extends Thread
           // We didn't find the log in the archive directory, look if it still
           // exists in the dead RS folder (there could be a chain of failures
           // to look at)
-          for (int i = this.deadRegionServers.length - 1; i > 0; i--) {
+          LOG.info("NB dead servers : " + deadRegionServers.length);
+          for (int i = this.deadRegionServers.length - 1; i >= 0; i--) {
+
             Path deadRsDirectory =
-                new Path(this.manager.getLogDir(), this.deadRegionServers[i]);
+                new Path(manager.getLogDir().getParent(), this.deadRegionServers[i]);
             Path possibleLogLocation =
                 new Path(deadRsDirectory, currentPath.getName());
+            LOG.info("Possible location " + possibleLogLocation.toUri().toString());
             if (this.manager.getFs().exists(possibleLogLocation)) {
               // We found the right new location
               LOG.info("Log " + this.currentPath + " still exists at " +
                   possibleLogLocation);
               // Breaking here will make us sleep since reader is null
-              break;
+              return true;
             }
           }
           // TODO What happens if the log was missing from every single location?

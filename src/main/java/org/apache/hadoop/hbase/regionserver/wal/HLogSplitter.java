@@ -287,7 +287,8 @@ public class HLogSplitter {
       }
       if (fs.listStatus(srcDir).length > processedLogs.size()
           + corruptedLogs.size()) {
-        throw new IOException("Discovered orphan hlog after split. Maybe "
+        throw new OrphanHLogAfterSplitException(
+            "Discovered orphan hlog after split. Maybe the "
             + "HRegionServer was not dead when we started");
       }
       archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);

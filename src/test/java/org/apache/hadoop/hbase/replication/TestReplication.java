@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.mapreduce.Job;
@@ -126,7 +127,6 @@ public class TestReplication {
     utility2.startMiniCluster(2);
 
     HTableDescriptor table = new HTableDescriptor(tableName);
-    table.setDeferredLogFlush(false);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);
@@ -153,8 +153,15 @@ public class TestReplication {
    */
   @Before
   public void setUp() throws Exception {
+
+    // Starting and stopping replication can make us miss new logs,
+    // rolling like this makes sure the most recent one gets added to the queue
+    for ( JVMClusterUtil.RegionServerThread r :
+        utility1.getHBaseCluster().getRegionServerThreads()) {
+      r.getRegionServer().getWAL().rollWriter();
+    }
     utility1.truncateTable(tableName);
-    // truncating the table will send on Delete per row to the slave cluster
+    // truncating the table will send one Delete per row to the slave cluster
     // in an async fashion, which is why we cannot just call truncateTable on
     // utility2 since late writes could make it to the slave in some way.
     // Instead, we truncate the first table and wait for all the Deletes to
@@ -172,6 +179,7 @@ public class TestReplication {
        if (lastCount < res.length) {
           i--; // Don't increment timeout if we make progress
         }
+        lastCount = res.length;
         LOG.info("Still got " + res.length + " rows");
         Thread.sleep(SLEEP_TIME);
       } else {

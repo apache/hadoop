@@ -157,7 +157,7 @@ public class TestHLogSplit {
     assertEquals(parentOfParent, HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
   }
 
-  @Test(expected = IOException.class)
+  @Test(expected = OrphanHLogAfterSplitException.class)
   public void testSplitFailsIfNewHLogGetsCreatedAfterSplitStarted()
   throws IOException {
     AtomicBoolean stop = new AtomicBoolean(false);

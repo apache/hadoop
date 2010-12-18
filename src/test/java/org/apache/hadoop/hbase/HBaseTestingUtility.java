@@ -599,6 +599,7 @@ public class HBaseTestingUtility {
       Delete del = new Delete(res.getRow());
       table.delete(del);
     }
+    resScan = table.getScanner(scan);
     return table;
   }
 

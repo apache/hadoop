@@ -790,6 +790,11 @@ Release 0.90.0 - Unreleased
                location in .META. is possible
    HBASE-3368  Split message can come in before region opened message; results
                in 'Region has been PENDING_CLOSE for too long' cycle
+   HBASE-3366  WALObservers should be notified before the lock
+   HBASE-3367  Failed log split not retried
+   HBASE-3370  ReplicationSource.openReader fails to locate HLogs when they
+               aren't split yet
+   HBASE-3371  Race in TestReplication can make it fail
 
 
   IMPROVEMENTS
@@ -1274,6 +1279,7 @@ Release 0.90.0 - Unreleased
    HBASE-3303  Lower hbase.regionserver.handler.count from 25 back to 10
    HBASE-2467  Concurrent flushers in HLog sync using HDFS-895
    HBASE-3349  Pass HBase configuration to HttpServer
+   HBASE-3372  HRS shouldn't print a full stack for ServerNotRunningException
 
 
   NEW FEATURES
