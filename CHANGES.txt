@@ -41,6 +41,7 @@ Release 0.91.0 - Unreleased
    HBASE-3260  Coprocessors: Add explicit lifecycle management
    HBASE-3377  Upgrade Jetty to 6.1.26
 
+
   NEW FEATURES
    HBASE-3287  Add option to cache blocks on hfile write and evict blocks on
                hfile close
