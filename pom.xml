@@ -477,7 +477,7 @@
     <hadoop.version>0.20-append-r1044525</hadoop.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.1</jaxb-api.version>
-    <jetty.version>6.1.25</jetty.version>
+    <jetty.version>6.1.26</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jersey.version>1.4</jersey.version>
     <jruby.version>1.5.2</jruby.version>
