@@ -72,6 +72,8 @@ public class TestReplication {
   private static HBaseTestingUtility utility1;
   private static HBaseTestingUtility utility2;
   private static final int NB_ROWS_IN_BATCH = 100;
+  private static final int NB_ROWS_IN_BIG_BATCH =
+      NB_ROWS_IN_BATCH * 10;
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 10;
 
@@ -173,7 +175,7 @@ public class TestReplication {
         fail("Waited too much time for truncate");
       }
       ResultScanner scanner = htable2.getScanner(scan);
-      Result[] res = scanner.next(NB_ROWS_IN_BATCH);
+      Result[] res = scanner.next(NB_ROWS_IN_BIG_BATCH);
       scanner.close();
       if (res.length != 0) {
        if (lastCount < res.length) {
@@ -417,7 +419,7 @@ public class TestReplication {
   public void loadTesting() throws Exception {
     htable1.setWriteBufferSize(1024);
     htable1.setAutoFlush(false);
-    for (int i = 0; i < NB_ROWS_IN_BATCH *10; i++) {
+    for (int i = 0; i < NB_ROWS_IN_BIG_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.add(famName, row, row);
       htable1.put(put);
@@ -427,7 +429,7 @@ public class TestReplication {
     Scan scan = new Scan();
 
     ResultScanner scanner = htable1.getScanner(scan);
-    Result[] res = scanner.next(NB_ROWS_IN_BATCH * 100);
+    Result[] res = scanner.next(NB_ROWS_IN_BIG_BATCH);
     scanner.close();
 
     assertEquals(NB_ROWS_IN_BATCH *10, res.length);
@@ -437,9 +439,9 @@ public class TestReplication {
     for (int i = 0; i < NB_RETRIES; i++) {
 
       scanner = htable2.getScanner(scan);
-      res = scanner.next(NB_ROWS_IN_BATCH * 100);
+      res = scanner.next(NB_ROWS_IN_BIG_BATCH);
       scanner.close();
-      if (res.length != NB_ROWS_IN_BATCH *10) {
+      if (res.length != NB_ROWS_IN_BIG_BATCH) {
         if (i == NB_RETRIES-1) {
           int lastRow = -1;
           for (Result result : res) {
@@ -451,7 +453,7 @@ public class TestReplication {
           }
           LOG.error("Last row: " + lastRow);
           fail("Waited too much time for normal batch replication, "
-              + res.length + " instead of " + NB_ROWS_IN_BATCH *10);
+              + res.length + " instead of " + NB_ROWS_IN_BIG_BATCH);
         } else {
           LOG.info("Only got " + res.length + " rows");
           Thread.sleep(SLEEP_TIME);
