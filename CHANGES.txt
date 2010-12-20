@@ -44,6 +44,7 @@ Release 0.91.0 - Unreleased
   NEW FEATURES
    HBASE-3287  Add option to cache blocks on hfile write and evict blocks on
                hfile close
+   HBASE-3335  Add BitComparator for filtering (Nathaniel Cook via Stack)
 
 
 Release 0.90.0 - Unreleased
