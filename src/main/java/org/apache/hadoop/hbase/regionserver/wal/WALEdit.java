@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -66,7 +67,7 @@ import org.apache.hadoop.io.Writable;
  * is an old style KeyValue or the new style WALEdit.
  *
  */
-public class WALEdit implements Writable {
+public class WALEdit implements Writable, HeapSize {
 
   private final int VERSION_2 = -1;
 
@@ -154,7 +155,19 @@ public class WALEdit implements Writable {
         out.writeInt(scopes.get(key));
       }
     }
+  }
 
+  public long heapSize() {
+    long ret = 0;
+    for (KeyValue kv : kvs) {
+      ret += kv.heapSize();
+    }
+    if (scopes != null) {
+      ret += ClassSize.TREEMAP;
+      ret += ClassSize.align(scopes.size() * ClassSize.MAP_ENTRY);
+      // TODO this isn't quite right, need help here
+    }
+    return ret;
   }
 
   public String toString() {

@@ -23,21 +23,18 @@ import static org.apache.hadoop.hbase.util.FSUtils.recoverFileLease;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -53,9 +51,11 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Writer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.io.MultipleIOException;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 
 /**
  * This class is responsible for splitting up a bunch of regionserver commit log
@@ -66,74 +66,109 @@ public class HLogSplitter {
 
   private static final String LOG_SPLITTER_IMPL = "hbase.hlog.splitter.impl";
 
-  static final Log LOG = LogFactory.getLog(HLogSplitter.class);
-
-  private long splitTime = 0;
-  private long splitSize = 0;
-
   /**
    * Name of file that holds recovered edits written by the wal log splitting
    * code, one per region
    */
   public static final String RECOVERED_EDITS = "recovered.edits";
 
+  
+  static final Log LOG = LogFactory.getLog(HLogSplitter.class);
+
+  private boolean hasSplit = false;
+  private long splitTime = 0;
+  private long splitSize = 0;
+
+
+  // Parameters for split process
+  protected final Path rootDir;
+  protected final Path srcDir;
+  protected final Path oldLogDir;
+  protected final FileSystem fs;
+  protected final Configuration conf;
+  
+  // Major subcomponents of the split process.
+  // These are separated into inner classes to make testing easier.
+  OutputSink outputSink;
+  EntryBuffers entryBuffers;
+
+  // If an exception is thrown by one of the other threads, it will be
+  // stored here.
+  protected AtomicReference<Throwable> thrown = new AtomicReference<Throwable>();
+
+  // Wait/notify for when data has been produced by the reader thread,
+  // consumed by the reader thread, or an exception occurred
+  Object dataAvailable = new Object();
+
+  
   /**
    * Create a new HLogSplitter using the given {@link Configuration} and the
    * <code>hbase.hlog.splitter.impl</code> property to derived the instance
    * class to use.
-   * 
-   * @param conf
-   * @return New HLogSplitter instance
+   *
+   * @param rootDir hbase directory
+   * @param srcDir logs directory
+   * @param oldLogDir directory where processed logs are archived to
+   * @param logfiles the list of log files to split
    */
-  public static HLogSplitter createLogSplitter(Configuration conf) {
+  public static HLogSplitter createLogSplitter(Configuration conf,
+      final Path rootDir, final Path srcDir,
+      Path oldLogDir, final FileSystem fs)  {
+
     @SuppressWarnings("unchecked")
     Class<? extends HLogSplitter> splitterClass = (Class<? extends HLogSplitter>) conf
         .getClass(LOG_SPLITTER_IMPL, HLogSplitter.class);
     try {
-      return splitterClass.newInstance();
+       Constructor<? extends HLogSplitter> constructor =
+         splitterClass.getConstructor(
+          Configuration.class, // conf
+          Path.class, // rootDir
+          Path.class, // srcDir
+          Path.class, // oldLogDir
+          FileSystem.class); // fs
+      return constructor.newInstance(conf, rootDir, srcDir, oldLogDir, fs);
+    } catch (IllegalArgumentException e) {
+      throw new RuntimeException(e);
     } catch (InstantiationException e) {
       throw new RuntimeException(e);
     } catch (IllegalAccessException e) {
       throw new RuntimeException(e);
+    } catch (InvocationTargetException e) {
+      throw new RuntimeException(e);
+    } catch (SecurityException e) {
+      throw new RuntimeException(e);
+    } catch (NoSuchMethodException e) {
+      throw new RuntimeException(e);
     }
   }
 
-  
-  
-  // Private immutable datastructure to hold Writer and its Path.
-  private final static class WriterAndPath {
-    final Path p;
-    final Writer w;
-
-    WriterAndPath(final Path p, final Writer w) {
-      this.p = p;
-      this.w = w;
-    }
+  public HLogSplitter(Configuration conf, Path rootDir, Path srcDir,
+      Path oldLogDir, FileSystem fs) {
+    this.conf = conf;
+    this.rootDir = rootDir;
+    this.srcDir = srcDir;
+    this.oldLogDir = oldLogDir;
+    this.fs = fs;
+    
+    entryBuffers = new EntryBuffers(
+        conf.getInt("hbase.regionserver.hlog.splitlog.buffersize",
+            128*1024*1024));
+    outputSink = new OutputSink();
   }
-
+  
   /**
    * Split up a bunch of regionserver commit log files that are no longer being
    * written to, into new files, one per region for region to replay on startup.
    * Delete the old log files when finished.
    * 
-   * @param rootDir
-   *          qualified root directory of the HBase instance
-   * @param srcDir
-   *          Directory of log files to split: e.g.
-   *          <code>${ROOTDIR}/log_HOST_PORT</code>
-   * @param oldLogDir
-   *          directory where processed (split) logs will be archived to
-   * @param fs
-   *          FileSystem
-   * @param conf
-   *          Configuration
-   * @throws IOException
-   *           will throw if corrupted hlogs aren't tolerated
+   * @throws IOException will throw if corrupted hlogs aren't tolerated
    * @return the list of splits
    */
-  public List<Path> splitLog(final Path rootDir, final Path srcDir,
-      Path oldLogDir, final FileSystem fs, final Configuration conf)
+  public List<Path> splitLog()
       throws IOException {
+    Preconditions.checkState(!hasSplit,
+        "An HLogSplitter instance may only be used once");
+    hasSplit = true;
 
     long startTime = System.currentTimeMillis();
     List<Path> splits = null;
@@ -148,29 +183,8 @@ public class HLogSplitter {
     }
     LOG.info("Splitting " + logfiles.length + " hlog(s) in "
         + srcDir.toString());
-    splits = splitLog(rootDir, srcDir, oldLogDir, logfiles, fs, conf);
-    try {
-      FileStatus[] files = fs.listStatus(srcDir);
-      for (FileStatus file : files) {
-        Path newPath = HLog.getHLogArchivePath(oldLogDir, file.getPath());
-        LOG.info("Moving " + FSUtils.getPath(file.getPath()) + " to "
-            + FSUtils.getPath(newPath));
-        if (!fs.rename(file.getPath(), newPath)) {
-          throw new IOException("Unable to rename " + file.getPath() +
-            " to " + newPath);
-        }
-      }
-      LOG.debug("Moved " + files.length + " log files to "
-          + FSUtils.getPath(oldLogDir));
-      if (!fs.delete(srcDir, true)) {
-        throw new IOException("Unable to delete " + srcDir);
-      }
-    } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
-      IOException io = new IOException("Cannot delete: " + srcDir);
-      io.initCause(e);
-      throw io;
-    }
+    splits = splitLog(logfiles);
+    
     splitTime = System.currentTimeMillis() - startTime;
     LOG.info("hlog file splitting completed in " + splitTime +
         " ms for " + srcDir.toString());
@@ -190,100 +204,77 @@ public class HLogSplitter {
   public long getSize() {
     return this.splitSize;
   }
+
+  /**
+   * @return a map from encoded region ID to the number of edits written out
+   * for that region.
+   */
+  Map<byte[], Long> getOutputCounts() {
+    Preconditions.checkState(hasSplit);
+    return outputSink.getOutputCounts();
+  }
    
   /**
-   * Sorts the HLog edits in the given list of logfiles (that are a mix of edits
+   * Splits the HLog edits in the given list of logfiles (that are a mix of edits
    * on multiple regions) by region and then splits them per region directories,
    * in batches of (hbase.hlog.split.batch.size)
    * 
-   * A batch consists of a set of log files that will be sorted in a single map
-   * of edits indexed by region the resulting map will be concurrently written
-   * by multiple threads to their corresponding regions
+   * This process is split into multiple threads. In the main thread, we loop
+   * through the logs to be split. For each log, we:
+   * <ul>
+   *   <li> Recover it (take and drop HDFS lease) to ensure no other process can write</li>
+   *   <li> Read each edit (see {@link #parseHLog}</li>
+   *   <li> Mark as "processed" or "corrupt" depending on outcome</li>
+   * </ul>
    * 
-   * Each batch consists of more more log files that are - recovered (files is
-   * opened for append then closed to ensure no process is writing into it) -
-   * parsed (each edit in the log is appended to a list of edits indexed by
-   * region see {@link #parseHLog} for more details) - marked as either
-   * processed or corrupt depending on parsing outcome - the resulting edits
-   * indexed by region are concurrently written to their corresponding region
-   * region directories - original files are then archived to a different
-   * directory
+   * Each edit is passed into the EntryBuffers instance, which takes care of
+   * memory accounting and splitting the edits by region.
    * 
+   * The OutputSink object then manages N other WriterThreads which pull chunks
+   * of edits from EntryBuffers and write them to the output region directories.
    * 
-   * 
-   * @param rootDir
-   *          hbase directory
-   * @param srcDir
-   *          logs directory
-   * @param oldLogDir
-   *          directory where processed logs are archived to
-   * @param logfiles
-   *          the list of log files to split
-   * @param fs
-   * @param conf
-   * @return
-   * @throws IOException
+   * After the process is complete, the log files are archived to a separate
+   * directory.
    */
-  private List<Path> splitLog(final Path rootDir, final Path srcDir,
-      Path oldLogDir, final FileStatus[] logfiles, final FileSystem fs,
-      final Configuration conf) throws IOException {
+  private List<Path> splitLog(final FileStatus[] logfiles) throws IOException {
     List<Path> processedLogs = new ArrayList<Path>();
     List<Path> corruptedLogs = new ArrayList<Path>();
-    final Map<byte[], WriterAndPath> logWriters = Collections
-        .synchronizedMap(new TreeMap<byte[], WriterAndPath>(
-            Bytes.BYTES_COMPARATOR));
     List<Path> splits = null;
 
-    // Number of logs in a read batch
-    // More means faster but bigger mem consumption
-    // TODO make a note on the conf rename and update hbase-site.xml if needed
-    int logFilesPerStep = conf.getInt("hbase.hlog.split.batch.size", 3);
     boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
 
     splitSize = 0;
+
+    outputSink.startWriterThreads(entryBuffers);
     
     try {
-      int i = -1;
-      while (i < logfiles.length) {
-        final Map<byte[], LinkedList<Entry>> editsByRegion = new TreeMap<byte[], LinkedList<Entry>>(
-            Bytes.BYTES_COMPARATOR);
-        for (int j = 0; j < logFilesPerStep; j++) {
-          i++;
-          if (i == logfiles.length) {
-            break;
-          }
-          FileStatus log = logfiles[i];
-          Path logPath = log.getPath();
-          long logLength = log.getLen();
-          splitSize += logLength;
-          LOG.debug("Splitting hlog " + (i + 1) + " of " + logfiles.length
-              + ": " + logPath + ", length=" + logLength);
-          try {
-            recoverFileLease(fs, logPath, conf);
-            parseHLog(log, editsByRegion, fs, conf);
+      int i = 0;
+      for (FileStatus log : logfiles) {
+       Path logPath = log.getPath();
+        long logLength = log.getLen();
+        splitSize += logLength;
+        LOG.debug("Splitting hlog " + (i++ + 1) + " of " + logfiles.length
+            + ": " + logPath + ", length=" + logLength);
+        try {
+          recoverFileLease(fs, logPath, conf);
+          parseHLog(log, entryBuffers, fs, conf);
+          processedLogs.add(logPath);
+        } catch (IOException e) {
+          // If the IOE resulted from bad file format,
+          // then this problem is idempotent and retrying won't help
+          if (e.getCause() instanceof ParseException) {
+            LOG.warn("ParseException from hlog " + logPath + ".  continuing");
             processedLogs.add(logPath);
-          } catch (EOFException eof) {
-              // truncated files are expected if a RS crashes (see HBASE-2643)
-              LOG.info("EOF from hlog " + logPath + ".  continuing");
-              processedLogs.add(logPath);
-          } catch (IOException e) {
-            // If the IOE resulted from bad file format,
-            // then this problem is idempotent and retrying won't help
-            if (e.getCause() instanceof ParseException) {
-              LOG.warn("ParseException from hlog " + logPath + ".  continuing");
-              processedLogs.add(logPath);
+          } else {
+            if (skipErrors) {
+              LOG.info("Got while parsing hlog " + logPath +
+                ". Marking as corrupted", e);
+              corruptedLogs.add(logPath);
             } else {
-              if (skipErrors) {
-                LOG.info("Got while parsing hlog " + logPath +
-                  ". Marking as corrupted", e);
-                corruptedLogs.add(logPath);
-              } else {
-                throw e;
-              }
+              throw e;
             }
           }
         }
-        writeEditsBatchToRegions(editsByRegion, logWriters, rootDir, fs, conf);
       }
       if (fs.listStatus(srcDir).length > processedLogs.size()
           + corruptedLogs.size()) {
@@ -291,86 +282,13 @@ public class HLogSplitter {
             "Discovered orphan hlog after split. Maybe the "
             + "HRegionServer was not dead when we started");
       }
-      archiveLogs(corruptedLogs, processedLogs, oldLogDir, fs, conf);
+      archiveLogs(srcDir, corruptedLogs, processedLogs, oldLogDir, fs, conf);      
     } finally {
-      splits = new ArrayList<Path>(logWriters.size());
-      for (WriterAndPath wap : logWriters.values()) {
-        wap.w.close();
-        splits.add(wap.p);
-        LOG.debug("Closed " + wap.p);
-      }
+      splits = outputSink.finishWritingAndClose();
     }
     return splits;
   }
 
-
-  /**
-   * Takes splitLogsMap and concurrently writes them to region directories using a thread pool
-   *
-   * @param splitLogsMap map that contains the log splitting result indexed by region
-   * @param logWriters map that contains a writer per region
-   * @param rootDir hbase root dir
-   * @param fs
-   * @param conf
-   * @throws IOException
-   */
-  private void writeEditsBatchToRegions(
-      final Map<byte[], LinkedList<Entry>> splitLogsMap,
-      final Map<byte[], WriterAndPath> logWriters, final Path rootDir,
-      final FileSystem fs, final Configuration conf) 
-	throws IOException {
-    // Number of threads to use when log splitting to rewrite the logs.
-    // More means faster but bigger mem consumption.
-    int logWriterThreads = conf.getInt(
-        "hbase.regionserver.hlog.splitlog.writer.threads", 3);
-    boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
-    HashMap<byte[], Future> writeFutureResult = new HashMap<byte[], Future>();
-    ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
-    builder.setNameFormat("SplitWriter-%1$d");
-    ThreadFactory factory = builder.build();
-    ThreadPoolExecutor threadPool =
-      (ThreadPoolExecutor)Executors.newFixedThreadPool(logWriterThreads, factory);
-    for (final byte[] region : splitLogsMap.keySet()) {
-      Callable splitter = createNewSplitter(rootDir, logWriters, splitLogsMap,
-          region, fs, conf);
-      writeFutureResult.put(region, threadPool.submit(splitter));
-    }
-
-    threadPool.shutdown();
-    // Wait for all threads to terminate
-    try {
-      for (int j = 0; !threadPool.awaitTermination(5, TimeUnit.SECONDS); j++) {
-        String message = "Waiting for hlog writers to terminate, elapsed " + j
-            * 5 + " seconds";
-        if (j < 30) {
-          LOG.debug(message);
-        } else {
-          LOG.info(message);
-        }
-
-      }
-    } catch (InterruptedException ex) {
-      LOG.warn("Hlog writers were interrupted, possible data loss!");
-      if (!skipErrors) {
-        throw new IOException("Could not finish writing log entries", ex);
-        // TODO maybe we should fail here regardless if skipErrors is active or not
-      }
-    }
-
-    for (Map.Entry<byte[], Future> entry : writeFutureResult.entrySet()) {
-      try {
-        entry.getValue().get();
-      } catch (ExecutionException e) {
-        throw (new IOException(e.getCause()));
-      } catch (InterruptedException e1) {
-        LOG.warn("Writer for region " + Bytes.toString(entry.getKey())
-            + " was interrupted, however the write process should have "
-            + "finished. Throwing up ", e1);
-        throw (new IOException(e1.getCause()));
-      }
-    }
-  }
-  
   /**
    * Moves processed logs to a oldLogDir after successful processing Moves
    * corrupted logs (any log that couldn't be successfully parsed to corruptDir
@@ -383,7 +301,9 @@ public class HLogSplitter {
    * @param conf
    * @throws IOException
    */
-  private static void archiveLogs(final List<Path> corruptedLogs,
+  private static void archiveLogs(
+      final Path srcDir,
+      final List<Path> corruptedLogs,
       final List<Path> processedLogs, final Path oldLogDir,
       final FileSystem fs, final Configuration conf) throws IOException {
     final Path corruptDir = new Path(conf.get(HConstants.HBASE_DIR), conf.get(
@@ -410,6 +330,10 @@ public class HLogSplitter {
       } else {
         LOG.info("Archived processed log " + p + " to " + newPath);
       }
+    }
+    
+    if (!fs.delete(srcDir, true)) {
+      throw new IOException("Unable to delete src dir: " + srcDir);
     }
   }
 
@@ -460,7 +384,7 @@ public class HLogSplitter {
    * @throws IOException if hlog is corrupted, or can't be open
    */
   private void parseHLog(final FileStatus logfile,
-		final Map<byte[], LinkedList<Entry>> splitLogsMap, final FileSystem fs,
+		EntryBuffers entryBuffers, final FileSystem fs,
     final Configuration conf) 
 	throws IOException {
     // Check for possibly empty file. With appends, currently Hadoop reports a
@@ -490,15 +414,11 @@ public class HLogSplitter {
     try {
       Entry entry;
       while ((entry = in.next()) != null) {
-        byte[] region = entry.getKey().getEncodedRegionName();
-        LinkedList<Entry> queue = splitLogsMap.get(region);
-        if (queue == null) {
-          queue = new LinkedList<Entry>();
-          splitLogsMap.put(region, queue);
-        }
-        queue.addLast(entry);
+        entryBuffers.appendEntry(entry);
         editsCount++;
       }
+    } catch (InterruptedException ie) {
+      throw new RuntimeException(ie);
     } finally {
       LOG.debug("Pushed=" + editsCount + " entries from " + path);
       try {
@@ -506,76 +426,30 @@ public class HLogSplitter {
           in.close();
         }
       } catch (IOException e) {
-        LOG
-            .warn("Close log reader in finally threw exception -- continuing",
-                e);
+        LOG.warn("Close log reader in finally threw exception -- continuing",
+                 e);
       }
     }
   }
-  
-  private Callable<Void> createNewSplitter(final Path rootDir,
-      final Map<byte[], WriterAndPath> logWriters,
-      final Map<byte[], LinkedList<Entry>> logEntries, final byte[] region,
-      final FileSystem fs, final Configuration conf) {
-    return new Callable<Void>() {
-      public String getName() {
-        return "Split writer thread for region " + Bytes.toStringBinary(region);
-      }
 
-      @Override
-      public Void call() throws IOException {
-        LinkedList<Entry> entries = logEntries.get(region);
-        LOG.debug(this.getName() + " got " + entries.size() + " to process");
-        long threadTime = System.currentTimeMillis();
-        try {
-          int editsCount = 0;
-          WriterAndPath wap = logWriters.get(region);
-          for (Entry logEntry : entries) {
-            if (wap == null) {
-              Path regionedits = getRegionSplitEditsPath(fs, logEntry, rootDir);
-              if (regionedits == null) {
-                // we already print a message if it's null in getRegionSplitEditsPath
-                break;
-              }
-              if (fs.exists(regionedits)) {
-                LOG.warn("Found existing old edits file. It could be the "
-                    + "result of a previous failed split attempt. Deleting "
-                    + regionedits + ", length="
-                    + fs.getFileStatus(regionedits).getLen());
-                if (!fs.delete(regionedits, false)) {
-                  LOG.warn("Failed delete of old " + regionedits);
-                }
-              }
-              Writer w = createWriter(fs, regionedits, conf);
-              wap = new WriterAndPath(regionedits, w);
-              logWriters.put(region, wap);
-              LOG.debug("Creating writer path=" + regionedits + " region="
-                  + Bytes.toStringBinary(region));
-            }
-            wap.w.append(logEntry);
-            editsCount++;
-          }
-          LOG.debug(this.getName() + " Applied " + editsCount
-              + " total edits to " + Bytes.toStringBinary(region) + " in "
-              + (System.currentTimeMillis() - threadTime) + "ms");
-        } catch (IOException e) {
-          e = RemoteExceptionHandler.checkIOException(e);
-          LOG.fatal(this.getName() + " Got while writing log entry to log", e);
-          throw e;
-        }
-        return null;
-      }
-    };
+  private void writerThreadError(Throwable t) {
+    thrown.compareAndSet(null, t);
   }
-
+  
+  /**
+   * Check for errors in the writer threads. If any is found, rethrow it.
+   */
+  private void checkForErrors() throws IOException {
+    Throwable thrown = this.thrown.get();
+    if (thrown == null) return;
+    if (thrown instanceof IOException) {
+      throw (IOException)thrown;
+    } else {
+      throw new RuntimeException(thrown);
+    }
+  }
   /**
    * Create a new {@link Writer} for writing log splits.
-   * 
-   * @param fs
-   * @param logfile
-   * @param conf
-   * @return A new Writer instance
-   * @throws IOException
    */
   protected Writer createWriter(FileSystem fs, Path logfile, Configuration conf)
       throws IOException {
@@ -584,16 +458,410 @@ public class HLogSplitter {
 
   /**
    * Create a new {@link Reader} for reading logs to split.
-   * 
-   * @param fs
-   * @param curLogFile
-   * @param conf
-   * @return A new Reader instance
-   * @throws IOException
    */
   protected Reader getReader(FileSystem fs, Path curLogFile, Configuration conf)
       throws IOException {
     return HLog.getReader(fs, curLogFile, conf);
   }
 
+
+  /**
+   * Class which accumulates edits and separates them into a buffer per region
+   * while simultaneously accounting RAM usage. Blocks if the RAM usage crosses
+   * a predefined threshold.
+   * 
+   * Writer threads then pull region-specific buffers from this class.
+   */
+  class EntryBuffers {
+    Map<byte[], RegionEntryBuffer> buffers =
+      new TreeMap<byte[], RegionEntryBuffer>(Bytes.BYTES_COMPARATOR);
+    
+    /* Track which regions are currently in the middle of writing. We don't allow
+       an IO thread to pick up bytes from a region if we're already writing
+       data for that region in a different IO thread. */ 
+    Set<byte[]> currentlyWriting = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+
+    long totalBuffered = 0;
+    long maxHeapUsage;
+    
+    EntryBuffers(long maxHeapUsage) {
+      this.maxHeapUsage = maxHeapUsage;
+    }
+
+    /**
+     * Append a log entry into the corresponding region buffer.
+     * Blocks if the total heap usage has crossed the specified threshold.
+     * 
+     * @throws InterruptedException
+     * @throws IOException 
+     */
+    void appendEntry(Entry entry) throws InterruptedException, IOException {
+      HLogKey key = entry.getKey();
+      
+      RegionEntryBuffer buffer;
+      synchronized (this) {
+        buffer = buffers.get(key.getEncodedRegionName());
+        if (buffer == null) {
+          buffer = new RegionEntryBuffer(key.getTablename(), key.getEncodedRegionName());
+          buffers.put(key.getEncodedRegionName(), buffer);
+        }
+        long incrHeap = buffer.appendEntry(entry);
+        totalBuffered += incrHeap;
+      }
+
+      // If we crossed the chunk threshold, wait for more space to be available
+      synchronized (dataAvailable) {
+        while (totalBuffered > maxHeapUsage && thrown == null) {
+          LOG.debug("Used " + totalBuffered + " bytes of buffered edits, waiting for IO threads...");
+          dataAvailable.wait(3000);
+        }
+        dataAvailable.notifyAll();
+      }
+      checkForErrors();
+    }
+
+    synchronized RegionEntryBuffer getChunkToWrite() {
+      long biggestSize=0;
+      byte[] biggestBufferKey=null;
+
+      for (Map.Entry<byte[], RegionEntryBuffer> entry : buffers.entrySet()) {
+        long size = entry.getValue().heapSize();
+        if (size > biggestSize && !currentlyWriting.contains(entry.getKey())) {
+          biggestSize = size;
+          biggestBufferKey = entry.getKey();
+        }
+      }
+      if (biggestBufferKey == null) {
+        return null;
+      }
+
+      RegionEntryBuffer buffer = buffers.remove(biggestBufferKey);
+      currentlyWriting.add(biggestBufferKey);
+      return buffer;
+    }
+
+    void doneWriting(RegionEntryBuffer buffer) {
+      synchronized (this) {
+        boolean removed = currentlyWriting.remove(buffer.encodedRegionName);
+        assert removed;
+      }
+      long size = buffer.heapSize();
+
+      synchronized (dataAvailable) {
+        totalBuffered -= size;
+        // We may unblock writers
+        dataAvailable.notifyAll();
+      }
+    }
+    
+    synchronized boolean isRegionCurrentlyWriting(byte[] region) {
+      return currentlyWriting.contains(region);
+    }
+  }
+
+  /**
+   * A buffer of some number of edits for a given region.
+   * This accumulates edits and also provides a memory optimization in order to
+   * share a single byte array instance for the table and region name.
+   * Also tracks memory usage of the accumulated edits.
+   */
+  static class RegionEntryBuffer implements HeapSize {
+    long heapInBuffer = 0;
+    List<Entry> entryBuffer;
+    byte[] tableName;
+    byte[] encodedRegionName;
+
+    RegionEntryBuffer(byte[] table, byte[] region) {
+      this.tableName = table;
+      this.encodedRegionName = region;
+      this.entryBuffer = new LinkedList<Entry>();
+    }
+
+    long appendEntry(Entry entry) {
+      internify(entry);
+      entryBuffer.add(entry);
+      long incrHeap = entry.getEdit().heapSize() +
+        ClassSize.align(2 * ClassSize.REFERENCE) + // HLogKey pointers
+        0; // TODO linkedlist entry
+      heapInBuffer += incrHeap;
+      return incrHeap;
+    }
+
+    private void internify(Entry entry) {
+      HLogKey k = entry.getKey();
+      k.internTableName(this.tableName);
+      k.internEncodedRegionName(this.encodedRegionName);
+    }
+
+    public long heapSize() {
+      return heapInBuffer;
+    }
+  }
+
+
+  class WriterThread extends Thread {
+    private volatile boolean shouldStop = false;
+    
+    WriterThread(int i) {
+      super("WriterThread-" + i);
+    }
+    
+    public void run()  {
+      try {
+        doRun();
+      } catch (Throwable t) {
+        LOG.error("Error in log splitting write thread", t);
+        writerThreadError(t);
+      }
+    }
+    
+    private void doRun() throws IOException {
+      LOG.debug("Writer thread " + this + ": starting");
+      while (true) {
+        RegionEntryBuffer buffer = entryBuffers.getChunkToWrite();
+        if (buffer == null) {
+          // No data currently available, wait on some more to show up
+          synchronized (dataAvailable) {
+            if (shouldStop) return;
+            try {
+              dataAvailable.wait(1000);
+            } catch (InterruptedException ie) {
+              if (!shouldStop) {
+                throw new RuntimeException(ie);
+              }
+            }
+          }
+          continue;
+        }
+        
+        assert buffer != null;
+        try {
+          writeBuffer(buffer);
+        } finally {
+          entryBuffers.doneWriting(buffer);
+        }
+      }
+    }
+       
+    private void writeBuffer(RegionEntryBuffer buffer) throws IOException {
+      List<Entry> entries = buffer.entryBuffer;      
+      if (entries.isEmpty()) {
+        LOG.warn(this.getName() + " got an empty buffer, skipping");
+        return;
+      }
+
+      WriterAndPath wap = null;
+      
+      long startTime = System.nanoTime();
+      try {
+        int editsCount = 0;
+
+        for (Entry logEntry : entries) {
+          if (wap == null) {
+            wap = outputSink.getWriterAndPath(logEntry);
+            if (wap == null) {
+              // getWriterAndPath decided we don't need to write these edits
+              // Message was already logged
+              return;
+            }
+          }
+          wap.w.append(logEntry);
+          editsCount++;
+        }
+        // Pass along summary statistics
+        wap.incrementEdits(editsCount);
+        wap.incrementNanoTime(System.nanoTime() - startTime);
+      } catch (IOException e) {
+        e = RemoteExceptionHandler.checkIOException(e);
+        LOG.fatal(this.getName() + " Got while writing log entry to log", e);
+        throw e;
+      }
+    }
+    
+    void finish() {
+      shouldStop = true;
+    }
+  }
+
+  /**
+   * Class that manages the output streams from the log splitting process.
+   */
+  class OutputSink {
+    private final Map<byte[], WriterAndPath> logWriters = Collections.synchronizedMap(
+          new TreeMap<byte[], WriterAndPath>(Bytes.BYTES_COMPARATOR));
+    private final List<WriterThread> writerThreads = Lists.newArrayList();
+    
+    /* Set of regions which we've decided should not output edits */
+    private final Set<byte[]> blacklistedRegions = Collections.synchronizedSet(
+        new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR));
+    
+    private boolean hasClosed = false;    
+    
+    /**
+     * Start the threads that will pump data from the entryBuffers
+     * to the output files.
+     * @return the list of started threads
+     */
+    synchronized void startWriterThreads(EntryBuffers entryBuffers) {
+      // More threads could potentially write faster at the expense
+      // of causing more disk seeks as the logs are split.
+      // 3. After a certain setting (probably around 3) the
+      // process will be bound on the reader in the current
+      // implementation anyway.
+      int numThreads = conf.getInt(
+          "hbase.regionserver.hlog.splitlog.writer.threads", 3);
+
+      for (int i = 0; i < numThreads; i++) {
+        WriterThread t = new WriterThread(i);
+        t.start();
+        writerThreads.add(t);
+      }
+    }
+    
+    List<Path> finishWritingAndClose() throws IOException {
+      LOG.info("Waiting for split writer threads to finish");
+      for (WriterThread t : writerThreads) {
+        t.finish();
+      }
+      for (WriterThread t: writerThreads) {
+        try {
+          t.join();
+        } catch (InterruptedException ie) {
+          throw new IOException(ie);
+        }
+        checkForErrors();
+      }
+      LOG.info("Split writers finished");
+      
+      return closeStreams();
+    }
+
+    /**
+     * Close all of the output streams.
+     * @return the list of paths written.
+     */
+    private List<Path> closeStreams() throws IOException {
+      Preconditions.checkState(!hasClosed);
+      
+      List<Path> paths = new ArrayList<Path>();
+      List<IOException> thrown = Lists.newArrayList();
+      
+      for (WriterAndPath wap : logWriters.values()) {
+        try {
+          wap.w.close();
+        } catch (IOException ioe) {
+          LOG.error("Couldn't close log at " + wap.p, ioe);
+          thrown.add(ioe);
+          continue;
+        }
+        paths.add(wap.p);
+        LOG.info("Closed path " + wap.p +" (wrote " + wap.editsWritten + " edits in "
+            + (wap.nanosSpent / 1000/ 1000) + "ms)");
+      }
+      if (!thrown.isEmpty()) {
+        throw MultipleIOException.createIOException(thrown);
+      }
+      
+      hasClosed = true;
+      return paths;
+    }
+
+    /**
+     * Get a writer and path for a log starting at the given entry.
+     * 
+     * This function is threadsafe so long as multiple threads are always
+     * acting on different regions.
+     * 
+     * @return null if this region shouldn't output any logs
+     */
+    WriterAndPath getWriterAndPath(Entry entry) throws IOException {
+    
+      byte region[] = entry.getKey().getEncodedRegionName();
+      WriterAndPath ret = logWriters.get(region);
+      if (ret != null) {
+        return ret;
+      }
+      
+      // If we already decided that this region doesn't get any output
+      // we don't need to check again.
+      if (blacklistedRegions.contains(region)) {
+        return null;
+      }
+      
+      // Need to create writer
+      Path regionedits = getRegionSplitEditsPath(fs,
+          entry, rootDir);
+      if (regionedits == null) {
+        // Edits dir doesn't exist
+        blacklistedRegions.add(region);
+        return null;
+      }
+      deletePreexistingOldEdits(regionedits);
+      Writer w = createWriter(fs, regionedits, conf);
+      ret = new WriterAndPath(regionedits, w);
+      logWriters.put(region, ret);
+      LOG.debug("Creating writer path=" + regionedits + " region="
+          + Bytes.toStringBinary(region));
+
+      return ret;
+    }
+
+    /**
+     * If the specified path exists, issue a warning and delete it.
+     */
+    private void deletePreexistingOldEdits(Path regionedits) throws IOException {
+      if (fs.exists(regionedits)) {
+        LOG.warn("Found existing old edits file. It could be the "
+            + "result of a previous failed split attempt. Deleting "
+            + regionedits + ", length="
+            + fs.getFileStatus(regionedits).getLen());
+        if (!fs.delete(regionedits, false)) {
+          LOG.warn("Failed delete of old " + regionedits);
+        }
+      }
+    }
+
+    /**
+     * @return a map from encoded region ID to the number of edits written out
+     * for that region.
+     */
+    private Map<byte[], Long> getOutputCounts() {
+      TreeMap<byte[], Long> ret = new TreeMap<byte[], Long>(
+          Bytes.BYTES_COMPARATOR);
+      synchronized (logWriters) {
+        for (Map.Entry<byte[], WriterAndPath> entry : logWriters.entrySet()) {
+          ret.put(entry.getKey(), entry.getValue().editsWritten);
+        }
+      }
+      return ret;
+    }
+  }
+
+  /**
+   *  Private data structure that wraps a Writer and its Path,
+   *  also collecting statistics about the data written to this
+   *  output.
+   */
+  private final static class WriterAndPath {
+    final Path p;
+    final Writer w;
+
+    /* Count of edits written to this path */
+    long editsWritten = 0;
+    /* Number of nanos spent writing to this log */
+    long nanosSpent = 0;
+
+    WriterAndPath(final Path p, final Writer w) {
+      this.p = p;
+      this.w = w;
+    }
+
+    void incrementEdits(int edits) {
+      editsWritten += edits;
+    }
+
+    void incrementNanoTime(long nanos) {
+      nanosSpent += nanos;
+    }
+  }
 }

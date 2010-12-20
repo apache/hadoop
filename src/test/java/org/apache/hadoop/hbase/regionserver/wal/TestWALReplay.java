@@ -487,9 +487,9 @@ public class TestWALReplay {
    */
   private Path runWALSplit(final Configuration c) throws IOException {
     FileSystem fs = FileSystem.get(c);
-    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(c);
-    List<Path> splits = logSplitter.splitLog(this.hbaseRootDir, this.logDir,
-      this.oldLogDir, fs, c);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(c,
+        this.hbaseRootDir, this.logDir, this.oldLogDir, fs);
+    List<Path> splits = logSplitter.splitLog();
     // Split should generate only 1 file since there's only 1 region
     assertEquals(1, splits.size());
     // Make sure the file exists

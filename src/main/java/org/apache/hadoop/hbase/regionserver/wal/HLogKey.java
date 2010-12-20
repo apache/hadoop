@@ -160,6 +160,32 @@ public class HLogKey implements WritableComparable<HLogKey> {
     return result;
   }
 
+  /**
+   * Drop this instance's tablename byte array and instead
+   * hold a reference to the provided tablename. This is not
+   * meant to be a general purpose setter - it's only used
+   * to collapse references to conserve memory.
+   */
+  void internTableName(byte []tablename) {
+    // We should not use this as a setter - only to swap
+    // in a new reference to the same table name.
+    assert Bytes.equals(tablename, this.tablename);
+    this.tablename = tablename;
+  }
+
+  /**
+   * Drop this instance's region name byte array and instead
+   * hold a reference to the provided region name. This is not
+   * meant to be a general purpose setter - it's only used
+   * to collapse references to conserve memory.
+   */
+  void internEncodedRegionName(byte []encodedRegionName) {
+    // We should not use this as a setter - only to swap
+    // in a new reference to the same table name.
+    assert Bytes.equals(this.encodedRegionName, encodedRegionName);
+    this.encodedRegionName = encodedRegionName;
+  }
+
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, this.encodedRegionName);
     Bytes.writeByteArray(out, this.tablename);

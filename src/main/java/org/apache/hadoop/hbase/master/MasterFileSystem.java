@@ -190,12 +190,13 @@ public class MasterFileSystem {
     long splitTime = 0, splitLogSize = 0;
     Path logDir = new Path(this.rootdir, HLog.getHLogDirectoryName(serverName));
     try {
-      HLogSplitter splitter = HLogSplitter.createLogSplitter(conf);
+      HLogSplitter splitter = HLogSplitter.createLogSplitter(
+        conf, rootdir, logDir, oldLogDir, this.fs);
       try {
-        splitter.splitLog(this.rootdir, logDir, oldLogDir, this.fs, conf);
+        splitter.splitLog();
       } catch (OrphanHLogAfterSplitException e) {
         LOG.warn("Retrying splitting because of:", e);
-        splitter.splitLog(this.rootdir, logDir, oldLogDir, this.fs, conf);
+        splitter.splitLog();
       }
       splitTime = splitter.getTime();
       splitLogSize = splitter.getSize();

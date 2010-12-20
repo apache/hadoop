@@ -1439,8 +1439,9 @@ public class HLog implements Syncable {
       throw new IOException(p + " is not a directory");
     }
 
-    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(conf);
-    logSplitter.splitLog(baseDir, p, oldLogDir, fs, conf);
+    HLogSplitter logSplitter = HLogSplitter.createLogSplitter(
+        conf, baseDir, p, oldLogDir, fs);
+    logSplitter.splitLog();
   }
 
   /**
