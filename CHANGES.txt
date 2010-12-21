@@ -799,6 +799,7 @@ Release 0.90.0 - Unreleased
    HBASE-3371  Race in TestReplication can make it fail
    HBASE-3323  OOME in master splitting logs
    HBASE-3374  Our jruby jar has *GPL jars in it; fix
+   HBASE-3343  Server not shutting down after losing log lease
 
 
   IMPROVEMENTS

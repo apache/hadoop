@@ -97,7 +97,7 @@ public class OpenRegionHandler extends EventHandler {
     if (tickleOpening("post_region_open")) {
       if (updateMeta(region)) failed = false;
     }
-    if (failed) {
+    if (failed || this.server.isStopped() || this.rsServices.isStopping()) {
       cleanupFailedOpen(region);
       return;
     }
@@ -119,6 +119,9 @@ public class OpenRegionHandler extends EventHandler {
    * Caller must cleanup region if this fails.
    */
   private boolean updateMeta(final HRegion r) {
+    if (this.server.isStopped() || this.rsServices.isStopping()) {
+      return false;
+    }
     // Object we do wait/notify on.  Make it boolean.  If set, we're done.
     // Else, wait.
     final AtomicBoolean signaller = new AtomicBoolean(false);

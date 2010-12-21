@@ -643,7 +643,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     // Interrupt catalog tracker here in case any regions being opened out in
     // handlers are stuck waiting on meta or root.
     if (this.catalogTracker != null) this.catalogTracker.stop();
-    waitOnAllRegionsToClose();
+    if (this.fsOk) waitOnAllRegionsToClose();
 
     // Make sure the proxy is down.
     if (this.hbaseMaster != null) {
