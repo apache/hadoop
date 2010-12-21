@@ -72,6 +72,8 @@ Release 0.20.3 - Unreleased
 
     HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
 
+    HDFS-1406. TestCLI fails on Ubuntu with default /etc/hosts. (cos)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
