@@ -53,7 +53,7 @@ public class TestCoprocessorEndpoint {
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = util.getConfiguration();
-    conf.set("hbase.coprocessor.default.classes",
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.coprocessor.ColumnAggregationEndpoint");
 
     util.startMiniCluster(2);

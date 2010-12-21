@@ -30,10 +30,8 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.coprocessor.Coprocessor;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.Coprocessor.Priority;
-import org.apache.hadoop.hbase.regionserver.CoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -75,43 +73,43 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     }
 
     @Override
-    public void preOpen(CoprocessorEnvironment e) {
+    public void preOpen(RegionCoprocessorEnvironment e) {
       preOpenCalled = true;
     }
     @Override
-    public void postOpen(CoprocessorEnvironment e) {
+    public void postOpen(RegionCoprocessorEnvironment e) {
       postOpenCalled = true;
     }
     @Override
-    public void preClose(CoprocessorEnvironment e, boolean abortRequested) {
+    public void preClose(RegionCoprocessorEnvironment e, boolean abortRequested) {
       preCloseCalled = true;
     }
     @Override
-    public void postClose(CoprocessorEnvironment e, boolean abortRequested) {
+    public void postClose(RegionCoprocessorEnvironment e, boolean abortRequested) {
       postCloseCalled = true;
     }
     @Override
-    public void preCompact(CoprocessorEnvironment e, boolean willSplit) {
+    public void preCompact(RegionCoprocessorEnvironment e, boolean willSplit) {
       preCompactCalled = true;
     }
     @Override
-    public void postCompact(CoprocessorEnvironment e, boolean willSplit) {
+    public void postCompact(RegionCoprocessorEnvironment e, boolean willSplit) {
       postCompactCalled = true;
     }
     @Override
-    public void preFlush(CoprocessorEnvironment e) {
+    public void preFlush(RegionCoprocessorEnvironment e) {
       preFlushCalled = true;
     }
     @Override
-    public void postFlush(CoprocessorEnvironment e) {
+    public void postFlush(RegionCoprocessorEnvironment e) {
       postFlushCalled = true;
     }
     @Override
-    public void preSplit(CoprocessorEnvironment e) {
+    public void preSplit(RegionCoprocessorEnvironment e) {
       preSplitCalled = true;
     }
     @Override
-    public void postSplit(CoprocessorEnvironment e, HRegion l, HRegion r) {
+    public void postSplit(RegionCoprocessorEnvironment e, HRegion l, HRegion r) {
       postSplitCalled = true;
     }
 
@@ -191,7 +189,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
     // and set it to region.
-    CoprocessorHost host = new CoprocessorHost(r, null, conf);
+    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
     r.setCoprocessorHost(host);
 
     host.load(implClass, Priority.USER);
@@ -218,7 +216,7 @@ public class TestCoprocessorInterface extends HBaseTestCase {
     HRegion r = HRegion.createHRegion(info, path, conf);
 
     // this following piece is a hack.
-    CoprocessorHost host = new CoprocessorHost(r, null, conf);
+    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
     r.setCoprocessorHost(host);
 
     host.load(implClass, Priority.USER);

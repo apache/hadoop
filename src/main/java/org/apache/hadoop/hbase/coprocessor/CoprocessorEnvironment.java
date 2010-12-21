@@ -33,11 +33,11 @@ public interface CoprocessorEnvironment {
   /** @return the HBase version as a string (e.g. "0.21.0") */
   public String getHBaseVersion();
 
-  /** @return the region associated with this coprocessor */
-  public HRegion getRegion();
+  /** @return the loaded coprocessor instance */
+  public Coprocessor getInstance();
 
-  /** @return reference to the region server services */
-  public RegionServerServices getRegionServerServices();
+  /** @return the priority assigned to the loaded coprocessor */
+  public Coprocessor.Priority getPriority();
 
   /**
    * @return an interface for accessing the given table

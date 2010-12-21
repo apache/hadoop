@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -68,12 +69,12 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   boolean hadPostIncrement = false;
 
   @Override
-  public void preOpen(CoprocessorEnvironment e) {
+  public void preOpen(RegionCoprocessorEnvironment e) {
     hadPreOpen = true;
   }
 
   @Override
-  public void postOpen(CoprocessorEnvironment e) {
+  public void postOpen(RegionCoprocessorEnvironment e) {
     hadPostOpen = true;
   }
 
@@ -82,12 +83,12 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void preClose(CoprocessorEnvironment e, boolean abortRequested) {
+  public void preClose(RegionCoprocessorEnvironment e, boolean abortRequested) {
     hadPreClose = true;
   }
 
   @Override
-  public void postClose(CoprocessorEnvironment e, boolean abortRequested) {
+  public void postClose(RegionCoprocessorEnvironment e, boolean abortRequested) {
     hadPostClose = true;
   }
 
@@ -96,12 +97,12 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void preFlush(CoprocessorEnvironment e) {
+  public void preFlush(RegionCoprocessorEnvironment e) {
     hadPreFlush = true;
   }
 
   @Override
-  public void postFlush(CoprocessorEnvironment e) {
+  public void postFlush(RegionCoprocessorEnvironment e) {
     hadPostFlush = true;
   }
 
@@ -110,12 +111,12 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void preSplit(CoprocessorEnvironment e) {
+  public void preSplit(RegionCoprocessorEnvironment e) {
     hadPreSplit = true;
   }
 
   @Override
-  public void postSplit(CoprocessorEnvironment e, HRegion l, HRegion r) {
+  public void postSplit(RegionCoprocessorEnvironment e, HRegion l, HRegion r) {
     hadPostSplit = true;
   }
 
@@ -124,12 +125,12 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void preCompact(CoprocessorEnvironment e, boolean willSplit) {
+  public void preCompact(RegionCoprocessorEnvironment e, boolean willSplit) {
     hadPreCompact = true;
   }
 
   @Override
-  public void postCompact(CoprocessorEnvironment e, boolean willSplit) {
+  public void postCompact(RegionCoprocessorEnvironment e, boolean willSplit) {
     hadPostCompact = true;
   }
 
@@ -138,7 +139,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void preGet(final CoprocessorEnvironment e, final Get get,
+  public void preGet(final RegionCoprocessorEnvironment e, final Get get,
       final List<KeyValue> results) throws IOException {
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -151,7 +152,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void postGet(final CoprocessorEnvironment e, final Get get,
+  public void postGet(final RegionCoprocessorEnvironment e, final Get get,
       final List<KeyValue> results) {
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -181,7 +182,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void prePut(final CoprocessorEnvironment e, final Map<byte[],
+  public void prePut(final RegionCoprocessorEnvironment e, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -208,7 +209,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void postPut(final CoprocessorEnvironment e, final Map<byte[],
+  public void postPut(final RegionCoprocessorEnvironment e, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -235,7 +236,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void preDelete(final CoprocessorEnvironment e, final Map<byte[],
+  public void preDelete(final RegionCoprocessorEnvironment e, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -247,7 +248,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void postDelete(final CoprocessorEnvironment e, final Map<byte[],
+  public void postDelete(final RegionCoprocessorEnvironment e, final Map<byte[],
       List<KeyValue>> familyMap, final boolean writeToWAL) throws IOException {
     assertNotNull(e);
     assertNotNull(e.getRegion());
@@ -260,7 +261,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void preGetClosestRowBefore(final CoprocessorEnvironment e,
+  public void preGetClosestRowBefore(final RegionCoprocessorEnvironment e,
       final byte[] row, final byte[] family, final Result result)
       throws IOException {
     assertNotNull(e);
@@ -274,7 +275,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void postGetClosestRowBefore(final CoprocessorEnvironment e,
+  public void postGetClosestRowBefore(final RegionCoprocessorEnvironment e,
       final byte[] row, final byte[] family, final Result result)
       throws IOException {
     assertNotNull(e);
@@ -288,7 +289,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void preIncrement(final CoprocessorEnvironment e,
+  public void preIncrement(final RegionCoprocessorEnvironment e,
       final Increment increment, final Result result) throws IOException {
     if (Arrays.equals(e.getRegion().getTableDesc().getName(),
         TestRegionObserverInterface.TEST_TABLE_2)) {
@@ -297,7 +298,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   }
 
   @Override
-  public void postIncrement(final CoprocessorEnvironment e,
+  public void postIncrement(final RegionCoprocessorEnvironment e,
       final Increment increment, final Result result) throws IOException {
     if (Arrays.equals(e.getRegion().getTableDesc().getName(),
         TestRegionObserverInterface.TEST_TABLE_2)) {

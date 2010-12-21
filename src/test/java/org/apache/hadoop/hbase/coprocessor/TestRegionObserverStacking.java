@@ -33,8 +33,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coprocessor.Coprocessor.Priority;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.regionserver.CoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -46,7 +45,7 @@ public class TestRegionObserverStacking extends TestCase {
   public static class ObserverA extends BaseRegionObserverCoprocessor {
     long id;
     @Override
-    public void postPut(final CoprocessorEnvironment e, final Map<byte[],
+    public void postPut(final RegionCoprocessorEnvironment e, final Map<byte[],
         List<KeyValue>> familyMap, final boolean writeToWAL)
         throws IOException {
       id = System.currentTimeMillis();
@@ -60,7 +59,7 @@ public class TestRegionObserverStacking extends TestCase {
   public static class ObserverB extends BaseRegionObserverCoprocessor {
     long id;
     @Override
-    public void postPut(final CoprocessorEnvironment e, final Map<byte[],
+    public void postPut(final RegionCoprocessorEnvironment e, final Map<byte[],
         List<KeyValue>> familyMap, final boolean writeToWAL)
         throws IOException {
       id = System.currentTimeMillis();
@@ -75,7 +74,7 @@ public class TestRegionObserverStacking extends TestCase {
     long id;
 
     @Override
-    public void postPut(final CoprocessorEnvironment e, final Map<byte[],
+    public void postPut(final RegionCoprocessorEnvironment e, final Map<byte[],
         List<KeyValue>> familyMap, final boolean writeToWAL)
         throws IOException {
       id = System.currentTimeMillis();
@@ -99,7 +98,7 @@ public class TestRegionObserverStacking extends TestCase {
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
     // and set it to region.
-    CoprocessorHost host = new CoprocessorHost(r, null, conf);
+    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
     r.setCoprocessorHost(host);
     return r;
   }
@@ -112,7 +111,7 @@ public class TestRegionObserverStacking extends TestCase {
 
     HRegion region = initHRegion(TABLE, getClass().getName(),
       HBaseConfiguration.create(), FAMILIES);
-    CoprocessorHost h = region.getCoprocessorHost();
+    RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(ObserverA.class, Priority.HIGHEST);
     h.load(ObserverB.class, Priority.USER);
     h.load(ObserverC.class, Priority.LOWEST);

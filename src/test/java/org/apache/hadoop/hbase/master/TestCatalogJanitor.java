@@ -150,7 +150,16 @@ public class TestCatalogJanitor {
       // TODO Auto-generated method stub
       return null;
     }
-    
+
+    @Override
+    public ZooKeeperWatcher getZooKeeperWatcher() {
+      return null;
+    }
+
+    @Override
+    public CatalogTracker getCatalogTracker() {
+      return null;
+    }
   }
 
   @Test

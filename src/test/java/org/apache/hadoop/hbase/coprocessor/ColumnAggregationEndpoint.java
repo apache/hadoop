@@ -43,7 +43,8 @@ implements ColumnAggregationProtocol {
     scan.addColumn(family, qualifier);
     int sumResult = 0;
 
-    InternalScanner scanner = getEnvironment().getRegion().getScanner(scan);
+    InternalScanner scanner = ((RegionCoprocessorEnvironment)getEnvironment())
+        .getRegion().getScanner(scan);
     try {
       List<KeyValue> curVals = new ArrayList<KeyValue>();
       boolean done = false;

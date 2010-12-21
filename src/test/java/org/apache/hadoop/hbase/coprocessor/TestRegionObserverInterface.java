@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coprocessor.Coprocessor.Priority;
-import org.apache.hadoop.hbase.regionserver.CoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -46,8 +46,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import org.apache.hadoop.conf.Configuration;
 
 import static org.junit.Assert.*;
 
@@ -77,7 +75,7 @@ public class TestRegionObserverInterface {
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = util.getConfiguration();
-    conf.set("hbase.coprocessor.default.classes",
+    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver");
 
     util.startMiniCluster(2);
@@ -114,7 +112,7 @@ public class TestRegionObserverInterface {
     // start a region server here, so just manually create cphost
     // and set it to region.
     HRegion r = HRegion.createHRegion(info, path, conf);
-    CoprocessorHost host = new CoprocessorHost(r, null, conf);
+    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
     r.setCoprocessorHost(host);
     host.load(implClass, Priority.USER);
     return r;
@@ -145,7 +143,7 @@ public class TestRegionObserverInterface {
         if (!Arrays.equals(r.getTableDesc().getName(), TEST_TABLE)) {
           continue;
         }
-        CoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).
+        RegionCoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).
           getCoprocessorHost();
         Coprocessor c = cph.findCoprocessor(SimpleRegionObserver.class.getName());
         assertNotNull(c);
@@ -175,7 +173,7 @@ public class TestRegionObserverInterface {
         if (!Arrays.equals(r.getTableDesc().getName(), TEST_TABLE_2)) {
           continue;
         }
-        CoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).
+        RegionCoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).
           getCoprocessorHost();
         Coprocessor c = cph.findCoprocessor(SimpleRegionObserver.class.getName());
         assertTrue(((SimpleRegionObserver)c).hadPreIncrement());

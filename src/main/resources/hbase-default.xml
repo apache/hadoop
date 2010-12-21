@@ -480,14 +480,25 @@
   </property>
 
   <property>
-    <name>hbase.coprocessor.default.classes</name>
+    <name>hbase.coprocessor.region.classes</name>
     <value></value>
     <description>A comma-separated list of Coprocessors that are loaded by
-    default. For any override coprocessor method, these classes will be called
-    in order. After implement your own
-    Coprocessor, just put it in HBase's classpath and add the fully
-    qualified class name here.
+    default on all tables. For any override coprocessor method, these classes
+    will be called in order. After implementing your own Coprocessor, just put
+    it in HBase's classpath and add the fully qualified class name here.
     A coprocessor can also be loaded on demand by setting HTableDescriptor.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.coprocessor.master.classes</name>
+    <value></value>
+    <description>A comma-separated list of
+    org.apache.hadoop.hbase.coprocessor.MasterObserver coprocessors that are
+    loaded by default on the active HMaster process. For any implemented
+    coprocessor methods, the listed classes will be called in order. After
+    implementing your own MasterObserver, just put it in HBase's classpath
+    and add the fully qualified class name here.
     </description>
   </property>
 

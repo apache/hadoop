@@ -286,7 +286,7 @@ or by <code>HTableDescriptor</code> for a newly created table.
 opened regions.)
 <h3>Load from configuration</h3>
 Whenever a region is opened, it will read coprocessor class names from
-<code>hbase.coprocessor.default.classes</code> from <code>Configuration</code>.
+<code>hbase.coprocessor.region.classes</code> from <code>Configuration</code>.
 Coprocessor framework will automatically load the configured classes as
 default coprocessors. The classes must be included in the classpath already.
 
@@ -294,7 +294,7 @@ default coprocessors. The classes must be included in the classpath already.
 <div style="background-color: #cccccc; padding: 2px">
 <blockquote><pre>
   &lt;property&gt;
-    &lt;name&gt;hbase.coprocessor.default.classes&lt;/name&gt;
+    &lt;name&gt;hbase.coprocessor.region.classes&lt;/name&gt;
     &lt;value&gt;org.apache.hadoop.hbase.coprocessor.AccessControllCoprocessor, org.apache.hadoop.hbase.coprocessor.ColumnAggregationProtocol&lt;/value&gt;
     &lt;description&gt;A comma-separated list of Coprocessors that are loaded by
     default. For any override coprocessor method from RegionObservor or
