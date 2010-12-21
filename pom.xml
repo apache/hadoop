@@ -10,13 +10,7 @@
   <parent>
     <groupId>org.apache</groupId>
     <artifactId>apache</artifactId>
-    <version>7</version>
-    <!-- Building 'site', you'll see a complaint about parent
-    pom not being found.  To fix, I've downloaded apache's pom
-    from here https://repository.apache.org/content/repositories/releases/org/apache/apache/7/apache-7.pom
-    saving it as 'pom.xml' into a directory named 'apache-7.pom'.  I then uncommented the below.
-    -->
-    <relativePath>../apache-7.pom/</relativePath>
+    <version>8</version>
   </parent>
 
   <groupId>org.apache.hbase</groupId>
@@ -746,14 +740,6 @@
   $ mvn -s /my/path/settings.xml deploy
 
   -->
-  <distributionManagement>
-    <!-- Private Site Repository -->
-    <!-- TODO -->
-    <site>
-      <id>HBase Site</id>
-      <url>scp://people.apache.org/home/psmith/public_html/hbase/sandbox/hbase/</url>
-    </site>
-  </distributionManagement>
 
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
