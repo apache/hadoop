@@ -317,7 +317,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable {
       // Abort the server if Disconnected or Expired
       // TODO: Åny reason to handle these two differently?
       case Disconnected:
-        LOG.info(prefix("Received Disconnected from ZooKeeper, ignoring"));
+        LOG.debug(prefix("Received Disconnected from ZooKeeper, ignoring"));
         break;
 
       case Expired:
