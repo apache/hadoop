@@ -298,7 +298,7 @@ module Hbase
     # Intercept cells whose format we know such as the info:regioninfo in .META.
     def to_string(column, kv, maxlength = -1)
       if is_meta_table?
-        if column == 'info:regioninfo'
+        if column == 'info:regioninfo' or column == 'info:splitA' or column == 'info:splitB'
           hri = org.apache.hadoop.hbase.util.Writables.getHRegionInfoOrNull(kv.getValue)
           return "timestamp=%d, value=%s" % [kv.getTimestamp, hri.toString]
         end
