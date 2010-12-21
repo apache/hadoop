@@ -798,6 +798,7 @@ Release 0.90.0 - Unreleased
                aren't split yet
    HBASE-3371  Race in TestReplication can make it fail
    HBASE-3323  OOME in master splitting logs
+   HBASE-3374  Our jruby jar has *GPL jars in it; fix
 
 
   IMPROVEMENTS

@@ -24,6 +24,10 @@ module Shell
       def help
         return <<-EOF
 Enable/Disable balancer. Returns previous balancer state.
+Examples:
+
+  hbase> balance_switch true
+  hbase> balance_switch false
 EOF
       end
 

@@ -28,10 +28,6 @@
 # whether the table exists and returns nil regardless.
 include Java
 
-java_import org.apache.hadoop.hbase.HConstants
-java_import org.apache.hadoop.hbase.HColumnDescriptor
-java_import org.apache.hadoop.hbase.HTableDescriptor
-
 include_class('java.lang.Integer') {|package,name| "J#{name}" }
 include_class('java.lang.Long') {|package,name| "J#{name}" }
 include_class('java.lang.Boolean') {|package,name| "J#{name}" }
@@ -40,9 +36,9 @@ module HBaseConstants
   COLUMN = "COLUMN"
   COLUMNS = "COLUMNS"
   TIMESTAMP = "TIMESTAMP"
-  NAME = HConstants::NAME
-  VERSIONS = HConstants::VERSIONS
-  IN_MEMORY = HConstants::IN_MEMORY
+  NAME = org.apache.hadoop.hbase.HConstants::NAME
+  VERSIONS = org.apache.hadoop.hbase.HConstants::VERSIONS
+  IN_MEMORY = org.apache.hadoop.hbase.HConstants::IN_MEMORY
   STOPROW = "STOPROW"
   STARTROW = "STARTROW"
   ENDROW = STOPROW
@@ -64,8 +60,8 @@ module HBaseConstants
     end
   end
 
-  promote_constants(HColumnDescriptor.constants)
-  promote_constants(HTableDescriptor.constants)
+  promote_constants(org.apache.hadoop.hbase.HColumnDescriptor.constants)
+  promote_constants(org.apache.hadoop.hbase.HTableDescriptor.constants)
 end
 
 # Include classes definition

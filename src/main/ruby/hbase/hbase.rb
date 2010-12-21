@@ -20,8 +20,6 @@
 
 include Java
 
-import org.apache.hadoop.hbase.HBaseConfiguration
-
 require 'hbase/admin'
 require 'hbase/table'
 

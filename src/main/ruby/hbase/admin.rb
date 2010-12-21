@@ -20,16 +20,6 @@
 
 include Java
 
-java_import org.apache.hadoop.hbase.client.HBaseAdmin
-java_import org.apache.zookeeper.ZooKeeperMain
-java_import org.apache.hadoop.hbase.HColumnDescriptor
-java_import org.apache.hadoop.hbase.HTableDescriptor
-java_import org.apache.hadoop.hbase.HRegionInfo
-java_import org.apache.hadoop.hbase.util.Bytes
-java_import org.apache.zookeeper.ZooKeeper
-java_import org.apache.hadoop.hbase.io.hfile.Compression
-java_import org.apache.hadoop.hbase.regionserver.StoreFile
-
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
 module Hbase
@@ -37,11 +27,11 @@ module Hbase
     include HBaseConstants
 
     def initialize(configuration, formatter)
-      @admin = HBaseAdmin.new(configuration)
+      @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
       connection = @admin.getConnection()
       @zk_wrapper = connection.getZooKeeperWatcher()
       zk = @zk_wrapper.getZooKeeper()
-      @zk_main = ZooKeeperMain.new(zk)
+      @zk_main = org.apache.zookeeper.ZooKeeperMain.new(zk)
       @formatter = formatter
     end
 
@@ -124,8 +114,8 @@ module Hbase
       raise ArgumentError, "Table #{table_name} is enabled. Disable it first.'" if enabled?(table_name)
 
       @admin.deleteTable(table_name)
-      flush(HConstants::META_TABLE_NAME)
-      major_compact(HConstants::META_TABLE_NAME)
+      flush(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
+      major_compact(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -147,7 +137,7 @@ module Hbase
       raise(ArgumentError, "Table must have at least one column family") if args.empty?
 
       # Start defining the table
-      htd = HTableDescriptor.new(table_name)
+      htd = org.apache.hadoop.hbase.HTableDescriptor.new(table_name)
 
       # All args are columns, add them to the table definition
       # TODO: add table options support
@@ -177,27 +167,27 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Assign a region
     def assign(region_name, force)
-      @admin.assign(Bytes.toBytes(region_name), java.lang.Boolean::valueOf(force))
+      @admin.assign(org.apache.hadoop.hbase.util.Bytes.toBytes(region_name), java.lang.Boolean::valueOf(force))
     end
 
     #----------------------------------------------------------------------------------------------
     # Unassign a region
     def unassign(region_name, force)
-      @admin.unassign(Bytes.toBytes(region_name), java.lang.Boolean::valueOf(force))
+      @admin.unassign(org.apache.hadoop.hbase.util.Bytes.toBytes(region_name), java.lang.Boolean::valueOf(force))
     end
 
     #----------------------------------------------------------------------------------------------
     # Move a region
     def move(encoded_region_name, server = nil)
-      @admin.move(Bytes.toBytes(encoded_region_name), server ? Bytes.toBytes(server): nil)
+      @admin.move(org.apache.hadoop.hbase.util.Bytes.toBytes(encoded_region_name), server ? org.apache.hadoop.hbase.util.Bytes.toBytes(server): nil)
     end
 
     #----------------------------------------------------------------------------------------------
     # Returns table's structure description
     def describe(table_name)
       tables = @admin.listTables.to_a
-      tables << HTableDescriptor::META_TABLEDESC
-      tables << HTableDescriptor::ROOT_TABLEDESC
+      tables << org.apache.hadoop.hbase.HTableDescriptor::META_TABLEDESC
+      tables << org.apache.hadoop.hbase.HTableDescriptor::ROOT_TABLEDESC
 
       tables.each do |t|
         # Found the table
@@ -210,7 +200,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name)
-      h_table = HTable.new(table_name)
+      h_table = org.apache.hadoop.hbase.client.HTable.new(table_name)
       table_description = h_table.getTableDescriptor()
       yield 'Disabling table...' if block_given?
       disable(table_name)
@@ -353,35 +343,35 @@ module Hbase
     # Return a new HColumnDescriptor made of passed args
     def hcd(arg, htd)
       # String arg, single parameter constructor
-      return HColumnDescriptor.new(arg) if arg.kind_of?(String)
+      return org.apache.hadoop.hbase.HColumnDescriptor.new(arg) if arg.kind_of?(String)
 
       raise(ArgumentError, "Column family #{arg} must have a name") unless name = arg[NAME]
 
       family = htd.getFamily(name.to_java_bytes)
       # create it if it's a new family
-      family ||= HColumnDescriptor.new(name.to_java_bytes)
+      family ||= org.apache.hadoop.hbase.HColumnDescriptor.new(name.to_java_bytes)
 
-      family.setBlockCacheEnabled(JBoolean.valueOf(arg[HColumnDescriptor::BLOCKCACHE])) if arg.include?(HColumnDescriptor::BLOCKCACHE)
-      family.setScope(JInteger.valueOf(arg[REPLICATION_SCOPE])) if arg.include?(HColumnDescriptor::REPLICATION_SCOPE)
-      family.setInMemory(JBoolean.valueOf(arg[IN_MEMORY])) if arg.include?(HColumnDescriptor::IN_MEMORY)
-      family.setTimeToLive(JInteger.valueOf(arg[HColumnDescriptor::TTL])) if arg.include?(HColumnDescriptor::TTL)
-      family.setCompressionType(arg[HColumnDescriptor::COMPRESSION]) if arg.include?(HColumnDescriptor::COMPRESSION)
-      family.setBlocksize(JInteger.valueOf(arg[HColumnDescriptor::BLOCKSIZE])) if arg.include?(HColumnDescriptor::BLOCKSIZE)
-      family.setMaxVersions(JInteger.valueOf(arg[VERSIONS])) if arg.include?(HColumnDescriptor::VERSIONS)
-      if arg.include?(HColumnDescriptor::BLOOMFILTER)
-        bloomtype = arg[HColumnDescriptor::BLOOMFILTER].upcase
-        unless StoreFile::BloomType.constants.include?(bloomtype)      
-          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + StoreFile::BloomType.constants.join(" ")) 
+      family.setBlockCacheEnabled(JBoolean.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::BLOCKCACHE])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKCACHE)
+      family.setScope(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::REPLICATION_SCOPE])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::REPLICATION_SCOPE)
+      family.setInMemory(JBoolean.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::IN_MEMORY)
+      family.setTimeToLive(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::TTL])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::TTL)
+      family.setCompressionType(arg[org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION]) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION)
+      family.setBlocksize(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOCKSIZE)
+      family.setMaxVersions(JInteger.valueOf(arg[org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS])) if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::VERSIONS)
+      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER)
+        bloomtype = arg[org.apache.hadoop.hbase.HColumnDescriptor::BLOOMFILTER].upcase
+        unless org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.include?(bloomtype)      
+          raise(ArgumentError, "BloomFilter type #{bloomtype} is not supported. Use one of " + org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.constants.join(" ")) 
         else 
-          family.setBloomFilterType(StoreFile::BloomType.valueOf(bloomtype))
+          family.setBloomFilterType(org.apache.hadoop.hbase.regionserver.StoreFile::BloomType.valueOf(bloomtype))
         end
       end
-      if arg.include?(HColumnDescriptor::COMPRESSION)
-        compression = arg[HColumnDescriptor::COMPRESSION].upcase
-        unless Compression::Algorithm.constants.include?(compression)      
-          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + Compression::Algorithm.constants.join(" ")) 
+      if arg.include?(org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION)
+        compression = arg[org.apache.hadoop.hbase.HColumnDescriptor::COMPRESSION].upcase
+        unless org.apache.hadoop.hbase.io.hfile.Compression::Algorithm.constants.include?(compression)      
+          raise(ArgumentError, "Compression #{compression} is not supported. Use one of " + org.apache.hadoop.hbase.io.hfile.Compression::Algorithm.constants.join(" ")) 
         else 
-          family.setCompressionType(Compression::Algorithm.valueOf(compression))
+          family.setCompressionType(org.apache.hadoop.hbase.io.hfile.Compression::Algorithm.valueOf(compression))
         end
       end
       return family
@@ -391,22 +381,22 @@ module Hbase
     # Enables/disables a region by name
     def online(region_name, on_off)
       # Open meta table
-      meta = HTable.new(HConstants::META_TABLE_NAME)
+      meta = org.apache.hadoop.hbase.client.HTable.new(org.apache.hadoop.hbase.HConstants::META_TABLE_NAME)
 
       # Read region info
       # FIXME: fail gracefully if can't find the region
-      region_bytes = Bytes.toBytes(region_name)
-      g = Get.new(region_bytes)
-      g.addColumn(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER)
+      region_bytes = org.apache.hadoop.hbase.util.Bytes.toBytes(region_name)
+      g = org.apache.hadoop.hbase.client.Get.new(region_bytes)
+      g.addColumn(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER)
       hri_bytes = meta.get(g).value
 
       # Change region status
-      hri = Writables.getWritable(hri_bytes, HRegionInfo.new)
+      hri = org.apache.hadoop.hbase.util.Writables.getWritable(hri_bytes, org.apache.hadoop.hbase.HRegionInfo.new)
       hri.setOffline(on_off)
 
       # Write it back
-      put = Put.new(region_bytes)
-      put.add(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER, Writables.getBytes(hri))
+      put = org.apache.hadoop.hbase.client.Put.new(region_bytes)
+      put.add(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER, org.apache.hadoop.hbase.util.Writables.getBytes(hri))
       meta.put(put)
     end
   end

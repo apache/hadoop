@@ -41,7 +41,7 @@ EOF
           formatter.row([ table ])
         end
 
-        formatter.footer(now, list.count)
+        formatter.footer(now, list.size)
       end
     end
   end

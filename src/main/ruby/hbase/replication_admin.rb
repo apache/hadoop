@@ -20,8 +20,6 @@
 
 include Java
 
-java_import org.apache.hadoop.hbase.client.replication.ReplicationAdmin
-
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
 module Hbase
@@ -29,7 +27,7 @@ module Hbase
     include HBaseConstants
 
     def initialize(configuration, formatter)
-      @replication_admin = ReplicationAdmin.new(configuration)
+      @replication_admin = org.apache.hadoop.hbase.client.replication.ReplicationAdmin.new(configuration)
       @formatter = formatter
     end
 

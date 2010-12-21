@@ -20,19 +20,6 @@
 
 include Java
 
-java_import org.apache.hadoop.hbase.client.HTable
-
-java_import org.apache.hadoop.hbase.KeyValue
-java_import org.apache.hadoop.hbase.util.Bytes
-java_import org.apache.hadoop.hbase.util.Writables
-
-java_import org.apache.hadoop.hbase.client.Put
-java_import org.apache.hadoop.hbase.client.Get
-java_import org.apache.hadoop.hbase.client.Delete
-
-java_import org.apache.hadoop.hbase.client.Scan
-java_import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter
-
 # Wrapper for org.apache.hadoop.hbase.client.HTable
 
 module Hbase
@@ -40,13 +27,13 @@ module Hbase
     include HBaseConstants
 
     def initialize(configuration, table_name, formatter)
-      @table = HTable.new(configuration, table_name)
+      @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
     end
 
     #----------------------------------------------------------------------------------------------
     # Put a cell 'value' at specified table/row/column
     def put(row, column, value, timestamp = nil)
-      p = Put.new(row.to_s.to_java_bytes)
+      p = org.apache.hadoop.hbase.client.Put.new(row.to_s.to_java_bytes)
       family, qualifier = parse_column_name(column)
       if timestamp
         p.add(family, qualifier, timestamp, value.to_s.to_java_bytes)
@@ -58,14 +45,14 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Delete a cell
-    def delete(row, column, timestamp = HConstants::LATEST_TIMESTAMP)
+    def delete(row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
       deleteall(row, column, timestamp)
     end
 
     #----------------------------------------------------------------------------------------------
     # Delete a row
-    def deleteall(row, column = nil, timestamp = HConstants::LATEST_TIMESTAMP)
-      d = Delete.new(row.to_s.to_java_bytes, timestamp, nil)
+    def deleteall(row, column = nil, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+      d = org.apache.hadoop.hbase.client.Delete.new(row.to_s.to_java_bytes, timestamp, nil)
       if column
         family, qualifier = parse_column_name(column)
         d.deleteColumns(family, qualifier, timestamp)
@@ -85,10 +72,10 @@ module Hbase
     # Count rows in a table
     def count(interval = 1000, caching_rows = 10)
       # We can safely set scanner caching with the first key only filter
-      scan = Scan.new
+      scan = org.apache.hadoop.hbase.client.Scan.new
       scan.cache_blocks = false
       scan.caching = caching_rows
-      scan.setFilter(FirstKeyOnlyFilter.new)
+      scan.setFilter(org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new)
 
       # Run the scanner
       scanner = @table.getScanner(scan)
@@ -111,7 +98,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Get from table
     def get(row, *args)
-      get = Get.new(row.to_s.to_java_bytes)
+      get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
       maxlength = -1
 
       # Normalize args
@@ -174,7 +161,7 @@ module Hbase
       res = {}
       result.list.each do |kv|
         family = String.from_java_bytes(kv.getFamily)
-        qualifier = Bytes::toStringBinary(kv.getQualifier)
+        qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getQualifier)
 
         column = "#{family}:#{qualifier}"
         value = to_string(column, kv, maxlength)
@@ -195,7 +182,7 @@ module Hbase
     def get_counter(row, column)
       family, qualifier = parse_column_name(column.to_s)
       # Format get request
-      get = Get.new(row.to_s.to_java_bytes)
+      get = org.apache.hadoop.hbase.client.Get.new(row.to_s.to_java_bytes)
       get.addColumn(family, qualifier)
       get.setMaxVersions(1)
 
@@ -205,7 +192,7 @@ module Hbase
 
       # Fetch cell value
       cell = result.list.first
-      Bytes::toLong(cell.getValue)
+      org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValue)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -234,9 +221,9 @@ module Hbase
         end
 
         scan = if stoprow
-          Scan.new(startrow.to_java_bytes, stoprow.to_java_bytes)
+          org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes, stoprow.to_java_bytes)
         else
-          Scan.new(startrow.to_java_bytes)
+          org.apache.hadoop.hbase.client.Scan.new(startrow.to_java_bytes)
         end
 
         columns.each { |c| scan.addColumns(c) }
@@ -245,7 +232,7 @@ module Hbase
         scan.setCacheBlocks(cache)
         scan.setMaxVersions(versions) if versions > 1
       else
-        scan = Scan.new
+        scan = org.apache.hadoop.hbase.client.Scan.new
       end
 
       # Start the scanner
@@ -261,11 +248,11 @@ module Hbase
         end
 
         row = iter.next
-        key = Bytes::toStringBinary(row.getRow)
+        key = org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow)
 
         row.list.each do |kv|
           family = String.from_java_bytes(kv.getFamily)
-          qualifier = Bytes::toStringBinary(kv.getQualifier)
+          qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getQualifier)
 
           column = "#{family}:#{qualifier}"
           cell = to_string(column, kv, maxlength)
@@ -298,12 +285,12 @@ module Hbase
     # Checks if current table is one of the 'meta' tables
     def is_meta_table?
       tn = @table.table_name
-      Bytes.equals(tn, HConstants::META_TABLE_NAME) || Bytes.equals(tn, HConstants::ROOT_TABLE_NAME)
+      org.apache.hadoop.hbase.util.Bytes.equals(tn, org.apache.hadoop.hbase.HConstants::META_TABLE_NAME) || org.apache.hadoop.hbase.util.Bytes.equals(tn, org.apache.hadoop.hbase.HConstants::ROOT_TABLE_NAME)
     end
 
     # Returns family and (when has it) qualifier for a column name
     def parse_column_name(column)
-      split = KeyValue.parseColumn(column.to_java_bytes)
+      split = org.apache.hadoop.hbase.KeyValue.parseColumn(column.to_java_bytes)
       return split[0], (split.length > 1) ? split[1] : nil
     end
 
@@ -312,20 +299,20 @@ module Hbase
     def to_string(column, kv, maxlength = -1)
       if is_meta_table?
         if column == 'info:regioninfo'
-          hri = Writables.getHRegionInfoOrNull(kv.getValue)
+          hri = org.apache.hadoop.hbase.util.Writables.getHRegionInfoOrNull(kv.getValue)
           return "timestamp=%d, value=%s" % [kv.getTimestamp, hri.toString]
         end
         if column == 'info:serverstartcode'
           if kv.getValue.length > 0
-            str_val = Bytes.toLong(kv.getValue)
+            str_val = org.apache.hadoop.hbase.util.Bytes.toLong(kv.getValue)
           else
-            str_val = Bytes.toStringBinary(kv.getValue)
+            str_val = org.apache.hadoop.hbase.util.Bytes.toStringBinary(kv.getValue)
           end
           return "timestamp=%d, value=%s" % [kv.getTimestamp, str_val]
         end
       end
 
-      val = "timestamp=#{kv.getTimestamp}, value=#{Bytes::toStringBinary(kv.getValue)}"
+      val = "timestamp=#{kv.getTimestamp}, value=#{org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getValue)}"
       (maxlength != -1) ? val[0, maxlength] : val
     end
 
