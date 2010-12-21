@@ -529,7 +529,7 @@ runContribTests () {
   echo ""
 
   ### Kill any rogue build processes from the last attempt
-  $PS -auxwww | $GREP HadoopPatchProcess | /usr/bin/nawk '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
+  $PS auxwww | $GREP HadoopPatchProcess | /usr/bin/nawk '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
 
   echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no test-contrib"
   $ANT_HOME/bin/ant -Dversion="${VERSION}" $ECLIPSE_PROPERTY $PYTHON_PROPERTY -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no test-contrib
