@@ -259,6 +259,10 @@ public class HLogSplitter {
           recoverFileLease(fs, logPath, conf);
           parseHLog(log, entryBuffers, fs, conf);
           processedLogs.add(logPath);
+        } catch (EOFException eof) {
+          // truncated files are expected if a RS crashes (see HBASE-2643)
+          LOG.info("EOF from hlog " + logPath + ".  continuing");
+          processedLogs.add(logPath);
         } catch (IOException e) {
           // If the IOE resulted from bad file format,
           // then this problem is idempotent and retrying won't help
