@@ -158,9 +158,19 @@ public class OpenRegionHandler extends EventHandler {
     }
     // Is thread still alive?  We may have left above loop because server is
     // stopping or we timed out the edit.  Is so, interrupt it.
-    if (t.isAlive() && !signaller.get()) {
-      LOG.debug("Interrupting thread " + t);
-      t.interrupt();
+    if (t.isAlive()) {
+      if (!signaller.get()) {
+        // Thread still running; interrupt
+        LOG.debug("Interrupting thread " + t);
+        t.interrupt();
+      }
+      try {
+        t.join();
+      } catch (InterruptedException ie) {
+        LOG.warn("Interrupted joining " +
+          r.getRegionInfo().getRegionNameAsString(), ie);
+        Thread.currentThread().interrupt();
+      }
     }
     // Was there an exception opening the region?  This should trigger on
     // InterruptedException too.  If so, we failed.
