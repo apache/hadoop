@@ -178,7 +178,7 @@ public class TestReplication {
       Result[] res = scanner.next(NB_ROWS_IN_BIG_BATCH);
       scanner.close();
       if (res.length != 0) {
-       if (lastCount < res.length) {
+       if (res.length < lastCount) {
           i--; // Don't increment timeout if we make progress
         }
         lastCount = res.length;
