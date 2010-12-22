@@ -261,8 +261,13 @@ public class AssignmentManager extends ZooKeeperListener {
   throws KeeperException, IOException {
     RegionTransitionData data = ZKAssign.getData(watcher, encodedRegionName);
     if (data == null) return false;
-    HRegionInfo hri = (regionInfo != null)? regionInfo:
-      MetaReader.getRegion(catalogTracker, data.getRegionName()).getFirst();
+    HRegionInfo hri = regionInfo;
+    if (hri == null) {
+      Pair<HRegionInfo, HServerAddress> p =
+        MetaReader.getRegion(catalogTracker, data.getRegionName());
+      if (p == null) return false;
+      hri = p.getFirst();
+    }
     processRegionsInTransition(data, hri);
     return true;
   }

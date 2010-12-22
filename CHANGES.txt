@@ -803,6 +803,8 @@ Release 0.90.0 - Unreleased
    HBASE-3343  Server not shutting down after losing log lease
    HBASE-3381  Interrupt of a region open comes across as a successful open
    HBASE-3386  NPE in TableRecordReaderImpl.restart
+   HBASE-3388  NPE processRegionInTransition(AssignmentManager.java:264)
+               doing rolling-restart.sh
 
 
   IMPROVEMENTS
