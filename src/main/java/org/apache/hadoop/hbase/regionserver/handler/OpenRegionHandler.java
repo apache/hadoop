@@ -164,7 +164,7 @@ public class OpenRegionHandler extends EventHandler {
     }
     // Was there an exception opening the region?  This should trigger on
     // InterruptedException too.  If so, we failed.
-    return t.getException() == null;
+    return !t.interrupted() && t.getException() == null;
   }
 
   /**

@@ -385,6 +385,8 @@ public class HBaseFsck {
     boolean deploymentMatchesMeta =
       hasMetaAssignment && isDeployed && !isMultiplyDeployed &&
       hbi.metaEntry.regionServer.equals(hbi.deployedOn.get(0));
+    boolean splitParent =
+      (hbi.metaEntry == null)? false: hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
     boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry);
     boolean recentlyModified = hbi.foundRegionDir != null &&
       hbi.foundRegionDir.getModificationTime() + timelag > System.currentTimeMillis();
@@ -394,6 +396,10 @@ public class HBaseFsck {
       return;
     }
     if (inMeta && inHdfs && isDeployed && deploymentMatchesMeta && shouldBeDeployed) {
+      return;
+    } else if (inMeta && !isDeployed && splitParent) {
+      // Offline regions shouldn't cause complaints
+      LOG.debug("Region " + descriptiveName + " offline, split, parent, ignoring.");
       return;
     } else if (inMeta && !shouldBeDeployed && !isDeployed) {
       // offline regions shouldn't cause complaints

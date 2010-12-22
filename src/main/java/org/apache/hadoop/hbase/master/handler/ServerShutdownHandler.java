@@ -137,13 +137,15 @@ public class ServerShutdownHandler extends EventHandler {
     // Skip regions that were in transition unless CLOSING or PENDING_CLOSE
     for (RegionState rit : regionsInTransition) {
       if (!rit.isClosing() && !rit.isPendingClose()) {
+        LOG.debug("Removed " + rit.getRegion().getRegionNameAsString() +
+          " from list of regions to assign because in RIT");
         hris.remove(rit.getRegion());
       }
     }
 
-    LOG.info("Reassigning " + hris.size() + " region(s) that " + serverName
-        + " was carrying (skipping " + regionsInTransition.size() +
-        " regions(s) that are already in transition)");
+    LOG.info("Reassigning " + hris.size() + " region(s) that " + serverName +
+      " was carrying (skipping " + regionsInTransition.size() +
+      " regions(s) that are already in transition)");
 
     // Iterate regions that were on this server and assign them
     for (Map.Entry<HRegionInfo, Result> e: hris.entrySet()) {
@@ -175,6 +177,8 @@ public class ServerShutdownHandler extends EventHandler {
         hri.getTableDesc().getNameAsString());
     if (disabled) return false;
     if (hri.isOffline() && hri.isSplit()) {
+      LOG.debug("Offlined and split region " + hri.getRegionNameAsString() +
+        "; checking daughter presence");
       fixupDaughters(result, assignmentManager, catalogTracker);
       return false;
     }
@@ -208,13 +212,16 @@ public class ServerShutdownHandler extends EventHandler {
   throws IOException {
     byte [] bytes = result.getValue(HConstants.CATALOG_FAMILY, qualifier);
     if (bytes == null || bytes.length <= 0) return;
-    HRegionInfo hri = Writables.getHRegionInfo(bytes);
+    HRegionInfo hri = Writables.getHRegionInfoOrNull(bytes);
+    if (hri == null) return;
     Pair<HRegionInfo, HServerAddress> pair =
       MetaReader.getRegion(catalogTracker, hri.getRegionName());
     if (pair == null || pair.getFirst() == null) {
       LOG.info("Fixup; missing daughter " + hri.getEncodedName());
       MetaEditor.addDaughter(catalogTracker, hri, null);
       assignmentManager.assign(hri, true);
+    } else {
+      LOG.debug("Daughter " + hri.getRegionNameAsString() + " present");
     }
   }
 }
