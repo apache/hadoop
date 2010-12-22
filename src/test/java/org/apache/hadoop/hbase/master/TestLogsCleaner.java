@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.replication.ReplicationZookeeper;
+import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -63,6 +64,7 @@ public class TestLogsCleaner {
   public void testLogCleaning() throws Exception{
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, true);
+    Replication.decorateMasterConfiguration(conf);
     Server server = new DummyServer();
     ReplicationZookeeper zkHelper =
         new ReplicationZookeeper(server, new AtomicBoolean(true));
