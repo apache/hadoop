@@ -805,6 +805,8 @@ Release 0.90.0 - Unreleased
    HBASE-3386  NPE in TableRecordReaderImpl.restart
    HBASE-3388  NPE processRegionInTransition(AssignmentManager.java:264)
                doing rolling-restart.sh
+   HBASE-3383  [0.90RC1] bin/hbase script displays "no such file" warning on
+               target/cached_classpath.txt
 
 
   IMPROVEMENTS
