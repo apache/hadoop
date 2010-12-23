@@ -106,10 +106,11 @@ public class HLogSplitter {
    * <code>hbase.hlog.splitter.impl</code> property to derived the instance
    * class to use.
    *
+   * @param conf
    * @param rootDir hbase directory
    * @param srcDir logs directory
    * @param oldLogDir directory where processed logs are archived to
-   * @param logfiles the list of log files to split
+   * @param fs FileSystem
    */
   public static HLogSplitter createLogSplitter(Configuration conf,
       final Path rootDir, final Path srcDir,
