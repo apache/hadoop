@@ -311,6 +311,11 @@ Usually you'll want to use the latest version available except the problematic u
  patch changes the RPC version because protocol was changed.
  Version mismatch issues have various manifestations but often all looks like its hung up.
  </para>
+ <note><title>Hadoop Security</title>
+     <para>HBase will run on any Hadoop 0.20.x that incorporates Hadoop security features -- e.g. Y! 0.20S or CDH3B3 -- as long
+         as you do as suggested above and replace the Hadoop jar that ships with HBase with the secure version.
+  </para>
+  </note>
   </section>
 <section xml:id="ssh"> <title>ssh</title>
 <para><command>ssh</command> must be installed and <command>sshd</command> must
