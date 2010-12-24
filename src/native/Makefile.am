@@ -43,6 +43,7 @@ libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
                        src/org/apache/hadoop/io/compress/zlib/ZlibDecompressor.c \
                        src/org/apache/hadoop/security/getGroup.c \
                        src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c \
+                       src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c \
                        src/org/apache/hadoop/io/nativeio/file_descriptor.c \
                        src/org/apache/hadoop/io/nativeio/errno_enum.c \
                        src/org/apache/hadoop/io/nativeio/NativeIO.c

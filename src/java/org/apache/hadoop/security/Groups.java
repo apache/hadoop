@@ -98,22 +98,56 @@ public class Groups {
    */
   public void refresh() {
     LOG.info("clearing userToGroupsMap cache");
+    try {
+      impl.cacheGroupsRefresh();
+    } catch (IOException e) {
+      LOG.warn("Error refreshing groups cache", e);
+    }
     userToGroupsMap.clear();
   }
-  
+
+  /**
+   * Add groups to cache
+   *
+   * @param groups list of groups to add to cache
+   */
+  public void cacheGroupsAdd(List<String> groups) {
+    try {
+      impl.cacheGroupsAdd(groups);
+    } catch (IOException e) {
+      LOG.warn("Error caching groups", e);
+    }
+  }
+
+  /**
+   * Class to hold the cached groups
+   */
   private static class CachedGroups {
     final long timestamp;
     final List<String> groups;
     
+    /**
+     * Create and initialize group cache
+     */
     CachedGroups(List<String> groups) {
       this.groups = groups;
       this.timestamp = System.currentTimeMillis();
     }
 
+    /**
+     * Returns time of last cache update
+     *
+     * @return time of last cache update
+     */
     public long getTimestamp() {
       return timestamp;
     }
 
+    /**
+     * Get list of cached groups
+     *
+     * @return cached groups
+     */
     public List<String> getGroups() {
       return groups;
     }
@@ -128,13 +162,15 @@ public class Groups {
   public static Groups getUserToGroupsMappingService() {
     return getUserToGroupsMappingService(new Configuration()); 
   }
-  
+
   /**
    * Get the groups being used to map user-to-groups.
    * @param conf
    * @return the groups being used to map user-to-groups.
    */
-  public static Groups getUserToGroupsMappingService(Configuration conf) {
+  public static synchronized Groups getUserToGroupsMappingService(
+    Configuration conf) {
+
     if(GROUPS == null) {
       if(LOG.isDebugEnabled()) {
         LOG.debug(" Creating new Groups object");

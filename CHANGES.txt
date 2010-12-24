@@ -242,6 +242,9 @@ Release 0.22.0 - Unreleased
     classpath. (Patrick Angeles via eli)
 
     HADOOP-6298. Add copyBytes to Text and BytesWritable. (omalley)
+  
+    HADOOP-6864. Provide a JNI-based implementation of ShellBasedUnixGroupsNetgroupMapping 
+    (implementation of GroupMappingServiceProvider) (Erik Seffl via boryas)
 
   OPTIMIZATIONS
 
