@@ -36,6 +36,9 @@ Trunk (unreleased changes)
 
     HADOOP-7059. Remove "unused" warning in native code.  (Noah Watkins via eli)
 
+    HADOOP-7078. Improve javadocs for RawComparator interface.
+    (Harsh J Chouraria via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
