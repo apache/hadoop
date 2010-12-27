@@ -101,6 +101,7 @@ public class Store implements HeapSize {
   // With float, java will downcast your long to float for comparisons (bad)
   private double compactRatio;
   private long lastCompactSize = 0;
+  private volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
   static int closeCheckInterval = 0;
   private final long desiredMaxFileSize;
@@ -609,11 +610,10 @@ public class Store implements HeapSize {
    * <p>We don't want to hold the structureLock for the whole time, as a compact()
    * can be lengthy and we want to allow cache-flushes during this period.
    *
-   * @param forceMajor True to force a major compaction regardless of thresholds
    * @return row to split around if a split is needed, null otherwise
    * @throws IOException
    */
-  StoreSize compact(final boolean forceMajor) throws IOException {
+  StoreSize compact() throws IOException {
     boolean forceSplit = this.region.shouldForceSplit();
     synchronized (compactLock) {
       this.lastCompactSize = 0; // reset first in case compaction is aborted
@@ -629,12 +629,12 @@ public class Store implements HeapSize {
 
       // if the user wants to force a split, skip compaction unless necessary
       boolean references = hasReferences(this.storefiles);
-      if (forceSplit && !forceMajor && !references) {
+      if (forceSplit && !this.forceMajor && !references) {
         return checkSplit(forceSplit);
       }
 
       Collection<StoreFile> filesToCompact
-        = compactSelection(this.storefiles, forceMajor);
+        = compactSelection(this.storefiles, this.forceMajor);
 
       // empty == do not compact
       if (filesToCompact.isEmpty()) {
@@ -652,6 +652,9 @@ public class Store implements HeapSize {
       // major compaction iff all StoreFiles are included
       boolean majorcompaction
         = (filesToCompact.size() == this.storefiles.size());
+      if (majorcompaction) {
+        this.forceMajor = false;
+      }
 
       // Max-sequenceID is the last key in the files we're compacting
       long maxId = StoreFile.getMaxSequenceIdInList(filesToCompact);
@@ -1407,6 +1410,14 @@ public class Store implements HeapSize {
     return storeSize;
   }
 
+  void setForceMajorCompaction(final boolean b) {
+    this.forceMajor = b;
+  }
+
+  boolean getForceMajorCompaction() {
+    return this.forceMajor;
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // File administration
   //////////////////////////////////////////////////////////////////////////////
@@ -1613,7 +1624,7 @@ public class Store implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT + (15 * ClassSize.REFERENCE) +
       (7 * Bytes.SIZEOF_LONG) + (1 * Bytes.SIZEOF_DOUBLE) +
-      (4 * Bytes.SIZEOF_INT) + (Bytes.SIZEOF_BOOLEAN * 2));
+      (4 * Bytes.SIZEOF_INT) + (3 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.OBJECT + ClassSize.REENTRANT_LOCK +
