@@ -535,7 +535,6 @@ public class AvroServer {
     System.exit(0);
   }
 
-  // TODO(hammer): Figure out a better way to keep the server alive!
   protected static void doMain(final String[] args) throws Exception {
     if (args.length < 1) {
       printUsageAndExit();
@@ -562,8 +561,9 @@ public class AvroServer {
     Log LOG = LogFactory.getLog("AvroServer");
     LOG.info("starting HBase Avro server on port " + Integer.toString(port));
     SpecificResponder r = new SpecificResponder(HBase.class, new HBaseImpl());
-    new HttpServer(r, 9090);
-    Thread.sleep(1000000);
+    HttpServer server = new HttpServer(r, port);
+    server.start();
+    server.join();
   }
 
   // TODO(hammer): Look at Cassandra's daemonization and integration with JSVC

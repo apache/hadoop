@@ -42,6 +42,8 @@ Release 0.91.0 - Unreleased
    HBASE-3377  Upgrade Jetty to 6.1.26
    HBASE-3387  Pair does not deep check arrays for equality
                (Jesse Yates via Stack)
+   HBASE-3393  Update Avro gateway to use Avro 1.4.1 and the new
+               server.join() method (Jeff Hammerbacher via Stack)
 
 
   NEW FEATURES

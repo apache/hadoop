@@ -188,6 +188,13 @@
         <enabled>true</enabled>
       </releases>
     </repository>
+    <repository>
+      <id>repository.jboss.org</id>
+      <url>http://repository.jboss.org/nexus/content/groups/public-jboss/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
   </repositories>
 
   <build>
@@ -456,7 +463,7 @@
     <compileSource>1.6</compileSource>
 
     <!-- Dependencies -->
-    <avro.version>1.3.3</avro.version>
+    <avro.version>1.4.1</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.4</commons-codec.version>
     <commons-httpclient.version>3.1</commons-httpclient.version><!-- pretty outdated -->
@@ -538,7 +545,7 @@
       <version>${log4j.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
       <version>${avro.version}</version>
     </dependency>

@@ -128,14 +128,14 @@ public class AvroUtil {
     acs.averageLoad = cs.getAverageLoad();
     Collection<String> deadServerNames = cs.getDeadServerNames();
     Schema stringArraySchema = Schema.createArray(Schema.create(Schema.Type.STRING));
-    GenericData.Array<Utf8> adeadServerNames = null;
+    GenericData.Array<CharSequence> adeadServerNames = null;
     if (deadServerNames != null) {
-      adeadServerNames = new GenericData.Array<Utf8>(deadServerNames.size(), stringArraySchema);
+      adeadServerNames = new GenericData.Array<CharSequence>(deadServerNames.size(), stringArraySchema);
       for (String deadServerName : deadServerNames) {
 	adeadServerNames.add(new Utf8(deadServerName));
       }
     } else {
-      adeadServerNames = new GenericData.Array<Utf8>(0, stringArraySchema);
+      adeadServerNames = new GenericData.Array<CharSequence>(0, stringArraySchema);
     }
     acs.deadServerNames = adeadServerNames;
     acs.deadServers = cs.getDeadServers();
