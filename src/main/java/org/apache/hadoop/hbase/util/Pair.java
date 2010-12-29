@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.Serializable;
+import java.lang.reflect.Array;
 
 /**
  * A generic class for pairs.
@@ -87,9 +88,35 @@ public class Pair<T1, T2> implements Serializable
     return second;
   }
 
-  private static boolean equals(Object x, Object y)
-  {
-     return (x == null && y == null) || (x != null && x.equals(y));
+  private static boolean equals(Object x, Object y) {
+    if (x == null && y == null)
+      return true;
+
+    if (x != null && y != null) {
+      if (x.getClass().equals(y.getClass())) {
+        if (x.getClass().isArray() && y.getClass().isArray()) {
+
+          int len = Array.getLength(x) == Array.getLength(y) ? Array
+              .getLength(x) : -1;
+          if (len < 0)
+            return false;
+
+          for (int i = 0; i < len; i++) {
+
+            Object xi = Array.get(x, i);
+            Object yi = Array.get(y, i);
+
+            if (!xi.equals(yi))
+              return false;
+          }
+          return true;
+        } else {
+          return x.equals(y);
+        }
+      }
+    }
+    return false;
+
   }
 
   @Override
