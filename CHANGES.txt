@@ -413,6 +413,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7038. saveVersion script includes an additional \r while running
     whoami under windows. (Wang Xu via cos)
 
+    HADOOP-7082. Configuration.writeXML should not hold lock while outputting
+    (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
