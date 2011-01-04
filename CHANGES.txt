@@ -1993,6 +1993,8 @@ Release 0.20.3 - Unreleased
     comparators in initializers, which are no longer automatically run
     in Java 6 when a class is referenced. (cutting via omalley)
 
+    HADOOP-7072. Remove java5 dependencies from build. (cos)
+
 Release 0.20.2 - 2010-2-16
 
   NEW FEATURES
