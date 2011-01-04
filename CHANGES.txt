@@ -1297,6 +1297,7 @@ Release 0.90.0 - Unreleased
    HBASE-2467  Concurrent flushers in HLog sync using HDFS-895
    HBASE-3349  Pass HBase configuration to HttpServer
    HBASE-3372  HRS shouldn't print a full stack for ServerNotRunningException
+   HBASE-3392  Update backport of InputSampler to reflect MAPREDUCE-1820
 
 
   NEW FEATURES
