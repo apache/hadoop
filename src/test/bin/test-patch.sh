@@ -26,7 +26,7 @@ parseArgs() {
     HUDSON)
       ### Set HUDSON to true to indicate that this script is being run by Hudson
       HUDSON=true
-      if [[ $# != 18 ]] ; then
+      if [[ $# != 17 ]] ; then
         echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <JIRA_PASSWD> <CURL_CMD> <DEFECT> "
         cleanupAndExit 0
       fi
@@ -44,8 +44,8 @@ parseArgs() {
       PYTHON_HOME=${13}
       BASEDIR=${14}
       JIRA_PASSWD=${15}
-      CURL=${17}
-      defect=${18}
+      CURL=${16}
+      defect=${17}
 		
       ### Retrieve the defect number
       if [ -z "$defect" ] ; then
@@ -63,7 +63,7 @@ parseArgs() {
     DEVELOPER)
       ### Set HUDSON to false to indicate that this script is being run by a developer
       HUDSON=false
-      if [[ $# != 10 ]] ; then
+      if [[ $# != 9 ]] ; then
         echo "ERROR: usage $0 DEVELOPER <PATCH_FILE> <SCRATCH_DIR> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <WORKSPACE_BASEDIR>"
         cleanupAndExit 0
       fi
