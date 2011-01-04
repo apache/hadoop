@@ -811,6 +811,7 @@ Release 0.90.0 - Unreleased
                doing rolling-restart.sh
    HBASE-3383  [0.90RC1] bin/hbase script displays "no such file" warning on
                target/cached_classpath.txt
+   HBASE-3344  Master aborts after RPC to server that was shutting down
 
 
   IMPROVEMENTS

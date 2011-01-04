@@ -1122,6 +1122,10 @@ public class AssignmentManager extends ZooKeeperListener {
         // Failed to close, so pass through and reassign
         LOG.debug("Server " + server + " returned " + ioe + " for " +
           region.getEncodedName());
+      } else if (ioe instanceof EOFException) {
+        // Failed to close, so pass through and reassign
+        LOG.debug("Server " + server + " returned " + ioe + " for " +
+          region.getEncodedName());
       } else {
         this.master.abort("Remote unexpected exception", ioe);
       }
