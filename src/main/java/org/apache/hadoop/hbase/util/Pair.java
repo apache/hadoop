@@ -51,7 +51,19 @@ public class Pair<T1, T2> implements Serializable
     this.first = a;
     this.second = b;
   }
-
+  
+  /**
+   * Constructs a new pair, inferring the type via the passed arguments
+   * @param <T1> type for first
+   * @param <T2> type for second
+   * @param a first element
+   * @param b second element
+   * @return a new pair containing the passed arguments
+   */
+  public static <T1,T2> Pair<T1,T2> newPair(T1 a, T2 b) {
+    return new Pair<T1,T2>(a, b);
+  }
+  
   /**
    * Replace the first element of the pair.
    * @param a operand
