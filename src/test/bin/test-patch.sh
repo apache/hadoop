@@ -24,8 +24,8 @@ parseArgs() {
     HUDSON)
       ### Set HUDSON to true to indicate that this script is being run by Hudson
       HUDSON=true
-      if [[ $# != 19 ]] ; then
-        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <TRIGGER_BUILD> <JIRA_PASSWD> <JAVA5_HOME> <CURL_CMD> <DEFECT> "
+      if [[ $# != 18 ]] ; then
+        echo "ERROR: usage $0 HUDSON <PATCH_DIR> <SUPPORT_DIR> <PS_CMD> <WGET_CMD> <JIRACLI> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <ECLIPSE_HOME> <PYTHON_HOME> <WORKSPACE_BASEDIR> <TRIGGER_BUILD> <JIRA_PASSWD> <CURL_CMD> <DEFECT> "
         cleanupAndExit 0
       fi
       PATCH_DIR=$2
@@ -43,9 +43,8 @@ parseArgs() {
       BASEDIR=${14}
       TRIGGER_BUILD_URL=${15}
       JIRA_PASSWD=${16}
-      JAVA5_HOME=${17}
-      CURL=${18}
-      defect=${19}
+      CURL=${17}
+      defect=${18}
 		
       ### Retrieve the defect number
       if [ -z "$defect" ] ; then
@@ -63,8 +62,8 @@ parseArgs() {
     DEVELOPER)
       ### Set HUDSON to false to indicate that this script is being run by a developer
       HUDSON=false
-      if [[ $# != 10 ]] ; then
-        echo "ERROR: usage $0 DEVELOPER <PATCH_FILE> <SCRATCH_DIR> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <WORKSPACE_BASEDIR> <JAVA5_HOME>"
+      if [[ $# != 9 ]] ; then
+        echo "ERROR: usage $0 DEVELOPER <PATCH_FILE> <SCRATCH_DIR> <SVN_CMD> <GREP_CMD> <PATCH_CMD> <FINDBUGS_HOME> <FORREST_HOME> <WORKSPACE_BASEDIR>"
         cleanupAndExit 0
       fi
       ### PATCH_FILE contains the location of the patchfile
@@ -90,7 +89,6 @@ parseArgs() {
       FINDBUGS_HOME=$7
       FORREST_HOME=$8
       BASEDIR=$9
-      JAVA5_HOME=${10}
       ### Obtain the patch filename to append it to the version number
       defect=`basename $PATCH_FILE` 
       ;;
@@ -173,16 +171,16 @@ setup () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/trunkReleaseAuditWarnings.txt 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/trunkReleaseAuditWarnings.txt 2>&1
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/trunkReleaseAuditWarnings.txt 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/trunkReleaseAuditWarnings.txt 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     echo "Trunk compilation is broken?"
     cleanupAndExit 1
   fi
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs > /dev/null 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs > /dev/null 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs > /dev/null 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs > /dev/null 2>&1
   if [[ $? != 0 ]] ; then
     echo "Trunk findbugs is broken?"
     cleanupAndExit 1
@@ -328,8 +326,8 @@ checkJavacWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/patchJavacWarnings.txt 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/patchJavacWarnings.txt 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djavac.args="-Xlint -Xmaxwarns 1000" $ECLIPSE_PROPERTY -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= clean tar > $PATCH_DIR/patchJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -368,8 +366,8 @@ checkReleaseAuditWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/patchReleaseAuditWarnings.txt 2>&1"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/patchReleaseAuditWarnings.txt 2>&1
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/patchReleaseAuditWarnings.txt 2>&1"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= releaseaudit > $PATCH_DIR/patchReleaseAuditWarnings.txt 2>&1
 
   ### Compare trunk and patch release audit warning numbers
   if [[ -f $PATCH_DIR/patchReleaseAuditWarnings.txt ]] ; then
@@ -446,8 +444,8 @@ checkFindbugsWarnings () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Djava5.home=${JAVA5_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -505,8 +503,12 @@ runCoreTests () {
      PreTestTarget="create-c++-configure"
   fi
 
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME -Djava5.home=$JAVA5_HOME $PreTestTarget test-core"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME -Djava5.home=$JAVA5_HOME $PreTestTarget test-core
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME $PreTestTarget test-core"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME $PreTestTarget test-core
+=======
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME $PreTestTarget test-core"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=no -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME  $PreTestTarget test-core
+>>>>>>> .merge-right.r1054848
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -614,8 +616,8 @@ checkInjectSystemFaults () {
   ### Kill any rogue build processes from the last attempt
   $PS auxwww | $GREP HadoopPatchProcess | /usr/bin/nawk '{print $2}' | /usr/bin/xargs -t -I {} /usr/bin/kill -9 {} > /dev/null
 
-  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME -Djava5.home=$JAVA5_HOME inject-system-faults"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME -Djava5.home=$JAVA5_HOME inject-system-faults
+  echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME inject-system-faults"
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -DHadoopPatchProcess= -Dtest.junit.output.format=xml -Dtest.output=yes -Dcompile.c++=yes -Dforrest.home=$FORREST_HOME inject-system-faults
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
