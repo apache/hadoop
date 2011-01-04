@@ -193,6 +193,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-6298. Add copyBytes to Text and BytesWritable. (omalley)
 
+    HADOOP-6578. Configuration should trim whitespace around a lot of value
+    types. (Michele Catasta via eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
