@@ -249,6 +249,9 @@ Release 0.22.0 - Unreleased
     HADOOP-6864. Provide a JNI-based implementation of ShellBasedUnixGroupsNetgroupMapping 
     (implementation of GroupMappingServiceProvider) (Erik Seffl via boryas)
 
+    HADOOP-6578. Configuration should trim whitespace around a lot of value
+    types. (Michele Catasta via eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
