@@ -196,6 +196,9 @@ public class MasterFileSystem {
         splitter.splitLog();
       } catch (OrphanHLogAfterSplitException e) {
         LOG.warn("Retrying splitting because of:", e);
+        // An HLogSplitter instance can only be used once.  Get new instance.
+        splitter = HLogSplitter.createLogSplitter(conf, rootdir, logDir,
+          oldLogDir, this.fs);
         splitter.splitLog();
       }
       splitTime = splitter.getTime();
