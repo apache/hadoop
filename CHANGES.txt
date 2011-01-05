@@ -815,6 +815,7 @@ Release 0.90.0 - Unreleased
    HBASE-3408  AssignmentManager NullPointerException
    HBASE-3402  Web UI shows two META regions
    HBASE-3409  Failed server shutdown processing when retrying hlog split
+   HBASE-3412  HLogSplitter should handle missing HLogs
 
 
   IMPROVEMENTS

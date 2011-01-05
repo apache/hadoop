@@ -36,10 +36,12 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.io.SequenceFile;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -649,6 +651,11 @@ public class FSUtils {
           } catch (InterruptedException ex) {
             // ignore it and try again
           }
+        } else if (e instanceof LeaseExpiredException &&
+            e.getMessage().contains("File does not exist")) {
+          // This exception comes out instead of FNFE, fix it
+          throw new FileNotFoundException(
+              "The given HLog wasn't found at " + p.toString());
         } else {
           throw new IOException("Failed to open " + p + " for append", e);
         }

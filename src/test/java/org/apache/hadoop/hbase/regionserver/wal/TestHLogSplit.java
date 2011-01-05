@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -670,6 +671,33 @@ public class TestHLogSplit {
       fail("Didn't throw!");
     } catch (IOException ioe) {
       assertTrue(ioe.toString().contains("Injected"));
+    }
+  }
+
+  // Test for HBASE-3412
+  @Test
+  public void testMovedHLogDuringRecovery() throws Exception {
+    generateHLogs(-1);
+
+    fs.initialize(fs.getUri(), conf);
+
+    // This partial mock will throw LEE for every file simulating
+    // files that were moved
+    FileSystem spiedFs = Mockito.spy(fs);
+    // The "File does not exist" part is very important,
+    // that's how it comes out of HDFS
+    Mockito.doThrow(new LeaseExpiredException("Injected: File does not exist")).
+        when(spiedFs).append(Mockito.<Path>any());
+
+    HLogSplitter logSplitter = new HLogSplitter(
+        conf, hbaseDir, hlogDir, oldLogDir, spiedFs);
+
+    try {
+      logSplitter.splitLog();
+      assertEquals(NUM_WRITERS, fs.listStatus(oldLogDir).length);
+      assertFalse(fs.exists(hlogDir));
+    } catch (IOException e) {
+      fail("There shouldn't be any exception but: " + e.toString());
     }
   }
   

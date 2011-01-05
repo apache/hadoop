@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.apache.hadoop.hbase.util.FSUtils.recoverFileLease;
 
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -262,7 +263,14 @@ public class HLogSplitter {
           processedLogs.add(logPath);
         } catch (EOFException eof) {
           // truncated files are expected if a RS crashes (see HBASE-2643)
-          LOG.info("EOF from hlog " + logPath + ".  continuing");
+          LOG.info("EOF from hlog " + logPath + ". Continuing");
+          processedLogs.add(logPath);
+        } catch (FileNotFoundException fnfe) {
+          // A file may be missing if the region server was able to archive it
+          // before shutting down. This means the edits were persisted already
+          LOG.info("A log was missing " + logPath +
+              ", probably because it was moved by the" +
+              " now dead region server. Continuing");
           processedLogs.add(logPath);
         } catch (IOException e) {
           // If the IOE resulted from bad file format,
