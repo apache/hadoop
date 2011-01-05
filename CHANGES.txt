@@ -1,6 +1,14 @@
 Hadoop Change Log
 
-Release 0.20.3 - Unreleased
+Release 0.20.4 - Unreleased
+
+  NEW FEATURES
+
+  BUG FIXES
+
+  IMPROVEMENTS
+
+Release 0.20.3 - 2011-1-5
 
   NEW FEATURES
 
