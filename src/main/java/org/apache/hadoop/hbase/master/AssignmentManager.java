@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.IOException;
 import java.io.EOFException;
+import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -1005,8 +1005,9 @@ public class AssignmentManager extends ZooKeeperListener {
     RegionPlan existingPlan = null;
     synchronized (this.regionPlans) {
       existingPlan = this.regionPlans.get(encodedName);
-      if (existingPlan == null || forceNewPlan ||
-          (existingPlan != null && existingPlan.getDestination().equals(serverToExclude))) {
+      if (forceNewPlan || existingPlan == null 
+              || existingPlan.getDestination() == null 
+              || existingPlan.getDestination().equals(serverToExclude)) {
         newPlan = true;
         this.regionPlans.put(encodedName, randomPlan);
       }
