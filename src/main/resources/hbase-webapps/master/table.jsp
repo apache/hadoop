@@ -100,7 +100,7 @@
   // NOTE: Presumes one meta region only.
   HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
   HServerAddress metaLocation = master.getCatalogTracker().getMetaLocation();
-  for (int i = 0; i <= 1; i++) {
+  for (int i = 0; i < 1; i++) {
     int infoPort = master.getServerManager().getHServerInfo(metaLocation).getInfoPort();
     String url = "http://" + metaLocation.getHostname() + ":" + infoPort + "/";
 %>

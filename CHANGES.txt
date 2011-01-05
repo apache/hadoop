@@ -813,6 +813,7 @@ Release 0.90.0 - Unreleased
                target/cached_classpath.txt
    HBASE-3344  Master aborts after RPC to server that was shutting down
    HBASE-3408  AssignmentManager NullPointerException
+   HBASE-3402  Web UI shows two META regions
 
 
   IMPROVEMENTS
