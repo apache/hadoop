@@ -8,6 +8,9 @@ Release 0.20.4 - Unreleased
 
   IMPROVEMENTS
 
+    MAPREDUCE-1734. Un-deprecate the old MapReduce API in the 0.20 branch.
+    (todd)
+
 Release 0.20.3 - 2011-1-5
 
   NEW FEATURES
@@ -88,9 +91,6 @@ Release 0.20.3 - 2011-1-5
     actual usage. (Benoit Sigoure via cdouglas)
 
     MAPREDUCE-1832. Allow file sizes less than 1MB in DFSIO benchmark. (shv)
-
-    MAPREDUCE-1734. Un-deprecate the old MapReduce API in the 0.20 branch.
-    (todd)
 
 Release 0.20.2 - 2010-2-19
 
