@@ -27,7 +27,6 @@ package org.apache.hadoop.mapred;
  * @see TaskID
  * @see TaskAttemptID
  */
-@Deprecated
 public abstract class ID extends org.apache.hadoop.mapreduce.ID {
 
   /** constructs an ID object from the given int */

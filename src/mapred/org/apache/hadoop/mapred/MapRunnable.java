@@ -27,9 +27,7 @@ import java.io.IOException;
  * control on map processing e.g. multi-threaded, asynchronous mappers etc.</p>
  * 
  * @see Mapper
- * @deprecated Use {@link org.apache.hadoop.mapreduce.Mapper} instead.
  */
-@Deprecated
 public interface MapRunnable<K1, V1, K2, V2>
     extends JobConfigurable {
   

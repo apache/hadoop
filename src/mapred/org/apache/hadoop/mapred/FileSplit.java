@@ -28,10 +28,7 @@ import org.apache.hadoop.fs.Path;
 /** A section of an input file.  Returned by {@link
  * InputFormat#getSplits(JobConf, int)} and passed to
  * {@link InputFormat#getRecordReader(InputSplit,JobConf,Reporter)}. 
- * @deprecated Use {@link org.apache.hadoop.mapreduce.lib.input.FileSplit}
- *  instead.
  */
-@Deprecated
 public class FileSplit extends org.apache.hadoop.mapreduce.InputSplit 
                        implements InputSplit {
   private Path file;

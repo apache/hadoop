@@ -160,9 +160,7 @@ import org.apache.hadoop.io.Closeable;
  * @see Partitioner
  * @see Reporter
  * @see MapReduceBase
- * @deprecated Use {@link org.apache.hadoop.mapreduce.Reducer} instead.
  */
-@Deprecated
 public interface Reducer<K2, V2, K3, V3> extends JobConfigurable, Closeable {
   
   /** 

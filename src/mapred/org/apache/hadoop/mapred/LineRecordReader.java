@@ -34,10 +34,7 @@ import org.apache.commons.logging.Log;
 
 /**
  * Treats keys as offset in file and value as line. 
- * @deprecated Use 
- *   {@link org.apache.hadoop.mapreduce.lib.input.LineRecordReader} instead.
  */
-@Deprecated
 public class LineRecordReader implements RecordReader<LongWritable, Text> {
   private static final Log LOG
     = LogFactory.getLog(LineRecordReader.class.getName());

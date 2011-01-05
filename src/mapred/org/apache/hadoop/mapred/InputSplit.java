@@ -31,9 +31,7 @@ import org.apache.hadoop.io.Writable;
  * 
  * @see InputFormat
  * @see RecordReader
- * @deprecated Use {@link org.apache.hadoop.mapreduce.InputSplit} instead.
  */
-@Deprecated
 public interface InputSplit extends Writable {
 
   /**

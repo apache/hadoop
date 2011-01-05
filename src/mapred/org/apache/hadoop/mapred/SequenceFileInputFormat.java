@@ -28,11 +28,7 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.MapFile;
 
 /** An {@link InputFormat} for {@link SequenceFile}s. 
- * @deprecated Use 
- *  {@link org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat} 
- *  instead.
  */
-@Deprecated
 public class SequenceFileInputFormat<K, V> extends FileInputFormat<K, V> {
 
   public SequenceFileInputFormat() {

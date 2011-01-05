@@ -43,7 +43,6 @@ import java.io.IOException;
  * @see JobID
  * @see TaskAttemptID
  */
-@Deprecated
 public class TaskID extends org.apache.hadoop.mapreduce.TaskID {
 
   /**

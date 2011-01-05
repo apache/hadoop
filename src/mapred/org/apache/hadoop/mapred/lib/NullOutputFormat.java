@@ -27,10 +27,7 @@ import org.apache.hadoop.util.Progressable;
 
 /**
  * Consume all outputs and put them in /dev/null. 
- * @deprecated Use 
- *   {@link org.apache.hadoop.mapreduce.lib.output.NullOutputFormat} instead.
  */
-@Deprecated
 public class NullOutputFormat<K, V> implements OutputFormat<K, V> {
   
   public RecordWriter<K, V> getRecordWriter(FileSystem ignored, JobConf job, 
