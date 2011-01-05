@@ -1567,11 +1567,13 @@ public class AssignmentManager extends ZooKeeperListener {
             // Expired!  Do a retry.
             switch (regionState.getState()) {
               case CLOSED:
-                LOG.info("Region has been CLOSED for too long, " +
-                    "retriggering ClosedRegionHandler");
-                AssignmentManager.this.executorService.submit(
-                    new ClosedRegionHandler(master, AssignmentManager.this,
-                        regionState.getRegion()));
+                LOG.info("Region " + regionInfo.getEncodedName() +
+                  " has been CLOSED for too long, waiting on queued " +
+                  "ClosedRegionHandler to run or server shutdown");
+                // Update our timestamp.
+                synchronized(regionState) {
+                  regionState.update(regionState.getState());
+                }
                 break;
               case OFFLINE:
                 LOG.info("Region has been OFFLINE for too long, " +

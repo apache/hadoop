@@ -816,6 +816,8 @@ Release 0.90.0 - Unreleased
    HBASE-3402  Web UI shows two META regions
    HBASE-3409  Failed server shutdown processing when retrying hlog split
    HBASE-3412  HLogSplitter should handle missing HLogs
+   HBASE-3420  Handling a big rebalance, we can queue multiple instances of
+               a Close event; messes up state
 
 
   IMPROVEMENTS
