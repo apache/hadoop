@@ -44,6 +44,7 @@ import java.lang.reflect.Method;
  *
  */
 public class HBaseRpcMetrics implements Updater {
+  public static final String NAME_DELIM = "$";
   private MetricsRecord metricsRecord;
   private static Log LOG = LogFactory.getLog(HBaseRpcMetrics.class);
   private final HBaseRPCStatistics rpcStatistics;
@@ -102,14 +103,44 @@ public class HBaseRpcMetrics implements Updater {
     m.inc(amt);
   }
 
-  public void createMetrics(Class<?> []ifaces) {
+  /**
+   * Generate metrics entries for all the methods defined in the list of
+   * interfaces.  A {@link MetricsTimeVaryingRate} counter will be created for
+   * each {@code Class.getMethods().getName()} entry.
+   * @param ifaces Define metrics for all methods in the given classes
+   */
+  public void createMetrics(Class<?>[] ifaces) {
+    createMetrics(ifaces, false);
+  }
+
+  /**
+   * Generate metrics entries for all the methods defined in the list of
+   * interfaces.  A {@link MetricsTimeVaryingRate} counter will be created for
+   * each {@code Class.getMethods().getName()} entry.
+   *
+   * <p>
+   * If {@code prefixWithClass} is {@code true}, each metric will be named as
+   * {@code [Class.getSimpleName()].[Method.getName()]}.  Otherwise each metric
+   * will just be named according to the method -- {@code Method.getName()}.
+   * </p>
+   * @param ifaces Define metrics for all methods in the given classes
+   * @param prefixWithClass If {@code true}, each metric will be named as
+   *     "classname.method"
+   */
+  public void createMetrics(Class<?>[] ifaces, boolean prefixWithClass) {
     for (Class<?> iface : ifaces) {
       Method[] methods = iface.getMethods();
       for (Method method : methods) {
-        if (get(method.getName()) == null)
-          create(method.getName());
+        String attrName = prefixWithClass ?
+            getMetricName(iface, method.getName()) : method.getName();
+        if (get(attrName) == null)
+          create(attrName);
       }
     }
+  }
+
+  public static String getMetricName(Class<?> c, String method) {
+    return c.getSimpleName() + NAME_DELIM + method;
   }
 
   /**
