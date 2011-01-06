@@ -360,6 +360,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7082. Configuration.writeXML should not hold lock while outputting
     (todd)
 
+    HADOOP-7070. JAAS configuration should delegate unknown application names
+    to pre-existing configuration. (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
