@@ -50,19 +50,24 @@ public class TestHBaseFsck {
     TEST_UTIL.startMiniCluster(3);
   }
 
-  @Test
-  public void testHBaseFsck() throws Exception {
+  private int doFsck(boolean fix) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf);
     fsck.displayFullReport();
     fsck.setTimeLag(0);
+    fsck.setFixErrors(fix);
     // Most basic check ever, 0 tables
-    int result = fsck.doWork();
+    return fsck.doWork();
+  }
+
+  @Test
+  public void testHBaseFsck() throws Exception {
+    int result = doFsck(false);
     assertEquals(0, result);
 
     TEST_UTIL.createTable(TABLE, FAM);
 
     // We created 1 table, should be fine
-    result = fsck.doWork();
+    result = doFsck(false);
     assertEquals(0, result);
 
     // Now let's mess it up and change the assignment in .META. to
@@ -92,14 +97,14 @@ public class TestHBaseFsck {
       }
     }
 
-    // We set this here, but it's really not fixing anything...
-    fsck.setFixErrors();
-    result = fsck.doWork();
-    // Fixed or not, it still reports inconsistencies
+    // Try to fix the data
+    result = doFsck(true);
     assertEquals(-1, result);
 
     Thread.sleep(15000);
-    // Disabled, won't work because the region stays unassigned, see HBASE-3217
-    // new HTable(conf, TABLE).getScanner(new Scan());
+    result = doFsck(false);
+    // Should have fixed
+    assertEquals(0, result);
+    new HTable(conf, TABLE).getScanner(new Scan());
   }
 }

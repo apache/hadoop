@@ -68,6 +68,7 @@ import com.google.common.collect.Lists;
  */
 public class HBaseFsck {
   public static final long DEFAULT_TIME_LAG = 60000; // default value of 1 minute
+  public static final long DEFAULT_SLEEP_BEFORE_RERUN = 10000;
 
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
   private Configuration conf;
@@ -898,8 +899,8 @@ public class HBaseFsck {
    * Fix inconsistencies found by fsck. This should try to fix errors (if any)
    * found by fsck utility.
    */
-  void setFixErrors() {
-    fix = true;
+  void setFixErrors(boolean shouldFix) {
+    fix = shouldFix;
   }
 
   boolean shouldFix() {
@@ -923,6 +924,8 @@ public class HBaseFsck {
                        " have not experienced any metadata updates in the last " +
                        " {{timeInSeconds} seconds.");
     System.err.println("   -fix Try to fix some of the errors.");
+    System.err.println("   -sleepBeforeRerun {timeInSeconds} Sleep this many seconds" +
+                       " before checking if the fix worked if run with -fix");
     System.err.println("   -summary Print only summary of the tables and status.");
 
     Runtime.getRuntime().exit(-2);
@@ -939,6 +942,7 @@ public class HBaseFsck {
     Configuration conf = HBaseConfiguration.create();
     conf.set("fs.defaultFS", conf.get("hbase.rootdir"));
     HBaseFsck fsck = new HBaseFsck(conf);
+    long sleepBeforeRerun = DEFAULT_SLEEP_BEFORE_RERUN;
 
     // Process command-line args.
     for (int i = 0; i < args.length; i++) {
@@ -958,8 +962,20 @@ public class HBaseFsck {
           printUsageAndExit();
         }
         i++;
+      } else if (cmd.equals("-sleepBeforeRerun")) {
+        if (i == args.length - 1) {
+          System.err.println("HBaseFsck: -sleepBeforeRerun needs a value.");
+          printUsageAndExit();
+        }
+        try {
+          sleepBeforeRerun = Long.parseLong(args[i+1]);
+        } catch (NumberFormatException e) {
+          System.err.println("-sleepBeforeRerun needs a numeric value.");
+          printUsageAndExit();
+        }
+        i++;
       } else if (cmd.equals("-fix")) {
-        fsck.setFixErrors();
+        fsck.setFixErrors(true);
       } else if (cmd.equals("-summary")) {
         fsck.setSummary();
       } else {
@@ -976,6 +992,14 @@ public class HBaseFsck {
     // We run it only once more because otherwise we can easily fall into
     // an infinite loop.
     if (fsck.shouldRerun()) {
+      try {
+        LOG.info("Sleeping " + sleepBeforeRerun + "ms before re-checking after fix...");
+        Thread.sleep(sleepBeforeRerun);
+      } catch (InterruptedException ie) {
+        Runtime.getRuntime().exit(code);
+      }
+      // Just report
+      fsck.setFixErrors(false);
       code = fsck.doWork();
     }
 

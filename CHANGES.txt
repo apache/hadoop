@@ -820,6 +820,7 @@ Release 0.90.0 - Unreleased
                a Close event; messes up state
    HBASE-3423  hbase-env.sh over-rides HBASE_OPTS incorrectly (Ted Dunning via
                Andrew Purtell)
+   HBASE-3407  hbck should pause between fixing and re-checking state
 
 
   IMPROVEMENTS
