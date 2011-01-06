@@ -31,6 +31,7 @@ import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -3086,6 +3087,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // combine and return
     results.addAll(fileResults);
+    Collections.sort(results, KeyValue.COMPARATOR);
     return results;
   }
 
