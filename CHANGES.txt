@@ -818,6 +818,8 @@ Release 0.90.0 - Unreleased
    HBASE-3412  HLogSplitter should handle missing HLogs
    HBASE-3420  Handling a big rebalance, we can queue multiple instances of
                a Close event; messes up state
+   HBASE-3423  hbase-env.sh over-rides HBASE_OPTS incorrectly (Ted Dunning via
+               Andrew Purtell)
 
 
   IMPROVEMENTS
