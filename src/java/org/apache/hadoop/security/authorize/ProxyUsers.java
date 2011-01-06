@@ -126,7 +126,9 @@ public class ProxyUsers {
     Collection<String> allowedUserGroups = proxyGroups.get(
         getProxySuperuserGroupConfKey(superUser.getShortUserName()));
     
-    if (allowedUserGroups != null && !allowedUserGroups.isEmpty()) {
+    if (isWildcardList(allowedUserGroups)) {
+      groupAuthorized = true;
+    } else if (allowedUserGroups != null && !allowedUserGroups.isEmpty()) {
       for (String group : user.getGroupNames()) {
         if (allowedUserGroups.contains(group)) {
           groupAuthorized = true;
@@ -142,8 +144,10 @@ public class ProxyUsers {
     
     Collection<String> ipList = proxyHosts.get(
         getProxySuperuserIpConfKey(superUser.getShortUserName()));
-    
-    if (ipList != null && !ipList.isEmpty()) {
+   
+    if (isWildcardList(ipList)) {
+      ipAuthorized = true;
+    } else if (ipList != null && !ipList.isEmpty()) {
       for (String allowedHost : ipList) {
         InetAddress hostAddr;
         try {
@@ -162,4 +166,15 @@ public class ProxyUsers {
           + superUser.getUserName() + " from IP " + remoteAddress);
     }
   }
+
+  /**
+   * Return true if the configuration specifies the special configuration value
+   * "*", indicating that any group or host list is allowed to use this configuration.
+   */
+  private static boolean isWildcardList(Collection<String> list) {
+    return (list != null) &&
+      (list.size() == 1) &&
+      (list.contains("*"));
+  }
+
 }

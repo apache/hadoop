@@ -39,6 +39,9 @@ Trunk (unreleased changes)
     HADOOP-7078. Improve javadocs for RawComparator interface.
     (Harsh J Chouraria via todd)
 
+    HADOOP-6995. Allow wildcards to be used in ProxyUsers configurations.
+    (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
