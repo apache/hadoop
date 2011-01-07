@@ -824,6 +824,7 @@ Release 0.90.0 - Unreleased
                Andrew Purtell)
    HBASE-3407  hbck should pause between fixing and re-checking state
    HBASE-3401  Region IPC operations should be high priority
+   HBASE-3430  hbase-daemon.sh should clean up PID files on process stop
 
 
   IMPROVEMENTS

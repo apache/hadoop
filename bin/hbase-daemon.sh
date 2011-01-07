@@ -164,6 +164,7 @@ case $startStop in
           echo -n "."
           sleep 1;
         done
+        rm $pid
         echo
       else
         retval=$?
