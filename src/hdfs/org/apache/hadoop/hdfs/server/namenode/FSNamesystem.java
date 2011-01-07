@@ -1051,7 +1051,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     try {
       INode myFile = dir.getFileINode(src);
-      recoverLeaseInternal(myFile, src, holder, clientMachine, false);
+      recoverLeaseInternal(myFile, src, holder, clientMachine);
 
       try {
         verifyReplication(src, replication, clientMachine);
@@ -1126,11 +1126,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
-   * Recover lease;
-   * Immediately revoke the lease of the current lease holder and start lease
-   * recovery so that the file can be forced to be closed.
+   * Trigger to recover lease;
+   * When the method returns successfully, the lease has been recovered and
+   * the file is closed.
    * 
-   * @param src the path of the file to start lease recovery
+   * @param src the path of the file to trigger release
    * @param holder the lease holder's name
    * @param clientMachine the client machine's name
    * @throws IOException
@@ -1154,11 +1154,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkPathAccess(src, FsAction.WRITE);
     }
 
-    recoverLeaseInternal(inode, src, holder, clientMachine, true);
+    recoverLeaseInternal(inode, src, holder, clientMachine);
   }
   
   private void recoverLeaseInternal(INode fileInode, 
-      String src, String holder, String clientMachine, boolean force)
+      String src, String holder, String clientMachine)
   throws IOException {
     if (fileInode != null && fileInode.isUnderConstruction()) {
       INodeFileUnderConstruction pendingFile = (INodeFileUnderConstruction) fileInode;
@@ -1171,7 +1171,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       // We found the lease for this file. And surprisingly the original
       // holder is trying to recreate this file. This should never occur.
       //
-      if (!force && lease != null) {
+      if (lease != null) {
         Lease leaseFile = leaseManager.getLeaseByPath(src);
         if (leaseFile != null && leaseFile.equals(lease)) { 
           throw new AlreadyBeingCreatedException(
@@ -1190,29 +1190,21 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                     " on client " + clientMachine + 
                     " because pendingCreates is non-null but no leases found.");
       }
-      if (force) {
-        // close now: no need to wait for soft lease expiration and 
-        // close only the file src
-        LOG.info("recoverLease: recover lease " + lease + ", src=" + src +
+      //
+      // If the original holder has not renewed in the last SOFTLIMIT 
+      // period, then start lease recovery.
+      //
+      if (lease.expiredSoftLimit()) {
+        LOG.info("startFile: recover lease " + lease + ", src=" + src +
                  " from client " + pendingFile.clientName);
-        internalReleaseLeaseOne(lease, src);
-      } else {
-        //
-        // If the original holder has not renewed in the last SOFTLIMIT 
-        // period, then start lease recovery.
-        //
-        if (lease.expiredSoftLimit()) {
-          LOG.info("startFile: recover lease " + lease + ", src=" + src +
-              " from client " + pendingFile.clientName);
-          internalReleaseLease(lease, src);
-        }
-        throw new AlreadyBeingCreatedException(
-            "failed to create file " + src + " for " + holder +
-            " on client " + clientMachine + 
-            ", because this file is already being created by " +
-            pendingFile.getClientName() + 
-            " on " + pendingFile.getClientMachine());
+        internalReleaseLease(lease, src);
       }
+      throw new AlreadyBeingCreatedException(
+                    "failed to create file " + src + " for " + holder +
+                    " on client " + clientMachine + 
+                    ", because this file is already being created by " +
+                    pendingFile.getClientName() + 
+                    " on " + pendingFile.getClientMachine());
     }
 
   }
@@ -4856,12 +4848,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   /**
    * Verifies that the block is associated with a file that has a lease.
    * Increments, logs and then returns the stamp
-   *
-   * @param block block
-   * @param fromNN if it is for lease recovery initiated by NameNode
-   * @return a new generation stamp
-   */  
-  synchronized long nextGenerationStampForBlock(Block block, boolean fromNN) throws IOException {
+   */
+  synchronized long nextGenerationStampForBlock(Block block) throws IOException {
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot get nextGenStamp for " + block, safeMode);
     }
@@ -4874,15 +4862,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     INodeFile fileINode = storedBlock.getINode();
     if (!fileINode.isUnderConstruction()) {
       String msg = block + " is already commited, !fileINode.isUnderConstruction().";
-      LOG.info(msg);
-      throw new IOException(msg);
-    }
-    // Disallow client-initiated recovery once
-    // NameNode initiated lease recovery starts
-    if (!fromNN && HdfsConstants.NN_RECOVERY_LEASEHOLDER.equals(
-        leaseManager.getLeaseByPath(FSDirectory.getFullPathName(fileINode)).getHolder())) {
-      String msg = block +
-        "is being recovered by NameNode, ignoring the request from a client";
       LOG.info(msg);
       throw new IOException(msg);
     }

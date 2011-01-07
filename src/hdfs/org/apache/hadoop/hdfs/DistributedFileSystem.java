@@ -180,8 +180,7 @@ public class DistributedFileSystem extends FileSystem {
   }
 
   /** 
-   * Start the lease reovery of a file
-   *
+   * Trigger the lease reovery of a file
    * @param f a file
    * @throws IOException if an error occurs
    */

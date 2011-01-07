@@ -1574,7 +1574,7 @@ public class DataNode extends Configured
 
     List<DatanodeID> successList = new ArrayList<DatanodeID>();
 
-    long generationstamp = namenode.nextGenerationStamp(block, closeFile);
+    long generationstamp = namenode.nextGenerationStamp(block);
     Block newblock = new Block(block.getBlockId(), block.getNumBytes(), generationstamp);
 
     for(BlockRecord r : syncList) {
