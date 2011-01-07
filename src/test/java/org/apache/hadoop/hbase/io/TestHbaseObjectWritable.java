@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.TestCase;
@@ -122,6 +123,20 @@ public class TestHbaseObjectWritable extends TestCase {
     assertEquals("mykey", ((CustomFilter)child).getKey());
   }
   
+  public void testCustomWritableArray() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+
+    // test proper serialization of un-encoded custom writables
+    CustomWritable custom1 = new CustomWritable("test phrase");
+    CustomWritable custom2 = new CustomWritable("test phrase2");
+    CustomWritable[] customs = {custom1, custom2};
+    Object obj = doType(conf, customs, CustomWritable[].class);
+    
+    assertTrue("Arrays should match " + Arrays.toString(customs) + ", "
+               + Arrays.toString((Object[]) obj),
+               Arrays.equals(customs, (Object[])obj));
+  }
+  
   public void testCustomSerializable() throws Exception {
     Configuration conf = HBaseConfiguration.create();
 
@@ -131,6 +146,20 @@ public class TestHbaseObjectWritable extends TestCase {
     assertTrue(obj instanceof Serializable);
     assertTrue(obj instanceof CustomSerializable);
     assertEquals("test phrase", ((CustomSerializable)obj).getValue());
+  }
+  
+  
+  public void testCustomSerializableArray() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+
+    // test proper serialization of un-encoded serialized java objects
+    CustomSerializable custom1 = new CustomSerializable("test phrase");
+    CustomSerializable custom2 = new CustomSerializable("test phrase2");
+    CustomSerializable[] custom = {custom1, custom2};
+    Object obj = doType(conf, custom, CustomSerializable[].class);
+    assertTrue("Arrays should match " + Arrays.toString(custom) + ", "
+                   + Arrays.toString((Object[]) obj),
+               Arrays.equals(custom, (Object[]) obj));
   }
 
   private Object doType(final Configuration conf, final Object value,
@@ -149,7 +178,7 @@ public class TestHbaseObjectWritable extends TestCase {
   }
   
   public static class CustomSerializable implements Serializable {
-    private static final long serialVersionUID = 1048445561865740632L;
+    private static final long serialVersionUID = 1048445561865740633L;
     private String value = null;
     
     public CustomSerializable() {
@@ -165,6 +194,21 @@ public class TestHbaseObjectWritable extends TestCase {
     
     public void setValue(String value) {
       this.value = value;
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+      return (obj instanceof CustomSerializable) && ((CustomSerializable)obj).value.equals(value);
+    }
+    
+    @Override
+    public int hashCode() {
+      return value.hashCode();
+    }
+    
+    @Override
+    public String toString() {
+      return "<" + value + ">";
     }
     
   }
@@ -189,6 +233,21 @@ public class TestHbaseObjectWritable extends TestCase {
     @Override
     public void readFields(DataInput in) throws IOException {
       this.value = Text.readString(in);
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+      return (obj instanceof CustomWritable) && ((CustomWritable)obj).value.equals(value);
+    }
+    
+    @Override
+    public int hashCode() {
+      return value.hashCode();
+    }
+    
+    @Override
+    public String toString() {
+      return "<" + value + ">";
     }
   }
 
