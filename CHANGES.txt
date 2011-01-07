@@ -91,6 +91,9 @@ Release 0.20-append - Unreleased
     HDFS-724.  Use a bidirectional heartbeat to detect stuck
     pipeline. (hairong)
 
+    HDFS-1555. Disallow pipelien recovery if a file is already being
+    lease recovered. (hairong)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES

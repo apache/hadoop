@@ -124,8 +124,9 @@ public interface ClientProtocol extends VersionedProtocol {
   public LocatedBlock append(String src, String clientName) throws IOException;
   
   /**
-   * Trigger lease recovery to happen
-   * @param src path of the file to trigger lease recovery
+   * Start lease recovery
+   * 
+   * @param src path of the file to start lease recovery
    * @param clientName name of the current client
    * @throws IOException
    */

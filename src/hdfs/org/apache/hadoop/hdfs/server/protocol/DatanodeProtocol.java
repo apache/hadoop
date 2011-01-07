@@ -35,10 +35,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 19: SendHeartbeat returns an array of DatanodeCommand objects
-   *     in stead of a DatanodeCommand object.
+   * 20: nextGenerationStamp has a new parameter indicating if it is for
+   * NameNode initiated lease recovery or not
    */
-  public static final long versionID = 19L;
+  public static final long versionID = 20L;
   
   // error code
   final static int NOTIFY = 0;
@@ -142,10 +142,14 @@ public interface DatanodeProtocol extends VersionedProtocol {
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException;
   
   /**
-   * @return the next GenerationStamp to be associated with the specified
-   * block. 
+   * Get the next GenerationStamp to be associated with the specified
+   * block.
+   * 
+   * @param block block
+   * @param fromNN if it is for lease recovery initiated by NameNode
+   * @return a new generation stamp
    */
-  public long nextGenerationStamp(Block block) throws IOException;
+  public long nextGenerationStamp(Block block, boolean fromNN) throws IOException;
 
   /**
    * Commit block synchronization in lease recovery
