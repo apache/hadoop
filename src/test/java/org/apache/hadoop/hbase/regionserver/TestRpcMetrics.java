@@ -104,10 +104,13 @@ public class TestRpcMetrics {
     MetricsContext ctx = MetricsUtil.getContext("rpc");
     assertTrue("Wrong MetricContext implementation class",
         (ctx instanceof MockMetricsContext));
+
+    TEST_UTIL.startMiniZKCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniZKCluster();
   }
 
   @Test
