@@ -84,7 +84,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Classes;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.ObjectWritable;
 import org.apache.hadoop.io.Text;
@@ -383,9 +382,7 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       declClass = Writable.class;
     }
     writeClassCode(out, declClass);
-    // used to just be arrays. Now check for ones for which there's a
-    // class code, and let the others get scooped up by serializable.
-    if (declClass.isArray() && CLASS_TO_CODE.get(declClass)!=null) {   // array
+    if (declClass.isArray()) {                // array
       // If bytearray, just dump it out -- avoid the recursion and
       // byte-at-a-time we were previously doing.
       if (declClass.equals(byte [].class)) {
@@ -452,27 +449,18 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
       } else {
         writeClassCode(out, c);
       }
-      if(declClass.isArray()){
-        int length = Array.getLength(instanceObj);
-        out.writeInt(length);
-        for (int i = 0; i < length; i++) {
-          writeObject(out, Array.get(instanceObj, i),
-                    declClass.getComponentType(), conf);
-        }
-      } else {
-        ByteArrayOutputStream bos = null;
-        ObjectOutputStream oos = null;
-        try{
-          bos = new ByteArrayOutputStream();
-          oos = new ObjectOutputStream(bos);
-          oos.writeObject(instanceObj);
-          byte[] value = bos.toByteArray();
-          out.writeInt(value.length);
-          out.write(value);
-        } finally {
-          if(bos!=null) bos.close();
-          if(oos!=null) oos.close();
-        }
+      ByteArrayOutputStream bos = null;
+      ObjectOutputStream oos = null;
+      try{
+        bos = new ByteArrayOutputStream();
+        oos = new ObjectOutputStream(bos);
+        oos.writeObject(instanceObj);
+        byte[] value = bos.toByteArray();
+        out.writeInt(value.length);
+        out.write(value);
+      } finally {
+        if(bos!=null) bos.close();
+        if(oos!=null) oos.close();
       }
     } else {
       throw new IOException("Can't write: "+instanceObj+" as "+declClass);
@@ -581,29 +569,21 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
           instance = null;
         }
       } else {
-        if(instanceClass.isArray()){
-          int length = in.readInt();
-          instance = Array.newInstance(instanceClass.getComponentType(), length);
-          for(int i = 0; i< length; i++){
-            Array.set(instance, i, HbaseObjectWritable.readObject(in, conf));
-          }
-        } else {
-          int length = in.readInt();
-          byte[] objectBytes = new byte[length];
-          in.readFully(objectBytes);
-          ByteArrayInputStream bis = null;
-          ObjectInputStream ois = null;
-          try { 
-            bis = new ByteArrayInputStream(objectBytes);
-            ois = new ObjectInputStream(bis);
-            instance = ois.readObject();
-          } catch (ClassNotFoundException e) {
-            LOG.error("Error in readFields", e);
-            throw new IOException("Error in readFields", e);
-          } finally {
-            if(bis!=null) bis.close();
-            if(ois!=null) ois.close();
-          }
+        int length = in.readInt();
+        byte[] objectBytes = new byte[length];
+        in.readFully(objectBytes);
+        ByteArrayInputStream bis = null;
+        ObjectInputStream ois = null;
+        try { 
+          bis = new ByteArrayInputStream(objectBytes);
+          ois = new ObjectInputStream(bis);
+          instance = ois.readObject();
+        } catch (ClassNotFoundException e) {
+          LOG.error("Error in readFields", e);
+          throw new IOException("Error in readFields", e);
+        } finally {
+          if(bis!=null) bis.close();
+          if(ois!=null) ois.close();
         }
       }
     }
