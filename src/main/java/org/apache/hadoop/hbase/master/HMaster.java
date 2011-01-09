@@ -741,6 +741,16 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return oldValue;
   }
 
+  /**
+   * Switch for the background {@link CatalogJanitor} thread.
+   * Used for testing.  The thread will continue to run.  It will just be a noop
+   * if disabled.
+   * @param b If false, the catalog janitor won't do anything.
+   */
+  public void setCatalogJanitorEnabled(final boolean b) {
+    ((CatalogJanitor)this.catalogJanitorChore).setEnabled(b);
+  }
+
   @Override
   public void move(final byte[] encodedRegionName, final byte[] destServerName)
   throws UnknownRegionException {

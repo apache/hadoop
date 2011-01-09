@@ -77,10 +77,6 @@ public class MetaEditor {
     copyOfParent.setSplit(true);
     Put put = new Put(copyOfParent.getRegionName());
     addRegionInfo(put, copyOfParent);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
-        HConstants.EMPTY_BYTE_ARRAY);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
-        HConstants.EMPTY_BYTE_ARRAY);
     put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER,
       Writables.getBytes(a));
     put.add(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER,

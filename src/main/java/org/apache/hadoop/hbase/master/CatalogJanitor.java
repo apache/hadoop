@@ -51,6 +51,7 @@ class CatalogJanitor extends Chore {
   private static final Log LOG = LogFactory.getLog(CatalogJanitor.class.getName());
   private final Server server;
   private final MasterServices services;
+  private boolean enabled = true;
 
   CatalogJanitor(final Server server, final MasterServices services) {
     super(server.getServerName() + "-CatalogJanitor",
@@ -63,12 +64,19 @@ class CatalogJanitor extends Chore {
   @Override
   protected boolean initialChore() {
     try {
-      scan();
+      if (this.enabled) scan();
     } catch (IOException e) {
       LOG.warn("Failed initial scan of catalog table", e);
       return false;
     }
     return true;
+  }
+
+  /**
+   * @param enabled
+   */
+  public void setEnabled(final boolean enabled) {
+    this.enabled = enabled;
   }
 
   @Override

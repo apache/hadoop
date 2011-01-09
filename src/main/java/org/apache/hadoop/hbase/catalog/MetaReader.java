@@ -234,9 +234,28 @@ public class MetaReader {
   public static void fullScan(CatalogTracker catalogTracker,
       final Visitor visitor)
   throws IOException {
+    fullScan(catalogTracker, visitor, null);
+  }
+
+  /**
+   * Performs a full scan of <code>.META.</code>.
+   * <p>
+   * Returns a map of every region to it's currently assigned server, according
+   * to META.  If the region does not have an assignment it will have a null
+   * value in the map.
+   * @param catalogTracker
+   * @param visitor
+   * @param startrow Where to start the scan. Pass null if want to begin scan
+   * at first row.
+   * @throws IOException
+   */
+  public static void fullScan(CatalogTracker catalogTracker,
+      final Visitor visitor, final byte [] startrow)
+  throws IOException {
     HRegionInterface metaServer =
       catalogTracker.waitForMetaServerConnectionDefault();
     Scan scan = new Scan();
+    if (startrow != null) scan.setStartRow(startrow);
     scan.addFamily(HConstants.CATALOG_FAMILY);
     long scannerid = metaServer.openScanner(
         HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), scan);
