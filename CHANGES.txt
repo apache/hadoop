@@ -94,6 +94,8 @@ Release 0.20-append - Unreleased
     HDFS-1555. Disallow pipelien recovery if a file is already being
     lease recovered. (hairong)
 
+    HDFS-1554. New semantics for recoverLease. (hairong)
+
 Release 0.20.3 - Unreleased
 
   NEW FEATURES

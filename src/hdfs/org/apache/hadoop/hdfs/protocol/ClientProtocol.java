@@ -40,9 +40,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 42: Introduce a lightweight recoverLease RPC
+   * 43: recoverLease return if the file is closed or not
    */
-  public static final long versionID = 42L;
+  public static final long versionID = 43L;
   
   ///////////////////////////////////////
   // File contents
@@ -124,12 +124,14 @@ public interface ClientProtocol extends VersionedProtocol {
   public LocatedBlock append(String src, String clientName) throws IOException;
   
   /**
-   * Trigger lease recovery to happen
-   * @param src path of the file to trigger lease recovery
+   * Start lease recovery
+   * 
+   * @param src path of the file to start lease recovery
    * @param clientName name of the current client
+   * @return true if the file is already closed
    * @throws IOException
    */
-  public void recoverLease(String src, String clientName) throws IOException;
+  public boolean recoverLease(String src, String clientName) throws IOException;
 
   /**
    * Set replication for an existing file.
