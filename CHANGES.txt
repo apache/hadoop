@@ -47,6 +47,7 @@ Release 0.91.0 - Unreleased
                (Jesse Yates via Stack)
    HBASE-3393  Update Avro gateway to use Avro 1.4.1 and the new
                server.join() method (Jeff Hammerbacher via Stack)
+   HBASE-3437  Support Explict Split Points from the Shell
 
 
   NEW FEATURES
