@@ -56,9 +56,6 @@ Trunk (unreleased changes)
     HADOOP-6939. Inconsistent lock ordering in
     AbstractDelegationTokenSecretManager. (Todd Lipcon via tomwhite)
 
-    HADOOP-7091. reloginFromKeytab() should happen even if TGT can't be found.
-    (Kan Zhang via jghoman)
-
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
@@ -429,6 +426,9 @@ Release 0.22.0 - Unreleased
     to pre-existing configuration. (todd)
 
     HADOOP-7087. SequenceFile.createWriter ignores FileSystem parameter (todd)
+
+    HADOOP-7091. reloginFromKeytab() should happen even if TGT can't be found.
+    (Kan Zhang via jghoman)
 
 Release 0.21.1 - Unreleased
 
