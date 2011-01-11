@@ -526,7 +526,7 @@ public class UserGroupInformation {
    * Get the Kerberos TGT
    * @return the user's TGT or null if none was found
    */
-  private KerberosTicket getTGT() {
+  private synchronized KerberosTicket getTGT() {
     Set<KerberosTicket> tickets = subject
         .getPrivateCredentials(KerberosTicket.class);
     for (KerberosTicket ticket : tickets) {
@@ -657,12 +657,14 @@ public class UserGroupInformation {
          !isKeytab)
       return;
     
-    KerberosTicket tgt = getTGT();
-    if (tgt == null) {
+    long now = System.currentTimeMillis();
+    if (!hasSufficientTimeElapsed(now)) {
       return;
     }
+
+    KerberosTicket tgt = getTGT();
     //Return if TGT is valid and is not going to expire soon.
-    if (System.currentTimeMillis() < getRefreshTime(tgt)) {
+    if (tgt != null && now < getRefreshTime(tgt)) {
       return;
     }
     
@@ -670,7 +672,6 @@ public class UserGroupInformation {
     if (login == null || keytabFile == null) {
       throw new IOException("loginUserFromKeyTab must be done first");
     }
-    long now = System.currentTimeMillis();
     
     long start = 0;
     // register most recent relogin attempt
