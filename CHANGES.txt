@@ -363,6 +363,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7070. JAAS configuration should delegate unknown application names
     to pre-existing configuration. (todd)
 
+    HADOOP-7087. SequenceFile.createWriter ignores FileSystem parameter (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
