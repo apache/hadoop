@@ -1059,6 +1059,11 @@ public class HBaseAdmin implements Abortable {
     split(tableNameOrRegionName, null);
   }
 
+  public void split(final String tableNameOrRegionName,
+    final String splitPoint) throws IOException, InterruptedException {
+    split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
+  }
+
   /**
    * Split a table or an individual region.
    * Asynchronous operation.

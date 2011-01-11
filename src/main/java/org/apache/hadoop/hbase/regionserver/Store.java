@@ -1319,12 +1319,11 @@ public class Store implements HeapSize {
   StoreSize checkSplit(final boolean force) {
     this.lock.readLock().lock();
     try {
-      // Iterate through all store files
-      if (this.storefiles.isEmpty()) {
-        return null;
-      }
-      if (!force && (storeSize < this.desiredMaxFileSize)) {
-        return null;
+      // sanity checks
+      if (!force) {
+        if (storeSize < this.desiredMaxFileSize || this.storefiles.isEmpty()) {
+          return null;
+        }
       }
 
       if (this.region.getRegionInfo().isMetaRegion()) {

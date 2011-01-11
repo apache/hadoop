@@ -61,8 +61,12 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region split
-    def split(table_or_region_name)
-      @admin.split(table_or_region_name)
+    def split(table_or_region_name, split_point)
+      if split_point == nil
+        @admin.split(table_or_region_name)
+      else
+        @admin.split(table_or_region_name, split_point)
+      end
     end
 
     #----------------------------------------------------------------------------------------------
