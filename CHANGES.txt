@@ -368,6 +368,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7087. SequenceFile.createWriter ignores FileSystem parameter (todd)
 
+    HADOOP-7091. reloginFromKeytab() should happen even if TGT can't be found.
+    (Kan Zhang via todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
