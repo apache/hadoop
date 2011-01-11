@@ -258,6 +258,9 @@ Release 0.22.0 - Unreleased
     HADOOP-6578. Configuration should trim whitespace around a lot of value
     types. (Michele Catasta via eli)
 
+    HADOOP-6811. Remove EC2 bash scripts. They are replaced by Apache Whirr
+    (incubating, http://incubator.apache.org/whirr). (tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
