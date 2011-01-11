@@ -288,7 +288,8 @@ public class SequenceFile {
   public static Writer 
     createWriter(FileSystem fs, Configuration conf, Path name, 
                  Class keyClass, Class valClass) throws IOException {
-    return createWriter(conf, Writer.file(name), Writer.keyClass(keyClass),
+    return createWriter(conf, Writer.filesystem(fs),
+                        Writer.file(name), Writer.keyClass(keyClass),
                         Writer.valueClass(valClass));
   }
   
@@ -310,7 +311,8 @@ public class SequenceFile {
     createWriter(FileSystem fs, Configuration conf, Path name, 
                  Class keyClass, Class valClass, 
                  CompressionType compressionType) throws IOException {
-    return createWriter(conf, Writer.file(name), Writer.keyClass(keyClass),
+    return createWriter(conf, Writer.filesystem(fs),
+                        Writer.file(name), Writer.keyClass(keyClass),
                         Writer.valueClass(valClass), 
                         Writer.compression(compressionType));
   }
@@ -334,7 +336,9 @@ public class SequenceFile {
     createWriter(FileSystem fs, Configuration conf, Path name, 
                  Class keyClass, Class valClass, CompressionType compressionType,
                  Progressable progress) throws IOException {
-    return createWriter(conf, Writer.file(name), Writer.keyClass(keyClass),
+    return createWriter(conf, Writer.file(name),
+                        Writer.filesystem(fs),
+                        Writer.keyClass(keyClass),
                         Writer.valueClass(valClass), 
                         Writer.compression(compressionType),
                         Writer.progressable(progress));
@@ -359,7 +363,9 @@ public class SequenceFile {
     createWriter(FileSystem fs, Configuration conf, Path name, 
                  Class keyClass, Class valClass, CompressionType compressionType, 
                  CompressionCodec codec) throws IOException {
-    return createWriter(conf, Writer.file(name), Writer.keyClass(keyClass),
+    return createWriter(conf, Writer.file(name),
+                        Writer.filesystem(fs),
+                        Writer.keyClass(keyClass),
                         Writer.valueClass(valClass), 
                         Writer.compression(compressionType, codec));
   }
@@ -386,7 +392,9 @@ public class SequenceFile {
                  Class keyClass, Class valClass, 
                  CompressionType compressionType, CompressionCodec codec,
                  Progressable progress, Metadata metadata) throws IOException {
-    return createWriter(conf, Writer.file(name), Writer.keyClass(keyClass),
+    return createWriter(conf, Writer.file(name),
+                        Writer.filesystem(fs),
+                        Writer.keyClass(keyClass),
                         Writer.valueClass(valClass),
                         Writer.compression(compressionType, codec),
                         Writer.progressable(progress),
@@ -419,7 +427,9 @@ public class SequenceFile {
                  short replication, long blockSize,
                  CompressionType compressionType, CompressionCodec codec,
                  Progressable progress, Metadata metadata) throws IOException {
-    return createWriter(conf, Writer.file(name), Writer.keyClass(keyClass),
+    return createWriter(conf, Writer.file(name),
+                        Writer.filesystem(fs),
+                        Writer.keyClass(keyClass),
                         Writer.valueClass(valClass), 
                         Writer.bufferSize(bufferSize), 
                         Writer.replication(replication),
@@ -450,7 +460,9 @@ public class SequenceFile {
                  Class keyClass, Class valClass, 
                  CompressionType compressionType, CompressionCodec codec,
                  Progressable progress) throws IOException {
-    return createWriter(conf, Writer.file(name), Writer.keyClass(keyClass),
+    return createWriter(conf, Writer.file(name),
+                        Writer.filesystem(fs),
+                        Writer.keyClass(keyClass),
                         Writer.valueClass(valClass),
                         Writer.compression(compressionType, codec),
                         Writer.progressable(progress));
@@ -777,6 +789,21 @@ public class SequenceFile {
       }
     }
 
+    /**
+     * @deprecated only used for backwards-compatibility in the createWriter methods
+     * that take FileSystem.
+     */
+    @Deprecated
+    private static class FileSystemOption implements Option {
+      private final FileSystem value;
+      protected FileSystemOption(FileSystem value) {
+        this.value = value;
+      }
+      public FileSystem getValue() {
+        return value;
+      }
+    }
+
     static class StreamOption extends Options.FSDataOutputStreamOption 
                               implements Option {
       StreamOption(FSDataOutputStream stream) {
@@ -857,6 +884,15 @@ public class SequenceFile {
     public static Option file(Path value) {
       return new FileOption(value);
     }
+
+    /**
+     * @deprecated only used for backwards-compatibility in the createWriter methods
+     * that take FileSystem.
+     */
+    @Deprecated
+    private static Option filesystem(FileSystem fs) {
+      return new SequenceFile.Writer.FileSystemOption(fs);
+    }
     
     public static Option bufferSize(int value) {
       return new BufferSizeOption(value);
@@ -916,6 +952,7 @@ public class SequenceFile {
       ProgressableOption progressOption = 
         Options.getOption(ProgressableOption.class, opts);
       FileOption fileOption = Options.getOption(FileOption.class, opts);
+      FileSystemOption fsOption = Options.getOption(FileSystemOption.class, opts);
       StreamOption streamOption = Options.getOption(StreamOption.class, opts);
       KeyClassOption keyClassOption = 
         Options.getOption(KeyClassOption.class, opts);
@@ -941,7 +978,12 @@ public class SequenceFile {
       boolean ownStream = fileOption != null;
       if (ownStream) {
         Path p = fileOption.getValue();
-        FileSystem fs = p.getFileSystem(conf);
+        FileSystem fs;
+        if (fsOption != null) {
+          fs = fsOption.getValue();
+        } else {
+          fs = p.getFileSystem(conf);
+        }
         int bufferSize = bufferSizeOption == null ? getBufferSize(conf) :
           bufferSizeOption.getValue();
         short replication = replicationOption == null ? 

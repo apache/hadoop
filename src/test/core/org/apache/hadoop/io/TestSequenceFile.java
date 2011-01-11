@@ -30,6 +30,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.conf.*;
+import org.mockito.Mockito;
 
 
 /** Support for flat files of binary key/value pairs. */
@@ -455,6 +456,20 @@ public class TestSequenceFile extends TestCase {
   
     assertFalse(reader1.next(text));
     assertFalse(reader2.next(text));
+  }
+
+  /**
+   * Test that makes sure the FileSystem passed to createWriter
+   * @throws Exception
+   */
+  public void testCreateUsesFsArg() throws Exception {
+    FileSystem fs = FileSystem.getLocal(conf);
+    FileSystem spyFs = Mockito.spy(fs);
+    Path p = new Path(System.getProperty("test.build.data", ".")+"/testCreateUsesFSArg.seq");
+    SequenceFile.Writer writer = SequenceFile.createWriter(
+        spyFs, conf, p, NullWritable.class, NullWritable.class);
+    writer.close();
+    Mockito.verify(spyFs).getDefaultReplication();
   }
 
   private static class TestFSDataInputStream extends FSDataInputStream {
