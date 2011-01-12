@@ -298,12 +298,6 @@
 </property>
 
 <property>
-  <name>fs.ramfs.impl</name>
-  <value>org.apache.hadoop.fs.InMemoryFileSystem</value>
-  <description>The FileSystem for ramfs: uris.</description>
-</property>
-
-<property>
   <name>fs.har.impl</name>
   <value>org.apache.hadoop.fs.HarFileSystem</value>
   <description>The filesystem for Hadoop archives. </description>

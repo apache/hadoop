@@ -3371,9 +3371,6 @@ public class SequenceFile {
       public boolean nextRawKey() throws IOException {
         if (in == null) {
           int bufferSize = getBufferSize(conf); 
-          if (fs.getUri().getScheme().startsWith("ramfs")) {
-            bufferSize = conf.getInt("io.bytes.per.checksum", 512);
-          }
           Reader reader = new Reader(conf,
                                      Reader.file(segmentPathName), 
                                      Reader.bufferSize(bufferSize),
