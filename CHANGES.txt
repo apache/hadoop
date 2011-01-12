@@ -430,6 +430,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7091. reloginFromKeytab() should happen even if TGT can't be found.
     (Kan Zhang via jghoman)
 
+    HADOOP-7100. Fix build to not refer to contrib/ec2 removed by HADOOP-6811
+    (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
