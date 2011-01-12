@@ -1879,6 +1879,18 @@ to ensure well-formedness of your document after an edit session.
                 </para>
             </answer>
         </qandaentry>
+        <qandaentry>
+            <question><para>Why are logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
+            brand-new compressor' messages?</para></question>
+            <answer>
+                <para>
+                    Because we are not using the native versions of compression
+                    libraries.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-1900">HBASE-1900 Put back native support when hadoop 0.21 is released</link>.
+                    Copy the native libs from hadoop under hbase lib dir or
+                    symlink them into place and the message should go away.
+                </para>
+            </answer>
+        </qandaentry>
     </qandadiv>
     <qandadiv xml:id="ec2"><title>EC2</title>
         <qandaentry>
