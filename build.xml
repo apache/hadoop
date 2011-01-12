@@ -1122,7 +1122,6 @@
         <fileset dir="${dist.dir}/src/contrib/">
           <include name="*/bin/*" />
         </fileset>
-        <fileset dir="${dist.dir}/src/contrib/ec2/bin/image"/>
     </chmod>
 
   </target>
@@ -1136,15 +1135,11 @@
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
           <exclude name="${final.name}/contrib/*/bin/*" />
-          <exclude name="${final.name}/src/contrib/ec2/bin/*" />
-          <exclude name="${final.name}/src/contrib/ec2/bin/image/*" />
           <include name="${final.name}/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
           <include name="${final.name}/bin/*" />
           <include name="${final.name}/contrib/*/bin/*" />
-          <include name="${final.name}/src/contrib/ec2/bin/*" />
-          <include name="${final.name}/src/contrib/ec2/bin/image/*" />
         </tarfileset>
       </param.listofitems>
     </macro_tar>
