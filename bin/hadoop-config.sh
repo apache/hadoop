@@ -192,9 +192,9 @@ if [ -d "${HADOOP_COMMON_HOME}/build/native" -o -d "${HADOOP_COMMON_HOME}/lib/na
   
   if [ -d "$HADOOP_COMMON_HOME/build/native" ]; then
     if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-        JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_CORE_HOME}/build/native/${JAVA_PLATFORM}/lib
+        JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HADOOP_COMMON_HOME}/build/native/${JAVA_PLATFORM}/lib
     else
-        JAVA_LIBRARY_PATH=${HADOOP_CORE_HOME}/build/native/${JAVA_PLATFORM}/lib
+        JAVA_LIBRARY_PATH=${HADOOP_COMMON_HOME}/build/native/${JAVA_PLATFORM}/lib
     fi
   fi
   

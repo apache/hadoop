@@ -433,6 +433,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7100. Fix build to not refer to contrib/ec2 removed by HADOOP-6811
     (todd)
 
+    HADOOP-7097. JAVA_LIBRARY_PATH missing base directory. (Noah Watkins via
+    todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
