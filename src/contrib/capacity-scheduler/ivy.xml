@@ -52,5 +52,9 @@
       name="commons-httpclient"
       rev="${commons-httpclient.version}"
       conf="common->master"/> 
+    <dependency org="commons-cli"
+      name="commons-cli"
+      rev="${commons-cli.version}"
+      conf="common->master"/>
   </dependencies>
 </ivy-module>

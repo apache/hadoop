@@ -8,9 +8,6 @@ Release 0.20.4 - Unreleased
 
   IMPROVEMENTS
 
-    MAPREDUCE-1734. Un-deprecate the old MapReduce API in the 0.20 branch.
-    (todd)
-
 Release 0.20.3 - 2011-1-5
 
   NEW FEATURES
@@ -85,12 +82,18 @@ Release 0.20.3 - 2011-1-5
 
     HDFS-1406. TestCLI fails on Ubuntu with default /etc/hosts. (cos)
 
+    MAPREDUCE-2262. Add capacity scheduler ivy dependency on commons-cli. 
+    (omalley)
+
   IMPROVEMENTS
 
     MAPREDUCE-1407. Update javadoc in mapreduce.{Mapper,Reducer} to match
     actual usage. (Benoit Sigoure via cdouglas)
 
     MAPREDUCE-1832. Allow file sizes less than 1MB in DFSIO benchmark. (shv)
+
+    MAPREDUCE-1734. Un-deprecate the old MapReduce API in the 0.20 branch.
+    (todd)
 
 Release 0.20.2 - 2010-2-19
 
