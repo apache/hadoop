@@ -112,17 +112,26 @@ public class MetricsServlet extends HttpServlet {
       return;
     }
 
-    PrintWriter out = new PrintWriter(response.getOutputStream());
     String format = request.getParameter("format");
     Collection<MetricsContext> allContexts = 
       ContextFactory.getFactory().getAllContexts();
     if ("json".equals(format)) {
-      // Uses Jetty's built-in JSON support to convert the map into JSON.
-      out.print(new JSON().toJSON(makeMap(allContexts)));
+      response.setContentType("application/json; charset=utf-8");
+      PrintWriter out = response.getWriter();
+      try {
+        // Uses Jetty's built-in JSON support to convert the map into JSON.
+        out.print(new JSON().toJSON(makeMap(allContexts)));
+      } finally {
+        out.close();
+      }
     } else {
-      printMap(out, makeMap(allContexts));
+      PrintWriter out = response.getWriter();
+      try {
+        printMap(out, makeMap(allContexts));
+      } finally {
+        out.close();
+      }
     }
-    out.close();
   }
   
   /**

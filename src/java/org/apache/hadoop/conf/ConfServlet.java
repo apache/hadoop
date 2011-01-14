@@ -69,12 +69,12 @@ public class ConfServlet extends HttpServlet {
     }
 
     if (FORMAT_XML.equals(format)) {
-      response.setContentType("text/xml");
+      response.setContentType("text/xml; charset=utf-8");
     } else if (FORMAT_JSON.equals(format)) {
-      response.setContentType("text/javascript");
+      response.setContentType("application/json; charset=utf-8");
     }
 
-    OutputStreamWriter out = new OutputStreamWriter(response.getOutputStream());
+    Writer out = response.getWriter();
     try {
       writeResponse(getConfFromContext(), out, format);
     } catch (BadFormatException bfe) {
