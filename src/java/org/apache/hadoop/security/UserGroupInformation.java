@@ -468,7 +468,11 @@ public class UserGroupInformation {
   public static UserGroupInformation getCurrentUser() throws IOException {
     AccessControlContext context = AccessController.getContext();
     Subject subject = Subject.getSubject(context);
-    return subject == null ? getLoginUser() : new UserGroupInformation(subject);
+    if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
+      return getLoginUser();
+    } else {
+      return new UserGroupInformation(subject);
+    }
   }
 
   /**
