@@ -739,8 +739,7 @@ public class HttpServer implements FilterContainer {
         return;
       }
 
-      PrintWriter out = new PrintWriter
-                    (HtmlQuoting.quoteOutputStream(response.getOutputStream()));
+      PrintWriter out = response.getWriter();
       ReflectionUtils.printThreadInfo(out, "");
       out.close();
       ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);      
@@ -858,12 +857,16 @@ public class HttpServer implements FilterContainer {
       HttpServletResponse httpResponse = (HttpServletResponse) response;
 
       String mime = inferMimeType(request);
-      if (mime == null || mime.equals("text/html")) {
-        // no extension or HTML with unspecified encoding, we want to
+      if (mime == null) {
+        httpResponse.setContentType("text/plain; charset=utf-8");
+      } else if (mime.startsWith("text/html")) {
+        // HTML with unspecified encoding, we want to
         // force HTML with utf-8 encoding
         // This is to avoid the following security issue:
         // http://openmya.hacker.jp/hasegawa/security/utf7cs.html
         httpResponse.setContentType("text/html; charset=utf-8");
+      } else if (mime.startsWith("application/xml")) {
+        httpResponse.setContentType("text/xml; charset=utf-8");
       }
       chain.doFilter(quoted, httpResponse);
     }

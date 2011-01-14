@@ -438,6 +438,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7097. JAVA_LIBRARY_PATH missing base directory. (Noah Watkins via
     todd)
 
+    HADOOP-7093. Servlets should default to text/plain (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
