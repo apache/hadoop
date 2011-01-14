@@ -381,6 +381,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7093. Servlets should default to text/plain (todd)
 
+    HADOOP-7101. UserGroupInformation.getCurrentUser() fails when called from
+    non-Hadoop JAAS context. (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
