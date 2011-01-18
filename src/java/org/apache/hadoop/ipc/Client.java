@@ -1268,7 +1268,7 @@ public class Client {
                   + protocol.getCanonicalName());
         }
         return SecurityUtil.getServerPrincipal(conf.get(serverKey), address
-            .getAddress().getCanonicalHostName());
+            .getAddress());
       }
       return null;
     }
