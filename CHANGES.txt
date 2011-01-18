@@ -42,9 +42,6 @@ Trunk (unreleased changes)
     HADOOP-6995. Allow wildcards to be used in ProxyUsers configurations.
     (todd)
 
-    HADOOP-7104. Remove unnecessary DNS reverse lookups from RPC layer
-    (Kan Zhang via todd)
-
   OPTIMIZATIONS
 
   BUG FIXES
@@ -262,6 +259,9 @@ Release 0.22.0 - Unreleased
     (incubating, http://incubator.apache.org/whirr). (tomwhite)
 
     HADOOP-7102. Remove "fs.ramfs.impl" field from core-deafult.xml (shv)
+
+    HADOOP-7104. Remove unnecessary DNS reverse lookups from RPC layer
+    (Kan Zhang via todd)
 
   OPTIMIZATIONS
 
