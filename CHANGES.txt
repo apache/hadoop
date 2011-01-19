@@ -36,6 +36,9 @@ Trunk (unreleased changes)
 
     HADOOP-7059. Remove "unused" warning in native code.  (Noah Watkins via eli)
 
+    HADOOP-6864. Provide a JNI-based implementation of ShellBasedUnixGroupsNetgroupMapping 
+    (implementation of GroupMappingServiceProvider) (Erik Seffl via boryas)
+
     HADOOP-7078. Improve javadocs for RawComparator interface.
     (Harsh J Chouraria via todd)
 
@@ -249,9 +252,6 @@ Release 0.22.0 - Unreleased
 
     HADOOP-6298. Add copyBytes to Text and BytesWritable. (omalley)
   
-    HADOOP-6864. Provide a JNI-based implementation of ShellBasedUnixGroupsNetgroupMapping 
-    (implementation of GroupMappingServiceProvider) (Erik Seffl via boryas)
-
     HADOOP-6578. Configuration should trim whitespace around a lot of value
     types. (Michele Catasta via eli)
 
