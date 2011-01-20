@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.catalog;
 import java.io.EOFException;
 import java.io.IOException;
 import java.net.ConnectException;
+import java.net.SocketTimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -388,6 +389,9 @@ public class CatalogTracker {
       } else {
         throw e;
       }
+    } catch (SocketTimeoutException e) {
+      // We were passed the wrong address.  Return 'protocol' == null.
+      LOG.debug("Timed out connecting to " + address);
     } catch (IOException ioe) {
       Throwable cause = ioe.getCause();
       if (cause != null && cause instanceof EOFException) {
