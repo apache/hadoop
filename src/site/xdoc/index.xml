@@ -49,6 +49,7 @@ HBase includes:
 
         </section>
         <section name="News">
+            <p>December 13th, <a href="http://www.meetup.com/hackathon/calendar/15597555/">HBase Hackathon: Coprocessor Edition</a></p>
       <p>November 19th, <a href="http://huguk.org/">Hadoop HUG in London</a> is all about HBase</p>
       <p>November 15-19th, <a href="http://www.devoxx.com/display/Devoxx2K10/Home">Devoxx</a> features HBase Training and multiple HBase presentations</p>
       <p>October 12th, HBase-related presentations by core contributors and users at <a href="http://www.cloudera.com/company/press-center/hadoop-world-nyc/">Hadoop World 2010</a></p>
