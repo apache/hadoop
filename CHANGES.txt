@@ -25,6 +25,7 @@ Release 0.91.0 - Unreleased
    HBASE-3418  Increment operations can break when qualifiers are split
                between memstore/snapshot and storefiles
    HBASE-3403  Region orphaned after failure during split
+   HBASE-3387  Pair does not deep check arrays for equality -- REVERT THIS PATCH
 
 
   IMPROVEMENTS
@@ -57,7 +58,7 @@ Release 0.91.0 - Unreleased
    HBASE-3256  Coprocessors: Coprocessor host and observer for HMaster
 
 
-Release 0.90.0 - Unreleased
+Release 0.90.0 - January 19th, 2011
   INCOMPATIBLE CHANGES
    HBASE-1822  Remove the deprecated APIs
    HBASE-1848  Fixup shell for HBASE-1822
