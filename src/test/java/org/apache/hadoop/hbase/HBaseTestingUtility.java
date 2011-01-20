@@ -408,11 +408,7 @@ public class HBaseTestingUtility {
    */
   public void shutdownMiniCluster() throws IOException {
     LOG.info("Shutting down minicluster");
-    if (this.hbaseCluster != null) {
-      this.hbaseCluster.shutdown();
-      // Wait till hbase is down before going on to shutdown zk.
-      this.hbaseCluster.join();
-    }
+    shutdownMiniHBaseCluster();
     if (!this.passedZkCluster) shutdownMiniZKCluster();
     if (this.dfsCluster != null) {
       // The below throws an exception per dn, AsynchronousCloseException.
@@ -428,6 +424,19 @@ public class HBaseTestingUtility {
       this.clusterTestBuildDir = null;
     }
     LOG.info("Minicluster is down");
+  }
+
+  /**
+   * Shutdown HBase mini cluster.  Does not shutdown zk or dfs if running.
+   * @throws IOException
+   */
+  public void shutdownMiniHBaseCluster() throws IOException {
+    if (this.hbaseCluster != null) {
+      this.hbaseCluster.shutdown();
+      // Wait till hbase is down before going on to shutdown zk.
+      this.hbaseCluster.join();
+    }
+    this.hbaseCluster = null;
   }
 
   /**
