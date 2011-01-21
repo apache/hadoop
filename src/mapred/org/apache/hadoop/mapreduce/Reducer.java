@@ -84,7 +84,7 @@ import org.apache.hadoop.mapred.RawKeyValueIterator;
  *   
  *   <p>In this phase the 
  *   {@link #reduce(Object, Iterable, Context)}
- *   method is called for each <code>&lt;key, (collection of values)&gt;</code> in
+ *   method is called for each <code>&lt;key, (collection of values)></code> in
  *   the sorted inputs.</p>
  *   <p>The output of the reduce task is typically written to a 
  *   {@link RecordWriter} via 
@@ -96,18 +96,18 @@ import org.apache.hadoop.mapred.RawKeyValueIterator;
  * 
  * <p>Example:</p>
  * <p><blockquote><pre>
- * public class IntSumReducer&lt;Key&gt; extends Reducer&lt;Key,IntWritable,
- *                                                 Key,IntWritable&gt; {
+ * public class IntSumReducer<Key> extends Reducer<Key,IntWritable,
+ *                                                 Key,IntWritable> {
  *   private IntWritable result = new IntWritable();
  * 
- *   public void reduce(Key key, Iterable&lt;IntWritable&gt; values,
- *                      Context context) throws IOException, InterruptedException {
+ *   public void reduce(Key key, Iterable<IntWritable> values, 
+ *                      Context context) throws IOException {
  *     int sum = 0;
  *     for (IntWritable val : values) {
  *       sum += val.get();
  *     }
  *     result.set(sum);
- *     context.write(key, result);
+ *     context.collect(key, result);
  *   }
  * }
  * </pre></blockquote></p>
@@ -121,8 +121,7 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
     extends ReduceContext<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
     public Context(Configuration conf, TaskAttemptID taskid,
                    RawKeyValueIterator input, 
-                   Counter inputKeyCounter,
-                   Counter inputValueCounter,
+                   Counter inputCounter,
                    RecordWriter<KEYOUT,VALUEOUT> output,
                    OutputCommitter committer,
                    StatusReporter reporter,
@@ -130,8 +129,7 @@ public class Reducer<KEYIN,VALUEIN,KEYOUT,VALUEOUT> {
                    Class<KEYIN> keyClass,
                    Class<VALUEIN> valueClass
                    ) throws IOException, InterruptedException {
-      super(conf, taskid, input, inputKeyCounter, inputValueCounter,
-            output, committer, reporter, 
+      super(conf, taskid, input, inputCounter, output, committer, reporter, 
             comparator, keyClass, valueClass);
     }
   }

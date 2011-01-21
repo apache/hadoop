@@ -14,8 +14,6 @@
   private static SimpleDateFormat dateFormat = 
                                     new SimpleDateFormat("d/MM HH:mm:ss");
 %>
-<%!	private static final long serialVersionUID = 1L;
-%>
 <html>
 <head>
 <title>Hadoop Map/Reduce Administration</title>

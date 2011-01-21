@@ -430,7 +430,6 @@ public class Job extends JobContext {
     ensureState(JobState.DEFINE);
     setUseNewAPI();
     info = jobClient.submitJobInternal(conf);
-    super.setJobID(info.getID());
     state = JobState.RUNNING;
    }
   

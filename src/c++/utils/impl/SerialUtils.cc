@@ -22,7 +22,6 @@
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 #include <string>
-#include <string.h>
 
 using std::string;
 

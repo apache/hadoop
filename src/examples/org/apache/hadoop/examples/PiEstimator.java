@@ -20,7 +20,6 @@ package org.apache.hadoop.examples;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configured;
@@ -311,11 +310,10 @@ public class PiEstimator extends Configured implements Tool {
       }
 
       //compute estimated value
-      final BigDecimal numTotal
-          = BigDecimal.valueOf(numMaps).multiply(BigDecimal.valueOf(numPoints));
       return BigDecimal.valueOf(4).setScale(20)
           .multiply(BigDecimal.valueOf(numInside.get()))
-          .divide(numTotal, RoundingMode.HALF_UP);
+          .divide(BigDecimal.valueOf(numMaps))
+          .divide(BigDecimal.valueOf(numPoints));
     } finally {
       fs.delete(TMP_DIR, true);
     }

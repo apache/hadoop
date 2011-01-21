@@ -13,8 +13,6 @@
   <jsp:param name="jobTrackerId" value="<%=request.getParameter("jobTrackerId") %>"/>
 </jsp:include>
 <%!	private static SimpleDateFormat dateFormat = new SimpleDateFormat("d/MM HH:mm:ss") ; %>
-<%!	private static final long serialVersionUID = 1L;
-%>
 
 <%	
   String jobid = request.getParameter("jobid");

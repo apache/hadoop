@@ -26,7 +26,9 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapReduceBase;
 
 /** Implements the identity function, mapping inputs directly to outputs. 
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.Mapper} instead.
  */
+@Deprecated
 public class IdentityMapper<K, V>
     extends MapReduceBase implements Mapper<K, V, K, V> {
 

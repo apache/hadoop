@@ -678,8 +678,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public synchronized void setPermission(String src, FsPermission permission
       ) throws IOException {
-    if (isInSafeMode())
-       throw new SafeModeException("Cannot set permission for " + src, safeMode);
     checkOwner(src);
     dir.setPermission(src, permission);
     getEditLog().logSync();
@@ -697,8 +695,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public synchronized void setOwner(String src, String username, String group
       ) throws IOException {
-    if (isInSafeMode())
-       throw new SafeModeException("Cannot set owner for " + src, safeMode);
     PermissionChecker pc = checkOwner(src);
     if (!pc.isSuper) {
       if (username != null && !pc.user.equals(username)) {
@@ -763,7 +759,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (length < 0) {
       throw new IOException("Negative length is not supported. File: " + src );
     }
-    final LocatedBlocks ret = getBlockLocationsInternal(src, 
+    final LocatedBlocks ret = getBlockLocationsInternal(src, dir.getFileINode(src),
         offset, length, Integer.MAX_VALUE, doAccessTime);  
     if (auditLog.isInfoEnabled()) {
       logAuditEvent(UserGroupInformation.getCurrentUGI(),
@@ -774,12 +770,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   private synchronized LocatedBlocks getBlockLocationsInternal(String src,
+                                                       INodeFile inode,
                                                        long offset, 
                                                        long length,
                                                        int nrBlocksToReturn,
                                                        boolean doAccessTime) 
                                                        throws IOException {
-    INodeFile inode = dir.getFileINode(src);
     if(inode == null) {
       return null;
     }
@@ -1702,7 +1698,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
     }
 
-    return dir.delete(src);
+    return dir.delete(src) != null;
   }
 
   void removePathAndBlocks(String src, List<Block> blocks) throws IOException {
@@ -1790,9 +1786,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * contract.
    */
   void setQuota(String path, long nsQuota, long dsQuota) throws IOException {
-   if (isInSafeMode())
-      throw new SafeModeException("Cannot set quota on " + path, safeMode); 
-   if (isPermissionEnabled) {
+    if (isPermissionEnabled) {
       checkSuperuserPrivilege();
     }
     
@@ -3579,7 +3573,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new IOException("Safe mode should be turned ON " +
                             "in order to create namespace image.");
     }
-    getFSImage().saveNamespace(true);
+    getFSImage().saveFSImage();
     LOG.info("New namespace image has been created.");
   }
 
@@ -4370,7 +4364,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * @throws IOException
    */
   synchronized void enterSafeMode() throws IOException {
-    getEditLog().logSyncAll();
     if (!isInSafeMode()) {
       safeMode = new SafeModeInfo();
       return;

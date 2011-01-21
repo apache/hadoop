@@ -86,7 +86,6 @@
       <include name="**/*.jar" />
     </fileset>
     <path refid="${ant.project.name}.common-classpath"/>
-    <pathelement path="${clover.jar}"/>
   </path>
 
   <!-- the unit test classpath -->
@@ -174,7 +173,7 @@
   <target name="jar" depends="compile" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <jar
-      jarfile="${build.dir}/hadoop-${name}-${version}.jar"
+      jarfile="${build.dir}/hadoop-${version}-${name}.jar"
       basedir="${build.classes}"      
     />
   </target>
@@ -186,7 +185,7 @@
   <target name="jar-examples" depends="compile-examples"
           if="examples.available" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
-    <jar jarfile="${build.dir}/hadoop-${name}-examples-${version}.jar">
+    <jar jarfile="${build.dir}/hadoop-${version}-${name}-examples.jar">
       <fileset dir="${build.classes}">
       </fileset>
       <fileset dir="${build.examples}">
@@ -201,7 +200,7 @@
     <mkdir dir="${dist.dir}/contrib/${name}"/>
     <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
       <fileset dir="${build.dir}">
-        <include name="hadoop-${name}-${version}.jar" />
+        <include name="hadoop-${version}-${name}.jar" />
       </fileset>
     </copy>
   </target>

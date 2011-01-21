@@ -71,35 +71,43 @@ public class TestStreamingStderr extends TestCase
   }
 
   public void runStreamJob(String baseName, boolean hasInput,
-                           int preLines, int duringLines, int postLines)
-    throws Exception {
-    File input = setupInput(baseName, hasInput);
-    File output = setupOutput(baseName);
-    boolean mayExit = false;
-    int returnStatus = 0;
+                           int preLines, int duringLines, int postLines) {
+    try {
+      File input = setupInput(baseName, hasInput);
+      File output = setupOutput(baseName);
+      boolean mayExit = false;
+      int returnStatus = 0;
 
-    StreamJob job = new StreamJob(genArgs(input, output, preLines, duringLines, postLines), mayExit);
-    returnStatus = job.go();
-    assertEquals("StreamJob success", 0, returnStatus);
+      StreamJob job = new StreamJob(genArgs(input, output, preLines, duringLines, postLines), mayExit);
+      returnStatus = job.go();
+      assertEquals("StreamJob success", 0, returnStatus);
+    } catch (Exception e) {
+      failTrace(e);
+    }
   }
 
   // This test will fail by blocking forever if the stderr isn't
   // consumed by Hadoop for tasks that don't have any input.
-  public void testStderrNoInput() throws Exception {
+  public void testStderrNoInput() throws IOException {
     runStreamJob("stderr-pre", false, 10000, 0, 0);
   }
 
   // Streaming should continue to read stderr even after all input has
   // been consumed.
-  public void testStderrAfterOutput() throws Exception {
+  public void testStderrAfterOutput() throws IOException {
     runStreamJob("stderr-post", false, 0, 0, 10000);
   }
 
   // This test should produce a task timeout if stderr lines aren't
   // counted as progress. This won't actually work until
   // LocalJobRunner supports timeouts.
-  public void testStderrCountsAsProgress() throws Exception {
+  public void testStderrCountsAsProgress() throws IOException {
     runStreamJob("stderr-progress", true, 10, 1000, 0);
   }
   
+  protected void failTrace(Exception e) {
+    StringWriter sw = new StringWriter();
+    e.printStackTrace(new PrintWriter(sw));
+    fail(sw.toString());
+  }
 }

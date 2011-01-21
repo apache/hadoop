@@ -9,8 +9,6 @@
   import="java.lang.Integer"
   import="java.text.SimpleDateFormat"
 %>
-<%!	private static final long serialVersionUID = 1L;
-%>
 <%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
@@ -29,7 +27,7 @@
   int next_page = pnum+1;
   int numperpage = 2000;
   JobID jobidObj = JobID.forName(jobid);
-  JobInProgress job = tracker.getJob(jobidObj);
+  JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
   JobProfile profile = (job != null) ? (job.getProfile()) : null;
   JobStatus status = (job != null) ? (job.getStatus()) : null;
   TaskReport[] reports = null;

@@ -18,26 +18,18 @@
 
 package org.apache.hadoop.fs;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
+import java.io.*;
+
+import junit.framework.TestCase;
 import java.util.Date;
 import java.util.StringTokenizer;
 
-import junit.framework.TestCase;
+import org.apache.commons.logging.*;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
+import org.apache.hadoop.conf.*;
 
 /**
  * Distributed i/o benchmark.
@@ -68,7 +60,6 @@ import org.apache.hadoop.mapred.*;
  */
 public class DFSCIOTest extends TestCase {
   // Constants
-  private static final Log LOG = LogFactory.getLog(DFSCIOTest.class);
   private static final int TEST_TYPE_READ = 0;
   private static final int TEST_TYPE_WRITE = 1;
   private static final int TEST_TYPE_CLEANUP = 2;
@@ -76,6 +67,7 @@ public class DFSCIOTest extends TestCase {
   private static final String BASE_FILE_NAME = "test_io_";
   private static final String DEFAULT_RES_FILE_NAME = "DFSCIOTest_results.log";
   
+  private static final Log LOG = FileInputFormat.LOG;
   private static Configuration fsConfig = new Configuration();
   private static final long MEGA = 0x100000;
   private static String TEST_ROOT_DIR = System.getProperty("test.build.data","/benchmarks/DFSCIOTest");
@@ -132,9 +124,9 @@ public class DFSCIOTest extends TestCase {
       SequenceFile.Writer writer = null;
       try {
         writer = SequenceFile.createWriter(fs, fsConfig, controlFile,
-                                           Text.class, LongWritable.class,
+                                           UTF8.class, LongWritable.class,
                                            CompressionType.NONE);
-        writer.append(new Text(name), new LongWritable(fileSize));
+        writer.append(new UTF8(name), new LongWritable(fileSize));
       } catch(Exception e) {
         throw new IOException(e.getLocalizedMessage());
       } finally {
@@ -162,30 +154,26 @@ public class DFSCIOTest extends TestCase {
    * <li>i/o rate squared</li>
    * </ul>
    */
-  private abstract static class IOStatMapper extends IOMapperBase<Long> {
+  private abstract static class IOStatMapper extends IOMapperBase {
     IOStatMapper() { 
+      super(fsConfig);
     }
     
-    void collectStats(OutputCollector<Text, Text> output, 
+    void collectStats(OutputCollector<UTF8, UTF8> output, 
                       String name,
                       long execTime, 
-                      Long objSize) throws IOException {
-      long totalSize = objSize.longValue();
+                      Object objSize) throws IOException {
+      long totalSize = ((Long)objSize).longValue();
       float ioRateMbSec = (float)totalSize * 1000 / (execTime * MEGA);
       LOG.info("Number of bytes processed = " + totalSize);
       LOG.info("Exec time = " + execTime);
       LOG.info("IO rate = " + ioRateMbSec);
       
-      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_LONG + "tasks"),
-          new Text(String.valueOf(1)));
-      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_LONG + "size"),
-          new Text(String.valueOf(totalSize)));
-      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_LONG + "time"),
-          new Text(String.valueOf(execTime)));
-      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_FLOAT + "rate"),
-          new Text(String.valueOf(ioRateMbSec*1000)));
-      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_FLOAT + "sqrate"),
-          new Text(String.valueOf(ioRateMbSec*ioRateMbSec*1000)));
+      output.collect(new UTF8("l:tasks"), new UTF8(String.valueOf(1)));
+      output.collect(new UTF8("l:size"), new UTF8(String.valueOf(totalSize)));
+      output.collect(new UTF8("l:time"), new UTF8(String.valueOf(execTime)));
+      output.collect(new UTF8("f:rate"), new UTF8(String.valueOf(ioRateMbSec*1000)));
+      output.collect(new UTF8("f:sqrate"), new UTF8(String.valueOf(ioRateMbSec*ioRateMbSec*1000)));
     }
   }
 
@@ -200,7 +188,7 @@ public class DFSCIOTest extends TestCase {
         buffer[i] = (byte)('0' + i % 50);
     }
 
-    public Long doIO(Reporter reporter, 
+    public Object doIO(Reporter reporter, 
                        String name, 
                        long totalSize 
                        ) throws IOException {
@@ -286,8 +274,8 @@ public class DFSCIOTest extends TestCase {
     job.setReducerClass(AccumulatingReducer.class);
 
     FileOutputFormat.setOutputPath(job, outputDir);
-    job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(Text.class);
+    job.setOutputKeyClass(UTF8.class);
+    job.setOutputValueClass(UTF8.class);
     job.setNumReduceTasks(1);
     JobClient.runJob(job);
   }
@@ -301,7 +289,7 @@ public class DFSCIOTest extends TestCase {
       super(); 
     }
 
-    public Long doIO(Reporter reporter, 
+    public Object doIO(Reporter reporter, 
                        String name, 
                        long totalSize 
                        ) throws IOException {

@@ -472,43 +472,6 @@ class MapTask extends Task {
     }
   }
 
-  private class NewDirectOutputCollector<K,V>
-  extends org.apache.hadoop.mapreduce.RecordWriter<K,V> {
-    private final org.apache.hadoop.mapreduce.RecordWriter out;
-
-    private final TaskReporter reporter;
-
-    private final Counters.Counter mapOutputRecordCounter;
-    
-    @SuppressWarnings("unchecked")
-    NewDirectOutputCollector(org.apache.hadoop.mapreduce.JobContext jobContext,
-        JobConf job, TaskUmbilicalProtocol umbilical, TaskReporter reporter) 
-    throws IOException, ClassNotFoundException, InterruptedException {
-      this.reporter = reporter;
-      out = outputFormat.getRecordWriter(taskContext);
-      mapOutputRecordCounter = 
-        reporter.getCounter(MAP_OUTPUT_RECORDS);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public void write(K key, V value) 
-    throws IOException, InterruptedException {
-      reporter.progress();
-      out.write(key, value);
-      mapOutputRecordCounter.increment(1);
-    }
-
-    @Override
-    public void close(TaskAttemptContext context) 
-    throws IOException,InterruptedException {
-      reporter.progress();
-      if (out != null) {
-        out.close(context);
-      }
-    }
-  }
-  
   private class NewOutputCollector<K,V>
     extends org.apache.hadoop.mapreduce.RecordWriter<K,V> {
     private final MapOutputCollector<K,V> collector;
@@ -607,8 +570,7 @@ class MapTask extends Task {
 
       // get an output object
       if (job.getNumReduceTasks() == 0) {
-         output =
-           new NewDirectOutputCollector(taskContext, job, umbilical, reporter);
+        output = outputFormat.getRecordWriter(taskContext);
       } else {
         output = new NewOutputCollector(taskContext, job, umbilical, reporter);
       }

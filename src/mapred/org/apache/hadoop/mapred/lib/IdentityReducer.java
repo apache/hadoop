@@ -28,7 +28,9 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.MapReduceBase;
 
 /** Performs no reduction, writing all input values directly to the output. 
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.Reducer} instead.
  */
+@Deprecated
 public class IdentityReducer<K, V>
     extends MapReduceBase implements Reducer<K, V, K, V> {
 

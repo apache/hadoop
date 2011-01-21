@@ -492,7 +492,7 @@ hdfsFile hdfsOpenFile(hdfsFS fs, const char* path, int flags,
         if (!blockSize) {
             if (invokeMethod(env, &jVal, &jExc, INSTANCE, jConfiguration, 
                              HADOOP_CONF, "getLong", "(Ljava/lang/String;J)J",
-                             jStrBlockSize, (jlong)67108864)) {
+                             jStrBlockSize, 67108864)) {
                 errno = errnoFromException(jExc, env, "org.apache.hadoop.conf."
                                            "FileSystem::%s(%s)", method,
                                            signature);
@@ -2071,17 +2071,11 @@ hdfsFileInfo *hdfsGetPathInfo(hdfsFS fs, const char* path)
 
 void hdfsFreeFileInfo(hdfsFileInfo *hdfsFileInfo, int numEntries)
 {
-    //Free the mName, mOwner, and mGroup
+    //Free the mName
     int i;
     for (i=0; i < numEntries; ++i) {
         if (hdfsFileInfo[i].mName) {
             free(hdfsFileInfo[i].mName);
-        }
-        if (hdfsFileInfo[i].mOwner) {
-            free(hdfsFileInfo[i].mOwner);
-        }
-        if (hdfsFileInfo[i].mGroup) {
-            free(hdfsFileInfo[i].mGroup);
         }
     }
 

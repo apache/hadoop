@@ -89,7 +89,7 @@ public class TestTFileUnsortedByteArrays extends TestCase {
 
     try {
       Scanner scanner =
-          reader.createScannerByKey("aaa".getBytes(), "zzz".getBytes());
+          reader.createScanner("aaa".getBytes(), "zzz".getBytes());
       Assert
           .fail("Failed to catch creating scanner with keys on unsorted file.");
     }

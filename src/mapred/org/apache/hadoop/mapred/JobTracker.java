@@ -117,15 +117,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private DNSToSwitchMapping dnsToSwitchMapping;
   private NetworkTopology clusterMap = new NetworkTopology();
   private int numTaskCacheLevels; // the max level to which we cache tasks
-  /**
-   * {@link #nodesAtMaxLevel} is using the keySet from {@link ConcurrentHashMap}
-   * so that it can be safely written to and iterated on via 2 separate threads.
-   * Note: It can only be iterated from a single thread which is feasible since
-   *       the only iteration is done in {@link JobInProgress} under the 
-   *       {@link JobTracker} lock.
-   */
-  private Set<Node> nodesAtMaxLevel = 
-    Collections.newSetFromMap(new ConcurrentHashMap<Node, Boolean>());
+  private Set<Node> nodesAtMaxLevel = new HashSet<Node>();
   private final TaskScheduler taskScheduler;
   private final List<JobInProgressListener> jobInProgressListeners =
     new CopyOnWriteArrayList<JobInProgressListener>();
@@ -142,9 +134,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * A client tried to submit a job before the Job Tracker was ready.
    */
   public static class IllegalStateException extends IOException {
- 
-    private static final long serialVersionUID = 1L;
-
     public IllegalStateException(String msg) {
       super(msg);
     }
@@ -2396,27 +2385,25 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
   
   private Node addHostToNodeMapping(String host, String networkLoc) {
-    Node node = null;
-    synchronized (nodesAtMaxLevel) {
-      if ((node = clusterMap.getNode(networkLoc+"/"+host)) == null) {
-        node = new NodeBase(host, networkLoc);
-        clusterMap.add(node);
-        if (node.getLevel() < getNumTaskCacheLevels()) {
-          LOG.fatal("Got a host whose level is: " + node.getLevel() + "." 
-              + " Should get at least a level of value: " 
-              + getNumTaskCacheLevels());
-          try {
-            stopTracker();
-          } catch (IOException ie) {
-            LOG.warn("Exception encountered during shutdown: " 
-                + StringUtils.stringifyException(ie));
-            System.exit(-1);
-          }
+    Node node;
+    if ((node = clusterMap.getNode(networkLoc+"/"+host)) == null) {
+      node = new NodeBase(host, networkLoc);
+      clusterMap.add(node);
+      if (node.getLevel() < getNumTaskCacheLevels()) {
+        LOG.fatal("Got a host whose level is: " + node.getLevel() + "." 
+                  + " Should get at least a level of value: " 
+                  + getNumTaskCacheLevels());
+        try {
+          stopTracker();
+        } catch (IOException ie) {
+          LOG.warn("Exception encountered during shutdown: " 
+                   + StringUtils.stringifyException(ie));
+          System.exit(-1);
         }
-        hostnameToNodeMap.put(host, node);
-        // Make an entry for the node at the max level in the cache
-        nodesAtMaxLevel.add(getParentNode(node, getNumTaskCacheLevels() - 1));
       }
+      hostnameToNodeMap.put(host, node);
+      // Make an entry for the node at the max level in the cache
+      nodesAtMaxLevel.add(getParentNode(node, getNumTaskCacheLevels() - 1));
     }
     return node;
   }
@@ -3312,13 +3299,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       Vector<TaskInProgress> completeTasks = job.reportCleanupTIPs(true);
       for (Iterator<TaskInProgress> it = completeTasks.iterator();
            it.hasNext();) {
-        TaskInProgress tip = it.next();
+        TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
       Vector<TaskInProgress> incompleteTasks = job.reportCleanupTIPs(false);
       for (Iterator<TaskInProgress> it = incompleteTasks.iterator(); 
            it.hasNext();) {
-        TaskInProgress tip = it.next();
+        TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
       return reports.toArray(new TaskReport[reports.size()]);
@@ -3335,13 +3322,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       Vector<TaskInProgress> completeTasks = job.reportSetupTIPs(true);
       for (Iterator<TaskInProgress> it = completeTasks.iterator();
            it.hasNext();) {
-        TaskInProgress tip =  it.next();
+        TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
       Vector<TaskInProgress> incompleteTasks = job.reportSetupTIPs(false);
       for (Iterator<TaskInProgress> it = incompleteTasks.iterator(); 
            it.hasNext();) {
-        TaskInProgress tip =  it.next();
+        TaskInProgress tip = (TaskInProgress) it.next();
         reports.add(tip.generateSingleReport());
       }
       return reports.toArray(new TaskReport[reports.size()]);
@@ -3753,7 +3740,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         jobStatusList.add(status);
       }
     }
-    return  jobStatusList.toArray(
+    return (JobStatus[]) jobStatusList.toArray(
         new JobStatus[jobStatusList.size()]);
   }
 

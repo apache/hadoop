@@ -88,9 +88,7 @@ public abstract class Server {
   /**
    * How many calls/handler are allowed in the queue.
    */
-  private static final int IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT = 100;
-  private static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY = 
-                                            "ipc.server.handler.queue.size";
+  private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
   
   public static final Log LOG = LogFactory.getLog(Server.class);
 
@@ -1018,9 +1016,7 @@ public abstract class Server {
     this.paramClass = paramClass;
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
-    this.maxQueueSize = handlerCount * conf.getInt(
-                                IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
-                                IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
+    this.maxQueueSize = handlerCount * MAX_QUEUE_SIZE_PER_HANDLER;
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
     this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);

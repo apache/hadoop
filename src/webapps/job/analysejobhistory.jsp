@@ -15,8 +15,6 @@
 <%!	private static SimpleDateFormat dateFormat 
                               = new SimpleDateFormat("d/MM HH:mm:ss") ; 
 %>
-<%!	private static final long serialVersionUID = 1L;
-%>
 <html><body>
 <%
   String jobid = request.getParameter("jobid");

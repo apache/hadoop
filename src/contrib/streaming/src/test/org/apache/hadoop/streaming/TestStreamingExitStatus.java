@@ -24,7 +24,6 @@ import java.util.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class tests if hadoopStreaming fails a job when the mapper or
@@ -33,11 +32,8 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class TestStreamingExitStatus extends TestCase
 {
-  protected File TEST_DIR =
-    new File("TestStreamingExitStatus").getAbsoluteFile();
-
-  protected File INPUT_FILE = new File(TEST_DIR, "input.txt");
-  protected File OUTPUT_DIR = new File(TEST_DIR, "out");  
+  protected File INPUT_FILE = new File("input.txt");
+  protected File OUTPUT_DIR = new File("out");  
 
   protected String failingTask = StreamUtil.makeJavaCommand(FailApp.class, new String[]{"true"});
   protected String echoTask = StreamUtil.makeJavaCommand(FailApp.class, new String[]{"false"});
@@ -45,6 +41,7 @@ public class TestStreamingExitStatus extends TestCase
   public TestStreamingExitStatus() throws IOException {
     UtilTest utilTest = new UtilTest(getClass().getName());
     utilTest.checkUserDir();
+    utilTest.redirectIfAntJunit();
   }
 
   protected String[] genArgs(boolean exitStatusIsFailure, boolean failMap) {
@@ -60,58 +57,51 @@ public class TestStreamingExitStatus extends TestCase
   }
 
   public void setUp() throws IOException {
-    UtilTest.recursiveDelete(TEST_DIR);
-    assertTrue(TEST_DIR.mkdirs());
-
+    UtilTest.recursiveDelete(INPUT_FILE);
+    UtilTest.recursiveDelete(OUTPUT_DIR);
+    
     FileOutputStream out = new FileOutputStream(INPUT_FILE.getAbsoluteFile());
     out.write("hello\n".getBytes());
     out.close();
   }
 
-  private static String join(CharSequence separator, Iterable<String> strings) {
-    StringBuilder sb = new StringBuilder();
-    boolean first = true;
-    for (String s : strings) {
-      if (first) {
-        first = false;
-      } else {
-        sb.append(separator);
-      }
-      sb.append(s);
-    }
-    return sb.toString();
-  }
+  public void runStreamJob(boolean exitStatusIsFailure, boolean failMap) {
+    try {
+      boolean mayExit = false;
+      int returnStatus = 0;
 
-  public void runStreamJob(boolean exitStatusIsFailure, boolean failMap) throws Exception {
-    boolean mayExit = false;
-    int returnStatus = 0;
-    String args[] = genArgs(exitStatusIsFailure, failMap);
-    System.err.println("Testing streaming command line:\n" +
-               join(" ", Arrays.asList(args)));
-    StreamJob job = new StreamJob(genArgs(exitStatusIsFailure, failMap), mayExit);
-    returnStatus = job.go();
-    
-    if (exitStatusIsFailure) {
-      assertEquals("Streaming Job failure code expected", /*job not successful:*/1, returnStatus);
-    } else {
-      assertEquals("Streaming Job expected to succeed", 0, returnStatus);
+      StreamJob job = new StreamJob(genArgs(exitStatusIsFailure, failMap), mayExit);
+      returnStatus = job.go();
+      
+      if (exitStatusIsFailure) {
+        assertEquals("Streaming Job failure code expected", /*job not successful:*/1, returnStatus);
+      } else {
+        assertEquals("Streaming Job expected to succeed", 0, returnStatus);
+      }
+    } catch (Exception e) {
+      failTrace(e);
     }
   }
   
-  public void testMapFailOk() throws Exception {
+  public void testMapFailOk() {
     runStreamJob(false, true);
   }
   
-  public void testMapFailNotOk() throws Exception {
+  public void testMapFailNotOk() {
     runStreamJob(true, true);
   }
   
-  public void testReduceFailOk() throws Exception {
+  public void testReduceFailOk() {
     runStreamJob(false, false);
   }
   
-  public void testReduceFailNotOk() throws Exception {
+  public void testReduceFailNotOk() {
     runStreamJob(true, false);
   }  
   
+  protected void failTrace(Exception e) {
+    StringWriter sw = new StringWriter();
+    e.printStackTrace(new PrintWriter(sw));
+    fail(sw.toString());
+  }
 }

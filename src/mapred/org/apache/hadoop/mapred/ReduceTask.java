@@ -553,14 +553,11 @@ class ReduceTask extends Task {
     org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE> output =
       (org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE>)
         outputFormat.getRecordWriter(taskContext);
-     org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE> trackedRW = 
-       new NewTrackingRecordWriter<OUTKEY, OUTVALUE>(output, reduceOutputCounter);
     job.setBoolean("mapred.skip.on", isSkipping());
     org.apache.hadoop.mapreduce.Reducer.Context 
          reducerContext = createReduceContext(reducer, job, getTaskID(),
-                                               rIter, reduceInputKeyCounter,
-                                               reduceInputValueCounter, 
-                                               trackedRW, committer,
+                                               rIter, reduceInputValueCounter, 
+                                               output, committer,
                                                reporter, comparator, keyClass,
                                                valueClass);
     reducer.run(reducerContext);
@@ -968,13 +965,13 @@ class ReduceTask extends Task {
        * simultaneously after which a merge is triggered. */ 
       private static final float MAX_STALLED_SHUFFLE_THREADS_FRACTION = 0.75f;
       
-      private final long maxSize;
-      private final long maxSingleShuffleLimit;
+      private final int maxSize;
+      private final int maxSingleShuffleLimit;
       
-      private long size = 0;
+      private int size = 0;
       
       private Object dataAvailable = new Object();
-      private long fullSize = 0;
+      private int fullSize = 0;
       private int numPendingRequests = 0;
       private int numRequiredMapOutputs = 0;
       private int numClosed = 0;
@@ -987,11 +984,10 @@ class ReduceTask extends Task {
           throw new IOException("mapred.job.shuffle.input.buffer.percent" +
                                 maxInMemCopyUse);
         }
-        // Allow unit tests to fix Runtime memory
-        maxSize = (int)(conf.getInt("mapred.job.reduce.total.mem.bytes",
-            (int)Math.min(Runtime.getRuntime().maxMemory(), Integer.MAX_VALUE))
-          * maxInMemCopyUse);
-        maxSingleShuffleLimit = (long)(maxSize * MAX_SINGLE_SHUFFLE_SEGMENT_FRACTION);
+        maxSize = (int)Math.min(
+            Runtime.getRuntime().maxMemory() * maxInMemCopyUse,
+            Integer.MAX_VALUE);
+        maxSingleShuffleLimit = (int)(maxSize * MAX_SINGLE_SHUFFLE_SEGMENT_FRACTION);
         LOG.info("ShuffleRamManager: MemoryLimit=" + maxSize + 
                  ", MaxSingleShuffleLimit=" + maxSingleShuffleLimit);
       }
@@ -1103,6 +1099,10 @@ class ReduceTask extends Task {
         return (float)fullSize/maxSize;
       }
 
+      int getMemoryLimit() {
+        return maxSize;
+      }
+      
       boolean canFitInMemory(long requestedSize) {
         return (requestedSize < Integer.MAX_VALUE && 
                 requestedSize < maxSingleShuffleLimit);

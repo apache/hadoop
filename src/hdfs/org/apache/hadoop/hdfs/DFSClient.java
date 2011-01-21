@@ -29,7 +29,6 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.*;
-import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -186,7 +185,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     this.socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
     // dfs.write.packet.size is an internal config variable
     this.writePacketSize = conf.getInt("dfs.write.packet.size", 64*1024);
-    this.maxBlockAcquireFailures = getMaxBlockAcquireFailures(conf);
+    this.maxBlockAcquireFailures = 
+                          conf.getInt("dfs.client.max.block.acquire.failures",
+                                      MAX_BLOCK_ACQUIRE_FAILURES);
     
     try {
       this.ugi = UnixUserGroupInformation.login(conf, true);
@@ -214,11 +215,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           "Expecting exactly one of nameNodeAddr and rpcNamenode being null: "
           + "nameNodeAddr=" + nameNodeAddr + ", rpcNamenode=" + rpcNamenode);
     }
-  }
-
-  static int getMaxBlockAcquireFailures(Configuration conf) {
-    return conf.getInt("dfs.client.max.block.acquire.failures",
-                       MAX_BLOCK_ACQUIRE_FAILURES);
   }
 
   private void checkOpen() throws IOException {
@@ -306,7 +302,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return hints;
   }
 
-  static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
+  private static LocatedBlocks callGetBlockLocations(ClientProtocol namenode,
       String src, long start, long length) throws IOException {
     try {
       return namenode.getBlockLocations(src, start, length);
@@ -658,28 +654,25 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       final int timeout = 3000 * datanodes.length + socketTimeout;
       boolean done = false;
       for(int j = 0; !done && j < datanodes.length; j++) {
-        Socket sock = null;
-        DataOutputStream out = null;
-        DataInputStream in = null;
-        
+        //connect to a datanode
+        final Socket sock = socketFactory.createSocket();
+        NetUtils.connect(sock, 
+                         NetUtils.createSocketAddr(datanodes[j].getName()),
+                         timeout);
+        sock.setSoTimeout(timeout);
+
+        DataOutputStream out = new DataOutputStream(
+            new BufferedOutputStream(NetUtils.getOutputStream(sock), 
+                                     DataNode.SMALL_BUFFER_SIZE));
+        DataInputStream in = new DataInputStream(NetUtils.getInputStream(sock));
+
+        // get block MD5
         try {
-          //connect to a datanode
-          sock = socketFactory.createSocket();
-          NetUtils.connect(sock,
-              NetUtils.createSocketAddr(datanodes[j].getName()), timeout);
-          sock.setSoTimeout(timeout);
-
-          out = new DataOutputStream(
-              new BufferedOutputStream(NetUtils.getOutputStream(sock), 
-                                       DataNode.SMALL_BUFFER_SIZE));
-          in = new DataInputStream(NetUtils.getInputStream(sock));
-
           if (LOG.isDebugEnabled()) {
             LOG.debug("write to " + datanodes[j].getName() + ": "
-                + DataTransferProtocol.OP_BLOCK_CHECKSUM + ", block=" + block);
+                + DataTransferProtocol.OP_BLOCK_CHECKSUM +
+                ", block=" + block);
           }
-
-          // get block MD5
           out.writeShort(DataTransferProtocol.DATA_TRANSFER_VERSION);
           out.write(DataTransferProtocol.OP_BLOCK_CHECKSUM);
           out.writeLong(block.getBlockId());
@@ -1030,17 +1023,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
     }
 
-    void close() {
-      while (true) {
-        String src;
-        OutputStream out;
-        synchronized (this) {
-          if (pendingCreates.isEmpty()) {
-            return;
-          }
-          src = pendingCreates.firstKey();
-          out = pendingCreates.remove(src);
-        }
+    synchronized void close() {
+      while (!pendingCreates.isEmpty()) {
+        String src = pendingCreates.firstKey();
+        OutputStream out = pendingCreates.remove(src);
         if (out != null) {
           try {
             out.close();
@@ -1456,18 +1442,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private Block currentBlock = null;
     private long pos = 0;
     private long blockEnd = -1;
-
-    /**
-     * This variable tracks the number of failures since the start of the
-     * most recent user-facing operation. That is to say, it should be reset
-     * whenever the user makes a call on this stream, and if at any point
-     * during the retry logic, the failure count exceeds a threshold,
-     * the errors will be thrown back to the operation.
-     *
-     * Specifically this counts the number of times the client has gone
-     * back to the namenode to get a new list of block locations, and is
-     * capped at maxBlockAcquireFailures
-     */
     private int failures = 0;
 
     /* XXX Use of CocurrentHashMap is temp fix. Need to fix 
@@ -1760,8 +1734,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       if (closed) {
         throw new IOException("Stream closed");
       }
-      failures = 0;
-
       if (pos < getFileLength()) {
         int retries = 2;
         while (retries > 0) {
@@ -1905,7 +1877,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       if (closed) {
         throw new IOException("Stream closed");
       }
-      failures = 0;
       long filelen = getFileLength();
       if ((position < 0) || (position >= filelen)) {
         return -1;
@@ -2418,24 +2389,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       public void run() {
 
         this.setName("ResponseProcessor for block " + block);
-        PipelineAck ack = new PipelineAck();
   
         while (!closed && clientRunning && !lastPacketInBlock) {
           // process responses from datanodes.
           try {
-            // read an ack from the pipeline
-            ack.readFields(blockReplyStream, targets.length);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("DFSClient " + ack);
-            }
-            long seqno = ack.getSeqno();
-            if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
+            // verify seqno from datanode
+            long seqno = blockReplyStream.readLong();
+            LOG.debug("DFSClient received ack for seqno " + seqno);
+            if (seqno == -1) {
               continue;
             } else if (seqno == -2) {
-              // This signifies that some pipeline node failed to read downstream
-              // and therefore has no idea what sequence number the message corresponds
-              // to. So, we don't try to match it up with an ack.
-              assert ! ack.isSuccess();
+              // no nothing
             } else {
               Packet one = null;
               synchronized (ackQueue) {
@@ -2451,7 +2415,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
             // processes response status from all datanodes.
             for (int i = 0; i < targets.length && clientRunning; i++) {
-              short reply = ack.getReply(i);
+              short reply = blockReplyStream.readShort();
               if (reply != DataTransferProtocol.OP_STATUS_SUCCESS) {
                 errorIndex = i; // first bad datanode
                 throw new IOException("Bad response " + reply +
@@ -3181,13 +3145,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      */
     @Override
     public void close() throws IOException {
-      if (closed) {
-        IOException e = lastException;
-        if (e == null)
-          return;
-        else
-          throw e;
-      }
+      if(closed)
+        return;
       closeInternal();
       leasechecker.remove(src);
       

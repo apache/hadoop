@@ -21,7 +21,6 @@ import java.io.*;
 import java.net.*;
 import java.util.Iterator;
 import java.util.Map;
-import java.lang.Math;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
@@ -32,8 +31,6 @@ import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
  * This class provides fetching a specified file from the NameNode.
  */
 class TransferFsImage implements FSConstants {
-  
-  public final static String CONTENT_LENGTH = "Content-Length";
   
   private boolean isGetImage;
   private boolean isGetEdit;
@@ -121,16 +118,6 @@ class TransferFsImage implements FSConstants {
         throw new IOException("If this exception is not caught by the " +
             "name-node fs image will be truncated.");
       }
-      
-      if (ErrorSimulator.getErrorSimulation(3)
-          && localfile.getAbsolutePath().contains("fsimage")) {
-          // Test sending image shorter than localfile
-          long len = localfile.length();
-          buf = new byte[(int)Math.min(len/2, BUFFER_SIZE)];
-          // This will read at most half of the image
-          // and the rest of the image will be sent over the wire
-          infile.read(buf);
-      }
       int num = 1;
       while (num > 0) {
         num = infile.read(buf);
@@ -161,15 +148,6 @@ class TransferFsImage implements FSConstants {
     //
     URL url = new URL(str.toString());
     URLConnection connection = url.openConnection();
-    long advertisedSize;
-    String contentLength = connection.getHeaderField(CONTENT_LENGTH);
-    if (contentLength != null) {
-      advertisedSize = Long.parseLong(contentLength);
-    } else {
-      throw new IOException(CONTENT_LENGTH + " header is not provided " +
-                            "by the namenode when trying to fetch " + str);
-    }
-    long received = 0;
     InputStream stream = connection.getInputStream();
     FileOutputStream[] output = null;
 
@@ -184,7 +162,6 @@ class TransferFsImage implements FSConstants {
       while (num > 0) {
         num = stream.read(buf);
         if (num > 0 && localPath != null) {
-          received += num;
           for (int i = 0; i < output.length; i++) {
             output[i].write(buf, 0, num);
           }
@@ -198,11 +175,6 @@ class TransferFsImage implements FSConstants {
             output[i].close();
           }
         }
-      }
-      if (received != advertisedSize) {
-        throw new IOException("File " + str + " received length " + received +
-                              " is not of the advertised size " +
-                              advertisedSize);
       }
     }
   }

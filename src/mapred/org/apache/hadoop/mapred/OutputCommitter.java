@@ -53,7 +53,9 @@ import java.io.IOException;
  * @see FileOutputCommitter 
  * @see JobContext
  * @see TaskAttemptContext 
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.OutputCommitter} instead.
  */
+@Deprecated
 public abstract class OutputCommitter 
                 extends org.apache.hadoop.mapreduce.OutputCommitter {
   /**

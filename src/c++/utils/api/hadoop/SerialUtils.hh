@@ -19,7 +19,6 @@
 #define HADOOP_SERIAL_UTILS_HH
 
 #include <string>
-#include <stdint.h>
 
 namespace HadoopUtils {
 

@@ -30,6 +30,8 @@
 
 #define PATH_SEPARATOR ':'
 
+#define USER_CLASSPATH "/home/y/libexec/hadoop/conf:/home/y/libexec/hadoop/lib/hadoop-0.1.0.jar"
+
 
 /** Denote the method we want to invoke as STATIC or INSTANCE */
 typedef enum {

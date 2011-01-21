@@ -239,7 +239,7 @@ public class MiniDFSCluster {
       ioe.initCause(e);
       throw ioe;
     }
-    base_dir = getBaseDir();
+    base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     data_dir = new File(base_dir, "data");
     
     // Setup the NameNode configuration
@@ -835,10 +835,5 @@ public class MiniDFSCluster {
    */
   public String getDataDirectory() {
     return data_dir.getAbsolutePath();
-  }
-
-  public static File getBaseDir() {
-    return new File(System.getProperty(
-      "test.build.data", "build/test/data"), "dfs/");
   }
 }

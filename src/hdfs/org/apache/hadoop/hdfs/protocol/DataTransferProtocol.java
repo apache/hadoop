@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 
 /**
  * 
@@ -59,95 +56,6 @@ public interface DataTransferProtocol {
   public static final int OP_STATUS_ERROR_EXISTS = 4;  
   public static final int OP_STATUS_CHECKSUM_OK = 5;  
 
-  /* seqno for a heartbeat packet */
-  public static final int HEARTBEAT_SEQNO = -1;
 
-  /** reply **/
-  public static class PipelineAck {
-    private long seqno;
-    private short replies[];
-    final public static PipelineAck HEART_BEAT =
-      new PipelineAck(HEARTBEAT_SEQNO, new short[0]);
 
-    /** default constructor **/
-    public PipelineAck() {
-    }
-
-    /**
-     * Constructor
-     * @param seqno sequence number
-     * @param replies an array of replies
-     */
-    public PipelineAck(long seqno, short[] replies) {
-      this.seqno = seqno;
-      this.replies = replies;
-    }
-
-    /**
-     * Get the sequence number
-     * @return the sequence number
-     */
-    public long getSeqno() {
-      return seqno;
-    }
-
-    /**
-     * get the ith reply
-     * @return the the ith reply
-     */
-    public short getReply(int i) {
-      return replies[i];
-    }
-
-    /**
-     * Check if this ack contains error status
-     * @return true if all statuses are SUCCESS
-     */
-    public boolean isSuccess() {
-      for (short reply : replies) {
-        if (reply != OP_STATUS_SUCCESS) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    public void readFields(DataInput in, int numRepliesExpected)
-      throws IOException {
-      assert numRepliesExpected > 0;
-
-      seqno = in.readLong();
-      if (seqno == HEARTBEAT_SEQNO) {
-        // Heartbeat doesn't forward any replies
-        replies = new short[0];
-      } else {
-        replies = new short[numRepliesExpected];
-        for (int i=0; i < replies.length; i++) {
-          replies[i] = in.readShort();
-        }
-      }
-    }
-
-    public void write(DataOutput out) throws IOException {
-      out.writeLong(seqno);
-      for(short reply : replies) {
-        out.writeShort(reply);
-      }
-    }
-
-    @Override //Object
-    public String toString() {
-      StringBuilder ack = new StringBuilder("Replies for seqno ");
-      ack.append( seqno ).append( " are" );
-      for(short reply : replies) {
-        ack.append(" ");
-        if (reply == OP_STATUS_SUCCESS) {
-          ack.append("SUCCESS");
-        } else {
-          ack.append("FAILED");
-        }
-      }
-      return ack.toString();
-    }
-  }
 }

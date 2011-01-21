@@ -222,7 +222,7 @@ int invokeMethod(JNIEnv *env, RetVal *retval, Exc *exc, MethType methType,
 }
 
 jarray constructNewArrayString(JNIEnv *env, Exc *exc, const char **elements, int size) {
-  const char *className = "java/lang/String";
+  const char *className = "Ljava/lang/String;";
   jobjectArray result;
   int i;
   jclass arrCls = (*env)->FindClass(env, className);

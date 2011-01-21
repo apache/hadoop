@@ -57,7 +57,7 @@ public class TestHarFileSystem extends TestCase {
   private MiniDFSCluster dfscluster;
   private MiniMRCluster mapred;
   private FileSystem fs;
-  private Path filea, fileb, filec, filed;
+  private Path filea, fileb, filec;
   private Path archivePath;
   
   protected void setUp() throws Exception {
@@ -69,9 +69,6 @@ public class TestHarFileSystem extends TestCase {
     filea = new Path(inputPath,"a");
     fileb = new Path(inputPath,"b");
     filec = new Path(inputPath,"c");
-    // check for har containing escape worthy characters
-    // in there name
-    filed = new Path(inputPath, "d%d");
     archivePath = new Path(fs.getHomeDirectory(), "tmp");
   }
   
@@ -124,14 +121,7 @@ public class TestHarFileSystem extends TestCase {
     out = fs.create(filec);
     out.write("c".getBytes());
     out.close();
-    out = fs.create(filed);
-    out.write("d".getBytes());
-    out.close();
     Configuration conf = mapred.createJobConf();
-    
-    // check to see if fs.har.impl.disable.cache is true
-    boolean archivecaching = conf.getBoolean("fs.har.impl.disable.cache", false);
-    assertTrue(archivecaching);
     HadoopArchives har = new HadoopArchives(conf);
     String[] args = new String[3];
     //check for destination not specfied
@@ -189,7 +179,6 @@ public class TestHarFileSystem extends TestCase {
     Path harFilea = new Path(harPath, "a");
     Path harFileb = new Path(harPath, "b");
     Path harFilec = new Path(harPath, "c");
-    Path harFiled = new Path(harPath, "d%d");
     FileSystem harFs = harFilea.getFileSystem(conf);
     FSDataInputStream fin = harFs.open(harFilea);
     byte[] b = new byte[4];
@@ -204,11 +193,6 @@ public class TestHarFileSystem extends TestCase {
     fin.read(b);
     fin.close();
     assertTrue("strings are equal ", (b[0] == "c".getBytes()[0]));
-    fin = harFs.open(harFiled);
-    fin.read(b);
-    fin.close();
-    assertTrue("strings are equal ", (b[0] == "d".getBytes()[0]));
-    
     // ok all files match 
     // run a map reduce job
     Path outdir = new Path(fs.getHomeDirectory(), "mapout"); 
@@ -229,11 +213,11 @@ public class TestHarFileSystem extends TestCase {
     FileStatus[] status = fs.globStatus(new Path(outdir, "part*"));
     Path reduceFile = status[0].getPath();
     FSDataInputStream reduceIn = fs.open(reduceFile);
-    b = new byte[8];
+    b = new byte[6];
     reduceIn.read(b);
-    //assuming all the 8 bytes were read.
+    //assuming all the 6 bytes were read.
     Text readTxt = new Text(b);
-    assertTrue("a\nb\nc\nd\n".equals(readTxt.toString()));
+    assertTrue("a\nb\nc\n".equals(readTxt.toString()));
     assertTrue("number of bytes left should be -1", reduceIn.read(b) == -1);
     reduceIn.close();
   }

@@ -118,8 +118,6 @@ public class StreamJob implements Tool {
       return submitAndMonitorJob();
     }catch (IllegalArgumentException ex) {
       //ignore, since log will already be printed
-      // print the log in debug mode.
-      LOG.debug("Error in streaming job", ex);
       return 1;
     }
   }
@@ -344,13 +342,13 @@ public class StreamJob implements Tool {
     return OptionBuilder.withDescription(desc).create(name);
   }
   
-  private void validate(final List<String> values) 
+  private static void validate(final List<String> values) 
   throws IllegalArgumentException {
     for (String file : values) {
       File f = new File(file);  
       if (!f.canRead()) {
-        fail("File: " + f.getAbsolutePath() 
-          + " does not exist, or is not readable."); 
+        throw new IllegalArgumentException("File : " + f.getAbsolutePath() 
+                                           + " is not readable."); 
       }
     }
   }

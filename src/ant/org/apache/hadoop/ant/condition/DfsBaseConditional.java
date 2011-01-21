@@ -56,7 +56,7 @@ public abstract class DfsBaseConditional extends org.apache.hadoop.ant.DfsTask
 
   protected int postCmd(int exit_code) {
     exit_code = super.postCmd(exit_code);
-    result = exit_code == 0;
+    result = exit_code == 1;
     return exit_code;
   }
 

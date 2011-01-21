@@ -347,12 +347,10 @@ public class Client {
     private void handleConnectionFailure(
         int curRetries, int maxRetries, IOException ioe) throws IOException {
       // close the current connection
-      if (socket != null) {
-        try {
-          socket.close();
-        } catch (IOException e) {
-          LOG.warn("Not able to close a socket", e);
-        }
+      try {
+        socket.close();
+      } catch (IOException e) {
+        LOG.warn("Not able to close a socket", e);
       }
       // set socket to null so that the next call to setupIOstreams
       // can start the process of connect all over again.
@@ -505,18 +503,16 @@ public class Client {
         if (LOG.isDebugEnabled())
           LOG.debug(getName() + " got value #" + id);
 
-        Call call = calls.get(id);
+        Call call = calls.remove(id);
 
         int state = in.readInt();     // read call status
         if (state == Status.SUCCESS.state) {
           Writable value = ReflectionUtils.newInstance(valueClass, conf);
           value.readFields(in);                 // read value
           call.setValue(value);
-          calls.remove(id);
         } else if (state == Status.ERROR.state) {
           call.setException(new RemoteException(WritableUtils.readString(in),
                                                 WritableUtils.readString(in)));
-          calls.remove(id);
         } else if (state == Status.FATAL.state) {
           // Close the connection
           markClosed(new RemoteException(WritableUtils.readString(in), 

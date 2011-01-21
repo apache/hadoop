@@ -47,7 +47,9 @@ import org.apache.hadoop.util.StringUtils;
  * 
  * <p><code>Counters</code> are bunched into {@link Group}s, each comprising of
  * counters from a particular <code>Enum</code> class. 
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.Counters} instead.
  */
+@Deprecated
 public class Counters implements Writable, Iterable<Counters.Group> {
   private static final Log LOG = LogFactory.getLog(Counters.class);
   private static final char GROUP_OPEN = '{';
@@ -108,6 +110,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     }
     
     // Checks for (content) equality of two (basic) counters
+    @Deprecated
     synchronized boolean contentEquals(Counter c) {
       return this.equals(c);
     }

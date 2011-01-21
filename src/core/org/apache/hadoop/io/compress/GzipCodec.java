@@ -161,7 +161,7 @@ public class GzipCodec extends DefaultCodec {
   public Class<? extends Compressor> getCompressorType() {
     return ZlibFactory.isNativeZlibLoaded(conf)
       ? GzipZlibCompressor.class
-      : null;
+      : BuiltInZlibDeflater.class;
   }
 
   public CompressionInputStream createInputStream(InputStream in) 
@@ -192,7 +192,7 @@ public class GzipCodec extends DefaultCodec {
   public Class<? extends Decompressor> getDecompressorType() {
     return ZlibFactory.isNativeZlibLoaded(conf)
       ? GzipZlibDecompressor.class
-      : null;
+      : BuiltInZlibInflater.class;
   }
 
   public String getDefaultExtension() {

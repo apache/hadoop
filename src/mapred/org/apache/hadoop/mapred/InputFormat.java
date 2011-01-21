@@ -61,7 +61,9 @@ import org.apache.hadoop.fs.FileSystem;
  * @see RecordReader
  * @see JobClient
  * @see FileInputFormat
+ * @deprecated Use {@link org.apache.hadoop.mapreduce.InputFormat} instead.
  */
+@Deprecated
 public interface InputFormat<K, V> {
 
   /** 
