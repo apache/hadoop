@@ -566,6 +566,26 @@ public class KeyValue implements Writable, HeapSize {
     return ret;
   }
 
+  /**
+   * Creates a deep copy of this KeyValue, re-allocating the buffer.
+   * Same function as {@link #clone()}.  Added for clarity vs shallowCopy()
+   * @return Deep copy of this KeyValue
+   */
+  public KeyValue deepCopy() {
+    return clone();
+  }
+
+  /**
+   * Creates a shallow copy of this KeyValue, reusing the data byte buffer.
+   * http://en.wikipedia.org/wiki/Object_copy
+   * @return Shallow copy of this KeyValue
+   */
+  public KeyValue shallowCopy() {
+    KeyValue shallowCopy = new KeyValue(this.bytes, this.offset, this.length);
+    shallowCopy.setMemstoreTS(this.memstoreTS);
+    return shallowCopy;
+  }
+
   //---------------------------------------------------------------------------
   //
   //  String representation

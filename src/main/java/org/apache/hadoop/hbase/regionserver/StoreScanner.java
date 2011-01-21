@@ -253,7 +253,7 @@ class StoreScanner implements KeyValueScanner, InternalScanner, ChangedReadersOb
     List<KeyValue> results = new ArrayList<KeyValue>();
     LOOP: while((kv = this.heap.peek()) != null) {
       // kv is no longer immutable due to KeyOnlyFilter! use copy for safety
-      KeyValue copyKv = new KeyValue(kv.getBuffer(), kv.getOffset(), kv.getLength());
+      KeyValue copyKv = kv.shallowCopy();
       ScanQueryMatcher.MatchCode qcode = matcher.match(copyKv);
       //DebugPrint.println("SS peek kv = " + kv + " with qcode = " + qcode);
       switch(qcode) {
