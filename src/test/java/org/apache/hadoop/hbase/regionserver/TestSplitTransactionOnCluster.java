@@ -245,6 +245,8 @@ public class TestSplitTransactionOnCluster {
     HRegionServer tableRegionServer = cluster.getRegionServer(tableRegionIndex);
     if (metaRegionServer.getServerName().equals(tableRegionServer.getServerName())) {
       HRegionServer hrs = getOtherRegionServer(cluster, metaRegionServer);
+      LOG.info("Moving " + hri.getRegionNameAsString() + " to " +
+        hrs.getServerName() + "; metaServerIndex=" + metaServerIndex);
       admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(hrs.getServerName()));
     }
     // Wait till table region is up on the server that is NOT carrying .META..
@@ -252,7 +254,7 @@ public class TestSplitTransactionOnCluster {
       tableRegionIndex = cluster.getServerWith(hri.getRegionName());
       if (tableRegionIndex != -1 && tableRegionIndex != metaServerIndex) break;
       LOG.debug("Waiting on region move off the .META. server; current index " +
-        tableRegionIndex);
+        tableRegionIndex + " and metaServerIndex=" + metaServerIndex);
       Thread.sleep(100);
     }
     // Verify for sure table region is not on same server as .META.
