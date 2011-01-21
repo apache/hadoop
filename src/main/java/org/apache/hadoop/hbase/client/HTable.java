@@ -19,9 +19,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1328,6 +1328,14 @@ public class HTable implements HTableInterface {
   public static boolean getRegionCachePrefetch(final byte[] tableName) throws ZooKeeperConnectionException {
     return HConnectionManager.getConnection(HBaseConfiguration.create()).
     getRegionCachePrefetch(tableName);
+  }
+
+  /**
+   * Explicitly clears the region cache to fetch the latest value from META.
+   * This is a power user function: avoid unless you know the ramifications.
+   */
+  public void clearRegionCache() {
+    this.connection.clearRegionCache();
   }
 
   @Override
