@@ -80,12 +80,15 @@ public class HBaseClient {
   protected final boolean tcpNoDelay; // if T then disable Nagle's Algorithm
   protected final boolean tcpKeepAlive; // if T then use keepalives
   protected int pingInterval; // how often sends ping to the server in msecs
+  protected int socketTimeout; // socket timeout
 
   protected final SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
 
   final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
-  final static int DEFAULT_PING_INTERVAL = 60000; // 1 min
+  final private static String SOCKET_TIMEOUT = "ipc.socket.timeout";
+  final static int DEFAULT_PING_INTERVAL = 60000;  // 1 min
+  final static int DEFAULT_SOCKET_TIMEOUT = 20000; // 20 seconds
   final static int PING_CALL_ID = -1;
 
   /**
@@ -94,7 +97,6 @@ public class HBaseClient {
    * @param conf Configuration
    * @param pingInterval the ping interval
    */
-  @SuppressWarnings({"UnusedDeclaration"})
   public static void setPingInterval(Configuration conf, int pingInterval) {
     conf.setInt(PING_INTERVAL_NAME, pingInterval);
   }
@@ -108,6 +110,22 @@ public class HBaseClient {
    */
   static int getPingInterval(Configuration conf) {
     return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
+  }
+
+  /**
+   * Set the socket timeout
+   * @param conf Configuration
+   * @param socketTimeout the socket timeout
+   */
+  public static void setSocketTimeout(Configuration conf, int socketTimeout) {
+    conf.setInt(SOCKET_TIMEOUT, socketTimeout);
+  }
+
+  /**
+   * @return the socket timeout
+   */
+  static int getSocketTimeout(Configuration conf) {
+    return conf.getInt(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT);
   }
 
   /**
@@ -309,8 +327,8 @@ public class HBaseClient {
             this.socket = socketFactory.createSocket();
             this.socket.setTcpNoDelay(tcpNoDelay);
             this.socket.setKeepAlive(tcpKeepAlive);
-            // connection time out is 20s
-            NetUtils.connect(this.socket, remoteId.getAddress(), 20000);
+            NetUtils.connect(this.socket, remoteId.getAddress(),
+              getSocketTimeout(conf));
             if (remoteId.rpcTimeout > 0) {
               pingInterval = remoteId.rpcTimeout; // overwrite pingInterval
             }
