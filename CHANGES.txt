@@ -95,6 +95,8 @@ Release 0.20.3 - 2011-1-5
     MAPREDUCE-1734. Un-deprecate the old MapReduce API in the 0.20 branch.
     (todd)
 
+    HADOOP-6882. Update the version of Jetty to 6.1.26. (omalley)
+
 Release 0.20.2 - 2010-2-19
 
   NEW FEATURES
