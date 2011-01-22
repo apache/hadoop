@@ -31,11 +31,35 @@
   ordering of the filters.</description>
 </property>
 
+ <property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value>
+  <description>Class for user to group mapping (get groups for a given user)
+  </description>
+</property>
+
 <property>
   <name>hadoop.security.authorization</name>
   <value>false</value>
   <description>Is service-level authorization enabled?</description>
 </property>
+
+<property>
+  <name>hadoop.security.authentication</name>
+  <value>simple</value>
+  <description>Possible values are simple (no authentication), and kerberos
+  </description>
+</property>
+
+<!--
+<property>
+  <name>hadoop.security.service.user.name.key</name>
+  <value></value>
+  <description>Name of the kerberos principal of the user that owns
+  a given service daemon
+  </description>
+</property>
+-->
 
 <!--- logging properties -->
 
@@ -166,6 +190,12 @@
   <name>fs.har.impl</name>
   <value>org.apache.hadoop.fs.HarFileSystem</value>
   <description>The filesystem for Hadoop archives. </description>
+</property>
+
+<property>
+  <name>fs.har.impl.disable.cache</name>
+  <value>true</value>
+  <description>Don't cache 'har' filesystem instances.</description>
 </property>
 
 <property>
@@ -429,6 +459,12 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.security.uid.cache.secs</name>
+  <value>14400</value>
+  <description> NativeIO maintains a cache from UID to UserName. This is
+  the timeout for an entry in that cache. </description>
+</property>
 
 
 </configuration>

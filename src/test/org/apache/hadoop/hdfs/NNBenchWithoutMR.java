@@ -24,12 +24,16 @@ import java.util.Date;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.mapred.JobConf;
+
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * This program executes a specified operation that applies load to 
@@ -43,7 +47,7 @@ import org.apache.hadoop.util.StringUtils;
  * This version does not use the map reduce framework
  * 
  */
-public class NNBenchWithoutMR {
+public class NNBenchWithoutMR extends Configured implements Tool {
   
   private static final Log LOG = LogFactory.getLog(
                                             "org.apache.hadoop.hdfs.NNBench");
@@ -59,7 +63,6 @@ public class NNBenchWithoutMR {
   // variables initialized in main()
   private static FileSystem fileSys = null;
   private static Path taskDir = null;
-  private static String uniqueId = null;
   private static byte[] buffer;
   private static long maxExceptionsPerFile = 200;
     
@@ -69,12 +72,14 @@ public class NNBenchWithoutMR {
    * This allows multiple instances of this program, running on clock
    * synchronized nodes, to start at roughly the same time.
    */
+
   static void barrier() {
     long sleepTime;
     while ((sleepTime = startTime - System.currentTimeMillis()) > 0) {
       try {
         Thread.sleep(sleepTime);
       } catch (InterruptedException ex) {
+        //This left empty on purpose
       }
     }
   }
@@ -98,18 +103,20 @@ public class NNBenchWithoutMR {
   static int createWrite() {
     int totalExceptions = 0;
     FSDataOutputStream out = null;
-    boolean success = false;
+    boolean success;
     for (int index = 0; index < numFiles; index++) {
       int singleFileExceptions = 0;
       do { // create file until is succeeds or max exceptions reached
         try {
           out = fileSys.create(
-                               new Path(taskDir, "" + index), false, 512, (short)1, bytesPerBlock);
+                  new Path(taskDir, "" + index), false, 512,
+                  (short)1, bytesPerBlock);
           success = true;
         } catch (IOException ioe) { 
           success=false; 
           totalExceptions++;
-          handleException("creating file #" + index, ioe, ++singleFileExceptions);
+          handleException("creating file #" + index, ioe,
+                  ++singleFileExceptions);
         }
       } while (!success);
       long toBeWritten = bytesPerFile;
@@ -120,7 +127,8 @@ public class NNBenchWithoutMR {
           out.write(buffer, 0, nbytes);
         } catch (IOException ioe) {
           totalExceptions++;
-          handleException("writing to file #" + index, ioe, ++singleFileExceptions);
+          handleException("writing to file #" + index, ioe,
+                  ++singleFileExceptions);
         }
       }
       do { // close file until is succeeds
@@ -130,7 +138,8 @@ public class NNBenchWithoutMR {
         } catch (IOException ioe) {
           success=false; 
           totalExceptions++;
-          handleException("closing file #" + index, ioe, ++singleFileExceptions);
+          handleException("closing file #" + index, ioe,
+                  ++singleFileExceptions);
         }
       } while (!success);
     }
@@ -144,7 +153,7 @@ public class NNBenchWithoutMR {
    */
   static int openRead() {
     int totalExceptions = 0;
-    FSDataInputStream in = null;
+    FSDataInputStream in;
     for (int index = 0; index < numFiles; index++) {
       int singleFileExceptions = 0;
       try {
@@ -153,11 +162,12 @@ public class NNBenchWithoutMR {
         while (toBeRead > 0) {
           int nbytes = (int) Math.min(buffer.length, toBeRead);
           toBeRead -= nbytes;
-          try { // only try once
+          try { // only try once && we don't care about a number of bytes read
             in.read(buffer, 0, nbytes);
           } catch (IOException ioe) {
             totalExceptions++;
-            handleException("reading from file #" + index, ioe, ++singleFileExceptions);
+            handleException("reading from file #" + index, ioe,
+                    ++singleFileExceptions);
           }
         }
         in.close();
@@ -177,19 +187,23 @@ public class NNBenchWithoutMR {
    */
   static int rename() {
     int totalExceptions = 0;
-    boolean success = false;
+    boolean success;
     for (int index = 0; index < numFiles; index++) {
       int singleFileExceptions = 0;
       do { // rename file until is succeeds
         try {
-          boolean result = fileSys.rename(
-                                          new Path(taskDir, "" + index), new Path(taskDir, "A" + index));
+          // Possible result of this operation is at no interest to us for it
+          // can return false only if the namesystem
+          // could rename the path from the name
+          // space (e.g. no Exception has been thrown)
+          fileSys.rename(new Path(taskDir, "" + index),
+              new Path(taskDir, "A" + index));
           success = true;
-        } catch (IOException ioe) { 
-          success=false; 
+        } catch (IOException ioe) {
+          success = false;
           totalExceptions++;
           handleException("creating file #" + index, ioe, ++singleFileExceptions);
-       }
+        }
       } while (!success);
     }
     return totalExceptions;
@@ -203,14 +217,18 @@ public class NNBenchWithoutMR {
    */
   static int delete() {
     int totalExceptions = 0;
-    boolean success = false;
+    boolean success;
     for (int index = 0; index < numFiles; index++) {
       int singleFileExceptions = 0;
       do { // delete file until is succeeds
         try {
-          boolean result = fileSys.delete(new Path(taskDir, "A" + index), true);
+          // Possible result of this operation is at no interest to us for it
+          // can return false only if namesystem
+          // delete could remove the path from the name
+          // space (e.g. no Exception has been thrown)
+          fileSys.delete(new Path(taskDir, "A" + index), true);
           success = true;
-        } catch (IOException ioe) { 
+        } catch (IOException ioe) {
           success=false; 
           totalExceptions++;
           handleException("creating file #" + index, ioe, ++singleFileExceptions);
@@ -239,15 +257,23 @@ public class NNBenchWithoutMR {
    *         [-bytesPerChecksum <value for io.bytes.per.checksum>]
    * </pre>
    *
+   * @param args is an array of the program command line arguments
    * @throws IOException indicates a problem with test startup
    */
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) throws Exception {
+    int res = ToolRunner.run(new NNBenchWithoutMR(), args);
+    System.exit(res);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception {
+
     String version = "NameNodeBenchmark.0.3";
     System.out.println(version);
     int bytesPerChecksum = -1;
     
     String usage =
-      "Usage: nnbench " +
+      "Usage: NNBenchWithoutMR " +
       "  -operation <one of createWrite, openRead, rename, or delete> " +
       "  -baseDir <base output/input DFS path> " +
       "  -startTime <time to start, given in seconds from the epoch> " +
@@ -275,13 +301,13 @@ public class NNBenchWithoutMR {
         operation = args[++i];
       } else {
         System.out.println(usage);
-        System.exit(-1);
+        return -1;
       }
     }
     bytesPerFile = bytesPerBlock * blocksPerFile;
     
     JobConf jobConf = new JobConf(new Configuration(), NNBench.class);
-    
+
     if ( bytesPerChecksum < 0 ) { // if it is not set in cmdline
       bytesPerChecksum = jobConf.getInt("io.bytes.per.checksum", 512);
     }
@@ -304,11 +330,11 @@ public class NNBenchWithoutMR {
         bytesPerBlock % bytesPerChecksum != 0)
       {
         System.err.println(usage);
-        System.exit(-1);
+        return -1;
       }
     
     fileSys = FileSystem.get(jobConf);
-    uniqueId = java.net.InetAddress.getLocalHost().getHostName();
+    String uniqueId = java.net.InetAddress.getLocalHost().getHostName();
     taskDir = new Path(baseDir, uniqueId);
     // initialize buffer used for writing/reading file
     buffer = new byte[(int) Math.min(bytesPerFile, 32768L)];
@@ -333,12 +359,14 @@ public class NNBenchWithoutMR {
       exceptions = delete();
     } else {
       System.err.println(usage);
-      System.exit(-1);
+      return -1;
     }
     endTime = new Date();
     System.out.println("Job ended: " + endTime);
     duration = (endTime.getTime() - execTime.getTime()) /1000;
     System.out.println("The " + operation + " job took " + duration + " seconds.");
     System.out.println("The job recorded " + exceptions + " exceptions.");
+
+    return 0;
   }
 }

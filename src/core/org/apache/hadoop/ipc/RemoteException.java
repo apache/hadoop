@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 
 import org.xml.sax.Attributes;
-import org.znerd.xmlenc.XMLOutputter;
 
 public class RemoteException extends IOException {
   /** For java.io.Serializable */
@@ -96,20 +95,6 @@ public class RemoteException extends IOException {
     IOException ex = cn.newInstance(firstLine);
     ex.initCause(this);
     return ex;
-  }
-
-  /** Write the object to XML format */
-  public void writeXml(String path, XMLOutputter doc) throws IOException {
-    doc.startTag(RemoteException.class.getSimpleName());
-    doc.attribute("path", path);
-    doc.attribute("class", getClassName());
-    String msg = getLocalizedMessage();
-    int i = msg.indexOf("\n");
-    if (i >= 0) {
-      msg = msg.substring(0, i);
-    }
-    doc.attribute("message", msg.substring(msg.indexOf(":") + 1).trim());
-    doc.endTag();
   }
 
   /** Create RemoteException from attributes */

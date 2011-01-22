@@ -46,10 +46,14 @@ public class TestHDFSServerPorts extends TestCase {
   Configuration config;
   File hdfsDir;
 
+  public NameNode startNameNode() throws IOException {
+    return startNameNode(false);
+  }
+
   /**
    * Start the name-node.
    */
-  public NameNode startNameNode() throws IOException {
+  public NameNode startNameNode(boolean withService) throws IOException {
     String dataDir = System.getProperty("test.build.data");
     hdfsDir = new File(dataDir, "dfs");
     if ( hdfsDir.exists() && !FileUtil.fullyDelete(hdfsDir) ) {
@@ -58,6 +62,9 @@ public class TestHDFSServerPorts extends TestCase {
     config = new Configuration();
     config.set("dfs.name.dir", new File(hdfsDir, "name1").getPath());
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
+    if (withService) {
+      NameNode.setServiceAddress(config, NAME_NODE_HOST + "0");      
+    }
     config.set("dfs.http.address", NAME_NODE_HTTP_HOST + "0");
     NameNode.format(config);
 
@@ -147,13 +154,18 @@ public class TestHDFSServerPorts extends TestCase {
     return true;
   }
 
+  public void testNameNodePorts() throws Exception {
+    runTestNameNodePorts(false);
+    runTestNameNodePorts(true);
+  }
+
   /**
    * Verify name-node port usage.
    */
-  public void testNameNodePorts() throws Exception {
+  public void runTestNameNodePorts(boolean withService) throws Exception {
     NameNode nn = null;
     try {
-      nn = startNameNode();
+      nn = startNameNode(withService);
 
       // start another namenode on the same port
       Configuration conf2 = new Configuration(config);
@@ -172,7 +184,18 @@ public class TestHDFSServerPorts extends TestCase {
       // different http port
       conf2.set("dfs.http.address", NAME_NODE_HTTP_HOST + "0");
       started = canStartNameNode(conf2);
-      assertTrue(started); // should start now
+
+      if (withService) {
+        assertFalse("Should've failed on service port", started);
+
+        // reset conf2 since NameNode modifies it
+        FileSystem.setDefaultUri(conf2, "hdfs://"+NAME_NODE_HOST + "0");
+        conf2.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, NAME_NODE_HTTP_HOST + "0");
+        // Set Service address      
+        conf2.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, NAME_NODE_HOST + "0");
+        started = canStartNameNode(conf2);        
+      }
+      assertTrue(started);
     } finally {
       stopNameNode(nn);
     }

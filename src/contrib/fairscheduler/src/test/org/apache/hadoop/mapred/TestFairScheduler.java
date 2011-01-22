@@ -33,6 +33,9 @@ import junit.framework.TestCase;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.FairScheduler.JobInfo;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.split.JobSplit;
+import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
 
 public class TestFairScheduler extends TestCase {
   final static String TEST_DIR = new File(System.getProperty("test.build.data",
@@ -50,8 +53,9 @@ public class TestFairScheduler extends TestCase {
     private FakeTaskTrackerManager taskTrackerManager;
     
     public FakeJobInProgress(JobConf jobConf,
-        FakeTaskTrackerManager taskTrackerManager) throws IOException {
-      super(new JobID("test", ++jobCounter), jobConf);
+        FakeTaskTrackerManager taskTrackerManager, 
+        JobTracker jt) throws IOException {
+      super(new JobID("test", ++jobCounter), jobConf, jt);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
       this.status = new JobStatus();
@@ -67,7 +71,8 @@ public class TestFairScheduler extends TestCase {
     public Task obtainNewMapTask(final TaskTrackerStatus tts, int clusterSize,
         int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(true);
-      Task task = new MapTask("", attemptId, 0, "", new BytesWritable()) {
+      Task task = new MapTask("", attemptId, 0, new JobSplit.TaskSplitIndex(),
+          1) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -82,7 +87,7 @@ public class TestFairScheduler extends TestCase {
     public Task obtainNewReduceTask(final TaskTrackerStatus tts,
         int clusterSize, int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(false);
-      Task task = new ReduceTask("", attemptId, 0, 10) {
+      Task task = new ReduceTask("", attemptId, 0, 10, 1) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -108,18 +113,26 @@ public class TestFairScheduler extends TestCase {
     List<JobInProgressListener> listeners =
       new ArrayList<JobInProgressListener>();
     
-    private Map<String, TaskTrackerStatus> trackers =
-      new HashMap<String, TaskTrackerStatus>();
+    private Map<String, TaskTracker> trackers =
+      new HashMap<String, TaskTracker>();
     private Map<String, TaskStatus> taskStatuses = 
       new HashMap<String, TaskStatus>();
 
     public FakeTaskTrackerManager() {
-      trackers.put("tt1", new TaskTrackerStatus("tt1", "tt1.host", 1,
-          new ArrayList<TaskStatus>(), 0,
-          maxMapTasksPerTracker, maxReduceTasksPerTracker));
-      trackers.put("tt2", new TaskTrackerStatus("tt2", "tt2.host", 2,
-          new ArrayList<TaskStatus>(), 0,
-          maxMapTasksPerTracker, maxReduceTasksPerTracker));
+      TaskTracker tt1 = new TaskTracker("tt1");
+      tt1.setStatus(new TaskTrackerStatus("tt1", "tt1.host", 1,
+                                          new ArrayList<TaskStatus>(), 0,
+                                          maxMapTasksPerTracker, 
+                                          maxReduceTasksPerTracker));
+      trackers.put("tt1", tt1);
+      
+      TaskTracker tt2 = new TaskTracker("tt2");
+      tt2.setStatus(new TaskTrackerStatus("tt2", "tt2.host", 2,
+                                          new ArrayList<TaskStatus>(), 0,
+                                          maxMapTasksPerTracker, 
+                                          maxReduceTasksPerTracker));
+      trackers.put("tt2", tt2);
+
     }
     
     @Override
@@ -143,7 +156,11 @@ public class TestFairScheduler extends TestCase {
 
     @Override
     public Collection<TaskTrackerStatus> taskTrackers() {
-      return trackers.values();
+      List<TaskTrackerStatus> statuses = new ArrayList<TaskTrackerStatus>();
+      for (TaskTracker tt : trackers.values()) {
+        statuses.add(tt.getStatus());
+      }
+      return statuses;
     }
 
 
@@ -188,7 +205,7 @@ public class TestFairScheduler extends TestCase {
       }
     }
     
-    public TaskTrackerStatus getTaskTracker(String trackerID) {
+    public TaskTracker getTaskTracker(String trackerID) {
       return trackers.get(trackerID);
     }
     
@@ -206,7 +223,7 @@ public class TestFairScheduler extends TestCase {
       };
       taskStatuses.put(t.getTaskID().toString(), status);
       status.setRunState(TaskStatus.State.RUNNING);
-      trackers.get(taskTrackerName).getTaskReports().add(status);
+      trackers.get(taskTrackerName).getStatus().getTaskReports().add(status);
     }
     
     public void finishTask(String taskTrackerName, String tipId) {
@@ -217,19 +234,6 @@ public class TestFairScheduler extends TestCase {
         reduces--;
       }
       status.setRunState(TaskStatus.State.SUCCEEDED);
-    }
-  }
-  
-  protected class FakeClock extends FairScheduler.Clock {
-    private long time = 0;
-    
-    public void advance(long millis) {
-      time += millis;
-    }
-
-    @Override
-    long getTime() {
-      return time;
     }
   }
   
@@ -279,7 +283,8 @@ public class TestFairScheduler extends TestCase {
     jobConf.setNumReduceTasks(reduces);
     if (pool != null)
       jobConf.set(POOL_PROPERTY, pool);
-    JobInProgress job = new FakeJobInProgress(jobConf, taskTrackerManager);
+    JobInProgress job = new FakeJobInProgress(jobConf, taskTrackerManager,
+        UtilsForTests.getJobTracker());
     job.getStatus().setRunState(state);
     taskTrackerManager.submitJob(job);
     job.startTime = clock.time;
@@ -499,7 +504,8 @@ public class TestFairScheduler extends TestCase {
     // Finish up the tasks and advance time again. Note that we must finish
     // the task since FakeJobInProgress does not properly maintain running
     // tasks, so the scheduler will always get an empty task list from
-    // the JobInProgress's getMapTasks/getReduceTasks and think they finished.
+    // the JobInProgress's getTasks(TaskType.MAP)/getTasks(TaskType.REDUCE) and 
+    // think they finished.
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_m_000001_0");
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_m_000002_0");
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_r_000003_0");
@@ -1227,7 +1233,7 @@ public class TestFairScheduler extends TestCase {
     scheduler.update();
   }
 
-  protected TaskTrackerStatus tracker(String taskTrackerName) {
+  protected TaskTracker tracker(String taskTrackerName) {
     return taskTrackerManager.getTaskTracker(taskTrackerName);
   }
   

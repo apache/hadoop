@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapred;
 
 import java.io.File;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 /**
  * TaskTrackerInstrumentation defines a number of instrumentation points
@@ -61,5 +63,14 @@ class TaskTrackerInstrumentation  {
    * @param t
    */
   public void reportTaskEnd(TaskAttemptID t) {}
-   
+
+  static TaskTrackerInstrumentation create(TaskTracker tt) {
+    return create(tt, DefaultMetricsSystem.INSTANCE);
+  }
+
+  static TaskTrackerInstrumentation create(TaskTracker tt, MetricsSystem ms) {
+    return ms.register("TaskTrackerMetrics", "TaskTracker metrics",
+                       new TaskTrackerMetricsSource(tt));
+  }
+
 }

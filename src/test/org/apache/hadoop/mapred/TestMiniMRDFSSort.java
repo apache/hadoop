@@ -71,7 +71,7 @@ public class TestMiniMRDFSSort extends TestCase {
     return setup;
   }
 
-  private static void runRandomWriter(JobConf job, Path sortInput) 
+  public static void runRandomWriter(JobConf job, Path sortInput) 
   throws Exception {
     // Scale down the default settings for RandomWriter for the test-case
     // Generates NUM_HADOOP_SLAVES * RW_MAPS_PER_HOST * RW_BYTES_PER_MAP

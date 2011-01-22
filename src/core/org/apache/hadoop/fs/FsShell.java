@@ -333,7 +333,7 @@ public class FsShell extends Configured implements Tool {
    * @exception: IOException
    * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
-  void cat(String src, boolean verifyChecksum) throws IOException {
+  void cat(final String src, boolean verifyChecksum) throws IOException {
     //cat behavior in Linux
     //  [~/1207]$ ls ?.txt
     //  x.txt  z.txt
@@ -346,9 +346,6 @@ public class FsShell extends Configured implements Tool {
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
-        if (srcFs.getFileStatus(p).isDir()) {
-          throw new IOException("Source must be a file.");
-        }
         printToStdout(srcFs.open(p));
       }
     }.globAndProcess(srcPattern, getSrcFileSystem(srcPattern, verifyChecksum));
@@ -1060,10 +1057,20 @@ public class FsShell extends Configured implements Tool {
     }
     
     if(!skipTrash) {
-      Trash trashTmp = new Trash(srcFs, getConf());
-      if (trashTmp.moveToTrash(src)) {
-        System.out.println("Moved to trash: " + src);
-        return;
+      try {
+	      Trash trashTmp = new Trash(srcFs, getConf());
+        if (trashTmp.moveToTrash(src)) {
+          System.out.println("Moved to trash: " + src);
+          return;
+        }
+      } catch (IOException e) {
+        Exception cause = (Exception) e.getCause();
+        String msg = "";
+        if(cause != null) {
+          msg = cause.getLocalizedMessage();
+        }
+        System.err.println("Problem with Trash." + msg +". Consider using -skipTrash option");        
+        throw e;
       }
     }
     
@@ -1209,6 +1216,12 @@ public class FsShell extends Configured implements Tool {
       Path srcPath = new Path(args[i]);
       FileSystem srcFs = srcPath.getFileSystem(getConf());
       Path[] paths = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
+      // if nothing matches to given glob pattern then increment error count
+      if(paths.length==0) {
+        System.err.println(handler.getName() + 
+            ": could not get status for '" + args[i] + "'");
+        errors++;
+      }
       for(Path path : paths) {
         try {
           FileStatus file = srcFs.getFileStatus(path);
@@ -1224,7 +1237,8 @@ public class FsShell extends Configured implements Tool {
             (e.getCause().getMessage() != null ? 
                 e.getCause().getLocalizedMessage() : "null"));
           System.err.println(handler.getName() + ": could not get status for '"
-                                        + path + "': " + msg.split("\n")[0]);        
+                                        + path + "': " + msg.split("\n")[0]);
+          errors++;
         }
       }
     }
@@ -1734,7 +1748,8 @@ public class FsShell extends Configured implements Tool {
                          "... command aborted.");
       return exitCode;
     } catch (IOException e) {
-      System.err.println("Bad connection to FS. command aborted.");
+      System.err.println("Bad connection to FS. command aborted. exception: " +
+          e.getLocalizedMessage());
       return exitCode;
     }
 
@@ -1768,7 +1783,7 @@ public class FsShell extends Configured implements Tool {
       } else if ("-chmod".equals(cmd) || 
                  "-chown".equals(cmd) ||
                  "-chgrp".equals(cmd)) {
-        FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
+        exitCode = FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, i);

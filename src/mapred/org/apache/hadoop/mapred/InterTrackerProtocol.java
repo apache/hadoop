@@ -21,11 +21,16 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.security.KerberosInfo;
 
 /** 
  * Protocol that a TaskTracker and the central JobTracker use to communicate.
  * The JobTracker is the Server, which implements this protocol.
  */ 
+@KerberosInfo(
+    serverPrincipal = JobTracker.JT_USER_NAME,
+    clientPrincipal = TaskTracker.TT_USER_NAME)
 interface InterTrackerProtocol extends VersionedProtocol {
   /**
    * version 3 introduced to replace 
@@ -61,8 +66,11 @@ interface InterTrackerProtocol extends VersionedProtocol {
    *            (HADOOP-4869) 
    * Version 24: Changed format of Task and TaskStatus for HADOOP-4759 
    * Version 25: JobIDs are passed in response to JobTracker restart 
+   * Version 26: Added numRequiredSlots to TaskStatus for MAPREDUCE-516
+   * Version 27: Adding node health status to TaskStatus for MAPREDUCE-211
+   * Version 28: Adding user name to the serialized Task for use by TT.
    */
-  public static final long versionID = 25L;
+  public static final long versionID = 28L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

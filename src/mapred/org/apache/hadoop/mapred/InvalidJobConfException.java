@@ -27,12 +27,22 @@ import java.io.IOException;
 public class InvalidJobConfException
     extends IOException {
 
+  private static final long serialVersionUID = 1L;
+
   public InvalidJobConfException() {
     super();
   }
 
   public InvalidJobConfException(String msg) {
     super(msg);
+  }
+
+  public InvalidJobConfException(String msg, Throwable t) {
+    super(msg, t);
+  }
+
+  public InvalidJobConfException(Throwable t) {
+    super(t);
   }
 
 }

@@ -21,6 +21,8 @@ package org.apache.hadoop.streaming;
 import junit.framework.TestCase;
 import java.io.*;
 
+import org.apache.hadoop.fs.FileUtil;
+
 /**
  * This class tests hadoopStreaming in MapReduce local mode.
  */
@@ -39,7 +41,7 @@ public class TestStreaming extends TestCase
   protected String reduce = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"R"});
   protected String outputExpect = "Rare\t\nRblue\t\nRbunnies\t\nRpink\t\nRred\t\nRroses\t\nRviolets\t\n";
 
-  private StreamJob job;
+  protected StreamJob job;
 
   public TestStreaming() throws IOException
   {
@@ -73,7 +75,7 @@ public class TestStreaming extends TestCase
   {
     try {
       try {
-        OUTPUT_DIR.getAbsoluteFile().delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
       } catch (Exception e) {
       }
 
@@ -91,10 +93,8 @@ public class TestStreaming extends TestCase
       System.err.println("  out1=" + output);
       assertEquals(outputExpect, output);
     } finally {
-      File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
       INPUT_FILE.delete();
-      outFileCRC.delete();
-      OUTPUT_DIR.getAbsoluteFile().delete();
+      FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
     }
   }
 

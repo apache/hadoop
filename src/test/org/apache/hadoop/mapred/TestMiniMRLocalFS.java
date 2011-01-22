@@ -60,6 +60,10 @@ public class TestMiniMRLocalFS extends TestCase {
     MiniMRCluster mr = null;
     try {
       mr = new MiniMRCluster(2, "file:///", 3);
+      // make cleanup inline sothat validation of existence of these directories
+      // can be done
+      mr.setInlineCleanupThreads();
+
       TestMiniMRWithDFS.runPI(mr, mr.createJobConf());
 
       // run the wordcount example with caching

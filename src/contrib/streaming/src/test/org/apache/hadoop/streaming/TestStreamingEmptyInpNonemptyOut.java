@@ -21,6 +21,8 @@ package org.apache.hadoop.streaming;
 import junit.framework.TestCase;
 import java.io.*;
 
+import org.apache.hadoop.fs.FileUtil;
+
 /**
  * This class tests hadoopStreaming in MapReduce local mode by giving
  * empty input to mapper and the mapper generates nonempty output. Since map()
@@ -77,7 +79,7 @@ public class TestStreamingEmptyInpNonemptyOut extends TestCase
   {
     try {
       try {
-        OUTPUT_DIR.getAbsoluteFile().delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
       } catch (Exception e) {
       }
 
@@ -100,12 +102,14 @@ public class TestStreamingEmptyInpNonemptyOut extends TestCase
       outFile = new File(OUTPUT_DIR, "part-00000").getAbsoluteFile();
       outFile.delete();
     } finally {
-      File outFileCRC = new File(OUTPUT_DIR, ".part-00000.crc").getAbsoluteFile();
-      INPUT_FILE.delete();
-      SCRIPT_FILE.delete();
-      outFileCRC.delete();
-      OUTPUT_DIR.getAbsoluteFile().delete();
-    }
+      try {
+        INPUT_FILE.delete();
+        SCRIPT_FILE.delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
+      } catch(Exception e) {
+        e.printStackTrace();
+      }
+   }
   }
 
   public static void main(String[]args) throws Exception

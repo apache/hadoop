@@ -29,7 +29,7 @@
       <title>Purpose</title>
       
       <p>This document describes the Capacity Scheduler, a pluggable 
-      Map/Reduce scheduler for Hadoop which provides a way to share 
+      MapReduce scheduler for Hadoop which provides a way to share 
       large clusters.</p>
     </section>
     
@@ -204,6 +204,30 @@
           	users, no user can use more than 25% of the queue's resources. A 
           	value of 100 implies no user limits are imposed.</td>
           </tr>
+          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.maximum-capacity</td>
+          	<td>
+                  maximum-capacity defines a limit beyond which a queue cannot
+                  use the capacity of the cluster.This provides a means to limit
+                  how much excess capacity a queue can use. By default, there
+                  is no limit.
+                  The maximum-capacity of a queue can only be greater than or
+                  equal to its minimum capacity.
+                  Default value of -1 implies a queue can use complete capacity
+                  of the cluster.
+
+                  This property could be to curtail certain jobs which are long
+                  running in nature from occupying more than a certain
+                  percentage of the cluster, which in the absence of
+                  pre-emption, could lead to capacity guarantees of other queues
+                  being affected.
+
+                  One important thing to note is that maximum-capacity is a
+                  percentage , so based on the cluster's capacity
+                  it would change. So if large no of nodes or racks get added
+                  to the cluster , maximum Capacity in
+                  absolute terms would increase accordingly.
+                </td>
+          </tr>
         </table>
       </section>
       
@@ -213,8 +237,8 @@
         <p>The Capacity Scheduler supports scheduling of tasks on a
         <code>TaskTracker</code>(TT) based on a job's memory requirements
         and the availability of RAM and Virtual Memory (VMEM) on the TT node.
-        See the <a href="mapred_tutorial.html#Memory+monitoring">Hadoop 
-        Map/Reduce tutorial</a> for details on how the TT monitors
+        See the <a href="mapred_tutorial.html#Memory+monitoring"> 
+        MapReduce Tutorial</a> for details on how the TT monitors
         memory usage.</p>
         <p>Currently the memory based scheduling is only supported
         in Linux platform.</p>
@@ -227,8 +251,8 @@
           <code>mapred.task.limit.maxvmem</code>, disables memory-based
           scheduling, just as it disables memory monitoring for a TT. These
           config parameters are described in the 
-          <a href="mapred_tutorial.html#Memory+monitoring">Hadoop Map/Reduce 
-          tutorial</a>. The value of  
+          <a href="mapred_tutorial.html#Memory+monitoring">MapReduce 
+          Tutorial</a>. The value of  
           <code>mapred.tasktracker.vmem.reserved</code> is 
           obtained from the TT via its heartbeat. 
           </li>
@@ -253,8 +277,8 @@
           set, the Scheduler computes the available RAM on the node. Next, 
           the Scheduler figures out the RAM requirements of the job, if any. 
           As with VMEM, users can optionally specify a RAM limit for their job
-          (<code>mapred.task.maxpmem</code>, described in the Map/Reduce 
-          tutorial). The Scheduler also maintains a limit for this value 
+          (<code>mapred.task.maxpmem</code>, described in the MapReduce 
+          Tutorial). The Scheduler also maintains a limit for this value 
           (<code>mapred.capacity-scheduler.task.default-pmem-percentage-in-vmem</code>, 
           described below). All these three values must be set for the 
           Scheduler to schedule tasks based on RAM constraints.
@@ -337,10 +361,10 @@
         <title>Reviewing the configuration of the Capacity Scheduler</title>
         <p>
           Once the installation and configuration is completed, you can review
-          it after starting the Map/Reduce cluster from the admin UI.
+          it after starting the MapReduce cluster from the admin UI.
         </p>
         <ul>
-          <li>Start the Map/Reduce cluster as usual.</li>
+          <li>Start the MapReduce cluster as usual.</li>
           <li>Open the JobTracker web UI.</li>
           <li>The queues you have configured should be listed under the <em>Scheduling
               Information</em> section of the page.</li>

@@ -47,4 +47,10 @@
   <description>The name of the s3n file system for testing.</description>
 </property>
 
+<!-- Turn security off for tests by default -->
+<property>
+  <name>hadoop.security.authentication</name>
+  <value>simple</value>
+</property>
+
 </configuration>

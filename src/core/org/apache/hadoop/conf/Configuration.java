@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
+import java.io.Writer;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -60,6 +61,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -153,7 +156,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private boolean loadDefaults = true;
   
   /**
-   * Configurtion objects
+   * Configuration objects
    */
   private static final WeakHashMap<Configuration,Object> REGISTRY = 
     new WeakHashMap<Configuration,Object>();
@@ -164,6 +167,18 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   private static final ArrayList<String> defaultResources = 
     new ArrayList<String>();
+  
+  /**
+   * Flag to indicate if the storage of resource which updates a key needs 
+   * to be stored for each key
+   */
+  private boolean storeResource;
+  
+  /**
+   * Stores the mapping of key to the resource which modifies or loads 
+   * the key most recently
+   */
+  private HashMap<String, String> updatingResource;
   
   static{
     //print deprecation warning if hadoop-site.xml is found in classpath
@@ -211,6 +226,24 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     synchronized(Configuration.class) {
       REGISTRY.put(this, null);
+    }
+    this.storeResource = false;
+  }
+  
+  /**
+   * A new configuration with the same settings and additional facility for
+   * storage of resource to each key which loads or updates 
+   * the key most recently
+   * @param other the configuration from which to clone settings
+   * @param storeResource flag to indicate if the storage of resource to 
+   * each key is to be stored
+   */
+  private Configuration(Configuration other, boolean storeResource) {
+    this(other);
+    this.loadDefaults = other.loadDefaults;
+    this.storeResource = storeResource;
+    if (storeResource) {
+      updatingResource = new HashMap<String, String>();
     }
   }
   
@@ -591,6 +624,30 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public void setBooleanIfUnset(String name, boolean value) {
     setIfUnset(name, Boolean.toString(value));
+  }
+
+  /**
+   * Set the value of the <code>name</code> property to the given type. This
+   * is equivalent to <code>set(&lt;name&gt;, value.toString())</code>.
+   * @param name property name
+   * @param value new value
+   */
+  public <T extends Enum<T>> void setEnum(String name, T value) {
+    set(name, value.toString());
+  }
+
+  /**
+   * Return value matching this enumerated type.
+   * @param name Property name
+   * @param defaultValue Value returned if no mapping exists
+   * @throws IllegalArgumentException If mapping is illegal for the type
+   * provided
+   */
+  public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
+    final String val = get(name);
+    return null == val
+      ? defaultValue
+      : Enum.valueOf(defaultValue.getDeclaringClass(), val);
   }
 
   /**
@@ -977,8 +1034,14 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     if (properties == null) {
       properties = new Properties();
       loadResources(properties, resources, quietmode);
-      if (overlay!= null)
+      if (overlay!= null) {
         properties.putAll(overlay);
+        if (storeResource) {
+          for (Map.Entry<Object,Object> item: overlay.entrySet()) {
+            updatingResource.put((String) item.getKey(), "Unknown");
+          }
+        }
+      }
     }
     return properties;
   }
@@ -1144,14 +1207,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
         
         // Ignore this parameter if it has already been marked as 'final'
-        if (attr != null && value != null) {
-          if (!finalParameters.contains(attr)) {
-            properties.setProperty(attr, value);
-            if (finalParameter)
-              finalParameters.add(attr);
-          } else {
-            LOG.warn(name+":a attempt to override final parameter: "+attr
+        if (attr != null) {
+          if (value != null) {
+            if (!finalParameters.contains(attr)) {
+              properties.setProperty(attr, value);
+              if (storeResource) {
+                updatingResource.put(attr, name.toString());
+              }
+            } else {
+              LOG.warn(name+":a attempt to override final parameter: "+attr
                      +";  Ignoring.");
+            }
+          }
+          if (finalParameter) {
+            finalParameters.add(attr);
           }
         }
       }
@@ -1218,6 +1287,43 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
   }
 
+  /**
+   *  Writes out all the parameters and their properties (final and resource) to
+   *  the given {@link Writer}
+   *  The format of the output would be 
+   *  { "properties" : [ {key1,value1,key1.isFinal,key1.resource}, {key2,value2,
+   *  key2.isFinal,key2.resource}... ] } 
+   *  It does not output the parameters of the configuration object which is 
+   *  loaded from an input stream.
+   * @param out the Writer to write to
+   * @throws IOException
+   */
+  public static void dumpConfiguration(Configuration conf, 
+      Writer out) throws IOException {
+    Configuration config = new Configuration(conf,true);
+    config.reloadConfiguration();
+    JsonFactory dumpFactory = new JsonFactory();
+    JsonGenerator dumpGenerator = dumpFactory.createJsonGenerator(out);
+    dumpGenerator.writeStartObject();
+    dumpGenerator.writeFieldName("properties");
+    dumpGenerator.writeStartArray();
+    dumpGenerator.flush();
+    for (Map.Entry<Object,Object> item: config.getProps().entrySet()) {
+      dumpGenerator.writeStartObject();
+      dumpGenerator.writeStringField("key", (String) item.getKey());
+      dumpGenerator.writeStringField("value", 
+          config.get((String) item.getKey()));
+      dumpGenerator.writeBooleanField("isFinal",
+          config.finalParameters.contains(item.getKey()));
+      dumpGenerator.writeStringField("resource",
+          config.updatingResource.get(item.getKey()));
+      dumpGenerator.writeEndObject();
+    }
+    dumpGenerator.writeEndArray();
+    dumpGenerator.writeEndObject();
+    dumpGenerator.flush();
+  }
+  
   /**
    * Get the {@link ClassLoader} for this job.
    * 
@@ -1296,5 +1402,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       org.apache.hadoop.io.Text.writeString(out, (String) item.getValue());
     }
   }
-
+  
+  /**
+   * get keys matching the the regex 
+   * @param regex
+   * @return Map<String,String> with matching keys
+   */
+  public Map<String,String> getValByRegex(String regex) {
+    Pattern p = Pattern.compile(regex);
+    
+    Map<String,String> result = new HashMap<String,String>();
+    Matcher m;
+    
+    for(Map.Entry<Object,Object> item: getProps().entrySet()) {
+      if (item.getKey() instanceof String && 
+          item.getValue() instanceof String) {
+        m = p.matcher((String)item.getKey());
+        if(m.find()) { // match
+          result.put((String) item.getKey(), (String) item.getValue());
+        }
+      }
+    }
+    return result;
+  }
 }

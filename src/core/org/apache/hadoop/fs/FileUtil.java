@@ -27,6 +27,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.mortbay.log.Log;
 
 /**
  * A collection of file-processing util methods
@@ -70,12 +71,25 @@ public class FileUtil {
    * we return false, the directory may be partially-deleted.
    */
   public static boolean fullyDelete(File dir) throws IOException {
+    if (!fullyDeleteContents(dir)) {
+      return false;
+    }
+    return dir.delete();
+  }
+
+  /**
+   * Delete the contents of a directory, not the directory itself.  If
+   * we return false, the directory may be partially-deleted.
+   */
+  public static boolean fullyDeleteContents(File dir) throws IOException {
+    boolean deletionSucceeded = true;
     File contents[] = dir.listFiles();
     if (contents != null) {
       for (int i = 0; i < contents.length; i++) {
         if (contents[i].isFile()) {
           if (!contents[i].delete()) {
-            return false;
+            deletionSucceeded = false;
+            continue; // continue deletion of other files/dirs under dir
           }
         } else {
           //try deleting the directory
@@ -89,12 +103,13 @@ public class FileUtil {
           // if not an empty directory or symlink let
           // fullydelete handle it.
           if (!fullyDelete(contents[i])) {
-            return false;
+            deletionSucceeded = false;
+            continue; // continue deletion of other files/dirs under dir
           }
         }
       }
     }
-    return dir.delete();
+    return deletionSucceeded;
   }
 
   /**
@@ -692,11 +707,41 @@ public class FileUtil {
    */
   public static int chmod(String filename, String perm
                           ) throws IOException, InterruptedException {
-    String cmd = "chmod " + perm + " " + filename;
-    Process p = Runtime.getRuntime().exec(cmd, null);
-    return p.waitFor();
+    return chmod(filename, perm, false);
   }
 
+  /**
+   * Change the permissions on a file / directory, recursively, if
+   * needed.
+   * @param filename name of the file whose permissions are to change
+   * @param perm permission string
+   * @param recursive true, if permissions should be changed recursively
+   * @return the exit code from the command.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public static int chmod(String filename, String perm, boolean recursive)
+                            throws IOException {
+    StringBuffer cmdBuf = new StringBuffer();
+    cmdBuf.append("chmod ");
+    if (recursive) {
+      cmdBuf.append("-R ");
+    }
+    cmdBuf.append(perm).append(" ");
+    cmdBuf.append(filename);
+    String[] shellCmd = {"bash", "-c" ,cmdBuf.toString()};
+    ShellCommandExecutor shExec = new ShellCommandExecutor(shellCmd);
+    try {
+      shExec.execute();
+    }catch(IOException e) {
+      if(Log.isDebugEnabled()) {
+        Log.debug("Error while changing permission : " + filename 
+            +" Exception: " + StringUtils.stringifyException(e));
+      }
+    }
+    return shExec.getExitCode();
+  }
+  
   /**
    * Create a tmp file for a base file.
    * @param basefile the base file of the tmp

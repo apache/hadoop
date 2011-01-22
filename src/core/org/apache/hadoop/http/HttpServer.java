@@ -23,21 +23,33 @@ import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.nio.channels.ServerSocketChannel;
 
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.log.LogLevel;
+import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector.MODE;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
@@ -69,6 +81,13 @@ public class HttpServer implements FilterContainer {
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
 
+  // The ServletContext attribute where the daemon Configuration
+  // gets stored.
+  static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
+  static final String ADMINS_ACL = "admins.acl";
+
+  private AccessControlList adminsAcl;
+
   protected final Server webServer;
   protected final Connector listener;
   protected final WebAppContext webAppContext;
@@ -77,6 +96,9 @@ public class HttpServer implements FilterContainer {
       new HashMap<Context, Boolean>();
   protected final List<String> filterNames = new ArrayList<String>();
   private static final int MAX_RETRIES = 10;
+  private final Configuration conf;
+
+  private boolean listenerStartedExternally = false;
 
   /** Same as this(name, bindAddress, port, findPort, null); */
   public HttpServer(String name, String bindAddress, int port, boolean findPort
@@ -84,6 +106,16 @@ public class HttpServer implements FilterContainer {
     this(name, bindAddress, port, findPort, new Configuration());
   }
 
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf) throws IOException {
+    this(name, bindAddress, port, findPort, conf, null, null);
+  }
+
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf, Connector connector) throws IOException {
+    this(name, bindAddress, port, findPort, conf, null, connector);
+  }
+  
   /**
    * Create a status server on the given port.
    * The jsp scripts are taken from src/webapps/<name>.
@@ -92,15 +124,32 @@ public class HttpServer implements FilterContainer {
    * @param findPort whether the server should start at the given port and 
    *        increment by 1 until it finds a free port.
    * @param conf Configuration 
+   * @param adminsAcl {@link AccessControlList} of the admins
    */
   public HttpServer(String name, String bindAddress, int port,
-      boolean findPort, Configuration conf) throws IOException {
+      boolean findPort, Configuration conf, AccessControlList adminsAcl)
+      throws IOException {
+    this(name, bindAddress, port, findPort, conf, adminsAcl, null);
+  }
+
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf, AccessControlList adminsAcl, 
+      Connector connector) throws IOException{
     webServer = new Server();
     this.findPort = findPort;
+    this.conf = conf;
+    this.adminsAcl = adminsAcl;
 
-    listener = createBaseListener(conf);
-    listener.setHost(bindAddress);
-    listener.setPort(port);
+    if(connector == null) {
+      listenerStartedExternally = false;
+      listener = createBaseListener(conf);
+      listener.setHost(bindAddress);
+      listener.setPort(port);
+    } else {
+      listenerStartedExternally = true;
+      listener = connector;
+    }
+    
     webServer.addConnector(listener);
 
     webServer.setThreadPool(new QueuedThreadPool());
@@ -110,16 +159,24 @@ public class HttpServer implements FilterContainer {
     webServer.setHandler(contexts);
 
     webAppContext = new WebAppContext();
+    webAppContext.setDisplayName("WepAppsContext");
     webAppContext.setContextPath("/");
     webAppContext.setWar(appDir + "/" + name);
+    webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
+    webAppContext.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
     webServer.addHandler(webAppContext);
 
     addDefaultApps(contexts, appDir);
-
+    
+    defineFilter(webAppContext, "krb5Filter", 
+        Krb5AndCertsSslSocketConnector.Krb5SslFilter.class.getName(), 
+        null, null);
+    
+    addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
     if (initializers != null) {
       for(FilterInitializer c : initializers) {
-        c.initFilter(this);
+        c.initFilter(this, conf);
       }
     }
     addDefaultServlets();
@@ -130,16 +187,21 @@ public class HttpServer implements FilterContainer {
    * provided. This wrapper and all subclasses must create at least one
    * listener.
    */
-  protected Connector createBaseListener(Configuration conf)
+  public Connector createBaseListener(Configuration conf)
       throws IOException {
+    return HttpServer.createDefaultChannelConnector();
+  }
+  
+  // LimitedPrivate for creating secure datanodes
+  public static Connector createDefaultChannelConnector() {
     SelectChannelConnector ret = new SelectChannelConnector();
     ret.setLowResourceMaxIdleTime(10000);
     ret.setAcceptQueueSize(128);
     ret.setResolveNames(false);
     ret.setUseDirectBuffers(false);
-    return ret;
+    return ret;   
   }
-
+  
   /** Get an array of FilterConfiguration specified in the conf */
   private static FilterInitializer[] getFilterInitializers(Configuration conf) {
     if (conf == null) {
@@ -171,16 +233,25 @@ public class HttpServer implements FilterContainer {
     if (logDir != null) {
       Context logContext = new Context(parent, "/logs");
       logContext.setResourceBase(logDir);
-      logContext.addServlet(DefaultServlet.class, "/");
+      logContext.addServlet(AdminAuthorizedServlet.class, "/");
+      logContext.setDisplayName("logs");
+      setContextAttributes(logContext);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
     Context staticContext = new Context(parent, "/static");
     staticContext.setResourceBase(appDir + "/static");
     staticContext.addServlet(DefaultServlet.class, "/*");
+    staticContext.setDisplayName("static");
+    setContextAttributes(staticContext);
     defaultContexts.put(staticContext, true);
   }
   
+  private void setContextAttributes(Context context) {
+    context.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
+    context.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
+  }
+
   /**
    * Add default servlets.
    */
@@ -220,7 +291,18 @@ public class HttpServer implements FilterContainer {
    * @param value The value of the attribute
    */
   public void setAttribute(String name, Object value) {
-    webAppContext.setAttribute(name, value);
+    setAttribute(webAppContext, name, value);
+  }
+
+  /**
+   * Set a value in the webapp context. These values are available to the jsp
+   * pages as "application.getAttribute(name)".
+   * @param context Context to add attribute
+   * @param name The name of the attribute
+   * @param value The value of the attribute
+   */
+  public void setAttribute(Context context, String name, Object value) {
+    context.setAttribute(name, value);
   }
 
   /**
@@ -231,7 +313,7 @@ public class HttpServer implements FilterContainer {
    */
   public void addServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
-    addInternalServlet(name, pathSpec, clazz);
+    addInternalServlet(name, pathSpec, clazz, false);
     addFilterPathMapping(pathSpec, webAppContext);
   }
 
@@ -245,11 +327,38 @@ public class HttpServer implements FilterContainer {
   @Deprecated
   public void addInternalServlet(String name, String pathSpec,
       Class<? extends HttpServlet> clazz) {
+    addInternalServlet(name, pathSpec, clazz, false);
+  }
+
+  /**
+   * Add an internal servlet in the server, specifying whether or not to
+   * protect with Kerberos authentication. 
+   * Note: This method is to be used for adding servlets that facilitate
+   * internal communication and not for user facing functionality. For
+   * servlets added using this method, filters (except internal Kerberized
+   * filters) are not enabled. 
+   * 
+   * @param name The name of the servlet (can be passed as null)
+   * @param pathSpec The path spec for the servlet
+   * @param clazz The servlet class
+   */
+  public void addInternalServlet(String name, String pathSpec, 
+      Class<? extends HttpServlet> clazz, boolean requireAuth) {
     ServletHolder holder = new ServletHolder(clazz);
     if (name != null) {
       holder.setName(name);
     }
     webAppContext.addServlet(holder, pathSpec);
+    
+    if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
+       LOG.info("Adding Kerberos filter to " + name);
+       ServletHandler handler = webAppContext.getServletHandler();
+       FilterMapping fmap = new FilterMapping();
+       fmap.setPathSpec(pathSpec);
+       fmap.setFilterName("krb5Filter");
+       fmap.setDispatches(Handler.ALL);
+       handler.addFilterMapping(fmap);
+    }
   }
 
   /** {@inheritDoc} */
@@ -258,6 +367,8 @@ public class HttpServer implements FilterContainer {
 
     final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
     defineFilter(webAppContext, name, classname, parameters, USER_FACING_URLS);
+    LOG.info("Added filter " + name + " (class=" + classname
+        + ") to context " + webAppContext.getDisplayName());
     final String[] ALL_URLS = { "/*" };
     for (Map.Entry<Context, Boolean> e : defaultContexts.entrySet()) {
       if (e.getValue()) {
@@ -385,10 +496,22 @@ public class HttpServer implements FilterContainer {
    */
   public void addSslListener(InetSocketAddress addr, Configuration sslConf,
       boolean needClientAuth) throws IOException {
+    addSslListener(addr, sslConf, needClientAuth, false);
+  }
+
+  /**
+   * Configure an ssl listener on the server.
+   * @param addr address to listen on
+   * @param sslConf conf to retrieve ssl options
+   * @param needCertsAuth whether x509 certificate authentication is required
+   * @param needKrbAuth whether to allow kerberos auth
+   */
+  public void addSslListener(InetSocketAddress addr, Configuration sslConf,
+      boolean needCertsAuth, boolean needKrbAuth) throws IOException {
     if (webServer.isStarted()) {
       throw new IOException("Failed to add ssl listener");
     }
-    if (needClientAuth) {
+    if (needCertsAuth) {
       // setting up SSL truststore for authenticating clients
       System.setProperty("javax.net.ssl.trustStore", sslConf.get(
           "ssl.server.truststore.location", ""));
@@ -397,14 +520,22 @@ public class HttpServer implements FilterContainer {
       System.setProperty("javax.net.ssl.trustStoreType", sslConf.get(
           "ssl.server.truststore.type", "jks"));
     }
-    SslSocketConnector sslListener = new SslSocketConnector();
+    Krb5AndCertsSslSocketConnector.MODE mode;
+    if(needCertsAuth && needKrbAuth)
+      mode = MODE.BOTH;
+    else if (!needCertsAuth && needKrbAuth)
+      mode = MODE.KRB;
+    else // Default to certificates
+      mode = MODE.CERTS;
+
+    SslSocketConnector sslListener = new Krb5AndCertsSslSocketConnector(mode);
     sslListener.setHost(addr.getHostName());
     sslListener.setPort(addr.getPort());
     sslListener.setKeystore(sslConf.get("ssl.server.keystore.location"));
     sslListener.setPassword(sslConf.get("ssl.server.keystore.password", ""));
     sslListener.setKeyPassword(sslConf.get("ssl.server.keystore.keypassword", ""));
     sslListener.setKeystoreType(sslConf.get("ssl.server.keystore.type", "jks"));
-    sslListener.setNeedClientAuth(needClientAuth);
+    sslListener.setNeedClientAuth(needCertsAuth);
     webServer.addConnector(sslListener);
   }
 
@@ -413,68 +544,76 @@ public class HttpServer implements FilterContainer {
    */
   public void start() throws IOException {
     try {
-      int port = 0;
-      int oriPort = listener.getPort(); // The original requested port
-      while (true) {
-        try {
-          port = webServer.getConnectors()[0].getLocalPort();
-          LOG.info("Port returned by webServer.getConnectors()[0]." +
-          		"getLocalPort() before open() is "+ port + 
-          		". Opening the listener on " + oriPort);
-          listener.open();
-          port = listener.getLocalPort();
-          LOG.info("listener.getLocalPort() returned " + listener.getLocalPort() + 
-                " webServer.getConnectors()[0].getLocalPort() returned " +
-                webServer.getConnectors()[0].getLocalPort());
-          //Workaround to handle the problem reported in HADOOP-4744
-          if (port < 0) {
-            Thread.sleep(100);
-            int numRetries = 1;
-            while (port < 0) {
-              LOG.warn("listener.getLocalPort returned " + port);
-              if (numRetries++ > MAX_RETRIES) {
-                throw new Exception(" listener.getLocalPort is returning " +
-                		"less than 0 even after " +numRetries+" resets");
-              }
-              for (int i = 0; i < 2; i++) {
-                LOG.info("Retrying listener.getLocalPort()");
-                port = listener.getLocalPort();
+      if(listenerStartedExternally) { // Expect that listener was started securely
+        if(listener.getLocalPort() == -1) // ... and verify
+          throw new Exception("Exepected webserver's listener to be started" +
+          		"previously but wasn't");
+        // And skip all the port rolling issues.
+        webServer.start();
+      } else {
+        int port = 0;
+        int oriPort = listener.getPort(); // The original requested port
+        while (true) {
+          try {
+            port = webServer.getConnectors()[0].getLocalPort();
+            LOG.info("Port returned by webServer.getConnectors()[0]." +
+            		"getLocalPort() before open() is "+ port + 
+            		". Opening the listener on " + oriPort);
+            listener.open();
+            port = listener.getLocalPort();
+            LOG.info("listener.getLocalPort() returned " + listener.getLocalPort() + 
+                  " webServer.getConnectors()[0].getLocalPort() returned " +
+                  webServer.getConnectors()[0].getLocalPort());
+            //Workaround to handle the problem reported in HADOOP-4744
+            if (port < 0) {
+              Thread.sleep(100);
+              int numRetries = 1;
+              while (port < 0) {
+                LOG.warn("listener.getLocalPort returned " + port);
+                if (numRetries++ > MAX_RETRIES) {
+                  throw new Exception(" listener.getLocalPort is returning " +
+                  		"less than 0 even after " +numRetries+" resets");
+                }
+                for (int i = 0; i < 2; i++) {
+                  LOG.info("Retrying listener.getLocalPort()");
+                  port = listener.getLocalPort();
+                  if (port > 0) {
+                    break;
+                  }
+                  Thread.sleep(200);
+                }
                 if (port > 0) {
                   break;
                 }
-                Thread.sleep(200);
+                LOG.info("Bouncing the listener");
+                listener.close();
+                Thread.sleep(1000);
+                listener.setPort(oriPort == 0 ? 0 : (oriPort += 1));
+                listener.open();
+                Thread.sleep(100);
+                port = listener.getLocalPort();
               }
-              if (port > 0) {
-                break;
+            } //Workaround end
+            LOG.info("Jetty bound to port " + port);
+            webServer.start();
+            break;
+          } catch (IOException ex) {
+            // if this is a bind exception,
+            // then try the next port number.
+            if (ex instanceof BindException) {
+              if (!findPort) {
+                throw (BindException) ex;
               }
-              LOG.info("Bouncing the listener");
-              listener.close();
-              Thread.sleep(1000);
-              listener.setPort(oriPort == 0 ? 0 : (oriPort += 1));
-              listener.open();
-              Thread.sleep(100);
-              port = listener.getLocalPort();
-            }
-          } //Workaround end
-          LOG.info("Jetty bound to port " + port);
-          webServer.start();
-          break;
-        } catch (IOException ex) {
-          // if this is a bind exception,
-          // then try the next port number.
-          if (ex instanceof BindException) {
-            if (!findPort) {
-              throw (BindException) ex;
-            }
-          } else {
-            LOG.info("HttpServer.start() threw a non Bind IOException"); 
+            } else {
+              LOG.info("HttpServer.start() threw a non Bind IOException"); 
+              throw ex;
+           }
+          } catch (MultiException ex) {
+            LOG.info("HttpServer.start() threw a MultiException"); 
             throw ex;
           }
-        } catch (MultiException ex) {
-          LOG.info("HttpServer.start() threw a MultiException"); 
-          throw ex;
+          listener.setPort((oriPort += 1));
         }
-        listener.setPort((oriPort += 1));
       }
     } catch (IOException e) {
       throw e;
@@ -496,6 +635,48 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
+   * Does the user sending the HttpServletRequest has the administrator ACLs? If
+   * it isn't the case, response will be modified to send an error to the user.
+   * 
+   * @param servletContext
+   * @param request
+   * @param response
+   * @return true if admin-authorized, false otherwise
+   * @throws IOException
+   */
+  public static boolean hasAdministratorAccess(
+      ServletContext servletContext, HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    Configuration conf =
+        (Configuration) servletContext.getAttribute(CONF_CONTEXT_ATTRIBUTE);
+
+    // If there is no authorization, anybody has administrator access.
+    if (!conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      return true;
+    }
+
+    String remoteUser = request.getRemoteUser();
+    if (remoteUser == null) {
+      return true;
+    }
+    AccessControlList adminsAcl = (AccessControlList) servletContext
+        .getAttribute(ADMINS_ACL);
+    UserGroupInformation remoteUserUGI =
+        UserGroupInformation.createRemoteUser(remoteUser);
+    if (adminsAcl != null) {
+      if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
+            + remoteUser + " is unauthorized to access this page. "
+            + "AccessControlList for accessing this page : "
+            + adminsAcl.toString());
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * A very simple servlet to serve up a text representation of the current
    * stack traces. It both returns the stacks to the caller and logs them.
    * Currently the stack traces are done sequentially rather than exactly the
@@ -507,11 +688,133 @@ public class HttpServer implements FilterContainer {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-      
-      PrintWriter out = new PrintWriter(response.getOutputStream());
+
+      // Do the authorization
+      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
+          response)) {
+        return;
+      }
+
+      PrintWriter out = new PrintWriter
+                    (HtmlQuoting.quoteOutputStream(response.getOutputStream()));
       ReflectionUtils.printThreadInfo(out, "");
       out.close();
       ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);      
     }
+  }
+  
+  /**
+   * A Servlet input filter that quotes all HTML active characters in the
+   * parameter names and values. The goal is to quote the characters to make
+   * all of the servlets resistant to cross-site scripting attacks.
+   */
+  public static class QuotingInputFilter implements Filter {
+
+    public static class RequestQuoter extends HttpServletRequestWrapper {
+      private final HttpServletRequest rawRequest;
+      public RequestQuoter(HttpServletRequest rawRequest) {
+        super(rawRequest);
+        this.rawRequest = rawRequest;
+      }
+      
+      /**
+       * Return the set of parameter names, quoting each name.
+       */
+      @SuppressWarnings("unchecked")
+      @Override
+      public Enumeration<String> getParameterNames() {
+        return new Enumeration<String>() {
+          private Enumeration<String> rawIterator = 
+            rawRequest.getParameterNames();
+          @Override
+          public boolean hasMoreElements() {
+            return rawIterator.hasMoreElements();
+          }
+
+          @Override
+          public String nextElement() {
+            return HtmlQuoting.quoteHtmlChars(rawIterator.nextElement());
+          }
+        };
+      }
+      
+      /**
+       * Unquote the name and quote the value.
+       */
+      @Override
+      public String getParameter(String name) {
+        return HtmlQuoting.quoteHtmlChars(rawRequest.getParameter
+                                     (HtmlQuoting.unquoteHtmlChars(name)));
+      }
+      
+      @Override
+      public String[] getParameterValues(String name) {
+        String unquoteName = HtmlQuoting.unquoteHtmlChars(name);
+        String[] unquoteValue = rawRequest.getParameterValues(unquoteName);
+        String[] result = new String[unquoteValue.length];
+        for(int i=0; i < result.length; ++i) {
+          result[i] = HtmlQuoting.quoteHtmlChars(unquoteValue[i]);
+        }
+        return result;
+      }
+
+      @SuppressWarnings("unchecked")
+      @Override
+      public Map<String, String[]> getParameterMap() {
+        Map<String, String[]> result = new HashMap<String,String[]>();
+        Map<String, String[]> raw = rawRequest.getParameterMap();
+        for (Map.Entry<String,String[]> item: raw.entrySet()) {
+          String[] rawValue = item.getValue();
+          String[] cookedValue = new String[rawValue.length];
+          for(int i=0; i< rawValue.length; ++i) {
+            cookedValue[i] = HtmlQuoting.quoteHtmlChars(rawValue[i]);
+          }
+          result.put(HtmlQuoting.quoteHtmlChars(item.getKey()), cookedValue);
+        }
+        return result;
+      }
+      
+      /**
+       * Quote the url so that users specifying the HOST HTTP header
+       * can't inject attacks.
+       */
+      @Override
+      public StringBuffer getRequestURL(){
+        String url = rawRequest.getRequestURL().toString();
+        return new StringBuffer(HtmlQuoting.quoteHtmlChars(url));
+      }
+      
+      /**
+       * Quote the server name so that users specifying the HOST HTTP header
+       * can't inject attacks.
+       */
+      @Override
+      public String getServerName() {
+        return HtmlQuoting.quoteHtmlChars(rawRequest.getServerName());
+      }
+    }
+
+    @Override
+    public void init(FilterConfig config) throws ServletException {
+    }
+
+    @Override
+    public void destroy() {
+    }
+
+    @Override
+    public void doFilter(ServletRequest request, 
+                         ServletResponse response,
+                         FilterChain chain
+                         ) throws IOException, ServletException {
+      HttpServletRequestWrapper quoted = 
+        new RequestQuoter((HttpServletRequest) request);
+      final HttpServletResponse httpResponse = (HttpServletResponse) response;
+      // set the default to UTF-8 so that we don't need to worry about IE7
+      // choosing to interpret the special characters as UTF-7
+      httpResponse.setContentType("text/html;charset=utf-8");
+      chain.doFilter(quoted, response);
+    }
+
   }
 }

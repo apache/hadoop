@@ -23,7 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import org.apache.hadoop.io.Writable;
 
-class JvmTask implements Writable {
+public class JvmTask implements Writable {
   Task t;
   boolean shouldDie;
   public JvmTask(Task t, boolean shouldDie) {

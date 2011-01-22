@@ -24,28 +24,57 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.util.Iterator;
+import java.util.Properties;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.StringUtils;
+import org.hsqldb.lib.StringUtil;
 
 public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
+  protected void setUp() throws Exception {
+    super.setUp();
+    Properties prop = new Properties();
+    prop.put("mapred.job.tracker.persist.jobstatus.active", "true");
+    prop.put("mapred.job.tracker.persist.jobstatus.hours", "1");
+    startCluster(true, prop);
+  }
   
   enum EnumCounter { MAP_RECORDS }
   
   static class CountingMapper<K, V> extends IdentityMapper<K, V> {
-
+    private JobConf jconf;
+    boolean generateUniqueCounters = false;
+    
+    @Override
+    public void configure(JobConf jconf) {
+      this.jconf = jconf;
+      this.generateUniqueCounters = 
+        jconf.getBoolean("task.generate.unique.counters", false);
+    }
+    
     public void map(K key, V value,
         OutputCollector<K, V> output, Reporter reporter)
         throws IOException {
       output.collect(key, value);
       reporter.incrCounter(EnumCounter.MAP_RECORDS, 1);
       reporter.incrCounter("StringCounter", "MapRecords", 1);
+      for (int i =0; i < 50; i++) {
+        if (generateUniqueCounters) {
+          reporter.incrCounter("StringCounter", "countername_" + 
+              jconf.get("mapred.task.id") + "_"+ i, 1);
+        } else {
+          reporter.incrCounter("StringCounter", "countername_" + 
+              i, 1);
+        }
+      }    
     }
-
   }
   
   public void testMapReduceJob() throws Exception {
@@ -80,7 +109,7 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
 
     Path[] outputFiles = FileUtil.stat2Paths(
                            getFileSystem().listStatus(getOutputDir(),
-                           new OutputLogFilter()));
+                           new Utils.OutputFileUtils.OutputFilesFilter()));
     if (outputFiles.length > 0) {
       InputStream is = getFileSystem().open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));
@@ -94,12 +123,32 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
       reader.close();
       assertEquals(4, counter);
     }
-    
+
     assertEquals(4,
         runningJob.getCounters().getCounter(EnumCounter.MAP_RECORDS));
+    Counters counters = runningJob.getCounters();
     assertEquals(4,
         runningJob.getCounters().getGroup("StringCounter")
         .getCounter("MapRecords"));
+    assertTrue(counters.getGroupNames().size() <= 51);
+    int i = 0;
+    while (counters.size() < Counters.MAX_COUNTER_LIMIT) {
+      counters.incrCounter("IncrCounter", "limit " + i, 2);
+      i++;
+    }
+    try {
+      counters.incrCounter("IncrCountertest", "test", 2);
+      assertTrue(false);
+    } catch(RuntimeException re) {
+      System.out.println("Exceeded counter " + 
+          StringUtils.stringifyException(re));
+    }
+    conf.setBoolean("task.generate.unique.counters", true);
+    FileOutputFormat.setOutputPath(conf, new Path("output-fail"));
+    try {
+      runningJob = JobClient.runJob(conf);
+    } catch(Exception ie) {
+      System.out.println(StringUtils.stringifyException(ie));
+    }
   }
-
 }

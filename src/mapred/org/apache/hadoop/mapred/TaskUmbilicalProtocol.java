@@ -22,12 +22,15 @@ import java.io.IOException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.mapred.JvmTask;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSelector;
+import org.apache.hadoop.security.token.TokenInfo;
 
 /** Protocol that task child process uses to contact its parent process.  The
  * parent is a daemon which which polls the central master for a new map or
  * reduce task and runs it as a child process.  All communication between child
- * and parent is via this protocol. */ 
-interface TaskUmbilicalProtocol extends VersionedProtocol {
+ * and parent is via this protocol. */
+@TokenInfo(JobTokenSelector.class)
+public interface TaskUmbilicalProtocol extends VersionedProtocol {
 
   /** 
    * Changed the version to 2, since we have a new method getMapOutputs 
@@ -53,18 +56,21 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 13 changed the getTask method signature for HADOOP-249
    * Version 14 changed the getTask method signature for HADOOP-4232
    * Version 15 Adds FAILED_UNCLEAN and KILLED_UNCLEAN states for HADOOP-4759
-   * Version 16 Added fatalError for child to communicate fatal errors to TT
+   * Version 16 Added numRequiredSlots to TaskStatus for MAPREDUCE-516
+   * Version 17 Change in signature of getTask() for HADOOP-5488
+   * Version 18 Added fatalError for child to communicate fatal errors to TT
    * */
 
-  public static final long versionID = 16L;
+  public static final long versionID = 18L;
   
   /**
    * Called when a child task process starts, to get its task.
-   * @param jvmId the ID of this JVM w.r.t the tasktracker that launched it
+   * @param context the JvmContext of the JVM w.r.t the TaskTracker that
+   *        launched it
    * @return Task object
    * @throws IOException 
    */
-  JvmTask getTask(JVMId jvmId) throws IOException;
+  JvmTask getTask(JvmContext context) throws IOException;
 
   /**
    * Report child's progress to parent.
@@ -138,7 +144,7 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
    * task-tracker has changed or not. This will trigger some action at the 
    * child-process.
    *
-   * @param taskId the reduce task id
+   * @param jobId the reducer job id
    * @param fromIndex the index starting from which the locations should be 
    * fetched
    * @param maxLocs the max number of locations to fetch
@@ -151,4 +157,13 @@ interface TaskUmbilicalProtocol extends VersionedProtocol {
                                                        TaskAttemptID id) 
   throws IOException;
 
+  /**
+   * The job initializer needs to report the sizes of the archive
+   * objects in the private distributed cache.
+   * @param jobId the job to update
+   * @param sizes the array of sizes that were computed
+   * @throws IOException
+   */
+  void updatePrivateDistributedCacheSizes(org.apache.hadoop.mapreduce.JobID jobId,
+                                          long[] sizes) throws IOException;
 }

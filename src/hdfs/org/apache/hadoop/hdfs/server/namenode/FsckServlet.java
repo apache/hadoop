@@ -17,29 +17,54 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.util.*;
-import java.io.*;
-import org.apache.hadoop.conf.*;
-import org.apache.commons.logging.*;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.security.PrivilegedExceptionAction;
+import java.util.Map;
+
 import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.security.UserGroupInformation;
+
 /**
- * This class is used in Namesystem's jetty to do fsck on namenode.
+ * This class is used in Namesystem's web server to do fsck on namenode.
  */
-public class FsckServlet extends HttpServlet {
-  @SuppressWarnings("unchecked")
-  public void doGet(HttpServletRequest request,
-                    HttpServletResponse response
-                    ) throws ServletException, IOException {
-    Map<String,String[]> pmap = request.getParameterMap();
-    ServletContext context = getServletContext();
-    NameNode nn = (NameNode) context.getAttribute("name.node");
-    Configuration conf = (Configuration) context.getAttribute("name.conf");
-    NamenodeFsck fscker = new NamenodeFsck(conf, nn, pmap, response);
-    fscker.fsck();
+public class FsckServlet extends DfsServlet {
+  /** for java.io.Serializable */
+  private static final long serialVersionUID = 1L;
+
+  /** Handle fsck request */
+  public void doGet(HttpServletRequest request, HttpServletResponse response
+      ) throws IOException {
+    @SuppressWarnings("unchecked")
+    final Map<String,String[]> pmap = request.getParameterMap();
+    final PrintWriter out = response.getWriter();
+    final InetAddress remoteAddress = 
+      InetAddress.getByName(request.getRemoteAddr());
+    final ServletContext context = getServletContext();
+    final Configuration conf = 
+      (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+    final UserGroupInformation ugi = getUGI(request, conf);
+    try {
+      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final NameNode nn = (NameNode) context.getAttribute("name.node");
+          final int totalDatanodes = nn.namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
+          final short minReplication = nn.namesystem.getMinReplication();
+
+          new NamenodeFsck(conf, nn, nn.getNetworkTopology(), pmap, out,
+              totalDatanodes, minReplication, remoteAddress).fsck();
+                    return null;
+          }
+      });
+    } catch (InterruptedException e) {
+        response.sendError(400, e.getMessage());
+    }
   }
 }

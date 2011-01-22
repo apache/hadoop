@@ -31,6 +31,7 @@ import java.util.Random;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -43,6 +44,9 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+
 
 /**********************************************************
  * MapredLoadTest generates a bunch of work that exercises
@@ -77,7 +81,7 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
  * 7) A mapred job integrates all the count files into a single one.
  *
  **********************************************************/
-public class TestMapRed extends TestCase {
+public class TestMapRed extends TestCase implements Tool {
   /**
    * Modified to make it a junit test.
    * The RandomGen Job does the actual work of creating
@@ -248,6 +252,7 @@ public class TestMapRed extends TestCase {
      }
   **/
 
+  
   public void testMapred() throws Exception {
     launch();
   }
@@ -272,14 +277,12 @@ public class TestMapRed extends TestCase {
   private static class MyReduce extends IdentityReducer {
     private JobConf conf;
     private boolean compressInput;
-    private TaskAttemptID taskId;
     private boolean first = true;
       
     @Override
     public void configure(JobConf conf) {
       this.conf = conf;
       compressInput = conf.getCompressMapOutput();
-      taskId = TaskAttemptID.forName(conf.get("mapred.task.id"));
     }
       
     public void reduce(WritableComparable key, Iterator values,
@@ -287,9 +290,9 @@ public class TestMapRed extends TestCase {
                        ) throws IOException {
       if (first) {
         first = false;
-        MapOutputFile mapOutputFile = new MapOutputFile(taskId.getJobID());
+        MapOutputFile mapOutputFile = new MapOutputFile();
         mapOutputFile.setConf(conf);
-        Path input = mapOutputFile.getInputFile(0, taskId);
+        Path input = mapOutputFile.getInputFile(0);
         FileSystem fs = FileSystem.get(conf);
         assertTrue("reduce input exists " + input, fs.exists(input));
         SequenceFile.Reader rdr = 
@@ -314,6 +317,7 @@ public class TestMapRed extends TestCase {
     }
   }
 
+  
   public void testPartitioner() throws Exception {
     JobConf conf = new JobConf(TestMapRed.class);
     conf.setPartitionerClass(BadPartitioner.class);
@@ -363,6 +367,7 @@ public class TestMapRed extends TestCase {
     public void close() { }
   }
 
+  
   public void testNullKeys() throws Exception {
     JobConf conf = new JobConf(TestMapRed.class);
     FileSystem fs = FileSystem.getLocal(conf);
@@ -454,7 +459,8 @@ public class TestMapRed extends TestCase {
       fs.delete(testdir, true);
     }
   }
-    
+  
+   
   public void testCompression() throws Exception {
     EnumSet<SequenceFile.CompressionType> seq =
       EnumSet.allOf(SequenceFile.CompressionType.class);
@@ -470,11 +476,19 @@ public class TestMapRed extends TestCase {
   /**
    * 
    */
-  public static void launch() throws Exception {
+  public void launch() throws Exception {
     //
     // Generate distribution of ints.  This is the answer key.
     //
-    JobConf conf = new JobConf(TestMapRed.class);
+    JobConf conf = null;
+    //Check to get configuration and check if it is configured thro' Configured
+    //interface. This would happen when running testcase thro' command line.
+    if(getConf() == null) {
+      conf = new JobConf();
+    } else {
+      conf = new JobConf(getConf());
+    }
+    conf.setJarByClass(TestMapRed.class);
     int countsToGo = counts;
     int dist[] = new int[range];
     for (int i = 0; i < range; i++) {
@@ -736,23 +750,15 @@ public class TestMapRed extends TestCase {
    * Launches all the tasks in order.
    */
   public static void main(String[] argv) throws Exception {
-    if (argv.length < 2) {
-      System.err.println("Usage: TestMapRed <range> <counts>");
-      System.err.println();
-      System.err.println("Note: a good test will have a <counts> value that is substantially larger than the <range>");
-      return;
-    }
-
-    int i = 0;
-    range = Integer.parseInt(argv[i++]);
-    counts = Integer.parseInt(argv[i++]);
-    launch();
+    int res = ToolRunner.run(new TestMapRed(), argv);
+    System.exit(res);
   }
     
   public void testSmallInput(){
     runJob(100);
   }
-
+  
+  
   public void testBiggerInput(){
     runJob(1000);
   }
@@ -799,7 +805,36 @@ public class TestMapRed extends TestCase {
 
       JobClient.runJob(conf);
     } catch (Exception e) {
-      fail("Threw exception:" + e);
+      assertTrue("Threw exception:" + e,false);
     }
+  }
+
+  @Override
+  public int run(String[] argv) throws Exception {
+    if (argv.length < 2) {
+      System.err.println("Usage: TestMapRed <range> <counts>");
+      System.err.println();
+      System.err.println("Note: a good test will have a " +
+      		"<counts> value that is substantially larger than the <range>");
+      return -1;
+    }
+
+    int i = 0;
+    range = Integer.parseInt(argv[i++]);
+    counts = Integer.parseInt(argv[i++]);
+    launch();
+    return 0;
+  }
+
+  Configuration myConf = null;
+  
+  @Override
+  public Configuration getConf() {
+    return myConf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    myConf = conf;
   }
 }

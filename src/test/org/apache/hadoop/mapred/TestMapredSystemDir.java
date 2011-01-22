@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
@@ -34,63 +37,81 @@ import org.apache.hadoop.security.*;
 public class TestMapredSystemDir extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestMapredSystemDir.class);
   
-  // dfs ugi
-  private static final UnixUserGroupInformation DFS_UGI = 
-    TestMiniMRWithDFSWithDistinctUsers.createUGI("dfs", true);
   // mapred ugi
-  private static final UnixUserGroupInformation MR_UGI = 
+  private static final UserGroupInformation MR_UGI = 
     TestMiniMRWithDFSWithDistinctUsers.createUGI("mr", false);
   private static final FsPermission SYSTEM_DIR_PERMISSION =
     FsPermission.createImmutable((short) 0733); // rwx-wx-wx
   
   public void testGarbledMapredSystemDir() throws Exception {
+    final Configuration conf = new Configuration();
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
     try {
       // start dfs
-      Configuration conf = new Configuration();
       conf.set("dfs.permissions.supergroup", "supergroup");
-      UnixUserGroupInformation.saveToConf(conf,
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, DFS_UGI);
+      conf.set("mapred.system.dir", "/mapred");
       dfs = new MiniDFSCluster(conf, 1, true, null);
       FileSystem fs = dfs.getFileSystem();
-      
-      // create mapred.system.dir
-      Path mapredSysDir = new Path("/mapred");
+      // create Configs.SYSTEM_DIR's parent (the parent has to be given
+      // permissions since the JT internally tries to delete the leaf of
+      // the directory structure
+      Path mapredSysDir =  new Path(conf.get("mapred.system.dir")).getParent();
       fs.mkdirs(mapredSysDir);
       fs.setPermission(mapredSysDir, new FsPermission(SYSTEM_DIR_PERMISSION));
       fs.setOwner(mapredSysDir, "mr", "mrgroup");
 
-      // start mr (i.e jobtracker)
-      Configuration mrConf = new Configuration();
-      UnixUserGroupInformation.saveToConf(mrConf,
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, MR_UGI);
-      mr = new MiniMRCluster(0, 0, 0, dfs.getFileSystem().getUri().toString(),
-                             1, null, null, MR_UGI, new JobConf(mrConf));
-      JobTracker jobtracker = mr.getJobTrackerRunner().getJobTracker();
+      final MiniDFSCluster finalDFS = dfs;
       
-      // add garbage to mapred.system.dir
-      Path garbage = new Path(jobtracker.getSystemDir(), "garbage");
-      fs.mkdirs(garbage);
-      fs.setPermission(garbage, new FsPermission(SYSTEM_DIR_PERMISSION));
+      // Become MR_UGI to do start the job tracker...
+      mr = MR_UGI.doAs(new PrivilegedExceptionAction<MiniMRCluster>() {
+        @Override
+        public MiniMRCluster run() throws Exception {
+          // start mr (i.e jobtracker)
+          Configuration mrConf = new Configuration();
+          
+          FileSystem fs = finalDFS.getFileSystem();
+          MiniMRCluster mr2 = new MiniMRCluster(0, 0, 0, fs.getUri().toString(),
+              1, null, null, MR_UGI, new JobConf(mrConf));
+          JobTracker jobtracker = mr2.getJobTrackerRunner().getJobTracker();
+          // add garbage to mapred.system.dir
+          Path garbage = new Path(jobtracker.getSystemDir(), "garbage");
+          fs.mkdirs(garbage);
+          fs.setPermission(garbage, new FsPermission(SYSTEM_DIR_PERMISSION));
+          return mr2;
+        }
+      });
+      
+      // Drop back to regular user (superuser) to change owner of garbage dir
+      final Path garbage = new Path(
+          mr.getJobTrackerRunner().getJobTracker().getSystemDir(), "garbage");
       fs.setOwner(garbage, "test", "test-group");
       
-      // stop the jobtracker
-      mr.stopJobTracker();
-      mr.getJobTrackerConf().setBoolean("mapred.jobtracker.restart.recover", 
-                                        false);
-      // start jobtracker but dont wait for it to be up
-      mr.startJobTracker(false);
+      // Again become MR_UGI to start/stop the MR cluster
+      final MiniMRCluster mr2 = mr;
+      MR_UGI.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          // stop the jobtracker
+          mr2.stopJobTracker();
+          mr2.getJobTrackerConf().setBoolean(
+              "mapred.jobtracker.restart.recover", false);
+          // start jobtracker but dont wait for it to be up
+          mr2.startJobTracker(false);
 
-      // check 5 times .. each time wait for 2 secs to check if the jobtracker
-      // has crashed or not.
-      for (int i = 0; i < 5; ++i) {
-        LOG.info("Check #" + i);
-        if (!mr.getJobTrackerRunner().isActive()) {
-          return;
+          // check 5 times .. each time wait for 2 secs to check if the
+          // jobtracker
+          // has crashed or not.
+          for (int i = 0; i < 5; ++i) {
+            LOG.info("Check #" + i);
+            if (!mr2.getJobTrackerRunner().isActive()) {
+              return null;
+            }
+            UtilsForTests.waitFor(2000);
+          }
+          return null;
         }
-        UtilsForTests.waitFor(2000);
-      }
+      });
 
       assertFalse("JobTracker did not bail out (waited for 10 secs)", 
                   mr.getJobTrackerRunner().isActive());

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -29,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.util.StringUtils;
 
@@ -42,7 +42,6 @@ class TaskMemoryManagerThread extends Thread {
 
   private TaskTracker taskTracker;
   private long monitoringInterval;
-  private long sleepTimeBeforeSigKill;
 
   private long maxMemoryAllowedForAllTasks;
 
@@ -50,15 +49,16 @@ class TaskMemoryManagerThread extends Thread {
   private Map<TaskAttemptID, ProcessTreeInfo> tasksToBeAdded;
   private List<TaskAttemptID> tasksToBeRemoved;
 
+  private static final String MEMORY_USAGE_STRING =
+    "Memory usage of ProcessTree %s for task-id %s : %d bytes, " +
+      "limit : %d bytes";
+  
   public TaskMemoryManagerThread(TaskTracker taskTracker) {
     
     this(taskTracker.getTotalMemoryAllottedForTasksOnTT() * 1024 * 1024L,
       taskTracker.getJobConf().getLong(
         "mapred.tasktracker.taskmemorymanager.monitoring-interval", 
-        5000L),
-      taskTracker.getJobConf().getLong(
-        "mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill",
-        ProcfsBasedProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL));
+        5000L));
 
     this.taskTracker = taskTracker;
   }
@@ -66,8 +66,7 @@ class TaskMemoryManagerThread extends Thread {
   // mainly for test purposes. note that the tasktracker variable is
   // not set here.
   TaskMemoryManagerThread(long maxMemoryAllowedForAllTasks,
-                            long monitoringInterval,
-                            long sleepTimeBeforeSigKill) {
+                            long monitoringInterval) {
     setName(this.getClass().getName());
 
     processTreeInfoMap = new HashMap<TaskAttemptID, ProcessTreeInfo>();
@@ -77,15 +76,12 @@ class TaskMemoryManagerThread extends Thread {
     this.maxMemoryAllowedForAllTasks = maxMemoryAllowedForAllTasks;
 
     this.monitoringInterval = monitoringInterval;
-    
-    this.sleepTimeBeforeSigKill = sleepTimeBeforeSigKill;
   }
 
-  public void addTask(TaskAttemptID tid, long memLimit, String pidFile) {
+  public void addTask(TaskAttemptID tid, long memLimit) {
     synchronized (tasksToBeAdded) {
       LOG.debug("Tracking ProcessTree " + tid + " for the first time");
-      ProcessTreeInfo ptInfo = new ProcessTreeInfo(tid, null, null, memLimit,
-          sleepTimeBeforeSigKill, pidFile);
+      ProcessTreeInfo ptInfo = new ProcessTreeInfo(tid, null, null, memLimit);
       tasksToBeAdded.put(tid, ptInfo);
     }
   }
@@ -104,16 +100,11 @@ class TaskMemoryManagerThread extends Thread {
     private String pidFile;
 
     public ProcessTreeInfo(TaskAttemptID tid, String pid,
-        ProcfsBasedProcessTree pTree, long memLimit, 
-        long sleepTimeBeforeSigKill, String pidFile) {
+        ProcfsBasedProcessTree pTree, long memLimit) {
       this.tid = tid;
       this.pid = pid;
       this.pTree = pTree;
-      if (this.pTree != null) {
-        this.pTree.setSigKillInterval(sleepTimeBeforeSigKill);
-      }
       this.memLimit = memLimit;
-      this.pidFile = pidFile;
     }
 
     public TaskAttemptID getTID() {
@@ -184,16 +175,16 @@ class TaskMemoryManagerThread extends Thread {
 
           // Initialize any uninitialized processTrees
           if (pId == null) {
-            // get pid from pid-file
-            pId = getPid(ptInfo.pidFile);
+            // get pid from taskAttemptId
+            pId = taskTracker.getPid(ptInfo.getTID());
             if (pId != null) {
               // PID will be null, either if the pid file is yet to be created
               // or if the tip is finished and we removed pidFile, but the TIP
               // itself is still retained in runningTasks till successful
               // transmission to JT
 
-              // create process tree object
-              ProcfsBasedProcessTree pt = new ProcfsBasedProcessTree(pId);
+              ProcfsBasedProcessTree pt = 
+                new ProcfsBasedProcessTree(pId, ProcessTree.isSetsidAvailable);
               LOG.debug("Tracking ProcessTree " + pId + " for the first time");
 
               ptInfo.setPid(pId);
@@ -217,23 +208,23 @@ class TaskMemoryManagerThread extends Thread {
           // are processes more than 1 iteration old.
           long curMemUsageOfAgedProcesses = pTree.getCumulativeVmem(1);
           long limit = ptInfo.getMemLimit();
-          LOG.info("Memory usage of ProcessTree " + pId + " :"
-              + currentMemUsage + "bytes. Limit : " + limit + "bytes");
+          LOG.info(String.format(MEMORY_USAGE_STRING, 
+                                pId, tid.toString(), currentMemUsage, limit));
 
           if (isProcessTreeOverLimit(tid.toString(), currentMemUsage, 
                                       curMemUsageOfAgedProcesses, limit)) {
             // Task (the root process) is still alive and overflowing memory.
-            // Clean up.
+            // Dump the process-tree and then clean it up.
             String msg =
                 "TaskTree [pid=" + pId + ",tipID=" + tid
                     + "] is running beyond memory-limits. Current usage : "
                     + currentMemUsage + "bytes. Limit : " + limit
-                    + "bytes. Killing task.";
+                    + "bytes. Killing task. \nDump of the process-tree for "
+                    + tid + " : \n" + pTree.getProcessTreeDump();
             LOG.warn(msg);
+            // kill the task
             taskTracker.cleanUpOverMemoryTask(tid, true, msg);
 
-            // Now destroy the ProcessTree, remove it from monitoring map.
-            pTree.destroy();
             it.remove();
             LOG.info("Removed ProcessTree with root " + pId);
           } else {
@@ -367,8 +358,6 @@ class TaskMemoryManagerThread extends Thread {
         taskTracker.cleanUpOverMemoryTask(tid, false, msg);
         // Now destroy the ProcessTree, remove it from monitoring map.
         ProcessTreeInfo ptInfo = processTreeInfoMap.get(tid);
-        ProcfsBasedProcessTree pTree = ptInfo.getProcessTree();
-        pTree.destroy();
         processTreeInfoMap.remove(tid);
         LOG.info("Removed ProcessTree with root " + ptInfo.getPID());
       }
@@ -376,18 +365,5 @@ class TaskMemoryManagerThread extends Thread {
       LOG.info("The total memory usage is overflowing TTs limits. "
           + "But found no alive task to kill for freeing memory.");
     }
-  }
-
-  /**
-   * Load pid of the task from the pidFile.
-   * 
-   * @param pidFileName
-   * @return the pid of the task process.
-   */
-  private String getPid(String pidFileName) {
-    if ((new File(pidFileName)).exists()) {
-      return ProcfsBasedProcessTree.getPidFromPidFile(pidFileName);
-     }
-     return null;
   }
 }

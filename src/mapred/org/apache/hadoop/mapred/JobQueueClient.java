@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 /**
@@ -34,7 +35,6 @@ import org.apache.hadoop.util.ToolRunner;
 class JobQueueClient extends Configured implements  Tool {
   
   JobClient jc;
-
   
   public JobQueueClient() {
   }
@@ -60,9 +60,12 @@ class JobQueueClient extends Configured implements  Tool {
     boolean displayQueueList = false;
     boolean displayQueueInfoWithJobs = false;
     boolean displayQueueInfoWithoutJobs = false;
+    boolean displayQueueAclsInfoForCurrentUser = false;
     
     if("-list".equals(cmd)){
       displayQueueList = true;
+    }else if("-showacls".equals(cmd)) {
+      displayQueueAclsInfoForCurrentUser = true;
     }else if("-info".equals(cmd)){
       if(argv.length == 2 && !(argv[1].equals("-showJobs"))) {
         displayQueueInfoWithoutJobs = true;
@@ -92,6 +95,9 @@ class JobQueueClient extends Configured implements  Tool {
     } else if (displayQueueInfoWithJobs) {
       displayQueueInfo(argv[1],true);
       exitcode = 0;
+    }else if (displayQueueAclsInfoForCurrentUser) {
+      this.displayQueueAclsInfoForCurrentUser();
+      exitcode = 0;
     }
     
     return exitcode;
@@ -105,13 +111,14 @@ class JobQueueClient extends Configured implements  Tool {
    * @throws IOException
    */
 
-  private void displayQueueInfo(String queue, boolean showJobs) throws IOException {
-    JobQueueInfo schedInfo = jc.getQueueInfo(queue);
-    if (schedInfo == null) {
-      System.out.printf("Queue Name : %s has no scheduling information \n", queue);
+  private void displayQueueInfo(String queue, boolean showJobs)
+      throws IOException {
+    JobQueueInfo jobQueueInfo = jc.getQueueInfo(queue);
+    if (jobQueueInfo == null) {
+      System.out.println("Queue Name : " + queue +
+          " has no scheduling information");
     } else {
-      System.out.printf("Queue Name : %s \n", schedInfo.getQueueName());
-      System.out.printf("Scheduling Info : %s \n",schedInfo.getSchedulingInfo());
+      printJobQueueInfo(jobQueueInfo);
     }
     if (showJobs) {
       System.out.printf("Job List\n");
@@ -123,6 +130,19 @@ class JobQueueClient extends Configured implements  Tool {
   }
 
   /**
+   * format and print information about the passed in job queue.
+   */
+  private void printJobQueueInfo(JobQueueInfo jobQueueInfo) {
+    System.out.println("Queue Name : " + jobQueueInfo.getQueueName());
+    System.out.println("Queue State : " + jobQueueInfo.getQueueState());
+    String schedInfo = jobQueueInfo.getSchedulingInfo();
+    if (null == schedInfo || "".equals(schedInfo.trim())) {
+      schedInfo = JobQueueInfo.EMPTY_INFO;
+    }
+    System.out.println("Scheduling Info : " + schedInfo);
+  }
+
+  /**
    * Method used to display the list of the JobQueues registered
    * with the {@link QueueManager}
    * 
@@ -131,15 +151,37 @@ class JobQueueClient extends Configured implements  Tool {
   private void displayQueueList() throws IOException {
     JobQueueInfo[] queues = jc.getQueues();
     for (JobQueueInfo queue : queues) {
-      String schedInfo = queue.getSchedulingInfo();
-      if(schedInfo.trim().equals("")){
-        schedInfo = "N/A";
-      }
-      System.out.printf("Queue Name : %s \n", queue.getQueueName());
-      System.out.printf("Scheduling Info : %s \n",queue.getSchedulingInfo());
+      printJobQueueInfo(queue);
     }
   }
 
+  private void displayQueueAclsInfoForCurrentUser() throws IOException {
+    QueueAclsInfo[] queueAclsInfoList = jc.getQueueAclsForCurrentUser();
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    if (queueAclsInfoList.length > 0) {
+      System.out.println("Queue acls for user :  "
+              + ugi.getShortUserName());
+      System.out.println("\nQueue  Operations");
+      System.out.println("=====================");
+      for (QueueAclsInfo queueInfo : queueAclsInfoList) {
+        System.out.print(queueInfo.getQueueName() + "  ");
+        String[] ops = queueInfo.getOperations();
+        int max = ops.length - 1;
+        for (int j = 0; j < ops.length; j++) {
+          System.out.print(ops[j].replaceFirst("acl-", ""));
+          if (j < max) {
+            System.out.print(",");
+          }
+        }
+        System.out.println();
+      }
+    } else {
+      System.out.println("User " +
+              ugi.getShortUserName() +
+              " does not have access to any queue. \n");
+    }
+  }
+  
   private void displayUsage(String cmd) {
     String prefix = "Usage: JobQueueClient ";
     if ("-queueinfo".equals(cmd)){
@@ -147,7 +189,8 @@ class JobQueueClient extends Configured implements  Tool {
     }else {
       System.err.printf(prefix + "<command> <args>\n");
       System.err.printf("\t[-list]\n");
-      System.err.printf("\t[-info <job-queue-name> [-showJobs]]\n\n");
+      System.err.printf("\t[-info <job-queue-name> [-showJobs]]\n");
+      System.err.printf("\t[-showacls] \n\n");
       ToolRunner.printGenericCommandUsage(System.out);
     }
   }

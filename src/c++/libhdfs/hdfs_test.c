@@ -397,11 +397,8 @@ int main(int argc, char **argv) {
 
       const char *tuser = "nobody";
       const char* writePath = "/tmp/usertestfile.txt";
-      const char **groups =  (const char**)malloc(sizeof(char*)* 2);
-      groups[0] = "users";
-      groups[1] = "nobody";
 
-      fs = hdfsConnectAsUser("default", 0, tuser, groups, 2);
+      fs = hdfsConnectAsUser("default", 0, tuser);
       if(!fs) {
         fprintf(stderr, "Oops! Failed to connect to hdfs as user %s!\n",tuser);
         exit(-1);

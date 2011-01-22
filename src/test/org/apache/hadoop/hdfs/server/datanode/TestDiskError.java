@@ -25,12 +25,15 @@ import java.net.Socket;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.DiskChecker;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 
 import junit.framework.TestCase;
 
@@ -119,6 +122,7 @@ public class TestDiskError extends TestCase {
       Text.writeString( out, "" );
       out.writeBoolean(false); // Not sending src node information
       out.writeInt(0);
+      BlockTokenSecretManager.DUMMY_TOKEN.write(out);
       
       // write check header
       out.writeByte( 1 );
@@ -147,5 +151,34 @@ public class TestDiskError extends TestCase {
     } finally {
       cluster.shutdown();
     }
+  }
+  
+  public void testLocalDirs() throws Exception {
+    Configuration conf = new Configuration();
+    final String permStr = "755";
+    FsPermission expected = new FsPermission(permStr);
+    conf.set(DataNode.DATA_DIR_PERMISSION_KEY, permStr);
+    MiniDFSCluster cluster = null; 
+    
+    try {
+      // Start the cluster
+      cluster = new MiniDFSCluster(conf, 1, true, null);
+      cluster.waitActive();
+      
+      // Check permissions on directories in 'dfs.data.dir'
+      FileSystem localFS = FileSystem.getLocal(conf);
+      for (DataNode dn : cluster.getDataNodes()) {
+        String[] dataDirs = dn.getConf().getStrings(DataNode.DATA_DIR_KEY);
+        for (String dir : dataDirs) {
+          Path dataDir = new Path(dir);
+          FsPermission actual = localFS.getFileStatus(dataDir).getPermission();
+          assertEquals("Permission for dir: " + dataDir, expected, actual);
+        }
+      }
+    } finally {
+      if (cluster != null)
+        cluster.shutdown();
+    }
+    
   }
 }

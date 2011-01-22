@@ -18,18 +18,26 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import javax.security.auth.login.LoginException;
 
-import org.apache.commons.logging.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
@@ -47,10 +55,10 @@ public class TestDFSPermission extends TestCase {
   final private static String USER2_NAME = "user2";
   final private static String USER3_NAME = "user3";
 
-  private static UnixUserGroupInformation SUPERUSER;
-  private static UnixUserGroupInformation USER1;
-  private static UnixUserGroupInformation USER2;
-  private static UnixUserGroupInformation USER3;
+  private static UserGroupInformation SUPERUSER;
+  private static UserGroupInformation USER1;
+  private static UserGroupInformation USER2;
+  private static UserGroupInformation USER3;
   
   final private static short MAX_PERMISSION = 511;
   final private static short DEFAULT_UMASK = 022;
@@ -80,15 +88,22 @@ public class TestDFSPermission extends TestCase {
       // explicitly turn on permission checking
       conf.setBoolean("dfs.permissions", true);
       
+      // create fake mapping for the groups
+      Map<String, String[]> u2g_map = new HashMap<String, String[]> (3);
+      u2g_map.put(USER1_NAME, new String[] {GROUP1_NAME, GROUP2_NAME });
+      u2g_map.put(USER2_NAME, new String[] {GROUP2_NAME, GROUP3_NAME });
+      u2g_map.put(USER3_NAME, new String[] {GROUP3_NAME, GROUP4_NAME });
+      DFSTestUtil.updateConfWithFakeGroupMapping(conf, u2g_map);
+      
       // Initiate all four users
-      SUPERUSER = UnixUserGroupInformation.login(conf);
-      USER1 = new UnixUserGroupInformation(USER1_NAME, new String[] {
-          GROUP1_NAME, GROUP2_NAME });
-      USER2 = new UnixUserGroupInformation(USER2_NAME, new String[] {
-          GROUP2_NAME, GROUP3_NAME });
-      USER3 = new UnixUserGroupInformation(USER3_NAME, new String[] {
-          GROUP3_NAME, GROUP4_NAME });
-    } catch (LoginException e) {
+      SUPERUSER = UserGroupInformation.getCurrentUser();
+      USER1 = UserGroupInformation.createUserForTesting(USER1_NAME,
+          new String[] { GROUP1_NAME, GROUP2_NAME });
+      USER2 = UserGroupInformation.createUserForTesting(USER2_NAME,
+          new String[] { GROUP2_NAME, GROUP3_NAME });
+      USER3 = UserGroupInformation.createUserForTesting(USER3_NAME,
+          new String[] { GROUP3_NAME, GROUP4_NAME });
+    } catch (IOException e) {
       throw new RuntimeException(e);
     }
   }
@@ -153,8 +168,8 @@ public class TestDFSPermission extends TestCase {
   /* create a file/directory with the given umask and permission */
   private void create(OpType op, Path name, short umask, 
       FsPermission permission) throws IOException {
-    // set umask in configuration
-    conf.setInt(FsPermission.UMASK_LABEL, umask);
+    // set umask in configuration, converting to padded octal
+    conf.set(FsPermission.UMASK_LABEL, String.format("%1$03o", umask));
 
     // create the file/directory
     switch (op) {
@@ -246,15 +261,15 @@ public class TestDFSPermission extends TestCase {
     fs = FileSystem.get(conf);
     create(op, FILE_DIR_PATH, DEFAULT_UMASK,
         new FsPermission(DEFAULT_PERMISSION));
-    checkOwnership(FILE_DIR_PATH, SUPERUSER.getUserName(),
+    checkOwnership(FILE_DIR_PATH, SUPERUSER.getShortUserName(),
         getGroup(FILE_DIR_PATH.getParent()));
 
     // case 2: superuser changes FILE_DIR_PATH's owner to be <user1, group3>
-    setOwner(FILE_DIR_PATH, USER1.getUserName(), GROUP3_NAME, false);
+    setOwner(FILE_DIR_PATH, USER1.getShortUserName(), GROUP3_NAME, false);
 
     // case 3: user1 changes FILE_DIR_PATH's owner to be user2
     login(USER1);
-    setOwner(FILE_DIR_PATH, USER2.getUserName(), null, true);
+    setOwner(FILE_DIR_PATH, USER2.getShortUserName(), null, true);
 
     // case 4: user1 changes FILE_DIR_PATH's group to be group1 which it belongs
     // to
@@ -269,7 +284,7 @@ public class TestDFSPermission extends TestCase {
     setOwner(FILE_DIR_PATH, null, GROUP3_NAME, true);
 
     // case 7: user2 (non-owner) changes FILE_DIR_PATH's user to be user2
-    setOwner(FILE_DIR_PATH, USER2.getUserName(), null, true);
+    setOwner(FILE_DIR_PATH, USER2.getShortUserName(), null, true);
 
     // delete the file/directory
     login(SUPERUSER);
@@ -375,7 +390,7 @@ public class TestDFSPermission extends TestCase {
    * for the given user for operations mkdir, open, setReplication, 
    * getFileInfo, isDirectory, exists, getContentLength, list, rename,
    * and delete */
-  private void testPermissionCheckingPerUser(UnixUserGroupInformation ugi,
+  private void testPermissionCheckingPerUser(UserGroupInformation ugi,
       short[] ancestorPermission, short[] parentPermission,
       short[] filePermission, Path[] parentDirs, Path[] files, Path[] dirs)
       throws Exception {
@@ -462,7 +477,7 @@ public class TestDFSPermission extends TestCase {
     final static protected short opAncestorPermission = SEARCH_MASK;
     protected short opParentPermission;
     protected short opPermission;
-    protected UnixUserGroupInformation ugi;
+    protected UserGroupInformation ugi;
 
     /* initialize */
     protected void set(Path path, short ancestorPermission,
@@ -476,7 +491,7 @@ public class TestDFSPermission extends TestCase {
     }
 
     /* Perform an operation and verify if the permission checking is correct */
-    void verifyPermission(UnixUserGroupInformation ugi) throws LoginException,
+    void verifyPermission(UserGroupInformation ugi) throws LoginException,
         IOException {
       if (this.ugi != ugi) {
         setRequiredPermissions(ugi);
@@ -520,7 +535,7 @@ public class TestDFSPermission extends TestCase {
     }
 
     /* Set the permissions required to pass the permission checking */
-    protected void setRequiredPermissions(UnixUserGroupInformation ugi)
+    protected void setRequiredPermissions(UserGroupInformation ugi)
         throws IOException {
       if (SUPERUSER.equals(ugi)) {
         requiredAncestorPermission = SUPER_MASK;
@@ -597,7 +612,7 @@ public class TestDFSPermission extends TestCase {
   private CreatePermissionVerifier createVerifier =
     new CreatePermissionVerifier();
   /* test if the permission checking of create/mkdir is correct */
-  private void testCreateMkdirs(UnixUserGroupInformation ugi, Path path,
+  private void testCreateMkdirs(UserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission) throws Exception {
     createVerifier.set(path, OpType.MKDIRS, ancestorPermission,
         parentPermission);
@@ -626,7 +641,7 @@ public class TestDFSPermission extends TestCase {
 
   private OpenPermissionVerifier openVerifier = new OpenPermissionVerifier();
   /* test if the permission checking of open is correct */
-  private void testOpen(UnixUserGroupInformation ugi, Path path,
+  private void testOpen(UserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission, short filePermission)
       throws Exception {
     openVerifier
@@ -652,7 +667,7 @@ public class TestDFSPermission extends TestCase {
   private SetReplicationPermissionVerifier replicatorVerifier =
     new SetReplicationPermissionVerifier();
   /* test if the permission checking of setReplication is correct */
-  private void testSetReplication(UnixUserGroupInformation ugi, Path path,
+  private void testSetReplication(UserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission, short filePermission)
       throws Exception {
     replicatorVerifier.set(path, ancestorPermission, parentPermission,
@@ -680,7 +695,7 @@ public class TestDFSPermission extends TestCase {
   private SetTimesPermissionVerifier timesVerifier =
     new SetTimesPermissionVerifier();
   /* test if the permission checking of setReplication is correct */
-  private void testSetTimes(UnixUserGroupInformation ugi, Path path,
+  private void testSetTimes(UserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission, short filePermission)
       throws Exception {
     timesVerifier.set(path, ancestorPermission, parentPermission,
@@ -735,7 +750,7 @@ public class TestDFSPermission extends TestCase {
   private StatsPermissionVerifier statsVerifier = new StatsPermissionVerifier();
   /* test if the permission checking of isDirectory, exist,
    * getFileInfo, getContentSummary is correct */
-  private void testStats(UnixUserGroupInformation ugi, Path path,
+  private void testStats(UserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission) throws Exception {
     statsVerifier.set(path, OpType.GET_FILEINFO, ancestorPermission,
         parentPermission);
@@ -794,7 +809,7 @@ public class TestDFSPermission extends TestCase {
 
   ListPermissionVerifier listVerifier = new ListPermissionVerifier();
   /* test if the permission checking of list is correct */
-  private void testList(UnixUserGroupInformation ugi, Path file, Path dir,
+  private void testList(UserGroupInformation ugi, Path file, Path dir,
       short ancestorPermission, short parentPermission, short filePermission)
       throws Exception {
     listVerifier.set(file, InodeType.FILE, ancestorPermission,
@@ -849,7 +864,7 @@ public class TestDFSPermission extends TestCase {
 
   RenamePermissionVerifier renameVerifier = new RenamePermissionVerifier();
   /* test if the permission checking of rename is correct */
-  private void testRename(UnixUserGroupInformation ugi, Path src, Path dst,
+  private void testRename(UserGroupInformation ugi, Path src, Path dst,
       short srcAncestorPermission, short srcParentPermission,
       short dstAncestorPermission, short dstParentPermission) throws Exception {
     renameVerifier.set(src, srcAncestorPermission, srcParentPermission, dst,
@@ -913,7 +928,7 @@ public class TestDFSPermission extends TestCase {
     new DeletePermissionVerifier();
 
   /* test if the permission checking of file deletion is correct */
-  private void testDeleteFile(UnixUserGroupInformation ugi, Path file,
+  private void testDeleteFile(UserGroupInformation ugi, Path file,
       short ancestorPermission, short parentPermission) throws Exception {
     fileDeletionVerifier.set(file, ancestorPermission, parentPermission);
     fileDeletionVerifier.verifyPermission(ugi);
@@ -923,7 +938,7 @@ public class TestDFSPermission extends TestCase {
     new DeleteDirPermissionVerifier();
 
   /* test if the permission checking of directory deletion is correct */
-  private void testDeleteDir(UnixUserGroupInformation ugi, Path path,
+  private void testDeleteDir(UserGroupInformation ugi, Path path,
       short ancestorPermission, short parentPermission, short permission,
       short[] childPermissions) throws Exception {
     dirDeletionVerifier.set(path, ancestorPermission, parentPermission,
@@ -933,13 +948,12 @@ public class TestDFSPermission extends TestCase {
   }
 
   /* log into dfs as the given user */
-  private void login(UnixUserGroupInformation ugi) throws IOException {
+  private void login(UserGroupInformation ugi) throws 
+       IOException, InterruptedException {
     if (fs != null) {
       fs.close();
     }
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
-    fs = FileSystem.get(conf); // login as ugi
+    fs = DFSTestUtil.getFileSystemAs(ugi, conf);
   }
 
   /* test non-existent file */

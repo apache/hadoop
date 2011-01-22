@@ -18,17 +18,20 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.Queue.QueueState;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.SecurityUtil.AccessControlList;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Class that exposes information about queues maintained by the Hadoop
@@ -49,45 +52,43 @@ class QueueManager {
   
   private static final Log LOG = LogFactory.getLog(QueueManager.class);
   
-  // Prefix in configuration for queue related keys
-  private static final String QUEUE_CONF_PROPERTY_NAME_PREFIX 
-                                                        = "mapred.queue.";
-  // Configured queues
-  private Set<String> queueNames;
-  // Map of a queue and ACL property name with an ACL
-  private HashMap<String, AccessControlList> aclsMap;
-  // Map of a queue name to any generic object that represents 
-  // scheduler information 
-  private HashMap<String, Object> schedulerInfoObjects;
-  // Whether ACLs are enabled in the system or not.
+  static final String QUEUE_STATE_SUFFIX = "state";
+  /** Prefix in configuration for queue related keys */
+  static final String QUEUE_CONF_PROPERTY_NAME_PREFIX = "mapred.queue.";
+
+  // Continue to add this resource, to avoid incompatible change
+  static final String QUEUE_ACLS_FILE_NAME = "mapred-queue-acls.xml";
+
+  /** Whether ACLs are enabled in the system or not. */
   private boolean aclsEnabled;
+  /** Map of a queue name and Queue object */
+  final HashMap<String,Queue> queues = new HashMap<String,Queue>();
   
   /**
-   * Enum representing an operation that can be performed on a queue.
+   * Enum representing an AccessControlList that drives set of operations that
+   * can be performed on a queue.
    */
-  static enum QueueOperation {
-    SUBMIT_JOB ("acl-submit-job", false),
-    ADMINISTER_JOBS ("acl-administer-jobs", true);
+  static enum QueueACL {
+    SUBMIT_JOB ("acl-submit-job"),
+    ADMINISTER_JOBS ("acl-administer-jobs");
+    // Currently this ACL acl-administer-jobs is checked for the operations
+    // FAIL_TASK, KILL_TASK, KILL_JOB, SET_JOB_PRIORITY and VIEW_JOB.
+
     // TODO: Add ACL for LIST_JOBS when we have ability to authenticate 
     //       users in UI
     // TODO: Add ACL for CHANGE_ACL when we have an admin tool for 
     //       configuring queues.
     
     private final String aclName;
-    private final boolean jobOwnerAllowed;
     
-    QueueOperation(String aclName, boolean jobOwnerAllowed) {
+    QueueACL(String aclName) {
       this.aclName = aclName;
-      this.jobOwnerAllowed = jobOwnerAllowed;
     }
 
     final String getAclName() {
       return aclName;
     }
     
-    final boolean isJobOwnerAllowed() {
-      return jobOwnerAllowed;
-    }
   }
   
   /**
@@ -97,10 +98,26 @@ class QueueManager {
    * @param conf Configuration object where queue configuration is specified.
    */
   public QueueManager(Configuration conf) {
-    queueNames = new TreeSet<String>();
-    aclsMap = new HashMap<String, AccessControlList>();
-    schedulerInfoObjects = new HashMap<String, Object>();
-    initialize(conf);
+    checkDeprecation(conf);
+    conf.addResource(QUEUE_ACLS_FILE_NAME);
+    
+    // Get configured ACLs and state for each queue
+    aclsEnabled = conf.getBoolean("mapred.acls.enabled", false);
+
+    queues.putAll(parseQueues(conf)); 
+  }
+  
+  synchronized private Map<String, Queue> parseQueues(Configuration conf) {
+    Map<String, Queue> queues = new HashMap<String, Queue>();
+    // First get the queue names
+    String[] queueNameValues = conf.getStrings("mapred.queue.names",
+        new String[]{JobConf.DEFAULT_QUEUE_NAME});
+    for (String name : queueNameValues) {
+      queues.put(name, new Queue(name, getQueueAcls(name, conf),
+          getQueueState(name, conf)));
+    }
+    
+    return queues;
   }
   
   /**
@@ -113,92 +130,56 @@ class QueueManager {
    * @return Set of queue names.
    */
   public synchronized Set<String> getQueues() {
-    return queueNames;
+    return queues.keySet();
   }
   
   /**
-   * Return true if the given {@link QueueManager.QueueOperation} can be 
-   * performed by the specified user on the given queue.
+   * Return true if the given user is part of the ACL for the given
+   * {@link QueueACL} name for the given queue.
    * 
    * An operation is allowed if all users are provided access for this
    * operation, or if either the user or any of the groups specified is
    * provided access.
    * 
    * @param queueName Queue on which the operation needs to be performed. 
-   * @param oper The operation to perform
+   * @param qACL The queue ACL name to be checked
    * @param ugi The user and groups who wish to perform the operation.
    * 
    * @return true if the operation is allowed, false otherwise.
    */
-  public synchronized boolean hasAccess(String queueName, QueueOperation oper,
-                                UserGroupInformation ugi) {
-    return hasAccess(queueName, null, oper, ugi);
-  }
-  
-  /**
-   * Return true if the given {@link QueueManager.QueueOperation} can be 
-   * performed by the specified user on the specified job in the given queue.
-   * 
-   * An operation is allowed either if the owner of the job is the user 
-   * performing the task, all users are provided access for this
-   * operation, or if either the user or any of the groups specified is
-   * provided access.
-   * 
-   * If the {@link QueueManager.QueueOperation} is not job specific then the 
-   * job parameter is ignored.
-   * 
-   * @param queueName Queue on which the operation needs to be performed.
-   * @param job The {@link JobInProgress} on which the operation is being
-   *            performed. 
-   * @param oper The operation to perform
-   * @param ugi The user and groups who wish to perform the operation.
-   * 
-   * @return true if the operation is allowed, false otherwise.
-   */
-  public synchronized boolean hasAccess(String queueName, JobInProgress job, 
-                                QueueOperation oper, 
-                                UserGroupInformation ugi) {
+  public synchronized boolean hasAccess(String queueName, QueueACL qACL,
+      UserGroupInformation ugi) {
     if (!aclsEnabled) {
       return true;
     }
-    
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("checking access for : " + toFullPropertyName(queueName, 
-                                            oper.getAclName()));      
-    }
-    
-    if (oper.isJobOwnerAllowed()) {
-      if (job.getJobConf().getUser().equals(ugi.getUserName())) {
-        return true;
-      }
-    }
-    
-    AccessControlList acl = aclsMap.get(toFullPropertyName(queueName, oper.getAclName()));
-    if (acl == null) {
+    final Queue q = queues.get(queueName);
+    if (null == q) {
+      LOG.info("Queue " + queueName + " is not present");
       return false;
     }
     
-    // Check the ACL list
-    boolean allowed = acl.allAllowed();
-    if (!allowed) {
-      // Check the allowed users list
-      if (acl.getUsers().contains(ugi.getUserName())) {
-        allowed = true;
-      } else {
-        // Check the allowed groups list
-        Set<String> allowedGroups = acl.getGroups();
-        for (String group : ugi.getGroupNames()) {
-          if (allowedGroups.contains(group)) {
-            allowed = true;
-            break;
-          }
-        }
-      }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("checking access for : " +
+          toFullPropertyName(queueName, qACL.getAclName()));
     }
-    
-    return allowed;    
+
+    AccessControlList acl =
+      q.getAcls().get(toFullPropertyName(queueName, qACL.getAclName()));
+
+    // Check if user is part of the ACL
+    return acl != null && acl.isUserAllowed(ugi);
   }
-  
+
+  /**
+   * Checks whether the given queue is running or not.
+   * @param queueName name of the queue
+   * @return true, if the queue is running.
+   */
+  synchronized boolean isRunning(String queueName) {
+    Queue q = queues.get(queueName);
+    return q != null && Queue.QueueState.RUNNING.equals(q.getState());
+  }
+
   /**
    * Set a generic Object that represents scheduling information relevant
    * to a queue.
@@ -212,7 +193,10 @@ class QueueManager {
    */
   public synchronized void setSchedulerInfo(String queueName, 
                                               Object queueInfo) {
-    schedulerInfoObjects.put(queueName, queueInfo);
+    Queue q = queues.get(queueName);
+    if (q != null) {
+      q.setSchedulingInfo(queueInfo);
+    }
   }
   
   /**
@@ -224,73 +208,192 @@ class QueueManager {
    * @see #setSchedulerInfo(String, Object)
    */
   public synchronized Object getSchedulerInfo(String queueName) {
-    return schedulerInfoObjects.get(queueName);
+    Queue q = queues.get(queueName);
+    return (q != null)
+      ? q.getSchedulingInfo()
+      : null;
   }
   
   /**
-   * Refresh information configured for queues in the system by reading
-   * it from the passed in {@link org.apache.hadoop.conf.Configuration}.
-   *
-   * Previously stored information about queues is removed and new
-   * information populated from the configuration.
+   * Refresh the acls for the configured queues in the system by reading
+   * it from mapred-queue-acls.xml.
    * 
-   * @param conf New configuration for the queues. 
+   * The previous acls are removed. Previously configured queues and
+   * if or not acl is disabled is retained.
+   * 
+   * @throws IOException when queue ACL configuration file is invalid.
    */
-  public synchronized void refresh(Configuration conf) {
-    queueNames.clear();
-    aclsMap.clear();
-    schedulerInfoObjects.clear();
-    initialize(conf);
-  }
-  
-  private void initialize(Configuration conf) {
-    aclsEnabled = conf.getBoolean("mapred.acls.enabled", false);
-    String[] queues = conf.getStrings("mapred.queue.names", 
-                                  new String[] {JobConf.DEFAULT_QUEUE_NAME});
-    addToSet(queueNames, queues);
+  synchronized void refreshQueues(Configuration conf) throws IOException {
     
-    // for every queue, and every operation, get the ACL
-    // if any is specified and store in aclsMap.
-    for (String queue : queues) {
-      for (QueueOperation oper : QueueOperation.values()) {
-        String key = toFullPropertyName(queue, oper.getAclName());
-        String aclString = conf.get(key, "*");
-        aclsMap.put(key, new AccessControlList(aclString));
+    // First check if things are configured in mapred-site.xml,
+    // so we can print out a deprecation warning.
+    // This check is needed only until we support the configuration
+    // in mapred-site.xml
+    checkDeprecation(conf);
+
+    // Add the queue configuration file. Values from mapred-site.xml
+    // will be overridden.
+    conf.addResource(QUEUE_ACLS_FILE_NAME);
+
+    // Now parse the queues and check to ensure no queue has been deleted
+    Map<String, Queue> newQueues = parseQueues(conf);
+    checkQueuesForDeletion(queues, newQueues);
+
+    // Now we refresh the properties of the queues. Note that we
+    // do *not* refresh the queue names or the acls flag. Instead
+    // we use the older values configured for them.
+    queues.clear();
+    queues.putAll(newQueues);
+    LOG.info("Queues acls, state and configs refreshed: " + 
+        queues.size() + " queues present now.");
+  }
+
+  private void checkQueuesForDeletion(Map<String, Queue> currentQueues,
+      Map<String, Queue> newQueues) {
+    for (String queue : currentQueues.keySet()) {
+      if (!newQueues.containsKey(queue)) {
+        throw new IllegalArgumentException("Couldn't find queue '" + queue + 
+            "' during refresh!");
+      }
+    }
+    
+    // Mark new queues as STOPPED
+    for (String queue : newQueues.keySet()) {
+      if (!currentQueues.containsKey(queue)) {
+        newQueues.get(queue).setState(QueueState.STOPPED);
       }
     }
   }
   
-  private static final String toFullPropertyName(String queue, 
-      String property) {
+  private void checkDeprecation(Configuration conf) {
+    // check if queues are defined.
+    String[] queues = conf.getStrings("mapred.queue.names");
+    // check if acls are defined
+    if (queues != null) {
+      for (String queue : queues) {
+        for (QueueACL oper : QueueACL.values()) {
+          String aclString =
+            conf.get(toFullPropertyName(queue, oper.getAclName()));
+          if (aclString != null) {
+            LOG.warn("Configuring queue ACLs in mapred-site.xml or " +
+                "hadoop-site.xml is deprecated. Configure queue ACLs in " +
+                QUEUE_ACLS_FILE_NAME);
+            // even if one string is configured, it is enough for printing
+            // the warning. so we can return from here.
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  /** Parse ACLs for the queue from the configuration. */
+  HashMap<String, AccessControlList> getQueueAcls(
+      String name, Configuration conf) {
+    HashMap<String,AccessControlList> map =
+      new HashMap<String,AccessControlList>();
+    for (QueueACL oper : QueueACL.values()) {
+      String aclKey = toFullPropertyName(name, oper.getAclName());
+      map.put(aclKey, new AccessControlList(conf.get(aclKey, "*")));
+    }
+    return map;
+  }
+
+  /** Parse state of the queue from the configuration. */
+  Queue.QueueState getQueueState(String name, Configuration conf) {
+    return conf.getEnum(
+        toFullPropertyName(name, QueueManager.QUEUE_STATE_SUFFIX),
+        Queue.QueueState.RUNNING);
+  }
+
+  static final String toFullPropertyName(String queue, String property) {
     return QUEUE_CONF_PROPERTY_NAME_PREFIX + queue + "." + property;
   }
   
-  private static final void addToSet(Set<String> set, String[] elems) {
-    for (String elem : elems) {
-      set.add(elem);
+  synchronized JobQueueInfo getJobQueueInfo(String queue) {
+    Queue q = queues.get(queue);
+    if (q != null) {
+      JobQueueInfo qInfo = new JobQueueInfo();
+      qInfo.setQueueName(q.getName());
+      qInfo.setQueueState(q.getState().getStateName());
+      Object schedInfo = q.getSchedulingInfo();
+      qInfo.setSchedulingInfo(schedInfo == null ? null : schedInfo.toString());
+      return qInfo;
     }
-  }
-  
-  synchronized JobQueueInfo[] getJobQueueInfos() {
-    ArrayList<JobQueueInfo> queueInfoList = new ArrayList<JobQueueInfo>();
-    for(String queue : queueNames) {
-      Object schedulerInfo = schedulerInfoObjects.get(queue);
-      if(schedulerInfo != null) {
-        queueInfoList.add(new JobQueueInfo(queue,schedulerInfo.toString()));
-      }else {
-        queueInfoList.add(new JobQueueInfo(queue,null));
-      }
-    }
-    return (JobQueueInfo[]) queueInfoList.toArray(new JobQueueInfo[queueInfoList
-        .size()]);
+    return null;
   }
 
-  JobQueueInfo getJobQueueInfo(String queue) {
-    Object schedulingInfo = schedulerInfoObjects.get(queue);
-    if(schedulingInfo!=null){
-      return new JobQueueInfo(queue,schedulingInfo.toString());
-    }else {
-      return new JobQueueInfo(queue,null);
+  synchronized JobQueueInfo[] getJobQueueInfos() {
+    ArrayList<JobQueueInfo> ret = new ArrayList<JobQueueInfo>();
+    for (String qName : getQueues()) {
+      ret.add(getJobQueueInfo(qName));
     }
+    return (JobQueueInfo[]) ret.toArray(new JobQueueInfo[ret.size()]);
   }
+
+  /**
+   * Generates the array of QueueAclsInfo object. The array consists of only those queues
+   * for which user <ugi.getShortUserName()> has acls
+   *
+   * @return QueueAclsInfo[]
+   * @throws java.io.IOException
+   */
+  synchronized QueueAclsInfo[] getQueueAcls(UserGroupInformation ugi)
+      throws IOException {
+    //List of all QueueAclsInfo objects , this list is returned
+    ArrayList<QueueAclsInfo> queueAclsInfolist = new ArrayList<QueueAclsInfo>();
+    QueueACL[] acls = QueueACL.values();
+    for (String queueName : getQueues()) {
+      QueueAclsInfo queueAclsInfo = null;
+      ArrayList<String> operationsAllowed = null;
+      for (QueueACL qACL : acls) {
+        if (hasAccess(queueName, qACL, ugi)) {
+          if (operationsAllowed == null) {
+            operationsAllowed = new ArrayList<String>();
+          }
+          operationsAllowed.add(qACL.getAclName());
+        }
+      }
+      if (operationsAllowed != null) {
+        //There is atleast 1 operation supported for queue <queueName>
+        //, hence initialize queueAclsInfo
+        queueAclsInfo = new QueueAclsInfo(queueName, operationsAllowed.toArray(
+              new String[operationsAllowed.size()]));
+        queueAclsInfolist.add(queueAclsInfo);
+      }
+    }
+    return
+      queueAclsInfolist.toArray(new QueueAclsInfo[queueAclsInfolist.size()]);
+  }
+
+  /**
+   * Returns the specific queue ACL for the given queue.
+   * Returns null if the given queue does not exist or the acl is not
+   * configured for that queue.
+   * If acls are disabled(mapred.acls.enabled set to false), returns ACL with
+   * all users.
+   */
+  synchronized AccessControlList getQueueACL(String queueName, QueueACL qACL) {
+    if (aclsEnabled) {
+      Queue q = queues.get(queueName);
+      assert q != null;
+      return q.getAcls().get(toFullPropertyName(queueName, qACL.getAclName()));
+    }
+    return new AccessControlList("*");
+  }
+
+  /**
+   * prints the configuration of QueueManager in Json format.
+   * The method should be modified accordingly whenever
+   * QueueManager(Configuration) constructor is modified.
+   * @param writer {@link}Writer object to which the configuration properties 
+   * are printed in json format
+   * @throws IOException
+   */
+  static void dumpConfiguration(Writer writer) throws IOException {
+    Configuration conf = new Configuration(false);
+    conf.addResource(QUEUE_ACLS_FILE_NAME);
+    Configuration.dumpConfiguration(conf, writer);
+  }
+
 }

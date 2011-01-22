@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
-import org.apache.hadoop.metrics.util.MBeanUtil;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
@@ -638,7 +638,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
     try {
       bean = new StandardMBean(this,FSDatasetMBean.class);
-      mbeanName = MBeanUtil.registerMBean("DataNode",
+      mbeanName = MBeans.register("DataNode",
           "FSDatasetState-" + storageId, bean);
     } catch (NotCompliantMBeanException e) {
       e.printStackTrace();
@@ -649,10 +649,14 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   public void shutdown() {
     if (mbeanName != null)
-      MBeanUtil.unregisterMBean(mbeanName);
+      MBeans.unregister(mbeanName);
   }
 
   public String getStorageInfo() {
     return "Simulated FSDataset-" + storageId;
+  }
+  
+  public boolean hasEnoughResource() {
+    return true;
   }
 }

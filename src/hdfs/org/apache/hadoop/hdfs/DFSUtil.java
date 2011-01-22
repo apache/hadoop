@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.UnsupportedEncodingException;
+
 import java.util.StringTokenizer;
 import org.apache.hadoop.fs.Path;
 
@@ -46,6 +48,29 @@ public class DFSUtil {
     }
     return true;
   }
+  
+  /**
+   * Converts a byte array to a string using UTF8 encoding.
+   */
+  public static String bytes2String(byte[] bytes) {
+    try {
+      return new String(bytes, "UTF8");
+    } catch(UnsupportedEncodingException e) {
+      assert false : "UTF8 encoding is not supported ";
+    }
+    return null;
+  }
 
+  /**
+   * Converts a string to a byte array using UTF8 encoding.
+   */
+  public static byte[] string2Bytes(String str) {
+    try {
+      return str.getBytes("UTF8");
+    } catch(UnsupportedEncodingException e) {
+      assert false : "UTF8 encoding is not supported ";
+    }
+    return null;
+  }
 }
 

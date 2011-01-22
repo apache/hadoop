@@ -18,6 +18,7 @@
 -->
 
 <project name="Hadoop" default="compile" 
+   xmlns:artifact="urn:maven-artifact-ant"
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->
@@ -27,9 +28,17 @@
  
   <property name="Name" value="Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="0.20.2-dev"/>
+  <property name="version" value="0.20.202.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
+  <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="year" value="2009"/>
+  
+  <property name="core.final.name" value="${name}-core-${version}"/>
+  <property name="test.final.name" value="${name}-test-${version}"/>
+  <property name="examples.final.name" value="${name}-examples-${version}"/>
+  <property name="tools.final.name" value="${name}-tools-${version}"/>
+  <property name="ant.final.name" value="${name}-ant-${version}"/>
+  <property name="streaming.final.name" value="${name}-streaming-${version}"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
   <property name="core.src.dir" value="${src.dir}/core"/>
@@ -109,6 +118,11 @@
   <property name="test.junit.printsummary" value="yes" />
   <property name="test.junit.haltonfailure" value="no" />
   <property name="test.junit.maxmemory" value="512m" />
+  <property name="test.tools.input.dir" value="${basedir}/src/test/tools/data"/>
+  
+  <property name="test.commit.tests.file" value="${test.src.dir}/commit-tests" />
+  <property name="test.smoke.tests.file" value="${test.src.dir}/smoke-tests" />
+  <property name="test.all.tests.file" value="${test.src.dir}/all-tests" />
 
   <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
@@ -120,6 +134,7 @@
   <property name="javadoc.link.java"
 	    value="http://java.sun.com/javase/6/docs/api/"/>
   <property name="javadoc.packages" value="org.apache.hadoop.*"/>
+  <property name="javadoc.maxmemory" value="512m" />
 
   <property name="dist.dir" value="${build.dir}/${final.name}"/>
 
@@ -137,7 +152,7 @@
 
   <property name="jdiff.build.dir" value="${build.docs}/jdiff"/>
   <property name="jdiff.xml.dir" value="${lib.dir}/jdiff"/>
-  <property name="jdiff.stable" value="0.19.2"/>
+  <property name="jdiff.stable" value="0.20.9"/>
   <property name="jdiff.stable.javadoc" 
             value="http://hadoop.apache.org/core/docs/r${jdiff.stable}/api/"/>
 
@@ -147,32 +162,89 @@
   <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
 
+  <property name="jsvc.build.dir" value="${build.dir}/jsvc" />
+  <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
+  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-i386.tar.gz" />
+  <property name="jsvc.dest.name" value="jsvc.tar.gz" />
+
+  <!-- task-controller properties set here -->
+  <!-- Source directory from where configure is run and files are copied
+  -->
+	
+  <property name="c++.task-controller.src" 
+    value="${basedir}/src/c++/task-controller" />
+  <!-- directory where autoconf files + temporary files and src is 
+    stored for compilation -->
+  <property name="build.c++.task-controller" 
+    value="${build.c++}/task-controller" />
+  <property name="task-controller.prefix.dir" value="${dist.dir}" />
+  <!-- the configuration directory for the linux task controller -->
+  <property name="hadoop.conf.dir" value="/etc/hadoop"/>
+
+  <!-- end of task-controller properties -->
+
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
+  <property name="mvnrepo" value="http://repo2.maven.org/maven2"/>
+  <property name="asfrepo" value="https://repository.apache.org"/> 
   <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
-  <property name="ivy_repo_url" value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
-  <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml" />
+  <property name="ivy_repo_url" 
+    value="${mvnrepo}/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
+  <property name="ant_task.jar" 
+    location="${ivy.dir}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="tsk.org" value="/org/apache/maven/maven-ant-tasks/"/>
+  <property name="ant_task_repo_url"
+    value="${mvnrepo}${tsk.org}${ant-task.version}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="repo" value="snapshots"/>
+  <property name="asfsnapshotrepo" 
+    value="${asfrepo}/content/repositories/snapshots"/> 
+  <property name="asfstagingrepo"
+    value="${asfrepo}/service/local/staging/deploy/maven2"/> 
+  <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml"/>
   <property name="ivy.org" value="org.apache.hadoop"/>
   <property name="build.dir" location="build" />
   <property name="dist.dir" value="${build.dir}/${final.name}"/>
   <property name="build.ivy.dir" location="${build.dir}/ivy" />
-  <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
-  <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
-  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
-  <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
-  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-core-${hadoop.version}.pom" />
-  <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${hadoop.version}.jar" />
+  <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib"/>
+  <property name="common.ivy.lib.dir" 
+    location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
+  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report"/>
 
+  <property name="hadoop-core.pom" location="${ivy.dir}/hadoop-core-pom.xml"/>
+  <property name="hadoop-core-pom-template.xml" 
+    location="${ivy.dir}/hadoop-core-pom-template.xml"/>
+  <property name="hadoop-core.jar" location="${build.dir}/${core.final.name}.jar"/>
+  <property name="hadoop-test.pom" location="${ivy.dir}/hadoop-test-pom.xml"/>
+  <property name="hadoop-test-pom-template.xml" 
+    location="${ivy.dir}/hadoop-test-pom-template.xml" />
+  <property name="hadoop-test.jar" location="${build.dir}/${test.final.name}.jar"/>
+  <property name="hadoop-tools.pom" location="${ivy.dir}/hadoop-tools-pom.xml"/>
+  <property name="hadoop-tools-pom-template.xml" 
+    location="${ivy.dir}/hadoop-tools-pom-template.xml" />
+  <property name="hadoop-tools.jar" location="${build.dir}/${tools.final.name}.jar"/>
+  <property name="hadoop-examples.pom" location="${ivy.dir}/hadoop-examples-pom.xml"/>
+  <property name="hadoop-examples-pom-template.xml" 
+    location="${ivy.dir}/hadoop-examples-pom-template.xml"/>
+  <property name="hadoop-examples.jar" 
+    location="${build.dir}/${examples.final.name}.jar"/>
+  <property name="hadoop-streaming.pom" 
+    location="${ivy.dir}/hadoop-streaming-pom.xml"/>
+  <property name="hadoop-streaming-pom-template.xml" 
+    location="${ivy.dir}/hadoop-streaming-pom-template.xml"/>
+  <property name="hadoop-streaming.jar" 
+    location="${build.dir}/contrib/streaming/${streaming.final.name}.jar"/>
+   
   <!--this is the naming policy for artifacts we want pulled down-->
-  <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
+  <property name="ivy.artifact.retrieve.pattern" 
+    value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="hadoop-[revision]-core.[ext]"/>
-  <property name="hadoop.jar" location="${build.dir}/hadoop-${hadoop.version}-core.jar" />
 
   <!-- jdiff.home property set -->
-  <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
+  <property name="jdiff.home" 
+    value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
   <property name="jdiff.jar" value="${jdiff.home}/jdiff-${jdiff.version}.jar"/>
   <property name="xerces.jar" value="${jdiff.home}/xerces-${xerces.version}.jar"/>
 
@@ -185,6 +257,10 @@
         <isset property="run.clover"/>
         <isset property="clover.present"/>
     </and>
+  </condition>
+
+  <condition property="staging">
+     <equals arg1="${repo}" arg2="staging"/>
   </condition>
 
   <!-- the normal classpath -->
@@ -208,8 +284,8 @@
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
     <fileset dir="${test.lib.dir}">
-      <include name="**/*.jar" />
-      <exclude name="**/excluded/" />
+      <include name="**/*.jar"/>
+      <exclude name="**/excluded/"/>
     </fileset>
     <path refid="classpath"/>
   </path>
@@ -221,9 +297,6 @@
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
   </path>
-
-  <!-- properties dependent on the items defined above. -->
-  <!--<available classname="${rat.reporting.classname}" classpathref="classpath" property="rat.present" value="true"/> -->
 
   <!-- ====================================================== -->
   <!-- Macro definitions                                      -->
@@ -249,6 +322,7 @@
     <mkdir dir="${build.src}"/>
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
+    <mkdir dir="${build.webapps}/history/WEB-INF"/>
     <mkdir dir="${build.webapps}/hdfs/WEB-INF"/>
     <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
     <mkdir dir="${build.webapps}/secondary/WEB-INF"/>
@@ -285,13 +359,15 @@
     </copy>
 
     <exec executable="sh">
-       <arg line="src/saveVersion.sh ${version}"/>
+       <arg line="src/saveVersion.sh ${version} ${build.dir}"/>
     </exec>
 	
    <exec executable="sh">
        <arg line="src/fixFontsPath.sh ${src.docs.cn}"/>
    </exec>
   </target>
+
+  <import file="${test.src.dir}/aop/build/aop.xml"/>
 
   <!-- ====================================================== -->
   <!-- Compile the Java files                                 -->
@@ -349,7 +425,7 @@
      
   </target>
 
-  <target name="compile-mapred-classes" depends="compile-core-classes">
+  <target name="compile-mapred-classes" depends="compile-core-classes,compile-hdfs-classes">
     <jsp-compile
      uriroot="${src.webapps}/task"
      outputdir="${build.src}"
@@ -357,8 +433,21 @@
      webxml="${build.webapps}/task/WEB-INF/web.xml">
     </jsp-compile>
 
+    <!-- Compile Java files (excluding JSPs) checking warnings -->
     <jsp-compile
-     uriroot="${src.webapps}/job"
+     uriroot="${src.webapps}/history"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.mapred"
+     webxml="${build.webapps}/history/WEB-INF/web.xml">
+    </jsp-compile>
+    
+    <copy todir="${build.webapps}/job">
+      <fileset dir="${src.webapps}/job" includes="**/*.jsp"/>
+      <fileset dir="${src.webapps}/history" includes="**/*.jsp"/>
+    </copy>
+     
+    <jsp-compile
+     uriroot="${build.webapps}/job"
      outputdir="${build.src}"
      package="org.apache.hadoop.mapred"
      webxml="${build.webapps}/job/WEB-INF/web.xml">
@@ -455,6 +544,8 @@
   	
     <mkdir dir="${build.native}/lib"/>
     <mkdir dir="${build.native}/src/org/apache/hadoop/io/compress/zlib"/>
+    <mkdir dir="${build.native}/src/org/apache/hadoop/io/nativeio"/>
+    <mkdir dir="${build.native}/src/org/apache/hadoop/security"/>
 
   	<javah
   	  classpath="${build.classes}"
@@ -464,6 +555,32 @@
   	  >
   	  <class name="org.apache.hadoop.io.compress.zlib.ZlibCompressor" />
       <class name="org.apache.hadoop.io.compress.zlib.ZlibDecompressor" />
+  	</javah>
+
+        <javah
+          classpath="${build.classes}"
+          destdir="${build.native}/src/org/apache/hadoop/io/nativeio"
+       force="yes"
+          verbose="yes"
+          >
+          <class name="org.apache.hadoop.io.nativeio.NativeIO" />
+        </javah>
+  	<javah
+  	  classpath="${build.classes}"
+  	  destdir="${build.native}/src/org/apache/hadoop/security"
+      force="yes"
+  	  verbose="yes"
+  	  >
+  	  <class name="org.apache.hadoop.security.JniBasedUnixGroupsMapping" />
+  	</javah>
+
+  	<javah
+  	  classpath="${build.classes}"
+  	  destdir="${build.native}/src/org/apache/hadoop/security"
+      force="yes"
+  	  verbose="yes"
+  	  >
+  	  <class name="org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping" />
   	</javah>
 
 	<exec dir="${build.native}" executable="sh" failonerror="true">
@@ -482,7 +599,7 @@
     </exec>
 
 	<exec dir="${build.native}" executable="sh" failonerror="true">
-	  <arg line="${build.native}/libtool --mode=install cp ${build.native}/lib/libhadoop.la ${build.native}/lib"/>
+	  <arg line="${build.native}/libtool --mode=install cp ${build.native}/libhadoop.la ${build.native}/lib"/>
     </exec>
 
   </target>
@@ -493,7 +610,7 @@
   	description="Compile core only">
   </target>
 
-  <target name="compile-contrib" depends="compile-core,compile-c++-libhdfs">
+  <target name="compile-contrib" depends="compile-core,tools-jar,compile-c++-libhdfs">
      <subant target="compile">
         <property name="version" value="${version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
@@ -532,7 +649,9 @@
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
-    <jar jarfile="${build.dir}/${final.name}-core.jar"
+    <property name="jar.properties.list"
+      value="commons-logging.properties, log4j.properties, hadoop-metrics.properties"/>
+    <jar jarfile="${build.dir}/${core.final.name}.jar"
          basedir="${build.classes}">
       <manifest>
         <section name="org/apache/hadoop">
@@ -541,9 +660,8 @@
           <attribute name="Implementation-Vendor" value="Apache"/>
         </section>
       </manifest>
-      <fileset file="${conf.dir}/commons-logging.properties"/>
-      <fileset file="${conf.dir}/log4j.properties"/>
-      <fileset file="${conf.dir}/hadoop-metrics.properties"/>
+      <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
+      <fileset file="${jar.extra.properties.list}" />
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
   </target>
@@ -554,18 +672,29 @@
   <!--                                                                    -->
   <!-- ================================================================== -->
   <target name="examples" depends="jar, compile-examples" description="Make the Hadoop examples jar.">
-    <jar jarfile="${build.dir}/${final.name}-examples.jar"
-         basedir="${build.examples}">
-      <manifest>
-        <attribute name="Main-Class" 
-                   value="org/apache/hadoop/examples/ExampleDriver"/>
-      </manifest>
-    </jar>
+    <macro-jar-examples
+      build.dir="${build.dir}"
+      basedir="${build.examples}">
+    </macro-jar-examples>
   </target>
+
+  <macrodef name="macro-jar-examples">
+    <attribute name="build.dir" />
+    <attribute name="basedir" />
+    <sequential>
+      <jar jarfile="@{build.dir}/${examples.final.name}.jar"
+           basedir="@{basedir}">
+        <manifest>
+          <attribute name="Main-Class"
+                    value="org/apache/hadoop/examples/ExampleDriver"/>
+        </manifest>
+      </jar>
+    </sequential>
+  </macrodef>
 
   <target name="tools-jar" depends="jar, compile-tools" 
           description="Make the Hadoop tools jar.">
-    <jar jarfile="${build.dir}/${final.name}-tools.jar"
+    <jar jarfile="${build.dir}/${tools.final.name}.jar"
          basedir="${build.tools}">
       <manifest>
         <attribute name="Main-Class" 
@@ -575,15 +704,15 @@
   </target>
 
   <!-- ================================================================== -->
-  <!-- Make the Hadoop metrics jar. (for use outside Hadoop)              -->
+  <!-- Make the Hadoop metrics plugin dev/sdk jar. (for use outside Hadoop)              -->
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="metrics.jar" depends="compile-core" description="Make the Hadoop metrics jar. (for use outside Hadoop)">
-    <jar jarfile="${build.dir}/hadoop-metrics-${version}.jar"
+  <target name="metrics.jar" depends="compile-core" description="Make the Hadoop metrics plugin dev/sdk jar. (for use outside Hadoop)">
+    <jar jarfile="${build.dir}/hadoop-metrics-dev-${version}.jar"
          basedir="${build.classes}">
-      <include name="**/metrics/**" />
-      <exclude name="**/package.html" />
+      <include name="**/metrics2/*.class" />
+      <include name="**/metrics2/util/*.class" />
     </jar>
   </target>
 
@@ -685,7 +814,7 @@
   <!--                                                                    -->
   <!-- ================================================================== -->
   <target name="jar-test" depends="compile-core-test" description="Make hadoop-test.jar">
-    <jar jarfile="${build.dir}/${final.name}-test.jar"
+    <jar jarfile="${build.dir}/${test.final.name}.jar"
          basedir="${test.build.classes}">
          <manifest>
            <attribute name="Main-Class"
@@ -700,64 +829,260 @@
   </target>
 
   <!-- ================================================================== -->
+  <!-- Fault injection customization section.
+       These targets ought to be copied over to other projects and modified
+       as needed -->
+  <!-- ================================================================== -->
+  <target name="-classes-compilation" depends="compile-core-classes,
+      compile-hdfs-classes, compile-mapred-classes, compile-core-test"/>
+  <target name="run-test-core-fault-inject" depends="injectfaults"
+	  description="Run full set of the unit tests with fault injection">
+    <macro-run-tests-fault-inject target.name="test-core"
+      testcasesonly="false"/>
+  </target>
+
+  <target name="jar-test-fault-inject" depends="injectfaults"
+    description="Make hadoop-test-fi.jar">
+    <macro-jar-test-fault-inject
+      target.name="jar-test"
+      jar.final.name="test.final.name"
+      jar.final.value="${test.final.name}-fi" />
+  </target>
+
+  <target name="jar-fault-inject" depends="injectfaults"
+    description="Make hadoop-fi.jar">
+    <macro-jar-fault-inject
+      target.name="jar"
+      build.dir="${build-fi.dir}"
+      jar.final.name="final.name"
+      jar.final.value="${final.name}-fi" />
+  </target>
+
+  <!--This target is not included into the the top level list of target
+  for it serves a special "regression" testing purpose of non-FI tests in
+  FI environment -->
+  <target name="run-fault-inject-with-testcaseonly" depends="injectfaults">
+    <fail unless="testcase">Can't run this target without -Dtestcase setting!
+    </fail>
+    <macro-run-tests-fault-inject target.name="test-core"
+      testcasesonly="true"/>
+  </target>
+  <!-- ================================================================== -->
+  <!-- End of Fault injection customization section                       -->
+  <!-- ================================================================== -->
+
+  <condition property="tests.notestcase">
+    <and>
+      <isfalse value="${test.fault.inject}"/>
+      <not>
+        <isset property="testcase"/>
+      </not>
+    </and>
+  </condition>
+  <condition property="tests.notestcase.fi">
+    <and>
+      <not>
+        <isset property="testcase" />
+      </not>
+      <istrue value="${test.fault.inject}" />
+    </and>
+  </condition>
+  <condition property="tests.testcase">
+    <and>
+      <isfalse value="${test.fault.inject}" />
+      <isset property="testcase" />
+    </and>
+  </condition>
+  <condition property="tests.testcase.fi">
+    <and>
+      <istrue value="${test.fault.inject}" />
+      <isset property="testcase" />
+    </and>
+  </condition>
+  <!-- ================================================================== -->
+  <!-- Define exclude lists for different kinds of testing -->
+  <!-- ================================================================== -->
+  <patternset id="empty.exclude.list.id" />
+    <patternset id="commit.smoke.exclude.list.id">
+    <excludesfile name="${test.commit.tests.file}"/>
+    <excludesfile name="${test.smoke.tests.file}"/>
+  </patternset>
+
+  <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="test-core" depends="jar-test" description="Run core unit tests">
+  <macrodef name="macro-test-runner">
+    <attribute name="test.file" />
+    <attribute name="classpath" />
+    <attribute name="test.dir" />
+    <attribute name="fileset.dir" />
+    <attribute name="hadoop.conf.dir.deployed" default="" />
+    <attribute name="test.krb5.conf" default="" />
+    <attribute name="test.krb5.conf.filename" default="" />
+    <attribute name="exclude.list.id" default="empty.exclude.list.id" />
+    <sequential>
+      <delete file="${test.build.dir}/testsfailed"/>
+      <delete dir="@{test.dir}/data" />
+      <mkdir dir="@{test.dir}/data" />
+      <delete dir="@{test.dir}/logs" />
+      <mkdir dir="@{test.dir}/logs" />
+      <copy file="${test.src.dir}/hadoop-policy.xml"
+            todir="@{test.dir}/extraconf" />
+      <copy file="${test.src.dir}/fi-site.xml"
+            todir="@{test.dir}/extraconf" />
+      <junit showoutput="${test.output}"
+             printsummary="${test.junit.printsummary}"
+             haltonfailure="${test.junit.haltonfailure}"
+             fork="yes"
+             forkmode="${test.junit.fork.mode}"
+             maxmemory="${test.junit.maxmemory}"
+             dir="${basedir}"
+             timeout="${test.timeout}"
+             errorProperty="tests.failed"
+             failureProperty="tests.failed">
+        <sysproperty key="test.build.data" value="${test.build.data}" />
+        <sysproperty key="test.tools.input.dir"
+                     value="${test.tools.input.dir}" />
+        <sysproperty key="test.cache.data" value="${test.cache.data}" />
+        <sysproperty key="test.debug.data" value="${test.debug.data}" />
+        <sysproperty key="hadoop.log.dir" value="${test.log.dir}" />
+        <sysproperty key="test.src.dir" value="${test.src.dir}" />
+        <sysproperty key="taskcontroller-path" value="${taskcontroller-path}" />
+        <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}" />
+        <sysproperty key="test.build.extraconf"
+                     value="@{test.dir}/extraconf" />
+        <sysproperty key="@{test.krb5.conf}"
+                     value="@{test.krb5.conf.filename}"/>
+        <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
+        <sysproperty key="java.library.path"
+                     value="${build.native}/lib:${lib.dir}/native/${build.platform}:${lib.file.path}" />
+        <sysproperty key="install.c++.examples"
+                     value="${install.c++.examples}" />
+        <sysproperty key="testjar"
+                     value="@{test.dir}/testjar" />
+        <!-- System properties that are specifically set for system tests -->
+        <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
+                     value="@{hadoop.conf.dir.deployed}" />
+        <!-- set io.compression.codec.lzo.class in the child jvm only if it is set -->
+        <syspropertyset dynamic="no">
+          <propertyref name="io.compression.codec.lzo.class" />
+        </syspropertyset>
+        <!-- set compile.c++ in the child jvm only if it is set -->
+        <syspropertyset dynamic="no">
+          <propertyref name="compile.c++" />
+        </syspropertyset>
+        <classpath refid="@{classpath}" />
+        <syspropertyset id="FaultProbabilityProperties">
+          <propertyref regex="fi.*" />
+        </syspropertyset>
+        <formatter type="${test.junit.output.format}" />
+        <batchtest todir="@{test.dir}" if="tests.notestcase">
+          <fileset dir="@{fileset.dir}"
+                   excludes="**/${test.exclude}.java aop/** system/**">
+            <patternset>
+              <includesfile name="@{test.file}"/>
+            </patternset>
+            <patternset refid="@{exclude.list.id}"/>
+          </fileset>
+        </batchtest>
+        <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
+          <fileset dir="${test.src.dir}/aop"
+                   includes="**/${test.include}.java"
+                   excludes="**/${test.exclude}.java" />
+        </batchtest>
+        <batchtest todir="@{test.dir}" if="tests.testcase">
+          <fileset dir="@{fileset.dir}"
+            includes="**/${testcase}.java" excludes="aop/** system/**"/>
+        </batchtest>
+        <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
+          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java" />
+        </batchtest>
+        <!--The following batch is for very special occasions only when
+                a non-FI tests are needed to be executed against FI-environment -->
+        <batchtest todir="${test.build.dir}" if="tests.testcaseonly">
+          <fileset dir="${test.src.dir}" includes="**/${testcase}.java" />
+        </batchtest>
+      </junit>
+      <antcall target="checkfailure"/>
+    </sequential>
+  </macrodef>
 
-    <delete dir="${test.build.data}"/>
-    <mkdir dir="${test.build.data}"/>
-    <delete dir="${test.log.dir}"/>
-    <mkdir dir="${test.log.dir}"/>
-  	<copy file="${test.src.dir}/hadoop-policy.xml" 
-  	  todir="${test.build.extraconf}" />
-    <junit showoutput="${test.output}"
-      printsummary="${test.junit.printsummary}"
-      haltonfailure="${test.junit.haltonfailure}"
-      fork="yes"
-      forkmode="${test.junit.fork.mode}"
-      maxmemory="${test.junit.maxmemory}"
-      dir="${basedir}" timeout="${test.timeout}"
-      errorProperty="tests.failed" failureProperty="tests.failed">
-      <sysproperty key="test.build.data" value="${test.build.data}"/>
-      <sysproperty key="test.cache.data" value="${test.cache.data}"/>    	
-      <sysproperty key="test.debug.data" value="${test.debug.data}"/>
-      <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
-      <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-      <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
-      <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
-      <sysproperty key="java.library.path"
-       value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
-      <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
-      <!-- set io.compression.codec.lzo.class in the child jvm only if it is set -->
-	  <syspropertyset dynamic="no">
-		  <propertyref name="io.compression.codec.lzo.class"/>
-	  </syspropertyset>
-      <!-- set compile.c++ in the child jvm only if it is set -->
-      <syspropertyset dynamic="no">
-         <propertyref name="compile.c++"/>
-      </syspropertyset>
-      <classpath refid="${test.classpath.id}"/>
-      <formatter type="${test.junit.output.format}" />
-      <batchtest todir="${test.build.dir}" unless="testcase">
-        <fileset dir="${test.src.dir}"
-	         includes="**/${test.include}.java"
-		 excludes="**/${test.exclude}.java" />
-      </batchtest>
-      <batchtest todir="${test.build.dir}" if="testcase">
-        <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
-      </batchtest>
-    </junit>
-    <fail if="tests.failed">Tests failed!</fail>
+  <target name="test-core" depends="test-commit, test-smoke,
+    test-core-excluding-commit-and-smoke,
+    test-core-all-withtestcaseonly, jar-test"
+    description="Run core unit tests">
+  </target>
+
+  <target name="test-core-all-withtestcaseonly" depends="jar-test" if="testcase">
+    <macro-test-runner test.file="${test.all.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf="java.security.krb5.conf"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       >
+    </macro-test-runner>
+  </target>
+
+  <target name="test-core-excluding-commit-and-smoke" depends="jar-test"
+    unless="testcase">
+    <macro-test-runner test.file="${test.all.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf="java.security.krb5.conf"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       exclude.list.id="commit.smoke.exclude.list.id"
+                       >
+    </macro-test-runner>
   </target>   
+
+  <target name="test-commit" depends="jar-test" 
+    description="Run approx 10-minute set of unit tests prior to commiting"
+    unless="testcase">
+    <macro-test-runner test.file="${test.commit.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf="java.security.krb5.conf"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       >
+    </macro-test-runner>
+  </target>
+
+  <target name="test-smoke" depends="jar-test"
+    description="Run approx 30-minute set of functional tests prior to
+      guarantee that the build is not DOA" unless="testcase">
+    <macro-test-runner test.file="${test.smoke.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf="java.security.krb5.conf"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       >
+    </macro-test-runner>
+  </target>
+
+  <target name="checkfailure" if="tests.failed">
+    <touch file="${test.build.dir}/testsfailed"/>
+    <fail unless="continueOnFailure">Tests failed!</fail>
+  </target>
 
   <target name="test-contrib" depends="compile, compile-core-test" description="Run contrib unit tests">
     <subant target="test">
        <property name="version" value="${version}"/>
+       <property name="clover.jar" value="${clover.jar}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
 	  
-  <target name="test" depends="test-core, test-contrib" description="Run core, contrib unit tests">
+  <target name="test" description="Run core, contrib, fault injection tests">
+    <delete file="${test.build.dir}/testsfailed"/>
+    <property name="continueOnFailure" value="true"/>
+    <antcall target="test-core"/>
+    <antcall target="test-contrib"/>
+    <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
+    <fail if="testsfailed">Tests failed!</fail>
   </target>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
@@ -828,10 +1153,10 @@
       <sourcePath path="${examples.dir}" />
       <sourcePath path="${tools.src}" />
       <sourcePath path="${basedir}/src/contrib/streaming/src/java" />
-      <class location="${basedir}/build/${final.name}-core.jar" />
-      <class location="${basedir}/build/${final.name}-examples.jar" />
-      <class location="${basedir}/build/${final.name}-tools.jar" />
-      <class location="${basedir}/build/contrib/streaming/${final.name}-streaming.jar" />
+      <class location="${build.dir}/${core.final.name}.jar" />
+      <class location="${build.dir}/${examples.final.name}.jar" />
+      <class location="${build.dir}/${tools.final.name}.jar" />
+      <class location="${build.dir}/contrib/streaming/${streaming.final.name}.jar" />
     </findbugs>
 
         <xslt style="${findbugs.home}/src/xsl/default.xsl"
@@ -907,6 +1232,7 @@
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} Developer API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
         <packageset dir="${mapred.src.dir}"/>
@@ -949,6 +1275,7 @@
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
         <packageset dir="${mapred.src.dir}"/>
@@ -982,7 +1309,7 @@
   </target>	
 
   <target name="api-xml" depends="ivy-retrieve-jdiff,javadoc,write-null">
-    <javadoc>
+    <javadoc maxmemory="${javadoc.maxmemory}">
        <doclet name="jdiff.JDiff"
                path="${jdiff.jar}:${xerces.jar}">
          <param name="-apidir" value="${jdiff.xml.dir}"/>
@@ -1009,7 +1336,8 @@
     <mkdir dir="${jdiff.build.dir}"/>
     <javadoc sourcepath="src/core,src/hdfs,src,mapred,src/tools"
              destdir="${jdiff.build.dir}"
-             sourceFiles="${jdiff.home}/Null.java">
+	     sourceFiles="${jdiff.home}/Null.java"
+	     maxmemory="${javadoc.maxmemory}">
        <doclet name="jdiff.JDiff"
                path="${jdiff.jar}:${xerces.jar}">
          <param name="-oldapi" value="hadoop ${jdiff.stable}"/>
@@ -1043,7 +1371,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
+  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1083,7 +1411,7 @@
     </copy>
 
     <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}-*.jar"/>
+      <fileset file="${build.dir}/${name}-*-${version}.jar"/>
     </copy>
     
     <copy todir="${dist.dir}/bin">
@@ -1156,7 +1484,7 @@
     </macro_tar>
   </target>
 
-  <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio" 
+  <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc" 
 		description="assembles artifacts for binary target">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1193,7 +1521,7 @@
     </copy>
 
     <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}-*.jar"/>
+      <fileset file="${build.dir}/${name}-*-${version}.jar"/>
     </copy>
     
     <copy todir="${dist.dir}/bin">
@@ -1227,6 +1555,32 @@
     </chmod>
   </target>
 
+  <target name="binary-system" depends="bin-package, jar-system, jar-test-system"
+     description="make system test package for deployment">
+    <copy todir="${system-test-build-dir}/${final.name}">
+      <fileset dir="${dist.dir}">
+      </fileset>
+    </copy>
+    <copy todir="${system-test-build-dir}/${final.name}" 
+      file="${system-test-build-dir}/${core.final.name}.jar" overwrite="true"/>
+    <copy todir="${system-test-build-dir}/${final.name}"
+      file="${system-test-build-dir}/${test.final.name}.jar" overwrite="true"/>
+    <macro_tar 
+      param.destfile="${system-test-build-dir}/${final.name}-bin.tar.gz">
+        <param.listofitems>
+          <tarfileset dir="${system-test-build-dir}" mode="664">
+            <exclude name="${final.name}/bin/*" />
+            <exclude name="${final.name}/src/**" />
+            <exclude name="${final.name}/docs/**" />
+            <include name="${final.name}/**" />
+          </tarfileset>
+          <tarfileset dir="${build.dir}" mode="755">
+            <include name="${final.name}/bin/*" />
+          </tarfileset>
+        </param.listofitems>
+      </macro_tar>
+  </target>
+  
   <target name="binary" depends="bin-package" description="Make tarball without source and documentation">
     <macro_tar param.destfile="${build.dir}/${final.name}-bin.tar.gz">
       <param.listofitems>
@@ -1257,11 +1611,28 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-sign, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
+    <delete file="${basedir}/ivy/hadoop-core-pom.xml"/>
+    <delete file="${basedir}/ivy/hadoop-test-pom.xml"/>
+    <delete file="${basedir}/ivy/hadoop-examples-pom.xml"/>
+    <delete file="${basedir}/ivy/hadoop-tools-pom.xml"/>
+    <delete file="${basedir}/ivy/hadoop-streaming-pom.xml"/>
   </target>
+
+  <target name="clean-sign" description="Clean.  Delete .asc files">
+    <delete>
+      <fileset dir="." includes="**/**/*.asc"/>
+    </delete>
+  </target>  
+ 
+  <target name="veryclean" depends="clean" description="Delete mvn ant task jar and ivy ant taks jar">
+    <delete file="${ant_task.jar}"/>
+    <delete file="${ivy.jar}"/>
+  </target>
+
 
   <!-- ================================================================== -->
   <!-- Clean contrib target. For now, must be called explicitly           -->
@@ -1487,7 +1858,7 @@
   <target name="ant-tasks" depends="jar, compile-ant-tasks">
     <copy file="${anttasks.dir}/org/apache/hadoop/ant/antlib.xml"
           todir="${build.anttasks}/org/apache/hadoop/ant"/>
-    <jar destfile="${build.dir}/${final.name}-ant.jar">
+    <jar destfile="${build.dir}/${ant.final.name}.jar">
       <fileset dir="${build.anttasks}"/>
     </jar>
   </target>
@@ -1601,7 +1972,6 @@
     <mkdir dir="${build.ivy.dir}" />
     <mkdir dir="${build.ivy.lib.dir}" />
     <mkdir dir="${build.ivy.report.dir}" />
-    <mkdir dir="${build.ivy.maven.dir}" />
   </target>
 
   <target name="ivy-probe-antlib" >
@@ -1731,70 +2101,226 @@
     </echo>
   </target>
 
-  <target name="assert-hadoop-jar-exists" depends="ivy-init">
-    <fail>
-      <condition >
-        <not>
-          <available file="${hadoop.jar}" />
-        </not>
-      </condition>
-      Not found: ${hadoop.jar}
-      Please run the target "jar" in the main build file
-    </fail>
-
+  <target name="ant-task-download" description="To download mvn-ant-task">
+    <get src="${ant_task_repo_url}" dest="${ant_task.jar}" usetimestamp="true"/>
   </target>
 
-  <target name="ready-to-publish" depends="jar,assert-hadoop-jar-exists,ivy-resolve"/>
+  <target name="mvn-taskdef" depends="ant-task-download">
+     <path id="mvn-ant-task.classpath" path="${ant_task.jar}"/>
+     <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
+         uri="urn:maven-artifact-ant"
+         classpathref="mvn-ant-task.classpath"/>
+  </target>  
 
-  <target name="ivy-publish-local" depends="ready-to-publish,ivy-resolve">
-    <ivy:publish
-      settingsRef="${ant.project.name}.ivy.settings"
-      resolver="local"
-      pubrevision="${hadoop.version}"
-      overwrite="true"
-      artifactspattern="${build.dir}/${ivy.publish.pattern}" />
+  <target name="mvn-install" depends="mvn-taskdef,bin-package,set-version"
+     description="To install hadoop core and test jars to local filesystem's m2 cache">
+     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-test.pom}" id="hadoop.test"/>
+     <artifact:pom file="${hadoop-examples.pom}" id="hadoop.examples"/>
+     <artifact:pom file="${hadoop-tools.pom}" id="hadoop.tools"/>
+     <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
+
+     <artifact:install file="${hadoop-core.jar}">
+        <pom refid="hadoop.core"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-test.jar}">
+        <pom refid="hadoop.test"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-tools.jar}">
+        <pom refid="hadoop.tools"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-examples.jar}">
+        <pom refid="hadoop.examples"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-streaming.jar}">
+        <pom refid="hadoop.streaming"/>
+     </artifact:install>
   </target>
 
+  <target name="mvn-deploy" depends="mvn-taskdef, bin-package, set-version, signanddeploy, simpledeploy"
+     description="To deploy hadoop core and test jar's to apache maven repository"/>
 
-  <!-- this is here for curiosity, to see how well the makepom task works
-  Answer: it depends whether you want transitive dependencies excluded or not
-  -->
-  <target name="makepom" depends="ivy-resolve">
-    <ivy:makepom settingsRef="${ant.project.name}.ivy.settings"
-      ivyfile="ivy.xml"
-      pomfile="${build.ivy.maven.dir}/generated.pom">
-      <ivy:mapping conf="default" scope="default"/>
-      <ivy:mapping conf="master" scope="master"/>
-      <ivy:mapping conf="runtime" scope="runtime"/>
-    </ivy:makepom>
+  <target name="signanddeploy" if="staging" depends="sign">
+     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-test.pom}" id="hadoop.core.test"/>
+     <artifact:pom file="${hadoop-examples.pom}" id="hadoop.examples"/>
+     <artifact:pom file="${hadoop-tools.pom}" id="hadoop.tools"/>
+     <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
+     <artifact:install-provider artifactId="wagon-http"
+       version="${wagon-http.version}"/>
+     <artifact:deploy file="${hadoop-core.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+         <pom refid="hadoop.core"/>
+         <attach file="${hadoop-core.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-core.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-test.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/> 
+         <pom refid="hadoop.core.test"/>
+         <attach file="${hadoop-test.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-test.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-tools.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/> 
+         <pom refid="hadoop.tools"/>
+         <attach file="${hadoop-tools.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-tools.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-examples.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/> 
+         <pom refid="hadoop.examples"/>
+         <attach file="${hadoop-examples.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-examples.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-streaming.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/> 
+         <pom refid="hadoop.streaming"/>
+         <attach file="${hadoop-streaming.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-streaming.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
   </target>
 
-
-  <target name="copy-jar-to-maven" depends="ready-to-publish">
-    <copy file="${hadoop.jar}"
-      tofile="${build.ivy.maven.jar}"/>
-    <checksum file="${build.ivy.maven.jar}" algorithm="md5"/>
+  <target name="sign" depends="clean-sign" if="staging">
+    <input message="password:>" addproperty="gpg.passphrase">
+     <handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+    </input>
+    <macrodef name="sign-artifact" description="Signs the artifact">
+      <attribute name="input.file"/>
+      <attribute name="output.file" default="@{input.file}.asc"/>
+      <attribute name="gpg.passphrase"/>
+      <sequential>
+        <echo>Signing @{input.file} Sig File: @{output.file}</echo>
+        <exec executable="gpg" >
+          <arg value="--armor"/>
+          <arg value="--output"/>
+          <arg value="@{output.file}"/>
+          <arg value="--passphrase"/>
+          <arg value="@{gpg.passphrase}"/>
+          <arg value="--detach-sig"/>
+          <arg value="@{input.file}"/>
+        </exec>
+      </sequential>
+    </macrodef>
+    <sign-artifact input.file="${hadoop-core.jar}" 
+     output.file="${hadoop-core.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-test.jar}" 
+     output.file="${hadoop-test.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-tools.jar}" 
+     output.file="${hadoop-tools.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-examples.jar}" 
+     output.file="${hadoop-examples.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-streaming.jar}" 
+     output.file="${hadoop-streaming.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-core.pom}" 
+     output.file="${hadoop-core.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-test.pom}" 
+     output.file="${hadoop-test.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-tools.pom}" 
+     output.file="${hadoop-tools.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-examples.pom}" 
+     output.file="${hadoop-examples.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-streaming.pom}" 
+     output.file="${hadoop-streaming.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
   </target>
 
-  <target name="copypom" depends="ivy-init-dirs">
+  <target name="simpledeploy" unless="staging">
+     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-test.pom}" id="hadoop.test"/>
+     <artifact:pom file="${hadoop-examples.pom}" id="hadoop.examples"/>
+     <artifact:pom file="${hadoop-tools.pom}" id="hadoop.tools"/>
+     <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
 
-   <presetdef name="expandingcopy" >
-    <copy overwrite="true">
-      <filterchain>
-        <expandproperties/>
-      </filterchain>
-    </copy>
-   </presetdef>
-
-   <expandingcopy file="ivy/hadoop-core.pom"
-      tofile="${build.ivy.maven.pom}"/>
-   <checksum file="${build.ivy.maven.pom}" algorithm="md5"/>
+     <artifact:install-provider artifactId="wagon-http" version="${wagon-http.version}"/>
+     <artifact:deploy file="${hadoop-core.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.core"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-test.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.test"/>
+     </artifact:deploy> 
+     <artifact:deploy file="${hadoop-examples.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.examples"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-tools.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.tools"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-streaming.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.streaming"/>
+     </artifact:deploy>
   </target>
 
-  <target name="maven-artifacts" depends="copy-jar-to-maven,copypom" />
-
-  <target name="published" depends="ivy-publish-local,maven-artifacts">
-
+  <target name="set-version">
+    <delete file="${hadoop-core.pom}"/>
+    <delete file="${hadoop-test.pom}"/>
+    <delete file="${hadoop-examples.pom}"/>
+    <delete file="${hadoop-tools.pom}"/>
+    <delete file="${hadoop-streaming.pom}"/>
+    <copy file="${hadoop-core-pom-template.xml}" tofile="${hadoop-core.pom}"/>
+    <copy file="${hadoop-test-pom-template.xml}" tofile="${hadoop-test.pom}"/>
+    <copy file="${hadoop-examples-pom-template.xml}" tofile="${hadoop-examples.pom}"/>
+    <copy file="${hadoop-tools-pom-template.xml}" tofile="${hadoop-tools.pom}"/>
+    <copy file="${hadoop-streaming-pom-template.xml}" tofile="${hadoop-streaming.pom}"/>
+    <replaceregexp byline="true">
+      <regexp pattern="@version"/>
+      <substitution expression="${version}"/>
+      <fileset dir="${basedir}/ivy">
+        <include name="hadoop-core-pom.xml"/>
+        <include name="hadoop-test-pom.xml"/>
+        <include name="hadoop-tools-pom.xml"/>
+        <include name="hadoop-examples-pom.xml"/>
+        <include name="hadoop-streaming-pom.xml"/>
+      </fileset>
+    </replaceregexp>
   </target>
+
+  <!-- taskcontroller targets -->
+  <target name="task-controller" depends="init">
+    <exec executable="autoreconf" 
+          dir="${c++.task-controller.src}"
+          searchpath="yes" failonerror="yes">
+      <arg value="-i"/>
+    </exec>
+    <mkdir dir="${build.c++.task-controller}" />
+    <exec executable="${c++.task-controller.src}/configure"
+          dir="${build.c++.task-controller}">
+      <arg value="--prefix=${task-controller.prefix.dir}"/>
+      <env key="CFLAGS" 
+           value="-DHADOOP_CONF_DIR=${hadoop.conf.dir}"/>
+    </exec>
+    <!-- delete main in case HADOOP_CONF_DIR is different -->
+    <delete file="${build.c++.task-controller}/impl/main.o"
+            quiet="true" failonerror="false"/>
+    <exec executable="make"
+          dir="${build.c++.task-controller}"
+          searchpath="yes" failonerror="yes">
+      <arg value="install"/>
+    </exec>
+  </target>
+
+  <target name="test-task-controller" depends="init,task-controller">
+    <exec executable="make"
+          dir="${build.c++.task-controller}"
+          searchpath="yes" failonerror="yes">
+      <arg value="check"/>
+    </exec>
+  </target>
+
+  <!-- end of task-controller targets -->
+
+  <target name="jsvc" >
+    <mkdir dir="${jsvc.build.dir}" />
+    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}" />
+
+    <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
+
+    <copy file="${jsvc.build.dir}/jsvc" todir="${jsvc.install.dir}" verbose="true" />
+    <chmod perm="ugo+x" type="file">
+      <fileset file="${jsvc.install.dir}/jsvc"/>
+    </chmod>
+ </target>
 
 </project>

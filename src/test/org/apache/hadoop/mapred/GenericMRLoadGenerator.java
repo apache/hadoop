@@ -135,14 +135,14 @@ public class GenericMRLoadGenerator extends Configured implements Tool {
       confRandom(job);
     } else if (null != job.getClass("mapred.indirect.input.format", null)) {
       // specified IndirectInputFormat? Build src list
-      JobClient jClient = new JobClient(job);  
-      Path sysdir = jClient.getSystemDir();
+      JobClient jClient = new JobClient(job);
+      Path tmpDir = new Path(jClient.getFs().getHomeDirectory(), ".staging");
       Random r = new Random();
-      Path indirInputFile = new Path(sysdir,
+      Path indirInputFile = new Path(tmpDir,
           Integer.toString(r.nextInt(Integer.MAX_VALUE), 36) + "_files");
       job.set("mapred.indirect.input.file", indirInputFile.toString());
       SequenceFile.Writer writer = SequenceFile.createWriter(
-          sysdir.getFileSystem(job), job, indirInputFile,
+          tmpDir.getFileSystem(job), job, indirInputFile,
           LongWritable.class, Text.class,
           SequenceFile.CompressionType.NONE);
       try {

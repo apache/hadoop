@@ -118,6 +118,8 @@ public class StreamJob implements Tool {
       return submitAndMonitorJob();
     }catch (IllegalArgumentException ex) {
       //ignore, since log will already be printed
+      // print the log in debug mode.
+      LOG.debug("Error in streaming job", ex);
       return 1;
     }
   }
@@ -342,13 +344,13 @@ public class StreamJob implements Tool {
     return OptionBuilder.withDescription(desc).create(name);
   }
   
-  private static void validate(final List<String> values) 
+  private void validate(final List<String> values) 
   throws IllegalArgumentException {
     for (String file : values) {
       File f = new File(file);  
       if (!f.canRead()) {
-        throw new IllegalArgumentException("File : " + f.getAbsolutePath() 
-                                           + " is not readable."); 
+        fail("File: " + f.getAbsolutePath() 
+          + " does not exist, or is not readable."); 
       }
     }
   }
@@ -413,7 +415,6 @@ public class StreamJob implements Tool {
     Option info = createBoolOption("info", "print verbose output"); 
     Option help = createBoolOption("help", "print this help message"); 
     Option debug = createBoolOption("debug", "print debug output"); 
-    Option inputtagged = createBoolOption("inputtagged", "inputtagged"); 
     
     allOptions = new Options().
       addOption(input).
@@ -439,7 +440,6 @@ public class StreamJob implements Tool {
       addOption(verbose).
       addOption(info).
       addOption(debug).
-      addOption(inputtagged).
       addOption(help);
   }
 
@@ -453,7 +453,8 @@ public class StreamJob implements Tool {
     System.out.println("  -input    <path>     DFS input file(s) for the Map step");
     System.out.println("  -output   <path>     DFS output directory for the Reduce step");
     System.out.println("  -mapper   <cmd|JavaClassName>      The streaming command to run");
-    System.out.println("  -combiner <JavaClassName> Combiner has to be a Java class");
+    System.out.println("  -combiner <cmd|JavaClassName>" + 
+                       " The streaming command to run");
     System.out.println("  -reducer  <cmd|JavaClassName>      The streaming command to run");
     System.out.println("  -file     <file>     File/dir to be shipped in the Job jar file");
     System.out.println("  -inputformat TextInputFormat(default)|SequenceFileAsTextInputFormat|JavaClassName Optional.");
@@ -710,7 +711,9 @@ public class StreamJob implements Tool {
       if (c != null) {
         jobConf_.setCombinerClass(c);
       } else {
-        fail("-combiner : class not found : " + comCmd_);
+        jobConf_.setCombinerClass(PipeCombiner.class);
+        jobConf_.set("stream.combine.streamprocessor", URLEncoder.encode(
+                comCmd_, "UTF-8"));
       }
     }
 
@@ -894,7 +897,7 @@ public class StreamJob implements Tool {
       }
       if (!running_.isSuccessful()) {
         jobInfo();
-	LOG.error("Job not Successful!");
+	LOG.error("Job not successful. Error: " + running_.getFailureInfo());
 	return 1;
       }
       LOG.info("Job complete: " + jobId_);

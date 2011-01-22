@@ -17,27 +17,36 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
-import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.http.HttpServer;
-import org.apache.hadoop.net.NetUtils;
-
-import java.io.*;
-import java.net.*;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
-import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.metrics2.source.JvmMetricsSource;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.StringUtils;
 
 /**********************************************************
  * The Secondary NameNode is a helper to the primary NameNode.
@@ -54,6 +63,10 @@ import org.apache.hadoop.metrics.jvm.JvmMetrics;
  **********************************************************/
 public class SecondaryNameNode implements Runnable {
     
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
   public static final Log LOG = 
     LogFactory.getLog(SecondaryNameNode.class.getName());
 
@@ -66,6 +79,7 @@ public class SecondaryNameNode implements Runnable {
   private volatile boolean shouldRun;
   private HttpServer infoServer;
   private int infoPort;
+  private int imagePort;
   private String infoBindAddress;
 
   private Collection<File> checkpointDirs;
@@ -118,17 +132,33 @@ public class SecondaryNameNode implements Runnable {
       throw e;
     }
   }
-
+  
+  @SuppressWarnings("deprecation")
+  public static InetSocketAddress getHttpAddress(Configuration conf) {
+    String infoAddr = NetUtils.getServerAddress(conf,
+        "dfs.secondary.info.bindAddress", "dfs.secondary.info.port",
+        "dfs.secondary.http.address");
+    return NetUtils.createSocketAddr(infoAddr);
+  }
+  
   /**
    * Initialize SecondaryNameNode.
    */
-  private void initialize(Configuration conf) throws IOException {
+  private void initialize(final Configuration conf) throws IOException {
+    final InetSocketAddress infoSocAddr = getHttpAddress(conf);
+    infoBindAddress = infoSocAddr.getHostName();
+    if (UserGroupInformation.isSecurityEnabled()) {
+      SecurityUtil.login(conf, 
+          DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
+          DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY,
+          infoBindAddress);
+    }
     // initiate Java VM metrics
-    JvmMetrics.init("SecondaryNameNode", conf.get("session.id"));
+    JvmMetricsSource.create("SecondaryNameNode", conf.get("session.id"));
     
     // Create connection to the namenode.
     shouldRun = true;
-    nameNodeAddr = NameNode.getAddress(conf);
+    nameNodeAddr = NameNode.getServiceAddress(conf, true);
 
     this.conf = conf;
     this.namenode =
@@ -149,25 +179,57 @@ public class SecondaryNameNode implements Runnable {
     checkpointSize = conf.getLong("fs.checkpoint.size", 4194304);
 
     // initialize the webserver for uploading files.
-    String infoAddr = 
-      NetUtils.getServerAddress(conf, 
-                                "dfs.secondary.info.bindAddress",
-                                "dfs.secondary.info.port",
-                                "dfs.secondary.http.address");
-    InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
-    infoBindAddress = infoSocAddr.getHostName();
-    int tmpInfoPort = infoSocAddr.getPort();
-    infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
-        tmpInfoPort == 0, conf);
-    infoServer.setAttribute("name.system.image", checkpointImage);
-    this.infoServer.setAttribute("name.conf", conf);
-    infoServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
-    infoServer.start();
+    // Kerberized SSL servers must be run from the host principal...
+    UserGroupInformation httpUGI = 
+      UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+          SecurityUtil.getServerPrincipal(conf
+        .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY), 
+        infoBindAddress), 
+        conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY));
+    try {
+      infoServer = httpUGI.doAs(new PrivilegedExceptionAction<HttpServer>() {
 
+        @Override
+        public HttpServer run() throws IOException, InterruptedException {
+          LOG.info("Starting web server as: " +
+              UserGroupInformation.getCurrentUser().getUserName());
+
+          int tmpInfoPort = infoSocAddr.getPort();
+          infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
+              tmpInfoPort == 0, conf, 
+              SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN));
+          
+          if(UserGroupInformation.isSecurityEnabled()) {
+            System.setProperty("https.cipherSuites", 
+                Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
+            InetSocketAddress secInfoSocAddr = 
+              NetUtils.createSocketAddr(infoBindAddress + ":"+ conf.get(
+                "dfs.secondary.https.port", infoBindAddress + ":" + 0));
+            imagePort = secInfoSocAddr.getPort();
+            infoServer.addSslListener(secInfoSocAddr, conf, false, true);
+          }
+          
+          infoServer.setAttribute("name.system.image", checkpointImage);
+          infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
+          infoServer.addInternalServlet("getimage", "/getimage",
+              GetImageServlet.class, true);
+          infoServer.start();
+          return infoServer;
+        }
+      });
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    LOG.info("Web server init done");
     // The web-server port can be ephemeral... ensure we have the correct info
+    
     infoPort = infoServer.getPort();
+    if(!UserGroupInformation.isSecurityEnabled())
+      imagePort = infoPort;
+    
     conf.set("dfs.secondary.http.address", infoBindAddress + ":" +infoPort); 
     LOG.info("Secondary Web-server up at: " + infoBindAddress + ":" +infoPort);
+    LOG.info("Secondary image servlet up at: " + infoBindAddress + ":" + imagePort);
     LOG.warn("Checkpoint Period   :" + checkpointPeriod + " secs " +
              "(" + checkpointPeriod/60 + " min)");
     LOG.warn("Log Size Trigger    :" + checkpointSize + " bytes " +
@@ -192,10 +254,31 @@ public class SecondaryNameNode implements Runnable {
     }
   }
 
+  public void run() {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      UserGroupInformation ugi = null;
+      try { 
+        ugi = UserGroupInformation.getLoginUser();
+      } catch (IOException e) {
+        LOG.error(StringUtils.stringifyException(e));
+        e.printStackTrace();
+        Runtime.getRuntime().exit(-1);
+      }
+      ugi.doAs(new PrivilegedAction<Object>() {
+        @Override
+        public Object run() {
+          doWork();
+          return null;
+        }
+      });
+    } else {
+      doWork();
+    }
+  }
   //
   // The main work loop
   //
-  public void run() {
+  public void doWork() {
 
     //
     // Poll the Namenode (once every 5 minutes) to find the size of the
@@ -217,6 +300,10 @@ public class SecondaryNameNode implements Runnable {
         break;
       }
       try {
+        // We may have lost our ticket since last checkpoint, log in again, just in case
+        if(UserGroupInformation.isSecurityEnabled())
+          UserGroupInformation.getCurrentUser().reloginFromKeytab();
+        
         long now = System.currentTimeMillis();
 
         long size = namenode.getEditLogSize();
@@ -243,38 +330,48 @@ public class SecondaryNameNode implements Runnable {
    * files from the name-node.
    * @throws IOException
    */
-  private void downloadCheckpointFiles(CheckpointSignature sig
+  private void downloadCheckpointFiles(final CheckpointSignature sig
                                       ) throws IOException {
-    
-    checkpointImage.cTime = sig.cTime;
-    checkpointImage.checkpointTime = sig.checkpointTime;
+    try {
+      UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Void>() {
 
-    // get fsimage
-    String fileid = "getimage=1";
-    File[] srcNames = checkpointImage.getImageFiles();
-    assert srcNames.length > 0 : "No checkpoint targets.";
-    TransferFsImage.getFileClient(fsName, fileid, srcNames);
-    LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
-             srcNames[0].length() + " bytes.");
+        @Override
+        public Void run() throws Exception {
+          checkpointImage.cTime = sig.cTime;
+          checkpointImage.checkpointTime = sig.checkpointTime;
 
-    // get edits file
-    fileid = "getedit=1";
-    srcNames = checkpointImage.getEditsFiles();
-    assert srcNames.length > 0 : "No checkpoint targets.";
-    TransferFsImage.getFileClient(fsName, fileid, srcNames);
-    LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
-        srcNames[0].length() + " bytes.");
+          // get fsimage
+          String fileid = "getimage=1";
+          File[] srcNames = checkpointImage.getImageFiles();
+          assert srcNames.length > 0 : "No checkpoint targets.";
+          TransferFsImage.getFileClient(fsName, fileid, srcNames);
+          LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
+                   srcNames[0].length() + " bytes.");
 
-    checkpointImage.checkpointUploadDone();
+          // get edits file
+          fileid = "getedit=1";
+          srcNames = checkpointImage.getEditsFiles();
+          assert srcNames.length > 0 : "No checkpoint targets.";
+          TransferFsImage.getFileClient(fsName, fileid, srcNames);
+          LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
+              srcNames[0].length() + " bytes.");
+
+          checkpointImage.checkpointUploadDone();
+          return null;
+        }
+      });
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+
   }
 
   /**
    * Copy the new fsimage into the NameNode
    */
   private void putFSImage(CheckpointSignature sig) throws IOException {
-    String fileid = "putimage=1&port=" + infoPort +
-      "&machine=" +
-      InetAddress.getLocalHost().getHostAddress() +
+    String fileid = "putimage=1&port=" + imagePort +
+      "&machine=" + infoBindAddress +
       "&token=" + sig.toString();
     LOG.info("Posted URL " + fsName + fileid);
     TransferFsImage.getFileClient(fsName, fileid, (File[])null);
@@ -288,8 +385,9 @@ public class SecondaryNameNode implements Runnable {
     if (!"hdfs".equals(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
-    return NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
-                                     "dfs.info.port", "dfs.http.address");
+    String infoAddr = NameNode.getInfoServer(conf);
+    LOG.debug("infoAddr = " + infoAddr);
+    return infoAddr;
   }
 
   /**
@@ -544,29 +642,13 @@ public class SecondaryNameNode implements Runnable {
      */
     void startCheckpoint() throws IOException {
       for(StorageDirectory sd : storageDirs) {
-        File curDir = sd.getCurrentDir();
-        File tmpCkptDir = sd.getLastCheckpointTmp();
-        assert !tmpCkptDir.exists() : 
-          tmpCkptDir.getName() + " directory must not exist.";
-        if(curDir.exists()) {
-          // rename current to tmp
-          rename(curDir, tmpCkptDir);
-        }
-        if (!curDir.mkdir())
-          throw new IOException("Cannot create directory " + curDir);
+        moveCurrent(sd);
       }
     }
 
     void endCheckpoint() throws IOException {
       for(StorageDirectory sd : storageDirs) {
-        File tmpCkptDir = sd.getLastCheckpointTmp();
-        File prevCkptDir = sd.getPreviousCheckpoint();
-        // delete previous dir
-        if (prevCkptDir.exists())
-          deleteDir(prevCkptDir);
-        // rename tmp to previous
-        if (tmpCkptDir.exists())
-          rename(tmpCkptDir, prevCkptDir);
+        moveLastCheckpoint(sd);
       }
     }
 
@@ -589,7 +671,7 @@ public class SecondaryNameNode implements Runnable {
       loadFSImage(FSImage.getImageFile(sdName, NameNodeFile.IMAGE));
       loadFSEdits(sdEdits);
       sig.validateStorageInfo(this);
-      saveFSImage();
+      saveNamespace(false);
     }
   }
 }

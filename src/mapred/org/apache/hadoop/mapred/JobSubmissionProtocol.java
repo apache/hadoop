@@ -20,13 +20,24 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSelector;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenInfo;
 
 /** 
  * Protocol that a JobClient and the central JobTracker use to communicate.  The
  * JobClient can use these methods to submit a Job for execution, and learn about
  * the current system status.
  */ 
+@KerberosInfo(
+    serverPrincipal = JobTracker.JT_USER_NAME)
+@TokenInfo(DelegationTokenSelector.class)
 interface JobSubmissionProtocol extends VersionedProtocol {
   /* 
    *Changing the versionID to 2L since the getTaskCompletionEvents method has
@@ -58,8 +69,21 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             for HADOOP-4807
    * Version 20: Modified ClusterStatus to have the tasktracker expiry
    *             interval for HADOOP-4939                     
+   * Version 21: Added method getQueueAclsForCurrentUser to get queue acls info
+   *             for a user
+   * Version 22: Job submission files are uploaded to a staging area under
+   *             user home dir. JobTracker reads the required files from the
+   *             staging area using user credentials passed via the rpc. 
+   * Version 23: Provide TokenStorage object while submitting a job
+   * Version 24: Added delegation tokens (add, renew, cancel)
+   * Version 25: Added JobACLs to JobStatus as part of MAPREDUCE-1307
+   * Version 26: Added the method getQueueAdmins(queueName) as part of
+   *             MAPREDUCE-1664.
+   * Version 27: Added queue state to JobQueueInfo as part of HADOOP-5913.
+   * Version 28: Added a new field to JobStatus to provide user readable 
+   *             information on job failure. MAPREDUCE-1521.
    */
-  public static final long versionID = 20L;
+  public static final long versionID = 28L;
 
   /**
    * Allocate a name for the job.
@@ -71,18 +95,28 @@ interface JobSubmissionProtocol extends VersionedProtocol {
   /**
    * Submit a Job for execution.  Returns the latest profile for
    * that job.
-   * The job files should be submitted in <b>system-dir</b>/<b>jobName</b>.
+   * The job files should be submitted in <b>jobSubmitDir</b>.
    */
-  public JobStatus submitJob(JobID jobName) throws IOException;
+  public JobStatus submitJob(JobID jobName, String jobSubmitDir, Credentials ts) 
+  throws IOException;
 
   /**
    * Get the current status of the cluster
-   * @param detailed if true then report tracker names as well
+   * @param detailed if true then report tracker names and memory usage
    * @return summary of the state of the cluster
    */
   public ClusterStatus getClusterStatus(boolean detailed) throws IOException;
-  
-    
+
+  /**
+   * Get the administrators of the given job-queue.
+   * This method is for hadoop internal use only.
+   * @param queueName
+   * @return Queue administrators ACL for the queue to which job is
+   *         submitted to
+   * @throws IOException
+   */
+  public AccessControlList getQueueAdmins(String queueName) throws IOException;
+
   /**
    * Kill the indicated job
    */
@@ -189,6 +223,14 @@ interface JobSubmissionProtocol extends VersionedProtocol {
   public String getSystemDir();  
   
   /**
+   * Get a hint from the JobTracker 
+   * where job-specific files are to be placed.
+   * 
+   * @return the directory where job-specific files are to be placed.
+   */
+  public String getStagingAreaDir() throws IOException;
+  
+  /**
    * Gets set of Job Queues associated with the Job Tracker
    * 
    * @return Array of the Job Queue Information Object
@@ -212,4 +254,44 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public JobStatus[] getJobsFromQueue(String queue) throws IOException;
+  
+  /**
+   * Gets the Queue ACLs for current user
+   * @return array of QueueAclsInfo object for current user.
+   * @throws IOException
+   */
+  public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException;
+  
+  /**
+   * Get a new delegation token.
+   * @param renewer the user other than the creator (if any) that can renew the 
+   *        token
+   * @return the new delegation token
+   * @throws IOException
+   * @throws InterruptedException
+   */ 
+  public 
+  Token<DelegationTokenIdentifier> getDelegationToken(Text renewer
+                                                      ) throws IOException,
+                                                          InterruptedException;
+
+  /**
+   * Renew an existing delegation token
+   * @param token the token to renew
+   * @return the new expiration time
+   * @throws IOException
+   * @throws InterruptedException
+   */ 
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token
+                                   ) throws IOException,
+                                            InterruptedException;
+
+  /**
+   * Cancel a delegation token.
+   * @param token the token to cancel
+   * @throws IOException
+   * @throws InterruptedException
+   */ 
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token
+                                    ) throws IOException,InterruptedException;
 }

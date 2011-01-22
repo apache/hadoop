@@ -4,8 +4,12 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapred.JSPUtil.JobWithViewAccessCheck"
   import="org.apache.hadoop.util.*"
+%>
+<%!	private static final long serialVersionUID = 1L;
 %>
 
 <%
@@ -22,8 +26,8 @@
     int maxErrorsPerTracker = job.getJobConf().getMaxTaskFailuresPerTracker();
     for (Map.Entry<String,Integer> e : trackerErrors.entrySet()) {
       if (e.getValue().intValue() >= maxErrorsPerTracker) {
-        out.print("<tr><td>" + e.getKey() + "</td><td>" + e.getValue() + 
-            "</td></tr>\n");
+        out.print("<tr><td>" + HtmlQuoting.quoteHtmlChars(e.getKey()) +
+            "</td><td>" + e.getValue() + "</td></tr>\n");
       }
     }
     out.print("</table>\n");
@@ -37,7 +41,13 @@
   	  return;
     }
     
-    JobInProgress job = (JobInProgress) tracker.getJob(JobID.forName(jobId));
+    JobWithViewAccessCheck myJob = JSPUtil.checkAccessAndGetJob(tracker,
+        JobID.forName(jobId), request, response);
+    if (!myJob.isViewJobAllowed()) {
+      return; // user is not authorized to view this job
+    }
+
+    JobInProgress job = myJob.getJob();
     if (job == null) {
       out.print("<b>Job " + jobId + " not found.</b><br>\n");
       return;

@@ -5,12 +5,17 @@
   import="java.io.*"
   import="java.util.*"
   import="java.text.DecimalFormat"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapreduce.*"
   import="org.apache.hadoop.util.*"
+%>
+<%!	private static final long serialVersionUID = 1L;
 %>
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   ClusterStatus status = tracker.getClusterStatus();
+  ClusterMetrics metrics = tracker.getClusterMetrics();
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
   JobQueueInfo[] queues = tracker.getQueues();
@@ -21,28 +26,41 @@
 <%!
   private static DecimalFormat percentFormat = new DecimalFormat("##0.00");
   
-  public void generateSummaryTable(JspWriter out, ClusterStatus status,
+  public void generateSummaryTable(JspWriter out, ClusterMetrics metrics,
                                    JobTracker tracker) throws IOException {
-    String tasksPerNode = status.getTaskTrackers() > 0 ?
-      percentFormat.format(((double)(status.getMaxMapTasks() +
-                      status.getMaxReduceTasks())) / status.getTaskTrackers()):
+    String tasksPerNode = metrics.getTaskTrackerCount() > 0 ?
+      percentFormat.format(((double)(metrics.getMapSlotCapacity() +
+      metrics.getReduceSlotCapacity())) / metrics.getTaskTrackerCount()):
       "-";
     out.print("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\">\n"+
-              "<tr><th>Maps</th><th>Reduces</th>" + 
+              "<tr><th>Running Map Tasks</th><th>Running Reduce Tasks</th>" + 
               "<th>Total Submissions</th>" +
-              "<th>Nodes</th><th>Map Task Capacity</th>" +
+              "<th>Nodes</th>" + 
+              "<th>Occupied Map Slots</th><th>Occupied Reduce Slots</th>" + 
+              "<th>Reserved Map Slots</th><th>Reserved Reduce Slots</th>" + 
+              "<th>Map Task Capacity</th>" +
               "<th>Reduce Task Capacity</th><th>Avg. Tasks/Node</th>" + 
-              "<th>Blacklisted Nodes</th></tr>\n");
-    out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
-              status.getReduceTasks() + "</td><td>" + 
-              tracker.getTotalSubmissions() +
+              "<th>Blacklisted Nodes</th>" +
+              "<th>Graylisted Nodes</th>" +
+              "<th>Excluded Nodes</th></tr>\n");
+    out.print("<tr><td>" + metrics.getRunningMaps() + "</td><td>" +
+              metrics.getRunningReduces() + "</td><td>" + 
+              metrics.getTotalJobSubmissions() +
               "</td><td><a href=\"machines.jsp?type=active\">" +
-              status.getTaskTrackers() +
-              "</a></td><td>" + status.getMaxMapTasks() +
-              "</td><td>" + status.getMaxReduceTasks() +
+              metrics.getTaskTrackerCount() + "</a></td><td>" + 
+              metrics.getOccupiedMapSlots() + "</td><td>" +
+              metrics.getOccupiedReduceSlots() + "</td><td>" + 
+              metrics.getReservedMapSlots() + "</td><td>" +
+              metrics.getReservedReduceSlots() + "</td><td>" + 
+              metrics.getMapSlotCapacity() +
+              "</td><td>" + metrics.getReduceSlotCapacity() +
               "</td><td>" + tasksPerNode +
               "</td><td><a href=\"machines.jsp?type=blacklisted\">" +
-              status.getBlacklistedTrackers() + "</a>" +
+              metrics.getBlackListedTaskTrackerCount() + "</a>" +
+              "</td><td><a href=\"machines.jsp?type=graylisted\">" +
+              metrics.getGrayListedTaskTrackerCount() + "</a>" +
+              "</td><td><a href=\"machines.jsp?type=excluded\">" +
+              metrics.getDecommissionedTaskTrackerCount() + "</a>" +
               "</td></tr></table>\n");
 
     out.print("<br>");
@@ -64,6 +82,7 @@
 <title><%= trackerName %> Hadoop Map/Reduce Administration</title>
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 <script type="text/javascript" src="/static/jobtracker.js"></script>
+<script type='text/javascript' src='/static/sorttable.js'></script>
 </head>
 <body>
 
@@ -76,8 +95,7 @@
   <ul id="quicklinks-list">
     <li><a href="#scheduling_info">Scheduling Info</a></li>
     <li><a href="#running_jobs">Running Jobs</a></li>
-    <li><a href="#completed_jobs">Completed Jobs</a></li>
-    <li><a href="#failed_jobs">Failed Jobs</a></li>
+    <li><a href="#retired_jobs">Retired Jobs</a></li>
     <li><a href="#local_logs">Local Logs</a></li>
   </ul>
 </div>
@@ -91,16 +109,17 @@
 <b>Identifier:</b> <%= tracker.getTrackerIdentifier()%><br>                 
                    
 <hr>
-<h2>Cluster Summary (Heap Size is <%= StringUtils.byteDesc(status.getUsedMemory()) %>/<%= StringUtils.byteDesc(status.getMaxMemory()) %>)</h2>
+<h2>Cluster Summary (Heap Size is <%= StringUtils.byteDesc(Runtime.getRuntime().totalMemory()) %>/<%= StringUtils.byteDesc(Runtime.getRuntime().maxMemory()) %>)</h2>
 <% 
- generateSummaryTable(out, status, tracker); 
+ generateSummaryTable(out, metrics, tracker); 
 %>
 <hr>
 <h2 id="scheduling_info">Scheduling Information</h2>
-<table border="2" cellpadding="5" cellspacing="2">
+<table border="2" cellpadding="5" cellspacing="2" class="sortable">
 <thead style="font-weight: bold">
 <tr>
 <td> Queue Name </td>
+<td> State </td>
 <td> Scheduling Information</td>
 </tr>
 </thead>
@@ -108,6 +127,7 @@
 <%
 for(JobQueueInfo queue: queues) {
   String queueName = queue.getQueueName();
+  String state = queue.getQueueState();
   String schedulingInformation = queue.getSchedulingInfo();
   if(schedulingInformation == null || schedulingInformation.trim().equals("")) {
     schedulingInformation = "NA";
@@ -115,7 +135,8 @@ for(JobQueueInfo queue: queues) {
 %>
 <tr>
 <td><a href="jobqueue_details.jsp?queueName=<%=queueName%>"><%=queueName%></a></td>
-<td><%=schedulingInformation.replaceAll("\n","<br/>") %>
+<td><%=state%></td>
+<td><%=HtmlQuoting.quoteHtmlChars(schedulingInformation).replaceAll("\n","<br/>") %>
 </td>
 </tr>
 <%
@@ -129,20 +150,35 @@ for(JobQueueInfo queue: queues) {
 <hr>
 
 <h2 id="running_jobs">Running Jobs</h2>
-<%=JSPUtil.generateJobTable("Running", runningJobs, 30, 0)%>
+<%=JSPUtil.generateJobTable("Running", runningJobs, 30, 0, tracker.conf)%>
 <hr>
 
-<h2 id="completed_jobs">Completed Jobs</h2>
-<%=JSPUtil.generateJobTable("Completed", completedJobs, 0, runningJobs.size())%>
-<hr>
+<%
+if (completedJobs.size() > 0) {
+  out.print("<h2 id=\"completed_jobs\">Completed Jobs</h2>");
+  out.print(JSPUtil.generateJobTable("Completed", completedJobs, 0, 
+    runningJobs.size(), tracker.conf));
+  out.print("<hr>");
+}
+%>
 
-<h2 id="failed_jobs">Failed Jobs</h2>
-<%=JSPUtil.generateJobTable("Failed", failedJobs, 0, 
-    (runningJobs.size()+completedJobs.size()))%>
+<%
+if (failedJobs.size() > 0) {
+  out.print("<h2 id=\"failed_jobs\">Failed Jobs</h2>");
+  out.print(JSPUtil.generateJobTable("Failed", failedJobs, 0, 
+    (runningJobs.size()+completedJobs.size()), tracker.conf));
+  out.print("<hr>");
+}
+%>
+
+<h2 id="retired_jobs">Retired Jobs</h2>
+<%=JSPUtil.generateRetiredJobTable(tracker, 
+  (runningJobs.size()+completedJobs.size()+failedJobs.size()))%>
 <hr>
 
 <h2 id="local_logs">Local Logs</h2>
-<a href="logs/">Log</a> directory, <a href="jobhistory.jsp">
+<a href="logs/">Log</a> directory,
+<a href="<%=JobHistoryServer.getHistoryUrlPrefix(tracker.conf)%>/jobhistoryhome.jsp">
 Job Tracker History</a>
 
 <%

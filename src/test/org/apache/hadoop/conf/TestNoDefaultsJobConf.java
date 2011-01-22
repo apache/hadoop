@@ -82,8 +82,8 @@ public class TestNoDefaultsJobConf extends HadoopTestCase {
     JobClient.runJob(conf);
 
     Path[] outputFiles = FileUtil.stat2Paths(
-                           getFileSystem().listStatus(outDir,
-                           new OutputLogFilter()));
+                   getFileSystem().listStatus(outDir,
+                   new Utils.OutputFileUtils.OutputFilesFilter()));
     if (outputFiles.length > 0) {
       InputStream is = getFileSystem().open(outputFiles[0]);
       BufferedReader reader = new BufferedReader(new InputStreamReader(is));

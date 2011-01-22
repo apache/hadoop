@@ -32,6 +32,12 @@ import org.apache.hadoop.mapred.JobConf;
  */
 interface DownwardProtocol<K extends WritableComparable, V extends Writable> {
   /**
+   * request authentication
+   * @throws IOException
+   */
+  void authenticate(String digest, String challenge) throws IOException;
+  
+  /**
    * Start communication
    * @throws IOException
    */

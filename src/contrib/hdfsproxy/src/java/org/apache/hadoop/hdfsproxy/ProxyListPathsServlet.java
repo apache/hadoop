@@ -17,10 +17,13 @@
  */
 package org.apache.hadoop.hdfsproxy;
 
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** {@inheritDoc} */
 public class ProxyListPathsServlet extends ListPathsServlet {
@@ -29,7 +32,10 @@ public class ProxyListPathsServlet extends ListPathsServlet {
 
   /** {@inheritDoc} */
   @Override
-  protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    return (UnixUserGroupInformation) request.getAttribute("authorized.ugi");
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) {
+    String userID = (String) request
+        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    return ProxyUtil.getProxyUGIFor(userID);
   }
 }

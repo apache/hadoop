@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.hdfsproxy;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigInteger;
+import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
@@ -28,6 +31,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.net.InetSocketAddress;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -37,12 +41,14 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.ServletContext;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 public class ProxyFilter implements Filter {
   public static final Log LOG = LogFactory.getLog(ProxyFilter.class);
@@ -50,19 +56,16 @@ public class ProxyFilter implements Filter {
   /** Pattern for triggering reload of user permissions */
   protected static final Pattern RELOAD_PATTERN = Pattern
       .compile("^(/reloadPermFiles)$");
-  /** Pattern for triggering clearing of ugi Cache */
-  protected static final Pattern CLEAR_PATTERN = Pattern
-      .compile("^(/clearUgiCache)$");
   /** Pattern for a filter to find out if a request is HFTP/HSFTP request */
   protected static final Pattern HFTP_PATTERN = Pattern
-      .compile("^(/listPaths|/data|/streamFile)$");
+      .compile("^(/listPaths|/data|/streamFile|/file)$");
   /**
    * Pattern for a filter to find out if an HFTP/HSFTP request stores its file
    * path in the extra path information associated with the URL; if not, the
    * file path is stored in request parameter "filename"
    */
   protected static final Pattern FILEPATH_PATTERN = Pattern
-      .compile("^(/listPaths|/data)$");
+      .compile("^(/listPaths|/data|/file)$");
 
   private static volatile Map<String, Set<Path>> permsMap;
   private static volatile Map<String, Set<BigInteger>> certsMap;
@@ -74,9 +77,25 @@ public class ProxyFilter implements Filter {
     Map<String, Set<BigInteger>> cMap = getCertsMap(conf);
     certsMap = cMap != null ? cMap : new HashMap<String, Set<BigInteger>>();
   }
+  
 
   /** {@inheritDoc} */
   public void init(FilterConfig filterConfig) throws ServletException {
+    ServletContext context = filterConfig.getServletContext();
+    Configuration conf = new Configuration(false);
+    conf.addResource("hdfsproxy-default.xml");
+    conf.addResource("ssl-server.xml");
+    conf.addResource("hdfsproxy-site.xml");
+    String nn = conf.get("hdfsproxy.dfs.namenode.address");
+    if (nn == null) {
+      throw new ServletException("Proxy source cluster name node address not speficied");
+    }
+    InetSocketAddress nAddr = NetUtils.createSocketAddr(nn);
+    context.setAttribute("name.node.address", nAddr);
+    context.setAttribute("name.conf", new Configuration());   
+    
+    context.setAttribute("org.apache.hadoop.hdfsproxy.conf", conf);
+    LOG.info("proxyFilter initialization success: " + nn);
   }
 
   private static Map<String, Set<Path>> getPermMap(Configuration conf) {
@@ -136,6 +155,8 @@ public class ProxyFilter implements Filter {
   /** {@inheritDoc} */
   public void destroy() {
   }
+  
+  
 
   /** {@inheritDoc} */
   public void doFilter(ServletRequest request, ServletResponse response,
@@ -143,7 +164,7 @@ public class ProxyFilter implements Filter {
 
     HttpServletRequest rqst = (HttpServletRequest) request;
     HttpServletResponse rsp = (HttpServletResponse) response;
-
+    
     if (LOG.isDebugEnabled()) {
       StringBuilder b = new StringBuilder("Request from ").append(
           rqst.getRemoteHost()).append("/").append(rqst.getRemoteAddr())
@@ -177,15 +198,33 @@ public class ProxyFilter implements Filter {
 
       LOG.debug(b.toString());
     }
-
-    if (rqst.getScheme().equalsIgnoreCase("https")) {
+    
+    boolean unitTest = false;
+    if (rqst.getScheme().equalsIgnoreCase("http") && rqst.getParameter("UnitTest") != null) unitTest = true;
+    
+    if (rqst.getScheme().equalsIgnoreCase("https") || unitTest) {
       boolean isAuthorized = false;
-      X509Certificate[] certs = (X509Certificate[]) rqst
-          .getAttribute("javax.servlet.request.X509Certificate");
+      X509Certificate[] certs = (X509Certificate[]) rqst.getAttribute("javax.servlet.request.X509Certificate");
+      
+      if (unitTest) {
+        try {
+          LOG.debug("==> Entering https unit test");
+          String SslPath = rqst.getParameter("SslPath");
+          InputStream inStream = new FileInputStream(SslPath);
+          CertificateFactory cf = CertificateFactory.getInstance("X.509");
+          X509Certificate cert = (X509Certificate)cf.generateCertificate(inStream);
+          inStream.close();          
+          certs = new X509Certificate[] {cert};
+        } catch (Exception e) {
+          // do nothing here
+        }
+      } 
+      
       if (certs == null || certs.length == 0) {
         rsp.sendError(HttpServletResponse.SC_BAD_REQUEST,
-            "No client SSL certificate received");
-        return;
+          "No client SSL certificate received");
+        LOG.info("No Client SSL certificate received");
+        return;       
       }
       for (X509Certificate cert : certs) {
         try {
@@ -205,7 +244,7 @@ public class ProxyFilter implements Filter {
           return;
         }
       }
-
+      
       String[] tokens = certs[0].getSubjectX500Principal().getName().split(
           "\\s*,\\s*");
       String userID = null;
@@ -222,8 +261,13 @@ public class ProxyFilter implements Filter {
         return;
       }
       userID = userID.substring(3);
-
+      
       String servletPath = rqst.getServletPath();
+      if (unitTest) { 
+        servletPath = rqst.getParameter("TestSevletPathInfo");
+        LOG.info("this is for unit test purpose only");
+      }
+      
       if (HFTP_PATTERN.matcher(servletPath).matches()) {
         // request is an HSFTP request
         if (FILEPATH_PATTERN.matcher(servletPath).matches()) {
@@ -252,34 +296,24 @@ public class ProxyFilter implements Filter {
         LOG.info("User permissions and user certs files reloaded");
         rsp.setStatus(HttpServletResponse.SC_OK);
         return;
-      } else if (CLEAR_PATTERN.matcher(servletPath).matches()
-          && checkUser("Admin", certs[0])) {
-        ProxyUgiManager.clearCache();
-        LOG.info("Ugi cache cleared");
-        rsp.setStatus(HttpServletResponse.SC_OK);
-        return;
       }
 
       if (!isAuthorized) {
         rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "Unauthorized access");
         return;
       }
+      
       // request is authorized, set ugi for servlets
-      UnixUserGroupInformation ugi = ProxyUgiManager
-          .getUgiForUser(userID);
-      if (ugi == null) {
-        LOG.info("Can't retrieve ugi for user " + userID);
-        rsp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-            "Can't retrieve ugi for user " + userID);
-        return;
-      }
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser(userID);
       rqst.setAttribute("authorized.ugi", ugi);
-    } else { // http request, set ugi for servlets, only for testing purposes
+      rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", userID);
+    } else if(rqst.getScheme().equalsIgnoreCase("http")) { // http request, set ugi for servlets, only for testing purposes
       String ugi = rqst.getParameter("ugi");
-      rqst.setAttribute("authorized.ugi", new UnixUserGroupInformation(ugi
-          .split(",")));
+      if (ugi != null) {
+        rqst.setAttribute("authorized.ugi", UserGroupInformation.createRemoteUser(ugi));
+        rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", ugi.split(",")[0]);
+      }
     }
-
     chain.doFilter(request, response);
   }
 
@@ -314,7 +348,7 @@ public class ProxyFilter implements Filter {
       LOG.info("Can't get file path from HTTPS request; user is " + userID);
       return false;
     }
-
+    
     Path userPath = new Path(pathInfo);
     while (userPath != null) {
       if (LOG.isDebugEnabled()) {

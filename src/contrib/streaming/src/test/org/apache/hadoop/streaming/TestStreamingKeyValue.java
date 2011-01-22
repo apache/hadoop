@@ -21,6 +21,8 @@ package org.apache.hadoop.streaming;
 import junit.framework.TestCase;
 import java.io.*;
 
+import org.apache.hadoop.fs.FileUtil;
+
 /**
  * This class tests hadoopStreaming in MapReduce local mode.
  * This testcase looks at different cases of tab position in input. 
@@ -78,7 +80,7 @@ public class TestStreamingKeyValue extends TestCase
     File outFile = null;
     try {
       try {
-        OUTPUT_DIR.getAbsoluteFile().delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
       } catch (Exception e) {
       }
 
@@ -96,13 +98,13 @@ public class TestStreamingKeyValue extends TestCase
       assertEquals(outputExpect, output);
     } catch(Exception e) {
       failTrace(e);
-    } finally {
-      outFile.delete();
-      File outFileCRC = new File(OUTPUT_DIR,
-                          "." + outFileName + ".crc").getAbsoluteFile();
-      INPUT_FILE.delete();
-      outFileCRC.delete();
-      OUTPUT_DIR.getAbsoluteFile().delete();
+    } finally { 
+      try {
+        INPUT_FILE.delete();
+        FileUtil.fullyDelete(OUTPUT_DIR.getAbsoluteFile());
+      } catch(Exception e) {
+        failTrace(e);
+      }
     }
   }
 

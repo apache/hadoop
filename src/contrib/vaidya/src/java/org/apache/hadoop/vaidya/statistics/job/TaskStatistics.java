@@ -30,27 +30,40 @@ public class TaskStatistics {
    */
   private Hashtable<Enum, String>  _task = new Hashtable<Enum, String>();
   
-  /*
+  /* 
    * Get Long key value
    */
   public long getLongValue(Enum key) {
-    return Long.parseLong(this._task.get(key));
-  }
-  
+    if (this._task.get(key) == null) {
+      return (long)0;
+    }
+    else {
+      return Long.parseLong(this._task.get(key));
+    }
+  } 
+
   /*
-   * Get double key value
+   * Get key type Double
    */
   public double getDoubleValue(Enum key) {
-    return Double.parseDouble(this._task.get(key));
+    if (this._task.get(key) == null) {
+      return (double)0;
+    } else {
+      return Double.parseDouble(this._task.get(key));
+    }
   }
-  
+ 
   /*
-   * Get String key value
+   * Get key of type String
    */
   public String getStringValue(Enum key) {
-    return this._task.get(key);
+    if (this._task.get(key) == null) {
+      return "";
+    } else {
+     return this._task.get(key);
+    }
   }
-  
+
   /*
    * Set long key value 
    */

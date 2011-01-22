@@ -126,6 +126,16 @@
       rev="${commons-net.version}"
       conf="ftp->default"/>
 
+    <dependency org="commons-configuration"
+      name="commons-configuration"
+      rev="${commons-configuration.version}"
+      conf="common->default"/>
+
+    <dependency org="org.apache.commons"
+      name="commons-math"
+      rev="${commons-math.version}"
+      conf="common->default"/>
+
     <!--Configuration: Jetty -->
 
 <!-- <dependency org="javax.servlet"
@@ -135,7 +145,7 @@
     <dependency org="org.mortbay.jetty"
       name="jetty"
       rev="${jetty.version}"
-      conf="jetty->master"/>
+      conf="jetty->default"/>
     <dependency org="org.mortbay.jetty"
       name="jetty-util"
       rev="${jetty-util.version}"
@@ -159,7 +169,18 @@
       rev="${commons-el.version}"
       conf="jetty->master"/>
 
+    <!--Configuration: secure datanode -->
+    <dependency org="commons-daemon" 
+      name="commons-daemon" 
+      rev="${commons-daemon.version}"
+      conf="server->default" /> 
 
+    <dependency org="com.jcraft"
+      name="jsch"
+      rev="${jsch.version}"
+      conf="common->master">
+    </dependency>
+    
     <!--Configuration: commons-logging -->
 
     <!--it is essential that only the master JAR of commons logging
@@ -191,10 +212,6 @@
       name="commons-net"
       rev="${commons-net.version}"
       conf="s3-client->master"/> 
-    <dependency org="org.mortbay.jetty"
-      name="servlet-api-2.5"
-      rev="${servlet-api-2.5.version}"
-      conf="s3-client->master"/>
 
     <!--Configuration: kfs -->
 
@@ -256,6 +273,24 @@
       rev="${slf4j-log4j12.version}"
       conf="common->master">
     </dependency>
-    </dependencies>
-  
+    <dependency org="org.codehaus.jackson"
+      name="jackson-mapper-asl"
+      rev="1.0.1"
+      conf="common->default"/>
+   <dependency org="org.mockito" 
+       name="mockito-all" 
+       rev="${mockito-all.version}" 
+       conf="common->default">
+    </dependency>
+    <dependency org="org.aspectj"
+      name="aspectjrt"
+      rev="${aspectj.version}"
+      conf="common->default">
+    </dependency>
+    <dependency org="org.aspectj"
+      name="aspectjtools"
+      rev="${aspectj.version}"
+      conf="common->default">
+    </dependency>
+ </dependencies>
 </ivy-module>

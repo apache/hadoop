@@ -17,17 +17,23 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 
 /**
  * A class for file/directory permissions.
  */
 public class FsPermission implements Writable {
+  private static final Log LOG = LogFactory.getLog(FsPermission.class);
+  
   static final WritableFactory FACTORY = new WritableFactory() {
     public Writable newInstance() { return new FsPermission(); }
   };
@@ -78,6 +84,15 @@ public class FsPermission implements Writable {
     this.useraction = other.useraction;
     this.groupaction = other.groupaction;
     this.otheraction = other.otheraction;
+  }
+  
+  /**
+   * Construct by given mode, either in octal or symbolic format.
+   * @param mode mode as a string, either in octal or symbolic format
+   * @throws IllegalArgumentException if <code>mode</code> is invalid
+   */
+  public FsPermission(String mode) {
+    this(new UmaskParser(mode).getUMask());
   }
   
   /** Return user {@link FsAction}. */
@@ -154,20 +169,50 @@ public class FsPermission implements Writable {
   }
 
   /** umask property label */
-  public static final String UMASK_LABEL = "dfs.umask";
+  public static final String DEPRECATED_UMASK_LABEL = "dfs.umask"; 
+  public static final String UMASK_LABEL = "dfs.umaskmode";
   public static final int DEFAULT_UMASK = 0022;
 
-  /** Get the user file creation mask (umask) */
+  /** 
+   * Get the user file creation mask (umask)
+   * 
+   * {@code UMASK_LABEL} config param has umask value that is either symbolic 
+   * or octal.
+   * 
+   * Symbolic umask is applied relative to file mode creation mask; 
+   * the permission op characters '+' clears the corresponding bit in the mask, 
+   * '-' sets bits in the mask.
+   * 
+   * Octal umask, the specified bits are set in the file mode creation mask.
+   * 
+   * {@code DEPRECATED_UMASK_LABEL} config param has umask value set to decimal.
+   */
   public static FsPermission getUMask(Configuration conf) {
     int umask = DEFAULT_UMASK;
-    if (conf != null) {
-      umask = conf.getInt(UMASK_LABEL, DEFAULT_UMASK);
+    
+    // To ensure backward compatibility first use the deprecated key.
+    // If the deprecated key is not present then check for the new key
+    if(conf != null) {
+      int oldStyleValue = conf.getInt(DEPRECATED_UMASK_LABEL, Integer.MIN_VALUE);
+      if(oldStyleValue != Integer.MIN_VALUE) { // Property was set with old key
+        LOG.warn(DEPRECATED_UMASK_LABEL + " configuration key is deprecated. " +
+            "Convert to " + UMASK_LABEL + ", using octal or symbolic umask " +
+            "specifications.");
+        umask = oldStyleValue;
+      } else {
+        String confUmask = conf.get(UMASK_LABEL);
+        if(confUmask != null) { // UMASK_LABEL is set
+          return new FsPermission(confUmask);
+        }
+      }
     }
+    
     return new FsPermission((short)umask);
   }
+  
   /** Set the user file creation mask (umask) */
   public static void setUMask(Configuration conf, FsPermission umask) {
-    conf.setInt(UMASK_LABEL, umask.toShort());
+    conf.set(UMASK_LABEL, String.format("%1$03o", umask.toShort()));
   }
 
   /** Get the default permission. */

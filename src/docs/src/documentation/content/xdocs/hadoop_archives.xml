@@ -17,11 +17,11 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
         <header>
-        <title>Archives Guide</title>
+        <title>Hadoop Archives Guide</title>
         </header>
         <body>
         <section>
-        <title> What are Hadoop archives? </title>
+        <title>Overview</title>
         <p>
         Hadoop archives are special format archives. A Hadoop archive
         maps to a file system directory. A Hadoop archive always has a *.har
@@ -31,28 +31,27 @@
         within the part files. 
         </p>
         </section>
+        
         <section>
-        <title> How to create an archive? </title>
+        <title>How to Create an Archive</title>
         <p>
-        <code>Usage: hadoop archive -archiveName name &lt;src&gt;* &lt;dest&gt;</code>
+        <code>Usage: hadoop archive -archiveName name -p &lt;parent&gt; &lt;src&gt;* &lt;dest&gt;</code>
         </p>
         <p>
         -archiveName is the name of the archive you would like to create. 
         An example would be foo.har. The name should have a *.har extension. 
-        The inputs are file system pathnames which work as usual with regular
-        expressions. The destination directory would contain the archive.
+       	The parent argument is to specify the relative path to which the files should be
+       	archived to. Example would be :
+        </p><p><code> -p /foo/bar a/b/c e/f/g </code></p><p>
+        Here /foo/bar is the parent path and a/b/c, e/f/g are relative paths to parent. 
         Note that this is a Map/Reduce job that creates the archives. You would
-        need a map reduce cluster to run this. The following is an example:</p>
-        <p>
-        <code>hadoop archive -archiveName foo.har /user/hadoop/dir1 /user/hadoop/dir2 /user/zoo/</code>
-        </p><p>
-        In the above example /user/hadoop/dir1 and /user/hadoop/dir2 will be
-        archived in the following file system directory -- /user/zoo/foo.har.
-        The sources are not changed or removed when an archive is created.
-        </p>
+        need a map reduce cluster to run this. For a detailed example the later sections. </p>
+        <p> If you just want to archive a single directory /foo/bar then you can just use </p>
+        <p><code> hadoop archive -archiveName zoo.har -p /foo/bar /outputdir </code></p>
         </section>
+        
         <section>
-        <title> How to look up files in archives? </title>
+        <title>How to Look Up Files in Archives</title>
         <p>
         The archive exposes itself as a file system layer. So all the fs shell
         commands in the archives work but with a different URI. Also, note that
@@ -60,20 +59,61 @@
         an error. URI for Hadoop Archives is 
         </p><p><code>har://scheme-hostname:port/archivepath/fileinarchive</code></p><p>
         If no scheme is provided it assumes the underlying filesystem. 
-        In that case the URI would look like 
-        </p><p><code>
-        har:///archivepath/fileinarchive</code></p>
-        <p>
-        Here is an example of archive. The input to the archives is /dir. The directory dir contains 
-        files filea, fileb. To archive /dir to /user/hadoop/foo.har, the command is 
-        </p>
-        <p><code>hadoop archive -archiveName foo.har /dir /user/hadoop</code>
-        </p><p>
-        To get file listing for files in the created archive 
-        </p>
-        <p><code>hadoop dfs -lsr har:///user/hadoop/foo.har</code></p>
-        <p>To cat filea in archive -
-        </p><p><code>hadoop dfs -cat har:///user/hadoop/foo.har/dir/filea</code></p>
+        In that case the URI would look like </p>
+        <p><code>har:///archivepath/fileinarchive</code></p>
         </section>
-	</body>
+
+ 		<section>
+ 		<title>Archives Examples</title>
+ 		<section>
+	    <title>Creating an Archive</title>
+			
+        <p><code>hadoop archive -archiveName foo.har -p /user/hadoop dir1 dir2 /user/zoo </code></p>
+        <p>
+         The above example is creating an archive using /user/hadoop as the relative archive directory.
+         The directories /user/hadoop/dir1 and /user/hadoop/dir2 will be 
+        archived in the following file system directory -- /user/zoo/foo.har. Archiving does not delete the input
+        files. If you want to delete the input files after creating the archives (to reduce namespace), you
+        will have to do it on your own. 
+        </p>
+        </section>
+        <section>
+        <title> Looking Up Files</title>
+		 <p> Looking up files in hadoop archives is as easy as doing an ls on the filesystem. After you have
+		 archived the directories /user/hadoop/dir1 and /user/hadoop/dir2 as in the example above, to see all
+		 the files in the archives you can just run: </p>
+		 <p><code>hadoop dfs -lsr har:///user/zoo/foo.har/</code></p>
+		 <p> To understand the significance of the -p argument, lets go through the above example again. If you just do
+		 an ls (not lsr) on the hadoop archive using </p>
+		 <p><code>hadoop dfs -ls har:///user/zoo/foo.har</code></p>
+		 <p>The output should be:</p>
+		 <source>
+har:///user/zoo/foo.har/dir1
+har:///user/zoo/foo.har/dir2
+</source>
+		 <p> As you can recall the archives were created with the following command </p>
+        <p><code>hadoop archive -archiveName foo.har -p /user/hadoop dir1 dir2 /user/zoo </code></p>
+        <p> If we were to change the command to: </p>
+        <p><code>hadoop archive -archiveName foo.har -p /user/  hadoop/dir1 hadoop/dir2 /user/zoo </code></p>
+        <p> then a ls on the hadoop archive using </p>
+        <p><code>hadoop dfs -ls har:///user/zoo/foo.har</code></p>
+        <p>would give you</p>
+        <source>
+har:///user/zoo/foo.har/hadoop/dir1
+har:///user/zoo/foo.har/hadoop/dir2
+</source>
+		<p>
+		Notice that the archived files have been archived relative to /user/ rather than /user/hadoop.
+		</p>
+		</section>
+		</section>
+		
+		<section>
+		<title>Hadoop Archives and MapReduce </title> 
+		<p>Using Hadoop Archives in MapReduce is as easy as specifying a different input filesystem than the default file system.
+		If you have a hadoop archive stored in HDFS in /user/zoo/foo.har then for using this archive for MapReduce input, all
+		you need to specify the input directory as har:///user/zoo/foo.har. Since Hadoop Archives is exposed as a file system 
+		MapReduce will be able to use all the logical input files in Hadoop Archives as input.</p>
+        </section>
+  </body>
 </document>

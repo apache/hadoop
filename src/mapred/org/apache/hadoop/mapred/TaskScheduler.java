@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
  * Used by a {@link JobTracker} to schedule {@link Task}s on
@@ -36,7 +37,7 @@ import org.apache.hadoop.conf.Configuration;
  * between the job being added (when
  * {@link JobInProgressListener#jobAdded(JobInProgress)} is called)
  * and tasks for that job being assigned (by
- * {@link #assignTasks(TaskTrackerStatus)}).
+ * {@link #assignTasks(TaskTracker)}).
  * @see EagerTaskInitializationListener
  */
 abstract class TaskScheduler implements Configurable {
@@ -80,8 +81,8 @@ abstract class TaskScheduler implements Configurable {
    * @param taskTracker The TaskTracker for which we're looking for tasks.
    * @return A list of tasks to run on that TaskTracker, possibly empty.
    */
-  public abstract List<Task> assignTasks(TaskTrackerStatus taskTracker)
-    throws IOException;
+  public abstract List<Task> assignTasks(TaskTracker taskTracker)
+  throws IOException;
 
   /**
    * Returns a collection of jobs in an order which is specific to 
@@ -90,5 +91,10 @@ abstract class TaskScheduler implements Configurable {
    * @return
    */
   public abstract Collection<JobInProgress> getJobs(String queueName);
-    
+
+  /**
+   * Refresh the configuration of the scheduler.
+   */
+  public void refresh() throws IOException {}
+  
 }

@@ -17,18 +17,23 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.BufferedReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -57,21 +62,20 @@ import org.apache.hadoop.util.ToolRunner;
  *  
  */
 public class DFSck extends Configured implements Tool {
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
 
-  DFSck() {}
-  
+  private final UserGroupInformation ugi;
+
   /**
    * Filesystem checker.
    * @param conf current Configuration
-   * @throws Exception
    */
-  public DFSck(Configuration conf) throws Exception {
+  public DFSck(Configuration conf) throws IOException {
     super(conf);
-  }
-  
-  private String getInfoServer() throws IOException {
-    return NetUtils.getServerAddress(getConf(), "dfs.info.bindAddress", 
-                                     "dfs.info.port", "dfs.http.address");
+    this.ugi = UserGroupInformation.getCurrentUser();
   }
   
   /**
@@ -96,52 +100,71 @@ public class DFSck extends Configured implements Tool {
   /**
    * @param args
    */
-  public int run(String[] args) throws Exception {
-    String fsName = getInfoServer();
+  public int run(final String[] args) throws IOException {
     if (args.length == 0) {
       printUsage();
       return -1;
     }
-    StringBuffer url = new StringBuffer("http://"+fsName+"/fsck?path=");
-    String dir = "/";
-    // find top-level dir first
-    for (int idx = 0; idx < args.length; idx++) {
-      if (!args[idx].startsWith("-")) { dir = args[idx]; break; }
-    }
-    url.append(URLEncoder.encode(dir, "UTF-8"));
-    for (int idx = 0; idx < args.length; idx++) {
-      if (args[idx].equals("-move")) { url.append("&move=1"); }
-      else if (args[idx].equals("-delete")) { url.append("&delete=1"); }
-      else if (args[idx].equals("-files")) { url.append("&files=1"); }
-      else if (args[idx].equals("-openforwrite")) { url.append("&openforwrite=1"); }
-      else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
-      else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
-      else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
-    }
-    URL path = new URL(url.toString());
-    URLConnection connection = path.openConnection();
-    InputStream stream = connection.getInputStream();
-    BufferedReader input = new BufferedReader(new InputStreamReader(
-                                              stream, "UTF-8"));
-    String line = null;
-    String lastLine = null;
-    int errCode = -1;
+    
     try {
-      while ((line = input.readLine()) != null) {
-        System.out.println(line);
-        lastLine = line;
-      }
-    } finally {
-      input.close();
+      return UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Integer>() {      
+        @Override
+        public Integer run() throws Exception {
+
+          String proto = "http://";
+          if(UserGroupInformation.isSecurityEnabled()) { 
+             System.setProperty("https.cipherSuites", Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
+             proto = "https://";
+          }
+          
+          final StringBuffer url = new StringBuffer(proto);
+          url.append(NameNode.getInfoServer(getConf())).append("/fsck?ugi=").append(ugi.getShortUserName()).append("&path=");
+
+          String dir = "/";
+          // find top-level dir first
+          for (int idx = 0; idx < args.length; idx++) {
+            if (!args[idx].startsWith("-")) { dir = args[idx]; break; }
+          }
+          url.append(URLEncoder.encode(dir, "UTF-8"));
+          for (int idx = 0; idx < args.length; idx++) {
+            if (args[idx].equals("-move")) { url.append("&move=1"); }
+            else if (args[idx].equals("-delete")) { url.append("&delete=1"); }
+            else if (args[idx].equals("-files")) { url.append("&files=1"); }
+            else if (args[idx].equals("-openforwrite")) { url.append("&openforwrite=1"); }
+            else if (args[idx].equals("-blocks")) { url.append("&blocks=1"); }
+            else if (args[idx].equals("-locations")) { url.append("&locations=1"); }
+            else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
+          }
+          URL path = new URL(url.toString());
+          SecurityUtil.fetchServiceTicket(path);
+          URLConnection connection = path.openConnection();
+          InputStream stream = connection.getInputStream();
+          BufferedReader input = new BufferedReader(new InputStreamReader(
+              stream, "UTF-8"));
+          String line = null;
+          String lastLine = null;
+          int errCode = -1;
+          try {
+            while ((line = input.readLine()) != null) {
+              System.out.println(line);
+              lastLine = line;
+            }
+          } finally {
+            input.close();
+          }
+          if (lastLine.endsWith(NamenodeFsck.HEALTHY_STATUS)) {
+            errCode = 0;
+          } else if (lastLine.endsWith(NamenodeFsck.CORRUPT_STATUS)) {
+            errCode = 1;
+          } else if (lastLine.endsWith(NamenodeFsck.NONEXISTENT_STATUS)) {
+            errCode = 0;
+          }
+          return errCode;
+        }
+      });
+    } catch (InterruptedException e) {
+      throw new IOException(e);
     }
-    if (lastLine.endsWith(NamenodeFsck.HEALTHY_STATUS)) {
-      errCode = 0;
-    } else if (lastLine.endsWith(NamenodeFsck.CORRUPT_STATUS)) {
-      errCode = 1;
-    } else if (lastLine.endsWith(NamenodeFsck.NONEXISTENT_STATUS)) {
-      errCode = 0;
-    }
-    return errCode;
   }
 
   static{

@@ -20,26 +20,28 @@ package org.apache.hadoop.hdfs.tools;
 import java.io.IOException;
 import java.util.List;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.shell.Command;
+import org.apache.hadoop.fs.shell.CommandFormat;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
+import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FsShell;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.shell.Command;
-import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.RefreshUserMappingsProtocol;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -428,6 +430,8 @@ public class DFSAdmin extends FsShell {
       "\t[" + SetSpaceQuotaCommand.USAGE + "]\n" +
       "\t[" + ClearSpaceQuotaCommand.USAGE +"]\n" +
       "\t[-refreshServiceAcl]\n" +
+      "\t[-refreshUserToGroupsMappings]\n" +
+      "\t[refreshSuperUserGroupsConfiguration]\n" +
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -476,6 +480,12 @@ public class DFSAdmin extends FsShell {
 
     String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
       "\t\tNamenode will reload the authorization policy file.\n";
+
+    String refreshUserToGroupsMappings =
+      "-refreshUserToGroupsMappings: Refresh user-to-groups mappings\n";
+    
+    String refreshSuperUserGroupsConfiguration = 
+      "-refreshSuperUserGroupsConfiguration: Refresh superuser proxy groups mappings\n";
     
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
@@ -504,6 +514,10 @@ public class DFSAdmin extends FsShell {
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
     } else if ("refreshServiceAcl".equals(cmd)) {
       System.out.println(refreshServiceAcl);
+    } else if ("refreshUserToGroupsMappings".equals(cmd)) {
+      System.out.println(refreshUserToGroupsMappings);
+    } else if ("refreshSuperUserGroupsConfiguration".equals(cmd)) {
+      System.out.println(refreshSuperUserGroupsConfiguration);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -520,6 +534,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(SetSpaceQuotaCommand.DESCRIPTION);
       System.out.println(ClearSpaceQuotaCommand.DESCRIPTION);
       System.out.println(refreshServiceAcl);
+      System.out.println(refreshUserToGroupsMappings);
+      System.out.println(refreshSuperUserGroupsConfiguration);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -603,16 +619,9 @@ public class DFSAdmin extends FsShell {
     return 0;
   }
 
-  private static UnixUserGroupInformation getUGI(Configuration conf) 
+  private static UserGroupInformation getUGI() 
   throws IOException {
-    UnixUserGroupInformation ugi = null;
-    try {
-      ugi = UnixUserGroupInformation.login(conf, true);
-    } catch (LoginException e) {
-      throw (IOException)(new IOException(
-          "Failed to get the current user's information.").initCause(e));
-    }
-    return ugi;
+    return UserGroupInformation.getCurrentUser();
   }
 
   /**
@@ -624,21 +633,90 @@ public class DFSAdmin extends FsShell {
     // Get the current configuration
     Configuration conf = getConf();
     
+    // for security authorization
+    // server principal for this call   
+    // should be NN's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
+    
+    
     // Create the client
     RefreshAuthorizationPolicyProtocol refreshProtocol = 
       (RefreshAuthorizationPolicyProtocol) 
       RPC.getProxy(RefreshAuthorizationPolicyProtocol.class, 
                    RefreshAuthorizationPolicyProtocol.versionID, 
-                   NameNode.getAddress(conf), getUGI(conf), conf,
+                   NameNode.getAddress(conf), getUGI(), conf,
                    NetUtils.getSocketFactory(conf, 
                                              RefreshAuthorizationPolicyProtocol.class));
     
     // Refresh the authorization policy in-effect
+    
     refreshProtocol.refreshServiceAcl();
     
     return 0;
   }
   
+  /**
+   * Refresh the user-to-groups mappings on the {@link NameNode}.
+   * @return exitcode 0 on success, non-zero on failure
+   * @throws IOException
+   */
+  public int refreshUserToGroupsMappings() throws IOException {
+    // Get the current configuration
+    Configuration conf = getConf();
+    
+    // for security authorization
+    // server principal for this call 
+    // should be NAMENODE's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
+    
+    // Create the client
+    RefreshUserMappingsProtocol refreshProtocol = 
+      (RefreshUserMappingsProtocol) 
+      RPC.getProxy(RefreshUserMappingsProtocol.class, 
+                   RefreshUserMappingsProtocol.versionID, 
+                   NameNode.getAddress(conf), getUGI(), conf,
+                   NetUtils.getSocketFactory(conf, 
+                                             RefreshUserMappingsProtocol.class));
+    
+    // Refresh the user-to-groups mappings
+    refreshProtocol.refreshUserToGroupsMappings();
+    
+    return 0;
+  }
+
+  /**
+   * refreshSuperUserGroupsConfiguration {@link NameNode}.
+   * @return exitcode 0 on success, non-zero on failure
+   * @throws IOException
+   */
+  public int refreshSuperUserGroupsConfiguration() throws IOException {
+    // Get the current configuration
+    Configuration conf = getConf();
+    
+    // for security authorization
+    // server principal for this call 
+    // should be NAMENODE's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
+    
+    // Create the client
+    RefreshUserMappingsProtocol refreshProtocol = 
+      (RefreshUserMappingsProtocol) 
+      RPC.getProxy(RefreshUserMappingsProtocol.class, 
+                   RefreshUserMappingsProtocol.versionID, 
+                   NameNode.getAddress(conf), getUGI(), conf,
+                   NetUtils.getSocketFactory(conf, 
+                       RefreshUserMappingsProtocol.class));
+    
+    // Refresh the user-to-groups mappings
+    refreshProtocol.refreshSuperUserGroupsConfiguration();
+    
+    return 0;
+  }
+  
+
   /**
    * Displays format of commands.
    * @param cmd The command that is being executed.
@@ -680,6 +758,12 @@ public class DFSAdmin extends FsShell {
     } else if ("-refreshServiceAcl".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-refreshServiceAcl]");
+    } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-refreshUserToGroupsMappings]");
+    } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-refreshSuperUserGroupsConfiguration]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
@@ -690,10 +774,12 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-upgradeProgress status | details | force]");
       System.err.println("           [-metasave filename]");
       System.err.println("           [-refreshServiceAcl]");
+      System.err.println("           [-refreshUserToGroupsMappings]");
+      System.err.println("           [-refreshSuperUserGroupsConfiguration]");
       System.err.println("           ["+SetQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
       System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
-      System.err.println("           ["+ClearSpaceQuotaCommand.USAGE+"]");      
+      System.err.println("           ["+ClearSpaceQuotaCommand.USAGE+"]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
       ToolRunner.printGenericCommandUsage(System.err);
@@ -760,6 +846,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
+      if (argv.length != 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -800,6 +891,10 @@ public class DFSAdmin extends FsShell {
         exitCode = new SetSpaceQuotaCommand(argv, i, fs).runAll();
       } else if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshServiceAcl();
+      } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
+        exitCode = refreshUserToGroupsMappings();
+      } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
+        exitCode = refreshSuperUserGroupsConfiguration();
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);

@@ -55,7 +55,8 @@ public class TestJobSysDirWithDFS extends TestCase {
                                            Path outDir,
                                            String input,
                                            int numMaps,
-                                           int numReduces) throws IOException {
+                                           int numReduces,
+                                           String sysDir) throws IOException {
     FileSystem inFs = inDir.getFileSystem(conf);
     FileSystem outFs = outDir.getFileSystem(conf);
     outFs.delete(outDir, true);
@@ -88,14 +89,15 @@ public class TestJobSysDirWithDFS extends TestCase {
     // Checking that the Job Client system dir is not used
     assertFalse(FileSystem.get(conf).exists(new Path(conf.get("mapred.system.dir")))); 
     // Check if the Job Tracker system dir is propogated to client
-    String sysDir = jobClient.getSystemDir().toString();
+    sysDir = jobClient.getSystemDir().toString();
     System.out.println("Job sys dir -->" + sysDir);
     assertFalse(sysDir.contains("/tmp/subru/mapred/system"));
     assertTrue(sysDir.contains("custom"));
     return new TestResult(job, TestMiniMRWithDFS.readOutput(outDir, conf));
   }
 
- static void runWordCount(MiniMRCluster mr, JobConf jobConf) throws IOException {
+ static void runWordCount(MiniMRCluster mr, JobConf jobConf, String sysDir)
+ throws IOException {
     LOG.info("runWordCount");
     // Run a word count example
     // Keeping tasks that match this pattern
@@ -105,7 +107,7 @@ public class TestJobSysDirWithDFS extends TestCase {
     result = launchWordCount(jobConf, inDir, outDir,
                              "The quick brown fox\nhas many silly\n" + 
                              "red fox sox\n",
-                             3, 1);
+                             3, 1, sysDir);
     assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                  "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
     // Checking if the Job ran successfully in spite of different system dir config
@@ -126,7 +128,7 @@ public class TestJobSysDirWithDFS extends TestCase {
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1, null, null, conf);
 
-      runWordCount(mr, mr.createJobConf());
+      runWordCount(mr, mr.createJobConf(), conf.get("mapred.system.dir"));
     } finally {
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown();

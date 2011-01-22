@@ -9,5 +9,17 @@
   <name>io.sort.mb</name>
   <value>10</value>
 </property>
-
+<property>
+  <name>mapred.hosts.exclude</name>
+  <value>hosts.exclude</value>
+  <description></description>
+</property>
+<property>
+  <name>mapreduce.fileoutputcommitter.marksuccessfuljobs</name>
+  <value>false</value>
+</property>
+<property>
+  <name>mapred.child.java.opts</name>
+  <value>-Xmx200m -Djava.net.preferIPv4Stack=true</value>
+</property>
 </configuration>

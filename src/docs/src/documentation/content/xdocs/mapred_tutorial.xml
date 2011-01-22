@@ -20,30 +20,30 @@
 <document>
   
   <header>
-    <title>Map/Reduce Tutorial</title>
+    <title>MapReduce Tutorial</title>
   </header>
   
   <body>
-  
+
     <section>
       <title>Purpose</title>
       
       <p>This document comprehensively describes all user-facing facets of the 
-      Hadoop Map/Reduce framework and serves as a tutorial.
+      Hadoop MapReduce framework and serves as a tutorial.
       </p>
     </section>
     
     <section>
-      <title>Pre-requisites</title>
+      <title>Prerequisites</title>
       
       <p>Ensure that Hadoop is installed, configured and is running. More
       details:</p> 
       <ul>
         <li>
-          <a href="quickstart.html">Hadoop Quick Start</a> for first-time users.
+          <a href="single_node_setup.html">Single Node Setup</a> for first-time users.
         </li>
         <li>
-          <a href="cluster_setup.html">Hadoop Cluster Setup</a> for large, 
+          <a href="cluster_setup.html">Cluster Setup</a> for large, 
           distributed clusters.
         </li>
       </ul>
@@ -52,12 +52,12 @@
     <section>
       <title>Overview</title>
       
-      <p>Hadoop Map/Reduce is a software framework for easily writing 
+      <p>Hadoop MapReduce is a software framework for easily writing 
       applications which process vast amounts of data (multi-terabyte data-sets) 
       in-parallel on large clusters (thousands of nodes) of commodity 
       hardware in a reliable, fault-tolerant manner.</p>
       
-      <p>A Map/Reduce <em>job</em> usually splits the input data-set into 
+      <p>A MapReduce <em>job</em> usually splits the input data-set into 
       independent chunks which are processed by the <em>map tasks</em> in a
       completely parallel manner. The framework sorts the outputs of the maps, 
       which are then input to the <em>reduce tasks</em>. Typically both the 
@@ -66,13 +66,13 @@
       tasks.</p>
       
       <p>Typically the compute nodes and the storage nodes are the same, that is, 
-      the Map/Reduce framework and the Hadoop Distributed File System (see <a href="hdfs_design.html">HDFS Architecture </a>) 
+      the MapReduce framework and the Hadoop Distributed File System (see <a href="hdfs_design.html">HDFS Architecture Guide</a>) 
       are running on the same set of nodes. This configuration
       allows the framework to effectively schedule tasks on the nodes where data 
       is already present, resulting in very high aggregate bandwidth across the 
       cluster.</p>
       
-      <p>The Map/Reduce framework consists of a single master 
+      <p>The MapReduce framework consists of a single master 
       <code>JobTracker</code> and one slave <code>TaskTracker</code> per 
       cluster-node. The master is responsible for scheduling the jobs' component 
       tasks on the slaves, monitoring them and re-executing the failed tasks. The 
@@ -89,7 +89,7 @@
       information to the job-client.</p>
       
       <p>Although the Hadoop framework is implemented in Java<sup>TM</sup>, 
-      Map/Reduce applications need not be written in Java.</p>
+      MapReduce applications need not be written in Java.</p>
       <ul>
         <li>
           <a href="ext:api/org/apache/hadoop/streaming/package-summary">
@@ -100,7 +100,7 @@
         <li>
           <a href="ext:api/org/apache/hadoop/mapred/pipes/package-summary">
           Hadoop Pipes</a> is a <a href="http://www.swig.org/">SWIG</a>-
-          compatible <em>C++ API</em> to implement Map/Reduce applications (non 
+          compatible <em>C++ API</em> to implement MapReduce applications (non 
           JNI<sup>TM</sup> based).
         </li>
       </ul>
@@ -109,7 +109,7 @@
     <section>
       <title>Inputs and Outputs</title>
 
-      <p>The Map/Reduce framework operates exclusively on 
+      <p>The MapReduce framework operates exclusively on 
       <code>&lt;key, value&gt;</code> pairs, that is, the framework views the 
       input to the job as a set of <code>&lt;key, value&gt;</code> pairs and 
       produces a set of <code>&lt;key, value&gt;</code> pairs as the output of 
@@ -123,7 +123,7 @@
       WritableComparable</a> interface to facilitate sorting by the framework.
       </p>
 
-      <p>Input and Output types of a Map/Reduce job:</p>
+      <p>Input and Output types of a MapReduce job:</p>
       <p>
         (input) <code>&lt;k1, v1&gt;</code> 
         -&gt; 
@@ -140,22 +140,22 @@
         <code>&lt;k3, v3&gt;</code> (output)
       </p>
     </section>
-
+    
     <section>
       <title>Example: WordCount v1.0</title>
       
-      <p>Before we jump into the details, lets walk through an example Map/Reduce 
+      <p>Before we jump into the details, lets walk through an example MapReduce 
       application to get a flavour for how they work.</p>
       
       <p><code>WordCount</code> is a simple application that counts the number of
       occurences of each word in a given input set.</p>
       
       <p>This works with a local-standalone, pseudo-distributed or fully-distributed 
-      Hadoop installation(see <a href="quickstart.html"> Hadoop Quick Start</a>).</p>
+      Hadoop installation (<a href="single_node_setup.html">Single Node Setup</a>).</p>
       
       <section>
         <title>Source Code</title>
-        
+
         <table>
           <tr>
             <th></th>
@@ -164,7 +164,7 @@
           <tr>
             <td>1.</td>
             <td>
-              <code>package org.myorg;</code>
+                <code>package org.myorg;</code>
             </td>
           </tr>
           <tr>
@@ -208,7 +208,7 @@
           <tr>
             <td>9.</td>
             <td>
-              <code>import org.apache.hadoop.mapred.*;</code>
+            <code>import org.apache.hadoop.mapred.*;</code>
             </td>
           </tr>
           <tr>
@@ -604,17 +604,36 @@
         would be present in the current working directory of the task 
         using the option <code>-files</code>. The <code>-libjars</code>
         option allows applications to add jars to the classpaths of the maps
-        and reduces. The <code>-archives</code> allows them to pass archives
-        as arguments that are unzipped/unjarred and a link with name of the
-        jar/zip are created in the current working directory of tasks. More
+        and reduces. The option <code>-archives</code> allows them to pass 
+        comma separated list of archives as arguments. These archives are 
+        unarchived and a link with name of the archive is created in 
+        the current working directory of tasks. More
         details about the command line options are available at 
-        <a href="commands_manual.html"> Hadoop Command Guide.</a></p>
+        <a href="commands_manual.html">Commands Guide.</a></p>
         
         <p>Running <code>wordcount</code> example with 
-        <code>-libjars</code> and <code>-files</code>:<br/>
+        <code>-libjars</code>, <code>-files</code> and <code>-archives</code>:
+        <br/>
         <code> hadoop jar hadoop-examples.jar wordcount -files cachefile.txt 
-        -libjars mylib.jar input output </code> 
+        -libjars mylib.jar -archives myarchive.zip input output </code> 
+         Here, myarchive.zip will be placed and unzipped into a directory 
+         by the name "myarchive.zip".
         </p>
+        
+        <p> Users can specify a different symbolic name for 
+        files and archives passed through -files and -archives option, using #.
+        </p>
+        
+        <p> For example,
+        <code> hadoop jar hadoop-examples.jar wordcount 
+        -files dir1/dict.txt#dict1,dir2/dict.txt#dict2 
+        -archives mytar.tgz#tgzdir input output </code>
+        Here, the files dir1/dict.txt and dir2/dict.txt can be accessed by 
+        tasks using the symbolic names dict1 and dict2 respectively.
+        The archive mytar.tgz will be placed and unarchived into a 
+        directory by the name "tgzdir".
+        </p> 
+ 
       </section>
       
       <section>
@@ -696,10 +715,10 @@
     </section>
     
     <section>
-      <title>Map/Reduce - User Interfaces</title>
+      <title>MapReduce - User Interfaces</title>
       
       <p>This section provides a reasonable amount of detail on every user-facing 
-      aspect of the Map/Reduce framwork. This should help users implement, 
+      aspect of the MapReduce framework. This should help users implement, 
       configure and tune their jobs in a fine-grained manner. However, please 
       note that the javadoc for each class/interface remains the most 
       comprehensive documentation available; this is only meant to be a tutorial.
@@ -738,7 +757,7 @@
           to be of the same type as the input records. A given input pair may 
           map to zero or many output pairs.</p> 
  
-          <p>The Hadoop Map/Reduce framework spawns one map task for each 
+          <p>The Hadoop MapReduce framework spawns one map task for each 
           <code>InputSplit</code> generated by the <code>InputFormat</code> for 
           the job.</p>
           
@@ -949,7 +968,7 @@
           <title>Reporter</title>
         
           <p><a href="ext:api/org/apache/hadoop/mapred/reporter">
-          Reporter</a> is a facility for Map/Reduce applications to report 
+          Reporter</a> is a facility for MapReduce applications to report 
           progress, set application-level status messages and update 
           <code>Counters</code>.</p>
  
@@ -972,12 +991,12 @@
         
           <p><a href="ext:api/org/apache/hadoop/mapred/outputcollector">
           OutputCollector</a> is a generalization of the facility provided by
-          the Map/Reduce framework to collect data output by the 
+          the MapReduce framework to collect data output by the 
           <code>Mapper</code> or the <code>Reducer</code> (either the 
           intermediate outputs or the output of the job).</p>
         </section>
       
-        <p>Hadoop Map/Reduce comes bundled with a 
+        <p>Hadoop MapReduce comes bundled with a 
         <a href="ext:api/org/apache/hadoop/mapred/lib/package-summary">
         library</a> of generally useful mappers, reducers, and partitioners.</p>
       </section>
@@ -986,10 +1005,10 @@
         <title>Job Configuration</title>
         
         <p><a href="ext:api/org/apache/hadoop/mapred/jobconf">
-        JobConf</a> represents a Map/Reduce job configuration.</p>
+        JobConf</a> represents a MapReduce job configuration.</p>
  
         <p><code>JobConf</code> is the primary interface for a user to describe
-        a Map/Reduce job to the Hadoop framework for execution. The framework 
+        a MapReduce job to the Hadoop framework for execution. The framework 
         tries to faithfully execute the job as described by <code>JobConf</code>, 
         however:</p> 
         <ul>
@@ -1051,24 +1070,25 @@
         
         <p>The child-task inherits the environment of the parent 
         <code>TaskTracker</code>. The user can specify additional options to the
-        child-jvm via the <code>mapred.child.java.opts</code> configuration
-        parameter in the <code>JobConf</code> such as non-standard paths for the 
-        run-time linker to search shared libraries via 
+        child-jvm via the <code>mapred.{map|reduce}.child.java.opts</code> 
+        configuration parameter in the <code>JobConf</code> such as non-standard 
+         paths for the run-time linker to search shared libraries via 
         <code>-Djava.library.path=&lt;&gt;</code> etc. If the 
-        <code>mapred.child.java.opts</code> contains the symbol <em>@taskid@</em> 
-        it is interpolated with value of <code>taskid</code> of the map/reduce
-        task.</p>
+        <code>mapred.{map|reduce}.child.java.opts</code> parameters contains the 
+        symbol <em>@taskid@</em> it is interpolated with value of 
+        <code>taskid</code> of the MapReduce task.</p>
         
         <p>Here is an example with multiple arguments and substitutions, 
         showing jvm GC logging, and start of a passwordless JVM JMX agent so that
         it can connect with jconsole and the likes to watch child memory, 
         threads and get thread dumps. It also sets the maximum heap-size of the 
-        child jvm to 512MB and adds an additional path to the 
-        <code>java.library.path</code> of the child-jvm.</p>
+        map and reduce child jvm to 512MB &amp; 1024MB respectively. It also 
+        adds an additional path to the <code>java.library.path</code> of the 
+        child-jvm.</p>
 
         <p>
           <code>&lt;property&gt;</code><br/>
-          &nbsp;&nbsp;<code>&lt;name&gt;mapred.child.java.opts&lt;/name&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;name&gt;mapred.map.child.java.opts&lt;/name&gt;</code><br/>
           &nbsp;&nbsp;<code>&lt;value&gt;</code><br/>
           &nbsp;&nbsp;&nbsp;&nbsp;<code>
                     -Xmx512M -Djava.library.path=/home/mycompany/lib
@@ -1080,22 +1100,36 @@
           <code>&lt;/property&gt;</code>
         </p>
         
+        <p>
+          <code>&lt;property&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;name&gt;mapred.reduce.child.java.opts&lt;/name&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;value&gt;</code><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<code>
+                    -Xmx1024M -Djava.library.path=/home/mycompany/lib
+                    -verbose:gc -Xloggc:/tmp/@taskid@.gc</code><br/>
+          &nbsp;&nbsp;&nbsp;&nbsp;<code>
+                    -Dcom.sun.management.jmxremote.authenticate=false 
+                    -Dcom.sun.management.jmxremote.ssl=false</code><br/>
+          &nbsp;&nbsp;<code>&lt;/value&gt;</code><br/>
+          <code>&lt;/property&gt;</code>
+        </p>
+        
         <section>
-        <title> Memory management</title>
+        <title> Memory Management</title>
         <p>Users/admins can also specify the maximum virtual memory 
         of the launched child-task, and any sub-process it launches 
-        recursively, using <code>mapred.child.ulimit</code>. Note that
-        the value set here is a per process limit.
-        The value for <code>mapred.child.ulimit</code> should be specified 
-        in kilo bytes (KB). And also the value must be greater than
+        recursively, using <code>mapred.{map|reduce}.child.ulimit</code>. Note 
+        that the value set here is a per process limit.
+        The value for <code>mapred.{map|reduce}.child.ulimit</code> should be 
+        specified in kilo bytes (KB). And also the value must be greater than
         or equal to the -Xmx passed to JavaVM, else the VM might not start. 
         </p>
         
-        <p>Note: <code>mapred.child.java.opts</code> are used only for 
-        configuring the launched child tasks from task tracker. Configuring 
+        <p>Note: <code>mapred.{map|reduce}.child.java.opts</code> are used only 
+        for configuring the launched child tasks from task tracker. Configuring 
         the memory options for daemons is documented in 
         <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
-        cluster_setup.html </a></p>
+       Configuring the Environment of the Hadoop Daemons</a>.</p>
         
         <p>The memory available to some parts of the framework is also
         configurable. In map and reduce tasks, performance may be influenced
@@ -1229,7 +1263,7 @@
                 shuffle.</td></tr>
             <tr><td>mapred.job.shuffle.input.buffer.percent</td><td>float</td>
                 <td>The percentage of memory- relative to the maximum heapsize
-                as typically specified in <code>mapred.child.java.opts</code>-
+                as typically specified in <code>mapred.reduce.child.java.opts</code>-
                 that can be allocated to storing map outputs during the
                 shuffle. Though some memory should be set aside for the
                 framework, in general it is advantageous to set this high
@@ -1275,26 +1309,35 @@
         semi-random local directory. When the job starts, task tracker 
         creates a localized job directory relative to the local directory
         specified in the configuration. Thus the task tracker directory 
-        structure looks the following: </p>         
+        structure looks as following: </p>         
         <ul>
-        <li><code>${mapred.local.dir}/taskTracker/archive/</code> :
-        The distributed cache. This directory holds the localized distributed
-        cache. Thus localized distributed cache is shared among all
-        the tasks and jobs </li>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/</code> :
-        The localized job directory 
+        <li><code>${mapred.local.dir}/taskTracker/distcache/</code> :
+        The public distributed cache for the jobs of all users. This directory
+        holds the localized public distributed cache. Thus localized public
+        distributed cache is shared among all the tasks and jobs of all users.
+        </li>
+        <li><code>${mapred.local.dir}/taskTracker/$user/distcache/</code> :
+        The private distributed cache for the jobs of the specific user. This
+        directory holds the localized private distributed cache. Thus localized
+        private distributed cache is shared among all the tasks and jobs of the
+        specific user only. It is not accessible to jobs of other users.
+        </li>
+        <li><code>${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/
+        </code> : The localized job directory 
         <ul>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/work/</code> 
+        <li><code>${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/work/
+        </code>
         : The job-specific shared directory. The tasks can use this space as 
         scratch space and share files among them. This directory is exposed
         to the users through the configuration property  
         <code>job.local.dir</code>. The directory can accessed through 
-        api <a href="ext:api/org/apache/hadoop/mapred/jobconf/getjoblocaldir">
+        the API <a href="ext:api/org/apache/hadoop/mapred/jobconf/getjoblocaldir">
         JobConf.getJobLocalDir()</a>. It is available as System property also.
         So, users (streaming etc.) can call 
         <code>System.getProperty("job.local.dir")</code> to access the 
         directory.</li>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/jars/</code>
+        <li><code>${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/jars/
+        </code>
         : The jars directory, which has the job jar file and expanded jar.
         The <code>job.jar</code> is the application's jar file that is
         automatically distributed to each machine. It is expanded in jars
@@ -1303,27 +1346,37 @@
         <a href="ext:api/org/apache/hadoop/mapred/jobconf/getjar"> 
         JobConf.getJar() </a>. To access the unjarred directory,
         JobConf.getJar().getParent() can be called.</li>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/job.xml</code>
+        <li><code>${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/job.xml
+        </code>
         : The job.xml file, the generic job configuration, localized for 
         the job. </li>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/$taskid</code>
+        <li><code>${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid
+        </code>
         : The task directory for each task attempt. Each task directory
         again has the following structure :
         <ul>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/$taskid/job.xml</code>
+        <li><code>
+        ${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid/job.xml
+        </code>
         : A job.xml file, task localized job configuration, Task localization
         means that properties have been set that are specific to
         this particular task within the job. The properties localized for 
         each task are described below.</li>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/$taskid/output</code>
+        <li><code>
+        ${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid/output
+        </code>
         : A directory for intermediate output files. This contains the
         temporary map reduce data generated by the framework
         such as map output files etc. </li>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/$taskid/work</code>
-        : The curernt working directory of the task. 
+        <li><code>
+        ${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid/work
+        </code>
+        : The current working directory of the task. 
         With <a href="#Task+JVM+Reuse">jvm reuse</a> enabled for tasks, this 
         directory will be the directory on which the jvm has started</li>
-        <li><code>${mapred.local.dir}/taskTracker/jobcache/$jobid/$taskid/work/tmp</code>
+        <li><code>
+        ${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/$taskid/work/tmp
+        </code>
         : The temporary directory for the task. 
         (User can specify the property <code>mapred.child.tmp</code> to set
         the value of temporary directory for map and reduce tasks. This 
@@ -1332,7 +1385,7 @@
         directly assigned. The directory will be created if it doesn't exist.
         Then, the child java tasks are executed with option
         <code>-Djava.io.tmpdir='the absolute path of the tmp dir'</code>.
-        Anp pipes and streaming are set with environment variable,
+        Pipes and streaming are set with environment variable,
         <code>TMPDIR='the absolute path of the tmp dir'</code>). This 
         directory is created, if <code>mapred.child.tmp</code> has the value
         <code>./tmp</code> </li>
@@ -1355,6 +1408,8 @@
         JobConf.setNumTasksToExecutePerJvm(int)</a></p>
         </section>
 
+        <section>
+                <title>Configured Parameters</title>
         <p>The following properties are localized in the job configuration 
          for each task's execution: </p>
         <table>
@@ -1381,11 +1436,25 @@
           <tr><td>mapred.work.output.dir</td><td> String </td>
               <td>The task's temporary output directory</td></tr>
         </table>
-        
+
+        <p>
+        <strong>Note:</strong>
+        During the execution of a streaming job, the names of the "mapred" parameters are transformed. 
+        The dots ( . ) become underscores ( _ ).
+        For example, mapred.job.id becomes mapred_job_id and mapred.jar becomes mapred_jar. 
+        To get the values in a streaming job's mapper/reducer use the parameter names with the underscores.
+        </p>
+        </section>
+
+        <section>
+                <title>Task Logs</title>
         <p>The standard output (stdout) and error (stderr) streams of the task 
         are read by the TaskTracker and logged to 
         <code>${HADOOP_LOG_DIR}/userlogs</code></p>
-        
+         </section>
+
+         <section>
+                <title>Distributing Libraries</title>
         <p>The <a href="#DistributedCache">DistributedCache</a> can also be used
         to distribute both jars and native libraries for use in the map 
         and/or reduce tasks. The child-jvm always has its 
@@ -1399,6 +1468,7 @@
         distributed cache are documented at 
         <a href="native_libraries.html#Loading+native+libraries+through+DistributedCache">
         native_libraries.html</a></p>
+        </section>
       </section>
       
       <section>
@@ -1409,7 +1479,7 @@
         with the <code>JobTracker</code>.</p>
  
         <p><code>JobClient</code> provides facilities to submit jobs, track their 
-        progress, access component-tasks' reports and logs, get the Map/Reduce 
+        progress, access component-tasks' reports and logs, get the MapReduce 
         cluster's status information and so on.</p>
  
         <p>The job submission process involves:</p>
@@ -1421,7 +1491,7 @@
             <code>DistributedCache</code> of the job, if necessary.
           </li>
           <li>
-            Copying the job's jar and configuration to the Map/Reduce system 
+            Copying the job's jar and configuration to the MapReduce system 
             directory on the <code>FileSystem</code>.
           </li>
           <li>
@@ -1454,12 +1524,71 @@
         <p>Normally the user creates the application, describes various facets 
         of the job via <code>JobConf</code>, and then uses the 
         <code>JobClient</code> to submit the job and monitor its progress.</p>
+        
+        <section>
+          <title>Job Authorization</title>
+          <p>Job level authorization and queue level authorization are enabled
+          on the cluster, if the configuration
+          <code>mapred.acls.enabled</code> is set to
+          true. When enabled, access control checks are done by (a) the
+          JobTracker before allowing users to submit jobs to queues and
+          administering these jobs and (b) by the JobTracker and the TaskTracker 
+          before allowing users to view job details or to modify a job using
+          MapReduce APIs, CLI or web user interfaces.</p>
+          
+          <p>A job submitter can specify access control lists for viewing or
+          modifying a job via the configuration properties
+          <code>mapreduce.job.acl-view-job</code> and
+          <code>mapreduce.job.acl-modify-job</code> respectively. By default, 
+          nobody is given access in these properties.</p> 
+          
+          <p>However, irrespective of the job ACLs configured, a job's owner,
+          the superuser and cluster administrators
+          (<code>mapreduce.cluster.administrators</code>) and queue
+          administrators of the queue to which the job was submitted to
+          (<code>mapred.queue.queue-name.acl-administer-jobs</code>) always
+          have access to view and modify a job.</p>
+          
+          <p> A job view ACL authorizes users against the configured 
+          <code>mapreduce.job.acl-view-job</code> before returning possibly 
+          sensitive information about a job, like: </p>
+          <ul>
+            <li> job level counters </li>
+            <li> task level counters </li>
+            <li> tasks's diagnostic information </li>
+            <li> task logs displayed on the TaskTracker web UI </li>
+            <li> job.xml showed by the JobTracker's web UI </li>
+          </ul>
+          <p>Other information about a job, like its status and its profile, 
+          is accessible to all users, without requiring authorization.</p>
+          
+          <p> A job modification ACL authorizes users against the configured
+          <code>mapreduce.job.acl-modify-job</code> before allowing
+          modifications to jobs, like: </p>
+          <ul>
+            <li> killing a job </li>
+            <li> killing/failing a task of a job </li>
+            <li> setting the priority of a job </li>
+          </ul>
+          <p>These operations are also permitted by the queue level ACL,
+          "mapred.queue.queue-name.acl-administer-jobs", configured via
+          mapred-queue-acls.xml. The caller will be able to do the operation
+          if he/she is part of either queue admins ACL or job modification ACL.
+          </p>
+          
+          <p>The format of a job level ACL is the same as the format for a
+          queue level ACL as defined in the
+          <a href ="cluster_setup.html#Configuring+the+Hadoop+Daemons">
+          Cluster Setup</a> documentation.
+          </p>
+          
+        </section>
 
         <section>
           <title>Job Control</title>
  
-          <p>Users may need to chain Map/Reduce jobs to accomplish complex
-          tasks which cannot be done via a single Map/Reduce job. This is fairly
+          <p>Users may need to chain MapReduce jobs to accomplish complex
+          tasks which cannot be done via a single MapReduce job. This is fairly
           easy since the output of the job typically goes to distributed 
           file-system, and the output, in turn, can be used as the input for the 
           next job.</p>
@@ -1487,16 +1616,93 @@
             </li>
           </ul>
         </section>
+        <section>
+          <title>Job Credentials</title>
+          <p>In a secure cluster, the user is authenticated via Kerberos'
+             kinit command. Because of scalability concerns, we don't push
+             the client's Kerberos' tickets in MapReduce jobs. Instead, we
+             acquire delegation tokens from each HDFS NameNode that the job
+             will use and store them in the job as part of job submission.
+             The delegation tokens are automatically obtained
+             for the HDFS that holds the staging directories, where the job
+             job files are written, and any HDFS systems referenced by
+             FileInputFormats, FileOutputFormats, DistCp, and the
+             distributed cache.
+             Other applications require to set the configuration
+             "mapreduce.job.hdfs-servers" for all NameNodes that tasks might 
+             need to talk during the job execution. This is a comma separated
+             list of file system names, such as "hdfs://nn1/,hdfs://nn2/".
+             These tokens are passed to the JobTracker
+             as part of the job submission as <a href="ext:api/org/apache/hadoop/
+             security/credentials">Credentials</a>. </p> 
+
+          <p>Similar to HDFS delegation tokens, we also have MapReduce delegation tokens. The
+             MapReduce tokens are provided so that tasks can spawn jobs if they wish to. The tasks authenticate
+             to the JobTracker via the MapReduce delegation tokens. The delegation token can
+             be obtained via the API in <a href="api/org/apache/hadoop/mapred/jobclient/getdelegationtoken">
+             JobClient.getDelegationToken</a>. The obtained token must then be pushed onto the
+             credentials that is there in the JobConf used for job submission. The API  
+             <a href="ext:api/org/apache/hadoop/security/credentials/addtoken">Credentials.addToken</a>
+             can be used for this. </p>
+
+          <p>The credentials are sent to the JobTracker as part of the job submission process.
+             The JobTracker persists the tokens and secrets in its filesystem (typically HDFS) 
+             in a file within mapred.system.dir/JOBID. The TaskTracker localizes the file as part
+             job localization. Tasks see an environment variable called
+             HADOOP_TOKEN_FILE_LOCATION and the framework sets this to point to the
+             localized file. In order to launch jobs from tasks or for doing any HDFS operation,
+             tasks must set the configuration "mapreduce.job.credentials.binary" to point to
+             this token file.</p> 
+
+          <p>The HDFS delegation tokens passed to the JobTracker during job submission are
+             are cancelled by the JobTracker when the job completes. This is the default behavior
+             unless mapreduce.job.complete.cancel.delegation.tokens is set to false in the 
+             JobConf. For jobs whose tasks in turn spawns jobs, this should be set to false.
+             Applications sharing JobConf objects between multiple jobs on the JobClient side 
+             should look at setting mapreduce.job.complete.cancel.delegation.tokens to false. 
+             This is because the Credentials object within the JobConf will then be shared. 
+             All jobs will end up sharing the same tokens, and hence the tokens should not be 
+             canceled when the jobs in the sequence finish.</p>
+
+          <p>Apart from the HDFS delegation tokens, arbitrary secrets can also be 
+             passed during the job submission for tasks to access other third party services.
+             The APIs 
+             <a href="ext:api/org/apache/hadoop/mapred/jobconf/getcredentials">
+             JobConf.getCredentials</a> or <a href="ext:api/org/apache/
+              hadoop/mapreduce/jobcontext/getcredentials">JobContext.getCredentials()</a>
+             should be used to get the credentials object and then
+             <a href="ext:api/org/apache/hadoop/security/credentials/addsecretkey">
+             Credentials.addSecretKey</a> should be used to add secrets.</p>
+
+          <p>For applications written using the old MapReduce API, the Mapper/Reducer classes 
+             need to implement <a href="api/org/apache/hadoop/mapred/jobconfigurable">
+             JobConfigurable</a> in order to get access to the credentials in the tasks.
+             A reference to the JobConf passed in the 
+             <a href="api/org/apache/hadoop/mapred/jobconfigurable/configure">
+             JobConfigurable.configure</a> should be stored. In the new MapReduce API, 
+             a similar thing can be done in the 
+             <a href="api/org/apache/hadoop/mapreduce/mapper/setup">Mapper.setup</a>
+             method.
+             The api <a href="ext:api/org/apache/hadoop/mapred/jobconf/getcredentials">
+              JobConf.getCredentials()</a> or the api <a href="ext:api/org/apache/
+              hadoop/mapreduce/jobcontext/getcredentials">JobContext.getCredentials()</a>
+              should be used to get the credentials reference (depending
+              on whether the new MapReduce API or the old MapReduce API is used). 
+              Tasks can access the secrets using the APIs in <a href="ext:api/
+              org/apache/hadoop/security/credentials">Credentials</a> </p>
+
+             
+        </section>
       </section>
 
       <section>
         <title>Job Input</title>
         
         <p><a href="ext:api/org/apache/hadoop/mapred/inputformat">
-        InputFormat</a> describes the input-specification for a Map/Reduce job.
+        InputFormat</a> describes the input-specification for a MapReduce job.
         </p> 
  
-        <p>The Map/Reduce framework relies on the <code>InputFormat</code> of 
+        <p>The MapReduce framework relies on the <code>InputFormat</code> of 
         the job to:</p>
         <ol>
           <li>Validate the input-specification of the job.</li>
@@ -1575,10 +1781,10 @@
         <title>Job Output</title>
         
         <p><a href="ext:api/org/apache/hadoop/mapred/outputformat">
-        OutputFormat</a> describes the output-specification for a Map/Reduce 
+        OutputFormat</a> describes the output-specification for a MapReduce 
         job.</p>
 
-        <p>The Map/Reduce framework relies on the <code>OutputFormat</code> of 
+        <p>The MapReduce framework relies on the <code>OutputFormat</code> of 
         the job to:</p>
         <ol>
           <li>
@@ -1600,9 +1806,9 @@
         
         <p><a href="ext:api/org/apache/hadoop/mapred/outputcommitter">
         OutputCommitter</a> describes the commit of task output for a 
-        Map/Reduce job.</p>
+        MapReduce job.</p>
 
-        <p>The Map/Reduce framework relies on the <code>OutputCommitter</code>
+        <p>The MapReduce framework relies on the <code>OutputCommitter</code>
         of the job to:</p>
         <ol>
           <li>
@@ -1660,7 +1866,7 @@
           (using the attemptid, say <code>attempt_200709221812_0001_m_000000_0</code>), 
           not just per task.</p> 
  
-          <p>To avoid these issues the Map/Reduce framework, when the 
+          <p>To avoid these issues the MapReduce framework, when the 
           <code>OutputCommitter</code> is <code>FileOutputCommitter</code>, 
           maintains a special 
           <code>${mapred.output.dir}/_temporary/_${taskid}</code> sub-directory
@@ -1684,10 +1890,10 @@
           <p>Note: The value of <code>${mapred.work.output.dir}</code> during 
           execution of a particular task-attempt is actually 
           <code>${mapred.output.dir}/_temporary/_{$taskid}</code>, and this value is 
-          set by the Map/Reduce framework. So, just create any side-files in the 
+          set by the MapReduce framework. So, just create any side-files in the 
           path  returned by
           <a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/getworkoutputpath">
-          FileOutputFormat.getWorkOutputPath() </a>from map/reduce 
+          FileOutputFormat.getWorkOutputPath() </a>from MapReduce 
           task to take advantage of this feature.</p>
           
           <p>The entire discussion holds true for maps of jobs with 
@@ -1736,7 +1942,7 @@
           <title>Counters</title>
           
           <p><code>Counters</code> represent global counters, defined either by 
-          the Map/Reduce framework or applications. Each <code>Counter</code> can 
+          the MapReduce framework or applications. Each <code>Counter</code> can 
           be of any <code>Enum</code> type. Counters of a particular 
           <code>Enum</code> are bunched into groups of type 
           <code>Counters.Group</code>.</p>
@@ -1760,7 +1966,7 @@
           files efficiently.</p>
  
           <p><code>DistributedCache</code> is a facility provided by the 
-          Map/Reduce framework to cache files (text, archives, jars and so on) 
+          MapReduce framework to cache files (text, archives, jars and so on) 
           needed by applications.</p>
  
           <p>Applications specify the files to be cached via urls (hdfs://)
@@ -1828,7 +2034,36 @@
           <code>mapred.job.classpath.{files|archives}</code>. Similarly the
           cached files that are symlinked into the working directory of the
           task can be used to distribute native libraries and load them.</p>
-          
+          <section>
+            <title>Private and Public DistributedCache Files</title>
+            <p>DistributedCache files can be private or public, that 
+               determines how they can be shared on the slave nodes.</p>
+            <ul>
+              <li>"Private" DistributedCache files are cached in a local
+              directory private to the user whose jobs need these
+              files. These files are shared by all
+              tasks and jobs of the specific user only and cannot be accessed by
+              jobs of other users on the slaves. A DistributedCache file becomes private by
+              virtue of its permissions on the file system where the files
+              are uploaded, typically HDFS. If the file has no world readable
+              access, or if the directory path leading to the file has no
+              world executable access for lookup, then the file becomes private.
+              </li>
+              <li>"Public" DistributedCache files are cached in a global
+              directory and the file access is setup such that they are 
+              publicly visible to all users. These files can be shared by
+              tasks and jobs of all users on the slaves.
+              A DistributedCache file becomes public by virtue of its permissions
+              on the file system where the files are uploaded, typically HDFS. 
+              If the file has world readable access, AND if the directory
+              path leading to the file has world executable access for lookup,
+              then the file becomes public. In other words, if the user intends
+              to make a file publicly available to all users, the file permissions
+              must be set to be world readable, and the directory permissions
+              on the path leading to the file must be world executable. 
+              </li>
+            </ul>
+          </section>
         </section>
         
         <section>
@@ -1838,7 +2073,7 @@
           interface supports the handling of generic Hadoop command-line options.
           </p>
           
-          <p><code>Tool</code> is the standard for any Map/Reduce tool or 
+          <p><code>Tool</code> is the standard for any MapReduce tool or 
           application. The application should delegate the handling of 
           standard command-line options to 
           <a href="ext:api/org/apache/hadoop/util/genericoptionsparser">
@@ -1871,11 +2106,11 @@
           <title>IsolationRunner</title>
           
           <p><a href="ext:api/org/apache/hadoop/mapred/isolationrunner">
-          IsolationRunner</a> is a utility to help debug Map/Reduce programs.</p>
+          IsolationRunner</a> is a utility to help debug MapReduce programs.</p>
           
           <p>To use the <code>IsolationRunner</code>, first set 
-          <code>keep.failed.tasks.files</code> to <code>true</code> 
-          (also see <code>keep.tasks.files.pattern</code>).</p>
+          <code>keep.failed.task.files</code> to <code>true</code> 
+          (also see <code>keep.task.files.pattern</code>).</p>
           
           <p>
             Next, go to the node on which the failed task ran and go to the 
@@ -1889,6 +2124,8 @@
           
           <p><code>IsolationRunner</code> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
+
+          <p>Note that currently IsolationRunner will only re-run map tasks.</p>
         </section>
 
         <section>
@@ -1909,7 +2146,7 @@
           <p>Once user configures that profiling is needed, she/he can use
           the configuration property 
           <code>mapred.task.profile.{maps|reduces}</code> to set the ranges
-          of map/reduce tasks to profile. The value can be set using the api 
+          of MapReduce tasks to profile. The value can be set using the api 
           <a href="ext:api/org/apache/hadoop/mapred/jobconf/setprofiletaskrange">
           JobConf.setProfileTaskRange(boolean,String)</a>.
           By default, the specified range is <code>0-2</code>.</p>
@@ -1930,8 +2167,8 @@
         
         <section>
           <title>Debugging</title>
-          <p>The Map/Reduce framework provides a facility to run user-provided 
-          scripts for debugging. When a map/reduce task fails, a user can run 
+          <p>The MapReduce framework provides a facility to run user-provided 
+          scripts for debugging. When a MapReduce task fails, a user can run 
           a debug script, to process task logs for example. The script is 
           given access to the task's stdout and stderr outputs, syslog and 
           jobconf. The output from the debug script's stdout and stderr is 
@@ -1964,7 +2201,7 @@
             
           <p>The arguments to the script are the task's stdout, stderr, 
           syslog and jobconf files. The debug command, run on the node where
-          the map/reduce task failed, is: <br/>
+          the MapReduce task failed, is: <br/>
           <code> $script $stdout $stderr $syslog $jobconf </code> </p> 
 
           <p> Pipes programs have the c++ program name as a fifth argument
@@ -1984,14 +2221,14 @@
           <title>JobControl</title>
           
           <p><a href="ext:api/org/apache/hadoop/mapred/jobcontrol/package-summary">
-          JobControl</a> is a utility which encapsulates a set of Map/Reduce jobs
+          JobControl</a> is a utility which encapsulates a set of MapReduce jobs
           and their dependencies.</p>
         </section>
         
         <section>
           <title>Data Compression</title>
           
-          <p>Hadoop Map/Reduce provides facilities for the application-writer to
+          <p>Hadoop MapReduce provides facilities for the application-writer to
           specify compression for both intermediate map-outputs and the
           job-outputs i.e. output of the reduces. It also comes bundled with
           <a href="ext:api/org/apache/hadoop/io/compress/compressioncodec">
@@ -2120,12 +2357,12 @@
       <title>Example: WordCount v2.0</title>
       
       <p>Here is a more complete <code>WordCount</code> which uses many of the
-      features provided by the Map/Reduce framework we discussed so far.</p>
+      features provided by the MapReduce framework we discussed so far.</p>
       
       <p>This needs the HDFS to be up and running, especially for the 
       <code>DistributedCache</code>-related features. Hence it only works with a 
-      <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
-      <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
+      <a href="single_node_setup.html#SingleNodeSetup">pseudo-distributed</a> or
+      <a href="single_node_setup.html#Fully-Distributed+Operation">fully-distributed</a>
       Hadoop installation.</p>      
       
       <section>
@@ -3072,7 +3309,7 @@
         <title>Highlights</title>
         
         <p>The second version of <code>WordCount</code> improves upon the 
-        previous one by using some features offered by the Map/Reduce framework:
+        previous one by using some features offered by the MapReduce framework:
         </p>
         <ul>
           <li>

@@ -118,12 +118,13 @@ public class Trash extends Configured {
     for (int i = 0; i < 2; i++) {
       try {
         if (!fs.mkdirs(baseTrashPath, PERMISSION)) {      // create current
-          LOG.warn("Can't create trash directory: "+baseTrashPath);
+          LOG.warn("Can't create(mkdir) trash directory: "+baseTrashPath);
           return false;
         }
       } catch (IOException e) {
         LOG.warn("Can't create trash directory: "+baseTrashPath);
-        return false;
+        cause = e;
+        break;
       }
       try {
         //

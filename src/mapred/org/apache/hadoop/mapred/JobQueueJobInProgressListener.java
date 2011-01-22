@@ -54,6 +54,28 @@ class JobQueueJobInProgressListener extends JobInProgressListener {
     JobPriority getPriority() {return priority;}
     long getStartTime() {return startTime;}
     JobID getJobID() {return id;}
+    
+    @Override
+    public boolean equals(Object obj) {
+      if (obj == null || obj.getClass() != JobSchedulingInfo.class) {
+        return false;
+      } else if (obj == this) {
+        return true;
+      }
+      else if (obj instanceof JobSchedulingInfo) {
+        JobSchedulingInfo that = (JobSchedulingInfo)obj;
+        return (this.id.equals(that.id) && 
+                this.startTime == that.startTime && 
+                this.priority == that.priority);
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return (int)(id.hashCode() * priority.hashCode() + startTime);
+    }
+
   }
   
   static final Comparator<JobSchedulingInfo> FIFO_JOB_QUEUE_COMPARATOR

@@ -53,7 +53,8 @@ public final class WritableUtils  {
     }
   }
 
-  public static int  writeCompressedByteArray(DataOutput out, byte[] bytes) throws IOException {
+  public static int  writeCompressedByteArray(DataOutput out, 
+                                              byte[] bytes) throws IOException {
     if (bytes != null) {
       ByteArrayOutputStream bos =  new ByteArrayOutputStream();
       GZIPOutputStream gzout = new GZIPOutputStream(bos);

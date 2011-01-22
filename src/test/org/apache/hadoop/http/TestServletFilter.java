@@ -66,7 +66,7 @@ public class TestServletFilter extends junit.framework.TestCase {
     static public class Initializer extends FilterInitializer {
       public Initializer() {}
 
-      void initFilter(FilterContainer container) {
+      public void initFilter(FilterContainer container, Configuration conf) {
         container.addFilter("simple", SimpleFilter.class.getName(), null);
       }
     }

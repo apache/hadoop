@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.TaskStatus.State;
 
 import java.io.*;
 import java.util.*;
@@ -28,9 +31,11 @@ import java.util.*;
  * of the most recent TaskTrackerStatus objects for each
  * unique TaskTracker it knows about.
  *
+ * This is NOT a public interface!
  **************************************************/
-class TaskTrackerStatus implements Writable {
-
+public class TaskTrackerStatus implements Writable {
+  public static final Log LOG = LogFactory.getLog(TaskTrackerStatus.class);
+  
   static {                                        // register a ctor
     WritableFactories.setFactory
       (TaskTrackerStatus.class,
@@ -48,6 +53,7 @@ class TaskTrackerStatus implements Writable {
   volatile long lastSeen;
   private int maxMapTasks;
   private int maxReduceTasks;
+  private TaskTrackerHealthStatus healthStatus;
    
   /**
    * Class representing a collection of resources on this tasktracker.
@@ -191,6 +197,13 @@ class TaskTrackerStatus implements Writable {
   public TaskTrackerStatus() {
     taskReports = new ArrayList<TaskStatus>();
     resStatus = new ResourceStatus();
+    this.healthStatus = new TaskTrackerHealthStatus();
+  }
+
+  TaskTrackerStatus(String trackerName, String host) {
+    this();
+    this.trackerName = trackerName;
+    this.host = host;
   }
 
   /**
@@ -208,6 +221,7 @@ class TaskTrackerStatus implements Writable {
     this.maxMapTasks = maxMapTasks;
     this.maxReduceTasks = maxReduceTasks;
     this.resStatus = new ResourceStatus();
+    this.healthStatus = new TaskTrackerHealthStatus();
   }
 
   /**
@@ -247,19 +261,26 @@ class TaskTrackerStatus implements Writable {
   public List<TaskStatus> getTaskReports() {
     return taskReports;
   }
-    
+   
   /**
-   * Return the current MapTask count
+   * Is the given task considered as 'running' ?
+   * @param taskStatus
+   * @return
+   */
+  private boolean isTaskRunning(TaskStatus taskStatus) {
+    TaskStatus.State state = taskStatus.getRunState();
+    return (state == State.RUNNING || state == State.UNASSIGNED || 
+            taskStatus.inTaskCleanupPhase());
+  }
+  
+  /**
+   * Get the number of running map tasks.
+   * @return the number of running map tasks
    */
   public int countMapTasks() {
     int mapCount = 0;
-    for (Iterator it = taskReports.iterator(); it.hasNext();) {
-      TaskStatus ts = (TaskStatus) it.next();
-      TaskStatus.State state = ts.getRunState();
-      if (ts.getIsMap() &&
-          ((state == TaskStatus.State.RUNNING) ||
-           (state == TaskStatus.State.UNASSIGNED) ||
-           ts.inTaskCleanupPhase())) {
+    for (TaskStatus ts : taskReports) {
+      if (ts.getIsMap() && isTaskRunning(ts)) {
         mapCount++;
       }
     }
@@ -267,22 +288,63 @@ class TaskTrackerStatus implements Writable {
   }
 
   /**
-   * Return the current ReduceTask count
+   * Get the number of occupied map slots.
+   * @return the number of occupied map slots
+   */
+  public int countOccupiedMapSlots() {
+    int mapSlotsCount = 0;
+    for (TaskStatus ts : taskReports) {
+      if (ts.getIsMap() && isTaskRunning(ts)) {
+        mapSlotsCount += ts.getNumSlots();
+      }
+    }
+    return mapSlotsCount;
+  }
+  
+  /**
+   * Get available map slots.
+   * @return available map slots
+   */
+  public int getAvailableMapSlots() {
+    return getMaxMapSlots() - countOccupiedMapSlots();
+  }
+  
+  /**
+   * Get the number of running reduce tasks.
+   * @return the number of running reduce tasks
    */
   public int countReduceTasks() {
     int reduceCount = 0;
-    for (Iterator it = taskReports.iterator(); it.hasNext();) {
-      TaskStatus ts = (TaskStatus) it.next();
-      TaskStatus.State state = ts.getRunState();
-      if ((!ts.getIsMap()) &&
-          ((state == TaskStatus.State.RUNNING) ||  
-           (state == TaskStatus.State.UNASSIGNED) ||
-           ts.inTaskCleanupPhase())) {
+    for (TaskStatus ts : taskReports) {
+      if ((!ts.getIsMap()) && isTaskRunning(ts)) {
         reduceCount++;
       }
     }
     return reduceCount;
   }
+
+  /**
+   * Get the number of occupied reduce slots.
+   * @return the number of occupied reduce slots
+   */
+  public int countOccupiedReduceSlots() {
+    int reduceSlotsCount = 0;
+    for (TaskStatus ts : taskReports) {
+      if ((!ts.getIsMap()) && isTaskRunning(ts)) {
+        reduceSlotsCount += ts.getNumSlots();
+      }
+    }
+    return reduceSlotsCount;
+  }
+  
+  /**
+   * Get available reduce slots.
+   * @return available reduce slots
+   */
+  public int getAvailableReduceSlots() {
+    return getMaxReduceSlots() - countOccupiedReduceSlots();
+  }
+  
 
   /**
    */
@@ -296,15 +358,18 @@ class TaskTrackerStatus implements Writable {
   }
 
   /**
-   * Get the maximum concurrent tasks for this node.  (This applies
-   * per type of task - a node with maxTasks==1 will run up to 1 map
-   * and 1 reduce concurrently).
-   * @return maximum tasks this node supports
+   * Get the maximum map slots for this node.
+   * @return the maximum map slots for this node
    */
-  public int getMaxMapTasks() {
+  public int getMaxMapSlots() {
     return maxMapTasks;
   }
-  public int getMaxReduceTasks() {
+  
+  /**
+   * Get the maximum reduce slots for this node.
+   * @return the maximum reduce slots for this node
+   */
+  public int getMaxReduceSlots() {
     return maxReduceTasks;
   }  
   
@@ -317,13 +382,128 @@ class TaskTrackerStatus implements Writable {
   ResourceStatus getResourceStatus() {
     return resStatus;
   }
+
+  /**
+   * Returns health status of the task tracker.
+   * @return health status of Task Tracker
+   */
+  public TaskTrackerHealthStatus getHealthStatus() {
+    return healthStatus;
+  }
+
+  /**
+   * Static class which encapsulates the Node health
+   * related fields.
+   * 
+   */
+  /**
+   * Static class which encapsulates the Node health
+   * related fields.
+   * 
+   */
+  static class TaskTrackerHealthStatus implements Writable {
+    
+    private boolean isNodeHealthy;
+    
+    private String healthReport;
+    
+    private long lastReported;
+    
+    public TaskTrackerHealthStatus(boolean isNodeHealthy, String healthReport,
+        long lastReported) {
+      this.isNodeHealthy = isNodeHealthy;
+      this.healthReport = healthReport;
+      this.lastReported = lastReported;
+    }
+    
+    public TaskTrackerHealthStatus() {
+      this.isNodeHealthy = true;
+      this.healthReport = "";
+      this.lastReported = System.currentTimeMillis();
+    }
+
+    /**
+     * Sets whether or not a task tracker is healthy or not, based on the
+     * output from the node health script.
+     * 
+     * @param isNodeHealthy
+     */
+    void setNodeHealthy(boolean isNodeHealthy) {
+      this.isNodeHealthy = isNodeHealthy;
+    }
+
+    /**
+     * Returns if node is healthy or not based on result from node health
+     * script.
+     * 
+     * @return true if the node is healthy.
+     */
+    boolean isNodeHealthy() {
+      return isNodeHealthy;
+    }
+
+    /**
+     * Sets the health report based on the output from the health script.
+     * 
+     * @param healthReport
+     *          String listing cause of failure.
+     */
+    void setHealthReport(String healthReport) {
+      this.healthReport = healthReport;
+    }
+
+    /**
+     * Returns the health report of the node if any, The health report is
+     * only populated when the node is not healthy.
+     * 
+     * @return health report of the node if any
+     */
+    String getHealthReport() {
+      return healthReport;
+    }
+
+    /**
+     * Sets when the TT got its health information last 
+     * from node health monitoring service.
+     * 
+     * @param lastReported last reported time by node 
+     * health script
+     */
+    public void setLastReported(long lastReported) {
+      this.lastReported = lastReported;
+    }
+
+    /**
+     * Gets time of most recent node health update.
+     * 
+     * @return time stamp of most recent health update.
+     */
+    public long getLastReported() {
+      return lastReported;
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      isNodeHealthy = in.readBoolean();
+      healthReport = Text.readString(in);
+      lastReported = in.readLong();
+    }
+    
+    @Override
+    public void write(DataOutput out) throws IOException {
+      out.writeBoolean(isNodeHealthy);
+      Text.writeString(out, healthReport);
+      out.writeLong(lastReported);
+    }
+    
+  }
   
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, trackerName);
-    UTF8.writeString(out, host);
+    Text.writeString(out, trackerName);
+    Text.writeString(out, host);
     out.writeInt(httpPort);
     out.writeInt(failures);
     out.writeInt(maxMapTasks);
@@ -334,11 +514,12 @@ class TaskTrackerStatus implements Writable {
     for (TaskStatus taskStatus : taskReports) {
       TaskStatus.writeTaskStatus(out, taskStatus);
     }
+    getHealthStatus().write(out);
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.trackerName = UTF8.readString(in);
-    this.host = UTF8.readString(in);
+    this.trackerName = Text.readString(in);
+    this.host = Text.readString(in);
     this.httpPort = in.readInt();
     this.failures = in.readInt();
     this.maxMapTasks = in.readInt();
@@ -350,5 +531,6 @@ class TaskTrackerStatus implements Writable {
     for (int i = 0; i < numTasks; i++) {
       taskReports.add(TaskStatus.readTaskStatus(in));
     }
+    getHealthStatus().readFields(in);
   }
 }

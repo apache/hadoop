@@ -22,23 +22,18 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
 
 import junit.framework.TestCase;
 
 /** Unit tests for permission */
 public class TestPermission extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestPermission.class);
-
-  {
-    ((Log4JLogger)UserGroupInformation.LOG).getLogger().setLevel(Level.ALL);
-  }
 
   final private static Path ROOT_PATH = new Path("/data");
   final private static Path CHILD_DIR1 = new Path(ROOT_PATH, "child1");
@@ -63,10 +58,43 @@ public class TestPermission extends TestCase {
     return s.getPermission();
   }
 
+  /**
+   * Tests backward compatibility. Configuration can be
+   * either set with old param dfs.umask that takes decimal umasks
+   * or dfs.umaskmode that takes symbolic or octal umask.
+   */
+  public void testBackwardCompatibility() {
+    // Test 1 - old configuration key with decimal 
+    // umask value should be handled when set using 
+    // FSPermission.setUMask() API
+    FsPermission perm = new FsPermission((short)18);
+    Configuration conf = new Configuration();
+    FsPermission.setUMask(conf, perm);
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+    
+    // Test 2 - old configuration key set with decimal 
+    // umask value should be handled
+    perm = new FsPermission((short)18);
+    conf = new Configuration();
+    conf.set(FsPermission.DEPRECATED_UMASK_LABEL, "18");
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+    
+    // Test 3 - old configuration key overrides the new one
+    conf = new Configuration();
+    conf.set(FsPermission.DEPRECATED_UMASK_LABEL, "18");
+    conf.set(FsPermission.UMASK_LABEL, "000");
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+    
+    // Test 4 - new configuration key is handled
+    conf = new Configuration();
+    conf.set(FsPermission.UMASK_LABEL, "022");
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+  }
+  
   public void testCreate() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean("dfs.permissions", true);
-    conf.setInt(FsPermission.UMASK_LABEL, 0);
+    conf.set(FsPermission.UMASK_LABEL, "000");
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
 
@@ -94,7 +122,7 @@ public class TestPermission extends TestCase {
       checkPermission(fs, "/b1/b2", inheritPerm);
       checkPermission(fs, "/b1/b2/b3.txt", filePerm);
       
-      conf.setInt(FsPermission.UMASK_LABEL, 0022);
+      conf.set(FsPermission.UMASK_LABEL, "022");
       FsPermission permission = 
         FsPermission.createImmutable((short)0666);
       FileSystem.mkdirs(fs, new Path("/c1"), new FsPermission(permission));
@@ -117,7 +145,7 @@ public class TestPermission extends TestCase {
   }
 
   public void testFilePermision() throws Exception {
-    Configuration conf = new Configuration();
+    final Configuration conf = new Configuration();
     conf.setBoolean("dfs.permissions", true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
@@ -147,7 +175,7 @@ public class TestPermission extends TestCase {
       RAN.nextBytes(data);
       out.write(data);
       out.close();
-      nnfs.setPermission(CHILD_FILE1, new FsPermission((short)0700));
+      nnfs.setPermission(CHILD_FILE1, new FsPermission("700"));
 
       // following read is legal
       byte dataIn[] = new byte[FILE_LEN];
@@ -160,11 +188,10 @@ public class TestPermission extends TestCase {
 
       ////////////////////////////////////////////////////////////////
       // test illegal file/dir creation
-      UnixUserGroupInformation userGroupInfo = new UnixUserGroupInformation(
-          USER_NAME, GROUP_NAMES );
-      UnixUserGroupInformation.saveToConf(conf,
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, userGroupInfo);
-      FileSystem userfs = FileSystem.get(conf);
+      UserGroupInformation userGroupInfo = 
+        UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES );
+      
+      FileSystem userfs = DFSTestUtil.getFileSystemAs(userGroupInfo, conf);
 
       // make sure mkdir of a existing directory that is not owned by 
       // this user does not throw an exception.
@@ -180,7 +207,7 @@ public class TestPermission extends TestCase {
       assertTrue(!canOpen(userfs, CHILD_FILE1));
 
       nnfs.setPermission(ROOT_PATH, new FsPermission((short)0755));
-      nnfs.setPermission(CHILD_DIR1, new FsPermission((short)0777));
+      nnfs.setPermission(CHILD_DIR1, new FsPermission("777"));
       nnfs.setPermission(new Path("/"), new FsPermission((short)0777));
       final Path RENAME_PATH = new Path("/foo/bar");
       userfs.mkdirs(RENAME_PATH);

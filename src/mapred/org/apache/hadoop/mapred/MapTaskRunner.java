@@ -23,9 +23,11 @@ import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 
 /** Runs a map task. */
 class MapTaskRunner extends TaskRunner {
-
-  public MapTaskRunner(TaskInProgress task, TaskTracker tracker, JobConf conf) {
-    super(task, tracker, conf);
+  
+  public MapTaskRunner(TaskInProgress task, TaskTracker tracker, JobConf conf,
+                       TaskTracker.RunningJob rjob) 
+  throws IOException {
+    super(task, tracker, conf, rjob);
   }
   
   /** Delete any temporary files from previous failed attempts. */
@@ -34,13 +36,37 @@ class MapTaskRunner extends TaskRunner {
       return false;
     }
     
-    mapOutputFile.removeAll(getTask().getTaskID());
+    mapOutputFile.removeAll();
     return true;
   }
 
   /** Delete all of the temporary map output files. */
   public void close() throws IOException {
     LOG.info(getTask()+" done; removing files.");
-    mapOutputFile.removeAll(getTask().getTaskID());
+    mapOutputFile.removeAll();
   }
+
+  @Override
+  public String getChildJavaOpts(JobConf jobConf, String defaultValue) {
+    String user = 
+      jobConf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
+        super.getChildJavaOpts(jobConf, 
+            JobConf.DEFAULT_MAPRED_TASK_JAVA_OPTS));
+    String admin = 
+      jobConf.get(TaskRunner.MAPRED_MAP_ADMIN_JAVA_OPTS,
+        TaskRunner.DEFAULT_MAPRED_ADMIN_JAVA_OPTS);
+    return user + " " + admin;
+  }
+
+  @Override
+  public int getChildUlimit(JobConf jobConf) {
+    return jobConf.getInt(JobConf.MAPRED_MAP_TASK_ULIMIT, 
+                          super.getChildUlimit(jobConf));
+  }
+
+  @Override
+  public String getChildEnv(JobConf jobConf) {
+    return jobConf.get(JobConf.MAPRED_MAP_TASK_ENV, super.getChildEnv(jobConf));
+  }
+
 }

@@ -17,54 +17,113 @@
  */
 package org.apache.hadoop.security;
 
+import java.io.IOException;
 import java.security.Principal;
 
+import javax.security.auth.login.LoginContext;
+
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+
 /**
- * The username of a user.
+ * Save the full and short name of the user as a principal. This allows us to
+ * have a single type that we always look for when picking up user names.
  */
-public class User implements Principal {
-  final String user;
+class User implements Principal {
+  private final String fullName;
+  private final String shortName;
+  private AuthenticationMethod authMethod = null;
+  private LoginContext login = null;
+  private long lastLogin = 0;
+
+  public User(String name) {
+    this(name, null, null);
+  }
+  
+  public User(String name, AuthenticationMethod authMethod, LoginContext login) {
+    try {
+      shortName = new KerberosName(name).getShortName();
+    } catch (IOException ioe) {
+      throw new IllegalArgumentException("Illegal principal name " + name, ioe);
+    }
+    fullName = name;
+    this.authMethod = authMethod;
+    this.login = login;
+  }
 
   /**
-   * Create a new <code>User</code> with the given username.
-   * @param user user name
+   * Get the full name of the user.
    */
-  public User(String user) {
-    this.user = user;
+  @Override
+  public String getName() {
+    return fullName;
+  }
+  
+  /**
+   * Get the user name up to the first '/' or '@'
+   * @return the leading part of the user name
+   */
+  public String getShortName() {
+    return shortName;
   }
   
   @Override
-  public String getName() {
-    return user;
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    } else if (o == null || getClass() != o.getClass()) {
+      return false;
+    } else {
+      return ((fullName.equals(((User) o).fullName)) && (authMethod == ((User) o).authMethod));
+    }
   }
-
-  @Override
-  public String toString() {
-    return user;
-  }
-
+  
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((user == null) ? 0 : user.hashCode());
-    return result;
+    return fullName.hashCode();
+  }
+  
+  @Override
+  public String toString() {
+    return fullName;
   }
 
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj)
-      return true;
-    if (obj == null)
-      return false;
-    if (getClass() != obj.getClass())
-      return false;
-    User other = (User) obj;
-    if (user == null) {
-      if (other.user != null)
-        return false;
-    } else if (!user.equals(other.user))
-      return false;
-    return true;
+  public void setAuthenticationMethod(AuthenticationMethod authMethod) {
+    this.authMethod = authMethod;
+  }
+
+  public AuthenticationMethod getAuthenticationMethod() {
+    return authMethod;
+  }
+  
+  /**
+   * Returns login object
+   * @return login
+   */
+  public LoginContext getLogin() {
+    return login;
+  }
+  
+  /**
+   * Set the login object
+   * @param login
+   */
+  public void setLogin(LoginContext login) {
+    this.login = login;
+  }
+  
+  /**
+   * Set the last login time.
+   * @param time the number of milliseconds since the beginning of time
+   */
+  public void setLastLogin(long time) {
+    lastLogin = time;
+  }
+  
+  /**
+   * Get the time of the last login.
+   * @return the number of milliseconds since the beginning of time.
+   */
+  public long getLastLogin() {
+    return lastLogin;
   }
 }

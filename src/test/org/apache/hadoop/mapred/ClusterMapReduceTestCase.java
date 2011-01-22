@@ -82,7 +82,8 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
 
       ConfigurableMiniMRCluster.setConfiguration(props);
       //noinspection deprecation
-      mrCluster = new ConfigurableMiniMRCluster(2, getFileSystem().getName(), 1);
+      mrCluster = new ConfigurableMiniMRCluster(2, getFileSystem().getName(),
+                                                1, conf);
     }
   }
 
@@ -94,8 +95,9 @@ public abstract class ClusterMapReduceTestCase extends TestCase {
     }
 
     public ConfigurableMiniMRCluster(int numTaskTrackers, String namenode,
-                                     int numDir) throws Exception {
-      super(numTaskTrackers, namenode, numDir);
+                                     int numDir, JobConf conf)
+        throws Exception {
+      super(0,0, numTaskTrackers, namenode, numDir, null, null, null, conf);
     }
 
     public JobConf createJobConf() {

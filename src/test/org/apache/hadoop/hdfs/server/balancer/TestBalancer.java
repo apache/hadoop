@@ -40,7 +40,6 @@ import junit.framework.TestCase;
  * This class tests if a balancer schedules tasks correctly.
  */
 public class TestBalancer extends TestCase {
-  private static final Configuration CONF = new Configuration();
   final private static long CAPACITY = 500L;
   final private static String RACK0 = "/rack0";
   final private static String RACK1 = "/rack1";
@@ -56,12 +55,15 @@ public class TestBalancer extends TestCase {
   private Random r = new Random();
 
   static {
-    CONF.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
-    CONF.setInt("io.bytes.per.checksum", DEFAULT_BLOCK_SIZE);
-    CONF.setLong("dfs.heartbeat.interval", 1L);
-    CONF.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
-    CONF.setLong("dfs.balancer.movedWinWidth", 2000L);
     Balancer.setBlockMoveWaitTime(1000L) ;
+  }
+
+  private void initConf(Configuration conf) {
+    conf.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
+    conf.setInt("io.bytes.per.checksum", DEFAULT_BLOCK_SIZE);
+    conf.setLong("dfs.heartbeat.interval", 1L);
+    conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
+    conf.setLong("dfs.balancer.movedWinWidth", 2000L);
   }
 
   /* create a file with a length of <code>fileLen</code> */
@@ -77,11 +79,11 @@ public class TestBalancer extends TestCase {
   /* fill up a cluster with <code>numNodes</code> datanodes 
    * whose used space to be <code>size</code>
    */
-  private Block[] generateBlocks(long size, short numNodes) throws IOException {
-    cluster = new MiniDFSCluster( CONF, numNodes, true, null);
+  private Block[] generateBlocks(Configuration conf, long size, short numNodes) throws IOException {
+    cluster = new MiniDFSCluster( conf, numNodes, true, null);
     try {
       cluster.waitActive();
-      client = DFSClient.createNamenode(CONF);
+      client = DFSClient.createNamenode(conf);
 
       short replicationFactor = (short)(numNodes-1);
       long fileLen = size/replicationFactor;
@@ -140,7 +142,7 @@ public class TestBalancer extends TestCase {
    * then redistribute blocks according the required distribution.
    * Afterwards a balancer is running to balance the cluster.
    */
-  private void testUnevenDistribution(
+  private void testUnevenDistribution(Configuration conf,
       long distribution[], long capacities[], String[] racks) throws Exception {
     int numDatanodes = distribution.length;
     if (capacities.length != numDatanodes || racks.length != numDatanodes) {
@@ -154,18 +156,18 @@ public class TestBalancer extends TestCase {
     }
 
     // fill the cluster
-    Block[] blocks = generateBlocks(totalUsedSpace, (short)numDatanodes);
+    Block[] blocks = generateBlocks(conf, totalUsedSpace, (short)numDatanodes);
 
     // redistribute blocks
     Block[][] blocksDN = distributeBlocks(
         blocks, (short)(numDatanodes-1), distribution);
 
     // restart the cluster: do NOT format the cluster
-    CONF.set("dfs.safemode.threshold.pct", "0.0f"); 
-    cluster = new MiniDFSCluster(0, CONF, numDatanodes,
+    conf.set("dfs.safemode.threshold.pct", "0.0f"); 
+    cluster = new MiniDFSCluster(0, conf, numDatanodes,
         false, true, null, racks, capacities);
     cluster.waitActive();
-    client = DFSClient.createNamenode(CONF);
+    client = DFSClient.createNamenode(conf);
 
     cluster.injectBlocks(blocksDN);
 
@@ -173,7 +175,7 @@ public class TestBalancer extends TestCase {
     for(long capacity:capacities) {
       totalCapacity += capacity;
     }
-    runBalancer(totalUsedSpace, totalCapacity);
+    runBalancer(conf, totalUsedSpace, totalCapacity);
   }
 
   /* wait for one heartbeat */
@@ -194,15 +196,15 @@ public class TestBalancer extends TestCase {
    * @param newCapacity new node's capacity
    * @param new 
    */
-  private void test(long[] capacities, String[] racks, 
+  private void test(Configuration conf, long[] capacities, String[] racks, 
       long newCapacity, String newRack) throws Exception {
     int numOfDatanodes = capacities.length;
     assertEquals(numOfDatanodes, racks.length);
-    cluster = new MiniDFSCluster(0, CONF, capacities.length, true, true, null, 
+    cluster = new MiniDFSCluster(0, conf, capacities.length, true, true, null, 
         racks, capacities);
     try {
       cluster.waitActive();
-      client = DFSClient.createNamenode(CONF);
+      client = DFSClient.createNamenode(conf);
 
       long totalCapacity=0L;
       for(long capacity:capacities) {
@@ -212,25 +214,25 @@ public class TestBalancer extends TestCase {
       long totalUsedSpace = totalCapacity*3/10;
       createFile(totalUsedSpace/numOfDatanodes, (short)numOfDatanodes);
       // start up an empty node with the same capacity and on the same rack
-      cluster.startDataNodes(CONF, 1, true, null,
+      cluster.startDataNodes(conf, 1, true, null,
           new String[]{newRack}, new long[]{newCapacity});
 
       totalCapacity += newCapacity;
 
       // run balancer and validate results
-      runBalancer(totalUsedSpace, totalCapacity);
+      runBalancer(conf, totalUsedSpace, totalCapacity);
     } finally {
       cluster.shutdown();
     }
   }
 
   /* Start balancer and check if the cluster is balanced after the run */
-  private void runBalancer( long totalUsedSpace, long totalCapacity )
+  private void runBalancer(Configuration conf, long totalUsedSpace, long totalCapacity )
   throws Exception {
     waitForHeartBeat(totalUsedSpace, totalCapacity);
 
     // start rebalancing
-    balancer = new Balancer(CONF);
+    balancer = new Balancer(conf);
     balancer.run(new String[0]);
 
     waitForHeartBeat(totalUsedSpace, totalCapacity);
@@ -255,21 +257,39 @@ public class TestBalancer extends TestCase {
     } while(!balanced);
 
   }
+  
+  /** one-node cluster test*/
+  private void oneNodeTest(Configuration conf) throws Exception {
+    // add an empty node with half of the CAPACITY & the same rack
+    test(conf, new long[]{CAPACITY}, new String[]{RACK0}, CAPACITY/2, RACK0);
+  }
+  
+  /** two-node cluster test */
+  private void twoNodeTest(Configuration conf) throws Exception {
+    test(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
+        CAPACITY, RACK2);
+  }
+  
+  /** test using a user-supplied conf */
+  public void integrationTest(Configuration conf) throws Exception {
+    initConf(conf);
+    oneNodeTest(conf);
+  }
+  
   /** Test a cluster with even distribution, 
    * then a new empty node is added to the cluster*/
   public void testBalancer0() throws Exception {
-    /** one-node cluster test*/
-    // add an empty node with half of the CAPACITY & the same rack
-    test(new long[]{CAPACITY}, new String[]{RACK0}, CAPACITY/2, RACK0);
-
-    /** two-node cluster test */
-    test(new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
-        CAPACITY, RACK2);
+    Configuration conf = new Configuration();
+    initConf(conf);
+    oneNodeTest(conf);
+    twoNodeTest(conf);
   }
 
   /** Test unevenly distributed cluster */
   public void testBalancer1() throws Exception {
-    testUnevenDistribution(
+    Configuration conf = new Configuration();
+    initConf(conf);
+    testUnevenDistribution(conf,
         new long[] {50*CAPACITY/100, 10*CAPACITY/100},
         new long[]{CAPACITY, CAPACITY},
         new String[] {RACK0, RACK1});

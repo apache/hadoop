@@ -18,7 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.mapred.JobClient.RawSplit;
+import org.apache.hadoop.mapreduce.split.JobSplit;
 
 public class TestResourceEstimation extends TestCase {
   
@@ -32,7 +32,8 @@ public class TestResourceEstimation extends TestCase {
     jc.setNumMapTasks(maps);
     jc.setNumReduceTasks(reduces);
     
-    JobInProgress jip = new JobInProgress(jid, jc);
+    JobInProgress jip = new JobInProgress(jid, jc, 
+        UtilsForTests.getJobTracker());
     //unfortunately, we can't set job input size from here.
     ResourceEstimator re = new ResourceEstimator(jip);
     
@@ -44,9 +45,10 @@ public class TestResourceEstimation extends TestCase {
       
       TaskStatus ts = new MapTaskStatus();
       ts.setOutputSize(singleMapOutputSize);
-      RawSplit split = new RawSplit();
-      split.setDataLength(0);
-      TaskInProgress tip = new TaskInProgress(jid, "", split, null, jc, jip, 0);
+      JobSplit.TaskSplitMetaInfo split =
+          new JobSplit.TaskSplitMetaInfo(new String[0], 0, 0);
+      TaskInProgress tip = 
+        new TaskInProgress(jid, "", split, jip.jobtracker, jc, jip, 0, 1);
       re.updateWithCompletedTask(ts, tip);
     }
     assertEquals(2* singleMapOutputSize, re.getEstimatedMapOutputSize());
@@ -64,7 +66,8 @@ public class TestResourceEstimation extends TestCase {
     jc.setNumMapTasks(maps);
     jc.setNumReduceTasks(reduces);
     
-    JobInProgress jip = new JobInProgress(jid, jc) {
+    JobInProgress jip = new JobInProgress(jid, jc, 
+        UtilsForTests.getJobTracker()) {
       long getInputLength() {
         return singleMapInputSize*desiredMaps();
       }
@@ -79,9 +82,11 @@ public class TestResourceEstimation extends TestCase {
       
       TaskStatus ts = new MapTaskStatus();
       ts.setOutputSize(singleMapOutputSize);
-      RawSplit split = new RawSplit();
-      split.setDataLength(singleMapInputSize);
-      TaskInProgress tip = new TaskInProgress(jid, "", split, null, jc, jip, 0);
+      JobSplit.TaskSplitMetaInfo split =
+              new JobSplit.TaskSplitMetaInfo(new String[0], 0,
+                                           singleMapInputSize);
+      TaskInProgress tip = 
+        new TaskInProgress(jid, "", split, jip.jobtracker, jc, jip, 0, 1);
       re.updateWithCompletedTask(ts, tip);
     }
     
@@ -91,9 +96,10 @@ public class TestResourceEstimation extends TestCase {
     //add one more map task with input size as 0
     TaskStatus ts = new MapTaskStatus();
     ts.setOutputSize(singleMapOutputSize);
-    RawSplit split = new RawSplit();
-    split.setDataLength(0);
-    TaskInProgress tip = new TaskInProgress(jid, "", split, null, jc, jip, 0);
+    JobSplit.TaskSplitMetaInfo split =
+        new JobSplit.TaskSplitMetaInfo(new String[0], 0, 0);
+    TaskInProgress tip = 
+      new TaskInProgress(jid, "", split, jip.jobtracker, jc, jip, 0, 1);
     re.updateWithCompletedTask(ts, tip);
     
     long expectedTotalMapOutSize = (singleMapOutputSize*11) * 

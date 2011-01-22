@@ -18,20 +18,31 @@
 
 package org.apache.hadoop.fs;
 
-import java.io.*;
-
-import junit.framework.TestCase;
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.util.Date;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
 import java.util.Vector;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.mapred.*;
-import org.apache.hadoop.io.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.conf.*;
+import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Test;
 
 /**
  * Distributed checkup of the file system consistency.
@@ -43,8 +54,9 @@ import org.apache.hadoop.conf.*;
  * Optionally displays statistics on read performance.
  * 
  */
-public class DistributedFSCheck extends TestCase {
+public class DistributedFSCheck extends Configured implements Tool {
   // Constants
+  private static final Log LOG = LogFactory.getLog(DistributedFSCheck.class);
   private static final int TEST_TYPE_READ = 0;
   private static final int TEST_TYPE_CLEANUP = 2;
   private static final int DEFAULT_BUFFER_SIZE = 1000000;
@@ -52,7 +64,6 @@ public class DistributedFSCheck extends TestCase {
   private static final long MEGA = 0x100000;
   
   private static Configuration fsConfig = new Configuration();
-  private static final Log LOG = FileInputFormat.LOG;
   private static Path TEST_ROOT_DIR = new Path(System.getProperty("test.build.data","/benchmarks/DistributedFSCheck"));
   private static Path MAP_INPUT_DIR = new Path(TEST_ROOT_DIR, "map_input");
   private static Path READ_DIR = new Path(TEST_ROOT_DIR, "io_read");
@@ -70,6 +81,7 @@ public class DistributedFSCheck extends TestCase {
    * 
    * @throws Exception
    */
+  @Test
   public void testFSBlocks() throws Exception {
     testFSBlocks("/");
   }
@@ -92,7 +104,7 @@ public class DistributedFSCheck extends TestCase {
     Path inputFile = new Path(MAP_INPUT_DIR, "in_file");
     SequenceFile.Writer writer =
       SequenceFile.createWriter(fs, fsConfig, inputFile, 
-                                UTF8.class, LongWritable.class, CompressionType.NONE);
+                                Text.class, LongWritable.class, CompressionType.NONE);
     
     try {
       nrFiles = 0;
@@ -106,30 +118,41 @@ public class DistributedFSCheck extends TestCase {
   private void listSubtree(Path rootFile,
                            SequenceFile.Writer writer
                            ) throws IOException {
-    if (!fs.isDirectory(rootFile)) {
+    FileStatus rootStatus = fs.getFileStatus(rootFile);
+    listSubtree(rootStatus, writer);
+  }
+
+  private void listSubtree(FileStatus rootStatus,
+                           SequenceFile.Writer writer
+                           ) throws IOException {
+    Path rootFile = rootStatus.getPath();
+    if (!rootStatus.isDir()) {
       nrFiles++;
       // For a regular file generate <fName,offset> pairs
       long blockSize = fs.getDefaultBlockSize();
-      long fileLength = fs.getLength(rootFile);
+      long fileLength = rootStatus.getLen();
       for(long offset = 0; offset < fileLength; offset += blockSize)
-        writer.append(new UTF8(rootFile.toString()), new LongWritable(offset));
+        writer.append(new Text(rootFile.toString()), new LongWritable(offset));
       return;
     }
     
-    FileStatus children[] = fs.listStatus(rootFile);
-    if (children == null)
+    FileStatus [] children = null;
+    try {
+      children = fs.listStatus(rootFile);
+    } catch (FileNotFoundException fnfe ){
       throw new IOException("Could not get listing for " + rootFile);
+    }
+
     for (int i = 0; i < children.length; i++)
-      listSubtree(children[i].getPath(), writer);
+      listSubtree(children[i], writer);
   }
 
   /**
    * DistributedFSCheck mapper class.
    */
-  public static class DistributedFSCheckMapper extends IOMapperBase {
+  public static class DistributedFSCheckMapper extends IOMapperBase<Object> {
 
     public DistributedFSCheckMapper() { 
-      super(fsConfig); 
     }
 
     public Object doIO(Reporter reporter, 
@@ -163,14 +186,17 @@ public class DistributedFSCheck extends TestCase {
       return new Long(actualSize);
     }
     
-    void collectStats(OutputCollector<UTF8, UTF8> output, 
+    void collectStats(OutputCollector<Text, Text> output, 
                       String name, 
                       long execTime, 
                       Object corruptedBlock) throws IOException {
-      output.collect(new UTF8("l:blocks"), new UTF8(String.valueOf(1)));
+      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_LONG + "blocks"),
+          new Text(String.valueOf(1)));
 
       if (corruptedBlock.getClass().getName().endsWith("String")) {
-        output.collect(new UTF8("s:badBlocks"), new UTF8((String)corruptedBlock));
+        output.collect(
+            new Text(AccumulatingReducer.VALUE_TYPE_STRING + "badBlocks"),
+            new Text((String)corruptedBlock));
         return;
       }
       long totalSize = ((Long)corruptedBlock).longValue();
@@ -179,9 +205,12 @@ public class DistributedFSCheck extends TestCase {
       LOG.info("Exec time = " + execTime);
       LOG.info("IO rate = " + ioRateMbSec);
       
-      output.collect(new UTF8("l:size"), new UTF8(String.valueOf(totalSize)));
-      output.collect(new UTF8("l:time"), new UTF8(String.valueOf(execTime)));
-      output.collect(new UTF8("f:rate"), new UTF8(String.valueOf(ioRateMbSec*1000)));
+      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_LONG + "size"),
+          new Text(String.valueOf(totalSize)));
+      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_LONG + "time"),
+          new Text(String.valueOf(execTime)));
+      output.collect(new Text(AccumulatingReducer.VALUE_TYPE_FLOAT + "rate"),
+          new Text(String.valueOf(ioRateMbSec*1000)));
     }
   }
   
@@ -195,59 +224,17 @@ public class DistributedFSCheck extends TestCase {
     job.setReducerClass(AccumulatingReducer.class);
 
     FileOutputFormat.setOutputPath(job, READ_DIR);
-    job.setOutputKeyClass(UTF8.class);
-    job.setOutputValueClass(UTF8.class);
+    job.setOutputKeyClass(Text.class);
+    job.setOutputValueClass(Text.class);
     job.setNumReduceTasks(1);
     JobClient.runJob(job);
   }
 
-  public static void main(String[] args) throws Exception {
-    int testType = TEST_TYPE_READ;
-    int bufferSize = DEFAULT_BUFFER_SIZE;
-    String resFileName = DEFAULT_RES_FILE_NAME;
-    String rootName = "/";
-    boolean viewStats = false;
-
-    String usage = "Usage: DistributedFSCheck [-root name] [-clean] [-resFile resultFileName] [-bufferSize Bytes] [-stats] ";
-    
-    if (args.length == 1 && args[0].startsWith("-h")) {
-      System.err.println(usage);
-      System.exit(-1);
-    }
-    for(int i = 0; i < args.length; i++) {       // parse command line
-      if (args[i].equals("-root")) {
-        rootName = args[++i];
-      } else if (args[i].startsWith("-clean")) {
-        testType = TEST_TYPE_CLEANUP;
-      } else if (args[i].equals("-bufferSize")) {
-        bufferSize = Integer.parseInt(args[++i]);
-      } else if (args[i].equals("-resFile")) {
-        resFileName = args[++i];
-      } else if (args[i].startsWith("-stat")) {
-        viewStats = true;
-      }
-    }
-
-    LOG.info("root = " + rootName);
-    LOG.info("bufferSize = " + bufferSize);
-  
-    Configuration conf = new Configuration();  
-    conf.setInt("test.io.file.buffer.size", bufferSize);
-    DistributedFSCheck test = new DistributedFSCheck(conf);
-
-    if (testType == TEST_TYPE_CLEANUP) {
-      test.cleanup();
-      return;
-    }
-    test.createInputFile(rootName);
-    long tStart = System.currentTimeMillis();
-    test.runDistributedFSCheck();
-    long execTime = System.currentTimeMillis() - tStart;
-    
-    test.analyzeResult(execTime, resFileName, viewStats);
-    // test.cleanup();  // clean up after all to restore the system state
+  public static void main(String[] args) throws Exception{
+    int res = ToolRunner.run(new TestDFSIO(), args);
+    System.exit(res);
   }
-  
+
   private void analyzeResult(long execTime,
                              String resFileName,
                              boolean viewStats
@@ -327,5 +314,54 @@ public class DistributedFSCheck extends TestCase {
   private void cleanup() throws IOException {
     LOG.info("Cleaning up test files");
     fs.delete(TEST_ROOT_DIR, true);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception {
+    int testType = TEST_TYPE_READ;
+    int bufferSize = DEFAULT_BUFFER_SIZE;
+    String resFileName = DEFAULT_RES_FILE_NAME;
+    String rootName = "/";
+    boolean viewStats = false;
+
+    String usage = "Usage: DistributedFSCheck [-root name] [-clean] [-resFile resultFileName] [-bufferSize Bytes] [-stats] ";
+    
+    if (args.length == 1 && args[0].startsWith("-h")) {
+      System.err.println(usage);
+      return -1;
+    }
+    for(int i = 0; i < args.length; i++) {       // parse command line
+      if (args[i].equals("-root")) {
+        rootName = args[++i];
+      } else if (args[i].startsWith("-clean")) {
+        testType = TEST_TYPE_CLEANUP;
+      } else if (args[i].equals("-bufferSize")) {
+        bufferSize = Integer.parseInt(args[++i]);
+      } else if (args[i].equals("-resFile")) {
+        resFileName = args[++i];
+      } else if (args[i].startsWith("-stat")) {
+        viewStats = true;
+      }
+    }
+
+    LOG.info("root = " + rootName);
+    LOG.info("bufferSize = " + bufferSize);
+  
+    Configuration conf = new Configuration();  
+    conf.setInt("test.io.file.buffer.size", bufferSize);
+    DistributedFSCheck test = new DistributedFSCheck(conf);
+
+    if (testType == TEST_TYPE_CLEANUP) {
+      test.cleanup();
+      return 0;
+    }
+    test.createInputFile(rootName);
+    long tStart = System.currentTimeMillis();
+    test.runDistributedFSCheck();
+    long execTime = System.currentTimeMillis() - tStart;
+    
+    test.analyzeResult(execTime, resFileName, viewStats);
+    // test.cleanup();  // clean up after all to restore the system state
+    return 0;
   }
 }

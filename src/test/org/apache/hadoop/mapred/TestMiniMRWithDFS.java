@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import javax.security.auth.login.LoginException;
+
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
@@ -39,6 +41,8 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
@@ -101,7 +105,8 @@ public class TestMiniMRWithDFS extends TestCase {
     {
       
       Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
-                                   new OutputLogFilter()));
+          new Utils.OutputFileUtils.OutputFilesFilter()));
+
       for(int i=0; i < fileList.length; ++i) {
         LOG.info("File list[" + i + "]" + ": "+ fileList[i]);
         BufferedReader file = 
@@ -117,55 +122,107 @@ public class TestMiniMRWithDFS extends TestCase {
     }
     return result.toString();
   }
-  
+
   /**
    * Make sure that there are exactly the directories that we expect to find.
+   * 
+   * <br/>
+   * <br/>
+   * 
+   * For e.g., if we want to check the existence of *only* the directories for
+   * user1's tasks job1-attempt1, job1-attempt2, job2-attempt1, we pass user1 as
+   * user, {job1, job1, job2, job3} as jobIds and {attempt1, attempt2, attempt1,
+   * attempt3} as taskDirs.
+   * 
    * @param mr the map-reduce cluster
+   * @param user the name of the job-owner
+   * @param jobIds the list of jobs
    * @param taskDirs the task ids that should be present
    */
-  static void checkTaskDirectories(MiniMRCluster mr,
-                                           String[] jobIds,
-                                           String[] taskDirs) {
+  static void checkTaskDirectories(MiniMRCluster mr, String user,
+      String[] jobIds, String[] taskDirs) {
+
     mr.waitUntilIdle();
     int trackers = mr.getNumTaskTrackers();
-    List<String> neededDirs = new ArrayList<String>(Arrays.asList(taskDirs));
-    boolean[] found = new boolean[taskDirs.length];
-    for(int i=0; i < trackers; ++i) {
-      int numNotDel = 0;
+
+    List<String> observedJobDirs = new ArrayList<String>();
+    List<String> observedFilesInsideJobDir = new ArrayList<String>();
+
+    for (int i = 0; i < trackers; ++i) {
+
+      // Verify that mapred-local-dir and it's direct contents are valid
       File localDir = new File(mr.getTaskTrackerLocalDir(i));
-      LOG.debug("Tracker directory: " + localDir);
-      File trackerDir = new File(localDir, "taskTracker");
-      assertTrue("local dir " + localDir + " does not exist.", 
-                 localDir.isDirectory());
-      assertTrue("task tracker dir " + trackerDir + " does not exist.", 
-                 trackerDir.isDirectory());
-      String contents[] = localDir.list();
-      String trackerContents[] = trackerDir.list();
-      for(int j=0; j < contents.length; ++j) {
-        System.out.println("Local " + localDir + ": " + contents[j]);
-      }
-      for(int j=0; j < trackerContents.length; ++j) {
-        System.out.println("Local jobcache " + trackerDir + ": " + trackerContents[j]);
-      }
-      for(int fileIdx = 0; fileIdx < contents.length; ++fileIdx) {
-        String name = contents[fileIdx];
-        if (!("taskTracker".equals(contents[fileIdx]))) {
-          LOG.debug("Looking at " + name);
-          assertTrue("Spurious directory " + name + " found in " +
-                     localDir, false);
+      assertTrue("Local dir " + localDir + " does not exist.", localDir
+          .isDirectory());
+      LOG.info("Verifying contents of mapred.local.dir "
+          + localDir.getAbsolutePath());
+      // Verify contents(user-dir) of tracker-sub-dir
+      File trackerSubDir = new File(localDir, TaskTracker.SUBDIR);
+      if (trackerSubDir.isDirectory()) {
+
+        // Verify contents of user-dir and populate the job-dirs/attempt-dirs
+        // lists
+        File userDir = new File(trackerSubDir, user);
+        if (userDir.isDirectory()) {
+          LOG.info("Verifying contents of user-dir "
+              + userDir.getAbsolutePath());
+          verifyContents(new String[] { TaskTracker.JOBCACHE,
+              TaskTracker.DISTCACHEDIR }, userDir.list());
+
+          File jobCacheDir =
+              new File(localDir, TaskTracker.getJobCacheSubdir(user));
+          String[] jobDirs = jobCacheDir.list();
+          observedJobDirs.addAll(Arrays.asList(jobDirs));
+
+          for (String jobDir : jobDirs) {
+            String[] attemptDirs = new File(jobCacheDir, jobDir).list();
+            observedFilesInsideJobDir.addAll(Arrays.asList(attemptDirs));
+          }
         }
       }
-      for (int idx = 0; idx < neededDirs.size(); ++idx) {
-        String name = neededDirs.get(idx);
-        if (new File(new File(new File(trackerDir, "jobcache"),
-                              jobIds[idx]), name).isDirectory()) {
-          found[idx] = true;
-          numNotDel++;
-        }  
+    }
+
+    // Now verify that only expected job-dirs and attempt-dirs are present.
+    LOG.info("Verifying the list of job directories");
+    verifyContents(jobIds, observedJobDirs.toArray(new String[observedJobDirs
+        .size()]));
+    LOG.info("Verifying the list of task directories");
+    // All taskDirs should be present in the observed list. Other files like
+    // job.xml etc may be present too, we are not checking them here.
+    for (int j = 0; j < taskDirs.length; j++) {
+      assertTrue(
+          "Expected task-directory " + taskDirs[j] + " is not present!",
+          observedFilesInsideJobDir.contains(taskDirs[j]));
+    }
+  }
+
+  /**
+   * Check the list of expectedFiles against the list of observedFiles and make
+   * sure they both are the same. Duplicates can be present in either of the
+   * lists and all duplicate entries are treated as a single entity.
+   * 
+   * @param expectedFiles
+   * @param observedFiles
+   */
+  private static void verifyContents(String[] expectedFiles,
+      String[] observedFiles) {
+    boolean[] foundExpectedFiles = new boolean[expectedFiles.length];
+    boolean[] validObservedFiles = new boolean[observedFiles.length];
+    for (int j = 0; j < observedFiles.length; ++j) {
+      for (int k = 0; k < expectedFiles.length; ++k) {
+        if (expectedFiles[k].equals(observedFiles[j])) {
+          foundExpectedFiles[k] = true;
+          validObservedFiles[j] = true;
+        }
       }
     }
-    for(int i=0; i< found.length; i++) {
-      assertTrue("Directory " + taskDirs[i] + " not found", found[i]);
+    for (int j = 0; j < foundExpectedFiles.length; j++) {
+      assertTrue("Expected file " + expectedFiles[j] + " not found",
+          foundExpectedFiles[j]);
+    }
+    for (int j = 0; j < validObservedFiles.length; j++) {
+      assertTrue("Unexpected file " + observedFiles[j] + " found",
+          validObservedFiles[j]);
     }
   }
 
@@ -175,7 +232,8 @@ public class TestMiniMRWithDFS extends TestCase {
         NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
     double error = Math.abs(Math.PI - estimate);
     assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
-    checkTaskDirectories(mr, new String[]{}, new String[]{});
+    String userName = UserGroupInformation.getLoginUser().getUserName();
+    checkTaskDirectories(mr, userName, new String[] {}, new String[] {});
   }
 
   public static void runWordCount(MiniMRCluster mr, JobConf jobConf) 
@@ -194,9 +252,11 @@ public class TestMiniMRWithDFS extends TestCase {
     assertEquals("The\t1\nbrown\t1\nfox\t2\nhas\t1\nmany\t1\n" +
                  "quick\t1\nred\t1\nsilly\t1\nsox\t1\n", result.output);
     JobID jobid = result.job.getID();
-    TaskAttemptID taskid = new TaskAttemptID(new TaskID(jobid, true, 1),0);
-    checkTaskDirectories(mr, new String[]{jobid.toString()}, 
-                         new String[]{taskid.toString()});
+    TaskAttemptID taskid = new TaskAttemptID(
+        new TaskID(jobid, true, 1),0);
+    String userName = UserGroupInformation.getLoginUser().getUserName();
+    checkTaskDirectories(mr, userName, new String[] { jobid.toString() },
+        new String[] { taskid.toString() });
     // test with maps=0
     jobConf = mr.createJobConf();
     input = "owen is oom";
@@ -209,8 +269,10 @@ public class TestMiniMRWithDFS extends TestCase {
     long hdfsWrite = 
       counters.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
           Task.getFileSystemCounterNames("hdfs")[1]).getCounter();
+    long rawSplitBytesRead =
+      counters.findCounter(Task.Counter.SPLIT_RAW_BYTES).getCounter();
     assertEquals(result.output.length(), hdfsWrite);
-    assertEquals(input.length(), hdfsRead);
+    assertEquals(input.length() + rawSplitBytesRead, hdfsRead);
 
     // Run a job with input and output going to localfs even though the 
     // default fs is hdfs.
@@ -243,6 +305,9 @@ public class TestMiniMRWithDFS extends TestCase {
       dfs = new MiniDFSCluster(conf, 4, true, null);
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1);
+      // make cleanup inline sothat validation of existence of these directories
+      // can be done
+      mr.setInlineCleanupThreads();
 
       runPI(mr, mr.createJobConf());
       runWordCount(mr, mr.createJobConf());

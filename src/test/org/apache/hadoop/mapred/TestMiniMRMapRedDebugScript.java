@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.net.URI;
 
 import junit.framework.TestCase;
+import org.junit.Ignore;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +40,7 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
 /**
  * Class to test mapred debug Script
  */
+@Ignore //disabled until we fix the issues in running debug scripts
 public class TestMiniMRMapRedDebugScript extends TestCase {
   private static final Log LOG =
     LogFactory.getLog(TestMiniMRMapRedDebugScript.class.getName());

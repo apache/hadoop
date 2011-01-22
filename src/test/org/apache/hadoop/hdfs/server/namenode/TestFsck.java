@@ -18,36 +18,56 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import java.net.InetSocketAddress;
 import java.io.File;
-import java.io.RandomAccessFile;
-import java.lang.Exception;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.RandomAccessFile;
+import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
+import java.security.PrivilegedExceptionAction;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.log4j.Level;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.RollingFileAppender;
 
 /**
  * A JUnit test for doing fsck
  */
 public class TestFsck extends TestCase {
+  static final String auditLogFile = System.getProperty("test.build.dir",
+      "build/test") + "/audit.log";
+  
+  // Pattern for: 
+  // ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
+  static final Pattern fsckPattern = Pattern.compile(
+      "ugi=.*?\\s" + 
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
+      "cmd=fsck\\ssrc=\\/\\sdst=null\\s" + 
+      "perm=null");
+  
   static String runFsck(Configuration conf, int expectedErrCode, 
                         boolean checkErrorCode,String... path) 
                         throws Exception {
@@ -55,11 +75,11 @@ public class TestFsck extends TestCase {
     ByteArrayOutputStream bStream = new ByteArrayOutputStream();
     PrintStream newOut = new PrintStream(bStream, true);
     System.setOut(newOut);
-    ((Log4JLogger)PermissionChecker.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSPermissionChecker.LOG).getLogger().setLevel(Level.ALL);
     int errCode = ToolRunner.run(new DFSck(conf), path);
     if (checkErrorCode)
       assertEquals(expectedErrCode, errCode);
-    ((Log4JLogger)PermissionChecker.LOG).getLogger().setLevel(Level.INFO);
+    ((Log4JLogger)FSPermissionChecker.LOG).getLogger().setLevel(Level.INFO);
     System.setOut(oldOut);
     return bStream.toString();
   }
@@ -71,12 +91,23 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new Configuration();
+      final long precision = 1L;
+      conf.setLong("dfs.access.time.precision", precision);
       conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
-      util.createFiles(fs, "/srcdat");
-      util.waitReplication(fs, "/srcdat", (short)3);
+      final String fileName = "/srcdat";
+      util.createFiles(fs, fileName);
+      util.waitReplication(fs, fileName, (short)3);
+      FileStatus[] stats = fs.listStatus(new Path(fileName));
+      assertFalse(0==stats.length);
+      final Path file = stats[0].getPath();
+      long aTime = fs.getFileStatus(file).getAccessTime();
+      Thread.sleep(2*precision);
+      setupAuditLogs();
       String outStr = runFsck(conf, 0, true, "/");
+      verifyAuditLogs();
+      assertEquals(aTime, fs.getFileStatus(file).getAccessTime());
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       System.out.println(outStr);
       if (fs != null) {try{fs.close();} catch(Exception e){}}
@@ -101,6 +132,33 @@ public class TestFsck extends TestCase {
     }
   }
 
+  /** Sets up log4j logger for auditlogs */
+  private void setupAuditLogs() throws IOException {
+    File file = new File(auditLogFile);
+    if (file.exists()) {
+      file.delete();
+    }
+    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    logger.setLevel(Level.INFO);
+    PatternLayout layout = new PatternLayout("%m%n");
+    RollingFileAppender appender = new RollingFileAppender(layout, auditLogFile);
+    logger.addAppender(appender);
+  }
+  
+  private void verifyAuditLogs() throws IOException {
+    // Turn off the logs
+    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    logger.setLevel(Level.OFF);
+    
+    // Ensure audit log has only one for FSCK
+    BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
+    String line = reader.readLine();
+    assertNotNull(line);
+    assertTrue("Expected fsck event not found in audit log",
+        fsckPattern.matcher(line).matches());
+    assertNull("Unexpected event in audit log", reader.readLine());
+  }
+  
   public void testFsckNonExistent() throws Exception {
     DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
     MiniDFSCluster cluster = null;
@@ -118,6 +176,54 @@ public class TestFsck extends TestCase {
       util.cleanup(fs, "/srcdat");
     } finally {
       if (fs != null) {try{fs.close();} catch(Exception e){}}
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
+  /** Test fsck with permission set on inodes */
+  public void testFsckPermission() throws Exception {
+    final DFSTestUtil util = new DFSTestUtil(getClass().getSimpleName(), 20, 3, 8*1024);
+    final Configuration conf = new Configuration();
+    conf.setLong("dfs.blockreport.intervalMsec", 10000L);
+
+    MiniDFSCluster cluster = null;
+    try {
+      // Create a cluster with the current user, write some files
+      cluster = new MiniDFSCluster(conf, 4, true, null);
+      final MiniDFSCluster c2 = cluster;
+      final String dir = "/dfsck";
+      final Path dirpath = new Path(dir);
+      final FileSystem fs = c2.getFileSystem();
+      
+      util.createFiles(fs, dir);
+      util.waitReplication(fs, dir, (short)3);
+      fs.setPermission(dirpath, new FsPermission((short)0700));
+      
+      // run DFSck as another user, should fail with permission issue
+      UserGroupInformation fakeUGI = UserGroupInformation.createUserForTesting(
+          "ProbablyNotARealUserName", new String[] { "ShangriLa" });
+      fakeUGI.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          System.out.println(runFsck(conf, -1, true, dir));
+          return null;
+        }
+      });
+      
+      //set permission and try DFSck again as the fake user, should succeed
+      fs.setPermission(dirpath, new FsPermission((short)0777));
+      fakeUGI.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final String outStr = runFsck(conf, 0, true, dir);
+          System.out.println(outStr);
+          assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+          return null;
+        }
+      });
+      
+      util.cleanup(fs, dir);
+    } finally {
       if (cluster != null) { cluster.shutdown(); }
     }
   }

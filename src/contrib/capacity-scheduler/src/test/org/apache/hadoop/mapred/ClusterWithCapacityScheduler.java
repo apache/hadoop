@@ -146,7 +146,7 @@ public class ClusterWithCapacityScheduler extends TestCase {
   }
 
   protected JobConf getJobConf() {
-    return this.jobConf;
+    return new JobConf(this.jobConf);
   }
 
   protected JobTracker getJobTracker() {
@@ -195,6 +195,13 @@ public class ClusterWithCapacityScheduler extends TestCase {
       LOG.info("Waiting till cluster reaches steady state. currentTasks : "
           + currentTasks + " total cluster capacity : " + maxTasks);
     }
+  }
+
+  /**
+   * @return the mrCluster
+   */
+  public MiniMRCluster getMrCluster() {
+    return mrCluster;
   }
 
   static class MyClassLoader extends ClassLoader {

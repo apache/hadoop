@@ -163,6 +163,9 @@
     ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
     jspHelper.DFSNodesStatus(live, dead);
 
+    ArrayList<DatanodeDescriptor> decommissioning = fsn
+        .getDecommissioningNodes();
+	
     sorterField = request.getParameter("sorter/field");
     sorterOrder = request.getParameter("sorter/order");
     if ( sorterField == null )
@@ -214,8 +217,14 @@
 	       		colTxt() + ":" + colTxt() + live.size() +
 	       rowTxt() + colTxt() +
 	       		"<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> " +
-	       		colTxt() + ":" + colTxt() + dead.size() +
-               "</table></div><br>\n" );
+	       		colTxt() + ":" + colTxt() + dead.size() + rowTxt() + colTxt()
+				+ "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
+				+ "Decommissioning Nodes</a> "
+				+ colTxt() + ":" + colTxt() + decommissioning.size()
+				+ rowTxt() + colTxt()
+				+ "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
+				+ fsn.getUnderReplicatedBlocks()
+                + "</table></div><br>\n" );
     
     if (live.isEmpty() && dead.isEmpty()) {
         out.print("There are no datanodes in the cluster");

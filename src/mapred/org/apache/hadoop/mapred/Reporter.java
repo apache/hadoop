@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import org.apache.hadoop.mapred.Counters.Counter;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.Progressable;
 
 /** 

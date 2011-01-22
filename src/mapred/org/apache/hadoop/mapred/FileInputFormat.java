@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
@@ -69,6 +70,9 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         return !name.startsWith("_") && !name.startsWith("."); 
       }
     }; 
+  
+  static final String NUM_INPUT_FILES = "mapreduce.input.num.files";
+  
   protected void setMinSplitSize(long minSplitSize) {
     this.minSplitSize = minSplitSize;
   }
@@ -152,6 +156,9 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
       throw new IOException("No input paths specified in job");
     }
 
+    // get tokens for all the required FileSystems..
+    TokenCache.obtainTokensForNamenodes(job.getCredentials(), dirs, job);
+    
     List<FileStatus> result = new ArrayList<FileStatus>();
     List<IOException> errors = new ArrayList<IOException>();
     
@@ -200,6 +207,8 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     throws IOException {
     FileStatus[] files = listStatus(job);
     
+    // Save the number of input files in the job-conf
+    job.setLong(NUM_INPUT_FILES, files.length);
     long totalSize = 0;                           // compute total size
     for (FileStatus file: files) {                // check we have valid files
       if (file.isDir()) {

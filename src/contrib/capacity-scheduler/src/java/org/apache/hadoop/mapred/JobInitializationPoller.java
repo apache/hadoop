@@ -19,11 +19,15 @@ package org.apache.hadoop.mapred;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -68,16 +72,6 @@ public class JobInitializationPoller extends Thread {
   private static final Log LOG = LogFactory
       .getLog(JobInitializationPoller.class.getName());
 
-  /*
-   * The poller picks up jobs across users to initialize based on user limits.
-   * Suppose the user limit for a queue is 25%, it means atmost 4 users' jobs
-   * can run together. However, in order to account for jobs from a user that
-   * might complete faster than others, it initializes jobs from an additional
-   * number of users as a backlog. This variable defines the additional
-   * number of users whose jobs can be considered for initializing. 
-   */
-  private static final int MAX_ADDITIONAL_USERS_TO_INIT = 2;
-
   private JobQueuesManager jobQueueManager;
   private long sleepInterval;
   private int poolSize;
@@ -100,11 +94,12 @@ public class JobInitializationPoller extends Thread {
      * The hash map which maintains relationship between queue to jobs to
      * initialize per queue.
      */
-    private HashMap<String, TreeMap<JobSchedulingInfo, JobInProgress>> jobsPerQueue;
+    private Map<String, Map<JobSchedulingInfo, JobInProgress>> jobsPerQueue;
 
     public JobInitializationThread() {
       startIniting = true;
-      jobsPerQueue = new HashMap<String, TreeMap<JobSchedulingInfo, JobInProgress>>();
+      jobsPerQueue = 
+        new ConcurrentHashMap<String, Map<JobSchedulingInfo, JobInProgress>>();
     }
 
     @Override
@@ -156,8 +151,7 @@ public class JobInitializationPoller extends Thread {
      * @return First job in the queue and removes it.
      */
     private JobInProgress getFirstJobInQueue(String queue) {
-      TreeMap<JobSchedulingInfo, JobInProgress> jobsList = jobsPerQueue
-          .get(queue);
+      Map<JobSchedulingInfo, JobInProgress> jobsList = jobsPerQueue.get(queue);
       synchronized (jobsList) {
         if (jobsList.isEmpty()) {
           return null;
@@ -186,8 +180,7 @@ public class JobInitializationPoller extends Thread {
     }
 
     void addJobsToQueue(String queue, JobInProgress job) {
-      TreeMap<JobSchedulingInfo, JobInProgress> jobs = jobsPerQueue
-          .get(queue);
+      Map<JobSchedulingInfo, JobInProgress> jobs = jobsPerQueue.get(queue);
       if (jobs == null) {
         LOG.error("Invalid queue passed to the thread : " + queue
             + " For job :: " + job.getJobID());
@@ -199,43 +192,20 @@ public class JobInitializationPoller extends Thread {
       }
     }
 
-    void addQueue(String queue) {
-      TreeMap<JobSchedulingInfo, JobInProgress> jobs = new TreeMap<JobSchedulingInfo, JobInProgress>(
-          jobQueueManager.getComparator(queue));
-      jobsPerQueue.put(queue, jobs);
+    void addQueue(String queueName) {
+      CapacitySchedulerQueue queue = jobQueueManager.getQueue(queueName);
+
+      TreeMap<JobSchedulingInfo, JobInProgress> jobs = 
+        new TreeMap<JobSchedulingInfo, JobInProgress>(queue.getComparator());
+      jobsPerQueue.put(queueName, jobs);
     }
   }
-
-  /**
-   * The queue information class maintains following information per queue:
-   * Maximum users allowed to initialize job in the particular queue. Maximum
-   * jobs allowed to be initialize per user in the queue.
-   * 
-   */
-  private class QueueInfo {
-    String queue;
-    int maxUsersAllowedToInitialize;
-    int maxJobsPerUserToInitialize;
-
-    public QueueInfo(String queue, int maxUsersAllowedToInitialize,
-        int maxJobsPerUserToInitialize) {
-      this.queue = queue;
-      this.maxJobsPerUserToInitialize = maxJobsPerUserToInitialize;
-      this.maxUsersAllowedToInitialize = maxUsersAllowedToInitialize;
-    }
-  }
-
-  /**
-   * Map which contains the configuration used for initializing jobs
-   * in that associated to a particular job queue.
-   */
-  private HashMap<String, QueueInfo> jobQueues;
 
   /**
    * Set of jobs which have been passed to Initialization threads.
    * This is maintained so that we dont call initTasks() for same job twice.
    */
-  private HashMap<JobID,JobInProgress> initializedJobs;
+  private HashMap<JobID, JobInProgress> initializedJobs;
 
   private volatile boolean running;
 
@@ -244,40 +214,34 @@ public class JobInitializationPoller extends Thread {
    * The map which provides information which thread should be used to
    * initialize jobs for a given job queue.
    */
-  private HashMap<String, JobInitializationThread> threadsToQueueMap;
+  private Map<String, JobInitializationThread> threadsToQueueMap;
 
   public JobInitializationPoller(JobQueuesManager mgr,
       CapacitySchedulerConf rmConf, Set<String> queue, 
       TaskTrackerManager ttm) {
     initializedJobs = new HashMap<JobID,JobInProgress>();
-    jobQueues = new HashMap<String, QueueInfo>();
     this.jobQueueManager = mgr;
-    threadsToQueueMap = new HashMap<String, JobInitializationThread>();
+    threadsToQueueMap = 
+      Collections.synchronizedMap(new HashMap<String, 
+          JobInitializationThread>());
     super.setName("JobInitializationPollerThread");
     running = true;
     this.ttm = ttm;
   }
 
+  void setTaskTrackerManager(TaskTrackerManager ttm) {
+    this.ttm = ttm;
+  }
+  
   /*
    * method to read all configuration values required by the initialisation
    * poller
    */
 
-  void init(Set<String> queues, CapacitySchedulerConf capacityConf) {
-    for (String queue : queues) {
-      int userlimit = capacityConf.getMinimumUserLimitPercent(queue);
-      int maxUsersToInitialize = ((100 / userlimit) + MAX_ADDITIONAL_USERS_TO_INIT);
-      int maxJobsPerUserToInitialize = capacityConf
-          .getMaxJobsPerUserToInitialize(queue);
-      QueueInfo qi = new QueueInfo(queue, maxUsersToInitialize,
-          maxJobsPerUserToInitialize);
-      jobQueues.put(queue, qi);
-    }
+  void init(int numQueues, 
+            CapacitySchedulerConf capacityConf) {
     sleepInterval = capacityConf.getSleepInterval();
-    poolSize = capacityConf.getMaxWorkerThreads();
-    if (poolSize > queues.size()) {
-      poolSize = queues.size();
-    }
+    poolSize = Math.min(capacityConf.getMaxWorkerThreads(), numQueues);
     assignThreadsToQueues();
     Collection<JobInitializationThread> threads = threadsToQueueMap.values();
     for (JobInitializationThread t : threads) {
@@ -288,6 +252,20 @@ public class JobInitializationPoller extends Thread {
     }
   }
 
+  void reinit(Set<String> queues) {
+    Set<String> oldQueues = threadsToQueueMap.keySet();
+    int i=0;
+    JobInitializationThread[] threads = 
+      threadsToQueueMap.values().toArray(new JobInitializationThread[0]);
+    for (String newQueue : queues) {
+      if (!oldQueues.contains(newQueue)) {
+        JobInitializationThread t = threads[i++ % threads.length];
+        t.addQueue(newQueue);
+        threadsToQueueMap.put(newQueue, t);
+      }
+    }
+  }
+  
   /**
    * This is main thread of initialization poller, We essentially do 
    * following in the main threads:
@@ -322,7 +300,7 @@ public class JobInitializationPoller extends Thread {
    * 
    */
   void selectJobsToInitialize() {
-    for (String queue : jobQueues.keySet()) {
+    for (String queue : jobQueueManager.getAllQueues()) {
       ArrayList<JobInProgress> jobsToInitialize = getJobsToInitialize(queue);
       printJobs(jobsToInitialize);
       JobInitializationThread t = threadsToQueueMap.get(queue);
@@ -367,8 +345,9 @@ public class JobInitializationPoller extends Thread {
    * 
    */
   private void assignThreadsToQueues() {
-    int countOfQueues = jobQueues.size();
-    String[] queues = (String[]) jobQueues.keySet().toArray(
+    Collection<String> queueNames = jobQueueManager.getAllQueues();
+    int countOfQueues = queueNames.size();
+    String[] queues = (String[]) queueNames.toArray(
         new String[countOfQueues]);
     int numberOfQueuesPerThread = countOfQueues / poolSize;
     int numberOfQueuesAssigned = 0;
@@ -424,22 +403,17 @@ public class JobInitializationPoller extends Thread {
    * already been initialized. The latter user's initialized jobs are redundant,
    * but we'll leave them initialized.
    * 
-   * @param queue name of the queue to pick the jobs to initialize.
+   * @param queueName name of the queue to pick the jobs to initialize.
    * @return list of jobs to be initalized in a queue. An empty queue is
    *         returned if no jobs are found.
    */
-  ArrayList<JobInProgress> getJobsToInitialize(String queue) {
-    QueueInfo qi = jobQueues.get(queue);
+  ArrayList<JobInProgress> getJobsToInitialize(String queueName) {
+    CapacitySchedulerQueue queue = jobQueueManager.getQueue(queueName);
     ArrayList<JobInProgress> jobsToInitialize = new ArrayList<JobInProgress>();
-    // use the configuration parameter which is configured for the particular
-    // queue.
-    int maximumUsersAllowedToInitialize = qi.maxUsersAllowedToInitialize;
-    int maxJobsPerUserAllowedToInitialize = qi.maxJobsPerUserToInitialize;
-    int maxJobsPerQueueToInitialize = maximumUsersAllowedToInitialize
-        * maxJobsPerUserAllowedToInitialize;
-    int countOfJobsInitialized = 0;
-    HashMap<String, Integer> userJobsInitialized = new HashMap<String, Integer>();
-    Collection<JobInProgress> jobs = jobQueueManager.getWaitingJobs(queue);
+
+    Set<String> usersOverLimit = new HashSet<String>();
+    Collection<JobInProgress> jobs = queue.getWaitingJobs();
+    
     /*
      * Walk through the collection of waiting jobs.
      *  We maintain a map of jobs that have already been initialized. If a 
@@ -455,40 +429,45 @@ public class JobInitializationPoller extends Thread {
      */
     for (JobInProgress job : jobs) {
       String user = job.getProfile().getUser();
-      int numberOfJobs = userJobsInitialized.get(user) == null ? 0
-          : userJobsInitialized.get(user);
-      // If the job is already initialized then add the count against user
-      // then continue.
+      // If the job is already initialized then continue.
       if (initializedJobs.containsKey(job.getJobID())) {
-        userJobsInitialized.put(user, Integer.valueOf(numberOfJobs + 1));
-        countOfJobsInitialized++;
         continue;
       }
-      boolean isUserPresent = userJobsInitialized.containsKey(user);
-      if (!isUserPresent
-          && userJobsInitialized.size() < maximumUsersAllowedToInitialize) {
-        // this is a new user being considered and the number of users
-        // is within limits.
-        userJobsInitialized.put(user, Integer.valueOf(numberOfJobs + 1));
-        jobsToInitialize.add(job);
-        initializedJobs.put(job.getJobID(),job);
-        countOfJobsInitialized++;
-      } else if (isUserPresent
-          && numberOfJobs < maxJobsPerUserAllowedToInitialize) {
-        userJobsInitialized.put(user, Integer.valueOf(numberOfJobs + 1));
-        jobsToInitialize.add(job);
-        initializedJobs.put(job.getJobID(),job);
-        countOfJobsInitialized++;
-      }
-      /*
-       * if the maximum number of jobs to initalize for a queue is reached
-       * then we stop looking at further jobs. The jobs beyond this number
-       * can be initialized.
+
+      /** 
+       * Ensure we will not exceed queue limits
        */
-      if(countOfJobsInitialized > maxJobsPerQueueToInitialize) {
+      if (!queue.initializeJobForQueue(job)) {
         break;
       }
+      
+      
+      /**
+       *  Ensure we will not exceed user limits
+       */
+      
+      // Ensure we don't process a user's jobs out of order 
+      if (usersOverLimit.contains(user)) {
+        continue;
+      }
+      
+      // Check if the user is within limits 
+      if (!queue.initializeJobForUser(job)) {
+        usersOverLimit.add(user);   // Note down the user
+        continue;
+      }
+      
+      // Ready to initialize! 
+      // Double check to ensure that the job has not been killed!
+      if (job.getStatus().getRunState() == JobStatus.PREP) {
+        initializedJobs.put(job.getJobID(), job);
+        jobsToInitialize.add(job);
+
+        // Inform the queue
+        queue.addInitializingJob(job);
+      }
     }
+    
     return jobsToInitialize;
   }
 
@@ -535,7 +514,6 @@ public class JobInitializationPoller extends Thread {
           LOG.info("Removing scheduled jobs from waiting queue"
               + job.getJobID());
           jobsIterator.remove();
-          jobQueueManager.removeJobFromWaitingQueue(job);
           continue;
         }
       }

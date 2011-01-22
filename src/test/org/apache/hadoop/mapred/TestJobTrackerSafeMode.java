@@ -27,12 +27,16 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.HashSet;
 import java.util.Set;
+import org.junit.*;
 
 /** 
  * This test checks jobtracker in safe mode. In safe mode the jobtracker upon 
  * restart doesnt schedule any new tasks and waits for the (old) trackers to 
  * join back.
  */
+/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
+ */
+@Ignore
 public class TestJobTrackerSafeMode extends TestCase {
   final Path testDir = 
     new Path(System.getProperty("test.build.data", "/tmp"), "jt-safemode");
@@ -70,7 +74,7 @@ public class TestJobTrackerSafeMode extends TestCase {
    *   - check that after all the trackers are recovered, scheduling is opened 
    */
   private void testSafeMode(MiniDFSCluster dfs, MiniMRCluster mr) 
-  throws IOException {
+  throws IOException, InterruptedException {
     FileSystem fileSys = dfs.getFileSystem();
     JobConf jobConf = mr.createJobConf();
     String mapSignalFile = UtilsForTests.getMapSignalFile(shareDir);
@@ -194,7 +198,7 @@ public class TestJobTrackerSafeMode extends TestCase {
     long jobtrackerRecoveryFinishTime = 
       jobtracker.getStartTime() + jobtracker.getRecoveryDuration();
     for (String trackerName : present) {
-      TaskTrackerStatus status = jobtracker.getTaskTracker(trackerName);
+      TaskTrackerStatus status = jobtracker.getTaskTrackerStatus(trackerName);
       // check if the status is present and also the tracker has contacted back
       // after restart
       if (status == null 
@@ -203,7 +207,7 @@ public class TestJobTrackerSafeMode extends TestCase {
       }
     }
     for (String trackerName : absent) {
-      TaskTrackerStatus status = jobtracker.getTaskTracker(trackerName);
+      TaskTrackerStatus status = jobtracker.getTaskTrackerStatus(trackerName);
       // check if the status is still present
       if ( status != null) {
         return false;
@@ -214,8 +218,9 @@ public class TestJobTrackerSafeMode extends TestCase {
 
   /**
    * Test {@link JobTracker}'s safe mode.
+   * @throws InterruptedException 
    */
-  public void testJobTrackerSafeMode() throws IOException {
+  public void testJobTrackerSafeMode() throws IOException,InterruptedException{
     String namenode = null;
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
@@ -274,7 +279,8 @@ public class TestJobTrackerSafeMode extends TestCase {
     }
   }
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) 
+  throws IOException, InterruptedException {
     new TestJobTrackerSafeMode().testJobTrackerSafeMode();
   }
 }

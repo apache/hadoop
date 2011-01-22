@@ -63,6 +63,10 @@ import org.apache.hadoop.util.ToolRunner;
  *   will be used as the scratch space. Note that password-less SSH must be set up 
  *   between the client machine from where the test is submitted, and the cluster 
  *   nodes where the test runs.
+ *   
+ *   The test should be run on a <b>free</b> cluster where there is no other parallel
+ *   job submission going on. Submission of other jobs while the test runs can cause
+ *   the tests/jobs submitted to fail.
  */
 
 public class ReliabilityTest extends Configured implements Tool {
@@ -77,7 +81,10 @@ public class ReliabilityTest extends Configured implements Tool {
     		"\n[-scratchdir] points to a scratch space on this host where temp" +
     		" files for this test will be created. Defaults to current working" +
     		" dir. \nPasswordless SSH must be set up between this host and the" +
-    		" nodes which the test is going to use");
+    		" nodes which the test is going to use.\n"+
+        "The test should be run on a free cluster with no parallel job submission" +
+        " going on, as the test requires to restart TaskTrackers and kill tasks" +
+        " any job submission while the tests are running can cause jobs/tests to fail");
     System.exit(-1);
   }
   
@@ -191,7 +198,6 @@ public class ReliabilityTest extends Configured implements Tool {
   private void runTest(final JobClient jc, final Configuration conf,
       final String jobClass, final String[] args, KillTaskThread killTaskThread,
       KillTrackerThread killTrackerThread) throws Exception {
-    int prevJobsNum = jc.getAllJobs().length;
     Thread t = new Thread("Job Test") {
       public void run() {
         try {
@@ -209,12 +215,17 @@ public class ReliabilityTest extends Configured implements Tool {
     t.start();
     JobStatus[] jobs;
     //get the job ID. This is the job that we just submitted
-    while ((jobs = jc.getAllJobs()).length - prevJobsNum == 0) {
+    while ((jobs = jc.jobsToComplete()).length == 0) {
       LOG.info("Waiting for the job " + jobClass +" to start");
       Thread.sleep(1000);
     }
     JobID jobId = jobs[jobs.length - 1].getJobID();
     RunningJob rJob = jc.getJob(jobId);
+    if(rJob.isComplete()) {
+      LOG.error("The last job returned by the querying JobTracker is complete :" + 
+          rJob.getJobID() + " .Exiting the test");
+      System.exit(-1);
+    }
     while (rJob.getJobState() == JobStatus.PREP) {
       LOG.info("JobID : " + jobId + " not started RUNNING yet");
       Thread.sleep(1000);

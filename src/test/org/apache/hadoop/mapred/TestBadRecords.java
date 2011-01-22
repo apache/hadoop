@@ -165,7 +165,7 @@ public class TestBadRecords extends ClusterMapReduceTestCase {
     
     Path[] outputFiles = FileUtil.stat2Paths(
         getFileSystem().listStatus(getOutputDir(),
-        new OutputLogFilter()));
+        new Utils.OutputFileUtils.OutputFilesFilter()));
     
     List<String> mapperOutput=getProcessed(input, mapperBadRecords);
     LOG.debug("mapperOutput " + mapperOutput.size());

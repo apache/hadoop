@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
  * A {@link TaskScheduler} that implements fair sharing.
@@ -84,15 +85,6 @@ public class FairScheduler extends TaskScheduler {
     int minReduces = 0;         // Minimum reduces as guaranteed by pool
     double mapFairShare = 0;    // Fair share of map slots at last update
     double reduceFairShare = 0; // Fair share of reduce slots at last update
-  }
-  
-  /**
-   * A clock class - can be mocked out for testing.
-   */
-  static class Clock {
-    long getTime() {
-      return System.currentTimeMillis();
-    }
   }
   
   public FairScheduler() {
@@ -218,7 +210,7 @@ public class FairScheduler extends TaskScheduler {
   }
   
   @Override
-  public synchronized List<Task> assignTasks(TaskTrackerStatus tracker)
+  public synchronized List<Task> assignTasks(TaskTracker tracker)
       throws IOException {
     if (!initialized) // Don't try to assign tasks if we haven't yet started up
       return null;
@@ -244,10 +236,11 @@ public class FairScheduler extends TaskScheduler {
     // Scan to see whether any job needs to run a map, then a reduce
     ArrayList<Task> tasks = new ArrayList<Task>();
     TaskType[] types = new TaskType[] {TaskType.MAP, TaskType.REDUCE};
+    TaskTrackerStatus trackerStatus = tracker.getStatus();
     for (TaskType taskType: types) {
       boolean canAssign = (taskType == TaskType.MAP) ? 
-          loadMgr.canAssignMap(tracker, runnableMaps, totalMapSlots) :
-          loadMgr.canAssignReduce(tracker, runnableReduces, totalReduceSlots);
+          loadMgr.canAssignMap(trackerStatus, runnableMaps, totalMapSlots) :
+          loadMgr.canAssignReduce(trackerStatus, runnableReduces, totalReduceSlots);
       if (canAssign) {
         // Figure out the jobs that need this type of task
         List<JobInProgress> candidates = new ArrayList<JobInProgress>();
@@ -263,8 +256,8 @@ public class FairScheduler extends TaskScheduler {
         Collections.sort(candidates, comparator);
         for (JobInProgress job: candidates) {
           Task task = (taskType == TaskType.MAP ? 
-              taskSelector.obtainNewMapTask(tracker, job) :
-              taskSelector.obtainNewReduceTask(tracker, job));
+              taskSelector.obtainNewMapTask(trackerStatus, job) :
+              taskSelector.obtainNewReduceTask(trackerStatus, job));
           if (task != null) {
             // Update the JobInfo for this job so we account for the launched
             // tasks during this update interval and don't try to launch more
@@ -412,7 +405,8 @@ public class FairScheduler extends TaskScheduler {
       int totalMaps = job.numMapTasks;
       int finishedMaps = 0;
       int runningMaps = 0;
-      for (TaskInProgress tip: job.getMapTasks()) {
+      for (TaskInProgress tip : 
+           job.getTasks(org.apache.hadoop.mapreduce.TaskType.MAP)) {
         if (tip.isComplete()) {
           finishedMaps += 1;
         } else if (tip.isRunning()) {
@@ -426,7 +420,8 @@ public class FairScheduler extends TaskScheduler {
       int totalReduces = job.numReduceTasks;
       int finishedReduces = 0;
       int runningReduces = 0;
-      for (TaskInProgress tip: job.getReduceTasks()) {
+      for (TaskInProgress tip : 
+           job.getTasks(org.apache.hadoop.mapreduce.TaskType.REDUCE)) {
         if (tip.isComplete()) {
           finishedReduces += 1;
         } else if (tip.isRunning()) {

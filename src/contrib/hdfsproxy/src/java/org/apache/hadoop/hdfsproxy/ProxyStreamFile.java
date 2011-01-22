@@ -19,14 +19,16 @@ package org.apache.hadoop.hdfsproxy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.server.namenode.StreamFile;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.server.namenode.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.StreamFile;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** {@inheritDoc} */
 public class ProxyStreamFile extends StreamFile {
@@ -35,21 +37,20 @@ public class ProxyStreamFile extends StreamFile {
 
   /** {@inheritDoc} */
   @Override
-  protected DFSClient getDFSClient(HttpServletRequest request)
-      throws IOException {
-    ServletContext context = getServletContext();
-    Configuration conf = new Configuration((Configuration) context
-        .getAttribute("name.conf"));
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, getUGI(request));
-    InetSocketAddress nameNodeAddr = (InetSocketAddress) context
-        .getAttribute("name.node.address");
-    return new DFSClient(nameNodeAddr, conf);
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) {
+    String userID = (String) request
+        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    return ProxyUtil.getProxyUGIFor(userID);
   }
 
-  /** {@inheritDoc} */
   @Override
-  protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    return (UnixUserGroupInformation) request.getAttribute("authorized.ugi");
+  protected DFSClient getDFSClient(HttpServletRequest request) throws IOException, InterruptedException {
+    ServletContext context = getServletContext();
+    Configuration conf = (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+    UserGroupInformation ugi = getUGI(request, conf);
+    final InetSocketAddress nameNodeAddr = (InetSocketAddress) context.getAttribute("name.node.address");
+
+    return JspHelper.getDFSClient(ugi, nameNodeAddr, conf);
   }
 }

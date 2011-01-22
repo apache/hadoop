@@ -27,10 +27,17 @@ import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableUtils;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.security.authorize.AccessControlList;
+
 /**************************************************
- * Describes the current status of a job.  This is
- * not intended to be a comprehensive piece of data.
- * For that, look at JobProfile.
+ * Describes the current status of a job.
+ * 
+ * @see JobProfile for some more information.
  **************************************************/
 public class JobStatus implements Writable, Cloneable {
 
@@ -48,6 +55,25 @@ public class JobStatus implements Writable, Cloneable {
   public static final int PREP = 4;
   public static final int KILLED = 5;
 
+  private Map<JobACL, AccessControlList> jobACLs =
+    new HashMap<JobACL, AccessControlList>();
+
+  private static final String UNKNOWN = "UNKNOWN";
+  private static final String[] runStates =
+      {UNKNOWN, "RUNNING", "SUCCEEDED", "FAILED", "PREP", "KILLED"};
+  
+  /**
+   * Helper method to get human-readable state of the job.
+   * @param state job state
+   * @return human-readable state of the job
+   */
+  public static String getJobRunState(int state) {
+    if (state < 1 || state >= runStates.length) {
+      return UNKNOWN;
+    }
+    return runStates[state];
+  }
+  
   private JobID jobid;
   private float mapProgress;
   private float reduceProgress;
@@ -58,7 +84,8 @@ public class JobStatus implements Writable, Cloneable {
   private String user;
   private JobPriority priority;
   private String schedulingInfo="NA";
-    
+  private String failureInfo = "NA";
+  
   /**
    */
   public JobStatus() {
@@ -129,7 +156,7 @@ public class JobStatus implements Writable, Cloneable {
      }
      priority = jp;
    }
-   
+
   /**
    * @deprecated use getJobID instead
    */
@@ -145,7 +172,16 @@ public class JobStatus implements Writable, Cloneable {
    * @return Percentage of progress in maps 
    */
   public synchronized float mapProgress() { return mapProgress; }
-    
+
+  /**
+   * Set the job acls
+   * 
+   * @param acls {@link Map} from {@link JobACL}  to {@link AccessControlList} 
+   */
+  protected synchronized void setJobACLs(Map<JobACL, AccessControlList> acls) {
+    this.jobACLs = acls;
+  }
+
   /**
    * Sets the map progress of this job
    * @param p The value of map progress to set to
@@ -243,7 +279,23 @@ public class JobStatus implements Writable, Cloneable {
   public synchronized String getSchedulingInfo() {
    return schedulingInfo;
   }
+  
+  /**
+   * gets any available info on the reason of failure of the job.
+   * @return diagnostic information on why a job might have failed.
+   */
+  public synchronized String getFailureInfo() {
+    return this.failureInfo;
+  }
 
+  /**
+   * set the reason for failuire of this job
+   * @param failureInfo the reason for failure of this job.
+   */
+  public synchronized void setFailureInfo(String failureInfo) {
+    this.failureInfo = failureInfo;
+  }
+  
   /**
    * Used to set the scheduling information associated to a particular Job.
    * 
@@ -253,6 +305,15 @@ public class JobStatus implements Writable, Cloneable {
     this.schedulingInfo = schedulingInfo;
   }
   
+  /**
+   * Get the acls for Job.
+   * 
+   * @return a {@link Map} from {@link JobACL} to {@link AccessControlList}
+   */
+  public synchronized Map<JobACL, AccessControlList> getJobACLs() {
+    return jobACLs;
+  }
+
   /**
    * Return the priority of the job
    * @return job priority
@@ -292,6 +353,14 @@ public class JobStatus implements Writable, Cloneable {
     Text.writeString(out, user);
     WritableUtils.writeEnum(out, priority);
     Text.writeString(out, schedulingInfo);
+
+    // Serialize the job's ACLs
+    out.writeInt(jobACLs.size());
+    for (Entry<JobACL, AccessControlList> entry : jobACLs.entrySet()) {
+      WritableUtils.writeEnum(out, entry.getKey());
+      entry.getValue().write(out);
+    }
+    Text.writeString(out, failureInfo);
   }
 
   public synchronized void readFields(DataInput in) throws IOException {
@@ -305,5 +374,21 @@ public class JobStatus implements Writable, Cloneable {
     this.user = Text.readString(in);
     this.priority = WritableUtils.readEnum(in, JobPriority.class);
     this.schedulingInfo = Text.readString(in);
+
+    // De-serialize the job's ACLs
+    int numACLs = in.readInt();
+    for (int i = 0; i < numACLs; i++) {
+      JobACL aclType = WritableUtils.readEnum(in, JobACL.class);
+      AccessControlList acl = new AccessControlList(" ");
+      acl.readFields(in);
+      this.jobACLs.put(aclType, acl);
+    }
+    this.failureInfo = Text.readString(in);
+  }
+
+  // A utility to convert new job runstates to the old ones.
+  static int getOldNewJobRunState(
+    org.apache.hadoop.mapreduce.JobStatus.State state) {
+    return state.getValue();
   }
 }

@@ -38,6 +38,7 @@ AC_INIT(src/org_apache_hadoop.h)
 AC_CONFIG_SRCDIR([src/org_apache_hadoop.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config.h])
+AC_SYS_LARGEFILE
 
 AM_INIT_AUTOMAKE(hadoop,1.0.0)
 
@@ -86,15 +87,19 @@ AC_SUBST([JNI_CPPFLAGS])
 dnl Check for zlib headers
 AC_CHECK_HEADERS([zlib.h zconf.h], AC_COMPUTE_NEEDED_DSO(z,HADOOP_ZLIB_LIBRARY), AC_MSG_ERROR(Zlib headers were not found... native-hadoop library needs zlib to build. Please install the requisite zlib development package.))
 
+dnl Check for headers needed by the native Group resolution implementation
+AC_CHECK_HEADERS([fcntl.h stdlib.h string.h unistd.h], [], AC_MSG_ERROR(Some system headers not found... please ensure their presence on your platform.))
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 
 # Checks for library functions.
 AC_CHECK_FUNCS([memset])
 
-AC_CONFIG_FILES([Makefile
-                 src/org/apache/hadoop/io/compress/zlib/Makefile
-                 lib/Makefile])
+# Check for nonstandard STRERROR_R
+AC_FUNC_STRERROR_R
+
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
 #

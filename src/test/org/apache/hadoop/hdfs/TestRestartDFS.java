@@ -29,9 +29,7 @@ import org.apache.hadoop.fs.Path;
  * A JUnit test for checking if restarting DFS preserves integrity.
  */
 public class TestRestartDFS extends TestCase {
-  /** check if DFS remains in proper condition after a restart */
-  public void testRestartDFS() throws Exception {
-    final Configuration conf = new Configuration();
+  public void runTests(Configuration conf, boolean serviceTest) throws Exception {
     MiniDFSCluster cluster = null;
     DFSTestUtil files = new DFSTestUtil("TestRestartDFS", 20, 3, 8*1024);
 
@@ -44,6 +42,10 @@ public class TestRestartDFS extends TestCase {
     FileStatus dirstatus;
 
     try {
+      if (serviceTest) {
+        conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+                 "localhost:0");
+      }
       cluster = new MiniDFSCluster(conf, 4, true, null);
       FileSystem fs = cluster.getFileSystem();
       files.createFiles(fs, dir);
@@ -58,8 +60,12 @@ public class TestRestartDFS extends TestCase {
       if (cluster != null) { cluster.shutdown(); }
     }
     try {
+      if (serviceTest) {
+        conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+                 "localhost:0");
+      }
       // Here we restart the MiniDFScluster without formatting namenode
-      cluster = new MiniDFSCluster(conf, 4, false, null);
+      cluster = new MiniDFSCluster(conf, 4, false, null); 
       FileSystem fs = cluster.getFileSystem();
       assertTrue("Filesystem corrupted after restart.",
                  files.checkFiles(fs, dir));
@@ -78,4 +84,17 @@ public class TestRestartDFS extends TestCase {
       if (cluster != null) { cluster.shutdown(); }
     }
   }
+  /** check if DFS remains in proper condition after a restart */
+  public void testRestartDFS() throws Exception {
+    final Configuration conf = new Configuration();
+    runTests(conf, false);
+  }
+  
+  /** check if DFS remains in proper condition after a restart 
+   * this rerun is with 2 ports enabled for RPC in the namenode
+   */
+   public void testRestartDualPortDFS() throws Exception {
+     final Configuration conf = new Configuration();
+     runTests(conf, true);
+   }
 }

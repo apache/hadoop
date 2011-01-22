@@ -286,7 +286,7 @@ public class Job {
           this.state = Job.SUCCESS;
         } else {
           this.state = Job.FAILED;
-          this.message = "Job failed!";
+          this.message = "Job failed! Error - " + running.getFailureInfo();
           try {
             running.killJob();
           } catch (IOException e1) {

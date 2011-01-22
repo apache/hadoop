@@ -29,10 +29,10 @@
       <title>Overview</title>
 
       <p>DistCp (distributed copy) is a tool used for large inter/intra-cluster
-      copying. It uses Map/Reduce to effect its distribution, error
+      copying. It uses MapReduce to effect its distribution, error
       handling and recovery, and reporting. It expands a list of files and
       directories into input to map tasks, each of which will copy a partition
-      of the files specified in the source list. Its Map/Reduce pedigree has
+      of the files specified in the source list. Its MapReduce pedigree has
       endowed it with some quirks in both its semantics and execution. The
       purpose of this document is to offer guidance for common tasks and to
       elucidate its model.</p>
@@ -92,7 +92,7 @@
 
         <p>After a copy, it is recommended that one generates and cross-checks
         a listing of the source and destination to verify that the copy was
-        truly successful. Since DistCp employs both Map/Reduce and the
+        truly successful. Since DistCp employs both MapReduce and the
         FileSystem API, issues in or between any of the three could adversely
         and silently affect the copy. Some have had success running with
         <code>-update</code> enabled to perform a second pass, but users should
@@ -305,7 +305,7 @@
       </section>
 
       <section>
-        <title>Map/Reduce and other side-effects</title>
+        <title>MapReduce and other side-effects</title>
 
         <p>As has been mentioned in the preceding, should a map fail to copy
         one of its inputs, there will be several side-effects.</p>

@@ -88,4 +88,14 @@ interface UpwardProtocol<K extends WritableComparable, V extends Writable> {
    * @throws IOException
    */
   void incrementCounter(int id, long amount) throws IOException;
+
+  /**
+   * Handles authentication response from client.
+   * It must notify the threads waiting for authentication response.
+   * @param digest
+   * @return true if authentication is successful
+   * @throws IOException
+   */
+  boolean authenticate(String digest) throws IOException;
+
 }

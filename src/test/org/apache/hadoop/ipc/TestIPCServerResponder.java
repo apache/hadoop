@@ -114,6 +114,14 @@ public class TestIPCServerResponder extends TestCase {
     }
   }
 
+  public void testResponseBuffer() throws Exception {
+    Server.INITIAL_RESP_BUF_SIZE = 1;
+    conf.setInt(Server.IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
+                1);
+    testServerResponder(1, true, 1, 1, 5);
+    conf = new Configuration(); // reset configuration
+  }
+
   public void testServerResponder() throws Exception {
     testServerResponder(10, true, 1, 10, 200);
   }

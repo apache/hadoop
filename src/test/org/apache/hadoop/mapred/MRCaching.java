@@ -34,7 +34,10 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.filecache.*;
+
 import java.net.URI;
+
+import junit.framework.Assert;
 
 public class MRCaching {
   static String testStr = "This is a test file " + "used for testing caching "
@@ -269,11 +272,22 @@ public class MRCaching {
       uris[4] = fs.getUri().resolve(cacheDir + "/test.tar.gz#" + "testtargz");
       uris[5] = fs.getUri().resolve(cacheDir + "/test.tar#" + "testtar");
     }
+    
+    //Add files to DC and track their sizes
     DistributedCache.addCacheFile(uris[0], conf);
+    long[] fileSizes = new long[1];
+    fileSizes[0] = fs.getFileStatus(new Path(uris[0].getPath())).getLen();
+    
+    long archivesSizes[] = new long[5];
     for (int i = 1; i < 6; i++) {
       DistributedCache.addCacheArchive(uris[i], conf);
+      archivesSizes[i-1] = 
+        fs.getFileStatus(new Path(uris[i].getPath())).getLen();
     }
+    
+    // Run the job
     RunningJob job = JobClient.runJob(conf);
+    
     int count = 0;
     // after the job ran check to see if the input from the localized cache
     // match the real string. check if there are 3 instances or not.
@@ -294,7 +308,32 @@ public class MRCaching {
     if (count != 6)
       return new TestResult(job, false);
 
+    // Check to ensure the filesizes of files in DC were correctly saved
+    validateCacheFilesSizes(conf, fileSizes, DistributedCache.CACHE_FILES_SIZES);
+    validateCacheFilesSizes(conf, archivesSizes, 
+                            DistributedCache.CACHE_ARCHIVES_SIZES);
+    
     return new TestResult(job, true);
 
+  }
+  
+  private static void validateCacheFilesSizes(JobConf job, 
+                                       long[] expectedSizes, String configKey) 
+  throws IOException {
+    String configValues = job.get(configKey, "");
+    System.out.println(configKey + " -> " + configValues);
+    String[] realSizes = StringUtils.getStrings(configValues);
+    Assert.assertEquals("Found " + realSizes.length + " file-sizes for " + 
+                            configKey + " (" + configValues + "), expected: " + 
+                            expectedSizes.length, 
+                        expectedSizes.length, realSizes.length);
+    
+    for (int i=0; i < expectedSizes.length; ++i) {
+      long actual = Long.valueOf(realSizes[i]);
+      long expected = expectedSizes[i];
+      Assert.assertEquals("Found length: " + actual + ", while expected: " + 
+                              expected, 
+                          expected, actual);
+    }
   }
 }

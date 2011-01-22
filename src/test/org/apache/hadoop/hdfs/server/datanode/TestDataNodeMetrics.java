@@ -23,9 +23,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.conf.Configuration;
 import junit.framework.TestCase;
+import static org.apache.hadoop.test.MetricsAsserts.*;
 
 public class TestDataNodeMetrics extends TestCase {
   
@@ -41,8 +41,7 @@ public class TestDataNodeMetrics extends TestCase {
       List<DataNode> datanodes = cluster.getDataNodes();
       assertEquals(datanodes.size(), 1);
       DataNode datanode = datanodes.get(0);
-      DataNodeMetrics metrics = datanode.getMetrics();
-      assertEquals(LONG_FILE_LEN, metrics.bytesWritten.getCurrentIntervalValue());
+      assertCounter("bytes_written", LONG_FILE_LEN, datanode.getMetrics());
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }

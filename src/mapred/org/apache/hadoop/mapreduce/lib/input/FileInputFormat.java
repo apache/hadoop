@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -60,6 +61,8 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         return !name.startsWith("_") && !name.startsWith("."); 
       }
     }; 
+
+  static final String NUM_INPUT_FILES = "mapreduce.input.num.files";
 
   /**
    * Proxy PathFilter that accepts a path only if all filters given in the
@@ -185,6 +188,10 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
     if (dirs.length == 0) {
       throw new IOException("No input paths specified in job");
     }
+    
+    // get tokens for all the required FileSystems..
+    TokenCache.obtainTokensForNamenodes(job.getCredentials(), dirs, 
+                                        job.getConfiguration());
 
     List<IOException> errors = new ArrayList<IOException>();
     
@@ -238,7 +245,8 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
 
     // generate splits
     List<InputSplit> splits = new ArrayList<InputSplit>();
-    for (FileStatus file: listStatus(job)) {
+    List<FileStatus>files = listStatus(job);
+    for (FileStatus file: files) {
       Path path = file.getPath();
       FileSystem fs = path.getFileSystem(job.getConfiguration());
       long length = file.getLen();
@@ -266,6 +274,10 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
         splits.add(new FileSplit(path, 0, length, new String[0]));
       }
     }
+    
+    // Save the number of input files in the job-conf
+    job.getConfiguration().setLong(NUM_INPUT_FILES, files.size());
+
     LOG.debug("Total # of splits: " + splits.size());
     return splits;
   }
@@ -333,12 +345,11 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   public static void setInputPaths(Job job, 
                                    Path... inputPaths) throws IOException {
     Configuration conf = job.getConfiguration();
-    FileSystem fs = FileSystem.get(conf);
-    Path path = inputPaths[0].makeQualified(fs);
+    Path path = inputPaths[0].getFileSystem(conf).makeQualified(inputPaths[0]);
     StringBuffer str = new StringBuffer(StringUtils.escapeString(path.toString()));
     for(int i = 1; i < inputPaths.length;i++) {
       str.append(StringUtils.COMMA_STR);
-      path = inputPaths[i].makeQualified(fs);
+      path = inputPaths[i].getFileSystem(conf).makeQualified(inputPaths[i]);
       str.append(StringUtils.escapeString(path.toString()));
     }
     conf.set("mapred.input.dir", str.toString());
@@ -354,8 +365,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
   public static void addInputPath(Job job, 
                                   Path path) throws IOException {
     Configuration conf = job.getConfiguration();
-    FileSystem fs = FileSystem.get(conf);
-    path = path.makeQualified(fs);
+    path = path.getFileSystem(conf).makeQualified(path);
     String dirStr = StringUtils.escapeString(path.toString());
     String dirs = conf.get("mapred.input.dir");
     conf.set("mapred.input.dir", dirs == null ? dirStr : dirs + "," + dirStr);

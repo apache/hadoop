@@ -440,7 +440,6 @@ public class TestTaskTrackerMemoryManager extends TestCase {
       
       // Create TaskMemoryMonitorThread
       TaskMemoryManagerThread test = new TaskMemoryManagerThread(1000000L,
-                                                                5000L,
                                                                 5000L);
       // create process trees
       // tree rooted at 100 is over limit immediately, as it is

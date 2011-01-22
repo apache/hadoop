@@ -21,8 +21,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -111,16 +114,20 @@ public class GenericOptionsParser {
    * Create an options parser with the given options to parse the args.
    * @param opts the options
    * @param args the command line arguments
+   * @throws IOException 
    */
-  public GenericOptionsParser(Options opts, String[] args) {
+  public GenericOptionsParser(Options opts, String[] args) 
+      throws IOException {
     this(new Configuration(), new Options(), args);
   }
 
   /**
    * Create an options parser to parse the args.
    * @param args the command line arguments
+   * @throws IOException 
    */
-  public GenericOptionsParser(String[] args) {
+  public GenericOptionsParser(String[] args) 
+      throws IOException {
     this(new Configuration(), new Options(), args);
   }
   
@@ -133,8 +140,10 @@ public class GenericOptionsParser {
    * 
    * @param conf the <code>Configuration</code> to modify.
    * @param args command-line arguments.
+   * @throws IOException 
    */
-  public GenericOptionsParser(Configuration conf, String[] args) {
+  public GenericOptionsParser(Configuration conf, String[] args) 
+      throws IOException {
     this(conf, new Options(), args); 
   }
 
@@ -148,8 +157,10 @@ public class GenericOptionsParser {
    * @param conf the configuration to modify  
    * @param options options built by the caller 
    * @param args User-specified arguments
+   * @throws IOException 
    */
-  public GenericOptionsParser(Configuration conf, Options options, String[] args) {
+  public GenericOptionsParser(Configuration conf,
+      Options options, String[] args) throws IOException {
     parseGeneralOptions(options, conf, args);
     this.conf = conf;
   }
@@ -222,6 +233,11 @@ public class GenericOptionsParser {
     .withDescription("comma separated archives to be unarchived" +
                      " on the compute machines.")
     .create("archives");
+    // file with security tokens
+    Option tokensFile = OptionBuilder.withArgName("tokensFile")
+    .hasArg()
+    .withDescription("name of the file with the tokens")
+    .create("tokenCacheFile");
 
     opts.addOption(fs);
     opts.addOption(jt);
@@ -230,6 +246,7 @@ public class GenericOptionsParser {
     opts.addOption(libjars);
     opts.addOption(files);
     opts.addOption(archives);
+    opts.addOption(tokensFile);
 
     return opts;
   }
@@ -240,7 +257,7 @@ public class GenericOptionsParser {
    * @param line User-specified generic options
    */
   private void processGeneralOptions(Configuration conf,
-      CommandLine line) {
+      CommandLine line) throws IOException {
     if (line.hasOption("fs")) {
       FileSystem.setDefaultUri(conf, line.getOptionValue("fs"));
     }
@@ -254,29 +271,25 @@ public class GenericOptionsParser {
         conf.addResource(new Path(value));
       }
     }
-    try {
-      if (line.hasOption("libjars")) {
-        conf.set("tmpjars", 
-                 validateFiles(line.getOptionValue("libjars"), conf));
-        //setting libjars in client classpath
-        URL[] libjars = getLibJars(conf);
-        if(libjars!=null && libjars.length>0) {
-          conf.setClassLoader(new URLClassLoader(libjars, conf.getClassLoader()));
-          Thread.currentThread().setContextClassLoader(
-              new URLClassLoader(libjars, 
-                  Thread.currentThread().getContextClassLoader()));
-        }
+    if (line.hasOption("libjars")) {
+      conf.set("tmpjars", 
+               validateFiles(line.getOptionValue("libjars"), conf));
+      //setting libjars in client classpath
+      URL[] libjars = getLibJars(conf);
+      if(libjars!=null && libjars.length>0) {
+        conf.setClassLoader(new URLClassLoader(libjars, conf.getClassLoader()));
+        Thread.currentThread().setContextClassLoader(
+            new URLClassLoader(libjars, 
+                Thread.currentThread().getContextClassLoader()));
       }
-      if (line.hasOption("files")) {
-        conf.set("tmpfiles", 
-                 validateFiles(line.getOptionValue("files"), conf));
-      }
-      if (line.hasOption("archives")) {
-        conf.set("tmparchives", 
-                  validateFiles(line.getOptionValue("archives"), conf));
-      }
-    } catch (IOException ioe) {
-      System.err.println(StringUtils.stringifyException(ioe));
+    }
+    if (line.hasOption("files")) {
+      conf.set("tmpfiles", 
+               validateFiles(line.getOptionValue("files"), conf));
+    }
+    if (line.hasOption("archives")) {
+      conf.set("tmparchives", 
+                validateFiles(line.getOptionValue("archives"), conf));
     }
     if (line.hasOption('D')) {
       String[] property = line.getOptionValues('D');
@@ -288,6 +301,26 @@ public class GenericOptionsParser {
       }
     }
     conf.setBoolean("mapred.used.genericoptionsparser", true);
+    
+    // tokensFile
+    if(line.hasOption("tokenCacheFile")) {
+      String fileName = line.getOptionValue("tokenCacheFile");
+      // check if the local file exists
+      try 
+      {
+        FileSystem localFs = FileSystem.getLocal(conf);
+        Path p = new Path(fileName);
+        if (!localFs.exists(p)) {
+          throw new FileNotFoundException("File "+fileName+" does not exist.");
+        }
+
+        LOG.debug("setting conf tokensFile: " + fileName);
+        conf.set("mapreduce.job.credentials.json", 
+                 localFs.makeQualified(p).toString());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
   
   /**
@@ -302,12 +335,14 @@ public class GenericOptionsParser {
       return null;
     }
     String[] files = jars.split(",");
-    URL[] cp = new URL[files.length];
-    for (int i=0;i<cp.length;i++) {
-      Path tmp = new Path(files[i]);
-      cp[i] = FileSystem.getLocal(conf).pathToFile(tmp).toURI().toURL();
+    List<URL> cp = new ArrayList<URL>();
+    for (String file : files) {
+      Path tmp = new Path(file);
+      if (tmp.getFileSystem(conf).equals(FileSystem.getLocal(conf))) {
+        cp.add(FileSystem.getLocal(conf).pathToFile(tmp).toURI().toURL());
+      }
     }
-    return cp;
+    return cp.toArray(new URL[0]);
   }
 
   /**
@@ -320,7 +355,8 @@ public class GenericOptionsParser {
    * @param files
    * @return
    */
-  private String validateFiles(String files, Configuration conf) throws IOException  {
+  private String validateFiles(String files, Configuration conf) 
+      throws IOException  {
     if (files == null) 
       return null;
     String[] fileArr = files.split(",");
@@ -328,8 +364,13 @@ public class GenericOptionsParser {
     for (int i =0; i < fileArr.length; i++) {
       String tmp = fileArr[i];
       String finalPath;
-      Path path = new Path(tmp);
-      URI pathURI =  path.toUri();
+      URI pathURI;
+      try {
+        pathURI = new URI(tmp);
+      } catch (URISyntaxException e) {
+        throw new IllegalArgumentException(e);
+      }
+      Path path = new Path(pathURI);
       FileSystem localFs = FileSystem.getLocal(conf);
       if (pathURI.getScheme() == null) {
         //default to the local file system
@@ -349,9 +390,6 @@ public class GenericOptionsParser {
           throw new FileNotFoundException("File " + tmp + " does not exist.");
         }
         finalPath = path.makeQualified(fs).toString();
-        try {
-          fs.close();
-        } catch(IOException e){};
       }
       finalArr[i] = finalPath;
     }
@@ -367,7 +405,7 @@ public class GenericOptionsParser {
    * @return Command-specific arguments
    */
   private String[] parseGeneralOptions(Options opts, Configuration conf, 
-      String[] args) {
+      String[] args) throws IOException {
     opts = buildGeneralOptions(opts);
     CommandLineParser parser = new GnuParser();
     try {

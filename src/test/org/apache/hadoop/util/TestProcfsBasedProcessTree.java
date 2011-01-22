@@ -23,16 +23,25 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
+import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ProcessTree.Signal;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
+import org.apache.hadoop.mapred.UtilsForTests;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import junit.framework.TestCase;
 
+/**
+ * A JUnit test to test ProcfsBasedProcessTree.
+ */
 public class TestProcfsBasedProcessTree extends TestCase {
 
   private static final Log LOG = LogFactory
@@ -41,23 +50,28 @@ public class TestProcfsBasedProcessTree extends TestCase {
       "test.build.data", "/tmp")).toString().replace(' ', '+');
 
   private ShellCommandExecutor shexec = null;
-  private String pidFile;
+  private String pidFile, lowestDescendant;
   private String shellScript;
-  private static final int N = 10; // Controls the RogueTask
+  private static final int N = 6; // Controls the RogueTask
 
-  private static final int memoryLimit = 15 * 1024 * 1024; // 15MB
-  private static final long PROCESSTREE_RECONSTRUCTION_INTERVAL =
-    ProcfsBasedProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL; // msec
 
   private class RogueTaskThread extends Thread {
     public void run() {
       try {
-        String args[] = { "bash", "-c",
-            "echo $$ > " + pidFile + "; sh " + shellScript + " " + N + ";" };
-        shexec = new ShellCommandExecutor(args);
+        Vector<String> args = new Vector<String>();
+        if(ProcessTree.isSetsidAvailable) {
+          args.add("setsid");
+        }
+        args.add("bash");
+        args.add("-c");
+        args.add(" echo $$ > " + pidFile + "; sh " +
+            shellScript + " " + N + ";") ;
+        shexec = new ShellCommandExecutor(args.toArray(new String[0]));
         shexec.execute();
       } catch (ExitCodeException ee) {
-        LOG.info("Shell Command exit with a non-zero exit code. " + ee);
+        LOG.info("Shell Command exit with a non-zero exit code. This is" +
+            " expected as we are killing the subprocesses of the" +
+            " task intentionally. " + ee);
       } catch (IOException ioe) {
         LOG.info("Error executing shell command " + ioe);
       } finally {
@@ -77,7 +91,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
     }
 
     // read from pidFile
-    return ProcfsBasedProcessTree.getPidFromPidFile(pidFile);
+    return UtilsForTests.getPidFromPidFile(pidFile);
   }
 
   public void testProcessTree() {
@@ -94,26 +108,34 @@ public class TestProcfsBasedProcessTree extends TestCase {
     }
     // create shell script
     Random rm = new Random();
-    File tempFile = new File(this.getName() + "_shellScript_" + rm.nextInt()
-        + ".sh");
+    File tempFile = new File(TEST_ROOT_DIR, this.getName() + "_shellScript_"
+        + rm.nextInt() + ".sh");
     tempFile.deleteOnExit();
-    shellScript = tempFile.getName();
+    shellScript = TEST_ROOT_DIR + File.separator + tempFile.getName();
 
     // create pid file
-    tempFile = new File(this.getName() + "_pidFile_" + rm.nextInt() + ".pid");
+    tempFile = new File(TEST_ROOT_DIR,  this.getName() + "_pidFile_" +
+                        rm.nextInt() + ".pid");
     tempFile.deleteOnExit();
-    pidFile = tempFile.getName();
+    pidFile = TEST_ROOT_DIR + File.separator + tempFile.getName();
+
+    lowestDescendant = TEST_ROOT_DIR + File.separator + "lowestDescendantPidFile";
 
     // write to shell-script
     try {
       FileWriter fWriter = new FileWriter(shellScript);
       fWriter.write(
           "# rogue task\n" +
-          "sleep 10\n" +
+          "sleep 1\n" +
           "echo hello\n" +
           "if [ $1 -ne 0 ]\n" +
           "then\n" +
           " sh " + shellScript + " $(($1-1))\n" +
+          "else\n" +
+          " echo $$ > " + lowestDescendant + "\n" +
+          " while true\n do\n" +
+          "  sleep 5\n" +
+          " done\n" +
           "fi");
       fWriter.close();
     } catch (IOException ioe) {
@@ -125,25 +147,52 @@ public class TestProcfsBasedProcessTree extends TestCase {
     t.start();
     String pid = getRogueTaskPID();
     LOG.info("Root process pid: " + pid);
-    ProcfsBasedProcessTree p = new ProcfsBasedProcessTree(pid);
+    ProcfsBasedProcessTree p = new ProcfsBasedProcessTree(pid,
+        ProcessTree.isSetsidAvailable);
     p = p.getProcessTree(); // initialize
-    try {
-      while (true) {
-        LOG.info("ProcessTree: " + p.toString());
-        long mem = p.getCumulativeVmem();
-        LOG.info("Memory usage: " + mem + "bytes.");
-        if (mem > memoryLimit) {
-          p.destroy();
-          break;
-        }
-        Thread.sleep(PROCESSTREE_RECONSTRUCTION_INTERVAL);
-        p = p.getProcessTree(); // reconstruct
+    LOG.info("ProcessTree: " + p.toString());
+    File leaf = new File(lowestDescendant);
+    //wait till lowest descendant process of Rougue Task starts execution
+    while (!leaf.exists()) {
+      try {
+        Thread.sleep(500);
+      } catch (InterruptedException ie) {
+        break;
       }
-    } catch (InterruptedException ie) {
-      LOG.info("Interrupted.");
+    }
+    
+    p = p.getProcessTree(); // reconstruct
+    LOG.info("ProcessTree: " + p.toString());
+
+    // Get the process-tree dump
+    String processTreeDump = p.getProcessTreeDump();
+
+    // destroy the map task and all its subprocesses
+    if (ProcessTree.isSetsidAvailable) {
+      ProcessTree.killProcessGroup(pid, Signal.KILL);
+    } else {
+      ProcessTree.killProcess(pid, Signal.KILL);
+    }
+    if(ProcessTree.isSetsidAvailable) {// whole processtree should be gone
+      assertEquals(false, p.isAnyProcessInTreeAlive());
+    }
+    else {// process should be gone
+      assertEquals(false, p.isAlive());
     }
 
-    assertFalse("ProcessTree must have been gone", p.isAlive());
+    LOG.info("Process-tree dump follows: \n" + processTreeDump);
+    assertTrue("Process-tree dump doesn't start with a proper header",
+        processTreeDump.startsWith("\t|- PID PPID PGRPID SESSID CMD_NAME "
+            + "VMEM_USAGE(BYTES) FULL_CMD_LINE\n"));
+    for (int i = N; i >= 0; i--) {
+      String cmdLineDump =
+          "\\|- [0-9]+ [0-9]+ [0-9]+ [0-9]+ \\(sh\\) [0-9]+ sh " + shellScript
+              + " " + i;
+      Pattern pat = Pattern.compile(cmdLineDump);
+      Matcher mat = pat.matcher(processTreeDump);
+      assertTrue("Process-tree dump doesn't contain the cmdLineDump of " + i
+          + "th process!", mat.find());
+    }
 
     // Not able to join thread sometimes when forking with large N.
     try {
@@ -328,6 +377,88 @@ public class TestProcfsBasedProcessTree extends TestCase {
   }
 
   /**
+   * Test the correctness of process-tree dump.
+   * 
+   * @throws IOException
+   */
+  public void testProcessTreeDump()
+      throws IOException {
+
+    String[] pids = { "100", "200", "300", "400", "500", "600" };
+
+    File procfsRootDir = new File(TEST_ROOT_DIR, "proc");
+
+    try {
+      setupProcfsRootDir(procfsRootDir);
+      setupPidDirs(procfsRootDir, pids);
+
+      int numProcesses = pids.length;
+      // Processes 200, 300, 400 and 500 are descendants of 100. 600 is not.
+      ProcessStatInfo[] procInfos = new ProcessStatInfo[numProcesses];
+      procInfos[0] =
+          new ProcessStatInfo(new String[] { "100", "proc1", "1", "100",
+              "100", "100000" });
+      procInfos[1] =
+          new ProcessStatInfo(new String[] { "200", "proc2", "100", "100",
+              "100", "200000" });
+      procInfos[2] =
+          new ProcessStatInfo(new String[] { "300", "proc3", "200", "100",
+              "100", "300000" });
+      procInfos[3] =
+          new ProcessStatInfo(new String[] { "400", "proc4", "200", "100",
+              "100", "400000" });
+      procInfos[4] =
+          new ProcessStatInfo(new String[] { "500", "proc5", "400", "100",
+              "100", "400000" });
+      procInfos[5] =
+          new ProcessStatInfo(new String[] { "600", "proc6", "1", "1", "1",
+              "400000" });
+
+      String[] cmdLines = new String[numProcesses];
+      cmdLines[0] = "proc1 arg1 arg2";
+      cmdLines[1] = "proc2 arg3 arg4";
+      cmdLines[2] = "proc3 arg5 arg6";
+      cmdLines[3] = "proc4 arg7 arg8";
+      cmdLines[4] = "proc5 arg9 arg10";
+      cmdLines[5] = "proc6 arg11 arg12";
+
+      writeStatFiles(procfsRootDir, pids, procInfos);
+      writeCmdLineFiles(procfsRootDir, pids, cmdLines);
+
+      ProcfsBasedProcessTree processTree =
+          new ProcfsBasedProcessTree("100", procfsRootDir.getAbsolutePath());
+      // build the process tree.
+      processTree.getProcessTree();
+
+      // Get the process-tree dump
+      String processTreeDump = processTree.getProcessTreeDump();
+
+      LOG.info("Process-tree dump follows: \n" + processTreeDump);
+      assertTrue("Process-tree dump doesn't start with a proper header",
+          processTreeDump.startsWith("\t|- PID PPID PGRPID SESSID CMD_NAME "
+              + "VMEM_USAGE(BYTES) FULL_CMD_LINE\n"));
+      for (int i = 0; i < 5; i++) {
+        ProcessStatInfo p = procInfos[i];
+        assertTrue(
+            "Process-tree dump doesn't contain the cmdLineDump of process "
+                + p.pid, processTreeDump.contains("\t|- " + p.pid + " "
+                + p.ppid + " " + p.pgrpId + " " + p.session + " (" + p.name
+                + ") " + p.vmem + " " + cmdLines[i]));
+      }
+
+      // 600 should not be in the dump
+      ProcessStatInfo p = procInfos[5];
+      assertFalse(
+          "Process-tree dump shouldn't contain the cmdLineDump of process "
+              + p.pid, processTreeDump.contains("\t|- " + p.pid + " " + p.ppid
+              + " " + p.pgrpId + " " + p.session + " (" + p.name + ") "
+              + p.vmem + " " + cmdLines[5]));
+    } finally {
+      FileUtil.fullyDelete(procfsRootDir);
+    }
+  }
+
+  /**
    * Create a directory to mimic the procfs file system's root.
    * @param procfsRootDir root directory to create.
    * @throws IOException if could not delete the procfs root directory
@@ -375,7 +506,9 @@ public class TestProcfsBasedProcessTree extends TestCase {
   public static void writeStatFiles(File procfsRootDir, String[] pids, 
                               ProcessStatInfo[] procs) throws IOException {
     for (int i=0; i<pids.length; i++) {
-      File statFile = new File(new File(procfsRootDir, pids[i]), "stat");
+      File statFile =
+          new File(new File(procfsRootDir, pids[i]),
+              ProcfsBasedProcessTree.PROCFS_STAT_FILE);
       BufferedWriter bw = null;
       try {
         FileWriter fw = new FileWriter(statFile);
@@ -383,6 +516,28 @@ public class TestProcfsBasedProcessTree extends TestCase {
         bw.write(procs[i].getStatLine());
         LOG.info("wrote stat file for " + pids[i] + 
                   " with contents: " + procs[i].getStatLine());
+      } finally {
+        // not handling exception - will throw an error and fail the test.
+        if (bw != null) {
+          bw.close();
+        }
+      }
+    }
+  }
+
+  private static void writeCmdLineFiles(File procfsRootDir, String[] pids,
+      String[] cmdLines)
+      throws IOException {
+    for (int i = 0; i < pids.length; i++) {
+      File statFile =
+          new File(new File(procfsRootDir, pids[i]),
+              ProcfsBasedProcessTree.PROCFS_CMDLINE_FILE);
+      BufferedWriter bw = null;
+      try {
+        bw = new BufferedWriter(new FileWriter(statFile));
+        bw.write(cmdLines[i]);
+        LOG.info("wrote command-line file for " + pids[i] + " with contents: "
+            + cmdLines[i]);
       } finally {
         // not handling exception - will throw an error and fail the test.
         if (bw != null) {

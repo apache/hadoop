@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.List;
@@ -54,7 +55,13 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import static org.mockito.Mockito.mock;
 
 public class TestFileSystem extends TestCase {
   private static final Log LOG = FileSystem.LOG;
@@ -487,24 +494,19 @@ public class TestFileSystem extends TestCase {
     }
   }
 
-  static Configuration createConf4Testing(String username) throws Exception {
-    Configuration conf = new Configuration();
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        new UnixUserGroupInformation(username, new String[]{"group"}));
-    return conf;    
-  }
-
   public void testFsCache() throws Exception {
     {
       long now = System.currentTimeMillis();
-      Configuration[] conf = {new Configuration(),
-          createConf4Testing("foo" + now), createConf4Testing("bar" + now)};
-      FileSystem[] fs = new FileSystem[conf.length];
+      String[] users = new String[]{"foo","bar"};
+      final Configuration conf = new Configuration();
+      FileSystem[] fs = new FileSystem[users.length];
   
-      for(int i = 0; i < conf.length; i++) {
-        fs[i] = FileSystem.get(conf[i]);
-        assertEquals(fs[i], FileSystem.get(conf[i]));
+      for(int i = 0; i < users.length; i++) {
+        UserGroupInformation ugi = UserGroupInformation.createRemoteUser(users[i]);
+        fs[i] = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+          public FileSystem run() throws IOException {
+            return FileSystem.get(conf);
+        }});
         for(int j = 0; j < i; j++) {
           assertFalse(fs[j] == fs[i]);
         }
@@ -567,21 +569,18 @@ public class TestFileSystem extends TestCase {
     {
       Configuration conf = new Configuration();
       new Path("file:///").getFileSystem(conf);
-      UnixUserGroupInformation.login(conf, true);
       FileSystem.closeAll();
     }
 
     {
       Configuration conf = new Configuration();
       new Path("hftp://localhost:12345/").getFileSystem(conf);
-      UnixUserGroupInformation.login(conf, true);
       FileSystem.closeAll();
     }
 
     {
       Configuration conf = new Configuration();
       FileSystem fs = new Path("hftp://localhost:12345/").getFileSystem(conf);
-      UnixUserGroupInformation.login(fs.getConf(), true);
       FileSystem.closeAll();
     }
   }
@@ -617,5 +616,85 @@ public class TestFileSystem extends TestCase {
     assertTrue(map.containsKey(uppercaseCachekey));
     assertTrue(map.containsKey(lowercaseCachekey2));    
 
+  }
+
+  @SuppressWarnings("unchecked")
+  public <T extends TokenIdentifier> void testCacheForUgi() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
+    UserGroupInformation ugiB = UserGroupInformation.createRemoteUser("bar");
+    FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    FileSystem fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    //Since the UGIs are the same, we should have the same filesystem for both
+    assertSame(fsA, fsA1);
+    
+    FileSystem fsB = ugiB.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    //Since the UGIs are different, we should end up with different filesystems
+    //corresponding to the two UGIs
+    assertNotSame(fsA, fsB);
+    
+    Token<T> t1 = mock(Token.class);
+    UserGroupInformation ugiA2 = UserGroupInformation.createRemoteUser("foo");
+    
+    fsA = ugiA2.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    // Although the users in the UGI are same, they have different subjects
+    // and so are different.
+    assertNotSame(fsA, fsA1);
+    
+    ugiA.addToken(t1);
+    
+    fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    // Make sure that different UGI's with the same subject lead to the same
+    // file system.
+    assertSame(fsA, fsA1);
+  }
+  
+  public void testCloseAllForUGI() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("fs.cachedfile.impl", conf.get("fs.file.impl"));
+    UserGroupInformation ugiA = UserGroupInformation.createRemoteUser("foo");
+    FileSystem fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    //Now we should get the cached filesystem
+    FileSystem fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    assertSame(fsA, fsA1);
+    
+    FileSystem.closeAllForUGI(ugiA);
+    
+    //Now we should get a different (newly created) filesystem
+    fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    assertNotSame(fsA, fsA1);
   }
 }

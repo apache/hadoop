@@ -19,10 +19,14 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.Format;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -32,6 +36,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.mapred.Counters.Counter;
+import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapred.DefaultJobHistoryParser.*;
 import org.apache.hadoop.mapred.JobHistory.*;
 import org.apache.hadoop.util.StringUtils;
@@ -78,7 +84,8 @@ class HistoryViewer {
       }
       jobLogFile = jobFiles[0].toString();
       String[] jobDetails = 
-          JobInfo.decodeJobHistoryFileName(jobFiles[0].getName()).split("_");
+          JobHistory.JobInfo.decodeJobHistoryFileName(jobFiles[0].getName()).
+                             split("_");
       trackerHostName = jobDetails[0];
       trackerStartTime = jobDetails[1];
       jobId = jobDetails[2] + "_" + jobDetails[3] + "_" + jobDetails[4];
@@ -89,7 +96,7 @@ class HistoryViewer {
     }
   }
   
-  public void print() throws IOException{
+  public void print() throws IOException {
     printJobDetails();
     printTaskSummary();
     printJobAnalysis();
@@ -117,7 +124,7 @@ class HistoryViewer {
     printFailedAttempts(filter);
   }
 
-  private void printJobDetails() {
+  private void printJobDetails() throws IOException {
     StringBuffer jobDetails = new StringBuffer();
     jobDetails.append("\nHadoop job: " ).append(jobId);
     jobDetails.append("\n=====================================");
@@ -140,8 +147,56 @@ class HistoryViewer {
                         job.getLong(Keys.LAUNCH_TIME)));
     jobDetails.append("\nStatus: ").append(((job.get(Keys.JOB_STATUS) == "") ? 
                       "Incomplete" :job.get(Keys.JOB_STATUS)));
+    try {
+      printCounters(jobDetails, job);
+    } catch (ParseException p) {
+      throw new IOException(p);
+    }
     jobDetails.append("\n=====================================");
     System.out.println(jobDetails.toString());
+  }
+  
+  private void printCounters(StringBuffer buff, JobHistory.JobInfo job) 
+      throws ParseException {
+    Counters mapCounters = 
+      Counters.fromEscapedCompactString(job.get(Keys.MAP_COUNTERS));
+    Counters reduceCounters = 
+      Counters.fromEscapedCompactString(job.get(Keys.REDUCE_COUNTERS));
+    Counters totalCounters = 
+      Counters.fromEscapedCompactString(job.get(Keys.COUNTERS));
+    
+    // Killed jobs might not have counters
+    if (totalCounters == null) {
+      return;
+    }
+    buff.append("\nCounters: \n\n");
+    buff.append(String.format("|%1$-30s|%2$-30s|%3$-10s|%4$-10s|%5$-10s|", 
+      "Group Name",
+      "Counter name",
+      "Map Value",
+      "Reduce Value",
+      "Total Value"));
+    buff.append("\n------------------------------------------"+
+      "---------------------------------------------");
+    for (String groupName : totalCounters.getGroupNames()) {
+      Group totalGroup = totalCounters.getGroup(groupName);
+      Group mapGroup = mapCounters.getGroup(groupName);
+      Group reduceGroup = reduceCounters.getGroup(groupName);
+      Format decimal = new DecimalFormat();
+      Iterator<Counter> ctrItr = totalGroup.iterator();
+      while (ctrItr.hasNext()) {
+        Counter counter = ctrItr.next();
+        String name = counter.getDisplayName();
+        String mapValue = decimal.format(mapGroup.getCounter(name));
+        String reduceValue = decimal.format(reduceGroup.getCounter(name));
+        String totalValue = decimal.format(counter.getValue());
+        buff.append(
+          String.format("\n|%1$-30s|%2$-30s|%3$-10s|%4$-10s|%5$-10s", 
+          totalGroup.getDisplayName(),
+          counter.getDisplayName(),
+          mapValue, reduceValue, totalValue));
+      }
+    }
   }
   
   private void printTasks(String taskType, String taskStatus) {

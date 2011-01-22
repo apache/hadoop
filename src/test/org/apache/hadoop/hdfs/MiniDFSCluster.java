@@ -20,17 +20,19 @@ package org.apache.hadoop.hdfs;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.nio.channels.FileChannel;
 import java.util.Random;
 import java.io.RandomAccessFile;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.security.*;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -232,13 +235,6 @@ public class MiniDFSCluster {
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
     this.conf = conf;
-    try {
-      UserGroupInformation.setCurrentUser(UnixUserGroupInformation.login(conf));
-    } catch (LoginException e) {
-      IOException ioe = new IOException();
-      ioe.initCause(e);
-      throw ioe;
-    }
     base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     data_dir = new File(base_dir, "data");
     
@@ -386,7 +382,7 @@ public class MiniDFSCluster {
           throw new IOException("Mkdirs failed to create directory for DataNode "
                                 + i + ": " + dir1 + " or " + dir2);
         }
-        dnConf.set("dfs.data.dir", dir1.getPath() + "," + dir2.getPath()); 
+        dnConf.set(DataNode.DATA_DIR_KEY, dir1.getPath() + "," + dir2.getPath());
       }
       if (simulatedCapacities != null) {
         dnConf.setBoolean("dfs.datanode.simulateddatastorage", true);
@@ -563,6 +559,45 @@ public class MiniDFSCluster {
     }
   }
 
+  /**
+   * Shutdown namenode.
+   */
+  public synchronized void shutdownNameNode() {
+    if (nameNode != null) {
+      System.out.println("Shutting down the namenode");
+      nameNode.stop();
+      nameNode.join();
+      nameNode = null;
+    }
+  }
+
+  /**
+   * Restart namenode.
+   */
+  public synchronized void restartNameNode() throws IOException {
+    shutdownNameNode();
+    nameNode = NameNode.createNameNode(new String[] {}, conf);
+    waitClusterUp();
+    System.out.println("Restarted the namenode");
+    int failedCount = 0;
+    while (true) {
+      try {
+        waitActive();
+        break;
+      } catch (IOException e) {
+        failedCount++;
+        // Cached RPC connection to namenode, if any, is expected to fail once
+        if (failedCount > 1) {
+          System.out.println("Tried waitActive() " + failedCount
+              + " time(s) and failed, giving up.  "
+              + StringUtils.stringifyException(e));
+          throw e;
+        }
+      }
+    }
+    System.out.println("Cluster is active");
+  }
+
   /*
    * Corrupt a block on all datanode
    */
@@ -602,7 +637,7 @@ public class MiniDFSCluster {
   /*
    * Shutdown a particular datanode
    */
-  public DataNodeProperties stopDataNode(int i) {
+  public synchronized DataNodeProperties stopDataNode(int i) {
     if (i < 0 || i >= dataNodes.size()) {
       return null;
     }
@@ -615,36 +650,6 @@ public class MiniDFSCluster {
     dn.shutdown();
     numDataNodes--;
     return dnprop;
-  }
-
-  /**
-   * Restart a datanode
-   * @param dnprop datanode's property
-   * @return true if restarting is successful
-   * @throws IOException
-   */
-  public synchronized boolean restartDataNode(DataNodeProperties dnprop)
-  throws IOException {
-    Configuration conf = dnprop.conf;
-    String[] args = dnprop.dnArgs;
-    Configuration newconf = new Configuration(conf); // save cloned config
-    dataNodes.add(new DataNodeProperties(
-                     DataNode.createDataNode(args, conf), 
-                     newconf, args));
-    numDataNodes++;
-    return true;
-
-  }
-  /*
-   * Restart a particular datanode
-   */
-  public synchronized boolean restartDataNode(int i) throws IOException {
-    DataNodeProperties dnprop = stopDataNode(i);
-    if (dnprop == null) {
-      return false;
-    } else {
-      return restartDataNode(dnprop);
-    }
   }
 
   /*
@@ -660,7 +665,80 @@ public class MiniDFSCluster {
     }
     return stopDataNode(i);
   }
-  
+
+  /**
+   * Restart a datanode
+   * @param dnprop datanode's property
+   * @return true if restarting is successful
+   * @throws IOException
+   */
+  public boolean restartDataNode(DataNodeProperties dnprop) throws IOException {
+    return restartDataNode(dnprop, false);
+  }
+
+  /**
+   * Restart a datanode, on the same port if requested
+   * @param dnprop, the datanode to restart
+   * @param keepPort, whether to use the same port
+   * @return true if restarting is successful
+   * @throws IOException
+   */
+  public synchronized boolean restartDataNode(DataNodeProperties dnprop,
+      boolean keepPort) throws IOException {
+    Configuration conf = dnprop.conf;
+    String[] args = dnprop.dnArgs;
+    Configuration newconf = new Configuration(conf); // save cloned config
+    if (keepPort) {
+      InetSocketAddress addr = dnprop.datanode.getSelfAddr();
+      conf.set("dfs.datanode.address", addr.getAddress().getHostAddress() + ":"
+          + addr.getPort());
+    }
+    dataNodes.add(new DataNodeProperties(DataNode.createDataNode(args, conf),
+        newconf, args));
+    numDataNodes++;
+    return true;
+  }
+
+  /*
+   * Restart a particular datanode, use newly assigned port
+   */
+  public boolean restartDataNode(int i) throws IOException {
+    return restartDataNode(i, false);
+  }
+
+  /*
+   * Restart a particular datanode, on the same port if keepPort is true
+   */
+  public synchronized boolean restartDataNode(int i, boolean keepPort)
+      throws IOException {
+    DataNodeProperties dnprop = stopDataNode(i);
+    if (dnprop == null) {
+      return false;
+    } else {
+      return restartDataNode(dnprop, keepPort);
+    }
+  }
+
+  /*
+   * Restart all datanodes, on the same ports if keepPort is true
+   */
+  public synchronized boolean restartDataNodes(boolean keepPort)
+      throws IOException {
+    for (int i = dataNodes.size() - 1; i >= 0; i--) {
+      if (!restartDataNode(i, keepPort))
+        return false;
+      System.out.println("Restarted DataNode " + i);
+    }
+    return true;
+  }
+
+  /*
+   * Restart all datanodes, use newly assigned ports
+   */
+  public boolean restartDataNodes() throws IOException {
+    return restartDataNodes(false);
+  }
+
   /**
    * Returns true if the NameNode is running and is out of Safe Mode.
    */
@@ -698,6 +776,34 @@ public class MiniDFSCluster {
   }
 
   /**
+   * @return a {@link HftpFileSystem} object.
+   */
+  public HftpFileSystem getHftpFileSystem() throws IOException {
+    final String str = "hftp://" + conf.get("dfs.http.address");
+    try {
+      return (HftpFileSystem)FileSystem.get(new URI(str), conf); 
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
+   *  @return a {@link HftpFileSystem} object as specified user. 
+   */
+  public HftpFileSystem getHftpFileSystemAs(final String username,
+      final Configuration conf, final String... groups
+      ) throws IOException, InterruptedException {
+    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        username, groups);
+    return ugi.doAs(new PrivilegedExceptionAction<HftpFileSystem>() {
+      @Override
+      public HftpFileSystem run() throws Exception {
+        return getHftpFileSystem();
+      }
+    });
+  }
+
+  /**
    * Get the directories where the namenode stores its image.
    */
   public Collection<File> getNameDirs() {
@@ -722,18 +828,31 @@ public class MiniDFSCluster {
                                                    getNameNodePort());
     DFSClient client = new DFSClient(addr, conf);
 
-    // make sure all datanodes are alive
-    while(client.datanodeReport(DatanodeReportType.LIVE).length
-        != numDataNodes) {
+    // make sure all datanodes have registered and sent heartbeat
+    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE))) {
       try {
-        Thread.sleep(500);
-      } catch (Exception e) {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
       }
     }
 
     client.close();
   }
-  
+
+  private synchronized boolean shouldWait(DatanodeInfo[] dnInfo) {
+    if (dnInfo.length != numDataNodes) {
+      return true;
+    }
+    // make sure all datanodes have sent first heartbeat to namenode,
+    // using (capacity == 0) as proxy.
+    for (DatanodeInfo dn : dnInfo) {
+      if (dn.getCapacity() == 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public void formatDataNodeDirs() throws IOException {
     base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     data_dir = new File(base_dir, "data");

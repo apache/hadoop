@@ -35,8 +35,6 @@ public class ReadingHDFSFilesAsSideEffect extends DiagnosticTest {
   private double _impact;
   private JobStatistics _job;
   
-  
-  
   /**
    * 
    */
@@ -53,6 +51,12 @@ public class ReadingHDFSFilesAsSideEffect extends DiagnosticTest {
      * Set the this._job
      */
     this._job = job;
+
+    /*
+     * Read the Normalization Factor
+     */
+    double normF = getInputElementDoubleValue("NormalizationFactor", 2.0);
+    
     
     /*
      * Calculate and return the impact
@@ -64,13 +68,20 @@ public class ReadingHDFSFilesAsSideEffect extends DiagnosticTest {
      * If side effect HDFS bytes read are >= twice map input bytes impact is treated as
      * maximum.
      */
+    if(job.getLongValue(JobKeys.MAP_INPUT_BYTES) == 0 && job.getLongValue(JobKeys.HDFS_BYTES_READ) != 0) {
+      return (double)1;
+    }
+
+    if (job.getLongValue(JobKeys.HDFS_BYTES_READ) == 0) {
+      return (double)0;
+    }
     
     this._impact = (job.getLongValue(JobKeys.HDFS_BYTES_READ) / job.getLongValue(JobKeys.MAP_INPUT_BYTES));
-    if (this._impact >= 2.0) {
+    if (this._impact >= normF) {
       this._impact = 1;
     }
     else  {
-      this._impact -= 1;
+      this._impact = this._impact/normF;
     }
     
     return this._impact;

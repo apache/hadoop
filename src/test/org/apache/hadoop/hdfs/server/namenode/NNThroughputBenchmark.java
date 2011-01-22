@@ -45,10 +45,10 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 
 /**
  * Main class for a series of name-node benchmarks.
@@ -61,14 +61,22 @@ import org.apache.log4j.Level;
  * by calling directly the respective name-node method.
  * The name-node here is real all other components are simulated.
  * 
- * Command line arguments for the benchmark include:<br>
- * 1) total number of operations to be performed,<br>
- * 2) number of threads to run these operations,<br>
- * 3) followed by operation specific input parameters.
+ * Command line arguments for the benchmark include:
+ * <ol>
+ * <li>total number of operations to be performed,</li>
+ * <li>number of threads to run these operations,</li>
+ * <li>followed by operation specific input parameters.</li>
+ * <li>-logLevel L specifies the logging level when the benchmark runs.
+ * The default logging level is {@link Level#ERROR}.</li>
+ * <li>-UGCacheRefreshCount G will cause the benchmark to call
+ * {@link NameNode#refreshUserToGroupsMappings(Configuration)} after
+ * every G operations, which purges the name-node's user group cache.
+ * By default the refresh is never called.</li>
+ * </ol>
  * 
- * Then the benchmark generates inputs for each thread so that the
+ * The benchmark first generates inputs for each thread so that the
  * input generation overhead does not effect the resulting statistics.
- * The number of operations performed by threads practically is the same. 
+ * The number of operations performed by threads is practically the same. 
  * Precisely, the difference between the number of operations 
  * performed by any two threads does not exceed 1.
  * 
@@ -78,16 +86,14 @@ import org.apache.log4j.Level;
 public class NNThroughputBenchmark {
   private static final Log LOG = LogFactory.getLog(NNThroughputBenchmark.class);
   private static final int BLOCK_SIZE = 16;
+  private static final String GENERAL_OPTIONS_USAGE = 
+    "    [-logLevel L] [-UGCacheRefreshCount G]";
 
   static Configuration config;
   static NameNode nameNode;
 
-  private final UserGroupInformation ugi;
-
   NNThroughputBenchmark(Configuration conf) throws IOException, LoginException {
     config = conf;
-    ugi = UnixUserGroupInformation.login(config);
-    UserGroupInformation.setCurrentUser(ugi);
 
     // We do not need many handlers, since each thread simulates a handler
     // by calling name-node methods directly
@@ -109,14 +115,15 @@ public class NNThroughputBenchmark {
     nameNode.stop();
   }
 
-  static void turnOffNameNodeLogging() {
-    // change log level to ERROR: NameNode.LOG & NameNode.stateChangeLog
-    ((Log4JLogger)NameNode.LOG).getLogger().setLevel(Level.ERROR);
-    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(Level.ERROR);
-    ((Log4JLogger)NetworkTopology.LOG).getLogger().setLevel(Level.ERROR);
-    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ERROR);
-    ((Log4JLogger)FSNamesystem.auditLog).getLogger().setLevel(Level.ERROR);
-    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ERROR);
+  static void setNameNodeLoggingLevel(Level logLevel) {
+    LOG.fatal("Log level = " + logLevel.toString());
+    // change log level to NameNode logs
+    LogManager.getLogger(NameNode.class.getName()).setLevel(logLevel);
+    ((Log4JLogger)NameNode.stateChangeLog).getLogger().setLevel(logLevel);
+    LogManager.getLogger(NetworkTopology.class.getName()).setLevel(logLevel);
+    LogManager.getLogger(FSNamesystem.class.getName()).setLevel(logLevel);
+    LogManager.getLogger(LeaseManager.class.getName()).setLevel(logLevel);
+    LogManager.getLogger(Groups.class.getName()).setLevel(logLevel);
   }
 
   /**
@@ -139,6 +146,8 @@ public class NNThroughputBenchmark {
     protected long cumulativeTime = 0;    // sum of times for each op
     protected long elapsedTime = 0;       // time from start to finish
     protected boolean keepResults = false;// don't clean base directory on exit
+    protected Level logLevel;             // logging level, ERROR by default
+    protected int ugcRefreshCount = 0;    // user group cache refresh count
 
     protected List<StatsDaemon> daemons;
 
@@ -194,6 +203,8 @@ public class NNThroughputBenchmark {
       replication = (short) config.getInt("dfs.replication", 3);
       numOpsRequired = 10;
       numThreads = 3;
+      logLevel = Level.ERROR;
+      ugcRefreshCount = Integer.MAX_VALUE;
     }
 
     void benchmark() throws IOException {
@@ -216,8 +227,8 @@ public class NNThroughputBenchmark {
         // if numThreads > numOpsRequired then the remaining threads will do nothing
         for(; tIdx < numThreads; tIdx++)
           opsPerThread[tIdx] = 0;
-        turnOffNameNodeLogging();
         generateInputs(opsPerThread);
+        setNameNodeLoggingLevel(logLevel);
         for(tIdx=0; tIdx < numThreads; tIdx++)
           daemons.add(new StatsDaemon(tIdx, opsPerThread[tIdx], this));
         start = System.currentTimeMillis();
@@ -294,11 +305,33 @@ public class NNThroughputBenchmark {
     protected boolean verifyOpArgument(List<String> args) {
       if(args.size() < 2 || ! args.get(0).startsWith("-op"))
         printUsage();
+
+      // process common options
       int krIndex = args.indexOf("-keepResults");
       keepResults = (krIndex >= 0);
       if(keepResults) {
         args.remove(krIndex);
       }
+
+      int llIndex = args.indexOf("-logLevel");
+      if(llIndex >= 0) {
+        if(args.size() <= llIndex + 1)
+          printUsage();
+        logLevel = Level.toLevel(args.get(llIndex+1), Level.ERROR);
+        args.remove(llIndex+1);
+        args.remove(llIndex);
+      }
+
+      int ugrcIndex = args.indexOf("-UGCacheRefreshCount");
+      if(ugrcIndex >= 0) {
+        if(args.size() <= ugrcIndex + 1)
+          printUsage();
+        int g = Integer.parseInt(args.get(ugrcIndex+1));
+        if(g > 0) ugcRefreshCount = g;
+        args.remove(ugrcIndex+1);
+        args.remove(ugrcIndex);
+      }
+
       String type = args.get(1);
       if(OP_ALL_NAME.equals(type)) {
         type = getOpName();
@@ -337,7 +370,6 @@ public class NNThroughputBenchmark {
     }
 
     public void run() {
-      UserGroupInformation.setCurrentUser(ugi);
       localNumOpsExecuted = 0;
       localCumulativeTime = 0;
       arg1 = statsOp.getExecutionArgument(daemonId);
@@ -355,6 +387,8 @@ public class NNThroughputBenchmark {
 
     void benchmarkOne() throws IOException {
       for(int idx = 0; idx < opsPerThread; idx++) {
+        if((localNumOpsExecuted+1) % statsOp.ugcRefreshCount == 0)
+          nameNode.refreshUserToGroupsMappings();
         long stat = statsOp.executeOp(daemonId, idx, arg1);
         localNumOpsExecuted++;
         localCumulativeTime += stat;
@@ -1106,6 +1140,7 @@ public class NNThroughputBenchmark {
         + " | \n\t" + BlockReportStats.OP_BLOCK_REPORT_USAGE
         + " | \n\t" + ReplicationStats.OP_REPLICATION_USAGE
         + " | \n\t" + CleanAllStats.OP_CLEAN_USAGE
+        + " | \n\t" + GENERAL_OPTIONS_USAGE
     );
     System.exit(-1);
   }

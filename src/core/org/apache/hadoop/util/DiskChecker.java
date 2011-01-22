@@ -19,7 +19,15 @@
 package org.apache.hadoop.util;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * Class that provides utility functions for checking disk problem
@@ -68,6 +76,11 @@ public class DiskChecker {
                                       (canonDir.mkdir() || canonDir.exists()));
   }
   
+  /**
+   * Create the directory if it doesn't exist and 
+   * @param dir
+   * @throws DiskErrorException
+   */
   public static void checkDir(File dir) throws DiskErrorException {
     if (!mkdirsWithExistsCheck(dir))
       throw new DiskErrorException("can not create directory: " 
@@ -86,4 +99,84 @@ public class DiskChecker {
                                    + dir.toString());
   }
 
+  private static void checkPermission(Path dir, 
+                                     FsPermission expected, FsPermission actual) 
+  throws IOException {
+    // Check for permissions
+    if (!actual.equals(expected)) {
+      throw new IOException("Incorrect permission for " + dir + 
+                            ", expected: " + expected + ", while actual: " + 
+                            actual);
+    }
+
+  }
+  
+  /** 
+   * Create the directory or check permissions if it already exists.
+   * 
+   * The semantics of mkdirsWithExistsAndPermissionCheck method is different 
+   * from the mkdirs method provided in the Sun's java.io.File class in the 
+   * following way:
+   * While creating the non-existent parent directories, this method checks for
+   * the existence of those directories if the mkdir fails at any point (since
+   * that directory might have just been created by some other process).
+   * If both mkdir() and the exists() check fails for any seemingly 
+   * non-existent directory, then we signal an error; Sun's mkdir would signal
+   * an error (return false) if a directory it is attempting to create already
+   * exists or the mkdir fails.
+   * @param localFS local filesystem
+   * @param dir directory to be created or checked
+   * @param expected expected permission
+   * @return true on success, false on failure
+   */
+  public static boolean mkdirsWithExistsAndPermissionCheck(
+      LocalFileSystem localFS, Path dir, FsPermission expected) 
+  throws IOException {
+    File directory = new File(dir.makeQualified(localFS).toUri().getPath());
+    if (!directory.exists()) {
+      boolean created = mkdirsWithExistsCheck(directory);
+      if (created) {
+        localFS.setPermission(dir, expected);
+        return true;
+      }
+    }
+
+    checkPermission(dir, expected, localFS.getFileStatus(dir).getPermission());
+    return true;
+  }
+  
+  /**
+   * Create the local directory if necessary, check permissions and also ensure 
+   * it can be read from and written into.
+   * @param localFS local filesystem
+   * @param dir directory
+   * @param expected permission
+   * @throws DiskErrorException
+   * @throws IOException
+   */
+  public static void checkDir(LocalFileSystem localFS, Path dir, 
+                              FsPermission expected) 
+  throws DiskErrorException, IOException {
+    if (!mkdirsWithExistsAndPermissionCheck(localFS, dir, expected))
+      throw new DiskErrorException("can not create directory: " 
+                                   + dir.toString());
+
+    FileStatus stat = localFS.getFileStatus(dir);
+    FsPermission actual = stat.getPermission();
+    
+    if (!stat.isDir())
+      throw new DiskErrorException("not a directory: " 
+                                   + dir.toString());
+            
+    FsAction user = actual.getUserAction();
+    if (!user.implies(FsAction.READ))
+      throw new DiskErrorException("directory is not readable: " 
+                                   + dir.toString());
+            
+    if (!user.implies(FsAction.WRITE))
+      throw new DiskErrorException("directory is not writable: " 
+                                   + dir.toString());
+  }
+
 }
+

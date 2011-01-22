@@ -65,13 +65,40 @@ public abstract class OutputCommitter {
   public abstract void setupJob(JobContext jobContext) throws IOException;
 
   /**
-   * For cleaning up the job's output after job completion
+   * For cleaning up the job's output after job completion. Note that this
+   * is invoked for jobs with final run state as 
+   * {@link JobStatus.State#SUCCEEDED}
    * 
    * @param jobContext Context of the job whose output is being written.
    * @throws IOException
    */
-  public abstract void cleanupJob(JobContext jobContext) throws IOException;
+  public void commitJob(JobContext jobContext) throws IOException {
+    cleanupJob(jobContext);
+  }
 
+  /**
+   * For cleaning up the job's output after job completion
+   * @deprecated use {@link #commitJob(JobContext)} or
+   *                 {@link #abortJob(JobContext, JobStatus.State)} instead
+   */
+  @Deprecated
+  public void cleanupJob(JobContext context) throws IOException { }
+
+  /**
+   * For aborting an unsuccessful job's output. Note that this is invoked for 
+   * jobs with final run state as {@link JobStatus.State#FAILED} or 
+   * {@link JobStatus.State#KILLED}.
+ 
+   * @param jobContext Context of the job whose output is being written.
+   * @param state final run state of the job, should be either 
+   * {@link JobStatus.State#KILLED} or {@link JobStatus.State#FAILED} 
+   * @throws IOException
+   */
+  public void abortJob(JobContext jobContext, JobStatus.State state) 
+  throws IOException {
+    cleanupJob(jobContext);
+  }
+  
   /**
    * Sets up output for the task.
    * 

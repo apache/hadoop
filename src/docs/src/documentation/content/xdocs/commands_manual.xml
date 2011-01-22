@@ -56,8 +56,8 @@
 				<title>Generic Options</title>
 				<p>
 				  The following options are supported by <a href="commands_manual.html#dfsadmin">dfsadmin</a>, 
-				  <a href="commands_manual.html#fs">fs</a>, <a href="commands_manual.html#fsck">fsck</a> and 
-				  <a href="commands_manual.html#job">job</a>. 
+				  <a href="commands_manual.html#fs">fs</a>, <a href="commands_manual.html#fsck">fsck</a>, 
+				  <a href="commands_manual.html#job">job</a> and <a href="commands_manual.html#fetchdt">fetchdt</a>. 
 				  Applications should implement 
 				  <a href="ext:api/org/apache/hadoop/util/tool">Tool</a> to support
 				  <a href="ext:api/org/apache/hadoop/util/genericoptionsparser">
@@ -161,7 +161,7 @@
 					Runs a generic filesystem user client.
 				</p>
 				<p>
-					The various COMMAND_OPTIONS can be found at <a href="hdfs_shell.html">Hadoop FS Shell Guide</a>.
+					The various COMMAND_OPTIONS can be found at <a href="file_system_shell.html">File System Shell Guide</a>.
 				</p>   
 			</section>
 			
@@ -210,6 +210,26 @@
 					</table>
 			</section>
 			
+			<section>
+                <title> fetchdt </title>
+                <p>
+                    Gets Delegation Token from a NameNode. See <a href="hdfs_user_guide.html#fetchdt">fetchdt</a> for more info.
+                </p> 
+                <p><code>Usage: hadoop fetchdt [</code><a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a><code>] 
+                [--webservice &lt;namenode_http_addr&gt;] &lt;path&gt; </code></p>
+                <table>
+                      <tr><th> COMMAND_OPTION </th><th> Description </th></tr>
+                      <tr>
+                        <td><code>&lt;fileName&gt;</code></td>
+                        <td>File name to store the token into.</td>
+                       </tr>
+                       <tr>
+                        <td><code>--webservice &lt;https_address&gt;</code></td>
+                        <td>use http protocol instead of RPC</td>
+                       </tr>
+                    </table>
+            </section>
+            
 			<section>
 				<title> jar </title>
 				<p>
@@ -360,7 +380,7 @@
           command to interact and view Job Queue information
         </p>
         <p>
-          <code>Usage : hadoop queue [-list] | [-info &lt;job-queue-name&gt; [-showJobs]]</code>
+          <code>Usage : hadoop queue [-list] | [-info &lt;job-queue-name&gt; [-showJobs]] | [-showacls]</code>
         </p>
         <table>
         <tr>
@@ -380,6 +400,12 @@
            queue is displayed. 
           </td>
         </tr>
+        <tr>
+          <td><code>-showacls</code></td>
+          <td>Displays the queue name and associated queue operations allowed for the current user.
+          The list consists of only those queues to which the user has access.
+          </td>
+          </tr>
         </table>
       </section>  	
 			<section>
@@ -401,6 +427,15 @@
 				</p>
 				<p>
 					 Runs the class named CLASSNAME.
+				</p>
+			</section>
+			<section>
+				<title> classpath </title>
+				<p>
+					Prints the class path needed to get the Hadoop jar and the required libraries.
+				</p>
+				<p>
+					<code>Usage: hadoop classpath</code>
 				</p>
 			</section>
     </section>
@@ -553,16 +588,41 @@
 			           </tr>
 			     </table>
 			</section>
-			
 			<section>
-				<title> jobtracker </title>
-				<p>
-					Runs the MapReduce job Tracker node.
-				</p> 
-				<p>
-					<code>Usage: hadoop jobtracker</code>
-				</p>
-			</section>
+        <title>mradmin</title>
+        <p>Runs MR admin client</p>
+        <p><code>Usage: hadoop mradmin  [</code>
+        <a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a>
+        <code>] [-refreshQueueAcls] </code></p>
+        <table>
+        <tr>
+        <th> COMMAND_OPTION </th><th> Description </th>
+        </tr>
+        <tr>
+        <td><code>-refreshQueueAcls</code></td>
+        <td> Refresh the queue acls used by hadoop, to check access during submissions
+        and administration of the job by the user. The properties present in
+        <code>mapred-queue-acls.xml</code> is reloaded by the queue manager.</td>
+        </tr>
+        </table>
+      </section>
+      <section>
+	<title> jobtracker </title>
+	<p>Runs the MapReduce job Tracker node.</p> 
+	<p><code>Usage: hadoop jobtracker [-dumpConfiguration]</code></p>
+        <table>
+        <tr>
+        <th>COMMAND_OPTION</th><th> Description</th>
+        </tr>
+        <tr>
+        <td><code>-dumpConfiguration</code></td>
+        <td> Dumps the configuration used by the JobTracker alongwith queue
+        configuration in JSON format into Standard output used by the 
+        jobtracker and exits.</td>
+        </tr>
+        </table>
+				
+      </section>
 			
 			<section>
 				<title> namenode </title>

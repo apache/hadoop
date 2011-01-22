@@ -18,15 +18,23 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.fail;
+
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.io.*;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Enumeration;
+import java.util.Properties;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.examples.RandomWriter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -39,9 +47,14 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogEvent;
+import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringUtils;
 
 /** 
  * Utilities used in unit test.
@@ -49,6 +62,7 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
  */
 public class UtilsForTests {
 
+  static final Log LOG = LogFactory.getLog(UtilsForTests.class);
   final static long KB = 1024L * 1;
   final static long MB = 1024L * KB;
   final static long GB = 1024L * MB;
@@ -217,7 +231,7 @@ public class UtilsForTests {
   /**
    * A utility that waits for specified amount of time
    */
-  static void waitFor(long duration) {
+  public static void waitFor(long duration) {
     try {
       synchronized (waitLock) {
         waitLock.wait(duration);
@@ -249,7 +263,9 @@ public class UtilsForTests {
     while (true) {
       boolean shouldWait = false;
       for (JobStatus jobStatuses : jobClient.getAllJobs()) {
-        if (jobStatuses.getRunState() == JobStatus.RUNNING) {
+        if (jobStatuses.getRunState() != JobStatus.SUCCEEDED
+            && jobStatuses.getRunState() != JobStatus.FAILED
+            && jobStatuses.getRunState() != JobStatus.KILLED) {
           shouldWait = true;
           break;
         }
@@ -419,7 +435,55 @@ public class UtilsForTests {
       }
     }
   }
-  
+
+  /**
+   * Cleans up files/dirs inline. CleanupQueue deletes in a separate thread
+   * asynchronously.
+   */
+  public static class InlineCleanupQueue extends CleanupQueue {
+    List<Path> stalePaths = new ArrayList<Path>();
+
+    public InlineCleanupQueue() {
+      // do nothing
+    }
+
+    @Override
+    public void addToQueue(PathDeletionContext... contexts) {
+      // delete paths in-line
+      for (PathDeletionContext context : contexts) {
+        Exception exc = null;
+        try {
+          if (!deletePath(context)) {
+            LOG.warn("Stale path " + context.fullPath);
+            stalePaths.add(context.fullPath);
+          }
+        } catch (IOException e) {
+          exc = e;
+        } catch (InterruptedException ie) {
+          exc = ie;
+        }
+        if (exc != null) {
+          LOG.warn("Caught exception while deleting path "
+              + context.fullPath);
+          LOG.info(StringUtils.stringifyException(exc));
+          stalePaths.add(context.fullPath);
+        }
+      }
+    }
+    static boolean deletePath(PathDeletionContext context) 
+    throws IOException, InterruptedException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Trying to delete " + context.fullPath);
+      }
+//      FileSystem fs = context.fullPath.getFileSystem(context.conf);
+//      if (fs.exists(context.fullPath)) {
+//        return fs.delete(context.fullPath, true);
+//      }
+      context.deletePath();
+      return true;
+    }
+  }
+
   static String getTaskSignalParameter(boolean isMap) {
     return isMap 
            ? "test.mapred.map.waiting.target" 
@@ -539,11 +603,13 @@ public class UtilsForTests {
   }
 
   // Start a job and return its RunningJob object
-  static RunningJob runJob(JobConf conf, Path inDir, Path outDir, int numMaps, 
-                           int numReds) throws IOException {
+  public static RunningJob runJob(JobConf conf, Path inDir, Path outDir, 
+                                  int numMaps, int numReds) throws IOException {
 
     FileSystem fs = FileSystem.get(conf);
-    fs.delete(outDir, true);
+    if (fs.exists(outDir)) {
+      fs.delete(outDir, true);
+    }
     if (!fs.exists(inDir)) {
       fs.mkdirs(inDir);
     }
@@ -636,6 +702,19 @@ public class UtilsForTests {
     return job;
   }
 
+  static class FakeClock extends Clock {
+    long time = 0;
+    
+    public void advance(long millis) {
+      time += millis;
+    }
+     
+      @Override
+      long getTime() {
+        return time;
+      }
+    }
+  
   // Mapper that fails
   static class FailMapper extends MapReduceBase implements
       Mapper<WritableComparable, Writable, WritableComparable, Writable> {
@@ -664,4 +743,132 @@ public class UtilsForTests {
       }
     }
   }
+
+  /**
+   * This is an in-line {@link UserLogManager} to do all the actions in-line. 
+   */
+  static class InLineUserLogManager extends UserLogManager {
+    public InLineUserLogManager(Configuration conf) throws IOException {
+      super(conf);
+      getUserLogCleaner().setCleanupQueue(new InlineCleanupQueue());
+    }
+
+    // do the action in-line
+    public void addLogEvent(UserLogEvent event) {
+      try {
+        super.addLogEvent(event);
+        super.monitor();
+      } catch (Exception e) {
+        fail("failed to process action " + event.getEventType());
+      }
+    }
+  }
+
+  static void setUpConfigFile(Properties confProps, File configFile)
+    throws IOException {
+    Configuration config = new Configuration(false);
+    FileOutputStream fos = new FileOutputStream(configFile);
+
+    for (Enumeration<?> e = confProps.propertyNames(); e.hasMoreElements();) {
+      String key = (String) e.nextElement();
+      config.set(key, confProps.getProperty(key));
+    }
+
+    config.writeXml(fos);
+    fos.close();
+  }
+
+  
+  /**
+   * Get PID from a pid-file.
+   * 
+   * @param pidFileName
+   *          Name of the pid-file.
+   * @return the PID string read from the pid-file. Returns null if the
+   *         pidFileName points to a non-existing file or if read fails from the
+   *         file.
+   */
+  public static String getPidFromPidFile(String pidFileName) {
+    BufferedReader pidFile = null;
+    FileReader fReader = null;
+    String pid = null;
+
+    try {
+      fReader = new FileReader(pidFileName);
+      pidFile = new BufferedReader(fReader);
+    } catch (FileNotFoundException f) {
+      LOG.debug("PidFile doesn't exist : " + pidFileName);
+      return pid;
+    }
+
+    try {
+      pid = pidFile.readLine();
+    } catch (IOException i) {
+      LOG.error("Failed to read from " + pidFileName);
+    } finally {
+      try {
+        if (fReader != null) {
+          fReader.close();
+        }
+        try {
+          if (pidFile != null) {
+            pidFile.close();
+          }
+        } catch (IOException i) {
+          LOG.warn("Error closing the stream " + pidFile);
+        }
+      } catch (IOException i) {
+        LOG.warn("Error closing the stream " + fReader);
+      }
+    }
+    return pid;
+  }
+
+  static JobTracker getJobTracker() {
+    JobConf conf = new JobConf();
+    conf.set("mapred.job.tracker", "localhost:0");
+    conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+    JobTracker jt;
+    try {
+      jt = new JobTracker(conf);
+      return jt;
+    } catch (Exception e) {
+      throw new RuntimeException("Could not start jt", e);
+    }
+  }
+
+  /**
+   * This creates a file in the dfs
+   * @param dfs FileSystem Local File System where file needs to be picked
+   * @param URIPATH Path dfs path where file needs to be copied
+   * @param permission FsPermission File permission
+   * @return returns the DataOutputStream
+   */
+  public static DataOutputStream
+      createTmpFileDFS(FileSystem dfs, Path URIPATH,
+      FsPermission permission, String input) throws Exception {
+    //Creating the path with the file
+    DataOutputStream file =
+      FileSystem.create(dfs, URIPATH, permission);
+    file.writeBytes(input);
+    file.close();
+    return file;
+  }
+
+  /**
+   * This formats the long tasktracker name to just the FQDN
+   * @param taskTrackerLong String The long format of the tasktracker string
+   * @return String The FQDN of the tasktracker
+   * @throws Exception
+   */
+  public static String getFQDNofTT (String taskTrackerLong) throws Exception {
+    //Getting the exact FQDN of the tasktracker from the tasktracker string.
+    String[] firstSplit = taskTrackerLong.split("_");
+    String tmpOutput = firstSplit[1];
+    String[] secondSplit = tmpOutput.split(":");
+    String tmpTaskTracker = secondSplit[0];
+    return tmpTaskTracker;
+  }
+
 }
+

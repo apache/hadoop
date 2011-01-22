@@ -23,10 +23,12 @@ import java.net.URI;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -43,6 +45,9 @@ public class FileOutputCommitter extends OutputCommitter {
    * Temporary directory name 
    */
   protected static final String TEMP_DIR_NAME = "_temporary";
+  public static final String SUCCEEDED_FILE_NAME = "_SUCCESS";
+  static final String SUCCESSFUL_JOB_OUTPUT_DIR_MARKER =
+    "mapreduce.fileoutputcommitter.marksuccessfuljobs";
   private FileSystem outputFileSystem = null;
   private Path outputPath = null;
   private Path workPath = null;
@@ -80,10 +85,41 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  private static boolean shouldMarkOutputDir(Configuration conf) {
+    return conf.getBoolean(SUCCESSFUL_JOB_OUTPUT_DIR_MARKER, 
+                           true);
+  }
+
+  // Mark the output dir of the job for which the context is passed.
+  private void markOutputDirSuccessful(JobContext context)
+  throws IOException {
+    if (outputPath != null) {
+      FileSystem fileSys = outputPath.getFileSystem(context.getConfiguration());
+      if (fileSys.exists(outputPath)) {
+        // create a file in the folder to mark it
+        Path filePath = new Path(outputPath, SUCCEEDED_FILE_NAME);
+        fileSys.create(filePath).close();
+      }
+    }
+  }
+
   /**
    * Delete the temporary directory, including all of the work directories.
-   * @param context the job's context
+   * This is called for all jobs whose final run state is SUCCEEDED
+   * @param context the job's context.
    */
+  public void commitJob(JobContext context) throws IOException {
+    // delete the _temporary folder
+    cleanupJob(context);
+    // check if the o/p dir should be marked
+    if (shouldMarkOutputDir(context.getConfiguration())) {
+      // create a _success file in the o/p folder
+      markOutputDirSuccessful(context);
+    }
+  }
+
+  @Override
+  @Deprecated
   public void cleanupJob(JobContext context) throws IOException {
     if (outputPath != null) {
       Path tmpDir = new Path(outputPath, FileOutputCommitter.TEMP_DIR_NAME);
@@ -91,9 +127,22 @@ public class FileOutputCommitter extends OutputCommitter {
       if (fileSys.exists(tmpDir)) {
         fileSys.delete(tmpDir, true);
       }
+    } else {
+      LOG.warn("Output path is null in cleanup");
     }
   }
 
+  /**
+   * Delete the temporary directory, including all of the work directories.
+   * @param context the job's context
+   * @param state final run state of the job, should be FAILED or KILLED
+   */
+  @Override
+  public void abortJob(JobContext context, JobStatus.State state)
+  throws IOException {
+    cleanupJob(context);
+  }
+  
   /**
    * No task setup required.
    */

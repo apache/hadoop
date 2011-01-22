@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -221,7 +221,7 @@ abstract class INode implements Comparable<byte[]> {
    * @return local file name
    */
   String getLocalName() {
-    return bytes2String(name);
+    return DFSUtil.bytes2String(name);
   }
 
   /**
@@ -236,7 +236,7 @@ abstract class INode implements Comparable<byte[]> {
    * Set local file name
    */
   void setLocalName(String name) {
-    this.name = string2Bytes(name);
+    this.name = DFSUtil.string2Bytes(name);
   }
 
   /**
@@ -324,7 +324,7 @@ abstract class INode implements Comparable<byte[]> {
     }
     byte[][] bytes = new byte[strings.length][];
     for (int i = 0; i < strings.length; i++)
-      bytes[i] = string2Bytes(strings[i]);
+      bytes[i] = DFSUtil.string2Bytes(strings[i]);
     return bytes;
   }
 
@@ -392,30 +392,6 @@ abstract class INode implements Comparable<byte[]> {
         return b1 - b2;
     }
     return len1 - len2;
-  }
-
-  /**
-   * Converts a byte array to a string using UTF8 encoding.
-   */
-  static String bytes2String(byte[] bytes) {
-    try {
-      return new String(bytes, "UTF8");
-    } catch(UnsupportedEncodingException e) {
-      assert false : "UTF8 encoding is not supported ";
-    }
-    return null;
-  }
-
-  /**
-   * Converts a string to a byte array using UTF8 encoding.
-   */
-  static byte[] string2Bytes(String str) {
-    try {
-      return str.getBytes("UTF8");
-    } catch(UnsupportedEncodingException e) {
-      assert false : "UTF8 encoding is not supported ";
-    }
-    return null;
   }
   
   

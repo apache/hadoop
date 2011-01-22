@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 
 import junit.framework.TestCase;
 import java.io.*;
-import java.net.InetSocketAddress;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TreeMap;
@@ -30,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.commons.logging.Log;
@@ -127,43 +127,43 @@ public class TestDFSUpgradeFromImage extends TestCase {
   
   CRC32 overallChecksum = new CRC32();
   
-  private void verifyDir(DFSClient client, String dir) 
+  private void verifyDir(DistributedFileSystem dfs, Path dir) 
                                            throws IOException {
     
-    FileStatus[] fileArr = client.listPaths(dir);
-    TreeMap<String, Boolean> fileMap = new TreeMap<String, Boolean>();
+    FileStatus[] fileArr = dfs.listStatus(dir);
+    TreeMap<Path, Boolean> fileMap = new TreeMap<Path, Boolean>();
     
     for(FileStatus file : fileArr) {
-      String path = file.getPath().toString();
-      fileMap.put(path, Boolean.valueOf(file.isDir()));
+      fileMap.put(file.getPath(), Boolean.valueOf(file.isDir()));
     }
     
-    for(Iterator<String> it = fileMap.keySet().iterator(); it.hasNext();) {
-      String path = it.next();
+    for(Iterator<Path> it = fileMap.keySet().iterator(); it.hasNext();) {
+      Path path = it.next();
       boolean isDir = fileMap.get(path);
       
-      overallChecksum.update(path.getBytes());
+      String pathName = path.toUri().getPath();
+      overallChecksum.update(pathName.getBytes());
       
       if ( isDir ) {
-        verifyDir(client, path);
+        verifyDir(dfs, path);
       } else {
         // this is not a directory. Checksum the file data.
         CRC32 fileCRC = new CRC32();
-        FSInputStream in = client.open(path);
+        FSInputStream in = dfs.dfs.open(pathName);
         byte[] buf = new byte[4096];
         int nRead = 0;
         while ( (nRead = in.read(buf, 0, buf.length)) > 0 ) {
           fileCRC.update(buf, 0, nRead);
         }
         
-        verifyChecksum(path, fileCRC.getValue());
+        verifyChecksum(pathName, fileCRC.getValue());
       }
     }
   }
   
-  private void verifyFileSystem(DFSClient client) throws IOException {
+  private void verifyFileSystem(DistributedFileSystem dfs) throws IOException {
   
-    verifyDir(client, "/");
+    verifyDir(dfs, new Path("/"));
     
     verifyChecksum("overallCRC", overallChecksum.getValue());
     
@@ -185,8 +185,8 @@ public class TestDFSUpgradeFromImage extends TestCase {
       cluster = new MiniDFSCluster(0, conf, numDataNodes, false, true,
                                    StartupOption.UPGRADE, null);
       cluster.waitActive();
-      DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
-                                           cluster.getNameNodePort()), conf);
+      DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
+      DFSClient dfsClient = dfs.dfs;
       //Safemode will be off only after upgrade is complete. Wait for it.
       while ( dfsClient.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET) ) {
         LOG.info("Waiting for SafeMode to be OFF.");
@@ -195,7 +195,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
         } catch (InterruptedException ignored) {}
       }
 
-      verifyFileSystem(dfsClient);
+      verifyFileSystem(dfs);
     } finally {
       if (cluster != null) { cluster.shutdown(); }
     }

@@ -24,11 +24,15 @@ import org.apache.hadoop.mapred.TestJobTrackerRestart;
 
 import junit.framework.TestCase;
 import java.io.*;
+import org.junit.*;
 
 /** 
  * This test checks if the jobtracker can detect and recover a tracker that was
  * lost while the jobtracker was down.
  */
+/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
+ */
+@Ignore
 public class TestJobTrackerRestartWithLostTracker extends TestCase {
   final Path testDir = new Path("/jt-restart-lost-tt-testing");
   final Path inDir = new Path(testDir, "input");

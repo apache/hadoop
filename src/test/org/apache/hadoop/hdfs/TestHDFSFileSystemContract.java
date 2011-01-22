@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystemContractBaseTest;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
   
@@ -33,7 +33,7 @@ public class TestHDFSFileSystemContract extends FileSystemContractBaseTest {
     cluster = new MiniDFSCluster(conf, 2, true, null);
     fs = cluster.getFileSystem();
     defaultWorkingDirectory = "/user/" + 
-           UnixUserGroupInformation.login().getUserName();
+           UserGroupInformation.getCurrentUser().getShortUserName();
   }
   
   @Override

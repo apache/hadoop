@@ -26,16 +26,19 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Runs a job multiple times and takes average of all runs.
  */
-public class MRBench {
+public class MRBench extends Configured implements Tool{
   
   private static final Log LOG = LogFactory.getLog(MRBench.class);
   private static Path BASE_DIR =
@@ -87,7 +90,7 @@ public class MRBench {
    * an appropriate number of leading '0' (zero) characters.  The order of
    * generated data is one of ascending, descending, or random.
    */
-  public static void generateTextFile(FileSystem fs, Path inputFile, 
+  public void generateTextFile(FileSystem fs, Path inputFile, 
                                       long numLines, Order sortOrder) throws IOException 
   {
     LOG.info("creating control file: "+numLines+" numLines, "+sortOrder+" sortOrder");
@@ -137,8 +140,9 @@ public class MRBench {
   /**
    * Create the job configuration.
    */
-  private static JobConf setupJob(int numMaps, int numReduces, String jarFile) {
-    JobConf jobConf = new JobConf(MRBench.class);
+  private JobConf setupJob(int numMaps, int numReduces, String jarFile) {
+    JobConf jobConf = new JobConf(getConf());
+    jobConf.setJarByClass(MRBench.class);
     FileInputFormat.addInputPath(jobConf, INPUT_DIR);
     
     jobConf.setInputFormat(TextInputFormat.class);
@@ -157,7 +161,8 @@ public class MRBench {
     
     jobConf.setNumMapTasks(numMaps);
     jobConf.setNumReduceTasks(numReduces);
-    
+    jobConf
+        .setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
     return jobConf; 
   }
   
@@ -165,8 +170,7 @@ public class MRBench {
    * Runs a MapReduce task, given number of times. The input to each run
    * is the same file.
    */
-  private static ArrayList<Long> runJobInSequence(JobConf masterJobConf, int numRuns) throws IOException {
-    Path intrimData = null; 
+  private ArrayList<Long> runJobInSequence(JobConf masterJobConf, int numRuns) throws IOException {
     Random rand = new Random();
     ArrayList<Long> execTimes = new ArrayList<Long>(); 
     
@@ -204,7 +208,13 @@ public class MRBench {
    *    [-verbose]
    * </pre>
    */
-  public static void main (String[] args) throws IOException {
+  public static void main (String[] args) throws Exception {
+    int res = ToolRunner.run(new MRBench(), args);
+    System.exit(res);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception {
     String version = "MRBenchmark.0.0.2";
     System.out.println(version);
 
@@ -265,7 +275,7 @@ public class MRBench {
         inputSortOrder == null)
       {
         System.err.println(usage);
-        System.exit(-1);
+        return -1;
       }
 
     JobConf jobConf = setupJob(numMaps, numReduces, jarFile);
@@ -303,6 +313,7 @@ public class MRBench {
     System.out.println("DataLines\tMaps\tReduces\tAvgTime (milliseconds)");
     System.out.println(inputLines + "\t\t" + numMaps + "\t" + 
                        numReduces + "\t" + avgTime);
+    return 0;
   }
   
 }

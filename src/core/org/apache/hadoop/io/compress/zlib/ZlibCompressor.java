@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.util.NativeCodeLoader;
+import org.mortbay.log.Log;
 
 /**
  * A {@link Compressor} based on the popular 
@@ -40,7 +42,7 @@ public class ZlibCompressor implements Compressor {
   private long stream;
   private CompressionLevel level;
   private CompressionStrategy strategy;
-  private CompressionHeader windowBits;
+  private final CompressionHeader windowBits;
   private int directBufferSize;
   private byte[] userBuf = null;
   private int userBufOff = 0, userBufLen = 0;
@@ -178,6 +180,31 @@ public class ZlibCompressor implements Compressor {
     return nativeZlibLoaded;
   }
 
+  protected final void construct(CompressionLevel level, CompressionStrategy strategy,
+      CompressionHeader header, int directBufferSize) {
+  }
+
+  /**
+   * Creates a new compressor with the default compression level.
+   * Compressed data will be generated in ZLIB format.
+   */
+  public ZlibCompressor() {
+    this(CompressionLevel.DEFAULT_COMPRESSION,
+         CompressionStrategy.DEFAULT_STRATEGY,
+         CompressionHeader.DEFAULT_HEADER,
+         DEFAULT_DIRECT_BUFFER_SIZE);
+  }
+
+  /**
+   * Creates a new compressor, taking settings from the configuration.
+   */
+  public ZlibCompressor(Configuration conf) {
+    this(ZlibFactory.getCompressionLevel(conf),
+         ZlibFactory.getCompressionStrategy(conf),
+         CompressionHeader.DEFAULT_HEADER,
+         DEFAULT_DIRECT_BUFFER_SIZE);
+  }
+
   /** 
    * Creates a new compressor using the specified compression level.
    * Compressed data will be generated in ZLIB format.
@@ -192,28 +219,38 @@ public class ZlibCompressor implements Compressor {
     this.level = level;
     this.strategy = strategy;
     this.windowBits = header;
-    this.directBufferSize = directBufferSize;
-    
-    uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
-    compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
-    compressedDirectBuf.position(directBufferSize);
-    
     stream = init(this.level.compressionLevel(), 
                   this.strategy.compressionStrategy(), 
                   this.windowBits.windowBits());
+
+    this.directBufferSize = directBufferSize;
+    uncompressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
+    compressedDirectBuf = ByteBuffer.allocateDirect(directBufferSize);
+    compressedDirectBuf.position(directBufferSize);
   }
-  
+
   /**
-   * Creates a new compressor with the default compression level.
-   * Compressed data will be generated in ZLIB format.
+   * Prepare the compressor to be used in a new stream with settings defined in
+   * the given Configuration. It will reset the compressor's compression level
+   * and compression strategy.
+   * 
+   * @param conf Configuration storing new settings
    */
-  public ZlibCompressor() {
-    this(CompressionLevel.DEFAULT_COMPRESSION, 
-         CompressionStrategy.DEFAULT_STRATEGY, 
-         CompressionHeader.DEFAULT_HEADER, 
-         DEFAULT_DIRECT_BUFFER_SIZE);
+  @Override
+  public synchronized void reinit(Configuration conf) {
+    reset();
+    if (conf == null) {
+      return;
+    }
+    end(stream);
+    level = ZlibFactory.getCompressionLevel(conf);
+    strategy = ZlibFactory.getCompressionStrategy(conf);
+    stream = init(level.compressionLevel(), 
+                  strategy.compressionStrategy(), 
+                  windowBits.windowBits());
+    Log.debug("Reinit compressor with new compression configuration");
   }
-  
+
   public synchronized void setInput(byte[] b, int off, int len) {
     if (b== null) {
       throw new NullPointerException();

@@ -20,10 +20,13 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.*;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.ipc.VersionedProtocol;
+
+import org.apache.hadoop.security.KerberosInfo;
 
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
@@ -33,17 +36,23 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * returning values from these functions.
  *
  **********************************************************************/
+@KerberosInfo(
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, 
+    clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 19: SendHeartbeat returns an array of DatanodeCommand objects
-   *     in stead of a DatanodeCommand object.
+   * 25: Serialized format of BlockTokenIdentifier changed to contain
+   *     multiple blocks within a single BlockTokenIdentifier
+   *     
+   *     (bumped to 25 to bring in line with trunk)
    */
-  public static final long versionID = 19L;
+  public static final long versionID = 25L;
   
   // error code
   final static int NOTIFY = 0;
-  final static int DISK_ERROR = 1;
+  final static int DISK_ERROR = 1; // there are still valid volumes on DN
   final static int INVALID_BLOCK = 2;
+  final static int FATAL_DISK_ERROR = 3; // no valid volumes left on DN
 
   /**
    * Determines actions that data node should perform 
@@ -56,6 +65,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_REGISTER = 4;   // re-register
   final static int DNA_FINALIZE = 5;   // finalize previous upgrade
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
+  final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
 
   /** 
    * Register Datanode.

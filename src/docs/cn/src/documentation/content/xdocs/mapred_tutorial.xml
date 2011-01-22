@@ -1336,8 +1336,8 @@
           IsolationRunner</a> 是帮助调试Map/Reduce程序的工具。</p>
           
           <p>使用<code>IsolationRunner</code>的方法是，首先设置
-          <code>keep.failed.tasks.files</code>属性为<code>true</code> 
-          （同时参考<code>keep.tasks.files.pattern</code>）。</p>
+          <code>keep.failed.task.files</code>属性为<code>true</code> 
+          （同时参考<code>keep.task.files.pattern</code>）。</p>
           
           <p>
             然后，登录到任务运行失败的节点上，进入

@@ -27,32 +27,24 @@ to call at top-level: ant deploy-contrib compile-core-test
 
   <!-- Override jar target to specify main class -->
   <target name="jar" depends="compile">
-    <jar
-      jarfile="${build.dir}/hadoop-${version}-${name}.jar"
-      basedir="${build.classes}"      
-    >
+      <jar jarfile="${build.dir}/hadoop-${name}-${version}.jar"
+      basedir="${build.classes}">
   	<manifest>
 	    <attribute name="Main-Class" value="org.apache.hadoop.streaming.HadoopStreaming"/>
 	</manifest>
     </jar>
   </target>
 
-  <!-- Run only pure-Java unit tests. superdottest -->
+  <!-- Run all unit tests. superdottest -->
   <target name="test">
    <antcall target="hadoopbuildcontrib.test"> 
-     <param name="test.exclude" value="TestStreamedMerge"/>
    </antcall>
   </target>  
  
-  <!-- Run all unit tests
-  This is not called as part of the nightly build
-  because it will only run on platforms that have standard 
-  Unix utilities available. 
-  -->
- <target name="test-unix">
-   <antcall target="hadoopbuildcontrib.test">
-   </antcall>
- </target>  
-
+  <!--Run all system tests.-->
+  <target name="test-system">
+    <antcall target="hadoopbuildcontrib.test-system">
+    </antcall>
+   </target>
 
 </project>

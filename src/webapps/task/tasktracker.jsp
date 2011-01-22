@@ -5,8 +5,11 @@
   import="java.io.*"
   import="java.util.*"
   import="java.text.DecimalFormat"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
+%>
+<%!	private static final long serialVersionUID = 1L;
 %>
 <%
   TaskTracker tracker = (TaskTracker) application.getAttribute("task.tracker");
@@ -39,7 +42,9 @@
        out.print("</td><td>" + status.getRunState()); 
        out.print("</td><td>" + 
                  StringUtils.formatPercent(status.getProgress(), 2));
-       out.print("</td><td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
+       out.print("</td><td><pre>" +
+           HtmlQuoting.quoteHtmlChars(status.getDiagnosticInfo()) +
+           "</pre></td>");
        out.print("</tr>\n");
      }
   %>
@@ -72,7 +77,9 @@
        out.print("</td><td>" + status.getRunState()); 
        out.print("</td><td>" + 
                  StringUtils.formatPercent(status.getProgress(), 2));
-       out.print("</td><td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
+       out.print("</td><td><pre>" +
+           HtmlQuoting.quoteHtmlChars(status.getDiagnosticInfo()) +
+           "</pre></td>");
        out.print("</tr>\n");
      }
   %>

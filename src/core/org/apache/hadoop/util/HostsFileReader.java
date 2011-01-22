@@ -22,13 +22,18 @@ import java.io.*;
 import java.util.Set;
 import java.util.HashSet;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
 
-// Keeps track of which datanodes are allowed to connect to the namenode.
+// Keeps track of which datanodes/tasktrackers are allowed to connect to the 
+// namenode/jobtracker.
 public class HostsFileReader {
   private Set<String> includes;
   private Set<String> excludes;
   private String includesFile;
   private String excludesFile;
+  
+  private static final Log LOG = LogFactory.getLog(HostsFileReader.class);
 
   public HostsFileReader(String inFile, 
                          String exFile) throws IOException {
@@ -40,7 +45,11 @@ public class HostsFileReader {
   }
 
   private void readFileToSet(String filename, Set<String> set) throws IOException {
-    FileInputStream fis = new FileInputStream(new File(filename));
+    File file = new File(filename);
+    if (!file.exists()) {
+      return;
+    }
+    FileInputStream fis = new FileInputStream(file);
     BufferedReader reader = null;
     try {
       reader = new BufferedReader(new InputStreamReader(fis));
@@ -64,30 +73,36 @@ public class HostsFileReader {
   }
 
   public synchronized void refresh() throws IOException {
-    includes.clear();
-    excludes.clear();
-    
+    LOG.info("Refreshing hosts (include/exclude) list");
     if (!includesFile.equals("")) {
-      readFileToSet(includesFile, includes);
+      Set<String> newIncludes = new HashSet<String>();
+      readFileToSet(includesFile, newIncludes);
+      // switch the new hosts that are to be included
+      includes = newIncludes;
     }
     if (!excludesFile.equals("")) {
-      readFileToSet(excludesFile, excludes);
+      Set<String> newExcludes = new HashSet<String>();
+      readFileToSet(excludesFile, newExcludes);
+      // switch the excluded hosts
+      excludes = newExcludes;
     }
   }
 
-  public Set<String> getHosts() {
+  public synchronized Set<String> getHosts() {
     return includes;
   }
 
-  public Set<String> getExcludedHosts() {
+  public synchronized Set<String> getExcludedHosts() {
     return excludes;
   }
 
   public synchronized void setIncludesFile(String includesFile) {
+    LOG.info("Setting the includes file to " + includesFile);
     this.includesFile = includesFile;
   }
   
   public synchronized void setExcludesFile(String excludesFile) {
+    LOG.info("Setting the excludes file to " + excludesFile);
     this.excludesFile = excludesFile;
   }
 

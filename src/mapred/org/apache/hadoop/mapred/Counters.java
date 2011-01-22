@@ -61,7 +61,22 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   private static char[] charsToEscape =  {GROUP_OPEN, GROUP_CLOSE, 
                                           COUNTER_OPEN, COUNTER_CLOSE, 
                                           UNIT_OPEN, UNIT_CLOSE};
+  /** limit on the size of the name of the group **/
+  private static final int GROUP_NAME_LIMIT = 128;
+  /** limit on the size of the counter name **/
+  private static final int COUNTER_NAME_LIMIT = 64;
   
+  private static final JobConf conf = new JobConf();
+  /** limit on counters **/
+  public static int MAX_COUNTER_LIMIT = 
+    conf.getInt("mapreduce.job.counters.limit", 120);
+
+  /** the max groups allowed **/
+  static final int MAX_GROUP_LIMIT = 50;
+  
+  /** the number of current counters**/
+  private int numCounters = 0;
+
   //private static Log log = LogFactory.getLog("Counters.class");
   
   /**
@@ -86,27 +101,36 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * [(actual-name)(display-name)(value)]
      */
     public synchronized String makeEscapedCompactString() {
-      StringBuffer buf = new StringBuffer();
-      buf.append(COUNTER_OPEN);
+
+      // First up, obtain the strings that need escaping. This will help us
+      // determine the buffer length apriori.
+      String escapedName = escape(getName());
+      String escapedDispName = escape(getDisplayName());
+      long currentValue = this.getValue();
+      int length = escapedName.length() + escapedDispName.length() + 4;
+
+      length += 8; // For the following delimiting characters
+      StringBuilder builder = new StringBuilder(length);
+      builder.append(COUNTER_OPEN);
       
       // Add the counter name
-      buf.append(UNIT_OPEN);
-      buf.append(escape(getName()));
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(escapedName);
+      builder.append(UNIT_CLOSE);
       
       // Add the display name
-      buf.append(UNIT_OPEN);
-      buf.append(escape(getDisplayName()));
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(escapedDispName);
+      builder.append(UNIT_CLOSE);
       
       // Add the value
-      buf.append(UNIT_OPEN);
-      buf.append(this.getValue());
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(currentValue);
+      builder.append(UNIT_CLOSE);
       
-      buf.append(COUNTER_CLOSE);
+      builder.append(COUNTER_CLOSE);
       
-      return buf.toString();
+      return builder.toString();
     }
     
     // Checks for (content) equality of two (basic) counters
@@ -132,7 +156,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    *  <p><code>Group</code>handles localization of the class name and the 
    *  counter names.</p>
    */
-  public static class Group implements Writable, Iterable<Counter> {
+  public class Group implements Writable, Iterable<Counter> {
     private String groupName;
     private String displayName;
     private Map<String, Counter> subcounters = new HashMap<String, Counter>();
@@ -148,19 +172,12 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       }
       this.groupName = groupName;
       this.displayName = localize("CounterGroupName", groupName);
-      LOG.debug("Creating group " + groupName + " with " +
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Creating group " + groupName + " with " +
                (bundle == null ? "nothing" : "bundle"));
+      }
     }
-    
-    /**
-     * Returns the specified resource bundle, or throws an exception.
-     * @throws MissingResourceException if the bundle isn't found
-     */
-    private static ResourceBundle getResourceBundle(String enumClassName) {
-      String bundleName = enumClassName.replace('$','_');
-      return ResourceBundle.getBundle(bundleName);
-    }
-    
+        
     /**
      * Returns raw name of the group.  This is the name of the enum class
      * for this group of counters.
@@ -190,26 +207,41 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * counters within.
      */
     public String makeEscapedCompactString() {
-      StringBuffer buf = new StringBuffer();
-      buf.append(GROUP_OPEN); // group start
+      String[] subcountersArray = new String[subcounters.size()];
+
+      // First up, obtain the strings that need escaping. This will help us
+      // determine the buffer length apriori.
+      String escapedName = escape(getName());
+      String escapedDispName = escape(getDisplayName());
+      int i = 0;
+      int length = escapedName.length() + escapedDispName.length();
+      for (Counter counter : subcounters.values()) {
+        String escapedStr = counter.makeEscapedCompactString();
+        subcountersArray[i++] = escapedStr;
+        length += escapedStr.length();
+      }
+
+      length += 6; // for all the delimiting characters below
+      StringBuilder builder = new StringBuilder(length);
+      builder.append(GROUP_OPEN); // group start
       
       // Add the group name
-      buf.append(UNIT_OPEN);
-      buf.append(escape(getName()));
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(escapedName);
+      builder.append(UNIT_CLOSE);
       
       // Add the display name
-      buf.append(UNIT_OPEN);
-      buf.append(escape(getDisplayName()));
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(escapedDispName);
+      builder.append(UNIT_CLOSE);
       
       // write the value
-      for(Counter counter: subcounters.values()) {
-        buf.append(counter.makeEscapedCompactString());
+      for(String str : subcountersArray) {
+        builder.append(str);
       }
       
-      buf.append(GROUP_CLOSE); // group end
-      return buf.toString();
+      builder.append(GROUP_CLOSE); // group end
+      return builder.toString();
     }
 
     @Override
@@ -272,11 +304,20 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * @return the counter
      */
     public synchronized Counter getCounterForName(String name) {
-      Counter result = subcounters.get(name);
+      String shortName = getShortName(name, COUNTER_NAME_LIMIT);
+      Counter result = subcounters.get(shortName);
       if (result == null) {
-        LOG.debug("Adding " + name);
-        result = new Counter(name, localize(name + ".name", name), 0L);
-        subcounters.put(name, result);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Adding " + shortName);
+        }
+        numCounters = (numCounters == 0) ? Counters.this.size(): numCounters; 
+        if (numCounters >= MAX_COUNTER_LIMIT) {
+          throw new CountersExceededException("Error: Exceeded limits on number of counters - " 
+              + "Counters=" + numCounters + " Limit=" + MAX_COUNTER_LIMIT);
+        }
+        result = new Counter(shortName, localize(shortName + ".name", shortName), 0L);
+        subcounters.put(shortName, result);
+        numCounters++;
       }
       return result;
     }
@@ -337,7 +378,16 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * typical usage.
    */
   private Map<Enum, Counter> cache = new IdentityHashMap<Enum, Counter>();
-  
+
+  /**
+   * Returns the specified resource bundle, or throws an exception.
+   * @throws MissingResourceException if the bundle isn't found
+   */
+  private static ResourceBundle getResourceBundle(String enumClassName) {
+    String bundleName = enumClassName.replace('$','_');
+    return ResourceBundle.getBundle(bundleName);
+  }
+
   /**
    * Returns the names of all counter classes.
    * @return Set of counter names.
@@ -355,13 +405,20 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * with the specified name.
    */
   public synchronized Group getGroup(String groupName) {
-    Group result = counters.get(groupName);
+    String shortGroupName = getShortName(groupName, GROUP_NAME_LIMIT);
+    Group result = counters.get(shortGroupName);
     if (result == null) {
-      result = new Group(groupName);
-      counters.put(groupName, result);
+      /** check if we have exceeded the max number on groups **/
+      if (counters.size() > MAX_GROUP_LIMIT) {
+        throw new RuntimeException(
+            "Error: Exceeded limits on number of groups in counters - " +
+            "Groups=" + counters.size() +" Limit=" + MAX_GROUP_LIMIT);
+      }
+      result = new Group(shortGroupName);
+      counters.put(shortGroupName, result);
     }
     return result;
-  }
+  } 
 
   /**
    * Find the counter for the given enum. The same enum will always return the
@@ -373,8 +430,10 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     Counter counter = cache.get(key);
     if (counter == null) {
       Group group = getGroup(key.getDeclaringClass().getName());
-      counter = group.getCounterForName(key.toString());
-      cache.put(key, counter);
+      if (group != null) {
+        counter = group.getCounterForName(key.toString());
+        if (counter != null)  cache.put(key, counter);
+      }
     }
     return counter;    
   }
@@ -386,10 +445,11 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @return the counter for that name
    */
   public synchronized Counter findCounter(String group, String name) {
-    return getGroup(group).getCounterForName(name);
+    Group retGroup = getGroup(group);
+    return (retGroup == null) ? null: retGroup.getCounterForName(name);
   }
 
-  /**
+  /** 
    * Find a counter by using strings
    * @param group the name of the group
    * @param id the id of the counter within the group (0 to N-1)
@@ -399,7 +459,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    */
   @Deprecated
   public synchronized Counter findCounter(String group, int id, String name) {
-    return getGroup(group).getCounterForName(name);
+    Group retGroup = getGroup(group);
+    return (retGroup == null) ? null: retGroup.getCounterForName(name);
   }
 
   /**
@@ -420,7 +481,13 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @param amount amount by which counter is to be incremented
    */
   public synchronized void incrCounter(String group, String counter, long amount) {
-    getGroup(group).getCounterForName(counter).increment(amount);
+    Group retGroup = getGroup(group);
+    if (retGroup != null) {
+      Counter retCounter = retGroup.getCounterForName(counter);
+      if (retCounter != null ) {
+        retCounter.increment(amount);
+      }
+    }
   }
   
   /**
@@ -428,7 +495,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * does not exist.
    */
   public synchronized long getCounter(Enum key) {
-    return findCounter(key).getValue();
+    Counter retCounter = findCounter(key);
+    return (retCounter == null) ? 0 : retCounter.getValue();
   }
   
   /**
@@ -439,9 +507,15 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   public synchronized void incrAllCounters(Counters other) {
     for (Group otherGroup: other) {
       Group group = getGroup(otherGroup.getName());
+      if (group == null) {
+        continue;
+      }
       group.displayName = otherGroup.displayName;
       for (Counter otherCounter : otherGroup) {
         Counter counter = group.getCounterForName(otherCounter.getName());
+        if (counter == null) {
+          continue;
+        }
         counter.setDisplayName(otherCounter.getDisplayName());
         counter.increment(otherCounter.getValue());
       }
@@ -567,11 +641,36 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * {(groupname)(group-displayname)[(countername)(displayname)(value)][][]}{}{}
    */
   public synchronized String makeEscapedCompactString() {
-    StringBuffer buffer = new StringBuffer();
-    for(Group group: this){
-      buffer.append(group.makeEscapedCompactString());
+    String[] groupsArray = new String[counters.size()];
+    int i = 0;
+    int length = 0;
+
+    // First up, obtain the escaped string for each group so that we can
+    // determine the buffer length apriori.
+    for (Group group : this) {
+      String escapedString = group.makeEscapedCompactString();
+      groupsArray[i++] = escapedString;
+      length += escapedString.length();
     }
-    return buffer.toString();
+
+    // Now construct the buffer
+    StringBuilder builder = new StringBuilder(length);
+    for (String group : groupsArray) {
+      builder.append(group);
+    }
+    return builder.toString();
+  }
+  
+  /**
+   * return the short name of a counter/group name
+   * truncates from beginning.
+   * @param name the name of a group or counter
+   * @param limit the limit of characters
+   * @return the short name
+   */
+  static String getShortName(String name, int limit) {
+    return (name.length() > limit ?
+          name.substring(name.length() - limit, name.length()): name);
   }
 
   // Extracts a block (data enclosed within delimeters) ignoring escape 
@@ -703,5 +802,18 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       }
     }
     return isEqual;
+  }
+  
+  /**
+   * Counter exception thrown when the number of counters exceed 
+   * the limit
+   */
+  public static class CountersExceededException extends RuntimeException {
+  
+    private static final long serialVersionUID = 1L;
+
+    public CountersExceededException(String msg) {
+      super(msg);
+    }
   }
 }

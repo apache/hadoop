@@ -132,7 +132,7 @@
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
-      <version>1.3</version>
+      <version>1.4</version>
       <scope>optional</scope>
     </dependency>
 
@@ -253,5 +253,11 @@
       <version>0.52</version>
       <scope>optional</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.directory.daemon</groupId>
+      <artifactId>daemon-plugin</artifactId>
+      <version>${commons-daemon.version}</version>
+    </dependency>
+
   </dependencies>
 </project>

@@ -68,7 +68,7 @@ public class TestGlobalFilter extends junit.framework.TestCase {
     static public class Initializer extends FilterInitializer {
       public Initializer() {}
 
-      void initFilter(FilterContainer container) {
+      public void initFilter(FilterContainer container, Configuration conf) {
         container.addGlobalFilter("recording", RecordingFilter.class.getName(), null);
       }
     }

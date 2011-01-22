@@ -23,7 +23,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.UnknownHostException;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSession;
@@ -69,7 +68,8 @@ public class HsftpFileSystem extends HftpFileSystem {
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     try {
-      final URL url = new URI("https", null, pickOneAddress(nnAddr.getHostName()),
+      query = updateQuery(query);
+      final URL url = new URI("https", null, nnAddr.getHostName(),
           nnAddr.getPort(), path, query, null).toURL();
       HttpsURLConnection conn = (HttpsURLConnection)url.openConnection();
       // bypass hostname verification
@@ -83,13 +83,11 @@ public class HsftpFileSystem extends HftpFileSystem {
   @Override
   public URI getUri() {
     try {
-      return new URI("hsftp", null, pickOneAddress(nnAddr.getHostName()), nnAddr.getPort(),
+      return new URI("hsftp", null, nnAddr.getHostName(), nnAddr.getPort(),
                      null, null, null);
     } catch (URISyntaxException e) {
       return null;
-    } catch (UnknownHostException e) {
-      return null;
-    }
+    } 
   }
 
   /**

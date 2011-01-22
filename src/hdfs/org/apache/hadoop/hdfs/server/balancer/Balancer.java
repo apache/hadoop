@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -55,6 +56,9 @@ import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -71,8 +75,9 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -190,6 +195,11 @@ public class Balancer implements Tool {
   private NamenodeProtocol namenode;
   private ClientProtocol client;
   private FileSystem fs;
+  private boolean isBlockTokenEnabled;
+  private boolean shouldRun;
+  private long keyUpdaterInterval;
+  private BlockTokenSecretManager blockTokenSecretManager;
+  private Daemon keyupdaterthread = null; // AccessKeyUpdater thread
   private final static Random rnd = new Random();
   
   // all data node lists
@@ -359,6 +369,13 @@ public class Balancer implements Tool {
       out.writeLong(block.getBlock().getGenerationStamp());
       Text.writeString(out, source.getStorageID());
       proxySource.write(out);
+      Token<BlockTokenIdentifier> accessToken = BlockTokenSecretManager.DUMMY_TOKEN;
+      if (isBlockTokenEnabled) {
+        accessToken = blockTokenSecretManager.generateToken(null, block.getBlock(), 
+            EnumSet.of(BlockTokenSecretManager.AccessMode.REPLACE,
+                BlockTokenSecretManager.AccessMode.COPY));
+      }
+      accessToken.write(out);
       out.flush();
     }
     
@@ -366,6 +383,8 @@ public class Balancer implements Tool {
     private void receiveResponse(DataInputStream in) throws IOException {
       short status = in.readShort();
       if (status != DataTransferProtocol.OP_STATUS_SUCCESS) {
+        if (status == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN)
+          throw new IOException("block move failed due to access token error");
         throw new IOException("block move is failed");
       }
     }
@@ -841,13 +860,55 @@ public class Balancer implements Tool {
     this.namenode = createNamenode(conf);
     this.client = DFSClient.createNamenode(conf);
     this.fs = FileSystem.get(conf);
+    ExportedBlockKeys keys = namenode.getBlockKeys();
+    this.isBlockTokenEnabled = keys.isBlockTokenEnabled();
+    if (isBlockTokenEnabled) {
+      long blockKeyUpdateInterval = keys.getKeyUpdateInterval();
+      long blockTokenLifetime = keys.getTokenLifetime();
+      LOG.info("Block token params received from NN: keyUpdateInterval="
+          + blockKeyUpdateInterval / (60 * 1000) + " min(s), tokenLifetime="
+          + blockTokenLifetime / (60 * 1000) + " min(s)");
+      this.blockTokenSecretManager = new BlockTokenSecretManager(false,
+          blockKeyUpdateInterval, blockTokenLifetime);
+      this.blockTokenSecretManager.setKeys(keys);
+      /*
+       * Balancer should sync its block keys with NN more frequently than NN
+       * updates its block keys
+       */
+      this.keyUpdaterInterval = blockKeyUpdateInterval / 4;
+      LOG.info("Balancer will update its block keys every "
+          + keyUpdaterInterval / (60 * 1000) + " minute(s)");
+      this.keyupdaterthread = new Daemon(new BlockKeyUpdater());
+      this.shouldRun = true;
+      this.keyupdaterthread.start();
+    }
+  }
+  
+  /**
+   * Periodically updates access keys.
+   */
+  class BlockKeyUpdater implements Runnable {
+
+    public void run() {
+      while (shouldRun) {
+        try {
+          blockTokenSecretManager.setKeys(namenode.getBlockKeys());
+        } catch (Exception e) {
+          LOG.error(StringUtils.stringifyException(e));
+        }
+        try {
+          Thread.sleep(keyUpdaterInterval);
+        } catch (InterruptedException ie) {
+        }
+      }
+    }
   }
   
   /* Build a NamenodeProtocol connection to the namenode and
    * set up the retry policy */ 
   private static NamenodeProtocol createNamenode(Configuration conf)
     throws IOException {
-    InetSocketAddress nameNodeAddr = NameNode.getAddress(conf);
+    InetSocketAddress nameNodeAddr = NameNode.getServiceAddress(conf, true);
     RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
         5, 200, TimeUnit.MILLISECONDS);
     Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
@@ -857,13 +918,9 @@ public class Balancer implements Tool {
     Map<String,RetryPolicy> methodNameToPolicyMap =
         new HashMap<String, RetryPolicy>();
     methodNameToPolicyMap.put("getBlocks", methodPolicy);
+    methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
 
-    UserGroupInformation ugi;
-    try {
-      ugi = UnixUserGroupInformation.login(conf);
-    } catch (javax.security.auth.login.LoginException e) {
-      throw new IOException(StringUtils.stringifyException(e));
-    }
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     return (NamenodeProtocol) RetryProxy.create(
         NamenodeProtocol.class,
@@ -1502,6 +1559,12 @@ public class Balancer implements Tool {
       dispatcherExecutor.shutdownNow();
       moverExecutor.shutdownNow();
 
+      shouldRun = false;
+      try {
+        if (keyupdaterthread != null) keyupdaterthread.interrupt();
+      } catch (Exception e) {
+        LOG.warn("Exception shutting down access key updater thread", e);
+      }
       // close the output file
       IOUtils.closeStream(out); 
       if (fs != null) {

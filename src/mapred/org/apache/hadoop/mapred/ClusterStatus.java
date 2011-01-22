@@ -60,22 +60,27 @@ public class ClusterStatus implements Writable {
   private int numActiveTrackers;
   private Collection<String> activeTrackers = new ArrayList<String>();
   private Collection<String> blacklistedTrackers = new ArrayList<String>();
+  private Collection<String> graylistedTrackers = new ArrayList<String>();
   private int numBlacklistedTrackers;
+  private int numGraylistedTrackers;
+  private int numExcludedNodes;
   private long ttExpiryInterval;
   private int map_tasks;
   private int reduce_tasks;
   private int max_map_tasks;
   private int max_reduce_tasks;
   private JobTracker.State state;
-  private long used_memory;
-  private long max_memory;
+
+  public static final long UNINITIALIZED_MEMORY_VALUE = -1;
+  private long used_memory = UNINITIALIZED_MEMORY_VALUE;
+  private long max_memory = UNINITIALIZED_MEMORY_VALUE;
 
   ClusterStatus() {}
   
   /**
    * Construct a new cluster status.
    * 
-   * @param trackers no. of tasktrackers in the cluster
+   * @param trackers no. of active tasktrackers in the cluster
    * @param maps no. of currently running map-tasks in the cluster
    * @param reduces no. of currently running reduce-tasks in the cluster
    * @param maxMaps the maximum no. of map tasks in the cluster
@@ -86,15 +91,16 @@ public class ClusterStatus implements Writable {
   @Deprecated
   ClusterStatus(int trackers, int maps, int reduces, int maxMaps,
                 int maxReduces, JobTracker.State state) {
-    this(trackers, 0, JobTracker.TASKTRACKER_EXPIRY_INTERVAL, maps, reduces,
+    this(trackers, 0, 0, JobTracker.TASKTRACKER_EXPIRY_INTERVAL, maps, reduces,
         maxMaps, maxReduces, state);
   }
   
   /**
    * Construct a new cluster status.
    * 
-   * @param trackers no. of tasktrackers in the cluster
-   * @param blacklists no of blacklisted task trackers in the cluster
+   * @param trackers no. of active tasktrackers in the cluster (includes gray)
+   * @param blacklists no. of blacklisted task trackers in the cluster
+   * @param graylists no. of graylisted task trackers in the cluster
    * @param ttExpiryInterval the tasktracker expiry interval
    * @param maps no. of currently running map-tasks in the cluster
    * @param reduces no. of currently running reduce-tasks in the cluster
@@ -102,57 +108,118 @@ public class ClusterStatus implements Writable {
    * @param maxReduces the maximum no. of reduce tasks in the cluster
    * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
    */
-  ClusterStatus(int trackers, int blacklists, long ttExpiryInterval, 
-                int maps, int reduces,
+  ClusterStatus(int trackers, int blacklists, int graylists,
+                long ttExpiryInterval, int maps, int reduces,
                 int maxMaps, int maxReduces, JobTracker.State state) {
+    this(trackers, blacklists, graylists, ttExpiryInterval, maps, reduces,
+         maxMaps, maxReduces, state, 0);
+  }
+
+  /**
+   * Construct a new cluster status.
+   * 
+   * @param trackers no. of active tasktrackers in the cluster (includes gray)
+   * @param blacklists no. of blacklisted task trackers in the cluster
+   * @param graylists no. of graylisted task trackers in the cluster
+   * @param ttExpiryInterval the tasktracker expiry interval
+   * @param maps no. of currently running map-tasks in the cluster
+   * @param reduces no. of currently running reduce-tasks in the cluster
+   * @param maxMaps the maximum no. of map tasks in the cluster
+   * @param maxReduces the maximum no. of reduce tasks in the cluster
+   * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
+   * @param numDecommissionedNodes number of decommission trackers
+   */
+  ClusterStatus(int trackers, int blacklists, int graylists,
+                long ttExpiryInterval, 
+                int maps, int reduces, int maxMaps, int maxReduces, 
+                JobTracker.State state, int numDecommissionedNodes) {
+    this(trackers, blacklists, graylists, ttExpiryInterval, maps, reduces, 
+         maxMaps, maxReduces, state, numDecommissionedNodes, 
+         UNINITIALIZED_MEMORY_VALUE, UNINITIALIZED_MEMORY_VALUE);
+  }
+
+  /**
+   * Construct a new cluster status.
+   * 
+   * @param activeTrackers active tasktrackers in the cluster (includes gray)
+   * @param blacklistedTrackers blacklisted tasktrackers in the cluster
+   * @param graylistedTrackers graylisted tasktrackers in the cluster
+   * @param ttExpiryInterval the tasktracker expiry interval
+   * @param maps no. of currently running map-tasks in the cluster
+   * @param reduces no. of currently running reduce-tasks in the cluster
+   * @param maxMaps the maximum no. of map tasks in the cluster
+   * @param maxReduces the maximum no. of reduce tasks in the cluster
+   * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
+   */
+  ClusterStatus(Collection<String> activeTrackers,
+                Collection<String> blacklistedTrackers,
+                Collection<String> graylistedTrackers,
+                long ttExpiryInterval,
+                int maps, int reduces, int maxMaps, int maxReduces,
+                JobTracker.State state) {
+    this(activeTrackers, blacklistedTrackers, graylistedTrackers,
+         ttExpiryInterval, maps, reduces, maxMaps, maxReduces, state, 0);
+  }
+
+  ClusterStatus(int trackers, int blacklists, int graylists,
+                long ttExpiryInterval, int maps, int reduces, int maxMaps,
+                int maxReduces, JobTracker.State state,
+                int numDecommissionedNodes, long used_memory, long max_memory) {
     numActiveTrackers = trackers;
     numBlacklistedTrackers = blacklists;
+    numGraylistedTrackers = graylists;
+    this.numExcludedNodes = numDecommissionedNodes;
     this.ttExpiryInterval = ttExpiryInterval;
     map_tasks = maps;
     reduce_tasks = reduces;
     max_map_tasks = maxMaps;
     max_reduce_tasks = maxReduces;
     this.state = state;
-    used_memory = Runtime.getRuntime().totalMemory();
-    max_memory = Runtime.getRuntime().maxMemory();
+    this.used_memory = used_memory;
+    this.max_memory = max_memory;
   }
-
+  
   /**
-   * Construct a new cluster status.
-   * 
-   * @param activeTrackers active tasktrackers in the cluster
+   * Construct a new cluster status. 
+   * @param activeTrackers active tasktrackers in the cluster (includes gray)
    * @param blacklistedTrackers blacklisted tasktrackers in the cluster
+   * @param graylistedTrackers graylisted tasktrackers in the cluster
    * @param ttExpiryInterval the tasktracker expiry interval
    * @param maps no. of currently running map-tasks in the cluster
    * @param reduces no. of currently running reduce-tasks in the cluster
    * @param maxMaps the maximum no. of map tasks in the cluster
    * @param maxReduces the maximum no. of reduce tasks in the cluster
    * @param state the {@link JobTracker.State} of the <code>JobTracker</code>
+   * @param numDecommissionNodes number of decommission trackers
    */
   ClusterStatus(Collection<String> activeTrackers, 
-      Collection<String> blacklistedTrackers,
-      long ttExpiryInterval,
-      int maps, int reduces, int maxMaps, int maxReduces, 
-      JobTracker.State state) {
-    this(activeTrackers.size(), blacklistedTrackers.size(), ttExpiryInterval, 
-        maps, reduces, maxMaps, maxReduces, state);
+                Collection<String> blacklistedTrackers,
+                Collection<String> graylistedTrackers, long ttExpiryInterval,
+                int maps, int reduces, int maxMaps, int maxReduces, 
+                JobTracker.State state, int numDecommissionNodes) {
+    this(activeTrackers.size(), blacklistedTrackers.size(),
+        graylistedTrackers.size(), ttExpiryInterval, maps, reduces,
+        maxMaps, maxReduces, state, numDecommissionNodes,
+        Runtime.getRuntime().totalMemory(), Runtime.getRuntime().maxMemory());
     this.activeTrackers = activeTrackers;
     this.blacklistedTrackers = blacklistedTrackers;
+    this.graylistedTrackers = graylistedTrackers;
   }
 
-
   /**
-   * Get the number of task trackers in the cluster.
-   * 
-   * @return the number of task trackers in the cluster.
+   * Get the number of active task trackers in the cluster.  Includes
+   * graylisted but not blacklisted trackers.
+   *
+   * @return the number of active task trackers in the cluster.
    */
   public int getTaskTrackers() {
     return numActiveTrackers;
   }
   
   /**
-   * Get the names of task trackers in the cluster.
-   * 
+   * Get the names of active task trackers in the cluster.  Includes
+   * graylisted but not blacklisted trackers.
+   *
    * @return the active task trackers in the cluster.
    */
   public Collection<String> getActiveTrackerNames() {
@@ -160,14 +227,14 @@ public class ClusterStatus implements Writable {
   }
 
   /**
-   * Get the names of task trackers in the cluster.
+   * Get the names of blacklisted task trackers in the cluster.
    * 
    * @return the blacklisted task trackers in the cluster.
    */
   public Collection<String> getBlacklistedTrackerNames() {
     return blacklistedTrackers;
   }
-  
+
   /**
    * Get the number of blacklisted task trackers in the cluster.
    * 
@@ -175,6 +242,32 @@ public class ClusterStatus implements Writable {
    */
   public int getBlacklistedTrackers() {
     return numBlacklistedTrackers;
+  }
+
+  /**
+   * Get the names of graylisted task trackers in the cluster.
+   * 
+   * @return the graylisted task trackers in the cluster.
+   */
+  public Collection<String> getGraylistedTrackerNames() {
+    return graylistedTrackers;
+  }
+
+  /**
+   * Get the number of graylisted task trackers in the cluster.
+   * 
+   * @return the number of graylisted task trackers in the cluster.
+   */
+  public int getGraylistedTrackers() {
+    return numGraylistedTrackers;
+  }
+
+  /**
+   * Get the number of excluded hosts in the cluster.
+   * @return the number of excluded hosts in the cluster.
+   */
+  public int getNumExcludedNodes() {
+    return numExcludedNodes;
   }
   
   /**
@@ -270,6 +363,17 @@ public class ClusterStatus implements Writable {
         Text.writeString(out, tracker);
       }
     }
+    if (graylistedTrackers.size() == 0) {
+      out.writeInt(numGraylistedTrackers);
+      out.writeInt(0);
+    } else {
+      out.writeInt(graylistedTrackers.size());
+      out.writeInt(graylistedTrackers.size());
+      for (String tracker : graylistedTrackers) {
+        Text.writeString(out, tracker);
+      }
+    }
+    out.writeInt(numExcludedNodes);
     out.writeLong(ttExpiryInterval);
     out.writeInt(map_tasks);
     out.writeInt(reduce_tasks);
@@ -297,6 +401,15 @@ public class ClusterStatus implements Writable {
         blacklistedTrackers.add(name);
       }
     }
+    numGraylistedTrackers = in.readInt();
+    numTrackerNames = in.readInt();
+    if (numTrackerNames > 0) {
+      for (int i = 0; i < numTrackerNames; i++) {
+        String name = Text.readString(in);
+        graylistedTrackers.add(name);
+      }
+    }
+    numExcludedNodes = in.readInt();
     ttExpiryInterval = in.readLong();
     map_tasks = in.readInt();
     reduce_tasks = in.readInt();

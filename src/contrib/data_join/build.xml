@@ -28,9 +28,8 @@ to call at top-level: ant deploy-contrib compile-core-test
   <!-- Override jar target to specify main class -->
   <target name="jar" depends="compile">
     <jar
-      jarfile="${build.dir}/hadoop-${version}-${name}.jar"
-      basedir="${build.classes}"      
-    >
+      jarfile="${build.dir}/hadoop-${name}-${version}.jar"
+      basedir="${build.classes}">      
   	<manifest>
 	    <attribute name="Main-Class" value="org.apache.hadoop.contrib.utils.join.DataJoinJob"/>
 	</manifest>

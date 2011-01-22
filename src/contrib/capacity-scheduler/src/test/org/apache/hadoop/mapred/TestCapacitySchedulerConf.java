@@ -278,6 +278,26 @@ public class TestCapacitySchedulerConf extends TestCase {
     }
   }
   
+  public void testInvalidMaxCapacity() throws IOException {
+    openFile();
+    startConfig();
+    writeProperty(
+      "mapred.capacity-scheduler.queue.default.capacity", "70");
+    writeProperty(
+      "mapred.capacity-scheduler.queue.default.maximum-capacity", "50");
+    endConfig();
+    testConf = new CapacitySchedulerConf(new Path(testConfFile));
+
+    try {
+      testConf.getMaxCapacity("default");
+      fail(" getMaxCapacity worked " + testConf.getCapacity("default"));
+    } catch (IllegalArgumentException e) {
+      assertEquals(
+        CapacitySchedulerConf.MAX_CAPACITY_PROPERTY + " 50.0"+
+          " for a queue should be greater than or equal to capacity ", e.getMessage());
+    }
+  }
+  
   public void testInitializationPollerProperties() 
     throws Exception {
     /*

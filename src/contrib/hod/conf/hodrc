@@ -24,6 +24,7 @@ register                        = True
 java-home                       = ${JAVA_HOME}
 http-port-range                 = 8000-9000
 xrs-port-range                  = 32768-65536
+hadoop-port-range               = 50000-60000
 debug                           = 3
 
 [resource_manager]

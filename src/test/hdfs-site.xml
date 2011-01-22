@@ -4,6 +4,10 @@
 <!-- Put site-specific property overrides in this file. -->
 
 <configuration>
-
+  <!-- Turn security off for tests by default -->
+  <property>
+    <name>hadoop.security.authentication</name>
+    <value>simple</value>
+  </property>
 
 </configuration>

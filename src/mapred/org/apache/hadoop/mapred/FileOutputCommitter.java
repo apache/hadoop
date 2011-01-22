@@ -39,6 +39,9 @@ public class FileOutputCommitter extends OutputCommitter {
    * Temporary directory name 
    */
   public static final String TEMP_DIR_NAME = "_temporary";
+  public static final String SUCCEEDED_FILE_NAME = "_SUCCESS";
+  static final String SUCCESSFUL_JOB_OUTPUT_DIR_MARKER =
+    "mapreduce.fileoutputcommitter.marksuccessfuljobs";
 
   public void setupJob(JobContext context) throws IOException {
     JobConf conf = context.getJobConf();
@@ -52,6 +55,36 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
+  private static boolean getOutputDirMarking(JobConf conf) {
+    return conf.getBoolean(SUCCESSFUL_JOB_OUTPUT_DIR_MARKER, 
+                           true);
+  }
+
+  // Mark the output dir of the job for which the context is passed.
+  private void markSuccessfulOutputDir(JobContext context) 
+  throws IOException {
+    JobConf conf = context.getJobConf();
+    Path outputPath = FileOutputFormat.getOutputPath(conf);
+    if (outputPath != null) {
+      FileSystem fileSys = outputPath.getFileSystem(conf);
+      // create a file in the folder to mark it
+      if (fileSys.exists(outputPath)) {
+        Path filePath = new Path(outputPath, SUCCEEDED_FILE_NAME);
+        fileSys.create(filePath).close();
+      }
+    }
+  }
+  
+  @Override
+  public void commitJob(JobContext context) throws IOException {
+    cleanupJob(context);
+    if (getOutputDirMarking(context.getJobConf())) {
+      markSuccessfulOutputDir(context);
+    }
+  }
+  
+  @Override
+  @Deprecated
   public void cleanupJob(JobContext context) throws IOException {
     JobConf conf = context.getJobConf();
     // do the clean up of temporary directory
@@ -63,9 +96,22 @@ public class FileOutputCommitter extends OutputCommitter {
       if (fileSys.exists(tmpDir)) {
         fileSys.delete(tmpDir, true);
       }
+    } else {
+      LOG.warn("Output path is null in cleanup");
     }
   }
 
+  /**
+   * Delete the temporary directory, including all of the work directories.
+   * @param context the job's context
+   * @param runState final run state of the job, should be
+   * {@link JobStatus#KILLED} or {@link JobStatus#FAILED}
+   */
+  @Override
+  public void abortJob(JobContext context, int runState) throws IOException {
+    cleanupJob(context);
+  }
+  
   public void setupTask(TaskAttemptContext context) throws IOException {
     // FileOutputCommitter's setupTask doesn't do anything. Because the
     // temporary task directory is created on demand when the 

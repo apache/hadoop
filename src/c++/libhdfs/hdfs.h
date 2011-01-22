@@ -101,10 +101,9 @@ extern  "C" {
      * (core-site/core-default.xml).
      * @param port The port on which the server is listening.
      * @param user the user name (this is hadoop domain user). Or NULL is equivelant to hhdfsConnect(host, port)
-     * @param groups the groups (these are hadoop domain groups)
      * @return Returns a handle to the filesystem or NULL on error.
      */
-     hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user , const char *groups[], int groups_size );
+     hdfsFS hdfsConnectAsUser(const char* host, tPort port, const char *user);
 
 
     /** 
