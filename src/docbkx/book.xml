@@ -1064,6 +1064,7 @@ to ensure well-formedness of your document after an edit session.
         </para>
 
       </section>
+
       <section xml:id="lzo">
       <title>LZO compression</title>
       <para>You should consider enabling LZO compression.  Its
@@ -1084,7 +1085,72 @@ to ensure well-formedness of your document after an edit session.
       <link linkend="hbase.regionserver.codecs">hbase.regionserver.codecs</link>
       for a feature to help protect against failed LZO install</para></footnote>.
       </para>
+      <para>See also the <link linkend="compression">Compression Appendix</link>
+      at the tail of this book.</para>
       </section>
+      <section xml:id="bigger.regions">
+      <title>Bigger Regions</title>
+      <para>
+      Consider going to larger regions to cut down on the total number of regions
+      on your cluster. Generally less Regions to manage makes for a smoother running
+      cluster (You can always later manually split the big Regions should one prove
+      hot and you want to spread the request load over the cluster).  By default,
+      regions are 256MB in size.  You could run with
+      1G.  Some run with even larger regions; 4G or even larger.  Adjust
+      <code>hbase.hregion.max.filesize</code> in your <filename>hbase-site.xml</filename>.
+      </para>
+      </section>
+      <section xml:id="disable.splitting">
+      <title>Managed Splitting</title>
+      <para>
+      Rather than let HBase auto-split your Regions, manage the splitting manually
+      <footnote><para>What follows is taken from the javadoc at the head of
+      the <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname> tool
+      added to HBase post-0.90.0 release.
+      </para>
+      </footnote>.
+ With growing amounts of data, splits will continually be needed. Since
+ you always know exactly what regions you have, long-term debugging and
+ profiling is much easier with manual splits. It is hard to trace the logs to
+ understand region level problems if it keeps splitting and getting renamed.
+ Data offlining bugs + unknown number of split regions == oh crap! If an
+ <classname>HLog</classname> or <classname>StoreFile</classname>
+ was mistakenly unprocessed by HBase due to a weird bug and
+ you notice it a day or so later, you can be assured that the regions
+ specified in these files are the same as the current regions and you have
+ less headaches trying to restore/replay your data.
+ You can finely tune your compaction algorithm. With roughly uniform data
+ growth, it's easy to cause split / compaction storms as the regions all
+ roughly hit the same data size at the same time. With manual splits, you can
+ let staggered, time-based major compactions spread out your network IO load.
+      </para>
+      <para>
+ How do I turn off automatic splitting? Automatic splitting is determined by the configuration value
+ <code>hbase.hregion.max.filesize</code>. It is not recommended that you set this
+ to <varname>Long.MAX_VALUE</varname> in case you forget about manual splits. A suggested setting
+ is 100GB, which would result in > 1hr major compactions if reached.
+ </para>
+ <para>What's the optimal number of pre-split regions to create?
+ Mileage will vary depending upon your application.
+ You could start low with 10 pre-split regions / server and watch as data grows
+ over time. It's better to err on the side of too little regions and rolling split later.
+ A more complicated answer is that this depends upon the largest storefile
+ in your region. With a growing data size, this will get larger over time. You
+ want the largest region to be just big enough that the <classname>Store</classname> compact
+ selection algorithm only compacts it due to a timed major. If you don't, your
+ cluster can be prone to compaction storms as the algorithm decides to run
+ major compactions on a large series of regions all at once. Note that
+ compaction storms are due to the uniform data growth, not the manual split
+ decision.
+ </para>
+<para> If you pre-split your regions too thin, you can increase the major compaction
+interval by configuring <varname>HConstants.MAJOR_COMPACTION_PERIOD</varname>. If your data size
+grows too large, use the (post-0.90.0 HBase) <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname>
+script to perform a network IO safe rolling split
+of all regions.
+</para>
+      </section>
+
       </section>
 
       </section>
@@ -1861,18 +1927,29 @@ to ensure well-formedness of your document after an edit session.
     </para>
     </section>
 
-    <section id="lzo.compression">
+    <section xml:id="lzo.compression">
     <title>
     LZO
     </title>
     <para>
-    Running with LZO enabled is recommended though HBase does not ship with
-    LZO because of licensing issues.  See the HBase wiki page
-    <link xlink:href="http://wiki.apache.org/hadoop/UsingLzoCompression">Using LZO Compression</link>
-    for help installing LZO.
+    See <link linkend="lzo">LZO Compression</link> above.
     </para>
     </section>
 
+    <section xml:id="gzip.compression">
+    <title>
+    GZIP
+    </title>
+    <para>
+    GZIP will generally compress better than LZO though slower.
+    For some setups, better compression may be preferred.
+    Java will use java's GZIP unless the native Hadoop libs are
+    available on the CLASSPATH; in this case it will use native
+    compressors instead (If the native libs are NOT present,
+    you will see lots of <emphasis>Got brand-new compressor</emphasis>
+    reports in your logs; TO BE FIXED).
+    </para>
+    </section>
   </appendix>
 
   <appendix xml:id="faq">
