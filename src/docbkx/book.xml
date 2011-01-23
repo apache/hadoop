@@ -1822,17 +1822,15 @@ to ensure well-formedness of your document after an edit session.
     </section>
   </appendix>
   <appendix xml:id="compression">
-    <title >Compression</title>
 
-    <para>TODO: Compression in hbase...</para>
-    <section>
-    <title>
-    LZO
-    </title>
+    <title >Compression In HBase</title>
+
+    <section id="compression.test">
+    <title>CompressionTest Tool</title>
     <para>
-    Running with LZO enabled is recommended though HBase does not ship with
-    LZO because of licensing issues.  To install LZO and verify its installation
-    and that its available to HBase, do the following...
+    HBase includes a tool to test compression is set up properly.
+    To run it, type <code>/bin/hbase org.apache.hadoop.hbase.util.CompressionTest</code>. 
+    This will emit usage on how to run the tool.
     </para>
     </section>
 
@@ -1861,8 +1859,20 @@ to ensure well-formedness of your document after an edit session.
     the case where a new server is added to cluster but the cluster
     requires install of a particular coded.
     </para>
-
     </section>
+
+    <section id="lzo.compression">
+    <title>
+    LZO
+    </title>
+    <para>
+    Running with LZO enabled is recommended though HBase does not ship with
+    LZO because of licensing issues.  See the HBase wiki page
+    <link xlink:href="http://wiki.apache.org/hadoop/UsingLzoCompression">Using LZO Compression</link>
+    for help installing LZO.
+    </para>
+    </section>
+
   </appendix>
 
   <appendix xml:id="faq">
