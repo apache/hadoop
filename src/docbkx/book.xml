@@ -285,7 +285,7 @@ stopping hbase...............</programlisting></para>
 Usually you'll want to use the latest version available except the problematic u18  (u22 is the latest version as of this writing).</para>
 </section>
 
-  <section xml:id="hadoop"><title><link xlink:href="http://hadoop.apache.org">hadoop</link></title>
+  <section xml:id="hadoop"><title><link xlink:href="http://hadoop.apache.org">hadoop</link><indexterm><primary>Hadoop</primary></indexterm></title>
 <para>This version of HBase will only run on <link xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</link>.
     It will not run on hadoop 0.21.x (nor 0.22.x) as of this writing.
     HBase will lose data unless it is running on an HDFS that has a durable <code>sync</code>.
@@ -343,7 +343,7 @@ be running to use Hadoop's scripts to manage remote Hadoop and HBase daemons.
 
 
       <section xml:id="ulimit">
-      <title><varname>ulimit</varname></title>
+      <title><varname>ulimit</varname><indexterm><primary>ulimit</primary></indexterm></title>
       <para>HBase is a database, it uses a lot of files at the same time.
       The default ulimit -n of 1024 on *nix systems is insufficient.
       Any significant amount of loading will lead you to 
@@ -390,7 +390,7 @@ be running to use Hadoop's scripts to manage remote Hadoop and HBase daemons.
       </section>
 
       <section xml:id="dfs.datanode.max.xcievers">
-      <title><varname>dfs.datanode.max.xcievers</varname></title>
+      <title><varname>dfs.datanode.max.xcievers</varname><indexterm><primary>xcievers</primary></indexterm></title>
       <para>
       An Hadoop HDFS datanode has an upper bound on the number of files
       that it will serve at any one time.
@@ -1060,13 +1060,14 @@ to ensure well-formedness of your document after an edit session.
           HBase ships with a reasonable, conservative configuration that will
           work on nearly all
           machine types that people might want to test with. If you have larger
-          machines you might the following configuration options helpful.
+          machines -- HBase has 8G and larger heap -- you might the following configuration options helpful.
+          TODO.
         </para>
 
       </section>
 
       <section xml:id="lzo">
-      <title>LZO compression</title>
+      <title>LZO compression<indexterm><primary>LZO</primary></indexterm></title>
       <para>You should consider enabling LZO compression.  Its
       near-frictionless and in most all cases boosts performance.
       </para>
@@ -1886,10 +1887,14 @@ of all regions.
         doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
       </section>
     </section>
+    <section><title>Compression Tool</title>
+        <para>See <link linkend="compression.tool" >Compression Tool</link>.</para>
+    </section>
   </appendix>
+
   <appendix xml:id="compression">
 
-    <title >Compression In HBase</title>
+    <title >Compression In HBase<indexterm><primary>Compression</primary></indexterm></title>
 
     <section id="compression.test">
     <title>CompressionTest Tool</title>
@@ -1947,7 +1952,7 @@ of all regions.
     available on the CLASSPATH; in this case it will use native
     compressors instead (If the native libs are NOT present,
     you will see lots of <emphasis>Got brand-new compressor</emphasis>
-    reports in your logs; TO BE FIXED).
+    reports in your logs; see <link linkend="brand.new.compressor">FAQ</link>).
     </para>
     </section>
   </appendix>
@@ -1966,7 +1971,7 @@ of all regions.
                 </para>
             </answer>
         </qandaentry>
-        <qandaentry>
+        <qandaentry xml:id="brand.new.compressor">
             <question><para>Why are logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
             brand-new compressor' messages?</para></question>
             <answer>
