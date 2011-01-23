@@ -52,3 +52,6 @@ export HADOOP_JOBTRACKER_OPTS="-Dcom.sun.management.jmxremote $HADOOP_JOBTRACKER
 
 # The scheduling priority for daemon processes.  See 'man nice'.
 # export HADOOP_NICENESS=10
+
+# Allow Hadoop to run with sysctl net.ipv6.bindv6only = 1
+# export HADOOP_ALLOW_IPV6=yes
