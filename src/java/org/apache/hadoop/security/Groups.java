@@ -134,7 +134,7 @@ public class Groups {
    * @param conf
    * @return the groups being used to map user-to-groups.
    */
-  public static Groups getUserToGroupsMappingService(Configuration conf) {
+  public static synchronized Groups getUserToGroupsMappingService(Configuration conf) {
     if(GROUPS == null) {
       if(LOG.isDebugEnabled()) {
         LOG.debug(" Creating new Groups object");
