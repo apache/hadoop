@@ -2027,6 +2027,13 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
     </qandaset>
   </appendix>
 
+  <appendix>
+      <title xml:id="ycsb"><link xlink:href="https://github.com/brianfrankcooper/YCSB/">YCSB: The Yahoo! Cloud Serving Benchmark</link> and HBase</title>
+      <para>TODO: Describe setup of YCSB for HBase</para>
+      <para>Ted Dunning redid YCSB so its mavenized and added facility for verifying workloads.  See <link xlink:href="https://github.com/tdunning/YCSB">Ted Dunning's YCSB</link>.</para>
+
+  </appendix>
+
 
 
 
