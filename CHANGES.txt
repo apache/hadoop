@@ -451,6 +451,8 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7089. Fix link resolution logic in hadoop-config.sh. (eli)
 
+    HADOOP-7046. Fix Findbugs warning in Configuration. (Po Cheung via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

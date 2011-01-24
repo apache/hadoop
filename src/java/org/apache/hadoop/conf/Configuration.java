@@ -1591,7 +1591,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   public void writeXml(Writer out) throws IOException {
     Document doc = asXmlDocument();
 
-    Properties properties = getProps();
     try {
       DOMSource source = new DOMSource(doc);
       StreamResult result = new StreamResult(out);
