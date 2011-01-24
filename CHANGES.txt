@@ -6,6 +6,10 @@ Release 0.20.4 - Unreleased
 
   BUG FIXES
 
+  HADOOP-6923. Native Libraries do not load if a different platform
+  signature is returned from org.apache.hadoop.util.PlatformName.
+  (Stephen Watt via todd)
+
   IMPROVEMENTS
 
 Release 0.20.3 - 2011-1-5

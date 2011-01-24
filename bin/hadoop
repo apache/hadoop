@@ -257,6 +257,10 @@ JAVA_LIBRARY_PATH=''
 if [ -d "${HADOOP_HOME}/build/native" -o -d "${HADOOP_HOME}/lib/native" ]; then
   JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} -Xmx32m org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
   
+  if [ $JAVA_PLATFORM = "Linux-x86-32" ]; then
+	JAVA_PLATFORM="Linux-i386-32"
+  fi
+  
   if [ -d "$HADOOP_HOME/build/native" ]; then
     JAVA_LIBRARY_PATH=${HADOOP_HOME}/build/native/${JAVA_PLATFORM}/lib
   fi
