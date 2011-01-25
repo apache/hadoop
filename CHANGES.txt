@@ -6,10 +6,6 @@ Release 0.20.4 - Unreleased
 
   BUG FIXES
 
-  HADOOP-6923. Native Libraries do not load if a different platform
-  signature is returned from org.apache.hadoop.util.PlatformName.
-  (Stephen Watt via todd)
-
   IMPROVEMENTS
 
 Release 0.20.3 - 2011-1-5
@@ -87,6 +83,13 @@ Release 0.20.3 - 2011-1-5
     HDFS-1406. TestCLI fails on Ubuntu with default /etc/hosts. (cos)
 
     MAPREDUCE-2262. Add capacity scheduler ivy dependency on commons-cli. 
+    (omalley)
+
+    HADOOP-6923. Native Libraries do not load if a different platform
+    signature is returned from org.apache.hadoop.util.PlatformName.
+    (Stephen Watt via todd)
+
+    HADOOP-7116. Increase the heap size for the contrib unit tests to 512mb.
     (omalley)
 
   IMPROVEMENTS
