@@ -74,6 +74,9 @@ public class NativeIO {
   public static native FileDescriptor open(String path, int flags, int mode) throws IOException;
   /** Wrapper around fstat(2) */
   public static native Stat fstat(FileDescriptor fd) throws IOException;
+  /** Wrapper around chmod(2) */
+  public static native void chmod(String path, int mode) throws IOException;
+
   /** Initialize the JNI method ID and class ID cache */
   private static native void initNative();
 
