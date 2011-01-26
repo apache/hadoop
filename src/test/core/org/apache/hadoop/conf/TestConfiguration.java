@@ -18,6 +18,7 @@
 package org.apache.hadoop.conf;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -253,6 +254,16 @@ public class TestConfiguration extends TestCase {
       "Configuration: core-default.xml, core-site.xml, " + 
       fileResource.toString();
     assertEquals(expectedOutput, conf.toString());
+  }
+  
+  public void testWriteXml() throws IOException {
+    Configuration conf = new Configuration();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream(); 
+    conf.writeXml(baos);
+    String result = baos.toString();
+    assertTrue("Result has proper header", result.startsWith(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><configuration>"));
+    assertTrue("Result has proper footer", result.endsWith("</configuration>"));
   }
   
   public void testIncludes() throws Exception {
