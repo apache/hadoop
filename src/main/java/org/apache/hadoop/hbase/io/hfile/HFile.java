@@ -1951,45 +1951,47 @@ public class HFile {
         // create reader and load file info
         HFile.Reader reader = new HFile.Reader(fs, file, null, false, false);
         Map<byte[],byte[]> fileInfo = reader.loadFileInfo();
-        // scan over file and read key/value's and check if requested
-        HFileScanner scanner = reader.getScanner(false, false);
-        scanner.seekTo();
-        KeyValue pkv = null;
         int count = 0;
-        do {
-          KeyValue kv = scanner.getKeyValue();
-          // dump key value
-          if (printKeyValue) {
-            System.out.println("K: " + kv +
-              " V: " + Bytes.toStringBinary(kv.getValue()));
-          }
-          // check if rows are in order
-          if (checkRow && pkv != null) {
-            if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
-              System.err.println("WARNING, previous row is greater then" +
-                " current row\n\tfilename -> " + file +
-                "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey()) +
-                "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+        if (verbose || printKeyValue || checkRow || checkFamily) {
+          // scan over file and read key/value's and check if requested
+          HFileScanner scanner = reader.getScanner(false, false);
+          scanner.seekTo();
+          KeyValue pkv = null;
+          do {
+            KeyValue kv = scanner.getKeyValue();
+            // dump key value
+            if (printKeyValue) {
+              System.out.println("K: " + kv +
+                  " V: " + Bytes.toStringBinary(kv.getValue()));
             }
-          }
-          // check if families are consistent
-          if (checkFamily) {
-            String fam = Bytes.toString(kv.getFamily());
-            if (!file.toString().contains(fam)) {
-              System.err.println("WARNING, filename does not match kv family," +
-                "\n\tfilename -> " + file +
-                "\n\tkeyvalue -> " + Bytes.toStringBinary(kv.getKey()));
+            // check if rows are in order
+            if (checkRow && pkv != null) {
+              if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
+                System.err.println("WARNING, previous row is greater then" +
+                    " current row\n\tfilename -> " + file +
+                    "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey()) +
+                    "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+              }
             }
-            if (pkv != null && Bytes.compareTo(pkv.getFamily(), kv.getFamily()) != 0) {
-              System.err.println("WARNING, previous kv has different family" +
-                " compared to current key\n\tfilename -> " + file +
-                "\n\tprevious -> " +  Bytes.toStringBinary(pkv.getKey()) +
-                "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+            // check if families are consistent
+            if (checkFamily) {
+              String fam = Bytes.toString(kv.getFamily());
+              if (!file.toString().contains(fam)) {
+                System.err.println("WARNING, filename does not match kv family," +
+                    "\n\tfilename -> " + file +
+                    "\n\tkeyvalue -> " + Bytes.toStringBinary(kv.getKey()));
+              }
+              if (pkv != null && Bytes.compareTo(pkv.getFamily(), kv.getFamily()) != 0) {
+                System.err.println("WARNING, previous kv has different family" +
+                    " compared to current key\n\tfilename -> " + file +
+                    "\n\tprevious -> " +  Bytes.toStringBinary(pkv.getKey()) +
+                    "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+              }
             }
-          }
-          pkv = kv;
-          count++;
-        } while (scanner.next());
+            pkv = kv;
+            count++;
+          } while (scanner.next());
+        }
         if (verbose || printKeyValue) {
           System.out.println("Scanned kv count -> " + count);
         }
