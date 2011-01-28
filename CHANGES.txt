@@ -457,6 +457,8 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7118. Fix NPE in Configuration.writeXml (todd)
 
+    HADOOP-7122. Fix thread leak when shell commands time out. (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

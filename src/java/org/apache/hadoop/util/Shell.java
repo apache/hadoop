@@ -205,7 +205,7 @@ abstract public class Shell {
     
     process = builder.start();
     if (timeOutInterval > 0) {
-      timeOutTimer = new Timer();
+      timeOutTimer = new Timer("Shell command timeout");
       timeoutTimerTask = new ShellTimeoutTimerTask(
           this);
       //One time scheduling.
@@ -263,7 +263,7 @@ abstract public class Shell {
     } catch (InterruptedException ie) {
       throw new IOException(ie.toString());
     } finally {
-      if ((timeOutTimer!=null) && !timedOut.get()) {
+      if (timeOutTimer != null) {
         timeOutTimer.cancel();
       }
       // close the input stream
