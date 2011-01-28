@@ -1277,6 +1277,20 @@ of all regions.
   up in javadocs.</para>
   </chapter>
 
+  <chapter xml:id="schema">
+  <title>HBase and Schema Design</title>
+  <section>
+  <title>
+  Monotonically Increasing Row Keys; e.g. timeseries data
+  </title>
+  <para>See this comic by IKai Lan on why monotically increasing row keys are
+  problematic in BigTable-like datastores:
+  <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link></para>
+  <para>See <link xlink:href="http://opentsdb.net/">OpenTSDB</link> as a way for managing
+  timeseries data on top of HBase</para>
+  </section>
+  </chapter>
+
   <chapter xml:id="hbase_metrics">
   <title>Metrics</title>
   <para>See <link xlink:href="metrics.html">Metrics</link>.
