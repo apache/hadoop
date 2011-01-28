@@ -33,6 +33,8 @@ Release 0.21.1 - Unreleased
     HADOOP-7053. wrong FSNamesystem Audit logging setting in 
     conf/log4j.properties. (Jingguo Yao via eli)
 
+    HADOOP-7120. Fix a syntax error in test-patch.sh.  (szetszwo)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
