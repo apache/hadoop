@@ -441,7 +441,7 @@ checkFindbugsWarnings () {
   echo ""
   echo ""
   echo "$ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs"
-  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=$FINDBUGS_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs
+  $ANT_HOME/bin/ant -Dversion="${VERSION}" -Dfindbugs.home=${FINDBUGS_HOME} -Dforrest.home=${FORREST_HOME} -DHadoopPatchProcess= findbugs
   if [ $? != 0 ] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
