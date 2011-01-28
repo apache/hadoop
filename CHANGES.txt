@@ -209,6 +209,11 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7110. Implement chmod with JNI. (todd)
 
+    HADOOP-6812. Change documentation for correct placement of configuration
+    variables: mapreduce.reduce.input.buffer.percent, 
+    mapreduce.task.io.sort.factor, mapreduce.task.io.sort.mb
+    (Chris Douglas via shv)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

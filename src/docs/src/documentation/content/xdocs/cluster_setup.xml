@@ -666,22 +666,33 @@
                     </td>
                   </tr>
                   <tr>
-                    <td>conf/core-site.xml</td>
-                    <td>fs.inmemory.size.mb</td>
-                    <td>200</td>
+                    <td>conf/mapred-site.xml</td>
+                    <td>mapreduce.reduce.shuffle.input.buffer.percent</td>
+                    <td>0.80</td>
                     <td>
-                      Larger amount of memory allocated for the in-memory 
-                      file-system used to merge map-outputs at the reduces.
+                      Larger amount of memory allocated for merging map output
+                      in memory during the shuffle. Expressed as a fraction of
+                      the total heap.
                     </td>
                   </tr>
                   <tr>
-                    <td>conf/core-site.xml</td>
+                    <td>conf/mapred-site.xml</td>
+                    <td>mapreduce.reduce.input.buffer.percent</td>
+                    <td>0.80</td>
+                    <td>
+                      Larger amount of memory allocated for retaining map output
+                      in memory during the reduce. Expressed as a fraction of
+                      the total heap.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>conf/mapred-site.xml</td>
                     <td>mapreduce.task.io.sort.factor</td>
                     <td>100</td>
                     <td>More streams merged at once while sorting files.</td>
                   </tr>
                   <tr>
-                    <td>conf/core-site.xml</td>
+                    <td>conf/mapred-site.xml</td>
                     <td>mapreduce.task.io.sort.mb</td>
                     <td>200</td>
                     <td>Higher memory-limit while sorting data.</td>

@@ -250,7 +250,7 @@ info_port = Port number of the HDFS NameNode web UI
   <p>For example:</p>
 <source>
 server-params = mapred.reduce.parallel.copies=20,io.sort.factor=100,io.sort.mb=128,io.file.buffer.size=131072
-final-server-params = mapred.child.java.opts=-Xmx512m,dfs.block.size=134217728,fs.inmemory.size.mb=128   
+final-server-params = mapred.child.java.opts=-Xmx512m,dfs.block.size=134217728
 </source>
   <p>In order to provide the options from command line, you can use the following syntax:</p>
   <p>For configuring the MapReduce daemons use:</p>
