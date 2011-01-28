@@ -24,6 +24,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
+import java.util.Timer;
 
 public class TestShell extends TestCase {
 
@@ -95,6 +99,46 @@ public class TestShell extends TestCase {
     shellFile.delete();
     assertTrue("Script didnt not timeout" , shexc.isTimedOut());
   }
+  
+  private static int countTimerThreads() {
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+    
+    int count = 0;
+    ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    for (ThreadInfo info : infos) {
+      if (info == null) continue;
+      for (StackTraceElement elem : info.getStackTrace()) {
+        if (elem.getClassName().contains("Timer")) {
+          count++;
+          break;
+        }
+      }
+    }
+    return count;
+  }
+  
+  public void testShellCommandTimerLeak() throws Exception {
+    String quickCommand[] = new String[] {"/bin/sleep", "100"};
+    
+    int timersBefore = countTimerThreads();
+    System.err.println("before: " + timersBefore);
+    
+    for (int i = 0; i < 10; i++) {
+      Shell.ShellCommandExecutor shexec = new Shell.ShellCommandExecutor(
+            quickCommand, null, null, 1);
+      try {
+        shexec.execute();
+        fail("Bad command should throw exception");
+      } catch (Exception e) {
+        // expected
+      }
+    }
+    Thread.sleep(1000);
+    int timersAfter = countTimerThreads();
+    System.err.println("after: " + timersAfter);
+    assertEquals(timersBefore, timersAfter);
+  }
+  
 
   private void testInterval(long interval) throws IOException {
     Command command = new Command(interval);
