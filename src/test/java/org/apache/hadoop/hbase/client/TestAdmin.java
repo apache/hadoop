@@ -25,7 +25,10 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -297,6 +300,27 @@ public class TestAdmin {
     }
   }
 
+  protected void verifyRoundRobinDistribution(HTable ht, int expectedRegions) throws IOException {
+    int numRS = ht.getCurrentNrHRS();
+    Map<HRegionInfo,HServerAddress> regions = ht.getRegionsInfo();
+    Map<HServerAddress, List<HRegionInfo>> server2Regions = new HashMap<HServerAddress, List<HRegionInfo>>();
+    for (Map.Entry<HRegionInfo,HServerAddress> entry : regions.entrySet()) {
+      HServerAddress server = entry.getValue();
+      List<HRegionInfo> regs = server2Regions.get(server);
+      if (regs == null) {
+        regs = new ArrayList<HRegionInfo>();
+        server2Regions.put(server, regs);
+      }
+      regs.add(entry.getKey());
+    }
+    float average = (float) expectedRegions/numRS;
+    int min = (int)Math.floor(average);
+    int max = (int)Math.ceil(average);
+    for (List<HRegionInfo> regionList : server2Regions.values()) {
+      assertTrue(regionList.size() == min || regionList.size() == max);
+    }
+  }
+
   @Test
   public void testCreateTableWithRegions() throws IOException, InterruptedException {
 
@@ -358,6 +382,8 @@ public class TestAdmin {
     assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
     assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
+    verifyRoundRobinDistribution(ht, expectedRegions);
+
     // Now test using start/end with a number of regions
 
     // Use 80 bit numbers to make sure we aren't limited
@@ -415,6 +441,8 @@ public class TestAdmin {
     assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {9,9,9,9,9,9,9,9,9,9}));
     assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
+    verifyRoundRobinDistribution(ht, expectedRegions);
+
     // Try once more with something that divides into something infinite
 
     startKey = new byte [] { 0, 0, 0, 0, 0, 0 };
@@ -435,6 +463,8 @@ public class TestAdmin {
         "but only found " + regions.size(),
         expectedRegions, regions.size());
     System.err.println("Found " + regions.size() + " regions");
+
+    verifyRoundRobinDistribution(ht, expectedRegions);
 
     // Try an invalid case where there are duplicate split keys
     splitKeys = new byte [][] {

@@ -56,6 +56,8 @@ Release 0.91.0 - Unreleased
                server.join() method (Jeff Hammerbacher via Stack)
    HBASE-3437  Support Explict Split Points from the Shell
    HBASE-3433  KeyValue API to explicitly distinguish between deep & shallow copies
+   HBASE-3305  Allow round-robin distribution for table created with
+               multiple regions (ted yu via jgray)
 
 
   NEW FEATURES

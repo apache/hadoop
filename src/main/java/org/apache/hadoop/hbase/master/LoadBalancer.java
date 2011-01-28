@@ -378,13 +378,18 @@ public class LoadBalancer {
     int numServers = servers.size();
     int max = (int)Math.ceil((float)numRegions/numServers);
     int serverIdx = 0;
-    for(HServerInfo server : servers) {
+    if (numServers > 1) {
+      serverIdx = rand.nextInt(numServers);
+    }
+    int regionIdx = 0;
+    for (int j = 0; j < numServers; j++) {
+      HServerInfo server = servers.get((j+serverIdx) % numServers);
       List<HRegionInfo> serverRegions = new ArrayList<HRegionInfo>(max);
-      for(int i=serverIdx;i<regions.size();i+=numServers) {
-        serverRegions.add(regions.get(i));
+      for (int i=regionIdx; i<numRegions; i += numServers) {
+        serverRegions.add(regions.get(i % numRegions));
       }
       assignments.put(server, serverRegions);
-      serverIdx++;
+      regionIdx++;
     }
     return assignments;
   }

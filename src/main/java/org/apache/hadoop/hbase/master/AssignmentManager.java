@@ -1183,6 +1183,28 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * Assigns list of user regions in round-robin fashion, if any exist.
+   * <p>
+   * This is a synchronous call and will return once every region has been
+   * assigned.  If anything fails, an exception is thrown
+   * @throws InterruptedException
+   * @throws IOException
+   */
+  public void assignUserRegions(List<HRegionInfo> regions, List<HServerInfo> servers) throws IOException, InterruptedException {
+    if (regions == null)
+      return;
+    Map<HServerInfo, List<HRegionInfo>> bulkPlan = null;
+    // Generate a round-robin bulk assignment plan
+    bulkPlan = LoadBalancer.roundRobinAssignment(regions, servers);
+    LOG.info("Bulk assigning " + regions.size() + " region(s) round-robin across " +
+               servers.size() + " server(s)");
+    // Use fixed count thread pool assigning.
+    BulkAssigner ba = new BulkStartupAssigner(this.master, bulkPlan, this);
+    ba.bulkAssign();
+    LOG.info("Bulk assigning done");
+  }
+
+  /**
    * Assigns all user regions, if any exist.  Used during cluster startup.
    * <p>
    * This is a synchronous call and will return once every region has been
@@ -1209,9 +1231,9 @@ public class AssignmentManager extends ZooKeeperListener {
       // Reuse existing assignment info
       bulkPlan = LoadBalancer.retainAssignment(allRegions, servers);
     } else {
-      // Generate a round-robin bulk assignment plan
-      bulkPlan = LoadBalancer.roundRobinAssignment(
-          new ArrayList<HRegionInfo>(allRegions.keySet()), servers);
+      // assign regions in round-robin fashion
+      assignUserRegions(new ArrayList<HRegionInfo>(allRegions.keySet()), servers);
+      return;
     }
     LOG.info("Bulk assigning " + allRegions.size() + " region(s) across " +
       servers.size() + " server(s), retainAssignment=" + retainAssignment);

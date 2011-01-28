@@ -25,6 +25,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
@@ -848,9 +849,15 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // 4. Close the new region to flush to disk.  Close log file too.
       region.close();
       region.getLog().closeAndDelete();
+    }
 
-      // 5. Trigger immediate assignment of this region
-      assignmentManager.assign(region.getRegionInfo(), true);
+    // 5. Trigger immediate assignment of the regions in round-robin fashion
+    List<HServerInfo> servers = serverManager.getOnlineServersList();
+    try {
+      this.assignmentManager.assignUserRegions(Arrays.asList(newRegions), servers);
+    } catch (InterruptedException ie) {
+      LOG.error("Caught " + ie + " during round-robin assignment");
+      throw new IOException(ie);
     }
 
     // 5. If sync, wait for assignment of regions
