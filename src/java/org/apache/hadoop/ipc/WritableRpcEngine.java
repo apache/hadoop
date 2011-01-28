@@ -35,7 +35,6 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -221,25 +220,32 @@ public class WritableRpcEngine implements RpcEngine {
   }
   
   /** Construct a client-side proxy object that implements the named protocol,
-   * talking to a server at the named address. */
-  public Object getProxy(Class<?> protocol, long clientVersion,
+   * talking to a server at the named address. 
+   * @param <T>*/
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
                          InetSocketAddress addr, UserGroupInformation ticket,
                          Configuration conf, SocketFactory factory,
                          int rpcTimeout)
     throws IOException {    
 
-    Object proxy = Proxy.newProxyInstance
+    T proxy = (T)Proxy.newProxyInstance
       (protocol.getClassLoader(), new Class[] { protocol },
        new Invoker(protocol, addr, ticket, conf, factory, rpcTimeout));
+    int[] serverMethods = null;
     if (proxy instanceof VersionedProtocol) {
-      long serverVersion = ((VersionedProtocol)proxy)
-        .getProtocolVersion(protocol.getName(), clientVersion);
+      ProtocolSignature serverInfo = ((VersionedProtocol)proxy)
+        .getProtocolSignature(protocol.getName(), clientVersion,
+            ProtocolSignature.getFingerprint(protocol.getMethods()));
+      long serverVersion = serverInfo.getVersion();
       if (serverVersion != clientVersion) {
         throw new RPC.VersionMismatch(protocol.getName(), clientVersion, 
                                       serverVersion);
       }
+      serverMethods = serverInfo.getMethods();
     }
-    return proxy;
+    return new ProtocolProxy<T>(protocol, proxy, serverMethods);
   }
 
   /**

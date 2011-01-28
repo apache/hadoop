@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
-import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.spi.NullContext;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.net.NetUtils;
@@ -79,6 +78,11 @@ public class TestRPC extends TestCase {
     
     public long getProtocolVersion(String protocol, long clientVersion) {
       return TestProtocol.versionID;
+    }
+    
+    public ProtocolSignature getProtocolSignature(String protocol, long clientVersion,
+        int hashcode) {
+      return new ProtocolSignature(TestProtocol.versionID, null);
     }
     
     public void ping() {}

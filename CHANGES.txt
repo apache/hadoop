@@ -4,6 +4,8 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+   HADOOP-6904. Support method based RPC compatiblity. (hairong)
+
   NEW FEATURES
 
     HADOOP-7023. Add listCorruptFileBlocks to Filesysem. (Patrick Kling

@@ -132,6 +132,15 @@ public class MiniRPCBenchmark {
       throw new IOException("Unknown protocol: " + protocol);
     }
 
+    @Override // VersionedProtocol
+    public ProtocolSignature getProtocolSignature(String protocol, 
+                                   long clientVersion,
+                                   int clientMethodsHashCode) throws IOException {
+      if (protocol.equals(MiniProtocol.class.getName()))
+        return new ProtocolSignature(versionID, null);
+      throw new IOException("Unknown protocol: " + protocol);
+    }
+
     @Override // MiniProtocol
     public Token<TestDelegationTokenIdentifier> getDelegationToken(Text renewer) 
     throws IOException {

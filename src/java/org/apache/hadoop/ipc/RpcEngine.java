@@ -34,8 +34,9 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 @InterfaceStability.Evolving
 public interface RpcEngine {
 
-  /** Construct a client-side proxy object. */
-  Object getProxy(Class<?> protocol,
+  /** Construct a client-side proxy object. 
+   * @param <T>*/
+  <T> ProtocolProxy<T> getProxy(Class<T> protocol,
                   long clientVersion, InetSocketAddress addr,
                   UserGroupInformation ticket, Configuration conf,
                   SocketFactory factory, int rpcTimeout) throws IOException;
