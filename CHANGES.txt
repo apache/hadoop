@@ -214,6 +214,8 @@ Release 0.22.0 - Unreleased
     mapreduce.task.io.sort.factor, mapreduce.task.io.sort.mb
     (Chris Douglas via shv)
 
+    HADOOP-6436. Remove auto-generated native build files. (rvs via eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

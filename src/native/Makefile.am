@@ -31,6 +31,7 @@
 # Export $(PLATFORM) to prevent proliferation of sub-shells
 export PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
 
+ACLOCAL_AMFLAGS = -I m4 
 AM_CPPFLAGS = @JNI_CPPFLAGS@ -I$(HADOOP_NATIVE_SRCDIR)/src \
               -Isrc/org/apache/hadoop/io/compress/zlib \
               -Isrc/org/apache/hadoop/security \
