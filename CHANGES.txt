@@ -31,7 +31,9 @@ Release 0.91.0 - Unreleased
    HBASE-3476  HFile -m option need not scan key values
                (Prakash Khemani via Lars George)
    HBASE-3481  max seq id in flushed file can be larger than its correct value 
-   	       causing data loss during recovery
+   	           causing data loss during recovery
+   HBASE-3493  HMaster sometimes hangs during initialization due to missing
+               notify call (Bruno Dumon via Stack)
 
 
   IMPROVEMENTS

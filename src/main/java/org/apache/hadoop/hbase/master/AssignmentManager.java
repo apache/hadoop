@@ -588,6 +588,7 @@ public class AssignmentManager extends ZooKeeperListener {
         " on " + hsi);
       this.regions.put(regionInfo, serverInfo);
       addToServers(serverInfo, regionInfo);
+      this.regions.notifyAll();
     }
     // Remove plan if one.
     clearRegionPlan(regionInfo);
