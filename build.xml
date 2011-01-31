@@ -361,7 +361,42 @@
     </antcall> 
   </target>
 
-  <target name="compile-core-native" depends="compile-core-classes"
+  <target name="check-native-configure" if="compile.native">
+    <condition property="need.native.configure">
+       <not> <available file="${native.src.dir}/configure"/> </not>
+    </condition>
+  </target>
+
+  <target name="create-native-configure" depends="check-native-configure" if="need.native.configure">
+    <mkdir dir="${native.src.dir}/config"/>
+    <mkdir dir="${native.src.dir}/m4"/>
+    <exec executable="autoreconf" dir="${native.src.dir}" 
+          searchpath="yes" failonerror="yes">
+       <arg value="-i"/>
+       <arg value="-f"/>
+    </exec>
+  </target>
+
+  <target name="check-native-makefile" if="compile.native">
+    <condition property="need.native.makefile">
+       <not> <available file="${native.src.dir}/Makefile"/> </not>
+    </condition>
+  </target>
+
+  <target name="create-native-makefile" depends="check-native-makefile" if="need.native.makefile"> 
+    <antcall target="create-native-configure"/>
+    <mkdir dir="${build.native}"/>
+	<exec dir="${build.native}" executable="sh" failonerror="true">
+	  <env key="OS_NAME" value="${os.name}"/>
+	  <env key="OS_ARCH" value="${os.arch}"/>
+	  <env key="JVM_DATA_MODEL" value="${sun.arch.data.model}"/>
+	  <env key="HADOOP_NATIVE_SRCDIR" value="${native.src.dir}"/>
+	  <arg line="${native.src.dir}/configure"/>
+    </exec>
+  </target>
+
+
+  <target name="compile-core-native" depends="compile-core-classes,create-native-makefile"
           if="compile.native">
   	
     <mkdir dir="${build.native}/lib"/>
@@ -404,14 +439,6 @@
   	  >
   	  <class name="org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping" />
   	</javah>
-
-	<exec dir="${build.native}" executable="sh" failonerror="true">
-	  <env key="OS_NAME" value="${os.name}"/>
-	  <env key="OS_ARCH" value="${os.arch}"/>
-	  <env key="JVM_DATA_MODEL" value="${sun.arch.data.model}"/>
-	  <env key="HADOOP_NATIVE_SRCDIR" value="${native.src.dir}"/>
-	  <arg line="${native.src.dir}/configure"/>
-    </exec>
 
     <exec dir="${build.native}" executable="${make.cmd}" failonerror="true">
       <env key="OS_NAME" value="${os.name}"/>
@@ -1060,7 +1087,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, api-report, jar-test"
+  <target name="package" depends="compile, jar, javadoc, docs, api-report, create-native-configure, jar-test"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1411,6 +1438,7 @@
         <exclude name="lib/jdiff/"/>
         <exclude name="**/native/*"/>
         <exclude name="**/native/config/*"/>
+        <exclude name="**/native/m4/*"/>
         <exclude name="**/VERSION"/>
         <exclude name="**/*.json"/>
         <exclude name="**/hod/*.txt"/>

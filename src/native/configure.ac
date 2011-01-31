@@ -36,7 +36,8 @@
 AC_PREREQ(2.59)
 AC_INIT(src/org_apache_hadoop.h)
 AC_CONFIG_SRCDIR([src/org_apache_hadoop.h])
-AC_CONFIG_AUX_DIR(config)
+AC_CONFIG_AUX_DIR([config])
+AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADER([config.h])
 AC_SYS_LARGEFILE
 
