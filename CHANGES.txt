@@ -61,6 +61,8 @@ Trunk (unreleased changes)
     HADOOP-6939. Inconsistent lock ordering in
     AbstractDelegationTokenSecretManager. (Todd Lipcon via tomwhite)
 
+    HADOOP-7129. Fix typo in method name getProtocolSigature (todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

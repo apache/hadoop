@@ -225,7 +225,7 @@ public class ProtocolSignature implements Writable {
    * @throws IOException if any error occurs
    */
   @SuppressWarnings("unchecked")
-  public static ProtocolSignature getProtocolSigature(VersionedProtocol server,
+  public static ProtocolSignature getProtocolSignature(VersionedProtocol server,
       String protocol,
       long clientVersion, int clientMethodsHash) throws IOException {
     Class<? extends VersionedProtocol> inter;
@@ -237,5 +237,17 @@ public class ProtocolSignature implements Writable {
     long serverVersion = server.getProtocolVersion(protocol, clientVersion);
     return ProtocolSignature.getProtocolSignature(
         clientMethodsHash, serverVersion, inter);
+  }
+
+  /**
+   * @deprecated Misspelled method name - to be removed after references
+   * to this typo have been fixed in HDFS and MapRed.
+   */
+  @Deprecated
+  public static ProtocolSignature getProtocolSigature(VersionedProtocol server,
+      String protocol,
+      long clientVersion, int clientMethodsHash) throws IOException {
+    return getProtocolSignature(server, protocol, clientVersion,
+        clientMethodsHash);
   }
 }

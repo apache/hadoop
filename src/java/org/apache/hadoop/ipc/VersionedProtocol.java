@@ -45,7 +45,7 @@ public interface VersionedProtocol {
    * @param clientMethodsHash the hashcode of client protocol methods
    * @return the server protocol signature containing its version and
    *         a list of its supported methods
-   * @see ProtocolSignature#getProtocolSigature(VersionedProtocol, String, 
+   * @see ProtocolSignature#getProtocolSignature(VersionedProtocol, String, 
    *                long, int) for a default implementation
    */
   public ProtocolSignature getProtocolSignature(String protocol, 
