@@ -468,6 +468,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7122. Fix thread leak when shell commands time out. (todd)
 
+    HADOOP-7126. Fix file permission setting for RawLocalFileSystem on Windows.
+    (Po Cheung via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
