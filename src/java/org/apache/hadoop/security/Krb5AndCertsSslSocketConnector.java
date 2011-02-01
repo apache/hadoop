@@ -20,6 +20,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.security.Principal;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import javax.net.ssl.SSLContext;
@@ -52,10 +54,11 @@ import org.mortbay.jetty.security.SslSocketConnector;
  * running with Kerberos support.
  */
 public class Krb5AndCertsSslSocketConnector extends SslSocketConnector {
-  public static final String[] KRB5_CIPHER_SUITES = 
-    new String [] {"TLS_KRB5_WITH_3DES_EDE_CBC_SHA"};
+  public static final List<String> KRB5_CIPHER_SUITES = 
+    Collections.unmodifiableList(Collections.singletonList(
+          "TLS_KRB5_WITH_3DES_EDE_CBC_SHA"));
   static {
-    System.setProperty("https.cipherSuites", KRB5_CIPHER_SUITES[0]);
+    System.setProperty("https.cipherSuites", KRB5_CIPHER_SUITES.get(0));
   }
   
   private static final Log LOG = LogFactory
@@ -136,11 +139,12 @@ public class Krb5AndCertsSslSocketConnector extends SslSocketConnector {
       String [] combined;
       if(useCerts) { // combine the cipher suites
         String[] certs = ss.getEnabledCipherSuites();
-        combined = new String[certs.length + KRB5_CIPHER_SUITES.length];
+        combined = new String[certs.length + KRB5_CIPHER_SUITES.size()];
         System.arraycopy(certs, 0, combined, 0, certs.length);
-        System.arraycopy(KRB5_CIPHER_SUITES, 0, combined, certs.length, KRB5_CIPHER_SUITES.length);
+        System.arraycopy(KRB5_CIPHER_SUITES.toArray(new String[0]), 0, combined,
+              certs.length, KRB5_CIPHER_SUITES.size());
       } else { // Just enable Kerberos auth
-        combined = KRB5_CIPHER_SUITES;
+        combined = KRB5_CIPHER_SUITES.toArray(new String[0]);
       }
       
       ss.setEnabledCipherSuites(combined);
