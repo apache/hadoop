@@ -556,7 +556,7 @@ public class RawLocalFileSystem extends FileSystem {
   private static String execCommand(File f, String... cmd) throws IOException {
     String[] args = new String[cmd.length + 1];
     System.arraycopy(cmd, 0, args, 0, cmd.length);
-    args[cmd.length] = f.getCanonicalPath();
+    args[cmd.length] = FileUtil.makeShellPath(f, true);
     String output = Shell.execCommand(args);
     return output;
   }
