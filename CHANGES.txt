@@ -69,6 +69,11 @@ Release 0.91.0 - Unreleased
    HBASE-3256  Coprocessors: Coprocessor host and observer for HMaster
    HBASE-3448  RegionSplitter, utility class to manually split tables
 
+Release 0.90.1 - Unreleased
+
+  BUG FIXES
+   HBASE-3483  Memstore lower limit should trigger asynchronous flushes
+
 
 Release 0.90.0 - January 19th, 2011
   INCOMPATIBLE CHANGES
