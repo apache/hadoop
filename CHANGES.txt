@@ -410,6 +410,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7126. Fix file permission setting for RawLocalFileSystem on Windows.
     (Po Cheung via shv)
 
+    HADOOP-6642. Fix javac, javadoc, findbugs warnings related to security work. 
+    (Chris Douglas, Po Cheung via shv)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
