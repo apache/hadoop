@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.RowLock;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
@@ -1635,7 +1636,11 @@ public class HRegion implements HeapSize { // , Writable{
     checkResources();
     boolean isPut = w instanceof Put;
     if (!isPut && !(w instanceof Delete))
-      throw new IOException("Action must be Put or Delete");
+      throw new DoNotRetryIOException("Action must be Put or Delete");
+    Row r = (Row)w;
+    if (Bytes.compareTo(row, r.getRow()) != 0) {
+      throw new DoNotRetryIOException("Action's getRow must match the passed row");
+    }
 
     startRegionOperation();
     try {

@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -96,6 +97,8 @@ public class TestHRegion extends HBaseTestCase {
   protected final byte[] value1 = Bytes.toBytes("value1");
   protected final byte[] value2 = Bytes.toBytes("value2");
   protected final byte [] row = Bytes.toBytes("rowA");
+  protected final byte [] row2 = Bytes.toBytes("rowB");
+
 
   /**
    * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
@@ -603,6 +606,20 @@ public class TestHRegion extends HBaseTestCase {
       assertEquals(expected[i], actual[i]);
     }
 
+  }
+
+  public void testCheckAndPut_wrongRowInPut() throws IOException {
+    initHRegion(tableName, this.getName(), COLUMNS);
+
+    Put put = new Put(row2);
+    put.add(fam1, qual1, value1);
+    try {
+    boolean res = region.checkAndMutate(row,
+        fam1, qual1, value2, put, null, false);
+      fail();
+    } catch (DoNotRetryIOException expected) {
+      // expected exception.
+    }
   }
 
   public void testCheckAndDelete_ThatDeleteWasWritten() throws IOException{
