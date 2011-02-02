@@ -136,7 +136,7 @@
         <ol>
           <li>
             Any row returned by the scan will be a consistent view (i.e. that version
-            of the complete row existed at some point in time)
+            of the complete row existed at some point in time) [1]
           </li>
           <li>
             A scan will always reflect a view of the data <em>at least as new as</em>
@@ -187,7 +187,7 @@
       <section name="Durability">
         <ol>
           <li> All visible data is also durable data. That is to say, a read will never return
-          data that has not been made durable on disk[1]</li>
+          data that has not been made durable on disk[2]</li>
           <li> Any operation that returns a &quot;success&quot; code (eg does not throw an exception)
           will be made durable.</li>
           <li> Any operation that returns a &quot;failure&quot; code will not be made durable
@@ -206,8 +206,13 @@
       </section>
     </section>
     <section name="Footnotes">
+      <p>[1] A consistent view is not guaranteed intra-row scanning -- i.e. fetching a portion of
+          a row in one RPC then going back to fetch another portion of the row in a subsequent RPC.
+          Intra-row scanning happens when you set a limit on how many values to return per Scan#next
+          (See <a href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#setBatch(int)">Scan#setBatch(int)</a>).
+      </p>
 
-      <p>[1] In the context of HBase, &quot;durably on disk&quot; implies an hflush() call on the transaction
+      <p>[2] In the context of HBase, &quot;durably on disk&quot; implies an hflush() call on the transaction
       log. This does not actually imply an fsync() to magnetic media, but rather just that the data has been
       written to the OS cache on all replicas of the log. In the case of a full datacenter power loss, it is
       possible that the edits are not truly durable.</p>
