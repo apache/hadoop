@@ -4,9 +4,9 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
-   HADOOP-6432. Add Statistics support in FileContext. (jitendra)
-
    HADOOP-6904. Support method based RPC compatiblity. (hairong)
+
+   HADOOP-6432. Add Statistics support in FileContext. (jitendra)
 
   NEW FEATURES
 
