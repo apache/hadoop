@@ -60,6 +60,7 @@ public class TestSplitTransactionOnCluster {
     new HBaseTestingUtility();
 
   @BeforeClass public static void before() throws Exception {
+    TESTING_UTIL.getConfiguration().setInt("hbase.balancer.period", 60000);
     TESTING_UTIL.startMiniCluster(2);
   }
 
