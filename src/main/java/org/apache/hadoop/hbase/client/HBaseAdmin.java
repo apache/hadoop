@@ -53,10 +53,10 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
- * Provides an interface to manage HBase database table metadata + general 
- * administrative functions.  Use HBaseAdmin to create, drop, list, enable and 
- * disable tables. Use it also to add and drop table column families. 
- * 
+ * Provides an interface to manage HBase database table metadata + general
+ * administrative functions.  Use HBaseAdmin to create, drop, list, enable and
+ * disable tables. Use it also to add and drop table column families.
+ *
  * <p>See {@link HTable} to add, update, and delete data from an individual table.
  * <p>Currently HBaseAdmin instances are not expected to be long-lived.  For
  * example, an HBaseAdmin instance will not ride over a Master restart.
@@ -151,7 +151,7 @@ public class HBaseAdmin implements Abortable {
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
-   * @throws IOException 
+   * @throws IOException
    */
   public boolean tableExists(final String tableName)
   throws IOException {
@@ -168,7 +168,7 @@ public class HBaseAdmin implements Abortable {
   /**
    * @param tableName Table to check.
    * @return True if table exists already.
-   * @throws IOException 
+   * @throws IOException
    */
   public boolean tableExists(final byte [] tableName)
   throws IOException {
@@ -451,7 +451,7 @@ public class HBaseAdmin implements Abortable {
   public void enableTable(final byte [] tableName)
   throws IOException {
     enableTableAsync(tableName);
- 
+
     // Wait until all regions are enabled
     boolean enabled = false;
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
@@ -818,7 +818,7 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to flush
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void flush(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
@@ -831,7 +831,7 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to flush
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void flush(final byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
@@ -873,7 +873,7 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to compact
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void compact(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
@@ -886,7 +886,7 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to compact
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void compact(final byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
@@ -899,7 +899,7 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to major compact
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void majorCompact(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
@@ -912,7 +912,7 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to major compact
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void majorCompact(final byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
@@ -926,7 +926,7 @@ public class HBaseAdmin implements Abortable {
    * @param tableNameOrRegionName table or region to compact
    * @param major True if we are to do a major compaction.
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   private void compact(final byte [] tableNameOrRegionName, final boolean major)
   throws IOException, InterruptedException {
@@ -974,8 +974,8 @@ public class HBaseAdmin implements Abortable {
    * <code> host187.example.com,60020,1289493121758</code>.
    * @throws UnknownRegionException Thrown if we can't find a region named
    * <code>encodedRegionName</code>
-   * @throws ZooKeeperConnectionException 
-   * @throws MasterNotRunningException 
+   * @throws ZooKeeperConnectionException
+   * @throws MasterNotRunningException
    */
   public void move(final byte [] encodedRegionName, final byte [] destServerName)
   throws UnknownRegionException, MasterNotRunningException, ZooKeeperConnectionException {
@@ -1039,7 +1039,7 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table or region to split
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void split(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
@@ -1052,7 +1052,7 @@ public class HBaseAdmin implements Abortable {
    *
    * @param tableNameOrRegionName table to region to split
    * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void split(final byte [] tableNameOrRegionName)
   throws IOException, InterruptedException {
@@ -1094,11 +1094,12 @@ public class HBaseAdmin implements Abortable {
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
           // May not be a server for a particular row
           if (pair.getSecond() == null) continue;
-          if (splitPoint != null) {
-            // if a split point given, only split that particular region
-            HRegionInfo r = pair.getFirst();
-            if (!r.containsRow(splitPoint)) continue;
-          }
+          HRegionInfo r = pair.getFirst();
+          // check for parents
+          if (r.isSplitParent()) continue;
+          // if a split point given, only split that particular region
+          if (splitPoint != null && !r.containsRow(splitPoint)) continue;
+          // call out to region server to do split now
           split(pair.getSecond(), pair.getFirst(), splitPoint);
         }
       }
@@ -1139,7 +1140,7 @@ public class HBaseAdmin implements Abortable {
    * @return True if <code>tableNameOrRegionName</code> is *possibly* a region
    * name else false if a verified tablename (we call {@link #tableExists(byte[])};
    * else we throw an exception.
-   * @throws IOException 
+   * @throws IOException
    */
   private boolean isRegionName(final byte [] tableNameOrRegionName)
   throws IOException {
