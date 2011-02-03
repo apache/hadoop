@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -51,17 +52,17 @@ public class TestWideScanner extends HBaseTestCase {
     new HTableDescriptor("testwidescan");
   static {
     TESTTABLEDESC.addFamily(new HColumnDescriptor(A,
-      10,  // Ten is arbitrary number.  Keep versions to help debuggging.
+      100,  // Keep versions to help debuggging.
       Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
       HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
       HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
     TESTTABLEDESC.addFamily(new HColumnDescriptor(B,
-      10,  // Ten is arbitrary number.  Keep versions to help debuggging.
+      100,  // Keep versions to help debuggging.
       Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
       HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
       HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
     TESTTABLEDESC.addFamily(new HColumnDescriptor(C,
-      10,  // Ten is arbitrary number.  Keep versions to help debuggging.
+      100,  // Keep versions to help debuggging.
       Compression.Algorithm.NONE.getName(), false, true, 8 * 1024,
       HConstants.FOREVER, StoreFile.BloomType.NONE.toString(),
       HColumnDescriptor.DEFAULT_REPLICATION_SCOPE));
@@ -88,19 +89,23 @@ public class TestWideScanner extends HBaseTestCase {
     int count = 0;
     for (char c = 'a'; c <= 'c'; c++) {
       byte[] row = Bytes.toBytes("ab" + c);
-      int i;
-      for (i = 0; i < 2500; i++) {
+      int i, j;
+      long ts = System.currentTimeMillis();
+      for (i = 0; i < 100; i++) {
         byte[] b = Bytes.toBytes(String.format("%10d", i));
-        Put put = new Put(row);
-        put.add(COLUMNS[rng.nextInt(COLUMNS.length)], b, b);
-        region.put(put);
-        count++;
+        for (j = 0; j < 100; j++) {
+          Put put = new Put(row);
+          put.add(COLUMNS[rng.nextInt(COLUMNS.length)], b, ++ts, b);
+          region.put(put);
+          count++;
+        }
       }
     }
     return count;
   }
 
   public void testWideScanBatching() throws IOException {
+    final int batch = 256;
     try {
       this.r = createNewHRegion(REGION_INFO.getTableDesc(), null, null);
       int inserted = addWideContent(this.r);
@@ -109,7 +114,8 @@ public class TestWideScanner extends HBaseTestCase {
       scan.addFamily(A);
       scan.addFamily(B);
       scan.addFamily(C);
-      scan.setBatch(1000);
+      scan.setMaxVersions(100);
+      scan.setBatch(batch);
       InternalScanner s = r.getScanner(scan);
       int total = 0;
       int i = 0;
@@ -119,8 +125,8 @@ public class TestWideScanner extends HBaseTestCase {
         i++;
         LOG.info("iteration #" + i + ", results.size=" + results.size());
 
-        // assert that the result set is no larger than 1000
-        assertTrue(results.size() <= 1000);
+        // assert that the result set is no larger
+        assertTrue(results.size() <= batch);
 
         total += results.size();
 
@@ -133,11 +139,19 @@ public class TestWideScanner extends HBaseTestCase {
         }
 
         results.clear();
+
+        // trigger ChangedReadersObservers
+        Iterator<KeyValueScanner> scanners =
+          ((HRegion.RegionScanner)s).storeHeap.getHeap().iterator();
+        while (scanners.hasNext()) {
+          StoreScanner ss = (StoreScanner)scanners.next();
+          ss.updateReaders();
+        }
       } while (more);
 
       // assert that the scanner returned all values
       LOG.info("inserted " + inserted + ", scanned " + total);
-      assertTrue(total == inserted);
+      assertEquals(total, inserted);
 
       s.close();
     } finally {

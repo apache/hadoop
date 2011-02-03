@@ -31,11 +31,14 @@ Release 0.91.0 - Unreleased
    HBASE-3476  HFile -m option need not scan key values
                (Prakash Khemani via Lars George)
    HBASE-3481  max seq id in flushed file can be larger than its correct value 
-   	           causing data loss during recovery
+               causing data loss during recovery
    HBASE-3493  HMaster sometimes hangs during initialization due to missing
                notify call (Bruno Dumon via Stack)
    HBASE-3494  checkAndPut implementation doesnt verify row param and writable 
-              row are the same
+               row are the same
+   HBASE-3416  For intra-row scanning, the update readers notification resets
+               the query matcher and can lead to incorrect behavior
+
 
   IMPROVEMENTS
    HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
