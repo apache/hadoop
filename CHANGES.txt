@@ -42,6 +42,8 @@ Release 0.91.0 - Unreleased
    HBASE-3495  Shell is failing on subsequent split calls
    HBASE-3400  Coprocessor Support for Generic Interfaces
                (Ed Kohlwey via Gary Helmling)
+   HBASE-3502  Can't open region because can't open .regioninfo because
+               AlreadyBeingCreatedException
 
 
   IMPROVEMENTS

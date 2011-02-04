@@ -424,16 +424,17 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   private void checkRegioninfoOnFilesystem() throws IOException {
-    // Name of this file has two leading and trailing underscores so it doesn't
-    // clash w/ a store/family name.  There is possibility, but assumption is
-    // that its slim (don't want to use control character in filename because
-    //
-    Path regioninfo = new Path(this.regiondir, REGIONINFO_FILE);
-    if (this.fs.exists(regioninfo) &&
-        this.fs.getFileStatus(regioninfo).getLen() > 0) {
+    Path regioninfoPath = new Path(this.regiondir, REGIONINFO_FILE);
+    if (this.fs.exists(regioninfoPath) &&
+        this.fs.getFileStatus(regioninfoPath).getLen() > 0) {
       return;
     }
-    FSDataOutputStream out = this.fs.create(regioninfo, true);
+    // Create in tmpdir and then move into place in case we crash after
+    // create but before close.  If we don't successfully close the file,
+    // subsequent region reopens will fail the below because create is
+    // registered in NN.
+    Path tmpPath = new Path(getTmpDir(), REGIONINFO_FILE);
+    FSDataOutputStream out = this.fs.create(tmpPath, true);
     try {
       this.regionInfo.write(out);
       out.write('\n');
@@ -441,6 +442,10 @@ public class HRegion implements HeapSize { // , Writable{
       out.write(Bytes.toBytes(this.regionInfo.toString()));
     } finally {
       out.close();
+    }
+    if (!fs.rename(tmpPath, regioninfoPath)) {
+      throw new IOException("Unable to rename " + tmpPath + " to " +
+        regioninfoPath);
     }
   }
 
