@@ -30,12 +30,12 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hbase.util.Bytes;
 
 public class TestRandomRowFilter extends TestCase {
-  protected RandomRowFilter halfChanceFilter;
+  protected RandomRowFilter quarterChanceFilter;
 
   @Override
   protected void setUp() throws Exception {
     super.setUp();
-    halfChanceFilter = new RandomRowFilter(0.25f);
+    quarterChanceFilter = new RandomRowFilter(0.25f);
   }
 
   /**
@@ -47,7 +47,7 @@ public class TestRandomRowFilter extends TestCase {
     int included = 0;
     int max = 1000000;
     for (int i = 0; i < max; i++) {
-      if (!halfChanceFilter.filterRowKey(Bytes.toBytes("row"), 0, Bytes
+      if (!quarterChanceFilter.filterRowKey(Bytes.toBytes("row"), 0, Bytes
           .toBytes("row").length)) {
         included++;
       }
@@ -66,10 +66,10 @@ public class TestRandomRowFilter extends TestCase {
    * @throws Exception
    */
   public void testSerialization() throws Exception {
-    RandomRowFilter newFilter = serializationTest(halfChanceFilter);
+    RandomRowFilter newFilter = serializationTest(quarterChanceFilter);
     // use epsilon float comparison
     assertTrue("float should be equal", Math.abs(newFilter.getChance()
-        - halfChanceFilter.getChance()) < 0.000001f);
+        - quarterChanceFilter.getChance()) < 0.000001f);
   }
 
   private RandomRowFilter serializationTest(RandomRowFilter filter)
