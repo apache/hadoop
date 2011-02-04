@@ -37,16 +37,12 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import static org.apache.hadoop.hbase.HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS;
 
 /**
- * This Chore, everytime it runs, will clear the wal logs in the old logs folder
- * that are deletable for each log cleaner in the chain, in order to limit the
- * number of deletes it sends, will only delete maximum 20 in a single run.
+ * This Chore, everytime it runs, will clear the HLogs in the old logs folder
+ * that are deletable for each log cleaner in the chain.
  */
 public class LogCleaner extends Chore {
   static final Log LOG = LogFactory.getLog(LogCleaner.class.getName());
 
-  // Max number we can delete on every chore, this is to make sure we don't
-  // issue thousands of delete commands around the same time
-  private final int maxDeletedLogs;
   private final FileSystem fs;
   private final Path oldLogDir;
   private List<LogCleanerDelegate> logCleanersChain;
@@ -64,9 +60,6 @@ public class LogCleaner extends Chore {
                         Configuration conf, FileSystem fs,
                         Path oldLogDir) {
     super("LogsCleaner", p, s);
-
-    this.maxDeletedLogs =
-        conf.getInt("hbase.master.logcleaner.maxdeletedlogs", 20);
     this.fs = fs;
     this.oldLogDir = oldLogDir;
     this.conf = conf;
@@ -127,7 +120,6 @@ public class LogCleaner extends Chore {
     try {
       FileStatus [] files = this.fs.listStatus(this.oldLogDir);
       if (files == null) return;
-      int nbDeletedLog = 0;
       FILE: for (FileStatus file : files) {
         Path filePath = file.getPath();
         if (HLog.validateHLogFilename(filePath.getName())) {
@@ -144,15 +136,10 @@ public class LogCleaner extends Chore {
           }
           // delete this log file if it passes all the log cleaners
           this.fs.delete(filePath, true);
-          nbDeletedLog++;
         } else {
           LOG.warn("Found a wrongly formated file: "
               + file.getPath().getName());
           this.fs.delete(filePath, true);
-          nbDeletedLog++;
-        }
-        if (nbDeletedLog >= maxDeletedLogs) {
-          break;
         }
       }
     } catch (IOException e) {

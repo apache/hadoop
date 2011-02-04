@@ -112,13 +112,6 @@ public class TestLogsCleaner {
 
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
-    // This will take care of 20 old log files (default max we can delete)
-    cleaner.chore();
-
-    assertEquals(14, fs.listStatus(oldLogDir).length);
-
-    // We will delete all remaining log files which are not scheduled for
-    // replication and those that are invalid
     cleaner.chore();
 
     // We end up with the current log file, a newer one and the 3 old log
