@@ -21,11 +21,13 @@ package org.apache.hadoop.hbase.client.coprocessor;
 
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Classes;
 import org.apache.hadoop.io.Writable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * Represents the return value from a
@@ -70,12 +72,25 @@ public class ExecResult implements Writable {
   public void write(DataOutput out) throws IOException {
     Bytes.writeByteArray(out, regionName);
     HbaseObjectWritable.writeObject(out, value,
-        (valueType != null ? valueType : Writable.class), null);
+        value.getClass(), null);
+    Class<?> alternativeSerializationClass;
+    if(value instanceof Writable){
+      alternativeSerializationClass = Writable.class;
+    } else {
+      alternativeSerializationClass = Serializable.class;
+    }
+    out.writeUTF((valueType != null ? valueType : alternativeSerializationClass).getName());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
     regionName = Bytes.readByteArray(in);
     value = HbaseObjectWritable.readObject(in, null);
+    String className = in.readUTF();
+    try {
+      valueType = Classes.extendedForName(className);
+    } catch (ClassNotFoundException e) {
+      throw new IOException("Unable to find class of type: " + className );
+    }
   }
 }

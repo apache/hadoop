@@ -31,11 +31,11 @@ import java.lang.reflect.Method;
 
 /** A method invocation, including the method name and its parameters.*/
 public class Invocation implements Writable, Configurable {
-  private String methodName;
+  protected String methodName;
   @SuppressWarnings("unchecked")
-  private Class[] parameterClasses;
-  private Object[] parameters;
-  private Configuration conf;
+  protected Class[] parameterClasses;
+  protected Object[] parameters;
+  protected Configuration conf;
 
   public Invocation() {}
 

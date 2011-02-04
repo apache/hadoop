@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.Invocation;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Classes;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -83,14 +84,37 @@ public class Exec extends Invocation implements Row {
 
   @Override
   public void write(DataOutput out) throws IOException {
-    super.write(out);
+    // fields for Invocation
+    out.writeUTF(this.methodName);
+    out.writeInt(parameterClasses.length);
+    for (int i = 0; i < parameterClasses.length; i++) {
+      HbaseObjectWritable.writeObject(out, parameters[i], parameters[i].getClass(),
+                                 conf);
+      out.writeUTF(parameterClasses[i].getName());
+    }
+    // fields for Exec
     Bytes.writeByteArray(out, referenceRow);
     out.writeUTF(protocol.getName());
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    super.readFields(in);
+    // fields for Invocation
+    methodName = in.readUTF();
+    parameters = new Object[in.readInt()];
+    parameterClasses = new Class[parameters.length];
+    HbaseObjectWritable objectWritable = new HbaseObjectWritable();
+    for (int i = 0; i < parameters.length; i++) {
+      parameters[i] = HbaseObjectWritable.readObject(in, objectWritable,
+        this.conf);
+      String parameterClassName = in.readUTF();
+      try {
+        parameterClasses[i] = Classes.extendedForName(parameterClassName);
+      } catch (ClassNotFoundException e) {
+        throw new IOException("Couldn't find class: " + parameterClassName);
+      }
+    }
+    // fields for Exec
     referenceRow = Bytes.readByteArray(in);
     String protocolName = in.readUTF();
     try {

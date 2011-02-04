@@ -40,6 +40,8 @@ Release 0.91.0 - Unreleased
                the query matcher and can lead to incorrect behavior
    HBASE-3492  NPE while splitting table with empty column family store
    HBASE-3495  Shell is failing on subsequent split calls
+   HBASE-3400  Coprocessor Support for Generic Interfaces
+               (Ed Kohlwey via Gary Helmling)
 
 
   IMPROVEMENTS
