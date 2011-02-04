@@ -63,7 +63,8 @@ Release 0.91.0 - Unreleased
    HBASE-3393  Update Avro gateway to use Avro 1.4.1 and the new
                server.join() method (Jeff Hammerbacher via Stack)
    HBASE-3437  Support Explict Split Points from the Shell
-   HBASE-3433  KeyValue API to explicitly distinguish between deep & shallow copies
+   HBASE-3433  KeyValue API to explicitly distinguish between deep & shallow
+               copies
    HBASE-3305  Allow round-robin distribution for table created with
                multiple regions (ted yu via jgray)
 
@@ -74,6 +75,9 @@ Release 0.91.0 - Unreleased
    HBASE-3335  Add BitComparator for filtering (Nathaniel Cook via Stack)
    HBASE-3256  Coprocessors: Coprocessor host and observer for HMaster
    HBASE-3448  RegionSplitter, utility class to manually split tables
+   HBASE-2824  A filter that randomly includes rows based on a configured
+               chance (Ferdy via Andrew Purtell)
+
 
 Release 0.90.1 - Unreleased
 
