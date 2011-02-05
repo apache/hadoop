@@ -72,6 +72,7 @@ Release 0.91.0 - Unreleased
                copies
    HBASE-3305  Allow round-robin distribution for table created with
                multiple regions (ted yu via jgray)
+   HBASE-3496  HFile CLI Improvements
 
 
   NEW FEATURES

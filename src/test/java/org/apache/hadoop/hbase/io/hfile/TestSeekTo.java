@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -31,18 +32,28 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TestSeekTo extends HBaseTestCase {
 
+  static KeyValue toKV(String row) {
+    return new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"), Bytes
+        .toBytes("qualifier"), Bytes.toBytes("value"));
+  }
+
+  static String toRowStr(KeyValue kv) {
+    return Bytes.toString(kv.getRow());
+  }
+
   Path makeNewFile() throws IOException {
     Path ncTFile = new Path(this.testDir, "basic.hfile");
     FSDataOutputStream fout = this.fs.create(ncTFile);
-    HFile.Writer writer = new HFile.Writer(fout, 40, "none", null);
+    int blocksize = toKV("a").getLength() * 3;
+    HFile.Writer writer = new HFile.Writer(fout, blocksize, "none", null);
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
-    writer.append(Bytes.toBytes("c"), Bytes.toBytes("value"));
-    writer.append(Bytes.toBytes("e"), Bytes.toBytes("value"));
-    writer.append(Bytes.toBytes("g"), Bytes.toBytes("value"));
+    writer.append(toKV("c"));
+    writer.append(toKV("e"));
+    writer.append(toKV("g"));
     // block transition
-    writer.append(Bytes.toBytes("i"), Bytes.toBytes("value"));
-    writer.append(Bytes.toBytes("k"), Bytes.toBytes("value"));
+    writer.append(toKV("i"));
+    writer.append(toKV("k"));
     writer.close();
     fout.close();
     return ncTFile;
@@ -52,32 +63,32 @@ public class TestSeekTo extends HBaseTestCase {
     HFile.Reader reader = new HFile.Reader(fs, p, null, false, false);
     reader.loadFileInfo();
     HFileScanner scanner = reader.getScanner(false, true);
-    assertEquals(false, scanner.seekBefore(Bytes.toBytes("a")));
+    assertEquals(false, scanner.seekBefore(toKV("a").getKey()));
 
-    assertEquals(false, scanner.seekBefore(Bytes.toBytes("c")));
+    assertEquals(false, scanner.seekBefore(toKV("c").getKey()));
 
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("d")));
-    assertEquals("c", scanner.getKeyString());
+    assertEquals(true, scanner.seekBefore(toKV("d").getKey()));
+    assertEquals("c", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("e")));
-    assertEquals("c", scanner.getKeyString());
+    assertEquals(true, scanner.seekBefore(toKV("e").getKey()));
+    assertEquals("c", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("f")));
-    assertEquals("e", scanner.getKeyString());
+    assertEquals(true, scanner.seekBefore(toKV("f").getKey()));
+    assertEquals("e", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("g")));
-    assertEquals("e", scanner.getKeyString());
+    assertEquals(true, scanner.seekBefore(toKV("g").getKey()));
+    assertEquals("e", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("h")));
-    assertEquals("g", scanner.getKeyString());
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("i")));
-    assertEquals("g", scanner.getKeyString());
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("j")));
-    assertEquals("i", scanner.getKeyString());
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("k")));
-    assertEquals("i", scanner.getKeyString());
-    assertEquals(true, scanner.seekBefore(Bytes.toBytes("l")));
-    assertEquals("k", scanner.getKeyString());
+    assertEquals(true, scanner.seekBefore(toKV("h").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+    assertEquals(true, scanner.seekBefore(toKV("i").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
+    assertEquals(true, scanner.seekBefore(toKV("j").getKey()));
+    assertEquals("i", toRowStr(scanner.getKeyValue()));
+    assertEquals(true, scanner.seekBefore(toKV("k").getKey()));
+    assertEquals("i", toRowStr(scanner.getKeyValue()));
+    assertEquals(true, scanner.seekBefore(toKV("l").getKey()));
+    assertEquals("k", toRowStr(scanner.getKeyValue()));
   }
 
   public void testSeekTo() throws Exception {
@@ -87,17 +98,17 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals(2, reader.blockIndex.count);
     HFileScanner scanner = reader.getScanner(false, true);
     // lies before the start of the file.
-    assertEquals(-1, scanner.seekTo(Bytes.toBytes("a")));
+    assertEquals(-1, scanner.seekTo(toKV("a").getKey()));
 
-    assertEquals(1, scanner.seekTo(Bytes.toBytes("d")));
-    assertEquals("c", scanner.getKeyString());
+    assertEquals(1, scanner.seekTo(toKV("d").getKey()));
+    assertEquals("c", toRowStr(scanner.getKeyValue()));
 
     // Across a block boundary now.
-    assertEquals(1, scanner.seekTo(Bytes.toBytes("h")));
-    assertEquals("g", scanner.getKeyString());
+    assertEquals(1, scanner.seekTo(toKV("h").getKey()));
+    assertEquals("g", toRowStr(scanner.getKeyValue()));
 
-    assertEquals(1, scanner.seekTo(Bytes.toBytes("l")));
-    assertEquals("k", scanner.getKeyString());
+    assertEquals(1, scanner.seekTo(toKV("l").getKey()));
+    assertEquals("k", toRowStr(scanner.getKeyValue()));
   }
 
   public void testBlockContainingKey() throws Exception {
@@ -105,19 +116,27 @@ public class TestSeekTo extends HBaseTestCase {
     HFile.Reader reader = new HFile.Reader(fs, p, null, false, false);
     reader.loadFileInfo();
     System.out.println(reader.blockIndex.toString());
+    int klen = toKV("a").getKey().length;
     // falls before the start of the file.
-    assertEquals(-1, reader.blockIndex.blockContainingKey(Bytes.toBytes("a"), 0, 1));
-    assertEquals(0, reader.blockIndex.blockContainingKey(Bytes.toBytes("c"), 0, 1));
-    assertEquals(0, reader.blockIndex.blockContainingKey(Bytes.toBytes("d"), 0, 1));
-    assertEquals(0, reader.blockIndex.blockContainingKey(Bytes.toBytes("e"), 0, 1));
-    assertEquals(0, reader.blockIndex.blockContainingKey(Bytes.toBytes("g"), 0, 1));
-    assertEquals(0, reader.blockIndex.blockContainingKey(Bytes.toBytes("h"), 0, 1));
-    assertEquals(1, reader.blockIndex.blockContainingKey(Bytes.toBytes("i"), 0, 1));
-    assertEquals(1, reader.blockIndex.blockContainingKey(Bytes.toBytes("j"), 0, 1));
-    assertEquals(1, reader.blockIndex.blockContainingKey(Bytes.toBytes("k"), 0, 1));
-    assertEquals(1, reader.blockIndex.blockContainingKey(Bytes.toBytes("l"), 0, 1));
-
-
-
+    assertEquals(-1, reader.blockIndex.blockContainingKey(toKV("a").getKey(),
+        0, klen));
+    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("c").getKey(), 0,
+        klen));
+    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("d").getKey(), 0,
+        klen));
+    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("e").getKey(), 0,
+        klen));
+    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("g").getKey(), 0,
+        klen));
+    assertEquals(0, reader.blockIndex.blockContainingKey(toKV("h").getKey(), 0,
+        klen));
+    assertEquals(1, reader.blockIndex.blockContainingKey(toKV("i").getKey(), 0,
+        klen));
+    assertEquals(1, reader.blockIndex.blockContainingKey(toKV("j").getKey(), 0,
+        klen));
+    assertEquals(1, reader.blockIndex.blockContainingKey(toKV("k").getKey(), 0,
+        klen));
+    assertEquals(1, reader.blockIndex.blockContainingKey(toKV("l").getKey(), 0,
+        klen));
   }
 }
