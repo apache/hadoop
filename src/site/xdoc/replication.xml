@@ -43,7 +43,10 @@
         other well known solutions like MySQL master/slave replication where
         there’s only one bin log to keep track of. One master cluster can
         replicate to any number of slave clusters, and each region server will
-        participate to replicate their own stream of edits.
+        participate to replicate their own stream of edits. For more information
+        on the different properties of master/slave replication and other types
+        of replication, please consult <a href="http://highscalability.com/blog/2009/8/24/how-google-serves-data-from-multiple-datacenters.html">
+        How Google Serves Data From Multiple Datacenters</a>.
       </p>
       <p>
         The replication is done asynchronously, meaning that the clusters can
@@ -72,6 +75,17 @@
         of replication on the slave clusters by relying on randomization.
       </p>
       <img src="images/replication_overview.png"/>
+    </section>
+    <section name="Enabling replication">
+      <p>
+        The guide on enabling and using cluster replication is contained
+        in the API documentation shipped with your HBase distribution.
+      </p>
+      <p>
+        The most up-to-date documentation is
+        <a href="apidocs/org/apache/hadoop/hbase/replication/package-summary.html#requirements">
+        available at this address</a>.
+      </p>
     </section>
     <section name="Life of a log edit">
       <p>
@@ -350,15 +364,6 @@
       </section>
     </section>
     <section name="FAQ">
-      <section name="Why do all clusters need to be in the same timezone?">
-        <p>
-          Suppose an edit to cell X happens in a EST cluster, then 2 minutes
-          later a new edits happens to the same cell in a PST cluster and that
-          both clusters are in a master-master replication. The second edit is
-          considered younger, so the first will always hide it while in fact the
-          second is older.
-        </p>
-      </section>
       <section name="GLOBAL means replicate? Any provision to replicate only to cluster X and not to cluster Y? or is that for later?">
         <p>
           Yes, this is for much later.

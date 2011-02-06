@@ -45,6 +45,7 @@ Release 0.91.0 - Unreleased
    HBASE-3502  Can't open region because can't open .regioninfo because
                AlreadyBeingCreatedException
    HBASE-3501  Remove the deletion limit in LogCleaner
+   HBASE-3500  Documentation update for replicatio
 
 
   IMPROVEMENTS

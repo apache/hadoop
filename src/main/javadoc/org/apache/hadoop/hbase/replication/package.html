@@ -92,6 +92,7 @@ to another.
   &lt;name&gt;hbase.replication&lt;/name&gt;
   &lt;value&gt;true&lt;/value&gt;
 &lt;/property&gt;</pre>
+      deploy the files, and then restart HBase if it was running.
     </li>
     <li>Run the following command in the master's shell while it's running
     <pre>add_peer</pre>
@@ -99,6 +100,18 @@ to another.
     both clusters. If both clusters use the same Zookeeper cluster, you have
     to use a different <b>zookeeper.znode.parent</b> since they can't
     write in the same folder.
+    </li>
+    <li>
+    Once you have a peer, you need to enable replication on your column families.
+    One way to do it is to alter the table and to set the scope like this:
+    <pre>
+      disable 'your_table'
+      alter 'your_table', {NAME => 'family_name', REPLICATION_SCOPE => '1'}
+      enable 'your_table'
+    </pre>
+    Currently, a scope of 0 (default) means that it won't be replicated and a
+    scope of 1 means it's going to be. In the future, different scope can be
+    used for routing policies.
     </li>
 </ol>
 
