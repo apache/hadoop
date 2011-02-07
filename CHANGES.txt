@@ -91,6 +91,8 @@ Release 0.90.1 - Unreleased
   BUG FIXES
    HBASE-3483  Memstore lower limit should trigger asynchronous flushes
 
+  IMPROVEMENTS
+   HBASE-3470  Check that hbase-default.xml is loaded from within jar
 
 Release 0.90.0 - January 19th, 2011
   INCOMPATIBLE CHANGES

@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.net.URL;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
@@ -58,7 +59,35 @@ public class HBaseConfiguration extends Configuration {
     }
   }
 
+  /**
+   * Check that the hbase-defaults.xml file is being loaded from within
+   * the hbase jar, rather than somewhere else on the classpath.
+   */
+  private static void checkDefaultsInJar(Configuration conf) {
+    ClassLoader cl = conf.getClassLoader();
+    URL url = cl.getResource("hbase-default.xml");
+    if (url == null) {
+      // This is essentially an assertion failure - we compile this
+      // into our own jar, so there's something really wacky about
+      // the classloader context!
+      throw new AssertionError("hbase-default.xml not on classpath");
+    }
+    if (!"jar".equals(url.getProtocol()) &&
+        !url.getPath().endsWith("target/classes/hbase-default.xml")) {
+      throw new RuntimeException(
+        "hbase-defaults.xml is being loaded from " + url + " rather than " +
+        "the HBase JAR. This is dangerous since you may pick up defaults " +
+        "from a previously installed version of HBase. Please remove " +
+        "hbase-default.xml from your configuration directory.");
+    }
+  }
+
+    
+
+
   public static Configuration addHbaseResources(Configuration conf) {
+    checkDefaultsInJar(conf);
+
     conf.addResource("hbase-default.xml");
     conf.addResource("hbase-site.xml");
     return conf;
