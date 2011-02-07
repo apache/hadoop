@@ -101,6 +101,7 @@ Release 0.90.1 - Unreleased
   IMPROVEMENTS
    HBASE-3470  Check that hbase-default.xml is loaded from within jar
    HBASE-3508  LruBlockCache statistics thread should have a name
+   HBASE-3511  Allow rolling restart to apply to only RS or only masters
 
 Release 0.90.0 - January 19th, 2011
   INCOMPATIBLE CHANGES
