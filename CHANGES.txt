@@ -84,10 +84,17 @@ Release 0.91.0 - Unreleased
    HBASE-3448  RegionSplitter, utility class to manually split tables
    HBASE-2824  A filter that randomly includes rows based on a configured
                chance (Ferdy via Andrew Purtell)
-
+   HBASE-3455  Add memstore-local allocation buffers to combat heap
+               fragmentation in the region server. Enabled by default as of
+               0.91
 
 Release 0.90.1 - Unreleased
 
+  NEW FEATURES
+   HBASE-3455  Add memstore-local allocation buffers to combat heap
+               fragmentation in the region server. Experimental / disabled
+               by default in 0.90.1
+  
   BUG FIXES
    HBASE-3483  Memstore lower limit should trigger asynchronous flushes
 

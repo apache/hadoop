@@ -178,7 +178,7 @@ public class Store implements HeapSize {
       // second -> ms adjust for user data
       this.ttl *= 1000;
     }
-    this.memstore = new MemStore(this.comparator);
+    this.memstore = new MemStore(conf, this.comparator);
     this.storeNameStr = Bytes.toString(this.family.getName());
 
     // By default, compact if storefile.count >= minFilesToCompact

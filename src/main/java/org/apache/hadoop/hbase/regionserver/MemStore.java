@@ -34,10 +34,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.regionserver.MemStoreLAB.Allocation;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -54,6 +57,13 @@ import org.apache.hadoop.hbase.util.ClassSize;
  */
 public class MemStore implements HeapSize {
   private static final Log LOG = LogFactory.getLog(MemStore.class);
+
+  static final String USEMSLAB_KEY =
+    "hbase.hregion.memstore.mslab.enabled";
+  private static final boolean USEMSLAB_DEFAULT = false;
+
+
+  private Configuration conf;
 
   // MemStore.  Use a KeyValueSkipListSet rather than SkipListSet because of the
   // better semantics.  The Map will overwrite if passed a key it already had
@@ -80,19 +90,23 @@ public class MemStore implements HeapSize {
 
   TimeRangeTracker timeRangeTracker;
   TimeRangeTracker snapshotTimeRangeTracker;
+  
+  MemStoreLAB allocator;
 
   /**
    * Default constructor. Used for tests.
    */
   public MemStore() {
-    this(KeyValue.COMPARATOR);
+    this(HBaseConfiguration.create(), KeyValue.COMPARATOR);
   }
 
   /**
    * Constructor.
    * @param c Comparator
    */
-  public MemStore(final KeyValue.KVComparator c) {
+  public MemStore(final Configuration conf,
+                  final KeyValue.KVComparator c) {
+    this.conf = conf;
     this.comparator = c;
     this.comparatorIgnoreTimestamp =
       this.comparator.getComparatorIgnoringTimestamps();
@@ -102,6 +116,11 @@ public class MemStore implements HeapSize {
     timeRangeTracker = new TimeRangeTracker();
     snapshotTimeRangeTracker = new TimeRangeTracker();
     this.size = new AtomicLong(DEEP_OVERHEAD);
+    if (conf.getBoolean(USEMSLAB_KEY, USEMSLAB_DEFAULT)) {
+      this.allocator = new MemStoreLAB(conf);
+    } else {
+      this.allocator = null;
+    }
   }
 
   void dump() {
@@ -134,6 +153,10 @@ public class MemStore implements HeapSize {
           this.timeRangeTracker = new TimeRangeTracker();
           // Reset heap to not include any keys
           this.size.set(DEEP_OVERHEAD);
+          // Reset allocator so we get a fresh buffer for the new memstore
+          if (allocator != null) {
+            this.allocator = new MemStoreLAB(conf);
+          }
         }
       }
     } finally {
@@ -184,16 +207,45 @@ public class MemStore implements HeapSize {
    * @return approximate size of the passed key and value.
    */
   long add(final KeyValue kv) {
-    long s = -1;
     this.lock.readLock().lock();
     try {
-      s = heapSizeChange(kv, this.kvset.add(kv));
-      timeRangeTracker.includeTimestamp(kv);
-      this.size.addAndGet(s);
+      KeyValue toAdd = maybeCloneWithAllocator(kv);
+      return internalAdd(toAdd);
     } finally {
       this.lock.readLock().unlock();
     }
+  }
+  
+  /**
+   * Internal version of add() that doesn't clone KVs with the
+   * allocator, and doesn't take the lock.
+   * 
+   * Callers should ensure they already have the read lock taken
+   */
+  private long internalAdd(final KeyValue toAdd) {
+    long s = heapSizeChange(toAdd, this.kvset.add(toAdd));
+    timeRangeTracker.includeTimestamp(toAdd);
+    this.size.addAndGet(s);
     return s;
+  }
+
+  private KeyValue maybeCloneWithAllocator(KeyValue kv) {
+    if (allocator == null) {
+      return kv;
+    }
+
+    int len = kv.getLength();
+    Allocation alloc = allocator.allocateBytes(len);
+    if (alloc == null) {
+      // The allocation was too large, allocator decided
+      // not to do anything with it.
+      return kv;
+    }
+    assert alloc != null && alloc.getData() != null;
+    System.arraycopy(kv.getBuffer(), kv.getOffset(), alloc.getData(), alloc.getOffset(), len);
+    KeyValue newKv = new KeyValue(alloc.getData(), alloc.getOffset(), len);
+    newKv.setMemstoreTS(kv.getMemstoreTS());
+    return newKv;
   }
 
   /**
@@ -205,8 +257,9 @@ public class MemStore implements HeapSize {
     long s = 0;
     this.lock.readLock().lock();
     try {
-      s += heapSizeChange(delete, this.kvset.add(delete));
-      timeRangeTracker.includeTimestamp(delete);
+      KeyValue toAdd = maybeCloneWithAllocator(delete);
+      s += heapSizeChange(toAdd, this.kvset.add(toAdd));
+      timeRangeTracker.includeTimestamp(toAdd);
     } finally {
       this.lock.readLock().unlock();
     }
@@ -459,12 +512,20 @@ public class MemStore implements HeapSize {
    * <p>
    * If there are any existing KeyValues in this MemStore with the same row,
    * family, and qualifier, they are removed.
+   * <p>
+   * Callers must hold the read lock.
+   * 
    * @param kv
    * @return change in size of MemStore
    */
   private long upsert(KeyValue kv) {
     // Add the KeyValue to the MemStore
-    long addedSize = add(kv);
+    // Use the internalAdd method here since we (a) already have a lock
+    // and (b) cannot safely use the MSLAB here without potentially
+    // hitting OOME - see TestMemStore.testUpsertMSLAB for a
+    // test that triggers the pathological case if we don't avoid MSLAB
+    // here.
+    long addedSize = internalAdd(kv);
 
     // Get the KeyValues for the row/family/qualifier regardless of timestamp.
     // For this case we want to clean up any other puts
@@ -732,7 +793,7 @@ public class MemStore implements HeapSize {
   }
 
   public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (9 * ClassSize.REFERENCE));
+      ClassSize.OBJECT + (11 * ClassSize.REFERENCE));
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.REENTRANT_LOCK + ClassSize.ATOMIC_LONG +

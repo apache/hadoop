@@ -360,6 +360,16 @@
     </description>
   </property>
   <property>
+    <name>hbase.hregion.memstore.mslab.enabled</name>
+    <value>true</value>
+    <description>
+      Enables the MemStore-Local Allocation Buffer,
+      a feature which works to prevent heap fragmentation under
+      heavy write loads. This can reduce the frequency of stop-the-world
+      GC pauses on large heaps.
+    </description>
+  </property>
+  <property>
     <name>hbase.hregion.max.filesize</name>
     <value>268435456</value>
     <description>
