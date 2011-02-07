@@ -263,6 +263,10 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     }
   }
 
+  public int getFlushQueueSize() {
+    return flushQueue.size();
+  }
+
   /**
    * Only interrupt once it's done with a run through the work loop.
    */

@@ -1177,6 +1177,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         .set((int) (storefileIndexSize / (1024 * 1024)));
     this.metrics.compactionQueueSize.set(compactSplitThread
         .getCompactionQueueSize());
+    this.metrics.flushQueueSize.set(cacheFlusher
+        .getFlushQueueSize());
 
     LruBlockCache lruBlockCache = (LruBlockCache) StoreFile.getBlockCache(conf);
     if (lruBlockCache != null) {

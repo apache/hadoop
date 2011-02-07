@@ -103,6 +103,7 @@ Release 0.90.1 - Unreleased
    HBASE-3508  LruBlockCache statistics thread should have a name
    HBASE-3511  Allow rolling restart to apply to only RS or only masters
    HBASE-3510  Add thread name for IPC reader threads
+   HBASE-3509  Add metric for flush queue length
 
 Release 0.90.0 - January 19th, 2011
   INCOMPATIBLE CHANGES

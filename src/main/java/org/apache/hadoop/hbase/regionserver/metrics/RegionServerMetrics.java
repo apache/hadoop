@@ -144,6 +144,12 @@ public class RegionServerMetrics implements Updater {
    */
   public final MetricsIntValue compactionQueueSize =
     new MetricsIntValue("compactionQueueSize", registry);
+  
+  /**
+   * Size of the flush queue.
+   */
+  public final MetricsIntValue flushQueueSize =
+    new MetricsIntValue("flushQueueSize", registry);
 
   /**
    * filesystem read latency
@@ -240,6 +246,7 @@ public class RegionServerMetrics implements Updater {
       this.regions.pushMetric(this.metricsRecord);
       this.requests.pushMetric(this.metricsRecord);
       this.compactionQueueSize.pushMetric(this.metricsRecord);
+      this.flushQueueSize.pushMetric(this.metricsRecord);
       this.blockCacheSize.pushMetric(this.metricsRecord);
       this.blockCacheFree.pushMetric(this.metricsRecord);
       this.blockCacheCount.pushMetric(this.metricsRecord);
@@ -340,6 +347,8 @@ public class RegionServerMetrics implements Updater {
       Integer.valueOf(this.memstoreSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "compactionQueueSize",
       Integer.valueOf(this.compactionQueueSize.get()));
+    sb = Strings.appendKeyValue(sb, "flushQueueSize",
+      Integer.valueOf(this.flushQueueSize.get()));
     // Duplicate from jvmmetrics because metrics are private there so
     // inaccessible.
     MemoryUsage memory =
