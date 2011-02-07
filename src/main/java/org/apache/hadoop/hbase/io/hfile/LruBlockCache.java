@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 /**
  * A block cache implementation that is memory-aware using {@link HeapSize},
  * memory-bound using an LRU eviction algorithm, and concurrent: backed by a
@@ -111,7 +113,10 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
   private final ScheduledExecutorService scheduleThreadPool =
-    Executors.newScheduledThreadPool(1);
+    Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder()
+        .setNameFormat("LRU Statistics #%d")
+        .build());
 
   /** Current size of cache */
   private final AtomicLong size;
