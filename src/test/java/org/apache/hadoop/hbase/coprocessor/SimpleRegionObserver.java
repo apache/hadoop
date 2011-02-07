@@ -67,6 +67,8 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   boolean hadPostGetClosestRowBefore = false;
   boolean hadPreIncrement = false;
   boolean hadPostIncrement = false;
+  boolean hadPreWALRestored = false;
+  boolean hadPostWALRestored = false;
 
   @Override
   public void preOpen(RegionCoprocessorEnvironment e) {
@@ -332,5 +334,13 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
 
   boolean hadPostIncrement() {
     return hadPostIncrement;
+  }
+
+  boolean hadPreWALRestored() {
+    return hadPreWALRestored;
+  }
+
+  boolean hadPostWALRestored() {
+    return hadPostWALRestored;
   }
 }

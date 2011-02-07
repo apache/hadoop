@@ -135,6 +135,8 @@ public class HLog implements Syncable {
   private static Class<? extends Writer> logWriterClass;
   private static Class<? extends Reader> logReaderClass;
 
+  private WALCoprocessorHost coprocessorHost;
+
   static void resetLogReaderClass() {
     HLog.logReaderClass = null;
   }
@@ -400,6 +402,7 @@ public class HLog implements Syncable {
     logSyncerThread = new LogSyncer(this.optionalFlushInterval);
     Threads.setDaemonThreadRunning(logSyncerThread,
         Thread.currentThread().getName() + ".logSyncer");
+    coprocessorHost = new WALCoprocessorHost(this, conf);
   }
 
   public void registerWALActionsListener (final WALObserver listener) {
@@ -1074,8 +1077,13 @@ public class HLog implements Syncable {
     }
     try {
       long now = System.currentTimeMillis();
-      this.writer.append(new HLog.Entry(logKey, logEdit));
+      // coprocessor hook:
+      if (!coprocessorHost.preWALWrite(info, logKey, logEdit)) {
+        // if not bypassed:
+        this.writer.append(new HLog.Entry(logKey, logEdit));
+      }
       long took = System.currentTimeMillis() - now;
+      coprocessorHost.postWALWrite(info, logKey, logEdit);
       writeTime += took;
       writeOps++;
       if (took > 1000) {
@@ -1442,6 +1450,13 @@ public class HLog implements Syncable {
     HLogSplitter logSplitter = HLogSplitter.createLogSplitter(
         conf, baseDir, p, oldLogDir, fs);
     logSplitter.splitLog();
+  }
+
+  /**
+   * @return Coprocessor host.
+   */
+  public WALCoprocessorHost getCoprocessorHost() {
+    return coprocessorHost;
   }
 
   /**

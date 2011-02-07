@@ -2009,6 +2009,16 @@ public class HRegion implements HeapSize { // , Writable{
       while ((entry = reader.next()) != null) {
         HLogKey key = entry.getKey();
         WALEdit val = entry.getEdit();
+
+        // Start coprocessor replay here. The coprocessor is for each WALEdit
+        // instead of a KeyValue.
+        if (coprocessorHost != null) {
+          if (coprocessorHost.preWALRestore(this.getRegionInfo(), key, val)) {
+            // if bypass this log entry, ignore it ...
+            continue;
+          }
+        }
+
         if (firstSeqIdInLog == -1) {
           firstSeqIdInLog = key.getLogSeqNum();
         }
@@ -2045,6 +2055,10 @@ public class HRegion implements HeapSize { // , Writable{
           editsCount++;
         }
         if (flush) internalFlushcache(null, currentEditSeqId);
+
+        if (coprocessorHost != null) {
+          coprocessorHost.postWALRestore(this.getRegionInfo(), key, val);
+        }
 
         // Every 'interval' edits, tell the reporter we're making progress.
         // Have seen 60k edits taking 3minutes to complete.

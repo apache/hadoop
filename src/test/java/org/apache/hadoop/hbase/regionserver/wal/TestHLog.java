@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -45,6 +46,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.coprocessor.Coprocessor;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
@@ -107,6 +111,8 @@ public class TestHLog  {
         .setInt("ipc.client.connect.max.retries", 1);
     TEST_UTIL.getConfiguration().setInt(
         "dfs.client.block.recovery.retries", 1);
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
+        SampleRegionWALObserver.class.getName());
     TEST_UTIL.startMiniCluster(3);
 
     conf = TEST_UTIL.getConfiguration();
@@ -638,6 +644,18 @@ public class TestHLog  {
     log.completeCacheFlush(hri2.getEncodedNameAsBytes(), tableName2, seqId, false);
     log.rollWriter();
     assertEquals(0, log.getNumLogFiles());
+  }
+
+  /**
+   * A loaded WAL coprocessor won't break existing HLog test cases.
+   */
+  @Test
+  public void testWALCoprocessorLoaded() throws Exception {
+    // test to see whether the coprocessor is loaded or not.
+    HLog log = new HLog(fs, dir, oldLogDir, conf);
+    WALCoprocessorHost host = log.getCoprocessorHost();
+    Coprocessor c = host.findCoprocessor(SampleRegionWALObserver.class.getName());
+    assertNotNull(c);
   }
 
   private void addEdits(HLog log, HRegionInfo hri, byte [] tableName,

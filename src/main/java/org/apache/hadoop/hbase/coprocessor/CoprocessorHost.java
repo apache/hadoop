@@ -51,6 +51,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       "hbase.coprocessor.region.classes";
   public static final String MASTER_COPROCESSOR_CONF_KEY =
       "hbase.coprocessor.master.classes";
+  public static final String WAL_COPROCESSOR_CONF_KEY =
+    "hbase.coprocessor.wal.classes";
+
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   /** Ordered set of loaded coprocessors with lock */
   protected final ReentrantReadWriteLock coprocessorLock = new ReentrantReadWriteLock();

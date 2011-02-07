@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -29,6 +30,8 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 import java.io.IOException;
 
@@ -529,4 +532,30 @@ public interface RegionObserver extends Coprocessor {
   public void postScannerClose(final RegionCoprocessorEnvironment e,
       final InternalScanner s)
     throws IOException;
+
+  /**
+   * Called before a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
+   * replayed for this region.
+   *
+   * @param env
+   * @param info
+   * @param logKey
+   * @param logEdit
+   * @throws IOException
+   */
+  void preWALRestore(final RegionCoprocessorEnvironment env,
+      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
+
+  /**
+   * Called after a {@link org.apache.hadoop.hbase.regionserver.wal.WALEdit}
+   * replayed for this region.
+   *
+   * @param env
+   * @param info
+   * @param logKey
+   * @param logEdit
+   * @throws IOException
+   */
+  void postWALRestore(final RegionCoprocessorEnvironment env,
+      HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 }

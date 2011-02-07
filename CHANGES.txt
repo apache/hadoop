@@ -49,8 +49,6 @@ Release 0.91.0 - Unreleased
 
 
   IMPROVEMENTS
-   HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
-               Andrew Purtell)
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
    HBASE-3292  Expose block cache hit/miss/evict counts into region server
                metrics
@@ -60,9 +58,6 @@ Release 0.91.0 - Unreleased
    HBASE-1861  Multi-Family support for bulk upload tools
    HBASE-3308  SplitTransaction.splitStoreFiles slows splits a lot
    HBASE-3328  Added Admin API to specify explicit split points
-   HBASE-3345  Coprocessors: Allow observers to completely override base
-               function
-   HBASE-3260  Coprocessors: Add explicit lifecycle management
    HBASE-3377  Upgrade Jetty to 6.1.26
    HBASE-3387  Pair does not deep check arrays for equality
                (Jesse Yates via Stack)
@@ -77,16 +72,24 @@ Release 0.91.0 - Unreleased
 
 
   NEW FEATURES
+   HBASE-2001  Coprocessors: Colocate user code with regions (Mingjie Lai via
+               Andrew Purtell)
    HBASE-3287  Add option to cache blocks on hfile write and evict blocks on
                hfile close
    HBASE-3335  Add BitComparator for filtering (Nathaniel Cook via Stack)
+   HBASE-3260  Coprocessors: Add explicit lifecycle management
    HBASE-3256  Coprocessors: Coprocessor host and observer for HMaster
+   HBASE-3345  Coprocessors: Allow observers to completely override base
+               function
    HBASE-3448  RegionSplitter, utility class to manually split tables
    HBASE-2824  A filter that randomly includes rows based on a configured
                chance (Ferdy via Andrew Purtell)
    HBASE-3455  Add memstore-local allocation buffers to combat heap
                fragmentation in the region server. Enabled by default as of
                0.91
+   HBASE-3257  Coprocessors: Extend server side API to include HLog operations
+               (Mingjie Lai via Andrew Purtell)
+
 
 Release 0.90.1 - Unreleased
 
