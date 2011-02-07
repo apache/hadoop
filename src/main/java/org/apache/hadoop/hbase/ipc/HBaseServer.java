@@ -62,6 +62,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Function;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -284,7 +285,9 @@ public abstract class HBaseServer implements RpcServer {
       selector= Selector.open();
 
       readers = new Reader[readThreads];
-      readPool = Executors.newFixedThreadPool(readThreads);
+      readPool = Executors.newFixedThreadPool(readThreads,
+        new ThreadFactoryBuilder().setNameFormat(
+          "IPC Reader %d on port " + port).build());
       for (int i = 0; i < readThreads; ++i) {
         Selector readSelector = Selector.open();
         Reader reader = new Reader(readSelector);
