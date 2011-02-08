@@ -288,34 +288,56 @@ Usually you'll want to use the latest version available except the problematic u
   <section xml:id="hadoop"><title><link xlink:href="http://hadoop.apache.org">hadoop</link><indexterm><primary>Hadoop</primary></indexterm></title>
 <para>This version of HBase will only run on <link xlink:href="http://hadoop.apache.org/common/releases.html">Hadoop 0.20.x</link>.
     It will not run on hadoop 0.21.x (nor 0.22.x) as of this writing.
-    HBase will lose data unless it is running on an HDFS that has a durable <code>sync</code>.
- Currently only the <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
- branch has this attribute.  No official releases have been made from this branch as of this writing
- so you will have to build your own Hadoop from the tip of this branch <footnote>
-     <para>Scroll down in the Hadoop <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">How To Release</link> to the section
-         Build Requirements for instruction on how to build Hadoop.
-     </para>
- </footnote> or you could use
- Cloudera's <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link>.
- CDH has the 0.20-append patches needed to add a durable sync (As of this writing
- CDH3 is still in beta.  Either CDH3b2 or CDH3b3 will suffice).
+    HBase will lose data unless it is running on an HDFS that has a
+    durable <code>sync</code>.  Currently only the
+    <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>
+    branch has this attribute
+    <footnote>
+    <para>
  See <link xlink:href="http://svn.apache.org/viewvc/hadoop/common/branches/branch-0.20-append/CHANGES.txt">CHANGES.txt</link>
- in branch-0.20-append to see list of patches involved.</para>
- <para>Because HBase depends on Hadoop, it bundles an Hadoop instance under its <filename>lib</filename> directory.
- The bundled Hadoop was made from the Apache branch-0.20-append branch.
- If you want to run HBase on an Hadoop cluster that is other than a version made from branch-0.20.append,
- you must replace the hadoop jar found in the HBase <filename>lib</filename> directory with the
+ in branch-0.20-append to see list of patches involved adding append on the Hadoop 0.20 branch.
+ </para>
+ </footnote>.
+    No official releases have been made from this branch up to now
+    so you will have to build your own Hadoop from the tip of this branch.
+    Scroll down in the Hadoop <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">How To Release</link> to the section
+    <emphasis>Build Requirements</emphasis> for instruction on how to build Hadoop.
+    </para>
+
+ <para>
+ Or rather than build your own, you could use
+ Cloudera's <link xlink:href="http://archive.cloudera.com/docs/">CDH3</link>.
+ CDH has the 0.20-append patches needed to add a durable sync (CDH3 is still in beta.
+ Either CDH3b2 or CDH3b3 will suffice).
+ </para>
+
+ <para>Because HBase depends on Hadoop, it bundles an instance of
+ the Hadoop jar under its <filename>lib</filename> directory.
+ The bundled Hadoop was made from the Apache branch-0.20-append branch
+ at the time of this HBase's release.
+ It is <emphasis>critical</emphasis> that the version of Hadoop that is
+ out on your cluster matches what is Hbase match.  Replace the hadoop
+ jar found in the HBase <filename>lib</filename> directory with the
  hadoop jar you are running out on your cluster to avoid version mismatch issues.
+ Make sure you replace the jar all over your cluster.
  For example, versions of CDH do not have HDFS-724 whereas
  Hadoops branch-0.20-append branch does have HDFS-724. This
  patch changes the RPC version because protocol was changed.
  Version mismatch issues have various manifestations but often all looks like its hung up.
  </para>
+
+ <note><title>Can I just replace the jar in Hadoop 0.20.2 tarball with the <emphasis>sync</emphasis>-supporting Hadoop jar found in HBase?</title>
+ <para>
+ You could do this.  It works going by a recent posting up on the
+ <link xlink:href="http://www.apacheserver.net/Using-Hadoop-bundled-in-lib-directory-HBase-at1136240.htm">mailing list</link>.
+ </para>
+ </note>
  <note><title>Hadoop Security</title>
      <para>HBase will run on any Hadoop 0.20.x that incorporates Hadoop security features -- e.g. Y! 0.20S or CDH3B3 -- as long
          as you do as suggested above and replace the Hadoop jar that ships with HBase with the secure version.
   </para>
   </note>
+
   </section>
 <section xml:id="ssh"> <title>ssh</title>
 <para><command>ssh</command> must be installed and <command>sshd</command> must
@@ -903,7 +925,55 @@ index e70ebc6..96f8c27 100644
     
     </section>
     </section>
+
   </chapter>
+
+    <chapter xml:id="upgrading">
+    <title>Upgrading</title>
+    <para>
+    Review the <link linkend="requirements">requirements</link>
+    section above, in particular the section on Hadoop version.
+    </para>
+    <section xml:id="upgrade0.90">
+    <title>Upgrading to HBase 0.90.x from 0.20.x or 0.89.x</title>
+          <para>This version of 0.90.x HBase can be started on data written by
+              HBase 0.20.x or HBase 0.89.x.  There is no need of a migration step.
+              HBase 0.89.x and 0.90.x does write out the name of region directories
+              differently -- it names them with a md5 hash of the region name rather
+              than a jenkins hash -- so this means that once started, there is no
+              going back to HBase 0.20.x.
+          </para>
+          <para>
+             Be sure to remove the <filename>hbase-default.xml</filename> from
+             your <filename>conf</filename>
+             directory on upgrade.  A 0.20.x version of this file will have
+             sub-optimal configurations for 0.90.x HBase.  The
+             <filename>hbase-default.xml</filename> file is now bundled into the
+             HBase jar and read from there.  If you would like to review
+             the content of this file, see it in the src tree at
+             <filename>src/main/resources/hbase-default.xml</filename> or
+             see <link linkend="hbase_default_configurations">Default HBase Configurations</link>.
+          </para>
+          <para>
+            Finally, if upgrading from 0.20.x, check your 
+            <varname>.META.</varname> schema in the shell.  In the past we would
+            recommend that users run with a 16MB
+            <varname>MEMSTORE_SIZE</varname>.
+            Run <code>hbase> scan '-ROOT-'</code> in the shell. This will output
+            the current <varname>.META.</varname> schema.  Check
+            <varname>MEMSTORE_SIZE</varname> size.  Is it 16MB?  If so, you will
+            need to change this.  Run the script <filename>bin/set_meta_memstore_size.rb</filename>.
+            This will make the necessary edit to your <varname>.META.</varname> schema.
+            Failure to run this change will make for a slow cluster <footnote>
+            <para>
+            See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3499">HBASE-3499 Users upgrading to 0.90.0 need to have their .META. table updated with the right MEMSTORE_SIZE</link>
+            </para>
+            </footnote>
+            .
+
+          </para>
+          </section>
+    </chapter>
 
   <chapter xml:id="configuration">
     <title>Configuration</title>
@@ -2019,22 +2089,6 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
                 <para>
                     Ignore it.  Its not an error.  It is <link xlink:href="http://jira.codehaus.org/browse/MSITE-286">officially ugly</link> though.
                 </para>
-            </answer>
-        </qandaentry>
-    </qandadiv>
-        <qandadiv><title>Upgrading your HBase</title>
-        <qandaentry>
-            <question xml:id="0_90_upgrade"><para>
-            Whats involved upgrading to HBase 0.90.x from 0.89.x or from 0.20.x?
-            </para></question>
-            <answer>
-          <para>This version of 0.90.x HBase can be started on data written by
-              HBase 0.20.x or HBase 0.89.x.  There is no need of a migration step.
-              HBase 0.89.x and 0.90.x does write out the name of region directories
-              differently -- it names them with a md5 hash of the region name rather
-              than a jenkins hash -- so this means that once started, there is no
-              going back to HBase 0.20.x.
-          </para>
             </answer>
         </qandaentry>
     </qandadiv>
