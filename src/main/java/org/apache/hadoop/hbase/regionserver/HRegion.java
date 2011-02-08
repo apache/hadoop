@@ -58,12 +58,12 @@ import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -340,7 +341,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return What the next sequence (edit) id should be.
    * @throws IOException e
    */
-  public long initialize(final Progressable reporter)
+  public long initialize(final CancelableProgressable reporter)
   throws IOException {
     if (coprocessorHost != null) {
       coprocessorHost.preOpen();
@@ -1537,7 +1538,7 @@ public class HRegion implements HeapSize { // , Writable{
         lastIndexExclusive++;
         numReadyToWrite++;
       }
-      // Nothing to put -- an exception in the above such as NoSuchColumnFamily? 
+      // Nothing to put -- an exception in the above such as NoSuchColumnFamily?
       if (numReadyToWrite <= 0) return 0L;
 
       // We've now grabbed as many puts off the list as we can
@@ -1942,7 +1943,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   protected long replayRecoveredEditsIfAny(final Path regiondir,
-      final long minSeqId, final Progressable reporter)
+      final long minSeqId, final CancelableProgressable reporter)
   throws UnsupportedEncodingException, IOException {
     long seqid = minSeqId;
     NavigableSet<Path> files = HLog.getSplitEditFilesSorted(this.fs, regiondir);
@@ -1991,7 +1992,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @throws IOException
    */
   private long replayRecoveredEdits(final Path edits,
-      final long minSeqId, final Progressable reporter)
+      final long minSeqId, final CancelableProgressable reporter)
     throws IOException {
     LOG.info("Replaying edits from " + edits + "; minSequenceid=" + minSeqId);
     HLog.Reader reader = HLog.getReader(this.fs, edits, conf);
@@ -2000,15 +2001,41 @@ public class HRegion implements HeapSize { // , Writable{
     long firstSeqIdInLog = -1;
     long skippedEdits = 0;
     long editsCount = 0;
+    long intervalEdits = 0;
     HLog.Entry entry;
     Store store = null;
 
     try {
-      // How many edits to apply before we send a progress report.
-      int interval = this.conf.getInt("hbase.hstore.report.interval.edits", 2000);
+      // How many edits seen before we check elapsed time
+      int interval = this.conf.getInt("hbase.hstore.report.interval.edits",
+          2000);
+      // How often to send a progress report (default 1/2 master timeout)
+      int period = this.conf.getInt("hbase.hstore.report.period",
+          this.conf.getInt("hbase.master.assignment.timeoutmonitor.timeout",
+              30000) / 2);
+      long lastReport = EnvironmentEdgeManager.currentTimeMillis();
+
       while ((entry = reader.next()) != null) {
         HLogKey key = entry.getKey();
         WALEdit val = entry.getEdit();
+
+        if (reporter != null) {
+          intervalEdits += val.size();
+          if (intervalEdits >= interval) {
+            // Number of edits interval reached
+            intervalEdits = 0;
+            long cur = EnvironmentEdgeManager.currentTimeMillis();
+            if (lastReport + period <= cur) {
+              // Timeout reached
+              if(!reporter.progress()) {
+                String msg = "Progressable reporter failed, stopping replay";
+                LOG.warn(msg);
+                throw new IOException(msg);
+              }
+              lastReport = cur;
+            }
+          }
+        }
 
         // Start coprocessor replay here. The coprocessor is for each WALEdit
         // instead of a KeyValue.
@@ -2058,12 +2085,6 @@ public class HRegion implements HeapSize { // , Writable{
 
         if (coprocessorHost != null) {
           coprocessorHost.postWALRestore(this.getRegionInfo(), key, val);
-        }
-
-        // Every 'interval' edits, tell the reporter we're making progress.
-        // Have seen 60k edits taking 3minutes to complete.
-        if (reporter != null && (editsCount % interval) == 0) {
-          reporter.progress();
         }
       }
     } catch (EOFException eof) {
@@ -2662,7 +2683,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   public static HRegion openHRegion(final HRegionInfo info, final HLog wal,
     final Configuration conf, final RegionServerServices rsServices,
-    final Progressable reporter)
+    final CancelableProgressable reporter)
   throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
@@ -2684,7 +2705,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return Returns <code>this</code>
    * @throws IOException
    */
-  protected HRegion openHRegion(final Progressable reporter)
+  protected HRegion openHRegion(final CancelableProgressable reporter)
   throws IOException {
     checkCompressionCodecs();
 

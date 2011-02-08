@@ -31,7 +31,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,11 +42,13 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.PairOfSameType;
-import org.apache.hadoop.util.Progressable;
 import org.apache.zookeeper.KeeperException;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Executes region split as a "transaction".  Call {@link #prepare()} to setup
@@ -338,7 +339,7 @@ public class SplitTransaction {
     services.postOpenDeployTasks(r, server.getCatalogTracker(), true);
   }
 
-  static class LoggingProgressable implements Progressable {
+  static class LoggingProgressable implements CancelableProgressable {
     private final HRegionInfo hri;
     private long lastLog = -1;
     private final long interval;
@@ -350,12 +351,13 @@ public class SplitTransaction {
     }
 
     @Override
-    public void progress() {
+    public boolean progress() {
       long now = System.currentTimeMillis();
       if (now - lastLog > this.interval) {
         LOG.info("Opening " + this.hri.getRegionNameAsString());
         this.lastLog = now;
       }
+      return true;
     }
   }
 

@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.util.Progressable;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -261,12 +261,12 @@ public class OpenRegionHandler extends EventHandler {
       // state so master doesn't timeout this region in transition.
       region = HRegion.openHRegion(this.regionInfo, this.rsServices.getWAL(),
         this.server.getConfiguration(), this.rsServices,
-        new Progressable() {
-          public void progress() {
+        new CancelableProgressable() {
+          public boolean progress() {
             // We may lose the znode ownership during the open.  Currently its
             // too hard interrupting ongoing region open.  Just let it complete
             // and check we still have the znode after region open.
-            tickleOpening("open_region_progress");
+            return tickleOpening("open_region_progress");
           }
         });
     } catch (IOException e) {
@@ -325,6 +325,7 @@ public class OpenRegionHandler extends EventHandler {
     } catch (KeeperException e) {
       server.abort("Exception refreshing OPENING; region=" + encodedName +
         ", context=" + context, e);
+      this.version = -1;
     }
     boolean b = isGoodVersion();
     if (!b) {
