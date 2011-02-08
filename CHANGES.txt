@@ -109,6 +109,8 @@ Release 0.90.1 - Unreleased
    HBASE-3509  Add metric for flush queue length
    HBASE-3419  If re-transition to OPENING during log replay fails, server
                aborts. Instead, should just cancel region open.
+   HBASE-3515  [replication] ReplicationSource can miss a log after RS comes
+               out of GC
 
 Release 0.90.0 - January 19th, 2011
   INCOMPATIBLE CHANGES
