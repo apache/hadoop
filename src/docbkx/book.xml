@@ -1351,13 +1351,16 @@ of all regions.
   <title>HBase and Schema Design</title>
   <section>
   <title>
-  Monotonically Increasing Row Keys; e.g. timeseries data
+  Monotonically Increasing Row Keys/Timeseries Data
   </title>
   <para>See this comic by IKai Lan on why monotically increasing row keys are
   problematic in BigTable-like datastores:
-  <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link></para>
-  <para>See <link xlink:href="http://opentsdb.net/">OpenTSDB</link> as a way for managing
-  timeseries data on top of HBase</para>
+  <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link>
+  in BigTable-like stores.</para>
+  <para>If you need to upload time series data into HBase, you should
+  study <link xlink:href="http://opentsdb.net/">OpenTSDB</link> as a
+  successful example.  It has a page describing the schema it uses in
+  HBase.  You might also consider just using OpenTSDB altogether.</para>
   </section>
   </chapter>
 
