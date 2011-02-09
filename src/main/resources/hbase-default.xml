@@ -609,4 +609,14 @@
     true: Only the GET method is permitted.
     </description>
   </property>
+
+  <property skipInDoc="true">
+    <name>hbase.defaults.for.version</name>
+    <value>@@@VERSION@@@</value>
+    <description>
+    This defaults file was compiled for version @@@VERSION@@@. This variable is used
+    to make sure that a user doesn't have an old version of hbase-default.xml on the
+    classpath.
+    </description>
+  </property>
 </configuration>

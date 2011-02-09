@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.util.VersionInfo;
 
 /**
  * Adds HBase configuration files to a Configuration
@@ -58,9 +59,21 @@ public class HBaseConfiguration extends Configuration {
     }
   }
 
+  private static void checkDefaultsVersion(Configuration conf) {
+    String defaultsVersion = conf.get("hbase.defaults.for.version");
+    String thisVersion = VersionInfo.getVersion();
+    if (!thisVersion.equals(defaultsVersion)) {
+      throw new RuntimeException(
+        "hbase-default.xml file seems to be for and old version of HBase (" +
+        defaultsVersion + "), this version is " + thisVersion);
+    }
+  }
+
   public static Configuration addHbaseResources(Configuration conf) {
     conf.addResource("hbase-default.xml");
     conf.addResource("hbase-site.xml");
+
+    checkDefaultsVersion(conf);
     return conf;
   }
 

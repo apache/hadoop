@@ -45,6 +45,7 @@ This documentation is generated using the default hbase configuration file,
 </para>
 
 <xsl:for-each select="property">
+<xsl:if test="not(@skipInDoc)">
 <glossentry>
   <xsl:attribute name="id">
     <xsl:value-of select="name" />
@@ -57,6 +58,7 @@ This documentation is generated using the default hbase configuration file,
   <para>Default: <varname><xsl:value-of select="value"/></varname></para>
   </glossdef>
 </glossentry>
+</xsl:if>
 </xsl:for-each>
 
 </glossary>

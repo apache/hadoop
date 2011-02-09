@@ -423,6 +423,18 @@
               <goal>run</goal>
             </goals>
           </execution>
+          <execution>
+            <phase>process-resources</phase>
+            <configuration>
+              <tasks>
+                <replace file="${project.build.outputDirectory}/hbase-default.xml"
+                  token="@@@VERSION@@@" value="${project.version}" />
+              </tasks>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
         </executions>
       </plugin>
       <plugin>

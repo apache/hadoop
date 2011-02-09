@@ -110,6 +110,7 @@ Release 0.90.1 - Unreleased
                aborts. Instead, should just cancel region open.
    HBASE-3515  [replication] ReplicationSource can miss a log after RS comes
                out of GC
+   HBASE-3517  Store build version in hbase-default.xml and verify at runtime
 
 Release 0.90.0 - January 19th, 2011
   INCOMPATIBLE CHANGES
