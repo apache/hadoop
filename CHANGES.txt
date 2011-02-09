@@ -102,7 +102,6 @@ Release 0.90.1 - Unreleased
    HBASE-3483  Memstore lower limit should trigger asynchronous flushes
 
   IMPROVEMENTS
-   HBASE-3470  Check that hbase-default.xml is loaded from within jar
    HBASE-3508  LruBlockCache statistics thread should have a name
    HBASE-3511  Allow rolling restart to apply to only RS or only masters
    HBASE-3510  Add thread name for IPC reader threads
