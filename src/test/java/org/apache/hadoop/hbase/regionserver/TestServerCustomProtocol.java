@@ -19,21 +19,34 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import com.google.common.collect.Lists;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.*;
-
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.apache.hadoop.ipc.VersionedProtocol;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import com.google.common.collect.Lists;
 
 public class TestServerCustomProtocol {
   /* Test protocol */
@@ -45,8 +58,9 @@ public class TestServerCustomProtocol {
   }
 
   /* Test protocol implementation */
-  private static class PingHandler implements PingProtocol,
-  HBaseRPCProtocolVersion {
+  private static class PingHandler implements PingProtocol, VersionedProtocol {
+    static int VERSION = 1;
+
     private int counter = 0;
     @Override
     public String ping() {
@@ -72,7 +86,7 @@ public class TestServerCustomProtocol {
 
     @Override
     public long getProtocolVersion(String s, long l) throws IOException {
-      return versionID;
+      return VERSION;
     }
   }
 

@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
@@ -472,7 +471,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   }
 
   public long getProtocolVersion(String protocol, long clientVersion) {
-    return HBaseRPCProtocolVersion.versionID;
+    return HMasterInterface.VERSION;
   }
 
   /** @return InfoServer object. Maybe null.*/

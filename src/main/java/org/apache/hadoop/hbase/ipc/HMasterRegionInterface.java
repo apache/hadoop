@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.io.MapWritable;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 import java.io.IOException;
 
@@ -35,7 +36,15 @@ import java.io.IOException;
  * number in HBaseRPCProtocolVersion
  *
  */
-public interface HMasterRegionInterface extends HBaseRPCProtocolVersion {
+public interface HMasterRegionInterface extends VersionedProtocol {
+  /**
+   * This Interfaces' version. Version changes when the Interface changes.
+   */
+  // All HBase Interfaces used derive from HBaseRPCProtocolVersion.  It
+  // maintained a single global version number on all HBase Interfaces.  This
+  // meant all HBase RPC was broke though only one of the three RPC Interfaces
+  // had changed.  This has since been undone.
+  public static final long VERSION = 28L;
 
   /**
    * Called when a region server first starts

@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
-import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.Test;
@@ -48,7 +47,7 @@ public class TestHMasterRPCException {
     try {
       HMasterInterface inf =
           (HMasterInterface) HBaseRPC.getProxy(
-              HMasterInterface.class,  HBaseRPCProtocolVersion.versionID,
+              HMasterInterface.class,  HMasterInterface.VERSION,
               hma.getInetSocketAddress(), conf, 100);
       inf.isMasterRunning();
       fail();

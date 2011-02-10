@@ -349,7 +349,7 @@ public class HConnectionManager {
             }
 
             HMasterInterface tryMaster = (HMasterInterface)HBaseRPC.getProxy(
-                HMasterInterface.class, HBaseRPCProtocolVersion.versionID,
+                HMasterInterface.class, HMasterInterface.VERSION,
                 masterLocation.getInetSocketAddress(), this.conf, this.rpcTimeout);
 
             if (tryMaster.isMasterRunning()) {
@@ -945,7 +945,7 @@ public class HConnectionManager {
         if (server == null) { // Get a connection
           try {
             server = (HRegionInterface)HBaseRPC.waitForProxy(
-                serverInterfaceClass, HBaseRPCProtocolVersion.versionID,
+                serverInterfaceClass, HRegionInterface.VERSION,
                 regionServer.getInetSocketAddress(), this.conf,
                 this.maxRPCAttempts, this.rpcTimeout, this.rpcTimeout);
           } catch (RemoteException e) {

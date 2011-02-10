@@ -101,7 +101,6 @@ import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
-import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
 import org.apache.hadoop.hbase.ipc.HBaseRpcMetrics;
 import org.apache.hadoop.hbase.ipc.HMasterRegionInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -1447,7 +1446,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         // Do initial RPC setup. The final argument indicates that the RPC
         // should retry indefinitely.
         master = (HMasterRegionInterface) HBaseRPC.waitForProxy(
-            HMasterRegionInterface.class, HBaseRPCProtocolVersion.versionID,
+            HMasterRegionInterface.class, HMasterRegionInterface.VERSION,
             masterAddress.getInetSocketAddress(), this.conf, -1,
             this.rpcTimeout, this.rpcTimeout);
       } catch (IOException e) {
@@ -2452,7 +2451,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public long getProtocolVersion(final String protocol, final long clientVersion)
       throws IOException {
     if (protocol.equals(HRegionInterface.class.getName())) {
-      return HBaseRPCProtocolVersion.versionID;
+      return HRegionInterface.VERSION;
     }
     throw new IOException("Unknown protocol to name node: " + protocol);
   }

@@ -19,8 +19,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
-import org.apache.hadoop.hbase.ipc.HBaseRPCProtocolVersion;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
  * This abstract class provides default implementation of an Endpoint.
@@ -33,15 +32,17 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
  * the region related resource, i.e., CoprocessorEnvironment.
  */
 public abstract class BaseEndpointCoprocessor implements Coprocessor,
-    CoprocessorProtocol {
-  private CoprocessorEnvironment env;
-
+    CoprocessorProtocol, VersionedProtocol {
   /**
-   * @param e Coprocessor environment.
+   * This Interfaces' version. Version changes when the Interface changes.
    */
-  private void setEnvironment(CoprocessorEnvironment e) {
-    env = e;
-  }
+  // All HBase Interfaces used derive from HBaseRPCProtocolVersion.  It
+  // maintained a single global version number on all HBase Interfaces.  This
+  // meant all HBase RPC was broke though only one of the three RPC Interfaces
+  // had changed.  This has since been undone.
+  public static final long VERSION = 28L;
+
+  private CoprocessorEnvironment env;
 
   /**
    * @return env Coprocessor environment.
@@ -59,7 +60,8 @@ public abstract class BaseEndpointCoprocessor implements Coprocessor,
   public void stop(CoprocessorEnvironment env) { }
 
   @Override
-  public long getProtocolVersion(String protocol, long clientVersion) throws IOException {
-    return HBaseRPCProtocolVersion.versionID;
+  public long getProtocolVersion(String protocol, long clientVersion)
+  throws IOException {
+    return VERSION;
   }
 }

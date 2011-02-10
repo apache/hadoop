@@ -69,6 +69,9 @@ Release 0.91.0 - Unreleased
    HBASE-3305  Allow round-robin distribution for table created with
                multiple regions (ted yu via jgray)
    HBASE-3496  HFile CLI Improvements
+   HBASE-3522  Unbundle our RPC versioning; rather than a global for all 4
+               Interfaces -- region, master, region to master, and
+               coprocesssors -- instead version each individually
 
 
   NEW FEATURES

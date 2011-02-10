@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.ipc;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.List;
-import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -30,8 +29,6 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.coprocessor.Exec;
-import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.MultiAction;
@@ -41,8 +38,11 @@ import org.apache.hadoop.hbase.client.MultiResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.coprocessor.Exec;
+import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
  * Clients interact with HRegionServers using a handle to the HRegionInterface.
@@ -50,7 +50,16 @@ import org.apache.hadoop.ipc.RemoteException;
  * <p>NOTE: if you change the interface, you must change the RPC version
  * number in HBaseRPCProtocolVersion
  */
-public interface HRegionInterface extends HBaseRPCProtocolVersion, Stoppable, Abortable {
+public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortable {
+  /**
+   * This Interfaces' version. Version changes when the Interface changes.
+   */
+  // All HBase Interfaces used derive from HBaseRPCProtocolVersion.  It
+  // maintained a single global version number on all HBase Interfaces.  This
+  // meant all HBase RPC was broke though only one of the three RPC Interfaces
+  // had changed.  This has since been undone.
+  public static final long VERSION = 28L;
+
   /**
    * Get metainfo about an HRegion
    *
