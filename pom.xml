@@ -487,7 +487,7 @@
     at revision 1034499 with this hdfs-895 patch:
     https://issues.apache.org/jira/secure/attachment/12459473/hdfs-895-branch-20-append.txt
     -->
-    <hadoop.version>0.20-append-r1056497</hadoop.version>
+    <hadoop.version>0.20-append-r1057313</hadoop.version>
     <jasper.version>5.5.23</jasper.version>
     <jaxb-api.version>2.1</jaxb-api.version>
     <jetty.version>6.1.26</jetty.version>

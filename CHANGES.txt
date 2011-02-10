@@ -91,6 +91,11 @@ Release 0.91.0 - Unreleased
                (Mingjie Lai via Andrew Purtell)
 
 
+Release 0.90.2 - Unreleased
+  TASK
+   HBASE-3520  Update our bundled hadoop from branch-0.20-append to latest
+               (rpc version 43)
+
 Release 0.90.1 - Unreleased
 
   NEW FEATURES
