@@ -165,6 +165,7 @@ import org.apache.hadoop.util.PriorityQueue;
  * <li>
  * Record <i>Block</i>
  *   <ul>
+ *     <li>Uncompressed number of records in the block</li>
  *     <li>Compressed key-lengths block-size</li>
  *     <li>Compressed key-lengths block</li>
  *     <li>Compressed keys block-size</li>
@@ -176,7 +177,7 @@ import org.apache.hadoop.util.PriorityQueue;
  *   </ul>
  * </li>
  * <li>
- * A sync-marker every few <code>100</code> bytes or so.
+ * A sync-marker every block.
  * </li>
  * </ul>
  * 

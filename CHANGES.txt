@@ -68,6 +68,9 @@ Trunk (unreleased changes)
 
     HADOOP-7129. Fix typo in method name getProtocolSigature (todd)
 
+    HADOOP-7048.  Wrong description of Block-Compressed SequenceFile Format in
+    SequenceFile's javadoc.  (Jingguo Yao via tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
