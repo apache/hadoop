@@ -46,7 +46,6 @@
   <!-- ====================================================== -->
   <target name="test">
     <subant target="test">
-      <fileset dir="." includes="failmon/build.xml"/>
       <fileset dir="." includes="hod/build.xml"/>
     </subant>
   </target>
