@@ -8,6 +8,8 @@ Trunk (unreleased changes)
 
    HADOOP-6432. Add Statistics support in FileContext. (jitendra)
 
+   HADOOP-7136. Remove failmon contrib component. (nigel)
+
   NEW FEATURES
 
     HADOOP-7023. Add listCorruptFileBlocks to Filesysem. (Patrick Kling
