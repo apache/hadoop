@@ -108,6 +108,7 @@ Release 0.90.1 - Unreleased
   
   BUG FIXES
    HBASE-3483  Memstore lower limit should trigger asynchronous flushes
+   HBASE-3524  NPE from CompactionChecker
 
   IMPROVEMENTS
    HBASE-3508  LruBlockCache statistics thread should have a name

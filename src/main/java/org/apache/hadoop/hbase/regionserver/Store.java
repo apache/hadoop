@@ -788,7 +788,10 @@ public class Store implements HeapSize {
       if (filesToCompact.size() == 1) {
         // Single file
         StoreFile sf = filesToCompact.get(0);
-        long oldest = now - sf.getReader().timeRangeTracker.minimumTimestamp;
+        long oldest =
+            (sf.getReader().timeRangeTracker == null) ?
+                Long.MIN_VALUE :
+                now - sf.getReader().timeRangeTracker.minimumTimestamp;
         if (sf.isMajorCompaction() &&
             (this.ttl == HConstants.FOREVER || oldest < this.ttl)) {
           if (LOG.isDebugEnabled()) {
