@@ -279,6 +279,7 @@ public class TestSplitTransactionOnCluster {
     for (RegionServerThread rst: cluster.getRegionServerThreads()) {
       HRegionServer hrs = rst.getRegionServer();
       if (hrs.getServerName().equals(notThisOne.getServerName())) continue;
+      if (hrs.isStopping() || hrs.isStopped()) continue;
       return hrs;
     }
     return null;
