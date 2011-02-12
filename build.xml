@@ -957,7 +957,6 @@
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}">
         <packageset dir="${java.src.dir}"/>
-	<packageset dir="src/contrib/failmon/src/java/"/> 
 
         <link href="${javadoc.link.java}"/>
 
@@ -972,7 +971,6 @@
         </classpath>
 
     	<group title="Core" packages="org.apache.*"/>
-        <group title="contrib: FailMon" packages="org.apache.hadoop.contrib.failmon*"/>
 
     </javadoc>
   </target>	
@@ -1002,7 +1000,6 @@
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}">
         <packageset dir="${java.src.dir}"/>
-	<packageset dir="src/contrib/failmon/src/java/"/> 
 	
         <link href="${javadoc.link.java}"/>
 
@@ -1017,7 +1014,6 @@
         </classpath>
 
        <group title="Core" packages="org.apache.*"/>
-       <group title="contrib: FailMon" packages="org.apache.hadoop.contrib.failmon*"/>
        <doclet name="org.apache.hadoop.classification.tools.ExcludePrivateAnnotationsStandardDoclet"
                path="${build.dir}/${final.name}.jar"/>
     </javadoc>
