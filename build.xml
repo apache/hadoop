@@ -1144,6 +1144,7 @@
   	
     <copy todir="${dist.dir}/" file="build.xml"/>
 
+    <chmod perm="ugo+x" file="${dist.dir}/src/native/configure"/>
     <chmod perm="ugo+x" type="file" parallel="false">
         <fileset dir="${dist.dir}/bin"/>
         <fileset dir="${dist.dir}/src/contrib/">
@@ -1162,11 +1163,13 @@
         <tarfileset dir="${build.dir}" mode="664">
           <exclude name="${final.name}/bin/*" />
           <exclude name="${final.name}/contrib/*/bin/*" />
+          <exclude name="${final.name}/src/native/configure" />
           <include name="${final.name}/**" />
         </tarfileset>
         <tarfileset dir="${build.dir}" mode="755">
           <include name="${final.name}/bin/*" />
           <include name="${final.name}/contrib/*/bin/*" />
+          <include name="${final.name}/src/native/configure" />
         </tarfileset>
       </param.listofitems>
     </macro_tar>

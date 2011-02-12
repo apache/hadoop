@@ -44,6 +44,9 @@ Release 0.22.0 - Unreleased
     HADOOP-6978. Adds support for NativeIO using JNI. 
     (Todd Lipcon, Devaraj Das & Owen O'Malley via ddas)
 
+    HADOOP-7134. configure files that are generated as part of the released
+    tarball need to have executable bit set. (Roman Shaposhnik via cos)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
