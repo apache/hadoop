@@ -54,8 +54,12 @@
   <dependencySets>
     <dependencySet>
       <outputDirectory>/lib</outputDirectory>
+      <excludes>
+        <exclude>org.apache.hbase:hbase</exclude>
+      </excludes>
       <unpack>false</unpack>
       <scope>runtime</scope>
+      <useTransitiveDependencies>false</useTransitiveDependencies>
     </dependencySet>
   </dependencySets>
 </assembly>
