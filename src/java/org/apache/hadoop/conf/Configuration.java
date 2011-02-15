@@ -1248,7 +1248,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public Path getLocalPath(String dirsProp, String path)
     throws IOException {
-    String[] dirs = getStrings(dirsProp);
+    String[] dirs = getTrimmedStrings(dirsProp);
     int hashCode = path.hashCode();
     FileSystem fs = FileSystem.getLocal(this);
     for (int i = 0; i < dirs.length; i++) {  // try each local dir
@@ -1280,7 +1280,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public File getFile(String dirsProp, String path)
     throws IOException {
-    String[] dirs = getStrings(dirsProp);
+    String[] dirs = getTrimmedStrings(dirsProp);
     int hashCode = path.hashCode();
     for (int i = 0; i < dirs.length; i++) {  // try each local dir
       int index = (hashCode+i & Integer.MAX_VALUE) % dirs.length;

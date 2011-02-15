@@ -243,6 +243,30 @@ public class TestConfiguration extends TestCase {
     }
   }
 
+  public void testGetLocalPath() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set("dirs", "a, b, c ");
+    for (int i = 0; i < 1000; i++) {
+      String localPath = conf.getLocalPath("dirs", "dir" + i).toString();
+      assertTrue("Path doesn't end in specified dir: " + localPath,
+        localPath.endsWith("dir" + i));
+      assertFalse("Path has internal whitespace: " + localPath,
+        localPath.contains(" "));
+    }
+  }
+  
+  public void testGetFile() throws IOException {
+    Configuration conf = new Configuration();
+    conf.set("dirs", "a, b, c ");
+    for (int i = 0; i < 1000; i++) {
+      String localPath = conf.getFile("dirs", "dir" + i).toString();
+      assertTrue("Path doesn't end in specified dir: " + localPath,
+        localPath.endsWith("dir" + i));
+      assertFalse("Path has internal whitespace: " + localPath,
+        localPath.contains(" "));
+    }
+  }
+
   public void testToString() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();

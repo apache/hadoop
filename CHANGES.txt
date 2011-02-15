@@ -493,6 +493,9 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7094. hadoop.css got lost during project split (cos)
 
+    HADOOP-7145. Configuration.getLocalPath should trim whitespace from
+    the provided directories. (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
