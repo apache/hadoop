@@ -418,6 +418,8 @@ Release 0.22.0 - Unreleased
 
     HADOOP-7140. IPC Reader threads do not stop when server stops (todd)
 
+    HADOOP-7094. hadoop.css got lost during project split (cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
