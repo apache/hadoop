@@ -416,6 +416,8 @@ Release 0.22.0 - Unreleased
     HADOOP-6642. Fix javac, javadoc, findbugs warnings related to security work. 
     (Chris Douglas, Po Cheung via shv)
 
+    HADOOP-7140. IPC Reader threads do not stop when server stops (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
