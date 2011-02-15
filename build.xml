@@ -43,6 +43,7 @@
   <property name="docs.src" value="${basedir}/src/docs"/>
   <property name="src.docs.cn" value="${basedir}/src/docs/cn"/>
   <property name="changes.src" value="${docs.src}/changes"/>
+  <property name="src.webapps" value="${basedir}/src/webapps"/>
 
   <property name="build.dir" value="${basedir}/build"/>
   <property name="build.classes" value="${build.dir}/classes"/>
@@ -274,6 +275,12 @@
     </touch>
     <delete file="${touch.temp.file}"/>
     <!-- copy all of the jsp and static files -->
+    <copy todir="${build.webapps}">
+      <fileset dir="${src.webapps}">
+        <exclude name="**/*.jsp" />
+        <exclude name="**/*.jspx" />
+      </fileset>
+    </copy>
 
     <copy todir="${conf.dir}" verbose="true">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
@@ -1117,6 +1124,10 @@
       <property name="dist.dir" value="${dist.dir}"/>
       <fileset file="${contrib.dir}/build.xml"/>
     </subant>  	
+
+    <copy todir="${dist.dir}/webapps">
+      <fileset dir="${build.webapps}"/>
+    </copy>
 
     <copy todir="${dist.dir}"> 
       <fileset file="${build.dir}/${final.name}.jar"/>
