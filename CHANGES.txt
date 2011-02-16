@@ -54,6 +54,8 @@ Trunk (unreleased changes)
     HADOOP-6995. Allow wildcards to be used in ProxyUsers configurations.
     (todd)
 
+    HADOOP-6970. SecurityAuth.audit should be generated under /build. (boryas)
+
   OPTIMIZATIONS
 
   BUG FIXES
