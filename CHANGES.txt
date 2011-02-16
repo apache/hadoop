@@ -218,6 +218,8 @@ Release 0.22.0 - Unreleased
     (Chris Douglas via shv)
 
     HADOOP-6436. Remove auto-generated native build files. (rvs via eli)
+ 
+    HADOOP-6970. SecurityAuth.audit should be generated under /build (boryas)
 
   OPTIMIZATIONS
 
