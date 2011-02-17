@@ -75,6 +75,8 @@ Release 0.91.0 - Unreleased
    HBASE-3522  Unbundle our RPC versioning; rather than a global for all 4
                Interfaces -- region, master, region to master, and
                coprocesssors -- instead version each individually
+   HBASE-3520  Update our bundled hadoop from branch-0.20-append to latest
+               (rpc version 43)
 
 
   NEW FEATURES
@@ -98,9 +100,6 @@ Release 0.91.0 - Unreleased
 
 
 Release 0.90.2 - Unreleased
-  TASK
-   HBASE-3520  Update our bundled hadoop from branch-0.20-append to latest
-               (rpc version 43)
   
   BUG FIXES
    HBASE-3545  Possible liveness issue with MasterServerAddress in
