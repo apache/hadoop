@@ -1433,15 +1433,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
    */
   private HServerAddress getMaster() {
     HServerAddress masterAddress = null;
-    while ((masterAddress = masterAddressManager.getMasterAddress()) == null) {
-      if (stopped) {
-        return null;
-      }
-      LOG.debug("No master found, will retry");
-      sleeper.sleep();
-    }
     HMasterRegionInterface master = null;
+
     while (!stopped && master == null) {
+
+      masterAddress = getMasterAddress();
+      LOG.info("Attempting connect to Master server at " + masterAddress);
       try {
         // Do initial RPC setup. The final argument indicates that the RPC
         // should retry indefinitely.
@@ -1464,6 +1461,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     this.hbaseMaster = master;
     return masterAddress;
   }
+
+  private HServerAddress getMasterAddress() {
+    HServerAddress masterAddress = null;
+      while ((masterAddress = masterAddressManager.getMasterAddress()) == null) {
+        if (stopped) {
+          return null;
+        }
+        LOG.debug("No master found, will retry");
+        sleeper.sleep();
+      }
+      return masterAddress;
+   }
 
   /**
    * @return True if successfully invoked {@link #reportForDuty()}

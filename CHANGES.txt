@@ -101,6 +101,10 @@ Release 0.90.2 - Unreleased
   TASK
    HBASE-3520  Update our bundled hadoop from branch-0.20-append to latest
                (rpc version 43)
+  
+  BUG FIXES
+   HBASE-3545  Possible liveness issue with MasterServerAddress in
+               HRegionServer getMaster (Greg Bowyer via Stack)
 
 Release 0.90.1 - Unreleased
 
