@@ -51,7 +51,6 @@ Release 0.91.0 - Unreleased
                unflushable regions.
    HBASE-3550  FilterList reports false positives (Bill Graham via Andrew
                Purtell)
-   HBASE-3548  Fix type in documentation of pseudo distributed mode
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -106,6 +105,7 @@ Release 0.90.2 - Unreleased
   BUG FIXES
    HBASE-3545  Possible liveness issue with MasterServerAddress in
                HRegionServer getMaster (Greg Bowyer via Stack)
+   HBASE-3548  Fix type in documentation of pseudo distributed mode
 
 Release 0.90.1 - Unreleased
 
