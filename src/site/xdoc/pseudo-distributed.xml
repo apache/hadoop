@@ -33,8 +33,8 @@ Running HBase in pseudo-distributed mode
  In particular it describes scripts that allow you start extra masters and regionservers when running in pseudo-distributed mode.
  </p>
 
- <ol><li>Copy the psuedo-distributed suggested configuration file (feel free to take a peek and understand what it's doing)
-             <source>% cp conf/hbase-site.xml{.psuedo-distributed.template,}</source>
+ <ol><li>Copy the pseudo-distributed suggested configuration file (feel free to take a peek and understand what it's doing)
+             <source>% cp conf/hbase-site.xml{.pseudo-distributed.template,}</source>
     </li>
     <li>(Optional) Start up <a href="http://hadoop.apache.org/common/docs/r0.20.2/quickstart.html#PseudoDistributed">Pseudo-distributed HDFS</a>.
              <ol><li>If you do, go to conf/hbase-site.xml.  Uncomment the 'hbase.rootdir' property.
