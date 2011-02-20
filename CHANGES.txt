@@ -49,7 +49,8 @@ Release 0.91.0 - Unreleased
    HBASE-3525  mvn assembly is over-filling the hbase lib dir
    HBASE-3531  When under global memstore pressure, dont try to flush
                unflushable regions.
-
+   HBASE-3550  FilterList reports false positives (Bill Graham via Andrew
+               Purtell)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

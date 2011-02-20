@@ -168,12 +168,15 @@ public class FilterList implements Filter {
         if (filter.filterAllRemaining()) {
           return ReturnCode.NEXT_ROW;
         }
-        switch (filter.filterKeyValue(v)) {
+        ReturnCode code = filter.filterKeyValue(v);
+        switch (code) {
         case INCLUDE:
           continue;
         case NEXT_ROW:
         case SKIP:
           return ReturnCode.SKIP;
+        default:
+          return code;
         }
       } else if (operator == Operator.MUST_PASS_ONE) {
         if (filter.filterAllRemaining()) {

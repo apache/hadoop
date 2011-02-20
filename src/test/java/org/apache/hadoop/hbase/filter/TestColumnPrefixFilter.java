@@ -74,7 +74,68 @@ public class TestColumnPrefixFilter {
     scan.setMaxVersions();
     for (String s: prefixMap.keySet()) {
       filter = new ColumnPrefixFilter(Bytes.toBytes(s));
+
       scan.setFilter(filter);
+
+      InternalScanner scanner = region.getScanner(scan);
+      List<KeyValue> results = new ArrayList<KeyValue>();
+      while(scanner.next(results));
+      assertEquals(prefixMap.get(s).size(), results.size());
+    }
+  }
+
+  @Test
+  public void testColumnPrefixFilterWithFilterList() throws IOException {
+    String family = "Family";
+    HTableDescriptor htd = new HTableDescriptor("TestColumnPrefixFilter");
+    htd.addFamily(new HColumnDescriptor(family));
+    HRegionInfo info = new HRegionInfo(htd, null, null, false);
+    HRegion region = HRegion.createHRegion(info, HBaseTestingUtility.
+        getTestDir(), TEST_UTIL.getConfiguration());
+
+    List<String> rows = generateRandomWords(100, "row");
+    List<String> columns = generateRandomWords(10000, "column");
+    long maxTimestamp = 2;
+
+    List<KeyValue> kvList = new ArrayList<KeyValue>();
+
+    Map<String, List<KeyValue>> prefixMap = new HashMap<String,
+        List<KeyValue>>();
+
+    prefixMap.put("p", new ArrayList<KeyValue>());
+    prefixMap.put("s", new ArrayList<KeyValue>());
+
+    String valueString = "ValueString";
+
+    for (String row: rows) {
+      Put p = new Put(Bytes.toBytes(row));
+      for (String column: columns) {
+        for (long timestamp = 1; timestamp <= maxTimestamp; timestamp++) {
+          KeyValue kv = KeyValueTestUtil.create(row, family, column, timestamp,
+              valueString);
+          p.add(kv);
+          kvList.add(kv);
+          for (String s: prefixMap.keySet()) {
+            if (column.startsWith(s)) {
+              prefixMap.get(s).add(kv);
+            }
+          }
+        }
+      }
+      region.put(p);
+    }
+
+    ColumnPrefixFilter filter;
+    Scan scan = new Scan();
+    scan.setMaxVersions();
+    for (String s: prefixMap.keySet()) {
+      filter = new ColumnPrefixFilter(Bytes.toBytes(s));
+
+      //this is how this test differs from the one above
+      FilterList filterList = new FilterList(FilterList.Operator.MUST_PASS_ALL);
+      filterList.addFilter(filter);
+      scan.setFilter(filterList);
+
       InternalScanner scanner = region.getScanner(scan);
       List<KeyValue> results = new ArrayList<KeyValue>();
       while(scanner.next(results));
