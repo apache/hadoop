@@ -116,8 +116,8 @@ public class TestLeaseRecovery extends junit.framework.TestCase {
           dfs.dfs.getNamenode(), filestr).getBlock();
       long currentGS = lastblock.getGenerationStamp();
       for(int i = 0; i < REPLICATION_NUM; i++) {
-        updatedmetainfo[i] =
-          datanodes[i].data.getStoredBlock(lastblock.getBlockId());
+        updatedmetainfo[i] = datanodes[i].data.getStoredBlock(lastblock
+            .getPoolId(), lastblock.getBlockId());
         assertEquals(lastblock.getBlockId(), updatedmetainfo[i].getBlockId());
         assertEquals(oldSize, updatedmetainfo[i].getNumBytes());
         assertEquals(currentGS, updatedmetainfo[i].getGenerationStamp());

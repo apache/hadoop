@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
@@ -50,7 +51,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return the length of the metadata file for the specified block.
    * @throws IOException
    */
-  public long getMetaDataLength(Block b) throws IOException;
+  public long getMetaDataLength(ExtendedBlock b) throws IOException;
   
   /**
    * This class provides the input stream and length of the metadata
@@ -75,7 +76,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return the metadata input stream; 
    * @throws IOException
    */
-  public MetaDataInputStream getMetaDataInputStream(Block b)
+  public MetaDataInputStream getMetaDataInputStream(ExtendedBlock b)
         throws IOException;
   
   /**
@@ -84,7 +85,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return true of the metafile for specified block exits
    * @throws IOException
    */
-  public boolean metaFileExists(Block b) throws IOException;
+  public boolean metaFileExists(ExtendedBlock b) throws IOException;
 
 
   /**
@@ -93,7 +94,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return   the specified block's on-disk length (excluding metadta)
    * @throws IOException
    */
-  public long getLength(Block b) throws IOException;
+  public long getLength(ExtendedBlock b) throws IOException;
 
   /**
    * Get reference to the replica meta info in the replicasMap. 
@@ -107,7 +108,8 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   /**
    * @return the generation stamp stored with the block.
    */
-  public Block getStoredBlock(long blkid) throws IOException;
+  public Block getStoredBlock(String poolId, long blkid)
+      throws IOException;
 
   /**
    * Returns an input stream to read the contents of the specified block
@@ -115,7 +117,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return an input stream to read the contents of the specified block
    * @throws IOException
    */
-  public InputStream getBlockInputStream(Block b) throws IOException;
+  public InputStream getBlockInputStream(ExtendedBlock b) throws IOException;
   
   /**
    * Returns an input stream at specified offset of the specified block
@@ -125,7 +127,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    *  starting at the offset
    * @throws IOException
    */
-  public InputStream getBlockInputStream(Block b, long seekOffset)
+  public InputStream getBlockInputStream(ExtendedBlock b, long seekOffset)
             throws IOException;
 
   /**
@@ -138,8 +140,8 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    *  starting at the offset
    * @throws IOException
    */
-  public BlockInputStreams getTmpInputStreams(Block b, long blkoff, long ckoff)
-            throws IOException;
+  public BlockInputStreams getTmpInputStreams(ExtendedBlock b, long blkoff,
+      long ckoff) throws IOException;
 
      /**
       * 
@@ -188,7 +190,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public ReplicaInPipelineInterface createTemporary(Block b)
+  public ReplicaInPipelineInterface createTemporary(ExtendedBlock b)
   throws IOException;
 
   /**
@@ -198,7 +200,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public ReplicaInPipelineInterface createRbw(Block b) throws IOException;
+  public ReplicaInPipelineInterface createRbw(ExtendedBlock b) throws IOException;
 
   /**
    * Recovers a RBW replica and returns the meta info of the replica
@@ -210,7 +212,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return the meta info of the replica which is being written to
    * @throws IOException if an error occurs
    */
-  public ReplicaInPipelineInterface recoverRbw(Block b, 
+  public ReplicaInPipelineInterface recoverRbw(ExtendedBlock b, 
       long newGS, long minBytesRcvd, long maxBytesRcvd)
   throws IOException;
 
@@ -223,7 +225,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return the meata info of the replica which is being written to
    * @throws IOException
    */
-  public ReplicaInPipelineInterface append(Block b, 
+  public ReplicaInPipelineInterface append(ExtendedBlock b, 
       long newGS, long expectedBlockLen) throws IOException;
 
   /**
@@ -236,7 +238,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return the meta info of the replica which is being written to
    * @throws IOException
    */
-  public ReplicaInPipelineInterface recoverAppend(Block b,
+  public ReplicaInPipelineInterface recoverAppend(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException;
   
   /**
@@ -248,7 +250,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @param expectedBlockLen the number of bytes the replica is expected to have
    * @throws IOException
    */
-  public void recoverClose(Block b,
+  public void recoverClose(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException;
   
   /**
@@ -258,7 +260,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @param b
    * @throws IOException
    */
-  public void finalizeBlock(Block b) throws IOException;
+  public void finalizeBlock(ExtendedBlock b) throws IOException;
 
   /**
    * Unfinalizes the block previously opened for writing using writeToBlock.
@@ -266,7 +268,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @param b
    * @throws IOException
    */
-  public void unfinalizeBlock(Block b) throws IOException;
+  public void unfinalizeBlock(ExtendedBlock b) throws IOException;
 
   /**
    * Returns the block report - the full list of blocks stored
@@ -279,14 +281,14 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @param b
    * @return - true if the specified block is valid
    */
-  public boolean isValidBlock(Block b);
+  public boolean isValidBlock(ExtendedBlock b);
 
   /**
    * Invalidates the specified blocks
    * @param invalidBlks - the blocks to be invalidated
    * @throws IOException
    */
-  public void invalidate(Block invalidBlks[]) throws IOException;
+  public void invalidate(String poolId, Block invalidBlks[]) throws IOException;
 
     /**
      * Check if all the data directories are healthy
@@ -312,7 +314,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @param checksumSize number of bytes each checksum has
    * @throws IOException
    */
-  public void adjustCrcChannelPosition(Block b, BlockWriteStreams stream, 
+  public void adjustCrcChannelPosition(ExtendedBlock b, BlockWriteStreams stream, 
       int checksumSize) throws IOException;
 
   /**
@@ -324,7 +326,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   /**
    * Get visible length of the specified replica.
    */
-  long getReplicaVisibleLength(final Block block) throws IOException;
+  long getReplicaVisibleLength(final ExtendedBlock block) throws IOException;
 
   /**
    * Initialize a replica recovery.
@@ -339,7 +341,7 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * Update replica's generation stamp and length and finalize it.
    */
   public ReplicaInfo updateReplicaUnderRecovery(
-                                          Block oldBlock,
+                                          ExtendedBlock oldBlock,
                                           long recoveryId,
                                           long newLength) throws IOException;
 }

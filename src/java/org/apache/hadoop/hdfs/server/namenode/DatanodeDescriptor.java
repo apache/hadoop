@@ -350,10 +350,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     }
   }
   
-  BlockCommand getReplicationCommand(int maxTransfers) {
-    List<BlockTargetPair> blocktargetlist = replicateBlocks.poll(maxTransfers);
-    return blocktargetlist == null? null:
-        new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blocktargetlist);
+  List<BlockTargetPair> getReplicationCommand(int maxTransfers) {
+    return replicateBlocks.poll(maxTransfers);
   }
 
   BlockRecoveryCommand getLeaseRecoveryCommand(int maxTransfers) {
@@ -371,10 +369,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Remove the specified number of blocks to be invalidated
    */
-  BlockCommand getInvalidateBlocks(int maxblocks) {
-    Block[] deleteList = getBlockArray(invalidateBlocks, maxblocks); 
-    return deleteList == null? 
-        null: new BlockCommand(DatanodeProtocol.DNA_INVALIDATE, deleteList);
+  Block[] getInvalidateBlocks(int maxblocks) {
+    return getBlockArray(invalidateBlocks, maxblocks); 
   }
 
   static private Block[] getBlockArray(Collection<Block> blocks, int max) {

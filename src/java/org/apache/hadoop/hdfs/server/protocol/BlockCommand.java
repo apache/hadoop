@@ -39,6 +39,7 @@ import org.apache.hadoop.io.*;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class BlockCommand extends DatanodeCommand {
+  String poolId;
   Block blocks[];
   DatanodeInfo targets[][];
 
@@ -48,9 +49,11 @@ public class BlockCommand extends DatanodeCommand {
    * Create BlockCommand for transferring blocks to another datanode
    * @param blocktargetlist    blocks to be transferred 
    */
-  public BlockCommand(int action, List<BlockTargetPair> blocktargetlist) {
+  public BlockCommand(int action, String poolId,
+      List<BlockTargetPair> blocktargetlist) {
     super(action);
 
+    this.poolId = poolId;
     blocks = new Block[blocktargetlist.size()]; 
     targets = new DatanodeInfo[blocks.length][];
     for(int i = 0; i < blocks.length; i++) {
@@ -66,12 +69,17 @@ public class BlockCommand extends DatanodeCommand {
    * Create BlockCommand for the given action
    * @param blocks blocks related to the action
    */
-  public BlockCommand(int action, Block blocks[]) {
+  public BlockCommand(int action, String poolId, Block blocks[]) {
     super(action);
+    this.poolId = poolId;
     this.blocks = blocks;
     this.targets = EMPTY_TARGET;
   }
 
+  public String getPoolId() {
+    return poolId;
+  }
+  
   public Block[] getBlocks() {
     return blocks;
   }
@@ -93,6 +101,7 @@ public class BlockCommand extends DatanodeCommand {
 
   public void write(DataOutput out) throws IOException {
     super.write(out);
+    Text.writeString(out, poolId);
     out.writeInt(blocks.length);
     for (int i = 0; i < blocks.length; i++) {
       blocks[i].write(out);
@@ -108,6 +117,7 @@ public class BlockCommand extends DatanodeCommand {
 
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
+    this.poolId = Text.readString(in);
     this.blocks = new Block[in.readInt()];
     for (int i = 0; i < blocks.length; i++) {
       blocks[i] = new Block();

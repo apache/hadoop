@@ -267,18 +267,20 @@ class DataBlockScanner implements Runnable {
   }
 
   /** Adds block to list of blocks */
-  synchronized void addBlock(Block block) {
+  synchronized void addBlock(ExtendedBlock block) {
     if (!isInitialized()) {
       return;
     }
     
-    BlockScanInfo info = blockMap.get(block);
+    // TODO:FEDERATION use ExtendedBlock
+    BlockScanInfo info = blockMap.get(block.getLocalBlock());
     if ( info != null ) {
       LOG.warn("Adding an already existing block " + block);
       delBlockInfo(info);
     }
     
-    info = new BlockScanInfo(block);    
+    // TODO:FEDERATION use ExtendedBlock
+    info = new BlockScanInfo(block.getLocalBlock());    
     info.lastScanTime = getNewBlockScanTime();
     
     addBlockInfo(info);
@@ -286,10 +288,11 @@ class DataBlockScanner implements Runnable {
   }
   
   /** Deletes the block from internal structures */
-  synchronized void deleteBlock(Block block) {
+  synchronized void deleteBlock(String bpid, Block block) {
     if (!isInitialized()) {
       return;
     }
+    // FEDERATION:TODO use bpid
     BlockScanInfo info = blockMap.get(block);
     if ( info != null ) {
       delBlockInfo(info);
@@ -306,9 +309,9 @@ class DataBlockScanner implements Runnable {
   }
 
   /** Deletes blocks from internal structures */
-  void deleteBlocks(Block[] blocks) {
+  void deleteBlocks(String bpid, Block[] blocks) {
     for ( Block b : blocks ) {
-      deleteBlock(b);
+      deleteBlock(bpid, b);
     }
   }
   
@@ -359,7 +362,7 @@ class DataBlockScanner implements Runnable {
     }
   }
   
-  private void handleScanFailure(Block block) {
+  private void handleScanFailure(ExtendedBlock block) {
     
     LOG.info("Reporting bad block " + block + " to namenode.");
     
@@ -422,8 +425,7 @@ class DataBlockScanner implements Runnable {
     throttler.setBandwidth(Math.min(bw, MAX_SCAN_RATE));
   }
   
-  private void verifyBlock(Block block) {
-    
+  private void verifyBlock(ExtendedBlock block) {
     BlockSender blockSender = null;
 
     /* In case of failure, attempt to read second time to reduce
@@ -436,9 +438,8 @@ class DataBlockScanner implements Runnable {
       try {
         adjustThrottler();
         
-        // TODO:FEDERATION use ExtendedBlock
-        blockSender = new BlockSender(new ExtendedBlock(block), 0, -1, false, 
-                                               false, true, datanode);
+        blockSender = new BlockSender(block, 0, -1, false, false, true,
+            datanode);
 
         DataOutputStream out = 
                 new DataOutputStream(new IOUtils.NullOutputStream());
@@ -452,18 +453,19 @@ class DataBlockScanner implements Runnable {
           totalTransientErrors++;
         }
         
-        updateScanStatus(block, ScanType.VERIFICATION_SCAN, true);
+        // TODO:FEDERATION use Extended block
+        updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, true);
 
         return;
       } catch (IOException e) {
-
-        updateScanStatus(block, ScanType.VERIFICATION_SCAN, false);
+        // TODO:FEDERATION use Extended block
+        updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
-        if ( dataset.getFile(block) == null ) {
+        if ( dataset.getFile(block.getLocalBlock()) == null ) {
           LOG.info("Verification failed for " + block + ". Its ok since " +
           "it not in datanode dataset anymore.");
-          deleteBlock(block);
+          deleteBlock(block.getPoolId(), block.getLocalBlock());
           return;
         }
 
@@ -503,7 +505,8 @@ class DataBlockScanner implements Runnable {
     }
     
     if ( block != null ) {
-      verifyBlock(block);
+      // TODO:FEDERATION blockInfoSet should use ExtendedBlock
+      verifyBlock(new ExtendedBlock(block));
     }
   }
   

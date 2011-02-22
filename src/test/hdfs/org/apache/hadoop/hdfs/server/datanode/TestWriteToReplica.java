@@ -19,10 +19,9 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 
@@ -31,10 +30,12 @@ import org.junit.Test;
 
 /** Test if FSDataset#append, writeToRbw, and writeToTmp */
 public class TestWriteToReplica {
-  final private static Block[] blocks = new Block[] {
-    new Block(1, 1, 2001), new Block(2, 1, 2002), 
-    new Block(3, 1, 2003), new Block(4, 1, 2004),
-    new Block(5, 1, 2005), new Block(6, 1, 2006)
+  static String bpid;
+  // TODO:FEDERATION make sure bpid is passed righ there
+  final private static ExtendedBlock[] blocks = new ExtendedBlock[] {
+    new ExtendedBlock(bpid, 1, 1, 2001), new ExtendedBlock(bpid, 2, 1, 2002), 
+    new ExtendedBlock(bpid, 3, 1, 2003), new ExtendedBlock(bpid, 4, 1, 2004),
+    new ExtendedBlock(bpid, 5, 1, 2005), new ExtendedBlock(bpid, 6, 1, 2006)
   };
   final private static int FINALIZED = 0;
   final private static int TEMPORARY = 1;
@@ -124,7 +125,7 @@ public class TestWriteToReplica {
     ReplicasMap replicasMap = dataSet.volumeMap;
     FSVolume vol = dataSet.volumes.getNextVolume(0);
     ReplicaInfo replicaInfo = new FinalizedReplica(
-        blocks[FINALIZED], vol, vol.getDir());
+        blocks[FINALIZED].getLocalBlock(), vol, vol.getDir());
     replicasMap.add(replicaInfo);
     replicaInfo.getBlockFile().createNewFile();
     replicaInfo.getMetaFile().createNewFile();
@@ -132,23 +133,25 @@ public class TestWriteToReplica {
     replicasMap.add(new ReplicaInPipeline(
         blocks[TEMPORARY].getBlockId(),
         blocks[TEMPORARY].getGenerationStamp(), vol, 
-        vol.createTmpFile(blocks[TEMPORARY]).getParentFile()));
+        vol.createTmpFile(blocks[TEMPORARY].getLocalBlock()).getParentFile()));
     
-    replicaInfo = new ReplicaBeingWritten(blocks[RBW], vol, 
-        vol.createRbwFile(blocks[RBW]).getParentFile(), null);
+    replicaInfo = new ReplicaBeingWritten(blocks[RBW].getLocalBlock(), vol, 
+        vol.createRbwFile(blocks[RBW].getLocalBlock()).getParentFile(), null);
     replicasMap.add(replicaInfo);
     replicaInfo.getBlockFile().createNewFile();
     replicaInfo.getMetaFile().createNewFile();
     
-    replicasMap.add(new ReplicaWaitingToBeRecovered(blocks[RWR], vol, 
-        vol.createRbwFile(blocks[RWR]).getParentFile()));
-    replicasMap.add(new ReplicaUnderRecovery(
-        new FinalizedReplica(blocks[RUR], vol, vol.getDir()), 2007));    
+    replicasMap.add(new ReplicaWaitingToBeRecovered(
+        blocks[RWR].getLocalBlock(), vol, vol.createRbwFile(
+            blocks[RWR].getLocalBlock()).getParentFile()));
+    replicasMap.add(new ReplicaUnderRecovery(new FinalizedReplica(blocks[RUR]
+        .getLocalBlock(), vol, vol.getDir()), 2007));    
   }
   
   private void testAppend(FSDataset dataSet) throws IOException {
     long newGS = blocks[FINALIZED].getGenerationStamp()+1;
-    FSVolume v = dataSet.volumeMap.get(blocks[FINALIZED]).getVolume();
+    FSVolume v = dataSet.volumeMap.get(blocks[FINALIZED].getLocalBlock())
+        .getVolume();
     long available = v.getCapacity()-v.getDfsUsed();
     long expectedLen = blocks[FINALIZED].getNumBytes();
     try {

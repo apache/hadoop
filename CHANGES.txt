@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+    HDFS-1450. Federation: Introduce block pool ID into FSDatasetInterface.
+    (suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

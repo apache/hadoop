@@ -52,10 +52,13 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
+import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor.BlockTargetPair;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
 import org.apache.hadoop.hdfs.server.namenode.UnderReplicatedBlocks.BlockIterator;
+import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
 import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
@@ -187,10 +190,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   // Stores the correct file name hierarchy
   //
   public FSDirectory dir;
-
-  // TODO:FEDERATION initialize from the persisted information
-  String  poolId = "TODO";
   BlockManager blockManager;
+  
+  // Block pool ID used by this namenode
+  String blockPoolId;
     
   /**
    * Stores the datanode -> block map.  
@@ -1525,11 +1528,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   ExtendedBlock getExtendedBlock(Block blk) {
-    return new ExtendedBlock(poolId, blk);
+    return new ExtendedBlock(blockPoolId, blk);
   }
-
+  
   void setBlockPoolId(String bpid) {
-    poolId = bpid;
+    blockPoolId = bpid;
   }
 
   /**
@@ -1773,7 +1776,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     b.setGenerationStamp(getGenerationStamp());
     b = dir.addBlock(src, inodes, b, targets);
     NameNode.stateChangeLog.info("BLOCK* NameSystem.allocateBlock: "
-                                 +src+ ". "+b);
+                                 +src+ ". " + blockPoolId + " "+ b);
     return b;
   }
 
@@ -2734,14 +2737,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       
         ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>(3);
         //check pending replication
-        cmd = nodeinfo.getReplicationCommand(
+        List<BlockTargetPair> pendingList = nodeinfo.getReplicationCommand(
               blockManager.maxReplicationStreams - xmitsInProgress);
-        if (cmd != null) {
+        if (pendingList != null) {
+          cmd = new BlockCommand(DatanodeProtocol.DNA_TRANSFER, blockPoolId,
+              pendingList);
           cmds.add(cmd);
         }
         //check block invalidation
-        cmd = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
-        if (cmd != null) {
+        Block[] blks = nodeinfo.getInvalidateBlocks(blockInvalidateLimit);
+        if (blks != null) {
+          cmd = new BlockCommand(DatanodeProtocol.DNA_INVALIDATE, blockPoolId, blks);
           cmds.add(cmd);
         }
         // check access key update
@@ -3210,17 +3216,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
   }
 
-  private void checkPoolId(String thatPoolId) throws IOException {
-    if (!this.poolId.equals(thatPoolId)) {
-      throw new IOException("PoolId " + thatPoolId
-          + " does not belong to expected pool " + poolId);
-    }
-  }
-
   private void checkBlock(ExtendedBlock block) throws IOException {
-    if (block != null && !this.poolId.equals(block.getPoolId())) {
-      throw new IOException("Block " + block
-          + " does not belong to expected pool " + poolId);
+    if (block != null && !this.blockPoolId.equals(block.getPoolId())) {
+      throw new IOException("Unexpected BlockPoolId " + block.getPoolId()
+          + " - expected " + blockPoolId);
     }
   }
 
@@ -5234,6 +5233,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
   
   public String getPoolId() {
-    return poolId;
+    return blockPoolId;
   }
 }

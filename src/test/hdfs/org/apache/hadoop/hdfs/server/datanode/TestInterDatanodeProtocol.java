@@ -48,7 +48,7 @@ import org.junit.Test;
  */
 public class TestInterDatanodeProtocol {
   public static void checkMetaInfo(ExtendedBlock b, DataNode dn) throws IOException {
-    Block metainfo = dn.data.getStoredBlock(b.getBlockId());
+    Block metainfo = dn.data.getStoredBlock(b.getPoolId(), b.getBlockId());
     Assert.assertEquals(b.getBlockId(), metainfo.getBlockId());
     Assert.assertEquals(b.getNumBytes(), metainfo.getNumBytes());
   }
@@ -209,7 +209,10 @@ public class TestInterDatanodeProtocol {
     }
   }
 
-  /** Test {@link FSDataset#updateReplicaUnderRecovery(Block, long, long)} */
+  /** 
+   * Test  for
+   * {@link FSDataset#updateReplicaUnderRecovery(ExtendedBlock, long, long)} 
+   * */
   @Test
   public void testUpdateReplicaUnderRecovery() throws IOException {
     final Configuration conf = new HdfsConfiguration();
@@ -255,8 +258,8 @@ public class TestInterDatanodeProtocol {
       //with (block length) != (stored replica's on disk length). 
       {
         //create a block with same id and gs but different length.
-        final Block tmp = new Block(rri.getBlockId(), rri.getNumBytes() - 1,
-            rri.getGenerationStamp());
+        final ExtendedBlock tmp = new ExtendedBlock(b.getPoolId(), rri
+            .getBlockId(), rri.getNumBytes() - 1, rri.getGenerationStamp());
         try {
           //update should fail
           fsdataset.updateReplicaUnderRecovery(tmp, recoveryid, newlength);
@@ -268,7 +271,7 @@ public class TestInterDatanodeProtocol {
 
       //update
       final ReplicaInfo finalized = fsdataset.updateReplicaUnderRecovery(
-          rri, recoveryid, newlength);
+          new ExtendedBlock(b.getPoolId(), rri), recoveryid, newlength);
 
       //check meta data after update
       FSDataset.checkReplicaFiles(finalized);

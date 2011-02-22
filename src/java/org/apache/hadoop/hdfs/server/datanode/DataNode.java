@@ -1008,7 +1008,7 @@ public class DataNode extends Configured
     switch(cmd.getAction()) {
     case DatanodeProtocol.DNA_TRANSFER:
       // Send a copy of a block to another datanode
-      transferBlocks(bcmd.getBlocks(), bcmd.getTargets());
+      transferBlocks(bcmd.getPoolId(), bcmd.getBlocks(), bcmd.getTargets());
       myMetrics.blocksReplicated.inc(bcmd.getBlocks().length);
       break;
     case DatanodeProtocol.DNA_INVALIDATE:
@@ -1019,9 +1019,9 @@ public class DataNode extends Configured
       Block toDelete[] = bcmd.getBlocks();
       try {
         if (blockScanner != null) {
-          blockScanner.deleteBlocks(toDelete);
+          blockScanner.deleteBlocks(bcmd.getPoolId(), toDelete);
         }
-        data.invalidate(toDelete);
+        data.invalidate(bcmd.getPoolId(), toDelete);
       } catch(IOException e) {
         checkDiskError();
         throw e;
@@ -1171,8 +1171,7 @@ public class DataNode extends Configured
   private void transferBlock( ExtendedBlock block, 
                               DatanodeInfo xferTargets[] 
                               ) throws IOException {
-    // TODO:FEDERATION use ExtendedBlock
-    if (!data.isValidBlock(block.getLocalBlock())) {
+    if (!data.isValidBlock(block)) {
       // block does not exist or is under-construction
       String errStr = "Can't send invalid block " + block;
       LOG.info(errStr);
@@ -1183,8 +1182,7 @@ public class DataNode extends Configured
     }
 
     // Check if NN recorded length matches on-disk length 
-    // TODO:FEDERATION use ExtendedBlock
-    long onDiskLength = data.getLength(block.getLocalBlock());
+    long onDiskLength = data.getLength(block);
     if (block.getNumBytes() > onDiskLength) {
       // Shorter on-disk len indicates corruption so report NN the corrupt block
       namenode.reportBadBlocks(new LocatedBlock[]{
@@ -1212,13 +1210,11 @@ public class DataNode extends Configured
     }
   }
 
-  private void transferBlocks( Block blocks[], 
-                               DatanodeInfo xferTargets[][] 
-                               ) {
+  private void transferBlocks(String poolId, Block blocks[],
+      DatanodeInfo xferTargets[][]) {
     for (int i = 0; i < blocks.length; i++) {
       try {
-        // TODO:FEDERATION cleanup
-        transferBlock(new ExtendedBlock(blocks[i]), xferTargets[i]);
+        transferBlock(new ExtendedBlock(poolId, blocks[i]), xferTargets[i]);
       } catch (IOException ie) {
         LOG.warn("Failed to transfer block " + blocks[i], ie);
       }
@@ -1230,13 +1226,15 @@ public class DataNode extends Configured
    * till namenode is informed before responding with success to the
    * client? For now we don't.
    */
-  protected void notifyNamenodeReceivedBlock(Block block, String delHint) {
+  protected void notifyNamenodeReceivedBlock(ExtendedBlock block, String delHint) {
     if(block==null || delHint==null) {
       throw new IllegalArgumentException(block==null?"Block is null":"delHint is null");
     }
     synchronized (receivedBlockList) {
       synchronized (delHints) {
-        receivedBlockList.add(block);
+        // TODO:FEDERATION receivedBlockList should be per block pool
+        // TODO:FEDERATION use ExtendedBlock
+        receivedBlockList.add(block.getLocalBlock());
         delHints.add(delHint);
         receivedBlockList.notifyAll();
       }
@@ -1413,7 +1411,7 @@ public class DataNode extends Configured
    * @param block
    * @param delHint
    */
-  void closeBlock(Block block, String delHint) {
+  void closeBlock(ExtendedBlock block, String delHint) {
     myMetrics.blocksWritten.inc();
     notifyNamenodeReceivedBlock(block, delHint);
     if (blockScanner != null) {
@@ -1736,7 +1734,7 @@ public class DataNode extends Configured
   public ExtendedBlock updateReplicaUnderRecovery(ExtendedBlock oldBlock,
                                           long recoveryId,
                                           long newLength) throws IOException {
-    ReplicaInfo r = data.updateReplicaUnderRecovery(oldBlock.getLocalBlock(),
+    ReplicaInfo r = data.updateReplicaUnderRecovery(oldBlock,
         recoveryId, newLength);
     return new ExtendedBlock(oldBlock.getPoolId(), r);
   }
@@ -1953,7 +1951,7 @@ public class DataNode extends Configured
       }
     }
 
-    return data.getReplicaVisibleLength(block.getLocalBlock());
+    return data.getReplicaVisibleLength(block);
   }
   
   // Determine a Datanode's streaming address

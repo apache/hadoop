@@ -121,7 +121,8 @@ public class TestDatanodeRestart {
       } else {
         Assert.assertEquals(fileLen, replica.getNumBytes());
       }
-      dn.data.invalidate(new Block[]{replica});
+      String bpid = cluster.getNamesystem().getPoolId();
+      dn.data.invalidate(bpid, new Block[]{replica});
     } finally {
       IOUtils.closeStream(out);
       if (fs.exists(src)) {

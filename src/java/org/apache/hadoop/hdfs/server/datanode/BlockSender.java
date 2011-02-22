@@ -145,10 +145,9 @@ class BlockSender implements java.io.Closeable, FSConstants {
       this.transferToAllowed = datanode.transferToAllowed;
       this.clientTraceFmt = clientTraceFmt;
 
-      // TODO:FEDERATION metaFileExists and getMetaDataInputStream should take ExtendedBlock
-      if ( !corruptChecksumOk || datanode.data.metaFileExists(block.getLocalBlock()) ) {
+      if ( !corruptChecksumOk || datanode.data.metaFileExists(block) ) {
         checksumIn = new DataInputStream(new BufferedInputStream(datanode.data
-            .getMetaDataInputStream(block.getLocalBlock()), BUFFER_SIZE));
+            .getMetaDataInputStream(block), BUFFER_SIZE));
 
         // read and handle the common header here. For now just a version
        BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
@@ -230,8 +229,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
         DataNode.LOG.debug("replica=" + replica);
       }
 
-      // TODO:FEDERATION getBlockInputStream must acccept ExtendedBlock
-      blockIn = datanode.data.getBlockInputStream(block.getLocalBlock(), offset); // seek to offset
+      blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
     } catch (IOException ioe) {
       IOUtils.closeStream(this);
       IOUtils.closeStream(blockIn);

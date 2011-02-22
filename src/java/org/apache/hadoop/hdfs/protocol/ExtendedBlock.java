@@ -54,6 +54,11 @@ public class ExtendedBlock implements Writable {
     this("TODO", b);
   }
   
+  // TODO:FEDERATION To remove when block pool ID related coding is complete
+  public ExtendedBlock(final long blkId) {
+    this("TODO", new Block(blkId));
+  }
+  
   public ExtendedBlock(final ExtendedBlock b) {
     this(b.poolId, b.block);
   }
@@ -128,9 +133,9 @@ public class ExtendedBlock implements Writable {
     block.setNumBytes(len);
   }
   
-  public void set(String poolId, long blkid, long gs, long len) {
+  public void set(String poolId, Block blk) {
     this.poolId = poolId;
-    block.set(blkid, gs, len);
+    this.block = blk;
   }
 
   public static Block getLocalBlock(final ExtendedBlock b) {

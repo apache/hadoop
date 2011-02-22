@@ -274,7 +274,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
             client, srcDataNode, datanode);
       } else {
         // TODO:FEDERATION use ExtendedBlock
-        datanode.data.recoverClose(block.getLocalBlock(), newGs, minBytesRcvd);
+        datanode.data.recoverClose(block, newGs, minBytesRcvd);
       }
 
       //
@@ -378,7 +378,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       if (client.length() == 0 || 
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         // TODO:FEDERATION use ExtendedBlock
-        datanode.closeBlock(block.getLocalBlock(), DataNode.EMPTY_DEL_HINT);
+        datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
         LOG.info("Received block " + block + 
                  " src: " + remoteAddress +
                  " dest: " + localAddress +
@@ -431,9 +431,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
       }
     }
 
-    // TODO:FEDERATION use ExtendedBlock
     final MetaDataInputStream metadataIn = 
-      datanode.data.getMetaDataInputStream(block.getLocalBlock());
+      datanode.data.getMetaDataInputStream(block);
     final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
         metadataIn, BUFFER_SIZE));
 
@@ -620,7 +619,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
                     
       // notify name node
       // TODO:FEDERATION use ExtendedBlock
-      datanode.notifyNamenodeReceivedBlock(block.getLocalBlock(), sourceID);
+      datanode.notifyNamenodeReceivedBlock(block, sourceID);
 
       LOG.info("Moved block " + block + 
           " from " + s.getRemoteSocketAddress());

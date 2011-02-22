@@ -68,6 +68,7 @@ public class TestBlockReport {
   static final int BLOCK_SIZE = 1024;
   static final int NUM_BLOCKS = 10;
   static final int FILE_SIZE = NUM_BLOCKS * BLOCK_SIZE + 1;
+  static String bpid;
 
   private MiniDFSCluster cluster;
   private DistributedFileSystem fs;
@@ -86,6 +87,7 @@ public class TestBlockReport {
     REPL_FACTOR = 1; //Reset if case a test has modified the value
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
     fs = (DistributedFileSystem) cluster.getFileSystem();
+    bpid = cluster.getNamesystem().getPoolId();
   }
 
   @After
@@ -173,7 +175,7 @@ public class TestBlockReport {
     File dataDir = new File(cluster.getDataDirectory());
     assertTrue(dataDir.isDirectory());
 
-    List<Block> blocks2Remove = new ArrayList<Block>();
+    List<ExtendedBlock> blocks2Remove = new ArrayList<ExtendedBlock>();
     List<Integer> removedIndex = new ArrayList<Integer>();
     List<LocatedBlock> lBlocks = cluster.getNameNode().getBlockLocations(
       filePath.toString(), FILE_START,
@@ -186,7 +188,7 @@ public class TestBlockReport {
     }
 
     for (Integer aRemovedIndex : removedIndex) {
-      blocks2Remove.add(lBlocks.get(aRemovedIndex).getBlock().getLocalBlock());
+      blocks2Remove.add(lBlocks.get(aRemovedIndex).getBlock());
     }
     ArrayList<Block> blocks = locatedToBlocks(lBlocks, removedIndex);
 
@@ -194,7 +196,7 @@ public class TestBlockReport {
       LOG.debug("Number of blocks allocated " + lBlocks.size());
     }
 
-    for (Block b : blocks2Remove) {
+    for (ExtendedBlock b : blocks2Remove) {
       if(LOG.isDebugEnabled()) {
         LOG.debug("Removing the block " + b.getBlockName());
       }
@@ -694,7 +696,8 @@ public class TestBlockReport {
 
       // Get block from the first DN
       ret = cluster.getDataNodes().get(DN_N0).
-        data.getStoredBlock(lb.getBlock().getBlockId());
+        data.getStoredBlock(lb.getBlock()
+        .getPoolId(), lb.getBlock().getBlockId());
     return ret;
   }
 

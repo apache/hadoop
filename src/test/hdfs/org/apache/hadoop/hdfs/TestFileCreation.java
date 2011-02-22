@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -765,7 +766,8 @@ public class TestFileCreation extends junit.framework.TestCase {
       for(DatanodeInfo datanodeinfo: locatedblock.getLocations()) {
         DataNode datanode = cluster.getDataNode(datanodeinfo.ipcPort);
         FSDataset dataset = (FSDataset)datanode.data;
-        Block b = dataset.getStoredBlock(locatedblock.getBlock().getBlockId());
+        ExtendedBlock blk = locatedblock.getBlock();
+        Block b = dataset.getStoredBlock(blk.getPoolId(), blk.getBlockId());
         File blockfile = dataset.findBlockFile(b.getBlockId());
         System.out.println("blockfile=" + blockfile);
         if (blockfile != null) {

@@ -21,7 +21,6 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 
 import junit.framework.TestCase;
 
@@ -43,10 +42,10 @@ public class TestDatanodeDescriptor extends TestCase {
       blockList.add(new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP));
     }
     dd.addBlocksToBeInvalidated(blockList);
-    BlockCommand bc = dd.getInvalidateBlocks(MAX_LIMIT);
-    assertEquals(bc.getBlocks().length, MAX_LIMIT);
+    Block[] bc = dd.getInvalidateBlocks(MAX_LIMIT);
+    assertEquals(bc.length, MAX_LIMIT);
     bc = dd.getInvalidateBlocks(MAX_LIMIT);
-    assertEquals(bc.getBlocks().length, REMAINING_BLOCKS);
+    assertEquals(bc.length, REMAINING_BLOCKS);
   }
   
   public void testBlocksCounter() throws Exception {

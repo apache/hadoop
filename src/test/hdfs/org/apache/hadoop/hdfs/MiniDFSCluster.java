@@ -1134,8 +1134,9 @@ public class MiniDFSCluster {
     if (!(dataSet instanceof SimulatedFSDataset)) {
       throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
     }
+    String bpid = getNamesystem().getPoolId();
     SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
-    sdataset.injectBlocks(blocksToInject);
+    sdataset.injectBlocks(bpid, blocksToInject);
     dataNodes.get(dataNodeIndex).datanode.scheduleBlockReport(0);
   }
   
@@ -1148,7 +1149,8 @@ public class MiniDFSCluster {
    *             if any of blocks already exist in the data nodes
    *             Note the rest of the blocks are not injected.
    */
-  public void injectBlocks(Iterable<Block>[] blocksToInject) throws IOException {
+  public void injectBlocks(Iterable<Block>[] blocksToInject)
+      throws IOException {
     if (blocksToInject.length >  dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
