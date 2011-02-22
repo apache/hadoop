@@ -4,6 +4,17 @@ Trunk (unreleased changes)
 
   NEW FEATURES
 
+  IMPROVEMENTS
+
+    HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
+
+  OPTIMIZATIONS
+
+  BUG FIXES
+
+Release 0.22.0 - Unreleased
+
+  NEW FEATURES
     HDFS-992. Re-factor block access token implementation to conform to the 
     generic Token interface in Common (Kan Zhang and Jitendra Pandey via jghoman)
 
