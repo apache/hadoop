@@ -138,11 +138,12 @@ public class TestEditLog extends TestCase {
       // If there were any corruptions, it is likely that the reading in
       // of these transactions will throw an exception.
       //
+      FSEditLogLoader loader = new FSEditLogLoader(namesystem);
       for (Iterator<StorageDirectory> it = 
               fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
         File editFile = FSImage.getImageFile(it.next(), NameNodeFile.EDITS);
         System.out.println("Verifying file: " + editFile);
-        int numEdits = namesystem.getEditLog().loadFSEdits(
+        int numEdits = loader.loadFSEdits(
                                   new EditLogFileInputStream(editFile));
         int numLeases = namesystem.leaseManager.countLease();
         System.out.println("Number of outstanding leases " + numLeases);

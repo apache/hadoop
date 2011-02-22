@@ -36,9 +36,13 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
+
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
@@ -347,5 +351,58 @@ public class TestStartup extends TestCase {
       if(cluster!=null)
         cluster.shutdown();
     }
+  }
+  
+  public void testCompression() throws IOException {
+    LOG.info("Test compressing image.");
+    Configuration conf = new Configuration();
+    FileSystem.setDefaultUri(conf, "hdfs://localhost:0");
+    conf.set("dfs.http.address", "127.0.0.1:0");
+    File base_dir = new File(System.getProperty(
+        "test.build.data", "build/test/data"), "dfs/");
+    conf.set("dfs.name.dir", new File(base_dir, "name").getPath());
+    conf.setBoolean("dfs.permissions", false);
+
+    NameNode.format(conf);
+
+    // create an uncompressed image
+    LOG.info("Create an uncompressed fsimage");
+    NameNode namenode = new NameNode(conf);
+    namenode.getNamesystem().mkdirs("/test",
+        new PermissionStatus("hairong", null, FsPermission.getDefault()), true);
+    assertTrue(namenode.getFileInfo("/test").isDir());
+    namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    namenode.saveNamespace();
+    namenode.stop();
+    namenode.join();
+
+    // compress image using default codec
+    LOG.info("Read an uncomressed image and store it compressed using default codec.");
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
+    checkNameSpace(conf);
+
+    // read image compressed using the default and compress it using Gzip codec
+    LOG.info("Read a compressed image and store it using a different codec.");
+    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
+        "org.apache.hadoop.io.compress.GzipCodec");
+    checkNameSpace(conf);
+
+    // read an image compressed in Gzip and store it uncompressed
+    LOG.info("Read an compressed iamge and store it as uncompressed.");
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
+    checkNameSpace(conf);
+
+    // read an uncomrpessed image and store it uncompressed
+    LOG.info("Read an uncompressed image and store it as uncompressed.");
+    checkNameSpace(conf);
+  }
+
+  private void checkNameSpace(Configuration conf) throws IOException {
+    NameNode namenode = new NameNode(conf);
+    assertTrue(namenode.getFileInfo("/test").isDir());
+    namenode.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+    namenode.saveNamespace();
+    namenode.stop();
+    namenode.join();
   }
 }

@@ -154,7 +154,7 @@ public abstract class BlockPlacementPolicy {
    * value of the configuration paramater dfs.block.replicator.classname.
    * 
    * @param conf the configuration to be used
-   * @param stats an object thatis used to retrieve the load on the cluster
+   * @param stats an object that is used to retrieve the load on the cluster
    * @param clusterMap the network topology of the cluster
    * @return an instance of BlockPlacementPolicy
    */

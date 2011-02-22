@@ -3505,6 +3505,22 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   short getMaxReplication()     { return (short)blockManager.maxReplication; }
   short getMinReplication()     { return (short)blockManager.minReplication; }
   short getDefaultReplication() { return (short)blockManager.defaultReplication; }
+
+  /**
+   * Clamp the specified replication between the minimum and maximum
+   * replication levels for this namesystem.
+   */
+  short adjustReplication(short replication) {
+    short minReplication = getMinReplication();
+    if (replication < minReplication) {
+      replication = minReplication;
+    }
+    short maxReplication = getMaxReplication();
+    if (replication > maxReplication) {
+      replication = maxReplication;
+    }
+    return replication;
+  }
     
   /**
    * A immutable object that stores the number of live replicas and

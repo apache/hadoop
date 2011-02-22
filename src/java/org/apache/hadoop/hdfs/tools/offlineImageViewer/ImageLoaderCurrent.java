@@ -23,6 +23,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -30,6 +31,8 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.tools.offlineImageViewer.ImageVisitor.ImageElement;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 /**
@@ -116,7 +119,8 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 class ImageLoaderCurrent implements ImageLoader {
   protected final DateFormat dateFormat = 
                                       new SimpleDateFormat("yyyy-MM-dd HH:mm");
-  private static int [] versions = {-16, -17, -18, -19, -20, -21, -22, -23, -24};
+  private static int [] versions = 
+           {-16, -17, -18, -19, -20, -21, -22, -23, -24, -25};
   private int imageVersion = 0;
 
   /* (non-Javadoc)
@@ -151,6 +155,22 @@ class ImageLoaderCurrent implements ImageLoader {
 
       v.visit(ImageElement.GENERATION_STAMP, in.readLong());
 
+      if (imageVersion <= -25) {
+        boolean isCompressed = in.readBoolean();
+        v.visit(ImageElement.IS_COMPRESSED, imageVersion);
+        if (isCompressed) {
+          String codecClassName = Text.readString(in);
+          v.visit(ImageElement.COMPRESS_CODEC, codecClassName);
+          CompressionCodecFactory codecFac = new CompressionCodecFactory(
+              new Configuration());
+          CompressionCodec codec = codecFac.getCodecByClassName(codecClassName);
+          if (codec == null) {
+            throw new IOException("Image compression codec not supported: "
+                + codecClassName);
+          }
+          in = new DataInputStream(codec.createInputStream(in));
+        }
+      }
       processINodes(in, v, numInodes, skipBlocks);
 
       processINodesUC(in, v, skipBlocks);

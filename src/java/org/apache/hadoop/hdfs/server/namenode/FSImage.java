@@ -78,6 +78,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 /**
@@ -154,6 +156,13 @@ public class FSImage extends Storage {
   private Collection<URI> checkpointEditsDirs;
 
   /**
+   * Image compression related fields
+   */
+  private boolean compressImage = false;  // if image should be compressed
+  private CompressionCodec saveCodec;     // the compression codec
+  private CompressionCodecFactory codecFac;  // all the supported codecs
+
+  /**
    * Can fs-image be rolled?
    */
   volatile protected CheckpointStates ckptState = FSImage.CheckpointStates.START; 
@@ -172,6 +181,34 @@ public class FSImage extends Storage {
     this((FSNamesystem)null);
   }
 
+  /**
+   * Constructor
+   * @param conf Configuration
+   */
+  FSImage(Configuration conf) throws IOException {
+    this();
+    if(conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY, 
+        DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_DEFAULT)) {
+      NameNode.LOG.info("set FSImage.restoreFailedStorage");
+      setRestoreFailedStorage(true);
+    }
+    setCheckpointDirectories(FSImage.getCheckpointDirs(conf, null),
+        FSImage.getCheckpointEditsDirs(conf, null));
+    this.compressImage = conf.getBoolean(
+        DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY,
+        DFSConfigKeys.DFS_IMAGE_COMPRESS_DEFAULT);
+     this.codecFac = new CompressionCodecFactory(conf);
+     if (this.compressImage) {
+       String codecClassName = conf.get(
+           DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
+           DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_DEFAULT);
+       this.saveCodec = codecFac.getCodecByClassName(codecClassName);
+       if (this.saveCodec == null) {
+         throw new IOException("Not supported codec: " + codecClassName);
+       }
+     }
+   }
+ 
   FSImage(FSNamesystem ns) {
     super(NodeType.NAME_NODE);
     this.editLog = new FSEditLog(this);
@@ -640,6 +677,7 @@ public class FSImage extends Storage {
     // replace real image with the checkpoint image
     FSImage realImage = fsNamesys.getFSImage();
     assert realImage == this;
+    ckptImage.codecFac = realImage.codecFac;
     fsNamesys.dir.fsImage = ckptImage;
     // load from the checkpoint dirs
     try {
@@ -1011,16 +1049,11 @@ public class FSImage extends Storage {
     // Recover from previous interrupted checkpoint, if any
     needToSave |= recoverInterruptedCheckpoint(latestNameSD, latestEditsSD);
 
-    long startTime = now();
-    long imageSize = getImageFile(latestNameSD, NameNodeFile.IMAGE).length();
-
     //
     // Load in bits
     //
     latestNameSD.read();
     needToSave |= loadFSImage(getImageFile(latestNameSD, NameNodeFile.IMAGE));
-    LOG.info("Image file of size " + imageSize + " loaded in " 
-        + (now() - startTime)/1000 + " seconds.");
     
     // Load latest edits
     if (latestNameCheckpointTime > latestEditsCheckpointTime)
@@ -1041,6 +1074,7 @@ public class FSImage extends Storage {
     assert this.getLayoutVersion() < 0 : "Negative layout version is expected.";
     assert curFile != null : "curFile is null";
 
+    long startTime = now();   
     FSNamesystem fsNamesys = getFSNamesystem();
     FSDirectory fsDir = fsNamesys.dir;
     fsNamesys.setBlockPoolId(this.getBlockPoolID());
@@ -1049,8 +1083,8 @@ public class FSImage extends Storage {
     // Load in bits
     //
     boolean needToSave = true;
-    DataInputStream in = new DataInputStream(new BufferedInputStream(
-                              new FileInputStream(curFile)));
+    FileInputStream fin = new FileInputStream(curFile);
+    DataInputStream in = new DataInputStream(fin);
     try {
       /*
        * Note: Remove any checks for version earlier than 
@@ -1064,6 +1098,8 @@ public class FSImage extends Storage {
        */
       // read image version: first appeared in version -1
       int imgVersion = in.readInt();
+      needToSave = (imgVersion != FSConstants.LAYOUT_VERSION);
+
       // read namespaceID: first appeared in version -2
       this.namespaceID = in.readInt();
 
@@ -1082,8 +1118,27 @@ public class FSImage extends Storage {
         fsNamesys.setGenerationStamp(genstamp); 
       }
 
-      needToSave = (imgVersion != FSConstants.LAYOUT_VERSION);
-
+      // read compression related info
+      boolean isCompressed = false;
+      if (imgVersion <= -25) {  // -25: 1st version providing compression option
+        isCompressed = in.readBoolean();
+        if (isCompressed) {
+          String codecClassName = Text.readString(in);
+          CompressionCodec loadCodec = codecFac.getCodecByClassName(codecClassName);
+          if (loadCodec == null) {
+            throw new IOException("Image compression codec not supported: "
+                                 + codecClassName);
+          }
+          in = new DataInputStream(loadCodec.createInputStream(fin));
+          LOG.info("Loading image file " + curFile +
+              " compressed using codec " + codecClassName);
+        }
+      }
+      if (!isCompressed) {
+        // use buffered input stream
+        in = new DataInputStream(new BufferedInputStream(fin));
+      }
+      
       // read file info
       short replication = fsNamesys.getDefaultReplication();
 
@@ -1098,7 +1153,7 @@ public class FSImage extends Storage {
         long blockSize = 0;
         pathComponents = readPathComponents(in);
         replication = in.readShort();
-        replication = editLog.adjustReplication(replication);
+        replication = fsNamesys.adjustReplication(replication);
         modificationTime = in.readLong();
         if (imgVersion <= -17) {
           atime = in.readLong();
@@ -1191,6 +1246,9 @@ public class FSImage extends Storage {
       in.close();
     }
     
+    LOG.info("Image file of size " + curFile.length() + " loaded in " 
+        + (now() - startTime)/1000 + " seconds.");
+
     return needToSave;
   }
 
@@ -1236,17 +1294,19 @@ public class FSImage extends Storage {
    * @throws IOException
    */
   int loadFSEdits(StorageDirectory sd) throws IOException {
+    FSEditLogLoader loader = new FSEditLogLoader(namesystem);
+    
     int numEdits = 0;
     EditLogFileInputStream edits = 
       new EditLogFileInputStream(getImageFile(sd, NameNodeFile.EDITS));
     
-    numEdits = editLog.loadFSEdits(edits);
+    numEdits = loader.loadFSEdits(edits);
     edits.close();
     File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
     
     if (editsNew.exists() && editsNew.length() > 0) {
       edits = new EditLogFileInputStream(editsNew);
-      numEdits += editLog.loadFSEdits(edits);
+      numEdits += loader.loadFSEdits(edits);
       edits.close();
     }
     
@@ -1267,13 +1327,26 @@ public class FSImage extends Storage {
     // Write out data
     //
     FileOutputStream fos = new FileOutputStream(newFile);
-    DataOutputStream out = new DataOutputStream(
-      new BufferedOutputStream(fos));
+    DataOutputStream out = new DataOutputStream(fos);
     try {
       out.writeInt(FSConstants.LAYOUT_VERSION);
       out.writeInt(namespaceID);
       out.writeLong(fsDir.rootDir.numItemsInTree());
       out.writeLong(fsNamesys.getGenerationStamp());
+      
+      // write compression info
+      out.writeBoolean(compressImage);
+      if (compressImage) {
+        String codecClassName = saveCodec.getClass().getCanonicalName();
+        Text.writeString(out, codecClassName);
+        out = new DataOutputStream(saveCodec.createOutputStream(fos));
+        LOG.info("Saving image file " + newFile +
+            " compressed using codec " + codecClassName);
+      } else {
+        // use a buffered output stream
+        out = new DataOutputStream(new BufferedOutputStream(fos));
+      }
+
       byte[] byteStore = new byte[4*FSConstants.MAX_PATH_LENGTH];
       ByteBuffer strbuf = ByteBuffer.wrap(byteStore);
       // save the root

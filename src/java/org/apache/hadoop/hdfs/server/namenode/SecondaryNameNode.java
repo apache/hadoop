@@ -166,7 +166,7 @@ public class SecondaryNameNode implements Runnable {
                                   "/tmp/hadoop/dfs/namesecondary");
     checkpointEditsDirs = FSImage.getCheckpointEditsDirs(conf, 
                                   "/tmp/hadoop/dfs/namesecondary");    
-    checkpointImage = new CheckpointStorage();
+    checkpointImage = new CheckpointStorage(conf);
     checkpointImage.recoverCreate(checkpointDirs, checkpointEditsDirs);
 
     // Initialize other scheduling parameters from the configuration
@@ -581,8 +581,8 @@ public class SecondaryNameNode implements Runnable {
   static class CheckpointStorage extends FSImage {
     /**
      */
-    CheckpointStorage() throws IOException {
-      super();
+    CheckpointStorage(Configuration conf) throws IOException {
+      super(conf);
     }
 
     @Override

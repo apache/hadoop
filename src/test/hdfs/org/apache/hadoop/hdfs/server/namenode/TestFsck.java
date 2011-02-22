@@ -73,16 +73,13 @@ public class TestFsck extends TestCase {
   static String runFsck(Configuration conf, int expectedErrCode, 
                         boolean checkErrorCode,String... path) 
                         throws Exception {
-    PrintStream oldOut = System.out;
     ByteArrayOutputStream bStream = new ByteArrayOutputStream();
-    PrintStream newOut = new PrintStream(bStream, true);
-    System.setOut(newOut);
+    PrintStream out = new PrintStream(bStream, true);
     ((Log4JLogger)FSPermissionChecker.LOG).getLogger().setLevel(Level.ALL);
-    int errCode = ToolRunner.run(new DFSck(conf), path);
+    int errCode = ToolRunner.run(new DFSck(conf, out), path);
     if (checkErrorCode)
       assertEquals(expectedErrCode, errCode);
     ((Log4JLogger)FSPermissionChecker.LOG).getLogger().setLevel(Level.INFO);
-    System.setOut(oldOut);
     return bStream.toString();
   }
 

@@ -529,4 +529,19 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.image.compress</name>
+  <value>false</value>
+  <description>Should the dfs image be compressed?
+  </description>
+</property>
+
+<property>
+  <name>dfs.image.compression.codec</name>
+  <value>org.apache.hadoop.io.compress.DefaultCodec</value>
+  <description>If the dfs image is compressed, how should they be compressed?
+               This has to be a codec defined in io.compression.codecs.
+  </description>
+</property>
+
 </configuration>

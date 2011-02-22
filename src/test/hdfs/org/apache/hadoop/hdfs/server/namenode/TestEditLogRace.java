@@ -222,7 +222,7 @@ public class TestEditLogRace {
            fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
       File editFile = FSImage.getImageFile(it.next(), NameNodeFile.EDITS);
       System.out.println("Verifying file: " + editFile);
-      int numEdits = namesystem.getEditLog().loadFSEdits(
+      int numEdits = new FSEditLogLoader(namesystem).loadFSEdits(
         new EditLogFileInputStream(editFile));
       System.out.println("Number of edits: " + numEdits);
     }

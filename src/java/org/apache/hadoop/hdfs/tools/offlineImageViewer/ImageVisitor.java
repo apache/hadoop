@@ -33,6 +33,8 @@ abstract class ImageVisitor {
     FS_IMAGE,
     IMAGE_VERSION,
     NAMESPACE_ID,
+    IS_COMPRESSED,
+    COMPRESS_CODEC,
     LAYOUT_VERSION,
     NUM_INODES,
     GENERATION_STAMP,

@@ -21,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -70,14 +71,20 @@ public class DFSck extends Configured implements Tool {
   }
 
   private final UserGroupInformation ugi;
+  private final PrintStream out;
 
   /**
    * Filesystem checker.
    * @param conf current Configuration
    */
   public DFSck(Configuration conf) throws IOException {
+    this(conf, System.out);
+  }
+
+  public DFSck(Configuration conf, PrintStream out) throws IOException {
     super(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
+    this.out = out;
   }
 
   /**
@@ -163,10 +170,10 @@ public class DFSck extends Configured implements Tool {
             continue;
           numCorrupt++;
           if (numCorrupt == 1) {
-            System.out.println("The list of corrupt files under path '" 
+            out.println("The list of corrupt files under path '" 
                 + dir + "' are:");
           }
-          System.out.println(line);
+          out.println(line);
           try {
             // Get the block # that we need to send in next call
             lastBlock = line.split("\t")[0];
@@ -179,7 +186,7 @@ public class DFSck extends Configured implements Tool {
         input.close();
       }
     }
-    System.out.println("The filesystem under path '" + dir + "' has " 
+    out.println("The filesystem under path '" + dir + "' has " 
         + numCorrupt + " CORRUPT files");
     if (numCorrupt == 0)
       errCode = 0;
@@ -231,7 +238,7 @@ public class DFSck extends Configured implements Tool {
     int errCode = -1;
     try {
       while ((line = input.readLine()) != null) {
-        System.out.println(line);
+        out.println(line);
         lastLine = line;
       }
     } finally {

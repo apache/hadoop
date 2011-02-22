@@ -198,6 +198,14 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_BLOCKREPORT_INITIAL_DELAY_KEY = "dfs.blockreport.initialDelay";
   public static final int     DFS_BLOCKREPORT_INITIAL_DELAY_DEFAULT = 0;
 
+  // property for fsimage compression
+  public static final String DFS_IMAGE_COMPRESS_KEY = "dfs.image.compress";
+  public static final boolean DFS_IMAGE_COMPRESS_DEFAULT = false;
+  public static final String DFS_IMAGE_COMPRESSION_CODEC_KEY =
+                                   "dfs.image.compression.codec";
+  public static final String DFS_IMAGE_COMPRESSION_CODEC_DEFAULT =
+                                   "org.apache.hadoop.io.compress.DefaultCodec";
+
   //Keys with no defaults
   public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";
   public static final String  DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY = "dfs.datanode.socket.write.timeout";

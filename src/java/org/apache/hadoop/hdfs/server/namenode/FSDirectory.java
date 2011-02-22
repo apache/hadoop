@@ -102,16 +102,8 @@ class FSDirectory implements Closeable {
   private final NameCache<ByteArray> nameCache;
 
   /** Access an existing dfs name directory. */
-  FSDirectory(FSNamesystem ns, Configuration conf) {
-    this(new FSImage(), ns, conf);
-    if(conf.getBoolean(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY, 
-                       DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_DEFAULT)) {
-      NameNode.LOG.info("set FSImage.restoreFailedStorage");
-      fsImage.setRestoreFailedStorage(true);
-    }
-    
-    fsImage.setCheckpointDirectories(FSImage.getCheckpointDirs(conf, null),
-                                FSImage.getCheckpointEditsDirs(conf, null));
+  FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
+    this(new FSImage(conf), ns, conf);
   }
 
   FSDirectory(FSImage fsImage, FSNamesystem ns, Configuration conf) {
