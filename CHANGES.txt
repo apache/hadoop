@@ -19,6 +19,9 @@ Trunk (unreleased changes)
     HDFS-1450. Federation: Introduce block pool ID into FSDatasetInterface.
     (suresh)
 
+    HDFS-1632. Federation: data node storage structure changes and
+    introduce block pool storage. (tanping via suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

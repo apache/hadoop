@@ -93,6 +93,8 @@ public class FSImage extends Storage {
   private static final SimpleDateFormat DATE_FORM =
     new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+  private String blockpoolID = "";   // id of the block pool
+  
   //
   // The filenames used for storing the images
   //
@@ -705,13 +707,33 @@ public class FSImage extends Storage {
     return isUpgradeFinalized;
   }
 
+  /** Validate and set block pool ID */
+  private void setBlockPoolID(File storage, String bpid)
+      throws InconsistentFSStateException {
+    if (bpid == null || bpid.equals("")) {
+      throw new InconsistentFSStateException(storage, "file "
+          + STORAGE_FILE_VERSION + " is invalid.");
+    }
+    
+    if (!blockpoolID.equals("") && !blockpoolID.equals(bpid)) {
+      throw new InconsistentFSStateException(storage,
+          "Unexepcted blockpoolID " + bpid + " . Expected " + blockpoolID);
+    }
+    blockpoolID = bpid;
+  }
+  
   protected void getFields(Properties props, 
                            StorageDirectory sd 
                            ) throws IOException {
     super.getFields(props, sd);
-    if (layoutVersion == 0)
-      throw new IOException("NameNode directory " 
-                            + sd.getRoot() + " is not formatted.");
+    if (layoutVersion == 0) {
+      throw new IOException("NameNode directory " + sd.getRoot()
+          + " is not formatted.");
+    }
+    
+    String sbpid = props.getProperty("blockpoolID");
+    setBlockPoolID(sd.getRoot(), sbpid);
+    
     String sDUS, sDUV;
     sDUS = props.getProperty("distributedUpgradeState"); 
     sDUV = props.getProperty("distributedUpgradeVersion");
@@ -756,6 +778,7 @@ public class FSImage extends Storage {
                            StorageDirectory sd 
                            ) throws IOException {
     super.setFields(props, sd);
+    props.setProperty("blockpoolID", blockpoolID);
     boolean uState = getDistributedUpgradeState();
     int uVersion = getDistributedUpgradeVersion();
     if(uState && uVersion != getLayoutVersion()) {
@@ -1569,8 +1592,8 @@ public class FSImage extends Storage {
       LOG.warn("Could not use SecureRandom");
       rand = R.nextInt(Integer.MAX_VALUE);
     }
-    this.blockpoolID ="BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
-    return this.blockpoolID;
+    String bpid = "BP-" + rand + "-"+ ip + "-" + System.currentTimeMillis();
+    return bpid;
   }
   
   /** Create new dfs name directory.  Caution: this destroys all files
@@ -2313,5 +2336,9 @@ public class FSImage extends Storage {
   static void writeString(String str, DataOutputStream out) throws IOException {
     U_STR.set(str);
     U_STR.write(out);
+  }
+
+  String getBlockPoolID() {
+    return blockpoolID;
   }
 }

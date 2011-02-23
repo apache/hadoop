@@ -41,11 +41,10 @@ public class TestStorageInfo extends TestCase {
     
     int nsID = 123;
     String cid = "cid-test";
-    String bpid = "bpid-test";
     int layoutV = 234;
     long cT = 0L;
     
-    StorageInfo sinfo = new StorageInfo(layoutV, nsID, cid,  bpid, cT);
+    StorageInfo sinfo = new StorageInfo(layoutV, nsID, cid,  cT);
     
     Assert.assertNotNull(sinfo);
 
@@ -69,7 +68,6 @@ public class TestStorageInfo extends TestCase {
         // compare
         Assert.assertEquals(sinfo.getClusterID(), secondsinfo.getClusterID());
         Assert.assertEquals(sinfo.getNamespaceID(), secondsinfo.getNamespaceID());
-        Assert.assertEquals(sinfo.getBlockPoolID(), secondsinfo.getBlockPoolID());
         Assert.assertEquals(sinfo.getLayoutVersion(), secondsinfo.getLayoutVersion());
         Assert.assertEquals(sinfo.getCTime(), secondsinfo.getCTime());
     }catch (IOException e) {

@@ -19,12 +19,13 @@ package org.apache.hadoop.hdfs.server.common;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.File;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-
 
 /**
  * Common class for storage information.
@@ -36,17 +37,15 @@ public class StorageInfo implements Writable {
   public int   layoutVersion;   // layout version of the storage data
   public int   namespaceID;     // id of the file system
   public String clusterID;      // id of the cluster
-  public String blockpoolID;    // id of the blockpool
   public long  cTime;           // creation time of the file system state
   
   public StorageInfo () {
-    this(0, 0, "", "", 0L);
+    this(0, 0, "", 0L);
   }
   
-  public StorageInfo(int layoutV, int nsID, String cid, String bpid, long cT) {
+  public StorageInfo(int layoutV, int nsID, String cid, long cT) {
     layoutVersion = layoutV;
     clusterID = cid;
-    blockpoolID = bpid;
     namespaceID = nsID;
     cTime = cT;
   }
@@ -73,11 +72,6 @@ public class StorageInfo implements Writable {
   public String    getClusterID()  { return clusterID; }
   
   /**
-   * blockpool id of the file system.<p>
-   */
-  public String    getBlockPoolID()  { return blockpoolID; }
-  
-  /**
    * Creation time of the file system state.<p>
    * Modified during upgrades.
    */
@@ -86,7 +80,6 @@ public class StorageInfo implements Writable {
   public void   setStorageInfo(StorageInfo from) {
     layoutVersion = from.layoutVersion;
     clusterID = from.clusterID;
-    blockpoolID = from.blockpoolID;
     namespaceID = from.namespaceID;
     cTime = from.cTime;
   }
@@ -98,7 +91,6 @@ public class StorageInfo implements Writable {
     out.writeInt(getLayoutVersion());
     out.writeInt(getNamespaceID());
     WritableUtils.writeString(out, clusterID);
-    WritableUtils.writeString(out, blockpoolID); 
     out.writeLong(getCTime());
   }
 
@@ -106,7 +98,36 @@ public class StorageInfo implements Writable {
     layoutVersion = in.readInt();
     namespaceID = in.readInt();
     clusterID = WritableUtils.readString(in);
-    blockpoolID = WritableUtils.readString(in);
     cTime = in.readLong();
+  }
+  
+  /** validate and set namespaceID */
+  protected void setNamespaceID(File storage, int nsId)
+      throws InconsistentFSStateException {
+    if (namespaceID != 0 && nsId != 0 && namespaceID != nsId) {
+      throw new InconsistentFSStateException(storage,
+          "namespaceID is incompatible with others.");
+    }
+    namespaceID = nsId;
+  }
+  
+  /** validate and set layout version */ 
+  protected void setLayoutVersion(File storage, int lv)
+      throws IncorrectVersionException, IOException {
+    if (lv < FSConstants.LAYOUT_VERSION) { // future version
+      throw new IncorrectVersionException(lv, "storage directory "
+          + storage.getCanonicalPath());
+    }
+    layoutVersion = lv;
+  }
+  
+  /** validate and set ClusterID */
+  protected void setClusterID(File storage, String cid)
+      throws InconsistentFSStateException {
+    if (!clusterID.equals("") && !cid.equals("") && !clusterID.equals(cid)) {
+      throw new InconsistentFSStateException(storage,
+          "cluster id is incompatible with others.");
+    }
+    clusterID = cid;
   }
 }

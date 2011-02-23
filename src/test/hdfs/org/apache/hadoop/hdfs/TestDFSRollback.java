@@ -196,7 +196,6 @@ public class TestDFSRollback extends TestCase {
                                          new StorageInfo(Integer.MIN_VALUE,
                                                          UpgradeUtilities.getCurrentNamespaceID(cluster),
                                                          UpgradeUtilities.getCurrentClusterID(cluster),
-                                                         UpgradeUtilities.getCurrentBlockPoolID(cluster),
                                                          UpgradeUtilities.getCurrentFsscTime(cluster)));
       startDataNodeShouldFail(StartupOption.ROLLBACK);
       cluster.shutdown();
@@ -218,7 +217,6 @@ public class TestDFSRollback extends TestCase {
                                          new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(),
                                                          UpgradeUtilities.getCurrentNamespaceID(cluster),
                                                          UpgradeUtilities.getCurrentClusterID(cluster),
-                                                         UpgradeUtilities.getCurrentBlockPoolID(cluster),
                                                          Long.MAX_VALUE));
       startDataNodeShouldFail(StartupOption.ROLLBACK);
       cluster.shutdown();
@@ -259,7 +257,6 @@ public class TestDFSRollback extends TestCase {
                                          new StorageInfo(1,
                                                          UpgradeUtilities.getCurrentNamespaceID(null),
                                                          UpgradeUtilities.getCurrentClusterID(null),
-                                                         UpgradeUtilities.getCurrentBlockPoolID(null),
                                                          UpgradeUtilities.getCurrentFsscTime(null)));
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);

@@ -77,27 +77,26 @@ public class TestDFSStartupVersions extends TestCase {
     long fsscTimeCur = UpgradeUtilities.getCurrentFsscTime(null);
     long fsscTimeNew = Long.MAX_VALUE;
     String clusterID = "cid-test";
-    String bpID = "bpid-test";
     
     return new StorageInfo[] {
-      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, bpID, fsscTimeOld), // 0
-      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, bpID, fsscTimeCur), // 1
-      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, bpID, fsscTimeNew), // 2
-      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, bpID, fsscTimeOld), // 3
-      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, bpID, fsscTimeCur), // 4
-      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, bpID, fsscTimeNew), // 5
-      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, bpID, fsscTimeOld), // 6
-      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, bpID, fsscTimeCur), // 7
-      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, bpID, fsscTimeNew), // 8
-      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, bpID, fsscTimeOld), // 9
-      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, bpID, fsscTimeCur), // 10
-      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, bpID, fsscTimeNew), // 11
-      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, bpID, fsscTimeOld), // 12
-      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, bpID, fsscTimeCur), // 13
-      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, bpID, fsscTimeNew), // 14
-      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, bpID, fsscTimeOld), // 15
-      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, bpID, fsscTimeCur), // 16
-      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, bpID, fsscTimeNew), // 17
+      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, fsscTimeOld), // 0
+      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, fsscTimeCur), // 1
+      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, fsscTimeNew), // 2
+      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, fsscTimeOld), // 3
+      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, fsscTimeCur), // 4
+      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, fsscTimeNew), // 5
+      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, fsscTimeOld), // 6
+      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, fsscTimeCur), // 7
+      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, fsscTimeNew), // 8
+      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, fsscTimeOld), // 9
+      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, fsscTimeCur), // 10
+      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, fsscTimeNew), // 11
+      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, fsscTimeOld), // 12
+      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, fsscTimeCur), // 13
+      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, fsscTimeNew), // 14
+      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, fsscTimeOld), // 15
+      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, fsscTimeCur), // 16
+      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, fsscTimeNew), // 17
     };
   }
   
@@ -185,7 +184,6 @@ public class TestDFSStartupVersions extends TestCase {
                                                   UpgradeUtilities.getCurrentLayoutVersion(),
                                                   UpgradeUtilities.getCurrentNamespaceID(cluster),
                                                   UpgradeUtilities.getCurrentClusterID(cluster),
-                                                  UpgradeUtilities.getCurrentBlockPoolID(cluster),
                                                   UpgradeUtilities.getCurrentFsscTime(cluster));
     log("NameNode version info", NAME_NODE, null, nameNodeVersion);
     for (int i = 0; i < versions.length; i++) {

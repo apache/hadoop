@@ -377,7 +377,6 @@ public class DataNode extends Configured
         dnRegistration.storageInfo.layoutVersion = FSConstants.LAYOUT_VERSION;
         dnRegistration.storageInfo.namespaceID = nsInfo.namespaceID;
         dnRegistration.storageInfo.clusterID = nsInfo.clusterID;
-        dnRegistration.storageInfo.blockpoolID = nsInfo.blockpoolID;
         // it would have been better to pass storage as a parameter to
         // constructor below - need to augment ReflectionUtils used below.
         conf.set(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY, dnRegistration.getStorageID());
@@ -1040,7 +1039,7 @@ public class DataNode extends Configured
       }
       break;
     case DatanodeProtocol.DNA_FINALIZE:
-      storage.finalizeUpgrade();
+      storage.finalizeUpgrade(bcmd.getPoolId());
       break;
     case UpgradeCommand.UC_ACTION_START_UPGRADE:
       // start distributed upgrade here
