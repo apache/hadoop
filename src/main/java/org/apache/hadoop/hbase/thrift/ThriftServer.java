@@ -398,6 +398,52 @@ public class ThriftServer {
       }
     }
 
+    public List<TRowResult> getRows(byte[] tableName, List<byte[]> rows)
+        throws IOError {
+      return getRowsWithColumnsTs(tableName, rows, null,
+                                  HConstants.LATEST_TIMESTAMP);
+    }
+
+    public List<TRowResult> getRowsWithColumns(byte[] tableName, List<byte[]> rows,
+        List<byte[]> columns) throws IOError {
+      return getRowsWithColumnsTs(tableName, rows, columns,
+                                  HConstants.LATEST_TIMESTAMP);
+    }
+
+    public List<TRowResult> getRowsTs(byte[] tableName, List<byte[]> rows,
+        long timestamp) throws IOError {
+      return getRowsWithColumnsTs(tableName, rows, null,
+                                  timestamp);
+    }
+
+    public List<TRowResult> getRowsWithColumnsTs(byte[] tableName, List<byte[]> rows,
+        List<byte[]> columns, long timestamp) throws IOError {
+      try {
+        List<Get> gets = new ArrayList<Get>(rows.size());
+        HTable table = getTable(tableName);
+        for (byte[] row : rows) {
+          Get get = new Get(row);
+          if (columns != null) {
+            byte[][] columnArr = columns.toArray(new byte[columns.size()][]);
+            for(byte [] column : columnArr) {
+              byte [][] famAndQf = KeyValue.parseColumn(column);
+              if (famAndQf.length == 1) {
+                get.addFamily(famAndQf[0]);
+              } else {
+                get.addColumn(famAndQf[0], famAndQf[1]);
+              }
+            }
+            get.setTimeRange(Long.MIN_VALUE, timestamp);
+          }
+          gets.add(get);
+        }
+        Result[] result = table.get(gets);
+        return ThriftUtilities.rowResultFromHBase(result);
+      } catch (IOException e) {
+        throw new IOError(e.getMessage());
+      }
+    }
+
     public void deleteAll(byte[] tableName, byte[] row, byte[] column)
         throws IOError {
       deleteAllTs(tableName, row, column, HConstants.LATEST_TIMESTAMP);

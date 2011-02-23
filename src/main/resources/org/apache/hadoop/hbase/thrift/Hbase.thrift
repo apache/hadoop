@@ -364,6 +364,72 @@ service Hbase {
     4:i64 timestamp
   ) throws (1:IOError io)
 
+  /**
+   * Get all the data for the specified table and rows at the latest
+   * timestamp. Returns an empty list if no rows exist.
+   *
+   * @return TRowResult containing the rows and map of columns to TCells
+   */
+  list<TRowResult> getRows(
+    /** name of table */
+    1:Text tableName,
+
+    /** row keys */
+    2:list<Text> rows
+  ) throws (1:IOError io)
+
+  /**
+   * Get the specified columns for the specified table and rows at the latest
+   * timestamp. Returns an empty list if no rows exist.
+   *
+   * @return TRowResult containing the rows and map of columns to TCells
+   */
+  list<TRowResult> getRowsWithColumns(
+    /** name of table */
+    1:Text tableName,
+
+    /** row keys */
+    2:list<Text> rows
+
+    /** List of columns to return, null for all columns */
+    3:list<Text> columns
+  ) throws (1:IOError io)
+
+  /**
+   * Get all the data for the specified table and rows at the specified
+   * timestamp. Returns an empty list if no rows exist.
+   *
+   * @return TRowResult containing the rows and map of columns to TCells
+   */
+  list<TRowResult> getRowsTs(
+    /** name of the table */
+    1:Text tableName,
+
+    /** row keys */
+    2:list<Text> rows
+
+    /** timestamp */
+    3:i64 timestamp
+  ) throws (1:IOError io)
+
+  /**
+   * Get the specified columns for the specified table and rows at the specified
+   * timestamp. Returns an empty list if no rows exist.
+   *
+   * @return TRowResult containing the rows and map of columns to TCells
+   */
+  list<TRowResult> getRowsWithColumnsTs(
+    /** name of table */
+    1:Text tableName,
+
+    /** row keys */
+    2:list<Text> rows
+
+    /** List of columns to return, null for all columns */
+    3:list<Text> columns,
+    4:i64 timestamp
+  ) throws (1:IOError io)
+
   /** 
    * Apply a series of mutations (updates/deletes) to a row in a
    * single transaction.  If an exception is thrown, then the

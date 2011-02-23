@@ -107,6 +107,9 @@ Release 0.90.2 - Unreleased
                HRegionServer getMaster (Greg Bowyer via Stack)
    HBASE-3548  Fix type in documentation of pseudo distributed mode
 
+  IMPROVEMENTS
+   HBASE-3542  MultiGet methods in Thrift
+
 Release 0.90.1 - Unreleased
 
   NEW FEATURES
