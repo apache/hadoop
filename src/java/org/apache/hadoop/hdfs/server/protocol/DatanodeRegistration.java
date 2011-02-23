@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.datanode.DataStorage;
+import org.apache.hadoop.hdfs.server.datanode.BlockPoolStorage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
@@ -77,9 +77,8 @@ implements Writable, NodeRegistration {
     this.ipcPort = ipcPort;
   }
 
-  public void setStorageInfo(DataStorage storage) {
+  public void setStorageInfo(StorageInfo storage) {
     this.storageInfo = new StorageInfo(storage);
-    this.storageID = storage.getStorageID();
   }
   
   public void setName(String name) {
@@ -108,6 +107,7 @@ implements Writable, NodeRegistration {
       + ", storageID=" + storageID
       + ", infoPort=" + infoPort
       + ", ipcPort=" + ipcPort
+      + ", storageInfo=" + storageInfo
       + ")";
   }
 

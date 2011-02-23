@@ -881,6 +881,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     volumes = new FSVolumeSet(volArray);
     volumes.getVolumeMap(volumeMap);
+
+    // TODO:FEDERATION this needs to be moved to addStorage()
     File[] roots = new File[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       roots[idx] = storage.getStorageDir(idx).getCurrentDir();

@@ -722,6 +722,7 @@ public class FSImage extends Storage {
     blockpoolID = bpid;
   }
   
+  @Override
   protected void getFields(Properties props, 
                            StorageDirectory sd 
                            ) throws IOException {
@@ -774,6 +775,7 @@ public class FSImage extends Storage {
    * @param sd storage directory
    * @throws IOException
    */
+  @Override
   protected void setFields(Properties props, 
                            StorageDirectory sd 
                            ) throws IOException {
@@ -2338,7 +2340,7 @@ public class FSImage extends Storage {
     U_STR.write(out);
   }
 
-  String getBlockPoolID() {
+  public String getBlockPoolID() {
     return blockpoolID;
   }
 }

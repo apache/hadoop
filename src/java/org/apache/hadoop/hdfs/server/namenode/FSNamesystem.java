@@ -525,11 +525,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
   
   NamespaceInfo getNamespaceInfo() {
-    return new NamespaceInfo(dir.fsImage.getNamespaceID(),
-                             dir.fsImage.getClusterID(),
-                             dir.fsImage.getBlockPoolID(),
+    NamespaceInfo nsinfo = new NamespaceInfo(dir.fsImage.getNamespaceID(),
+                             getClusterId(),
+                             getBlockpoolId(),
                              dir.fsImage.getCTime(),
                              getDistributedUpgradeVersion());
+    return nsinfo;
   }
 
   /**
@@ -2502,7 +2503,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * namespaceID and will continue serving the datanodes that has previously
    * registered with the namenode without restarting the whole cluster.
    * 
-   * @see org.apache.hadoop.hdfs.server.datanode.DataNode#register()
+   * @see org.apache.hadoop.hdfs.server.datanode.DataNode
    */
   public void registerDatanode(DatanodeRegistration nodeReg
                                             ) throws IOException {

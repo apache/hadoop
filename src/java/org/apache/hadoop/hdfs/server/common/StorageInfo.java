@@ -130,4 +130,11 @@ public class StorageInfo implements Writable {
     }
     clusterID = cid;
   }
+  
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("lv=").append(layoutVersion).append(";cid=").append(clusterID)
+    .append(";nsid=").append(namespaceID).append(";c=").append(cTime);
+    return sb.toString();
+  }
 }

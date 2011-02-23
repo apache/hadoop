@@ -66,11 +66,12 @@ public class BlockPoolStorage extends Storage {
     super(NodeType.DATA_NODE);
   }
 
-  BlockPoolStorage(int namespaceID, String bpID, long cTime) {
+  BlockPoolStorage(int namespaceID, String bpID, long cTime, String clusterId) {
     super(NodeType.DATA_NODE);
     this.namespaceID = namespaceID;
     this.blockpoolID = bpID;
     this.cTime = cTime;
+    this.clusterID = clusterId;
   }
 
   /**
@@ -507,5 +508,10 @@ public class BlockPoolStorage extends Storage {
   @Override
   public boolean isConversionNeeded(StorageDirectory sd) throws IOException {
     return false;
+  }
+  
+  @Override
+  public String toString() {
+    return super.toString() + ";bpid=" + blockpoolID;
   }
 }

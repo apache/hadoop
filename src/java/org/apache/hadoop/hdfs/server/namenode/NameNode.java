@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -31,9 +33,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
@@ -46,12 +48,12 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -217,6 +219,51 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public static InetSocketAddress getAddress(String address) {
     return NetUtils.createSocketAddr(address, DEFAULT_PORT);
   }
+  
+  /**
+   * TODO:FEDERATION
+   * at this moment only support fs.default style enteries.
+   * @param conf
+   * @return array of namenodes' addresses
+   */
+  public static InetSocketAddress [] getNNAddresses(Configuration conf) 
+  throws IOException {
+    URI[] nns=getNameNodesURIs(conf);
+    if(nns == null) {
+      throw new IOException("Federation namnodes are not configured correctly");
+    }
+
+    InetSocketAddress [] isas = new InetSocketAddress[nns.length];
+    int i=0;
+    for(URI u : nns) {
+      isas[i++] = getAddress(u); 
+    }
+    return isas;
+  }
+
+  /**
+   * TODO:FEDERATION
+   * get the list of namenodes from the configuration
+   * create URI for each one of them
+   * @param conf
+   * @return list of URIs of all configured NameNodes
+   */
+  public static URI [] getNameNodesURIs(Configuration conf) {
+    String [] nnURIs = conf.getStrings(DFSConfigKeys.DFS_FEDERATION_NAMENODES);
+    if(nnURIs == null) {
+      nnURIs = new String[] { conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY)};
+    }
+
+    AbstractList<URI> nns = new ArrayList<URI>(nnURIs.length);
+    for(String uri : nnURIs) {
+      // name should be prepened with FileSystem.fixName(uri)  
+      // TBD
+      nns.add(URI.create(uri));
+    }
+
+    URI[] r = new URI[nns.size()];
+    return nns.toArray(r);
+  }
 
   /**
    * Set the configuration property for the service rpc address
@@ -246,6 +293,15 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   public static InetSocketAddress getAddress(Configuration conf) {
     URI filesystemURI = FileSystem.getDefaultUri(conf);
+    return getAddress(filesystemURI);
+  }
+
+
+  /**
+   * TODO:FEDERATION
+   * @param filesystemURI
+   */
+  public static InetSocketAddress getAddress(URI filesystemURI) {
     String authority = filesystemURI.getAuthority();
     if (authority == null) {
       throw new IllegalArgumentException(String.format(

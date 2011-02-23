@@ -629,7 +629,7 @@ public class MiniDFSCluster {
         StaticMapping.addNodeToRack(ipAddr + ":" + port,
                                   racks[i-curDatanodesNum]);
       }
-      DataNode.runDatanodeDaemon(dn);
+      dn.runDatanodeDaemon();
       dataNodes.add(new DataNodeProperties(dn, newconf, dnArgs));
     }
     curDatanodesNum += numDataNodes;
@@ -1137,7 +1137,7 @@ public class MiniDFSCluster {
     String bpid = getNamesystem().getPoolId();
     SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
     sdataset.injectBlocks(bpid, blocksToInject);
-    dataNodes.get(dataNodeIndex).datanode.scheduleBlockReport(0);
+    dataNodes.get(dataNodeIndex).datanode.scheduleAllBlockReport(0);
   }
   
   /**

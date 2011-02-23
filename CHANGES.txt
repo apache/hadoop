@@ -22,6 +22,9 @@ Trunk (unreleased changes)
     HDFS-1632. Federation: data node storage structure changes and
     introduce block pool storage. (tanping via suresh)
 
+    HDFS-1634. Federation: Convert single threaded DataNode into 
+    per BlockPool thread model.(boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

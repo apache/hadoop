@@ -87,6 +87,10 @@ public class DataStorage extends Storage {
     storageID = "";
   }
   
+  public StorageInfo getBPStorage(String bpid) {
+    return bpStorageMap.get(bpid);
+  }
+  
   public DataStorage(StorageInfo storageInfo, String strgID) {
     super(NodeType.DATA_NODE, storageInfo);
     this.storageID = strgID;
@@ -118,7 +122,7 @@ public class DataStorage extends Storage {
                              Collection<File> dataDirs,
                              StartupOption startOpt
                              ) throws IOException {
-    if (this.initilized) {
+    if (initilized) {
       // DN storage has been initialized, no need to do anything
       return;
     }
@@ -169,7 +173,7 @@ public class DataStorage extends Storage {
 
     // 2. Do transitions
     // Each storage directory is treated individually.
-    // During sturtup some of them can upgrade or rollback 
+    // During startup some of them can upgrade or rollback 
     // while others could be uptodate for the regular startup.
     for(int idx = 0; idx < getNumStorageDirs(); idx++) {
       doTransition(getStorageDir(idx), nsInfo, startOpt);
@@ -177,6 +181,12 @@ public class DataStorage extends Storage {
         "Data-node and name-node layout versions must be the same.";
       assert this.getCTime() == nsInfo.getCTime() :
         "Data-node and name-node CTimes must be the same.";
+    }
+    
+    // make sure we have storage id set - if not - generate new one
+    if(storageID.isEmpty()) {
+      DataNode.setNewStorageID(DataNode.datanodeObject.dnRegistration);
+      storageID = DataNode.datanodeObject.dnRegistration.storageID;
     }
     
     // 3. Update all storages. Some of them might have just been formatted.
@@ -210,7 +220,8 @@ public class DataStorage extends Storage {
     // mkdir for the list of BlockPoolStorage
     makeBlockPoolDataDir(bpDataDirs, null);
     BlockPoolStorage bpStorage = new BlockPoolStorage(nsInfo.getNamespaceID(), 
-        bpID, nsInfo.getCTime());
+        bpID, nsInfo.getCTime(), nsInfo.getClusterID());
+    
     bpStorage.recoverTransitionRead(nsInfo, bpDataDirs, startOpt);
     addBlockPoolStorage(bpID, bpStorage);
   }
@@ -447,7 +458,7 @@ public class DataStorage extends Storage {
     // 3. Format BP and hard link blocks from previous directory
     File curBpDir = getBpRoot(nsInfo.getBlockPoolID(), curDir);
     BlockPoolStorage bpStorage = new BlockPoolStorage(nsInfo.getNamespaceID(), 
-        nsInfo.getBlockPoolID(), nsInfo.getCTime());
+        nsInfo.getBlockPoolID(), nsInfo.getCTime(), nsInfo.getClusterID());
     bpStorage.format(new StorageDirectory(curBpDir), nsInfo);
     linkAllBlocks(tmpDir, curBpDir);
     

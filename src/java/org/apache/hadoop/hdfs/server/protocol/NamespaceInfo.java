@@ -94,4 +94,8 @@ public class NamespaceInfo extends StorageInfo {
     distributedUpgradeVersion = in.readInt();
     blockPoolID = WritableUtils.readString(in);
   }
+  
+  public String toString(){
+    return super.toString() + ";bpid=" + blockPoolID;
+  }
 }
