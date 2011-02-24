@@ -54,6 +54,9 @@ Trunk (unreleased changes)
     HADOOP-6995. Allow wildcards to be used in ProxyUsers configurations.
     (todd)
 
+    HADOOP-6376. Add a comment header to conf/slaves that specifies the file
+    format. (Kay Kay via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
