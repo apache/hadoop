@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
+import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.net.DNS;
@@ -177,6 +179,18 @@ public class TestDataNodeMultipleRegistrations {
     Assert.assertNotNull("failed to create DataNode", dn);
     waitDataNodeUp(dn);
 
+    
+ // check number of vlumes in fsdataset
+    Collection<VolumeInfo> volInfos = ((FSDataset) dn.data).getVolumeInfo();
+    Assert.assertNotNull("No volumes in the fsdataset", volInfos);
+    int i=0;
+    for(VolumeInfo vi : volInfos) {
+      LOG.info("vol " + i++ + ";dir=" + vi.directory + ";fs= " + vi.freeSpace);
+    }
+    // number of volumes should be 2 - [data1, data2]
+    Assert.assertEquals("number of volumes is wrong",2, volInfos.size());
+    
+    
     for (BPOfferService bpos : dn.nameNodeThreads) {
       LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.name
           + "; sid=" + bpos.bpRegistration.storageID + "; nna=" + bpos.nn_addr);
@@ -235,12 +249,23 @@ public class TestDataNodeMultipleRegistrations {
     Assert.assertNotNull("failed to create DataNode", dn);
 
     waitDataNodeUp(dn);
-    // try block report
+    // check number of vlumes in fsdataset
+    Collection<VolumeInfo> volInfos = ((FSDataset) dn.data).getVolumeInfo();
+    Assert.assertNotNull("No volumes in the fsdataset", volInfos);
+    int i=0;
+    for(VolumeInfo vi : volInfos) {
+      LOG.info("vol " + i++ + ";dir=" + vi.directory + ";fs= " + vi.freeSpace);
+    }
+    // number of volumes should be 2 - [data1, data2]
+    Assert.assertEquals("number of volumes is wrong",2, volInfos.size());
+    
 
     for (BPOfferService bpos : dn.nameNodeThreads) {
       LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.name
           + "; sid=" + bpos.bpRegistration.storageID + "; nna=" + bpos.nn_addr);
     }
+    
+    // try block report
     BPOfferService bpos1 = dn.nameNodeThreads[0];
     bpos1.lastBlockReport = 0;
     DatanodeCommand cmd = bpos1.blockReport();

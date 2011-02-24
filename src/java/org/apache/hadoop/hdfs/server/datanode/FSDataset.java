@@ -877,12 +877,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     FSVolume[] volArray = new FSVolume[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
-      volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
+      volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(),
+          conf);
+      DataNode.LOG.info("FSDataset added volume - "
+          + storage.getStorageDir(idx).getCurrentDir());
     }
     volumes = new FSVolumeSet(volArray);
     volumes.getVolumeMap(volumeMap);
 
-    // TODO:FEDERATION this needs to be moved to addStorage()
     File[] roots = new File[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       roots[idx] = storage.getStorageDir(idx).getCurrentDir();

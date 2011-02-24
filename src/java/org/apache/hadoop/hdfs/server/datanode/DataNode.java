@@ -554,31 +554,31 @@ public class DataNode extends Configured
       setNamespaceInfo(nsInfo);
       setClusterId(nsInfo.clusterID);
       
-      // setup storage..
       StartupOption startOpt = getStartupOption(conf);
       assert startOpt != null : "Startup option must be set.";
 
       boolean simulatedFSDataset = 
         conf.getBoolean("dfs.datanode.simulateddatastorage", false);
+      
       if (simulatedFSDataset) {
-        bpRegistration.setStorageID(dnRegistration.getStorageID()); // same as mother DN
+        bpRegistration.setStorageID(dnRegistration.getStorageID()); //same as DN
         bpRegistration.storageInfo.layoutVersion = FSConstants.LAYOUT_VERSION;
         bpRegistration.storageInfo.namespaceID = bpNSInfo.namespaceID;
         bpRegistration.storageInfo.clusterID = bpNSInfo.clusterID;
-      //????        bpRegistration.storageInfo.blockpoolID = bpNSInfo.blockpoolID; // TODO:FEDERATION
+        // TODO: FEDERATION 
+        // bpRegistration.storageInfo.blockpoolID = bpNSInfo.blockpoolID;
       } else {
         // read storage info, lock data dirs and transition fs state if necessary          
         storage.recoverTransitionRead(blockPoolId, bpNSInfo, dataDirs, startOpt);
-        LOG.info("in setUp setting up storage: nsid=" + storage.namespaceID +
-            ";bpid=" + blockPoolId + 
-            ";lv=" + storage.layoutVersion +
-            ";nsInfo=" + bpNSInfo);
+        LOG.info("setting up storage: nsid=" + storage.namespaceID + ";bpid="
+            + blockPoolId + ";lv=" + storage.layoutVersion + ";nsInfo="
+            + bpNSInfo);
 
-        // use BlockPoolStorage as storageInfo in registration.
         bpRegistration.setStorageID(storage.getStorageID());
         bpRegistration.setStorageInfo(storage.getBPStorage(blockPoolId));
-        //data.addStorage(blockPoolId, storage);
-      }      
+      }
+      initFsDataSet(conf, dataDirs);
+      //data.addStorage(blockPoolId, storage);
     }
 
     /**
@@ -1066,7 +1066,6 @@ public class DataNode extends Configured
     // global DN settings
     initConfig(conf);
     registerMXBean();
-    initFsDataSet(conf, dataDirs); // TODO:FEDERATION should this be moved to after at least one storage is created..
     initDataXceiver(conf);
     startInfoServer(conf);
     initIpcServer(conf); // TODO:FEDERATION redirect the call appropriately 
@@ -1077,41 +1076,42 @@ public class DataNode extends Configured
     nameNodeThreads = getAllNamenodes(conf);
   }
   
-  private void initFsDataSet(Configuration conf, AbstractList<File> dataDirs)
-  throws IOException {
+  /**
+   * Initializes the {@link #data}. The initialization is done only once, when
+   * handshake with the the first namenode is completed.
+   */
+  private synchronized void initFsDataSet(Configuration conf,
+      AbstractList<File> dataDirs) throws IOException {
+    if (data != null) { // Already initialized
+      return;
+    }
+
     // get version and id info from the name-node
     boolean simulatedFSDataset = 
       conf.getBoolean("dfs.datanode.simulateddatastorage", false);
 
     if (simulatedFSDataset) {
-      
-      if(data == null) { // create FSDataset
-        setNewStorageID(dnRegistration);
-        conf.set(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY,
-            dnRegistration.getStorageID());
-        
-        // it would have been better to pass storage as a parameter to
-        // constructor below - need to augment ReflectionUtils used below.
+      setNewStorageID(dnRegistration);
+      conf.set(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY,
+          dnRegistration.getStorageID());
 
-        try {
-          //TODO:FEDERATION Equivalent of following (can't do because Simulated is in test dir)
-          if(data==null) {
-            data = (FSDatasetInterface) ReflectionUtils.newInstance(
-              Class.forName(
-                  "org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset"),
-                  conf);
-          }
-        } catch (ClassNotFoundException e) {
-          throw new IOException(StringUtils.stringifyException(e));
-        }
+      // it would have been better to pass storage as a parameter to
+      // constructor below - need to augment ReflectionUtils used below.
 
+      try {
+        // TODO:FEDERATION Equivalent of following (can't do because Simulated
+        // is in test dir)
+        data = (FSDatasetInterface) ReflectionUtils.newInstance(
+            Class.forName(
+            "org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset"),
+            conf);
+      } catch (ClassNotFoundException e) {
+        throw new IOException(StringUtils.stringifyException(e));
       }
       // TODO:FEDERATION do we need set it to the general dnRegistration?????
       // TODO:FEDERATION do we need LV,NSid, cid,bpid for datanode version file?
-      
     } else {
-      if(data == null)
-        data = new FSDataset(storage, conf);
+      data = new FSDataset(storage, conf);
     }
   }
 

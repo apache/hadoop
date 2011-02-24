@@ -25,6 +25,9 @@ Trunk (unreleased changes)
     HDFS-1634. Federation: Convert single threaded DataNode into 
     per BlockPool thread model.(boryas)
 
+    HDFS-1637. Federation: FSDataset in Datanode should be created after 
+    initial handshake with namenode. (boryas and jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
