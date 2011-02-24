@@ -76,6 +76,9 @@ Trunk (unreleased changes)
     HADOOP-7048.  Wrong description of Block-Compressed SequenceFile Format in
     SequenceFile's javadoc.  (Jingguo Yao via tomwhite)
 
+    HADOOP-7153. MapWritable violates contract of Map interface for equals()
+    and hashCode(). (Nicholas Telford via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

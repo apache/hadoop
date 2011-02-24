@@ -129,4 +129,24 @@ public class TestMapWritable extends TestCase {
     assertTrue(m.get(t).equals(t));
     dis.close();
   }
+
+  public void testEquality() {
+    MapWritable map1 = new MapWritable();
+    MapWritable map2 = new MapWritable();
+    MapWritable map3 = new MapWritable();
+    final IntWritable k1 = new IntWritable(5);
+    final IntWritable k2 = new IntWritable(10);
+    final Text value = new Text("value");
+
+    map1.put(k1, value); // equal
+    map2.put(k1, value); // equal
+    map3.put(k2, value); // not equal
+
+    assertTrue(map1.equals(map2));
+    assertTrue(map2.equals(map1));
+    assertFalse(map1.equals(map3));
+
+    assertEquals(map1.hashCode(), map2.hashCode());
+    assertFalse(map1.hashCode() == map3.hashCode());
+}
 }

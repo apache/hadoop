@@ -76,10 +76,33 @@ public class MapWritable extends AbstractMapWritable
   }
 
   /** {@inheritDoc} */
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+
+    if (obj instanceof MapWritable) {
+      Map map = (Map) obj;
+      if (size() != map.size()) {
+        return false;
+      }
+
+      return entrySet().equals(map.entrySet());
+    }
+
+    return false;
+  }
+
+  /** {@inheritDoc} */
   public Writable get(Object key) {
     return instance.get(key);
   }
   
+  /** {@inheritDoc} */
+  public int hashCode() {
+    return 1 + this.instance.hashCode();
+  }
+
   /** {@inheritDoc} */
   public boolean isEmpty() {
     return instance.isEmpty();
