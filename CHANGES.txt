@@ -57,6 +57,9 @@ Trunk (unreleased changes)
     HADOOP-6376. Add a comment header to conf/slaves that specifies the file
     format. (Kay Kay via todd)
 
+    HADOOP-7151. Document need for stable hashCode() in WritableComparable.
+    (Dmitriy V. Ryaboy via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
