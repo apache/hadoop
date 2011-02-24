@@ -26,12 +26,13 @@
       <item name="Team" href="team-list.html" />
     </menu>
     <menu name="Documentation">
-      <item name="Getting Started: Quick" href="quickstart.html" />
-      <item name="Getting Started: Detailed" href="notsoquick.html" />
+        <item name="Getting Started: Quick" href="book/quickstart.html" />
+        <item name="Getting Started: Detailed" href="book/notsoquick.html" />
       <item name="API" href="apidocs/index.html" />
       <item name="X-Ref" href="xref/index.html" />
-      <item name="Book"      href="book.html" />
-      <item name="FAQ" href="faq.html" />
+      <item name="Book (multi-page)"      href="book/book.html" />
+      <item name="Book (single-page)"      href="book.html" />
+      <item name="FAQ" href="book/faq.html" />
       <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
       <item name="ACID Semantics" href="acid-semantics.html" />
       <item name="Bulk Loads" href="bulk-loads.html" />
