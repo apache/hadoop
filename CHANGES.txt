@@ -78,6 +78,7 @@ Release 0.91.0 - Unreleased
                coprocesssors -- instead version each individually
    HBASE-3520  Update our bundled hadoop from branch-0.20-append to latest
                (rpc version 43)
+   HBASE-3563  [site] Add one-page-only version of hbase doc
 
 
   NEW FEATURES

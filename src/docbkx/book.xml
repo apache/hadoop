@@ -251,7 +251,7 @@ hbase(main):013:0&gt; drop 'test'
             <para><programlisting>hbase(main):014:0&gt; exit</programlisting></para>
             </section>
 
-          <section>
+          <section xml:id="stopping">
           <title>Stopping HBase</title>
             <para>Stop your hbase instance by running the stop script.</para>
 
@@ -456,7 +456,7 @@ guide.
 
       </section>
 
-      <section><title>HBase run modes: Standalone and Distributed</title>
+      <section xml:id="standalone_dist"><title>HBase run modes: Standalone and Distributed</title>
           <para>HBase has two run modes: <link linkend="standalone">standalone</link>
               and <link linkend="distributed">distributed</link>.
               Out of the box, HBase runs in standalone mode.  To set up a
@@ -479,7 +479,7 @@ Set <varname>JAVA_HOME</varname> to point at the root of your
         talk to HBase.
       </para>
       </section>
-      <section><title>Distributed</title>
+      <section xml:id="distributed"><title>Distributed</title>
           <para>Distributed mode can be subdivided into distributed but all daemons run on a
           single node -- a.k.a <emphasis>pseudo-distributed</emphasis>-- and
           <emphasis>fully-distributed</emphasis> where the daemons 
@@ -595,7 +595,7 @@ make the following configuration.</para>
 &lt;/configuration&gt;
 </programlisting>
 
-<section><title><filename>regionservers</filename></title>
+<section xml:id="regionserver"><title><filename>regionservers</filename></title>
 <para>In addition, a fully-distributed mode requires that you
 modify <filename>conf/regionservers</filename>.
 The <filename><link linkend="regionservrers">regionservers</link></filename> file lists all hosts
@@ -820,7 +820,7 @@ before stopping the Hadoop daemons.</para>
 
 
 
-    <section><title>Example Configurations</title>
+    <section xml:id="example_config"><title>Example Configurations</title>
     <section><title>Basic Distributed HBase Install</title>
     <para>Here is an example basic configuration for a distributed ten node cluster.
     The nodes are named <varname>example0</varname>, <varname>example1</varname>, etc., through
@@ -1002,7 +1002,7 @@ to ensure well-formedness of your document after an edit session.
     Use <command>rsync</command>.</para>
 
 
-    <section>
+    <section xml:id="hbase.site">
     <title><filename>hbase-site.xml</filename> and <filename>hbase-default.xml</filename></title>
     <para>Just as in Hadoop where you add site-specific HDFS configuration
     to the <filename>hdfs-site.xml</filename> file,
@@ -1032,7 +1032,7 @@ to ensure well-formedness of your document after an edit session.
       href="../../target/site/hbase-default.xml" />
     </section>
 
-      <section>
+      <section xml:id="hbase.env.sh">
       <title><filename>hbase-env.sh</filename></title>
       <para>Set HBase environment variables in this file.
       Examples include options to pass the JVM on start of
@@ -1280,7 +1280,7 @@ of all regions.
             <para>See <link linkend="shell_exercises">Shell Exercises</link>
             for example basic shell operation.</para>
 
-    <section><title>Scripting</title>
+    <section xml:id="scripting"><title>Scripting</title>
         <para>For examples scripting HBase, look in the
             HBase <filename>bin</filename> directory.  Look at the files
             that end in <filename>*.rb</filename>.  To run one of these
@@ -1349,14 +1349,31 @@ of all regions.
 
   <chapter xml:id="schema">
   <title>HBase and Schema Design</title>
+  <section xml:id="number.of.cfs">
+  <title>
+      On the number of column families
+  </title>
+  <para>
+      HBase currently does not do well with anything about two or three column families so keep the number
+      of column families in your schema low.  Currently, flushing and compactions are done on a per Region basis so
+      if one column family is carrying the bulk of the data bringing on flushes, the adjacent families
+      will also be flushed though the amount of data they carry is small.  Compaction is currently triggered
+      by the total number of files under a column family.  Its not size based.  When many column families the
+      flushing and compaction interaction can make for a bunch of needless i/o loading (To be addressed by
+      changing flushing and compaction to work on a per column family basis).
+    </para>
+    <para>Try to make do with one column famliy if you can in your schemas.  Only introduce a
+        second and third column family in the case where data access is usually column scoped;
+        i.e. you query one column family or the other but usually not both at the one time.
+    </para>
+  </section>
   <section>
   <title>
   Monotonically Increasing Row Keys/Timeseries Data
   </title>
   <para>See this comic by IKai Lan on why monotically increasing row keys are
   problematic in BigTable-like datastores:
-  <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link>
-  in BigTable-like stores.</para>
+  <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link>.</para>
   <para>If you need to upload time series data into HBase, you should
   study <link xlink:href="http://opentsdb.net/">OpenTSDB</link> as a
   successful example.  It has a page describing the schema it uses in
@@ -1434,7 +1451,7 @@ of all regions.
 
       <para></para>
     </section>
-    <section>
+    <section xml:id="cells">
       <title>Cells<indexterm><primary>Cells</primary></indexterm></title>
       <para>A <emphasis>{row, column, version} </emphasis>tuple exactly
       specifies a <literal>cell</literal> in HBase. 
@@ -1493,7 +1510,7 @@ of all regions.
           basically a synopsis of this article by Bruno Dumon.</para>
         </footnote>.</para>
 
-      <section>
+      <section xml:id="versions">
         <title>Versions and HBase Operations</title>
 
         <para>In this section we look at the behavior of the version dimension
@@ -1635,15 +1652,15 @@ of all regions.
 
   <chapter xml:id="architecture">
     <title>Architecture</title>
-    <section>
+    <section xml:id="daemons">
      <title>Daemons</title>
-     <section><title>Master</title>
+     <section xml:id="master"><title>Master</title>
      </section>
-     <section><title>RegionServer</title>
+     <section xml:id="regionserver.arch"><title>RegionServer</title>
      </section>
     </section>
 
-    <section>
+    <section xml:id="regions.arch">
     <title>Regions</title>
     <para>This chapter is all about Regions.</para>
     <note>
@@ -1758,7 +1775,7 @@ of all regions.
     <para>Each RegionServer adds updates to its Write-ahead Log (WAL)
     first, and then to memory.</para>
 
-    <section>
+    <section xml:id="purpose.wal">
       <title>What is the purpose of the HBase WAL</title>
 
       <para>
@@ -1812,6 +1829,36 @@ of all regions.
     </section>
 
   </chapter>
+  <chapter xml:id="performance">
+    <title>Performance Tuning</title>
+    <para>Start with the <link xlink:href="http://wiki.apache.org/hadoop/PerformanceTuning">wiki Performance Tuning</link> page.
+        It has a general discussion of the main factors involved; RAM, compression, JVM settings, etc.
+        Afterward, come back here for more pointers.
+    </para>
+    <section xml:id="jvm">
+        <title>Java</title>
+    <section xml:id="gc">
+        <title>The Garage Collector and HBase</title>
+        <section xml:id="gcpause">
+            <title>Long GC pauses</title>
+        <para>
+            In his presentation,
+            <link xlink:href="http://www.slideshare.net/cloudera/hbase-hug-presentation">Avoiding Full GCs with MemStore-Local Allocation Buffers</link>,
+            Todd Lipcon describes two cases of stop-the-world garbage collections common in HBase, especially during loading;
+            CMS failure modes and old generation heap fragmentation brought.  To address the first,
+            start the CMS earlier than default by adding <code>-XX:CMSInitiatingOccupancyFraction</code>
+            and setting it down from defaults.  Start at 60 or 70 percent (The lower you bring down
+            the threshold, the more GCing is done, the more CPU used).  To address the second
+            fragmentation issue, Todd added an experimental facility that must be 
+            explicitly enabled in HBase 0.90.x (Its defaulted to be on in 0.92.x HBase).  See
+            <code>hbase.hregion.memstore.mslab.enabled</code> to true in your
+            <classname>Configuration</classname>.  See the cited slides for background and
+            detail.
+        </para>
+      </section>
+    </section>
+    </section>
+  </chapter>
 
   <chapter xml:id="blooms">
     <title>Bloom Filters</title>
@@ -1839,7 +1886,7 @@ of all regions.
         work.</para>
       </footnote></para>
 
-    <section>
+    <section xml:id="bloom.config">
       <title>Configurations</title>
 
       <para>Blooms are enabled by specifying options on a column family in the
@@ -1975,7 +2022,7 @@ of all regions.
         doing:<programlisting> $ ./<code>bin/hbase org.apache.hadoop.hbase.regionserver.wal.HLog --split hdfs://example.org:9000/hbase/.logs/example.org,60020,1283516293161/</code></programlisting></para>
       </section>
     </section>
-    <section><title>Compression Tool</title>
+    <section xml:id="compression.tool"><title>Compression Tool</title>
         <para>See <link linkend="compression.tool" >Compression Tool</link>.</para>
     </section>
   </appendix>
@@ -1984,7 +2031,7 @@ of all regions.
 
     <title >Compression In HBase<indexterm><primary>Compression</primary></indexterm></title>
 
-    <section id="compression.test">
+    <section xml:id="compression.test">
     <title>CompressionTest Tool</title>
     <para>
     HBase includes a tool to test compression is set up properly.
@@ -1993,7 +2040,7 @@ of all regions.
     </para>
     </section>
 
-    <section id="hbase.regionserver.codecs">
+    <section xml:id="hbase.regionserver.codecs">
     <title>
     <varname>
     hbase.regionserver.codecs

@@ -287,10 +287,38 @@
         <version>2.0.11</version>
         <executions>
           <execution>
+              <id>multipage</id>
+              <phase>pre-site</phase>
+        <configuration>
+          <xincludeSupported>true</xincludeSupported>
+          <navigShowtitles>true</navigShowtitles>
+          <chunkedOutput>true</chunkedOutput>
+          <useIdAsFilename>true</useIdAsFilename>
+          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
+          <sectionAutolabel>true</sectionAutolabel>
+          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
+          <targetDirectory>${basedir}/target/site/book/</targetDirectory>
+          <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
+        </configuration>
             <goals>
               <goal>generate-html</goal>
             </goals>
+          </execution>
+          <execution>
+              <id>onepage</id>
             <phase>pre-site</phase>
+        <configuration>
+          <xincludeSupported>true</xincludeSupported>
+          <useIdAsFilename>true</useIdAsFilename>
+          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
+          <sectionAutolabel>true</sectionAutolabel>
+          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
+          <targetDirectory>${basedir}/target/site/</targetDirectory>
+          <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
+        </configuration>
+            <goals>
+              <goal>generate-html</goal>
+            </goals>
           </execution>
         </executions>
         <dependencies>
@@ -301,16 +329,6 @@
             <scope>runtime</scope>
           </dependency>
         </dependencies>
-        <configuration>
-          <xincludeSupported>true</xincludeSupported>
-          <chunkedOutput>true</chunkedOutput>
-          <useIdAsFilename>true</useIdAsFilename>
-          <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
-          <sectionAutolabel>true</sectionAutolabel>
-          <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
-          <targetDirectory>${basedir}/target/site/</targetDirectory>
-          <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
-        </configuration>
       </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
