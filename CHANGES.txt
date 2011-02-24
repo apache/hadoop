@@ -106,6 +106,9 @@ Release 0.90.2 - Unreleased
    HBASE-3545  Possible liveness issue with MasterServerAddress in
                HRegionServer getMaster (Greg Bowyer via Stack)
    HBASE-3548  Fix type in documentation of pseudo distributed mode
+   HBASE-3553  HTable ThreadPoolExecutor does not properly initialize
+               for hbase.htable.threads.max threads
+               (Himanshu Vashishtha via garyh)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

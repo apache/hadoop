@@ -190,10 +190,13 @@ public class HTable implements HTableInterface {
 
     // Unfortunately Executors.newCachedThreadPool does not allow us to
     // set the maximum size of the pool, so we have to do it ourselves.
-    this.pool = new ThreadPoolExecutor(0, nrThreads,
+    // Must also set set corethreadpool size as with a LinkedBlockingQueue,
+    // a new thread will not be started until the queue is full
+    this.pool = new ThreadPoolExecutor(nrThreads, nrThreads,
         60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<Runnable>(),
         new DaemonThreadFactory());
+    ((ThreadPoolExecutor)this.pool).allowCoreThreadTimeOut(true);
   }
 
   public Configuration getConfiguration() {

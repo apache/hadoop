@@ -20,8 +20,11 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,8 +51,9 @@ public class TestMultiParallel {
   private static final byte[] ONE_ROW = Bytes.toBytes("xxx");
   private static final byte [][] KEYS = makeKeys();
 
+  private static final int slaves = 2; // also used for testing HTable pool size
   @BeforeClass public static void beforeClass() throws Exception {
-    UTIL.startMiniCluster(2);
+    UTIL.startMiniCluster(slaves);
     HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
   }
@@ -60,7 +64,7 @@ public class TestMultiParallel {
 
   @Before public void before() throws IOException {
     LOG.info("before");
-    if (UTIL.ensureSomeRegionServersAvailable(2)) {
+    if (UTIL.ensureSomeRegionServersAvailable(slaves)) {
       // Distribute regions
       UTIL.getMiniHBaseCluster().getMaster().balance();
     }
@@ -461,5 +465,25 @@ public class TestMultiParallel {
     for (Object result : results) {
       validateEmpty(result);
     }
+  }
+
+  /**
+   * This is for testing the active number of threads that were used while
+   * doing a batch operation. It inserts one row per region via the batch
+   * operation, and then checks the number of active threads.
+   * For HBASE-3553
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws NoSuchFieldException
+   * @throws SecurityException
+   */
+  @Test public void testActiveThreadsCount() throws Exception{
+    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    List<Row> puts = constructPutRequests(); // creates a Put for every region
+    table.batch(puts);
+    Field poolField = table.getClass().getDeclaredField("pool");
+    poolField.setAccessible(true);
+    ThreadPoolExecutor tExecutor = (ThreadPoolExecutor) poolField.get(table);
+    assertEquals(slaves, tExecutor.getLargestPoolSize());
   }
 }
