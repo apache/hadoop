@@ -29,7 +29,7 @@
 <div style="float: right;">
     <img src="http://hbase.apache.org/images/hadoop-logo.jpg" style="border-style;none" />
 </div>
-HBase is an open-source, distributed, versioned, column-oriented store modeled after Google' <a hef="http://labs.google.com/papers/bigtable.html">Bigtable: A Distributed Storage System for Structured</a> by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop.
+HBase is an open-source, distributed, versioned, column-oriented store modeled after Google' <a href="http://labs.google.com/papers/bigtable.html">Bigtable: A Distributed Storage System for Structured</a> by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, HBase provides Bigtable-like capabilities on top of Hadoop.
 HBase includes:
 <ul>
     <li>Convenient base classes for backing Hadoop MapReduce jobs with HBase tables including cascading, hive and pig source and sink modules
