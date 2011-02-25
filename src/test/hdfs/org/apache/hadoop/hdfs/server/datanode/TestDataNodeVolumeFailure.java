@@ -118,9 +118,9 @@ public class TestDataNodeVolumeFailure extends TestCase{
     
     // make sure a block report is sent 
     DataNode dn = cluster.getDataNodes().get(1); //corresponds to dir data3
-    long[] bReport = dn.getFSDataset().getBlockReport().getBlockListAsLongs();
-    String poolId = cluster.getNamesystem().getPoolId();
-    cluster.getNameNode().blockReport(dn.dnRegistration, poolId, bReport);
+    String bpid = cluster.getNamesystem().getPoolId();
+    long[] bReport = dn.getFSDataset().getBlockReport(bpid).getBlockListAsLongs();
+    cluster.getNameNode().blockReport(dn.dnRegistration, bpid, bReport);
 
     // verify number of blocks and files...
     verify(filename, filesize);

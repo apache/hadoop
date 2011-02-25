@@ -213,8 +213,9 @@ class DataBlockScanner implements Runnable {
 
   private void init() {
     
+    // TODO:FEDERATION block scanner must work one BP at a time
     // get the list of blocks and arrange them in random order
-    List<Block> arr = dataset.getFinalizedBlocks();
+    List<Block> arr = dataset.getFinalizedBlocks("TODO");
     Collections.shuffle(arr);
     
     blockInfoSet = new TreeSet<BlockScanInfo>();
@@ -231,6 +232,8 @@ class DataBlockScanner implements Runnable {
     /* Pick the first directory that has any existing scanner log.
      * otherwise, pick the first directory.
      */
+    // TODO:FEDERATION currently picking only one block pool directory
+    // This needs to change to include all the block pool directories
     File dir = null;
     FSDataset.FSVolume[] volumes = dataset.volumes.volumes;
     for(FSDataset.FSVolume vol : volumes) {
@@ -462,7 +465,7 @@ class DataBlockScanner implements Runnable {
         updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
-        if ( dataset.getFile(block.getLocalBlock()) == null ) {
+        if ( dataset.getFile(block.getPoolId(), block.getLocalBlock()) == null ) {
           LOG.info("Verification failed for " + block + ". Its ok since " +
           "it not in datanode dataset anymore.");
           deleteBlock(block.getPoolId(), block.getLocalBlock());
@@ -506,7 +509,7 @@ class DataBlockScanner implements Runnable {
     
     if ( block != null ) {
       // TODO:FEDERATION blockInfoSet should use ExtendedBlock
-      verifyBlock(new ExtendedBlock(block));
+      verifyBlock(new ExtendedBlock("TODO", block));
     }
   }
   

@@ -161,7 +161,7 @@ public class TestFiHftp {
     final DataNode dn = cluster.getDataNode(datanodeinfos[0].getIpcPort());
     LOG.info("dn=" + dn + ", blk=" + blk + " (length=" + blk.getNumBytes() + ")");
     final FSDataset data = (FSDataset)dn.getFSDataset();
-    final File blkfile = data.getBlockFile(blk.getLocalBlock());
+    final File blkfile = data.getBlockFile(blk);
     Assert.assertTrue(blkfile.delete());
 
     //read again by hftp, should get an exception 

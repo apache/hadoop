@@ -581,7 +581,7 @@ public class DataNode extends Configured
         bpRegistration.setStorageInfo(storage.getBPStorage(blockPoolId));
       }
       initFsDataSet(conf, dataDirs);
-      //data.addStorage(blockPoolId, storage);
+      data.addBlockPool(blockPoolId, conf);
     }
 
     /**
@@ -681,9 +681,7 @@ public class DataNode extends Configured
         // and can be safely GC'ed.
         //
         long brStartTime = now();
-        BlockListAsLongs bReport = data.getBlockReport(/* TODO:FEDERATION pass blockPoolId*/);
-
-        // TODO:FEDERATION add support for pool ID
+        BlockListAsLongs bReport = data.getBlockReport(blockPoolId);
         cmd = bpNamenode.blockReport(bpRegistration, blockPoolId, bReport
             .getBlockListAsLongs());
         long brTime = now() - brStartTime;

@@ -54,7 +54,8 @@ public class TestWriteToReplica {
       FSDataset dataSet = (FSDataset)dn.data;
 
       // set up replicasMap
-      setup(dataSet);
+      String bpid = cluster.getNamesystem().getPoolId();
+      setup(bpid, dataSet);
 
       // test close
       testClose(dataSet);
@@ -73,10 +74,11 @@ public class TestWriteToReplica {
       FSDataset dataSet = (FSDataset)dn.data;
 
       // set up replicasMap
-      setup(dataSet);
+      String bpid = cluster.getNamesystem().getPoolId();
+      setup(bpid, dataSet);
 
       // test append
-      testAppend(dataSet);
+      testAppend(bpid, dataSet);
     } finally {
       cluster.shutdown();
     }
@@ -92,7 +94,8 @@ public class TestWriteToReplica {
       FSDataset dataSet = (FSDataset)dn.data;
 
       // set up replicasMap
-      setup(dataSet);
+      String bpid = cluster.getNamesystem().getPoolId();
+      setup(bpid, dataSet);
 
       // test writeToRbw
       testWriteToRbw(dataSet);
@@ -111,7 +114,8 @@ public class TestWriteToReplica {
       FSDataset dataSet = (FSDataset)dn.data;
 
       // set up replicasMap
-      setup(dataSet);
+      String bpid = cluster.getNamesystem().getPoolId();
+      setup(bpid, dataSet);
 
       // test writeToTemporary
       testWriteToTemporary(dataSet);
@@ -120,42 +124,42 @@ public class TestWriteToReplica {
     }
   }
   
-  private void setup(FSDataset dataSet) throws IOException {
+  private void setup(String bpid, FSDataset dataSet) throws IOException {
     // setup replicas map
     ReplicasMap replicasMap = dataSet.volumeMap;
     FSVolume vol = dataSet.volumes.getNextVolume(0);
     ReplicaInfo replicaInfo = new FinalizedReplica(
         blocks[FINALIZED].getLocalBlock(), vol, vol.getDir());
-    replicasMap.add(replicaInfo);
+    replicasMap.add(bpid, replicaInfo);
     replicaInfo.getBlockFile().createNewFile();
     replicaInfo.getMetaFile().createNewFile();
     
-    replicasMap.add(new ReplicaInPipeline(
+    replicasMap.add(bpid, new ReplicaInPipeline(
         blocks[TEMPORARY].getBlockId(),
         blocks[TEMPORARY].getGenerationStamp(), vol, 
-        vol.createTmpFile(blocks[TEMPORARY].getLocalBlock()).getParentFile()));
+        vol.createTmpFile(bpid, blocks[TEMPORARY].getLocalBlock()).getParentFile()));
     
     replicaInfo = new ReplicaBeingWritten(blocks[RBW].getLocalBlock(), vol, 
-        vol.createRbwFile(blocks[RBW].getLocalBlock()).getParentFile(), null);
-    replicasMap.add(replicaInfo);
+        vol.createRbwFile(bpid, blocks[RBW].getLocalBlock()).getParentFile(), null);
+    replicasMap.add(bpid, replicaInfo);
     replicaInfo.getBlockFile().createNewFile();
     replicaInfo.getMetaFile().createNewFile();
     
-    replicasMap.add(new ReplicaWaitingToBeRecovered(
-        blocks[RWR].getLocalBlock(), vol, vol.createRbwFile(
+    replicasMap.add(bpid, new ReplicaWaitingToBeRecovered(
+        blocks[RWR].getLocalBlock(), vol, vol.createRbwFile(bpid,
             blocks[RWR].getLocalBlock()).getParentFile()));
-    replicasMap.add(new ReplicaUnderRecovery(new FinalizedReplica(blocks[RUR]
+    replicasMap.add(bpid, new ReplicaUnderRecovery(new FinalizedReplica(blocks[RUR]
         .getLocalBlock(), vol, vol.getDir()), 2007));    
   }
   
-  private void testAppend(FSDataset dataSet) throws IOException {
+  private void testAppend(String bpid, FSDataset dataSet) throws IOException {
     long newGS = blocks[FINALIZED].getGenerationStamp()+1;
-    FSVolume v = dataSet.volumeMap.get(blocks[FINALIZED].getLocalBlock())
+    FSVolume v = dataSet.volumeMap.get(bpid, blocks[FINALIZED].getLocalBlock())
         .getVolume();
     long available = v.getCapacity()-v.getDfsUsed();
     long expectedLen = blocks[FINALIZED].getNumBytes();
     try {
-      v.decDfsUsed(-available);
+      v.decDfsUsed(bpid, -available);
       blocks[FINALIZED].setNumBytes(expectedLen+100);
       dataSet.append(blocks[FINALIZED], newGS, expectedLen);
       Assert.fail("Should not have space to append to an RWR replica" + blocks[RWR]);
@@ -163,7 +167,7 @@ public class TestWriteToReplica {
       Assert.assertTrue(e.getMessage().startsWith(
           "Insufficient space for appending to "));
     }
-    v.decDfsUsed(available);
+    v.decDfsUsed(bpid, available);
     blocks[FINALIZED].setNumBytes(expectedLen);
 
     newGS = blocks[RBW].getGenerationStamp()+1;

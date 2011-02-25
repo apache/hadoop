@@ -135,7 +135,7 @@ public class TestFileAppend extends TestCase {
       //
       for (int i = 0; i < blocks.size(); i = i + 2) {
         ExtendedBlock b = blocks.get(i).getBlock();
-        File f = dataset.getFile(b.getLocalBlock());
+        File f = dataset.getFile(b.getPoolId(), b.getLocalBlock());
         File link = new File(f.toString() + ".link");
         System.out.println("Creating hardlink for File " + f + " to " + link);
         HardLink.createHardLink(f, link);
@@ -148,7 +148,7 @@ public class TestFileAppend extends TestCase {
         ExtendedBlock b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned true",
-            dataset.unlinkBlock(b.getLocalBlock(), 1));
+            dataset.unlinkBlock(b, 1));
       }
 
       // Since the blocks were already detached earlier, these calls should
@@ -158,7 +158,7 @@ public class TestFileAppend extends TestCase {
         ExtendedBlock b = blocks.get(i).getBlock();
         System.out.println("testCopyOnWrite detaching block " + b);
         assertTrue("Detaching block " + b + " should have returned false",
-            !dataset.unlinkBlock(b.getLocalBlock(), 1));
+            !dataset.unlinkBlock(b, 1));
       }
 
     } finally {

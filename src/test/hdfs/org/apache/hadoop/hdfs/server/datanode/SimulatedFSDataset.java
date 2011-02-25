@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import javax.management.NotCompliantMBeanException;
@@ -295,7 +296,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
   }
   
-  private HashMap<Block, BInfo> blockMap = null;
+  private Map<String, Map<Block, BInfo>> blockMap = null;
   private SimulatedStorage storage = null;
   private String storageId;
   
@@ -320,10 +321,10 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     //DataNode.LOG.info("Starting Simulated storage; Capacity = " + getCapacity() + 
     //    "Used = " + getDfsUsed() + "Free =" + getRemaining());
 
-    blockMap = new HashMap<Block,BInfo>(); 
+    blockMap = new HashMap<String, Map<Block,BInfo>>(); 
   }
 
-  public synchronized void injectBlocks(String poolId,
+  public synchronized void injectBlocks(String bpid,
       Iterable<Block> injectBlocks) throws IOException {
     ExtendedBlock blk = new ExtendedBlock();
     if (injectBlocks != null) {
@@ -333,31 +334,41 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         if (b == null) {
           throw new NullPointerException("Null blocks in block list");
         }
-        blk.set(poolId, b);
+        blk.set(bpid, b);
         if (isValidBlock(blk)) {
           throw new IOException("Block already exists in  block list");
         }
       }
-      HashMap<Block, BInfo> oldBlockMap = blockMap;
-      blockMap = new HashMap<Block,BInfo>(
-          numInjectedBlocks + oldBlockMap.size());
-      blockMap.putAll(oldBlockMap);
+      Map<Block, BInfo> map = blockMap.get(bpid);
+      if (map == null) {
+        map = new HashMap<Block, BInfo>();
+        blockMap.put(bpid, map);
+      }
+      
       for (Block b: injectBlocks) {
-          BInfo binfo = new BInfo(b, false);
-          blockMap.put(binfo.theBlock, binfo);
+        BInfo binfo = new BInfo(b, false);
+        map.put(binfo.theBlock, binfo);
       }
     }
+  }
+  
+  /** Get a map for a given block pool Id */
+  private Map<Block, BInfo> getMap(String bpid) throws IOException {
+    final Map<Block, BInfo> map = blockMap.get(bpid);
+    if (map == null) {
+      throw new IOException("Non existent blockpool " + bpid);
+    }
+    return map;
   }
 
   @Override // FSDatasetInterface
   public synchronized void finalizeBlock(ExtendedBlock b) throws IOException {
-    // TODO:FEDERATION use ExtendedBlock
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("Finalizing a non existing block " + b);
     }
     binfo.finalizeBlock(b.getNumBytes());
-
   }
 
   @Override // FSDatasetInterface
@@ -368,16 +379,21 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   @Override
-  public synchronized BlockListAsLongs getBlockReport() {
-    Block[] blockTable = new Block[blockMap.size()];
-    int count = 0;
-    for (BInfo b : blockMap.values()) {
-      if (b.isFinalized()) {
-        blockTable[count++] = b.theBlock;
+  public synchronized BlockListAsLongs getBlockReport(String bpid) {
+    final Map<Block, BInfo> map = blockMap.get(bpid);
+    Block[] blockTable = new Block[map.size()];
+    if (map != null) {
+      int count = 0;
+      for (BInfo b : map.values()) {
+        if (b.isFinalized()) {
+          blockTable[count++] = b.theBlock;
+        }
       }
-    }
-    if (count != blockTable.length) {
-      blockTable = Arrays.copyOf(blockTable, count);
+      if (count != blockTable.length) {
+        blockTable = Arrays.copyOf(blockTable, count);
+      }
+    } else {
+      blockTable = new Block[0];
     }
     return new BlockListAsLongs(
         new ArrayList<Block>(Arrays.asList(blockTable)), null);
@@ -397,7 +413,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   @Override // FSDatasetInterface
   public synchronized long getLength(ExtendedBlock b) throws IOException {
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("Finalizing a non existing block " + b);
     }
@@ -406,35 +423,40 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   @Override
   @Deprecated
-  public Replica getReplica(long blockId) {
-    return blockMap.get(new Block(blockId));
-  }
-
-  @Override // FSDatasetInterface
-  public Block getStoredBlock(String poolId, long blkid) throws IOException {
-    ExtendedBlock b = new ExtendedBlock(poolId, blkid);
-    // TODO:FEDERATION use ExtendedBlock
-    BInfo binfo = blockMap.get(b.getLocalBlock());
-    if (binfo == null) {
-      return null;
+  public Replica getReplica(String bpid, long blockId) {
+    final Map<Block, BInfo> map = blockMap.get(bpid);
+    if (map != null) {
+      return map.get(new Block(blockId));
     }
-    b.setGenerationStamp(binfo.getGenerationStamp());
-    b.setNumBytes(binfo.getNumBytes());
-    return b.getLocalBlock();
+    return null;
   }
 
   @Override // FSDatasetInterface
-  public synchronized void invalidate(String poolId, Block[] invalidBlks)
+  public Block getStoredBlock(String bpid, long blkid) throws IOException {
+    final Map<Block, BInfo> map = blockMap.get(bpid);
+    if (map != null) {
+      BInfo binfo = map.get(new Block(blkid));
+      if (binfo == null) {
+        return null;
+      }
+      return new Block(blkid, binfo.getGenerationStamp(), binfo.getNumBytes());
+    }
+    return null;
+  }
+
+  @Override // FSDatasetInterface
+  public synchronized void invalidate(String bpid, Block[] invalidBlks)
       throws IOException {
     boolean error = false;
     if (invalidBlks == null) {
       return;
     }
+    final Map<Block, BInfo> map = getMap(bpid);
     for (Block b: invalidBlks) {
       if (b == null) {
         continue;
       }
-      BInfo binfo = blockMap.get(b);
+      BInfo binfo = map.get(b);
       if (binfo == null) {
         error = true;
         DataNode.LOG.warn("Invalidate: Missing block");
@@ -443,16 +465,18 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       storage.free(binfo.getNumBytes());
       blockMap.remove(b);
     }
-      if (error) {
-          throw new IOException("Invalidate: Missing blocks.");
-      }
+    if (error) {
+      throw new IOException("Invalidate: Missing blocks.");
+    }
   }
 
   @Override // FSDatasetInterface
   public synchronized boolean isValidBlock(ExtendedBlock b) {
-    // return (blockMap.containsKey(b));
-    // TODO:FEDERATION use ExtendedBlock
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = blockMap.get(b.getPoolId());
+    if (map == null) {
+      return false;
+    }
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       return false;
     }
@@ -461,8 +485,11 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   /* check if a block is created but not finalized */
   private synchronized boolean isBeingWritten(ExtendedBlock b) {
-    // TODO:FEDERATION use ExtendedBlock
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = blockMap.get(b.getPoolId());
+    if (map == null) {
+      return false;
+    }
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       return false;
     }
@@ -476,7 +503,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface append(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException {
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null || !binfo.isFinalized()) {
       throw new ReplicaNotFoundException("Block " + b
           + " is not valid, and cannot be appended to.");
@@ -488,7 +516,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface recoverAppend(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException {
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new ReplicaNotFoundException("Block " + b
           + " is not valid, and cannot be appended to.");
@@ -496,16 +525,17 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (binfo.isFinalized()) {
       binfo.unfinalizeBlock();
     }
-    blockMap.remove(b);
+    map.remove(b);
     binfo.theBlock.setGenerationStamp(newGS);
-    blockMap.put(binfo.theBlock, binfo);
+    map.put(binfo.theBlock, binfo);
     return binfo;
   }
 
   @Override // FSDatasetInterface
   public void recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen)
       throws IOException {
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new ReplicaNotFoundException("Block " + b
           + " is not valid, and cannot be appended to.");
@@ -513,15 +543,16 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (!binfo.isFinalized()) {
       binfo.finalizeBlock(binfo.getNumBytes());
     }
-    blockMap.remove(b.getLocalBlock());
+    map.remove(b.getLocalBlock());
     binfo.theBlock.setGenerationStamp(newGS);
-    blockMap.put(binfo.theBlock, binfo);
+    map.put(binfo.theBlock, binfo);
   }
   
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface recoverRbw(ExtendedBlock b,
       long newGS, long minBytesRcvd, long maxBytesRcvd) throws IOException {
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if ( binfo == null) {
       throw new ReplicaNotFoundException("Block " + b
           + " does not exist, and cannot be appended to.");
@@ -530,9 +561,9 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       throw new ReplicaAlreadyExistsException("Block " + b
           + " is valid, and cannot be written to.");
     }
-    blockMap.remove(b);
+    map.remove(b);
     binfo.theBlock.setGenerationStamp(newGS);
-    blockMap.put(binfo.theBlock, binfo);
+    map.put(binfo.theBlock, binfo);
     return binfo;
   }
 
@@ -553,22 +584,21 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         throw new ReplicaAlreadyExistsException("Block " + b + 
             " is being written, and cannot be written to.");
     }
-    // TODO:FEDERATION use ExtendedBlock
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
     BInfo binfo = new BInfo(b.getLocalBlock(), true);
-    blockMap.put(binfo.theBlock, binfo);
+    map.put(binfo.theBlock, binfo);
     return binfo;
   }
 
   @Override // FSDatasetInterface
   public synchronized InputStream getBlockInputStream(ExtendedBlock b)
       throws IOException {
-    // TODO:FEDERATION use ExtendedBlock
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("No such Block " + b );  
     }
     
-    //DataNode.LOG.info("Opening block(" + b.blkid + ") of length " + b.len);
     return binfo.getIStream();
   }
   
@@ -596,8 +626,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
    */
   private synchronized InputStream getMetaDataInStream(ExtendedBlock b)
                                               throws IOException {
-    // TODO:FEDERATION use ExtendedBlock
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("No such Block " + b );  
     }
@@ -611,8 +641,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public synchronized long getMetaDataLength(ExtendedBlock b)
       throws IOException {
-    // TODO:FEDERATION use ExtendedBlock
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("No such Block " + b );  
     }
@@ -818,7 +848,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
   throws IOException {
     ExtendedBlock b = rBlock.getBlock();
-    BInfo binfo = blockMap.get(b.getLocalBlock());
+    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("No such Block " + b );  
     }
@@ -839,5 +870,11 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public long getReplicaVisibleLength(ExtendedBlock block) throws IOException {
     return block.getNumBytes();
+  }
+
+  @Override // FSDatasetInterface
+  public void addBlockPool(String bpid, Configuration conf) {
+    Map<Block, BInfo> map = new HashMap<Block, BInfo>();
+    blockMap.put(bpid, map);
   }
 }

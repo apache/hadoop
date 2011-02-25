@@ -354,16 +354,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return replicateBlocks.poll(maxTransfers);
   }
 
-  BlockRecoveryCommand getLeaseRecoveryCommand(int maxTransfers) {
+  BlockInfoUnderConstruction[] getLeaseRecoveryCommand(int maxTransfers) {
     List<BlockInfoUnderConstruction> blocks = recoverBlocks.poll(maxTransfers);
     if(blocks == null)
       return null;
-    BlockRecoveryCommand brCommand = new BlockRecoveryCommand(blocks.size());
-    for(BlockInfoUnderConstruction b : blocks) {
-      brCommand.add(new RecoveringBlock(
-          new ExtendedBlock(b), b.getExpectedLocations(), b.getBlockRecoveryId()));
-    }
-    return brCommand;
+    return blocks.toArray(new BlockInfoUnderConstruction[blocks.size()]);
   }
 
   /**

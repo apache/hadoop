@@ -130,44 +130,47 @@ public class TestInterDatanodeProtocol {
     Assert.assertEquals(originalInfo.getState(), recoveryInfo.getOriginalReplicaState());
   }
 
-  /** Test {@link FSDataset#initReplicaRecovery(ReplicasMap, Block, long)} */
+  /** Test 
+   * {@link FSDataset#initReplicaRecovery(String, ReplicasMap, Block, long)}
+   */
   @Test
   public void testInitReplicaRecovery() throws IOException {
     final long firstblockid = 10000L;
     final long gs = 7777L;
     final long length = 22L;
     final ReplicasMap map = new ReplicasMap();
+    String bpid = "BP-TEST";
     final Block[] blocks = new Block[5];
     for(int i = 0; i < blocks.length; i++) {
       blocks[i] = new Block(firstblockid + i, length, gs);
-      map.add(createReplicaInfo(blocks[i]));
+      map.add(bpid, createReplicaInfo(blocks[i]));
     }
     
     { 
       //normal case
       final Block b = blocks[0];
-      final ReplicaInfo originalInfo = map.get(b);
+      final ReplicaInfo originalInfo = map.get(bpid, b);
 
       final long recoveryid = gs + 1;
-      final ReplicaRecoveryInfo recoveryInfo = FSDataset.initReplicaRecovery(map, blocks[0], recoveryid);
+      final ReplicaRecoveryInfo recoveryInfo = FSDataset.initReplicaRecovery(bpid, map, blocks[0], recoveryid);
       assertEquals(originalInfo, recoveryInfo);
 
-      final ReplicaUnderRecovery updatedInfo = (ReplicaUnderRecovery)map.get(b);
+      final ReplicaUnderRecovery updatedInfo = (ReplicaUnderRecovery)map.get(bpid, b);
       Assert.assertEquals(originalInfo.getBlockId(), updatedInfo.getBlockId());
       Assert.assertEquals(recoveryid, updatedInfo.getRecoveryID());
 
       //recover one more time 
       final long recoveryid2 = gs + 2;
-      final ReplicaRecoveryInfo recoveryInfo2 = FSDataset.initReplicaRecovery(map, blocks[0], recoveryid2);
+      final ReplicaRecoveryInfo recoveryInfo2 = FSDataset.initReplicaRecovery(bpid, map, blocks[0], recoveryid2);
       assertEquals(originalInfo, recoveryInfo2);
 
-      final ReplicaUnderRecovery updatedInfo2 = (ReplicaUnderRecovery)map.get(b);
+      final ReplicaUnderRecovery updatedInfo2 = (ReplicaUnderRecovery)map.get(bpid, b);
       Assert.assertEquals(originalInfo.getBlockId(), updatedInfo2.getBlockId());
       Assert.assertEquals(recoveryid2, updatedInfo2.getRecoveryID());
       
       //case RecoveryInProgressException
       try {
-        FSDataset.initReplicaRecovery(map, b, recoveryid);
+        FSDataset.initReplicaRecovery(bpid, map, b, recoveryid);
         Assert.fail();
       }
       catch(RecoveryInProgressException ripe) {
@@ -178,7 +181,7 @@ public class TestInterDatanodeProtocol {
     { // BlockRecoveryFI_01: replica not found
       final long recoveryid = gs + 1;
       final Block b = new Block(firstblockid - 1, length, gs);
-      ReplicaRecoveryInfo r = FSDataset.initReplicaRecovery(map, b, recoveryid);
+      ReplicaRecoveryInfo r = FSDataset.initReplicaRecovery(bpid, map, b, recoveryid);
       Assert.assertNull("Data-node should not have this replica.", r);
     }
     
@@ -186,7 +189,7 @@ public class TestInterDatanodeProtocol {
       final long recoveryid = gs - 1;
       final Block b = new Block(firstblockid + 1, length, gs);
       try {
-        FSDataset.initReplicaRecovery(map, b, recoveryid);
+        FSDataset.initReplicaRecovery(bpid, map, b, recoveryid);
         Assert.fail();
       }
       catch(IOException ioe) {
@@ -199,7 +202,7 @@ public class TestInterDatanodeProtocol {
       final long recoveryid = gs + 1;
       final Block b = new Block(firstblockid, length, gs+1);
       try {
-        FSDataset.initReplicaRecovery(map, b, recoveryid);
+        FSDataset.initReplicaRecovery(bpid, map, b, recoveryid);
         fail("InitReplicaRecovery should fail because replica's " +
         		"gs is less than the block's gs");
       } catch (IOException e) {
@@ -221,6 +224,7 @@ public class TestInterDatanodeProtocol {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
+      String bpid = cluster.getNamesystem().getPoolId();
 
       //create a file
       DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
@@ -248,7 +252,7 @@ public class TestInterDatanodeProtocol {
           new RecoveringBlock(b, null, recoveryid));
 
       //check replica
-      final ReplicaInfo replica = fsdataset.fetchReplicaInfo(b.getBlockId());
+      final ReplicaInfo replica = fsdataset.fetchReplicaInfo(bpid, b.getBlockId());
       Assert.assertEquals(ReplicaState.RUR, replica.getState());
 
       //check meta data before update

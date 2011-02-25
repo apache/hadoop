@@ -28,11 +28,13 @@ public class DataNodeAdapter {
   /**
    * Fetch a copy of ReplicaInfo from a datanode by block id
    * @param dn datanode to retrieve a replicainfo object from
+   * @param bpid Block pool Id
    * @param blkId id of the replica's block
    * @return copy of ReplicaInfo object @link{FSDataset#fetchReplicaInfo}
    */
   public static ReplicaInfo fetchReplicaInfo (final DataNode dn,
+                                              final String bpid,
                                               final long blkId) {
-    return ((FSDataset)dn.data).fetchReplicaInfo(blkId);
+    return ((FSDataset)dn.data).fetchReplicaInfo(bpid, blkId);
   }
 }

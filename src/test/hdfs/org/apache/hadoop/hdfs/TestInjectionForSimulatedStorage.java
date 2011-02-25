@@ -140,23 +140,17 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       //first time format
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
       cluster.waitActive();
+      String bpid = cluster.getNamesystem().getPoolId();
       DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                             cluster.getNameNodePort()),
                                             conf);
       
       writeFile(cluster.getFileSystem(), testPath, numDataNodes);
-
-      
       waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, 20);
-
-      
-      Iterable<Block>[] blocksList = cluster.getAllBlockReports();
-                    
+      Iterable<Block>[] blocksList = cluster.getAllBlockReports(bpid);
       
       cluster.shutdown();
       cluster = null;
-      
-
       
       /* Start the MiniDFSCluster with more datanodes since once a writeBlock
        * to a datanode node fails, same block can not be written to it

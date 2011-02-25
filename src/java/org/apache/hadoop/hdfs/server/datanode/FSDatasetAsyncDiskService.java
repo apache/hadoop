@@ -147,12 +147,12 @@ class FSDatasetAsyncDiskService {
    * Delete the block file and meta file from the disk asynchronously, adjust
    * dfsUsed statistics accordingly.
    */
-  void deleteAsync(FSDataset.FSVolume volume, File blockFile,
+  void deleteAsync(FSDataset.FSVolume volume, String bpid, File blockFile,
       File metaFile, long dfsBytes, String blockName) {
     DataNode.LOG.info("Scheduling block " + blockName + " file " + blockFile
         + " for deletion");
     ReplicaFileDeleteTask deletionTask = 
-        new ReplicaFileDeleteTask(volume, blockFile, metaFile, dfsBytes,
+        new ReplicaFileDeleteTask(volume, bpid, blockFile, metaFile, dfsBytes,
             blockName);
     execute(volume.getCurrentDir(), deletionTask);
   }
@@ -161,16 +161,17 @@ class FSDatasetAsyncDiskService {
    *  as decrement the dfs usage of the volume. 
    */
   static class ReplicaFileDeleteTask implements Runnable {
-
-    FSDataset.FSVolume volume;
-    File blockFile;
-    File metaFile;
-    long dfsBytes;
-    String blockName;
+    final FSDataset.FSVolume volume;
+    final String blockPoolId;
+    final File blockFile;
+    final File metaFile;
+    final long dfsBytes;
+    final String blockName;
     
-    ReplicaFileDeleteTask(FSDataset.FSVolume volume, File blockFile,
-        File metaFile, long dfsBytes, String blockName) {
+    ReplicaFileDeleteTask(FSDataset.FSVolume volume, String bpid,
+        File blockFile, File metaFile, long dfsBytes, String blockName) {
       this.volume = volume;
+      this.blockPoolId = bpid;
       this.blockFile = blockFile;
       this.metaFile = metaFile;
       this.dfsBytes = dfsBytes;
@@ -184,18 +185,21 @@ class FSDatasetAsyncDiskService {
     @Override
     public String toString() {
       // Called in AsyncDiskService.execute for displaying error messages.
-      return "deletion of block " + blockName + " with block file " + blockFile
-          + " and meta file " + metaFile + " from volume " + volume;
+      return "deletion of block " + blockPoolId + " " + blockName
+          + " with block file " + blockFile + " and meta file " + metaFile
+          + " from volume " + volume;
     }
 
     @Override
     public void run() {
       if ( !blockFile.delete() || ( !metaFile.delete() && metaFile.exists() ) ) {
         DataNode.LOG.warn("Unexpected error trying to delete block "
-            + blockName + " at file " + blockFile + ". Ignored.");
+            + blockPoolId + " " + blockName + " at file " + blockFile
+            + ". Ignored.");
       } else {
-        volume.decDfsUsed(dfsBytes);
-        DataNode.LOG.info("Deleted block " + blockName + " at file " + blockFile);
+        volume.decDfsUsed(blockPoolId, dfsBytes);
+        DataNode.LOG.info("Deleted block " + blockPoolId + " " + blockName
+            + " at file " + blockFile);
       }
     }
   };

@@ -49,16 +49,6 @@ public class ExtendedBlock implements Writable {
     this(null, 0, 0, 0);
   }
 
-  // TODO:FEDERATION To remove when block pool ID related coding is complete
-  public ExtendedBlock(final Block b) {
-    this("TODO", b);
-  }
-  
-  // TODO:FEDERATION To remove when block pool ID related coding is complete
-  public ExtendedBlock(final long blkId) {
-    this("TODO", new Block(blkId));
-  }
-  
   public ExtendedBlock(final ExtendedBlock b) {
     this(b.poolId, b.block);
   }

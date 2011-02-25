@@ -195,7 +195,7 @@ public class BlockTokenSecretManager extends
    */
   public void checkAccess(Token<BlockTokenIdentifier> blockToken, String userId,
       Block block, AccessMode mode) throws InvalidToken {
-    checkAccess(blockToken, userId, new ExtendedBlock(block), mode);
+    checkAccess(blockToken, userId, new ExtendedBlock("TODO", block), mode);
   }
   
   /**

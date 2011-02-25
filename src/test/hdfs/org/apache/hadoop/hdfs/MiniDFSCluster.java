@@ -827,6 +827,7 @@ public class MiniDFSCluster {
 
   /*
    * Corrupt a block on a particular datanode
+   * Types: delete, write bad data, truncate
    */
   boolean corruptBlockOnDataNode(int i, ExtendedBlock blk) throws Exception {
     Random random = new Random();
@@ -1094,11 +1095,12 @@ public class MiniDFSCluster {
    * @param dataNodeIndex - data node whose block report is desired - the index is same as for getDataNodes()
    * @return the block report for the specified data node
    */
-  public Iterable<Block> getBlockReport(int dataNodeIndex) {
+  public Iterable<Block> getBlockReport(String bpid, int dataNodeIndex) {
     if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
       throw new IndexOutOfBoundsException();
     }
-    return dataNodes.get(dataNodeIndex).datanode.getFSDataset().getBlockReport();
+    return dataNodes.get(dataNodeIndex).datanode.getFSDataset().getBlockReport(
+        bpid);
   }
   
   
@@ -1107,11 +1109,11 @@ public class MiniDFSCluster {
    * @return block reports from all data nodes
    *    BlockListAsLongs is indexed in the same order as the list of datanodes returned by getDataNodes()
    */
-  public Iterable<Block>[] getAllBlockReports() {
+  public Iterable<Block>[] getAllBlockReports(String bpid) {
     int numDataNodes = dataNodes.size();
     Iterable<Block>[] result = new BlockListAsLongs[numDataNodes];
     for (int i = 0; i < numDataNodes; ++i) {
-     result[i] = getBlockReport(i);
+     result[i] = getBlockReport(bpid, i);
     }
     return result;
   }

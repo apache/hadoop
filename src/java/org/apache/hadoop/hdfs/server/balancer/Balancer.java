@@ -379,7 +379,7 @@ public class Balancer implements Tool {
       }
       // TODO:FEDERATION use ExtendedBlock in BalancerBlock
       DataTransferProtocol.Sender.opReplaceBlock(out,
-          new ExtendedBlock(block.getBlock()), source.getStorageID(), 
+          new ExtendedBlock("TODO", block.getBlock()), source.getStorageID(), 
           proxySource.getDatanode(), accessToken);
     }
     

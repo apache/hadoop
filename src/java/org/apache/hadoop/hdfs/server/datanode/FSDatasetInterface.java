@@ -25,6 +25,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -103,12 +104,12 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @return replica from the replicas map
    */
   @Deprecated
-  public Replica getReplica(long blockId);
+  public Replica getReplica(String bpid, long blockId);
 
   /**
    * @return the generation stamp stored with the block.
    */
-  public Block getStoredBlock(String poolId, long blkid)
+  public Block getStoredBlock(String bpid, long blkid)
       throws IOException;
 
   /**
@@ -271,10 +272,12 @@ public interface FSDatasetInterface extends FSDatasetMBean {
   public void unfinalizeBlock(ExtendedBlock b) throws IOException;
 
   /**
-   * Returns the block report - the full list of blocks stored
+   * Returns the block report - the full list of blocks stored under a 
+   * block pool
+   * @param bpid Block Pool Id
    * @return - the block report - the full list of blocks stored
    */
-  public BlockListAsLongs getBlockReport();
+  public BlockListAsLongs getBlockReport(String bpid);
 
   /**
    * Is the block valid?
@@ -285,10 +288,11 @@ public interface FSDatasetInterface extends FSDatasetMBean {
 
   /**
    * Invalidates the specified blocks
+   * @param bpid Block pool Id
    * @param invalidBlks - the blocks to be invalidated
    * @throws IOException
    */
-  public void invalidate(String poolId, Block invalidBlks[]) throws IOException;
+  public void invalidate(String bpid, Block invalidBlks[]) throws IOException;
 
     /**
      * Check if all the data directories are healthy
@@ -330,12 +334,11 @@ public interface FSDatasetInterface extends FSDatasetMBean {
 
   /**
    * Initialize a replica recovery.
-   * 
    * @return actual state of the replica on this data-node or 
    * null if data-node does not have the replica.
    */
   public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
-  throws IOException;
+      throws IOException;
 
   /**
    * Update replica's generation stamp and length and finalize it.
@@ -344,4 +347,10 @@ public interface FSDatasetInterface extends FSDatasetMBean {
                                           ExtendedBlock oldBlock,
                                           long recoveryId,
                                           long newLength) throws IOException;
+  /**
+   * add new block pool ID
+   * @param bpid Block pool Id
+   * @param conf Configuration
+   */
+  public void addBlockPool(String bpid, Configuration conf) throws IOException;
 }

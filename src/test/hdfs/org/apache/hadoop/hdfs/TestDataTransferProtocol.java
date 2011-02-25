@@ -49,7 +49,6 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
@@ -420,7 +419,8 @@ public class TestDataTransferProtocol extends TestCase {
     
     /* Test OP_READ_BLOCK */
 
-    ExtendedBlock blk = new ExtendedBlock(firstBlock.getLocalBlock());
+    String bpid = cluster.getNamesystem().getPoolId();
+    ExtendedBlock blk = new ExtendedBlock(bpid, firstBlock.getLocalBlock());
     long blkid = blk.getBlockId();
     // bad block id
     sendBuf.reset();

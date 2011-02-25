@@ -199,7 +199,7 @@ public class TestFileAppend3 extends junit.framework.TestCase {
     assertEquals(repl, datanodeinfos.length);
     final DataNode dn = cluster.getDataNode(datanodeinfos[0].getIpcPort());
     final FSDataset data = (FSDataset)dn.getFSDataset();
-    final RandomAccessFile raf = new RandomAccessFile(data.getBlockFile(blk.getLocalBlock()), "rw");
+    final RandomAccessFile raf = new RandomAccessFile(data.getBlockFile(blk), "rw");
     AppendTestUtil.LOG.info("dn=" + dn + ", blk=" + blk + " (length=" + blk.getNumBytes() + ")");
     assertEquals(len1, raf.length());
     raf.setLength(0);

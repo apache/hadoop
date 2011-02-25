@@ -39,6 +39,8 @@ Trunk (unreleased changes)
 
     HDFS-1647. Federation: Multiple namenode configuration. (jitendra)
 
+    HDFS-1639. Add block pool management to FSDataset. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

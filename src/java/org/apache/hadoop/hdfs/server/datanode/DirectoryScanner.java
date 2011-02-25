@@ -173,8 +173,9 @@ public class DirectoryScanner {
   void reconcile() {
     scan();
     for (ScanInfo info : diff) {
-      dataset.checkAndUpdate(info.getBlockId(), info.getBlockFile(), info
-          .getMetaFile(), info.getVolume());
+      // TODO:FEDERATION use right block pool Id
+      dataset.checkAndUpdate("TODO", info.getBlockId(), info.getBlockFile(),
+          info.getMetaFile(), info.getVolume());
     }
   }
 
@@ -188,7 +189,8 @@ public class DirectoryScanner {
 
     // Hold FSDataset lock to prevent further changes to the block map
     synchronized(dataset) {
-      Block[] memReport = dataset.getBlockList(false);
+      // TODO:FEDERATION use right block pool Id
+      Block[] memReport = dataset.getBlockList("TODO", false);
       Arrays.sort(memReport); // Sort based on blockId
 
       int d = 0; // index for diskReport

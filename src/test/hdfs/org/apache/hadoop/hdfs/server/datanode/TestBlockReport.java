@@ -490,15 +490,15 @@ public class TestBlockReport {
       LOG.debug("Total number of DNs " + cluster.getDataNodes().size());
     }
     // Look about specified DN for the replica of the block from 1st DN
-    Replica r;
-    r = ((FSDataset) cluster.getDataNodes().get(DN_N1).getFSDataset()).
-      fetchReplicaInfo(bl.getBlockId());
+    String bpid = cluster.getNamesystem().getPoolId();
+    Replica r = ((FSDataset) cluster.getDataNodes().get(DN_N1).getFSDataset()).
+      fetchReplicaInfo(bpid, bl.getBlockId());
     long start = System.currentTimeMillis();
     int count = 0;
     while (r == null) {
       waitTil(50);
       r = ((FSDataset) cluster.getDataNodes().get(DN_N1).getFSDataset()).
-        fetchReplicaInfo(bl.getBlockId());
+        fetchReplicaInfo(bpid, bl.getBlockId());
       long waiting_period = System.currentTimeMillis() - start;
       if (count++ % 10 == 0)
         if(LOG.isDebugEnabled()) {

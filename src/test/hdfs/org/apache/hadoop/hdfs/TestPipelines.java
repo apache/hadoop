@@ -103,8 +103,9 @@ public class TestPipelines {
     List<LocatedBlock> lb = cluster.getNameNode().getBlockLocations(
       filePath.toString(), FILE_SIZE - 1, FILE_SIZE).getLocatedBlocks();
 
+    String bpid = cluster.getNamesystem().getPoolId();
     Replica r = DataNodeAdapter.fetchReplicaInfo(cluster.getDataNodes().get(0),
-      lb.get(0).getBlock().getBlockId());
+        bpid, lb.get(0).getBlock().getBlockId());
     assertTrue("Replica shouldn'e be null", r != null);
     assertEquals(
       "Should be RBW replica after sequence of calls append()/write()/hflush()",

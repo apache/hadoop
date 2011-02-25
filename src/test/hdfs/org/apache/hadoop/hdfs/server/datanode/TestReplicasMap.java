@@ -27,11 +27,12 @@ import org.junit.Test;
  */
 public class TestReplicasMap {
   private static final ReplicasMap map = new ReplicasMap();
+  private static final String bpid = "BP-TEST";
   private static final  Block block = new Block(1234, 1234, 1234);
   
   @BeforeClass
   public static void setup() {
-    map.add(new FinalizedReplica(block, null, null));
+    map.add(bpid, new FinalizedReplica(block, null, null));
   }
   
   /**
@@ -41,35 +42,35 @@ public class TestReplicasMap {
   public void testGet() {
     // Test 1: null argument throws invalid argument exception
     try {
-      map.get(null);
+      map.get(bpid, null);
       fail("Expected exception not thrown");
     } catch (IllegalArgumentException expected) { }
     
     // Test 2: successful lookup based on block
-    assertNotNull(map.get(block));
+    assertNotNull(map.get(bpid, block));
     
     // Test 3: Lookup failure - generation stamp mismatch 
     Block b = new Block(block);
     b.setGenerationStamp(0);
-    assertNull(map.get(b));
+    assertNull(map.get(bpid, b));
     
     // Test 4: Lookup failure - blockID mismatch
     b.setGenerationStamp(block.getGenerationStamp());
     b.setBlockId(0);
-    assertNull(map.get(b));
+    assertNull(map.get(bpid, b));
     
     // Test 5: successful lookup based on block ID
-    assertNotNull(map.get(block.getBlockId()));
+    assertNotNull(map.get(bpid, block.getBlockId()));
     
     // Test 6: failed lookup for invalid block ID
-    assertNull(map.get(0));
+    assertNull(map.get(bpid, 0));
   }
   
   @Test
   public void testAdd() {
     // Test 1: null argument throws invalid argument exception
     try {
-      map.add(null);
+      map.add(bpid, null);
       fail("Expected exception not thrown");
     } catch (IllegalArgumentException expected) { }
   }
@@ -78,28 +79,28 @@ public class TestReplicasMap {
   public void testRemove() {
     // Test 1: null argument throws invalid argument exception
     try {
-      map.remove(null);
+      map.remove(bpid, null);
       fail("Expected exception not thrown");
     } catch (IllegalArgumentException expected) { }
     
     // Test 2: remove failure - generation stamp mismatch 
     Block b = new Block(block);
     b.setGenerationStamp(0);
-    assertNull(map.remove(b));
+    assertNull(map.remove(bpid, b));
     
     // Test 3: remove failure - blockID mismatch
     b.setGenerationStamp(block.getGenerationStamp());
     b.setBlockId(0);
-    assertNull(map.remove(b));
+    assertNull(map.remove(bpid, b));
     
     // Test 4: remove success
-    assertNotNull(map.remove(block));
+    assertNotNull(map.remove(bpid, block));
     
     // Test 5: remove failure - invalid blockID
-    assertNull(map.remove(0));
+    assertNull(map.remove(bpid, 0));
     
     // Test 6: remove success
-    map.add(new FinalizedReplica(block, null, null));
-    assertNotNull(map.remove(block.getBlockId()));
+    map.add(bpid, new FinalizedReplica(block, null, null));
+    assertNotNull(map.remove(bpid, block.getBlockId()));
   }
 }

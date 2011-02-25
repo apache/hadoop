@@ -45,7 +45,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.shell.Count;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.io.IOUtils;
@@ -1108,14 +1107,12 @@ public class TestDFSShell extends TestCase {
   static List<File> getBlockFiles(MiniDFSCluster cluster) throws IOException {
     List<File> files = new ArrayList<File>();
     List<DataNode> datanodes = cluster.getDataNodes();
-    Iterable<Block>[] blocks = cluster.getAllBlockReports();
-    ExtendedBlock blk = new ExtendedBlock();
     String poolId = cluster.getNamesystem().getPoolId();
+    Iterable<Block>[] blocks = cluster.getAllBlockReports(poolId);
     for(int i = 0; i < blocks.length; i++) {
       FSDataset ds = (FSDataset)datanodes.get(i).getFSDataset();
       for(Block b : blocks[i]) {
-        blk.set(poolId, b);
-        files.add(ds.getBlockFile(blk.getLocalBlock()));
+        files.add(ds.getBlockFile(poolId, b));
       }        
     }
     return files;
