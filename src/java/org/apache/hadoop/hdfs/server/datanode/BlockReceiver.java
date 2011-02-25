@@ -43,6 +43,7 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionSta
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
@@ -244,6 +245,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private void verifyChunks( byte[] dataBuf, int dataOff, int len, 
                              byte[] checksumBuf, int checksumOff ) 
                              throws IOException {
+    DatanodeProtocol nn = datanode.getNamenode(block);
     while (len > 0) {
       int chunkLen = Math.min(len, bytesPerChecksum);
       
@@ -256,7 +258,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                       srcDataNode + " to namenode");
             LocatedBlock lb = new LocatedBlock(block, 
                                             new DatanodeInfo[] {srcDataNode});
-            datanode.namenode.reportBadBlocks(new LocatedBlock[] {lb});
+            nn.reportBadBlocks(new LocatedBlock[] {lb});
           } catch (IOException e) {
             LOG.warn("Failed to report bad block " + block + 
                       " from datanode " + srcDataNode + " to namenode");

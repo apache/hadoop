@@ -48,9 +48,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
@@ -366,19 +364,12 @@ class DataBlockScanner implements Runnable {
   }
   
   private void handleScanFailure(ExtendedBlock block) {
-    
-    LOG.info("Reporting bad block " + block + " to namenode.");
-    
+    LOG.info("Reporting bad block " + block);
     try {
-      DatanodeInfo[] dnArr = { new DatanodeInfo(datanode.dnRegistration) };
-      LocatedBlock[] blocks = { new LocatedBlock(block, dnArr) }; 
-      datanode.namenode.reportBadBlocks(blocks);
-    } catch (IOException e){
-      /* One common reason is that NameNode could be in safe mode.
-       * Should we keep on retrying in that case?
-       */
-      LOG.warn("Failed to report bad block " + block + " to namenode : " +
-               " Exception : " + StringUtils.stringifyException(e));
+      datanode.reportBadBlocks(block);
+    } catch (IOException ie) {
+      // it is bad, but not bad enough to shutdown the scanner
+      LOG.warn("Cannot report bad block=" + block.getBlockId());
     }
   }
   

@@ -304,9 +304,6 @@ public class DataNode extends Configured
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     }
 
-    // TODO:FEDERATION this.nameNodeAddr = NameNode.getServiceAddress(conf, true);
-    // FEDDERATION this.nameNodeAddrForClient = NameNode.getAddress(conf);
-
     this.socketTimeout =  conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
                                       HdfsConstants.READ_TIMEOUT);
     this.socketWriteTimeout = conf.getInt("dfs.datanode.socket.write.timeout",
@@ -455,6 +452,15 @@ public class DataNode extends Configured
     }
   }
 
+  
+  public void reportBadBlocks(ExtendedBlock block) throws IOException{
+    BPOfferService bpos = bpMapping.get(block.getPoolId());
+    if(bpos == null || bpos.bpNamenode == null) {
+      throw new IOException("cannot locate OfferService thread for bp="+block.getPoolId());
+    }
+    bpos.reportBadBlocks(block);
+  }
+  
   /**
    * A thread per namenode to perform:
    * <ul>
@@ -598,6 +604,22 @@ public class DataNode extends Configured
       resetBlockReportTime = true; // reset future BRs for randomness
     }
 
+    private void reportBadBlocks(ExtendedBlock block) {
+      DatanodeInfo[] dnArr = { new DatanodeInfo(bpRegistration) };
+      LocatedBlock[] blocks = { new LocatedBlock(block, dnArr) }; 
+      
+      try {
+        bpNamenode.reportBadBlocks(blocks);  
+      } catch (IOException e){
+        /* One common reason is that NameNode could be in safe mode.
+         * Should we keep on retrying in that case?
+         */
+        LOG.warn("Failed to report bad block " + block + " to namenode : " +
+                 " Exception : " + StringUtils.stringifyException(e));
+      }
+      
+    }
+    
     /**
      * Report received blocks and delete hints to the Namenode
      * @throws IOException
@@ -1448,11 +1470,13 @@ public class DataNode extends Configured
   private void transferBlock( ExtendedBlock block, 
                               DatanodeInfo xferTargets[] 
                               ) throws IOException {
+    DatanodeProtocol nn = getNamenode(block);
+    
     if (!data.isValidBlock(block)) {
       // block does not exist or is under-construction
       String errStr = "Can't send invalid block " + block;
       LOG.info(errStr);
-      namenode.errorReport(dnRegistration, 
+      nn.errorReport(dnRegistration, 
                            DatanodeProtocol.INVALID_BLOCK, 
                            errStr);
       return;
@@ -2043,10 +2067,36 @@ public class DataNode extends Configured
     syncBlock(rBlock, syncList);
   }
 
+  /**
+   * 
+   * @param eblock
+   * @return namenode corresponding to the Extended block
+   * @throws IOException
+   */
+  public DatanodeProtocol getNamenode(ExtendedBlock eblock) throws IOException {
+    return getNamenodeForBP(eblock.getPoolId());
+  }
+  
+  /**
+   * 
+   * @param bpid
+   * @return Namenode corresponding to the bpid
+   * @throws IOException
+   */
+  public DatanodeProtocol getNamenodeForBP(String bpid) throws IOException {
+    BPOfferService bpos = bpMapping.get(bpid);
+    if(bpos == null || bpos.bpNamenode == null) {
+      throw new IOException("cannot find a namnode proxy for bpid=" + bpid);
+    }
+    return bpos.bpNamenode;
+  }
+
   /** Block synchronization */
   void syncBlock(RecoveringBlock rBlock,
                          List<BlockRecord> syncList) throws IOException {
     ExtendedBlock block = rBlock.getBlock();
+    DatanodeProtocol nn = getNamenode(block);
+    
     long recoveryId = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {
       LOG.debug("block=" + block + ", (length=" + block.getNumBytes()
@@ -2057,7 +2107,7 @@ public class DataNode extends Configured
     // or their replicas have 0 length.
     // The block can be deleted.
     if (syncList.isEmpty()) {
-      namenode.commitBlockSynchronization(block, recoveryId, 0,
+      nn.commitBlockSynchronization(block, recoveryId, 0,
           true, true, DatanodeID.EMPTY_ARRAY);
       return;
     }
@@ -2144,7 +2194,7 @@ public class DataNode extends Configured
 
     // Notify the name-node about successfully recovered replicas.
     DatanodeID[] nlist = successList.toArray(new DatanodeID[successList.size()]);
-    namenode.commitBlockSynchronization(block,
+    nn.commitBlockSynchronization(block,
         newBlock.getGenerationStamp(), newBlock.getNumBytes(), true, false,
         nlist);
   }

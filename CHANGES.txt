@@ -44,6 +44,8 @@ Trunk (unreleased changes)
     HDFS-1648. Only DataStorage must be locked using in_use.lock and no 
     locks must be associated with BlockPoolStorage. (tanping via suresh)
 
+    HDFS-1641. Datanode fields that are no longer used should be removed (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

@@ -261,7 +261,7 @@ public class TestDataNodeMultipleRegistrations {
     
 
     for (BPOfferService bpos : dn.nameNodeThreads) {
-      LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.name
+      LOG.debug("reg: bpid=" + "; name=" + bpos.bpRegistration.name
           + "; sid=" + bpos.bpRegistration.storageID + "; nna=" + bpos.nn_addr);
     }
     
