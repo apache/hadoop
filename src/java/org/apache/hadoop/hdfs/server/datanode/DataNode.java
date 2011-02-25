@@ -1014,8 +1014,8 @@ public class DataNode extends Configured
         }
         break;
       case DatanodeProtocol.DNA_FINALIZE:
-        // TODO:FEDERATION - global storage????? or per BP storage - add real BPID
-        storage.finalizeUpgrade("FAKE ID NEEDS TO BE REPLACED");
+        storage.finalizeUpgrade(((DatanodeCommand.Finalize) cmd)
+            .getBlockPoolId());
         break;
       case UpgradeCommand.UC_ACTION_START_UPGRADE:
         // start distributed upgrade here

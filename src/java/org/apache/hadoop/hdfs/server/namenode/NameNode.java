@@ -251,7 +251,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   public static URI [] getNameNodesURIs(Configuration conf) {
     String [] nnURIs = conf.getStrings(DFSConfigKeys.DFS_FEDERATION_NAMENODES);
     if(nnURIs == null) {
-      nnURIs = new String[] { conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY)};
+      nnURIs = new String[] {conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY)};
     }
 
     AbstractList<URI> nns = new ArrayList<URI>(nnURIs.length);
@@ -300,6 +300,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   /**
    * TODO:FEDERATION
    * @param filesystemURI
+   * @return address of file system
    */
   public static InetSocketAddress getAddress(URI filesystemURI) {
     String authority = filesystemURI.getAuthority();
@@ -1300,7 +1301,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
     namesystem.processReport(nodeReg, poolId, blist);
     if (getFSImage().isUpgradeFinalized())
-      return DatanodeCommand.FINALIZE;
+      return new DatanodeCommand.Finalize(poolId);
     return null;
   }
 
@@ -1356,8 +1357,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    */
   public void verifyRequest(NodeRegistration nodeReg) throws IOException {
     verifyVersion(nodeReg.getVersion());
-    if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID()))
+    if (!namesystem.getRegistrationID().equals(nodeReg.getRegistrationID())) {
+      LOG.warn("Invalid registrationID - expected: "
+          + namesystem.getRegistrationID() + " received: "
+          + nodeReg.getRegistrationID());
       throw new UnregisteredNodeException(nodeReg);
+    }
   }
     
   /**

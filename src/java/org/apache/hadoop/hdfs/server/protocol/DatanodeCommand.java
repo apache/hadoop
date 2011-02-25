@@ -19,12 +19,14 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.avro.reflect.Union;
 
 /**
@@ -47,10 +49,27 @@ public abstract class DatanodeCommand extends ServerCommand {
     public void write(DataOutput out) {}
   }
 
-  static class Finalize extends DatanodeCommand {
-    private Finalize() {super(DatanodeProtocol.DNA_FINALIZE);}
-    public void readFields(DataInput in) {}
-    public void write(DataOutput out) {}
+  public static class Finalize extends DatanodeCommand {
+    String blockPoolId;
+    private Finalize() {
+      super(DatanodeProtocol.DNA_FINALIZE);
+    }
+    
+    public Finalize(String bpid) {
+      super(DatanodeProtocol.DNA_FINALIZE);
+      blockPoolId = bpid;
+    }
+    
+    public String getBlockPoolId() {
+      return blockPoolId;
+    }
+    
+    public void readFields(DataInput in) throws IOException {
+      blockPoolId = WritableUtils.readString(in);
+    }
+    public void write(DataOutput out) throws IOException {
+      WritableUtils.writeString(out, blockPoolId);
+    }
   }
 
   static {                                      // register a ctor
@@ -65,7 +84,6 @@ public abstract class DatanodeCommand extends ServerCommand {
   }
 
   public static final DatanodeCommand REGISTER = new Register();
-  public static final DatanodeCommand FINALIZE = new Finalize();
   
   public DatanodeCommand() {
     super();
