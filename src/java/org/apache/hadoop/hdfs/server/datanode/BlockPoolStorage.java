@@ -94,7 +94,7 @@ public class BlockPoolStorage extends Storage {
         dataDirs.size());
     for (Iterator<File> it = dataDirs.iterator(); it.hasNext();) {
       File dataDir = it.next();
-      StorageDirectory sd = new StorageDirectory(dataDir);
+      StorageDirectory sd = new StorageDirectory(dataDir, null, false);
       StorageState curState;
       try {
         curState = sd.analyzeStorage(startOpt);

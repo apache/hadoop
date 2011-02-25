@@ -198,19 +198,32 @@ public abstract class Storage extends StorageInfo {
    */
   @InterfaceAudience.Private
   public class StorageDirectory {
-    File              root; // root directory
-    FileLock          lock; // storage lock
-    StorageDirType dirType; // storage dir type
+    final File root;              // root directory
+    final boolean useLock;        // flag to enable storage lock
+    final StorageDirType dirType; // storage dir type
+    FileLock lock;                // storage lock
     
     public StorageDirectory(File dir) {
       // default dirType is null
-      this(dir, null);
+      this(dir, null, true);
     }
     
     public StorageDirectory(File dir, StorageDirType dirType) {
+      this(dir, dirType, true);
+    }
+    
+    /**
+     * Constructor
+     * @param dir directory corresponding to the storage
+     * @param dirType storage directory type
+     * @param useLock true - enables locking on the storage directory and false
+     *          disables locking
+     */
+    public StorageDirectory(File dir, StorageDirType dirType, boolean useLock) {
       this.root = dir;
       this.lock = null;
       this.dirType = dirType;
+      this.useLock = useLock;
     }
     
     /**
@@ -616,6 +629,10 @@ public abstract class Storage extends StorageInfo {
      * @throws IOException if locking fails
      */
     public void lock() throws IOException {
+      if (!useLock) {
+        LOG.info("Locking is disabled");
+        return;
+      }
       this.lock = tryLock();
       if (lock == null) {
         String msg = "Cannot lock storage " + this.root 

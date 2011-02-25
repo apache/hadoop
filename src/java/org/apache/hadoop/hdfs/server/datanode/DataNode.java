@@ -911,13 +911,6 @@ public class DataNode extends Configured
         register();
       } catch (IOException ioe) {
         LOG.error(bpRegistration + ": Setup failed", ioe);
-        try {
-          // TODO:FEDERATION needs to unlock only this specific storage...
-          // and remove it....
-          storage.unlockAll(); 
-        } catch (Exception e) { 
-          LOG.warn("failed to unlock storage for dn: " + bpRegistration, e);
-        }
         // TODO:FEDERATION should be local only
         //shutdown();
         return;
