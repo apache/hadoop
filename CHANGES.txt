@@ -34,6 +34,9 @@ Trunk (unreleased changes)
     HDFS-1645. DatanodeCommond.Finalize needs to include BlockPoolId.
     (suresh)
 
+    HDFS-1638.DataNode.handleDiskError needs to inform ALL namenodes if a disk 
+    failed (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
