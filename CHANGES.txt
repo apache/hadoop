@@ -28,6 +28,9 @@ Trunk (unreleased changes)
     HDFS-1637. Federation: FSDataset in Datanode should be created after 
     initial handshake with namenode. (boryas and jitendra)
 
+    HDFS-1653. Federation: Block received message from datanode sends invalid 
+    DatanodeRegistration. (Tanping via suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
