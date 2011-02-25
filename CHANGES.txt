@@ -37,6 +37,8 @@ Trunk (unreleased changes)
     HDFS-1638.DataNode.handleDiskError needs to inform ALL namenodes if a disk 
     failed (boryas)
 
+    HDFS-1647. Federation: Multiple namenode configuration. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

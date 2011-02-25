@@ -64,6 +64,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -1143,7 +1144,7 @@ public class DataNode extends Configured
       return nameNodeThreads; // already initialized
     
     // get NNs addresses from the configuration
-    InetSocketAddress[] isas = NameNode.getNNAddresses(conf);
+    InetSocketAddress[] isas = DFSUtil.getNNAddresses(conf);
 
     AbstractList<BPOfferService> al = new ArrayList<BPOfferService> (isas.length);
     for(InetSocketAddress isa : isas) {

@@ -18,19 +18,32 @@
 
 package org.apache.hadoop.hdfs;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NodeBase;
 
 @InterfaceAudience.Private
 public class DFSUtil {
+  
+  final private static String PRIMARY_NAMENODE_SUFFIX = "-primary.namenode";
+  
   /**
    * Whether the pathname is valid.  Currently prohibits relative paths, 
    * and names which contain a ":" or "/" 
@@ -226,6 +239,72 @@ public class DFSUtil {
     return blkLocations;
   }
 
+  private static URI getDefaultNamenode(Configuration conf) {
+    return FileSystem.getDefaultUri(conf);
+  }
+  
+  /**
+   * Returns the list of namenode URIs
+   * 
+   * @param conf
+   * @return list of namenode URIs
+   */
+  public static List<URI> getNamenodeList(Configuration conf) {
+    Collection<String> namenodes = conf
+        .getStringCollection(DFSConfigKeys.DFS_FEDERATION_NAMENODES);
 
+    List<URI> namenodeUris = new ArrayList<URI>();
+    if (namenodes.isEmpty()) {
+      namenodeUris.add(getDefaultNamenode(conf));
+    } else {
+      Iterator<String> nIter = namenodes.iterator();
+      while (nIter.hasNext()) {
+        namenodeUris.add(URI.create(nIter.next()));
+      }
+    }
+    return namenodeUris;
+  }
+
+  /**
+   * Returns the hostname of the primary namenode for a given secondary
+   * namenode.
+   * 
+   * @param conf
+   * @param secondaryHostName
+   *          hostname of the secondary namenode.
+   * @return primary namenode hostname
+   */
+  public static URI getPrimaryNamenode(Configuration conf,
+      String secondaryHostName) {
+    String key = secondaryHostName + PRIMARY_NAMENODE_SUFFIX;
+    String nn = conf.get(key);
+    if (nn == null) {
+      return getDefaultNamenode(conf);
+    } else {
+      return URI.create(nn);
+    }
+  }
+  
+  /**
+   * Returns the InetSocketAddresses for each configured namenode
+   * @param conf
+   * @return Array of InetSocketAddresses
+   * @throws IOException
+   */
+  public static InetSocketAddress[] getNNAddresses(Configuration conf)
+      throws IOException {
+    List<URI> nns = getNamenodeList(conf);
+    if (nns == null) {
+      throw new IOException("Federation namnodes are not configured correctly");
+    }
+
+    InetSocketAddress[] isas = new InetSocketAddress[nns.size()];
+    int i = 0;
+    for (URI u : nns) {
+      isas[i++] = NameNode.getAddress(u);
+    }
+    return isas;
+  }
+  
 }
 

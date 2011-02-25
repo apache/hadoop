@@ -221,51 +221,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
   
   /**
-   * TODO:FEDERATION
-   * at this moment only support fs.default style enteries.
-   * @param conf
-   * @return array of namenodes' addresses
-   */
-  public static InetSocketAddress [] getNNAddresses(Configuration conf) 
-  throws IOException {
-    URI[] nns=getNameNodesURIs(conf);
-    if(nns == null) {
-      throw new IOException("Federation namnodes are not configured correctly");
-    }
-
-    InetSocketAddress [] isas = new InetSocketAddress[nns.length];
-    int i=0;
-    for(URI u : nns) {
-      isas[i++] = getAddress(u); 
-    }
-    return isas;
-  }
-
-  /**
-   * TODO:FEDERATION
-   * get the list of namenodes from the configuration
-   * create URI for each one of them
-   * @param conf
-   * @return list of URIs of all configured NameNodes
-   */
-  public static URI [] getNameNodesURIs(Configuration conf) {
-    String [] nnURIs = conf.getStrings(DFSConfigKeys.DFS_FEDERATION_NAMENODES);
-    if(nnURIs == null) {
-      nnURIs = new String[] {conf.get(CommonConfigurationKeys.FS_DEFAULT_NAME_KEY)};
-    }
-
-    AbstractList<URI> nns = new ArrayList<URI>(nnURIs.length);
-    for(String uri : nnURIs) {
-      // name should be prepened with FileSystem.fixName(uri)  
-      // TBD
-      nns.add(URI.create(uri));
-    }
-
-    URI[] r = new URI[nns.size()];
-    return nns.toArray(r);
-  }
-
-  /**
    * Set the configuration property for the service rpc address
    * to address
    */
