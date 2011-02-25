@@ -857,7 +857,7 @@ Below we show what the main configuration files
   </property>
   <property>
     <name>hbase.rootdir</name>
-    <value>hdfs://example1:9000/hbase</value>
+    <value>hdfs://example0:9000/hbase</value>
     <description>The directory shared by region servers.
     </description>
   </property>
