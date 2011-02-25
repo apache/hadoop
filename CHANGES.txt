@@ -80,6 +80,8 @@ Release 0.91.0 - Unreleased
                (rpc version 43)
    HBASE-3563  [site] Add one-page-only version of hbase doc
    HBASE-3564  DemoClient.pl - a demo client in Perl
+   HBASE-3560  the hbase-default entry of "hbase.defaults.for.version" 
+   	       causes tests not to run via not-maven
 
 
   NEW FEATURES
