@@ -86,8 +86,9 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
             + "\n   " + getDescription() + "."
             + " Name-node version = " + nsInfo.getLayoutVersion() + ".";
     DataNode.LOG.fatal( errorMsg );
+    String bpid = nsInfo.getBlockPoolID();
     try {
-      dataNode.namenode.errorReport(dataNode.dnRegistration,
+      dataNode.namenode.errorReport(dataNode.getDNRegistrationForBP(bpid),
                                     DatanodeProtocol.NOTIFY, errorMsg);
     } catch(SocketTimeoutException e) {  // namenode is busy
       DataNode.LOG.info("Problem connecting to server: " 

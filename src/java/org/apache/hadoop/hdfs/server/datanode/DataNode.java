@@ -634,7 +634,7 @@ public class DataNode extends Configured
           if (numBlocks > 0) {
             if(numBlocks!=delHints.size()) {
               LOG.warn("Panic: receiveBlockList and delHints are not of " +
-              		"the same length" );
+              "the same length" );
             }
             //
             // Send newly-received blockids to namenode
@@ -854,11 +854,19 @@ public class DataNode extends Configured
         try {
           // reset name to machineName. Mainly for web interface. Same for all DB
           bpRegistration.name = machineName + ":" + bpRegistration.getPort();
-          LOG.info("bpReg before =" + bpRegistration.storageInfo + 
-              ";sid=" + bpRegistration.storageID);
+          LOG.info("bpReg before =" + bpRegistration.storageInfo +           
+              ";sid=" + bpRegistration.storageID + ";name="+bpRegistration.getName());
+
           bpRegistration = bpNamenode.registerDatanode(bpRegistration);
+          // make sure we got the machine name right (same as NN sees it)
+          String [] mNames = bpRegistration.getName().split(":");
+          synchronized (dnRegistration) {
+            dnRegistration.name = mNames[0] + ":" + dnRegistration.getPort();
+          }
+
           LOG.info("bpReg after =" + bpRegistration.storageInfo + 
-              ";sid=" + bpRegistration.storageID);
+              ";sid=" + bpRegistration.storageID + ";name="+bpRegistration.getName());
+
           break;
         } catch(SocketTimeoutException e) {  // namenode is busy
           LOG.info("Problem connecting to server: " + nn_addr);
@@ -1186,6 +1194,16 @@ public class DataNode extends Configured
       LOG.warn("Failed to register NameNode MXBean", e);
     }
   }
+  
+  public DatanodeRegistration getDNRegistrationForBP(String bpid) 
+  throws IOException {
+    BPOfferService bpos = bpMapping.get(bpid);
+    if(bpos==null || bpos.bpRegistration==null) {
+      throw new IOException("cannot find BPOfferService for bpid="+bpid);
+    }
+    return bpos.bpRegistration;
+  }
+  
 
   /**
    * Creates either NIO or regular depending on socketWriteTimeout.

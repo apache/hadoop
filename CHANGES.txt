@@ -46,6 +46,9 @@ Trunk (unreleased changes)
 
     HDFS-1641. Datanode fields that are no longer used should be removed (boryas)
 
+    HDFS-1642. HDFS Federation: add Datanode.getDNRegistration(String bpid) 
+    method  (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

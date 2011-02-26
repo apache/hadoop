@@ -1243,6 +1243,11 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         xceiverCount, xmitsInProgress);
   }
 
+  /**
+   * sends block report to the corresponding namenode (for the poolId)
+   * @return DataNodeCommand from the namenode
+   * @throws IOException
+   */
   public DatanodeCommand blockReport(DatanodeRegistration nodeReg,
                                      String poolId,
                                      long[] blocks) throws IOException {

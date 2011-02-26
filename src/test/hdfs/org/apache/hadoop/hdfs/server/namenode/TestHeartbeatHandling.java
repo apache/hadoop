@@ -47,7 +47,9 @@ public class TestHeartbeatHandling extends TestCase {
     try {
       cluster.waitActive();
       final FSNamesystem namesystem = cluster.getNamesystem();
-      final DatanodeRegistration nodeReg = cluster.getDataNodes().get(0).dnRegistration;
+      final String poolId = namesystem.getBlockpoolId();
+      final DatanodeRegistration nodeReg = 
+        cluster.getDataNodes().get(0).getDNRegistrationForBP(poolId);
       DatanodeDescriptor dd = namesystem.getDatanode(nodeReg);
       
       final int REMAINING_BLOCKS = 1;

@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
@@ -157,12 +158,13 @@ class DataXceiver extends DataTransferProtocol.Receiver
   
     // send the block
     BlockSender blockSender = null;
+    DatanodeRegistration dnR = datanode.getDNRegistrationForBP(block.getPoolId());
     final String clientTraceFmt =
       clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
             "%d", "HDFS_READ", clientName, "%d",
-            datanode.dnRegistration.getStorageID(), block, "%d")
-        : datanode.dnRegistration + " Served block " + block + " to " +
+            dnR.getStorageID(), block, "%d")
+        : dnR + " Served block " + block + " to " +
             s.getInetAddress();
     try {
       try {
@@ -243,7 +245,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
         try {
           if (client.length() != 0) {
             ERROR_ACCESS_TOKEN.write(replyOut);
-            Text.writeString(replyOut, datanode.dnRegistration.getName());
+            DatanodeRegistration dnR = 
+              datanode.getDNRegistrationForBP(block.getPoolId()); 
+            Text.writeString(replyOut, dnR.getName());
             replyOut.flush();
           }
           LOG.warn("Block token verification failed, for client "

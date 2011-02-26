@@ -86,10 +86,11 @@ public class TestDeadDatanode {
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
 
+    String poolId = cluster.getNamesystem().getPoolId();
     // wait for datanode to be marked live
     DataNode dn = cluster.getDataNodes().get(0);
-    DatanodeRegistration reg = cluster.getDataNodes().get(0)
-        .getDatanodeRegistration();
+    DatanodeRegistration reg = 
+      cluster.getDataNodes().get(0).getDNRegistrationForBP(poolId);
     waitForDatanodeState(reg.getStorageID(), true, 20000);
 
     // Shutdown and wait for datanode to be marked dead
@@ -97,7 +98,7 @@ public class TestDeadDatanode {
     waitForDatanodeState(reg.getStorageID(), false, 20000);
 
     DatanodeProtocol dnp = cluster.getNameNode();
-    String poolId = cluster.getNamesystem().getPoolId();
+    
     Block[] blocks = new Block[] { new Block(0) };
     String[] delHints = new String[] { "" };
     

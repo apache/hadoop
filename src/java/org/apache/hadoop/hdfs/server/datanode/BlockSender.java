@@ -194,7 +194,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
           || (length + startOffset) > endOffset) {
         String msg = " Offset " + startOffset + " and length " + length
         + " don't match block " + block + " ( blockLen " + endOffset + " )";
-        LOG.warn(datanode.dnRegistration + ":sendBlock() : " + msg);
+        LOG.warn(datanode.getDNRegistrationForBP(block.getPoolId()) +
+            ":sendBlock() : " + msg);
         throw new IOException(msg);
       }
       

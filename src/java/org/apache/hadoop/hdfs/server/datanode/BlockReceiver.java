@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
@@ -226,7 +227,8 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
    * affect this datanode unless it is caused by interruption.
    */
   private void handleMirrorOutError(IOException ioe) throws IOException {
-    LOG.info(datanode.dnRegistration + ":Exception writing block " +
+    String bpid = block.getPoolId();
+    LOG.info(datanode.getDNRegistrationForBP(bpid) + ":Exception writing block " +
              block + " to mirror " + mirrorAddr + "\n" +
              StringUtils.stringifyException(ioe));
     if (Thread.interrupted()) { // shut down if the thread is interrupted
@@ -903,10 +905,12 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               if (ClientTraceLog.isInfoEnabled() &&
                   receiver.clientName.length() > 0) {
                 long offset = 0;
+                DatanodeRegistration dnR = 
+                  datanode.getDNRegistrationForBP(block.getPoolId());
                 ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT,
                       receiver.inAddr, receiver.myAddr, block.getNumBytes(),
                       "HDFS_WRITE", receiver.clientName, offset,
-                      datanode.dnRegistration.getStorageID(), block, endTime-startTime));
+                      dnR.getStorageID(), block, endTime-startTime));
               } else {
                 LOG.info("Received block " + block + 
                          " of size " + block.getNumBytes() + 

@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.log4j.Level;
 
 /**
@@ -138,8 +139,9 @@ public class TestFileCorruption extends TestCase {
       DataNode dataNode = datanodes.get(2);
       
       // report corrupted block by the third datanode
+      DatanodeRegistration dnR = dataNode.getDNRegistrationForBP(blk.getPoolId());
       cluster.getNamesystem().markBlockAsCorrupt(blk, 
-          new DatanodeInfo(dataNode.dnRegistration ));
+          new DatanodeInfo(dnR));
       
       // open the file
       fs.open(FILE_PATH);

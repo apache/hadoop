@@ -42,6 +42,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.After;
@@ -119,8 +120,9 @@ public class TestDataNodeVolumeFailure extends TestCase{
     // make sure a block report is sent 
     DataNode dn = cluster.getDataNodes().get(1); //corresponds to dir data3
     String bpid = cluster.getNamesystem().getPoolId();
+    DatanodeRegistration dnR = dn.getDNRegistrationForBP(bpid);
     long[] bReport = dn.getFSDataset().getBlockReport(bpid).getBlockListAsLongs();
-    cluster.getNameNode().blockReport(dn.dnRegistration, bpid, bReport);
+    cluster.getNameNode().blockReport(dnR, bpid, bReport);
 
     // verify number of blocks and files...
     verify(filename, filesize);

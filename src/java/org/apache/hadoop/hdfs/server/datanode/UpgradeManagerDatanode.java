@@ -138,6 +138,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     upgradeState = false;
     currentUpgrades = null;
     upgradeDaemon = null;
+    // TODO:FEDERATION what dnRegistration we want to use here?
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
         + dataNode.dnRegistration.getName() 
         + " version " + getUpgradeVersion() + " to current LV " 
