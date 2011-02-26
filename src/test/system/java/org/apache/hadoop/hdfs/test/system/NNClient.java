@@ -31,6 +31,7 @@ import org.apache.hadoop.test.system.process.RemoteProcess;
 public class NNClient extends HDFSDaemonClient<NNProtocol> {
   
   NNProtocol proxy;
+  private static final String HADOOP_NAMENODE_OPTS_ENV = "HADOOP_NAMENODE_OPTS";
 
   public NNClient(Configuration conf, RemoteProcess process) throws IOException {
     super(conf, process);
@@ -67,5 +68,21 @@ public class NNClient extends HDFSDaemonClient<NNProtocol> {
   @Override
   protected NNProtocol getProxy() {
     return proxy;
+  }
+
+  @Override
+  public String getHadoopOptsEnvName() {
+    return HADOOP_NAMENODE_OPTS_ENV;
+  }
+
+  /**
+   * Concrete implementation of abstract super class method
+   * @param attributeName name of the attribute to be retrieved
+   * @return Object value of the given attribute
+   * @throws IOException is thrown in case of communication errors
+   */
+  @Override
+  public Object getDaemonAttribute (String attributeName) throws IOException {
+    return getJmxAttribute("NameNode", "NameNodeInfo", attributeName);
   }
 }

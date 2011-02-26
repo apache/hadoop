@@ -117,6 +117,8 @@ Release 0.22.0 - Unreleased
     HDFS-1457. Provide an option to throttle image transmission between
     pimary and secondary NameNodes. (Yifei Lu and hairong via hairong)
 
+    HDFS-1164. TestHdfsProxy is failing. (Todd Lipcon via cos)
+
   IMPROVEMENTS
 
     HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)

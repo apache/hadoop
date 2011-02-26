@@ -36,6 +36,7 @@ import org.apache.hadoop.test.system.process.RemoteProcess;
 public class DNClient extends HDFSDaemonClient<DNProtocol> {
 
   DNProtocol proxy;
+  private static final String HADOOP_DATANODE_OPTS_ENV = "HADOOP_DATANODE_OPTS";
 
   public DNClient(Configuration conf, RemoteProcess process) throws IOException {
     super(conf, process);
@@ -78,5 +79,21 @@ public class DNClient extends HDFSDaemonClient<DNProtocol> {
 
   public Configuration getDatanodeConfig() throws IOException {
     return getProxy().getDaemonConf();
+  }
+
+  @Override
+  public String getHadoopOptsEnvName() {
+    return HADOOP_DATANODE_OPTS_ENV;
+  }
+
+  /**
+   * Concrete implementation of abstract super class method
+   * @param attributeName name of the attribute to be retrieved
+   * @return Object value of the given attribute
+   * @throws IOException is thrown in case of communication errors
+   */
+  @Override
+  public Object getDaemonAttribute (String attributeName) throws IOException {
+    return getJmxAttribute("DataNode", "DataNodeInfo", attributeName);
   }
 }

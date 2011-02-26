@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * A JUnit test for HdfsProxy
@@ -203,13 +204,17 @@ public class TestHdfsProxy extends TestCase {
     MiniDFSCluster cluster = null;
     HdfsProxy proxy = null;
     try {
+      final UserGroupInformation CLIENT_UGI = UserGroupInformation.getCurrentUser();
+      final String testUser = CLIENT_UGI.getShortUserName();
+      final String testGroup = CLIENT_UGI.getGroupNames()[0];
 
       final Configuration dfsConf = new HdfsConfiguration();
-      dfsConf.set("hadoop.proxyuser." + System.getProperty("user.name") +
-          ".users", "users");
-      dfsConf.set("hadoop.proxyuser.users.ip-addresses", "localhost");
-      dfsConf.set("hadoop.proxyuser." + System.getProperty("user.name") +
-          ".ip-addresses", "localhost");
+      dfsConf.set("hadoop.proxyuser." + testUser +
+          ".groups", testGroup);
+      dfsConf.set("hadoop.proxyuser." + testGroup + ".hosts",
+          "localhost,127.0.0.1");
+      dfsConf.set("hadoop.proxyuser." + testUser +
+          ".hosts", "localhost,127.0.0.1");
       cluster = new MiniDFSCluster.Builder(dfsConf).numDataNodes(2).build();
       cluster.waitActive();
 
