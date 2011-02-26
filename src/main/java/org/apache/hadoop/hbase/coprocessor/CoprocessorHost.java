@@ -84,7 +84,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       if (findCoprocessor(className) != null) {
         continue;
       }
-      ClassLoader cl = ClassLoader.getSystemClassLoader();
+      ClassLoader cl = this.getClass().getClassLoader();
       Thread.currentThread().setContextClassLoader(cl);
       try {
         implClass = cl.loadClass(className);
@@ -154,7 +154,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         paths.add((new File(st.nextToken())).getCanonicalFile().toURL());
       }
       ClassLoader cl = new URLClassLoader(paths.toArray(new URL[]{}),
-        ClassLoader.getSystemClassLoader());
+        this.getClass().getClassLoader());
       Thread.currentThread().setContextClassLoader(cl);
       try {
         implClass = cl.loadClass(className);
