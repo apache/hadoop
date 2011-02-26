@@ -116,6 +116,7 @@ Release 0.90.2 - Unreleased
    HBASE-3553  HTable ThreadPoolExecutor does not properly initialize
                for hbase.htable.threads.max threads
                (Himanshu Vashishtha via garyh)
+   HBASE-3576  MasterAddressTracker is registered to ZooKeeperWatcher twice
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

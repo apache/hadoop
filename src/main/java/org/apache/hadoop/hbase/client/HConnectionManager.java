@@ -293,7 +293,6 @@ public class HConnectionManager {
       // initialize zookeeper and master address manager
       this.zooKeeper = getZooKeeperWatcher();
       masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
-      zooKeeper.registerListener(masterAddressTracker);
       masterAddressTracker.start();
 
       this.rootRegionTracker = new RootRegionTracker(this.zooKeeper, this);
