@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PacketHeader;
+import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.SocketOutputStream;
 import org.apache.hadoop.util.DataChecksum;
@@ -68,7 +69,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
   private boolean transferToAllowed = true;
   private boolean blockReadFully; //set when the whole block is read
   private boolean verifyChecksum; //if true, check is verified while reading
-  private BlockTransferThrottler throttler;
+  private DataTransferThrottler throttler;
   private final String clientTraceFmt; // format of client trace log message
 
   /**
@@ -420,7 +421,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
    * @return total bytes reads, including crc.
    */
   long sendBlock(DataOutputStream out, OutputStream baseStream, 
-                 BlockTransferThrottler throttler) throws IOException {
+                 DataTransferThrottler throttler) throws IOException {
     if( out == null ) {
       throw new IOException( "out stream is null" );
     }

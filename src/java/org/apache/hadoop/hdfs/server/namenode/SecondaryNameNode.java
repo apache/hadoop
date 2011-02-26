@@ -370,7 +370,8 @@ public class SecondaryNameNode implements Runnable {
   private void putFSImage(CheckpointSignature sig) throws IOException {
     String fileid = "putimage=1&port=" + imagePort +
       "&machine=" + infoBindAddress + 
-      "&token=" + sig.toString();
+      "&token=" + sig.toString() +
+      "&newChecksum=" + checkpointImage.imageDigest;
     LOG.info("Posted URL " + fsName + fileid);
     TransferFsImage.getFileClient(fsName, fileid, (File[])null);
   }
@@ -433,7 +434,7 @@ public class SecondaryNameNode implements Runnable {
                             "after uploading new image to NameNode");
     }
 
-    namenode.rollFsImage();
+    namenode.rollFsImage(sig);
     checkpointImage.endCheckpoint();
 
     LOG.warn("Checkpoint done. New Image Size: " 

@@ -15,15 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.server.datanode;
+package org.apache.hadoop.hdfs.util;
 
 /** 
- * a class to throttle the block transfers.
+ * a class to throttle the data transfers.
  * This class is thread safe. It can be shared by multiple threads.
  * The parameter bandwidthPerSec specifies the total bandwidth shared by
  * threads.
  */
-class BlockTransferThrottler {
+public class DataTransferThrottler {
   private long period;          // period over which bw is imposed
   private long periodExtension; // Max period over which bw accumulates.
   private long bytesPerPeriod; // total number of bytes can be sent in each period
@@ -34,7 +34,7 @@ class BlockTransferThrottler {
   /** Constructor 
    * @param bandwidthPerSec bandwidth allowed in bytes per second. 
    */
-  BlockTransferThrottler(long bandwidthPerSec) {
+  public DataTransferThrottler(long bandwidthPerSec) {
     this(500, bandwidthPerSec);  // by default throttling period is 500ms 
   }
 
@@ -44,7 +44,7 @@ class BlockTransferThrottler {
    *        period.
    * @param bandwidthPerSec bandwidth allowed in bytes per second. 
    */
-  BlockTransferThrottler(long period, long bandwidthPerSec) {
+  public DataTransferThrottler(long period, long bandwidthPerSec) {
     this.curPeriodStart = System.currentTimeMillis();
     this.period = period;
     this.curReserve = this.bytesPerPeriod = bandwidthPerSec*period/1000;
@@ -54,7 +54,7 @@ class BlockTransferThrottler {
   /**
    * @return current throttle bandwidth in bytes per second.
    */
-  synchronized long getBandwidth() {
+  public synchronized long getBandwidth() {
     return bytesPerPeriod*1000/period;
   }
   
@@ -64,7 +64,7 @@ class BlockTransferThrottler {
    * 
    * @param bytesPerSecond 
    */
-  synchronized void setBandwidth(long bytesPerSecond) {
+  public synchronized void setBandwidth(long bytesPerSecond) {
     if ( bytesPerSecond <= 0 ) {
       throw new IllegalArgumentException("" + bytesPerSecond);
     }
@@ -78,7 +78,7 @@ class BlockTransferThrottler {
    * @param numOfBytes
    *     number of bytes sent/received since last time throttle was called
    */
-  synchronized void throttle(long numOfBytes) {
+  public synchronized void throttle(long numOfBytes) {
     if ( numOfBytes <= 0 ) {
       return;
     }

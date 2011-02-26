@@ -104,6 +104,11 @@ Release 0.22.0 - Unreleased
 
     HDFS-1435. Provide an option to store fsimage compressed. (hairong)
 
+    HDFS-903.  Support fsimage validation through MD5 checksum. (hairong)
+
+    HDFS-1457. Provide an option to throttle image transmission between
+    pimary and secondary NameNodes. (Yifei Lu and hairong via hairong)
+
   IMPROVEMENTS
 
     HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)
@@ -225,6 +230,8 @@ Release 0.22.0 - Unreleased
     (Todd Lipcon via eli)
 
     HDFS-1485. Fix typo in BlockPlacementPolicy. (Jingguo Yao via shv)
+
+    HDFS-1035. Generate Eclipse's .classpath file from Ivy config. (nigel)
 
   OPTIMIZATIONS
 
@@ -399,6 +406,9 @@ Release 0.21.0 - Unreleased
     HDFS-1452. ant compile-contrib is broken (cos)
 
     HDFS-1474. ant binary-system is broken (cos)
+
+    HDFS-1292. Allow artifacts to be published to the staging Apache Nexus
+    Maven Repository.  (Giridharan Kesavan via tomwhite)
 
 Release 0.21.0 - 2010-08-13
 

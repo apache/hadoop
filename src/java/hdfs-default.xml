@@ -544,4 +544,14 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.image.transfer.bandwidthPerSec</name>
+  <value>0</value>
+  <description>
+        Specifies the maximum amount of bandwidth that can be utilized for image
+        transfer in term of the number of bytes per second.
+        A default value of 0 indicates that throttling is disabled. 
+  </description>
+</property>
+
 </configuration>

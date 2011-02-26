@@ -211,7 +211,8 @@ class Checkpointer extends Daemon {
     int httpPort = httpSocAddr.getPort();
     String fileid = "putimage=1&port=" + httpPort +
       "&machine=" + infoBindAddress +
-      "&token=" + sig.toString();
+      "&token=" + sig.toString() +
+      "&newChecksum=" + getFSImage().imageDigest.toString();
     LOG.info("Posted URL " + backupNode.nnHttpAddress + fileid);
     TransferFsImage.getFileClient(backupNode.nnHttpAddress, fileid, (File[])null);
   }

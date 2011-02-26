@@ -42,10 +42,10 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
    * 
-   * 4: new method added: getAccessKeys()
-   *      
+   * 5: Added one parameter to rollFSImage() and
+   *    changed the definition of CheckpointSignature
    */
-  public static final long versionID = 4L;
+  public static final long versionID = 5L;
 
   // Error codes passed by errorReport().
   final static int NOTIFY = 0;
@@ -108,12 +108,15 @@ public interface NamenodeProtocol extends VersionedProtocol {
    * Rolls the fsImage log. It removes the old fsImage, copies the
    * new image to fsImage, removes the old edits and renames edits.new 
    * to edits. The call fails if any of the four files are missing.
+   * 
+   * @param sig the signature of this checkpoint (old fsimage)
    * @throws IOException
    * @deprecated 
    *    See {@link org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode}
    */
   @Deprecated
-  public void rollFsImage() throws IOException;
+  public void rollFsImage(CheckpointSignature sig)
+  throws IOException;
 
   /**
    * Request name-node version and storage information.

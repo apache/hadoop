@@ -1111,9 +1111,9 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   /**
    * Roll the image 
    */
-  @Deprecated
-  public void rollFsImage() throws IOException {
-    namesystem.rollFSImage();
+  @Deprecated @Override
+  public void rollFsImage(CheckpointSignature sig) throws IOException {
+    namesystem.rollFSImage(sig);
   }
     
   public void finalizeUpgrade() throws IOException {

@@ -150,6 +150,10 @@
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
   <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
   <property name="mvn.repo" value="http://repo2.maven.org/maven2"/>
+  <property name="asfrepo" value="https://repository.apache.org"/>
+  <property name="asfsnapshotrepo" value="${asfrepo}/content/repositories/snapshots"/>
+  <property name="asfstagingrepo"
+  value="${asfrepo}/service/local/staging/deploy/maven2"/>
   <property name="ivy_repo_url" value="${mvn.repo}/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
   <property name="ant_task.jar" location="${ivy.dir}/maven-ant-tasks-${ant-task.version}.jar"/>
   <property name="ant_task_repo_url" value="${mvn.repo}/org/apache/maven/maven-ant-tasks/${ant-task.version}/maven-ant-tasks-${ant-task.version}.jar"/>
@@ -184,6 +188,13 @@
   <property name="jdiff.jar" value="${jdiff.home}/jdiff-${jdiff.version}.jar"/>
   <property name="xerces.jar" value="${jdiff.home}/xerces-${xerces.version}.jar"/>
 
+  <!-- Eclipse properties -->
+  <property name="build.dir.eclipse" value="${build.dir}/eclipse"/>
+  <property name="build.dir.eclipse-main-classes" value="${build.dir.eclipse}/classes-main"/>
+  <property name="build.dir.eclipse-main-generated-classes" value="${build.dir.eclipse}/classes-main-generated"/>
+  <property name="build.dir.eclipse-test-classes" value="${build.dir.eclipse}/classes-test"/>
+  <property name="build.dir.eclipse-contrib-classes" value="${build.dir.eclipse}/classes-contrib"/>
+
   <property name="clover.jar" location="${clover.home}/lib/clover.jar"/>
   <available property="clover.present" file="${clover.jar}" />
 
@@ -193,6 +204,10 @@
         <isset property="run.clover"/>
         <isset property="clover.present"/>
     </and>
+  </condition>
+
+  <condition property="staging">
+     <equals arg1="${repo}" arg2="staging"/>
   </condition>
 
   <!-- the normal classpath -->
@@ -1173,13 +1188,20 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-fi" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-fi, clean-sign" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${build-fi.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete file="${hadoop-hdfs.pom}"/>
     <delete file="${hadoop-hdfs-test.pom}"/>
     <delete file="${hadoop-hdfs-instrumented.pom}"/>
+    <delete file="${hadoop-hdfs-instrumented-test.pom}"/>
+  </target>
+
+  <target name="clean-sign" description="Clean.  Delete .asc files">
+    <delete>
+      <fileset dir="." includes="**/**/*.asc"/>
+    </delete>
   </target>
 
   <target name="veryclean" depends="clean-cache,clean" 
@@ -1389,13 +1411,52 @@
   </exec>
 </target>
 	
-  <target name="eclipse-files" depends="init"
-          description="Generate files for Eclipse">
-    <pathconvert property="eclipse.project">
-      <path path="${basedir}"/>
-      <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
-    </pathconvert>
-    <copy todir="." overwrite="true">
+  <condition property="ant-eclipse.jar.exists">
+    <available file="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar"/>
+  </condition>
+
+  <target name="ant-eclipse-download" unless="ant-eclipse.jar.exists"
+          description="Downloads the ant-eclipse binary.">
+    <get src="http://downloads.sourceforge.net/project/ant-eclipse/ant-eclipse/1.0/ant-eclipse-1.0.bin.tar.bz2"
+         dest="${build.dir}/ant-eclipse-1.0.bin.tar.bz2" usetimestamp="false" />
+
+    <untar src="${build.dir}/ant-eclipse-1.0.bin.tar.bz2"
+           dest="${build.dir}" compression="bzip2">
+      <patternset>
+        <include name="lib/ant-eclipse-1.0-jvm1.2.jar"/>
+      </patternset>
+    </untar>
+    <delete file="${build.dir}/java/ant-eclipse-1.0.bin.tar.bz2" />
+  </target>
+  
+  <target name="eclipse" 
+          depends="init,ant-eclipse-download,ivy-retrieve-common,ivy-retrieve-test"
+          description="Create eclipse project files">
+       <pathconvert property="eclipse.project">
+         <path path="${basedir}"/>
+         <regexpmapper from="^.*/([^/]+)$$" to="\1" handledirsep="yes"/>
+       </pathconvert>
+    <taskdef name="eclipse"
+             classname="prantl.ant.eclipse.EclipseTask"
+             classpath="${build.dir}/lib/ant-eclipse-1.0-jvm1.2.jar" />
+    <eclipse updatealways="true">
+      <project name="${eclipse.project}" />
+      <classpath>
+        <source path="${java.src.dir}"
+                output="${build.dir.eclipse-main-classes}" />
+        <source path="${build.src}"
+                output="${build.dir.eclipse-main-generated-classes}" />
+        <source path="${test.src.dir}/hdfs"
+                output="${build.dir.eclipse-test-classes}" />
+        <source path="${test.src.dir}/unit"
+                output="${build.dir.eclipse-test-classes}" />
+        <output path="${build.dir.eclipse-main-classes}" />
+        <library pathref="ivy-common.classpath" exported="true" />
+        <library pathref="ivy-test.classpath" exported="false" />
+        <library path="${conf.dir}" exported="false" />
+      </classpath>
+    </eclipse>
+	<copy todir="." overwrite="true">
       <fileset dir=".eclipse.templates">
       	<exclude name="**/README.txt"/>
       </fileset>
@@ -1432,16 +1493,8 @@
          uri="urn:maven-artifact-ant" classpathref="mvn-ant-task.classpath"/>
   </target>   
 
-  <target name="mvn-install-hdfs" depends="mvn-taskdef,jar,set-version">
-     <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
-     <artifact:install file="${hadoop-hdfs.jar}">
-        <pom refid="hadoop.hdfs"/>
-        <attach file="${hadoop-hdfs-sources.jar}" classifier="sources" />
-     </artifact:install>
-  </target>
-
-  <target name="mvn-install" depends="mvn-taskdef,jar,jar-hdfs-test,set-version,
-    -mvn-system-install">
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"
+     description="To install hadoop hdfs and test jars to local filesystem's m2 cache">
      <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
      <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
      <artifact:install file="${hadoop-hdfs.jar}">
@@ -1452,38 +1505,150 @@
         <pom refid="hadoop.hdfs.test"/>
         <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources" />
      </artifact:install>
-  </target>
+   </target>
+  
+   <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test,
+     jar-system, jar-test-system, set-version, signanddeploy, simpledeploy"
+     description="To deploy hadoop hdfs and test jar's to apache
+     snapshot's repository"/>
 
-  <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-hdfs-test, set-version,
-    -mvn-system-deploy">
-     <property name="repourl" value="https://repository.apache.org/content/repositories/snapshots" />
+   <target name="signanddeploy" if="staging" depends="sign">
      <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
      <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
+     <artifact:pom file="${hadoop-hdfs-instrumented.pom}" 
+       id="hadoop.hdfs.${herriot.suffix}"/>
+     <artifact:pom file="${hadoop-hdfs-instrumented-test.pom}" 
+       id="hadoop.hdfs.${herriot.suffix}.test"/>
+     <artifact:install-provider artifactId="wagon-http"
+     version="${wagon-http.version}"/>
 
-     <artifact:install-provider artifactId="wagon-http" version="1.0-beta-2"/>
      <artifact:deploy file="${hadoop-hdfs.jar}">
-         <remoteRepository id="apache.snapshots.https" url="${repourl}"/>
-         <pom refid="hadoop.hdfs"/>
-        <attach file="${hadoop-hdfs-sources.jar}" classifier="sources" />
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.hdfs"/>
+       <attach file="${hadoop-hdfs.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-hdfs.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-hdfs-sources.jar}.asc" type="jar.asc"
+         classifier="sources" />
+       <attach file="${hadoop-hdfs-sources.jar}" classifier="sources"/>
      </artifact:deploy>
+
      <artifact:deploy file="${hadoop-hdfs-test.jar}">
-         <remoteRepository id="apache.snapshots.https" url="${repourl}"/>
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.hdfs.test"/>
+       <attach file="${hadoop-hdfs-test.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-hdfs-test.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-hdfs-test-sources.jar}.asc" type="jar.asc"
+         classifier="sources"/>
+       <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources"/>
+     </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-hdfs-instrumented.jar}">
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.hdfs.${herriot.suffix}"/>
+       <attach file="${hadoop-hdfs-instrumented.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-hdfs-instrumented.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-hdfs-instrumented-sources.jar}.asc" 
+         type="jar.asc" classifier="sources"/>
+       <attach file="${hadoop-hdfs-instrumented-sources.jar}"
+         classifier="sources"/>
+     </artifact:deploy>
+
+      <artifact:deploy file="${hadoop-hdfs-instrumented-test.jar}">
+       <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+       <pom refid="hadoop.hdfs.${herriot.suffix}.test"/>
+       <attach file="${hadoop-hdfs-instrumented-test.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-hdfs-instrumented-test.pom}.asc" type="pom.asc"/>
+       <attach file="${hadoop-hdfs-instrumented-test-sources.jar}.asc" 
+         type="jar.asc" classifier="sources"/>
+       <attach file="${hadoop-hdfs-instrumented-test-sources.jar}"
+         classifier="sources"/>
+     </artifact:deploy>
+   </target>
+
+   <target name="sign" depends="clean-sign" if="staging">
+    <input message="password:>" addproperty="gpg.passphrase">
+     <handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+    </input>
+    <macrodef name="sign-artifact" description="Signs the artifact">
+      <attribute name="input.file"/>
+      <attribute name="output.file" default="@{input.file}.asc"/>
+      <attribute name="gpg.passphrase"/>
+      <sequential>
+        <echo>Signing @{input.file} Sig File: @{output.file}</echo>
+        <exec executable="gpg" >
+          <arg value="--armor"/>
+          <arg value="--output"/>
+          <arg value="@{output.file}"/>
+          <arg value="--passphrase"/>
+          <arg value="@{gpg.passphrase}"/>
+          <arg value="--detach-sig"/>
+          <arg value="@{input.file}"/>
+        </exec>
+      </sequential>
+    </macrodef>
+    <sign-artifact input.file="${hadoop-hdfs.jar}" 
+     output.file="${hadoop-hdfs.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-test.jar}" 
+     output.file="${hadoop-hdfs-test.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-sources.jar}" 
+     output.file="${hadoop-hdfs-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-test-sources.jar}" 
+     output.file="${hadoop-hdfs-test-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs.pom}" 
+     output.file="${hadoop-hdfs.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-test.pom}" 
+     output.file="${hadoop-hdfs-test.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented.jar}" 
+     output.file="${hadoop-hdfs-instrumented.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented.pom}" 
+     output.file="${hadoop-hdfs-instrumented.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented-sources.jar}" 
+     output.file="${hadoop-hdfs-instrumented-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented-test.jar}" 
+     output.file="${hadoop-hdfs-instrumented-test.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented-test.pom}" 
+     output.file="${hadoop-hdfs-instrumented-test.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-hdfs-instrumented-test-sources.jar}" 
+     output.file="${hadoop-hdfs-instrumented-test-sources.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+  </target>
+
+  <target name="simpledeploy" unless="staging">
+     <artifact:pom file="${hadoop-hdfs.pom}" id="hadoop.hdfs"/>
+     <artifact:pom file="${hadoop-hdfs-test.pom}" id="hadoop.hdfs.test"/>
+     <artifact:pom file="${hadoop-hdfs-instrumented.pom}" 
+       id="hadoop.hdfs.${herriot.suffix}"/>
+
+     <artifact:install-provider artifactId="wagon-http" version="${wagon-http.version}"/>
+     <artifact:deploy file="${hadoop-hdfs.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.hdfs"/>
+         <attach file="${hadoop-hdfs-sources.jar}" classifier="sources" />
+     </artifact:deploy>
+
+     <artifact:deploy file="${hadoop-hdfs-test.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
          <pom refid="hadoop.hdfs.test"/>
-        <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources" />
+         <attach file="${hadoop-hdfs-test-sources.jar}" classifier="sources" />
+     </artifact:deploy> 
+
+     <artifact:deploy file="${hadoop-hdfs-instrumented.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.hdfs.${herriot.suffix}"/>
+         <attach file="${hadoop-hdfs-instrumented-sources.jar}" classifier="sources" />
      </artifact:deploy>
   </target>
-  
+
   <target name="set-version">
     <delete file="${basedir}/ivy/hadoop-hdfs.xml"/>
     <delete file="${basedir}/ivy/hadoop-hdfs-test.xml"/>
-    <delete file="${hadoop-hdfs-instrumented.pom}"/>
-    <delete file="${hadoop-hdfs-instrumented-test.pom}"/>
+    <delete file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}.xml"/>
+    <delete file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-test.xml"/>
     <copy file="${basedir}/ivy/hadoop-hdfs-template.xml" tofile="${basedir}/ivy/hadoop-hdfs.xml"/>
     <copy file="${basedir}/ivy/hadoop-hdfs-test-template.xml" tofile="${basedir}/ivy/hadoop-hdfs-test.xml"/>
     <copy file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-template.xml"
-      tofile="${hadoop-hdfs-instrumented.pom}"/>
+      tofile="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}.xml"/>
     <copy file="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-test-template.xml"
-      tofile="${hadoop-hdfs-instrumented-test.pom}"/>
+      tofile="${basedir}/ivy/hadoop-hdfs-${herriot.suffix}-test.xml"/>
     <replaceregexp byline="true">
       <regexp pattern="@version"/>
       <substitution expression="${version}"/>
@@ -1495,7 +1660,6 @@
       </fileset>
     </replaceregexp>
   </target>
- 
 
   <!--
   To avoid Ivy leaking things across big projects, always load Ivy in the same classloader.

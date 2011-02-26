@@ -91,7 +91,7 @@ public interface FSConstants {
   // Version is reflected in the data storage file.
   // Versions are negative.
   // Decrement LAYOUT_VERSION to define a new version.
-  public static final int LAYOUT_VERSION = -25;
+  public static final int LAYOUT_VERSION = -26;
   // Current version: 
-  // -25: support iamge compression.
+  // -26: support image checksum.
 }

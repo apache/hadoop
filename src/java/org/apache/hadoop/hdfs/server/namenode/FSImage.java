@@ -33,6 +33,9 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.security.DigestInputStream;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -75,6 +78,7 @@ import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.net.DNS;
@@ -95,6 +99,7 @@ public class FSImage extends Storage {
 
   private String blockpoolID = "";   // id of the block pool
   
+  static final String MESSAGE_DIGEST_PROPERTY = "imageMD5Digest";
   //
   // The filenames used for storing the images
   //
@@ -139,6 +144,8 @@ public class FSImage extends Storage {
   protected long checkpointTime = -1L;  // The age of the image
   protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
+  protected MD5Hash imageDigest = null;
+  protected MD5Hash newImageDigest = null;
 
   /**
    * flag that controls if we try to restore failed storages
@@ -741,6 +748,20 @@ public class FSImage extends Storage {
     setDistributedUpgradeState(
         sDUS == null? false : Boolean.parseBoolean(sDUS),
         sDUV == null? getLayoutVersion() : Integer.parseInt(sDUV));
+    
+    String sMd5 = props.getProperty(MESSAGE_DIGEST_PROPERTY);
+    if (layoutVersion <= -26) {
+      if (sMd5 == null) {
+        throw new InconsistentFSStateException(sd.getRoot(),
+            "file " + STORAGE_FILE_VERSION + " does not have MD5 image digest.");
+      }
+      this.imageDigest = new MD5Hash(sMd5);
+    } else if (sMd5 != null) {
+      throw new InconsistentFSStateException(sd.getRoot(),
+          "file " + STORAGE_FILE_VERSION +
+          " has image MD5 digest when version is " + layoutVersion);
+    }
+
     this.checkpointTime = readCheckpointTime(sd);
   }
 
@@ -787,6 +808,12 @@ public class FSImage extends Storage {
       props.setProperty("distributedUpgradeState", Boolean.toString(uState));
       props.setProperty("distributedUpgradeVersion", Integer.toString(uVersion)); 
     }
+    if (imageDigest == null) {
+      imageDigest = MD5Hash.digest(
+          new FileInputStream(getImageFile(sd, NameNodeFile.IMAGE)));
+    }
+    props.setProperty(MESSAGE_DIGEST_PROPERTY, imageDigest.toString());
+
     writeCheckpointTime(sd);
   }
 
@@ -1108,7 +1135,10 @@ public class FSImage extends Storage {
     // Load in bits
     //
     boolean needToSave = true;
-    FileInputStream fin = new FileInputStream(curFile);
+    MessageDigest digester = MD5Hash.getDigester();
+    DigestInputStream fin = new DigestInputStream(
+         new FileInputStream(curFile), digester);
+
     DataInputStream in = new DataInputStream(fin);
     try {
       /*
@@ -1270,7 +1300,17 @@ public class FSImage extends Storage {
     } finally {
       in.close();
     }
-    
+
+    // verify checksum
+    MD5Hash readImageMd5 = new MD5Hash(digester.digest());
+    if (imageDigest == null) {
+      imageDigest = readImageMd5; // set this fsimage's checksum
+    } else if (!imageDigest.equals(readImageMd5)) {
+      throw new IOException("Image file " + curFile + 
+          "is corrupt with MD5 checksum of " + readImageMd5 +
+          " but expecting " + imageDigest);
+    }
+
     LOG.info("Image file of size " + curFile.length() + " loaded in " 
         + (now() - startTime)/1000 + " seconds.");
 
@@ -1351,7 +1391,10 @@ public class FSImage extends Storage {
     //
     // Write out data
     //
-    FileOutputStream fos = new FileOutputStream(newFile);
+    FileOutputStream fout = new FileOutputStream(newFile);
+    MessageDigest digester = MD5Hash.getDigester();
+    DigestOutputStream fos = new DigestOutputStream(fout, digester);
+
     DataOutputStream out = new DataOutputStream(fos);
     try {
       out.writeInt(FSConstants.LAYOUT_VERSION);
@@ -1383,15 +1426,21 @@ public class FSImage extends Storage {
       strbuf = null;
 
       out.flush();
-      fos.getChannel().force(true);
+      fout.getChannel().force(true);
     } finally {
       out.close();
     }
+
+    // set md5 of the saved image
+    setImageDigest( new MD5Hash(digester.digest()));
 
     LOG.info("Image file of size " + newFile.length() + " saved in " 
         + (now() - startTime)/1000 + " seconds.");
   }
 
+  public void setImageDigest(MD5Hash digest) {
+    this.imageDigest = digest;
+  }
   /**
    * Save the contents of the FS image and create empty edits.
    * 
@@ -1828,11 +1877,14 @@ public class FSImage extends Storage {
    * Moves fsimage.ckpt to fsImage and edits.new to edits
    * Reopens the new edits file.
    */
-  void rollFSImage() throws IOException {
+  void rollFSImage(CheckpointSignature sig, 
+      boolean renewCheckpointTime) throws IOException {
+    sig.validateStorageInfo(this);
     rollFSImage(true);
   }
 
-  void rollFSImage(boolean renewCheckpointTime) throws IOException {
+  private void rollFSImage(boolean renewCheckpointTime)
+  throws IOException {
     if (ckptState != CheckpointStates.UPLOAD_DONE
       && !(ckptState == CheckpointStates.ROLLED_EDITS
       && getNumStorageDirs(NameNodeDirType.IMAGE) == 0)) {
@@ -1856,7 +1908,7 @@ public class FSImage extends Storage {
     // Renames new image
     //
     renameCheckpoint();
-    resetVersion(renewCheckpointTime);
+    resetVersion(renewCheckpointTime, newImageDigest);
   }
 
   /**
@@ -1890,10 +1942,11 @@ public class FSImage extends Storage {
   /**
    * Updates version and fstime files in all directories (fsimage and edits).
    */
-  void resetVersion(boolean renewCheckpointTime) throws IOException {
+  void resetVersion(boolean renewCheckpointTime, MD5Hash newImageDigest) throws IOException {
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
     if(renewCheckpointTime)
       this.checkpointTime = now();
+    this.imageDigest = newImageDigest;
     
     ArrayList<StorageDirectory> al = null;
     for (Iterator<StorageDirectory> it = 
@@ -2030,7 +2083,7 @@ public class FSImage extends Storage {
    * @param remoteNNRole
    * @throws IOException
    */
-  void endCheckpoint(CheckpointSignature sig, 
+  void endCheckpoint(CheckpointSignature sig,
                      NamenodeRole remoteNNRole) throws IOException {
     sig.validateStorageInfo(this);
     // Renew checkpoint time for the active if the other is a checkpoint-node.
@@ -2039,7 +2092,7 @@ public class FSImage extends Storage {
     // The backup-node always has up-to-date image and will have the same
     // checkpoint time as the active node.
     boolean renewCheckpointTime = remoteNNRole.equals(NamenodeRole.CHECKPOINT);
-    rollFSImage(renewCheckpointTime);
+    rollFSImage(sig, renewCheckpointTime);
   }
 
   CheckpointStates getCheckpointState() {

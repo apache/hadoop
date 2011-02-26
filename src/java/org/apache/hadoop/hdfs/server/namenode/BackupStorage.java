@@ -165,6 +165,7 @@ public class BackupStorage extends FSImage {
 
     // set storage fields
     setStorageInfo(sig);
+    imageDigest = sig.imageDigest;
     checkpointTime = sig.checkpointTime;
   }
 
@@ -355,7 +356,7 @@ public class BackupStorage extends FSImage {
     editLog.revertFileStreams(STORAGE_JSPOOL_DIR + "/" + STORAGE_JSPOOL_FILE);
 
     // write version file
-    resetVersion(false);
+    resetVersion(false, imageDigest);
 
     // wake up journal writer
     synchronized(this) {

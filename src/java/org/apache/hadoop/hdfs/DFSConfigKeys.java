@@ -206,6 +206,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_IMAGE_COMPRESSION_CODEC_DEFAULT =
                                    "org.apache.hadoop.io.compress.DefaultCodec";
 
+  public static final String DFS_IMAGE_TRANSFER_RATE_KEY =
+                                           "dfs.image.transfer.bandwidthPerSec";
+  public static final long DFS_IMAGE_TRANSFER_RATE_DEFAULT = 0;  //no throttling
+
   //Keys with no defaults
   public static final String  DFS_DATANODE_PLUGINS_KEY = "dfs.datanode.plugins";
   public static final String  DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY = "dfs.datanode.socket.write.timeout";
