@@ -57,6 +57,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -2170,12 +2171,10 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
     // Send corrupt block report outside the lock
     if (corruptBlock != null) {
-      DatanodeInfo[] dnArr = { new DatanodeInfo(datanode.dnRegistration) };
-      LocatedBlock[] blocks = { new LocatedBlock(bpid, corruptBlock, dnArr) };
+      DataNode.LOG.warn("Reporting the block " + corruptBlock
+          + " as corrupt due to length mismatch");
       try {
-        datanode.namenode.reportBadBlocks(blocks);
-        DataNode.LOG.warn("Reporting the block " + corruptBlock
-            + " as corrupt due to length mismatch");
+        datanode.reportBadBlocks(new ExtendedBlock(bpid, corruptBlock));  
       } catch (IOException e) {
         DataNode.LOG.warn("Failed to repot bad block " + corruptBlock
             + "Exception:" + StringUtils.stringifyException(e));

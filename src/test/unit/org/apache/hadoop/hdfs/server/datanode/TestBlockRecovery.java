@@ -105,7 +105,8 @@ public class TestBlockRecovery {
     when(namenode.sendHeartbeat(any(DatanodeRegistration.class), anyLong(), 
         anyLong(), anyLong(), anyInt(), anyInt())).thenReturn(
             new DatanodeCommand[0]);
-    dn = new DataNode(conf, dirs, namenode, null);
+    dn = new DataNode(conf, dirs, null);
+    dn.namenodeTODO_FED = namenode; // TODO:FEDERATION - should go to a specific bpid
   }
 
   /**
@@ -403,7 +404,7 @@ public class TestBlockRecovery {
         initReplicaRecovery(any(RecoveringBlock.class));
     Daemon d = spyDN.recoverBlocks(initRecoveringBlocks());
     d.join();
-    verify(dn.namenode).commitBlockSynchronization(
+    verify(dn.namenodeTODO_FED).commitBlockSynchronization(
         block, RECOVERY_ID, 0, true, true, DatanodeID.EMPTY_ARRAY);
   }
 
@@ -459,7 +460,7 @@ public class TestBlockRecovery {
     } catch (IOException e) {
       e.getMessage().startsWith("Cannot recover ");
     }
-    verify(dn.namenode, never()).commitBlockSynchronization(
+    verify(dn.namenodeTODO_FED, never()).commitBlockSynchronization(
         any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
         anyBoolean(), any(DatanodeID[].class));
   }
@@ -486,7 +487,7 @@ public class TestBlockRecovery {
       } catch (IOException e) {
         e.getMessage().startsWith("Cannot recover ");
       }
-      verify(dn.namenode, never()).commitBlockSynchronization(
+      verify(dn.namenodeTODO_FED, never()).commitBlockSynchronization(
           any(ExtendedBlock.class), anyLong(), anyLong(), anyBoolean(),
           anyBoolean(), any(DatanodeID[].class));
     } finally {

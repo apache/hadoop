@@ -89,7 +89,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
           "UpgradeManagerDatanode.currentUpgrades is not null.";
         assert upgradeDaemon == null : 
           "UpgradeManagerDatanode.upgradeDaemon is not null.";
-        dataNode.namenode.processUpgradeCommand(broadcastCommand);
+        dataNode.namenodeTODO_FED.processUpgradeCommand(broadcastCommand); // TODO:FEDERATION needs to be fixed
         return true;
       }
     }

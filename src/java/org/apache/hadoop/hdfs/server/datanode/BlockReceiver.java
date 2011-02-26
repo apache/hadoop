@@ -247,7 +247,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private void verifyChunks( byte[] dataBuf, int dataOff, int len, 
                              byte[] checksumBuf, int checksumOff ) 
                              throws IOException {
-    DatanodeProtocol nn = datanode.getNamenode(block);
+    DatanodeProtocol nn = datanode.getBPNamenode(block.getPoolId());
     while (len > 0) {
       int chunkLen = Math.min(len, bytesPerChecksum);
       

@@ -173,7 +173,7 @@ class UO_Datanode extends UpgradeObjectDatanode {
 
   public void doUpgrade() throws IOException {
     this.status = (short)100;
-    getDatanode().namenode.processUpgradeCommand(
+    getDatanode().namenodeTODO_FED.processUpgradeCommand(
         new UpgradeCommand(UpgradeCommand.UC_ACTION_REPORT_STATUS, 
             getVersion(), getUpgradeStatus()));
   }

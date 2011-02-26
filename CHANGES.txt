@@ -49,6 +49,9 @@ Trunk (unreleased changes)
     HDFS-1642. HDFS Federation: add Datanode.getDNRegistration(String bpid) 
     method  (boryas)
 
+    HDFS-1643. HDFS Federation: remove namenode argument from DataNode 
+    constructor (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
