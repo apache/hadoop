@@ -51,6 +51,7 @@ Release 0.91.0 - Unreleased
                unflushable regions.
    HBASE-3550  FilterList reports false positives (Bill Graham via Andrew
                Purtell)
+   HBASE-3566  writeToWAL is not serialized for increment operation
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

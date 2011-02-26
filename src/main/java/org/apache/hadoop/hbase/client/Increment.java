@@ -44,7 +44,7 @@ import org.apache.hadoop.io.Writable;
  * {@link #addColumn(byte[], byte[], long)} method.
  */
 public class Increment implements Writable {
-  private static final byte INCREMENT_VERSION = (byte)1;
+  private static final byte INCREMENT_VERSION = (byte)2;
 
   private byte [] row = null;
   private long lockId = -1L;
@@ -296,6 +296,9 @@ public class Increment implements Writable {
       }
       this.familyMap.put(family, set);
     }
+    if (version > 1) {
+      this.writeToWAL = in.readBoolean();
+    }
   }
 
   public void write(final DataOutput out)
@@ -323,5 +326,6 @@ public class Increment implements Writable {
         }
       }
     }
+    out.writeBoolean(writeToWAL);
   }
 }
