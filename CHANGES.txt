@@ -63,6 +63,9 @@ Trunk (unreleased changes)
 
     HDFS-1650. TestReplication fails. (Tanping via suresh)
 
+    HDFS-1651. Tests fail due to null pointer exception in 
+    Datnode#shutdown() method. (Tanping via suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

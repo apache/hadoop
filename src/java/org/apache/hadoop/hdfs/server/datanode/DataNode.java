@@ -255,21 +255,6 @@ public class DataNode extends Configured
   }
   
   /**
-   * Start a Datanode with specified server sockets for secure environments
-   * where they are run with privileged ports and injected from a higher
-   * level of capability
-   */
-  /*
-  DataNode(final Configuration conf,
-           final AbstractList<File> dataDirs, final SecureResources resources) throws IOException {  
-    this(conf, dataDirs, (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
-                       DatanodeProtocol.versionID,
-                       NameNode.getServiceAddress(conf, true), 
-                       conf), resources);
-  }
-  */
-  
-  /**
    * Create the DataNode given a configuration, an array of dataDirs,
    * and a namenode proxy
    */
@@ -1362,6 +1347,7 @@ public class DataNode extends Configured
     for(BPOfferService bpos : nameNodeThreads) {
       if(bpos != null && bpos.bpThread!=null) {
         bpos.bpThread.interrupt();
+        RPC.stopProxy(bpos.bpNamenode); // stop the RPC threads 
       }
     } 
 
@@ -1374,12 +1360,6 @@ public class DataNode extends Configured
       }
     }
 
-    // stop all the proxy threads
-    for(BPOfferService bpos: nameNodeThreads) {
-      if(bpos!=null && bpos.bpNamenode!=null)
-        RPC.stopProxy(bpos.bpNamenode); // stop the RPC threads 
-    }
-  
     if(upgradeManager != null)
       upgradeManager.shutdownUpgrade();
     if (blockScannerThread != null) { 
