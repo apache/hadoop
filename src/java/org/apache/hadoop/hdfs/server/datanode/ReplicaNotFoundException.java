@@ -48,11 +48,6 @@ public class ReplicaNotFoundException extends IOException {
     super("Replica not found for " + b);
   }
   
-  // TODO:FEDERATION remove this later
-  ReplicaNotFoundException(Block b) {
-    super("Replica not found for " + b);
-  }
-  
   public ReplicaNotFoundException(String msg) {
     super(msg);
   }

@@ -70,7 +70,6 @@ public class TestBlockRecovery {
   private DataNode dn;
   private Configuration conf;
   private final static long RECOVERY_ID = 3000L;
-  // TODO:FEDERATION fix pool ID
   private final static String POOL_ID = "BP-TEST";
   private final static long BLOCK_ID = 1000L;
   private final static long GEN_STAMP = 2000L;

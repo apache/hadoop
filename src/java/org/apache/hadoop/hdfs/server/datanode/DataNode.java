@@ -1805,7 +1805,9 @@ public class DataNode extends Configured
   public static DataNode createDataNode(String args[], Configuration conf,
       SecureResources resources) throws IOException {
     DataNode dn = instantiateDataNode(args, conf, resources);
-    dn.runDatanodeDaemon();
+    if (dn != null) {
+      dn.runDatanodeDaemon();
+    }
     return dn;
   }
 

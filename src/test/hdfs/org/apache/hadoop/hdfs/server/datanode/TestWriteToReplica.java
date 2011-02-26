@@ -30,8 +30,7 @@ import org.junit.Test;
 
 /** Test if FSDataset#append, writeToRbw, and writeToTmp */
 public class TestWriteToReplica {
-  static String bpid;
-  // TODO:FEDERATION make sure bpid is passed righ there
+  static String bpid = "BP-TEST";
   final private static ExtendedBlock[] blocks = new ExtendedBlock[] {
     new ExtendedBlock(bpid, 1, 1, 2001), new ExtendedBlock(bpid, 2, 1, 2002), 
     new ExtendedBlock(bpid, 3, 1, 2003), new ExtendedBlock(bpid, 4, 1, 2004),

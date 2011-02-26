@@ -955,7 +955,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   public synchronized Block getStoredBlock(String bpid, long blkid)
       throws IOException {
-    // TODO:FEDERATION use extended block
     File blockfile = findBlockFile(bpid, blkid);
     if (blockfile == null) {
       return null;
@@ -992,7 +991,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
   @Override // FSDatasetInterface
   public boolean metaFileExists(ExtendedBlock b) throws IOException {
-    // TODO:FEDERATION use ExtendedBlock
     return getMetaFile(b).exists();
   }
   
@@ -1303,7 +1301,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       throw new IOException("The new generation stamp " + newGS + 
           " should be greater than the replica " + b + "'s generation stamp");
     }
-    // TODO:FEDERATION use ExtendedBlock
     ReplicaInfo replicaInfo = getReplicaInfo(b);
     if (replicaInfo == null) {
       throw new ReplicaNotFoundException(
@@ -1443,7 +1440,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       long newGS, long expectedBlockLen) throws IOException {
     DataNode.LOG.info("Recover failed append to " + b);
 
-    // TODO:FEDERATION use ExtendedBlock
     ReplicaInfo replicaInfo = recoverCheck(b, newGS, expectedBlockLen);
 
     // change the replica's state/gs etc.
@@ -2076,8 +2072,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           // Remove the block from volumeMap
           volumeMap.remove(bpid, blockId);
           if (datanode.blockScanner != null) {
-            // TODO:FEDERATION pass the right bpid
-            datanode.blockScanner.deleteBlock("TODO", new Block(blockId));
+            datanode.blockScanner.deleteBlock(bpid, new Block(blockId));
           }
           DataNode.LOG.warn("Removed block " + blockId
               + " from memory with missing block file on the disk");

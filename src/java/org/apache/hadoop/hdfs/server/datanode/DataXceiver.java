@@ -277,7 +277,6 @@ class DataXceiver extends DataTransferProtocol.Receiver
             stage, newGs, minBytesRcvd, maxBytesRcvd,
             client, srcDataNode, datanode);
       } else {
-        // TODO:FEDERATION use ExtendedBlock
         datanode.data.recoverClose(block, newGs, minBytesRcvd);
       }
 
@@ -381,7 +380,6 @@ class DataXceiver extends DataTransferProtocol.Receiver
       // the block is finalized in the PacketResponder.
       if (client.length() == 0 || 
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
-        // TODO:FEDERATION use ExtendedBlock
         datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
         LOG.info("Received block " + block + 
                  " src: " + remoteAddress +
@@ -622,7 +620,6 @@ class DataXceiver extends DataTransferProtocol.Receiver
           dataXceiverServer.balanceThrottler, -1);
                     
       // notify name node
-      // TODO:FEDERATION use ExtendedBlock
       datanode.notifyNamenodeReceivedBlock(block, sourceID);
 
       LOG.info("Moved block " + block + 

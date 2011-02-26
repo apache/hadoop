@@ -55,6 +55,9 @@ Trunk (unreleased changes)
     HDFS-1657. Tests that corrupt block files fail due to changed file 
     path in federation. (suresh)
 
+    HDFS-1661. Hdfs Federation: Remove unnecessary TODO:FEDERATION comments.
+    (jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
