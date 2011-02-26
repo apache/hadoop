@@ -58,6 +58,9 @@ Trunk (unreleased changes)
     HDFS-1661. Hdfs Federation: Remove unnecessary TODO:FEDERATION comments.
     (jitendra)
 
+    HDFS-1660. HDFS Federation: Datanode doesn't start with two namenodes
+    (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

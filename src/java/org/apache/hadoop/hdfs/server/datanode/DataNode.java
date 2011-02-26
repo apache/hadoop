@@ -1710,9 +1710,13 @@ public class DataNode extends Configured
    */
   void closeBlock(ExtendedBlock block, String delHint) {
     myMetrics.blocksWritten.inc();
-    BPOfferService bpos = nameNodeThreads[0];
-    // TODO:FEDERATION - find the corresponding bp - for now , for compiliation, pick the first one
-    bpos.notifyNamenodeReceivedBlock(new ExtendedBlock(block), delHint);
+    BPOfferService bpos = bpMapping.get(block.getPoolId());
+    if(bpos != null) {
+      bpos.notifyNamenodeReceivedBlock(block, delHint);
+    } else {
+      LOG.warn("Cannot find BPOfferService for reporting block received for bpid="
+          + block.getPoolId());
+    }
     if (blockScanner != null) {
       blockScanner.addBlock(block);
     }
