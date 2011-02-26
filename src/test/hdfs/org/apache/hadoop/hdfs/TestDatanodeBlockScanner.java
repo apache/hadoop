@@ -143,27 +143,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   }
 
   public static boolean corruptReplica(ExtendedBlock blk, int replica) throws IOException {
-    String blockName = blk.getLocalBlock().getBlockName();
-    Random random = new Random();
-    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
-    boolean corrupted = false;
-    // TODO:FEDERATION use BlockPoolId
-    for (int i=replica*2; i<replica*2+2; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1) + 
-          MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
-      if (blockFile.exists()) {
-        // Corrupt replica by writing random bytes into replica
-        RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
-        FileChannel channel = raFile.getChannel();
-        String badString = "BADBAD";
-        int rand = random.nextInt((int)channel.size()/2);
-        raFile.seek(rand);
-        raFile.write(badString.getBytes());
-        raFile.close();
-        corrupted = true;
-      }
-    }
-    return corrupted;
+    return MiniDFSCluster.corruptBlockOnDataNode(replica, blk);
   }
 
   public void testBlockCorruptionPolicy() throws IOException {
@@ -427,31 +407,22 @@ public class TestDatanodeBlockScanner extends TestCase {
    */
   static boolean changeReplicaLength(ExtendedBlock blk, int dnIndex,
       int lenDelta) throws IOException {
-    String blockName = blk.getBlockName();
-    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
-    for (int i=dnIndex*2; i<dnIndex*2+2; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1) + 
-          MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
-      if (blockFile.exists()) {
-        RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
-        raFile.setLength(raFile.length()+lenDelta);
-        raFile.close();
-        return true;
-      }
+    File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
+    if (blockFile.exists()) {
+      RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
+      raFile.setLength(raFile.length()+lenDelta);
+      raFile.close();
+      return true;
     }
     return false;
   }
   
   private static void waitForBlockDeleted(ExtendedBlock blk, int dnIndex) 
   throws IOException, InterruptedException {
-    String blockName = blk.getBlockName();
-    File baseDir = new File(MiniDFSCluster.getBaseDirectory(), "data");
-    File blockFile1 = new File(baseDir, "data" + (2*dnIndex+1) + 
-        MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
-    File blockFile2 = new File(baseDir, "data" + (2*dnIndex+2) + 
-        MiniDFSCluster.FINALIZED_DIR_NAME + blockName);
-    while (blockFile1.exists() || blockFile2.exists()) {
+    File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
+    while (blockFile != null) {
       Thread.sleep(100);
+      blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
     }
   }
 }

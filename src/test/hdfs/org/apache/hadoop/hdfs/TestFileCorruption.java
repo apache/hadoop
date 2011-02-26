@@ -63,8 +63,9 @@ public class TestFileCorruption extends TestCase {
       FileSystem fs = cluster.getFileSystem();
       util.createFiles(fs, "/srcdat");
       // Now deliberately remove the blocks
-      File data_dir = new File(System.getProperty("test.build.data"),
-                               "dfs/data/data5/current");
+      File storageDir = MiniDFSCluster.getStorageDir(2, 0);
+      String bpid = cluster.getNamesystem().getPoolId();
+      File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
       File[] blocks = data_dir.listFiles();
       assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));
@@ -123,12 +124,14 @@ public class TestFileCorruption extends TestCase {
       DFSTestUtil.createFile(fs, FILE_PATH, FILE_LEN, (short)2, 1L);
       
       // get the block
-      File dataDir = new File(cluster.getDataDirectory(),
-          "data1" + MiniDFSCluster.FINALIZED_DIR_NAME);
-      ExtendedBlock blk = getBlock(dataDir);
+      final String bpid = cluster.getNamesystem().getPoolId();
+      File storageDir = MiniDFSCluster.getStorageDir(0, 0);
+      File dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+      ExtendedBlock blk = getBlock(bpid, dataDir);
       if (blk == null) {
-        blk = getBlock(new File(cluster.getDataDirectory(),
-          "dfs/data/data2" + MiniDFSCluster.FINALIZED_DIR_NAME));
+        storageDir = MiniDFSCluster.getStorageDir(0, 1);
+        dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+        blk = getBlock(bpid, dataDir);
       }
       assertFalse(blk==null);
 
@@ -154,7 +157,7 @@ public class TestFileCorruption extends TestCase {
     
   }
   
-  private ExtendedBlock getBlock(File dataDir) {
+  private ExtendedBlock getBlock(String bpid, File dataDir) {
     assertTrue("data directory does not exist", dataDir.exists());
     File[] blocks = dataDir.listFiles();
     assertTrue("Blocks do not exist in dataDir", (blocks != null) && (blocks.length > 0));
@@ -181,7 +184,6 @@ public class TestFileCorruption extends TestCase {
         break;
       }
     }
-    // TODO:FEDERATION cleanup when BlockPoolID support in Datanode is complete
-    return new ExtendedBlock("TODO", blockId, blocks[idx].length(), blockTimeStamp);
+    return new ExtendedBlock(bpid, blockId, blocks[idx].length(), blockTimeStamp);
   }
 }

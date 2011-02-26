@@ -52,6 +52,9 @@ Trunk (unreleased changes)
     HDFS-1643. HDFS Federation: remove namenode argument from DataNode 
     constructor (boryas)
 
+    HDFS-1657. Tests that corrupt block files fail due to changed file 
+    path in federation. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

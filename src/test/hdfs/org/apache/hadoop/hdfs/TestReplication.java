@@ -326,25 +326,19 @@ public class TestReplication extends TestCase {
       waitForBlockReplication(testFile, dfsClient.getNamenode(), numDataNodes, -1);
 
       // get first block of the file.
-      String block = dfsClient.getNamenode().
-                       getBlockLocations(testFile, 0, Long.MAX_VALUE).
-                       get(0).getBlock().getBlockName();
+      ExtendedBlock block = dfsClient.getNamenode().getBlockLocations(testFile,
+          0, Long.MAX_VALUE).get(0).getBlock();
       
       cluster.shutdown();
       cluster = null;
       
-      //Now mess up some of the replicas.
-      //Delete the first and corrupt the next two.
-      File baseDir = new File(System.getProperty("test.build.data"), 
-                                                 "dfs/data");
       for (int i=0; i<25; i++) {
         buffer[i] = '0';
       }
       
       int fileCount = 0;
       for (int i=0; i<6; i++) {
-        File blockFile = new File(baseDir, "data" + (i+1) + 
-            MiniDFSCluster.FINALIZED_DIR_NAME + block);
+        File blockFile = MiniDFSCluster.getBlockFile(i, block);
         LOG.info("Checking for file " + blockFile);
         
         if (blockFile.exists()) {

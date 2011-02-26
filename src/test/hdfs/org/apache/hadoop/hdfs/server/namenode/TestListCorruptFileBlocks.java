@@ -138,23 +138,24 @@ public class TestListCorruptFileBlocks extends TestCase {
       int numCorrupt = corruptFileBlocks.size();
       assertTrue(numCorrupt == 0);
       // delete the blocks
-      File baseDir = new File(System.getProperty("test.build.data",
-          "build/test/data"), "dfs/data");
-      for (int i = 0; i < 8; i++) {
-        File data_dir = new File(baseDir, "data" + (i + 1)
-            + MiniDFSCluster.FINALIZED_DIR_NAME);
-        File[] blocks = data_dir.listFiles();
-        if (blocks == null)
-          continue;
-        // assertTrue("Blocks do not exist in data-dir", (blocks != null) &&
-        // (blocks.length > 0));
-        for (int idx = 0; idx < blocks.length; idx++) {
-          if (!blocks[idx].getName().startsWith("blk_")) {
+      String bpid = cluster.getNamesystem().getPoolId();
+      for (int i = 0; i < 4; i++) {
+        for (int j = 0; j <= 1; j++) {
+          File storageDir = MiniDFSCluster.getStorageDir(i, j);
+          File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+          File[] blocks = data_dir.listFiles();
+          if (blocks == null)
             continue;
+          // assertTrue("Blocks do not exist in data-dir", (blocks != null) &&
+          // (blocks.length > 0));
+          for (int idx = 0; idx < blocks.length; idx++) {
+            if (!blocks[idx].getName().startsWith("blk_")) {
+              continue;
+            }
+            LOG.info("Deliberately removing file " + blocks[idx].getName());
+            assertTrue("Cannot remove file.", blocks[idx].delete());
+            // break;
           }
-          LOG.info("Deliberately removing file " + blocks[idx].getName());
-          assertTrue("Cannot remove file.", blocks[idx].delete());
-          // break;
         }
       }
 
@@ -232,19 +233,22 @@ public class TestListCorruptFileBlocks extends TestCase {
           badFiles.size() == 0);
 
       // Now deliberately blocks from all files
-      File baseDir = new File(System.getProperty("test.build.data",
-      "build/test/data"),"dfs/data");
-      for (int i=0; i<8; i++) {
-        File data_dir = new File(baseDir, "data" +(i+1)+ MiniDFSCluster.FINALIZED_DIR_NAME);
-        File[] blocks = data_dir.listFiles();
-        if (blocks == null)
-          continue;
-
-        for (int idx = 0; idx < blocks.length; idx++) {
-          if (!blocks[idx].getName().startsWith("blk_")) {
+      final String bpid = cluster.getNamesystem().getPoolId();
+      for (int i=0; i<4; i++) {
+        for (int j=0; j<=1; j++) {
+          File storageDir = MiniDFSCluster.getStorageDir(i, j);
+          File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+          LOG.info("Removing files from " + data_dir);
+          File[] blocks = data_dir.listFiles();
+          if (blocks == null)
             continue;
+  
+          for (int idx = 0; idx < blocks.length; idx++) {
+            if (!blocks[idx].getName().startsWith("blk_")) {
+              continue;
+            }
+            assertTrue("Cannot remove file.", blocks[idx].delete());
           }
-          assertTrue("Cannot remove file.", blocks[idx].delete());
         }
       }
 

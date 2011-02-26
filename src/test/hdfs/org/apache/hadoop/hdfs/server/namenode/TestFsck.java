@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
@@ -246,14 +247,10 @@ public class TestFsck extends TestCase {
       String[] fileNames = util.getFileNames(topDir);
       DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                           cluster.getNameNodePort()), conf);
-      String block = dfsClient.getNamenode().
-                      getBlockLocations(fileNames[0], 0, Long.MAX_VALUE).
-                      get(0).getBlock().getBlockName();
-      File baseDir = new File(System.getProperty("test.build.data",
-                                                 "build/test/data"),"dfs/data");
-      for (int i=0; i<8; i++) {
-        File blockFile = new File(baseDir, "data" +(i+1) + 
-            MiniDFSCluster.FINALIZED_DIR_NAME + block);
+      ExtendedBlock block = dfsClient.getNamenode().getBlockLocations(
+          fileNames[0], 0, Long.MAX_VALUE).get(0).getBlock();
+      for (int i=0; i<4; i++) {
+        File blockFile = MiniDFSCluster.getBlockFile(i, block);
         if(blockFile.exists()) {
           assertTrue(blockFile.delete());
         }
@@ -354,7 +351,7 @@ public class TestFsck extends TestCase {
     DFSTestUtil.createFile(fs, file1, 1024, (short)3, 0);
     // Wait until file replication has completed
     DFSTestUtil.waitReplication(fs, file1, (short)3);
-    String block = DFSTestUtil.getFirstBlock(fs, file1).getBlockName();
+    ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, file1);
 
     // Make sure filesystem is in healthy state
     outStr = runFsck(conf, 0, true, "/");
@@ -362,11 +359,8 @@ public class TestFsck extends TestCase {
     assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
     
     // corrupt replicas 
-    File baseDir = new File(System.getProperty("test.build.data",
-                                               "build/test/data"),"dfs/data");
-    for (int i=0; i < 6; i++) {
-      File blockFile = new File(baseDir, "data" + (i+1) + 
-          MiniDFSCluster.FINALIZED_DIR_NAME + block);
+    for (int i=0; i < 3; i++) {
+      File blockFile = MiniDFSCluster.getBlockFile(i, block);
       if (blockFile.exists()) {
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
         FileChannel channel = raFile.getChannel();
@@ -469,19 +463,21 @@ public class TestFsck extends TestCase {
       System.out.println("1. good fsck out: " + outStr);
       assertTrue(outStr.contains("has 0 CORRUPT files"));
       // delete the blocks
-      File baseDir = new File(System.getProperty("test.build.data",
-      "build/test/data"),"dfs/data");
-      for (int i=0; i<8; i++) {
-        File data_dir = new File(baseDir, "data" +(i+1)+ MiniDFSCluster.FINALIZED_DIR_NAME);
-        File[] blocks = data_dir.listFiles();
-        if (blocks == null)
-          continue;
-
-        for (int idx = 0; idx < blocks.length; idx++) {
-          if (!blocks[idx].getName().startsWith("blk_")) {
+      final String bpid = cluster.getNamesystem().getPoolId();
+      for (int i=0; i<4; i++) {
+        for (int j=0; j<=1; j++) {
+          File storageDir = MiniDFSCluster.getStorageDir(i, j);
+          File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
+          File[] blocks = data_dir.listFiles();
+          if (blocks == null)
             continue;
+  
+          for (int idx = 0; idx < blocks.length; idx++) {
+            if (!blocks[idx].getName().startsWith("blk_")) {
+              continue;
+            }
+            assertTrue("Cannot remove file.", blocks[idx].delete());
           }
-          assertTrue("Cannot remove file.", blocks[idx].delete());
         }
       }
 

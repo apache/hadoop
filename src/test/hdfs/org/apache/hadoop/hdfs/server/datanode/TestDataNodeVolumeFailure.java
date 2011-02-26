@@ -101,7 +101,8 @@ public class TestDataNodeVolumeFailure extends TestCase{
     // fail the volume
     // delete/make non-writable one of the directories (failed volume)
     data_fail = new File(dataDir, "data3");
-    failedDir = new File(data_fail, MiniDFSCluster.FINALIZED_DIR_NAME);
+    failedDir = MiniDFSCluster.getFinalizedDir(dataDir, 
+        cluster.getNamesystem().getPoolId());
     if (failedDir.exists() &&
         //!FileUtil.fullyDelete(failedDir)
         !deteteBlocks(failedDir)
@@ -303,9 +304,11 @@ public class TestDataNodeVolumeFailure extends TestCase{
 
   private int countRealBlocks(Map<String, BlockLocs> map) {
     int total = 0;
+    final String bpid = cluster.getNamesystem().getPoolId();
     for(int i=0; i<dn_num; i++) {
-      for(int j=1; j<=2; j++) {
-        File dir = new File(dataDir, "data"+(2*i+j)+MiniDFSCluster.FINALIZED_DIR_NAME);
+      for(int j=0; j<=1; j++) {
+        File storageDir = MiniDFSCluster.getStorageDir(i, j);
+        File dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
         if(dir == null) {
           System.out.println("dir is null for dn=" + i + " and data_dir=" + j);
           continue;
