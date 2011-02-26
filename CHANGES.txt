@@ -5,7 +5,7 @@ Trunk (unreleased changes)
   NEW FEATURES
 
     HDFS-1365. Federation: propose ClusterID and BlockPoolID format 
-    (tanping via boryas)
+    (Tanping via boryas)
 
     HDFS-1394. Federation: modify -format option for namenode to generated 
     new blockpool id and accept newcluster (boryas)
@@ -14,13 +14,13 @@ Trunk (unreleased changes)
     include BlockPoolID in the protocol. (suresh)
 
     HDFS-1428. Federation : add cluster ID and block pool ID into 
-    Name node web UI(tanping via boryas)
+    Name node web UI(Tanping via boryas)
 
     HDFS-1450. Federation: Introduce block pool ID into FSDatasetInterface.
     (suresh)
 
     HDFS-1632. Federation: data node storage structure changes and
-    introduce block pool storage. (tanping via suresh)
+    introduce block pool storage. (Tanping via suresh)
 
     HDFS-1634. Federation: Convert single threaded DataNode into 
     per BlockPool thread model.(boryas)
@@ -42,7 +42,7 @@ Trunk (unreleased changes)
     HDFS-1639. Add block pool management to FSDataset. (suresh)
 
     HDFS-1648. Only DataStorage must be locked using in_use.lock and no 
-    locks must be associated with BlockPoolStorage. (tanping via suresh)
+    locks must be associated with BlockPoolStorage. (Tanping via suresh)
 
     HDFS-1641. Datanode fields that are no longer used should be removed (boryas)
 
@@ -60,6 +60,8 @@ Trunk (unreleased changes)
 
     HDFS-1660. HDFS Federation: Datanode doesn't start with two namenodes
     (boryas)
+
+    HDFS-1650. TestReplication fails. (Tanping via suresh)
 
   IMPROVEMENTS
 

@@ -408,7 +408,7 @@ public class TestDatanodeBlockScanner extends TestCase {
   static boolean changeReplicaLength(ExtendedBlock blk, int dnIndex,
       int lenDelta) throws IOException {
     File blockFile = MiniDFSCluster.getBlockFile(dnIndex, blk);
-    if (blockFile.exists()) {
+    if (blockFile != null && blockFile.exists()) {
       RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
       raFile.setLength(raFile.length()+lenDelta);
       raFile.close();

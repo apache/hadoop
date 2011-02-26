@@ -337,8 +337,9 @@ public class TestReplication extends TestCase {
       }
       
       int fileCount = 0;
-      for (int i=0; i<6; i++) {
-        File blockFile = MiniDFSCluster.getBlockFile(i, block);
+      // Choose 3 copies of block file - delete 1 and corrupt the remaining 2
+      for (int dnIndex=0; dnIndex<3; dnIndex++) {
+        File blockFile = MiniDFSCluster.getBlockFile(dnIndex, block);
         LOG.info("Checking for file " + blockFile);
         
         if (blockFile.exists()) {
