@@ -100,6 +100,7 @@ public class TableMapReduceUtil {
     if (outputValueClass != null) job.setMapOutputValueClass(outputValueClass);
     if (outputKeyClass != null) job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
+    HBaseConfiguration.addHbaseResources(job.getConfiguration());
     job.getConfiguration().set(TableInputFormat.INPUT_TABLE, table);
     job.getConfiguration().set(TableInputFormat.SCAN,
       convertScanToString(scan));
@@ -231,6 +232,7 @@ public class TableMapReduceUtil {
     String serverImpl, boolean addDependencyJars) throws IOException {
 
     Configuration conf = job.getConfiguration();
+    HBaseConfiguration.addHbaseResources(conf);
     job.setOutputFormatClass(TableOutputFormat.class);
     if (reducer != null) job.setReducerClass(reducer);
     conf.set(TableOutputFormat.OUTPUT_TABLE, table);

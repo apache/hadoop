@@ -54,6 +54,8 @@ Release 0.91.0 - Unreleased
    HBASE-3566  writeToWAL is not serialized for increment operation
    HBASE-3552  Coprocessors are unable to load if RegionServer is launched
                using a different classloader than system default
+   HBASE-3578  TableInputFormat does not setup the configuration for HBase
+               mapreduce jobs correctly (Dan Harvey via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -84,7 +86,7 @@ Release 0.91.0 - Unreleased
    HBASE-3563  [site] Add one-page-only version of hbase doc
    HBASE-3564  DemoClient.pl - a demo client in Perl
    HBASE-3560  the hbase-default entry of "hbase.defaults.for.version" 
-   	       causes tests not to run via not-maven
+               causes tests not to run via not-maven
 
 
   NEW FEATURES
