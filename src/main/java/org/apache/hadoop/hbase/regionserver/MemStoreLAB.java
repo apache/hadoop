@@ -154,6 +154,7 @@ public class MemStoreLAB {
     private byte[] data;
 
     private static final int UNINITIALIZED = -1;
+    private static final int OOM = -2;
     /**
      * Offset for the next allocation, or the sentinel value -1
      * which implies that the chunk is still uninitialized.
@@ -182,7 +183,13 @@ public class MemStoreLAB {
      */
     public void init() {
       assert nextFreeOffset.get() == UNINITIALIZED;
-      data = new byte[size];
+      try {
+        data = new byte[size];
+      } catch (OutOfMemoryError e) {
+        boolean failInit = nextFreeOffset.compareAndSet(UNINITIALIZED, OOM);
+        assert failInit; // should be true.
+        throw e;
+      }
       // Mark that it's ready for use
       boolean initted = nextFreeOffset.compareAndSet(
           UNINITIALIZED, 0);
@@ -206,6 +213,10 @@ public class MemStoreLAB {
           // shouldn't spin long!
           Thread.yield();
           continue;
+        }
+        if (oldOffset == OOM) {
+          // doh we ran out of ram. return -1 to chuck this away.
+          return -1;
         }
 
         if (oldOffset + size > data.length) {
