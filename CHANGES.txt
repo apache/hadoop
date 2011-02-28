@@ -60,6 +60,9 @@ Trunk (unreleased changes)
     HADOOP-7151. Document need for stable hashCode() in WritableComparable.
     (Dmitriy V. Ryaboy via todd)
 
+    HADOOP-7112. Issue a warning when GenericOptionsParser libjars are not on
+    local filesystem. (tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES

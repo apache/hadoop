@@ -342,6 +342,9 @@ public class GenericOptionsParser {
       Path tmp = new Path(file);
       if (tmp.getFileSystem(conf).equals(FileSystem.getLocal(conf))) {
         cp.add(FileSystem.getLocal(conf).pathToFile(tmp).toURI().toURL());
+      } else {
+        LOG.warn("The libjars file " + tmp + " is not on the local " +
+          "filesystem. Ignoring.");
       }
     }
     return cp.toArray(new URL[0]);
