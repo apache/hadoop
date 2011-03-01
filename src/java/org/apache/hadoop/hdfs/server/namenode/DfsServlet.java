@@ -85,7 +85,7 @@ abstract class DfsServlet extends HttpServlet {
     return DFSClient.createNamenode(nnAddr, conf);
   }
 
-  /** Create a URI for redirecting request */
+  /** Create a URI for redirecting request to a datanode */
   protected URI createRedirectUri(String servletpath, 
                                   UserGroupInformation ugi,
                                   DatanodeID host, 
@@ -109,6 +109,10 @@ abstract class DfsServlet extends HttpServlet {
       params.append("&ugi=");
       params.append(ugi.getShortUserName());
     }
+    
+    // Add namenode address to the URL params
+    String nnAddr = NameNode.getHostPortString(nn.getNameNodeAddress());
+    params.append(JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr));
     return new URI(scheme, null, hostname, port, servletpath,
                    params.toString(), null);
   }

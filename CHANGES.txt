@@ -81,6 +81,8 @@ Trunk (unreleased changes)
     HDFS-1668. Federation: Datanodes sends block pool usage information 
     to the namenode in heartbeat. (suresh)
 
+    HDFS-1669. Federation: Fix TestHftpFileSystem failure. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

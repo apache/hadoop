@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -36,6 +35,7 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSInputStream;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.mortbay.jetty.InclusiveByteRange;
 
@@ -46,29 +46,15 @@ public class StreamFile extends DfsServlet {
 
   public static final String CONTENT_LENGTH = "Content-Length";
 
-  static InetSocketAddress nameNodeAddr;
-  static DataNode datanode = null;
-  static {
-    if ((datanode = DataNode.getDataNode()) != null) {
-      nameNodeAddr = datanode.getNameNodeAddrForClient();
-    }
-  }
+  static DataNode datanode = DataNode.getDataNode();
   
   /** getting a client for connecting to dfs */
   protected DFSClient getDFSClient(HttpServletRequest request)
       throws IOException, InterruptedException {
     final Configuration conf =
       (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
-    
     UserGroupInformation ugi = getUGI(request, conf);
-    DFSClient client = ugi.doAs(new PrivilegedExceptionAction<DFSClient>() {
-      @Override
-      public DFSClient run() throws IOException {
-        return new DFSClient(nameNodeAddr, conf);
-      }
-    });
-    
-    return client;
+    return DatanodeJspHelper.getDFSClient(request, datanode, conf, ugi);
   }
   
   public void doGet(HttpServletRequest request, HttpServletResponse response)

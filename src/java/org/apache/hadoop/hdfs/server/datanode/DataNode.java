@@ -327,8 +327,6 @@ public class DataNode extends Configured
   private DataStorage storage = null;
   private HttpServer infoServer = null;
   DataNodeMetrics myMetrics;
-  private InetSocketAddress nameNodeAddr;
-  private InetSocketAddress nameNodeAddrForClient;
   private InetSocketAddress selfAddr;
   static DataNode datanodeObject = null;
   String machineName;
@@ -1361,12 +1359,18 @@ public class DataNode extends Configured
     }
   }
 
-  public InetSocketAddress getNameNodeAddr() {
-    return nameNodeAddr;
-  }
-  
-  public InetSocketAddress getNameNodeAddrForClient() {
-    return nameNodeAddrForClient;
+  /**
+   * get the name node address based on the block pool id
+   * @param bpid block pool ID
+   * @return namenode address corresponding to the bpid
+   */
+  public InetSocketAddress getNameNodeAddr(String bpid) {
+    BPOfferService bp = blockPoolManager.get(bpid);
+    if (bp != null) {
+      return bp.getNNSocketAddress();
+    }
+    LOG.warn("No name node address found for block pool ID " + bpid);
+    return null;
   }
   
   public InetSocketAddress getSelfAddr() {
@@ -2350,6 +2354,7 @@ public class DataNode extends Configured
     return NetUtils.createSocketAddr(
         conf.get("dfs.datanode.address", "0.0.0.0:50010"));
   }
+  
   @Override // DataNodeMXBean
   public String getVersion() {
     return VersionInfo.getVersion();
@@ -2367,9 +2372,19 @@ public class DataNode extends Configured
     return this.getConf().get("dfs.datanode.info.port");
   }
 
+  /**
+   * Returned information is a JSON representation of a map with 
+   * name node host name as the key and block pool Id as the value
+   */
   @Override // DataNodeMXBean
-  public String getNamenodeAddress(){
-    return nameNodeAddr.getHostName();
+  public String getNamenodeAddresses() {
+    final Map<String, String> info = new HashMap<String, String>();
+    for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
+      if (bpos != null && bpos.bpThread != null) {
+        info.put(bpos.getNNSocketAddress().getHostName(), bpos.blockPoolId);
+      }
+    }
+    return JSON.toString(info);
   }
 
   /**

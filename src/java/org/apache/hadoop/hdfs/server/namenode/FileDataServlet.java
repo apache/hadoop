@@ -49,7 +49,9 @@ public class FileDataServlet extends DfsServlet {
       ClientProtocol nnproxy, HttpServletRequest request, String dt)
       throws IOException, URISyntaxException {
     String scheme = request.getScheme();
-    final DatanodeID host = pickSrcDatanode(parent, i, nnproxy);
+    final LocatedBlocks blks = nnproxy.getBlockLocations(
+        i.getFullPath(new Path(parent)).toUri().getPath(), 0, 1);
+    final DatanodeID host = pickSrcDatanode(blks, i);
     final String hostname;
     if (host instanceof DatanodeInfo) {
       hostname = ((DatanodeInfo)host).getHostName();
@@ -62,22 +64,25 @@ public class FileDataServlet extends DfsServlet {
       dtParam=JspHelper.getDelegationTokenUrlParam(dt);
     }
 
+    // Add namenode address to the url params
+    NameNode nn = (NameNode)getServletContext().getAttribute("name.node");
+    String addr = NameNode.getHostPortString(nn.getNameNodeAddress());
+    String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
+    
     return new URI(scheme, null, hostname,
         "https".equals(scheme)
           ? (Integer)getServletContext().getAttribute("datanode.https.port")
           : host.getInfoPort(),
             "/streamFile" + i.getFullName(parent), 
-            "ugi=" + ugi.getShortUserName() + dtParam, null);
+            "ugi=" + ugi.getShortUserName() + dtParam + addrParam, null);
   }
 
   /** Select a datanode to service this request.
    * Currently, this looks at no more than the first five blocks of a file,
    * selecting a datanode randomly from the most represented.
    */
-  private DatanodeID pickSrcDatanode(String parent, HdfsFileStatus i,
-      ClientProtocol nnproxy) throws IOException {
-    final LocatedBlocks blks = nnproxy.getBlockLocations(
-        i.getFullPath(new Path(parent)).toUri().getPath(), 0, 1);
+  private DatanodeID pickSrcDatanode(LocatedBlocks blks, HdfsFileStatus i)
+      throws IOException {
     if (i.getLen() == 0 || blks.getLocatedBlocks().size() <= 0) {
       // pick a random datanode
       NameNode nn = (NameNode)getServletContext().getAttribute("name.node");

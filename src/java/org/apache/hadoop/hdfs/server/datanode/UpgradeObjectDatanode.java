@@ -93,7 +93,7 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
                                     DatanodeProtocol.NOTIFY, errorMsg);
     } catch(SocketTimeoutException e) {  // namenode is busy
       DataNode.LOG.info("Problem connecting to server: " 
-                        + dataNode.getNameNodeAddr());
+                        + dataNode.getNameNodeAddr(nsInfo.getBlockPoolID()));
     }
     throw new IOException(errorMsg);
   }

@@ -20,9 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.net.URL;
-import java.net.URLConnection;
 import java.net.HttpURLConnection;
-import java.util.Arrays;
 import java.util.Random;
 
 import junit.extensions.TestSetup;
@@ -39,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.log4j.Level;
 
 /**
@@ -122,7 +119,7 @@ public class TestHftpFileSystem extends TestCase {
     String locationName = locations[0].getNames()[0];
     URL u = hftpFs.getNamenodeFileURL(TEST_FILE);
     HttpURLConnection conn = (HttpURLConnection)u.openConnection();
-    conn.setFollowRedirects(true);
+    HttpURLConnection.setFollowRedirects(true);
     conn.connect();
     conn.getInputStream();
     boolean checked = false;

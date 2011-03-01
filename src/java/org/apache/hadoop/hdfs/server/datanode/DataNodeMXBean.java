@@ -50,11 +50,11 @@ public interface DataNodeMXBean {
   public String getHttpPort();
   
   /**
-   * Gets the namenode IP address.
+   * Gets the namenode IP addresses
    * 
-   * @return the namenode IP address
+   * @return the namenode IP addresses that the datanode is talking to
    */
-  public String getNamenodeAddress();
+  public String getNamenodeAddresses();
   
   /**
    * Gets the information of each volume on the Datanode. Please

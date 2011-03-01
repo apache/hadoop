@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
@@ -49,8 +50,6 @@ import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
 public class DatanodeJspHelper {
-  private static final DataNode datanode = DataNode.getDataNode();
-
   private static DFSClient getDFSClient(final UserGroupInformation user,
                                         final InetSocketAddress addr,
                                         final Configuration conf
@@ -90,8 +89,14 @@ public class DatanodeJspHelper {
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
-
-    DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
+    final String nnAddr = req.getParameter(JspHelper.NAMENODE_ADDRESS);
+    if (nnAddr == null){
+      out.print(JspHelper.NAMENODE_ADDRESS + " url param is null");
+      return;
+    }
+    
+    InetSocketAddress namenodeAddress = DFSUtil.getSocketAddress(nnAddr);
+    DFSClient dfs = getDFSClient(ugi, namenodeAddress, conf);
     String target = dir;
     final HdfsFileStatus targetStatus = dfs.getFileInfo(target);
     if (targetStatus == null) { // not exists
@@ -124,7 +129,8 @@ public class DatanodeJspHelper {
               + firstBlock.getBlock().getGenerationStamp() + "&filename="
               + URLEncoder.encode(dir, "UTF-8") + "&datanodePort="
               + datanodePort + "&namenodeInfoPort=" + namenodeInfoPort
-              + JspHelper.getDelegationTokenUrlParam(tokenString);
+              + JspHelper.getDelegationTokenUrlParam(tokenString)
+              + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
           resp.sendRedirect(redirectLocation);
         }
         return;
@@ -175,7 +181,8 @@ public class DatanodeJspHelper {
             String datanodeUrl = req.getRequestURL() + "?dir="
               + URLEncoder.encode(files[i].getFullName(target), "UTF-8")
               + "&namenodeInfoPort=" + namenodeInfoPort
-              + JspHelper.getDelegationTokenUrlParam(tokenString);
+              + JspHelper.getDelegationTokenUrlParam(tokenString)
+              + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
             cols[0] = "<a href=\"" + datanodeUrl + "\">"
               + localFileName + "</a>";
             cols[5] = FsShell.dateForm.format(new Date((files[i]
@@ -193,7 +200,7 @@ public class DatanodeJspHelper {
         JspHelper.addTableFooter(out);
       }
     }
-    String namenodeHost = datanode.getNameNodeAddrForClient().getHostName();
+    String namenodeHost = namenodeAddress.getHostName();
     out.print("<br><a href=\"http://"
         + InetAddress.getByName(namenodeHost).getCanonicalHostName() + ":"
         + namenodeInfoPort + "/dfshealth.jsp\">Go back to DFS home</a>");
@@ -228,6 +235,11 @@ public class DatanodeJspHelper {
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
+    final String nnAddr = req.getParameter(JspHelper.NAMENODE_ADDRESS);
+    if (nnAddr == null){
+      out.print(JspHelper.NAMENODE_ADDRESS + " url param is null");
+      return;
+    }
 
     final int chunkSizeToView = JspHelper.string2ChunkSizeToView(
         req.getParameter("chunkSizeToView"), getDefaultChunkSize(conf));
@@ -253,7 +265,8 @@ public class DatanodeJspHelper {
     }
     long blockSize = Long.parseLong(blockSizeStr);
 
-    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
+    final InetSocketAddress namenodeAddress = DFSUtil.getSocketAddress(nnAddr);
+    final DFSClient dfs = getDFSClient(ugi, namenodeAddress, conf);
     List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
         Long.MAX_VALUE).getLocatedBlocks();
     // Add the various links for looking at the file contents
@@ -310,7 +323,7 @@ public class DatanodeJspHelper {
     // generate a table and dump the info
     out.println("\n<table>");
     
-    String namenodeHost = datanode.getNameNodeAddrForClient().getHostName();
+    String namenodeHost = namenodeAddress.getHostName();
     String namenodeHostName = InetAddress.getByName(namenodeHost).getCanonicalHostName();
     
     for (LocatedBlock cur : blocks) {
@@ -332,7 +345,8 @@ public class DatanodeJspHelper {
             + "&genstamp=" + cur.getBlock().getGenerationStamp()
             + "&namenodeInfoPort=" + namenodeInfoPort
             + "&chunkSizeToView=" + chunkSizeToView
-            + JspHelper.getDelegationTokenUrlParam(tokenString);
+            + JspHelper.getDelegationTokenUrlParam(tokenString)
+            + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
 
         String blockInfoUrl = "http://" + namenodeHostName + ":"
             + namenodeInfoPort
@@ -358,8 +372,13 @@ public class DatanodeJspHelper {
     long startOffset = 0;
     int datanodePort = 0;
 
-    String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
-    String tokenString = req.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
+    final String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
+    final String nnAddr = req.getParameter(JspHelper.NAMENODE_ADDRESS);
+    if (nnAddr == null) {
+      out.print(JspHelper.NAMENODE_ADDRESS + " url param is null");
+      return;
+    }
+    final String tokenString = req.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
     UserGroupInformation ugi = JspHelper.getUGI(req, conf);
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
@@ -378,14 +397,10 @@ public class DatanodeJspHelper {
       return;
     }
     
-    final String poolId = req.getParameter("poolId");
-    if (poolId == null) {
-      out.print("Invalid input (poolId absent)");
-      return;
-    }
+    final DFSClient dfs = getDFSClient(ugi, 
+        DFSUtil.getSocketAddress(nnAddr), conf);
 
-    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
-
+    String bpid = null;
     Token<BlockTokenIdentifier> blockToken = BlockTokenSecretManager.DUMMY_TOKEN;
     if (conf.getBoolean(
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, 
@@ -399,6 +414,7 @@ public class DatanodeJspHelper {
       }
       for (int i = 0; i < blks.size(); i++) {
         if (blks.get(i).getBlock().getBlockId() == blockId) {
+          bpid = blks.get(i).getBlock().getPoolId();
           blockToken = blks.get(i).getBlockToken();
           break;
         }
@@ -564,7 +580,7 @@ public class DatanodeJspHelper {
     out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
     try {
       JspHelper.streamBlockInAscii(new InetSocketAddress(req.getServerName(),
-          datanodePort), poolId, blockId, blockToken, genStamp, blockSize,
+          datanodePort), bpid, blockId, blockToken, genStamp, blockSize,
           startOffset, chunkSizeToView, out, conf);
     } catch (Exception e) {
       out.print(e);
@@ -593,6 +609,7 @@ public class DatanodeJspHelper {
     UserGroupInformation ugi = JspHelper.getUGI(req, conf);
 
     String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
+    String nnAddr = req.getParameter(JspHelper.NAMENODE_ADDRESS);
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
@@ -622,7 +639,8 @@ public class DatanodeJspHelper {
           + "\">");
 
     // fetch the block from the datanode that has the last block for this file
-    final DFSClient dfs = getDFSClient(ugi, datanode.getNameNodeAddrForClient(), conf);
+    final DFSClient dfs = getDFSClient(ugi, DFSUtil.getSocketAddress(nnAddr),
+        conf);
     List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(filename, 0,
         Long.MAX_VALUE).getLocatedBlocks();
     if (blocks == null || blocks.size() == 0) {
@@ -654,5 +672,14 @@ public class DatanodeJspHelper {
         blockSize, startOffset, chunkSizeToView, out, conf);
     out.print("</textarea>");
     dfs.close();
+  }
+  
+  
+  /** Get DFSClient for a namenode corresponding to the BPID from a datanode */
+  public static DFSClient getDFSClient(final HttpServletRequest request,
+      final DataNode datanode, final Configuration conf,
+      final UserGroupInformation ugi) throws IOException, InterruptedException {
+    final String nnAddr = request.getParameter(JspHelper.NAMENODE_ADDRESS);
+    return getDFSClient(ugi, DFSUtil.getSocketAddress(nnAddr), conf);
   }
 }

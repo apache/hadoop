@@ -346,12 +346,14 @@ class NamenodeJspHelper {
       nodeToRedirect = nn.getHttpAddress().getHostName();
       redirectPort = nn.getHttpAddress().getPort();
     }
+    String addr = NameNode.getHostPortString(nn.getNameNodeAddress());
     String fqdn = InetAddress.getByName(nodeToRedirect).getCanonicalHostName();
     redirectLocation = "http://" + fqdn + ":" + redirectPort
         + "/browseDirectory.jsp?namenodeInfoPort="
         + nn.getHttpAddress().getPort() + "&dir=/"
         + (tokenString == null ? "" :
-           JspHelper.getDelegationTokenUrlParam(tokenString));
+           JspHelper.getDelegationTokenUrlParam(tokenString))
+        + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, addr);
     resp.sendRedirect(redirectLocation);
   }
 

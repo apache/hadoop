@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.PrivilegedExceptionAction;
 
 import javax.net.SocketFactory;
 import javax.servlet.ServletContext;
@@ -38,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.net.NetUtils;
@@ -89,19 +89,18 @@ public class FileChecksumServlets {
       final XMLOutputter xml = new XMLOutputter(out, "UTF-8");
       xml.declaration();
 
-      final Configuration conf = new HdfsConfiguration(DataNode.getDataNode().getConf());
-      final int socketTimeout = conf.getInt(DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY, HdfsConstants.READ_TIMEOUT);
-      final SocketFactory socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
+      final Configuration conf = 
+        new HdfsConfiguration(DataNode.getDataNode().getConf());
+      final int socketTimeout = conf.getInt(
+          DFSConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY,
+          HdfsConstants.READ_TIMEOUT);
+      final SocketFactory socketFactory = NetUtils.getSocketFactory(conf,
+          ClientProtocol.class);
       
       try {
-        ClientProtocol nnproxy = getUGI(request, conf).doAs
-        (new PrivilegedExceptionAction<ClientProtocol>() {
-          @Override
-          public ClientProtocol run() throws IOException {
-            return DFSClient.createNamenode(conf);
-          }
-        });
-        
+        final DFSClient dfs = DatanodeJspHelper.getDFSClient(request, 
+            DataNode.getDataNode(), conf, getUGI(request, conf));
+        final ClientProtocol nnproxy = dfs.getNamenode();
         final MD5MD5CRC32FileChecksum checksum = DFSClient.getFileChecksum(
             filename, nnproxy, socketFactory, socketTimeout);
         MD5MD5CRC32FileChecksum.write(xml, checksum);
