@@ -51,6 +51,7 @@ privileged public aspect BlockReceiverAspects {
   before(BlockReceiver blockreceiver
       ) throws IOException : callReceivePacket(blockreceiver) {
     final String dnName = blockreceiver.getDataNode().getMachineName();
+    final DatanodeID dnId = blockreceiver.getDataNode().getDatanodeId();
     LOG.info("FI: callReceivePacket, datanode=" + dnName);
     DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
     if (dtTest != null)
@@ -104,7 +105,7 @@ privileged public aspect BlockReceiverAspects {
     if (!(pTest instanceof PipelinesTest)) {
       return;
     }
-    NodeBytes nb = new NodeBytes(br.datanode.dnId, offset);
+    NodeBytes nb = new NodeBytes(br.datanode.getDatanodeId(), offset);
     try {
       ((PipelinesTest)pTest).fiCallSetNumBytes.run(nb);
     } catch (IOException e) {
@@ -134,7 +135,7 @@ privileged public aspect BlockReceiverAspects {
 
   private void bytesAckedService 
       (final PipelinesTest pTest, final PacketResponder pr, final long acked) {
-    NodeBytes nb = new NodeBytes(pr.receiver.datanode.dnId, acked);
+    NodeBytes nb = new NodeBytes(pr.receiver.datanode.getDatanodeId(), acked);
     try {
       pTest.fiCallSetBytesAcked.run(nb);
     } catch (IOException e) {

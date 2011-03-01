@@ -254,7 +254,11 @@ public class DataNode extends Configured
     void shutDownAll() throws InterruptedException {
       BPOfferService[] bposArray = this.getAllNamenodeThreads();
       for (BPOfferService bpos : bposArray) {
-        bpos.stop();
+        bpos.stop(); //interrupts the threads
+      }
+      //now join
+      for (BPOfferService bpos : bposArray) {
+        bpos.join();
       }
     }
     
@@ -300,6 +304,7 @@ public class DataNode extends Configured
 
         for (BPOfferService bpos : toShutdown) {
           bpos.stop();
+          bpos.join();
         }
         // Now start the threads that are not already running.
         startAll();
@@ -857,20 +862,17 @@ public class DataNode extends Configured
     void stop() {
       shouldServiceRun = false;
       if (bpThread != null) {
-        try {
           bpThread.interrupt();
-          bpThread.join();
-        } catch (InterruptedException ex) {
-          LOG.warn("Received exception: ", ex);
-        }
       }
     }
     
     //This must be called only by blockPoolManager
-    void join() throws InterruptedException {
-      if (bpThread != null) {
-        bpThread.join();
-      }
+    void join() {
+      try {
+        if (bpThread != null) {
+          bpThread.join();
+        }
+      } catch (InterruptedException ie) { }
     }
     
     //Cleanup method to be called by current thread before exiting.
@@ -1318,7 +1320,7 @@ public class DataNode extends Configured
     return datanodeId.ipcPort;
   }
   
-  DatanodeID getDataNodeId() {
+  DatanodeID getDatanodeId() {
     return datanodeId;
   }
   
@@ -1486,10 +1488,12 @@ public class DataNode extends Configured
       }
     }
     
-    try {
-      this.blockPoolManager.shutDownAll();
-    } catch (InterruptedException ie) {
-      LOG.warn("Received exception in BlockPoolManager#shutDownAll: ", ie);
+    if(blockPoolManager != null) {
+      try {
+        this.blockPoolManager.shutDownAll();
+      } catch (InterruptedException ie) {
+        LOG.warn("Received exception in BlockPoolManager#shutDownAll: ", ie);
+      }
     }
 
     if(upgradeManager != null)
@@ -1930,6 +1934,7 @@ public class DataNode extends Configured
     while (shouldRun) {
       try {
         blockPoolManager.joinAll();
+        Thread.sleep(2000);
       } catch (InterruptedException ex) {
         LOG.warn("Received exception in Datanode#join: " + ex);
       }

@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HDFS-1662. HDFS federation: fix unit test case, TestCheckpoint 
     and TestDataNodeMXBean (tanping via boryas)
 
+    HDFS-1671. HDFS Federation: shutdown in DataNode should be able to 
+    shutdown individual BP threads as well as the whole DN (boryas).
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
