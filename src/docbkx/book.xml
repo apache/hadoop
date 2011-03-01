@@ -1344,7 +1344,7 @@ of all regions.
 
   <chapter xml:id="mapreduce">
   <title>HBase and MapReduce</title>
-  <para>See <link xlink:href="apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">HBase and MapReduce</link>
+  <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">HBase and MapReduce</link>
   up in javadocs.</para>
   </chapter>
 
