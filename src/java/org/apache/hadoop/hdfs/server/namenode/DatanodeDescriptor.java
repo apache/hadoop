@@ -27,13 +27,8 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs.BlockReportIterator;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
-import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
-import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.hdfs.DeprecatedUTF8;
 import org.apache.hadoop.io.WritableUtils;
@@ -132,7 +127,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param nodeID id of the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID) {
-    this(nodeID, 0L, 0L, 0L, 0);
+    this(nodeID, 0L, 0L, 0L, 0L, 0);
   }
 
   /** DatanodeDescriptor constructor
@@ -154,7 +149,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   public DatanodeDescriptor(DatanodeID nodeID, 
                             String networkLocation,
                             String hostName) {
-    this(nodeID, networkLocation, hostName, 0L, 0L, 0L, 0);
+    this(nodeID, networkLocation, hostName, 0L, 0L, 0L, 0L, 0);
   }
   
   /** DatanodeDescriptor constructor
@@ -162,16 +157,18 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param nodeID id of the data node
    * @param capacity capacity of the data node
    * @param dfsUsed space used by the data node
-   * @param remaining remaing capacity of the data node
+   * @param remaining remaining capacity of the data node
+   * @param bpused space used by the block pool corresponding to this namenode
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID, 
                             long capacity,
                             long dfsUsed,
                             long remaining,
+                            long bpused,
                             int xceiverCount) {
     super(nodeID);
-    updateHeartbeat(capacity, dfsUsed, remaining, xceiverCount);
+    updateHeartbeat(capacity, dfsUsed, remaining, bpused, xceiverCount);
   }
 
   /** DatanodeDescriptor constructor
@@ -181,6 +178,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
    * @param capacity capacity of the data node, including space used by non-dfs
    * @param dfsUsed the used space by dfs datanode
    * @param remaining remaining capacity of the data node
+   * @param bpused space used by the block pool corresponding to this namenode
    * @param xceiverCount # of data transfers at the data node
    */
   public DatanodeDescriptor(DatanodeID nodeID,
@@ -189,9 +187,10 @@ public class DatanodeDescriptor extends DatanodeInfo {
                             long capacity,
                             long dfsUsed,
                             long remaining,
+                            long bpused,
                             int xceiverCount) {
     super(nodeID, networkLocation, hostName);
-    updateHeartbeat(capacity, dfsUsed, remaining, xceiverCount);
+    updateHeartbeat(capacity, dfsUsed, remaining, bpused, xceiverCount);
   }
 
   /**
@@ -247,6 +246,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   void resetBlocks() {
     this.capacity = 0;
     this.remaining = 0;
+    this.blockPoolUsed = 0;
     this.dfsUsed = 0;
     this.xceiverCount = 0;
     this.blockList = null;
@@ -260,10 +260,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    */
   void updateHeartbeat(long capacity, long dfsUsed, long remaining,
-      int xceiverCount) {
+      long blockPoolUsed, int xceiverCount) {
     this.capacity = capacity;
     this.dfsUsed = dfsUsed;
     this.remaining = remaining;
+    this.blockPoolUsed = blockPoolUsed;
     this.lastUpdate = System.currentTimeMillis();
     this.xceiverCount = xceiverCount;
     rollBlocksScheduled(lastUpdate);
@@ -543,6 +544,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.capacity = in.readLong();
     this.dfsUsed = in.readLong();
     this.remaining = in.readLong();
+    this.blockPoolUsed = in.readLong();
     this.lastUpdate = in.readLong();
     this.xceiverCount = in.readInt();
     this.location = Text.readString(in);

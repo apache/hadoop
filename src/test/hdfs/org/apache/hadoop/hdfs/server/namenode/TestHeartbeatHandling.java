@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,9 +38,10 @@ import junit.framework.TestCase;
  */
 public class TestHeartbeatHandling extends TestCase {
   /**
-   * Test if {@link FSNamesystem#handleHeartbeat(DatanodeRegistration, long, long, long, int, int)}
-   * can pick up replication and/or invalidate requests and 
-   * observes the max limit
+   * Test if
+   * {@link FSNamesystem#handleHeartbeat(DatanodeRegistration, long, long, long, long, int, int)}
+   * can pick up replication and/or invalidate requests and observes the max
+   * limit
    */
   public void testHeartbeat() throws Exception {
     final Configuration conf = new HdfsConfiguration();
@@ -64,8 +66,7 @@ public class TestHeartbeatHandling extends TestCase {
         dd.addBlockToBeReplicated(
             new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP), ONE_TARGET);
       }
-      DatanodeCommand[] cmds = namesystem.handleHeartbeat(
-          nodeReg, dd.getCapacity(), dd.getDfsUsed(), dd.getRemaining(), 0, 0);
+      DatanodeCommand[]cmds = sendHeartBeat(nodeReg, dd, namesystem);
       assertEquals(1, cmds.length);
       assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
       assertEquals(MAX_REPLICATE_LIMIT, ((BlockCommand)cmds[0]).getBlocks().length);
@@ -76,34 +77,36 @@ public class TestHeartbeatHandling extends TestCase {
       }
       dd.addBlocksToBeInvalidated(blockList);
            
-      cmds = namesystem.handleHeartbeat(
-          nodeReg, dd.getCapacity(), dd.getDfsUsed(), dd.getRemaining(), 0, 0);
+      sendHeartBeat(nodeReg, dd, namesystem);
       assertEquals(2, cmds.length);
       assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
       assertEquals(MAX_REPLICATE_LIMIT, ((BlockCommand)cmds[0]).getBlocks().length);
       assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[1].getAction());
       assertEquals(MAX_INVALIDATE_LIMIT, ((BlockCommand)cmds[1]).getBlocks().length);
       
-      cmds = namesystem.handleHeartbeat(
-          nodeReg, dd.getCapacity(), dd.getDfsUsed(), dd.getRemaining(), 0, 0);
+      sendHeartBeat(nodeReg, dd, namesystem);
       assertEquals(2, cmds.length);
       assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
       assertEquals(REMAINING_BLOCKS, ((BlockCommand)cmds[0]).getBlocks().length);
       assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[1].getAction());
       assertEquals(MAX_INVALIDATE_LIMIT, ((BlockCommand)cmds[1]).getBlocks().length);
       
-      cmds = namesystem.handleHeartbeat(
-          nodeReg, dd.getCapacity(), dd.getDfsUsed(), dd.getRemaining(), 0, 0);
+      cmds = sendHeartBeat(nodeReg, dd, namesystem);
       assertEquals(1, cmds.length);
       assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[0].getAction());
       assertEquals(REMAINING_BLOCKS, ((BlockCommand)cmds[0]).getBlocks().length);
 
-      cmds = namesystem.handleHeartbeat(
-          nodeReg, dd.getCapacity(), dd.getDfsUsed(), dd.getRemaining(), 0, 0);
+      cmds = sendHeartBeat(nodeReg, dd, namesystem);
       assertEquals(null, cmds);
       }
     } finally {
       cluster.shutdown();
     }
+  }
+  
+  private static DatanodeCommand[] sendHeartBeat(DatanodeRegistration nodeReg,
+      DatanodeDescriptor dd, FSNamesystem namesystem) throws IOException {
+    return namesystem.handleHeartbeat(nodeReg, dd.getCapacity(), 
+        dd.getDfsUsed(), dd.getRemaining(), dd.getBlockPoolUsed(), 0, 0);
   }
 }

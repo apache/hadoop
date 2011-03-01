@@ -305,5 +305,15 @@ public class DFSUtil {
     return isas;
   }
   
+  
+  /** Return used as percentage of capacity */
+  public static float getPercentUsed(long used, long capacity) {
+    return capacity <= 0 ? 100 : ((float)used * 100.0f)/(float)capacity; 
+  }
+  
+  /** Return remaining as percentage of capacity */
+  public static float getPercentRemaining(long remaining, long capacity) {
+    return capacity <= 0 ? 0 : ((float)remaining * 100.0f)/(float)capacity; 
+  }
 }
 

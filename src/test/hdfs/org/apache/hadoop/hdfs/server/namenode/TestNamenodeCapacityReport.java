@@ -23,6 +23,7 @@ import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.DF;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
@@ -65,8 +66,8 @@ public class TestNamenodeCapacityReport extends TestCase {
       
       assertTrue(live.size() == 1);
       
-      long used, remaining, configCapacity, nonDFSUsed;
-      float percentUsed, percentRemaining;
+      long used, remaining, configCapacity, nonDFSUsed, bpUsed;
+      float percentUsed, percentRemaining, percentBpUsed;
       
       for (final DatanodeDescriptor datanode : live) {
         used = datanode.getDfsUsed();
@@ -75,6 +76,8 @@ public class TestNamenodeCapacityReport extends TestCase {
         configCapacity = datanode.getCapacity();
         percentUsed = datanode.getDfsUsedPercent();
         percentRemaining = datanode.getRemainingPercent();
+        bpUsed = datanode.getBlockPoolUsed();
+        percentBpUsed = datanode.getBlockPoolUsedPercent();
         
         LOG.info("Datanode configCapacity " + configCapacity
             + " used " + used + " non DFS used " + nonDFSUsed 
@@ -82,8 +85,11 @@ public class TestNamenodeCapacityReport extends TestCase {
             + " percentRemaining " + percentRemaining);
         
         assertTrue(configCapacity == (used + remaining + nonDFSUsed));
-        assertTrue(percentUsed == ((100.0f * (float)used)/(float)configCapacity));
-        assertTrue(percentRemaining == ((100.0f * (float)remaining)/(float)configCapacity));
+        assertTrue(percentUsed == DFSUtil.getPercentUsed(used, configCapacity));
+        assertTrue(percentRemaining == DFSUtil.getPercentRemaining(remaining,
+            configCapacity));
+        assertTrue(percentBpUsed == DFSUtil.getPercentUsed(bpUsed,
+            configCapacity));
       }   
       
       DF df = new DF(new File(cluster.getDataDirectory()), conf);
@@ -109,6 +115,8 @@ public class TestNamenodeCapacityReport extends TestCase {
       remaining = namesystem.getCapacityRemaining();
       percentUsed = namesystem.getCapacityUsedPercent();
       percentRemaining = namesystem.getCapacityRemainingPercent();
+      bpUsed = namesystem.getBlockPoolUsedSpace();
+      percentBpUsed = namesystem.getPercentBlockPoolUsed();
       
       LOG.info("Data node directory " + cluster.getDataDirectory());
            
@@ -116,7 +124,8 @@ public class TestNamenodeCapacityReport extends TestCase {
           + configCapacity + " reserved " + reserved + " used " + used 
           + " remaining " + remaining + " nonDFSUsed " + nonDFSUsed 
           + " remaining " + remaining + " percentUsed " + percentUsed 
-          + " percentRemaining " + percentRemaining);
+          + " percentRemaining " + percentRemaining + " bpUsed " + bpUsed
+          + " percentBpUsed " + percentBpUsed);
       
       // Ensure new total capacity reported excludes the reserved space
       assertTrue(configCapacity == diskCapacity - reserved);
@@ -125,7 +134,10 @@ public class TestNamenodeCapacityReport extends TestCase {
       assertTrue(configCapacity == (used + remaining + nonDFSUsed));
 
       // Ensure percent used is calculated based on used and present capacity
-      assertTrue(percentUsed == ((float)used * 100.0f)/(float)configCapacity);
+      assertTrue(percentUsed == DFSUtil.getPercentUsed(used, configCapacity));
+
+      // Ensure percent used is calculated based on used and present capacity
+      assertTrue(percentBpUsed == DFSUtil.getPercentUsed(bpUsed, configCapacity));
 
       // Ensure percent used is calculated based on used and present capacity
       assertTrue(percentRemaining == ((float)remaining * 100.0f)/(float)configCapacity);

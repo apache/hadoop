@@ -87,11 +87,20 @@ public interface DatanodeProtocol extends VersionedProtocol {
    * an array of "DatanodeCommand" objects.
    * A DatanodeCommand tells the DataNode to invalidate local block(s), 
    * or to copy them to other DataNodes, etc.
+   * @param registration datanode registration information
+   * @param capacity total storage capacity available at the datanode
+   * @param dfsUsed storage used by HDFS
+   * @param remaining remaining storage available for HDFS
+   * @param blockPoolUsed storage used by the block pool
+   * @param xmitsInProgress number of transfers from this datanode to others
+   * @param xceiverCount number of active transceiver threads
+   * @throws IOException on error
    */
   @Nullable
   public DatanodeCommand[] sendHeartbeat(DatanodeRegistration registration,
                                        long capacity,
                                        long dfsUsed, long remaining,
+                                       long blockPoolUsed,
                                        int xmitsInProgress,
                                        int xceiverCount) throws IOException;
 

@@ -21,7 +21,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * 
  * This is the JMX management interface for namenode information
  */
 @InterfaceAudience.Public
@@ -95,6 +94,16 @@ public interface NameNodeMXBean {
    */
   public float getPercentRemaining();
   
+  /**
+   * Get the total space used by the block pools of this namenode
+   */
+  public long getBlockPoolUsedSpace();
+  
+  /**
+   * Get the total space used by the block pool as percentage of total capacity
+   */
+  public float getPercentBlockPoolUsed();
+    
   /**
    * Gets the total numbers of blocks on the cluster.
    * 

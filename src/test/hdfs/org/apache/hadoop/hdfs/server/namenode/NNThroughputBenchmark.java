@@ -796,8 +796,9 @@ public class NNThroughputBenchmark {
      */
     void sendHeartbeat() throws IOException {
       // register datanode
-      DatanodeCommand[] cmds = nameNode.sendHeartbeat(
-          dnRegistration, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, 0, 0);
+      // TODO:FEDERATION currently a single block pool is supported
+      DatanodeCommand[] cmds = nameNode.sendHeartbeat(dnRegistration,
+          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0);
       if(cmds != null) {
         for (DatanodeCommand cmd : cmds ) {
           if(LOG.isDebugEnabled()) {
@@ -840,8 +841,9 @@ public class NNThroughputBenchmark {
     @SuppressWarnings("unused") // keep it for future blockReceived benchmark
     int replicateBlocks() throws IOException {
       // register datanode
-      DatanodeCommand[] cmds = nameNode.sendHeartbeat(
-          dnRegistration, DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, 0, 0);
+      // TODO:FEDERATION currently a single block pool is supported
+      DatanodeCommand[] cmds = nameNode.sendHeartbeat(dnRegistration,
+          DF_CAPACITY, DF_USED, DF_CAPACITY - DF_USED, DF_USED, 0, 0);
       if (cmds != null) {
         for (DatanodeCommand cmd : cmds) {
           if (cmd.getAction() == DatanodeProtocol.DNA_TRANSFER) {

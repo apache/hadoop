@@ -40,6 +40,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 public interface FSDatasetMBean {
   
   /**
+   * Returns the total space (in bytes) used by a block pool
+   * @return  the total space used by a block pool
+   * @throws IOException
+   */  
+  public long getBlockPoolUsed(String bpid) throws IOException;
+  
+  /**
    * Returns the total space (in bytes) used by dfs datanode
    * @return  the total space used by dfs datanode
    * @throws IOException

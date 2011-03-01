@@ -399,14 +399,23 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         new ArrayList<Block>(Arrays.asList(blockTable)), null);
   }
 
+  @Override // FSDatasetMBean
   public long getCapacity() throws IOException {
     return storage.getCapacity();
   }
 
+  @Override // FSDatasetMBean
   public long getDfsUsed() throws IOException {
     return storage.getUsed();
   }
 
+  @Override // FSDatasetMBean
+  public long getBlockPoolUsed(String bpid) throws IOException {
+    // TODO:FEDERATION currently a single block pool is supported
+    return storage.getUsed();
+  }
+  
+  @Override // FSDatasetMBean
   public long getRemaining() throws IOException {
     return storage.getFree();
   }

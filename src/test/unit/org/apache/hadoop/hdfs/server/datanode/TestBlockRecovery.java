@@ -102,7 +102,7 @@ public class TestBlockRecovery {
     when(namenode.versionRequest()).thenReturn(new NamespaceInfo
         (1, "cid-test", "bpid-test", 1L, 1));
     when(namenode.sendHeartbeat(any(DatanodeRegistration.class), anyLong(), 
-        anyLong(), anyLong(), anyInt(), anyInt())).thenReturn(
+        anyLong(), anyLong(), anyLong(), anyInt(), anyInt())).thenReturn(
             new DatanodeCommand[0]);
     dn = new DataNode(conf, dirs, null);
     dn.namenodeTODO_FED = namenode; // TODO:FEDERATION - should go to a specific bpid

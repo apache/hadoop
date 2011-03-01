@@ -178,6 +178,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   // FSNamesystemMetrics counter variables
   private FSNamesystemMetrics myFSMetrics;
   private long capacityTotal = 0L, capacityUsed = 0L, capacityRemaining = 0L;
+  private long blockPoolUsed = 0L;
   private int totalLoad = 0;
   boolean isBlockTokenEnabled;
   BlockTokenSecretManager blockTokenSecretManager;
@@ -2591,7 +2592,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         if( !heartbeats.contains(nodeS)) {
           heartbeats.add(nodeS);
           //update its timestamp
-          nodeS.updateHeartbeat(0L, 0L, 0L, 0);
+          nodeS.updateHeartbeat(0L, 0L, 0L, 0L, 0);
           nodeS.isAlive = true;
         }
       }
@@ -2706,7 +2707,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @throws IOException
    */
   DatanodeCommand[] handleHeartbeat(DatanodeRegistration nodeReg,
-      long capacity, long dfsUsed, long remaining,
+      long capacity, long dfsUsed, long remaining, long blockPoolUsed,
       int xceiverCount, int xmitsInProgress) throws IOException {
     DatanodeCommand cmd = null;
     synchronized (heartbeats) {
@@ -2729,7 +2730,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         }
 
         updateStats(nodeinfo, false);
-        nodeinfo.updateHeartbeat(capacity, dfsUsed, remaining, xceiverCount);
+        nodeinfo.updateHeartbeat(capacity, dfsUsed, remaining, blockPoolUsed,
+            xceiverCount);
         updateStats(nodeinfo, true);
         
         //check lease recovery
@@ -2788,11 +2790,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (isAdded) {
       capacityTotal += node.getCapacity();
       capacityUsed += node.getDfsUsed();
+      blockPoolUsed += node.getBlockPoolUsed();
       capacityRemaining += node.getRemaining();
       totalLoad += node.getXceiverCount();
     } else {
       capacityTotal -= node.getCapacity();
       capacityUsed -= node.getDfsUsed();
+      blockPoolUsed -= node.getBlockPoolUsed();
       capacityRemaining -= node.getRemaining();
       totalLoad -= node.getXceiverCount();
     }
@@ -3252,26 +3256,28 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /**
    * Total raw bytes including non-dfs used space.
    */
+  @Override // FSNamesystemMBean
   public long getCapacityTotal() {
-    return getStats()[0];
+    synchronized(heartbeats) {
+      return capacityTotal;
+    }
   }
 
   /**
    * Total used space by data nodes
    */
+  @Override // FSNamesystemMBean
   public long getCapacityUsed() {
-    return getStats()[1];
+    synchronized(heartbeats) {
+      return capacityUsed;
+    }
   }
   /**
    * Total used space by data nodes as percentage of total capacity
    */
   public float getCapacityUsedPercent() {
     synchronized(heartbeats){
-      if (capacityTotal <= 0) {
-        return 100;
-      }
-
-      return ((float)capacityUsed * 100.0f)/(float)capacityTotal;
+      return DFSUtil.getPercentUsed(capacityUsed, capacityTotal);
     }
   }
   /**
@@ -3289,7 +3295,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Total non-used raw bytes.
    */
   public long getCapacityRemaining() {
-    return getStats()[2];
+    synchronized(heartbeats) {
+      return capacityRemaining;
+    }
   }
 
   /**
@@ -3297,16 +3305,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    */
   public float getCapacityRemainingPercent() {
     synchronized(heartbeats){
-      if (capacityTotal <= 0) {
-        return 0;
-      }
-
-      return ((float)capacityRemaining * 100.0f)/(float)capacityTotal;
+      return DFSUtil.getPercentRemaining(capacityRemaining, capacityTotal);
     }
   }
   /**
    * Total number of connections.
    */
+  @Override // FSNamesystemMBean
   public int getTotalLoad() {
     synchronized (heartbeats) {
       return this.totalLoad;
@@ -4133,6 +4138,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   /**
    * Get the total number of blocks in the system. 
    */
+  @Override // FSNamesystemMBean
   public long getBlocksTotal() {
     return blockManager.getTotalBlocks();
   }
@@ -4403,14 +4409,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return maxFsObjects;
   }
 
+  @Override // FSNamesystemMBean
   public long getFilesTotal() {
     return this.dir.totalInodes();
   }
 
+  @Override // FSNamesystemMBean
   public long getPendingReplicationBlocks() {
     return blockManager.pendingReplicationBlocksCount;
   }
 
+  @Override // FSNamesystemMBean
   public long getUnderReplicatedBlocks() {
     return blockManager.underReplicatedBlocksCount;
   }
@@ -4420,6 +4429,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return blockManager.corruptReplicaBlocksCount;
   }
 
+  @Override // FSNamesystemMBean
   public long getScheduledReplicationBlocks() {
     return blockManager.scheduledReplicationBlocksCount;
   }
@@ -4436,6 +4446,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return blockManager.getCapacity();
   }
 
+  @Override // FSNamesystemMBean
   public String getFSState() {
     return isInSafeMode() ? "safeMode" : "Operational";
   }
@@ -4481,6 +4492,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Number of live data nodes
    * @return Number of live data nodes
    */
+  @Override // FSNamesystemMBean
   public int getNumLiveDataNodes() {
     int numLive = 0;
     synchronized (datanodeMap) {   
@@ -4500,6 +4512,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * Number of dead data nodes
    * @return Number of dead data nodes
    */
+  @Override // FSNamesystemMBean
   public int getNumDeadDataNodes() {
     int numDead = 0;
     synchronized (datanodeMap) {   
@@ -5168,6 +5181,20 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   @Override // NameNodeMXBean
   public float getPercentUsed() {
     return getCapacityUsedPercent();
+  }
+
+  @Override // NameNodeMXBean
+  public long getBlockPoolUsedSpace() {
+    synchronized(heartbeats) {
+      return blockPoolUsed;
+    }
+  }
+
+  @Override // NameNodeMXBean
+  public float getPercentBlockPoolUsed() {
+    synchronized(heartbeats) {
+      return DFSUtil.getPercentUsed(blockPoolUsed, capacityTotal);
+    }
   }
 
   @Override // NameNodeMXBean

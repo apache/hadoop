@@ -78,6 +78,8 @@ Trunk (unreleased changes)
     HDFS-1654. Federation: Fix TestDFSUpgrade and TestDFSRollback failures.
     (suresh)
     
+    HDFS-1668. Federation: Datanodes sends block pool usage information 
+    to the namenode in heartbeat. (suresh)
 
   IMPROVEMENTS
 

@@ -588,6 +588,10 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return dfsUsed;
     }
     
+    long getBlockPoolUsed(String bpid) throws IOException {
+      return getBlockPool(bpid).getDfsUsed();
+    }
+    
     /**
      * Calculate the capacity of the filesystem, after removing any
      * reserved capacity.
@@ -747,6 +751,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       long dfsUsed = 0L;
       for (int idx = 0; idx < volumes.length; idx++) {
         dfsUsed += volumes[idx].getDfsUsed();
+      }
+      return dfsUsed;
+    }
+
+    long getBlockPoolUsed(String bpid) throws IOException {
+      long dfsUsed = 0L;
+      for (int idx = 0; idx < volumes.length; idx++) {
+        dfsUsed += volumes[idx].getBlockPoolUsed(bpid);
       }
       return dfsUsed;
     }
@@ -1074,12 +1086,23 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   /**
    * Return the total space used by dfs datanode
    */
+  @Override // FSDatasetMBean
   public long getDfsUsed() throws IOException {
     synchronized(statsLock) {
       return volumes.getDfsUsed();
     }
   }
 
+  /**
+   * Return the total space used by dfs datanode
+   */
+  @Override // FSDatasetMBean
+  public long getBlockPoolUsed(String bpid) throws IOException {
+    synchronized(statsLock) {
+      return volumes.getBlockPoolUsed(bpid);
+    }
+  }
+  
   /**
    * Return true - if there are still valid volumes on the DataNode. 
    */
@@ -1091,6 +1114,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   /**
    * Return total capacity, used and unused
    */
+  @Override // FSDatasetMBean
   public long getCapacity() throws IOException {
     synchronized(statsLock) {
       return volumes.getCapacity();
@@ -1100,6 +1124,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   /**
    * Return how many bytes can still be stored in the FSDataset
    */
+  @Override // FSDatasetMBean
   public long getRemaining() throws IOException {
     synchronized(statsLock) {
       return volumes.getRemaining();
@@ -2008,6 +2033,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
   }
 
+  @Override // FSDatasetMBean
   public String getStorageInfo() {
     return toString();
   }

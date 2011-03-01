@@ -841,6 +841,7 @@ public class DataNode extends Configured
           data.getCapacity(),
           data.getDfsUsed(),
           data.getRemaining(),
+          data.getBlockPoolUsed(blockPoolId),
           xmitsInProgress.get(),
           getXceiverCount());
     }

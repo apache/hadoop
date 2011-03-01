@@ -1233,11 +1233,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
                                        long capacity,
                                        long dfsUsed,
                                        long remaining,
+                                       long blockPoolUsed,
                                        int xmitsInProgress,
                                        int xceiverCount) throws IOException {
     verifyRequest(nodeReg);
     return namesystem.handleHeartbeat(nodeReg, capacity, dfsUsed, remaining,
-        xceiverCount, xmitsInProgress);
+        blockPoolUsed, xceiverCount, xmitsInProgress);
   }
 
   /**

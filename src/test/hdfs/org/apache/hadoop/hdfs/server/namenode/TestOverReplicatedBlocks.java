@@ -83,7 +83,7 @@ public class TestOverReplicatedBlocks extends TestCase {
         // so they will be chosen to be deleted when over-replication occurs
         for (DatanodeDescriptor datanode : namesystem.heartbeats) {
           if (!corruptDataNode.equals(datanode)) {
-            datanode.updateHeartbeat(100L, 100L, 0L, 0);
+            datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0);
           }
         }
         
