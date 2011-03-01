@@ -83,16 +83,19 @@ Trunk (unreleased changes)
 
     HDFS-1669. Federation: Fix TestHftpFileSystem failure. (suresh)
 
-    HDFS-1670. HDFS Federation: remove dnRegistration from Datanode (boryas)
+    HDFS-1670. Federation: remove dnRegistration from Datanode (boryas)
 
-    HDFS-1662. HDFS federation: fix unit test case, TestCheckpoint 
+    HDFS-1662. Federation: fix unit test case, TestCheckpoint 
     and TestDataNodeMXBean (tanping via boryas)
 
-    HDFS-1671. HDFS Federation: shutdown in DataNode should be able to 
+    HDFS-1671. Federation: shutdown in DataNode should be able to 
     shutdown individual BP threads as well as the whole DN (boryas).
 
-    HDFS-1663. HDFS federation: Rename getPoolId() everywhere to 
+    HDFS-1663. Federation: Rename getPoolId() everywhere to 
     getBlockPoolId() (tanping via boryas)
+
+    HDFS-1652. Add support for multiple namenodes in MiniDFSCluster.
+    (suresh)
 
   IMPROVEMENTS
 

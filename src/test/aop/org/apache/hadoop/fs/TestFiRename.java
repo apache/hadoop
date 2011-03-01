@@ -89,7 +89,7 @@ public class TestFiRename {
     }
     cluster = new MiniDFSCluster(CONF, 1, format, null);
     cluster.waitClusterUp();
-    fc = FileContext.getFileContext(cluster.getURI(), CONF);
+    fc = FileContext.getFileContext(cluster.getURI(0), CONF);
   }
 
   /**

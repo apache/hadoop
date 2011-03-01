@@ -50,7 +50,7 @@ public class TestHDFSFileContextMainOperations extends
       LoginException, URISyntaxException {
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(2).build();
     cluster.waitClusterUp();
-    fc = FileContext.getFileContext(cluster.getURI(), CONF);
+    fc = FileContext.getFileContext(cluster.getURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);
@@ -64,7 +64,7 @@ public class TestHDFSFileContextMainOperations extends
     cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(1)
                                               .format(false).build();
     cluster.waitClusterUp();
-    fc = FileContext.getFileContext(cluster.getURI(), CONF);
+    fc = FileContext.getFileContext(cluster.getURI(0), CONF);
     defaultWorkingDirectory = fc.makeQualified( new Path("/user/" + 
         UserGroupInformation.getCurrentUser().getShortUserName()));
     fc.mkdir(defaultWorkingDirectory, FileContext.DEFAULT_PERM, true);

@@ -73,8 +73,8 @@ public class TestFileStatus {
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 2);
     cluster = new MiniDFSCluster.Builder(conf).build();
     fs = cluster.getFileSystem();
-    fc = FileContext.getFileContext(cluster.getURI(), conf);
-    hftpfs = cluster.getHftpFileSystem();
+    fc = FileContext.getFileContext(cluster.getURI(0), conf);
+    hftpfs = cluster.getHftpFileSystem(0);
     dfsClient = new DFSClient(NameNode.getAddress(conf), conf);
     file1 = new Path("filestatus.dat");
     writeFile(fs, file1, 1, fileSize, blockSize);
@@ -294,7 +294,7 @@ public class TestFileStatus {
       fs.setPermission(dir, new FsPermission((short)0));
       try {
         final String username = UserGroupInformation.getCurrentUser().getShortUserName() + "1";
-        final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, conf, "somegroup");
+        final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, conf, 0, "somegroup");
         hftp2.getContentSummary(dir);
         fail();
       } catch(IOException ioe) {

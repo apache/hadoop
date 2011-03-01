@@ -415,7 +415,7 @@ public class TestBlockTokenWithDFS extends TestCase {
       assertTrue(cluster.restartDataNodes(true));
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
-      cluster.shutdownNameNode();
+      cluster.shutdownNameNode(0);
 
       // confirm tokens cached in in1 are still valid
       lblocks = DFSTestUtil.getAllBlocks(in1);
@@ -451,8 +451,8 @@ public class TestBlockTokenWithDFS extends TestCase {
        */
 
       // restart the namenode and then shut it down for test
-      cluster.restartNameNode();
-      cluster.shutdownNameNode();
+      cluster.restartNameNode(0);
+      cluster.shutdownNameNode(0);
 
       // verify blockSeekTo() still works (forced to use cached tokens)
       in1.seek(0);
@@ -471,13 +471,13 @@ public class TestBlockTokenWithDFS extends TestCase {
        */
 
       // restore the cluster and restart the datanodes for test
-      cluster.restartNameNode();
+      cluster.restartNameNode(0);
       assertTrue(cluster.restartDataNodes(true));
       cluster.waitActive();
       assertEquals(numDataNodes, cluster.getDataNodes().size());
 
       // shutdown namenode so that DFSClient can't get new tokens from namenode
-      cluster.shutdownNameNode();
+      cluster.shutdownNameNode(0);
 
       // verify blockSeekTo() fails (cached tokens become invalid)
       in1.seek(0);
@@ -486,7 +486,7 @@ public class TestBlockTokenWithDFS extends TestCase {
       assertFalse(checkFile2(in3));
 
       // restart the namenode to allow DFSClient to re-fetch tokens
-      cluster.restartNameNode();
+      cluster.restartNameNode(0);
       // verify blockSeekTo() works again (by transparently re-fetching
       // tokens from namenode)
       in1.seek(0);

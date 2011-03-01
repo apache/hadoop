@@ -130,7 +130,7 @@ public class TestFiHftp {
     DFSTestUtil.waitReplication(dfs, filepath, DATANODE_NUM);
 
     //test hftp open and read
-    final HftpFileSystem hftpfs = cluster.getHftpFileSystem();
+    final HftpFileSystem hftpfs = cluster.getHftpFileSystem(0);
     {
       final FSDataInputStream in = hftpfs.open(filepath);
       long bytesRead = 0;

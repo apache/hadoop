@@ -655,7 +655,7 @@ public class TestCheckpoint extends TestCase {
       //
       assertTrue(!fileSys.exists(file1));
       assertTrue(!fileSys.exists(file2));
-      namedirs = cluster.getNameDirs();
+      namedirs = cluster.getNameDirs(0);
 
       //
       // Create file1
@@ -757,7 +757,7 @@ public class TestCheckpoint extends TestCase {
       writeFile(fs, file, replication);
       checkFile(fs, file, replication);
       // verify that the edits file is NOT empty
-      Collection<URI> editsDirs = cluster.getNameEditsDirs();
+      Collection<URI> editsDirs = cluster.getNameEditsDirs(0);
       for(URI uri : editsDirs) {
         File ed = new File(uri.getPath());
         assertTrue(new File(ed, "current/edits").length() > Integer.SIZE/Byte.SIZE);

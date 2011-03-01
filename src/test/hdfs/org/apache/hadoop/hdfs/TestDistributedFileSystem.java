@@ -354,7 +354,7 @@ public class TestDistributedFileSystem {
         hdfs.setPermission(new Path(dir), new FsPermission((short)0));
         try {
           final String username = UserGroupInformation.getCurrentUser().getShortUserName() + "1";
-          final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, conf, "somegroup");
+          final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, conf, 0, "somegroup");
           hftp2.getFileChecksum(qualified);
           fail();
         } catch(IOException ioe) {

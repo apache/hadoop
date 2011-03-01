@@ -2430,7 +2430,7 @@ public class DataNode extends Configured
     return clusterId;
   }
   
-  void refreshNamenodes(Configuration conf) throws IOException {
+  public void refreshNamenodes(Configuration conf) throws IOException {
     try {
       blockPoolManager.refreshNamenodes(conf);
     } catch (InterruptedException ex) {

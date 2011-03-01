@@ -72,7 +72,7 @@ public class TestDatanodeConfig {
   @Test
   public void testDataDirectories() throws IOException {
     File dataDir = new File(BASE_DIR, "data").getCanonicalFile();
-    Configuration conf = cluster.getConfiguration();
+    Configuration conf = cluster.getConfiguration(0);
     // 1. Test unsupported schema. Only "file:" is supported.
     String dnDir = makeURI("shv", null, fileAsURI(dataDir).getPath());
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dnDir);

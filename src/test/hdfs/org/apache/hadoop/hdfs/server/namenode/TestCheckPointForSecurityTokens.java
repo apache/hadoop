@@ -95,7 +95,7 @@ public class TestCheckPointForSecurityTokens {
       String[] args = new String[]{"-saveNamespace"};
 
       // verify that the edits file is NOT empty
-      Collection<URI> editsDirs = cluster.getNameEditsDirs();
+      Collection<URI> editsDirs = cluster.getNameEditsDirs(0);
       for(URI uri : editsDirs) {
         File ed = new File(uri.getPath());
         Assert.assertTrue(new File(ed, "current/edits").length() > Integer.SIZE/Byte.SIZE);

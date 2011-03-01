@@ -64,7 +64,7 @@ public class TestListFilesInFileContext {
   @BeforeClass
   public static void testSetUp() throws Exception {
     cluster = new MiniDFSCluster.Builder(conf).build();
-    fc = FileContext.getFileContext(cluster.getConfiguration());
+    fc = FileContext.getFileContext(cluster.getConfiguration(0));
     fc.delete(TEST_DIR, true);
   }
   

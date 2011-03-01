@@ -62,7 +62,7 @@ public class TestListPathServlet {
     final String str = "hftp://"
         + CONF.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     hftpURI = new URI(str);
-    hftpFs = cluster.getHftpFileSystem();
+    hftpFs = cluster.getHftpFileSystem(0);
   }
 
   @AfterClass
@@ -104,7 +104,7 @@ public class TestListPathServlet {
     checkStatus("/nonexistent/a");
 
     final String username = UserGroupInformation.getCurrentUser().getShortUserName() + "1";
-    final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, CONF, "somegroup");
+    final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, CONF, 0, "somegroup");
     { //test file not found on hftp 
       final Path nonexistent = new Path("/nonexistent");
       try {

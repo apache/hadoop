@@ -18,96 +18,62 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.junit.Before;
 import org.junit.Test;
 
-
+/**
+ * Tests datanode refresh namenode list functionality.
+ */
 public class TestRefreshNamenodes {
-  
-  private String localhost = "127.0.0.1";
   private int nnPort1 = 2221;
-  private int nnPort2 = 2222;
-  private int nnPort3 = 2223;
-  private int nnPort4 = 2224;
-  private final String nnURL1 = "hdfs://" + localhost + ":" + nnPort1;
-  private final String nnURL2 = "hdfs://" + localhost + ":" + nnPort2;
-  private final String nnURL3 = "hdfs://" + localhost + ":" + nnPort3;
-  private final String nnURL4 = "hdfs://" + localhost + ":" + nnPort4;
-  private NameNode nn1 = null;
-  private NameNode nn2 = null;
-  private NameNode nn3 = null;
-  private NameNode nn4 = null;
-  private TestDataNodeMultipleRegistrations tdnmr = null;
-  
-  @Before
-  public void setUp() throws Exception {
-    tdnmr = new TestDataNodeMultipleRegistrations();
-    tdnmr.setUp();
-  }
-  
-  private void startNamenodes() throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    conf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, "127.0.0.1:0");
-
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:50071");
-    FileSystem.setDefaultUri(conf, nnURL1);
-    nn1 = tdnmr.startNameNode(conf, nnPort1);
-
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:50072");
-    FileSystem.setDefaultUri(conf, nnURL2);
-    nn2 = tdnmr.startNameNode(conf, nnPort2);
-   
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:50073");
-    FileSystem.setDefaultUri(conf, nnURL3);
-    nn3 = tdnmr.startNameNode(conf, nnPort3);
-    
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "0.0.0.0:50074");
-    FileSystem.setDefaultUri(conf, nnURL4);
-    nn4 = tdnmr.startNameNode(conf, nnPort4);
-  }
+  private int nnPort2 = 2224;
+  private int nnPort3 = 2227;
+  private int nnPort4 = 2230;
 
   @Test
   public void testRefreshNamenodes() throws IOException {
+    // Start cluster with a single NN and DN
     Configuration conf = new Configuration();
-    
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMENODES, nnURL1 +","+ nnURL2);   
-    startNamenodes();
-    
-    DataNode dn = tdnmr.startDataNode(conf);
-    tdnmr.waitDataNodeUp(dn);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numNameNodes(1)
+          .nameNodePort(nnPort1).build();
 
-    assertEquals(2, dn.getAllBpOs().length);
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMENODES, nnURL1 + "," + nnURL3
-        + "," + nnURL4);
-    dn.refreshNamenodes(conf);
-    tdnmr.waitDataNodeUp(dn);
-    BPOfferService[] bpoList = dn.getAllBpOs();
-    assertEquals(3, bpoList.length);
+      DataNode dn = cluster.getDataNodes().get(0);
+      assertEquals(1, dn.getAllBpOs().length);
 
-    InetSocketAddress nn_addr_1 = bpoList[0].nnAddr;
-    InetSocketAddress nn_addr_2 = bpoList[1].nnAddr;
-    InetSocketAddress nn_addr_3 = bpoList[2].nnAddr;
-    
-    assertTrue(nn_addr_1.equals(nn1.getNameNodeAddress()));
-    assertTrue(nn_addr_2.equals(nn3.getNameNodeAddress()));
-    assertTrue(nn_addr_3.equals(nn4.getNameNodeAddress()));
+      cluster.addNameNode(conf, nnPort2);
+      assertEquals(2, dn.getAllBpOs().length);
 
-    dn.shutdown();
-    tdnmr.shutdownNN(nn1);
-    tdnmr.shutdownNN(nn2);
-    tdnmr.shutdownNN(nn3);
-    tdnmr.shutdownNN(nn4);
+      cluster.addNameNode(conf, nnPort3);
+      assertEquals(3, dn.getAllBpOs().length);
+
+      cluster.addNameNode(conf, nnPort4);
+
+      BPOfferService[] bpoList = dn.getAllBpOs();
+      // Ensure a BPOfferService in the datanodes corresponds to
+      // a namenode in the cluster
+      for (int i = 0; i < 4; i++) {
+        InetSocketAddress addr = cluster.getNameNode(i).getNameNodeAddress();
+        boolean found = false;
+        for (int j = 0; j < bpoList.length; j++) {
+          if (bpoList[j] != null && addr.equals(bpoList[j].nnAddr)) {
+            found = true;
+            bpoList[j] = null; // Erase the address that matched
+            break;
+          }
+        }
+        assertTrue("NameNode address " + addr + " is not found.", found);
+      }
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

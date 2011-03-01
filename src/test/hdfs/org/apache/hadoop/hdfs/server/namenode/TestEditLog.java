@@ -101,7 +101,7 @@ public class TestEditLog extends TestCase {
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNamesystem();
   
-      for (Iterator<URI> it = cluster.getNameDirs().iterator(); it.hasNext(); ) {
+      for (Iterator<URI> it = cluster.getNameDirs(0).iterator(); it.hasNext(); ) {
         File dir = new File(it.next().getPath());
         System.out.println(dir);
       }

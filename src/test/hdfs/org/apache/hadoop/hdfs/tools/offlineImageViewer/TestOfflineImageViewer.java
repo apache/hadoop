@@ -128,7 +128,7 @@ public class TestOfflineImageViewer extends TestCase {
       cluster.getNameNode().saveNamespace();
       
       // Determine location of fsimage file
-      URI [] files = cluster.getNameDirs().toArray(new URI[0]);
+      URI [] files = cluster.getNameDirs(0).toArray(new URI[0]);
       orig =  new File(files[0].getPath(), "current/fsimage");
       
       if(!orig.exists())
