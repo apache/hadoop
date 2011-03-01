@@ -28,9 +28,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 public interface FSConstants {
   public static int MIN_BLOCKS_FOR_WRITE = 5;
 
-  // Chunk the block Invalidate message
-  public static final int BLOCK_INVALIDATE_CHUNK = 1000;
-
   // Long that indicates "leave current quota unchanged"
   public static final long QUOTA_DONT_SET = Long.MAX_VALUE;
   public static final long QUOTA_RESET = -1L;

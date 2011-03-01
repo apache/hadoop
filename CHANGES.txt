@@ -103,6 +103,8 @@ Trunk (unreleased changes)
     HDFS-1687. HDFS Federation: DirectoryScanner changes for 
     federation (mattf via boryas)
 
+    HDFS-1626. Make BLOCK_INVALIDATE_LIMIT configurable. (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
