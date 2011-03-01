@@ -101,36 +101,6 @@ public class StorageInfo implements Writable {
     cTime = in.readLong();
   }
   
-  /** validate and set namespaceID */
-  protected void setNamespaceID(File storage, int nsId)
-      throws InconsistentFSStateException {
-    if (namespaceID != 0 && nsId != 0 && namespaceID != nsId) {
-      throw new InconsistentFSStateException(storage,
-          "namespaceID is incompatible with others.");
-    }
-    namespaceID = nsId;
-  }
-  
-  /** validate and set layout version */ 
-  protected void setLayoutVersion(File storage, int lv)
-      throws IncorrectVersionException, IOException {
-    if (lv < FSConstants.LAYOUT_VERSION) { // future version
-      throw new IncorrectVersionException(lv, "storage directory "
-          + storage.getCanonicalPath());
-    }
-    layoutVersion = lv;
-  }
-  
-  /** validate and set ClusterID */
-  protected void setClusterID(File storage, String cid)
-      throws InconsistentFSStateException {
-    if (!clusterID.equals("") && !cid.equals("") && !clusterID.equals(cid)) {
-      throw new InconsistentFSStateException(storage,
-          "cluster id is incompatible with others.");
-    }
-    clusterID = cid;
-  }
-  
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("lv=").append(layoutVersion).append(";cid=").append(clusterID)

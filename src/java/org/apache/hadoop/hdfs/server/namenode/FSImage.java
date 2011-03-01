@@ -492,11 +492,30 @@ public class FSImage extends Storage {
     }
     if (startOpt != StartupOption.UPGRADE
           && layoutVersion < LAST_PRE_UPGRADE_LAYOUT_VERSION
-          && layoutVersion != FSConstants.LAYOUT_VERSION)
+          && layoutVersion != FSConstants.LAYOUT_VERSION) {
         throw new IOException(
-           "\nFile system image contains an old layout version " + layoutVersion
-         + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
-         + " is required.\nPlease restart NameNode with -upgrade option.");
+          "\nFile system image contains an old layout version " + layoutVersion
+              + ".\nAn upgrade to version " + FSConstants.LAYOUT_VERSION
+              + " is required.\nPlease restart NameNode with -upgrade option.");
+    }
+    
+    // Upgrade to federation requires -upgrade -clusterid <clusterID> option
+    if (startOpt == StartupOption.UPGRADE
+        && layoutVersion > LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      if (startOpt.getClusterId() == null) {
+        throw new IOException(
+            "\nFile system image contains an old layout version "
+                + layoutVersion + ".\nAn upgrade to version "
+                + FSConstants.LAYOUT_VERSION
+                + " is required.\nPlease restart NameNode with "
+                + "-upgrade -clusterid <clusterID> option.");
+      }
+      clusterID = startOpt.getClusterId();
+      
+      // Create new block pool Id
+      blockpoolID = newBlockPoolID();
+    }
+    
     // check whether distributed upgrade is reguired and/or should be continued
     verifyDistributedUpgradeProgress(startOpt);
 
@@ -719,7 +738,7 @@ public class FSImage extends Storage {
       throws InconsistentFSStateException {
     if (bpid == null || bpid.equals("")) {
       throw new InconsistentFSStateException(storage, "file "
-          + STORAGE_FILE_VERSION + " is invalid.");
+          + STORAGE_FILE_VERSION + " has no block pool Id.");
     }
     
     if (!blockpoolID.equals("") && !blockpoolID.equals(bpid)) {
@@ -739,8 +758,11 @@ public class FSImage extends Storage {
           + " is not formatted.");
     }
     
-    String sbpid = props.getProperty("blockpoolID");
-    setBlockPoolID(sd.getRoot(), sbpid);
+    // No Block pool ID in version LAST_PRE_FEDERATION_LAYOUT_VERSION or before
+    if (layoutVersion < LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      String sbpid = props.getProperty("blockpoolID");
+      setBlockPoolID(sd.getRoot(), sbpid);
+    }
     
     String sDUS, sDUV;
     sDUS = props.getProperty("distributedUpgradeState"); 

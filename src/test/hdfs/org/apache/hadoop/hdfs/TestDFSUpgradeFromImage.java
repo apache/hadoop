@@ -186,6 +186,7 @@ public class TestDFSUpgradeFromImage extends TestCase {
                                   .numDataNodes(numDataNodes)
                                   .format(false)
                                   .startupOption(StartupOption.UPGRADE)
+                                  .clusterId("testClusterId")
                                   .build();
       cluster.waitActive();
       DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();

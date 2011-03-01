@@ -51,13 +51,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -321,16 +318,15 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      * 
      * @param bpid Block pool Id
      * @param volume {@link FSVolume} to which this BlockPool belongs to
-     * @param currentDir currentDir corresponding to the BlockPool
+     * @param bpDir directory corresponding to the BlockPool
      * @param conf
      * @throws IOException
      */
-    BlockPool(String bpid, FSVolume volume, File currentDir, Configuration conf)
+    BlockPool(String bpid, FSVolume volume, File bpDir, Configuration conf)
         throws IOException {
       this.bpid = bpid;
       this.volume = volume;
-      this.currentDir = currentDir; 
-      File parent = currentDir.getParentFile();
+      this.currentDir = new File(bpDir, DataStorage.STORAGE_DIR_CURRENT); 
       final File finalizedDir = new File(
           currentDir, DataStorage.STORAGE_DIR_FINALIZED);
 
@@ -339,7 +335,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       // in the future, we might want to do some sort of datanode-local
       // recovery for these blocks. For example, crc validation.
       //
-      this.tmpDir = new File(parent, "tmp");
+      this.tmpDir = new File(bpDir, "tmp");
       if (tmpDir.exists()) {
         FileUtil.fullyDelete(tmpDir);
       }
@@ -358,7 +354,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           throw new IOException("Mkdirs failed to create " + tmpDir.toString());
         }
       }
-      this.dfsUsage = new DU(parent, conf);
+      this.dfsUsage = new DU(bpDir, conf);
       this.dfsUsage.start();
     }
 
@@ -396,7 +392,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      */
     File createTmpFile(Block b) throws IOException {
       File f = new File(tmpDir, b.getBlockName());
-      DataNode.LOG.info("SURESH creating temporary file " + f);
       return FSDataset.createTmpFile(b, f);
     }
 

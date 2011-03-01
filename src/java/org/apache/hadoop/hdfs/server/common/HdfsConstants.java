@@ -52,6 +52,10 @@ public interface HdfsConstants {
     IMPORT  ("-importCheckpoint");
     
     private String name = null;
+    
+    // Used only with format and upgrade options
+    private String clusterId = null;
+    
     private StartupOption(String arg) {this.name = arg;}
     public String getName() {return name;}
     public NamenodeRole toNodeRole() {
@@ -64,7 +68,14 @@ public interface HdfsConstants {
         return NamenodeRole.ACTIVE;
       }
     }
-
+    
+    public void setClusterId(String cid) {
+      clusterId = cid;
+    }
+    
+    public String getClusterId() {
+      return clusterId;
+    }
   }
 
   // Timeouts for communicating with DataNode for streaming writes/reads

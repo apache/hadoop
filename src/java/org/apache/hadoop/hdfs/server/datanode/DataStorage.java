@@ -214,7 +214,8 @@ public class DataStorage extends Storage {
     Collection<File> bpDataDirs = new ArrayList<File>();
     for(Iterator<File> it = dataDirs.iterator(); it.hasNext();) {
       File dnRoot = it.next();
-      File bpRoot = getBpRoot(bpID, dnRoot);
+      File bpRoot = BlockPoolStorage.getBpRoot(bpID, new File(dnRoot,
+          STORAGE_DIR_CURRENT));
       bpDataDirs.add(bpRoot);
     }
     // mkdir for the list of BlockPoolStorage
@@ -254,17 +255,6 @@ public class DataStorage extends Storage {
     }
   }
 
-  /**
-   * Get a block pool root directory based on data node root directory
-   * @param bpID block pool ID
-   * @param dnRoot directory of data node root
-   * @return root directory for block pool
-   */
-  private static File getBpRoot(String bpID, File dnRoot) {
-    File bpRoot = new File(new File(dnRoot, STORAGE_DIR_CURRENT), bpID);
-    return bpRoot;
-  }
-  
   void format(StorageDirectory sd, NamespaceInfo nsInfo) throws IOException {
     sd.clearDirectory(); // create directory
     this.layoutVersion = FSConstants.LAYOUT_VERSION;
@@ -297,30 +287,23 @@ public class DataStorage extends Storage {
   @Override
   protected void getFields(Properties props, StorageDirectory sd)
       throws IOException {
-    String scid = props.getProperty("clusterID");
-    String sct = props.getProperty("cTime");
-    String slv = props.getProperty("layoutVersion");
+    setLayoutVersion(props, sd);
+    setcTime(props, sd);
+    setStorageType(props, sd);
+    setClusterId(props, layoutVersion, sd);
+    
+    // Read NamespaceID in version LAST_PRE_FEDERATION_LAYOUT_VERSION or before
+    if (layoutVersion >= LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      setNamespaceID(props, sd);
+    }
+    
+    // valid storage id, storage id may be empty
     String ssid = props.getProperty("storageID");
-    String st = props.getProperty("storageType");
-
-    if (scid == null || sct == null || slv == null|| ssid == null
-        || st == null) {
+    if (ssid == null) {
       throw new InconsistentFSStateException(sd.getRoot(), "file "
           + STORAGE_FILE_VERSION + " is invalid.");
     }
-    setClusterID(sd.getRoot(), scid);
-    
-    long rct = Long.parseLong(sct);
-    cTime = rct;
-    
-    int rlv = Integer.parseInt(slv);
-    setLayoutVersion(sd.getRoot(), rlv);
-    
-    NodeType rt = NodeType.valueOf(st);
-    setStorageType(sd.getRoot(), rt);
-    
-    // valid storage id, storage id may be empty
-    if ((!storageID.equals("") && !ssid.equals("") && !storageID.equals(ssid))) {
+    if (!(storageID.equals("") || ssid.equals("") || storageID.equals(ssid))) {
       throw new InconsistentFSStateException(sd.getRoot(),
           "has incompatible storage Id.");
     }
@@ -374,12 +357,13 @@ public class DataStorage extends Storage {
     checkVersionUpgradable(this.layoutVersion);
     assert this.layoutVersion >= FSConstants.LAYOUT_VERSION :
       "Future version is not allowed";
-
-    if (!getClusterID().equals (nsInfo.getClusterID()))
-      throw new IOException(
-                            "Incompatible clusterIDs in " + sd.getRoot().getCanonicalPath()
-                            + ": namenode clusterID = " + nsInfo.getClusterID() 
-                            + "; datanode clusterID = " + getClusterID());
+    
+    if (layoutVersion < Storage.LAST_PRE_FEDERATION_LAYOUT_VERSION
+        && !getClusterID().equals(nsInfo.getClusterID())) {
+      throw new IOException("Incompatible clusterIDs in "
+          + sd.getRoot().getCanonicalPath() + ": namenode clusterID = "
+          + nsInfo.getClusterID() + "; datanode clusterID = " + getClusterID());
+    }
     // regular start up
     if (this.layoutVersion == FSConstants.LAYOUT_VERSION 
         && this.cTime == nsInfo.getCTime())
@@ -425,13 +409,12 @@ public class DataStorage extends Storage {
    * @throws IOException on error
    */
   void doUpgrade(StorageDirectory sd, NamespaceInfo nsInfo) throws IOException {
-    //  bp root directory <SD>/current/<bpid>
-    File bpRootDir = getBpRoot(nsInfo.getBlockPoolID(), sd.getRoot());
-
-    // regular startup if <SD>/current/<bpid> direcotry exist,
-    // i.e. the stored version is 0.22 or later release
-    if (bpRootDir.exists())
+    if (layoutVersion < Storage.LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      clusterID = nsInfo.getClusterID();
+      layoutVersion = nsInfo.getLayoutVersion();
+      sd.write();
       return;
+    }
     
     LOG.info("Upgrading storage directory " + sd.getRoot()
              + ".\n   old LV = " + this.getLayoutVersion()
@@ -456,15 +439,15 @@ public class DataStorage extends Storage {
     rename(curDir, tmpDir);
     
     // 3. Format BP and hard link blocks from previous directory
-    File curBpDir = getBpRoot(nsInfo.getBlockPoolID(), curDir);
+    File curBpDir = BlockPoolStorage.getBpRoot(nsInfo.getBlockPoolID(), curDir);
     BlockPoolStorage bpStorage = new BlockPoolStorage(nsInfo.getNamespaceID(), 
         nsInfo.getBlockPoolID(), nsInfo.getCTime(), nsInfo.getClusterID());
-    bpStorage.format(new StorageDirectory(curBpDir), nsInfo);
-    linkAllBlocks(tmpDir, curBpDir);
+    bpStorage.format(curDir, nsInfo);
+    linkAllBlocks(tmpDir, new File(curBpDir, STORAGE_DIR_CURRENT));
     
-    // 4. Write version file under <SD>/current/<bpid>/current
+    // 4. Write version file under <SD>/current
     layoutVersion = FSConstants.LAYOUT_VERSION;
-    cTime = nsInfo.getCTime();
+    clusterID = nsInfo.getClusterID();
     sd.write();
     
     // 5. Rename <SD>/previous.tmp to <SD>/previous
@@ -600,10 +583,8 @@ public class DataStorage extends Storage {
         doFinalize(sd);
       } else {
         // block pool storage finalize using specific bpID
-        File dnRoot = sd.getRoot();
         BlockPoolStorage bpStorage = bpStorageMap.get(bpID);
-        File bpRoot = getBpRoot(bpID, dnRoot);
-        bpStorage.doFinalize(new StorageDirectory(bpRoot));
+        bpStorage.doFinalize(sd.getCurrentDir());
       }
     }
   }
@@ -631,7 +612,8 @@ public class DataStorage extends Storage {
     }    
   }
   
-  static void linkBlocks(File from, File to, int oldLV) throws IOException {
+  static void linkBlocks(File from, File to, int oldLV)
+      throws IOException {
     if (!from.exists()) {
       return;
     }

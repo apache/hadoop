@@ -146,11 +146,23 @@ public class BlockPoolStorage extends Storage {
 
   /**
    * Format a block pool storage. 
+   * @param dnCurDir DataStorage current directory
+   * @param nsInfo the name space info
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  void format(File dnCurDir, NamespaceInfo nsInfo) throws IOException {
+    File curBpDir = getBpRoot(nsInfo.getBlockPoolID(), dnCurDir);
+    StorageDirectory bpSdir = new StorageDirectory(curBpDir);
+    format(bpSdir, nsInfo);
+  }
+
+  /**
+   * Format a block pool storage. 
    * @param sd the block pool storage
    * @param nsInfo the name space info
    * @throws IOException Signals that an I/O exception has occurred.
    */
-  void format(StorageDirectory bpSdir, NamespaceInfo nsInfo) throws IOException {
+  private void format(StorageDirectory bpSdir, NamespaceInfo nsInfo) throws IOException {
     LOG.info("Formatting block pool " + blockpoolID + " directory "
         + bpSdir.getCurrentDir());
     bpSdir.clearDirectory(); // create directory
@@ -173,7 +185,6 @@ public class BlockPoolStorage extends Storage {
     props.setProperty("namespaceID", String.valueOf(namespaceID));
     props.setProperty("blockpoolID", blockpoolID);
     props.setProperty("cTime", String.valueOf(cTime));
-    props.setProperty("storageType", storageType.toString());
   }
 
   /** Validate and set block pool ID */
@@ -194,27 +205,12 @@ public class BlockPoolStorage extends Storage {
   @Override
   protected void getFields(Properties props, StorageDirectory sd)
       throws IOException {
-    String sv = props.getProperty("layoutVersion");
-    String sctime = props.getProperty("cTime");
-    String sid = props.getProperty("namespaceID");
-    String st = props.getProperty("storageType");
-    if (st == null || sv == null || sctime == null || sid == null) {
-      throw new InconsistentFSStateException(sd.getRoot(), "file "
-          + STORAGE_FILE_VERSION + " is invalid.");
-    }
-    int rv = Integer.parseInt(sv);
-    setLayoutVersion(sd.getRoot(), rv);
-    
-    int rid = Integer.parseInt(sid);
-    setNamespaceID(sd.getRoot(), rid);
-    
-    NodeType rt = NodeType.valueOf(st);
-    setStorageType(sd.getRoot(), rt);
+    setLayoutVersion(props, sd);
+    setNamespaceID(props, sd);
+    setcTime(props, sd);
     
     String sbpid = props.getProperty("blockpoolID");
     setBlockPoolID(sd.getRoot(), sbpid);
-    
-    cTime = Long.parseLong(sctime);
   }
 
   /**
@@ -289,12 +285,11 @@ public class BlockPoolStorage extends Storage {
    * @throws IOException on error
    */
   void doUpgrade(StorageDirectory bpSd, NamespaceInfo nsInfo) throws IOException {
-    // have to be upgrading between any after 0.22 (0.22 included) release
-    // stored version <= 0.22 && software version < 0.22
+    // Upgrading is applicable only to release with federation or after
     if (!(this.getLayoutVersion() < LAST_PRE_FEDERATION_LAYOUT_VERSION)) {
       return;
     }
-    LOG.info("Upgrading storage directory " + bpSd.getRoot()
+    LOG.info("Upgrading block pool storage directory " + bpSd.getRoot()
         + ".\n   old LV = " + this.getLayoutVersion() + "; old CTime = "
         + this.getCTime() + ".\n   new LV = " + nsInfo.getLayoutVersion()
         + "; new CTime = " + nsInfo.getCTime());
@@ -418,7 +413,9 @@ public class BlockPoolStorage extends Storage {
    * Finalize the block pool storage by deleting <BP>/previous directory
    * that holds the snapshot.
    */
-  void doFinalize(StorageDirectory bpSd) throws IOException {
+  void doFinalize(File dnCurDir) throws IOException {
+    File bpRoot = getBpRoot(blockpoolID, dnCurDir);
+    StorageDirectory bpSd = new StorageDirectory(bpRoot);
     // block pool level previous directory
     File prevDir = bpSd.getPreviousDir();
     if (!prevDir.exists()) {
@@ -513,5 +510,15 @@ public class BlockPoolStorage extends Storage {
   @Override
   public String toString() {
     return super.toString() + ";bpid=" + blockpoolID;
+  }
+  
+  /**
+   * Get a block pool storage root based on data node storage root
+   * @param bpID block pool ID
+   * @param dnRoot data node storage root directory
+   * @return root directory for block pool storage
+   */
+  static File getBpRoot(String bpID, File dnCurDir) {
+    return new File(dnCurDir, bpID);
   }
 }

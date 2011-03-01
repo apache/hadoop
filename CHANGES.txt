@@ -31,39 +31,39 @@ Trunk (unreleased changes)
     HDFS-1653. Federation: Block received message from datanode sends invalid 
     DatanodeRegistration. (Tanping via suresh)
 
-    HDFS-1645. DatanodeCommond.Finalize needs to include BlockPoolId.
-    (suresh)
+    HDFS-1645. Federation: DatanodeCommond.Finalize needs to include 
+    BlockPoolId.  (suresh)
 
-    HDFS-1638.DataNode.handleDiskError needs to inform ALL namenodes if a disk 
-    failed (boryas)
+    HDFS-1638. Federation: DataNode.handleDiskError needs to inform 
+    ALL namenodes if a disk failed (boryas)
 
     HDFS-1647. Federation: Multiple namenode configuration. (jitendra)
 
-    HDFS-1639. Add block pool management to FSDataset. (suresh)
+    HDFS-1639. Federation: Add block pool management to FSDataset. (suresh)
 
-    HDFS-1648. Only DataStorage must be locked using in_use.lock and no 
-    locks must be associated with BlockPoolStorage. (Tanping via suresh)
+    HDFS-1648. Federation: Only DataStorage must be locked using in_use.lock 
+    and no locks must be associated with BlockPoolStorage. (Tanping via suresh)
 
-    HDFS-1641. Datanode fields that are no longer used should be removed (boryas)
+    HDFS-1641. Federation: Datanode fields that are no longer used should 
+    be removed (boryas)
 
-    HDFS-1642. HDFS Federation: add Datanode.getDNRegistration(String bpid) 
+    HDFS-1642. Federation: add Datanode.getDNRegistration(String bpid) 
     method  (boryas)
 
-    HDFS-1643. HDFS Federation: remove namenode argument from DataNode 
+    HDFS-1643. Federation: remove namenode argument from DataNode 
     constructor (boryas)
 
-    HDFS-1657. Tests that corrupt block files fail due to changed file 
-    path in federation. (suresh)
+    HDFS-1657. Federation: Tests that corrupt block files fail due to changed 
+    file path in federation. (suresh)
 
-    HDFS-1661. Hdfs Federation: Remove unnecessary TODO:FEDERATION comments.
+    HDFS-1661. Federation: Remove unnecessary TODO:FEDERATION comments.
     (jitendra)
 
-    HDFS-1660. HDFS Federation: Datanode doesn't start with two namenodes
-    (boryas)
+    HDFS-1660. Federation: Datanode doesn't start with two namenodes (boryas)
 
-    HDFS-1650. TestReplication fails. (Tanping via suresh)
+    HDFS-1650. Federation: TestReplication fails. (Tanping via suresh)
 
-    HDFS-1651. Tests fail due to null pointer exception in 
+    HDFS-1651. Federation: Tests fail due to null pointer exception in 
     Datnode#shutdown() method. (Tanping via suresh)
 
     HDFS-1649. Federation: Datanode command to refresh namenode list at 
@@ -72,8 +72,12 @@ Trunk (unreleased changes)
     HDFS-1646. Federation: MiniDFSClsuter#waitActive() waits for ever 
     with the introduction of BPOfferService in datanode. (suresh)
 
-    HDFS-1659. BPOfferService exits after one iteration incorrectly.
-    (Tanping via suresh)
+    HDFS-1659. Federation: BPOfferService exits after one iteration 
+    incorrectly.  (Tanping via suresh)
+
+    HDFS-1654. Federation: Fix TestDFSUpgrade and TestDFSRollback failures.
+    (suresh)
+    
 
   IMPROVEMENTS
 

@@ -22,8 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
-import java.util.AbstractList;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -163,7 +161,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
-  public static String clusterIdStr;
 
   protected FSNamesystem namesystem; 
   protected NamenodeRole role;
@@ -1409,23 +1406,24 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
     FSImage fsImage = new FSImage(dirsToFormat, editDirsToFormat);
     FSNamesystem nsys = new FSNamesystem(fsImage, conf);
-    //new cluster id
-    // if not provided - see if you can find the current one
-    if(clusterIdStr == null || clusterIdStr.equals("")) {
+    
+    // if clusterID is not provided - see if you can find the current one
+    String clusterId = StartupOption.FORMAT.getClusterId();
+    if(clusterId == null || clusterId.equals("")) {
       // try to get one from the existing storage
-      clusterIdStr = fsImage.determineClusterId();
-      if (clusterIdStr == null || clusterIdStr.equals("")) {
+      clusterId = fsImage.determineClusterId();
+      if (clusterId == null || clusterId.equals("")) {
         throw new IllegalArgumentException("Format must be provided with clusterid");
       }
       if(isConfirmationNeeded) {
-        System.err.print("Use existing cluster id=" + clusterIdStr + "? (Y or N)");
+        System.err.print("Use existing cluster id=" + clusterId + "? (Y or N)");
         if(System.in.read() != 'Y') {
           throw new IllegalArgumentException("Format must be provided with clusterid");
         }
         while(System.in.read() != '\n'); // discard the enter-key
       }
     }
-    nsys.dir.fsImage.format(clusterIdStr);
+    nsys.dir.fsImage.format(clusterId);
     return false;
   }
 
@@ -1500,9 +1498,10 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       if (StartupOption.FORMAT.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.FORMAT;
         // might be followed by two args
-        if(i+2<argsLen && args[i+1].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
-          i+=2;
-          clusterIdStr = args[i];  
+        if (i + 2 < argsLen
+            && args[i + 1].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
+          i += 2;
+          startOpt.setClusterId(args[i]);
         }
       } else if (StartupOption.GENCLUSTERID.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.GENCLUSTERID;
@@ -1514,6 +1513,12 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         startOpt = StartupOption.CHECKPOINT;
       } else if (StartupOption.UPGRADE.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.UPGRADE;
+        // might be followed by two args
+        if (i + 2 < argsLen
+            && args[i + 1].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
+          i += 2;
+          startOpt.setClusterId(args[i]);
+        }
       } else if (StartupOption.ROLLBACK.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.ROLLBACK;
       } else if (StartupOption.FINALIZE.getName().equalsIgnoreCase(cmd)) {

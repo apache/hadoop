@@ -86,6 +86,7 @@ public class MiniDFSCluster {
     private String[] racks = null; 
     private String [] hosts = null;
     private long [] simulatedCapacities = null;
+    private String clusterId = null;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -164,6 +165,14 @@ public class MiniDFSCluster {
     }
     
     /**
+     * Default: null
+     */
+    public Builder clusterId(String cid) {
+      this.clusterId = cid;
+      return this;
+    }
+
+    /**
      * Construct the actual MiniDFSCluster
      */
     public MiniDFSCluster build() throws IOException {
@@ -184,7 +193,8 @@ public class MiniDFSCluster {
                        builder.option,
                        builder.racks,
                        builder.hosts,
-                       builder.simulatedCapacities);
+                       builder.simulatedCapacities,
+                       builder.clusterId);
   }
   
   public class DataNodeProperties {
@@ -379,13 +389,14 @@ public class MiniDFSCluster {
                         long[] simulatedCapacities) throws IOException {
     initMiniDFSCluster(nameNodePort, conf, numDataNodes, format,
         manageNameDfsDirs, manageDataDfsDirs, operation, racks, hosts,
-        simulatedCapacities);
+        simulatedCapacities, null);
   }
 
   private void initMiniDFSCluster(int nameNodePort, Configuration conf,
       int numDataNodes, boolean format, boolean manageNameDfsDirs,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
-      String[] hosts, long[] simulatedCapacities) throws IOException {
+      String[] hosts, long[] simulatedCapacities, String clusterId)
+      throws IOException {
     this.conf = conf;
     base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");
@@ -435,6 +446,9 @@ public class MiniDFSCluster {
         throw new IOException("Cannot remove data directory: " + data_dir);
       }
       GenericTestUtils.formatNamenode(conf);
+    }
+    if (operation == StartupOption.UPGRADE){
+      operation.setClusterId(clusterId);
     }
     
     // Start the NameNode
@@ -1216,7 +1230,7 @@ public class MiniDFSCluster {
    * @return Storage directory
    */
   public static File getStorageDir(int dnIndex, int dirIndex) {
-    return new File(getBaseDirectory() + "data" + (2*dnIndex + 1 + dirIndex));
+    return new File(getBaseDirectory() + "data/data" + (2*dnIndex + 1 + dirIndex));
   }
   
   /**
@@ -1236,7 +1250,7 @@ public class MiniDFSCluster {
    * @return finalized directory for a block pool
    */
   public static File getFinalizedDir(File storageDir, String bpid) {
-    return new File(storageDir, "/current/" + bpid + "/finalized/");
+    return new File(storageDir, "/current/" + bpid + "/current/finalized/");
   }
   
   /**

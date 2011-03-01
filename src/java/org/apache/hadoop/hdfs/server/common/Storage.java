@@ -753,28 +753,11 @@ public abstract class Storage extends StorageInfo {
   protected void getFields(Properties props, 
                            StorageDirectory sd 
                            ) throws IOException {
-    String sv, st, sid, scid, sct;
-    sv = props.getProperty("layoutVersion");
-    st = props.getProperty("storageType");
-    sid = props.getProperty("namespaceID");
-    scid = props.getProperty("clusterID");
-    sct = props.getProperty("cTime");
-    if (sv == null || st == null || sid == null || scid == null || 
-        sct == null) {
-      throw new InconsistentFSStateException(sd.root,
-        "file " + STORAGE_FILE_VERSION + " is invalid.");
-    }
-    
-    int rv = Integer.parseInt(sv);
-    NodeType rt = NodeType.valueOf(st);
-    int rid = Integer.parseInt(sid);
-    long rct = Long.parseLong(sct);
-    
-    setClusterID(sd.root, scid);
-    setNamespaceID(sd.root, rid);
-    setLayoutVersion(sd.root, rv);
-    setStorageType(sd.root, rt);
-    cTime = rct;
+    setLayoutVersion(props, sd);
+    setNamespaceID(props, sd);
+    setStorageType(props, sd);
+    setcTime(props, sd);
+    setClusterId(props, layoutVersion, sd);
   }
   
   /**
@@ -888,13 +871,66 @@ public abstract class Storage extends StorageInfo {
     file.getFD().sync();
   }
   
-  /** Validate and set storage type */
-  protected void setStorageType(File storage, NodeType type)
+  String getProperty(Properties props, StorageDirectory sd,
+      String name) throws InconsistentFSStateException {
+    String property = props.getProperty(name);
+    if (property == null) {
+      throw new InconsistentFSStateException(sd.root, "file "
+          + STORAGE_FILE_VERSION + " has " + name + " mising.");
+    }
+    return property;
+  }
+  
+  /** Validate and set storage type from {@link Properties}*/
+  protected void setStorageType(Properties props, StorageDirectory sd)
       throws InconsistentFSStateException {
+    NodeType type = NodeType.valueOf(getProperty(props, sd, "storageType"));
     if (!storageType.equals(type)) {
-      throw new InconsistentFSStateException(storage,
+      throw new InconsistentFSStateException(sd.root,
           "node type is incompatible with others.");
     }
     storageType = type;
+  }
+  
+  /** Validate and set ctime from {@link Properties}*/
+  protected void setcTime(Properties props, StorageDirectory sd)
+      throws InconsistentFSStateException {
+    cTime = Long.parseLong(getProperty(props, sd, "cTime"));
+  }
+
+  /** Validate and set clusterId from {@link Properties}*/
+  protected void setClusterId(Properties props, int layoutVersion,
+      StorageDirectory sd) throws InconsistentFSStateException {
+    // No Cluster ID in version LAST_PRE_FEDERATION_LAYOUT_VERSION or before
+    if (layoutVersion < Storage.LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      String cid = getProperty(props, sd, "clusterID");
+      if (!(clusterID.equals("") || cid.equals("") || clusterID.equals(cid))) {
+        throw new InconsistentFSStateException(sd.getRoot(),
+            "cluster Id is incompatible with others.");
+      }
+      clusterID = cid;
+    }
+  }
+  
+  /** Validate and set layout version from {@link Properties}*/
+  protected void setLayoutVersion(Properties props, StorageDirectory sd)
+      throws IncorrectVersionException, InconsistentFSStateException {
+    int lv = Integer.parseInt(getProperty(props, sd, "layoutVersion"));
+    if (lv < FSConstants.LAYOUT_VERSION) { // future version
+      throw new IncorrectVersionException(lv, "storage directory "
+          + sd.root.getAbsolutePath());
+    }
+    layoutVersion = lv;
+  }
+  
+  /** Validate and set namespaceID version from {@link Properties}*/
+  protected void setNamespaceID(Properties props, StorageDirectory sd)
+      throws InconsistentFSStateException {
+    int nsId = Integer.parseInt(getProperty(props, sd, "namespaceID"));
+    if (namespaceID != 0 && nsId != 0 && namespaceID != nsId) {
+      throw new InconsistentFSStateException(sd.root,
+          "namespaceID is incompatible with others.");
+    }
+    namespaceID = nsId;
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.test;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 /**
@@ -40,7 +41,7 @@ public abstract class GenericTestUtils {
    * @throws IOException
    */
   public static void formatNamenode(Configuration conf) throws IOException {
-    NameNode.clusterIdStr = "testClusterId";
+    StartupOption.FORMAT.setClusterId("testClusterID");
     NameNode.format(conf);
   }
 }

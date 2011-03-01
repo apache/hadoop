@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 
 /**
@@ -58,40 +57,44 @@ public class TestDFSUpgrade extends TestCase {
   }
   
   /**
-   * Verify that the current and previous directories exist.  Verify that 
-   * previous hasn't been modified by comparing the checksum of all it's
-   * containing files with their original checksum.  It is assumed that
-   * the server has recovered and upgraded.
+   * For namenode, Verify that the current and previous directories exist.
+   * Verify that previous hasn't been modified by comparing the checksum of all
+   * its files with their original checksum. It is assumed that the
+   * server has recovered and upgraded.
    */
-  void checkResult(NodeType nodeType, String[] baseDirs) throws IOException {
-    switch (nodeType) {
-    case NAME_NODE:
-      for (int i = 0; i < baseDirs.length; i++) {
-        assertTrue(new File(baseDirs[i],"current").isDirectory());
-        assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
-        assertTrue(new File(baseDirs[i],"current/edits").isFile());
-        assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
-        assertTrue(new File(baseDirs[i],"current/fstime").isFile());
-      }
-      break;
-    case DATA_NODE:
-      for (int i = 0; i < baseDirs.length; i++) {
-        assertEquals(
-                     UpgradeUtilities.checksumContents(
-                                                       nodeType, new File(baseDirs[i],"current")),
-                     UpgradeUtilities.checksumMasterContents(nodeType));
-      }
-      break;
-    }
+  void checkNameNode(String[] baseDirs) throws IOException {
     for (int i = 0; i < baseDirs.length; i++) {
-      assertTrue(new File(baseDirs[i],"previous").isDirectory());
-      assertEquals(
-                   UpgradeUtilities.checksumContents(
-                                                     nodeType, new File(baseDirs[i],"previous")),
-                   UpgradeUtilities.checksumMasterContents(nodeType));
+      assertTrue(new File(baseDirs[i],"current").isDirectory());
+      assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
+      assertTrue(new File(baseDirs[i],"current/edits").isFile());
+      assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
+      assertTrue(new File(baseDirs[i],"current/fstime").isFile());
+      
+      File previous = new File(baseDirs[i], "previous");
+      assertTrue(previous.isDirectory());
+      assertEquals(UpgradeUtilities.checksumContents(NAME_NODE, previous),
+          UpgradeUtilities.checksumMasterContents(NAME_NODE));
     }
   }
  
+  /**
+   * For datanode, for a block pool, verify that the current and previous
+   * directories exist. Verify that previous hasn't been modified by comparing
+   * the checksum of all its files with their original checksum. It
+   * is assumed that the server has recovered and upgraded.
+   */
+  void checkDataNode(String[] baseDirs, String bpid) throws IOException {
+    for (int i = 0; i < baseDirs.length; i++) {
+      File current = new File(baseDirs[i], "current/" + bpid + "/current");
+      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, current),
+        UpgradeUtilities.checksumMasterContents(DATA_NODE));
+      
+      File previous = new File(baseDirs[i], "current/" + bpid + "/previous");
+      assertTrue(previous.isDirectory());
+      assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, previous),
+          UpgradeUtilities.checksumMasterContents(DATA_NODE));
+    }
+  }
   /**
    * Attempts to start a NameNode with the given operation.  Starting
    * the NameNode should throw an exception.
@@ -111,17 +114,16 @@ public class TestDFSUpgrade extends TestCase {
   }
   
   /**
-   * Attempts to start a DataNode with the given operation.  Starting
-   * the DataNode should throw an exception.
+   * Attempts to start a DataNode with the given operation. Starting
+   * the given block pool should fail.
+   * @param operation startup option
+   * @param bpid block pool Id that should fail to start
+   * @throws IOException 
    */
-  void startDataNodeShouldFail(StartupOption operation) {
-    try {
-      cluster.startDataNodes(conf, 1, false, operation, null); // should fail
-      throw new AssertionError("DataNode should have failed to start");
-    } catch (Exception expected) {
-      // expected
-      assertFalse(cluster.isDataNodeUp());
-    }
+  void startBlockPoolShouldFail(StartupOption operation, String bpid) throws IOException {
+    cluster.startDataNodes(conf, 1, false, operation, null); // should fail
+    assertFalse("Block pool " + bpid + " should have failed to start",
+        cluster.getDataNodes().get(0).isBPServiceAlive(bpid));
   }
  
   /**
@@ -155,7 +157,7 @@ public class TestDFSUpgrade extends TestCase {
       log("Normal NameNode upgrade", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
       cluster = createCluster();
-      checkResult(NAME_NODE, nameNodeDirs);
+      checkNameNode(nameNodeDirs);
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
@@ -164,7 +166,7 @@ public class TestDFSUpgrade extends TestCase {
       cluster = createCluster();
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-      checkResult(DATA_NODE, dataNodeDirs);
+      checkDataNode(dataNodeDirs, UpgradeUtilities.getCurrentBlockPoolID(null));
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
@@ -181,7 +183,7 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-      checkResult(DATA_NODE, dataNodeDirs);
+      checkDataNode(dataNodeDirs, UpgradeUtilities.getCurrentBlockPoolID(null));
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
@@ -195,7 +197,8 @@ public class TestDFSUpgrade extends TestCase {
                                                          UpgradeUtilities.getCurrentNamespaceID(cluster),
                                                          UpgradeUtilities.getCurrentClusterID(cluster),
                                                          UpgradeUtilities.getCurrentFsscTime(cluster)));
-      startDataNodeShouldFail(StartupOption.REGULAR);
+      startBlockPoolShouldFail(StartupOption.REGULAR, UpgradeUtilities
+          .getCurrentBlockPoolID(null));
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
@@ -209,7 +212,9 @@ public class TestDFSUpgrade extends TestCase {
                                                          UpgradeUtilities.getCurrentNamespaceID(cluster),
                                                          UpgradeUtilities.getCurrentClusterID(cluster),
                                                          Long.MAX_VALUE));
-      startDataNodeShouldFail(StartupOption.REGULAR);
+      // Ensure corresponding block pool failed to initialized
+      startBlockPoolShouldFail(StartupOption.REGULAR, UpgradeUtilities
+          .getCurrentBlockPoolID(null));
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);

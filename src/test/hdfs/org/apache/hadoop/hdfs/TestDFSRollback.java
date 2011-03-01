@@ -104,17 +104,17 @@ public class TestDFSRollback extends TestCase {
   }
   
   /**
-   * Attempts to start a DataNode with the given operation.  Starting
-   * the DataNode should throw an exception.
+   * Attempts to start a DataNode with the given operation. Starting
+   * the given block pool should fail.
+   * @param operation startup option
+   * @param bpid block pool Id that should fail to start
+   * @throws IOException 
    */
-  void startDataNodeShouldFail(StartupOption operation) {
-    try {
-      cluster.startDataNodes(conf, 1, false, operation, null); // should fail
-      throw new AssertionError("DataNode should have failed to start");
-    } catch (Exception expected) {
-      // expected
-      assertFalse(cluster.isDataNodeUp());
-    }
+  void startBlockPoolShouldFail(StartupOption operation, String bpid)
+      throws IOException {
+    cluster.startDataNodes(conf, 1, false, operation, null); // should fail
+    assertFalse("Block pool " + bpid + " should have failed to start", 
+        cluster.getDataNodes().get(0).isBPServiceAlive(bpid));
   }
  
   /**
@@ -197,7 +197,8 @@ public class TestDFSRollback extends TestCase {
                                                          UpgradeUtilities.getCurrentNamespaceID(cluster),
                                                          UpgradeUtilities.getCurrentClusterID(cluster),
                                                          UpgradeUtilities.getCurrentFsscTime(cluster)));
-      startDataNodeShouldFail(StartupOption.ROLLBACK);
+      startBlockPoolShouldFail(StartupOption.ROLLBACK, 
+          cluster.getNamesystem().getPoolId());
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
@@ -218,7 +219,8 @@ public class TestDFSRollback extends TestCase {
                                                          UpgradeUtilities.getCurrentNamespaceID(cluster),
                                                          UpgradeUtilities.getCurrentClusterID(cluster),
                                                          Long.MAX_VALUE));
-      startDataNodeShouldFail(StartupOption.ROLLBACK);
+      startBlockPoolShouldFail(StartupOption.ROLLBACK, 
+          cluster.getNamesystem().getPoolId());
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
