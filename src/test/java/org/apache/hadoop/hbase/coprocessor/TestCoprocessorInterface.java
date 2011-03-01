@@ -271,13 +271,11 @@ public class TestCoprocessorInterface extends HBaseTestCase {
         regions[i] = each_daughter;
         i++;
       }
-    }
-    catch (IOException ioe) {
+    } catch (IOException ioe) {
       LOG.info("Split transaction of " + r.getRegionNameAsString() +
           " failed:" + ioe.getMessage());
       assertTrue(false);
-    }
-    catch (RuntimeException e) {
+    } catch (RuntimeException e) {
       LOG.info("Failed rollback of failed split of " +
           r.getRegionNameAsString() + e.getMessage());
     }

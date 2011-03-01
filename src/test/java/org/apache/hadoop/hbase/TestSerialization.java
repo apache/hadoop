@@ -113,20 +113,36 @@ public class TestSerialization {
    * @throws Exception
    */
   @Test public void testRegionInfo() throws Exception {
-    final String name = "testRegionInfo";
-    HTableDescriptor htd = new HTableDescriptor(name);
-    String [] families = new String [] {"info", "anchor"};
-    for (int i = 0; i < families.length; i++) {
-      htd.addFamily(new HColumnDescriptor(families[i]));
-    }
-    HRegionInfo hri = new HRegionInfo(htd,
-      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    HRegionInfo hri = createRandomRegion("testRegionInfo");
     byte [] hrib = Writables.getBytes(hri);
     HRegionInfo deserializedHri =
       (HRegionInfo)Writables.getWritable(hrib, new HRegionInfo());
     assertEquals(hri.getEncodedName(), deserializedHri.getEncodedName());
     assertEquals(hri.getTableDesc().getFamilies().size(),
       deserializedHri.getTableDesc().getFamilies().size());
+  }
+
+  @Test public void testRegionInfos() throws Exception {
+    HRegionInfo hri = createRandomRegion("testRegionInfos");
+    byte [] hrib = Writables.getBytes(hri);
+    byte [] triple = new byte [3 * hrib.length];
+    System.arraycopy(hrib, 0, triple, 0, hrib.length);
+    System.arraycopy(hrib, 0, triple, hrib.length, hrib.length);
+    System.arraycopy(hrib, 0, triple, hrib.length * 2, hrib.length);
+    List<HRegionInfo> regions = Writables.getHRegionInfos(triple, 0, triple.length);
+    assertTrue(regions.size() == 3);
+    assertTrue(regions.get(0).equals(regions.get(1)));
+    assertTrue(regions.get(0).equals(regions.get(2)));
+  }
+
+  private HRegionInfo createRandomRegion(final String name) {
+    HTableDescriptor htd = new HTableDescriptor(name);
+    String [] families = new String [] {"info", "anchor"};
+    for (int i = 0; i < families.length; i++) {
+      htd.addFamily(new HColumnDescriptor(families[i]));
+    }
+    return new HRegionInfo(htd, HConstants.EMPTY_START_ROW,
+      HConstants.EMPTY_END_ROW);
   }
 
   /**

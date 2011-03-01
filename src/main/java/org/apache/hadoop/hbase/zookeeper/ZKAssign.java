@@ -387,7 +387,7 @@ public class ZKAssign {
    * @throws KeeperException if unexpected zookeeper exception
    * @throws KeeperException.NoNodeException if node does not exist
    */
-  private static boolean deleteNode(ZooKeeperWatcher zkw, String regionName,
+  public static boolean deleteNode(ZooKeeperWatcher zkw, String regionName,
       EventType expectedState)
   throws KeeperException, KeeperException.NoNodeException {
     LOG.debug(zkw.prefix("Deleting existing unassigned " +
@@ -412,8 +412,7 @@ public class ZKAssign {
       if(!ZKUtil.deleteNode(zkw, node, stat.getVersion())) {
         LOG.warn(zkw.prefix("Attempting to delete " +
           "unassigned node in " + expectedState +
-            " state but " +
-            "after verifying it was in OPENED state, we got a version mismatch"));
+            " state but after verifying state, we got a version mismatch"));
         return false;
       }
       LOG.debug(zkw.prefix("Successfully deleted unassigned node for region " +
@@ -624,7 +623,7 @@ public class ZKAssign {
   }
 
   /**
-   * Private method that actually performs unassigned node transitions.
+   * Method that actually performs unassigned node transitions.
    *
    * <p>Attempts to transition the unassigned node for the specified region
    * from the expected state to the state in the specified transition data.
@@ -654,6 +653,14 @@ public class ZKAssign {
   public static int transitionNode(ZooKeeperWatcher zkw, HRegionInfo region,
       String serverName, EventType beginState, EventType endState,
       int expectedVersion)
+  throws KeeperException {
+    return transitionNode(zkw, region, serverName, beginState, endState,
+        expectedVersion, null);
+  }
+
+  public static int transitionNode(ZooKeeperWatcher zkw, HRegionInfo region,
+      String serverName, EventType beginState, EventType endState,
+      int expectedVersion, final byte [] payload)
   throws KeeperException {
     String encoded = region.getEncodedName();
     if(LOG.isDebugEnabled()) {
@@ -694,7 +701,7 @@ public class ZKAssign {
     // Write new data, ensuring data has not changed since we last read it
     try {
       RegionTransitionData data = new RegionTransitionData(endState,
-          region.getRegionName(), serverName);
+          region.getRegionName(), serverName, payload);
       if(!ZKUtil.setData(zkw, node, data.getBytes(), stat.getVersion())) {
         LOG.warn(zkw.prefix("Attempt to transition the " +
         "unassigned node for " + encoded +

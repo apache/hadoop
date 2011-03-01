@@ -112,6 +112,7 @@ public class ExecutorService {
       case RS_ZK_REGION_OPENED:
         return ExecutorType.MASTER_OPEN_REGION;
 
+      case RS_ZK_REGION_SPLIT:
       case M_SERVER_SHUTDOWN:
         return ExecutorType.MASTER_SERVER_OPERATIONS;
 

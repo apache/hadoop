@@ -116,7 +116,19 @@ public class ServerShutdownHandler extends EventHandler {
 
     // Wait on meta to come online; we need it to progress.
     // TODO: Best way to hold strictly here?  We should build this retry logic
-    //       into the MetaReader operations themselves.
+    // into the MetaReader operations themselves.
+    // TODO: Is the reading of .META. necessary when the Master has state of
+    // cluster in its head?  It should be possible to do without reading .META.
+    // in all but one case. On split, the RS updates the .META.
+    // table and THEN informs the master of the split via zk nodes in
+    // 'unassigned' dir.  Currently the RS puts ephemeral nodes into zk so if
+    // the regionserver dies, these nodes do not stick around and this server
+    // shutdown processing does fixup (see the fixupDaughters method below).
+    // If we wanted to skip the .META. scan, we'd have to change at least the
+    // final SPLIT message to be permanent in zk so in here we'd know a SPLIT
+    // completed (zk is updated after edits to .META. have gone in).  See
+    // {@link SplitTransaction}.  We'd also have to be figure another way for
+    // doing the below .META. daughters fixup.
     NavigableMap<HRegionInfo, Result> hris = null;
     while (!this.server.isStopped()) {
       try {

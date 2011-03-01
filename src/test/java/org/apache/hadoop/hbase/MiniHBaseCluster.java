@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.zookeeper.KeeperException;
 
@@ -163,11 +161,19 @@ public class MiniHBaseCluster {
   public static class MiniHBaseClusterRegionServer extends HRegionServer {
     private Thread shutdownThread = null;
     private User user = null;
+    public static boolean TEST_SKIP_CLOSE = false;
 
     public MiniHBaseClusterRegionServer(Configuration conf)
         throws IOException, InterruptedException {
       super(conf);
       this.user = User.getCurrent();
+    }
+
+    @Override
+    public boolean closeRegion(HRegionInfo region)
+        throws NotServingRegionException {
+      if (TEST_SKIP_CLOSE) return true;
+      return super.closeRegion(region);
     }
 
     public void setHServerInfo(final HServerInfo hsi) {

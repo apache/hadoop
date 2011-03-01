@@ -154,27 +154,22 @@ public class CompactSplitThread extends Thread implements CompactionRequestor {
     if (!st.prepare()) return;
     try {
       st.execute(this.server, this.server);
-    } catch (IOException ioe) {
+    } catch (Exception e) {
       try {
         LOG.info("Running rollback of failed split of " +
-          parent.getRegionNameAsString() + "; " + ioe.getMessage());
-        st.rollback(this.server);
+          parent.getRegionNameAsString() + "; " + e.getMessage());
+        st.rollback(this.server, this.server);
         LOG.info("Successful rollback of failed split of " +
           parent.getRegionNameAsString());
-      } catch (RuntimeException e) {
+      } catch (RuntimeException ee) {
         // If failed rollback, kill this server to avoid having a hole in table.
         LOG.info("Failed rollback of failed split of " +
-          parent.getRegionNameAsString() + " -- aborting server", e);
+          parent.getRegionNameAsString() + " -- aborting server", ee);
         this.server.abort("Failed split");
       }
       return;
     }
 
-    // Now tell the master about the new regions.  If we fail here, its OK.
-    // Basescanner will do fix up.  And reporting split to master is going away.
-    // TODO: Verify this still holds in new master rewrite.
-    this.server.reportSplit(parent.getRegionInfo(), st.getFirstDaughter(),
-      st.getSecondDaughter());
     LOG.info("Region split, META updated, and report to master. Parent=" +
       parent.getRegionInfo().getRegionNameAsString() + ", new regions: " +
       st.getFirstDaughter().getRegionNameAsString() + ", " +

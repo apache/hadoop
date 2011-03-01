@@ -28,6 +28,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Utility class with methods for manipulating Writable objects
@@ -56,6 +58,31 @@ public class Writables {
         out.close();
       }
     }
+  }
+
+  /**
+   * Put a bunch of Writables as bytes all into the one byte array.
+   * @param w writable
+   * @return The bytes of <code>w</code> gotten by running its
+   * {@link Writable#write(java.io.DataOutput)} method.
+   * @throws IOException e
+   * @see #getHRegionInfos(byte[], int, int)
+   */
+  public static byte [] getBytes(final Writable... ws) throws IOException {
+    List<byte []> bytes = new ArrayList<byte []>();
+    int size = 0;
+    for (Writable w: ws) {
+      byte [] b = getBytes(w);
+      size += b.length;
+      bytes.add(b);
+    }
+    byte [] result = new byte[size];
+    int offset = 0;
+    for (byte [] b: bytes) {
+      System.arraycopy(b, 0, result, offset, b.length);
+      offset += b.length;
+    }
+    return result;
   }
 
   /**
@@ -117,6 +144,34 @@ public class Writables {
   public static HRegionInfo getHRegionInfo(final byte [] bytes)
   throws IOException {
     return (HRegionInfo)getWritable(bytes, new HRegionInfo());
+  }
+
+  /**
+   * @param bytes serialized bytes
+   * @return All the hregioninfos that are in the byte array.  Keeps reading
+   * till we hit the end.
+   * @throws IOException e
+   */
+  public static List<HRegionInfo> getHRegionInfos(final byte [] bytes,
+      final int offset, final int length)
+  throws IOException {
+    if (bytes == null) {
+      throw new IllegalArgumentException("Can't build a writable with empty " +
+        "bytes array");
+    }
+    DataInputBuffer in = new DataInputBuffer();
+    List<HRegionInfo> hris = new ArrayList<HRegionInfo>();
+    try {
+      in.reset(bytes, offset, length);
+      while (in.available() > 0) {
+        HRegionInfo hri = new HRegionInfo();
+        hri.readFields(in);
+        hris.add(hri);
+      }
+    } finally {
+      in.close();
+    }
+    return hris;
   }
 
   /**

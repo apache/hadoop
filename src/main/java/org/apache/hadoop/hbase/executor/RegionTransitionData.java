@@ -47,6 +47,8 @@ public class RegionTransitionData implements Writable {
   /** Time the event was created.  Required but automatically set. */
   private long stamp;
 
+  private byte [] payload;
+
   /**
    * Writable constructor.  Do not use directly.
    */
@@ -82,6 +84,7 @@ public class RegionTransitionData implements Writable {
    *
    * <p>Valid types for this constructor are {@link EventType#RS_ZK_REGION_CLOSING},
    * {@link EventType#RS_ZK_REGION_CLOSED}, {@link EventType#RS_ZK_REGION_OPENING},
+   * {@link EventType#RS_ZK_REGION_SPLITTING},
    * and {@link EventType#RS_ZK_REGION_OPENED}.
    *
    * @param eventType type of event
@@ -90,10 +93,31 @@ public class RegionTransitionData implements Writable {
    */
   public RegionTransitionData(EventType eventType, byte [] regionName,
       String serverName) {
+    this(eventType, regionName, serverName, null);
+  }
+
+  /**
+   * Construct data for a new region transition event with the specified event
+   * type, region name, and server name.
+   *
+   * <p>Used when the server name is known (a regionserver is setting it).
+   *
+   * <p>Valid types for this constructor are {@link EventType#RS_ZK_REGION_SPLIT}
+   * since SPLIT is only type that currently carries a payload.
+   *
+   * @param eventType type of event
+   * @param regionName name of region as per <code>HRegionInfo#getRegionName()</code>
+   * @param serverName name of server setting data
+   * @param payload Payload examples include the daughters involved in a
+   * {@link EventType#RS_ZK_REGION_SPLIT}. Can be null
+   */
+  public RegionTransitionData(EventType eventType, byte [] regionName,
+      String serverName, final byte [] payload) {
     this.eventType = eventType;
     this.stamp = System.currentTimeMillis();
     this.regionName = regionName;
     this.serverName = serverName;
+    this.payload = payload;
   }
 
   /**
@@ -106,6 +130,8 @@ public class RegionTransitionData implements Writable {
    * <li>{@link EventType#RS_ZK_REGION_CLOSED}
    * <li>{@link EventType#RS_ZK_REGION_OPENING}
    * <li>{@link EventType#RS_ZK_REGION_OPENED}
+   * <li>{@link EventType#RS_ZK_REGION_SPLITTING}
+   * <li>{@link EventType#RS_ZK_REGION_SPLIT}
    * </ul>
    * @return type of region transition event
    */
@@ -142,6 +168,13 @@ public class RegionTransitionData implements Writable {
     return stamp;
   }
 
+  /**
+   * @return Payload if any.
+   */
+  public byte [] getPayload() {
+    return this.payload;
+  }
+
   @Override
   public void readFields(DataInput in) throws IOException {
     // the event type byte
@@ -157,6 +190,9 @@ public class RegionTransitionData implements Writable {
     } else {
       serverName = null;
     }
+    if (in.readBoolean()) {
+      this.payload = Bytes.readByteArray(in);
+    }
   }
 
   @Override
@@ -168,6 +204,10 @@ public class RegionTransitionData implements Writable {
     out.writeBoolean(serverName != null);
     if(serverName != null) {
       out.writeUTF(serverName);
+    }
+    out.writeBoolean(this.payload != null);
+    if (this.payload != null) {
+      Bytes.writeByteArray(out, this.payload);
     }
   }
 

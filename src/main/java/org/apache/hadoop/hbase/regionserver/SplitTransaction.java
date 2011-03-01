@@ -40,13 +40,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.executor.RegionTransitionData;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.io.Reference.Range;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.hbase.zookeeper.ZKAssign;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NodeExistsException;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -85,6 +92,7 @@ public class SplitTransaction {
   private HRegionInfo hri_b;
   private Path splitdir;
   private long fileSplitTimeout = 30000;
+  private int znodeVersion = -1;
 
   /*
    * Row to split around
@@ -95,6 +103,10 @@ public class SplitTransaction {
    * Types to add to the transaction journal
    */
   enum JournalEntry {
+    /**
+     * Set region as in transition, set it into SPLITTING state.
+     */
+    SET_SPLITTING_IN_ZK,
     /**
      * We created the temporary split data directory.
      */
@@ -185,6 +197,8 @@ public class SplitTransaction {
    * @param services Used to online/offline regions.
    * @throws IOException If thrown, transaction failed. Call {@link #rollback(OnlineRegions)}
    * @return Regions created
+   * @throws KeeperException
+   * @throws NodeExistsException 
    * @see #rollback(OnlineRegions)
    */
   public PairOfSameType<HRegion> execute(final Server server,
@@ -195,19 +209,32 @@ public class SplitTransaction {
         (services != null && services.isStopping())) {
       throw new IOException("Server is stopped or stopping");
     }
-    assert !this.parent.lock.writeLock().isHeldByCurrentThread() : "Unsafe to hold write lock while performing RPCs";
+    assert !this.parent.lock.writeLock().isHeldByCurrentThread(): "Unsafe to hold write lock while performing RPCs";
 
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
       this.parent.getCoprocessorHost().preSplit();
     }
 
-    // If true, no cluster to write meta edits into.
+    // If true, no cluster to write meta edits to or to update znodes in.
     boolean testing = server == null? true:
       server.getConfiguration().getBoolean("hbase.testing.nocluster", false);
     this.fileSplitTimeout = testing ? this.fileSplitTimeout :
-        server.getConfiguration().getLong(
-            "hbase.regionserver.fileSplitTimeout", this.fileSplitTimeout);
+      server.getConfiguration().getLong("hbase.regionserver.fileSplitTimeout",
+          this.fileSplitTimeout);
+
+    // Set ephemeral SPLITTING znode up in zk.  Mocked servers sometimes don't
+    // have zookeeper so don't do zk stuff if zookeeper is null
+    if (server != null && server.getZooKeeper() != null) {
+      try {
+        this.znodeVersion = createNodeSplitting(server.getZooKeeper(),
+          this.parent.getRegionInfo(), server.getServerName());
+      } catch (KeeperException e) {
+        throw new IOException("Failed setting SPLITTING znode on " +
+          this.parent.getRegionNameAsString(), e);
+      }
+    }
+    this.journal.add(JournalEntry.SET_SPLITTING_IN_ZK);
 
     createSplitDir(this.parent.getFilesystem(), this.splitdir);
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
@@ -254,14 +281,9 @@ public class SplitTransaction {
         this.parent.getRegionInfo(), a.getRegionInfo(), b.getRegionInfo());
     }
 
-    // The is the point of no return.  We are committed to the split now.  We
+    // This is the point of no return.  We are committed to the split now.  We
     // have still the daughter regions to open but meta has been changed.
-    // If we fail from here on out, we can not rollback so, we'll just abort.
-    // The meta has been changed though so there will need to be a fixup run
-    // during processing of the crashed server by master (TODO: Verify this in place).
-
-    // TODO: Could we be smarter about the sequence in which we do these steps?
-
+    // If we fail from here on out, we cannot rollback so, we'll just abort.
     if (!testing) {
       // Open daughters in parallel.
       DaughterOpener aOpener = new DaughterOpener(server, services, a);
@@ -273,6 +295,17 @@ public class SplitTransaction {
         bOpener.join();
       } catch (InterruptedException e) {
         server.abort("Exception running daughter opens", e);
+      }
+    }
+
+    // Tell master about split by updating zk.  If we fail, abort.
+    if (server != null && server.getZooKeeper() != null) {
+      try {
+        transitionNodeSplit(server.getZooKeeper(), parent.getRegionInfo(),
+          a.getRegionInfo(), b.getRegionInfo(), server.getServerName(),
+          this.znodeVersion);
+      } catch (Exception e) {
+        server.abort("Failed telling master about split", e);
       }
     }
 
@@ -543,13 +576,20 @@ public class SplitTransaction {
    * @return The region we were splitting
    * @throws IOException If thrown, rollback failed.  Take drastic action.
    */
-  public void rollback(final OnlineRegions or) throws IOException {
+  public void rollback(final Server server, final OnlineRegions or)
+  throws IOException {
     FileSystem fs = this.parent.getFilesystem();
     ListIterator<JournalEntry> iterator =
       this.journal.listIterator(this.journal.size());
     while (iterator.hasPrevious()) {
       JournalEntry je = iterator.previous();
       switch(je) {
+      case SET_SPLITTING_IN_ZK:
+        if (server != null && server.getZooKeeper() != null) {
+          cleanZK(server, this.parent.getRegionInfo());
+        }
+        break;
+
       case CREATE_SPLIT_DIR:
         cleanupSplitDir(fs, this.splitdir);
         break;
@@ -622,5 +662,100 @@ public class SplitTransaction {
     }
     cleanupSplitDir(r.getFilesystem(), splitdir);
     LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
+  }
+
+  private static void cleanZK(final Server server, final HRegionInfo hri) {
+    try {
+      // Only delete if its in expected state; could have been hijacked.
+      ZKAssign.deleteNode(server.getZooKeeper(), hri.getEncodedName(),
+        EventType.RS_ZK_REGION_SPLITTING);
+    } catch (KeeperException e) {
+      server.abort("Failed cleanup of " + hri.getRegionNameAsString(), e);
+    }
+  }
+
+  /**
+   * Creates a new ephemeral node in the SPLITTING state for the specified region.
+   * Create it ephemeral in case regionserver dies mid-split.
+   *
+   * <p>Does not transition nodes from other states.  If a node already exists
+   * for this region, a {@link NodeExistsException} will be thrown.
+   *
+   * @param zkw zk reference
+   * @param region region to be created as offline
+   * @param serverName server event originates from
+   * @return Version of znode created.
+   * @throws IOException 
+   */
+  private static int createNodeSplitting(final ZooKeeperWatcher zkw,
+      final HRegionInfo region, final String serverName)
+  throws KeeperException, IOException {
+    LOG.debug(zkw.prefix("Creating ephemeral node for " +
+      region.getEncodedName() + " in SPLITTING state"));
+    RegionTransitionData data =
+      new RegionTransitionData(EventType.RS_ZK_REGION_SPLITTING,
+        region.getRegionName(), serverName);
+    // This synchronization is copied from ZKAssign.
+    synchronized(zkw.getNodes()) {
+      String node = ZKAssign.getNodeName(zkw, region.getEncodedName());
+      zkw.getNodes().add(node);
+      if (!ZKUtil.createEphemeralNodeAndWatch(zkw, node, data.getBytes())) {
+        throw new IOException("Failed create of ephemeral " + node);
+      }
+    }
+    // Transition node from SPLITTING to SPLITTING and pick up version so we
+    // can be sure this znode is ours; version is needed deleting.
+    return transitionNodeSplitting(zkw, region, serverName, -1);
+  }
+
+  /**
+   * Transitions an existing node for the specified region which is
+   * currently in the SPLITTING state to be in the SPLIT state.  Converts the
+   * ephemeral SPLITTING znode to an ephemeral SPLIT node.  Master cleans up
+   * SPLIT znode when it reads it (or if we crash, zk will clean it up).
+   *
+   * <p>Does not transition nodes from other states.  If for some reason the
+   * node could not be transitioned, the method returns -1.  If the transition
+   * is successful, the version of the node after transition is returned.
+   *
+   * <p>This method can fail and return false for three different reasons:
+   * <ul><li>Node for this region does not exist</li>
+   * <li>Node for this region is not in SPLITTING state</li>
+   * <li>After verifying SPLITTING state, update fails because of wrong version
+   * (this should never actually happen since an RS only does this transition
+   * following a transition to SPLITTING.  if two RS are conflicting, one would
+   * fail the original transition to SPLITTING and not this transition)</li>
+   * </ul>
+   *
+   * <p>Does not set any watches.
+   *
+   * <p>This method should only be used by a RegionServer when completing the
+   * open of a region.
+   *
+   * @param zkw zk reference
+   * @param parent region to be transitioned to opened
+   * @param a Daughter a of split
+   * @param b Daughter b of split
+   * @param serverName server event originates from
+   * @return version of node after transition, -1 if unsuccessful transition
+   * @throws KeeperException if unexpected zookeeper exception
+   * @throws IOException 
+   */
+  private static int transitionNodeSplit(ZooKeeperWatcher zkw,
+      HRegionInfo parent, HRegionInfo a, HRegionInfo b, String serverName,
+      final int znodeVersion)
+  throws KeeperException, IOException {
+    byte [] payload = Writables.getBytes(a, b);
+    return ZKAssign.transitionNode(zkw, parent, serverName,
+      EventType.RS_ZK_REGION_SPLITTING, EventType.RS_ZK_REGION_SPLIT,
+      znodeVersion, payload);
+  }
+
+  private static int transitionNodeSplitting(final ZooKeeperWatcher zkw,
+      final HRegionInfo parent,
+      final String serverName, final int version)
+  throws KeeperException, IOException {
+    return ZKAssign.transitionNode(zkw, parent, serverName,
+      EventType.RS_ZK_REGION_SPLITTING, EventType.RS_ZK_REGION_SPLITTING, version);
   }
 }

@@ -176,7 +176,8 @@ public interface HMasterInterface extends VersionedProtocol {
    * @param regionName Region to unassign. Will clear any existing RegionPlan
    * if one found.
    * @param force If true, force unassign (Will remove region from
-   * regions-in-transition too if present).
+   * regions-in-transition too if present as well as from assigned regions --
+   * radical!).
    * @throws IOException
    */
   public void unassign(final byte [] regionName, final boolean force)

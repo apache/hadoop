@@ -56,9 +56,6 @@ public class TestHMsg extends TestCase {
   }
 
   public void testSerialization() throws IOException {
-    // Check out new HMsg that carries two daughter split regions.
-    byte [] abytes = Bytes.toBytes("a");
-    byte [] bbytes = Bytes.toBytes("b");
     byte [] parentbytes = Bytes.toBytes("parent");
     HRegionInfo parent =
       new HRegionInfo(new HTableDescriptor(Bytes.toBytes("parent")),
@@ -68,15 +65,5 @@ public class TestHMsg extends TestCase {
     byte [] bytes = Writables.getBytes(hmsg);
     HMsg close = (HMsg)Writables.getWritable(bytes, new HMsg());
     assertTrue(close.equals(hmsg));
-    // Assert split serializes
-    HRegionInfo daughtera =
-      new HRegionInfo(new HTableDescriptor(Bytes.toBytes("a")), abytes, abytes);
-    HRegionInfo daughterb =
-      new HRegionInfo(new HTableDescriptor(Bytes.toBytes("b")), bbytes, bbytes);
-    HMsg splithmsg = new HMsg(HMsg.Type.REGION_SPLIT,
-      parent, daughtera, daughterb, Bytes.toBytes("REGION_SPLIT"));
-    bytes = Writables.getBytes(splithmsg);
-    hmsg = (HMsg)Writables.getWritable(bytes, new HMsg());
-    assertTrue(splithmsg.equals(hmsg));
   }
 }

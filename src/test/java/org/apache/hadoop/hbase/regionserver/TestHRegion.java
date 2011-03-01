@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
@@ -1339,7 +1338,7 @@ public class TestHRegion extends HBaseTestCase {
       try {
         LOG.info("Running rollback of failed split of " +
           parent.getRegionNameAsString() + "; " + ioe.getMessage());
-        st.rollback(null);
+        st.rollback(null, null);
         LOG.info("Successful rollback of failed split of " +
           parent.getRegionNameAsString());
         return null;

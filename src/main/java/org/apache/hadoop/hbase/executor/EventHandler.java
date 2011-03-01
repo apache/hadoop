@@ -104,6 +104,8 @@ public abstract class EventHandler implements Runnable, Comparable<Runnable> {
     RS_ZK_REGION_CLOSED       (2),   // RS has finished closing a region
     RS_ZK_REGION_OPENING      (3),   // RS is in process of opening a region
     RS_ZK_REGION_OPENED       (4),   // RS has finished opening a region
+    RS_ZK_REGION_SPLITTING    (5),   // RS has started a region split
+    RS_ZK_REGION_SPLIT        (6),   // RS split has completed.
 
     // Messages originating from Master to RS
     M_RS_OPEN_REGION          (20),  // Master asking RS to open a region

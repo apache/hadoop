@@ -190,7 +190,7 @@ public class TestSplitTransaction {
     }
     assertTrue(expectedException);
     // Run rollback
-    spiedUponSt.rollback(null);
+    spiedUponSt.rollback(null, null);
 
     // Assert I can scan parent.
     int parentRowCount2 = countRows(this.parent);

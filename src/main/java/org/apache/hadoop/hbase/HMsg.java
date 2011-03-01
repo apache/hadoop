@@ -48,11 +48,6 @@ public class HMsg implements Writable {
     STOP_REGIONSERVER,
 
     /**
-     * Region server split the region associated with this message.
-     */
-    REGION_SPLIT,
-
-    /**
      * When RegionServer receives this message, it goes into a sleep that only
      * an exit will cure.  This message is sent by unit tests simulating
      * pathological states.
@@ -229,10 +224,6 @@ public class HMsg implements Writable {
        out.writeBoolean(true);
        Bytes.writeByteArray(out, this.message);
      }
-     if (this.type.equals(Type.REGION_SPLIT)) {
-       this.daughterA.write(out);
-       this.daughterB.write(out);
-     }
    }
 
   /**
@@ -245,12 +236,6 @@ public class HMsg implements Writable {
      boolean hasMessage = in.readBoolean();
      if (hasMessage) {
        this.message = Bytes.readByteArray(in);
-     }
-     if (this.type.equals(Type.REGION_SPLIT)) {
-       this.daughterA = new HRegionInfo();
-       this.daughterB = new HRegionInfo();
-       this.daughterA.readFields(in);
-       this.daughterB.readFields(in);
      }
    }
 }

@@ -1535,25 +1535,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   /**
-   * Add to the outbound message buffer
-   *
-   * When a region splits, we need to tell the master that there are two new
-   * regions that need to be assigned.
-   *
-   * We do not need to inform the master about the old region, because we've
-   * updated the meta or root regions, and the master will pick that up on its
-   * next rescan of the root or meta tables.
-   */
-  void reportSplit(HRegionInfo oldRegion, HRegionInfo newRegionA,
-      HRegionInfo newRegionB) {
-    this.outboundMsgs.add(new HMsg(
-        HMsg.Type.REGION_SPLIT, oldRegion, newRegionA,
-        newRegionB, Bytes.toBytes("Daughters; "
-            + newRegionA.getRegionNameAsString() + ", "
-            + newRegionB.getRegionNameAsString())));
-  }
-
-  /**
    * Closes all regions.  Called on our way out.
    * Assumes that its not possible for new regions to be added to onlineRegions
    * while this method runs.

@@ -53,22 +53,24 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.catalog.RootLocationEditor;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.RegionTransitionData;
-import org.apache.hadoop.hbase.executor.EventHandler.EventType;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
+import org.apache.hadoop.hbase.master.handler.SplitRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil.NodeAndData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.AsyncCallback;
@@ -365,6 +367,43 @@ public class AssignmentManager extends ZooKeeperListener {
           // Nothing to do.
           break;
 
+        case RS_ZK_REGION_SPLITTING:
+          if (!isInStateForSplitting(regionState)) break;
+          addSplittingToRIT(data.getServerName(), encodedName);
+          break;
+
+        case RS_ZK_REGION_SPLIT:
+          // RegionState must be null, or SPLITTING or PENDING_CLOSE.
+          if (!isInStateForSplitting(regionState)) break;
+          // If null, add SPLITTING state before going to SPLIT
+          if (regionState == null) {
+            LOG.info("Received SPLIT for region " + prettyPrintedRegionName +
+              " from server " + data.getServerName() +
+              " but region was not first in SPLITTING state; continuing");
+            addSplittingToRIT(data.getServerName(), encodedName);
+          }
+          // Check it has daughters.
+          byte [] payload = data.getPayload();
+          List<HRegionInfo> daughters = null;
+          try {
+            daughters = Writables.getHRegionInfos(payload, 0, payload.length);
+          } catch (IOException e) {
+            LOG.error("Dropped split! Failed reading split payload for " +
+              prettyPrintedRegionName);
+            break;
+          }
+          assert daughters.size() == 2;
+          // Assert that we can get a serverinfo for this server.
+          HServerInfo hsi = getAndCheckHServerInfo(data.getServerName());
+          if (hsi == null) {
+            LOG.error("Dropped split! No HServerInfo for " + data.getServerName());
+            break;
+          }
+          // Run handler to do the rest of the SPLIT handling.
+          this.executorService.submit(new SplitRegionHandler(master, this,
+            regionState.getRegion(), hsi, daughters));
+          break;
+
         case RS_ZK_REGION_CLOSING:
           // Should see CLOSING after we have asked it to CLOSE or additional
           // times after already being in state of CLOSING
@@ -416,7 +455,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
         case RS_ZK_REGION_OPENED:
           // Should see OPENED after OPENING but possible after PENDING_OPEN
-          if(regionState == null ||
+          if (regionState == null ||
               (!regionState.isPendingOpen() && !regionState.isOpening())) {
             LOG.warn("Received OPENED for region " +
                 prettyPrintedRegionName +
@@ -433,6 +472,99 @@ public class AssignmentManager extends ZooKeeperListener {
           break;
       }
     }
+  }
+
+  /**
+   * @return Returns true if this RegionState is splittable; i.e. the
+   * RegionState is currently in splitting state or pending_close or
+   * null (Anything else will return false). (Anything else will return false).
+   */
+  private boolean isInStateForSplitting(final RegionState rs) {
+    if (rs == null) return true;
+    if (rs.isSplitting()) return true;
+    if (convertPendingCloseToSplitting(rs)) return true;
+    LOG.warn("Dropped region split! Not in state good for SPLITTING; rs=" + rs);
+    return false;
+  }
+
+  /**
+   * If the passed regionState is in PENDING_CLOSE, clean up PENDING_CLOSE
+   * state and convert it to SPLITTING instead.
+   * This can happen in case where master wants to close a region at same time
+   * a regionserver starts a split.  The split won.  Clean out old PENDING_CLOSE
+   * state.
+   * @param rs
+   * @return True if we converted from PENDING_CLOSE to SPLITTING
+   */
+  private boolean convertPendingCloseToSplitting(final RegionState rs) {
+    if (!rs.isPendingClose()) return false;
+    LOG.debug("Converting PENDING_CLOSE to SPLITING; rs=" + rs);
+    rs.update(RegionState.State.SPLITTING);
+    // Clean up existing state.  Clear from region plans seems all we
+    // have to do here by way of clean up of PENDING_CLOSE.
+    clearRegionPlan(rs.getRegion());
+    return true;
+  }
+
+  private HServerInfo getAndCheckHServerInfo(final String serverName) {
+    HServerInfo hsi = this.serverManager.getServerInfo(serverName);
+    if (hsi == null) LOG.debug("No serverinfo for " + serverName);
+    return hsi;
+  }
+
+  /**
+   * @param serverName
+   * @param encodedName
+   * @return The SPLITTING RegionState we added to RIT for the passed region
+   * <code>encodedName</code>
+   */
+  private RegionState addSplittingToRIT(final String serverName,
+      final String encodedName) {
+    RegionState regionState = null;
+    synchronized (this.regions) {
+      regionState = findHRegionInfoThenAddToRIT(serverName, encodedName);
+      regionState.update(RegionState.State.SPLITTING);
+    }
+    return regionState;
+  }
+
+  /**
+   * Caller must hold lock on <code>this.regions</code>.
+   * @param serverName
+   * @param encodedName
+   * @return The instance of RegionState that was added to RIT or null if error.
+   */
+  private RegionState findHRegionInfoThenAddToRIT(final String serverName,
+      final String encodedName) {
+    HRegionInfo hri = findHRegionInfo(serverName, encodedName);
+    if (hri == null) {
+      LOG.warn("Region " + encodedName + " not found on server " + serverName +
+        "; failed processing");
+      return null;
+    }
+    // Add to regions in transition, then update state to SPLITTING.
+    return addToRegionsInTransition(hri);
+  }
+
+  /**
+   * Caller must hold lock on <code>this.regions</code>.
+   * @param serverName
+   * @param encodedName
+   * @return Found HRegionInfo or null.
+   */
+  private HRegionInfo findHRegionInfo(final String serverName,
+      final String encodedName) {
+    HServerInfo hsi = getAndCheckHServerInfo(serverName);
+    if (hsi == null) return null;
+    List<HRegionInfo> hris = this.servers.get(hsi);
+    HRegionInfo foundHri = null;
+    for (HRegionInfo hri: hris) {
+      if (hri.getEncodedName().equals(encodedName)) {
+        foundHri = hri;
+        break;
+      }
+    }
+    return foundHri;
   }
 
   /**
@@ -523,7 +655,7 @@ public class AssignmentManager extends ZooKeeperListener {
       synchronized(regionsInTransition) {
         try {
           RegionTransitionData data = ZKAssign.getData(watcher, path);
-          if(data == null) {
+          if (data == null) {
             return;
           }
           handleRegion(data);
@@ -534,11 +666,31 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
+  @Override
+  public void nodeDeleted(String path) {
+    // Added so we notice when ephemeral nodes go away; in particular,
+    // SPLITTING or SPLIT nodes added by a regionserver splitting.
+    if (path.startsWith(this.watcher.assignmentZNode)) {
+      String regionName =
+        ZKAssign.getRegionName(this.master.getZooKeeper(), path);
+      RegionState rs = this.regionsInTransition.get(regionName);
+      if (rs != null) {
+        if (rs.isSplitting() || rs.isSplit()) {
+          LOG.debug("Ephemeral node deleted, regionserver crashed?, " +
+            "clearing from RIT; rs=" + rs);
+          clearRegionFromTransition(rs.getRegion());
+        } else {
+          LOG.warn("Node deleted but still in RIT: " + rs);
+        }
+      }
+    }
+  }
+
   /**
    * New unassigned node has been created.
    *
-   * <p>This happens when an RS begins the OPENING or CLOSING of a region by
-   * creating an unassigned node.
+   * <p>This happens when an RS begins the OPENING, SPLITTING or CLOSING of a
+   * region by creating a znode.
    *
    * <p>When this happens we must:
    * <ol>
@@ -849,7 +1001,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * @param region
-   * @return
+   * @return The current RegionState
    */
   private RegionState addToRegionsInTransition(final HRegionInfo region) {
     synchronized (regionsInTransition) {
@@ -1464,9 +1616,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Clears the specified region from being in transition.
-   * <p>
-   * Used only by HBCK tool.
-   * @param hri
+   * @param hri Region to remove.
    */
   public void clearRegionFromTransition(HRegionInfo hri) {
     synchronized (this.regionsInTransition) {
@@ -1747,24 +1897,6 @@ public class AssignmentManager extends ZooKeeperListener {
   public void handleSplitReport(final HServerInfo hsi, final HRegionInfo parent,
       final HRegionInfo a, final HRegionInfo b) {
     regionOffline(parent);
-    // Remove any CLOSING node, if exists, due to race between master & rs
-    // for close & split.  Not putting into regionOffline method because it is
-    // called from various locations.
-    try {
-      RegionTransitionData node = ZKAssign.getDataNoWatch(this.watcher,
-        parent.getEncodedName(), null);
-      if (node != null) {
-        if (node.getEventType().equals(EventType.RS_ZK_REGION_CLOSING)) {
-          ZKAssign.deleteClosingNode(this.watcher, parent);
-        } else {
-          LOG.warn("Split report has RIT node (shouldnt have one): " +
-            parent + " node: " + node);
-        }
-      }
-    } catch (KeeperException e) {
-      LOG.warn("Exception while validating RIT during split report", e);
-    }
-
     regionOnline(a, hsi);
     regionOnline(b, hsi);
 
@@ -1844,7 +1976,9 @@ public class AssignmentManager extends ZooKeeperListener {
       OPEN,           // server opened region and updated meta
       PENDING_CLOSE,  // sent rpc to server to close but has not begun
       CLOSING,        // server has begun to close but not yet done
-      CLOSED          // server closed region and updated meta
+      CLOSED,         // server closed region and updated meta
+      SPLITTING,      // server started split of a region
+      SPLIT           // server completed split of a region
     }
 
     private State state;
@@ -1910,6 +2044,14 @@ public class AssignmentManager extends ZooKeeperListener {
 
     public boolean isOffline() {
       return state == State.OFFLINE;
+    }
+
+    public boolean isSplitting() {
+      return state == State.SPLITTING;
+    }
+ 
+    public boolean isSplit() {
+      return state == State.SPLIT;
     }
 
     @Override

@@ -277,11 +277,6 @@ public class ServerManager {
     for (HMsg msg: msgs) {
       LOG.info("Received " + msg + " from " + serverInfo.getServerName());
       switch (msg.getType()) {
-      case REGION_SPLIT:
-        this.services.getAssignmentManager().handleSplitReport(serverInfo,
-            msg.getRegionInfo(), msg.getDaughterA(), msg.getDaughterB());
-        break;
-
         default:
           LOG.error("Unhandled msg type " + msg);
       }
