@@ -97,7 +97,7 @@ public class FSImage extends Storage {
   private static final SimpleDateFormat DATE_FORM =
     new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-  private String blockpoolID = "";   // id of the block pool
+  protected String blockpoolID = "";   // id of the block pool
   
   static final String MESSAGE_DIGEST_PROPERTY = "imageMD5Digest";
   //
@@ -718,6 +718,7 @@ public class FSImage extends Storage {
     realImage.setStorageInfo(ckptImage);
     checkpointTime = ckptImage.checkpointTime;
     fsNamesys.dir.fsImage = realImage;
+    realImage.blockpoolID = ckptImage.blockpoolID;
     // and save it but keep the same checkpointTime
     saveNamespace(false);
   }

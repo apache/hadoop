@@ -85,6 +85,9 @@ Trunk (unreleased changes)
 
     HDFS-1670. HDFS Federation: remove dnRegistration from Datanode (boryas)
 
+    HDFS-1662. HDFS federation: fix unit test case, TestCheckpoint 
+    and TestDataNodeMXBean (tanping via boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

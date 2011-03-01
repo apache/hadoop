@@ -789,4 +789,32 @@ public class TestCheckpoint extends TestCase {
       if(cluster!= null) cluster.shutdown();
     }
   }
+  
+  /* Test case to test CheckpointSignature */
+  @SuppressWarnings("deprecation")
+  public void testCheckpointSignature() throws IOException {
+
+    MiniDFSCluster cluster = null;
+    Configuration conf = new HdfsConfiguration();
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
+        .format(false).build();
+    NameNode nn = cluster.getNameNode();
+
+    SecondaryNameNode secondary = startSecondaryNameNode(conf);
+    // prepare checkpoint image
+    secondary.doCheckpoint();
+    CheckpointSignature sig = nn.rollEditLog();
+    // manipulate the CheckpointSignature fields
+    sig.setBlockpoolID("somerandomebpid");
+    sig.clusterID = "somerandomcid";
+    try {
+      sig.validateStorageInfo(nn.getFSImage()); // this should fail
+      assertTrue("This test is expected to fail.", false);
+    } catch (Exception ignored) {
+    }
+
+    secondary.shutdown();
+    cluster.shutdown();
+  }
 }

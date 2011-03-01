@@ -56,10 +56,10 @@ public class TestDataNodeMXBean {
       // get attribute "HttpPort"
       String httpPort = (String)mbs.getAttribute(mxbeanName, "HttpPort");
       Assert.assertEquals(datanode.getHttpPort(),httpPort);
-      // get attribute "NamenodeAddress"
-      String namenodeAddress = (String)mbs.getAttribute(mxbeanName, 
-          "NamenodeAddress");
-      Assert.assertEquals(datanode.getNamenodeAddresses(),namenodeAddress);
+      // get attribute "NamenodeAddresses"
+      String namenodeAddresses = (String)mbs.getAttribute(mxbeanName, 
+          "NamenodeAddresses");
+      Assert.assertEquals(datanode.getNamenodeAddresses(),namenodeAddresses);
       // get attribute "getVolumeInfo"
       String volumeInfo = (String)mbs.getAttribute(mxbeanName, "VolumeInfo");
       Assert.assertEquals(datanode.getVolumeInfo(),volumeInfo);
