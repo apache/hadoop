@@ -104,9 +104,6 @@ class DataBlockScanner implements Runnable {
   
   DataTransferThrottler throttler = null;
   
-  // Reconciles blocks on disk to blocks in memory
-  DirectoryScanner dirScanner;
-
   private static enum ScanType {
     REMOTE_READ,           // Verified when a block read by a client etc
     VERIFICATION_SCAN,     // scanned as part of periodic verfication
@@ -153,9 +150,7 @@ class DataBlockScanner implements Runnable {
       scanPeriod = DEFAULT_SCAN_PERIOD_HOURS;
     }
     scanPeriod *= 3600 * 1000;
-    // initialized when the scanner thread is started.
-
-    dirScanner = new DirectoryScanner(dataset, conf);
+    LOG.info("Periodic Block Verification scan initialized with interval " + scanPeriod + ".");
   }
   
   private synchronized boolean isInitialized() {
@@ -600,10 +595,6 @@ class DataBlockScanner implements Runnable {
             startNewPeriod();
           }
         }
-        if (dirScanner.newScanPeriod(now)) {
-          dirScanner.reconcile();
-          now = System.currentTimeMillis();
-        }
         if ( (now - getEarliestScanTime()) >= scanPeriod ) {
           verifyFirstBlock();
         } else {
@@ -625,7 +616,6 @@ class DataBlockScanner implements Runnable {
   synchronized void shutdown() {
     LogFileHandler log = verificationLog;
     verificationLog = null;
-    dirScanner.shutdown();
     if (log != null) {
       log.close();
     }

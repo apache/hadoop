@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 
 import java.io.BufferedOutputStream;
@@ -344,6 +345,7 @@ public class DataNode extends Configured
   
   public DataBlockScanner blockScanner = null;
   public Daemon blockScannerThread = null;
+  private DirectoryScanner directoryScanner = null;
   
   /** Activated plug-ins. */
   private List<ServicePlugin> plugins;
@@ -494,19 +496,78 @@ public class DataNode extends Configured
     LOG.info("datanodeId = " + datanodeId);
   }
   
-
-  private void initBlockScanner(Configuration conf) {
+/**
+ * Initialize the datanode's periodic scanners:
+ *     {@link DataBlockScanner}
+ *     {@link DirectoryScanner}
+ * They report results on a per-blockpool basis but do their scanning 
+ * on a per-Volume basis to minimize competition for disk iops.
+ * 
+ * @param conf - Configuration has the run intervals and other 
+ *               parameters for these periodic scanners
+ */
+  private void initPeriodicScanners(Configuration conf) {
+    initDataBlockScanner(conf);
+    initDirectoryScanner(conf);
+  }
+  
+  private void shutdownPeriodicScanners() {
+    shutdownDirectoryScanner();
+    shutdownDataBlockScanner();
+  }
+  
+  /**
+   * See {@link DataBlockScanner}
+   */
+  private void initDataBlockScanner(Configuration conf) {
     String reason = null;
-    if (conf.getInt("dfs.datanode.scan.period.hours", 0) < 0) {
+    if (conf.getInt(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY,
+                    DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT) < 0) {
       reason = "verification is turned off by configuration";
-    } else if ( !(data instanceof FSDataset) ) {
+    } else if (!(data instanceof FSDataset)) {
       reason = "verifcation is supported only with FSDataset";
     } 
-    if ( reason == null ) {
+    if (reason == null) {
       blockScanner = new DataBlockScanner(this, (FSDataset)data, conf);
     } else {
-      LOG.info("Periodic Block Verification is disabled because " +
+      LOG.info("Periodic Block Verification scan is disabled because " +
                reason + ".");
+    }
+  }
+  
+  private void shutdownDataBlockScanner() {
+    if (blockScannerThread != null) { 
+      blockScannerThread.interrupt();
+      try {
+        blockScannerThread.join(3600000L); // wait for at most 1 hour
+      } catch (InterruptedException ie) {
+      }
+    }
+  }
+  
+  /**
+   * See {@link DirectoryScanner}
+   */
+  private void initDirectoryScanner(Configuration conf) {
+    String reason = null;
+    if (conf.getInt(DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 
+                    DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT) < 0) {
+      reason = "verification is turned off by configuration";
+    } else if (!(data instanceof FSDataset)) {
+      reason = "verification is supported only with FSDataset";
+    } 
+    if (reason == null) {
+      directoryScanner = new DirectoryScanner((FSDataset) data, conf);
+      directoryScanner.start();
+    } else {
+      LOG.info("Periodic Directory Tree Verification scan is disabled because " +
+               reason + ".");
+    }
+  }
+  
+  private void shutdownDirectoryScanner() {
+    if (directoryScanner != null) {
+      directoryScanner.shutdown();
     }
   }
   
@@ -924,10 +985,17 @@ public class DataNode extends Configured
           processCommand(cmd);
 
           // start block scanner
+          // TODO:FEDERATION - SHOULD BE MOVED OUT OF THE THREAD...
+          // although it will work as is, since it checks (blockScannerThread == null)
+          // under synchronized(blockScanner).  See also {@link initDataBlockScanner()}
+          //
+          // Note that there may be a problem starting this before BPOfferService
+          // is running; and we may need to kick it to restart within each BP subdir
+          // as they come online, otherwise will wait 3 weeks for the first run.
           if (blockScanner != null) {
-            synchronized(blockScanner) { // SHOULD BE MOVED OUT OF THE THREAD.. FEDERATION
+            synchronized(blockScanner) { 
               if(blockScannerThread == null && upgradeManager.isUpgradeCompleted()) {
-                LOG.info("Starting Periodic block scanner.");
+                LOG.info("Periodic Block Verification scan starting.");
                 blockScannerThread = new Daemon(blockScanner);
                 blockScannerThread.start();
               }
@@ -1466,6 +1534,8 @@ public class DataNode extends Configured
       }
     }
     
+    shutdownPeriodicScanners();
+    
     if (infoServer != null) {
       try {
         infoServer.stop();
@@ -1518,13 +1588,7 @@ public class DataNode extends Configured
 
     if(upgradeManager != null)
       upgradeManager.shutdownUpgrade();
-    if (blockScannerThread != null) { 
-      blockScannerThread.interrupt();
-      try {
-        blockScannerThread.join(3600000L); // wait for at most 1 hour
-      } catch (InterruptedException ie) {
-      }
-    }
+        
     if (storage != null) {
       try {
         this.storage.unlockAll();
@@ -1864,7 +1928,7 @@ public class DataNode extends Configured
     // start dataXceiveServer
     dataXceiverServer.start();
     ipcServer.start();
-    initBlockScanner(conf);
+    initPeriodicScanners(conf);
     startPlugins(conf);
     
     // BlockTokenSecretManager is created here, but it shouldn't be

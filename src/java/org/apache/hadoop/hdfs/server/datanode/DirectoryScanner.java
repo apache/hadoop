@@ -22,12 +22,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,6 +42,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.util.DaemonFactory;
 
 /**
  * Periodically scans the data directories for block and block metadata files.
@@ -44,23 +50,102 @@ import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
  * {@link FSDataset}
  */
 @InterfaceAudience.Private
-public class DirectoryScanner {
+public class DirectoryScanner implements Runnable {
   private static final Log LOG = LogFactory.getLog(DirectoryScanner.class);
   private static final int DEFAULT_SCAN_INTERVAL = 21600;
 
   private final FSDataset dataset;
-  private long scanPeriod;
-  private long lastScanTime;
-  private ExecutorService reportCompileThreadPool;
+  private final ExecutorService reportCompileThreadPool;
+  private final ScheduledExecutorService masterThread;
+  private final long scanPeriodMsecs;
+  private volatile boolean shouldRun = false;
+  private boolean retainDiffs = false;
 
-  LinkedList<ScanInfo> diff = new LinkedList<ScanInfo>();
+  ScanInfoPerBlockPool diffs = new ScanInfoPerBlockPool();
+  Map<String, Stats> stats = new HashMap<String, Stats>();
+  
+  /**
+   * Allow retaining diffs for unit test and analysis
+   * @param b - defaults to false (off)
+   */
+  void setRetainDiffs(boolean b) {
+    retainDiffs = b;
+  }
 
-  /** Stats tracked for reporting and testing */
-  long totalBlocks;
-  long missingMetaFile;
-  long missingBlockFile;
-  long missingMemoryBlocks;
-  long mismatchBlocks;
+  /** Stats tracked for reporting and testing, per blockpool */
+  static class Stats {
+    String bpid;
+    long totalBlocks = 0;
+    long missingMetaFile = 0;
+    long missingBlockFile = 0;
+    long missingMemoryBlocks = 0;
+    long mismatchBlocks = 0;
+    
+    public Stats(String bpid) {
+      this.bpid = bpid;
+    }
+    
+    public String toString() {
+      return "BlockPool " + bpid
+      + " Total blocks: " + totalBlocks + ", missing metadata files:"
+      + missingMetaFile + ", missing block files:" + missingBlockFile
+      + ", missing blocks in memory:" + missingMemoryBlocks
+      + ", mismatched blocks:" + mismatchBlocks;
+    }
+  }
+  
+  static class ScanInfoPerBlockPool extends 
+                     HashMap<String, LinkedList<ScanInfo>> {
+    
+    private static final long serialVersionUID = 1L;
+
+    ScanInfoPerBlockPool() {super();}
+    
+    ScanInfoPerBlockPool(int sz) {super(sz);}
+    
+    /**
+     * Merges "that" ScanInfoPerBlockPool into this one
+     * @param that
+     */
+    public void addAll(ScanInfoPerBlockPool that) {
+      if (that == null) return;
+      
+      for (Entry<String, LinkedList<ScanInfo>> entry : that.entrySet()) {
+        String bpid = entry.getKey();
+        LinkedList<ScanInfo> list = entry.getValue();
+        
+        if (this.containsKey(bpid)) {
+          //merge that per-bpid linked list with this one
+          this.get(bpid).addAll(list);
+        } else {
+          //add that new bpid and its linked list to this
+          this.put(bpid, list);
+        }
+      }
+    }
+    
+    /**
+     * Convert all the LinkedList values in this ScanInfoPerBlockPool map
+     * into sorted arrays, and return a new map of these arrays per blockpool
+     * @return
+     */
+    public Map<String, ScanInfo[]> toSortedArrays() {
+      Map<String, ScanInfo[]> result = 
+        new HashMap<String, ScanInfo[]>(this.size());
+      
+      for (Entry<String, LinkedList<ScanInfo>> entry : this.entrySet()) {
+        String bpid = entry.getKey();
+        LinkedList<ScanInfo> list = entry.getValue();
+        
+        // convert list to array
+        ScanInfo[] record = list.toArray(new ScanInfo[list.size()]);
+        // Sort array based on blockId
+        Arrays.sort(record);
+        result.put(bpid, record);            
+      }
+      return result;
+    }
+  }
 
   /**
    * Tracks the files and other information related to a block on the disk
@@ -137,34 +222,80 @@ public class DirectoryScanner {
     this.dataset = dataset;
     int interval = conf.getInt("dfs.datanode.directoryscan.interval",
         DEFAULT_SCAN_INTERVAL);
-    scanPeriod = interval * 1000L;
+    scanPeriodMsecs = interval * 1000L; //msec
     int threads = 
         conf.getInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                     DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_DEFAULT);
 
-    reportCompileThreadPool = Executors.newFixedThreadPool(threads);
-
-    Random rand = new Random();
-    lastScanTime = System.currentTimeMillis() - (rand.nextInt(interval) * 1000L);
-    LOG.info("scan starts at " + (lastScanTime + scanPeriod)
-        + " with interval " + scanPeriod);
+    reportCompileThreadPool = Executors.newFixedThreadPool(threads, 
+        new DaemonFactory());
+    masterThread = new ScheduledThreadPoolExecutor(1, new DaemonFactory());
   }
 
-  boolean newScanPeriod(long now) {
-    return now > lastScanTime + scanPeriod;
+  void start() {
+    shouldRun = true;
+    Random rand = new Random();
+    long offset = rand.nextInt((int) (scanPeriodMsecs/1000L)) * 1000L; //msec
+    long firstScanTime = System.currentTimeMillis() + offset;
+    LOG.info("Periodic Directory Tree Verification scan starting at " 
+        + firstScanTime + " with interval " + scanPeriodMsecs);
+    masterThread.scheduleAtFixedRate(this, offset, scanPeriodMsecs, 
+                                     TimeUnit.MILLISECONDS);
+  }
+  
+  // for unit test
+  boolean getRunStatus() {
+    return shouldRun;
   }
 
   private void clear() {
-    diff.clear();
-    totalBlocks = 0;
-    missingMetaFile = 0;
-    missingBlockFile = 0;
-    missingMemoryBlocks = 0;
-    mismatchBlocks = 0;
+    diffs.clear();
+    stats.clear();
+  }
+
+  /**
+   * Main program loop for DirectoryScanner
+   * Runs "reconcile()" periodically under the masterThread.
+   */
+  @Override
+  public void run() {
+    try {
+      if (!shouldRun) {
+        //shutdown has been activated
+        LOG.warn("this cycle terminating immediately because 'shouldRun' has been deactivated");
+        return;
+      }
+      
+      if (!DataNode.getDataNode().upgradeManager.isUpgradeCompleted()) {
+        //If distributed upgrades underway, exit and wait for next cycle.
+        //TODO:FEDERATION update this when Distributed Upgrade is modified for Federation
+        LOG.warn("this cycle terminating immediately because Distributed Upgrade is in process");
+        return; 
+      }
+      
+      //We're are okay to run - do it
+      reconcile();      
+      
+    } catch (Exception e) {
+      //Log and continue - allows Executor to run again next cycle
+      LOG.error("Exception during DirectoryScanner execution - will continue next cycle", e);
+    } catch (Error er) {
+      //Non-recoverable error - re-throw after logging the problem
+      LOG.error("System Error during DirectoryScanner execution - permanently terminating periodic scanner", er);
+      throw er;
+    }
   }
   
   void shutdown() {
-    reportCompileThreadPool.shutdown();
+    if (!shouldRun) {
+      LOG.warn("DirectoryScanner: shutdown has been called, but periodic scanner not started");
+    } else {
+      LOG.warn("DirectoryScanner: shutdown has been called");      
+    }
+    shouldRun = false;
+    if (masterThread != null) masterThread.shutdown();
+    if (reportCompileThreadPool != null) reportCompileThreadPool.shutdown();
+    if (!retainDiffs) clear();
   }
 
   /**
@@ -172,113 +303,130 @@ public class DirectoryScanner {
    */
   void reconcile() {
     scan();
-    for (ScanInfo info : diff) {
-      // TODO:FEDERATION use right block pool Id
-      dataset.checkAndUpdate("TODO", info.getBlockId(), info.getBlockFile(),
-          info.getMetaFile(), info.getVolume());
+    for (Entry<String, LinkedList<ScanInfo>> entry : diffs.entrySet()) {
+      String bpid = entry.getKey();
+      LinkedList<ScanInfo> diff = entry.getValue();
+      
+      for (ScanInfo info : diff) {
+        dataset.checkAndUpdate(bpid, info.getBlockId(), info.getBlockFile(),
+            info.getMetaFile(), info.getVolume());
+      }
     }
+    if (!retainDiffs) clear();
   }
 
   /**
    * Scan for the differences between disk and in-memory blocks
+   * Scan only the "finalized blocks" lists of both disk and memory.
    */
   void scan() {
     clear();
-    ScanInfo[] diskReport = getDiskReport();
-    totalBlocks = diskReport.length;
+    Map<String, ScanInfo[]> diskReport = getDiskReport();
 
     // Hold FSDataset lock to prevent further changes to the block map
     synchronized(dataset) {
-      // TODO:FEDERATION use right block pool Id
-      Block[] memReport = dataset.getBlockList("TODO", false);
-      Arrays.sort(memReport); // Sort based on blockId
-
-      int d = 0; // index for diskReport
-      int m = 0; // index for memReprot
-      while (m < memReport.length && d < diskReport.length) {
-        Block memBlock = memReport[Math.min(m, memReport.length - 1)];
-        ScanInfo info = diskReport[Math.min(d, diskReport.length - 1)];
-        if (info.getBlockId() < memBlock.getBlockId()) {
-          // Block is missing in memory
-          missingMemoryBlocks++;
-          addDifference(info);
+      for (Entry<String, ScanInfo[]> entry : diskReport.entrySet()) {
+        String bpid = entry.getKey();
+        ScanInfo[] blockpoolReport = entry.getValue();
+        
+        Stats statsRecord = new Stats(bpid);
+        stats.put(bpid, statsRecord);
+        LinkedList<ScanInfo> diffRecord = new LinkedList<ScanInfo>();
+        diffs.put(bpid, diffRecord);
+        
+        statsRecord.totalBlocks = blockpoolReport.length;
+        List<Block> bl = dataset.getFinalizedBlocks(bpid);
+        Block[] memReport = bl.toArray(new Block[bl.size()]);
+        Arrays.sort(memReport); // Sort based on blockId
+  
+        int d = 0; // index for blockpoolReport
+        int m = 0; // index for memReprot
+        while (m < memReport.length && d < blockpoolReport.length) {
+          Block memBlock = memReport[Math.min(m, memReport.length - 1)];
+          ScanInfo info = blockpoolReport[Math.min(
+              d, blockpoolReport.length - 1)];
+          if (info.getBlockId() < memBlock.getBlockId()) {
+            // Block is missing in memory
+            statsRecord.missingMemoryBlocks++;
+            addDifference(diffRecord, statsRecord, info);
+            d++;
+            continue;
+          }
+          if (info.getBlockId() > memBlock.getBlockId()) {
+            // Block is missing on the disk
+            addDifference(diffRecord, statsRecord, memBlock.getBlockId());
+            m++;
+            continue;
+          }
+          // Block file and/or metadata file exists on the disk
+          // Block exists in memory
+          if (info.getBlockFile() == null) {
+            // Block metadata file exits and block file is missing
+            addDifference(diffRecord, statsRecord, info);
+          } else if (info.getGenStamp() != memBlock.getGenerationStamp()
+              || info.getBlockFile().length() != memBlock.getNumBytes()) {
+            // Block metadata file is missing or has wrong generation stamp,
+            // or block file length is different than expected
+            statsRecord.mismatchBlocks++;
+            addDifference(diffRecord, statsRecord, info);
+          }
           d++;
-          continue;
-        }
-        if (info.getBlockId() > memBlock.getBlockId()) {
-          // Block is missing on the disk
-          addDifference(memBlock.getBlockId());
           m++;
-          continue;
         }
-        // Block file and/or metadata file exists on the disk
-        // Block exists in memory
-        if (info.getBlockFile() == null) {
-          // Block metadata file exits and block file is missing
-          addDifference(info);
-        } else if (info.getGenStamp() != memBlock.getGenerationStamp()
-            || info.getBlockFile().length() != memBlock.getNumBytes()) {
-          mismatchBlocks++;
-          addDifference(info);
+        while (m < memReport.length) {
+          addDifference(diffRecord, statsRecord, memReport[m++].getBlockId());
         }
-        d++;
-        m++;
-      }
-      while (m < memReport.length) {
-        addDifference(memReport[m++].getBlockId());
-      }
-      while (d < diskReport.length) {
-        missingMemoryBlocks++;
-        addDifference(diskReport[d++]);
-      }
-    }
-    LOG.info("Total blocks: " + totalBlocks + ", missing metadata files:"
-        + missingMetaFile + ", missing block files:" + missingBlockFile
-        + ", missing blocks in memory:" + missingMemoryBlocks
-        + ", mismatched blocks:" + mismatchBlocks);
-    lastScanTime = System.currentTimeMillis();
+        while (d < blockpoolReport.length) {
+          statsRecord.missingMemoryBlocks++;
+          addDifference(diffRecord, statsRecord, blockpoolReport[d++]);
+        }
+        LOG.info(statsRecord.toString());
+      } //end for
+    } //end synchronized
   }
 
   /**
    * Block is found on the disk. In-memory block is missing or does not match
    * the block on the disk
    */
-  private void addDifference(ScanInfo info) {
-    missingMetaFile += info.getMetaFile() == null ? 1 : 0;
-    missingBlockFile += info.getBlockFile() == null ? 1 : 0;
-    diff.add(info);
+  private void addDifference(LinkedList<ScanInfo> diffRecord, 
+                             Stats statsRecord, ScanInfo info) {
+    statsRecord.missingMetaFile += info.getMetaFile() == null ? 1 : 0;
+    statsRecord.missingBlockFile += info.getBlockFile() == null ? 1 : 0;
+    diffRecord.add(info);
   }
 
   /** Block is not found on the disk */
-  private void addDifference(long blockId) {
-    missingBlockFile++;
-    missingMetaFile++;
-    diff.add(new ScanInfo(blockId));
+  private void addDifference(LinkedList<ScanInfo> diffRecord,
+                             Stats statsRecord, long blockId) {
+    statsRecord.missingBlockFile++;
+    statsRecord.missingMetaFile++;
+    diffRecord.add(new ScanInfo(blockId));
   }
 
-  /** Get list of blocks on the disk sorted by blockId */
-  private ScanInfo[] getDiskReport() {
+  /** Get lists of blocks on the disk sorted by blockId, per blockpool */
+  private Map<String, ScanInfo[]> getDiskReport() {
     // First get list of data directories
     FSDataset.FSVolume[] volumes = dataset.volumes.volumes;
-    ArrayList<LinkedList<ScanInfo>> dirReports =
-      new ArrayList<LinkedList<ScanInfo>>(volumes.length);
+    ArrayList<ScanInfoPerBlockPool> dirReports =
+      new ArrayList<ScanInfoPerBlockPool>(volumes.length);
     
-    Map<Integer, Future<LinkedList<ScanInfo>>> compilersInProgress =
-      new HashMap<Integer, Future<LinkedList<ScanInfo>>>();
+    Map<Integer, Future<ScanInfoPerBlockPool>> compilersInProgress =
+      new HashMap<Integer, Future<ScanInfoPerBlockPool>>();
     for (int i = 0; i < volumes.length; i++) {
       if (!dataset.volumes.isValid(volumes[i])) { // volume is still valid
         dirReports.add(i, null);
       } else {
         ReportCompiler reportCompiler =
-          new ReportCompiler(volumes[i], volumes[i].getDir());
-        Future<LinkedList<ScanInfo>> result = 
+          new ReportCompiler(volumes[i]);
+        Future<ScanInfoPerBlockPool> result = 
           reportCompileThreadPool.submit(reportCompiler);
         compilersInProgress.put(i, result);
       }
     }
     
-    for (Map.Entry<Integer, Future<LinkedList<ScanInfo>>> report :
-      compilersInProgress.entrySet()) {
+    for (Entry<Integer, Future<ScanInfoPerBlockPool>> report :
+        compilersInProgress.entrySet()) {
       try {
         dirReports.add(report.getKey(), report.getValue().get());
       } catch (Exception ex) {
@@ -289,17 +437,14 @@ public class DirectoryScanner {
     }
 
     // Compile consolidated report for all the volumes
-    LinkedList<ScanInfo> list = new LinkedList<ScanInfo>();
+    ScanInfoPerBlockPool list = new ScanInfoPerBlockPool();
     for (int i = 0; i < volumes.length; i++) {
       if (dataset.volumes.isValid(volumes[i])) { // volume is still valid
         list.addAll(dirReports.get(i));
       }
     }
 
-    ScanInfo[] report = list.toArray(new ScanInfo[list.size()]);
-    // Sort the report based on blockId
-    Arrays.sort(report);
-    return report;
+    return list.toSortedArrays();
   }
 
   private static boolean isBlockMetaFile(String blockId, String metaFile) {
@@ -307,19 +452,23 @@ public class DirectoryScanner {
         && metaFile.endsWith(Block.METADATA_EXTENSION);
   }
 
-  private static class ReportCompiler implements Callable<LinkedList<ScanInfo>> {
+  private static class ReportCompiler 
+  implements Callable<ScanInfoPerBlockPool> {
     private FSVolume volume;
-    private File dir;
 
-    public ReportCompiler(FSVolume volume, File dir) {
-      this.dir = dir;
+    public ReportCompiler(FSVolume volume) {
       this.volume = volume;
     }
 
     @Override
-    public LinkedList<ScanInfo> call() throws Exception {
-      LinkedList<ScanInfo> result = new LinkedList<ScanInfo>();
-      compileReport(volume, dir, result);
+    public ScanInfoPerBlockPool call() throws Exception {
+      String[] bpList = volume.getBlockPoolList();
+      ScanInfoPerBlockPool result = new ScanInfoPerBlockPool(bpList.length);
+      for (String bpid : bpList) {
+        LinkedList<ScanInfo> report = new LinkedList<ScanInfo>();
+        File bpFinalizedDir = volume.getBlockPool(bpid).getFinalizedDir();
+        result.put(bpid, compileReport(volume, bpFinalizedDir, report));
+      }
       return result;
     }
 

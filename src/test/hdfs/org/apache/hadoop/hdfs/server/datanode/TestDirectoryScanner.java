@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
+import java.util.LinkedList;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -143,7 +144,8 @@ public class TestDirectoryScanner extends TestCase {
     FSVolume[] volumes = fds.volumes.volumes;
     int index = rand.nextInt(volumes.length - 1);
     long id = getFreeBlockId();
-    File file = new File(volumes[index].getDir().getPath(), getBlockFile(id));
+    File finalizedDir = volumes[index].getBlockPool(bpid).getFinalizedDir();
+    File file = new File(finalizedDir, getBlockFile(id));
     if (file.createNewFile()) {
       LOG.info("Created block file " + file.getName());
     }
@@ -155,7 +157,8 @@ public class TestDirectoryScanner extends TestCase {
     FSVolume[] volumes = fds.volumes.volumes;
     int index = rand.nextInt(volumes.length - 1);
     long id = getFreeBlockId();
-    File file = new File(volumes[index].getDir().getPath(), getMetaFile(id));
+    File finalizedDir = volumes[index].getBlockPool(bpid).getFinalizedDir();
+    File file = new File(finalizedDir, getMetaFile(id));
     if (file.createNewFile()) {
       LOG.info("Created metafile " + file.getName());
     }
@@ -167,7 +170,8 @@ public class TestDirectoryScanner extends TestCase {
     FSVolume[] volumes = fds.volumes.volumes;
     int index = rand.nextInt(volumes.length - 1);
     long id = getFreeBlockId();
-    File file = new File(volumes[index].getDir().getPath(), getBlockFile(id));
+    File finalizedDir = volumes[index].getBlockPool(bpid).getFinalizedDir();
+    File file = new File(finalizedDir, getBlockFile(id));
     if (file.createNewFile()) {
       LOG.info("Created block file " + file.getName());
 
@@ -186,7 +190,7 @@ public class TestDirectoryScanner extends TestCase {
         LOG.info("Created extraneous file " + name2);
       }
 
-      file = new File(volumes[index].getDir().getPath(), getMetaFile(id));
+      file = new File(finalizedDir, getMetaFile(id));
       if (file.createNewFile()) {
         LOG.info("Created metafile " + file.getName());
       }
@@ -197,12 +201,18 @@ public class TestDirectoryScanner extends TestCase {
   private void scan(long totalBlocks, int diffsize, long missingMetaFile, long missingBlockFile,
       long missingMemoryBlocks, long mismatchBlocks) {
     scanner.reconcile();
-    assertEquals(totalBlocks, scanner.totalBlocks);
-    assertEquals(diffsize, scanner.diff.size());
-    assertEquals(missingMetaFile, scanner.missingMetaFile);
-    assertEquals(missingBlockFile, scanner.missingBlockFile);
-    assertEquals(missingMemoryBlocks, scanner.missingMemoryBlocks);
-    assertEquals(mismatchBlocks, scanner.mismatchBlocks);
+    
+    assertTrue(scanner.diffs.containsKey(bpid));
+    LinkedList<DirectoryScanner.ScanInfo> diff = scanner.diffs.get(bpid);
+    assertTrue(scanner.stats.containsKey(bpid));
+    DirectoryScanner.Stats stats = scanner.stats.get(bpid);
+    
+    assertEquals(diffsize, diff.size());
+    assertEquals(totalBlocks, stats.totalBlocks);
+    assertEquals(missingMetaFile, stats.missingMetaFile);
+    assertEquals(missingBlockFile, stats.missingBlockFile);
+    assertEquals(missingMemoryBlocks, stats.missingMemoryBlocks);
+    assertEquals(mismatchBlocks, stats.mismatchBlocks);
   }
 
   public void testDirectoryScanner() throws Exception {
@@ -221,6 +231,7 @@ public class TestDirectoryScanner extends TestCase {
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                   parallelism);
       scanner = new DirectoryScanner(fds, CONF);
+      scanner.setRetainDiffs(true);
 
       // Add files with 100 blocks
       createFile("/tmp/t1", 10000);
@@ -320,7 +331,14 @@ public class TestDirectoryScanner extends TestCase {
       truncateBlockFile();
       scan(totalBlocks+3, 6, 2, 2, 3, 2);
       scan(totalBlocks+1, 0, 0, 0, 0, 0);
+      
+      // Test14: validate clean shutdown of DirectoryScanner
+      ////assertTrue(scanner.getRunStatus()); //assumes "real" FSDataset, not sim
+      scanner.shutdown();
+      assertFalse(scanner.getRunStatus());
+      
     } finally {
+      scanner.shutdown();
       cluster.shutdown();
     }
   }

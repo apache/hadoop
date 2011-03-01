@@ -301,7 +301,13 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /**
-   * Manages block pool directory under {@link FSVolume}
+   * Manages block pool subdirectory under {@link FSVolume}
+   * 
+   * TODO:FEDERATION This class should be renamed, perhaps to "BlockPoolSlice".
+   * The real "block pool" is an abstraction that spans Volumes and
+   * Datanodes.  This "BlockPool" object doesn't represent that.  Rather,
+   * it only represents the concrete portion of a particular block pool 
+   * that resides on a particular Volume.
    */
   class BlockPool {
     private final String bpid;
@@ -619,7 +625,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return usage.getMount();
     }
     
-    private BlockPool getBlockPool(String bpid) throws IOException {
+    BlockPool getBlockPool(String bpid) throws IOException {
       BlockPool bp = map.get(bpid);
       if (bp == null) {
         // TODO:FEDERATION cleanup this exception
@@ -628,6 +634,15 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return bp;
     }
     
+    /**
+     * Make a deep copy of the list of currently active BPIDs
+     */
+    String[] getBlockPoolList() {
+      synchronized(FSDataset.this) {
+        return map.keySet().toArray(new String[map.keySet().size()]);   
+      }
+    }
+      
     /**
      * Temporary files. They get moved to the finalized block directory when
      * the block is finalized.

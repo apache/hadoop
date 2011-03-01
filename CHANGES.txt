@@ -100,6 +100,9 @@ Trunk (unreleased changes)
     HDFS-1672. HDFS Federation: refactor stopDatanode(name) to work 
     with multiple Block Pools (boryas)
 
+    HDFS-1687. HDFS Federation: DirectoryScanner changes for 
+    federation (mattf via boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
