@@ -291,17 +291,16 @@ public class DFSUtil {
    * @return Array of InetSocketAddresses
    * @throws IOException
    */
-  public static InetSocketAddress[] getNNAddresses(Configuration conf)
+  public static List<InetSocketAddress> getNNAddresses(Configuration conf)
       throws IOException {
     List<URI> nns = getNamenodeList(conf);
     if (nns == null) {
       throw new IOException("Federation namnodes are not configured correctly");
     }
 
-    InetSocketAddress[] isas = new InetSocketAddress[nns.size()];
-    int i = 0;
+    List<InetSocketAddress> isas = new ArrayList<InetSocketAddress>();
     for (URI u : nns) {
-      isas[i++] = NameNode.getAddress(u);
+      isas.add(NameNode.getAddress(u));
     }
     return isas;
   }

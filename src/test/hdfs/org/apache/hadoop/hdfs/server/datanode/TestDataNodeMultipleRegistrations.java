@@ -79,7 +79,6 @@ public class TestDataNodeMultipleRegistrations {
         false);
 
     // Setup the NameNode configuration
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, localHost + ":0");
     if (manageNameDfsDirs) {
       String name = fileAsURI(new File(base_dir, "name1")) + ","
           + fileAsURI(new File(base_dir, "name2"));
@@ -148,11 +147,13 @@ public class TestDataNodeMultipleRegistrations {
     int nnPort = 9928;
     String nnURL1 = "hdfs://" + localHost + ":" + Integer.toString(nnPort);
     FileSystem.setDefaultUri(conf, nnURL1);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, localHost + ":50070");
     nn1 = startNameNode(conf, nnPort);
     
     nnPort = 9929;
     String nnURL2 = "hdfs://" + localHost + ":" + Integer.toString(nnPort);
     FileSystem.setDefaultUri(conf, nnURL2);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, localHost + ":50071");
     nn2 = startNameNode(conf, nnPort);
     
     Assert.assertNotNull("cannot create nn1", nn1);
@@ -191,17 +192,24 @@ public class TestDataNodeMultipleRegistrations {
     Assert.assertEquals("number of volumes is wrong",2, volInfos.size());
     
     
-    for (BPOfferService bpos : dn.nameNodeThreads) {
+    for (BPOfferService bpos : dn.getAllBpOs()) {
       LOG.info("reg: bpid=" + "; name=" + bpos.bpRegistration.name
-          + "; sid=" + bpos.bpRegistration.storageID + "; nna=" + bpos.nn_addr);
+          + "; sid=" + bpos.bpRegistration.storageID + "; nna=" + bpos.nnAddr);
     }
     
-    BPOfferService bpos1 = dn.nameNodeThreads[0];
-    BPOfferService bpos2 = dn.nameNodeThreads[1];
+    BPOfferService bpos1 = dn.getAllBpOs()[0];
+    BPOfferService bpos2 = dn.getAllBpOs()[1];
+    
+    //The order of bpos is not guaranteed, so fix the order
+    if (bpos1.nnAddr.equals(nn2.getNameNodeAddress())) {
+      BPOfferService tmp = bpos1;
+      bpos1 = bpos2;
+      bpos2 = tmp;
+    }
 
-    Assert.assertEquals("wrong nn address", bpos1.nn_addr, nn1
+    Assert.assertEquals("wrong nn address", bpos1.nnAddr, nn1
         .getNameNodeAddress());
-    Assert.assertEquals("wrong nn address", bpos2.nn_addr, nn2
+    Assert.assertEquals("wrong nn address", bpos2.nnAddr, nn2
         .getNameNodeAddress());
     Assert.assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
     Assert.assertEquals("wrong bpid", bpos2.getBlockPoolId(), bpid2);
@@ -232,6 +240,7 @@ public class TestDataNodeMultipleRegistrations {
     String nnURL = "hdfs://" + localHost + ":" + Integer.toString(nnPort);
 
     FileSystem.setDefaultUri(conf, nnURL);
+    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, localHost + ":50070");
     nn1 = startNameNode(conf, nnPort);
     Assert.assertNotNull("cannot create nn1", nn1);
 
@@ -260,19 +269,19 @@ public class TestDataNodeMultipleRegistrations {
     Assert.assertEquals("number of volumes is wrong",2, volInfos.size());
     
 
-    for (BPOfferService bpos : dn.nameNodeThreads) {
-      LOG.debug("reg: bpid=" + "; name=" + bpos.bpRegistration.name
-          + "; sid=" + bpos.bpRegistration.storageID + "; nna=" + bpos.nn_addr);
+    for (BPOfferService bpos : dn.getAllBpOs()) {
+      LOG.debug("reg: bpid=" + "; name=" + bpos.bpRegistration.name + "; sid="
+          + bpos.bpRegistration.storageID + "; nna=" + bpos.nnAddr);
     }
-    
+
     // try block report
-    BPOfferService bpos1 = dn.nameNodeThreads[0];
+    BPOfferService bpos1 = dn.getAllBpOs()[0];
     bpos1.lastBlockReport = 0;
     DatanodeCommand cmd = bpos1.blockReport();
 
     Assert.assertNotNull("cmd is null", cmd);
 
-    Assert.assertEquals("wrong nn address", bpos1.nn_addr, nn1
+    Assert.assertEquals("wrong nn address", bpos1.nnAddr, nn1
         .getNameNodeAddress());
     Assert.assertEquals("wrong bpid", bpos1.getBlockPoolId(), bpid1);
     Assert.assertEquals("wrong cid", dn.getClusterId(), cid1);
@@ -283,7 +292,7 @@ public class TestDataNodeMultipleRegistrations {
     nn1 = null;
   }
 
-  private void shutdownNN(NameNode nn) {
+  void shutdownNN(NameNode nn) {
     if (nn == null) {
       return;
     }
@@ -292,8 +301,8 @@ public class TestDataNodeMultipleRegistrations {
   }
 
   public boolean isDnUp(DataNode dn) {
-    boolean up = dn.nameNodeThreads.length > 0;
-    for (BPOfferService bpos : dn.nameNodeThreads) {
+    boolean up = dn.getAllBpOs().length > 0;
+    for (BPOfferService bpos : dn.getAllBpOs()) {
       up = up && bpos.initialized();
     }
     return up;

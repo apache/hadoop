@@ -61,6 +61,15 @@ implements Writable, NodeRegistration {
   }
   
   /**
+   * Copy constructor
+   */
+  public DatanodeRegistration(DatanodeRegistration from) {
+    super(from);
+    this.storageInfo = new StorageInfo();
+    this.exportedKeys = new ExportedBlockKeys();
+  }
+  
+  /**
    * Create DatanodeRegistration
    */
   public DatanodeRegistration(String nodeName) {

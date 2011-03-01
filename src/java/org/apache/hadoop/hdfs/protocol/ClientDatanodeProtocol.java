@@ -23,23 +23,35 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSelector;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.TokenInfo;
 
 /** An client-datanode protocol for block recovery
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@KerberosInfo(
+    serverPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 @TokenInfo(BlockTokenSelector.class)
 public interface ClientDatanodeProtocol extends VersionedProtocol {
   public static final Log LOG = LogFactory.getLog(ClientDatanodeProtocol.class);
 
   /**
-   * 7: Add block pool ID to Block
+   * 8: Add refreshNamenodes method
    */
-  public static final long versionID = 7L;
+  public static final long versionID = 8L;
 
   /** Return the visible length of a replica. */
   long getReplicaVisibleLength(ExtendedBlock b) throws IOException;
+  
+  /**
+   * Refresh the list of federated namenodes from updated configuration
+   * Adds new namenodes and stops the deleted namenodes.
+   * 
+   * @throws IOException on error
+   **/
+  void refreshNamenodes() throws IOException;
 }

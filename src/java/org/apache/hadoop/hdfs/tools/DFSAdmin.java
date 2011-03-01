@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.shell.CommandFormat;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
@@ -479,6 +481,7 @@ public class DFSAdmin extends FsShell {
       "\t[-refreshUserToGroupsMappings]\n" +
       "\t[refreshSuperUserGroupsConfiguration]\n" +
       "\t[-printTopology]\n" +
+      "\t[-refreshNamenodes datanodehost:port]\n"+
       "\t[-help [cmd]]\n";
 
     String report ="-report: \tReports basic filesystem information and statistics.\n";
@@ -541,6 +544,11 @@ public class DFSAdmin extends FsShell {
     String printTopology = "-printTopology: Print a tree of the racks and their\n" +
                            "\t\tnodes as reported by the Namenode\n";
     
+    String refreshNamenodes = "-refreshNamenodes: Takes a datanodehost:port as argument,\n"+
+                              "\t\tFor the given datanode, reloads the configuration files,\n" +
+                              "\t\tstops serving the removed block-pools\n"+
+                              "\t\tand starts serving new block-pools\n";
+    
     String help = "-help [cmd]: \tDisplays help for the given command or all commands if none\n" +
       "\t\tis specified.\n";
 
@@ -576,6 +584,8 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshSuperUserGroupsConfiguration);
     } else if ("printTopology".equals(cmd)) {
       System.out.println(printTopology);
+    } else if ("refreshNamenodes".equals(cmd)) {
+      System.out.println(refreshNamenodes);
     } else if ("help".equals(cmd)) {
       System.out.println(help);
     } else {
@@ -596,6 +606,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(refreshUserToGroupsMappings);
       System.out.println(refreshSuperUserGroupsConfiguration);
       System.out.println(printTopology);
+      System.out.println(refreshNamenodes);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
@@ -875,6 +886,9 @@ public class DFSAdmin extends FsShell {
     } else if ("-printTopology".equals(cmd)) {
       System.err.println("Usage: java DFSAdmin"
                          + " [-printTopology]");
+    } else if ("-refreshNamenodes".equals(cmd)) {
+      System.err.println("Usage: java DFSAdmin"
+                         + " [-refreshNamenodes datanode-host:port]");
     } else {
       System.err.println("Usage: java DFSAdmin");
       System.err.println("           [-report]");
@@ -889,6 +903,7 @@ public class DFSAdmin extends FsShell {
       System.err.println("           [-refreshUserToGroupsMappings]");
       System.err.println("           [-refreshSuperUserGroupsConfiguration]");
       System.err.println("           [-printTopology]");
+      System.err.println("           [-refreshNamenodes datanodehost:port]");
       System.err.println("           ["+SetQuotaCommand.USAGE+"]");
       System.err.println("           ["+ClearQuotaCommand.USAGE+"]");
       System.err.println("           ["+SetSpaceQuotaCommand.USAGE+"]");
@@ -974,6 +989,11 @@ public class DFSAdmin extends FsShell {
         printUsage(cmd);
         return exitCode;
       }
+    } else if ("-refreshNamenodes".equals(cmd)) {
+      if (argv.length != 2) {
+        printUsage(cmd);
+        return exitCode;
+      }
     }
     
     // initialize DFSAdmin
@@ -1022,6 +1042,8 @@ public class DFSAdmin extends FsShell {
         exitCode = refreshSuperUserGroupsConfiguration();
       } else if ("-printTopology".equals(cmd)) {
         exitCode = printTopology();
+      } else if ("-refreshNamenodes".equals(cmd)) {
+        exitCode = refreshNamenodes(argv, i);
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -1057,6 +1079,38 @@ public class DFSAdmin extends FsShell {
                          + e.getLocalizedMessage());
     } 
     return exitCode;
+  }
+
+  private int refreshNamenodes(String[] argv, int i) throws IOException {
+    String datanode = argv[i];
+    
+    int colonIndex = datanode.indexOf(':');
+    String datanodeHostname = datanode.substring(0, colonIndex);
+    String portString = datanode.substring(colonIndex+1);
+    int port = Integer.valueOf(portString).intValue();
+    
+    InetSocketAddress datanodeAddr = new InetSocketAddress(datanodeHostname,
+        port);
+    
+    // Get the current configuration
+    Configuration conf = getConf();
+    
+    // for security authorization
+    // server principal for this call   
+    // should be NN's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY, ""));
+
+    // Create the client
+    ClientDatanodeProtocol refreshProtocol = (ClientDatanodeProtocol) RPC
+        .getProxy(ClientDatanodeProtocol.class,
+            ClientDatanodeProtocol.versionID, datanodeAddr, getUGI(), conf,
+            NetUtils.getSocketFactory(conf, ClientDatanodeProtocol.class));
+    
+    // Refresh the authorization policy in-effect
+    refreshProtocol.refreshNamenodes();
+    
+    return 0;
   }
 
   /**

@@ -66,6 +66,9 @@ Trunk (unreleased changes)
     HDFS-1651. Tests fail due to null pointer exception in 
     Datnode#shutdown() method. (Tanping via suresh)
 
+    HDFS-1649. Federation: Datanode command to refresh namenode list at 
+    the datanode. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
