@@ -504,7 +504,9 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     return this.tableDesc.isRootRegion();
   }
 
-  /** @return true if this is the meta table */
+  /** @return true if this region is from a table that is a meta table,
+   * either <code>.META.</code> or <code>-ROOT-</code>
+   */
   public boolean isMetaTable() {
     return this.tableDesc.isMetaTable();
   }

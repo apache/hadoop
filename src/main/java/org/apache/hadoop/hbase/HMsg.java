@@ -38,15 +38,9 @@ import org.apache.hadoop.io.Writable;
  * design, these are to go via zk from here on out.
  */
 public class HMsg implements Writable {
-  public static final HMsg [] STOP_REGIONSERVER_ARRAY =
-    new HMsg [] {new HMsg(Type.STOP_REGIONSERVER)};
   public static final HMsg [] EMPTY_HMSG_ARRAY = new HMsg[0];
 
   public static enum Type {
-    /** Master tells region server to stop.
-     */
-    STOP_REGIONSERVER,
-
     /**
      * When RegionServer receives this message, it goes into a sleep that only
      * an exit will cure.  This message is sent by unit tests simulating

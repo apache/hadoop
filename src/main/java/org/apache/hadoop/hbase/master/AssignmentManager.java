@@ -1964,6 +1964,40 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
+   * @param hsi
+   * @return True if this server is carrying a catalog region, a region from
+   * -ROOT- or .META. table.
+   */
+  boolean isMetaRegionServer(final HServerInfo hsi) {
+    synchronized (this.regions) {
+      List<HRegionInfo> regions = this.servers.get(hsi);
+      if (regions == null || regions.isEmpty()) return false;
+      for (HRegionInfo hri: regions) {
+        if (hri.isMetaRegion()) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Run through remaining regionservers and unassign all catalog regions.
+   */
+  void unassignCatalogRegions() {
+    this.servers.entrySet();
+    synchronized (this.regions) {
+      for (Map.Entry<HServerInfo, List<HRegionInfo>> e: this.servers.entrySet()) {
+        List<HRegionInfo> regions = e.getValue();
+        if (regions == null || regions.isEmpty()) continue;
+        for (HRegionInfo hri: regions) {
+          if (hri.isMetaRegion()) {
+            unassign(hri);
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * State of a Region while undergoing transitions.
    */
   public static class RegionState implements Writable {

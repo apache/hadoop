@@ -269,11 +269,6 @@ public class ServerManager {
           "ready next on next report");
     }
 
-    // Check startcodes
-    if (raceThatShouldNotHappenAnymore(storedInfo, info)) {
-      return HMsg.STOP_REGIONSERVER_ARRAY;
-    }
-
     for (HMsg msg: msgs) {
       LOG.info("Received " + msg + " from " + serverInfo.getServerName());
       switch (msg.getType()) {
@@ -283,38 +278,32 @@ public class ServerManager {
     }
 
     HMsg [] reply = null;
-    int numservers = countOfRegionServers();
     if (this.clusterShutdown) {
-      if (numservers <= 2) {
+      if (isOnlyMetaRegionServersOnline()) {
+        LOG.info("Only catalog regions remaining; running unassign");
+        // The only remaining regions are catalog regions.
         // Shutdown needs to be staggered; the meta regions need to close last
-        // in case they need to be updated during the close melee.  If <= 2
-        // servers left, then these are the two that were carrying root and meta
-        // most likely (TODO: This presumes unsplittable meta -- FIX). Tell
-        // these servers can shutdown now too.
-        reply = HMsg.STOP_REGIONSERVER_ARRAY;
+        // in case they need to be updated during the close melee. If only
+        // catalog reigons remaining, tell them they can go down now too.  On
+        // close of region, the regionservers should then shut themselves down.
+        this.services.getAssignmentManager().unassignCatalogRegions();
       }
     }
     return processRegionServerAllsWell(info, mostLoadedRegions, reply);
   }
 
-  private boolean raceThatShouldNotHappenAnymore(final HServerInfo storedInfo,
-      final HServerInfo reportedInfo) {
-    if (storedInfo.getStartCode() != reportedInfo.getStartCode()) {
-      // TODO: I don't think this possible any more.  We check startcodes when
-      // server comes in on regionServerStartup -- St.Ack
-      // This state is reachable if:
-      // 1) RegionServer A started
-      // 2) RegionServer B started on the same machine, then clobbered A in regionServerStartup.
-      // 3) RegionServer A returns, expecting to work as usual.
-      // The answer is to ask A to shut down for good.
-      LOG.warn("Race condition detected: " + reportedInfo.getServerName());
-      synchronized (this.onlineServers) {
-        removeServerInfo(reportedInfo.getServerName());
-        notifyOnlineServers();
+  /**
+   * @return True if all online servers are carrying one or more catalog
+   * regions, there are no servers online carrying user regions only
+   */
+  private boolean isOnlyMetaRegionServersOnline() {
+    List<HServerInfo> onlineServers = getOnlineServersList();
+    for (HServerInfo hsi: onlineServers) {
+      if (!this.services.getAssignmentManager().isMetaRegionServer(hsi)) {
+        return false;
       }
-      return true;
     }
-    return false;
+    return true;
   }
 
   /**

@@ -90,6 +90,8 @@ Release 0.91.0 - Unreleased
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
+   HBASE-3573  Move shutdown messaging OFF hearbeat; prereq for fix of
+               hbase-1502
 
 
   NEW FEATURES

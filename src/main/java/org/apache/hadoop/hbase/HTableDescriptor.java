@@ -249,7 +249,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     values.put(IS_META_KEY, isMeta? TRUE: FALSE);
   }
 
-  /** @return true if table is the meta table */
+  /** @return true if table is a meta table, either <code>.META.</code> or
+   * <code>-ROOT-</code>
+   */
   public boolean isMetaTable() {
     return isMetaRegion() && !isRootRegion();
   }

@@ -741,16 +741,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
     updateOutboundMsgs(outboundMessages);
     outboundMessages.clear();
-
-    for (int i = 0; !this.stopped && msgs != null && i < msgs.length; i++) {
-      LOG.info(msgs[i].toString());
-      // Intercept stop regionserver messages
-      if (msgs[i].getType().equals(HMsg.Type.STOP_REGIONSERVER)) {
-        stop("Received " + msgs[i]);
-        continue;
-      }
-      LOG.warn("NOT PROCESSING " + msgs[i] + " -- WHY IS MASTER SENDING IT TO US?");
-    }
     return outboundMessages;
   }
 

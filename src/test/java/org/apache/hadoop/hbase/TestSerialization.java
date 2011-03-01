@@ -84,21 +84,6 @@ public class TestSerialization {
     assertTrue(Bytes.equals("value".getBytes(), hmw.get("key".getBytes())));
   }
 
-  @Test public void testHMsg() throws Exception {
-    final String name = "testHMsg";
-    HMsg  m = new HMsg(HMsg.Type.STOP_REGIONSERVER);
-    byte [] mb = Writables.getBytes(m);
-    HMsg deserializedHMsg = (HMsg)Writables.getWritable(mb, new HMsg());
-    assertTrue(m.equals(deserializedHMsg));
-    m = new HMsg(HMsg.Type.STOP_REGIONSERVER,
-      new HRegionInfo(new HTableDescriptor(name),
-        HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY),
-        "Some message".getBytes());
-    mb = Writables.getBytes(m);
-    deserializedHMsg = (HMsg)Writables.getWritable(mb, new HMsg());
-    assertTrue(m.equals(deserializedHMsg));
-  }
-
   @Test public void testTableDescriptor() throws Exception {
     final String name = "testTableDescriptor";
     HTableDescriptor htd = createTableDescriptor(name);
