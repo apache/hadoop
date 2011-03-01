@@ -75,13 +75,15 @@ public class TestOverReplicatedBlocks extends TestCase {
       cluster.restartDataNode(dnProps);
       DFSTestUtil.waitReplication(fs, fileName, (short)2);
       
+      String blockPoolId = cluster.getNamesystem().getBlockpoolId();
       final DatanodeID corruptDataNode = 
-        cluster.getDataNodes().get(2).dnRegistration;
+        cluster.getDataNodes().get(2).getDNRegistrationForBP(blockPoolId); 
       final FSNamesystem namesystem = cluster.getNamesystem();
       synchronized (namesystem.heartbeats) {
         // set live datanode's remaining space to be 0 
         // so they will be chosen to be deleted when over-replication occurs
         for (DatanodeDescriptor datanode : namesystem.heartbeats) {
+          // TODO:FEDERATION - when comparing we either compare bpregistration or machine name only
           if (!corruptDataNode.equals(datanode)) {
             datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0);
           }

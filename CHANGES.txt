@@ -83,6 +83,8 @@ Trunk (unreleased changes)
 
     HDFS-1669. Federation: Fix TestHftpFileSystem failure. (suresh)
 
+    HDFS-1670. HDFS Federation: remove dnRegistration from Datanode (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

@@ -32,6 +32,7 @@ import org.apache.hadoop.fi.DataTransferTestUtil.DataTransferTest;
 import org.apache.hadoop.hdfs.server.datanode.BlockReceiver.PacketResponder;
 import org.apache.hadoop.hdfs.PipelinesTestUtil.PipelinesTest;
 import org.apache.hadoop.hdfs.PipelinesTestUtil.NodeBytes;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
@@ -49,11 +50,11 @@ privileged public aspect BlockReceiverAspects {
 	
   before(BlockReceiver blockreceiver
       ) throws IOException : callReceivePacket(blockreceiver) {
-    final DatanodeRegistration dr = blockreceiver.getDataNode().getDatanodeRegistration();
-    LOG.info("FI: callReceivePacket, datanode=" + dr.getName());
+    final String dnName = blockreceiver.getDataNode().getMachineName();
+    LOG.info("FI: callReceivePacket, datanode=" + dnName);
     DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
     if (dtTest != null)
-      dtTest.fiCallReceivePacket.run(dr);
+      dtTest.fiCallReceivePacket.run(dnId);
 
     if (ProbabilityModel.injectCriteria(BlockReceiver.class.getSimpleName())) {
       LOG.info("Before the injection point");
@@ -72,7 +73,7 @@ privileged public aspect BlockReceiverAspects {
     DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
     if (dtTest != null)
       dtTest.fiCallWritePacketToDisk.run(
-          blockreceiver.getDataNode().getDatanodeRegistration());
+          blockreceiver.getDataNode().getDatanodeId());
   }
 
   pointcut afterDownstreamStatusRead(BlockReceiver.PacketResponder responder):
@@ -83,7 +84,7 @@ privileged public aspect BlockReceiverAspects {
     final DataNode d = responder.receiver.getDataNode();
     DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
     if (dtTest != null)
-      dtTest.fiAfterDownstreamStatusRead.run(d.getDatanodeRegistration());
+      dtTest.fiAfterDownstreamStatusRead.run(d.getDatanodeId());
   }
 
     // Pointcuts and advises for TestFiPipelines  
@@ -94,7 +95,7 @@ privileged public aspect BlockReceiverAspects {
     && this(br);
   
   after(BlockReceiver br, long offset) : callSetNumBytes(br, offset) {
-    LOG.debug("FI: Received bytes To: " + br.datanode.dnRegistration.getStorageID() + ": " + offset);
+    LOG.debug("FI: Received bytes To: " + br.datanode.getStorageId() + ": " + offset);
     PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
     if (pTest == null) {
       LOG.debug("FI: no pipeline has been found in receiving");
@@ -103,7 +104,7 @@ privileged public aspect BlockReceiverAspects {
     if (!(pTest instanceof PipelinesTest)) {
       return;
     }
-    NodeBytes nb = new NodeBytes(br.datanode.dnRegistration, offset);
+    NodeBytes nb = new NodeBytes(br.datanode.dnId, offset);
     try {
       ((PipelinesTest)pTest).fiCallSetNumBytes.run(nb);
     } catch (IOException e) {
@@ -125,7 +126,7 @@ privileged public aspect BlockReceiverAspects {
       return;
     }
     LOG.debug("FI: Acked total bytes from: " + 
-        pr.receiver.datanode.dnRegistration.getStorageID() + ": " + acked);
+        pr.receiver.datanode.getStorageId() + ": " + acked);
     if (pTest instanceof PipelinesTest) {
       bytesAckedService((PipelinesTest)pTest, pr, acked);
     }
@@ -133,7 +134,7 @@ privileged public aspect BlockReceiverAspects {
 
   private void bytesAckedService 
       (final PipelinesTest pTest, final PacketResponder pr, final long acked) {
-    NodeBytes nb = new NodeBytes(pr.receiver.datanode.dnRegistration, acked);
+    NodeBytes nb = new NodeBytes(pr.receiver.datanode.dnId, acked);
     try {
       pTest.fiCallSetBytesAcked.run(nb);
     } catch (IOException e) {
@@ -180,8 +181,8 @@ privileged public aspect BlockReceiverAspects {
       ) throws IOException : pipelineClose(blockreceiver, offsetInBlock, seqno,
           lastPacketInBlock, len, endOfHeader) {
     if (len == 0) {
-      final DatanodeRegistration dr = blockreceiver.getDataNode().getDatanodeRegistration();
-      LOG.info("FI: pipelineClose, datanode=" + dr.getName()
+      final DatanodeID dnId = blockreceiver.getDataNode().getDatanodeId();
+      LOG.info("FI: pipelineClose, datanode=" + dnId.getName()
           + ", offsetInBlock=" + offsetInBlock
           + ", seqno=" + seqno
           + ", lastPacketInBlock=" + lastPacketInBlock
@@ -190,7 +191,7 @@ privileged public aspect BlockReceiverAspects {
   
       final DataTransferTest test = DataTransferTestUtil.getDataTransferTest();
       if (test != null) {
-        test.fiPipelineClose.run(dr);
+        test.fiPipelineClose.run(dnId);
       }
     }
   }
@@ -201,12 +202,12 @@ privileged public aspect BlockReceiverAspects {
 
   after(BlockReceiver.PacketResponder packetresponder) throws IOException
       : pipelineAck(packetresponder) {
-    final DatanodeRegistration dr = packetresponder.receiver.getDataNode().getDatanodeRegistration();
-    LOG.info("FI: fiPipelineAck, datanode=" + dr);
+    final DatanodeID dnId = packetresponder.receiver.getDataNode().getDatanodeId();
+    LOG.info("FI: fiPipelineAck, datanode=" + dnId);
 
     final DataTransferTest test = DataTransferTestUtil.getDataTransferTest();
     if (test != null) {
-      test.fiPipelineAck.run(dr);
+      test.fiPipelineAck.run(dnId);
     }
   }
 
@@ -216,12 +217,12 @@ privileged public aspect BlockReceiverAspects {
       && this(blockreceiver);
 
   after(BlockReceiver blockreceiver) throws IOException : blockFileClose(blockreceiver) {
-    final DatanodeRegistration dr = blockreceiver.getDataNode().getDatanodeRegistration();
-    LOG.info("FI: blockFileClose, datanode=" + dr);
+    final DatanodeID dnId = blockreceiver.getDataNode().getDatanodeId();
+    LOG.info("FI: blockFileClose, datanode=" + dnId);
 
     final DataTransferTest test = DataTransferTestUtil.getDataTransferTest();
     if (test != null) {
-      test.fiBlockFileClose.run(dr);
+      test.fiBlockFileClose.run(dnId);
     }
   }
 }

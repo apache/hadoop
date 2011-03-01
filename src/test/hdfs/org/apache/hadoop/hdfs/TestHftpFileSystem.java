@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.log4j.Level;
 
 /**
@@ -51,6 +52,7 @@ public class TestHftpFileSystem extends TestCase {
   private static MiniDFSCluster cluster = null;
   private static FileSystem hdfs = null;
   private static HftpFileSystem hftpFs = null;
+  private static String blockPoolId = null;
   
   /**
    * Setup hadoop mini-cluster for test.
@@ -67,6 +69,7 @@ public class TestHftpFileSystem extends TestCase {
 
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     hdfs = cluster.getFileSystem();
+    blockPoolId = cluster.getNamesystem().getBlockpoolId();
     final String hftpuri = 
       "hftp://" + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     hftpFs = (HftpFileSystem) new Path(hftpuri).getFileSystem(config);
@@ -116,6 +119,7 @@ public class TestHftpFileSystem extends TestCase {
     
     BlockLocation[] locations = 
         hdfs.getFileBlockLocations(TEST_FILE, 0, 10);
+    
     String locationName = locations[0].getNames()[0];
     URL u = hftpFs.getNamenodeFileURL(TEST_FILE);
     HttpURLConnection conn = (HttpURLConnection)u.openConnection();
@@ -126,10 +130,10 @@ public class TestHftpFileSystem extends TestCase {
     // Find the datanode that has the block according to locations
     // and check that the URL was redirected to this DN's info port
     for (DataNode node : cluster.getDataNodes()) {
-      if (node.getDatanodeRegistration().getName().equals(locationName)) {
+      DatanodeRegistration dnR = node.getDNRegistrationForBP(blockPoolId);
+      if (dnR.getName().equals(locationName)) {
         checked = true;
-        assertEquals(node.getDatanodeRegistration().getInfoPort(),
-                    conn.getURL().getPort());
+        assertEquals(dnR.getInfoPort(), conn.getURL().getPort());
       }
     }
     assertTrue("The test never checked that location of " + 

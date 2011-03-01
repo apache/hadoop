@@ -52,7 +52,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     if( ! super.initializeUpgrade())
       return; // distr upgrade is not needed
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
-        + dataNode.dnRegistration.getName() 
+        + dataNode.getMachineName() 
         + " version " + getUpgradeVersion() + " to current LV " 
         + FSConstants.LAYOUT_VERSION + " is initialized.");
     UpgradeObjectDatanode curUO = (UpgradeObjectDatanode)currentUpgrades.first();
@@ -109,7 +109,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     upgradeDaemon = new Daemon(curUO);
     upgradeDaemon.start();
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
-        + dataNode.dnRegistration.getName() 
+        + dataNode.getMachineName() 
         + " version " + getUpgradeVersion() + " to current LV " 
         + FSConstants.LAYOUT_VERSION + " is started.");
     return true;
@@ -124,7 +124,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     if(startUpgrade()) // upgrade started
       return;
     throw new IOException(
-        "Distributed upgrade for DataNode " + dataNode.dnRegistration.getName() 
+        "Distributed upgrade for DataNode " + dataNode.getMachineName() 
         + " version " + getUpgradeVersion() + " to current LV " 
         + FSConstants.LAYOUT_VERSION + " cannot be started. "
         + "The upgrade object is not defined.");
@@ -140,7 +140,7 @@ class UpgradeManagerDatanode extends UpgradeManager {
     upgradeDaemon = null;
     // TODO:FEDERATION what dnRegistration we want to use here?
     DataNode.LOG.info("\n   Distributed upgrade for DataNode " 
-        + dataNode.dnRegistration.getName() 
+        + dataNode.getMachineName()
         + " version " + getUpgradeVersion() + " to current LV " 
         + FSConstants.LAYOUT_VERSION + " is complete.");
   }

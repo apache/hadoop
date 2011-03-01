@@ -114,10 +114,10 @@ class DataXceiver extends DataTransferProtocol.Receiver
       opStartTime = now();
       processOp(op, in);
     } catch (Throwable t) {
-      LOG.error(datanode.dnRegistration + ":DataXceiver",t);
+      LOG.error(datanode.getMachineName() + ":DataXceiver",t);
     } finally {
       if (LOG.isDebugEnabled()) {
-        LOG.debug(datanode.dnRegistration + ":Number of active connections is: "
+        LOG.debug(datanode.getMachineName() + ":Number of active connections is: "
             + datanode.getXceiverCount());
       }
       IOUtils.closeStream(in);
@@ -158,7 +158,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
   
     // send the block
     BlockSender blockSender = null;
-    DatanodeRegistration dnR = datanode.getDNRegistrationForBP(block.getPoolId());
+    DatanodeRegistration dnR = 
+      datanode.getDNRegistrationForBP(block.getPoolId());
     final String clientTraceFmt =
       clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
@@ -198,7 +199,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       /* What exactly should we do here?
        * Earlier version shutdown() datanode if there is disk error.
        */
-      LOG.warn(datanode.dnRegistration +  ":Got exception while serving " + 
+      LOG.warn(dnR +  ":Got exception while serving " + 
           block + " to " +
                 s.getInetAddress() + ":\n" + 
                 StringUtils.stringifyException(ioe) );
@@ -237,6 +238,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
     DataOutputStream replyOut = null;   // stream to prev target
     replyOut = new DataOutputStream(
                    NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+    DatanodeRegistration dnR = 
+      datanode.getDNRegistrationForBP(block.getPoolId());
     if (datanode.isBlockTokenEnabled) {
       try {
         datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,
@@ -245,8 +248,6 @@ class DataXceiver extends DataTransferProtocol.Receiver
         try {
           if (client.length() != 0) {
             ERROR_ACCESS_TOKEN.write(replyOut);
-            DatanodeRegistration dnR = 
-              datanode.getDNRegistrationForBP(block.getPoolId()); 
             Text.writeString(replyOut, dnR.getName());
             replyOut.flush();
           }
@@ -341,7 +342,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
           if (client.length() > 0) {
             throw e;
           } else {
-            LOG.info(datanode.dnRegistration + ":Exception transfering block " +
+            LOG.info(dnR + ":Exception transfering block " +
                      block + " to mirror " + mirrorNode +
                      ". continuing without the mirror.\n" +
                      StringUtils.stringifyException(e));

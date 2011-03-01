@@ -17,14 +17,12 @@
  */
 package org.apache.hadoop.hdfs;
 
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.fs.Path;
 import junit.framework.TestCase;
 
 /**
@@ -71,8 +69,7 @@ public class TestDatanodeRegistration extends TestCase {
         fail("Never got a heartbeat from restarted datanode.");
       }
 
-      int realIpcPort = cluster.getDataNodes().get(0)
-        .dnRegistration.getIpcPort();
+      int realIpcPort = cluster.getDataNodes().get(0).getIpcPort();
       // Now make sure the reported IPC port is the correct one.
       assertEquals(realIpcPort, report[0].getIpcPort());
     } finally {

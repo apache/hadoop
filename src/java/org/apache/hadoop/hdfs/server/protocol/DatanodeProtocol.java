@@ -71,7 +71,6 @@ public interface DatanodeProtocol extends VersionedProtocol {
   /** 
    * Register Datanode.
    *
-   * @see org.apache.hadoop.hdfs.server.datanode.DataNode#dnRegistration
    * @see org.apache.hadoop.hdfs.server.namenode.FSNamesystem#registerDatanode(DatanodeRegistration)
    * 
    * @return updated {@link org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration}, which contains 

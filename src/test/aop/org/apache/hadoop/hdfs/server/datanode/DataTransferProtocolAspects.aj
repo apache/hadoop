@@ -49,7 +49,7 @@ public aspect DataTransferProtocolAspects {
 
   after(DataXceiver dataxceiver) returning(Op op): receiverOp(dataxceiver) {
     LOG.info("FI: receiverOp " + op + ", datanode="
-        + dataxceiver.getDataNode().getDatanodeRegistration().getName());    
+        + dataxceiver.getDataNode().getDatanodeId().getName());    
   }
 
   pointcut statusRead(DataXceiver dataxceiver):
@@ -59,10 +59,10 @@ public aspect DataTransferProtocolAspects {
       ) throws IOException: statusRead(dataxceiver) {
     final DataNode d = dataxceiver.getDataNode();
     LOG.info("FI: statusRead " + status + ", datanode="
-        + d.getDatanodeRegistration().getName());    
+        + d.getDatanodeId().getName());    
     DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
     if (dtTest != null) 
-      dtTest.fiStatusRead.run(d.getDatanodeRegistration());
+      dtTest.fiStatusRead.run(d.getDatanodeId());
   }
 
   pointcut receiverOpWriteBlock(DataXceiver dataxceiver):
@@ -74,6 +74,6 @@ public aspect DataTransferProtocolAspects {
     DataTransferTest dtTest = DataTransferTestUtil.getDataTransferTest();
     if (dtTest != null)
       dtTest.fiReceiverOpWriteBlock.run(
-          dataxceiver.getDataNode().getDatanodeRegistration());
+          dataxceiver.getDataNode().getDatanodeId());
   }
 }

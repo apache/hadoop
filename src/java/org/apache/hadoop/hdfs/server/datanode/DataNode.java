@@ -204,20 +204,18 @@ public class DataNode extends Configured
   class BlockPoolManager {
     private final Map<String, BPOfferService> bpMapping;
     private final Map<InetSocketAddress, BPOfferService> nameNodeThreads;
-    private final DatanodeRegistration dnReg;
-    
+ 
     //This lock is used only to ensure exclusion of refreshNamenodes
     private final Object refreshNamenodesLock = new Object();
     
-    BlockPoolManager(Configuration conf, DatanodeRegistration dnReg)
+    BlockPoolManager(Configuration conf)
         throws IOException {
-      this.dnReg = dnReg;
       bpMapping = new HashMap<String, BPOfferService>();
       nameNodeThreads = new HashMap<InetSocketAddress, BPOfferService>();
   
       List<InetSocketAddress> isas = DFSUtil.getNNAddresses(conf);
       for(InetSocketAddress isa : isas) {
-        BPOfferService bpos = new BPOfferService(isa, dnReg);
+        BPOfferService bpos = new BPOfferService(isa);
         nameNodeThreads.put(bpos.getNNSocketAddress(), bpos);
       }
     }
@@ -291,7 +289,7 @@ public class DataNode extends Configured
           }
 
           for (InetSocketAddress nnaddr : toStart) {
-            BPOfferService bpos = new BPOfferService(nnaddr, dnReg);
+            BPOfferService bpos = new BPOfferService(nnaddr);
             nameNodeThreads.put(bpos.getNNSocketAddress(), bpos);
           }
 
@@ -313,7 +311,7 @@ public class DataNode extends Configured
   private BlockPoolManager blockPoolManager;
   public DatanodeProtocol namenodeTODO_FED = null; //TODO:FEDERATION needs to be taken out.
   public FSDatasetInterface data = null;
-  public DatanodeRegistration dnRegistration = null;
+  private DatanodeID datanodeId = null;
   private String clusterId = null;
 
   public final static String EMPTY_DEL_HINT = "";
@@ -458,7 +456,7 @@ public class DataNode extends Configured
                                DataBlockScanner.Servlet.class);
     this.infoServer.start();
     // adjust info port
-    this.dnRegistration.setInfoPort(this.infoServer.getPort());
+    this.datanodeId.setInfoPort(this.infoServer.getPort());
   }
   
   private void startPlugins(Configuration conf) {
@@ -487,8 +485,8 @@ public class DataNode extends Configured
       ipcServer.refreshServiceAcl(conf, new HDFSPolicyProvider());
     }
 
-    dnRegistration.setIpcPort(ipcServer.getListenerAddress().getPort());
-    LOG.info("dnRegistration = " + dnRegistration);
+    datanodeId.setIpcPort(ipcServer.getListenerAddress().getPort());
+    LOG.info("datanodeId = " + datanodeId);
   }
   
 
@@ -511,7 +509,7 @@ public class DataNode extends Configured
     // construct registration
     InetSocketAddress socAddr = DataNode.getStreamingAddr(conf);
     int tmpPort = socAddr.getPort();
-    this.dnRegistration = new DatanodeRegistration(machineName + ":" + tmpPort);
+    this.datanodeId = new DatanodeID(machineName + ":" + tmpPort);
 
     // find free port or use privileged port provided
     ServerSocket ss;
@@ -527,7 +525,7 @@ public class DataNode extends Configured
     tmpPort = ss.getLocalPort();
     selfAddr = new InetSocketAddress(ss.getInetAddress().getHostAddress(),
                                      tmpPort);
-    this.dnRegistration.setName(machineName + ":" + tmpPort);
+    this.datanodeId.setName(machineName + ":" + tmpPort);
     LOG.info("Opened info server at " + tmpPort);
       
     this.threadGroup = new ThreadGroup("dataXceiverServer");
@@ -579,8 +577,8 @@ public class DataNode extends Configured
     private final LinkedList<String> delHints = new LinkedList<String>();
     private volatile boolean shouldServiceRun = true;
 
-    BPOfferService(InetSocketAddress isa, DatanodeRegistration bpRegistration) {
-      this.bpRegistration = new DatanodeRegistration(bpRegistration);
+    BPOfferService(InetSocketAddress isa) {
+      this.bpRegistration = new DatanodeRegistration(datanodeId);
       this.nnAddr = isa;
     }
 
@@ -671,7 +669,7 @@ public class DataNode extends Configured
         conf.getBoolean("dfs.datanode.simulateddatastorage", false);
       
       if (simulatedFSDataset) {
-        bpRegistration.setStorageID(dnRegistration.getStorageID()); //same as DN
+        bpRegistration.setStorageID(datanodeId.getStorageID()); //same as DN
         bpRegistration.storageInfo.layoutVersion = FSConstants.LAYOUT_VERSION;
         bpRegistration.storageInfo.namespaceID = bpNSInfo.namespaceID;
         bpRegistration.storageInfo.clusterID = bpNSInfo.clusterID;
@@ -999,8 +997,8 @@ public class DataNode extends Configured
           bpRegistration = bpNamenode.registerDatanode(bpRegistration);
           // make sure we got the machine name right (same as NN sees it)
           String [] mNames = bpRegistration.getName().split(":");
-          synchronized (dnRegistration) {
-            dnRegistration.name = mNames[0] + ":" + dnRegistration.getPort();
+          synchronized (datanodeId) {
+            datanodeId.name = mNames[0] + ":" + datanodeId.getPort();
           }
 
           LOG.info("bpReg after =" + bpRegistration.storageInfo + 
@@ -1241,9 +1239,9 @@ public class DataNode extends Configured
     startInfoServer(conf);
     initIpcServer(conf); // TODO:FEDERATION redirect the call appropriately 
 
-    myMetrics = new DataNodeMetrics(conf, dnRegistration.getName());
+    myMetrics = new DataNodeMetrics(conf, datanodeId.getName());
 
-    blockPoolManager = new BlockPoolManager(conf, dnRegistration);
+    blockPoolManager = new BlockPoolManager(conf);
   }
   
   BPOfferService[] getAllBpOs() {
@@ -1265,9 +1263,9 @@ public class DataNode extends Configured
       conf.getBoolean("dfs.datanode.simulateddatastorage", false);
 
     if (simulatedFSDataset) {
-      setNewStorageID(dnRegistration);
+      setNewStorageID(datanodeId);
       conf.set(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY,
-          dnRegistration.getStorageID());
+          datanodeId.getStorageID());
 
       // it would have been better to pass storage as a parameter to
       // constructor below - need to augment ReflectionUtils used below.
@@ -1306,6 +1304,22 @@ public class DataNode extends Configured
     } catch ( javax.management.JMException e ) {
       LOG.warn("Failed to register NameNode MXBean", e);
     }
+  }
+  
+  String getStorageId() {
+    return datanodeId.getStorageID();
+  }
+  
+  public String getMachineName() {
+    return datanodeId.name;
+  }
+  
+  public int getIpcPort() {
+    return datanodeId.ipcPort;
+  }
+  
+  DatanodeID getDataNodeId() {
+    return datanodeId;
   }
   
   public DatanodeRegistration getDNRegistrationForBP(String bpid) 
@@ -1381,12 +1395,7 @@ public class DataNode extends Configured
     return myMetrics;
   }
   
-  /** Return DatanodeRegistration */
-  public DatanodeRegistration getDatanodeRegistration() {
-    return dnRegistration;
-  }
-
-  public static void setNewStorageID(DatanodeRegistration dnReg) {
+  public static void setNewStorageID(DatanodeID dnId) {
     /* Return 
      * "DS-randInt-ipaddr-currentTimeMillis"
      * It is considered extermely rare for all these numbers to match
@@ -1413,7 +1422,7 @@ public class DataNode extends Configured
       LOG.warn("Could not use SecureRandom");
       rand = R.nextInt(Integer.MAX_VALUE);
     }
-    dnReg.storageID = "DS-" + rand + "-"+ ip + "-" + dnReg.getPort() + "-" + 
+    dnId.storageID = "DS-" + rand + "-"+ ip + "-" + dnId.getPort() + "-" + 
                       System.currentTimeMillis();
   }
 
@@ -1588,14 +1597,13 @@ public class DataNode extends Configured
                               DatanodeInfo xferTargets[] 
                               ) throws IOException {
     DatanodeProtocol nn = getBPNamenode(block.getPoolId());
+    DatanodeRegistration bpReg = getDNRegistrationForBP(block.getPoolId());
     
     if (!data.isValidBlock(block)) {
       // block does not exist or is under-construction
       String errStr = "Can't send invalid block " + block;
       LOG.info(errStr);
-      nn.errorReport(dnRegistration, 
-                           DatanodeProtocol.INVALID_BLOCK, 
-                           errStr);
+      nn.errorReport(bpReg, DatanodeProtocol.INVALID_BLOCK, errStr);
       return;
     }
 
@@ -1605,7 +1613,7 @@ public class DataNode extends Configured
       // Shorter on-disk len indicates corruption so report NN the corrupt block
       nn.reportBadBlocks(new LocatedBlock[]{
           new LocatedBlock(block, new DatanodeInfo[] {
-              new DatanodeInfo(dnRegistration)})});
+              new DatanodeInfo(bpReg)})});
       LOG.info("Can't replicate block " + block
           + " because on-disk length " + onDiskLength 
           + " is shorter than NameNode recorded length " + block.getNumBytes());
@@ -1620,7 +1628,7 @@ public class DataNode extends Configured
           xfersBuilder.append(xferTargets[i].getName());
           xfersBuilder.append(" ");
         }
-        LOG.info(dnRegistration + " Starting thread to transfer block " + 
+        LOG.info(bpReg + " Starting thread to transfer block " + 
                  block + " to " + xfersBuilder);                       
       }
 
@@ -1729,6 +1737,7 @@ public class DataNode extends Configured
     DatanodeInfo targets[];
     ExtendedBlock b;
     DataNode datanode;
+    final private DatanodeRegistration bpReg;
 
     /**
      * Connect to the first item in the target list.  Pass along the 
@@ -1739,6 +1748,8 @@ public class DataNode extends Configured
       this.targets = targets;
       this.b = b;
       this.datanode = datanode;
+      BPOfferService bpos = blockPoolManager.get(b.getPoolId());
+      bpReg = bpos.bpRegistration;
     }
 
     /**
@@ -1765,7 +1776,7 @@ public class DataNode extends Configured
 
         blockSender = new BlockSender(b, 0, b.getNumBytes(), 
             false, false, false, datanode);
-        DatanodeInfo srcNode = new DatanodeInfo(dnRegistration);
+        DatanodeInfo srcNode = new DatanodeInfo(bpReg);
 
         //
         // Header info
@@ -1783,10 +1794,10 @@ public class DataNode extends Configured
         blockSender.sendBlock(out, baseStream, null);
 
         // no response necessary
-        LOG.info(dnRegistration + ":Transmitted block " + b + " to " + curTarget);
+        LOG.info(bpReg + ":Transmitted block " + b + " to " + curTarget);
 
       } catch (IOException ie) {
-        LOG.warn(dnRegistration + ":Failed to transfer " + b + " to " + targets[0].getName()
+        LOG.warn(bpReg + ":Failed to transfer " + b + " to " + targets[0].getName()
             + " got " + StringUtils.stringifyException(ie));
         // check if there are any disk problem
         datanode.checkDiskError();
@@ -1979,15 +1990,15 @@ public class DataNode extends Configured
   @Override
   public String toString() {
     return "DataNode{" +
-      "data=" + data +
-      (dnRegistration != null ?
-          (", localName='" + dnRegistration.getName() + "'" +
-              ", storageID='" + dnRegistration.getStorageID() + "'")
-          : "") +
-      ", xmitsInProgress=" + xmitsInProgress.get() +
-      "}";
+    "data=" + data +
+    (datanodeId != null ?
+        (", localName='" + datanodeId.getName() + "'" +
+            ", storageID='" + datanodeId.getStorageID() + "'")
+            : "") +
+            ", xmitsInProgress=" + xmitsInProgress.get() +
+            "}";
   }
-  
+
   private static void printUsage() {
     System.err.println("Usage: java DataNode");
     System.err.println("           [-rollback]");
@@ -2153,6 +2164,7 @@ public class DataNode extends Configured
   /** Recover a block */
   private void recoverBlock(RecoveringBlock rBlock) throws IOException {
     ExtendedBlock block = rBlock.getBlock();
+    String blookPoolId = block.getPoolId();
     DatanodeInfo[] targets = rBlock.getLocations();
     DatanodeID[] datanodeids = (DatanodeID[])targets;
     List<BlockRecord> syncList = new ArrayList<BlockRecord>(datanodeids.length);
@@ -2161,7 +2173,9 @@ public class DataNode extends Configured
     //check generation stamps
     for(DatanodeID id : datanodeids) {
       try {
-        InterDatanodeProtocol datanode = dnRegistration.equals(id)?
+        BPOfferService bpos = blockPoolManager.get(blookPoolId);
+        DatanodeRegistration bpReg = bpos.bpRegistration;
+        InterDatanodeProtocol datanode = bpReg.equals(id)?
             this: DataNode.createInterDataNodeProtocolProxy(id, getConf(),
                 socketTimeout);
         ReplicaRecoveryInfo info = callInitReplicaRecovery(datanode, rBlock);

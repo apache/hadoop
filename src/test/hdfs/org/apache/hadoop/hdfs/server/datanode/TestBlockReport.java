@@ -343,8 +343,7 @@ public class TestBlockReport {
     int randIndex = rand.nextInt(blocks.size());
     // Get a block and screw its GS
     Block corruptedBlock = blocks.get(randIndex);
-    String secondNode = cluster.getDataNodes().get(DN_N1).
-      getDatanodeRegistration().getStorageID();
+    String secondNode = cluster.getDataNodes().get(DN_N1).getStorageId();
     if(LOG.isDebugEnabled()) {
       LOG.debug("Working with " + secondNode);
       LOG.debug("BlockGS before " + blocks.get(randIndex).getGenerationStamp());
@@ -573,8 +572,8 @@ public class TestBlockReport {
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("New datanode "
-          + cluster.getDataNodes().get(datanodes.size() - 1)
-          .getDatanodeRegistration() + " has been started");
+          + cluster.getDataNodes().get(datanodes.size() - 1).getMachineName() 
+          + " has been started");
     }
     if (waitReplicas) DFSTestUtil.waitReplication(fs, filePath, REPL_FACTOR);
   }

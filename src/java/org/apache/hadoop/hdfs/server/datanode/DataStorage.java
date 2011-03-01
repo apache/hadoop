@@ -185,8 +185,8 @@ public class DataStorage extends Storage {
     
     // make sure we have storage id set - if not - generate new one
     if(storageID.isEmpty()) {
-      DataNode.setNewStorageID(DataNode.datanodeObject.dnRegistration);
-      storageID = DataNode.datanodeObject.dnRegistration.storageID;
+      DataNode.setNewStorageID(DataNode.datanodeObject.getDataNodeId());
+      storageID = DataNode.datanodeObject.getStorageId();
     }
     
     // 3. Update all storages. Some of them might have just been formatted.

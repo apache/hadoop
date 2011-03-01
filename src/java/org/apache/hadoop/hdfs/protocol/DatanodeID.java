@@ -77,6 +77,18 @@ public class DatanodeID implements WritableComparable<DatanodeID> {
     this.ipcPort = ipcPort;
   }
   
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public void setInfoPort(int infoPort) {
+    this.infoPort = infoPort;
+  }
+  
+  public void setIpcPort(int ipcPort) {
+    this.ipcPort = ipcPort;
+  }
+  
   /**
    * @return hostname:portNumber.
    */

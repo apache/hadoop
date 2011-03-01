@@ -881,7 +881,7 @@ public class MiniDFSCluster {
     DataNodeProperties dnprop = dataNodes.remove(i);
     DataNode dn = dnprop.datanode;
     System.out.println("MiniDFSCluster Stopping DataNode " + 
-                       dn.dnRegistration.getName() +
+                       dn.getMachineName() +
                        " from a total of " + (dataNodes.size() + 1) + 
                        " datanodes.");
     dn.shutdown();
@@ -896,7 +896,8 @@ public class MiniDFSCluster {
     int i;
     for (i = 0; i < dataNodes.size(); i++) {
       DataNode dn = dataNodes.get(i).datanode;
-      if (dn.dnRegistration.getName().equals(name)) {
+      //TODO:FEDERATION we need either compare bpregistration or only the machine name without the port
+      if (dn.getMachineName().equals(name)) {
         break;
       }
     }
