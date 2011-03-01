@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.TestDatanodeUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.log4j.Level;
 
@@ -130,7 +131,8 @@ public class TestHftpFileSystem extends TestCase {
     // Find the datanode that has the block according to locations
     // and check that the URL was redirected to this DN's info port
     for (DataNode node : cluster.getDataNodes()) {
-      DatanodeRegistration dnR = node.getDNRegistrationForBP(blockPoolId);
+      DatanodeRegistration dnR = 
+        TestDatanodeUtils.getDNRegistrationForBP(node, blockPoolId);
       if (dnR.getName().equals(locationName)) {
         checked = true;
         assertEquals(dnR.getInfoPort(), conn.getURL().getPort());

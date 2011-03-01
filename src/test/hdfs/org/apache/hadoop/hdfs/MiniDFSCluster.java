@@ -47,10 +47,12 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.datanode.TestDatanodeUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
@@ -1012,8 +1014,12 @@ public class MiniDFSCluster {
     int i;
     for (i = 0; i < dataNodes.size(); i++) {
       DataNode dn = dataNodes.get(i).datanode;
-      //TODO:FEDERATION we need either compare bpregistration or only the machine name without the port
-      if (dn.getMachineName().equals(name)) {
+      // get BP registration
+      DatanodeRegistration dnR = 
+        TestDatanodeUtils.getDNRegistrationByMachineName(dn, name);
+      LOG.info("for name=" + name + " found bp=" + dnR + 
+          "; with dnMn=" + dn.getMachineName());
+      if(dnR != null) {
         break;
       }
     }

@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.datanode.TestDatanodeUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import junit.framework.TestCase;
@@ -43,7 +44,9 @@ public class TestOverReplicatedBlocks extends TestCase {
   public void testProcesOverReplicateBlock() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setLong("dfs.blockreport.intervalMsec", 1000L);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, Integer.toString(2));
+    conf.set(
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY,
+        Integer.toString(2));
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     FileSystem fs = cluster.getFileSystem();
 
@@ -77,7 +80,9 @@ public class TestOverReplicatedBlocks extends TestCase {
       
       String blockPoolId = cluster.getNamesystem().getBlockpoolId();
       final DatanodeID corruptDataNode = 
-        cluster.getDataNodes().get(2).getDNRegistrationForBP(blockPoolId); 
+        TestDatanodeUtils.getDNRegistrationForBP(
+            cluster.getDataNodes().get(2), blockPoolId);
+         
       final FSNamesystem namesystem = cluster.getNamesystem();
       synchronized (namesystem.heartbeats) {
         // set live datanode's remaining space to be 0 

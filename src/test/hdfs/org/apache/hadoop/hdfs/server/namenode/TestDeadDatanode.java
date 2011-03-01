@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.TestDatanodeUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -90,7 +91,8 @@ public class TestDeadDatanode {
     // wait for datanode to be marked live
     DataNode dn = cluster.getDataNodes().get(0);
     DatanodeRegistration reg = 
-      cluster.getDataNodes().get(0).getDNRegistrationForBP(poolId);
+      TestDatanodeUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
+      
     waitForDatanodeState(reg.getStorageID(), true, 20000);
 
     // Shutdown and wait for datanode to be marked dead

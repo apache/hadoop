@@ -1324,7 +1324,13 @@ public class DataNode extends Configured
     return datanodeId;
   }
   
-  public DatanodeRegistration getDNRegistrationForBP(String bpid) 
+  /**
+   * get BP registration by blockPool id
+   * @param bpid
+   * @return BP registration object
+   * @throws IOException
+   */
+  DatanodeRegistration getDNRegistrationForBP(String bpid) 
   throws IOException {
     BPOfferService bpos = blockPoolManager.get(bpid);
     if(bpos==null || bpos.bpRegistration==null) {
@@ -1333,7 +1339,21 @@ public class DataNode extends Configured
     return bpos.bpRegistration;
   }
   
-
+  /**
+   * get BP registration by machine and port name (host:port)
+   * @param mName
+   * @return BP registration 
+   * @throws IOException 
+   */
+  DatanodeRegistration getDNRegistrationByMachineName(String mName) {
+    BPOfferService [] bposArray = blockPoolManager.getAllNamenodeThreads();
+    for (BPOfferService bpos : bposArray) {
+      if(bpos.bpRegistration.getName().equals(mName))
+        return bpos.bpRegistration;
+    }
+    return null;
+  }
+  
   /**
    * Creates either NIO or regular depending on socketWriteTimeout.
    */
