@@ -956,8 +956,9 @@ public class DataNode extends Configured
           if (UnregisteredNodeException.class.getName().equals(reClass) ||
               DisallowedDatanodeException.class.getName().equals(reClass) ||
               IncorrectVersionException.class.getName().equals(reClass)) {
-            LOG.warn("DataNode is shutting down: " + 
+            LOG.warn("blockpool " + blockPoolId + " is shutting down: " + 
                 StringUtils.stringifyException(re));
+            shouldServiceRun = false;
             return;
           }
           LOG.warn(StringUtils.stringifyException(re));
@@ -969,8 +970,6 @@ public class DataNode extends Configured
           }
         } catch (IOException e) {
           LOG.warn(StringUtils.stringifyException(e));
-        } finally {
-          shouldServiceRun = false;
         }
       } // while (shouldRun && shouldServiceRun)
     } // offerService
@@ -1110,7 +1109,7 @@ public class DataNode extends Configured
           }
         }
       } finally {
-        LOG.info(bpRegistration + ":ending block pool service for: " 
+        LOG.warn(bpRegistration + ":ending block pool service for: " 
             + blockPoolId);
         cleanUp();
       }

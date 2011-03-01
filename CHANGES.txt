@@ -72,6 +72,9 @@ Trunk (unreleased changes)
     HDFS-1646. Federation: MiniDFSClsuter#waitActive() waits for ever 
     with the introduction of BPOfferService in datanode. (suresh)
 
+    HDFS-1659. BPOfferService exits after one iteration incorrectly.
+    (Tanping via suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
