@@ -241,7 +241,7 @@ public class TestDataTransferProtocol extends TestCase {
 
       /* Test writing to a new block */
       long newBlockId = firstBlock.getBlockId() + 1;
-      ExtendedBlock newBlock = new ExtendedBlock(firstBlock.getPoolId(),
+      ExtendedBlock newBlock = new ExtendedBlock(firstBlock.getBlockPoolId(),
           newBlockId, 0, firstBlock.getGenerationStamp());
 
       // test PIPELINE_SETUP_CREATE on a new block
@@ -339,7 +339,7 @@ public class TestDataTransferProtocol extends TestCase {
 
     // get the first blockid for the file
     final ExtendedBlock firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
-    final String poolId = firstBlock.getPoolId();
+    final String poolId = firstBlock.getBlockPoolId();
     long newBlockId = firstBlock.getBlockId() + 1;
 
     recvBuf.reset();
@@ -420,7 +420,7 @@ public class TestDataTransferProtocol extends TestCase {
     
     /* Test OP_READ_BLOCK */
 
-    String bpid = cluster.getNamesystem().getPoolId();
+    String bpid = cluster.getNamesystem().getBlockPoolId();
     ExtendedBlock blk = new ExtendedBlock(bpid, firstBlock.getLocalBlock());
     long blkid = blk.getBlockId();
     // bad block id

@@ -64,7 +64,7 @@ public class TestFileCorruption extends TestCase {
       util.createFiles(fs, "/srcdat");
       // Now deliberately remove the blocks
       File storageDir = MiniDFSCluster.getStorageDir(2, 0);
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
       File[] blocks = data_dir.listFiles();
@@ -124,7 +124,7 @@ public class TestFileCorruption extends TestCase {
       DFSTestUtil.createFile(fs, FILE_PATH, FILE_LEN, (short)2, 1L);
       
       // get the block
-      final String bpid = cluster.getNamesystem().getPoolId();
+      final String bpid = cluster.getNamesystem().getBlockPoolId();
       File storageDir = MiniDFSCluster.getStorageDir(0, 0);
       File dataDir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       ExtendedBlock blk = getBlock(bpid, dataDir);
@@ -142,7 +142,7 @@ public class TestFileCorruption extends TestCase {
       DataNode dataNode = datanodes.get(2);
       
       // report corrupted block by the third datanode
-      DatanodeRegistration dnR = dataNode.getDNRegistrationForBP(blk.getPoolId());
+      DatanodeRegistration dnR = dataNode.getDNRegistrationForBP(blk.getBlockPoolId());
       cluster.getNamesystem().markBlockAsCorrupt(blk, 
           new DatanodeInfo(dnR));
       

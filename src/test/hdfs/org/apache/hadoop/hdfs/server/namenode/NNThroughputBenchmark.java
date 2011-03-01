@@ -874,7 +874,7 @@ public class NNThroughputBenchmark {
                           new DataStorage(nsInfo, dnInfo.getStorageID()));
           receivedDNReg.setInfoPort(dnInfo.getInfoPort());
           nameNode.blockReceived( receivedDNReg, 
-                                  nameNode.getNamesystem().getPoolId(),
+                                  nameNode.getNamesystem().getBlockPoolId(),
                                   new Block[] {blocks[i]},
                                   new String[] {DataNode.EMPTY_DEL_HINT});
         }
@@ -990,7 +990,7 @@ public class NNThroughputBenchmark {
           datanodes[dnIdx].addBlock(loc.getBlock().getLocalBlock());
           nameNode.blockReceived(
               datanodes[dnIdx].dnRegistration, 
-              loc.getBlock().getPoolId(),
+              loc.getBlock().getBlockPoolId(),
               new Block[] {loc.getBlock().getLocalBlock()},
               new String[] {""});
         }
@@ -1010,7 +1010,7 @@ public class NNThroughputBenchmark {
       TinyDatanode dn = datanodes[daemonId];
       long start = System.currentTimeMillis();
       nameNode.blockReport(dn.dnRegistration, nameNode.getNamesystem()
-          .getPoolId(), dn.getBlockReportList());
+          .getBlockPoolId(), dn.getBlockReportList());
       long end = System.currentTimeMillis();
       return end-start;
     }

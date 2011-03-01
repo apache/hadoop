@@ -140,7 +140,7 @@ public class TestInjectionForSimulatedStorage extends TestCase {
       //first time format
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
       cluster.waitActive();
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       DFSClient dfsClient = new DFSClient(new InetSocketAddress("localhost",
                                             cluster.getNameNodePort()),
                                             conf);

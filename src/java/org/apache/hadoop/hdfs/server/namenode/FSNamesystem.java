@@ -3232,8 +3232,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
 
   private void checkBlock(ExtendedBlock block) throws IOException {
-    if (block != null && !this.blockPoolId.equals(block.getPoolId())) {
-      throw new IOException("Unexpected BlockPoolId " + block.getPoolId()
+    if (block != null && !this.blockPoolId.equals(block.getBlockPoolId())) {
+      throw new IOException("Unexpected BlockPoolId " + block.getBlockPoolId()
           + " - expected " + blockPoolId);
     }
   }
@@ -5292,7 +5292,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     return dir.fsImage.getBlockPoolID();
   }
   
-  public String getPoolId() {
+  public String getBlockPoolId() {
     return blockPoolId;
   }
 }

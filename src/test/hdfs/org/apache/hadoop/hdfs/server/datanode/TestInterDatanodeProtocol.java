@@ -48,7 +48,7 @@ import org.junit.Test;
  */
 public class TestInterDatanodeProtocol {
   public static void checkMetaInfo(ExtendedBlock b, DataNode dn) throws IOException {
-    Block metainfo = dn.data.getStoredBlock(b.getPoolId(), b.getBlockId());
+    Block metainfo = dn.data.getStoredBlock(b.getBlockPoolId(), b.getBlockId());
     Assert.assertEquals(b.getBlockId(), metainfo.getBlockId());
     Assert.assertEquals(b.getNumBytes(), metainfo.getNumBytes());
   }
@@ -109,7 +109,7 @@ public class TestInterDatanodeProtocol {
           new RecoveringBlock(b, locatedblock.getLocations(), recoveryId));
 
       //verify updateBlock
-      ExtendedBlock newblock = new ExtendedBlock(b.getPoolId(),
+      ExtendedBlock newblock = new ExtendedBlock(b.getBlockPoolId(),
           b.getBlockId(), b.getNumBytes()/2, b.getGenerationStamp()+1);
       idp.updateReplicaUnderRecovery(b, recoveryId, newblock.getNumBytes());
       checkMetaInfo(newblock, datanode);
@@ -224,7 +224,7 @@ public class TestInterDatanodeProtocol {
     try {
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
       cluster.waitActive();
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
 
       //create a file
       DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
@@ -262,7 +262,7 @@ public class TestInterDatanodeProtocol {
       //with (block length) != (stored replica's on disk length). 
       {
         //create a block with same id and gs but different length.
-        final ExtendedBlock tmp = new ExtendedBlock(b.getPoolId(), rri
+        final ExtendedBlock tmp = new ExtendedBlock(b.getBlockPoolId(), rri
             .getBlockId(), rri.getNumBytes() - 1, rri.getGenerationStamp());
         try {
           //update should fail
@@ -275,7 +275,7 @@ public class TestInterDatanodeProtocol {
 
       //update
       final ReplicaInfo finalized = fsdataset.updateReplicaUnderRecovery(
-          new ExtendedBlock(b.getPoolId(), rri), recoveryid, newlength);
+          new ExtendedBlock(b.getBlockPoolId(), rri), recoveryid, newlength);
 
       //check meta data after update
       FSDataset.checkReplicaFiles(finalized);

@@ -797,7 +797,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       if (success) {
         // update pipeline at the namenode
         ExtendedBlock newBlock = new ExtendedBlock(
-            block.getPoolId(), block.getBlockId(), block.getNumBytes(), newGS);
+            block.getBlockPoolId(), block.getBlockId(), block.getNumBytes(), newGS);
         dfsClient.namenode.updatePipeline(dfsClient.clientName, block, newBlock, nodes);
         // update client side generation stamp
         block = newBlock;

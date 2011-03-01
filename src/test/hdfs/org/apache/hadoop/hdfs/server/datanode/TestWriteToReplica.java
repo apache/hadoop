@@ -53,7 +53,7 @@ public class TestWriteToReplica {
       FSDataset dataSet = (FSDataset)dn.data;
 
       // set up replicasMap
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       setup(bpid, dataSet);
 
       // test close
@@ -73,7 +73,7 @@ public class TestWriteToReplica {
       FSDataset dataSet = (FSDataset)dn.data;
 
       // set up replicasMap
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       setup(bpid, dataSet);
 
       // test append
@@ -93,7 +93,7 @@ public class TestWriteToReplica {
       FSDataset dataSet = (FSDataset)dn.data;
 
       // set up replicasMap
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       setup(bpid, dataSet);
 
       // test writeToRbw
@@ -113,7 +113,7 @@ public class TestWriteToReplica {
       FSDataset dataSet = (FSDataset)dn.data;
 
       // set up replicasMap
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       setup(bpid, dataSet);
 
       // test writeToTemporary

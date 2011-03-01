@@ -101,7 +101,7 @@ public class TestBalancer extends TestCase {
       ExtendedBlock[] blocks = new ExtendedBlock[numOfBlocks];
       for(int i=0; i<numOfBlocks; i++) {
         ExtendedBlock b = locatedBlocks.get(i).getBlock();
-        blocks[i] = new ExtendedBlock(b.getPoolId(), b.getBlockId(), b
+        blocks[i] = new ExtendedBlock(b.getBlockPoolId(), b.getBlockId(), b
             .getNumBytes(), b.getGenerationStamp());
       }
 

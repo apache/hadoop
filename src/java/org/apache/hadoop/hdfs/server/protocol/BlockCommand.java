@@ -76,7 +76,7 @@ public class BlockCommand extends DatanodeCommand {
     this.targets = EMPTY_TARGET;
   }
 
-  public String getPoolId() {
+  public String getBlockPoolId() {
     return poolId;
   }
   

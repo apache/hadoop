@@ -414,7 +414,7 @@ public class DatanodeJspHelper {
       }
       for (int i = 0; i < blks.size(); i++) {
         if (blks.get(i).getBlock().getBlockId() == blockId) {
-          bpid = blks.get(i).getBlock().getPoolId();
+          bpid = blks.get(i).getBlock().getBlockPoolId();
           blockToken = blks.get(i).getBlockToken();
           break;
         }
@@ -649,7 +649,7 @@ public class DatanodeJspHelper {
       return;
     }
     LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
-    String poolId = lastBlk.getBlock().getPoolId();
+    String poolId = lastBlk.getBlock().getBlockPoolId();
     long blockSize = lastBlk.getBlock().getNumBytes();
     long blockId = lastBlk.getBlock().getBlockId();
     Token<BlockTokenIdentifier> accessToken = lastBlk.getBlockToken();

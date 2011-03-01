@@ -340,7 +340,7 @@ public class TestBlockRecovery {
   private Collection<RecoveringBlock> initRecoveringBlocks() throws IOException {
     Collection<RecoveringBlock> blocks = new ArrayList<RecoveringBlock>(1);
     DatanodeInfo[] locs = new DatanodeInfo[] {
-        new DatanodeInfo(dn.getDNRegistrationForBP(block.getPoolId())),
+        new DatanodeInfo(dn.getDNRegistrationForBP(block.getBlockPoolId())),
         mock(DatanodeInfo.class) };
     RecoveringBlock rBlock = new RecoveringBlock(block, locs, RECOVERY_ID);
     blocks.add(rBlock);
@@ -409,7 +409,7 @@ public class TestBlockRecovery {
 
   private List<BlockRecord> initBlockRecords(DataNode spyDN) throws IOException {
     List<BlockRecord> blocks = new ArrayList<BlockRecord>(1);
-    DatanodeRegistration dnR = dn.getDNRegistrationForBP(block.getPoolId());
+    DatanodeRegistration dnR = dn.getDNRegistrationForBP(block.getBlockPoolId());
     BlockRecord blockRecord = new BlockRecord(
         new DatanodeID(dnR), spyDN,
         new ReplicaRecoveryInfo(block.getBlockId(), block.getNumBytes(),

@@ -363,7 +363,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   @Override // FSDatasetInterface
   public synchronized void finalizeBlock(ExtendedBlock b) throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("Finalizing a non existing block " + b);
@@ -422,7 +422,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   @Override // FSDatasetInterface
   public synchronized long getLength(ExtendedBlock b) throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("Finalizing a non existing block " + b);
@@ -481,7 +481,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   @Override // FSDatasetInterface
   public synchronized boolean isValidBlock(ExtendedBlock b) {
-    final Map<Block, BInfo> map = blockMap.get(b.getPoolId());
+    final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
     if (map == null) {
       return false;
     }
@@ -494,7 +494,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   /* check if a block is created but not finalized */
   private synchronized boolean isBeingWritten(ExtendedBlock b) {
-    final Map<Block, BInfo> map = blockMap.get(b.getPoolId());
+    final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
     if (map == null) {
       return false;
     }
@@ -512,7 +512,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface append(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null || !binfo.isFinalized()) {
       throw new ReplicaNotFoundException("Block " + b
@@ -525,7 +525,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface recoverAppend(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new ReplicaNotFoundException("Block " + b
@@ -543,7 +543,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public void recoverClose(ExtendedBlock b, long newGS, long expectedBlockLen)
       throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new ReplicaNotFoundException("Block " + b
@@ -560,7 +560,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface recoverRbw(ExtendedBlock b,
       long newGS, long minBytesRcvd, long maxBytesRcvd) throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if ( binfo == null) {
       throw new ReplicaNotFoundException("Block " + b
@@ -593,7 +593,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         throw new ReplicaAlreadyExistsException("Block " + b + 
             " is being written, and cannot be written to.");
     }
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = new BInfo(b.getLocalBlock(), true);
     map.put(binfo.theBlock, binfo);
     return binfo;
@@ -602,7 +602,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public synchronized InputStream getBlockInputStream(ExtendedBlock b)
       throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("No such Block " + b );  
@@ -635,7 +635,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
    */
   private synchronized InputStream getMetaDataInStream(ExtendedBlock b)
                                               throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("No such Block " + b );  
@@ -650,7 +650,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   @Override // FSDatasetInterface
   public synchronized long getMetaDataLength(ExtendedBlock b)
       throws IOException {
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("No such Block " + b );  
@@ -857,7 +857,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   public ReplicaRecoveryInfo initReplicaRecovery(RecoveringBlock rBlock)
   throws IOException {
     ExtendedBlock b = rBlock.getBlock();
-    final Map<Block, BInfo> map = getMap(b.getPoolId());
+    final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
     BInfo binfo = map.get(b.getLocalBlock());
     if (binfo == null) {
       throw new IOException("No such Block " + b );  

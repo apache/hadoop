@@ -112,7 +112,7 @@ public class TestDatanodeRestart {
       dn = cluster.getDataNodes().get(0);
 
       // check volumeMap: one rwr replica
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       ReplicasMap replicas = ((FSDataset)(dn.data)).volumeMap;
       Assert.assertEquals(1, replicas.size(bpid));
       ReplicaInfo replica = replicas.replicas(bpid).iterator().next();
@@ -147,7 +147,7 @@ public class TestDatanodeRestart {
         DFSTestUtil.createFile(fs, fileName, 1, (short)1, 0L);
         DFSTestUtil.waitReplication(fs, fileName, (short)1);
       }
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       DataNode dn = cluster.getDataNodes().get(0);
       Iterator<ReplicaInfo> replicasItor = 
         ((FSDataset)dn.data).volumeMap.replicas(bpid).iterator();

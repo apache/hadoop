@@ -60,7 +60,7 @@ public class TestDiskError extends TestCase {
     cluster.waitActive();
     FileSystem fs = cluster.getFileSystem();
     final int dnIndex = 0;
-    String bpid = cluster.getNamesystem().getPoolId();
+    String bpid = cluster.getNamesystem().getBlockPoolId();
     File storageDir = MiniDFSCluster.getStorageDir(dnIndex, 0);
     File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
     storageDir = MiniDFSCluster.getStorageDir(dnIndex, 1);
@@ -134,7 +134,7 @@ public class TestDiskError extends TestCase {
       out.close();
       
       // the temporary block & meta files should be deleted
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       File storageDir = MiniDFSCluster.getStorageDir(sndNode, 0);
       File dir1 = MiniDFSCluster.getRbwDir(storageDir, bpid);
       storageDir = MiniDFSCluster.getStorageDir(sndNode, 1);

@@ -353,7 +353,7 @@ public class TestBlockTokenWithDFS extends TestCase {
       tryRead(conf, lblock, true);
       // use a token with wrong blockID
       ExtendedBlock wrongBlock = new ExtendedBlock(lblock.getBlock()
-          .getPoolId(), lblock.getBlock().getBlockId() + 1);
+          .getBlockPoolId(), lblock.getBlock().getBlockId() + 1);
       lblock.setBlockToken(cluster.getNameNode().getNamesystem()
           .blockTokenSecretManager.generateToken(wrongBlock,
               EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));

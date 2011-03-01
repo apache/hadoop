@@ -90,7 +90,7 @@ public class ExtendedBlock implements Writable {
     block.readId(in);
   }
   
-  public String getPoolId() {
+  public String getBlockPoolId() {
     return poolId;
   }
 

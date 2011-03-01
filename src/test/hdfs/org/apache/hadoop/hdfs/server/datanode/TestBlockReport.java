@@ -88,7 +88,7 @@ public class TestBlockReport {
     REPL_FACTOR = 1; //Reset if case a test has modified the value
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(REPL_FACTOR).build();
     fs = (DistributedFileSystem) cluster.getFileSystem();
-    bpid = cluster.getNamesystem().getPoolId();
+    bpid = cluster.getNamesystem().getBlockPoolId();
   }
 
   @After
@@ -136,7 +136,7 @@ public class TestBlockReport {
     }
     // all blocks belong to the same file, hence same BP
     DataNode dn = cluster.getDataNodes().get(DN_N0);
-    String poolId = cluster.getNamesystem().getPoolId();
+    String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
     cluster.getNameNode().blockReport(dnR, poolId,
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
@@ -215,7 +215,7 @@ public class TestBlockReport {
 
     // all blocks belong to the same file, hence same BP
     DataNode dn = cluster.getDataNodes().get(DN_N0);
-    String poolId = cluster.getNamesystem().getPoolId();
+    String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
     cluster.getNameNode().blockReport(dnR, poolId,
       new BlockListAsLongs(blocks, null).getBlockListAsLongs());
@@ -254,7 +254,7 @@ public class TestBlockReport {
     
     // all blocks belong to the same file, hence same BP
     DataNode dn = cluster.getDataNodes().get(DN_N0);
-    String poolId = cluster.getNamesystem().getPoolId();
+    String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
     DatanodeCommand dnCmd = cluster.getNameNode().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
@@ -306,7 +306,7 @@ public class TestBlockReport {
 
  // all blocks belong to the same file, hence same BP
     DataNode dn = cluster.getDataNodes().get(DN_N1);
-    String poolId = cluster.getNamesystem().getPoolId();
+    String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
     cluster.getNameNode().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
@@ -355,7 +355,7 @@ public class TestBlockReport {
     }
     // all blocks belong to the same file, hence same BP
     DataNode dn = cluster.getDataNodes().get(DN_N1);
-    String poolId = cluster.getNamesystem().getPoolId();
+    String poolId = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
     cluster.getNameNode().blockReport(dnR, poolId,
         new BlockListAsLongs(blocks, null).getBlockListAsLongs());
@@ -427,7 +427,7 @@ public class TestBlockReport {
       
       // all blocks belong to the same file, hence same BP
       DataNode dn = cluster.getDataNodes().get(DN_N1);
-      String poolId = cluster.getNamesystem().getPoolId();
+      String poolId = cluster.getNamesystem().getBlockPoolId();
       DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
       cluster.getNameNode().blockReport(dnR, poolId,
           new BlockListAsLongs(blocks, null).getBlockListAsLongs());
@@ -473,7 +473,7 @@ public class TestBlockReport {
                                                 
       // all blocks belong to the same file, hence same BP
       DataNode dn = cluster.getDataNodes().get(DN_N1);
-      String poolId = cluster.getNamesystem().getPoolId();
+      String poolId = cluster.getNamesystem().getBlockPoolId();
       DatanodeRegistration dnR = dn.getDNRegistrationForBP(poolId);
       cluster.getNameNode().blockReport(dnR, poolId,
           new BlockListAsLongs(blocks, null).getBlockListAsLongs());
@@ -503,7 +503,7 @@ public class TestBlockReport {
       LOG.debug("Total number of DNs " + cluster.getDataNodes().size());
     }
     // Look about specified DN for the replica of the block from 1st DN
-    String bpid = cluster.getNamesystem().getPoolId();
+    String bpid = cluster.getNamesystem().getBlockPoolId();
     Replica r = ((FSDataset) cluster.getDataNodes().get(DN_N1).getFSDataset()).
       fetchReplicaInfo(bpid, bl.getBlockId());
     long start = System.currentTimeMillis();
@@ -710,7 +710,7 @@ public class TestBlockReport {
       // Get block from the first DN
       ret = cluster.getDataNodes().get(DN_N0).
         data.getStoredBlock(lb.getBlock()
-        .getPoolId(), lb.getBlock().getBlockId());
+        .getBlockPoolId(), lb.getBlock().getBlockId());
     return ret;
   }
 

@@ -764,8 +764,8 @@ public class TestFileCreation extends junit.framework.TestCase {
         DataNode datanode = cluster.getDataNode(datanodeinfo.ipcPort);
         FSDataset dataset = (FSDataset)datanode.data;
         ExtendedBlock blk = locatedblock.getBlock();
-        Block b = dataset.getStoredBlock(blk.getPoolId(), blk.getBlockId());
-        File blockfile = dataset.findBlockFile(blk.getPoolId(), b.getBlockId());
+        Block b = dataset.getStoredBlock(blk.getBlockPoolId(), blk.getBlockId());
+        File blockfile = dataset.findBlockFile(blk.getBlockPoolId(), b.getBlockId());
         System.out.println("blockfile=" + blockfile);
         if (blockfile != null) {
           BufferedReader in = new BufferedReader(new FileReader(blockfile));

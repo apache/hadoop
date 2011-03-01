@@ -138,7 +138,7 @@ public class TestListCorruptFileBlocks extends TestCase {
       int numCorrupt = corruptFileBlocks.size();
       assertTrue(numCorrupt == 0);
       // delete the blocks
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       for (int i = 0; i < 4; i++) {
         for (int j = 0; j <= 1; j++) {
           File storageDir = MiniDFSCluster.getStorageDir(i, j);
@@ -233,7 +233,7 @@ public class TestListCorruptFileBlocks extends TestCase {
           badFiles.size() == 0);
 
       // Now deliberately blocks from all files
-      final String bpid = cluster.getNamesystem().getPoolId();
+      final String bpid = cluster.getNamesystem().getBlockPoolId();
       for (int i=0; i<4; i++) {
         for (int j=0; j<=1; j++) {
           File storageDir = MiniDFSCluster.getStorageDir(i, j);

@@ -311,7 +311,7 @@ public class NamenodeFsck {
       if (isCorrupt) {
         corrupt++;
         res.corruptBlocks++;
-        out.print("\n" + path + ": CORRUPT blockpool " + block.getPoolId() + 
+        out.print("\n" + path + ": CORRUPT blockpool " + block.getBlockPoolId() + 
             " block " + block.getBlockName()+"\n");
       }
       if (locs.length >= minReplication)
@@ -503,7 +503,7 @@ public class NamenodeFsck {
         s.connect(targetAddr, HdfsConstants.READ_TIMEOUT);
         s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
         
-        String file = BlockReader.getFileName(targetAddr, block.getPoolId(),
+        String file = BlockReader.getFileName(targetAddr, block.getBlockPoolId(),
             block.getBlockId());
         blockReader = BlockReader.newBlockReader(s, file, block, lblock
             .getBlockToken(), 0, -1, conf.getInt("io.file.buffer.size", 4096));

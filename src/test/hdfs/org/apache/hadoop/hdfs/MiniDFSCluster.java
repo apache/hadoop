@@ -1160,7 +1160,7 @@ public class MiniDFSCluster {
     if (!(dataSet instanceof SimulatedFSDataset)) {
       throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
     }
-    String bpid = getNamesystem().getPoolId();
+    String bpid = getNamesystem().getBlockPoolId();
     SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
     sdataset.injectBlocks(bpid, blocksToInject);
     dataNodes.get(dataNodeIndex).datanode.scheduleAllBlockReport(0);
@@ -1261,7 +1261,7 @@ public class MiniDFSCluster {
    * @return file corresponding to the block
    */
   public static File getBlockFile(File storageDir, ExtendedBlock blk) {
-    return new File(getFinalizedDir(storageDir, blk.getPoolId()), blk
+    return new File(getFinalizedDir(storageDir, blk.getBlockPoolId()), blk
         .getBlockName());
   }
   

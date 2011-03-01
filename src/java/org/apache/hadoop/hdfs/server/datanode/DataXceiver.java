@@ -159,7 +159,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
     // send the block
     BlockSender blockSender = null;
     DatanodeRegistration dnR = 
-      datanode.getDNRegistrationForBP(block.getPoolId());
+      datanode.getDNRegistrationForBP(block.getBlockPoolId());
     final String clientTraceFmt =
       clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
@@ -239,7 +239,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
     replyOut = new DataOutputStream(
                    NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
     DatanodeRegistration dnR = 
-      datanode.getDNRegistrationForBP(block.getPoolId());
+      datanode.getDNRegistrationForBP(block.getBlockPoolId());
     if (datanode.isBlockTokenEnabled) {
       try {
         datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,

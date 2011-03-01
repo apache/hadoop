@@ -198,7 +198,7 @@ public class TestDFSRollback extends TestCase {
                                                          UpgradeUtilities.getCurrentClusterID(cluster),
                                                          UpgradeUtilities.getCurrentFsscTime(cluster)));
       startBlockPoolShouldFail(StartupOption.ROLLBACK, 
-          cluster.getNamesystem().getPoolId());
+          cluster.getNamesystem().getBlockPoolId());
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
@@ -220,7 +220,7 @@ public class TestDFSRollback extends TestCase {
                                                          UpgradeUtilities.getCurrentClusterID(cluster),
                                                          Long.MAX_VALUE));
       startBlockPoolShouldFail(StartupOption.ROLLBACK, 
-          cluster.getNamesystem().getPoolId());
+          cluster.getNamesystem().getBlockPoolId());
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);

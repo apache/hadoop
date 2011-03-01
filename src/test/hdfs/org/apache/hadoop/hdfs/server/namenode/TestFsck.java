@@ -463,7 +463,7 @@ public class TestFsck extends TestCase {
       System.out.println("1. good fsck out: " + outStr);
       assertTrue(outStr.contains("has 0 CORRUPT files"));
       // delete the blocks
-      final String bpid = cluster.getNamesystem().getPoolId();
+      final String bpid = cluster.getNamesystem().getBlockPoolId();
       for (int i=0; i<4; i++) {
         for (int j=0; j<=1; j++) {
           File storageDir = MiniDFSCluster.getStorageDir(i, j);

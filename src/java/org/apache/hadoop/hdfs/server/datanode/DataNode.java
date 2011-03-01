@@ -541,19 +541,19 @@ public class DataNode extends Configured
   
   // calls specific to BP
   protected void notifyNamenodeReceivedBlock(ExtendedBlock block, String delHint) {
-    BPOfferService bpos = blockPoolManager.get(block.getPoolId());
+    BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
     if(bpos != null) {
       bpos.notifyNamenodeReceivedBlock(block, delHint); 
     } else {
       LOG.warn("Cannot find BPOfferService for reporting block received for bpid="
-          + block.getPoolId());
+          + block.getBlockPoolId());
     }
   }
   
   public void reportBadBlocks(ExtendedBlock block) throws IOException{
-    BPOfferService bpos = blockPoolManager.get(block.getPoolId());
+    BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
     if(bpos == null || bpos.bpNamenode == null) {
-      throw new IOException("cannot locate OfferService thread for bp="+block.getPoolId());
+      throw new IOException("cannot locate OfferService thread for bp="+block.getBlockPoolId());
     }
     bpos.reportBadBlocks(block);
   }
@@ -776,8 +776,8 @@ public class DataNode extends Configured
             block==null?"Block is null":"delHint is null");
       }
       
-      if (!block.getPoolId().equals(blockPoolId)) {
-        LOG.warn("BlockPool mismatch " + block.getPoolId() + 
+      if (!block.getBlockPoolId().equals(blockPoolId)) {
+        LOG.warn("BlockPool mismatch " + block.getBlockPoolId() + 
             " vs. " + blockPoolId);
         return;
       }
@@ -1150,7 +1150,7 @@ public class DataNode extends Configured
       switch(cmd.getAction()) {
       case DatanodeProtocol.DNA_TRANSFER:
         // Send a copy of a block to another datanode
-        transferBlocks(bcmd.getPoolId(), bcmd.getBlocks(), bcmd.getTargets());
+        transferBlocks(bcmd.getBlockPoolId(), bcmd.getBlocks(), bcmd.getTargets());
         myMetrics.blocksReplicated.inc(bcmd.getBlocks().length);
         break;
       case DatanodeProtocol.DNA_INVALIDATE:
@@ -1161,10 +1161,10 @@ public class DataNode extends Configured
         Block toDelete[] = bcmd.getBlocks();
         try {
           if (blockScanner != null) {
-            blockScanner.deleteBlocks(bcmd.getPoolId(), toDelete);
+            blockScanner.deleteBlocks(bcmd.getBlockPoolId(), toDelete);
           }
           // using global fsdataset
-          data.invalidate(bcmd.getPoolId(), toDelete);
+          data.invalidate(bcmd.getBlockPoolId(), toDelete);
         } catch(IOException e) {
           checkDiskError();
           throw e;
@@ -1600,8 +1600,8 @@ public class DataNode extends Configured
   private void transferBlock( ExtendedBlock block, 
                               DatanodeInfo xferTargets[] 
                               ) throws IOException {
-    DatanodeProtocol nn = getBPNamenode(block.getPoolId());
-    DatanodeRegistration bpReg = getDNRegistrationForBP(block.getPoolId());
+    DatanodeProtocol nn = getBPNamenode(block.getBlockPoolId());
+    DatanodeRegistration bpReg = getDNRegistrationForBP(block.getBlockPoolId());
     
     if (!data.isValidBlock(block)) {
       // block does not exist or is under-construction
@@ -1752,7 +1752,7 @@ public class DataNode extends Configured
       this.targets = targets;
       this.b = b;
       this.datanode = datanode;
-      BPOfferService bpos = blockPoolManager.get(b.getPoolId());
+      BPOfferService bpos = blockPoolManager.get(b.getBlockPoolId());
       bpReg = bpos.bpRegistration;
     }
 
@@ -1823,12 +1823,12 @@ public class DataNode extends Configured
    */
   void closeBlock(ExtendedBlock block, String delHint) {
     myMetrics.blocksWritten.inc();
-    BPOfferService bpos = blockPoolManager.get(block.getPoolId());
+    BPOfferService bpos = blockPoolManager.get(block.getBlockPoolId());
     if(bpos != null) {
       bpos.notifyNamenodeReceivedBlock(block, delHint);
     } else {
       LOG.warn("Cannot find BPOfferService for reporting block received for bpid="
-          + block.getPoolId());
+          + block.getBlockPoolId());
     }
     if (blockScanner != null) {
       blockScanner.addBlock(block);
@@ -2131,7 +2131,7 @@ public class DataNode extends Configured
                                           long newLength) throws IOException {
     ReplicaInfo r = data.updateReplicaUnderRecovery(oldBlock,
         recoveryId, newLength);
-    return new ExtendedBlock(oldBlock.getPoolId(), r);
+    return new ExtendedBlock(oldBlock.getBlockPoolId(), r);
   }
 
   /** {@inheritDoc} */
@@ -2169,7 +2169,7 @@ public class DataNode extends Configured
   /** Recover a block */
   private void recoverBlock(RecoveringBlock rBlock) throws IOException {
     ExtendedBlock block = rBlock.getBlock();
-    String blookPoolId = block.getPoolId();
+    String blookPoolId = block.getBlockPoolId();
     DatanodeInfo[] targets = rBlock.getLocations();
     DatanodeID[] datanodeids = (DatanodeID[])targets;
     List<BlockRecord> syncList = new ArrayList<BlockRecord>(datanodeids.length);
@@ -2229,7 +2229,7 @@ public class DataNode extends Configured
   void syncBlock(RecoveringBlock rBlock,
                          List<BlockRecord> syncList) throws IOException {
     ExtendedBlock block = rBlock.getBlock();
-    DatanodeProtocol nn = getBPNamenode(block.getPoolId());
+    DatanodeProtocol nn = getBPNamenode(block.getBlockPoolId());
     
     long recoveryId = rBlock.getNewGenerationStamp();
     if (LOG.isDebugEnabled()) {
@@ -2265,7 +2265,7 @@ public class DataNode extends Configured
     // Calculate list of nodes that will participate in the recovery
     // and the new block size
     List<BlockRecord> participatingList = new ArrayList<BlockRecord>();
-    final ExtendedBlock newBlock = new ExtendedBlock(block.getPoolId(), block
+    final ExtendedBlock newBlock = new ExtendedBlock(block.getBlockPoolId(), block
         .getBlockId(), -1, recoveryId);
     switch(bestState) {
     case FINALIZED:
@@ -2301,7 +2301,7 @@ public class DataNode extends Configured
     for(BlockRecord r : participatingList) {
       try {
         ExtendedBlock reply = r.datanode.updateReplicaUnderRecovery(
-            new ExtendedBlock(newBlock.getPoolId(), r.rInfo), recoveryId,
+            new ExtendedBlock(newBlock.getBlockPoolId(), r.rInfo), recoveryId,
             newBlock.getNumBytes());
         assert reply.equals(newBlock) &&
                reply.getNumBytes() == newBlock.getNumBytes() :

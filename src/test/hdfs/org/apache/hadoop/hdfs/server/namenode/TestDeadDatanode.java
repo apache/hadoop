@@ -86,7 +86,7 @@ public class TestDeadDatanode {
     cluster = new MiniDFSCluster.Builder(conf).build();
     cluster.waitActive();
 
-    String poolId = cluster.getNamesystem().getPoolId();
+    String poolId = cluster.getNamesystem().getBlockPoolId();
     // wait for datanode to be marked live
     DataNode dn = cluster.getDataNodes().get(0);
     DatanodeRegistration reg = 

@@ -102,7 +102,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     // delete/make non-writable one of the directories (failed volume)
     data_fail = new File(dataDir, "data3");
     failedDir = MiniDFSCluster.getFinalizedDir(dataDir, 
-        cluster.getNamesystem().getPoolId());
+        cluster.getNamesystem().getBlockPoolId());
     if (failedDir.exists() &&
         //!FileUtil.fullyDelete(failedDir)
         !deteteBlocks(failedDir)
@@ -120,7 +120,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
     
     // make sure a block report is sent 
     DataNode dn = cluster.getDataNodes().get(1); //corresponds to dir data3
-    String bpid = cluster.getNamesystem().getPoolId();
+    String bpid = cluster.getNamesystem().getBlockPoolId();
     DatanodeRegistration dnR = dn.getDNRegistrationForBP(bpid);
     long[] bReport = dn.getFSDataset().getBlockReport(bpid).getBlockListAsLongs();
     cluster.getNameNode().blockReport(dnR, bpid, bReport);
@@ -304,7 +304,7 @@ public class TestDataNodeVolumeFailure extends TestCase{
 
   private int countRealBlocks(Map<String, BlockLocs> map) {
     int total = 0;
-    final String bpid = cluster.getNamesystem().getPoolId();
+    final String bpid = cluster.getNamesystem().getBlockPoolId();
     for(int i=0; i<dn_num; i++) {
       for(int j=0; j<=1; j++) {
         File storageDir = MiniDFSCluster.getStorageDir(i, j);

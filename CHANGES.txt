@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     HDFS-1671. HDFS Federation: shutdown in DataNode should be able to 
     shutdown individual BP threads as well as the whole DN (boryas).
 
+    HDFS-1663. HDFS federation: Rename getPoolId() everywhere to 
+    getBlockPoolId() (tanping via boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

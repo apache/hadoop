@@ -84,7 +84,7 @@ public class TestCrcCorruption {
       // However, a client is alowed access to this block.
       //
       File storageDir = MiniDFSCluster.getStorageDir(0, 1);
-      String bpid = cluster.getNamesystem().getPoolId();
+      String bpid = cluster.getNamesystem().getBlockPoolId();
       File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
       File[] blocks = data_dir.listFiles();

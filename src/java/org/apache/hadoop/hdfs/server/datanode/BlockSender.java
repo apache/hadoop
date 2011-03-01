@@ -95,7 +95,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
     try {
       this.block = block;
       synchronized(datanode.data) { 
-        this.replica = datanode.data.getReplica(block.getPoolId(), 
+        this.replica = datanode.data.getReplica(block.getBlockPoolId(), 
             block.getBlockId());
         if (replica == null) {
           throw new ReplicaNotFoundException(block);
@@ -195,7 +195,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
           || (length + startOffset) > endOffset) {
         String msg = " Offset " + startOffset + " and length " + length
         + " don't match block " + block + " ( blockLen " + endOffset + " )";
-        LOG.warn(datanode.getDNRegistrationForBP(block.getPoolId()) +
+        LOG.warn(datanode.getDNRegistrationForBP(block.getBlockPoolId()) +
             ":sendBlock() : " + msg);
         throw new IOException(msg);
       }

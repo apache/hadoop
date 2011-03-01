@@ -216,7 +216,7 @@ public class TestDirectoryScanner extends TestCase {
     cluster = new MiniDFSCluster.Builder(CONF).build();
     try {
       cluster.waitActive();
-      bpid = cluster.getNamesystem().getPoolId();
+      bpid = cluster.getNamesystem().getBlockPoolId();
       fds = (FSDataset) cluster.getDataNodes().get(0).getFSDataset();
       CONF.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY,
                   parallelism);

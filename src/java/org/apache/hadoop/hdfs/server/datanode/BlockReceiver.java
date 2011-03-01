@@ -115,7 +115,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         case PIPELINE_SETUP_APPEND:
           replicaInfo = datanode.data.append(block, newGs, minBytesRcvd);
           if (datanode.blockScanner != null) { // remove from block scanner
-            datanode.blockScanner.deleteBlock(block.getPoolId(),
+            datanode.blockScanner.deleteBlock(block.getBlockPoolId(),
                 block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
@@ -123,7 +123,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         case PIPELINE_SETUP_APPEND_RECOVERY:
           replicaInfo = datanode.data.recoverAppend(block, newGs, minBytesRcvd);
           if (datanode.blockScanner != null) { // remove from block scanner
-            datanode.blockScanner.deleteBlock(block.getPoolId(),
+            datanode.blockScanner.deleteBlock(block.getBlockPoolId(),
                 block.getLocalBlock());
           }
           block.setGenerationStamp(newGs);
@@ -228,7 +228,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
    * affect this datanode unless it is caused by interruption.
    */
   private void handleMirrorOutError(IOException ioe) throws IOException {
-    String bpid = block.getPoolId();
+    String bpid = block.getBlockPoolId();
     LOG.info(datanode.getDNRegistrationForBP(bpid) + ":Exception writing block " +
              block + " to mirror " + mirrorAddr + "\n" +
              StringUtils.stringifyException(ioe));
@@ -248,7 +248,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private void verifyChunks( byte[] dataBuf, int dataOff, int len, 
                              byte[] checksumBuf, int checksumOff ) 
                              throws IOException {
-    DatanodeProtocol nn = datanode.getBPNamenode(block.getPoolId());
+    DatanodeProtocol nn = datanode.getBPNamenode(block.getBlockPoolId());
     while (len > 0) {
       int chunkLen = Math.min(len, bytesPerChecksum);
       
@@ -907,7 +907,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                   receiver.clientName.length() > 0) {
                 long offset = 0;
                 DatanodeRegistration dnR = 
-                  datanode.getDNRegistrationForBP(block.getPoolId());
+                  datanode.getDNRegistrationForBP(block.getBlockPoolId());
                 ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT,
                       receiver.inAddr, receiver.myAddr, block.getNumBytes(),
                       "HDFS_WRITE", receiver.clientName, offset,

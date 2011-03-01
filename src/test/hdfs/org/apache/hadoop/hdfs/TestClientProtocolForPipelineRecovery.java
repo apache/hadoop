@@ -64,7 +64,7 @@ public class TestClientProtocolForPipelineRecovery {
       // test getNewStampAndToken on a non-existent block
       try {
         long newBlockId = firstBlock.getBlockId() + 1;
-        ExtendedBlock newBlock = new ExtendedBlock(firstBlock.getPoolId(),
+        ExtendedBlock newBlock = new ExtendedBlock(firstBlock.getBlockPoolId(),
             newBlockId, 0, firstBlock.getGenerationStamp());
         namenode.updateBlockForPipeline(newBlock, "");
         Assert.fail("Cannot get a new GS from a non-existent block");

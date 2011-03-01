@@ -1143,7 +1143,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * Get File name for a given block.
    */
   public File getBlockFile(ExtendedBlock b) throws IOException {
-    return getBlockFile(b.getPoolId(), b.getLocalBlock());
+    return getBlockFile(b.getBlockPoolId(), b.getLocalBlock());
   }
   
   /**
@@ -1184,7 +1184,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * @return the meta replica information
    */
   private ReplicaInfo getReplicaInfo(ExtendedBlock b) {
-    return volumeMap.get(b.getPoolId(), b.getLocalBlock());
+    return volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
   }
   
   /**
@@ -1337,7 +1337,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           " expected length is " + expectedBlockLen);
     }
 
-    return append(b.getPoolId(), (FinalizedReplica)replicaInfo, newGS,
+    return append(b.getBlockPoolId(), (FinalizedReplica)replicaInfo, newGS,
         b.getNumBytes());
   }
   
@@ -1464,7 +1464,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
     // change the replica's state/gs etc.
     if (replicaInfo.getState() == ReplicaState.FINALIZED ) {
-      return append(b.getPoolId(), (FinalizedReplica) replicaInfo, newGS, 
+      return append(b.getBlockPoolId(), (FinalizedReplica) replicaInfo, newGS, 
           b.getNumBytes());
     } else { //RBW
       bumpReplicaGS(replicaInfo, newGS);
@@ -1483,7 +1483,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     bumpReplicaGS(replicaInfo, newGS);
     // finalize the replica if RBW
     if (replicaInfo.getState() == ReplicaState.RBW) {
-      finalizeReplica(b.getPoolId(), replicaInfo);
+      finalizeReplica(b.getBlockPoolId(), replicaInfo);
     }
   }
   
@@ -1517,7 +1517,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface createRbw(ExtendedBlock b)
       throws IOException {
-    ReplicaInfo replicaInfo = volumeMap.get(b.getPoolId(), b.getBlockId());
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), b.getBlockId());
     if (replicaInfo != null) {
       throw new ReplicaAlreadyExistsException("Block " + b +
       " already exists in state " + replicaInfo.getState() +
@@ -1526,10 +1526,10 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     // create a new block
     FSVolume v = volumes.getNextVolume(b.getNumBytes());
     // create a rbw file to hold block in the designated volume
-    File f = v.createRbwFile(b.getPoolId(), b.getLocalBlock());
+    File f = v.createRbwFile(b.getBlockPoolId(), b.getLocalBlock());
     ReplicaBeingWritten newReplicaInfo = new ReplicaBeingWritten(b.getBlockId(), 
         b.getGenerationStamp(), v, f.getParentFile());
-    volumeMap.add(b.getPoolId(), newReplicaInfo);
+    volumeMap.add(b.getBlockPoolId(), newReplicaInfo);
     return newReplicaInfo;
   }
   
@@ -1539,7 +1539,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       throws IOException {
     DataNode.LOG.info("Recover the RBW replica " + b);
 
-    ReplicaInfo replicaInfo = volumeMap.get(b.getPoolId(), b.getBlockId());
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), b.getBlockId());
     if (replicaInfo == null) {
       throw new ReplicaNotFoundException(
           ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
@@ -1585,7 +1585,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface createTemporary(ExtendedBlock b)
       throws IOException {
-    ReplicaInfo replicaInfo = volumeMap.get(b.getPoolId(), b.getBlockId());
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), b.getBlockId());
     if (replicaInfo != null) {
       throw new ReplicaAlreadyExistsException("Block " + b +
           " already exists in state " + replicaInfo.getState() +
@@ -1594,10 +1594,10 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     
     FSVolume v = volumes.getNextVolume(b.getNumBytes());
     // create a temporary file to hold block in the designated volume
-    File f = v.createTmpFile(b.getPoolId(), b.getLocalBlock());
+    File f = v.createTmpFile(b.getBlockPoolId(), b.getLocalBlock());
     ReplicaInPipeline newReplicaInfo = new ReplicaInPipeline(b.getBlockId(), 
         b.getGenerationStamp(), v, f.getParentFile());
-    volumeMap.add(b.getPoolId(), newReplicaInfo);
+    volumeMap.add(b.getBlockPoolId(), newReplicaInfo);
     
     return newReplicaInfo;
   }
@@ -1647,7 +1647,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       // been opened for append but never modified
       return;
     }
-    finalizeReplica(b.getPoolId(), replicaInfo);
+    finalizeReplica(b.getBlockPoolId(), replicaInfo);
   }
   
   private synchronized FinalizedReplica finalizeReplica(String bpid,
@@ -1681,7 +1681,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     ReplicaInfo replicaInfo = getReplicaInfo(b);
     if (replicaInfo != null && replicaInfo.getState() == ReplicaState.TEMPORARY) {
       // remove from volumeMap
-      volumeMap.remove(b.getPoolId(), b.getLocalBlock());
+      volumeMap.remove(b.getBlockPoolId(), b.getLocalBlock());
       
       // delete the on-disk temp file
       if (delBlockFromDisk(replicaInfo.getBlockFile(), 
@@ -2211,7 +2211,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   public synchronized ReplicaRecoveryInfo initReplicaRecovery(
       RecoveringBlock rBlock) throws IOException {
-    return initReplicaRecovery(rBlock.getBlock().getPoolId(),
+    return initReplicaRecovery(rBlock.getBlock().getBlockPoolId(),
         volumeMap, rBlock.getBlock().getLocalBlock(), rBlock.getNewGenerationStamp());
   }
 
@@ -2287,7 +2287,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
                                     final long recoveryId,
                                     final long newlength) throws IOException {
     //get replica
-    final ReplicaInfo replica = volumeMap.get(oldBlock.getPoolId(), 
+    final ReplicaInfo replica = volumeMap.get(oldBlock.getBlockPoolId(), 
         oldBlock.getBlockId());
     DataNode.LOG.info("updateReplica: block=" + oldBlock
         + ", recoveryId=" + recoveryId
@@ -2317,7 +2317,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
     //update replica
     final FinalizedReplica finalized = updateReplicaUnderRecovery(oldBlock
-        .getPoolId(), (ReplicaUnderRecovery) replica, recoveryId, newlength);
+        .getBlockPoolId(), (ReplicaUnderRecovery) replica, recoveryId, newlength);
 
     //check replica files after update
     checkReplicaFiles(finalized);
@@ -2358,7 +2358,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   public synchronized long getReplicaVisibleLength(final ExtendedBlock block)
   throws IOException {
-    final Replica replica = volumeMap.get(block.getPoolId(), block.getBlockId());
+    final Replica replica = volumeMap.get(block.getBlockPoolId(), block.getBlockId());
     if (replica == null) {
       throw new ReplicaNotFoundException(block);
     }

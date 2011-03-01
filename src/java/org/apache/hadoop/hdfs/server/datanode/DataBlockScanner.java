@@ -457,10 +457,10 @@ class DataBlockScanner implements Runnable {
         updateScanStatus(block.getLocalBlock(), ScanType.VERIFICATION_SCAN, false);
 
         // If the block does not exists anymore, then its not an error
-        if ( dataset.getFile(block.getPoolId(), block.getLocalBlock()) == null ) {
+        if ( dataset.getFile(block.getBlockPoolId(), block.getLocalBlock()) == null ) {
           LOG.info("Verification failed for " + block + ". Its ok since " +
           "it not in datanode dataset anymore.");
-          deleteBlock(block.getPoolId(), block.getLocalBlock());
+          deleteBlock(block.getBlockPoolId(), block.getLocalBlock());
           return;
         }
 
