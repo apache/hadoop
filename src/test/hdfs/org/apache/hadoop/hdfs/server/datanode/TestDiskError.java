@@ -72,7 +72,7 @@ public class TestDiskError extends TestCase {
 
       // create files and make sure that first datanode will be down
       DataNode dn = cluster.getDataNodes().get(dnIndex);
-      for (int i=0; DataNode.isDatanodeUp(dn); i++) {
+      for (int i=0; dn.isDatanodeUp(); i++) {
         Path fileName = new Path("/test.txt"+i);
         DFSTestUtil.createFile(fs, fileName, 1024, (short)2, 1L);
         DFSTestUtil.waitReplication(fs, fileName, (short)2);

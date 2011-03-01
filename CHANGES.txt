@@ -69,6 +69,9 @@ Trunk (unreleased changes)
     HDFS-1649. Federation: Datanode command to refresh namenode list at 
     the datanode. (jitendra)
 
+    HDFS-1646. Federation: MiniDFSClsuter#waitActive() waits for ever 
+    with the introduction of BPOfferService in datanode. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

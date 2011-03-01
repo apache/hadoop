@@ -94,7 +94,6 @@ import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResour
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FileChecksumServlets;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
@@ -217,7 +216,6 @@ public class DataNode extends Configured
       nameNodeThreads = new HashMap<InetSocketAddress, BPOfferService>();
   
       List<InetSocketAddress> isas = DFSUtil.getNNAddresses(conf);
-      
       for(InetSocketAddress isa : isas) {
         BPOfferService bpos = new BPOfferService(isa, dnReg);
         nameNodeThreads.put(bpos.getNNSocketAddress(), bpos);
@@ -568,6 +566,7 @@ public class DataNode extends Configured
    * <li> Handle commands received from the datanode</li>
    * </ul>
    */
+  @InterfaceAudience.Private
   class BPOfferService implements Runnable {
     final InetSocketAddress nnAddr;
     DatanodeRegistration bpRegistration;
@@ -577,10 +576,10 @@ public class DataNode extends Configured
     private DatanodeProtocol bpNamenode;
     private String blockPoolId;
     private long lastHeartbeat = 0;
-    private boolean initialized = false;
+    private volatile boolean initialized = false;
     private final LinkedList<Block> receivedBlockList = new LinkedList<Block>();
     private final LinkedList<String> delHints = new LinkedList<String>();
-    volatile private boolean shouldServiceRun = true;
+    private volatile boolean shouldServiceRun = true;
 
     BPOfferService(InetSocketAddress isa, DatanodeRegistration bpRegistration) {
       this.bpRegistration = new DatanodeRegistration(bpRegistration);
@@ -588,7 +587,8 @@ public class DataNode extends Configured
     }
 
     /**
-     * returns true if BP thread has completed initialization
+     * returns true if BP thread has completed initialization of storage
+     * and has registered with the corresponding namenode
      * @return true if initialized
      */
     public boolean initialized() {
@@ -626,7 +626,7 @@ public class DataNode extends Configured
           } catch (InterruptedException ie) {}
         }
       }
-      LOG.info("handshake: nsifno= " + nsInfo);
+      LOG.info("handshake: namespace info = " + nsInfo);
       // TODO:FEDERATION on version mismatch datanode should continue
       // to retry
       // verify build version
@@ -975,8 +975,6 @@ public class DataNode extends Configured
       } // while (shouldRun && shouldServiceRun)
     } // offerService
 
-
-
     /**
      * Register one bp with the corresponding NameNode
      * <p>
@@ -1074,6 +1072,7 @@ public class DataNode extends Configured
      * Only stop when "shouldRun" or "shouldServiceRun" is turned off, which can
      * happen either at shutdown or due to refreshNamenodes.
      */
+    @Override
     public void run() {
       LOG.info(bpRegistration + "In BPOfferService.run, data = " + data
           + ";bp=" + blockPoolId);
@@ -1085,7 +1084,10 @@ public class DataNode extends Configured
           setupBP(conf, dataDirs);
           register();
         } catch (IOException ioe) {
-          LOG.error(bpRegistration + ": Setup failed", ioe);
+          // Initial handshake, storage recovery or registration failed
+          // End BPOfferService thread
+          LOG.fatal(bpRegistration + " initialization failed for block pool "
+              + blockPoolId, ioe);
           return;
         }
 
@@ -1108,7 +1110,8 @@ public class DataNode extends Configured
           }
         }
       } finally {
-        LOG.info(dnRegistration + ":Finishing DataNode in: " + data);
+        LOG.info(bpRegistration + ":ending block pool service for: " 
+            + blockPoolId);
         cleanUp();
       }
     }
@@ -1205,7 +1208,6 @@ public class DataNode extends Configured
       }
       return true;
     }
-
   }
 
   /**
@@ -1289,19 +1291,6 @@ public class DataNode extends Configured
     }
   }
 
-
-  void postStartInit(Configuration conf, AbstractList<File> dataDirs)
-  throws IOException {
-
-    initBlockScanner(conf);
-
-    startPlugins(conf);
-    
-    // BlockTokenSecretManager is created here, but it shouldn't be
-    // used until it is initialized in register().
-    this.blockTokenSecretManager = new BlockTokenSecretManager(false, 0, 0);    
-  }
-  
   /**
    * Determine the http server's effective addr
    */
@@ -1543,25 +1532,20 @@ public class DataNode extends Configured
   }
   
   private void handleDiskError(String errMsgr) {
-    boolean hasEnoughResource = data.hasEnoughResource();
-    LOG.warn("DataNode.handleDiskError: Keep Running: " + hasEnoughResource);
+    boolean hasEnoughResources = data.hasEnoughResource();
+    LOG.warn("DataNode.handleDiskError: Keep Running: " + hasEnoughResources);
     
-    //if hasEnoughtResource = true - more volumes are available, so we don't want 
-    // to shutdown DN completely and don't want NN to remove it.
-    int dp_error = DatanodeProtocol.DISK_ERROR;
-    if(hasEnoughResource == false) {
-      // DN will be shutdown and NN should remove it
-      dp_error = DatanodeProtocol.FATAL_DISK_ERROR;
-    }
+    int dpError = hasEnoughResources ? DatanodeProtocol.DISK_ERROR  
+                                     : DatanodeProtocol.FATAL_DISK_ERROR;  
     //inform NameNodes
     for(BPOfferService bpos: blockPoolManager.getAllNamenodeThreads()) {
       DatanodeProtocol nn = bpos.bpNamenode;
       try {
-        nn.errorReport(bpos.bpRegistration, dp_error, errMsgr);
+        nn.errorReport(bpos.bpRegistration, dpError, errMsgr);
       } catch(IOException ignored) { }
     }
     
-    if(hasEnoughResource) {
+    if(hasEnoughResources) {
       scheduleAllBlockReport(0);
       return; // do not shutdown
     }
@@ -1841,13 +1825,22 @@ public class DataNode extends Configured
     // start dataXceiveServer
     dataXceiverServer.start();
     ipcServer.start();
-
-    postStartInit(conf, dataDirs);
+    initBlockScanner(conf);
+    startPlugins(conf);
+    
+    // BlockTokenSecretManager is created here, but it shouldn't be
+    // used until it is initialized in register().
+    this.blockTokenSecretManager = new BlockTokenSecretManager(false, 0, 0);    
   }
 
-  static boolean isDatanodeUp(DataNode dn) {
-    //return dn.dataNodeThread != null && dn.dataNodeThread.isAlive();
-    return true; // TODO:FEDERATION - put the right condition
+  public boolean isDatanodeUp() {
+    for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
+      // Datanode is up, if one of the bp service is up
+      if (bp.bpThread.isAlive()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Instantiate a single datanode object. This must be run by invoking
@@ -2417,5 +2410,17 @@ public class DataNode extends Configured
   public void refreshNamenodes() throws IOException {
     conf = new Configuration();
     refreshNamenodes(conf);
+  }
+
+  /**
+   * @param bpid block pool Id
+   * @return true - if BPOfferService thread is alive
+   */
+  public boolean isBPServiceAlive(String bpid) {
+    BPOfferService bp = blockPoolManager.get(bpid);
+    if (bp != null) {
+      return bp.shouldServiceRun && bp.bpThread.isAlive();
+    }
+    return false;
   }
 }

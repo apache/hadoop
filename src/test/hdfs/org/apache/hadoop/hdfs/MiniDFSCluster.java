@@ -1069,6 +1069,15 @@ public class MiniDFSCluster {
   }
   
   private synchronized boolean shouldWait(DatanodeInfo[] dnInfo) {
+    for (DataNodeProperties dn : dataNodes) {
+      // If any one of the datanode is down, then do not continue to wait
+      // since the subsequent checks to stop waiting in this method are never
+      // going to be be met resulting in waiting forever.
+      if (!dn.datanode.isDatanodeUp()) {
+        return false;
+      }
+    }
+    
     if (dnInfo.length != numDataNodes) {
       return true;
     }

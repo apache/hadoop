@@ -181,7 +181,7 @@ public class TestDataNodeMultipleRegistrations {
     waitDataNodeUp(dn);
 
     
- // check number of vlumes in fsdataset
+    // check number of volumes in fsdataset
     Collection<VolumeInfo> volInfos = ((FSDataset) dn.data).getVolumeInfo();
     Assert.assertNotNull("No volumes in the fsdataset", volInfos);
     int i=0;
