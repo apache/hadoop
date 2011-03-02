@@ -88,7 +88,7 @@ public class ListPathsServlet extends DfsServlet {
     final String path = request.getPathInfo() != null
       ? request.getPathInfo() : "/";
     final String exclude = request.getParameter("exclude") != null
-      ? request.getParameter("exclude") : "\\..*\\.crc";
+      ? request.getParameter("exclude") : "";
     final String filter = request.getParameter("filter") != null
       ? request.getParameter("filter") : ".*";
     final boolean recur = request.getParameter("recursive") != null
