@@ -449,7 +449,7 @@ windows is not recommended.
 If you are running HBase on Windows, you must install
 <link xlink:href="http://cygwin.com/">Cygwin</link>
 to have a *nix-like environment for the shell scripts. The full details
-are explained in the <link xlink:href="cygwin.html">Windows Installation</link>
+are explained in the <link xlink:href="http://hbase.apache.org/cygwin.html">Windows Installation</link>
 guide.
 </para>
 </section>
@@ -554,7 +554,7 @@ connect from a remote location.</para>
 for how to start and verify your pseudo-distributed install.
 
 <footnote>
-<para>See <link xlink:href="pseudo-distributed.html">Pseudo-distributed mode extras</link>
+    <para>See <link xlink:href="http://hbase.apache.org/pseudo-distributed.html">Pseudo-distributed mode extras</link>
 for notes on how to start extra Masters and regionservers when running
     pseudo-distributed.</para>
 </footnote>
@@ -1388,13 +1388,13 @@ of all regions.
 
   <chapter xml:id="hbase_metrics">
   <title>Metrics</title>
-  <para>See <link xlink:href="metrics.html">Metrics</link>.
+  <para>See <link xlink:href="http://hbase.apache.org/metrics.html">Metrics</link>.
   </para>
   </chapter>
 
   <chapter xml:id="cluster_replication">
   <title>Cluster Replication</title>
-  <para>See <link xlink:href="replication.html">Cluster Replication</link>.
+  <para>See <link xlink:href="http://hbase.apache.org/replication.html">Cluster Replication</link>.
   </para>
   </chapter>
 
