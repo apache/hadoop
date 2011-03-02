@@ -138,6 +138,9 @@ Trunk (unreleased changes)
     HDFS:1699. Federation: Fix failure of TestBlockReport.
     (Matt Foley via suresh)
 
+    HDFS-1698. Federation: TestOverReplicatedBlocks and TestWriteToReplica 
+    failing. (jhoman and jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

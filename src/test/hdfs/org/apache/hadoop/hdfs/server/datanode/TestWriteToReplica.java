@@ -24,18 +24,12 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-
 import org.junit.Assert;
 import org.junit.Test;
 
 /** Test if FSDataset#append, writeToRbw, and writeToTmp */
 public class TestWriteToReplica {
-  static String bpid = "BP-TEST";
-  final private static ExtendedBlock[] blocks = new ExtendedBlock[] {
-    new ExtendedBlock(bpid, 1, 1, 2001), new ExtendedBlock(bpid, 2, 1, 2002), 
-    new ExtendedBlock(bpid, 3, 1, 2003), new ExtendedBlock(bpid, 4, 1, 2004),
-    new ExtendedBlock(bpid, 5, 1, 2005), new ExtendedBlock(bpid, 6, 1, 2006)
-  };
+
   final private static int FINALIZED = 0;
   final private static int TEMPORARY = 1;
   final private static int RBW = 2;
@@ -47,6 +41,7 @@ public class TestWriteToReplica {
   @Test
   public void testClose() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(new HdfsConfiguration()).build();
+    
     try {
       cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
@@ -54,10 +49,11 @@ public class TestWriteToReplica {
 
       // set up replicasMap
       String bpid = cluster.getNamesystem().getBlockPoolId();
-      setup(bpid, dataSet);
+      
+      ExtendedBlock[] blocks = setup(bpid, dataSet);
 
       // test close
-      testClose(dataSet);
+      testClose(dataSet, blocks);
     } finally {
       cluster.shutdown();
     }
@@ -74,10 +70,10 @@ public class TestWriteToReplica {
 
       // set up replicasMap
       String bpid = cluster.getNamesystem().getBlockPoolId();
-      setup(bpid, dataSet);
+      ExtendedBlock[] blocks = setup(bpid, dataSet);
 
       // test append
-      testAppend(bpid, dataSet);
+      testAppend(bpid, dataSet, blocks);
     } finally {
       cluster.shutdown();
     }
@@ -94,10 +90,10 @@ public class TestWriteToReplica {
 
       // set up replicasMap
       String bpid = cluster.getNamesystem().getBlockPoolId();
-      setup(bpid, dataSet);
+      ExtendedBlock[] blocks = setup(bpid, dataSet);
 
       // test writeToRbw
-      testWriteToRbw(dataSet);
+      testWriteToRbw(dataSet, blocks);
     } finally {
       cluster.shutdown();
     }
@@ -114,17 +110,33 @@ public class TestWriteToReplica {
 
       // set up replicasMap
       String bpid = cluster.getNamesystem().getBlockPoolId();
-      setup(bpid, dataSet);
+      ExtendedBlock[] blocks = setup(bpid, dataSet);
 
       // test writeToTemporary
-      testWriteToTemporary(dataSet);
+      testWriteToTemporary(dataSet, blocks);
     } finally {
       cluster.shutdown();
     }
   }
   
-  private void setup(String bpid, FSDataset dataSet) throws IOException {
+  /**
+   * Generate testing environment and return a collection of blocks
+   * on which to run the tests.
+   * 
+   * @param bpid Block pool ID to generate blocks for
+   * @param dataSet Namespace in which to insert blocks
+   * @return Contrived blocks for further testing.
+   * @throws IOException
+   */
+  private ExtendedBlock[] setup(String bpid, FSDataset dataSet) throws IOException {
     // setup replicas map
+    
+    ExtendedBlock[] blocks = new ExtendedBlock[] {
+        new ExtendedBlock(bpid, 1, 1, 2001), new ExtendedBlock(bpid, 2, 1, 2002), 
+        new ExtendedBlock(bpid, 3, 1, 2003), new ExtendedBlock(bpid, 4, 1, 2004),
+        new ExtendedBlock(bpid, 5, 1, 2005), new ExtendedBlock(bpid, 6, 1, 2006)
+    };
+    
     ReplicasMap replicasMap = dataSet.volumeMap;
     FSVolume vol = dataSet.volumes.getNextVolume(0);
     ReplicaInfo replicaInfo = new FinalizedReplica(
@@ -149,9 +161,11 @@ public class TestWriteToReplica {
             blocks[RWR].getLocalBlock()).getParentFile()));
     replicasMap.add(bpid, new ReplicaUnderRecovery(new FinalizedReplica(blocks[RUR]
         .getLocalBlock(), vol, vol.getDir()), 2007));    
+    
+    return blocks;
   }
   
-  private void testAppend(String bpid, FSDataset dataSet) throws IOException {
+  private void testAppend(String bpid, FSDataset dataSet, ExtendedBlock[] blocks) throws IOException {
     long newGS = blocks[FINALIZED].getGenerationStamp()+1;
     FSVolume v = dataSet.volumeMap.get(bpid, blocks[FINALIZED].getLocalBlock())
         .getVolume();
@@ -271,7 +285,7 @@ public class TestWriteToReplica {
     }
   }
 
-  private void testClose(FSDataset dataSet) throws IOException {
+  private void testClose(FSDataset dataSet, ExtendedBlock [] blocks) throws IOException {
     long newGS = blocks[FINALIZED].getGenerationStamp()+1;
     dataSet.recoverClose(blocks[FINALIZED], newGS, 
         blocks[FINALIZED].getNumBytes());  // successful
@@ -321,7 +335,7 @@ public class TestWriteToReplica {
     }
   }
   
-  private void testWriteToRbw(FSDataset dataSet) throws IOException {
+  private void testWriteToRbw(FSDataset dataSet, ExtendedBlock[] blocks) throws IOException {
     try {
       dataSet.recoverRbw(blocks[FINALIZED],
           blocks[FINALIZED].getGenerationStamp()+1,
@@ -414,7 +428,7 @@ public class TestWriteToReplica {
     dataSet.createRbw(blocks[NON_EXISTENT]);
   }
   
-  private void testWriteToTemporary(FSDataset dataSet) throws IOException {
+  private void testWriteToTemporary(FSDataset dataSet, ExtendedBlock[] blocks) throws IOException {
     try {
       dataSet.createTemporary(blocks[FINALIZED]);
       Assert.fail("Should not have created a temporary replica that was " +

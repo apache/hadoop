@@ -60,12 +60,10 @@ public class TestOverReplicatedBlocks extends TestCase {
       TestDatanodeBlockScanner.corruptReplica(block, 0);
       DataNodeProperties dnProps = cluster.stopDataNode(0);
       // remove block scanner log to trigger block scanning
-      // TODO:FEDERATION needs change when data block scanner is changed
-      // TODO:FEDERATION remove finalzied_dir_name and use methods in MiniDFSCluster
-      final String finalized_dir_name = "/current/finalized/";
-      File scanLog = new File(System.getProperty("test.build.data"),
-          "dfs/data/data1" + finalized_dir_name + 
-          "dncp_block_verification.log.curr");
+      File scanLog = new File(MiniDFSCluster.getFinalizedDir(
+          MiniDFSCluster.getStorageDir(0, 0),
+          cluster.getNamesystem().getBlockPoolId()).getParent().toString()
+          + "/../dncp_block_verification.log.prev");
       //wait for one minute for deletion to succeed;
       for(int i=0; !scanLog.delete(); i++) {
         assertTrue("Could not delete log file in one minute", i < 60);
