@@ -444,7 +444,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-1440. Fix TestComputeInvalidateWork failure. (suresh)
 
-Release 0.21.0 - Unreleased
+    HDFS-1625. Ignore disk space values in TestDataNodeMXBean.  (szetszwo)
+
+Release 0.21.1 - Unreleased
 
     HDFS-1411. Correct backup node startup command in hdfs user guide.
     (Ching-Shen Chen via shv)

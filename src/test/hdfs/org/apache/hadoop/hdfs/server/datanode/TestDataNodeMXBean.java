@@ -26,7 +26,7 @@ import javax.management.ObjectName;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
-import junit.framework.Assert;
+import org.junit.Assert;
 
 /**
  * Class for testing {@link DataNodeMXBean} implementation
@@ -62,9 +62,14 @@ public class TestDataNodeMXBean {
       Assert.assertEquals(datanode.getNamenodeAddresses(),namenodeAddresses);
       // get attribute "getVolumeInfo"
       String volumeInfo = (String)mbs.getAttribute(mxbeanName, "VolumeInfo");
-      Assert.assertEquals(datanode.getVolumeInfo(),volumeInfo);
+      Assert.assertEquals(replaceDigits(datanode.getVolumeInfo()),
+          replaceDigits(volumeInfo));
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
+  }
+  
+  private static String replaceDigits(final String s) {
+    return s.replaceAll("[0-9]+", "_DIGITS_");
   }
 }
