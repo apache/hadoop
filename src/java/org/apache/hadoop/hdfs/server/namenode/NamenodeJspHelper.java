@@ -660,18 +660,6 @@ class NamenodeJspHelper {
       }
     }
 
-    private String getLocalParentDir(INode inode) {
-      StringBuilder pathBuf = new StringBuilder();
-      INode node = inode;
-      
-      // loop up to directory root, prepending each directory name to buffer
-      while ((node = node.getParent()) != null && node.getLocalName() != "") {
-        pathBuf.insert(0, '/').insert(0, node.getLocalName());
-      }
-
-      return pathBuf.toString();
-    }
-
     public void toXML(XMLOutputter doc) throws IOException {
       doc.startTag("block_info");
       if (block == null) {
@@ -695,7 +683,7 @@ class NamenodeJspHelper {
           doc.endTag();
 
           doc.startTag("local_directory");
-          doc.pcdata(getLocalParentDir(inode));
+          doc.pcdata(inode.getLocalParentDir());
           doc.endTag();
 
           doc.startTag("user_name");

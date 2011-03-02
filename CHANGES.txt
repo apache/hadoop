@@ -127,6 +127,9 @@ Trunk (unreleased changes)
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
 
+    HDFS-1628. Display full path in AccessControlException.  (John George
+    via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

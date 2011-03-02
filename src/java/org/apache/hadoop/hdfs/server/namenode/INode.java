@@ -231,6 +231,16 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
     return DFSUtil.bytes2String(name);
   }
 
+
+  String getLocalParentDir() {
+    INode p_node=getParent();
+
+    if(p_node == null)
+      return "/";
+    else
+      return p_node.getFullPathName();
+  }
+
   /**
    * Get local file name
    * @return local file name
@@ -261,7 +271,14 @@ abstract class INode implements Comparable<byte[]>, FSInodeInfo {
 
   /** {@inheritDoc} */
   public String toString() {
-    return "\"" + getLocalName() + "\":" + getPermissionStatus();
+    String i_path=getFullPathName();
+
+    if(i_path.length() == 0)
+      i_path="/";
+
+    return "\"" + i_path + "\":"
+    + getUserName() + ":" + getGroupName() + ":"
+    + (isDirectory()? "d": "-") + getFsPermission();
   }
 
   /**
