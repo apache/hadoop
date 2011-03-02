@@ -137,6 +137,8 @@ Trunk (unreleased changes)
     HDFS-1449. Fix test failures - ExtendedBlock must return 
     block file name in #getBlockName(). (suresh)
 
+    HDFS-1680. Fix TestBalancer. (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   NEW FEATURES

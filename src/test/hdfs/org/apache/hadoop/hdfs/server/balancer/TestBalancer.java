@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.balancer;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -248,7 +250,10 @@ public class TestBalancer extends TestCase {
 
     // start rebalancing
     balancer = new Balancer(conf);
-    balancer.run(new String[0]);
+    final InetSocketAddress namenodeAddress = NameNode.getServiceAddress(conf, true);
+    final String blockpoolId = cluster.getNamesystem().getBlockPoolId();
+    final double threshold = balancer.parseArgs(new String[0]);
+    balancer.run(namenodeAddress, blockpoolId, threshold);
 
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     boolean balanced;
@@ -280,7 +285,10 @@ public class TestBalancer extends TestCase {
     // start rebalancing
     balancer = new Balancer();
     balancer.setConf(conf);
-    balancer.run(new String[0]);
+    final InetSocketAddress namenodeAddress = NameNode.getServiceAddress(conf, true);
+    final String blockpoolId = cluster.getNamesystem().getBlockPoolId();
+    final double threshold = balancer.parseArgs(new String[0]);
+    balancer.run(namenodeAddress, blockpoolId, threshold);
 
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     boolean balanced;

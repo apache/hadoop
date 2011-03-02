@@ -68,12 +68,12 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicy;
 import org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyDefault;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -198,11 +198,9 @@ public class Balancer implements Tool {
   public static final int MAX_NUM_CONCURRENT_MOVES = 5;
   
   private Configuration conf;
+  private BlockPool theblockpool;
 
   private double threshold = 10D;
-  private NamenodeProtocol namenode;
-  private ClientProtocol client;
-  private FileSystem fs;
   private boolean isBlockTokenEnabled;
   private boolean shouldRun;
   private long keyUpdaterInterval;
@@ -242,6 +240,30 @@ public class Balancer implements Tool {
   final private ExecutorService dispatcherExecutor =
     Executors.newFixedThreadPool(DISPATCHER_THREAD_POOL_SIZE);
   
+  static private class BlockPool {
+    final InetSocketAddress namenodeAddress;
+    final String id;
+
+    final NamenodeProtocol namenode;
+    final ClientProtocol client;
+    final FileSystem fs;
+
+    private BlockPool(InetSocketAddress namenodeAddress, final String id,
+        Configuration conf) throws IOException {
+      this.namenodeAddress = namenodeAddress;
+      this.id = id;
+      this.namenode = createNamenode(namenodeAddress, conf);
+      this.client = DFSClient.createNamenode(conf);
+      this.fs = FileSystem.get(conf);
+    }
+
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + "[namenodeAddress=" + namenodeAddress
+          + "]";
+    }
+  }
+
   /* This class keeps track of a scheduled block move */
   private class PendingBlockMove {
     private BalancerBlock block;
@@ -373,15 +395,13 @@ public class Balancer implements Tool {
     private void sendRequest(DataOutputStream out) throws IOException {
       Token<BlockTokenIdentifier> accessToken = BlockTokenSecretManager.DUMMY_TOKEN;
       if (isBlockTokenEnabled) {
-        // TODO:FEDERATION use ExtendedBlock in BalancerBlock
-        ExtendedBlock eblk = new ExtendedBlock("TODO", block.getBlock());
+        ExtendedBlock eblk = new ExtendedBlock(theblockpool.id, block.getBlock());
         accessToken = blockTokenSecretManager.generateToken(null, eblk,
             EnumSet.of(BlockTokenSecretManager.AccessMode.REPLACE,
             BlockTokenSecretManager.AccessMode.COPY));
       }
-      // TODO:FEDERATION use ExtendedBlock in BalancerBlock
       DataTransferProtocol.Sender.opReplaceBlock(out,
-          new ExtendedBlock("TODO", block.getBlock()), source.getStorageID(), 
+          new ExtendedBlock(theblockpool.id, block.getBlock()), source.getStorageID(), 
           proxySource.getDatanode(), accessToken);
     }
     
@@ -631,7 +651,7 @@ public class Balancer implements Tool {
      * Return the total size of the received blocks in the number of bytes.
      */
     private long getBlockList() throws IOException {
-      BlockWithLocations[] newBlocks = namenode.getBlocks(datanode, 
+      BlockWithLocations[] newBlocks = theblockpool.namenode.getBlocks(datanode, 
         Math.min(MAX_BLOCKS_SIZE_TO_FETCH, blocksToReceive)).getBlocks();
       long bytesReceived = 0;
       for (BlockWithLocations blk : newBlocks) {
@@ -830,7 +850,7 @@ public class Balancer implements Tool {
   }
 
   /* parse argument to get the threshold */
-  private double parseArgs(String[] args) {
+  double parseArgs(String[] args) {
     double threshold=0;
     int argsLen = (args == null) ? 0 : args.length;
     if (argsLen==0) {
@@ -862,12 +882,12 @@ public class Balancer implements Tool {
    * namenode as a client and a secondary namenode and retry proxies
    * when connection fails.
    */
-  private void init(double threshold) throws IOException {
+  private void init(InetSocketAddress namenodeAddress,  final String id,
+      double threshold) throws IOException {
     this.threshold = threshold;
-    this.namenode = createNamenode(conf);
-    this.client = DFSClient.createNamenode(conf);
-    this.fs = FileSystem.get(conf);
-    ExportedBlockKeys keys = namenode.getBlockKeys();
+
+    this.theblockpool = new BlockPool(namenodeAddress, id, conf);
+    ExportedBlockKeys keys = theblockpool.namenode.getBlockKeys();
     this.isBlockTokenEnabled = keys.isBlockTokenEnabled();
     if (isBlockTokenEnabled) {
       long blockKeyUpdateInterval = keys.getKeyUpdateInterval();
@@ -899,7 +919,7 @@ public class Balancer implements Tool {
     public void run() {
       while (shouldRun) {
         try {
-          blockTokenSecretManager.setKeys(namenode.getBlockKeys());
+          blockTokenSecretManager.setKeys(theblockpool.namenode.getBlockKeys());
         } catch (Exception e) {
           LOG.error(StringUtils.stringifyException(e));
         }
@@ -913,9 +933,8 @@ public class Balancer implements Tool {
   
   /* Build a NamenodeProtocol connection to the namenode and
    * set up the retry policy */ 
-  private static NamenodeProtocol createNamenode(Configuration conf)
+  private static NamenodeProtocol createNamenode(InetSocketAddress nameNodeAddr, Configuration conf)
     throws IOException {
-    InetSocketAddress nameNodeAddr = NameNode.getServiceAddress(conf, true);
     RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
         5, 200, TimeUnit.MILLISECONDS);
     Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =
@@ -955,7 +974,7 @@ public class Balancer implements Tool {
    * decide the number of bytes need to be moved
    */
   private long initNodes() throws IOException {
-    return initNodes(client.getDatanodeReport(DatanodeReportType.LIVE));
+    return initNodes(theblockpool.client.getDatanodeReport(DatanodeReportType.LIVE));
   }
   
   /* Given a data node set, build a network topology and decide
@@ -1476,11 +1495,20 @@ public class Balancer implements Tool {
    * @throws Exception exception that occured during datanode balancing
    */
   public int run(String[] args) throws Exception {
+    return run(NameNode.getServiceAddress(conf, true), "TODO", parseArgs(args));
+  }
+
+  int run(InetSocketAddress namenodeAddress, String blockpoolId,
+      double threshold) throws IOException, InterruptedException {
+    LOG.info("namenodeAddress = " + namenodeAddress);
+    LOG.info("blockpoolId     = " + blockpoolId);
+    LOG.info("threshold       = " + threshold);
+
     long startTime = Util.now();
     OutputStream out = null;
     try {
       // initialize a balancer
-      init(parseArgs(args));
+      init(namenodeAddress, blockpoolId, threshold);
       
       /* Check if there is another balancer running.
        * Exit if there is another one running.
@@ -1575,9 +1603,9 @@ public class Balancer implements Tool {
       }
       // close the output file
       IOUtils.closeStream(out); 
-      if (fs != null) {
+      if (theblockpool.fs != null) {
         try {
-          fs.delete(BALANCER_ID_PATH, true);
+          theblockpool.fs.delete(BALANCER_ID_PATH, true);
         } catch(IOException ignored) {
         }
       }
@@ -1603,7 +1631,7 @@ public class Balancer implements Tool {
    */
   private OutputStream checkAndMarkRunningBalancer() throws IOException {
     try {
-      DataOutputStream out = fs.create(BALANCER_ID_PATH);
+      DataOutputStream out = theblockpool.fs.create(BALANCER_ID_PATH);
       out. writeBytes(InetAddress.getLocalHost().getHostName());
       out.flush();
       return out;
