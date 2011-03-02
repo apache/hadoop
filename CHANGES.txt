@@ -110,7 +110,9 @@ Trunk (unreleased changes)
 
     HDFS-1664. Add block pool storage usage to Namenode WebUI.
     (Tanping via suresh)
-    
+
+    HDFS-1674. Rename BlockPool class to BlockPoolSlice. 
+    (jghoman, Tanping via suresh)
 
   IMPROVEMENTS
 

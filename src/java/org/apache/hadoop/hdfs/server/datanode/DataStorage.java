@@ -78,8 +78,8 @@ public class DataStorage extends Storage {
   private boolean initilized = false;
   
   // BlockPoolStorage is map of <Block pool Id, BlockPoolStorage>
-  private Map<String, BlockPoolStorage> bpStorageMap
-    = new HashMap<String, BlockPoolStorage>();
+  private Map<String, BlockPoolSliceStorage> bpStorageMap
+    = new HashMap<String, BlockPoolSliceStorage>();
 
 
   DataStorage() {
@@ -214,13 +214,13 @@ public class DataStorage extends Storage {
     Collection<File> bpDataDirs = new ArrayList<File>();
     for(Iterator<File> it = dataDirs.iterator(); it.hasNext();) {
       File dnRoot = it.next();
-      File bpRoot = BlockPoolStorage.getBpRoot(bpID, new File(dnRoot,
+      File bpRoot = BlockPoolSliceStorage.getBpRoot(bpID, new File(dnRoot,
           STORAGE_DIR_CURRENT));
       bpDataDirs.add(bpRoot);
     }
     // mkdir for the list of BlockPoolStorage
     makeBlockPoolDataDir(bpDataDirs, null);
-    BlockPoolStorage bpStorage = new BlockPoolStorage(nsInfo.getNamespaceID(), 
+    BlockPoolSliceStorage bpStorage = new BlockPoolSliceStorage(nsInfo.getNamespaceID(), 
         bpID, nsInfo.getCTime(), nsInfo.getClusterID());
     
     bpStorage.recoverTransitionRead(nsInfo, bpDataDirs, startOpt);
@@ -439,8 +439,8 @@ public class DataStorage extends Storage {
     rename(curDir, tmpDir);
     
     // 3. Format BP and hard link blocks from previous directory
-    File curBpDir = BlockPoolStorage.getBpRoot(nsInfo.getBlockPoolID(), curDir);
-    BlockPoolStorage bpStorage = new BlockPoolStorage(nsInfo.getNamespaceID(), 
+    File curBpDir = BlockPoolSliceStorage.getBpRoot(nsInfo.getBlockPoolID(), curDir);
+    BlockPoolSliceStorage bpStorage = new BlockPoolSliceStorage(nsInfo.getNamespaceID(), 
         nsInfo.getBlockPoolID(), nsInfo.getCTime(), nsInfo.getClusterID());
     bpStorage.format(curDir, nsInfo);
     linkAllBlocks(tmpDir, new File(curBpDir, STORAGE_DIR_CURRENT));
@@ -583,7 +583,7 @@ public class DataStorage extends Storage {
         doFinalize(sd);
       } else {
         // block pool storage finalize using specific bpID
-        BlockPoolStorage bpStorage = bpStorageMap.get(bpID);
+        BlockPoolSliceStorage bpStorage = bpStorageMap.get(bpID);
         bpStorage.doFinalize(sd.getCurrentDir());
       }
     }
@@ -702,7 +702,7 @@ public class DataStorage extends Storage {
   /**
    * Add bpStorage into bpStorageMap
    */
-  private void addBlockPoolStorage(String bpID, BlockPoolStorage bpStorage)
+  private void addBlockPoolStorage(String bpID, BlockPoolSliceStorage bpStorage)
       throws IOException {
     if (!this.bpStorageMap.containsKey(bpID)) {
       this.bpStorageMap.put(bpID, bpStorage);

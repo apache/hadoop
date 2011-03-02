@@ -144,7 +144,7 @@ public class TestDirectoryScanner extends TestCase {
     FSVolume[] volumes = fds.volumes.volumes;
     int index = rand.nextInt(volumes.length - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes[index].getBlockPool(bpid).getFinalizedDir();
+    File finalizedDir = volumes[index].getBlockPoolSlice(bpid).getFinalizedDir();
     File file = new File(finalizedDir, getBlockFile(id));
     if (file.createNewFile()) {
       LOG.info("Created block file " + file.getName());
@@ -157,7 +157,7 @@ public class TestDirectoryScanner extends TestCase {
     FSVolume[] volumes = fds.volumes.volumes;
     int index = rand.nextInt(volumes.length - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes[index].getBlockPool(bpid).getFinalizedDir();
+    File finalizedDir = volumes[index].getBlockPoolSlice(bpid).getFinalizedDir();
     File file = new File(finalizedDir, getMetaFile(id));
     if (file.createNewFile()) {
       LOG.info("Created metafile " + file.getName());
@@ -170,7 +170,7 @@ public class TestDirectoryScanner extends TestCase {
     FSVolume[] volumes = fds.volumes.volumes;
     int index = rand.nextInt(volumes.length - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes[index].getBlockPool(bpid).getFinalizedDir();
+    File finalizedDir = volumes[index].getBlockPoolSlice(bpid).getFinalizedDir();
     File file = new File(finalizedDir, getBlockFile(id));
     if (file.createNewFile()) {
       LOG.info("Created block file " + file.getName());

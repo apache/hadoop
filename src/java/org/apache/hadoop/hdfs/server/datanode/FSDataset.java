@@ -301,15 +301,11 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /**
-   * Manages block pool subdirectory under {@link FSVolume}
-   * 
-   * TODO:FEDERATION This class should be renamed, perhaps to "BlockPoolSlice".
-   * The real "block pool" is an abstraction that spans Volumes and
-   * Datanodes.  This "BlockPool" object doesn't represent that.  Rather,
-   * it only represents the concrete portion of a particular block pool 
-   * that resides on a particular Volume.
+   * A BlockPoolSlice represents a portion of a BlockPool stored on a volume.  
+   * Taken together, all BlockPoolSlices sharing a block pool ID across a 
+   * cluster represent a single block pool.
    */
-  class BlockPool {
+  class BlockPoolSlice {
     private final String bpid;
     private final FSVolume volume; // volume to which this BlockPool belongs to
     private final File currentDir; // StorageDirectory/current/bpid/current
@@ -328,7 +324,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      * @param conf
      * @throws IOException
      */
-    BlockPool(String bpid, FSVolume volume, File bpDir, Configuration conf)
+    BlockPoolSlice(String bpid, FSVolume volume, File bpDir, Configuration conf)
         throws IOException {
       this.bpid = bpid;
       this.volume = volume;
@@ -547,7 +543,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
   
   class FSVolume {
-    private final Map<String, BlockPool> map = new HashMap<String, BlockPool>();
+    private final Map<String, BlockPoolSlice> map = new HashMap<String, BlockPoolSlice>();
     private final File currentDir;    // <StorageDirectory>/current
     private final DF usage;           
     private final long reserved;
@@ -569,7 +565,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     
     public File getRbwDir(String bpid) throws IOException {
-      BlockPool bp = getBlockPool(bpid);
+      BlockPoolSlice bp = getBlockPoolSlice(bpid);
       return bp.getRbwDir();
     }
     
@@ -577,7 +573,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       // The caller to this method (BlockFileDeleteTask.run()) does
       // not have locked FSDataset.this yet.
       synchronized(FSDataset.this) {
-        BlockPool bp = map.get(bpid);
+        BlockPoolSlice bp = map.get(bpid);
         if (bp != null) {
           bp.decDfsUsed(value);
         }
@@ -587,15 +583,15 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     long getDfsUsed() throws IOException {
       // TODO valid synchronization
       long dfsUsed = 0;
-      Set<Entry<String, BlockPool>> set = map.entrySet();
-      for (Entry<String, BlockPool> entry : set) {
+      Set<Entry<String, BlockPoolSlice>> set = map.entrySet();
+      for (Entry<String, BlockPoolSlice> entry : set) {
         dfsUsed += entry.getValue().getDfsUsed();
       }
       return dfsUsed;
     }
     
     long getBlockPoolUsed(String bpid) throws IOException {
-      return getBlockPool(bpid).getDfsUsed();
+      return getBlockPoolSlice(bpid).getDfsUsed();
     }
     
     /**
@@ -625,8 +621,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       return usage.getMount();
     }
     
-    BlockPool getBlockPool(String bpid) throws IOException {
-      BlockPool bp = map.get(bpid);
+    BlockPoolSlice getBlockPoolSlice(String bpid) throws IOException {
+      BlockPoolSlice bp = map.get(bpid);
       if (bp == null) {
         // TODO:FEDERATION cleanup this exception
         throw new IOException("block pool " + bpid + " not found");
@@ -648,7 +644,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      * the block is finalized.
      */
     File createTmpFile(String bpid, Block b) throws IOException {
-      BlockPool bp = getBlockPool(bpid);
+      BlockPoolSlice bp = getBlockPoolSlice(bpid);
       return bp.createTmpFile(b);
     }
 
@@ -657,32 +653,32 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      * the block is finalized.
      */
     File createRbwFile(String bpid, Block b) throws IOException {
-      BlockPool bp = getBlockPool(bpid);
+      BlockPoolSlice bp = getBlockPoolSlice(bpid);
       return bp.createRbwFile(b);
     }
 
     File addBlock(String bpid, Block b, File f) throws IOException {
-      BlockPool bp = getBlockPool(bpid);
+      BlockPoolSlice bp = getBlockPoolSlice(bpid);
       return bp.addBlock(b, f);
     }
       
     void checkDirs() throws DiskErrorException {
       // TODO:FEDERATION valid synchronization
-      Set<Entry<String, BlockPool>> set = map.entrySet();
-      for (Entry<String, BlockPool> entry : set) {
+      Set<Entry<String, BlockPoolSlice>> set = map.entrySet();
+      for (Entry<String, BlockPoolSlice> entry : set) {
         entry.getValue().checkDirs();
       }
     }
       
     void getVolumeMap(ReplicasMap volumeMap) throws IOException {
-      Set<Entry<String, BlockPool>> set = map.entrySet();
-      for (Entry<String, BlockPool> entry : set) {
+      Set<Entry<String, BlockPoolSlice>> set = map.entrySet();
+      for (Entry<String, BlockPoolSlice> entry : set) {
         entry.getValue().getVolumeMap(volumeMap);
       }
     }
     
     void getVolumeMap(String bpid, ReplicasMap volumeMap) throws IOException {
-      BlockPool bp = getBlockPool(bpid);
+      BlockPoolSlice bp = getBlockPoolSlice(bpid);
       bp.getVolumeMap(volumeMap);
     }
     
@@ -696,14 +692,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
      */
     private void addToReplicasMap(String bpid, ReplicasMap volumeMap, 
         File dir, boolean isFinalized) throws IOException {
-      BlockPool bp = getBlockPool(bpid);
+      BlockPoolSlice bp = getBlockPoolSlice(bpid);
       // TODO move this up
       // dfsUsage.incDfsUsed(b.getNumBytes()+metaFile.length());
       bp.addToReplicasMap(volumeMap, dir, isFinalized);
     }
     
     void clearPath(String bpid, File f) throws IOException {
-      BlockPool bp = getBlockPool(bpid);
+      BlockPoolSlice bp = getBlockPoolSlice(bpid);
       bp.clearPath(f);
     }
       
@@ -712,8 +708,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
 
     public void shutdown() {
-      Set<Entry<String, BlockPool>> set = map.entrySet();
-      for (Entry<String, BlockPool> entry : set) {
+      Set<Entry<String, BlockPoolSlice>> set = map.entrySet();
+      for (Entry<String, BlockPoolSlice> entry : set) {
         entry.getValue().shutdown();
       }
     }
@@ -721,7 +717,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     public void addBlockPool(String bpid, Configuration conf)
         throws IOException {
       File bpdir = new File(currentDir, bpid);
-      BlockPool bp = new BlockPool(bpid, this, bpdir, conf);
+      BlockPoolSlice bp = new BlockPoolSlice(bpid, this, bpdir, conf);
       map.put(bpid, bp);
     }
   }

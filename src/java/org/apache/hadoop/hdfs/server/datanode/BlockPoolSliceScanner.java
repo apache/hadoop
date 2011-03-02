@@ -61,9 +61,9 @@ import org.apache.hadoop.util.StringUtils;
  * Currently it does not modify the metadata for block.
  */
 
-class BlockPoolScanner {
+class BlockPoolSliceScanner {
   
-  public static final Log LOG = LogFactory.getLog(BlockPoolScanner.class);
+  public static final Log LOG = LogFactory.getLog(BlockPoolSliceScanner.class);
   
   private static final int MAX_SCAN_RATE = 8 * 1024 * 1024; // 8MB per sec
   private static final int MIN_SCAN_RATE = 1 * 1024 * 1024; // 1MB per sec
@@ -139,7 +139,7 @@ class BlockPoolScanner {
     }
   }
   
-  BlockPoolScanner(DataNode datanode, FSDataset dataset, Configuration conf,
+  BlockPoolSliceScanner(DataNode datanode, FSDataset dataset, Configuration conf,
       String bpid) {
     this.datanode = datanode;
     this.dataset = dataset;
@@ -223,14 +223,14 @@ class BlockPoolScanner {
     File dir = null;
     FSDataset.FSVolume[] volumes = dataset.volumes.volumes;
     for (FSDataset.FSVolume vol : volumes) {
-      File bpDir = vol.getBlockPool(blockPoolId).getDirectory();
+      File bpDir = vol.getBlockPoolSlice(blockPoolId).getDirectory();
       if (LogFileHandler.isFilePresent(bpDir, verificationLogFile)) {
         dir = bpDir;
         break;
       }
     }
     if (dir == null) {
-      dir = volumes[0].getBlockPool(blockPoolId).getDirectory();
+      dir = volumes[0].getBlockPoolSlice(blockPoolId).getDirectory();
     }
     
     try {
@@ -581,8 +581,8 @@ class BlockPoolScanner {
   }
 
   static File getCurrentFile(FSVolume vol, String bpid) throws IOException {
-    return LogFileHandler.getCurrentFile(vol.getBlockPool(bpid).getDirectory(),
-        BlockPoolScanner.verificationLogFile);
+    return LogFileHandler.getCurrentFile(vol.getBlockPoolSlice(bpid).getDirectory(),
+        BlockPoolSliceScanner.verificationLogFile);
   }
   
   private synchronized void startNewPeriod() {
@@ -595,7 +595,7 @@ class BlockPoolScanner {
     currentPeriodStart = System.currentTimeMillis();
   }
   
-  void scanBlockPool() {
+  void scanBlockPoolSlice() {
     startNewPeriod();
     if (processedBlocks != null) {
       totalBlocksScannedInLastRun = processedBlocks.size();

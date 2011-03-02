@@ -466,7 +466,7 @@ public class DirectoryScanner implements Runnable {
       ScanInfoPerBlockPool result = new ScanInfoPerBlockPool(bpList.length);
       for (String bpid : bpList) {
         LinkedList<ScanInfo> report = new LinkedList<ScanInfo>();
-        File bpFinalizedDir = volume.getBlockPool(bpid).getFinalizedDir();
+        File bpFinalizedDir = volume.getBlockPoolSlice(bpid).getFinalizedDir();
         result.put(bpid, compileReport(volume, bpFinalizedDir, report));
       }
       return result;

@@ -37,7 +37,7 @@ import org.apache.commons.logging.LogFactory;
 
 /**
  * DataBlockScanner manages block scanning for all the block pools. For each
- * block pool a {@link BlockPoolScanner} is created which runs in a separate
+ * block pool a {@link BlockPoolSliceScanner} is created which runs in a separate
  * thread to scan the blocks for that block pool. When a {@link BPOfferService}
  * becomes alive or dies, blockPoolScannerMap in this class is updated.
  */
@@ -52,8 +52,8 @@ public class DataBlockScanner implements Runnable {
    * Map to find the BlockPoolScanner for a given block pool id. This is updated
    * when a BPOfferService becomes alive or dies.
    */
-  private final TreeMap<String, BlockPoolScanner> blockPoolScannerMap = 
-    new TreeMap<String, BlockPoolScanner>();
+  private final TreeMap<String, BlockPoolSliceScanner> blockPoolScannerMap = 
+    new TreeMap<String, BlockPoolSliceScanner>();
   Thread blockScannerThread = null;
   
   DataBlockScanner(DataNode datanode, FSDataset dataset, Configuration conf) {
@@ -65,7 +65,7 @@ public class DataBlockScanner implements Runnable {
   public void run() {
     String currentBpId = "";
     while (datanode.shouldRun && !Thread.interrupted()) {
-      BlockPoolScanner bpScanner = getNextBPScanner(currentBpId);
+      BlockPoolSliceScanner bpScanner = getNextBPScanner(currentBpId);
       if (bpScanner == null) {
         // Possible if thread is interrupted
         continue;
@@ -78,7 +78,7 @@ public class DataBlockScanner implements Runnable {
         removeBlockPool(currentBpId);
         continue;
       }
-      bpScanner.scanBlockPool();
+      bpScanner.scanBlockPoolSlice();
       try {
         Thread.sleep(5000);
       } catch (InterruptedException ex) {
@@ -110,7 +110,7 @@ public class DataBlockScanner implements Runnable {
    * However, if more than one current files are found, the one with latest 
    * modification time is used to find the next block pool id.
    */
-  private BlockPoolScanner getNextBPScanner(String currentBpId) {
+  private BlockPoolSliceScanner getNextBPScanner(String currentBpId) {
     
     String nextBpId = null;
     while ((nextBpId == null) && datanode.shouldRun
@@ -126,7 +126,7 @@ public class DataBlockScanner implements Runnable {
             String bpid = bpidIterator.next();
             for (FSDataset.FSVolume vol : dataset.volumes.volumes) {
               try {
-                File currFile = BlockPoolScanner.getCurrentFile(vol, bpid);
+                File currFile = BlockPoolSliceScanner.getCurrentFile(vol, bpid);
                 if (currFile.exists()) {
                   long lastModified = currFile.lastModified();
                   if (lastScanTime < lastModified) {
@@ -173,7 +173,7 @@ public class DataBlockScanner implements Runnable {
     return blockPoolScannerMap.size();
   }
   
-  private synchronized BlockPoolScanner getBPScanner(String bpid) {
+  private synchronized BlockPoolSliceScanner getBPScanner(String bpid) {
     return blockPoolScannerMap.get(bpid);
   }
   
@@ -183,7 +183,7 @@ public class DataBlockScanner implements Runnable {
   }
   
   public void addBlock(ExtendedBlock block) {
-    BlockPoolScanner bpScanner = getBPScanner(block.getBlockPoolId());
+    BlockPoolSliceScanner bpScanner = getBPScanner(block.getBlockPoolId());
     if (bpScanner != null) {
       bpScanner.addBlock(block);
     } else {
@@ -193,7 +193,7 @@ public class DataBlockScanner implements Runnable {
   }
   
   public synchronized boolean isInitialized(String bpid) {
-    BlockPoolScanner bpScanner = getBPScanner(bpid);
+    BlockPoolSliceScanner bpScanner = getBPScanner(bpid);
     if (bpScanner != null) {
       return bpScanner.isInitialized();
     }
@@ -209,7 +209,7 @@ public class DataBlockScanner implements Runnable {
       return;
     }
     for (String bpid : bpIdList) {
-      BlockPoolScanner bpScanner = getBPScanner(bpid);
+      BlockPoolSliceScanner bpScanner = getBPScanner(bpid);
       buffer.append("\n\nBlock report for block pool: "+bpid + "\n");
       bpScanner.printBlockReport(buffer, summary);
       buffer.append("\n");
@@ -217,7 +217,7 @@ public class DataBlockScanner implements Runnable {
   }
   
   public void deleteBlock(String poolId, Block toDelete) {
-    BlockPoolScanner bpScanner = getBPScanner(poolId);
+    BlockPoolSliceScanner bpScanner = getBPScanner(poolId);
     if (bpScanner != null) {
       bpScanner.deleteBlock(toDelete);
     } else {
@@ -227,7 +227,7 @@ public class DataBlockScanner implements Runnable {
   }
 
   public void deleteBlocks(String poolId, Block[] toDelete) {
-    BlockPoolScanner bpScanner = getBPScanner(poolId);
+    BlockPoolSliceScanner bpScanner = getBPScanner(poolId);
     if (bpScanner != null) {
       bpScanner.deleteBlocks(toDelete);
     } else {
@@ -246,7 +246,7 @@ public class DataBlockScanner implements Runnable {
     if (blockPoolScannerMap.get(blockPoolId) != null) {
       return;
     }
-    BlockPoolScanner bpScanner = new BlockPoolScanner(datanode, dataset,
+    BlockPoolSliceScanner bpScanner = new BlockPoolSliceScanner(datanode, dataset,
         conf, blockPoolId);
     try {
       bpScanner.init();
@@ -266,7 +266,7 @@ public class DataBlockScanner implements Runnable {
   
   // This method is used for testing
   long getBlocksScannedInLastRun(String bpid) throws IOException {
-    BlockPoolScanner bpScanner = getBPScanner(bpid);
+    BlockPoolSliceScanner bpScanner = getBPScanner(bpid);
     if (bpScanner == null) {
       throw new IOException("Block Pool: "+bpid+" is not running");
     } else {

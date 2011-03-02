@@ -38,10 +38,8 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.util.Daemon;
 
 /**
- * Manages storage for a block pool.
- * 
- * Block pool is a collection of blocks and is stored under the directory:
- * <StorageDirectory>/current/<Block pool Id>.
+ * Manages storage for the set of BlockPoolSlices which share a particular 
+ * block pool id, on this DataNode.
  * 
  * This class supports the following functionality:
  * <ol>
@@ -55,18 +53,18 @@ import org.apache.hadoop.util.Daemon;
  * @see Storage
  */
 @InterfaceAudience.Private
-public class BlockPoolStorage extends Storage {
+public class BlockPoolSliceStorage extends Storage {
   private static final Pattern BLOCK_POOL_PATH_PATTERN = Pattern
       .compile("^(.*)"
           + "(\\/BP-[0-9]+\\-\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\-[0-9]+\\/.*)$");
 
   private String blockpoolID = ""; // id of the blockpool
 
-  BlockPoolStorage() {
+  BlockPoolSliceStorage() {
     super(NodeType.DATA_NODE);
   }
 
-  BlockPoolStorage(int namespaceID, String bpID, long cTime, String clusterId) {
+  BlockPoolSliceStorage(int namespaceID, String bpID, long cTime, String clusterId) {
     super(NodeType.DATA_NODE);
     this.namespaceID = namespaceID;
     this.blockpoolID = bpID;
@@ -145,7 +143,7 @@ public class BlockPoolStorage extends Storage {
   }
 
   /**
-   * Format a block pool storage. 
+   * Format a block pool slice storage. 
    * @param dnCurDir DataStorage current directory
    * @param nsInfo the name space info
    * @throws IOException Signals that an I/O exception has occurred.
@@ -157,7 +155,7 @@ public class BlockPoolStorage extends Storage {
   }
 
   /**
-   * Format a block pool storage. 
+   * Format a block pool slice storage. 
    * @param sd the block pool storage
    * @param nsInfo the name space info
    * @throws IOException Signals that an I/O exception has occurred.
