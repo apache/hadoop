@@ -108,6 +108,10 @@ Trunk (unreleased changes)
     HDFS-1655. Federation: DatablockScanner should scan blocks for 
     all the block pools. (jitendra)
 
+    HDFS-1664. Add block pool storage usage to Namenode WebUI.
+    (Tanping via suresh)
+    
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

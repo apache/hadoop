@@ -34,6 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
@@ -42,9 +43,7 @@ import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.datanode.DatanodeJspHelper;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ServletUtil;
@@ -245,10 +244,8 @@ class NamenodeJspHelper {
       long used = fsnStats[1];
       long nonDFS = total - remaining - used;
       nonDFS = nonDFS < 0 ? 0 : nonDFS;
-      float percentUsed = total <= 0 ? 0f : ((float) used * 100.0f)
-          / (float) total;
-      float percentRemaining = total <= 0 ? 100f : ((float) remaining * 100.0f)
-          / (float) total;
+      float percentUsed = DFSUtil.getPercentUsed(used, total);
+      float percentRemaining = DFSUtil.getPercentRemaining(used, total);
       float median = 0;
       float max = 0;
       float min = 0;
@@ -274,6 +271,9 @@ class NamenodeJspHelper {
         dev = (float) Math.sqrt(dev/usages.length);
       }
 
+      long bpUsed = fsnStats[6];
+      float percentBpUsed = DFSUtil.getPercentUsed(bpUsed, total);
+      
       out.print("<div id=\"dfstable\"> <table>\n" + rowTxt() + colTxt()
           + "Configured Capacity" + colTxt() + ":" + colTxt()
           + StringUtils.byteDesc(total) + rowTxt() + colTxt() + "DFS Used"
@@ -286,6 +286,10 @@ class NamenodeJspHelper {
           + StringUtils.limitDecimalTo2(percentUsed) + " %" + rowTxt()
           + colTxt() + "DFS Remaining%" + colTxt() + ":" + colTxt()
           + StringUtils.limitDecimalTo2(percentRemaining) + " %"
+          + rowTxt() + colTxt() + "Block Pool Used" + colTxt() + ":" + colTxt()
+          + StringUtils.byteDesc(bpUsed) + rowTxt()
+          + colTxt() + "Block Pool Used%"+ colTxt() + ":" + colTxt()
+          + StringUtils.limitDecimalTo2(percentBpUsed) + " %" 
           + rowTxt() + colTxt() + "DataNodes usages" + colTxt() + ":" + colTxt()
           + "Min %" + colTxt() + "Median %" + colTxt() + "Max %" + colTxt()
           + "stdev %" + rowTxt() + colTxt() + colTxt() + colTxt()
@@ -468,6 +472,11 @@ class NamenodeJspHelper {
 
       long timestamp = d.getLastUpdate();
       long currentTime = System.currentTimeMillis();
+      
+      long bpUsed = d.getBlockPoolUsed();
+      String percentBpUsed = StringUtils.limitDecimalTo2(d
+          .getBlockPoolUsedPercent());
+
       out.print("<td class=\"lastcontact\"> "
           + ((currentTime - timestamp) / 1000)
           + "<td class=\"adminstate\">"
@@ -484,9 +493,15 @@ class NamenodeJspHelper {
           + percentUsed
           + "<td class=\"pcused\">"
           + ServletUtil.percentageGraph((int) Double.parseDouble(percentUsed),
-              100) + "<td align=\"right\" class=\"pcremaining`\">"
-          + percentRemaining + "<td title=" + "\"blocks scheduled : "
-          + d.getBlocksScheduled() + "\" class=\"blocks\">" + d.numBlocks()
+              100) 
+          + "<td align=\"right\" class=\"pcremaining`\">"
+          + percentRemaining 
+          + "<td title=" + "\"blocks scheduled : "
+          + d.getBlocksScheduled() + "\" class=\"blocks\">" + d.numBlocks()+"\n"
+          + "<td align=\"right\" class=\"bpused\">"
+          + StringUtils.limitDecimalTo2(bpUsed * 1.0 / diskBytes)
+          + "<td align=\"right\" class=\"pcbpused\">"
+          + percentBpUsed
           + "\n");
     }
 
@@ -565,7 +580,11 @@ class NamenodeJspHelper {
                 + "> Used <br>(%) <th " + nodeHeaderStr("pcused")
                 + "> Used <br>(%) <th " + nodeHeaderStr("pcremaining")
                 + "> Remaining <br>(%) <th " + nodeHeaderStr("blocks")
-                + "> Blocks\n");
+                + "> Blocks <th "
+                + nodeHeaderStr("bpused") + "> Block Pool<br>Used (" 
+                + diskByteStr + ") <th "
+                + nodeHeaderStr("pcbpused")
+                + "> Block Pool<br>Used (%)\n");
 
             JspHelper.sortNodeList(live, sorterField, sorterOrder);
             for (int i = 0; i < live.size(); i++) {

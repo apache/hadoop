@@ -3256,7 +3256,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                          this.capacityRemaining,
                          getUnderReplicatedBlocks(),
                          getCorruptReplicaBlocks(),
-                         getMissingBlocksCount()};
+                         getMissingBlocksCount(),
+                         getBlockPoolUsedSpace()};
     }
   }
 
