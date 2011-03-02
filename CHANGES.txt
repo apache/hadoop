@@ -487,6 +487,8 @@ Release 0.21.1 - Unreleased
     HDFS-1292. Allow artifacts to be published to the staging Apache Nexus
     Maven Repository.  (Giridharan Kesavan via tomwhite)
 
+    HDFS-1552. Remove java5 dependencies from build. (cos) 
+
     HDFS-1189. Quota counts missed between clear quota and set quota.
     (John George via szetszwo)
 

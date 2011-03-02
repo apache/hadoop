@@ -815,7 +815,6 @@
   <target name="docs" depends="forrest.check" description="Generate forrest-based documentation. To use, specify -Dforrest.home=&lt;base of Apache Forrest installation&gt; on the command line." if="forrest.home">
     <exec dir="${docs.src}" executable="${forrest.home}/bin/forrest"
 	  failonerror="true">
-      <env key="JAVA_HOME" value="${java5.home}"/>
     </exec>
     <copy todir="${build.docs}">
       <fileset dir="${docs.src}/build/site/" />
@@ -826,14 +825,10 @@
     <antcall target="changes-to-html"/>
   </target>
 
-  <target name="forrest.check" unless="forrest.home" depends="java5.check">
+  <target name="forrest.check" unless="forrest.home">
     <fail message="'forrest.home' is not defined. Please pass -Dforrest.home=&lt;base of Apache Forrest installation&gt; to Ant on the command-line." />
   </target>
 
-  <target name="java5.check" unless="java5.home">
-    <fail message="'java5.home' is not defined.  Forrest requires Java 5.  Please pass -Djava5.home=&lt;base of Java 5 distribution&gt; to Ant on the command-line." />
-  </target>
-	
   <target name="javadoc-dev" depends="compile, ivy-retrieve-javadoc" description="Generate javadoc for hadoop developers">
     <mkdir dir="${build.javadoc.dev}"/>
     <javadoc
@@ -1383,7 +1378,6 @@
     <arg value="${findbugs.home}"/>
     <arg value="${forrest.home}"/>
     <arg value="${basedir}"/>
-    <arg value="${java5.home}"/>
   </exec>
 </target>
 
@@ -1405,7 +1399,6 @@
     <arg value="${python.home}"/>
     <arg value="${basedir}"/>
     <arg value="${jira.passwd}"/>
-    <arg value="${java5.home}"/>
     <arg value="${curl.cmd}"/>
     <arg value="${defect}"/>
   </exec>
