@@ -373,8 +373,10 @@ public class Balancer implements Tool {
     private void sendRequest(DataOutputStream out) throws IOException {
       Token<BlockTokenIdentifier> accessToken = BlockTokenSecretManager.DUMMY_TOKEN;
       if (isBlockTokenEnabled) {
-        accessToken = blockTokenSecretManager.generateToken(null, block
-            .getBlock(), EnumSet.of(BlockTokenSecretManager.AccessMode.REPLACE,
+        // TODO:FEDERATION use ExtendedBlock in BalancerBlock
+        ExtendedBlock eblk = new ExtendedBlock("TODO", block.getBlock());
+        accessToken = blockTokenSecretManager.generateToken(null, eblk,
+            EnumSet.of(BlockTokenSecretManager.AccessMode.REPLACE,
             BlockTokenSecretManager.AccessMode.COPY));
       }
       // TODO:FEDERATION use ExtendedBlock in BalancerBlock

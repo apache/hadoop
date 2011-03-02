@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.CHECKSUM_OK;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.ERROR;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.ERROR_ACCESS_TOKEN;
 import static org.apache.hadoop.hdfs.protocol.DataTransferProtocol.Status.SUCCESS;
@@ -140,7 +139,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
     if (datanode.isBlockTokenEnabled) {
       try {
-        datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,
+        datanode.blockPoolTokenSecretManager.checkAccess(blockToken, null, block,
             BlockTokenSecretManager.AccessMode.READ);
       } catch (InvalidToken e) {
         try {
@@ -231,7 +230,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       datanode.getDNRegistrationForBP(block.getBlockPoolId());
     if (datanode.isBlockTokenEnabled) {
       try {
-        datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,
+        datanode.blockPoolTokenSecretManager.checkAccess(blockToken, null, block,
             BlockTokenSecretManager.AccessMode.WRITE);
       } catch (InvalidToken e) {
         try {
@@ -406,8 +405,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
         datanode.socketWriteTimeout));
     if (datanode.isBlockTokenEnabled) {
       try {
-        datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,
-            BlockTokenSecretManager.AccessMode.READ);
+        datanode.blockPoolTokenSecretManager.checkAccess(blockToken, null,
+            block, BlockTokenSecretManager.AccessMode.READ);
       } catch (InvalidToken e) {
         try {
           ERROR_ACCESS_TOKEN.write(out);
@@ -469,7 +468,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
     // Read in the header
     if (datanode.isBlockTokenEnabled) {
       try {
-        datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,
+        datanode.blockPoolTokenSecretManager.checkAccess(blockToken, null, block,
             BlockTokenSecretManager.AccessMode.COPY);
       } catch (InvalidToken e) {
         LOG.warn("Invalid access token in request from " + remoteAddress
@@ -545,7 +544,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
     block.setNumBytes(dataXceiverServer.estimateBlockSize);
     if (datanode.isBlockTokenEnabled) {
       try {
-        datanode.blockTokenSecretManager.checkAccess(blockToken, null, block,
+        datanode.blockPoolTokenSecretManager.checkAccess(blockToken, null, block,
             BlockTokenSecretManager.AccessMode.REPLACE);
       } catch (InvalidToken e) {
         LOG.warn("Invalid access token in request from " + remoteAddress

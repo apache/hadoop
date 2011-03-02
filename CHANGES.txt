@@ -94,13 +94,13 @@ Trunk (unreleased changes)
     HDFS-1663. Federation: Rename getPoolId() everywhere to 
     getBlockPoolId() (tanping via boryas)
 
-    HDFS-1652. Add support for multiple namenodes in MiniDFSCluster.
+    HDFS-1652. FederationL Add support for multiple namenodes in MiniDFSCluster.
     (suresh)
 
-    HDFS-1672. HDFS Federation: refactor stopDatanode(name) to work 
+    HDFS-1672. Federation: refactor stopDatanode(name) to work 
     with multiple Block Pools (boryas)
 
-    HDFS-1687. HDFS Federation: DirectoryScanner changes for 
+    HDFS-1687. Federation: DirectoryScanner changes for 
     federation (mattf via boryas)
 
     HDFS-1626. Make BLOCK_INVALIDATE_LIMIT configurable. (szetszwo)
@@ -108,11 +108,14 @@ Trunk (unreleased changes)
     HDFS-1655. Federation: DatablockScanner should scan blocks for 
     all the block pools. (jitendra)
 
-    HDFS-1664. Add block pool storage usage to Namenode WebUI.
+    HDFS-1664. Federation: Add block pool storage usage to Namenode WebUI.
     (Tanping via suresh)
 
-    HDFS-1674. Rename BlockPool class to BlockPoolSlice. 
+    HDFS-1674. Federation: Rename BlockPool class to BlockPoolSlice. 
     (jghoman, Tanping via suresh)
+
+    HDFS-1673. Federation: Datanode changes to track block token secret per 
+    namenode. (suresh)
 
   IMPROVEMENTS
 

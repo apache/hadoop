@@ -37,19 +37,21 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private long expiryDate;
   private int keyId;
   private String userId;
+  private String blockPoolId;
   private long blockId;
   private EnumSet<AccessMode> modes;
 
   private byte [] cache;
   
   public BlockTokenIdentifier() {
-    this(null, 0, EnumSet.noneOf(AccessMode.class));
+    this(null, null, 0, EnumSet.noneOf(AccessMode.class));
   }
 
-  public BlockTokenIdentifier(String userId, long blockId,
+  public BlockTokenIdentifier(String userId, String bpid, long blockId,
       EnumSet<AccessMode> modes) {
     this.cache = null;
     this.userId = userId;
+    this.blockPoolId = bpid;
     this.blockId = blockId;
     this.modes = modes == null ? EnumSet.noneOf(AccessMode.class) : modes;
   }
@@ -62,7 +64,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   @Override
   public UserGroupInformation getUser() {
     if (userId == null || "".equals(userId)) {
-      return UserGroupInformation.createRemoteUser(Long.toString(blockId));
+      String user = blockPoolId + ":" + Long.toString(blockId);
+      return UserGroupInformation.createRemoteUser(user);
     }
     return UserGroupInformation.createRemoteUser(userId);
   }
@@ -89,6 +92,10 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     return userId;
   }
 
+  public String getBlockPoolId() {
+    return blockPoolId;
+  }
+
   public long getBlockId() {
     return blockId;
   }
@@ -101,6 +108,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   public String toString() {
     return "block_token_identifier (expiryDate=" + this.getExpiryDate()
         + ", keyId=" + this.getKeyId() + ", userId=" + this.getUserId()
+        + ", blockPoolId=" + this.getBlockPoolId()
         + ", blockId=" + this.getBlockId() + ", access modes="
         + this.getAccessModes() + ")";
   }
@@ -117,7 +125,9 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     if (obj instanceof BlockTokenIdentifier) {
       BlockTokenIdentifier that = (BlockTokenIdentifier) obj;
       return this.expiryDate == that.expiryDate && this.keyId == that.keyId
-          && isEqual(this.userId, that.userId) && this.blockId == that.blockId
+          && isEqual(this.userId, that.userId) 
+          && isEqual(this.blockPoolId, that.blockPoolId)
+          && this.blockId == that.blockId
           && isEqual(this.modes, that.modes);
     }
     return false;
@@ -126,7 +136,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   /** {@inheritDoc} */
   public int hashCode() {
     return (int) expiryDate ^ keyId ^ (int) blockId ^ modes.hashCode()
-        ^ (userId == null ? 0 : userId.hashCode());
+        ^ (userId == null ? 0 : userId.hashCode())
+        ^ (blockPoolId == null ? 0 : blockPoolId.hashCode());
   }
 
   public void readFields(DataInput in) throws IOException {
@@ -134,6 +145,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     expiryDate = WritableUtils.readVLong(in);
     keyId = WritableUtils.readVInt(in);
     userId = WritableUtils.readString(in);
+    blockPoolId = WritableUtils.readString(in);
     blockId = WritableUtils.readVLong(in);
     int length = WritableUtils.readVInt(in);
     for (int i = 0; i < length; i++) {
@@ -145,6 +157,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     WritableUtils.writeVLong(out, expiryDate);
     WritableUtils.writeVInt(out, keyId);
     WritableUtils.writeString(out, userId);
+    WritableUtils.writeString(out, blockPoolId);
     WritableUtils.writeVLong(out, blockId);
     WritableUtils.writeVInt(out, modes.size());
     for (AccessMode aMode : modes) {

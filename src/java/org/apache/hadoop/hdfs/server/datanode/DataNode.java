@@ -80,6 +80,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionStage;
+import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
@@ -342,8 +343,7 @@ public class DataNode extends Configured
   boolean transferToAllowed = true;
   int writePacketSize = 0;
   boolean isBlockTokenEnabled;
-  BlockTokenSecretManager blockTokenSecretManager;
-  boolean isBlockTokenInitialized = false;
+  BlockPoolTokenSecretManager blockPoolTokenSecretManager;
   
   public DataBlockScanner blockScanner = null;
   private DirectoryScanner directoryScanner = null;
@@ -486,7 +486,7 @@ public class DataNode extends Configured
         conf.get("dfs.datanode.ipc.address"));
     ipcServer = RPC.getServer(DataNode.class, this, ipcAddr.getHostName(),
         ipcAddr.getPort(), conf.getInt("dfs.datanode.handler.count", 3), false,
-        conf, blockTokenSecretManager);
+        conf, blockPoolTokenSecretManager);
     
     // set service-level authorization security policy
     if (conf.getBoolean(
@@ -647,6 +647,7 @@ public class DataNode extends Configured
     private final LinkedList<Block> receivedBlockList = new LinkedList<Block>();
     private final LinkedList<String> delHints = new LinkedList<String>();
     private volatile boolean shouldServiceRun = true;
+    private boolean isBlockTokenInitialized = false;
 
     BPOfferService(InetSocketAddress isa) {
       this.bpRegistration = new DatanodeRegistration(datanodeId);
@@ -1080,7 +1081,7 @@ public class DataNode extends Configured
       }
 
       
-      // TODO:FEDERATION - reavaluate the following three checks!!!!!
+      // TODO:FEDERATION - reavaluate the following two checks!!!!!
       assert ("".equals(storage.getStorageID())
           && !"".equals(bpRegistration.getStorageID()))
           || storage.getStorageID().equals(bpRegistration.getStorageID()) :
@@ -1105,17 +1106,21 @@ public class DataNode extends Configured
         if (isBlockTokenEnabled) {
           long blockKeyUpdateInterval = keys.getKeyUpdateInterval();
           long blockTokenLifetime = keys.getTokenLifetime();
-          LOG.info("Block token params received from NN: keyUpdateInterval="
+          LOG.info("Block token params received from NN: for block pool " +
+              blockPoolId + " keyUpdateInterval="
               + blockKeyUpdateInterval / (60 * 1000)
               + " min(s), tokenLifetime=" + blockTokenLifetime / (60 * 1000)
               + " min(s)");
-          blockTokenSecretManager.setTokenLifetime(blockTokenLifetime);
+          final BlockTokenSecretManager secretMgr = 
+            new BlockTokenSecretManager(false, 0, blockTokenLifetime);
+          blockPoolTokenSecretManager.addBlockPool(blockPoolId, secretMgr);
         }
         isBlockTokenInitialized = true;
       }
 
       if (isBlockTokenEnabled) {
-        blockTokenSecretManager.setKeys(bpRegistration.exportedKeys);
+        blockPoolTokenSecretManager.setKeys(blockPoolId,
+            bpRegistration.exportedKeys);
         bpRegistration.exportedKeys = ExportedBlockKeys.DUMMY_KEYS;
       }
 
@@ -1262,7 +1267,8 @@ public class DataNode extends Configured
       case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
         LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
         if (isBlockTokenEnabled) {
-          blockTokenSecretManager.setKeys(((KeyUpdateCommand) cmd).getExportedKeys());
+          blockPoolTokenSecretManager.setKeys(blockPoolId, 
+              ((KeyUpdateCommand) cmd).getExportedKeys());
         }
         break;
       default:
@@ -1867,7 +1873,7 @@ public class DataNode extends Configured
         //
         Token<BlockTokenIdentifier> accessToken = BlockTokenSecretManager.DUMMY_TOKEN;
         if (isBlockTokenEnabled) {
-          accessToken = blockTokenSecretManager.generateToken(b, 
+          accessToken = blockPoolTokenSecretManager.generateToken(b, 
               EnumSet.of(BlockTokenSecretManager.AccessMode.WRITE));
         }
         DataTransferProtocol.Sender.opWriteBlock(out,
@@ -1926,9 +1932,9 @@ public class DataNode extends Configured
     ipcServer.start();
     startPlugins(conf);
     
-    // BlockTokenSecretManager is created here, but it shouldn't be
+    // BlockPoolTokenSecretManager is created here, but it shouldn't be
     // used until it is initialized in register().
-    this.blockTokenSecretManager = new BlockTokenSecretManager(false, 0, 0);    
+    this.blockPoolTokenSecretManager = new BlockPoolTokenSecretManager();
   }
 
   public boolean isDatanodeUp() {
@@ -2439,7 +2445,7 @@ public class DataNode extends Configured
         if (LOG.isDebugEnabled()) {
           LOG.debug("Got: " + id.toString());
         }
-        blockTokenSecretManager.checkAccess(id, null, block,
+        blockPoolTokenSecretManager.checkAccess(id, null, block,
             BlockTokenSecretManager.AccessMode.WRITE);
       }
     }

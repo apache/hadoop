@@ -221,5 +221,34 @@ public class TestBlockToken {
       }
     }
   }
-
+  
+  /** 
+   * Test {@link BlockPoolTokenSecretManager}
+   */
+  @Test
+  public void testBlockPoolTokenSecretManager() throws Exception {
+    BlockPoolTokenSecretManager bpMgr = new BlockPoolTokenSecretManager();
+    
+    // Test BlockPoolSecretManager with upto 10 block pools
+    for (int i = 0; i < 10; i++) {
+      String bpid = Integer.toString(i);
+      BlockTokenSecretManager masterHandler = new BlockTokenSecretManager(true,
+          blockKeyUpdateInterval, blockTokenLifetime);
+      BlockTokenSecretManager slaveHandler = new BlockTokenSecretManager(false,
+          blockKeyUpdateInterval, blockTokenLifetime);
+      bpMgr.addBlockPool(bpid, slaveHandler);
+      
+      
+      ExportedBlockKeys keys = masterHandler.exportKeys();
+      bpMgr.setKeys(bpid, keys);
+      tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid));
+      
+      // Test key updating
+      masterHandler.updateKeys();
+      tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid));
+      keys = masterHandler.exportKeys();
+      bpMgr.setKeys(bpid, keys);
+      tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid));
+    }
+  }
 }

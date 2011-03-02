@@ -31,7 +31,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -179,25 +178,17 @@ public class BlockTokenSecretManager extends
       EnumSet<AccessMode> modes) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String userID = (ugi == null ? null : ugi.getShortUserName());
-    return generateToken(userID, block.getLocalBlock(), modes);
+    return generateToken(userID, block, modes);
   }
 
   /** Generate a block token for a specified user */
   public Token<BlockTokenIdentifier> generateToken(String userId,
-      Block block, EnumSet<AccessMode> modes) throws IOException {
+      ExtendedBlock block, EnumSet<AccessMode> modes) throws IOException {
     BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
-        .getBlockId(), modes);
+        .getBlockPoolId(), block.getBlockId(), modes);
     return new Token<BlockTokenIdentifier>(id, this);
   }
 
-  /**
-   * TODO:FEDERATION To remove when block pool ID related coding is complete
-   */
-  public void checkAccess(Token<BlockTokenIdentifier> blockToken, String userId,
-      Block block, AccessMode mode) throws InvalidToken {
-    checkAccess(blockToken, userId, new ExtendedBlock("TODO", block), mode);
-  }
-  
   /**
    * Check if access should be allowed. userID is not checked if null. This
    * method doesn't check if token password is correct. It should be used only
@@ -212,6 +203,10 @@ public class BlockTokenSecretManager extends
     if (userId != null && !userId.equals(id.getUserId())) {
       throw new InvalidToken("Block token with " + id.toString()
           + " doesn't belong to user " + userId);
+    }
+    if (!id.getBlockPoolId().equals(block.getBlockPoolId())) {
+      throw new InvalidToken("Block token with " + id.toString()
+          + " doesn't apply to block " + block);
     }
     if (id.getBlockId() != block.getBlockId()) {
       throw new InvalidToken("Block token with " + id.toString()
