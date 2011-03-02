@@ -24,10 +24,10 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 
 /**
- * methods that can access package private methods from Datanode
+ * Utility class for accessing package-private DataNode information during tests.
  *
  */
-public class TestDatanodeUtils {
+public class DataNodeTestUtils {
   public static DatanodeRegistration 
   getDNRegistrationByMachineName(DataNode dn, String mName) {
     return dn.getDNRegistrationByMachineName(mName);
