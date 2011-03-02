@@ -70,7 +70,7 @@ public class TestHftpFileSystem extends TestCase {
 
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
     hdfs = cluster.getFileSystem();
-    blockPoolId = cluster.getNamesystem().getBlockpoolId();
+    blockPoolId = cluster.getNamesystem().getBlockPoolId();
     final String hftpuri = 
       "hftp://" + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
     hftpFs = (HftpFileSystem) new Path(hftpuri).getFileSystem(config);

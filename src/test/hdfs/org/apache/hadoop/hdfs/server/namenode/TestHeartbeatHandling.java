@@ -50,7 +50,7 @@ public class TestHeartbeatHandling extends TestCase {
     try {
       cluster.waitActive();
       final FSNamesystem namesystem = cluster.getNamesystem();
-      final String poolId = namesystem.getBlockpoolId();
+      final String poolId = namesystem.getBlockPoolId();
       final DatanodeRegistration nodeReg = 
         TestDatanodeUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
         

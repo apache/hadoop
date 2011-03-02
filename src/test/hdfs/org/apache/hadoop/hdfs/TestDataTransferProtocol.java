@@ -195,7 +195,7 @@ public class TestDataTransferProtocol extends TestCase {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDataNodes).build();
     try {
       cluster.waitActive();
-      String poolId = cluster.getNamesystem().getBlockpoolId(); 
+      String poolId = cluster.getNamesystem().getBlockPoolId(); 
       datanode = TestDatanodeUtils.getDNRegistrationForBP(
           cluster.getDataNodes().get(0), poolId);
       dnAddr = NetUtils.createSocketAddr(datanode.getName());

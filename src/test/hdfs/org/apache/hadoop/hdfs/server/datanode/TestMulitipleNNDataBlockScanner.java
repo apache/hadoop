@@ -50,7 +50,7 @@ public class TestMulitipleNNDataBlockScanner {
       cluster.waitActive(i);
     }
     for (int i = 0; i < 3; i++) {
-      bpids[i] = cluster.getNamesystem(i).getBlockpoolId();
+      bpids[i] = cluster.getNamesystem(i).getBlockPoolId();
     }
     for (int i = 0; i < 3; i++) {
       fs[i] = cluster.getFileSystem(i);
@@ -93,7 +93,7 @@ public class TestMulitipleNNDataBlockScanner {
       Configuration conf = new HdfsConfiguration();
       StringBuilder namenodesBuilder = new StringBuilder();
 
-      String bpidToShutdown = cluster.getNamesystem(2).getBlockpoolId();
+      String bpidToShutdown = cluster.getNamesystem(2).getBlockPoolId();
       for (int i = 0; i < 2; i++) {
         FileSystem fs = cluster.getFileSystem(i);
         namenodesBuilder.append(fs.getUri());

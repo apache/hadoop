@@ -120,6 +120,9 @@ Trunk (unreleased changes)
     HDFS-1677. Federation: Fix TestFsck and TestListCorruptFileBlocks 
     failures. (Tanping via suresh)
 
+    HDFS-1678. Federation: Remove unnecessary #getBlockpool() 
+    for NameNodeMXBean in FSNameSystem. (Tanping via Suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

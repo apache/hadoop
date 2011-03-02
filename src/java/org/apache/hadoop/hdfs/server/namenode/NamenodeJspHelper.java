@@ -134,7 +134,7 @@ class NamenodeJspHelper {
         + getUpgradeStatusText(fsn) 
         + "\n  <tr><td id='col1'>Cluster ID:</td><td>" + fsn.getClusterId()
         + "</td></tr>\n" 
-        + "\n  <tr><td id='col1'>Block Pool ID:</td><td>" + fsn.getBlockpoolId()
+        + "\n  <tr><td id='col1'>Block Pool ID:</td><td>" + fsn.getBlockPoolId()
         + "</td></tr>\n" 
         + "\n</table></div>";
   }

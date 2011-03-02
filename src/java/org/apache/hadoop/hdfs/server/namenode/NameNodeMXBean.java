@@ -158,5 +158,5 @@ public interface NameNodeMXBean {
    * 
    * @return the block pool id
    */
-  public String getBlockpoolId();
+  public String getBlockPoolId();
 }

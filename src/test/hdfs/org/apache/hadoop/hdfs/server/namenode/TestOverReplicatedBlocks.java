@@ -78,7 +78,7 @@ public class TestOverReplicatedBlocks extends TestCase {
       cluster.restartDataNode(dnProps);
       DFSTestUtil.waitReplication(fs, fileName, (short)2);
       
-      String blockPoolId = cluster.getNamesystem().getBlockpoolId();
+      String blockPoolId = cluster.getNamesystem().getBlockPoolId();
       final DatanodeID corruptDataNode = 
         TestDatanodeUtils.getDNRegistrationForBP(
             cluster.getDataNodes().get(2), blockPoolId);

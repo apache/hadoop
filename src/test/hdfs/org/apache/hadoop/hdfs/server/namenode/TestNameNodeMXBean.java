@@ -49,9 +49,10 @@ public class TestNameNodeMXBean {
       // get attribute "ClusterId"
       String clusterId = (String) mbs.getAttribute(mxbeanName, "ClusterId");
       Assert.assertEquals(fsn.getClusterId(), clusterId);
-      // get attribute "BlockpoolId"
-      String blockpoolId = (String) mbs.getAttribute(mxbeanName, "BlockpoolId");
-      Assert.assertEquals(fsn.getBlockpoolId(), blockpoolId);
+      // get attribute "BlockPoolId"
+      String blockpoolId = (String) mbs.getAttribute(mxbeanName, 
+          "BlockPoolId");
+      Assert.assertEquals(fsn.getBlockPoolId(), blockpoolId);
       // get attribute "Version"
       String version = (String) mbs.getAttribute(mxbeanName, "Version");
       Assert.assertEquals(fsn.getVersion(), version);

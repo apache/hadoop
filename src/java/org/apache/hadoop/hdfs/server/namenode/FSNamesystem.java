@@ -537,7 +537,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   NamespaceInfo getNamespaceInfo() {
     NamespaceInfo nsinfo = new NamespaceInfo(dir.fsImage.getNamespaceID(),
                              getClusterId(),
-                             getBlockpoolId(),
+                             getBlockPoolId(),
                              dir.fsImage.getCTime(),
                              getDistributedUpgradeVersion());
     return nsinfo;
@@ -5296,10 +5296,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   }
   
   @Override  // NameNodeMXBean
-  public String getBlockpoolId() {
-    return dir.fsImage.getBlockPoolID();
-  }
-  
   public String getBlockPoolId() {
     return blockPoolId;
   }
