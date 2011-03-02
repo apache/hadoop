@@ -28,7 +28,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
-import org.apache.hadoop.hdfs.server.datanode.TestDatanodeUtils;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -52,7 +52,7 @@ public class TestHeartbeatHandling extends TestCase {
       final FSNamesystem namesystem = cluster.getNamesystem();
       final String poolId = namesystem.getBlockPoolId();
       final DatanodeRegistration nodeReg = 
-        TestDatanodeUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
+        DataNodeTestUtils.getDNRegistrationForBP(cluster.getDataNodes().get(0), poolId);
         
       DatanodeDescriptor dd = namesystem.getDatanode(nodeReg);
       

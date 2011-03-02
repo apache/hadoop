@@ -132,6 +132,9 @@ Trunk (unreleased changes)
 
     HDFS-1681. Balancer: support per pool and per node policies.  (szetszwo)
 
+    HDFS-1695. HDFS federation: Fix testOIV and 
+    TestDatanodeUtils (jhoman and tanping via boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

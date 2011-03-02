@@ -47,7 +47,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
-import org.apache.hadoop.hdfs.server.datanode.TestDatanodeUtils;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -1015,7 +1015,7 @@ public class MiniDFSCluster {
       DataNode dn = dataNodes.get(i).datanode;
       // get BP registration
       DatanodeRegistration dnR = 
-        TestDatanodeUtils.getDNRegistrationByMachineName(dn, name);
+        DataNodeTestUtils.getDNRegistrationByMachineName(dn, name);
       LOG.info("for name=" + name + " found bp=" + dnR + 
           "; with dnMn=" + dn.getMachineName());
       if(dnR != null) {

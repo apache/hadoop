@@ -30,7 +30,7 @@ import org.apache.hadoop.hdfs.TestDatanodeBlockScanner;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.datanode.TestDatanodeUtils;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 
 import junit.framework.TestCase;
@@ -80,7 +80,7 @@ public class TestOverReplicatedBlocks extends TestCase {
       
       String blockPoolId = cluster.getNamesystem().getBlockPoolId();
       final DatanodeID corruptDataNode = 
-        TestDatanodeUtils.getDNRegistrationForBP(
+        DataNodeTestUtils.getDNRegistrationForBP(
             cluster.getDataNodes().get(2), blockPoolId);
          
       final FSNamesystem namesystem = cluster.getNamesystem();

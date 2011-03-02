@@ -53,7 +53,7 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.BlockConstructionSta
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.hdfs.server.datanode.TestDatanodeUtils;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
@@ -196,7 +196,7 @@ public class TestDataTransferProtocol extends TestCase {
     try {
       cluster.waitActive();
       String poolId = cluster.getNamesystem().getBlockPoolId(); 
-      datanode = TestDatanodeUtils.getDNRegistrationForBP(
+      datanode = DataNodeTestUtils.getDNRegistrationForBP(
           cluster.getDataNodes().get(0), poolId);
       dnAddr = NetUtils.createSocketAddr(datanode.getName());
       FileSystem fileSys = cluster.getFileSystem();
