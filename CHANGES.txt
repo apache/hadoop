@@ -88,6 +88,9 @@ Trunk (unreleased changes)
     HADOOP-7153. MapWritable violates contract of Map interface for equals()
     and hashCode(). (Nicholas Telford via todd)
 
+    HADOOP-6754. DefaultCodec.createOutputStream() leaks memory.
+    (Aaron Kimball via tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

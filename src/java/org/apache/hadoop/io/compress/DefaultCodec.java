@@ -19,18 +19,21 @@
 package org.apache.hadoop.io.compress;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.compress.zlib.*;
+import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class DefaultCodec implements Configurable, CompressionCodec {
+  private static final Log LOG = LogFactory.getLog(DefaultCodec.class);
   
   Configuration conf;
 
@@ -44,6 +47,12 @@ public class DefaultCodec implements Configurable, CompressionCodec {
   
   public CompressionOutputStream createOutputStream(OutputStream out) 
   throws IOException {
+    // This may leak memory if called in a loop. The createCompressor() call
+    // may cause allocation of an untracked direct-backed buffer if native
+    // libs are being used (even if you close the stream).  A Compressor
+    // object should be reused between successive calls.
+    LOG.warn("DefaultCodec.createOutputStream() may leak memory. "
+        + "Create a compressor first.");
     return new CompressorStream(out, createCompressor(), 
                                 conf.getInt("io.file.buffer.size", 4*1024));
   }
