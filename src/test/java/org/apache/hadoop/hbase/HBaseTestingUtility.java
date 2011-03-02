@@ -355,7 +355,7 @@ public class HBaseTestingUtility {
    * @param numSlaves
    * @return Reference to the hbase mini hbase cluster.
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    * @see {@link #startMiniCluster()}
    */
   public MiniHBaseCluster startMiniHBaseCluster(final int numMasters,
@@ -547,7 +547,7 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_COMPRESSION,
           HColumnDescriptor.DEFAULT_IN_MEMORY,
           HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
+          HColumnDescriptor.DEFAULT_BLOCKSIZE, HColumnDescriptor.DEFAULT_TTL,
           HColumnDescriptor.DEFAULT_BLOOMFILTER,
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
@@ -574,7 +574,7 @@ public class HBaseTestingUtility {
           HColumnDescriptor.DEFAULT_COMPRESSION,
           HColumnDescriptor.DEFAULT_IN_MEMORY,
           HColumnDescriptor.DEFAULT_BLOCKCACHE,
-          Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
+          HColumnDescriptor.DEFAULT_BLOCKSIZE, HColumnDescriptor.DEFAULT_TTL,
           HColumnDescriptor.DEFAULT_BLOOMFILTER,
           HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
       desc.addFamily(hcd);
@@ -757,7 +757,7 @@ public class HBaseTestingUtility {
     regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
     return createMultiRegions(c, table, family, regionStartKeys);
   }
-  
+
   public int createMultiRegions(final Configuration c, final HTable table,
       final byte[] columnFamily, byte [][] startKeys)
   throws IOException {
