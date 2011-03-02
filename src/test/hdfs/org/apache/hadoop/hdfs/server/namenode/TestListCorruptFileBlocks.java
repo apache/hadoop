@@ -70,8 +70,9 @@ public class TestListCorruptFileBlocks extends TestCase {
           + " corrupt files. Expecting None.", badFiles.size() == 0);
 
       // Now deliberately corrupt one block
-      File data_dir = new File(System.getProperty("test.build.data"),
-      "dfs/data/data1/current/finalized");
+      String bpid = cluster.getNamesystem().getBlockpoolId();
+      File storageDir = MiniDFSCluster.getStorageDir(0, 1);
+      File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
       assertTrue("data directory does not exist", data_dir.exists());
       File[] blocks = data_dir.listFiles();
       assertTrue("Blocks do not exist in data-dir", (blocks != null) && (blocks.length > 0));

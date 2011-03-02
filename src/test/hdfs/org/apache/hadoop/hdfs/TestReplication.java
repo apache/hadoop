@@ -342,7 +342,7 @@ public class TestReplication extends TestCase {
         File blockFile = MiniDFSCluster.getBlockFile(dnIndex, block);
         LOG.info("Checking for file " + blockFile);
         
-        if (blockFile.exists()) {
+        if (blockFile != null && blockFile.exists()) {
           if (fileCount == 0) {
             LOG.info("Deleting file " + blockFile);
             assertTrue(blockFile.delete());

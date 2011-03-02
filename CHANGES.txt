@@ -117,6 +117,9 @@ Trunk (unreleased changes)
     HDFS-1673. Federation: Datanode changes to track block token secret per 
     namenode. (suresh)
 
+    HDFS-1677. Federation: Fix TestFsck and TestListCorruptFileBlocks 
+    failures. (Tanping via suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

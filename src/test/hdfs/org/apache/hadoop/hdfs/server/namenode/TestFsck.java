@@ -251,7 +251,7 @@ public class TestFsck extends TestCase {
           fileNames[0], 0, Long.MAX_VALUE).get(0).getBlock();
       for (int i=0; i<4; i++) {
         File blockFile = MiniDFSCluster.getBlockFile(i, block);
-        if(blockFile.exists()) {
+        if(blockFile != null && blockFile.exists()) {
           assertTrue(blockFile.delete());
         }
       }
@@ -361,7 +361,7 @@ public class TestFsck extends TestCase {
     // corrupt replicas 
     for (int i=0; i < 3; i++) {
       File blockFile = MiniDFSCluster.getBlockFile(i, block);
-      if (blockFile.exists()) {
+      if (blockFile != null && blockFile.exists()) {
         RandomAccessFile raFile = new RandomAccessFile(blockFile, "rw");
         FileChannel channel = raFile.getChannel();
         String badString = "BADBAD";
