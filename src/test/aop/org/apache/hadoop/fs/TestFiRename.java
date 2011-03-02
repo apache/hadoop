@@ -87,7 +87,7 @@ public class TestFiRename {
       cluster.shutdown();
       cluster = null;
     }
-    cluster = new MiniDFSCluster(CONF, 1, format, null);
+    cluster = new MiniDFSCluster.Builder(CONF).format(format).build();
     cluster.waitClusterUp();
     fc = FileContext.getFileContext(cluster.getURI(0), CONF);
   }

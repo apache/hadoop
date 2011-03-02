@@ -233,8 +233,9 @@ public class FSImage extends Storage {
     setStorageDirectories(fsDirs, fsEditsDirs);
   }
 
-  public FSImage(StorageInfo storageInfo) {
+  public FSImage(StorageInfo storageInfo, String bpid) {
     super(NodeType.NAME_NODE, storageInfo);
+    blockpoolID = bpid;
   }
 
   /**
@@ -824,7 +825,10 @@ public class FSImage extends Storage {
                            StorageDirectory sd 
                            ) throws IOException {
     super.setFields(props, sd);
-    props.setProperty("blockpoolID", blockpoolID);
+    // Set blockpoolID in version LAST_PRE_FEDERATION_LAYOUT_VERSION or before
+    if (layoutVersion < LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      props.setProperty("blockpoolID", blockpoolID);
+    }
     boolean uState = getDistributedUpgradeState();
     int uVersion = getDistributedUpgradeVersion();
     if(uState && uVersion != getLayoutVersion()) {

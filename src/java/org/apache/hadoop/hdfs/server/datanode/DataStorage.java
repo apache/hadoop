@@ -220,8 +220,8 @@ public class DataStorage extends Storage {
     }
     // mkdir for the list of BlockPoolStorage
     makeBlockPoolDataDir(bpDataDirs, null);
-    BlockPoolSliceStorage bpStorage = new BlockPoolSliceStorage(nsInfo.getNamespaceID(), 
-        bpID, nsInfo.getCTime(), nsInfo.getClusterID());
+    BlockPoolSliceStorage bpStorage = new BlockPoolSliceStorage(
+        nsInfo.getNamespaceID(), bpID, nsInfo.getCTime(), nsInfo.getClusterID());
     
     bpStorage.recoverTransitionRead(nsInfo, bpDataDirs, startOpt);
     addBlockPoolStorage(bpID, bpStorage);
@@ -278,6 +278,10 @@ public class DataStorage extends Storage {
     props.setProperty("cTime", String.valueOf(cTime));
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
     props.setProperty("storageID", storageID);
+    // Set NamespaceID in version LAST_PRE_FEDERATION_LAYOUT_VERSION or before
+    if (layoutVersion >= LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      props.setProperty("namespaceID", String.valueOf(namespaceID));
+    }
   }
 
   /*
@@ -358,12 +362,23 @@ public class DataStorage extends Storage {
     assert this.layoutVersion >= FSConstants.LAYOUT_VERSION :
       "Future version is not allowed";
     
+    // For pre-federation version - validate the namespaceID
+    if (layoutVersion >= Storage.LAST_PRE_FEDERATION_LAYOUT_VERSION &&
+        getNamespaceID() != nsInfo.getNamespaceID()) {
+      throw new IOException("Incompatible namespaceIDs in "
+          + sd.getRoot().getCanonicalPath() + ": namenode namespaceID = "
+          + nsInfo.getNamespaceID() + "; datanode namespaceID = "
+          + getNamespaceID());
+    }
+    
+    // For post federation version, validate clusterID
     if (layoutVersion < Storage.LAST_PRE_FEDERATION_LAYOUT_VERSION
         && !getClusterID().equals(nsInfo.getClusterID())) {
       throw new IOException("Incompatible clusterIDs in "
           + sd.getRoot().getCanonicalPath() + ": namenode clusterID = "
           + nsInfo.getClusterID() + "; datanode clusterID = " + getClusterID());
     }
+    
     // regular start up
     if (this.layoutVersion == FSConstants.LAYOUT_VERSION 
         && this.cTime == nsInfo.getCTime())
@@ -421,6 +436,7 @@ public class DataStorage extends Storage {
              + "; old CTime = " + this.getCTime()
              + ".\n   new LV = " + nsInfo.getLayoutVersion()
              + "; new CTime = " + nsInfo.getCTime());
+    
     File curDir = sd.getCurrentDir();
     File prevDir = sd.getPreviousDir();
     assert curDir.exists() : "Data node current directory must exist.";

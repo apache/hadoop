@@ -46,7 +46,8 @@ public class TestDFSStartupVersions extends TestCase {
   /**
    * Writes an INFO log message containing the parameters.
    */
-  void log(String label, NodeType nodeType, Integer testCase, StorageInfo version) {
+  void log(String label, NodeType nodeType, Integer testCase,
+      StorageData sd) {
     String testCaseLine = "";
     if (testCase != null) {
       testCaseLine = " testCase="+testCase;
@@ -55,9 +56,26 @@ public class TestDFSStartupVersions extends TestCase {
     LOG.info("***TEST*** " + label + ":"
              + testCaseLine
              + " nodeType="+nodeType
-             + " layoutVersion="+version.getLayoutVersion()
-             + " namespaceID="+version.getNamespaceID()
-             + " fsscTime="+version.getCTime());
+             + " layoutVersion="+sd.storageInfo.getLayoutVersion()
+             + " namespaceID="+sd.storageInfo.getNamespaceID()
+             + " fsscTime="+sd.storageInfo.getCTime()
+             + " clusterID="+sd.storageInfo.getClusterID()
+             + " BlockPoolID="+sd.blockPoolId);
+  }
+  
+  /**
+   * Class used for initializing version information for tests
+   */
+  private static class StorageData {
+    private final StorageInfo storageInfo;
+    private final String blockPoolId;
+    
+    StorageData(int layoutVersion, int namespaceId, String clusterId,
+        long cTime, String bpid) {
+      storageInfo = new StorageInfo(layoutVersion, namespaceId, clusterId,
+          cTime);
+      blockPoolId = bpid;
+    }
   }
   
   /**
@@ -67,7 +85,7 @@ public class TestDFSStartupVersions extends TestCase {
    *    {currentNamespaceId,incorrectNamespaceId} X
    *      {pastFsscTime,currentFsscTime,futureFsscTime}
    */
-  private StorageInfo[] initializeVersions() throws Exception {
+  private StorageData[] initializeVersions() throws Exception {
     int layoutVersionOld = Storage.LAST_UPGRADABLE_LAYOUT_VERSION;
     int layoutVersionCur = UpgradeUtilities.getCurrentLayoutVersion();
     int layoutVersionNew = Integer.MIN_VALUE;
@@ -76,27 +94,54 @@ public class TestDFSStartupVersions extends TestCase {
     long fsscTimeOld = Long.MIN_VALUE;
     long fsscTimeCur = UpgradeUtilities.getCurrentFsscTime(null);
     long fsscTimeNew = Long.MAX_VALUE;
-    String clusterID = "cid-test";
+    String clusterID = "testClusterID";
+    String invalidClusterID = "testClusterID";
+    String bpid = UpgradeUtilities.getCurrentBlockPoolID(null);
+    String invalidBpid = "invalidBpid";
     
-    return new StorageInfo[] {
-      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, fsscTimeOld), // 0
-      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, fsscTimeCur), // 1
-      new StorageInfo(layoutVersionOld, namespaceIdCur, clusterID, fsscTimeNew), // 2
-      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, fsscTimeOld), // 3
-      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, fsscTimeCur), // 4
-      new StorageInfo(layoutVersionOld, namespaceIdOld, clusterID, fsscTimeNew), // 5
-      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, fsscTimeOld), // 6
-      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, fsscTimeCur), // 7
-      new StorageInfo(layoutVersionCur, namespaceIdCur, clusterID, fsscTimeNew), // 8
-      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, fsscTimeOld), // 9
-      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, fsscTimeCur), // 10
-      new StorageInfo(layoutVersionCur, namespaceIdOld, clusterID, fsscTimeNew), // 11
-      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, fsscTimeOld), // 12
-      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, fsscTimeCur), // 13
-      new StorageInfo(layoutVersionNew, namespaceIdCur, clusterID, fsscTimeNew), // 14
-      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, fsscTimeOld), // 15
-      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, fsscTimeCur), // 16
-      new StorageInfo(layoutVersionNew, namespaceIdOld, clusterID, fsscTimeNew), // 17
+    return new StorageData[] {
+        new StorageData(layoutVersionOld, namespaceIdCur, clusterID,
+            fsscTimeOld, bpid), // 0
+        new StorageData(layoutVersionOld, namespaceIdCur, clusterID,
+            fsscTimeCur, bpid), // 1
+        new StorageData(layoutVersionOld, namespaceIdCur, clusterID,
+            fsscTimeNew, bpid), // 2
+        new StorageData(layoutVersionOld, namespaceIdOld, clusterID,
+            fsscTimeOld, bpid), // 3
+        new StorageData(layoutVersionOld, namespaceIdOld, clusterID,
+            fsscTimeCur, bpid), // 4
+        new StorageData(layoutVersionOld, namespaceIdOld, clusterID,
+            fsscTimeNew, bpid), // 5
+        new StorageData(layoutVersionCur, namespaceIdCur, clusterID,
+            fsscTimeOld, bpid), // 6
+        new StorageData(layoutVersionCur, namespaceIdCur, clusterID,
+            fsscTimeCur, bpid), // 7
+        new StorageData(layoutVersionCur, namespaceIdCur, clusterID,
+            fsscTimeNew, bpid), // 8
+        new StorageData(layoutVersionCur, namespaceIdOld, clusterID,
+            fsscTimeOld, bpid), // 9
+        new StorageData(layoutVersionCur, namespaceIdOld, clusterID,
+            fsscTimeCur, bpid), // 10
+        new StorageData(layoutVersionCur, namespaceIdOld, clusterID,
+            fsscTimeNew, bpid), // 11
+        new StorageData(layoutVersionNew, namespaceIdCur, clusterID,
+            fsscTimeOld, bpid), // 12
+        new StorageData(layoutVersionNew, namespaceIdCur, clusterID,
+            fsscTimeCur, bpid), // 13
+        new StorageData(layoutVersionNew, namespaceIdCur, clusterID,
+            fsscTimeNew, bpid), // 14
+        new StorageData(layoutVersionNew, namespaceIdOld, clusterID,
+            fsscTimeOld, bpid), // 15
+        new StorageData(layoutVersionNew, namespaceIdOld, clusterID,
+            fsscTimeCur, bpid), // 16
+        new StorageData(layoutVersionNew, namespaceIdOld, clusterID,
+            fsscTimeNew, bpid), // 17
+        // Test with invalid clusterId
+        new StorageData(layoutVersionCur, namespaceIdCur, invalidClusterID,
+            fsscTimeCur, bpid), // 18
+        // Test with invalid block pool Id
+        new StorageData(layoutVersionCur, namespaceIdCur, clusterID,
+            fsscTimeCur, invalidBpid) // 19
     };
   }
   
@@ -107,29 +152,52 @@ public class TestDFSStartupVersions extends TestCase {
    * will work together. The rules for compatibility,
    * taken from the DFS Upgrade Design, are as follows:
    * <pre>
-   * 1. The data-node does regular startup (no matter which options 
+   * <ol>
+   * <li>Check 0: Datanode namespaceID != Namenode namespaceID the startup fails
+   * </li>
+   * <li>Check 1: Datanode clusterID != Namenode clusterID the startup fails
+   * </li>
+   * <li>Check 2: Datanode blockPoolID != Namenode blockPoolID the startup fails
+   * </li>
+   * <li>Check 3: The data-node does regular startup (no matter which options 
    *    it is started with) if
    *       softwareLV == storedLV AND 
    *       DataNode.FSSCTime == NameNode.FSSCTime
-   * 2. The data-node performs an upgrade if it is started without any 
+   * </li>
+   * <li>Check 4: The data-node performs an upgrade if it is started without any 
    *    options and
    *       |softwareLV| > |storedLV| OR 
    *       (softwareLV == storedLV AND
    *        DataNode.FSSCTime < NameNode.FSSCTime)
-   * 3. NOT TESTED: The data-node rolls back if it is started with
+   * </li>
+   * <li>NOT TESTED: The data-node rolls back if it is started with
    *    the -rollback option and
    *       |softwareLV| >= |previous.storedLV| AND 
    *       DataNode.previous.FSSCTime <= NameNode.FSSCTime
-   * 4. In all other cases the startup fails.
+   * </li>
+   * <li>Check 5: In all other cases the startup fails.</li>
+   * </ol>
    * </pre>
    */
-  boolean isVersionCompatible(StorageInfo namenodeVer, StorageInfo datanodeVer) {
+  boolean isVersionCompatible(StorageData namenodeSd, StorageData datanodeSd) {
+    final StorageInfo namenodeVer = namenodeSd.storageInfo;
+    final StorageInfo datanodeVer = datanodeSd.storageInfo;
     // check #0
     if (namenodeVer.getNamespaceID() != datanodeVer.getNamespaceID()) {
       LOG.info("namespaceIDs are not equal: isVersionCompatible=false");
       return false;
     }
     // check #1
+    if (!namenodeVer.getClusterID().equals(datanodeVer.getClusterID())) {
+      LOG.info("clusterIDs are not equal: isVersionCompatible=false");
+      return false;
+    }
+    // check #2
+    if (!namenodeSd.blockPoolId.equals(datanodeSd.blockPoolId)) {
+      LOG.info("blockPoolIDs are not equal: isVersionCompatible=false");
+      return false;
+    }
+    // check #3
     int softwareLV = FSConstants.LAYOUT_VERSION;  // will also be Namenode's LV
     int storedLV = datanodeVer.getLayoutVersion();
     if (softwareLV == storedLV &&  
@@ -138,7 +206,7 @@ public class TestDFSStartupVersions extends TestCase {
         LOG.info("layoutVersions and cTimes are equal: isVersionCompatible=true");
         return true;
       }
-    // check #2
+    // check #4
     long absSoftwareLV = Math.abs((long)softwareLV);
     long absStoredLV = Math.abs((long)storedLV);
     if (absSoftwareLV > absStoredLV ||
@@ -148,7 +216,7 @@ public class TestDFSStartupVersions extends TestCase {
         LOG.info("softwareLayoutVersion is newer OR namenode cTime is newer: isVersionCompatible=true");
         return true;
       }
-    // check #4
+    // check #5
     LOG.info("default case: isVersionCompatible=false");
     return false;
   }
@@ -171,7 +239,7 @@ public class TestDFSStartupVersions extends TestCase {
     UpgradeUtilities.initialize();
     Configuration conf = UpgradeUtilities.initializeStorageStateConf(1, 
                                                       new HdfsConfiguration());
-    StorageInfo[] versions = initializeVersions();
+    StorageData[] versions = initializeVersions();
     UpgradeUtilities.createStorageDirs(
                                        NAME_NODE, conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY), "current");
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
@@ -180,17 +248,21 @@ public class TestDFSStartupVersions extends TestCase {
                                               .manageNameDfsDirs(false)
                                               .startupOption(StartupOption.REGULAR)
                                               .build();
-    StorageInfo nameNodeVersion = new StorageInfo(
-                                                  UpgradeUtilities.getCurrentLayoutVersion(),
-                                                  UpgradeUtilities.getCurrentNamespaceID(cluster),
-                                                  UpgradeUtilities.getCurrentClusterID(cluster),
-                                                  UpgradeUtilities.getCurrentFsscTime(cluster));
+    StorageData nameNodeVersion = new StorageData(
+        UpgradeUtilities.getCurrentLayoutVersion(),
+        UpgradeUtilities.getCurrentNamespaceID(cluster),
+        UpgradeUtilities.getCurrentClusterID(cluster),
+        UpgradeUtilities.getCurrentFsscTime(cluster),
+        UpgradeUtilities.getCurrentBlockPoolID(cluster));
+    
     log("NameNode version info", NAME_NODE, null, nameNodeVersion);
+    String bpid = UpgradeUtilities.getCurrentBlockPoolID(cluster);
     for (int i = 0; i < versions.length; i++) {
-      File[] storage = UpgradeUtilities.createStorageDirs(
-                                                          DATA_NODE, conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY), "current");
+      File[] storage = UpgradeUtilities.createStorageDirs(DATA_NODE, 
+          conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY), "current");
       log("DataNode version info", DATA_NODE, i, versions[i]);
-      UpgradeUtilities.createVersionFile(DATA_NODE, storage, versions[i]);
+      UpgradeUtilities.createDataNodeVersionFile(storage,
+          versions[i].storageInfo, bpid, versions[i].blockPoolId);
       try {
         cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
       } catch (Exception ignore) {

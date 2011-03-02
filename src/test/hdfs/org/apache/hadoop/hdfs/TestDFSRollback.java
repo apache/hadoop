@@ -125,6 +125,7 @@ public class TestDFSRollback extends TestCase {
     File[] baseDirs;
     UpgradeUtilities.initialize();
     
+    StorageInfo storageInfo = null;
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
       conf.setInt("dfs.datanode.scan.period.hours", -1);      
@@ -192,11 +193,14 @@ public class TestDFSRollback extends TestCase {
                                                 .build();
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
-      UpgradeUtilities.createVersionFile(DATA_NODE, baseDirs,
-                                         new StorageInfo(Integer.MIN_VALUE,
-                                                         UpgradeUtilities.getCurrentNamespaceID(cluster),
-                                                         UpgradeUtilities.getCurrentClusterID(cluster),
-                                                         UpgradeUtilities.getCurrentFsscTime(cluster)));
+      storageInfo = new StorageInfo(Integer.MIN_VALUE, 
+          UpgradeUtilities.getCurrentNamespaceID(cluster), 
+          UpgradeUtilities.getCurrentClusterID(cluster), 
+          UpgradeUtilities.getCurrentFsscTime(cluster));
+      
+      UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo,
+          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      
       startBlockPoolShouldFail(StartupOption.ROLLBACK, 
           cluster.getNamesystem().getBlockPoolId());
       cluster.shutdown();
@@ -212,13 +216,16 @@ public class TestDFSRollback extends TestCase {
                                                 .manageNameDfsDirs(false)
                                                 .startupOption(StartupOption.ROLLBACK)
                                                 .build();
+      
       UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
       baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
-      UpgradeUtilities.createVersionFile(DATA_NODE, baseDirs,
-                                         new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(),
-                                                         UpgradeUtilities.getCurrentNamespaceID(cluster),
-                                                         UpgradeUtilities.getCurrentClusterID(cluster),
-                                                         Long.MAX_VALUE));
+      storageInfo = new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(), 
+            UpgradeUtilities.getCurrentNamespaceID(cluster), 
+            UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE);
+      
+      UpgradeUtilities.createDataNodeVersionFile(baseDirs, storageInfo,
+          UpgradeUtilities.getCurrentBlockPoolID(cluster));
+      
       startBlockPoolShouldFail(StartupOption.ROLLBACK, 
           cluster.getNamesystem().getBlockPoolId());
       cluster.shutdown();
@@ -255,11 +262,13 @@ public class TestDFSRollback extends TestCase {
       log("NameNode rollback with old layout version in previous", numDirs);
       UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
       baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "previous");
-      UpgradeUtilities.createVersionFile(NAME_NODE, baseDirs,
-                                         new StorageInfo(1,
-                                                         UpgradeUtilities.getCurrentNamespaceID(null),
-                                                         UpgradeUtilities.getCurrentClusterID(null),
-                                                         UpgradeUtilities.getCurrentFsscTime(null)));
+      storageInfo = new StorageInfo(1, 
+          UpgradeUtilities.getCurrentNamespaceID(null),
+          UpgradeUtilities.getCurrentClusterID(null),
+          UpgradeUtilities.getCurrentFsscTime(null));
+      
+      UpgradeUtilities.createNameNodeVersionFile(baseDirs,
+          storageInfo, UpgradeUtilities.getCurrentBlockPoolID(cluster));
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
     } // end numDir loop

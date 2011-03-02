@@ -71,8 +71,8 @@ public class TestFiDataTransferProtocol {
    * 5. read the 1 byte and compare results
    */
   private static void write1byte(String methodName) throws IOException {
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, REPLICATION, true,
-        null);
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(REPLICATION).format(true).build();
     final FileSystem dfs = cluster.getFileSystem();
     try {
       final Path p = new Path("/" + methodName + "/foo");

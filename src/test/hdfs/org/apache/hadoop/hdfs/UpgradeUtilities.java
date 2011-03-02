@@ -44,10 +44,10 @@ import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.DATA_N
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
+import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.test.GenericTestUtils;
 
 /**
@@ -313,36 +313,86 @@ public class UpgradeUtilities {
   }
   
   /**
-   * Create a <code>version</code> file inside the specified parent
+   * Create a <code>version</code> file for namenode inside the specified parent
    * directory.  If such a file already exists, it will be overwritten.
    * The given version string will be written to the file as the layout
    * version. None of the parameters may be null.
    *
-   * @param version
+   * @param parent directory where namenode VERSION file is stored
+   * @param version StorageInfo to create VERSION file from
+   * @param bpid Block pool Id
    *
    * @return the created version file
    */
-  public static File[] createVersionFile(NodeType nodeType, File[] parent,
-                                         StorageInfo version) throws IOException 
-  {
-    Storage storage = null;
+  public static File[] createNameNodeVersionFile(File[] parent,
+      StorageInfo version, String bpid) throws IOException {
+    FSImage storage = null;
     File[] versionFiles = new File[parent.length];
     for (int i = 0; i < parent.length; i++) {
       File versionFile = new File(parent[i], "VERSION");
       FileUtil.fullyDelete(versionFile);
-      switch (nodeType) {
-      case NAME_NODE:
-        storage = new FSImage(version);
-        break;
-      case DATA_NODE:
-        storage = new DataStorage(version, "doNotCare");
-        break;
-      }
+      storage = new FSImage(version, bpid);
       StorageDirectory sd = storage.new StorageDirectory(parent[i].getParentFile());
       sd.write(versionFile);
       versionFiles[i] = versionFile;
     }
     return versionFiles;
+  }
+  
+  /**
+   * Create a <code>version</code> file for datanode inside the specified parent
+   * directory.  If such a file already exists, it will be overwritten.
+   * The given version string will be written to the file as the layout
+   * version. None of the parameters may be null.
+   *
+   * @param parent directory where namenode VERSION file is stored
+   * @param version StorageInfo to create VERSION file from
+   * @param bpid Block pool Id
+   */
+  public static void createDataNodeVersionFile(File[] parent,
+      StorageInfo version, String bpid) throws IOException {
+    createDataNodeVersionFile(parent, version, bpid, bpid);
+  }
+  
+  /**
+   * Create a <code>version</code> file for datanode inside the specified parent
+   * directory.  If such a file already exists, it will be overwritten.
+   * The given version string will be written to the file as the layout
+   * version. None of the parameters may be null.
+   *
+   * @param parent directory where namenode VERSION file is stored
+   * @param version StorageInfo to create VERSION file from
+   * @param bpid Block pool Id
+   * @param bpidToWrite Block pool Id to write into the version file
+   */
+  public static void createDataNodeVersionFile(File[] parent,
+      StorageInfo version, String bpid, String bpidToWrite) throws IOException {
+    DataStorage storage = null;
+    File[] versionFiles = new File[parent.length];
+    for (int i = 0; i < parent.length; i++) {
+      File versionFile = new File(parent[i], "VERSION");
+      FileUtil.fullyDelete(versionFile);
+      storage = new DataStorage(version, "doNotCare");
+      StorageDirectory sd = storage.new StorageDirectory(parent[i].getParentFile());
+      sd.write(versionFile);
+      versionFiles[i] = versionFile;
+      File bpDir = BlockPoolSliceStorage.getBpRoot(bpid, parent[i]);
+      createBlockPoolVersionFile(bpDir, version, bpidToWrite);
+    }
+  }
+  
+  public static void createBlockPoolVersionFile(File bpDir,
+      StorageInfo version, String bpid) throws IOException {
+    // Create block pool version files
+    if (version.layoutVersion < Storage.LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      File bpCurDir = new File(bpDir, Storage.STORAGE_DIR_CURRENT);
+      BlockPoolSliceStorage bpStorage = new BlockPoolSliceStorage(version,
+          bpid);
+      File versionFile = new File(bpCurDir, "VERSION");
+      FileUtil.fullyDelete(versionFile);
+      StorageDirectory sd = bpStorage.new StorageDirectory(bpDir);
+      sd.write(versionFile);
+    }
   }
   
   /**

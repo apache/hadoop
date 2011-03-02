@@ -140,10 +140,8 @@ public class TestMulitipleNNDataBlockScanner {
     setUp(9943);
     try {
       cluster.restartDataNode(0);
+      cluster.waitActive();
       DataNode dn = cluster.getDataNodes().get(0);
-      while (!dn.isDatanodeUp()) {
-        Thread.sleep(2000);
-      }
       for (int i = 0; i < 3; i++) {
         long blocksScanned = 0;
         while (blocksScanned != 20) {

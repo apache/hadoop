@@ -319,7 +319,7 @@ public class DataNode extends Configured
   volatile boolean shouldRun = true;
   private BlockPoolManager blockPoolManager;
   public DatanodeProtocol namenodeTODO_FED = null; //TODO:FEDERATION needs to be taken out.
-  public FSDatasetInterface data = null;
+  public volatile FSDatasetInterface data = null;
   private DatanodeID datanodeId = null;
   private String clusterId = null;
 
@@ -570,7 +570,7 @@ public class DataNode extends Configured
     }
   }
   
-  private void shutdownDirectoryScanner() {
+  private synchronized void shutdownDirectoryScanner() {
     if (directoryScanner != null) {
       directoryScanner.shutdown();
     }
@@ -725,12 +725,10 @@ public class DataNode extends Configured
       DatanodeProtocol dnp = 
         (DatanodeProtocol)RPC.waitForProxy(DatanodeProtocol.class,
             DatanodeProtocol.versionID, nnAddr, conf);
-      LOG.info("NN proxy created in BP="+blockPoolId + " for " + nnAddr);
       setNameNode(dnp);
 
       // handshake with NN
       NamespaceInfo nsInfo = handshake();
-      LOG.info("received namespace info  nsInfo=" + nsInfo);
       setNamespaceInfo(nsInfo);
       setClusterId(nsInfo.clusterID);
       
@@ -1654,7 +1652,7 @@ public class DataNode extends Configured
     }
     
     LOG.warn("DataNode is shutting down.\n" + errMsgr);
-    shutdown();
+    shouldRun = false;
   }
     
   /** Number of concurrent xceivers per node. */
@@ -1937,9 +1935,11 @@ public class DataNode extends Configured
     this.blockPoolTokenSecretManager = new BlockPoolTokenSecretManager();
   }
 
+  /**
+   * A data node is considered to be up if one of the bp services is up
+   */
   public boolean isDatanodeUp() {
     for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
-      // Datanode is up, if one of the bp service is up
       if (bp.bpThread.isAlive()) {
         return true;
       }
@@ -2541,5 +2541,20 @@ public class DataNode extends Configured
       return bp.shouldServiceRun && bp.bpThread.isAlive();
     }
     return false;
+  }
+
+  /**
+   * A datanode is considered to be fully started if all the BP threads are
+   * alive and all the block pools are initialized.
+   * 
+   * @return true - if the data node is fully started
+   */
+  public boolean isDatanodeFullyStarted() {
+    for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
+      if (!bp.initialized() || !bp.shouldServiceRun || !bp.bpThread.isAlive()) {
+        return false;
+      }
+    }
+    return true;
   }
 }

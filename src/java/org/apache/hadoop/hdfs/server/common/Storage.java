@@ -728,8 +728,9 @@ public abstract class Storage extends StorageInfo {
   protected static void checkVersionUpgradable(int oldVersion) 
                                      throws IOException {
     if (oldVersion > LAST_UPGRADABLE_LAYOUT_VERSION) {
-      String msg = "*********** Upgrade is not supported from this older" +
-                   " version of storage to the current version." + 
+      String msg = "*********** Upgrade is not supported from this " +
+                   " older version " + oldVersion + 
+                   " of storage to the current version." + 
                    " Please upgrade to " + LAST_UPGRADABLE_HADOOP_VERSION +
                    " or a later version and then upgrade to current" +
                    " version. Old layout version is " + 
@@ -773,7 +774,10 @@ public abstract class Storage extends StorageInfo {
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
     props.setProperty("storageType", storageType.toString());
     props.setProperty("namespaceID", String.valueOf(namespaceID));
-    props.setProperty("clusterID", clusterID);
+    // Set clusterID in version LAST_PRE_FEDERATION_LAYOUT_VERSION or before
+    if (layoutVersion < LAST_PRE_FEDERATION_LAYOUT_VERSION) {
+      props.setProperty("clusterID", clusterID);
+    }
     props.setProperty("cTime", String.valueOf(cTime));
   }
 

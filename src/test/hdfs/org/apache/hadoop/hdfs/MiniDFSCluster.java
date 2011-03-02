@@ -410,7 +410,6 @@ public class MiniDFSCluster {
                         StartupOption operation,
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
-    this.numDataNodes = numDataNodes;
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
     initMiniDFSCluster(nameNodePort, conf, 1, format,
         manageNameDfsDirs, manageDataDfsDirs, operation, racks, hosts,
@@ -775,7 +774,7 @@ public class MiniDFSCluster {
   
   /**
    * Finalize cluster for the namenode at the given index 
-   * @see {@link MiniDFSCluster#finalizeCluster(Configuration)}
+   * @see MiniDFSCluster#finalizeCluster(Configuration)
    * @param nnIndex
    * @param conf
    * @throws Exception
@@ -1134,7 +1133,12 @@ public class MiniDFSCluster {
     if (dataNodes == null || dataNodes.size() == 0) {
       return false;
     }
-    return true;
+    for (DataNodeProperties dn : dataNodes) {
+      if (dn.datanode.isDatanodeUp()) {
+        return true;
+      }
+    }
+    return false;
   }
   
   /**
@@ -1255,10 +1259,26 @@ public class MiniDFSCluster {
     if (dnInfo.length != numDataNodes) {
       return true;
     }
+    
+    // check if all data nodes are fully started
+    for (DataNodeProperties dn : dataNodes) {
+      if (!dn.datanode.isDatanodeFullyStarted()) {
+        // if one of the data nodes is not fully started, continue to wait
+        return true;
+      }
+    }
+    
     // make sure all datanodes have sent first heartbeat to namenode,
     // using (capacity == 0) as proxy.
     for (DatanodeInfo dn : dnInfo) {
       if (dn.getCapacity() == 0) {
+        return true;
+      }
+    }
+    
+    // If datanode dataset is not initialized then wait
+    for (DataNodeProperties dn : dataNodes) {
+      if (dn.datanode.data == null) {
         return true;
       }
     }
@@ -1400,7 +1420,7 @@ public class MiniDFSCluster {
    * @return finalized directory for a block pool
    */
   public static File getRbwDir(File storageDir, String bpid) {
-    return new File(storageDir, "/current/" + bpid + "/rbw/");
+    return new File(storageDir, "/current/" + bpid + "/current/rbw/");
   }
   
   /**

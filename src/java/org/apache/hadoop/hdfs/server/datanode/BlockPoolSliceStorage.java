@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
@@ -64,7 +65,13 @@ public class BlockPoolSliceStorage extends Storage {
     super(NodeType.DATA_NODE);
   }
 
-  BlockPoolSliceStorage(int namespaceID, String bpID, long cTime, String clusterId) {
+  public BlockPoolSliceStorage(StorageInfo storageInfo, String bpid) {
+    super(NodeType.DATA_NODE, storageInfo);
+    blockpoolID = bpid;
+  }
+
+  BlockPoolSliceStorage(int namespaceID, String bpID, long cTime,
+      String clusterId) {
     super(NodeType.DATA_NODE);
     this.namespaceID = namespaceID;
     this.blockpoolID = bpID;
@@ -513,10 +520,10 @@ public class BlockPoolSliceStorage extends Storage {
   /**
    * Get a block pool storage root based on data node storage root
    * @param bpID block pool ID
-   * @param dnRoot data node storage root directory
+   * @param dnCurDir data node storage root directory
    * @return root directory for block pool storage
    */
-  static File getBpRoot(String bpID, File dnCurDir) {
+  public static File getBpRoot(String bpID, File dnCurDir) {
     return new File(dnCurDir, bpID);
   }
 }
