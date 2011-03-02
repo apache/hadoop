@@ -251,9 +251,8 @@ public class TestBalancer extends TestCase {
     // start rebalancing
     balancer = new Balancer(conf);
     final InetSocketAddress namenodeAddress = NameNode.getServiceAddress(conf, true);
-    final String blockpoolId = cluster.getNamesystem().getBlockPoolId();
     final double threshold = balancer.parseArgs(new String[0]);
-    balancer.run(namenodeAddress, blockpoolId, threshold);
+    balancer.run(namenodeAddress, BalancingPolicy.Node.INSTANCE, threshold);
 
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     boolean balanced;
@@ -286,9 +285,8 @@ public class TestBalancer extends TestCase {
     balancer = new Balancer();
     balancer.setConf(conf);
     final InetSocketAddress namenodeAddress = NameNode.getServiceAddress(conf, true);
-    final String blockpoolId = cluster.getNamesystem().getBlockPoolId();
     final double threshold = balancer.parseArgs(new String[0]);
-    balancer.run(namenodeAddress, blockpoolId, threshold);
+    balancer.run(namenodeAddress, BalancingPolicy.Node.INSTANCE, threshold);
 
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     boolean balanced;

@@ -74,6 +74,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.UnsupportedActionException;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -200,6 +201,7 @@ public class Balancer implements Tool {
   private Configuration conf;
   private BlockPool theblockpool;
 
+  private BalancingPolicy policy;
   private double threshold = 10D;
   private boolean isBlockTokenEnabled;
   private boolean shouldRun;
@@ -231,8 +233,6 @@ public class Balancer implements Tool {
   
   private NetworkTopology cluster = new NetworkTopology();
   
-  private double avgUtilization = 0.0D;
-  
   final static private int MOVER_THREAD_POOL_SIZE = 1000;
   final private ExecutorService moverExecutor = 
     Executors.newFixedThreadPool(MOVER_THREAD_POOL_SIZE);
@@ -248,18 +248,21 @@ public class Balancer implements Tool {
     final ClientProtocol client;
     final FileSystem fs;
 
-    private BlockPool(InetSocketAddress namenodeAddress, final String id,
-        Configuration conf) throws IOException {
+    private BlockPool(InetSocketAddress namenodeAddress, Configuration conf
+        ) throws IOException {
       this.namenodeAddress = namenodeAddress;
-      this.id = id;
       this.namenode = createNamenode(namenodeAddress, conf);
       this.client = DFSClient.createNamenode(conf);
       this.fs = FileSystem.get(conf);
+
+      final NamespaceInfo namespaceinfo = namenode.versionRequest();
+      this.id = namespaceinfo.getBlockPoolID();
     }
 
     @Override
     public String toString() {
       return getClass().getSimpleName() + "[namenodeAddress=" + namenodeAddress
+          + ", id=" + id
           + "]";
     }
   }
@@ -512,17 +515,13 @@ public class Balancer implements Tool {
     }
   }
   
-  /* Return the utilization of a datanode */
-  static private double getUtilization(DatanodeInfo datanode) {
-    return ((double)datanode.getDfsUsed())/datanode.getCapacity()*100;
-  }
   
   /* A class that keeps track of a datanode in Balancer */
   private static class BalancerDatanode {
     final private static long MAX_SIZE_TO_MOVE = 10*1024*1024*1024L; //10GB
-    protected DatanodeInfo datanode;
-    private double utilization;
-    protected long maxSizeToMove;
+    final DatanodeInfo datanode;
+    final double utilization;
+    final long maxSize2Move;
     protected long scheduledSize = 0L;
     //  blocks being moved but not confirmed yet
     private List<PendingBlockMove> pendingBlocks = 
@@ -531,11 +530,12 @@ public class Balancer implements Tool {
     /* Constructor 
      * Depending on avgutil & threshold, calculate maximum bytes to move 
      */
-    private BalancerDatanode(
-        DatanodeInfo node, double avgUtil, double threshold) {
+    private BalancerDatanode(DatanodeInfo node, BalancingPolicy policy, double threshold) {
       datanode = node;
-      utilization = Balancer.getUtilization(node);
-        
+      utilization = policy.getUtilization(node);
+      final double avgUtil = policy.getAvgUtilization();
+      long maxSizeToMove;
+
       if (utilization >= avgUtil+threshold
           || utilization <= avgUtil-threshold) { 
         maxSizeToMove = (long)(threshold*datanode.getCapacity()/100);
@@ -546,7 +546,7 @@ public class Balancer implements Tool {
       if (utilization < avgUtil ) {
         maxSizeToMove = Math.min(datanode.getRemaining(), maxSizeToMove);
       }
-      maxSizeToMove = Math.min(MAX_SIZE_TO_MOVE, maxSizeToMove);
+      this.maxSize2Move = Math.min(MAX_SIZE_TO_MOVE, maxSizeToMove);
     }
     
     /** Get the datanode */
@@ -566,12 +566,12 @@ public class Balancer implements Tool {
     
     /** Decide if still need to move more bytes */
     protected boolean isMoveQuotaFull() {
-      return scheduledSize<maxSizeToMove;
+      return scheduledSize<maxSize2Move;
     }
 
     /** Return the total number of bytes that need to be moved */
     protected long availableSizeToMove() {
-      return maxSizeToMove-scheduledSize;
+      return maxSize2Move-scheduledSize;
     }
     
     /* increment scheduled size */
@@ -629,8 +629,8 @@ public class Balancer implements Tool {
             = new ArrayList<BalancerBlock>();
     
     /* constructor */
-    private Source(DatanodeInfo node, double avgUtil, double threshold) {
-      super(node, avgUtil, threshold);
+    private Source(DatanodeInfo node, BalancingPolicy policy, double threshold) {
+      super(node, policy, threshold);
     }
     
     /** Add a node task */
@@ -882,11 +882,12 @@ public class Balancer implements Tool {
    * namenode as a client and a secondary namenode and retry proxies
    * when connection fails.
    */
-  private void init(InetSocketAddress namenodeAddress,  final String id,
+  private void init(InetSocketAddress namenodeAddress, BalancingPolicy policy,
       double threshold) throws IOException {
+    this.policy = policy;
     this.threshold = threshold;
 
-    this.theblockpool = new BlockPool(namenodeAddress, id, conf);
+    this.theblockpool = new BlockPool(namenodeAddress, conf);
     ExportedBlockKeys keys = theblockpool.namenode.getBlockKeys();
     this.isBlockTokenEnabled = keys.isBlockTokenEnabled();
     if (isBlockTokenEnabled) {
@@ -992,15 +993,13 @@ public class Balancer implements Tool {
    */
   private long initNodes(DatanodeInfo[] datanodes) {
     // compute average utilization
-    long totalCapacity=0L, totalUsedSpace=0L;
     for (DatanodeInfo datanode : datanodes) {
       if (datanode.isDecommissioned() || datanode.isDecommissionInProgress()) {
         continue; // ignore decommissioning or decommissioned nodes
       }
-      totalCapacity += datanode.getCapacity();
-      totalUsedSpace += datanode.getDfsUsed();
+      policy.accumulateSpaces(datanode);
     }
-    this.avgUtilization = ((double)totalUsedSpace)/totalCapacity*100;
+    policy.initAvgUtilization();
 
     /*create network topology and all data node lists: 
      * overloaded, above-average, below-average, and underloaded
@@ -1015,26 +1014,27 @@ public class Balancer implements Tool {
       }
       cluster.add(datanode);
       BalancerDatanode datanodeS;
-      if (getUtilization(datanode) > avgUtilization) {
-        datanodeS = new Source(datanode, avgUtilization, threshold);
+      final double avg = policy.getAvgUtilization();
+      if (policy.getUtilization(datanode) > avg) {
+        datanodeS = new Source(datanode, policy, threshold);
         if (isAboveAvgUtilized(datanodeS)) {
           this.aboveAvgUtilizedDatanodes.add((Source)datanodeS);
         } else {
           assert(isOverUtilized(datanodeS)) :
             datanodeS.getName()+ "is not an overUtilized node";
           this.overUtilizedDatanodes.add((Source)datanodeS);
-          overLoadedBytes += (long)((datanodeS.utilization-avgUtilization
+          overLoadedBytes += (long)((datanodeS.utilization-avg
               -threshold)*datanodeS.datanode.getCapacity()/100.0);
         }
       } else {
-        datanodeS = new BalancerDatanode(datanode, avgUtilization, threshold);
+        datanodeS = new BalancerDatanode(datanode, policy, threshold);
         if ( isBelowAvgUtilized(datanodeS)) {
           this.belowAvgUtilizedDatanodes.add(datanodeS);
         } else {
           assert (isUnderUtilized(datanodeS)) :
             datanodeS.getName()+ "is not an underUtilized node"; 
           this.underUtilizedDatanodes.add(datanodeS);
-          underLoadedBytes += (long)((avgUtilization-threshold-
+          underLoadedBytes += (long)((avg-threshold-
               datanodeS.utilization)*datanodeS.datanode.getCapacity()/100.0);
         }
       }
@@ -1441,7 +1441,7 @@ public class Balancer implements Tool {
     this.datanodes.clear();
     this.sources.clear();
     this.targets.clear();  
-    this.avgUtilization = 0.0D;
+    this.policy.reset();
     cleanGlobalBlockList();
     this.movedBlocks.cleanup();
   }
@@ -1461,26 +1461,28 @@ public class Balancer implements Tool {
   
   /* Return true if the given datanode is overUtilized */
   private boolean isOverUtilized(BalancerDatanode datanode) {
-    return datanode.utilization > (avgUtilization+threshold);
+    return datanode.utilization > (policy.getAvgUtilization()+threshold);
   }
   
   /* Return true if the given datanode is above average utilized
    * but not overUtilized */
   private boolean isAboveAvgUtilized(BalancerDatanode datanode) {
-    return (datanode.utilization <= (avgUtilization+threshold))
-        && (datanode.utilization > avgUtilization);
+    final double avg = policy.getAvgUtilization();
+    return (datanode.utilization <= (avg+threshold))
+        && (datanode.utilization > avg);
   }
   
   /* Return true if the given datanode is underUtilized */
   private boolean isUnderUtilized(BalancerDatanode datanode) {
-    return datanode.utilization < (avgUtilization-threshold);
+    return datanode.utilization < (policy.getAvgUtilization()-threshold);
   }
 
   /* Return true if the given datanode is below average utilized 
    * but not underUtilized */
   private boolean isBelowAvgUtilized(BalancerDatanode datanode) {
-        return (datanode.utilization >= (avgUtilization-threshold))
-                 && (datanode.utilization < avgUtilization);
+    final double avg = policy.getAvgUtilization();
+    return (datanode.utilization >= (avg-threshold))
+             && (datanode.utilization < avg);
   }
 
   // Exit status
@@ -1495,20 +1497,20 @@ public class Balancer implements Tool {
    * @throws Exception exception that occured during datanode balancing
    */
   public int run(String[] args) throws Exception {
-    return run(NameNode.getServiceAddress(conf, true), "TODO", parseArgs(args));
+    return run(NameNode.getServiceAddress(conf, true),
+        BalancingPolicy.Node.INSTANCE, parseArgs(args));
   }
 
-  int run(InetSocketAddress namenodeAddress, String blockpoolId,
+  int run(InetSocketAddress namenodeAddress, BalancingPolicy policy, 
       double threshold) throws IOException, InterruptedException {
     LOG.info("namenodeAddress = " + namenodeAddress);
-    LOG.info("blockpoolId     = " + blockpoolId);
     LOG.info("threshold       = " + threshold);
 
     long startTime = Util.now();
     OutputStream out = null;
     try {
       // initialize a balancer
-      init(namenodeAddress, blockpoolId, threshold);
+      init(namenodeAddress, policy, threshold);
       
       /* Check if there is another balancer running.
        * Exit if there is another one running.

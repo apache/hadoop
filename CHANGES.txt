@@ -130,6 +130,7 @@ Trunk (unreleased changes)
     datanode should wait (keep connecting) untill NN comes up 
     with the right version (boryas)
 
+    HDFS-1681. Balancer: support per pool and per node policies.  (szetszwo)
 
   IMPROVEMENTS
 
