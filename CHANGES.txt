@@ -127,6 +127,8 @@ Release 0.90.2 - Unreleased
    HBASE-3576  MasterAddressTracker is registered to ZooKeeperWatcher twice
    HBASE-3561  OPTS arguments are duplicated
    HBASE-3572  memstore lab can leave half inited data structs (bad!)
+   HBASE-3589  test jar should not include mapred-queues.xml and
+               log4j.properties
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

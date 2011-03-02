@@ -363,7 +363,9 @@
             <exclude>org/apache/jute/**</exclude>
             <exclude>org/apache/zookeeper/**</exclude>
             <exclude>**/*.jsp</exclude>
-            <exclude>**/hbase-site.xml</exclude>
+            <exclude>hbase-site.xml</exclude>
+            <exclude>log4j.properties</exclude>
+            <exclude>mapred-queues.xml</exclude>
           </excludes>
         </configuration>
       </plugin>
