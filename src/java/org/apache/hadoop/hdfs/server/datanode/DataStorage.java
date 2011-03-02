@@ -65,9 +65,9 @@ public class DataStorage extends Storage {
   final static String BLOCK_SUBDIR_PREFIX = "subdir";
   final static String BLOCK_FILE_PREFIX = "blk_";
   final static String COPY_FILE_PREFIX = "dncp_";
-  final static String STORAGE_DIR_RBW = "rbw";
-  final static String STORAGE_DIR_FINALIZED = "finalized";
   final static String STORAGE_DIR_DETACHED = "detach";
+  public final static String STORAGE_DIR_RBW = "rbw";
+  public final static String STORAGE_DIR_FINALIZED = "finalized";
 
   private static final Pattern PRE_GENSTAMP_META_FILE_PATTERN = 
     Pattern.compile("(.*blk_[-]*\\d+)\\.meta$");

@@ -69,7 +69,7 @@ public class TestDFSFinalize extends TestCase {
       assertEquals(
                    UpgradeUtilities.checksumContents(
                                                      DATA_NODE, new File(dataNodeDirs[i],"current")),
-                   UpgradeUtilities.checksumMasterContents(DATA_NODE));
+                   UpgradeUtilities.checksumMasterDataNodeContents());
     }
     for (int i = 0; i < nameNodeDirs.length; i++) {
       assertFalse(new File(nameNodeDirs[i],"previous").isDirectory());
@@ -95,10 +95,10 @@ public class TestDFSFinalize extends TestCase {
       String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
       
       log("Finalize with existing previous dir", numDirs);
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "previous");
-      UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
-      UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "previous");
       cluster = new MiniDFSCluster.Builder(conf)
                                   .format(false)
                                   .manageDataDfsDirs(false)

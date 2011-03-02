@@ -144,6 +144,8 @@ Trunk (unreleased changes)
     HDFS-1701. Federation: Fix TestHeartbeathandling.
     (Erik Steffl and Tanping Wang via suresh)
 
+    HDFS-1693. Fix TestDFSStorageStateRecovery failure. (suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

@@ -73,7 +73,7 @@ public class TestDFSUpgrade extends TestCase {
       File previous = new File(baseDirs[i], "previous");
       assertTrue(previous.isDirectory());
       assertEquals(UpgradeUtilities.checksumContents(NAME_NODE, previous),
-          UpgradeUtilities.checksumMasterContents(NAME_NODE));
+          UpgradeUtilities.checksumMasterNameNodeContents());
     }
   }
  
@@ -87,12 +87,12 @@ public class TestDFSUpgrade extends TestCase {
     for (int i = 0; i < baseDirs.length; i++) {
       File current = new File(baseDirs[i], "current/" + bpid + "/current");
       assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, current),
-        UpgradeUtilities.checksumMasterContents(DATA_NODE));
+        UpgradeUtilities.checksumMasterDataNodeContents());
       
       File previous = new File(baseDirs[i], "current/" + bpid + "/previous");
       assertTrue(previous.isDirectory());
       assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, previous),
-          UpgradeUtilities.checksumMasterContents(DATA_NODE));
+          UpgradeUtilities.checksumMasterDataNodeContents());
     }
   }
   /**
@@ -156,16 +156,16 @@ public class TestDFSUpgrade extends TestCase {
       String[] dataNodeDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
       
       log("Normal NameNode upgrade", numDirs);
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
       checkNameNode(nameNodeDirs);
       cluster.shutdown();
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("Normal DataNode upgrade", numDirs);
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
       checkDataNode(dataNodeDirs, UpgradeUtilities.getCurrentBlockPoolID(null));
       cluster.shutdown();
@@ -173,16 +173,16 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
       
       log("NameNode upgrade with existing previous dir", numDirs);
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "previous");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "previous");
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("DataNode upgrade with existing previous dir", numDirs);
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
-      UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "previous");
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
+      UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "previous");
       cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
       checkDataNode(dataNodeDirs, UpgradeUtilities.getCurrentBlockPoolID(null));
       cluster.shutdown();
@@ -190,9 +190,9 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
 
       log("DataNode upgrade with future stored layout version in current", numDirs);
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
+      baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
       storageInfo = new StorageInfo(Integer.MIN_VALUE, 
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster),
@@ -208,9 +208,9 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
       
       log("DataNode upgrade with newer fsscTime in current", numDirs);
-      UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       cluster = createCluster();
-      baseDirs = UpgradeUtilities.createStorageDirs(DATA_NODE, dataNodeDirs, "current");
+      baseDirs = UpgradeUtilities.createDataNodeStorageDirs(dataNodeDirs, "current");
       storageInfo = new StorageInfo(UpgradeUtilities.getCurrentLayoutVersion(), 
           UpgradeUtilities.getCurrentNamespaceID(cluster),
           UpgradeUtilities.getCurrentClusterID(cluster), Long.MAX_VALUE);
@@ -225,7 +225,7 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createEmptyDirs(dataNodeDirs);
 
       log("NameNode upgrade with no edits file", numDirs);
-      baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       for (File f : baseDirs) { 
         FileUtil.fullyDelete(new File(f,"edits"));
       }
@@ -233,7 +233,7 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with no image file", numDirs);
-      baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       for (File f : baseDirs) { 
         FileUtil.fullyDelete(new File(f,"fsimage")); 
       }
@@ -241,7 +241,7 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with corrupt version file", numDirs);
-      baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       for (File f : baseDirs) { 
         UpgradeUtilities.corruptFile(new File(f,"VERSION")); 
       }
@@ -249,7 +249,7 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with old layout version in current", numDirs);
-      baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       storageInfo = new StorageInfo(Storage.LAST_UPGRADABLE_LAYOUT_VERSION + 1, 
           UpgradeUtilities.getCurrentNamespaceID(null),
           UpgradeUtilities.getCurrentClusterID(null),
@@ -262,7 +262,7 @@ public class TestDFSUpgrade extends TestCase {
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);
       
       log("NameNode upgrade with future layout version in current", numDirs);
-      baseDirs = UpgradeUtilities.createStorageDirs(NAME_NODE, nameNodeDirs, "current");
+      baseDirs = UpgradeUtilities.createNameNodeStorageDirs(nameNodeDirs, "current");
       storageInfo = new StorageInfo(Integer.MIN_VALUE, 
           UpgradeUtilities.getCurrentNamespaceID(null),
           UpgradeUtilities.getCurrentClusterID(null),

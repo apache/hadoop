@@ -43,8 +43,10 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
@@ -1414,13 +1416,40 @@ public class MiniDFSCluster {
   }
   
   /**
+   * Get current directory corresponding to the datanode
+   * @param storageDir
+   * @return current directory
+   */
+  public static String getDNCurrentDir(File storageDir) {
+    return storageDir + "/" + Storage.STORAGE_DIR_CURRENT + "/";
+  }
+  
+  /**
+   * Get directory corresponding to block pool directory in the datanode
+   * @param storageDir
+   * @return current directory
+   */
+  public static String getBPDir(File storageDir, String bpid) {
+    return getDNCurrentDir(storageDir) + bpid + "/";
+  }
+  /**
+   * Get directory relative to block pool directory in the datanode
+   * @param storageDir
+   * @return current directory
+   */
+  public static String getBPDir(File storageDir, String bpid, String dirName) {
+    return getBPDir(storageDir, bpid) + dirName + "/";
+  }
+  
+  /**
    * Get finalized directory for a block pool
    * @param storageDir storage directory
    * @param bpid Block pool Id
    * @return finalized directory for a block pool
    */
   public static File getRbwDir(File storageDir, String bpid) {
-    return new File(storageDir, "/current/" + bpid + "/current/rbw/");
+    return new File(getBPDir(storageDir, bpid, Storage.STORAGE_DIR_CURRENT)
+        + DataStorage.STORAGE_DIR_RBW );
   }
   
   /**
@@ -1430,7 +1459,8 @@ public class MiniDFSCluster {
    * @return finalized directory for a block pool
    */
   public static File getFinalizedDir(File storageDir, String bpid) {
-    return new File(storageDir, "/current/" + bpid + "/current/finalized/");
+    return new File(getBPDir(storageDir, bpid, Storage.STORAGE_DIR_CURRENT)
+        + DataStorage.STORAGE_DIR_FINALIZED );
   }
   
   /**
@@ -1440,8 +1470,8 @@ public class MiniDFSCluster {
    * @return file corresponding to the block
    */
   public static File getBlockFile(File storageDir, ExtendedBlock blk) {
-    return new File(getFinalizedDir(storageDir, blk.getBlockPoolId()), blk
-        .getBlockName());
+    return new File(getFinalizedDir(storageDir, blk.getBlockPoolId()), 
+        blk.getBlockName());
   }
   
   /**

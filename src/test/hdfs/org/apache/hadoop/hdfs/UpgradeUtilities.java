@@ -80,6 +80,8 @@ public class UpgradeUtilities {
   private static File datanodeStorage = new File(TEST_ROOT_DIR, "datanodeMaster");
   // A checksum of the contents in datanodeStorage directory
   private static long datanodeStorageChecksum;
+  // A checksum of the contents in blockpool storage directory
+  private static long blockPoolStorageChecksum;
 
   /**
    * Initialize the data structures used by this class.  
@@ -144,10 +146,15 @@ public class UpgradeUtilities {
       FileUtil.fullyDelete(new File(namenodeStorage,"in_use.lock"));
       FileUtil.fullyDelete(new File(datanodeStorage,"in_use.lock"));
     }
-    namenodeStorageChecksum = checksumContents(
-                                               NAME_NODE, new File(namenodeStorage,"current"));
-    datanodeStorageChecksum = checksumContents(
-                                               DATA_NODE, new File(datanodeStorage,"current"));
+    namenodeStorageChecksum = checksumContents(NAME_NODE, 
+        new File(namenodeStorage, "current"));
+    File dnCurDir = new File(datanodeStorage, "current");
+    datanodeStorageChecksum = checksumContents(DATA_NODE, dnCurDir);
+    
+    String bpid = cluster.getNamesystem(0).getBlockPoolId();
+    File bpCurDir = new File(BlockPoolSliceStorage.getBpRoot(bpid, dnCurDir),
+        "current");
+    blockPoolStorageChecksum = checksumContents(DATA_NODE, bpCurDir);
   }
   
   // Private helper method that writes a file to the given file system.
@@ -200,14 +207,26 @@ public class UpgradeUtilities {
   
   /**
    * Return the checksum for the singleton master storage directory
-   * of the given node type.
+   * for namenode
    */
-  public static long checksumMasterContents(NodeType nodeType) throws IOException {
-    if (nodeType == NAME_NODE) {
-      return namenodeStorageChecksum;
-    } else {
-      return datanodeStorageChecksum;
-    }
+  public static long checksumMasterNameNodeContents() {
+    return namenodeStorageChecksum;
+  }
+  
+  /**
+   * Return the checksum for the singleton master storage directory
+   * for datanode
+   */
+  public static long checksumMasterDataNodeContents() {
+    return datanodeStorageChecksum;
+  }
+  
+  /**
+   * Return the checksum for the singleton master storage directory
+   * for block pool.
+   */
+  public static long checksumMasterBlockPoolContents() {
+    return blockPoolStorageChecksum;
   }
   
   /**
@@ -258,55 +277,96 @@ public class UpgradeUtilities {
   }
   
   /**
-   * Simulate the <code>dfs.name.dir</code> or <code>dfs.data.dir</code>
-   * of a populated DFS filesystem.
+   * Simulate the <code>dfs.name.dir</code> of a populated DFS filesystem.
+   * This method populates for each parent directory, <code>parent/dirName</code>
+   * with the content of namenode storage directory that comes from a singleton
+   * namenode master (that contains edits, fsimage, version and time files). 
+   * If the destination directory does not exist, it will be created.  
+   * If the directory already exists, it will first be deleted.
    *
-   * This method creates and populates the directory specified by
-   *  <code>parent/dirName</code>, for each parent directory.
-   * The contents of the new directories will be
-   * appropriate for the given node type.  If the directory does not
-   * exist, it will be created.  If the directory already exists, it
-   * will first be deleted.
-   *
-   * By default, a singleton master populated storage
-   * directory is created for a Namenode (contains edits, fsimage,
-   * version, and time files) and a Datanode (contains version and
-   * block files).  These directories are then
-   * copied by this method to create new storage
-   * directories of the appropriate type (Namenode or Datanode).
-   *
+   * @param parents parent directory where {@code dirName} is created
+   * @param dirName directory under which storage directory is created
    * @return the array of created directories
    */
-  public static File[] createStorageDirs(NodeType nodeType, String[] parents, String dirName) throws Exception {
+  public static File[] createNameNodeStorageDirs(String[] parents,
+      String dirName) throws Exception {
     File[] retVal = new File[parents.length];
     for (int i = 0; i < parents.length; i++) {
       File newDir = new File(parents[i], dirName);
       createEmptyDirs(new String[] {newDir.toString()});
       LocalFileSystem localFS = FileSystem.getLocal(new HdfsConfiguration());
-      switch (nodeType) {
-      case NAME_NODE:
-        localFS.copyToLocalFile(new Path(namenodeStorage.toString(), "current"),
-                                new Path(newDir.toString()),
-                                false);
-        Path newImgDir = new Path(newDir.getParent(), "image");
-        if (!localFS.exists(newImgDir))
-          localFS.copyToLocalFile(
-              new Path(namenodeStorage.toString(), "image"),
-              newImgDir,
-              false);
-        break;
-      case DATA_NODE:
-        localFS.copyToLocalFile(new Path(datanodeStorage.toString(), "current"),
-                                new Path(newDir.toString()),
-                                false);
-        Path newStorageFile = new Path(newDir.getParent(), "storage");
-        if (!localFS.exists(newStorageFile))
-          localFS.copyToLocalFile(
-              new Path(datanodeStorage.toString(), "storage"),
-              newStorageFile,
-              false);
-        break;
-      }
+      localFS.copyToLocalFile(new Path(namenodeStorage.toString(), "current"),
+                              new Path(newDir.toString()),
+                              false);
+      Path newImgDir = new Path(newDir.getParent(), "image");
+      if (!localFS.exists(newImgDir))
+        localFS.copyToLocalFile(
+            new Path(namenodeStorage.toString(), "image"),
+            newImgDir,
+            false);
+      retVal[i] = newDir;
+    }
+    return retVal;
+  }  
+  
+  /**
+   * Simulate the <code>dfs.data.dir</code> of a populated DFS filesystem.
+   * This method populates for each parent directory, <code>parent/dirName</code>
+   * with the content of datanode storage directory that comes from a singleton
+   * datanode master (that contains version and block files). If the destination
+   * directory does not exist, it will be created.  If the directory already 
+   * exists, it will first be deleted.
+   * 
+   * @param parents parent directory where {@code dirName} is created
+   * @param dirName directory under which storage directory is created
+   * @return the array of created directories
+   */
+  public static File[] createDataNodeStorageDirs(String[] parents,
+      String dirName) throws Exception {
+    File[] retVal = new File[parents.length];
+    for (int i = 0; i < parents.length; i++) {
+      File newDir = new File(parents[i], dirName);
+      createEmptyDirs(new String[] {newDir.toString()});
+      LocalFileSystem localFS = FileSystem.getLocal(new HdfsConfiguration());
+      localFS.copyToLocalFile(new Path(datanodeStorage.toString(), "current"),
+                              new Path(newDir.toString()),
+                              false);
+      Path newStorageFile = new Path(newDir.getParent(), "storage");
+      if (!localFS.exists(newStorageFile))
+        localFS.copyToLocalFile(
+            new Path(datanodeStorage.toString(), "storage"),
+            newStorageFile,
+            false);
+      retVal[i] = newDir;
+    }
+    return retVal;
+  }
+  
+  /**
+   * Simulate the <code>dfs.data.dir</code> of a populated DFS filesystem.
+   * This method populates for each parent directory, <code>parent/dirName</code>
+   * with the content of block pool storage directory that comes from a singleton
+   * datanode master (that contains version and block files). If the destination
+   * directory does not exist, it will be created.  If the directory already 
+   * exists, it will first be deleted.
+   * 
+   * @param parents parent directory where {@code dirName} is created
+   * @param dirName directory under which storage directory is created
+   * @param bpid block pool id for which the storage directory is created.
+   * @return the array of created directories
+   */
+  public static File[] createBlockPoolStorageDirs(String[] parents,
+      String dirName, String bpid) throws Exception {
+    File[] retVal = new File[parents.length];
+    Path bpCurDir = new Path(MiniDFSCluster.getBPDir(datanodeStorage,
+        bpid, Storage.STORAGE_DIR_CURRENT));
+    for (int i = 0; i < parents.length; i++) {
+      File newDir = new File(parents[i] + "/current/" + bpid, dirName);
+      createEmptyDirs(new String[] {newDir.toString()});
+      LocalFileSystem localFS = FileSystem.getLocal(new HdfsConfiguration());
+      localFS.copyToLocalFile(bpCurDir,
+                              new Path(newDir.toString()),
+                              false);
       retVal[i] = newDir;
     }
     return retVal;
@@ -476,6 +536,20 @@ public class UpgradeUtilities {
       return cluster.getNameNode().versionRequest().getCTime();
     }
     return namenodeStorageFsscTime;
+  }
+
+  /**
+   * Create empty block pool directories
+   * @return array of block pool directories
+   */
+  public static String[] createEmptyBPDirs(String[] baseDirs, String bpid)
+      throws IOException {
+    String[] bpDirs = new String[baseDirs.length];
+    for (int i = 0; i < baseDirs.length; i++) {
+      bpDirs[i] = MiniDFSCluster.getBPDir(new File(baseDirs[i]), bpid);
+    }
+    createEmptyDirs(bpDirs);
+    return bpDirs;
   }
 }
 

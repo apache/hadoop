@@ -84,12 +84,12 @@ public abstract class Storage extends StorageInfo {
   private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";
   public static final String STORAGE_DIR_CURRENT      = "current";
-  protected static final String STORAGE_DIR_PREVIOUS  = "previous";
-  private   static final String STORAGE_TMP_REMOVED   = "removed.tmp";
-  private   static final String STORAGE_TMP_PREVIOUS  = "previous.tmp";
-  private   static final String STORAGE_TMP_FINALIZED = "finalized.tmp";
-  private   static final String STORAGE_TMP_LAST_CKPT = "lastcheckpoint.tmp";
-  private   static final String STORAGE_PREVIOUS_CKPT = "previous.checkpoint";
+  public    static final String STORAGE_DIR_PREVIOUS  = "previous";
+  public    static final String STORAGE_TMP_REMOVED   = "removed.tmp";
+  public    static final String STORAGE_TMP_PREVIOUS  = "previous.tmp";
+  public    static final String STORAGE_TMP_FINALIZED = "finalized.tmp";
+  public    static final String STORAGE_TMP_LAST_CKPT = "lastcheckpoint.tmp";
+  public    static final String STORAGE_PREVIOUS_CKPT = "previous.checkpoint";
   
   public enum StorageState {
     NON_EXISTENT,

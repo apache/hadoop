@@ -23,7 +23,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType;
+import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 
 import static org.apache.hadoop.hdfs.server.common.HdfsConstants.NodeType.NAME_NODE;
@@ -102,88 +102,197 @@ public class TestDFSStorageStateRecovery extends TestCase {
              + " previous="+state[1]
              + " previous.tmp="+state[2]
              + " removed.tmp="+state[3]
-             + " lastcheckpoint.tmp="+state[4]);
+             + " lastcheckpoint.tmp="+state[4]
+             + " should recover="+state[5]
+             + " current exists after="+state[6]
+             + " previous exists after="+state[7]);
   }
   
   /**
-   * Sets up the storage directories for the given node type, either
-   * dfs.name.dir or dfs.data.dir. For each element in dfs.name.dir or
-   * dfs.data.dir, the subdirectories represented by the first four elements 
-   * of the <code>state</code> array will be created and populated.
-   * See UpgradeUtilities.createStorageDirs().
+   * Sets up the storage directories for namenode as defined by
+   * dfs.name.dir. For each element in dfs.name.dir, the subdirectories 
+   * represented by the first four elements of the <code>state</code> array
+   * will be created and populated.
    * 
-   * @param nodeType
-   *   the type of node that storage should be created for. Based on this
-   *   parameter either dfs.name.dir or dfs.data.dir is used from the global conf.
+   * See {@link UpgradeUtilities#createNameNodeStorageDirs()}
+   * 
    * @param state
    *   a row from the testCases table which indicates which directories
    *   to setup for the node
-   * @return file paths representing either dfs.name.dir or dfs.data.dir
-   *   directories
+   * @return file paths representing namenode storage directories
    */
-  String[] createStorageState(NodeType nodeType, boolean[] state) throws Exception {
-    String[] baseDirs = (nodeType == NAME_NODE ?
-                         conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY) :
-                         conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY));
+  String[] createNameNodeStorageState(boolean[] state) throws Exception {
+    String[] baseDirs = conf.getStrings(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY);
     UpgradeUtilities.createEmptyDirs(baseDirs);
     if (state[0])  // current
-      UpgradeUtilities.createStorageDirs(nodeType, baseDirs, "current");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "current");
     if (state[1])  // previous
-      UpgradeUtilities.createStorageDirs(nodeType, baseDirs, "previous");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "previous");
     if (state[2])  // previous.tmp
-      UpgradeUtilities.createStorageDirs(nodeType, baseDirs, "previous.tmp");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "previous.tmp");
     if (state[3])  // removed.tmp
-      UpgradeUtilities.createStorageDirs(nodeType, baseDirs, "removed.tmp");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "removed.tmp");
     if (state[4])  // lastcheckpoint.tmp
-      UpgradeUtilities.createStorageDirs(nodeType, baseDirs, "lastcheckpoint.tmp");
+      UpgradeUtilities.createNameNodeStorageDirs(baseDirs, "lastcheckpoint.tmp");
     return baseDirs;
   }
- 
+  
   /**
-   * Verify that the current and/or previous exist as indicated by 
+   * Sets up the storage directories for a datanode under
+   * dfs.data.dir. For each element in dfs.data.dir, the subdirectories 
+   * represented by the first four elements of the <code>state</code> array 
+   * will be created and populated. 
+   * See {@link UpgradeUtilities#createDataNodeStorageDirs()}
+   * 
+   * @param state
+   *   a row from the testCases table which indicates which directories
+   *   to setup for the node
+   * @return file paths representing datanode storage directories
+   */
+  String[] createDataNodeStorageState(boolean[] state) throws Exception {
+    String[] baseDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+    UpgradeUtilities.createEmptyDirs(baseDirs);
+    if (state[0])  // current
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "current");
+    if (state[1])  // previous
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "previous");
+    if (state[2])  // previous.tmp
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "previous.tmp");
+    if (state[3])  // removed.tmp
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "removed.tmp");
+    if (state[4])  // lastcheckpoint.tmp
+      UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "lastcheckpoint.tmp");
+    return baseDirs;
+  }
+  
+  /**
+   * Sets up the storage directories for a block pool under
+   * dfs.data.dir. For each element in dfs.data.dir, the subdirectories 
+   * represented by the first four elements of the <code>state</code> array 
+   * will be created and populated. 
+   * See {@link UpgradeUtilities#createBlockPoolStorageDirs()}
+   * 
+   * @param bpid block pool Id
+   * @param state
+   *   a row from the testCases table which indicates which directories
+   *   to setup for the node
+   * @return file paths representing block pool storage directories
+   */
+  String[] createBlockPoolStorageState(String bpid, boolean[] state) throws Exception {
+    String[] baseDirs = conf.getStrings(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+    UpgradeUtilities.createEmptyDirs(baseDirs);
+    UpgradeUtilities.createDataNodeStorageDirs(baseDirs, "current");
+    
+    // After copying the storage directories from master datanode, empty
+    // the block pool storage directories
+    String[] bpDirs = UpgradeUtilities.createEmptyBPDirs(baseDirs, bpid);
+    if (state[0]) // current
+      UpgradeUtilities.createBlockPoolStorageDirs(baseDirs, "current", bpid);
+    if (state[1]) // previous
+      UpgradeUtilities.createBlockPoolStorageDirs(baseDirs, "previous", bpid);
+    if (state[2]) // previous.tmp
+      UpgradeUtilities.createBlockPoolStorageDirs(baseDirs, "previous.tmp",
+          bpid);
+    if (state[3]) // removed.tmp
+      UpgradeUtilities
+          .createBlockPoolStorageDirs(baseDirs, "removed.tmp", bpid);
+    if (state[4]) // lastcheckpoint.tmp
+      UpgradeUtilities.createBlockPoolStorageDirs(baseDirs,
+          "lastcheckpoint.tmp", bpid);
+    return bpDirs;
+  }
+  
+  /**
+   * For NameNode, verify that the current and/or previous exist as indicated by 
    * the method parameters.  If previous exists, verify that
    * it hasn't been modified by comparing the checksum of all it's
    * containing files with their original checksum.  It is assumed that
    * the server has recovered.
    */
-  void checkResult(NodeType nodeType, String[] baseDirs, 
+  void checkResultNameNode(String[] baseDirs, 
                    boolean currentShouldExist, boolean previousShouldExist) 
     throws IOException
   {
-    switch (nodeType) {
-    case NAME_NODE:
-      if (currentShouldExist) {
-        for (int i = 0; i < baseDirs.length; i++) {
-          assertTrue(new File(baseDirs[i],"current").isDirectory());
-          assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
-          assertTrue(new File(baseDirs[i],"current/edits").isFile());
-          assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
-          assertTrue(new File(baseDirs[i],"current/fstime").isFile());
-        }
+    if (currentShouldExist) {
+      for (int i = 0; i < baseDirs.length; i++) {
+        assertTrue(new File(baseDirs[i],"current").isDirectory());
+        assertTrue(new File(baseDirs[i],"current/VERSION").isFile());
+        assertTrue(new File(baseDirs[i],"current/edits").isFile());
+        assertTrue(new File(baseDirs[i],"current/fsimage").isFile());
+        assertTrue(new File(baseDirs[i],"current/fstime").isFile());
       }
-      break;
-    case DATA_NODE:
-      if (currentShouldExist) {
-        for (int i = 0; i < baseDirs.length; i++) {
-          assertEquals(
-                       UpgradeUtilities.checksumContents(
-                                                         nodeType, new File(baseDirs[i],"current")),
-                       UpgradeUtilities.checksumMasterContents(nodeType));
-        }
-      }
-      break;
     }
     if (previousShouldExist) {
       for (int i = 0; i < baseDirs.length; i++) {
         assertTrue(new File(baseDirs[i],"previous").isDirectory());
         assertEquals(
                      UpgradeUtilities.checksumContents(
-                                                       nodeType, new File(baseDirs[i],"previous")),
-                     UpgradeUtilities.checksumMasterContents(nodeType));
+                                                       NAME_NODE, new File(baseDirs[i],"previous")),
+                     UpgradeUtilities.checksumMasterNameNodeContents());
+      }
+    }
+  }
+  
+  /**
+   * For datanode, verify that the current and/or previous exist as indicated by 
+   * the method parameters.  If previous exists, verify that
+   * it hasn't been modified by comparing the checksum of all it's
+   * containing files with their original checksum.  It is assumed that
+   * the server has recovered.
+   */
+  void checkResultDataNode(String[] baseDirs, 
+                   boolean currentShouldExist, boolean previousShouldExist) 
+    throws IOException
+  {
+    if (currentShouldExist) {
+      for (int i = 0; i < baseDirs.length; i++) {
+        assertEquals(
+                     UpgradeUtilities.checksumContents(DATA_NODE, new File(baseDirs[i],"current")),
+                     UpgradeUtilities.checksumMasterDataNodeContents());
+      }
+    }
+    if (previousShouldExist) {
+      for (int i = 0; i < baseDirs.length; i++) {
+        assertTrue(new File(baseDirs[i],"previous").isDirectory());
+        assertEquals(
+                     UpgradeUtilities.checksumContents(DATA_NODE, new File(baseDirs[i],"previous")),
+                     UpgradeUtilities.checksumMasterDataNodeContents());
       }
     }
   }
  
+  /**
+   * For block pool, verify that the current and/or previous exist as indicated
+   * by the method parameters.  If previous exists, verify that
+   * it hasn't been modified by comparing the checksum of all it's
+   * containing files with their original checksum.  It is assumed that
+   * the server has recovered.
+   * @param baseDirs directories pointing to block pool storage
+   * @param bpid block pool Id
+   * @param currentShouldExist current directory exists under storage
+   * @param currentShouldExist previous directory exists under storage
+   */
+  void checkResultBlockPool(String[] baseDirs, boolean currentShouldExist,
+      boolean previousShouldExist) throws IOException
+  {
+    if (currentShouldExist) {
+      for (int i = 0; i < baseDirs.length; i++) {
+        File bpCurDir = new File(baseDirs[i], Storage.STORAGE_DIR_CURRENT);
+        assertEquals(UpgradeUtilities.checksumContents(DATA_NODE, bpCurDir),
+                     UpgradeUtilities.checksumMasterBlockPoolContents());
+      }
+    }
+    if (previousShouldExist) {
+      for (int i = 0; i < baseDirs.length; i++) {
+        File bpPrevDir = new File(baseDirs[i], Storage.STORAGE_DIR_PREVIOUS);
+        assertTrue(bpPrevDir.isDirectory());
+        assertEquals(
+                     UpgradeUtilities.checksumContents(DATA_NODE, bpPrevDir),
+                     UpgradeUtilities.checksumMasterBlockPoolContents());
+      }
+    }
+  }
+  
   private MiniDFSCluster createCluster(Configuration c) throws IOException {
     return new MiniDFSCluster.Builder(c)
                              .numDataNodes(0)
@@ -211,10 +320,10 @@ public class TestDFSStorageStateRecovery extends TestCase {
         boolean prevAfterRecover = testCase[7];
 
         log("NAME_NODE recovery", numDirs, i, testCase);
-        baseDirs = createStorageState(NAME_NODE, testCase);
+        baseDirs = createNameNodeStorageState(testCase);
         if (shouldRecover) {
           cluster = createCluster(conf);
-          checkResult(NAME_NODE, baseDirs, curAfterRecover, prevAfterRecover);
+          checkResultNameNode(baseDirs, curAfterRecover, prevAfterRecover);
           cluster.shutdown();
         } else {
           try {
@@ -237,12 +346,13 @@ public class TestDFSStorageStateRecovery extends TestCase {
   }
 
   /**
-   * This test iterates over the testCases table and attempts
-   * to startup the DataNode normally.
+   * This test iterates over the testCases table for Datanode storage and
+   * attempts to startup the DataNode normally.
    */
   public void testDNStorageStates() throws Exception {
     String[] baseDirs;
 
+    // First setup the datanode storage directory
     for (int numDirs = 1; numDirs <= 2; numDirs++) {
       conf = new HdfsConfiguration();
       conf.setInt("dfs.datanode.scan.period.hours", -1);      
@@ -254,21 +364,66 @@ public class TestDFSStorageStateRecovery extends TestCase {
         boolean prevAfterRecover = testCase[7];
 
         log("DATA_NODE recovery", numDirs, i, testCase);
-        createStorageState(NAME_NODE,
-                           new boolean[] {true, true, false, false, false});
+        createNameNodeStorageState(new boolean[] { true, true, false, false,
+            false });
         cluster = createCluster(conf);
-        baseDirs = createStorageState(DATA_NODE, testCase);
+        baseDirs = createDataNodeStorageState(testCase);
         if (!testCase[0] && !testCase[1] && !testCase[2] && !testCase[3]) {
           // DataNode will create and format current if no directories exist
           cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
         } else {
           if (shouldRecover) {
             cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-            checkResult(DATA_NODE, baseDirs, curAfterRecover, prevAfterRecover);
+            checkResultDataNode(baseDirs, curAfterRecover, prevAfterRecover);
           } else {
             try {
               cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
-              throw new AssertionError("DataNode should have failed to start");
+              assertFalse(cluster.getDataNodes().get(0).isDatanodeUp());
+            } catch (Exception expected) {
+              // expected
+            }
+          }
+        }
+        cluster.shutdown();
+      } // end testCases loop
+    } // end numDirs loop
+  }
+
+  /**
+   * This test iterates over the testCases table for block pool storage and
+   * attempts to startup the DataNode normally.
+   */
+  public void testBlockPoolStorageStates() throws Exception {
+    String[] baseDirs;
+
+    // First setup the datanode storage directory
+    String bpid = UpgradeUtilities.getCurrentBlockPoolID(null);
+    for (int numDirs = 1; numDirs <= 2; numDirs++) {
+      conf = new HdfsConfiguration();
+      conf.setInt("dfs.datanode.scan.period.hours", -1);      
+      conf = UpgradeUtilities.initializeStorageStateConf(numDirs, conf);
+      for (int i = 0; i < NUM_DN_TEST_CASES; i++) {
+        boolean[] testCase = testCases[i];
+        boolean shouldRecover = testCase[5];
+        boolean curAfterRecover = testCase[6];
+        boolean prevAfterRecover = testCase[7];
+
+        log("BLOCK_POOL recovery", numDirs, i, testCase);
+        createNameNodeStorageState(new boolean[] { true, true, false, false,
+            false });
+        cluster = createCluster(conf);
+        baseDirs = createBlockPoolStorageState(bpid, testCase);
+        if (!testCase[0] && !testCase[1] && !testCase[2] && !testCase[3]) {
+          // DataNode will create and format current if no directories exist
+          cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
+        } else {
+          if (shouldRecover) {
+            cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
+            checkResultBlockPool(baseDirs, curAfterRecover, prevAfterRecover);
+          } else {
+            try {
+              cluster.startDataNodes(conf, 1, false, StartupOption.REGULAR, null);
+              assertFalse(cluster.getDataNodes().get(0).isBPServiceAlive(bpid));
             } catch (Exception expected) {
               // expected
             }
@@ -288,13 +443,4 @@ public class TestDFSStorageStateRecovery extends TestCase {
     LOG.info("Shutting down MiniDFSCluster");
     if (cluster != null) cluster.shutdown();
   }
-  
-  public static void main(String[] args) throws Exception {
-    TestDFSStorageStateRecovery test = new TestDFSStorageStateRecovery();
-    test.testNNStorageStates();
-    test.testDNStorageStates();
-  }
-  
 }
-
-
