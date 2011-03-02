@@ -63,6 +63,9 @@ Trunk (unreleased changes)
     HADOOP-7112. Issue a warning when GenericOptionsParser libjars are not on
     local filesystem. (tomwhite)
 
+    HADOOP-7114. FsShell should dump all exceptions at DEBUG level.
+    (todd via tomwhite)
+
   OPTIMIZATIONS
 
   BUG FIXES
