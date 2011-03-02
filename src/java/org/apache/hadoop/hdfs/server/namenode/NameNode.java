@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -579,6 +580,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
       throws IOException { 
     this.role = role;
     try {
+      initializeGenericKeys(conf);
       initialize(conf);
     } catch (IOException e) {
       this.stop();
@@ -1571,6 +1573,51 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         return new BackupNode(conf, startOpt.toNodeRole());
       default:
         return new NameNode(conf);
+    }
+  }
+
+  /**
+   * In federation configuration is set for a set of
+   * namenode and secondary namenode/backup/checkpointer, which are
+   * grouped under a logical nameservice ID. The configuration keys specific 
+   * to them have suffix set to configured nameserviceId.
+   * 
+   * This method copies the value from specific key of format key.nameserviceId
+   * to key, to set up the generic configuration. Once this is done, only
+   * generic version of the configuration is read in rest of the code, for
+   * backward compatibility and simpler code changes.
+   * 
+   * @param conf
+   *          Configuration object to lookup specific key and to set the value
+   *          to the key passed. Note the conf object is modified
+   * @see DFSUtil#setGenericConf()
+   */
+  static void initializeGenericKeys(Configuration conf) {
+    final String nameserviceId = DFSUtil.getNameServiceId(conf);
+    if ((nameserviceId == null) || nameserviceId.isEmpty()) {
+      return;
+    }
+    
+    DFSUtil.setGenericConf(conf, nameserviceId,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+        DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY,
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY,
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY,
+        DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY,
+        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_BACKUP_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_BACKUP_SERVICE_RPC_ADDRESS_KEY);
+    
+    if (conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY) != null) {
+      URI defaultUri = URI.create(FSConstants.HDFS_URI_SCHEME + "://"
+          + conf.get(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY));
+      conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, defaultUri.toString());
     }
   }
     

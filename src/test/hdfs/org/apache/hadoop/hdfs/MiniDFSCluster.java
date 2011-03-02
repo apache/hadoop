@@ -76,6 +76,9 @@ import org.apache.hadoop.util.ToolRunner;
  */
 public class MiniDFSCluster {
 
+  private static final String NAMESERVICE_ID_PREFIX = "nameserviceId";
+  private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
+
   /**
    * Class to construct instances of MiniDFSClusters with specific options.
    */
@@ -222,7 +225,6 @@ public class MiniDFSCluster {
       this.dnArgs = args;
     }
   }
-  private static final Log LOG = LogFactory.getLog(MiniDFSCluster.class);
 
   private Configuration conf;
   private NameNodeInfo[] nameNodes;
@@ -232,8 +234,6 @@ public class MiniDFSCluster {
   private File base_dir;
   private File data_dir;
   
-  public final static String FINALIZED_DIR_NAME = "/current/finalized/";
-  
   /**
    * Stores the information related to a namenode in the cluster
    */
@@ -242,7 +242,7 @@ public class MiniDFSCluster {
     final Configuration conf;
     NameNodeInfo(NameNode nn, Configuration conf) {
       this.nameNode = nn;
-      this.conf = new Configuration(conf);
+      this.conf = conf;
     }
   }
   
@@ -449,15 +449,30 @@ public class MiniDFSCluster {
                       false);
     }
     
-    // Create namenodes in the cluster
-    for (int i = 0; i < nameNodes.length; i++) {
-    int nnPort = nameNodePort + 2 * i;
-      createNameNode(i, conf, numDataNodes, manageNameDfsDirs, nnPort,
+    int replication = conf.getInt("dfs.replication", 3);
+    conf.setInt("dfs.replication", Math.min(replication, numDataNodes));
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
+    conf.setInt("dfs.namenode.decommission.interval", 3); // 3 second
+    conf.setClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
+                   StaticMapping.class, DNSToSwitchMapping.class);
+    
+    Collection<String> nameserviceIds = DFSUtil.getNameServiceIds(conf);
+    if (nameserviceIds.isEmpty() && nameNodes.length == 1) {
+      conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + nameNodePort);
+      conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      NameNode nn = createNameNode(0, conf, numDataNodes, manageNameDfsDirs,
           format, operation, clusterId);
-    }
-    // Set default URI for a single namenode cluster
-    if (nameNodes.length == 1) {
+      nameNodes[0] = new NameNodeInfo(nn, conf);
       FileSystem.setDefaultUri(conf, getURI(0));
+    } else {
+      if (nameserviceIds.isEmpty()) {
+        for (int i = 0; i < nameNodes.length; i++) {
+          nameserviceIds.add(NAMESERVICE_ID_PREFIX + i);
+        }
+      }
+      initFederationConf(conf, nameserviceIds, numDataNodes, nameNodePort);
+      createFederationNamenodes(conf, nameserviceIds, manageNameDfsDirs, format,
+          operation, clusterId);
     }
     
     if (format) {
@@ -474,17 +489,51 @@ public class MiniDFSCluster {
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
   
-  private void createNameNode(int nnIndex, Configuration conf,
-              int numDataNodes,
-              boolean manageNameDfsDirs,
-              int nameNodePort,
-              boolean format,
-              StartupOption operation,
-              String clusterId) throws IOException {
-    // TODO:FEDERATION cleanup - cluster configuration needs to change
-    // Setup the NameNode configuration
-    conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + nameNodePort);
-    conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");  
+  /** Initialize configuration for federated cluster */
+  private static void initFederationConf(Configuration conf,
+      Collection<String> nameserviceIds, int numDataNodes, int nnPort) {
+    String nameserviceIdList = "";
+    for (String nameserviceId : nameserviceIds) {
+      // Create comma separated list of nameserviceIds
+      if (nameserviceIdList.length() > 0) {
+        nameserviceIdList += ",";
+      }
+      nameserviceIdList += nameserviceId;
+      initFederatedNamenodeAddress(conf, nameserviceId, nnPort);
+      nnPort = nnPort == 0 ? 0 : nnPort + 2;
+    }
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceIdList);
+  }
+
+  /* For federated namenode initialize the address:port */
+  private static void initFederatedNamenodeAddress(Configuration conf,
+      String nameserviceId, int nnPort) {
+    // Set nameserviceId specific key
+    String key = DFSUtil.getNameServiceIdKey(
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId);
+    conf.set(key, "127.0.0.1:0");
+
+    key = DFSUtil.getNameServiceIdKey(
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId);
+    conf.set(key, "127.0.0.1:" + nnPort);
+  }
+  
+  private void createFederationNamenodes(Configuration conf,
+      Collection<String> nameserviceIds, boolean manageNameDfsDirs,
+      boolean format, StartupOption operation, String clusterId)
+      throws IOException {
+    // Create namenodes in the cluster
+    int nnCounter = 0;
+    for (String nameserviceId : nameserviceIds) {
+      createFederatedNameNode(nnCounter++, conf, numDataNodes, manageNameDfsDirs,
+          format, operation, clusterId, nameserviceId);
+    }
+  }
+  
+  private NameNode createNameNode(int nnIndex, Configuration conf,
+      int numDataNodes, boolean manageNameDfsDirs, boolean format,
+      StartupOption operation, String clusterId)
+      throws IOException {
     if (manageNameDfsDirs) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY,
           fileAsURI(new File(base_dir, "name" + (2*nnIndex + 1)))+","+
@@ -493,11 +542,6 @@ public class MiniDFSCluster {
           fileAsURI(new File(base_dir, "namesecondary" + (2*nnIndex + 1)))+","+
           fileAsURI(new File(base_dir, "namesecondary" + (2*nnIndex + 2))));
     }
-    
-    int replication = conf.getInt("dfs.replication", 3);
-    conf.setInt("dfs.replication", Math.min(replication, numDataNodes));
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY, 0);
-    conf.setInt("dfs.namenode.decommission.interval", 3); // 3 second
     
     // Format and clean out DataNode directories
     if (format) {
@@ -512,12 +556,27 @@ public class MiniDFSCluster {
                      operation == StartupOption.FORMAT ||
                      operation == StartupOption.REGULAR) ?
       new String[] {} : new String[] {operation.getName()};
-    conf.setClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY, 
-                   StaticMapping.class, DNSToSwitchMapping.class);
-    NameNode nn = NameNode.createNameNode(args, conf);
-    nameNodes[nnIndex] = new NameNodeInfo(nn, conf);
+    return NameNode.createNameNode(args, conf);
   }
   
+  private void createFederatedNameNode(int nnIndex, Configuration conf,
+      int numDataNodes, boolean manageNameDfsDirs, boolean format,
+      StartupOption operation, String clusterId, String nameserviceId)
+      throws IOException {
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICE_ID, nameserviceId);
+    NameNode nn = createNameNode(nnIndex, conf, numDataNodes, manageNameDfsDirs,
+        format, operation, clusterId);
+    conf.set(DFSUtil.getNameServiceIdKey(
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId), NameNode
+        .getHostPortString(nn.getNameNodeAddress()));
+    conf.set(DFSUtil.getNameServiceIdKey(
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nameserviceId), NameNode
+        .getHostPortString(nn.getHttpAddress()));
+    DFSUtil.setGenericConf(conf, nameserviceId, 
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
+    nameNodes[nnIndex] = new NameNodeInfo(nn, new Configuration(conf));
+  }
+
   private void setRpcEngine(Configuration conf, Class<?> protocol, Class<?> engine) {
     conf.setClass("rpc.engine."+protocol.getName(), engine, Object.class);
   }
@@ -608,7 +667,6 @@ public class MiniDFSCluster {
     // If minicluster's name node is null assume that the conf has been
     // set with the right address:port of the name node.
     //
-    setNamenodeList(conf);
     
     if (racks != null && numDataNodes > racks.length ) {
       throw new IllegalArgumentException( "The length of racks [" + racks.length
@@ -1508,23 +1566,6 @@ public class MiniDFSCluster {
   }
   
   /**
-   * Add comma separated list of namenode addresses to the config file
-   */
-  private void setNamenodeList(Configuration conf) {
-    String list = "";
-    for (int i = 0 ; i < nameNodes.length; i++) {
-      if (list.length() > 0) {
-        list += ",";
-      }
-      if (nameNodes[i].nameNode == null) {
-        continue;
-      }
-      list += getURI(i);
-    }
-    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMENODES, list);
-  }
-  
-  /**
    * Throw an exception if the MiniDFSCluster is not started with a single
    * namenode
    */
@@ -1533,10 +1574,11 @@ public class MiniDFSCluster {
       throw new IllegalArgumentException("Namenode index is needed");
     }
   }
-  
+
   /**
-   * Add a namenode to cluster and start it. Configuration of datanodes
-   * in the cluster is refreshed to register with the new namenode.
+   * Add a namenode to a federated cluster and start it. Configuration of
+   * datanodes in the cluster is refreshed to register with the new namenode.
+   * 
    * @return newly started namenode
    */
   public NameNode addNameNode(Configuration conf, int namenodePort)
@@ -1546,14 +1588,21 @@ public class MiniDFSCluster {
     NameNodeInfo[] newlist = new NameNodeInfo[numNameNodes];
     System.arraycopy(nameNodes, 0, newlist, 0, nameNodes.length);
     nameNodes = newlist;
-    createNameNode(nnIndex, conf, numDataNodes, true, namenodePort, true, null,
-        null);
+    String nameserviceId = NAMESERVICE_ID_PREFIX + nnIndex;
+    
+    String nameserviceIds = conf.get(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES);
+    nameserviceIds += "," + nameserviceId;
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceIds);
+    
+    initFederatedNamenodeAddress(conf, nameserviceId, namenodePort);
+    createFederatedNameNode(nnIndex, conf, numDataNodes, true, true, null,
+        null, nameserviceId);
 
     // Refresh datanodes with the newly started namenode
     for (DataNodeProperties dn : dataNodes) {
       DataNode datanode = dn.datanode;
       Configuration dnConf = datanode.getConf();
-      setNamenodeList(dnConf);
+      dnConf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceIds);
       datanode.refreshNamenodes(dnConf);
     }
 

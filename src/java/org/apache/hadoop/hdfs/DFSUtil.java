@@ -24,7 +24,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -38,11 +37,10 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NodeBase;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 @InterfaceAudience.Private
 public class DFSUtil {
-  
-  final private static String PRIMARY_NAMENODE_SUFFIX = "-primary.namenode";
   
   /**
    * Whether the pathname is valid.  Currently prohibits relative paths, 
@@ -244,67 +242,107 @@ public class DFSUtil {
   }
   
   /**
-   * Returns the list of namenode URIs
+   * Returns collection of nameservice Ids from the configuration.
    * 
-   * @param conf
-   * @return list of namenode URIs
+   * @param conf configuration
+   * @return collection of nameservice Ids
    */
-  public static List<URI> getNamenodeList(Configuration conf) {
-    Collection<String> namenodes = conf
-        .getStringCollection(DFSConfigKeys.DFS_FEDERATION_NAMENODES);
-
-    List<URI> namenodeUris = new ArrayList<URI>();
-    if (namenodes.isEmpty()) {
-      namenodeUris.add(getDefaultNamenode(conf));
-    } else {
-      Iterator<String> nIter = namenodes.iterator();
-      while (nIter.hasNext()) {
-        namenodeUris.add(URI.create(nIter.next()));
-      }
-    }
-    return namenodeUris;
-  }
-
-  /**
-   * Returns the hostname of the primary namenode for a given secondary
-   * namenode.
-   * 
-   * @param conf
-   * @param secondaryHostName
-   *          hostname of the secondary namenode.
-   * @return primary namenode hostname
-   */
-  public static URI getPrimaryNamenode(Configuration conf,
-      String secondaryHostName) {
-    String key = secondaryHostName + PRIMARY_NAMENODE_SUFFIX;
-    String nn = conf.get(key);
-    if (nn == null) {
-      return getDefaultNamenode(conf);
-    } else {
-      return URI.create(nn);
-    }
+  public static Collection<String> getNameServiceIds(Configuration conf) {
+    return conf.getStringCollection(DFS_FEDERATION_NAMESERVICES);
   }
   
   /**
-   * Returns the InetSocketAddresses for each configured namenode
-   * @param conf
-   * @return Array of InetSocketAddresses
-   * @throws IOException
+   * Returns the InetSocketAddresses of namenodes from the configuration.
+   * Note this is to be used by datanodes to get the list of namenode addresses
+   * to talk to.
+   * 
+   * If namenode address specifically configured for datanodes (using service
+   * ports) is found, it is returned. If not, regular RPC address configured 
+   * for other clients is returned.
+   * 
+   * @param conf configuration
+   * @return list of InetSocketAddresses
+   * @throws IOException on error
    */
-  public static List<InetSocketAddress> getNNAddresses(Configuration conf)
-      throws IOException {
-    List<URI> nns = getNamenodeList(conf);
-    if (nns == null) {
-      throw new IOException("Federation namnodes are not configured correctly");
-    }
-
+  public static List<InetSocketAddress> getNNServiceRpcAddresses(
+      Configuration conf) throws IOException {
+    Collection<String> nameserviceIds = getNameServiceIds(conf);
     List<InetSocketAddress> isas = new ArrayList<InetSocketAddress>();
-    for (URI u : nns) {
-      isas.add(NameNode.getAddress(u));
+
+    // Configuration with a single namenode
+    if (nameserviceIds == null || nameserviceIds.isEmpty()) {
+      String namenodeAddress = conf
+          .get(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
+      if (namenodeAddress == null) {
+        // Fall back to regular rpc address
+        namenodeAddress = conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY);
+      }
+      if (namenodeAddress == null) {
+        isas.add(NameNode.getAddress(getDefaultNamenode(conf)));
+      } else {
+        isas.add(NameNode.getAddress(namenodeAddress));
+      }
+    } else {
+      // Get the namenodes for all the configured nameServiceIds
+      for (String nameserviceId : nameserviceIds) {
+        String namenodeAddress = conf.get(getNameServiceIdKey(
+            DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nameserviceId));
+        if (namenodeAddress == null) {
+          // Fallback to regular rpc address
+          namenodeAddress = conf.get(getNameServiceIdKey(
+              DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId));
+        }
+        if (namenodeAddress == null) {
+          throw new IOException("Incorrect configuration: "
+              + "No namenode rpc address configured for nameserviceId "
+              + nameserviceId);
+        }
+        isas.add(NameNode.getAddress(namenodeAddress));
+      }
     }
     return isas;
   }
   
+  /**
+   * @return key specific to a nameserviceId from a generic key
+   */
+  public static String getNameServiceIdKey(String key, String nameserviceId) {
+    return key + "." + nameserviceId;
+  }
+  
+  /**
+   * Sets the node specific setting into generic configuration key. Looks up
+   * value of "key.nameserviceId" and if found sets that value into generic key 
+   * in the conf. Note that this only modifies the runtime conf.
+   * 
+   * @param conf
+   *          Configuration object to lookup specific key and to set the value
+   *          to the key passed. Note the conf object is modified.
+   * @param nameserviceId
+   *          nameservice Id to construct the node specific key.
+   * @param keys
+   *          The key for which node specific value is looked up
+   */
+  public static void setGenericConf(Configuration conf,
+      String nameserviceId, String... keys) {
+    for (String key : keys) {
+      String value = conf.get(getNameServiceIdKey(key, nameserviceId));
+      if (value != null) {
+        conf.set(key, value);
+      }
+    }
+  }
+  
+  /**
+   * Returns the configured nameservice Id
+   * 
+   * @param conf
+   *          Configuration object to lookup the nameserviceId
+   * @return nameserviceId string from conf
+   */
+  public static String getNameServiceId(Configuration conf) {
+    return conf.get(DFS_FEDERATION_NAMESERVICE_ID);
+  }
   
   /** Return used as percentage of capacity */
   public static float getPercentUsed(long used, long capacity) {

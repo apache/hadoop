@@ -149,6 +149,8 @@ Trunk (unreleased changes)
     HDFS-1694. Federation: SimulatedFSDataset changes to work with
     federation and multiple block pools. (suresh)
 
+    HDFS-1689. Federation: Configuration for namenodes. (suresh and jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

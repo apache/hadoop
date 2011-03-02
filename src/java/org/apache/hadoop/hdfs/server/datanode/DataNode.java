@@ -215,7 +215,7 @@ public class DataNode extends Configured
       bpMapping = new HashMap<String, BPOfferService>();
       nameNodeThreads = new HashMap<InetSocketAddress, BPOfferService>();
   
-      List<InetSocketAddress> isas = DFSUtil.getNNAddresses(conf);
+      List<InetSocketAddress> isas = DFSUtil.getNNServiceRpcAddresses(conf);
       for(InetSocketAddress isa : isas) {
         BPOfferService bpos = new BPOfferService(isa);
         nameNodeThreads.put(bpos.getNNSocketAddress(), bpos);
@@ -278,9 +278,10 @@ public class DataNode extends Configured
     
     void refreshNamenodes(Configuration conf)
         throws IOException, InterruptedException {
-      LOG.info("Refresh request received for namnodes: "
-          + conf.get(DFSConfigKeys.DFS_FEDERATION_NAMENODES));
-      List<InetSocketAddress> newAddresses = DFSUtil.getNNAddresses(conf);
+      LOG.info("Refresh request received for nameservices: "
+          + conf.get(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES));
+      List<InetSocketAddress> newAddresses = 
+        DFSUtil.getNNServiceRpcAddresses(conf);
       List<BPOfferService> toShutdown = new ArrayList<BPOfferService>();
       List<InetSocketAddress> toStart = new ArrayList<InetSocketAddress>();
       synchronized (refreshNamenodesLock) {

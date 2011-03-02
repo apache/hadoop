@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import junit.framework.TestCase;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
@@ -26,6 +27,7 @@ import java.util.Iterator;
 import java.util.Random;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -815,6 +817,57 @@ public class TestCheckpoint extends TestCase {
     }
 
     secondary.shutdown();
+    cluster.shutdown();
+  }
+  
+  /**
+   * Starts two namenodes and two secondary namenodes, verifies that secondary
+   * namenodes are configured correctly to talk to their respective namenodes
+   * and can do the checkpoint.
+   * 
+   * @throws IOException
+   */
+  @SuppressWarnings("deprecation")
+  public void testMultipleSecondaryNamenodes() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    String nameserviceId1 = "ns1";
+    String nameserviceId2 = "ns2";
+    conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceId1
+        + "," + nameserviceId2);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2)
+        .nameNodePort(9928).build();
+    Configuration snConf1 = new HdfsConfiguration(cluster.getConfiguration(0));
+    Configuration snConf2 = new HdfsConfiguration(cluster.getConfiguration(1));
+    InetSocketAddress nn1RpcAddress = cluster.getNameNode(0).rpcAddress;
+    InetSocketAddress nn2RpcAddress = cluster.getNameNode(1).rpcAddress;
+    String nn1 = nn1RpcAddress.getHostName() + ":" + nn1RpcAddress.getPort();
+    String nn2 = nn2RpcAddress.getHostName() + ":" + nn2RpcAddress.getPort();
+
+    // Set the Service Rpc address to empty to make sure the node specific
+    // setting works
+    snConf1.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "");
+    snConf2.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, "");
+
+    // Set the nameserviceIds
+    snConf1.set(DFSUtil.getNameServiceIdKey(
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nameserviceId1), nn1);
+    snConf2.set(DFSUtil.getNameServiceIdKey(
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nameserviceId2), nn2);
+
+    SecondaryNameNode secondary1 = startSecondaryNameNode(snConf1);
+    SecondaryNameNode secondary2 = startSecondaryNameNode(snConf2);
+
+    // make sure the two secondary namenodes are talking to correct namenodes.
+    assertEquals(secondary1.getNameNodeAddress().getPort(), nn1RpcAddress.getPort());
+    assertEquals(secondary2.getNameNodeAddress().getPort(), nn2RpcAddress.getPort());
+    assertTrue(secondary1.getNameNodeAddress().getPort() != secondary2
+        .getNameNodeAddress().getPort());
+
+    // both should checkpoint.
+    secondary1.doCheckpoint();
+    secondary2.doCheckpoint();
+    secondary1.shutdown();
+    secondary2.shutdown();
     cluster.shutdown();
   }
 }

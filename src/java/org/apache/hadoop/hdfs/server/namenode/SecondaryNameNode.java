@@ -121,6 +121,7 @@ public class SecondaryNameNode implements Runnable {
    */
   public SecondaryNameNode(Configuration conf)  throws IOException {
     try {
+      NameNode.initializeGenericKeys(conf);
       initialize(conf);
     } catch(IOException e) {
       shutdown();
@@ -361,6 +362,10 @@ public class SecondaryNameNode implements Runnable {
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
+  }
+  
+  InetSocketAddress getNameNodeAddress() {
+    return nameNodeAddr;
   }
 
   /**

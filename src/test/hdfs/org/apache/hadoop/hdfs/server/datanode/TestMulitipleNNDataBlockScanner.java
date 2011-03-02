@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
@@ -90,17 +91,17 @@ public class TestMulitipleNNDataBlockScanner {
       InterruptedException {
     setUp(9933);
     try {
-      Configuration conf = new HdfsConfiguration();
+      Configuration conf = new HdfsConfiguration(cluster.getConfiguration(0));
       StringBuilder namenodesBuilder = new StringBuilder();
 
       String bpidToShutdown = cluster.getNamesystem(2).getBlockPoolId();
       for (int i = 0; i < 2; i++) {
-        FileSystem fs = cluster.getFileSystem(i);
-        namenodesBuilder.append(fs.getUri());
+        String nsId = DFSUtil.getNameServiceId(cluster.getConfiguration(i));
+        namenodesBuilder.append(nsId);
         namenodesBuilder.append(",");
       }
 
-      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMENODES, namenodesBuilder
+      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, namenodesBuilder
           .toString());
       DataNode dn = cluster.getDataNodes().get(0);
       dn.refreshNamenodes(conf);
@@ -115,8 +116,9 @@ public class TestMulitipleNNDataBlockScanner {
         LOG.info(ex.getMessage());
       }
 
-      namenodesBuilder.append(cluster.getFileSystem(2).getUri());
-      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMENODES, namenodesBuilder
+      namenodesBuilder.append(DFSUtil.getNameServiceId(cluster
+          .getConfiguration(2)));
+      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, namenodesBuilder
           .toString());
       dn.refreshNamenodes(conf);
 
