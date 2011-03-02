@@ -686,31 +686,32 @@ public class DataNode extends Configured
       while (shouldRun && shouldServiceRun) {
         try {
           nsInfo = bpNamenode.versionRequest();
-          break;
+          // verify build version
+          String nsVer = nsInfo.getBuildVersion();
+          String stVer = Storage.getBuildVersion();
+          LOG.info("handshake: namespace info = " + nsInfo);
+          
+          if(! nsVer.equals(stVer)) {
+            String errorMsg = "Incompatible build versions: bp = " + blockPoolId + 
+            "namenode BV = " + nsVer + "; datanode BV = " + stVer;
+            LOG.warn(errorMsg);
+            bpNamenode.errorReport( bpRegistration, 
+                DatanodeProtocol.NOTIFY, errorMsg );
+          } else {
+            break;
+          }
         } catch(SocketTimeoutException e) {  // namenode is busy
-          LOG.info("Problem connecting to server: " + nnAddr);
-          try {
-            Thread.sleep(1000);
-          } catch (InterruptedException ie) {}
+          LOG.warn("Problem connecting to server: " + nnAddr);
+        } catch(IOException e ) {  // namenode is not available
+          LOG.warn("Problem connecting to server: " + nnAddr);
         }
-      }
-      LOG.info("handshake: namespace info = " + nsInfo);
-      // TODO:FEDERATION on version mismatch datanode should continue
-      // to retry
-      // verify build version
-      if(! nsInfo.getBuildVersion().equals(Storage.getBuildVersion())) {
-        String errorMsg = "Incompatible build versions: namenode BV = " 
-          + nsInfo.getBuildVersion() + "; datanode BV = "
-          + Storage.getBuildVersion();
-        LOG.fatal(errorMsg);
+        
+        // try again in a second
         try {
-          bpNamenode.errorReport( bpRegistration,
-              DatanodeProtocol.NOTIFY, errorMsg );
-        } catch( SocketTimeoutException e ) {  // namenode is busy
-          LOG.info("Problem connecting to server: " + nnAddr);
-        }
-        throw new IOException( errorMsg );
+          Thread.sleep(5000);
+        } catch (InterruptedException ie) {}
       }
+      
       assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
         "Data-node and name-node layout versions must be the same."
         + "Expected: "+ FSConstants.LAYOUT_VERSION 
@@ -980,7 +981,6 @@ public class DataNode extends Configured
             // -- Bytes remaining
             //
             lastHeartbeat = startTime;
-            // TODO:FEDERATION include some global DN stats..
             DatanodeCommand[] cmds = sendHeartBeat();
             myMetrics.heartbeats.inc(now() - startTime);
             if (!processCommand(cmds))
@@ -1307,7 +1307,7 @@ public class DataNode extends Configured
     registerMXBean();
     initDataXceiver(conf);
     startInfoServer(conf);
-    initIpcServer(conf); // TODO:FEDERATION redirect the call appropriately 
+    initIpcServer(conf);
 
     myMetrics = new DataNodeMetrics(conf, datanodeId.getName());
 

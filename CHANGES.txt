@@ -126,6 +126,11 @@ Trunk (unreleased changes)
     HDFS-1688. Fix failures in fault injection tests, TestDiskError, 
     TestDatanodeRestart and TestDFSTartupVersions. (suresh)
 
+    HDFS-1696. HDFS Federation: when build version doesn't match - 
+    datanode should wait (keep connecting) untill NN comes up 
+    with the right version (boryas)
+
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
