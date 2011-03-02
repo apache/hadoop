@@ -387,6 +387,15 @@ class INodeDirectory extends INode {
         child.computeContentSummary(summary);
       }
     }
+    if (this instanceof INodeDirectoryWithQuota) {
+      // Warn if the cached and computed diskspace values differ
+      INodeDirectoryWithQuota node = (INodeDirectoryWithQuota)this;
+      long space = node.diskspaceConsumed();
+      if (-1 != node.getDsQuota() && space != summary[3]) {
+        NameNode.LOG.warn("Inconsistent diskspace for directory "
+            +getLocalName()+". Cached: "+space+" Computed: "+summary[3]);
+      }
+    }
     summary[2]++;
     return summary;
   }

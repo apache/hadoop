@@ -218,7 +218,7 @@ class INodeFile extends INode {
      */
     if (blkArr.length > 0 && blkArr[blkArr.length-1] != null && 
         isUnderConstruction()) {
-      size += getPreferredBlockSize() - blocks[blocks.length-1].getNumBytes();
+      size += getPreferredBlockSize() - blkArr[blkArr.length-1].getNumBytes();
     }
     return size * getReplication();
   }

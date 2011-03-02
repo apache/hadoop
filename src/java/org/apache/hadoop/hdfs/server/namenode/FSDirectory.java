@@ -1122,21 +1122,10 @@ class FSDirectory implements Closeable {
   /**
    * Replaces the specified inode with the specified one.
    */
-  void replaceNode(String path, INodeFile oldnode, INodeFile newnode) 
-      throws IOException, UnresolvedLinkException {
-    replaceNode(path, oldnode, newnode, true);
-  }
-  
-  /**
-   * @see #replaceNode(String, INodeFile, INodeFile)
-   */
-  private void replaceNode(String path, INodeFile oldnode, INodeFile newnode,
-                           boolean updateDiskspace) 
+  public void replaceNode(String path, INodeFile oldnode, INodeFile newnode)
       throws IOException, UnresolvedLinkException {    
     writeLock();
     try {
-      long dsOld = oldnode.diskspaceConsumed();
-      
       //
       // Remove the node from the namespace 
       //
@@ -1150,21 +1139,8 @@ class FSDirectory implements Closeable {
       /* Currently oldnode and newnode are assumed to contain the same
        * blocks. Otherwise, blocks need to be removed from the blocksMap.
        */
-      
       rootDir.addNode(path, newnode); 
 
-      //check if disk space needs to be updated.
-      long dsNew = 0;
-      if (updateDiskspace && (dsNew = newnode.diskspaceConsumed()) != dsOld) {
-        try {
-          updateSpaceConsumed(path, 0, dsNew-dsOld);
-        } catch (QuotaExceededException e) {
-          // undo
-          replaceNode(path, newnode, oldnode, false);
-          throw e;
-        }
-      }
-      
       int index = 0;
       for (BlockInfo b : newnode.getBlocks()) {
         BlockInfo info = getBlockManager().addINode(b, newnode);
