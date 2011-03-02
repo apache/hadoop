@@ -101,7 +101,7 @@ Trunk (unreleased changes)
     with multiple Block Pools (boryas)
 
     HDFS-1687. Federation: DirectoryScanner changes for 
-    federation (mattf via boryas)
+    federation (Matt Foley via boryas)
 
     HDFS-1626. Make BLOCK_INVALIDATE_LIMIT configurable. (szetszwo)
 
@@ -123,17 +123,20 @@ Trunk (unreleased changes)
     HDFS-1678. Federation: Remove unnecessary #getBlockpool() 
     for NameNodeMXBean in FSNameSystem. (Tanping via Suresh)
 
-    HDFS-1688. Fix failures in fault injection tests, TestDiskError, 
-    TestDatanodeRestart and TestDFSTartupVersions. (suresh)
+    HDFS-1688. Federation: Fix failures in fault injection tests,
+    TestDiskError, TestDatanodeRestart and TestDFSTartupVersions. (suresh)
 
-    HDFS-1696. HDFS Federation: when build version doesn't match - 
+    HDFS-1696. Federation: when build version doesn't match - 
     datanode should wait (keep connecting) untill NN comes up 
     with the right version (boryas)
 
-    HDFS-1681. Balancer: support per pool and per node policies.  (szetszwo)
+    HDFS-1681. Balancer: support per pool and per node policies. (szetszwo)
 
-    HDFS-1695. HDFS federation: Fix testOIV and 
-    TestDatanodeUtils (jhoman and tanping via boryas)
+    HDFS-1695. Federation: Fix testOIV and TestDatanodeUtils 
+    (jhoman and tanping via boryas)
+
+    HDFS:1699. Federation: Fix failure of TestBlockReport.
+    (Matt Foley via suresh)
 
   IMPROVEMENTS
 

@@ -489,7 +489,7 @@ public class TestBlockReport {
     }
   }
 
-  private void waitForTempReplica(Block bl, int DN_N1) {
+  private void waitForTempReplica(Block bl, int DN_N1) throws IOException {
     final boolean tooLongWait = false;
     final int TIMEOUT = 40000;
     
@@ -502,6 +502,8 @@ public class TestBlockReport {
     if(LOG.isDebugEnabled()) {
       LOG.debug("Total number of DNs " + cluster.getDataNodes().size());
     }
+    cluster.waitActive();
+    
     // Look about specified DN for the replica of the block from 1st DN
     String bpid = cluster.getNamesystem().getBlockPoolId();
     Replica r = ((FSDataset) cluster.getDataNodes().get(DN_N1).getFSDataset()).
