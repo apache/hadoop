@@ -98,7 +98,9 @@ public class TestInterDatanodeProtocol {
       assertTrue(datanode != null);
       
       //stop block scanner, so we could compare lastScanTime
-      datanode.blockScannerThread.interrupt();
+      if (datanode.blockScanner != null) {
+        datanode.blockScanner.shutdown();
+      }
 
       //verify BlockMetaDataInfo
       ExtendedBlock b = locatedblock.getBlock();

@@ -105,6 +105,9 @@ Trunk (unreleased changes)
 
     HDFS-1626. Make BLOCK_INVALIDATE_LIMIT configurable. (szetszwo)
 
+    HDFS-1655. Federation: DatablockScanner should scan blocks for 
+    all the block pools. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

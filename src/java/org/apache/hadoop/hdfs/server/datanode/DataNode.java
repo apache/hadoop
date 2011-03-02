@@ -277,6 +277,8 @@ public class DataNode extends Configured
     
     void refreshNamenodes(Configuration conf)
         throws IOException, InterruptedException {
+      LOG.info("Refresh request received for namnodes: "
+          + conf.get(DFSConfigKeys.DFS_FEDERATION_NAMENODES));
       List<InetSocketAddress> newAddresses = DFSUtil.getNNAddresses(conf);
       List<BPOfferService> toShutdown = new ArrayList<BPOfferService>();
       List<InetSocketAddress> toStart = new ArrayList<InetSocketAddress>();
@@ -344,7 +346,6 @@ public class DataNode extends Configured
   boolean isBlockTokenInitialized = false;
   
   public DataBlockScanner blockScanner = null;
-  public Daemon blockScannerThread = null;
   private DirectoryScanner directoryScanner = null;
   
   /** Activated plug-ins. */
@@ -457,7 +458,8 @@ public class DataNode extends Configured
     this.infoServer.addInternalServlet(null, "/streamFile/*", StreamFile.class);
     this.infoServer.addInternalServlet(null, "/getFileChecksum/*",
         FileChecksumServlets.GetServlet.class);
-    this.infoServer.setAttribute("datanode.blockScanner", blockScanner);
+    
+    this.infoServer.setAttribute("datanode", this);
     this.infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
     this.infoServer.addServlet(null, "/blockScannerReport", 
                                DataBlockScanner.Servlet.class);
@@ -519,7 +521,10 @@ public class DataNode extends Configured
   /**
    * See {@link DataBlockScanner}
    */
-  private void initDataBlockScanner(Configuration conf) {
+  private synchronized void initDataBlockScanner(Configuration conf) {
+    if (blockScanner != null) {
+      return;
+    }
     String reason = null;
     if (conf.getInt(DFS_DATANODE_SCAN_PERIOD_HOURS_KEY,
                     DFS_DATANODE_SCAN_PERIOD_HOURS_DEFAULT) < 0) {
@@ -529,6 +534,7 @@ public class DataNode extends Configured
     } 
     if (reason == null) {
       blockScanner = new DataBlockScanner(this, (FSDataset)data, conf);
+      blockScanner.start();
     } else {
       LOG.info("Periodic Block Verification scan is disabled because " +
                reason + ".");
@@ -536,19 +542,18 @@ public class DataNode extends Configured
   }
   
   private void shutdownDataBlockScanner() {
-    if (blockScannerThread != null) { 
-      blockScannerThread.interrupt();
-      try {
-        blockScannerThread.join(3600000L); // wait for at most 1 hour
-      } catch (InterruptedException ie) {
-      }
+    if (blockScanner != null) {
+      blockScanner.shutdown();
     }
   }
   
   /**
    * See {@link DirectoryScanner}
    */
-  private void initDirectoryScanner(Configuration conf) {
+  private synchronized void initDirectoryScanner(Configuration conf) {
+    if (directoryScanner != null) {
+      return;
+    }
     String reason = null;
     if (conf.getInt(DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 
                     DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT) < 0) {
@@ -753,6 +758,7 @@ public class DataNode extends Configured
       }
       initFsDataSet(conf, dataDirs);
       data.addBlockPool(blockPoolId, conf);
+      initPeriodicScanners(conf);
     }
 
     /**
@@ -941,6 +947,9 @@ public class DataNode extends Configured
       blockPoolManager.remove(this);
       shouldServiceRun = false;
       RPC.stopProxy(bpNamenode);
+      if (blockScanner != null) {
+        blockScanner.removeBlockPool(this.getBlockPoolId());
+      }
     }
 
     /**
@@ -984,22 +993,9 @@ public class DataNode extends Configured
           DatanodeCommand cmd = blockReport();
           processCommand(cmd);
 
-          // start block scanner
-          // TODO:FEDERATION - SHOULD BE MOVED OUT OF THE THREAD...
-          // although it will work as is, since it checks (blockScannerThread == null)
-          // under synchronized(blockScanner).  See also {@link initDataBlockScanner()}
-          //
-          // Note that there may be a problem starting this before BPOfferService
-          // is running; and we may need to kick it to restart within each BP subdir
-          // as they come online, otherwise will wait 3 weeks for the first run.
+          // Now safe to start scanning the block pool
           if (blockScanner != null) {
-            synchronized(blockScanner) { 
-              if(blockScannerThread == null && upgradeManager.isUpgradeCompleted()) {
-                LOG.info("Periodic Block Verification scan starting.");
-                blockScannerThread = new Daemon(blockScanner);
-                blockScannerThread.start();
-              }
-            }
+            blockScanner.addBlockPool(this.blockPoolId);
           }
 
           //
@@ -1158,7 +1154,7 @@ public class DataNode extends Configured
         }
 
         initialized = true; // bp is initialized;
-
+        
         while (shouldRun && shouldServiceRun) {
           try {
             // TODO:FEDERATION needs to be moved too
@@ -1928,7 +1924,6 @@ public class DataNode extends Configured
     // start dataXceiveServer
     dataXceiverServer.start();
     ipcServer.start();
-    initPeriodicScanners(conf);
     startPlugins(conf);
     
     // BlockTokenSecretManager is created here, but it shouldn't be

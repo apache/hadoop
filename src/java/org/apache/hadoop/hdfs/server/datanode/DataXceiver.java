@@ -178,17 +178,6 @@ class DataXceiver extends DataTransferProtocol.Receiver
 
       SUCCESS.write(out); // send op status
       long read = blockSender.sendBlock(out, baseStream, null); // send data
-
-      if (blockSender.isBlockReadFully()) {
-        // See if client verification succeeded. 
-        // This is an optional response from client.
-        try {
-          if (DataTransferProtocol.Status.read(in) == CHECKSUM_OK
-              && datanode.blockScanner != null) {
-            datanode.blockScanner.verifiedByClient(block.getLocalBlock());
-          }
-        } catch (IOException ignored) {}
-      }
       
       datanode.myMetrics.bytesRead.inc((int) read);
       datanode.myMetrics.blocksRead.inc();

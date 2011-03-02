@@ -150,4 +150,14 @@ class ReplicasMap {
     Map<Long, ReplicaInfo> m = map.get(bpid);
     return m != null ? m.values() : null;
   }
+
+  void initBlockPool(String bpid) {
+    checkBlockPool(bpid);
+    Map<Long, ReplicaInfo> m = map.get(bpid);
+    if (m == null) {
+      // Add an entry for block pool if it does not exist already
+      m = new HashMap<Long, ReplicaInfo>();
+      map.put(bpid, m);
+    }
+  }
 }

@@ -2389,6 +2389,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       throws IOException {
     DataNode.LOG.info("Adding block pool " + bpid);
     volumes.addBlockPool(bpid, conf);
+    volumeMap.initBlockPool(bpid);
     volumes.getVolumeMap(bpid, volumeMap);
   }
   
