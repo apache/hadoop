@@ -306,6 +306,8 @@ Release 0.22.0 - Unreleased
 
     HDFS-1035. Generate Eclipse's .classpath file from Ivy config. (nigel)
 
+    HDFS-1408. Herriot NN and DN clients should vend statistics. (cos)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
