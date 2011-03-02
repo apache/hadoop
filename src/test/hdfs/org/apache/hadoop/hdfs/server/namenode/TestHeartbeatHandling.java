@@ -80,14 +80,14 @@ public class TestHeartbeatHandling extends TestCase {
       }
       dd.addBlocksToBeInvalidated(blockList);
            
-      sendHeartBeat(nodeReg, dd, namesystem);
+      cmds = sendHeartBeat(nodeReg, dd, namesystem);
       assertEquals(2, cmds.length);
       assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
       assertEquals(MAX_REPLICATE_LIMIT, ((BlockCommand)cmds[0]).getBlocks().length);
       assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[1].getAction());
       assertEquals(MAX_INVALIDATE_LIMIT, ((BlockCommand)cmds[1]).getBlocks().length);
       
-      sendHeartBeat(nodeReg, dd, namesystem);
+      cmds = sendHeartBeat(nodeReg, dd, namesystem);
       assertEquals(2, cmds.length);
       assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
       assertEquals(REMAINING_BLOCKS, ((BlockCommand)cmds[0]).getBlocks().length);
