@@ -38,6 +38,8 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
+import org.apache.hadoop.hdfs.server.datanode.FSDataset.BlockPoolSlice;
+import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolumeSet;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.ReplicaRecoveryInfo;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand.RecoveringBlock;
@@ -93,13 +95,14 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     SimulatedOutputStream oStream = null;
     private long bytesAcked;
     private long bytesRcvd;
-    BInfo(Block b, boolean forWriting) throws IOException {
+    BInfo(String bpid, Block b, boolean forWriting) throws IOException {
       theBlock = new Block(b);
       if (theBlock.getNumBytes() < 0) {
         theBlock.setNumBytes(0);
       }
-      if (!storage.alloc(theBlock.getNumBytes())) { // expected length - actual length may
-                                          // be more - we find out at finalize
+      if (!storage.alloc(bpid, theBlock.getNumBytes())) { 
+        // expected length - actual length may
+        // be more - we find out at finalize
         DataNode.LOG.warn("Lack of free storage on a block alloc");
         throw new IOException("Creating block, no free space available");
       }
@@ -142,7 +145,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       }
     }
     
-    synchronized void finalizeBlock(long finalSize) throws IOException {
+    synchronized void finalizeBlock(String bpid, long finalSize)
+        throws IOException {
       if (finalized) {
         throw new IOException(
             "Finalizing a block that has already been finalized" + 
@@ -163,12 +167,12 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       // adjust if necessary
       long extraLen = finalSize - theBlock.getNumBytes();
       if (extraLen > 0) {
-        if (!storage.alloc(extraLen)) {
+        if (!storage.alloc(bpid,extraLen)) {
           DataNode.LOG.warn("Lack of free storage on a block alloc");
           throw new IOException("Creating block, no free space available");
         }
       } else {
-        storage.free(-extraLen);
+        storage.free(bpid, -extraLen);
       }
       theBlock.setNumBytes(finalSize);  
 
@@ -261,12 +265,41 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
   }
   
-  static private class SimulatedStorage {
-    private long capacity;  // in bytes
+  /**
+   * Class is used for tracking block pool storage utilization similar
+   * to {@link BlockPoolSlice}
+   */
+  private static class SimulatedBPStorage {
     private long used;    // in bytes
     
+    long getUsed() {
+      return used;
+    }
+    
+    void alloc(long amount) {
+      used += amount;
+    }
+    
+    void free(long amount) {
+      used -= amount;
+    }
+    
+    SimulatedBPStorage() {
+      used = 0;   
+    }
+  }
+  
+  /**
+   * Class used for tracking datanode level storage utilization similar
+   * to {@link FSVolumeSet}
+   */
+  private static class SimulatedStorage {
+    private Map<String, SimulatedBPStorage> map = 
+      new HashMap<String, SimulatedBPStorage>();
+    private long capacity;  // in bytes
+    
     synchronized long getFree() {
-      return capacity - used;
+      return capacity - getUsed();
     }
     
     synchronized long getCapacity() {
@@ -274,25 +307,47 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
     
     synchronized long getUsed() {
+      long used = 0;
+      for (SimulatedBPStorage bpStorage : map.values()) {
+        used += bpStorage.getUsed();
+      }
       return used;
     }
     
-    synchronized boolean alloc(long amount) {
-      if (getFree() >= amount) {
-        used += amount;
-        return true;
-      } else {
-        return false;    
-      }
+    synchronized long getBlockPoolUsed(String bpid) throws IOException {
+      return getBPStorage(bpid).getUsed();
     }
     
-    synchronized void free(long amount) {
-      used -= amount;
+    synchronized boolean alloc(String bpid, long amount) throws IOException {
+      if (getFree() >= amount) {
+        getBPStorage(bpid).alloc(amount);
+        return true;
+      }
+      return false;    
+    }
+    
+    synchronized void free(String bpid, long amount) throws IOException {
+      getBPStorage(bpid).free(amount);
     }
     
     SimulatedStorage(long cap) {
       capacity = cap;
-      used = 0;   
+    }
+    
+    synchronized void addBlockPool(String bpid) {
+      SimulatedBPStorage bpStorage = map.get(bpid);
+      if (bpStorage != null) {
+        return;
+      }
+      map.put(bpid, new SimulatedBPStorage());
+    }
+    
+    private SimulatedBPStorage getBPStorage(String bpid) throws IOException {
+      SimulatedBPStorage bpStorage = map.get(bpid);
+      if (bpStorage == null) {
+        throw new IOException("block pool " + bpid + " not found");
+      }
+      return bpStorage;
     }
   }
   
@@ -304,7 +359,9 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     setConf(conf);
   }
   
-  private SimulatedFSDataset() { // real construction when setConf called.. Uggg
+  // Constructor used for constructing the object using reflection
+  @SuppressWarnings("unused")
+  private SimulatedFSDataset() { // real construction when setConf called..
   }
   
   public Configuration getConf() {
@@ -318,9 +375,6 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     registerMBean(storageId);
     storage = new SimulatedStorage(
         conf.getLong(CONFIG_PROPERTY_CAPACITY, DEFAULT_CAPACITY));
-    //DataNode.LOG.info("Starting Simulated storage; Capacity = " + getCapacity() + 
-    //    "Used = " + getDfsUsed() + "Free =" + getRemaining());
-
     blockMap = new HashMap<String, Map<Block,BInfo>>(); 
   }
 
@@ -346,7 +400,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
       }
       
       for (Block b: injectBlocks) {
-        BInfo binfo = new BInfo(b, false);
+        BInfo binfo = new BInfo(bpid, b, false);
         map.put(binfo.theBlock, binfo);
       }
     }
@@ -368,7 +422,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     if (binfo == null) {
       throw new IOException("Finalizing a non existing block " + b);
     }
-    binfo.finalizeBlock(b.getNumBytes());
+    binfo.finalizeBlock(b.getBlockPoolId(), b.getNumBytes());
   }
 
   @Override // FSDatasetInterface
@@ -411,8 +465,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   @Override // FSDatasetMBean
   public long getBlockPoolUsed(String bpid) throws IOException {
-    // TODO:FEDERATION currently a single block pool is supported
-    return storage.getUsed();
+    return storage.getBlockPoolUsed(bpid);
   }
   
   @Override // FSDatasetMBean
@@ -471,7 +524,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
         DataNode.LOG.warn("Invalidate: Missing block");
         continue;
       }
-      storage.free(binfo.getNumBytes());
+      storage.free(bpid, binfo.getNumBytes());
       blockMap.remove(b);
     }
     if (error) {
@@ -550,7 +603,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
           + " is not valid, and cannot be appended to.");
     }
     if (!binfo.isFinalized()) {
-      binfo.finalizeBlock(binfo.getNumBytes());
+      binfo.finalizeBlock(b.getBlockPoolId(), binfo.getNumBytes());
     }
     map.remove(b.getLocalBlock());
     binfo.theBlock.setGenerationStamp(newGS);
@@ -594,7 +647,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
             " is being written, and cannot be written to.");
     }
     final Map<Block, BInfo> map = getMap(b.getBlockPoolId());
-    BInfo binfo = new BInfo(b.getLocalBlock(), true);
+    BInfo binfo = new BInfo(b.getBlockPoolId(), b.getLocalBlock(), true);
     map.put(binfo.theBlock, binfo);
     return binfo;
   }
@@ -885,5 +938,6 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   public void addBlockPool(String bpid, Configuration conf) {
     Map<Block, BInfo> map = new HashMap<Block, BInfo>();
     blockMap.put(bpid, map);
+    storage.addBlockPool(bpid);
   }
 }

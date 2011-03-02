@@ -744,8 +744,6 @@ public class DataNode extends Configured
         bpRegistration.storageInfo.layoutVersion = FSConstants.LAYOUT_VERSION;
         bpRegistration.storageInfo.namespaceID = bpNSInfo.namespaceID;
         bpRegistration.storageInfo.clusterID = bpNSInfo.clusterID;
-        // TODO: FEDERATION 
-        //bpRegistration.storageInfo.blockpoolID = bpNSInfo.blockpoolID;
       } else {
         // read storage info, lock data dirs and transition fs state if necessary          
         storage.recoverTransitionRead(blockPoolId, bpNSInfo, dataDirs, startOpt);
@@ -1078,20 +1076,12 @@ public class DataNode extends Configured
         }
       }
 
-      
-      // TODO:FEDERATION - reavaluate the following two checks!!!!!
-      assert ("".equals(storage.getStorageID())
-          && !"".equals(bpRegistration.getStorageID()))
-          || storage.getStorageID().equals(bpRegistration.getStorageID()) :
-      "New storageID can be assigned only if data-node is not formatted";
-
       if (storage.getStorageID().equals("")) {
         storage.setStorageID(bpRegistration.getStorageID());
         storage.writeAll();
         LOG.info("New storage id " + bpRegistration.getStorageID()
             + " is assigned to data-node " + bpRegistration.getName());
-      }
-      if(! storage.getStorageID().equals(bpRegistration.getStorageID())) {
+      } else if(!storage.getStorageID().equals(bpRegistration.getStorageID())) {
         throw new IOException("Inconsistent storage IDs. Name-node returned "
             + bpRegistration.getStorageID() 
             + ". Expecting " + storage.getStorageID());
@@ -1334,15 +1324,11 @@ public class DataNode extends Configured
 
     if (simulatedFSDataset) {
       setNewStorageID(datanodeId);
-      conf.set(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY,
-          datanodeId.getStorageID());
-
       // it would have been better to pass storage as a parameter to
       // constructor below - need to augment ReflectionUtils used below.
-
+      conf.set(DFSConfigKeys.DFS_DATANODE_STORAGEID_KEY, datanodeId
+          .getStorageID());
       try {
-        // TODO:FEDERATION Equivalent of following (can't do because Simulated
-        // is in test dir)
         data = (FSDatasetInterface) ReflectionUtils.newInstance(
             Class.forName(
             "org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset"),
@@ -1350,8 +1336,6 @@ public class DataNode extends Configured
       } catch (ClassNotFoundException e) {
         throw new IOException(StringUtils.stringifyException(e));
       }
-      // TODO:FEDERATION do we need set it to the general dnRegistration?????
-      // TODO:FEDERATION do we need LV,NSid, cid,bpid for datanode version file?
     } else {
       data = new FSDataset(storage, conf);
     }

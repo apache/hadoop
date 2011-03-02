@@ -76,7 +76,6 @@ import org.apache.hadoop.io.IOUtils;
 @InterfaceAudience.Private
 public class FSDataset implements FSConstants, FSDatasetInterface {
 
-
   /**
    * A node type that can be built into a tree reflecting the
    * hierarchy of blocks on the local disk.
@@ -624,8 +623,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     BlockPoolSlice getBlockPoolSlice(String bpid) throws IOException {
       BlockPoolSlice bp = map.get(bpid);
       if (bp == null) {
-        // TODO:FEDERATION cleanup this exception
-        throw new IOException("block pool " + bpid + " not found");
+        throw new IOException("block pool " + bpid + " is not found");
       }
       return bp;
     }
