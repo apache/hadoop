@@ -1351,6 +1351,10 @@ of all regions.
   <chapter xml:id="schema">
   <title>HBase and Schema Design</title>
   <section xml:id="number.of.cfs">
+      <para>A good general introduction on the strength and weaknesses modelling on
+          the various non-rdbms datastores is Ian Varleys' Master thesis,
+          <link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link>.
+      </para>
   <title>
       On the number of column families
   </title>
