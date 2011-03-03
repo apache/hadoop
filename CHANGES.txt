@@ -171,6 +171,9 @@ Trunk (unreleased changes)
 
     HDFS-1680. Fix TestBalancer. (szetszwo)
 
+    HDFS-1705. Balancer command throws NullPointerException. (suresh via
+    szetszwo)
+
 Release 0.22.0 - Unreleased
 
   NEW FEATURES

@@ -1461,17 +1461,12 @@ public class Balancer {
   }
 
   static class Cli extends Configured implements Tool {
-    @Override
-    public void setConf(Configuration conf) {
-      super.setConf(conf);
-      WIN_WIDTH = conf.getLong("dfs.balancer.movedWinWidth", WIN_WIDTH);
-    }
-
     /** Parse arguments and then run Balancer */
     @Override
     public int run(String[] args) {
       final long startTime = Util.now();
       final Configuration conf = getConf();
+      WIN_WIDTH = conf.getLong("dfs.balancer.movedWinWidth", WIN_WIDTH);
 
       try {
         checkReplicationPolicyCompatibility(conf);
