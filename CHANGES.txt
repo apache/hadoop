@@ -130,6 +130,7 @@ Release 0.90.2 - Unreleased
    HBASE-3589  test jar should not include mapred-queues.xml and
                log4j.properties
    HBASE-3591  completebulkload doesn't honor generic -D options
+   HBASE-3594  Rest server fails because of missing asm jar
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
