@@ -193,6 +193,8 @@ Trunk (unreleased changes)
     HDFS-1559. Add missing UGM overrides to TestRefreshUserMappings
     (Todd Lipcon via eli)
 
+    HDFS-1585. Fix build after HDFS-1547 (todd)
+
 Release 0.22.0 - Unreleased
 
   NEW FEATURES
