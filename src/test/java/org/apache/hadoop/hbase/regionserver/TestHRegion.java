@@ -499,7 +499,7 @@ public class TestHRegion extends HBaseTestCase {
 
     res = region.checkAndMutate(row1, fam1, qf1, null, put, lockId, true);
     assertTrue(res);
-    
+
   }
 
   public void testCheckAndMutate_WithWrongValue() throws IOException{
@@ -2783,7 +2783,7 @@ public class TestHRegion extends HBaseTestCase {
         HColumnDescriptor.DEFAULT_COMPRESSION,
         HColumnDescriptor.DEFAULT_IN_MEMORY,
         HColumnDescriptor.DEFAULT_BLOCKCACHE,
-        Integer.MAX_VALUE, HColumnDescriptor.DEFAULT_TTL,
+        HColumnDescriptor.DEFAULT_BLOCKSIZE, HColumnDescriptor.DEFAULT_TTL,
         "rowcol",
         HColumnDescriptor.DEFAULT_REPLICATION_SCOPE);
     HTableDescriptor htd = new HTableDescriptor(TABLE);
