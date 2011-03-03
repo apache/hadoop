@@ -147,6 +147,21 @@
   <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
 
+  <!-- task-controller properties set here -->
+  <!-- Source directory from where configure is run and files are copied
+  -->
+	
+  <property name="c++.task-controller.src" 
+    value="${basedir}/src/c++/task-controller" />
+  <!-- directory where autoconf files + temporary files and src is 
+    stored for compilation -->
+  <property name="build.c++.task-controller" 
+    value="${build.c++}/task-controller" />
+  <!-- the default install dir is build directory override it using
+   -Dtask-controller.install.dir=$HADOOP_HOME/bin -->
+  <property name="task-controller.install.dir" value="${dist.dir}/bin" />
+  <!-- end of task-controller properties -->
+	
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
@@ -1797,4 +1812,52 @@
 
   </target>
 
+  <!-- taskcontroller targets -->
+  <target name="init-task-controller-build">
+    <mkdir dir="${build.c++.task-controller}" />
+    <copy todir="${build.c++.task-controller}">
+      <fileset dir="${c++.task-controller.src}" includes="*.c">
+      </fileset>
+      <fileset dir="${c++.task-controller.src}" includes="*.h">
+      </fileset>
+    </copy>
+    <chmod file="${c++.task-controller.src}/configure" perm="ugo+x"/> 
+    <condition property="task-controller.conf.dir.passed">
+      <not>
+        <equals arg1="${hadoop.conf.dir}" arg2="$${hadoop.conf.dir}"/>
+      </not>
+    </condition>
+  </target>
+  <target name="configure-task-controller" depends="init,
+          init-task-controller-build,
+          task-controller-configuration-with-confdir,
+          task-controller-configuration-with-no-confdir">
+  </target>
+  <target name="task-controller-configuration-with-confdir" 
+          if="task-controller.conf.dir.passed" >
+    <exec executable="${c++.task-controller.src}/configure" 
+          dir="${build.c++.task-controller}" failonerror="yes">
+      <arg value="--prefix=${task-controller.install.dir}" />
+      <arg value="--with-confdir=${hadoop.conf.dir}" />
+    </exec>
+  </target>
+  <target name="task-controller-configuration-with-no-confdir" 
+          unless="task-controller.conf.dir.passed">
+    <exec executable="${c++.task-controller.src}/configure" 
+          dir="${build.c++.task-controller}" failonerror="yes">
+      <arg value="--prefix=${task-controller.install.dir}" />
+    </exec>
+  </target>
+  <!--
+    * Create the installation directory.
+    * Do a make install.
+   -->
+  <target name="task-controller" depends="configure-task-controller">
+    <mkdir dir="${task-controller.install.dir}" />
+    <exec executable="${make.cmd}" dir="${build.c++.task-controller}" 
+        searchpath="yes" failonerror="yes">
+      <arg value="install" />
+    </exec>
+  </target>
+  <!-- end of task-controller target -->
 </project>
