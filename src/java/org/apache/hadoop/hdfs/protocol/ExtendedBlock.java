@@ -50,7 +50,7 @@ public class ExtendedBlock implements Writable {
   }
 
   public ExtendedBlock(final ExtendedBlock b) {
-    this(b.poolId, b.block);
+    this(b.poolId, new Block(b.block));
   }
   
   public ExtendedBlock(final String poolId, final long blockId) {

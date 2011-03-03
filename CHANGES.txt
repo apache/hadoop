@@ -159,6 +159,9 @@ Trunk (unreleased changes)
     HDFS-1702. Federation: fix TestBackupNode and TestRefreshNamendoes
     failures. (suresh)
 
+    HDFS-1706. Federation: TestFileAppend2, TestFileAppend3 and 
+    TestBlockTokenWithDFS failing. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

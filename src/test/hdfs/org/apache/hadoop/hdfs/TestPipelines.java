@@ -104,12 +104,15 @@ public class TestPipelines {
       filePath.toString(), FILE_SIZE - 1, FILE_SIZE).getLocatedBlocks();
 
     String bpid = cluster.getNamesystem().getBlockPoolId();
-    Replica r = DataNodeAdapter.fetchReplicaInfo(cluster.getDataNodes().get(1),
-        bpid, lb.get(0).getBlock().getBlockId());
-    assertTrue("Replica shouldn'e be null", r != null);
-    assertEquals(
-      "Should be RBW replica after sequence of calls append()/write()/hflush()",
-      HdfsConstants.ReplicaState.RBW, r.getState());
+    for (DataNode dn : cluster.getDataNodes()) {
+      Replica r = DataNodeAdapter.fetchReplicaInfo(dn, bpid, lb.get(0)
+          .getBlock().getBlockId());
+
+      assertTrue("Replica on DN " + dn + " shouldn't be null", r != null);
+      assertEquals("Should be RBW replica on " + dn
+          + " after sequence of calls " + "append()/write()/hflush()",
+          HdfsConstants.ReplicaState.RBW, r.getState());
+    }
     ofs.close();
   }
 

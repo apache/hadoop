@@ -975,7 +975,8 @@ public class MiniDFSCluster {
       System.out.println("Shutting down the namenode");
       nn.stop();
       nn.join();
-      nameNodes[nnIndex] = null;
+      Configuration conf = nameNodes[nnIndex].conf;
+      nameNodes[nnIndex] = new NameNodeInfo(null, conf);
     }
   }
 

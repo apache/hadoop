@@ -218,6 +218,11 @@ class DataXceiver extends DataTransferProtocol.Receiver
                 " tcp no delay " + s.getTcpNoDelay());
     }
 
+    // We later mutate block's generation stamp and length, but we need to
+    // forward the original version of the block to downstream mirrors, so
+    // make a copy here.
+    final ExtendedBlock originalBlock = new ExtendedBlock(block);
+
     block.setNumBytes(dataXceiverServer.estimateBlockSize);
     LOG.info("Receiving block " + block + 
              " src: " + remoteAddress +
@@ -294,7 +299,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
           mirrorIn = new DataInputStream(NetUtils.getInputStream(mirrorSock));
 
           // Write header: Copied from DFSClient.java!
-          DataTransferProtocol.Sender.opWriteBlock(mirrorOut, block,
+          DataTransferProtocol.Sender.opWriteBlock(mirrorOut, originalBlock,
               pipelineSize, stage, newGs, minBytesRcvd, maxBytesRcvd, client,
               srcDataNode, targets, blockToken);
 
