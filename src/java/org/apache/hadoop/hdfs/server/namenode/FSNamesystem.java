@@ -797,6 +797,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           clientMachine);
       for (LocatedBlock b : blocks.getLocatedBlocks()) {
         clusterMap.pseudoSortByDistance(client, b.getLocations());
+        
+        // Move decommissioned datanodes to the bottom
+        Arrays.sort(b.getLocations(), DFSUtil.DECOM_COMPARATOR);
       }
     }
     return blocks;
@@ -2589,6 +2592,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       clusterMap.remove(nodeS);
       nodeS.updateRegInfo(nodeReg);
       nodeS.setHostName(hostName);
+      nodeS.setDisallowed(false); // Node is in the include list
       
       // resolve network location
       resolveNetworkLocation(nodeS);
@@ -2603,6 +2607,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
           nodeS.isAlive = true;
         }
       }
+      checkDecommissioning(nodeS, dnAddress);
       return;
     } 
 
@@ -2623,7 +2628,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     resolveNetworkLocation(nodeDescr);
     unprotectedAddDatanode(nodeDescr);
     clusterMap.add(nodeDescr);
-      
+    checkDecommissioning(nodeDescr, dnAddress);
+    
     // also treat the registration message as a heartbeat
     synchronized(heartbeats) {
       heartbeats.add(nodeDescr);
@@ -2725,13 +2731,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         } catch(UnregisteredNodeException e) {
           return new DatanodeCommand[]{DatanodeCommand.REGISTER};
         }
-          
+        
         // Check if this datanode should actually be shutdown instead. 
-        if (nodeinfo != null && shouldNodeShutdown(nodeinfo)) {
+        if (nodeinfo != null && nodeinfo.isDisallowed()) {
           setDatanodeDead(nodeinfo);
           throw new DisallowedDatanodeException(nodeinfo);
         }
-
+         
         if (nodeinfo == null || !nodeinfo.isAlive) {
           return new DatanodeCommand[]{DatanodeCommand.REGISTER};
         }
@@ -2792,20 +2798,30 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
   private void updateStats(DatanodeDescriptor node, boolean isAdded) {
     //
     // The statistics are protected by the heartbeat lock
+    // For decommissioning/decommissioned nodes, only used capacity
+    // is counted.
     //
     assert(Thread.holdsLock(heartbeats));
     if (isAdded) {
-      capacityTotal += node.getCapacity();
       capacityUsed += node.getDfsUsed();
       blockPoolUsed += node.getBlockPoolUsed();
-      capacityRemaining += node.getRemaining();
       totalLoad += node.getXceiverCount();
+      if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+        capacityTotal += node.getCapacity();
+        capacityRemaining += node.getRemaining();
+      } else {
+        capacityTotal += node.getDfsUsed();
+      }
     } else {
-      capacityTotal -= node.getCapacity();
       capacityUsed -= node.getDfsUsed();
       blockPoolUsed -= node.getBlockPoolUsed();
-      capacityRemaining -= node.getRemaining();
       totalLoad -= node.getXceiverCount();
+      if (!(node.isDecommissionInProgress() || node.isDecommissioned())) {
+        capacityTotal -= node.getCapacity();
+        capacityRemaining -= node.getRemaining();
+      } else {
+        capacityTotal -= node.getDfsUsed();
+      }
     }
   }
 
@@ -3088,12 +3104,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
                             + nodeID.getName());
     }
 
-    // Check if this datanode should actually be shutdown instead.
-    if (shouldNodeShutdown(node)) {
-      setDatanodeDead(node);
-      throw new DisallowedDatanodeException(node);
-    }
-    
     blockManager.processReport(node, newReport);
     NameNode.getNameNodeMetrics().blockReport.inc((int) (now() - startTime));
     } finally {
@@ -3224,12 +3234,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("BLOCK* NameSystem.blockReceived: "
                                     +block+" is received from " + nodeID.getName());
-    }
-
-    // Check if this datanode should actually be shutdown instead.
-    if (shouldNodeShutdown(node)) {
-      setDatanodeDead(node);
-      throw new DisallowedDatanodeException(node);
     }
 
     blockManager.addBlock(node, block, delHint);
@@ -3497,12 +3501,16 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     throws IOException {
 
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
-      LOG.info("Start Decommissioning node " + node.getName());
-      node.startDecommission();
+      LOG.info("Start Decommissioning node " + node.getName() + " with " + 
+          node.numBlocks() +  " blocks.");
+      synchronized (heartbeats) {
+        updateStats(node, false);
+        node.startDecommission();
+        updateStats(node, true);
+      }
       node.decommissioningStatus.setStartTime(now());
-      //
-      // all the blocks that reside on this node have to be 
-      // replicated.
+      
+      // all the blocks that reside on this node have to be replicated.
       checkDecommissionStateInternal(node);
     }
   }
@@ -3512,8 +3520,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    */
   public void stopDecommission (DatanodeDescriptor node) 
     throws IOException {
-    LOG.info("Stop Decommissioning node " + node.getName());
-    node.stopDecommission();
+    if (node.isDecommissionInProgress() || node.isDecommissioned()) {
+      LOG.info("Stop Decommissioning node " + node.getName());
+      synchronized (heartbeats) {
+        updateStats(node, false);
+        node.stopDecommission();
+        updateStats(node, true);
+      }
+    }
   }
 
   /** 
@@ -3600,10 +3614,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         LOG.info("Decommission complete for node " + node.getName());
       }
     }
-    if (node.isDecommissioned()) {
-      return true;
-    }
-    return false;
+    return node.isDecommissioned();
   }
 
   /** 
@@ -3653,18 +3664,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
         DatanodeDescriptor node = it.next();
         // Check if not include.
         if (!inHostsList(node, null)) {
-          node.setDecommissioned();  // case 2.
+          node.setDisallowed(true);  // case 2.
         } else {
           if (inExcludedHostsList(node, null)) {
-            if (!node.isDecommissionInProgress() && 
-                !node.isDecommissioned()) {
-              startDecommission(node);   // case 3.
-            }
+            startDecommission(node);   // case 3.
           } else {
-            if (node.isDecommissionInProgress() || 
-                node.isDecommissioned()) {
-              stopDecommission(node);   // case 4.
-            } 
+            stopDecommission(node);   // case 4.
           }
         }
       }
@@ -3680,39 +3685,22 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   /**
    * Checks if the node is not on the hosts list.  If it is not, then
-   * it will be ignored.  If the node is in the hosts list, but is also 
-   * on the exclude list, then it will be decommissioned.
-   * Returns FALSE if node is rejected for registration. 
-   * Returns TRUE if node is registered (including when it is on the 
-   * exclude list and is being decommissioned). 
+   * it will be disallowed from registering. 
    */
-  private boolean verifyNodeRegistration(DatanodeID nodeReg, String ipAddr) 
-    throws IOException {
+  private boolean verifyNodeRegistration(DatanodeID nodeReg, String ipAddr) {
     assert (hasWriteLock());
-    if (!inHostsList(nodeReg, ipAddr)) {
-      return false;    
-    }
-    if (inExcludedHostsList(nodeReg, ipAddr)) {
-      DatanodeDescriptor node = getDatanode(nodeReg);
-      if (node == null) {
-        throw new IOException("verifyNodeRegistration: unknown datanode " +
-                              nodeReg.getName());
-      }
-      if (!checkDecommissionStateInternal(node)) {
-        startDecommission(node);
-      }
-    } 
-    return true;
+    return inHostsList(nodeReg, ipAddr);
   }
     
   /**
-   * Checks if the Admin state bit is DECOMMISSIONED.  If so, then 
-   * we should shut it down. 
-   * 
-   * Returns true if the node should be shutdown.
+   * Decommission the node if it is in exclude list.
    */
-  private boolean shouldNodeShutdown(DatanodeDescriptor node) {
-    return (node.isDecommissioned());
+  private void checkDecommissioning(DatanodeDescriptor nodeReg, String ipAddr) 
+    throws IOException {
+    // If the registered node is in exclude list, then decommission it
+    if (inExcludedHostsList(nodeReg, ipAddr)) {
+      startDecommission(nodeReg);
+    }
   }
     
   /**
@@ -4880,6 +4868,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
   }
   
+  /**
+   * @return list of datanodes where decommissioning is in progress
+   */
   public ArrayList<DatanodeDescriptor> getDecommissioningNodes() {
     readLock();
     try {
@@ -4899,10 +4890,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     }
   }
 
-  /*
-   * Delegation Token
+  /**
+   * Create delegation token secret manager
    */
-   
   private DelegationTokenSecretManager createDelegationTokenSecretManager(
       Configuration conf) {
     return new DelegationTokenSecretManager(conf.getLong(
@@ -5238,6 +5228,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       final Map<String, Object> innerinfo = new HashMap<String, Object>();
       innerinfo.put("lastContact", getLastContact(node));
       innerinfo.put("usedSpace", getDfsUsed(node));
+      innerinfo.put("adminState", node.getAdminState().toString());
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);
@@ -5255,6 +5246,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     for (DatanodeDescriptor node : deadNodeList) {
       final Map<String, Object> innerinfo = new HashMap<String, Object>();
       innerinfo.put("lastContact", getLastContact(node));
+      innerinfo.put("decommissioned", node.isDecommissioned());
       info.put(node.getHostName(), innerinfo);
     }
     return JSON.toString(info);

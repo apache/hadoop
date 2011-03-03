@@ -176,6 +176,8 @@ Trunk (unreleased changes)
 
     HDFS-1683. Test Balancer with multiple NameNodes.  (szetszwo)
 
+    HDFS-1547. Improve decommission mechanism. (suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

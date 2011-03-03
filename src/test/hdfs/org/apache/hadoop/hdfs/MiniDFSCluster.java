@@ -20,9 +20,12 @@ package org.apache.hadoop.hdfs;
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.channels.FileChannel;
@@ -95,6 +98,8 @@ public class MiniDFSCluster {
     private String [] hosts = null;
     private long [] simulatedCapacities = null;
     private String clusterId = null;
+    private boolean waitSafeMode = true;
+    private boolean setupHostsFile = false;
     
     public Builder(Configuration conf) {
       this.conf = conf;
@@ -189,6 +194,23 @@ public class MiniDFSCluster {
     }
 
     /**
+     * Default: true
+     */
+    public Builder waitSafeMode(boolean val) {
+      this.waitSafeMode = val;
+      return this;
+    }
+
+    /**
+     * Default: false
+     * When true the hosts file/include file for the cluster is setup
+     */
+    public Builder setupHostsFile(boolean val) {
+      this.setupHostsFile = val;
+      return this;
+    }
+    
+    /**
      * Construct the actual MiniDFSCluster
      */
     public MiniDFSCluster build() throws IOException {
@@ -211,7 +233,9 @@ public class MiniDFSCluster {
                        builder.racks,
                        builder.hosts,
                        builder.simulatedCapacities,
-                       builder.clusterId);
+                       builder.clusterId,
+                       builder.waitSafeMode,
+                       builder.setupHostsFile);
   }
   
   public class DataNodeProperties {
@@ -415,14 +439,14 @@ public class MiniDFSCluster {
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
     initMiniDFSCluster(nameNodePort, conf, 1, format,
         manageNameDfsDirs, manageDataDfsDirs, operation, racks, hosts,
-        simulatedCapacities, null);
+        simulatedCapacities, null, true, false);
   }
 
   private void initMiniDFSCluster(int nameNodePort, Configuration conf,
       int numDataNodes, boolean format, boolean manageNameDfsDirs,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
-      String[] hosts, long[] simulatedCapacities, String clusterId)
-      throws IOException {
+      String[] hosts, long[] simulatedCapacities, String clusterId,
+      boolean waitSafeMode, boolean setupHostsFile) throws IOException {
     this.conf = conf;
     base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");
@@ -482,8 +506,8 @@ public class MiniDFSCluster {
     }
     
     // Start the DataNodes
-    startDataNodes(conf, numDataNodes, manageDataDfsDirs, 
-                    operation, racks, hosts, simulatedCapacities);
+    startDataNodes(conf, numDataNodes, manageDataDfsDirs, operation, racks,
+        hosts, simulatedCapacities, setupHostsFile);
     waitClusterUp();
     //make sure ProxyUsers uses the latest conf
     ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
@@ -657,7 +681,8 @@ public class MiniDFSCluster {
   public synchronized void startDataNodes(Configuration conf, int numDataNodes, 
                              boolean manageDfsDirs, StartupOption operation, 
                              String[] racks, String[] hosts,
-                             long[] simulatedCapacities) throws IOException {
+                             long[] simulatedCapacities,
+                             boolean setupHostsFile) throws IOException {
 
     int curDatanodesNum = dataNodes.size();
     // for mincluster's the default initialDelay for BRs is 0
@@ -692,12 +717,6 @@ public class MiniDFSCluster {
           + "] is less than the number of datanodes [" + numDataNodes + "].");
     }
 
-    // Set up the right ports for the datanodes
-    conf.set("dfs.datanode.address", "127.0.0.1:0");
-    conf.set("dfs.datanode.http.address", "127.0.0.1:0");
-    conf.set("dfs.datanode.ipc.address", "127.0.0.1:0");
-    
-
     String [] dnArgs = (operation == null ||
                         operation != StartupOption.ROLLBACK) ?
         null : new String[] {operation.getName()};
@@ -705,6 +724,8 @@ public class MiniDFSCluster {
     
     for (int i = curDatanodesNum; i < curDatanodesNum+numDataNodes; i++) {
       Configuration dnConf = new HdfsConfiguration(conf);
+      // Set up datanode address
+      setupDatanodeAddress(dnConf, setupHostsFile);
       if (manageDfsDirs) {
         File dir1 = getStorageDir(i, 0);
         File dir2 = getStorageDir(i, 1);
@@ -786,7 +807,8 @@ public class MiniDFSCluster {
       boolean manageDfsDirs, StartupOption operation, 
       String[] racks
       ) throws IOException {
-    startDataNodes( conf,  numDataNodes, manageDfsDirs,  operation, racks, null, null);
+    startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, null,
+        null, false);
   }
   
   /**
@@ -816,7 +838,7 @@ public class MiniDFSCluster {
                              String[] racks,
                              long[] simulatedCapacities) throws IOException {
     startDataNodes(conf, numDataNodes, manageDfsDirs, operation, racks, null,
-                   simulatedCapacities);
+                   simulatedCapacities, false);
     
   }
 
@@ -1626,5 +1648,49 @@ public class MiniDFSCluster {
     // Wait for new namenode to get registrations from all the datanodes
     waitActive(nnIndex);
     return nameNodes[nnIndex].nameNode;
+  }
+  
+  private int getFreeSocketPort() {
+    int port = 0;
+    try {
+      ServerSocket s = new ServerSocket(0);
+      port = s.getLocalPort();
+      s.close();
+      return port;
+    } catch (IOException e) {
+      // Could not get a free port. Return default port 0.
+    }
+    return port;
+  }
+  
+  private void setupDatanodeAddress(Configuration conf, boolean setupHostsFile) throws IOException {
+    if (setupHostsFile) {
+      String hostsFile = conf.get("dfs.hosts", "").trim();
+      if (hostsFile.length() == 0) {
+        throw new IOException("Parameter dfs.hosts is not setup in conf");
+      }
+      // Setup datanode in the include file, if it is defined in the conf
+      String address = "127.0.0.1:" + getFreeSocketPort();
+      conf.set("dfs.datanode.address", address);
+      addToFile(hostsFile, address);
+      LOG.info("Adding datanode " + address + " to hosts file " + hostsFile);
+    } else {
+      conf.set("dfs.datanode.address", "127.0.0.1:0");
+      conf.set("dfs.datanode.http.address", "127.0.0.1:0");
+      conf.set("dfs.datanode.ipc.address", "127.0.0.1:0");
+    }
+  }
+  
+  private void addToFile(String p, String address) throws IOException {
+    File f = new File(p);
+    if (!f.exists()) {
+      f.createNewFile();
+    }
+    PrintWriter writer = new PrintWriter(new FileWriter(f, true));
+    try {
+      writer.println(address);
+    } finally {
+      writer.close();
+    }
   }
 }

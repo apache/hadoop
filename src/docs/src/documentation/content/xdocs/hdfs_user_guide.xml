@@ -209,14 +209,16 @@
    	</li>
     <li>
       <code>-refreshNodes</code>
-      : Updates the set of hosts allowed to connect to namenode.
-      Re-reads the config file to update values defined by dfs.hosts and 
-      dfs.host.exclude and reads the entires (hostnames) in those files. 
-      Each entry not defined in dfs.hosts but in dfs.hosts.exclude 
-      is decommissioned. Each entry defined in dfs.hosts and also in 
-      dfs.host.exclude is stopped from decommissioning if it has aleady 
-      been marked for decommission. Entires not present in both the lists 
-      are decommissioned. 
+      : Updates the namenode with the set of datanodes allowed to 
+      connect to the namenode. Namenodes re-read datanode hostnames 
+      in the file defined by dfs.hosts, dfs.hosts.exclude. Hosts defined 
+      in dfs.hosts are the datanodes that are part of the cluster. 
+      If there are entries in dfs.hosts, only the hosts in it are 
+      allowed to register with the namenode. Entries in dfs.hosts.exclude 
+      are datanodes that need to be decommissioned. Datanodes complete
+      decommissioning when all the replicas from them are replicated
+      to other datanodes. Decommissioned nodes are not automatically
+      shutdown and are not chosen for writing for new replicas.
     </li>
     <li>
       <code>-printTopology</code>

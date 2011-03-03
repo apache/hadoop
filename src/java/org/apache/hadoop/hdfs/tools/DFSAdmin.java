@@ -504,16 +504,18 @@ public class DFSAdmin extends FsShell {
     "Set/Unset/Check flag to attempt restore of failed storage replicas if they become available.\n" +
     "\t\tRequires superuser permissions.\n";
     
-    String refreshNodes = "-refreshNodes: \tUpdates the set of hosts allowed " +
-                          "to connect to namenode.\n\n" +
-      "\t\tRe-reads the config file to update values defined by \n" +
-      "\t\tdfs.hosts and dfs.host.exclude and reads the \n" +
-      "\t\tentires (hostnames) in those files.\n\n" +
-      "\t\tEach entry not defined in dfs.hosts but in \n" + 
-      "\t\tdfs.hosts.exclude is decommissioned. Each entry defined \n" +
-      "\t\tin dfs.hosts and also in dfs.host.exclude is stopped from \n" +
-      "\t\tdecommissioning if it has aleady been marked for decommission.\n" + 
-      "\t\tEntires not present in both the lists are decommissioned.\n";
+    String refreshNodes = "-refreshNodes: \tUpdates the namenode with the " +
+      "set of datanodes allowed to connect to the namenode.\n\n" +
+      "\t\tNamenode re-reads datanode hostnames from the file defined by \n" +
+      "\t\tdfs.hosts, dfs.hosts.exclude configuration parameters.\n" +
+      "\t\tHosts defined in dfs.hosts are the datanodes that are part of \n" +
+      "\t\tthe cluster. If there are entries in dfs.hosts, only the hosts \n" +
+      "\t\tin it are allowed to register with the namenode.\n\n" +
+      "\t\tEntries in dfs.hosts.exclude are datanodes that need to be \n" +
+      "\t\tdecommissioned. Datanodes complete decommissioning when \n" + 
+      "\t\tall the replicas from them are replicated to other datanodes.\n" +
+      "\t\tDecommissioned nodes are not automatically shutdown and \n" +
+      "\t\tare not chosen for writing new replicas.\n";
 
     String finalizeUpgrade = "-finalizeUpgrade: Finalize upgrade of HDFS.\n" +
       "\t\tDatanodes delete their previous version working directories,\n" +

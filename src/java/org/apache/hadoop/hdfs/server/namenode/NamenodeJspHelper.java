@@ -209,7 +209,17 @@ class NamenodeJspHelper {
       ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
       ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
       fsn.DFSNodesStatus(live, dead);
+      
+      int liveDecommissioned = 0;
+      for (DatanodeDescriptor d : live) {
+        liveDecommissioned += d.isDecommissioned() ? 1 : 0;
+      }
 
+      int deadDecommissioned = 0;
+      for (DatanodeDescriptor d : dead) {
+        deadDecommissioned += d.isDecommissioned() ? 1 : 0;
+      }
+      
       ArrayList<DatanodeDescriptor> decommissioning = fsn
           .getDecommissioningNodes();
 
@@ -299,9 +309,13 @@ class NamenodeJspHelper {
           + colTxt() + StringUtils.limitDecimalTo2(dev) + " %"
           + rowTxt() + colTxt()
           + "<a href=\"dfsnodelist.jsp?whatNodes=LIVE\">Live Nodes</a> "
-          + colTxt() + ":" + colTxt() + live.size() + rowTxt() + colTxt()
+          + colTxt() + ":" + colTxt() + live.size()
+          + " (Decommissioned: " + liveDecommissioned + ")"
+          + rowTxt() + colTxt()
           + "<a href=\"dfsnodelist.jsp?whatNodes=DEAD\">Dead Nodes</a> "
-          + colTxt() + ":" + colTxt() + dead.size() + rowTxt() + colTxt()
+          + colTxt() + ":" + colTxt() + dead.size() 
+          + " (Decommissioned: " + deadDecommissioned + ")"
+          + rowTxt() + colTxt()
           + "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
           + "Decommissioning Nodes</a> "
           + colTxt() + ":" + colTxt() + decommissioning.size() 
@@ -455,8 +469,11 @@ class NamenodeJspHelper {
        */
 
       generateNodeDataHeader(out, d, suffix, alive, nnHttpPort);
-      if (!alive)
+      if (!alive) {
+        out.print("<td class=\"decommissioned\"> " + 
+            d.isDecommissioned() + "\n");
         return;
+      }
 
       long c = d.getCapacity();
       long u = d.getDfsUsed();
@@ -466,9 +483,7 @@ class NamenodeJspHelper {
       String percentRemaining = StringUtils.limitDecimalTo2(d
           .getRemainingPercent());
 
-      String adminState = (d.isDecommissioned() ? "Decommissioned" : (d
-          .isDecommissionInProgress() ? "Decommission In Progress"
-          : "In Service"));
+      String adminState = d.getAdminState().toString();
 
       long timestamp = d.getLastUpdate();
       long currentTime = System.currentTimeMillis();
@@ -521,7 +536,6 @@ class NamenodeJspHelper {
         sorterOrder = "ASC";
 
       JspHelper.sortNodeList(live, sorterField, sorterOrder);
-      JspHelper.sortNodeList(dead, "name", "ASC");
 
       // Find out common suffix. Should this be before or after the sort?
       String port_suffix = null;
@@ -554,7 +568,6 @@ class NamenodeJspHelper {
         int nnHttpPort = nn.getHttpAddress().getPort();
         out.print("<div id=\"dfsnodetable\"> ");
         if (whatNodes.equals("LIVE")) {
-
           out.print("<a name=\"LiveNodes\" id=\"title\">" + "Live Datanodes : "
               + live.size() + "</a>"
               + "<br><br>\n<table border=1 cellspacing=0>\n");
@@ -599,9 +612,11 @@ class NamenodeJspHelper {
 
           if (dead.size() > 0) {
             out.print("<table border=1 cellspacing=0> <tr id=\"row1\"> "
-                + "<td> Node \n");
+                + "<th " + nodeHeaderStr("node")
+                + "> Node <th " + nodeHeaderStr("decommissioned")
+                + "> Decommissioned\n");
 
-            JspHelper.sortNodeList(dead, "name", "ASC");
+            JspHelper.sortNodeList(dead, sorterField, sorterOrder);
             for (int i = 0; i < dead.size(); i++) {
               generateNodeData(out, dead.get(i), port_suffix, false, nnHttpPort);
             }

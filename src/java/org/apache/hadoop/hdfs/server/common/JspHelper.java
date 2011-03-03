@@ -44,6 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -264,6 +265,8 @@ public class JspHelper {
         FIELD_NONDFS_USED       = 7,
         FIELD_REMAINING         = 8,
         FIELD_PERCENT_REMAINING = 9,
+        FIELD_ADMIN_STATE       = 10,
+        FIELD_DECOMMISSIONED    = 11,
         SORT_ORDER_ASC          = 1,
         SORT_ORDER_DSC          = 2;
 
@@ -287,6 +290,10 @@ public class JspHelper {
           sortField = FIELD_PERCENT_REMAINING;
         } else if (field.equals("blocks")) {
           sortField = FIELD_BLOCKS;
+        } else if (field.equals("adminstate")) {
+          sortField = FIELD_ADMIN_STATE;
+        } else if (field.equals("decommissioned")) {
+          sortField = FIELD_DECOMMISSIONED;
         } else {
           sortField = FIELD_NAME;
         }
@@ -333,6 +340,13 @@ public class JspHelper {
           break;
         case FIELD_BLOCKS:
           ret = d1.numBlocks() - d2.numBlocks();
+          break;
+        case FIELD_ADMIN_STATE:
+          ret = d1.getAdminState().toString().compareTo(
+              d2.getAdminState().toString());
+          break;
+        case FIELD_DECOMMISSIONED:
+          ret = DFSUtil.DECOM_COMPARATOR.compare(d1, d2);
           break;
         case FIELD_NAME: 
           ret = d1.getHostName().compareTo(d2.getHostName());

@@ -15882,39 +15882,47 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-refreshNodes:( |\t)*Updates the set of hosts allowed to connect to namenode.( )*</expected-output>
+          <expected-output>^-refreshNodes:( |\t)*Updates the namenode with the set of datanodes allowed to connect to the namenode.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Re-reads the config file to update values defined by( )*</expected-output>
+          <expected-output>^( |\t)*Namenode re-reads datanode hostnames from the file defined by( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*dfs.hosts and dfs.host.exclude and reads the( )*</expected-output>
+          <expected-output>^( |\t)*dfs.hosts, dfs.hosts.exclude configuration parameters.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*entires \(hostnames\) in those files.( )*</expected-output>
+          <expected-output>^( |\t)*Hosts defined in dfs.hosts are the datanodes that are part of( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Each entry not defined in dfs.hosts but in( )*</expected-output>
+          <expected-output>^( |\t)*the cluster. If there are entries in dfs.hosts, only the hosts( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*dfs.hosts.exclude is decommissioned. Each entry defined( )*</expected-output>
+          <expected-output>^( |\t)*in it are allowed to register with the namenode.( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*in dfs.hosts and also in dfs.host.exclude is stopped from( )*</expected-output>
+          <expected-output>^( |\t)*Entries in dfs.hosts.exclude are datanodes that need to be( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*decommissioning if it has aleady been marked for decommission.( )*</expected-output>
+          <expected-output>^( |\t)*decommissioned. Datanodes complete decommissioning when ( )*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^( |\t)*Entires not present in both the lists are decommissioned.( )*</expected-output>
+          <expected-output>^( |\t)*all the replicas from them are replicated to other datanodes.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*Decommissioned nodes are not automatically shutdown and( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*are not chosen for writing new replicas.( )*</expected-output>
         </comparator>
       </comparators>
     </test>

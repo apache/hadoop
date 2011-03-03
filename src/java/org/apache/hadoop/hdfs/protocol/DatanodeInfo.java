@@ -61,7 +61,22 @@ public class DatanodeInfo extends DatanodeID implements Node {
   protected String hostName = null;
   
   // administrative states of a datanode
-  public enum AdminStates {NORMAL, DECOMMISSION_INPROGRESS, DECOMMISSIONED; }
+  public enum AdminStates {
+    NORMAL("In Service"), 
+    DECOMMISSION_INPROGRESS("Decommission In Progress"), 
+    DECOMMISSIONED("Decommissioned");
+
+    final String value;
+
+    AdminStates(final String v) {
+      this.value = v;
+    }
+
+    public String toString() {
+      return value;
+    }
+  }
+
   @Nullable
   protected AdminStates adminState;
 
@@ -283,7 +298,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
   /**
    * Retrieves the admin state of this node.
    */
-  AdminStates getAdminState() {
+  public AdminStates getAdminState() {
     if (adminState == null) {
       return AdminStates.NORMAL;
     }
