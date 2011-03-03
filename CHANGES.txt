@@ -162,6 +162,8 @@ Trunk (unreleased changes)
     HDFS-1628. Display full path in AccessControlException.  (John George
     via szetszwo)
 
+    HDFS-1707. Federation: Failure in browsing data on new namenodes. (jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES

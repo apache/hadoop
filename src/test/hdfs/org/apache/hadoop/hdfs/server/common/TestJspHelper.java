@@ -78,17 +78,16 @@ public class TestJspHelper {
         tokenString);
     when(request.getRemoteUser()).thenReturn(user);
 
+    when(request.getParameter(JspHelper.NAMENODE_ADDRESS)).thenReturn(
+        "1.1.1.1:1111");
+
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
-
-    InetSocketAddress serviceAddr = NameNode.getAddress(conf);
-    Text tokenService = new Text(serviceAddr.getAddress().getHostAddress()
-        + ":" + serviceAddr.getPort());
 
     UserGroupInformation ugi = JspHelper.getUGI(request, conf);
     Token<? extends TokenIdentifier> tokenInUgi = ugi.getTokens().iterator()
         .next();
-    Assert.assertEquals(tokenInUgi.getService(), tokenService);
+    Assert.assertEquals(tokenInUgi.getService().toString(), "1.1.1.1:1111");
   }
   
   @Test

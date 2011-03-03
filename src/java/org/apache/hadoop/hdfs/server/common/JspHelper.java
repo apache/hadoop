@@ -43,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -480,7 +481,14 @@ public class JspHelper {
         Token<DelegationTokenIdentifier> token = 
           new Token<DelegationTokenIdentifier>();
         token.decodeFromUrlString(tokenString);
-        InetSocketAddress serviceAddr = NameNode.getAddress(conf);
+        String namenodeAddress = (String) request
+            .getParameter(NAMENODE_ADDRESS);
+        if (namenodeAddress == null) {
+          throw new IOException("Url parameter '" + NAMENODE_ADDRESS
+              + "' not found.");
+        }
+        InetSocketAddress serviceAddr = DFSUtil
+            .getSocketAddress(namenodeAddress);
         LOG.info("Setting service in token: "
             + new Text(serviceAddr.getAddress().getHostAddress() + ":"
                 + serviceAddr.getPort()));
