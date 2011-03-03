@@ -24,8 +24,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import junit.framework.TestCase;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -33,15 +38,10 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-
-import junit.framework.TestCase;
 /**
  * This class tests if a balancer schedules tasks correctly.
  */
@@ -57,7 +57,6 @@ public class TestBalancer extends TestCase {
   ClientProtocol client;
 
   static final int DEFAULT_BLOCK_SIZE = 10;
-  private Balancer balancer;
   private Random r = new Random();
 
   static {
@@ -243,50 +242,15 @@ public class TestBalancer extends TestCase {
     }
   }
 
-  /* Start balancer and check if the cluster is balanced after the run */
-  private void runBalancer(Configuration conf, long totalUsedSpace, long totalCapacity )
-  throws Exception {
-    waitForHeartBeat(totalUsedSpace, totalCapacity);
-
-    // start rebalancing
-    balancer = new Balancer(conf);
-    final InetSocketAddress namenodeAddress = NameNode.getServiceAddress(conf, true);
-    final double threshold = balancer.parseArgs(new String[0]);
-    balancer.run(namenodeAddress, BalancingPolicy.Node.INSTANCE, threshold);
-
-    waitForHeartBeat(totalUsedSpace, totalCapacity);
-    boolean balanced;
-    do {
-      DatanodeInfo[] datanodeReport = 
-        client.getDatanodeReport(DatanodeReportType.ALL);
-      assertEquals(datanodeReport.length, cluster.getDataNodes().size());
-      balanced = true;
-      double avgUtilization = ((double)totalUsedSpace)/totalCapacity*100;
-      for(DatanodeInfo datanode:datanodeReport) {
-        if(Math.abs(avgUtilization-
-            ((double)datanode.getDfsUsed())/datanode.getCapacity()*100)>10) {
-          balanced = false;
-          try {
-            Thread.sleep(100);
-          } catch(InterruptedException ignored) {
-          }
-          break;
-        }
-      }
-    } while(!balanced);
-
-  }
-
-  private void runBalancerDefaultConstructor(Configuration conf,
+  private void runBalancer(Configuration conf,
       long totalUsedSpace, long totalCapacity) throws Exception {
     waitForHeartBeat(totalUsedSpace, totalCapacity);
 
     // start rebalancing
-    balancer = new Balancer();
-    balancer.setConf(conf);
-    final InetSocketAddress namenodeAddress = NameNode.getServiceAddress(conf, true);
-    final double threshold = balancer.parseArgs(new String[0]);
-    balancer.run(namenodeAddress, BalancingPolicy.Node.INSTANCE, threshold);
+    final List<InetSocketAddress> namenodes =new ArrayList<InetSocketAddress>();
+    namenodes.add(NameNode.getServiceAddress(conf, true));
+    final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, conf);
+    assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
 
     waitForHeartBeat(totalUsedSpace, totalCapacity);
     boolean balanced;
@@ -383,7 +347,7 @@ public class TestBalancer extends TestCase {
       totalCapacity += newCapacity;
 
       // run balancer and validate results
-      runBalancerDefaultConstructor(conf, totalUsedSpace, totalCapacity);
+      runBalancer(conf, totalUsedSpace, totalCapacity);
     } finally {
       cluster.shutdown();
     }

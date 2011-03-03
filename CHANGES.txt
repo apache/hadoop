@@ -151,6 +151,9 @@ Trunk (unreleased changes)
 
     HDFS-1689. Federation: Configuration for namenodes. (suresh and jitendra)
 
+    HDFS-1682. Change Balancer CLI for multiple namenodes and balancing
+    policy.  (szetszwo)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
