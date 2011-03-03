@@ -17,20 +17,22 @@
 */
 package org.apache.hadoop.hdfs.server.common;
 
+import static org.apache.hadoop.hdfs.protocol.FSConstants.LAYOUT_VERSION;
+
 import java.io.IOException;
+
 import junit.framework.TestCase;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-
-import static org.apache.hadoop.hdfs.protocol.FSConstants.LAYOUT_VERSION;
-
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSUpgradeFromImage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.UpgradeObjectDatanode;
 import org.apache.hadoop.hdfs.server.namenode.UpgradeObjectNamenode;
+import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 
@@ -41,6 +43,7 @@ public class TestDistributedUpgrade extends TestCase {
   private Configuration conf;
   private int testCounter = 0;
   private MiniDFSCluster cluster = null;
+  private String clusterId = "testClsterId";
     
   /**
    * Writes an INFO log message containing the parameters.
@@ -63,9 +66,10 @@ public class TestDistributedUpgrade extends TestCase {
       // nn dirs set to name1 and name2
       cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
                                               .format(false)
+                                              .clusterId(clusterId)
                                               .startupOption(operation)
                                               .build(); // should fail
-      throw new AssertionError("Jakob was here. NameNode should have failed to start");
+      throw new AssertionError("NameNode should have failed to start");
     } catch (Exception expected) {
       expected = null;
       // expected
@@ -93,7 +97,7 @@ public class TestDistributedUpgrade extends TestCase {
     TestDFSUpgradeFromImage testImg = new TestDFSUpgradeFromImage();
     testImg.unpackStorage();
     int numDNs = testImg.numDataNodes;
-
+    
     // register new upgrade objects (ignore all existing)
     UpgradeObjectCollection.initialize();
     UpgradeObjectCollection.registerUpgrade(new UO_Datanode1());
@@ -117,6 +121,7 @@ public class TestDistributedUpgrade extends TestCase {
     // .startupOption(StartupOption.UPGRADE).build();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0)
                                               .format(false)
+                                              .clusterId(clusterId)
                                               .startupOption(StartupOption.UPGRADE)
                                               .build();
     cluster.shutdown();
@@ -131,6 +136,7 @@ public class TestDistributedUpgrade extends TestCase {
     cluster = new MiniDFSCluster.Builder(conf)
                                 .numDataNodes(numDNs)
                                 .format(false)
+                                .clusterId(clusterId)
                                 .startupOption(StartupOption.UPGRADE)
                                 .build();
     DFSAdmin dfsAdmin = new DFSAdmin();
@@ -142,6 +148,7 @@ public class TestDistributedUpgrade extends TestCase {
     log("NameCluster regular startup after the upgrade", numDirs);
     cluster = new MiniDFSCluster.Builder(conf)
                                 .numDataNodes(numDNs)
+                                .clusterId(clusterId)
                                 .format(false)
                                 .startupOption(StartupOption.REGULAR)
                                 .build();
@@ -173,7 +180,8 @@ class UO_Datanode extends UpgradeObjectDatanode {
 
   public void doUpgrade() throws IOException {
     this.status = (short)100;
-    getDatanode().namenodeTODO_FED.processUpgradeCommand(
+    DatanodeProtocol nn = getNamenode();
+    nn.processUpgradeCommand(
         new UpgradeCommand(UpgradeCommand.UC_ACTION_REPORT_STATUS, 
             getVersion(), getUpgradeStatus()));
   }

@@ -35,6 +35,7 @@ import java.net.SocketTimeoutException;
 @InterfaceAudience.Private
 public abstract class UpgradeObjectDatanode extends UpgradeObject implements Runnable {
   private DataNode dataNode = null;
+  private String bpid = null;
 
   public HdfsConstants.NodeType getType() {
     return HdfsConstants.NodeType.DATA_NODE;
@@ -43,9 +44,14 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
   protected DataNode getDatanode() {
     return dataNode;
   }
+  
+  protected DatanodeProtocol getNamenode() throws IOException {
+    return dataNode.getBPNamenode(bpid);
+  }
 
-  void setDatanode(DataNode dataNode) {
+  void setDatanode(DataNode dataNode, String bpid) {
     this.dataNode = dataNode;
+    this.bpid = bpid;
   }
 
   /**
@@ -118,7 +124,10 @@ public abstract class UpgradeObjectDatanode extends UpgradeObject implements Run
 
     // Complete the upgrade by calling the manager method
     try {
-      dataNode.upgradeManager.completeUpgrade();
+      UpgradeManagerDatanode upgradeManager = 
+        DataNode.getUpgradeManagerDatanode(bpid);
+      if(upgradeManager != null)
+        upgradeManager.completeUpgrade();
     } catch(IOException e) {
       DataNode.LOG.error(StringUtils.stringifyException(e));
     }

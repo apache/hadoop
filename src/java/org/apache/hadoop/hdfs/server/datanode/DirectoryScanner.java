@@ -127,7 +127,7 @@ public class DirectoryScanner implements Runnable {
     /**
      * Convert all the LinkedList values in this ScanInfoPerBlockPool map
      * into sorted arrays, and return a new map of these arrays per blockpool
-     * @return
+     * @return a map of ScanInfo arrays per blockpool
      */
     public Map<String, ScanInfo[]> toSortedArrays() {
       Map<String, ScanInfo[]> result = 
@@ -265,12 +265,16 @@ public class DirectoryScanner implements Runnable {
         LOG.warn("this cycle terminating immediately because 'shouldRun' has been deactivated");
         return;
       }
-      
-      if (!DataNode.getDataNode().upgradeManager.isUpgradeCompleted()) {
-        //If distributed upgrades underway, exit and wait for next cycle.
-        //TODO:FEDERATION update this when Distributed Upgrade is modified for Federation
-        LOG.warn("this cycle terminating immediately because Distributed Upgrade is in process");
-        return; 
+
+      String[] bpids = dataset.getBPIdlist();
+      for(String bpid : bpids) {
+        UpgradeManagerDatanode um = 
+          DataNode.getUpgradeManagerDatanode(bpid);
+        if (um != null && !um.isUpgradeCompleted()) {
+          //If distributed upgrades underway, exit and wait for next cycle.
+          LOG.warn("this cycle terminating immediately because Distributed Upgrade is in process");
+          return; 
+        }
       }
       
       //We're are okay to run - do it

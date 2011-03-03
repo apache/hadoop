@@ -2384,6 +2384,14 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
   
   /**
+   * get list of all bpids
+   * @return list of bpids
+   */
+  public String [] getBPIdlist() throws IOException {
+    return volumeMap.getBlockPoolList();
+  }
+  
+  /**
    * Class for representing the Datanode volume information
    */
   static class VolumeInfo {

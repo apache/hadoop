@@ -255,6 +255,7 @@ public class DataNode extends Configured
     
     void shutDownAll() throws InterruptedException {
       BPOfferService[] bposArray = this.getAllNamenodeThreads();
+      
       for (BPOfferService bpos : bposArray) {
         bpos.stop(); //interrupts the threads
       }
@@ -319,7 +320,6 @@ public class DataNode extends Configured
   
   volatile boolean shouldRun = true;
   private BlockPoolManager blockPoolManager;
-  public DatanodeProtocol namenodeTODO_FED = null; //TODO:FEDERATION needs to be taken out.
   public volatile FSDatasetInterface data = null;
   private DatanodeID datanodeId = null;
   private String clusterId = null;
@@ -649,6 +649,7 @@ public class DataNode extends Configured
     private final LinkedList<String> delHints = new LinkedList<String>();
     private volatile boolean shouldServiceRun = true;
     private boolean isBlockTokenInitialized = false;
+    UpgradeManagerDatanode upgradeManager = null;
 
     BPOfferService(InetSocketAddress isa) {
       this.bpRegistration = new DatanodeRegistration(datanodeId);
@@ -948,6 +949,10 @@ public class DataNode extends Configured
     
     //Cleanup method to be called by current thread before exiting.
     private void cleanUp() {
+      
+      if(upgradeManager != null)
+        upgradeManager.shutdownUpgrade();
+      
       blockPoolManager.remove(this);
       shouldServiceRun = false;
       RPC.stopProxy(bpNamenode);
@@ -1153,7 +1158,6 @@ public class DataNode extends Configured
         
         while (shouldRun && shouldServiceRun) {
           try {
-            // TODO:FEDERATION needs to be moved too
             startDistributedUpgradeIfNeeded();
             offerService();
           } catch (Exception ex) {
@@ -1248,7 +1252,6 @@ public class DataNode extends Configured
         break;
       case UpgradeCommand.UC_ACTION_START_UPGRADE:
         // start distributed upgrade here
-        datanodeObject.namenodeTODO_FED = bpNamenode; //TODO:FEDERATION - this needs to be converted.
         processDistributedUpgradeCommand((UpgradeCommand)cmd);
         break;
       case DatanodeProtocol.DNA_RECOVERBLOCK:
@@ -1265,6 +1268,33 @@ public class DataNode extends Configured
         LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
       }
       return true;
+    }
+    
+    private void processDistributedUpgradeCommand(UpgradeCommand comm)
+    throws IOException {
+      UpgradeManagerDatanode upgradeManager = getUpgradeManager();
+      upgradeManager.processUpgradeCommand(comm);
+    }
+
+    synchronized UpgradeManagerDatanode getUpgradeManager() {
+      if(upgradeManager == null)
+        upgradeManager = 
+          new UpgradeManagerDatanode(DataNode.getDataNode(), blockPoolId);
+      
+      return upgradeManager;
+    }
+    
+    /**
+     * Start distributed upgrade if it should be initiated by the data-node.
+     */
+    private void startDistributedUpgradeIfNeeded() throws IOException {
+      UpgradeManagerDatanode um = getUpgradeManager();
+      
+      if(!um.getUpgradeState())
+        return;
+      um.setUpgradeState(false, um.getUpgradeVersion());
+      um.startUpgrade();
+      return;
     }
   }
 
@@ -1580,10 +1610,7 @@ public class DataNode extends Configured
         LOG.warn("Received exception in BlockPoolManager#shutDownAll: ", ie);
       }
     }
-
-    if(upgradeManager != null)
-      upgradeManager.shutdownUpgrade();
-        
+    
     if (storage != null) {
       try {
         this.storage.unlockAll();
@@ -1659,26 +1686,13 @@ public class DataNode extends Configured
   int getXceiverCount() {
     return threadGroup == null ? 0 : threadGroup.activeCount();
   }
-    
-  // Distributed upgrade manager
-  UpgradeManagerDatanode upgradeManager = new UpgradeManagerDatanode(this);
 
-  private void processDistributedUpgradeCommand(UpgradeCommand comm
-                                               ) throws IOException {
-    assert upgradeManager != null : "DataNode.upgradeManager is null.";
-    upgradeManager.processUpgradeCommand(comm);
-  }
-  /**
-   * Start distributed upgrade if it should be initiated by the data-node.
-   */
-  private void startDistributedUpgradeIfNeeded() throws IOException {
-    UpgradeManagerDatanode um = DataNode.getDataNode().upgradeManager;
-    assert um != null : "DataNode.upgradeManager is null.";
-    if(!um.getUpgradeState())
-      return;
-    um.setUpgradeState(false, um.getUpgradeVersion());
-    um.startUpgrade();
-    return;
+  static UpgradeManagerDatanode getUpgradeManagerDatanode(String bpid) {
+    DataNode dn = getDataNode();
+    BPOfferService bpos = dn.blockPoolManager.get(bpid);
+    if(bpos==null)
+      return null;
+    return bpos.getUpgradeManager();
   }
 
   private void transferBlock( ExtendedBlock block, 

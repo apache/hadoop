@@ -28,6 +28,10 @@ class ReplicasMap {
   private Map<String, Map<Long, ReplicaInfo>> map = 
     new HashMap<String, Map<Long, ReplicaInfo>>();
   
+  synchronized String[] getBlockPoolList() {
+    return map.keySet().toArray(new String[map.keySet().size()]);   
+  }
+  
   private void checkBlockPool(String bpid) {
     if (bpid == null) {
       throw new IllegalArgumentException("Block Pool Id is null");

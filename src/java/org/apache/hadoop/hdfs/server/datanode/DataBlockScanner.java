@@ -89,8 +89,12 @@ public class DataBlockScanner implements Runnable {
   }
 
   // Wait for at least one block pool to be up
-  private void waitForInit() {
-    while (! datanode.upgradeManager.isUpgradeCompleted()
+  private void waitForInit(String bpid) {
+    UpgradeManagerDatanode um = null;
+    if(bpid != null && !bpid.equals(""))
+      um = DataNode.getUpgradeManagerDatanode(bpid);
+    
+    while ((um != null && ! um.isUpgradeCompleted())
         || (getBlockPoolSetSize() < datanode.getAllBpOs().length)
         || (getBlockPoolSetSize() < 1)) {
       try {
@@ -115,7 +119,7 @@ public class DataBlockScanner implements Runnable {
     String nextBpId = null;
     while ((nextBpId == null) && datanode.shouldRun
         && !blockScannerThread.isInterrupted()) {
-      waitForInit();
+      waitForInit(currentBpId);
       synchronized (this) {
         if (getBlockPoolSetSize() > 0) {          
           // Find nextBpId by finding the last modified current log file, if any
