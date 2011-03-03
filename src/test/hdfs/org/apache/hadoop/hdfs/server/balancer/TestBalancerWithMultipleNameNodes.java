@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -156,8 +157,7 @@ public class TestBalancerWithMultipleNameNodes {
     LOG.info("BALANCER 1");
 
     // start rebalancing
-    final List<InetSocketAddress> namenodes =new ArrayList<InetSocketAddress>();
-    namenodes.add(NameNode.getServiceAddress(s.conf, true));
+    final List<InetSocketAddress> namenodes = DFSUtil.getNNServiceRpcAddresses(s.conf);
     final int r = Balancer.run(namenodes, Balancer.Parameters.DEFALUT, s.conf);
     Assert.assertEquals(Balancer.ReturnStatus.SUCCESS.code, r);
 

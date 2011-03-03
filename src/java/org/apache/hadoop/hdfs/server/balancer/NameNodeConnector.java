@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.IOUtils;
@@ -80,7 +81,7 @@ class NameNodeConnector {
     this.namenodeAddress = namenodeAddress;
     this.namenode = createNamenode(namenodeAddress, conf);
     this.client = DFSClient.createNamenode(conf);
-    this.fs = FileSystem.get(conf);
+    this.fs = FileSystem.get(NameNode.getUri(namenodeAddress), conf);
 
     final NamespaceInfo namespaceinfo = namenode.versionRequest();
     this.blockpoolID = namespaceinfo.getBlockPoolID();
@@ -112,7 +113,7 @@ class NameNodeConnector {
     // Exit if there is another one running.
     out = checkAndMarkRunningBalancer(); 
     if (out == null) {
-      throw new IOException("Another balancer is running.  Exiting...");
+      throw new IOException("Another balancer is running");
     }
   }
 
