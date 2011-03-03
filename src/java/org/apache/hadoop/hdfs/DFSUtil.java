@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -30,12 +29,12 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
@@ -237,70 +236,144 @@ public class DFSUtil {
     return blkLocations;
   }
 
-  private static URI getDefaultNamenode(Configuration conf) {
-    return FileSystem.getDefaultUri(conf);
-  }
-  
   /**
    * Returns collection of nameservice Ids from the configuration.
-   * 
    * @param conf configuration
    * @return collection of nameservice Ids
    */
   public static Collection<String> getNameServiceIds(Configuration conf) {
     return conf.getStringCollection(DFS_FEDERATION_NAMESERVICES);
   }
+
+  /**
+   * Given a list of keys in the order of preference, returns a value
+   * for the key in the given order from the configuration.
+   * @param defaultValue default value to return, when key was not found
+   * @param keySuffix suffix to add to the key, if it is not null
+   * @param conf Configuration
+   * @param keys list of keys in the order of preference
+   * @return value of the key or default if a key was not found in configuration
+   */
+  private static String getConfValue(String defaultValue, String keySuffix,
+      Configuration conf, String... keys) {
+    String value = null;
+    for (String key : keys) {
+      if (keySuffix != null) {
+        key += "." + keySuffix;
+      }
+      value = conf.get(key);
+      if (value != null) {
+        break;
+      }
+    }
+    if (value == null) {
+      value = defaultValue;
+    }
+    return value;
+  }
   
   /**
-   * Returns the InetSocketAddresses of namenodes from the configuration.
-   * Note this is to be used by datanodes to get the list of namenode addresses
-   * to talk to.
-   * 
-   * If namenode address specifically configured for datanodes (using service
-   * ports) is found, it is returned. If not, regular RPC address configured 
-   * for other clients is returned.
-   * 
+   * Returns list of InetSocketAddress for a given set of keys.
    * @param conf configuration
-   * @return list of InetSocketAddresses
-   * @throws IOException on error
+   * @param defaultAddress default address to return in case key is not found
+   * @param keys Set of keys to look for in the order of preference
+   * @return list of InetSocketAddress corresponding to the key
    */
-  public static List<InetSocketAddress> getNNServiceRpcAddresses(
-      Configuration conf) throws IOException {
+  private static List<InetSocketAddress> getAddresses(Configuration conf,
+      String defaultAddress, String... keys) {
     Collection<String> nameserviceIds = getNameServiceIds(conf);
     List<InetSocketAddress> isas = new ArrayList<InetSocketAddress>();
 
     // Configuration with a single namenode
     if (nameserviceIds == null || nameserviceIds.isEmpty()) {
-      String namenodeAddress = conf
-          .get(DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY);
-      if (namenodeAddress == null) {
-        // Fall back to regular rpc address
-        namenodeAddress = conf.get(DFS_NAMENODE_RPC_ADDRESS_KEY);
+      String address = getConfValue(defaultAddress, null, conf, keys);
+      if (address == null) {
+        return null;
       }
-      if (namenodeAddress == null) {
-        isas.add(NameNode.getAddress(getDefaultNamenode(conf)));
-      } else {
-        isas.add(NameNode.getAddress(namenodeAddress));
-      }
+      isas.add(NetUtils.createSocketAddr(address));
     } else {
       // Get the namenodes for all the configured nameServiceIds
       for (String nameserviceId : nameserviceIds) {
-        String namenodeAddress = conf.get(getNameServiceIdKey(
-            DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, nameserviceId));
-        if (namenodeAddress == null) {
-          // Fallback to regular rpc address
-          namenodeAddress = conf.get(getNameServiceIdKey(
-              DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId));
+        String address = getConfValue(null, nameserviceId, conf, keys);
+        if (address == null) {
+          return null;
         }
-        if (namenodeAddress == null) {
-          throw new IOException("Incorrect configuration: "
-              + "No namenode rpc address configured for nameserviceId "
-              + nameserviceId);
-        }
-        isas.add(NameNode.getAddress(namenodeAddress));
+        isas.add(NetUtils.createSocketAddr(address));
       }
     }
     return isas;
+  }
+  
+  /**
+   * Returns list of InetSocketAddress corresponding to  backup node rpc 
+   * addresses from the configuration.
+   * 
+   * @param conf configuration
+   * @return list of InetSocketAddresses
+   * @throws IOException on error
+   */
+  public static List<InetSocketAddress> getBackupNodeAddresses(
+      Configuration conf) throws IOException {
+    List<InetSocketAddress> addressList = getAddresses(conf,
+        null, DFS_NAMENODE_BACKUP_ADDRESS_KEY);
+    if (addressList == null) {
+      throw new IOException("Incorrect configuration: backup node address "
+          + DFS_NAMENODE_BACKUP_ADDRESS_KEY + " is not configured.");
+    }
+    return addressList;
+  }
+
+  /**
+   * Returns list of InetSocketAddresses of corresponding to secondary namenode
+   * http addresses from the configuration.
+   * 
+   * @param conf configuration
+   * @return list of InetSocketAddresses
+   * @throws IOException on error
+   */
+  public static List<InetSocketAddress> getSecondaryNameNodeAddresses(
+      Configuration conf) throws IOException {
+    List<InetSocketAddress> addressList = getAddresses(conf, null,
+        DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY);
+    if (addressList == null) {
+      throw new IOException("Incorrect configuration: secondary namenode address "
+          + DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY + " is not configured.");
+    }
+    return addressList;
+  }
+
+  /**
+   * Returns list of InetSocketAddresses corresponding to namenodes from the
+   * configuration. Note this is to be used by datanodes to get the list of
+   * namenode addresses to talk to.
+   * 
+   * Returns namenode address specifically configured for datanodes (using
+   * service ports), if found. If not, regular RPC address configured for other
+   * clients is returned.
+   * 
+   * @param conf configuration
+   * @return list of InetSocketAddress
+   * @throws IOException on error
+   */
+  public static List<InetSocketAddress> getNNServiceRpcAddresses(
+      Configuration conf) throws IOException {
+    // Use default address as fall back
+    String defaultAddress;
+    try {
+      defaultAddress = NameNode.getHostPortString(NameNode.getAddress(conf));
+    } catch (IllegalArgumentException e) {
+      defaultAddress = null;
+    }
+    
+    List<InetSocketAddress> addressList = getAddresses(conf, defaultAddress,
+        DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY, DFS_NAMENODE_RPC_ADDRESS_KEY);
+    if (addressList == null) {
+      throw new IOException("Incorrect configuration: namenode address "
+          + DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY + " or "  
+          + DFS_NAMENODE_RPC_ADDRESS_KEY
+          + " is not configured.");
+    }
+    return addressList;
   }
   
   /**
@@ -367,4 +440,3 @@ public class DFSUtil {
         Integer.parseInt(address.substring(colon + 1)));
   }
 }
-

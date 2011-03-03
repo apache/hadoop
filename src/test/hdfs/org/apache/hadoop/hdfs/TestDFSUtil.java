@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.junit.Assert;
 import org.junit.Test;
 
 
@@ -115,4 +116,33 @@ public class TestDFSUtil {
         .get(DFSConfigKeys.FS_DEFAULT_NAME_KEY));
     cluster.shutdown();
   }
+  
+  /**
+   * Tests for empty configuration, an exception is thrown from
+   * {@link DFSUtil#getNNServiceRpcAddresses(Configuration)}
+   * {@link DFSUtil#getBackupNodeAddresses(Configuration)}
+   * {@link DFSUtil#getSecondaryNameNodeAddresses(Configuration)}
+   */
+  @Test
+  public void testEmptyConf() {
+    HdfsConfiguration conf = new HdfsConfiguration(false);
+    try {
+      DFSUtil.getNNServiceRpcAddresses(conf);
+      Assert.fail("Expected IOException is not thrown");
+    } catch (IOException expected) {
+    }
+
+    try {
+      DFSUtil.getBackupNodeAddresses(conf);
+      Assert.fail("Expected IOException is not thrown");
+    } catch (IOException expected) {
+    }
+
+    try {
+      DFSUtil.getSecondaryNameNodeAddresses(conf);
+      Assert.fail("Expected IOException is not thrown");
+    } catch (IOException expected) {
+    }
+  }
+
 }
