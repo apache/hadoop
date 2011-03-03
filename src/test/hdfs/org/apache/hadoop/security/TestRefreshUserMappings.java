@@ -67,6 +67,15 @@ public class TestRefreshUserMappings {
       i++;
       return l;
     }
+
+    @Override
+    public void cacheGroupsRefresh() throws IOException {
+      System.out.println("Refreshing groups in MockUnixGroupsMapping");
+    }
+  
+    @Override
+    public void cacheGroupsAdd(List<String> groups) throws IOException {
+    }
   }
   
   @Before
