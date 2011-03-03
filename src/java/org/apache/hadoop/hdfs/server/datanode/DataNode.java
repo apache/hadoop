@@ -679,7 +679,7 @@ public class DataNode extends Configured
     }
 
     void setNameNode(DatanodeProtocol dnProtocol) {
-      this.bpNamenode = dnProtocol;
+        bpNamenode = dnProtocol;
     }
 
     private NamespaceInfo handshake() throws IOException {
@@ -720,7 +720,6 @@ public class DataNode extends Configured
       return nsInfo;
     }
 
-
     void setupBP(Configuration conf, AbstractList<File> dataDirs) 
     throws IOException {
       // get NN proxy
@@ -734,6 +733,11 @@ public class DataNode extends Configured
       setNamespaceInfo(nsInfo);
       setClusterId(nsInfo.clusterID);
       
+      setupBPStorage();
+      initPeriodicScanners(conf);
+    }
+    
+    void setupBPStorage() throws IOException {
       StartupOption startOpt = getStartupOption(conf);
       assert startOpt != null : "Startup option must be set.";
 
@@ -757,7 +761,6 @@ public class DataNode extends Configured
       }
       initFsDataSet(conf, dataDirs);
       data.addBlockPool(blockPoolId, conf);
-      initPeriodicScanners(conf);
     }
 
     /**
@@ -1055,9 +1058,7 @@ public class DataNode extends Configured
         try {
           // reset name to machineName. Mainly for web interface. Same for all DB
           bpRegistration.name = machineName + ":" + bpRegistration.getPort();
-          LOG.info("bpReg before =" + bpRegistration.storageInfo +           
-              ";sid=" + bpRegistration.storageID + ";name="+bpRegistration.getName());
-
+          
           bpRegistration = bpNamenode.registerDatanode(bpRegistration);
           // make sure we got the machine name right (same as NN sees it)
           String [] mNames = bpRegistration.getName().split(":");
@@ -1250,7 +1251,6 @@ public class DataNode extends Configured
         processDistributedUpgradeCommand((UpgradeCommand)cmd);
         break;
       case DatanodeProtocol.DNA_RECOVERBLOCK:
-        // TODO:FEDERATION - global storage????? or per BP storage
         recoverBlocks(((BlockRecoveryCommand)cmd).getRecoveringBlocks());
         break;
       case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
@@ -2123,8 +2123,7 @@ public class DataNode extends Configured
       bpos.scheduleBlockReport(delay);
     }
   }
-  
-  
+
   /**
    * This method is used for testing. 
    * Examples are adding and deleting blocks directly.
@@ -2135,7 +2134,6 @@ public class DataNode extends Configured
   public FSDatasetInterface getFSDataset() {
     return data;
   }
-
 
   public static void secureMain(String args[], SecureResources resources) {
     try {
@@ -2159,7 +2157,7 @@ public class DataNode extends Configured
       public void run() {
         for(RecoveringBlock b : blocks) {
           try {
-            logRecoverBlock("NameNode", b.getBlock().getLocalBlock(), b.getLocations());
+            logRecoverBlock("NameNode", b.getBlock(), b.getLocations());
             recoverBlock(b);
           } catch (IOException e) {
             LOG.warn("recoverBlocks FAILED: " + b, e);
@@ -2282,8 +2280,8 @@ public class DataNode extends Configured
   }
 
   /**
-   * 
-   * @param bpid
+   * Get namenode corresponding to a block pool
+   * @param bpid Block pool Id
    * @return Namenode corresponding to the bpid
    * @throws IOException
    */
@@ -2293,6 +2291,16 @@ public class DataNode extends Configured
       throw new IOException("cannot find a namnode proxy for bpid=" + bpid);
     }
     return bpos.bpNamenode;
+  }
+
+  /**
+   * To be used by tests only to set a mock namenode in BPOfferService
+   */
+  void setBPNamenode(String bpid, DatanodeProtocol namenode) {
+    BPOfferService bp = blockPoolManager.get(bpid);
+    if (bp != null) {
+      bp.setNameNode(namenode);
+    }
   }
 
   /** Block synchronization */
@@ -2404,7 +2412,7 @@ public class DataNode extends Configured
   }
   
   private static void logRecoverBlock(String who,
-      Block block, DatanodeID[] targets) {
+      ExtendedBlock block, DatanodeID[] targets) {
     StringBuilder msg = new StringBuilder(targets[0].getName());
     for (int i = 1; i < targets.length; i++) {
       msg.append(", " + targets[i].getName());

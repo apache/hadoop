@@ -154,6 +154,7 @@ Trunk (unreleased changes)
     HDFS-1682. Change Balancer CLI for multiple namenodes and balancing
     policy.  (szetszwo)
 
+    HDFS-1697. HDFS federation: fix testBlockRecovery (boryas)
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

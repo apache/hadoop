@@ -317,13 +317,11 @@ public class BlockReader extends FSInputChecker {
     return bytesToRead;
   }
   
-  private BlockReader( String file, long blockId, DataInputStream in, 
-                       DataChecksum checksum, boolean verifyChecksum,
-                       long startOffset, long firstChunkOffset,
-                       long bytesToRead,
-                       Socket dnSock ) {
+  private BlockReader(String file, String bpid, long blockId,
+      DataInputStream in, DataChecksum checksum, boolean verifyChecksum,
+      long startOffset, long firstChunkOffset, long bytesToRead, Socket dnSock) {
     // Path is used only for printing block and file information in debug
-    super(new Path("/blk_" + blockId + ":of:" + file)/*too non path-like?*/,
+    super(new Path("/blk_" + blockId + ":" + bpid + ":of:"+ file)/*too non path-like?*/,
           1, verifyChecksum,
           checksum.getChecksumSize() > 0? checksum : null, 
           checksum.getBytesPerChecksum(),
@@ -417,9 +415,8 @@ public class BlockReader extends FSInputChecker {
                             startOffset + " for file " + file);
     }
 
-    // TODO:FEDERATION use poolId
-    return new BlockReader(file, block.getBlockId(), in, checksum,
-        verifyChecksum, startOffset, firstChunkOffset, len, sock);
+    return new BlockReader(file, block.getBlockPoolId(), block.getBlockId(),
+        in, checksum, verifyChecksum, startOffset, firstChunkOffset, len, sock);
   }
 
   @Override
