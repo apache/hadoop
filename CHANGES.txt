@@ -57,6 +57,7 @@ Release 0.91.0 - Unreleased
    HBASE-3578  TableInputFormat does not setup the configuration for HBase
                mapreduce jobs correctly (Dan Harvey via Stack)
    HBASE-3514  Speedup HFile.Writer append (Matteo via Ryan)
+   HBASE-3593  DemoClient.cpp is outdated
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

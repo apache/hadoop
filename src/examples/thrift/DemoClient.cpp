@@ -33,17 +33,20 @@
 
 #include <iostream>
 
+#include <boost/lexical_cast.hpp>
 #include <protocol/TBinaryProtocol.h>
 #include <transport/TSocket.h>
 #include <transport/TTransportUtils.h>
 
 #include "Hbase.h"
 
-using namespace facebook::thrift;
-using namespace facebook::thrift::protocol;
-using namespace facebook::thrift::transport;
+using namespace apache::thrift;
+using namespace apache::thrift::protocol;
+using namespace apache::thrift::transport;
 
 using namespace apache::hadoop::hbase::thrift;
+
+namespace {
 
 typedef std::vector<std::string> StrVec;
 typedef std::map<std::string,std::string> StrMap;
@@ -54,14 +57,16 @@ typedef std::map<std::string,TCell> CellMap;
 
 
 static void
-printRow(const TRowResult &rowResult)
+printRow(const std::vector<TRowResult> &rowResult)
 {
-  std::cout << "row: " << rowResult.row << ", cols: ";
-  for (CellMap::const_iterator it = rowResult.columns.begin(); 
-      it != rowResult.columns.end(); ++it) {
-    std::cout << it->first << " => " << it->second.value << "; ";
+  for (size_t i = 0; i < rowResult.size(); i++) {
+    std::cout << "row: " << rowResult[i].row << ", cols: ";
+    for (CellMap::const_iterator it = rowResult[i].columns.begin(); 
+         it != rowResult[i].columns.end(); ++it) {
+      std::cout << it->first << " => " << it->second.value << "; ";
+    }
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
 }
 
 static void
@@ -74,10 +79,17 @@ printVersions(const std::string &row, const CellVec &versions)
   std::cout << std::endl;
 }
 
+}
+
 int 
 main(int argc, char** argv) 
 {
-  boost::shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
+  if (argc < 3) {
+    std::cerr << "Invalid arguments!\n" << "Usage: DemoClient host port" << std::endl;
+    return -1;
+  }
+
+  boost::shared_ptr<TTransport> socket(new TSocket("localhost", boost::lexical_cast<int>(argv[2])));
   boost::shared_ptr<TTransport> transport(new TBufferedTransport(socket));
   boost::shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
   HbaseClient client(protocol);
@@ -118,8 +130,8 @@ main(int argc, char** argv)
     std::cout << "creating table: " << t << std::endl;
     try {
       client.createTable(t, columns);
-    } catch (AlreadyExists &ae) {
-      std::cout << "WARN: " << ae.message << std::endl;
+    } catch (const AlreadyExists &ae) {
+      std::cerr << "WARN: " << ae.message << std::endl;
     }
 
     ColMap columnMap;
@@ -156,18 +168,12 @@ main(int argc, char** argv)
     mutations.back().value = valid;
     client.mutateRow(t, valid, mutations);
 
-    // non-utf8 is not allowed in row names
-    try {
-      mutations.clear();
-      mutations.push_back(Mutation());
-      mutations.back().column = "entry:foo";
-      mutations.back().value = invalid;
-      client.mutateRow(t, invalid, mutations);
-      std::cout << "FATAL: shouldn't get here!" << std::endl;
-      exit(-1);
-    } catch (IOError e) {
-      std::cout << "expected error: " << e.message << std::endl;
-    }
+    // non-utf8 is now allowed in row names because HBase stores values as binary
+    mutations.clear();
+    mutations.push_back(Mutation());
+    mutations.back().column = "entry:foo";
+    mutations.back().value = invalid;
+    client.mutateRow(t, invalid, mutations);
 
     // Run a scanner on the rows we just created
     StrVec columnNames;
@@ -177,14 +183,18 @@ main(int argc, char** argv)
     int scanner = client.scannerOpen(t, "", columnNames);
     try {
       while (true) {
-        TRowResult value;
+        std::vector<TRowResult> value;
         client.scannerGet(value, scanner);
+        if (value.size() == 0)
+          break;
         printRow(value);
       }
-    } catch (NotFound &nf) {
-      client.scannerClose(scanner);
-      std::cout << "Scanner finished" << std::endl;
+    } catch (const IOError &ioe) {
+      std::cerr << "FATAL: Scanner raised IOError" << std::endl;
     }
+
+    client.scannerClose(scanner);
+    std::cout << "Scanner finished" << std::endl;
 
     //
     // Run some operations on a bunch of rows.
@@ -192,10 +202,9 @@ main(int argc, char** argv)
     for (int i = 100; i >= 0; --i) {
       // format row keys as "00000" to "00100"
       char buf[32];
-      sprintf(buf, "%0.5d", i);
+      sprintf(buf, "%05d", i);
       std::string row(buf);
-      
-      TRowResult rowResult;
+      std::vector<TRowResult> rowResult;
 
       mutations.clear();
       mutations.push_back(Mutation());
@@ -256,15 +265,17 @@ main(int argc, char** argv)
       CellVec versions;
       client.getVer(versions, t, row, "entry:num", 10);
       printVersions(row, versions);
-      assert(versions.size() == 4);
+      assert(versions.size());
       std::cout << std::endl;
 
       try {
-        TCell value;
+        std::vector<TCell> value;
         client.get(value, t, row, "entry:foo");
-        std::cout << "FATAL: shouldn't get here!" << std::endl;
-        exit(-1);
-      } catch (NotFound &nf) {
+        if (value.size()) {
+          std::cerr << "FATAL: shouldn't get here!" << std::endl;
+          return -1;
+        }
+      } catch (const IOError &ioe) {
         // blank
       }
     }
@@ -273,28 +284,32 @@ main(int argc, char** argv)
 
     columnNames.clear();
     client.getColumnDescriptors(columnMap, t);
+    std::cout << "The number of columns: " << columnMap.size() << std::endl;
     for (ColMap::const_iterator it = columnMap.begin(); it != columnMap.end(); ++it) {
-      std::cout << "column with name: " + it->second.name << std::endl;
-      columnNames.push_back(it->second.name + ":");
+      std::cout << " column with name: " + it->second.name << std::endl;
+      columnNames.push_back(it->second.name);
     }
+    std::cout << std::endl;
 
     std::cout << "Starting scanner..." << std::endl;
     scanner = client.scannerOpenWithStop(t, "00020", "00040", columnNames);
     try {
       while (true) {
-        TRowResult value;
+        std::vector<TRowResult> value;
         client.scannerGet(value, scanner);
+        if (value.size() == 0)
+          break;
         printRow(value);
       }
-    } catch (NotFound &nf) {
-      client.scannerClose(scanner);
-      std::cout << "Scanner finished" << std::endl;
+    } catch (const IOError &ioe) {
+      std::cerr << "FATAL: Scanner raised IOError" << std::endl;
     }
 
-    transport->close();
-  } 
-  catch (TException &tx) {
-    printf("ERROR: %s\n", tx.what());
-  }
+    client.scannerClose(scanner);
+    std::cout << "Scanner finished" << std::endl;
 
+    transport->close();
+  } catch (const TException &tx) {
+    std::cerr << "ERROR: " << tx.what() << std::endl;
+  }
 }
