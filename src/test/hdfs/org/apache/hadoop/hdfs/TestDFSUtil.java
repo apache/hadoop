@@ -100,8 +100,6 @@ public class TestDFSUtil {
     
     // Set the nameservice specific keys with nameserviceId
     conf.set(DFSUtil.getNameServiceIdKey(
-        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, nameserviceId), "namenode1");
-    conf.set(DFSUtil.getNameServiceIdKey(
             DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY, nameserviceId),
             "localhost:9090");
     
@@ -110,8 +108,6 @@ public class TestDFSUtil {
     
     // Make sure the specific keys are copied to generic keys post startup
     final Configuration nnConf = cluster.getConfiguration(0);
-    assertEquals("namenode1", nnConf
-        .get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY));
     assertEquals("hdfs://localhost:9090", nnConf
         .get(DFSConfigKeys.FS_DEFAULT_NAME_KEY));
     cluster.shutdown();

@@ -204,6 +204,9 @@ Trunk (unreleased changes)
     HDFS-1713. Federation: Prevent DataBlockScanner from running in tight loop.
     (jitendra)
 
+    HDFS-1721. Federation: Configuration for principal names should not be 
+    namenode specific. (jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
