@@ -85,9 +85,9 @@ public class TestOverReplicatedBlocks extends TestCase {
       synchronized (namesystem.heartbeats) {
         // set live datanode's remaining space to be 0 
         // so they will be chosen to be deleted when over-replication occurs
+        String corruptMachineName = corruptDataNode.getName();
         for (DatanodeDescriptor datanode : namesystem.heartbeats) {
-          // TODO:FEDERATION - when comparing we either compare bpregistration or machine name only
-          if (!corruptDataNode.equals(datanode)) {
+          if (!corruptMachineName.equals(datanode.getName())) {
             datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0);
           }
         }

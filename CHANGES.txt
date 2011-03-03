@@ -167,6 +167,9 @@ Trunk (unreleased changes)
 
     HDFS-1711. create method for updating machine name in DataNode.java (boryas)
 
+    HDFS-1712. when looking up datanode we should use machineNmae 
+    (in testOverReplicatedBlocks) (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
