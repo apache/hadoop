@@ -194,6 +194,9 @@ Trunk (unreleased changes)
     HDFS-1588. Remove hardcoded strings for configuration keys, "dfs.hosts"
     and "dfs.hosts.exlude". (Erik Steffl via suresh)
 
+    HDFS-1713. Federation: Prevent DataBlockScanner from running in tight loop.
+    (jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES

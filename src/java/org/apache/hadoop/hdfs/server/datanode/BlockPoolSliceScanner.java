@@ -617,7 +617,9 @@ class BlockPoolSliceScanner {
   }
   
   public void scan() {
-    LOG.info("Starting to scan blockpool: " + blockPoolId);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Starting to scan blockpool: " + blockPoolId);
+    }
     try {
       adjustThrottler();
         
@@ -633,8 +635,10 @@ class BlockPoolSliceScanner {
             || (!(this.isFirstBlockProcessed()))) {
           verifyFirstBlock();
         } else {
-          LOG.info("All remaining blocks were processed recently, "
-              + "so this run is complete");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("All remaining blocks were processed recently, "
+                + "so this run is complete");
+          }
           break;
         }
       }
@@ -644,7 +648,9 @@ class BlockPoolSliceScanner {
       throw e;
     } finally {
       cleanUp();
-      LOG.info("Done scanning block pool: " + blockPoolId);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Done scanning block pool: " + blockPoolId);
+      }
     }
   }
   
@@ -818,8 +824,10 @@ class BlockPoolSliceScanner {
     }
     
     private void roll() throws IOException {
-      LOG.info("Rolling current file: " + curFile.getAbsolutePath()
-          + " to previous file: " + prevFile.getAbsolutePath());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Rolling current file: " + curFile.getAbsolutePath()
+            + " to previous file: " + prevFile.getAbsolutePath());
+      }
 
       if (!prevFile.delete() && prevFile.exists()) {
         throw new IOException("Could not delete " + prevFile);

@@ -64,7 +64,21 @@ public class DataBlockScanner implements Runnable {
   
   public void run() {
     String currentBpId = "";
+    boolean firstRun = true;
     while (datanode.shouldRun && !Thread.interrupted()) {
+      //Sleep everytime except in the first interation.
+      if (!firstRun) {
+        try {
+          Thread.sleep(5000);
+        } catch (InterruptedException ex) {
+          // Interrupt itself again to set the interrupt status
+          blockScannerThread.interrupt();
+          continue;
+        }
+      } else {
+        firstRun = false;
+      }
+      
       BlockPoolSliceScanner bpScanner = getNextBPScanner(currentBpId);
       if (bpScanner == null) {
         // Possible if thread is interrupted
@@ -79,12 +93,6 @@ public class DataBlockScanner implements Runnable {
         continue;
       }
       bpScanner.scanBlockPoolSlice();
-      try {
-        Thread.sleep(5000);
-      } catch (InterruptedException ex) {
-        // Interrupt itself again to set the interrupt status
-        blockScannerThread.interrupt();
-      }
     }
   }
 
