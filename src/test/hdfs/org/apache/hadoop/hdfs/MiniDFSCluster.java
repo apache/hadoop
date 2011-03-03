@@ -914,6 +914,10 @@ public class MiniDFSCluster {
     }
   }
   
+  public int getNumNameNodes() {
+    return nameNodes.length;
+  }
+  
   /**
    * Gets the started NameNode.  May be null.
    */
@@ -1721,9 +1725,7 @@ public class MiniDFSCluster {
   
   private void addToFile(String p, String address) throws IOException {
     File f = new File(p);
-    if (!f.exists()) {
-      f.createNewFile();
-    }
+    f.createNewFile();
     PrintWriter writer = new PrintWriter(new FileWriter(f, true));
     try {
       writer.println(address);

@@ -165,18 +165,25 @@ Trunk (unreleased changes)
     HDFS-1704. Federation: Add a tool that lists namenodes, secondary and
     backup from configuration file. (suresh)
 
-    HDFS-1711. create method for updating machine name in DataNode.java (boryas)
+    HDFS-1711. Federation: create method for updating machine name in 
+    DataNode.java (boryas)
 
-    HDFS-1712. when looking up datanode we should use machineNmae 
+    HDFS-1712. Federation: when looking up datanode we should use machineNmae 
     (in testOverReplicatedBlocks) (boryas)
 
     HDFS-1709. Federation: Error "nnaddr url param is null" when clicking on a 
     node from NN Live Node Link. (jitendra)
 
-    HDFS-1714. HDFS Federation: refactor upgrade object in DataNode (boryas) 
+    HDFS-1714. Federation: refactor upgrade object in DataNode (boryas) 
 
-    HDFS-1715. HDFS Federation: warning/error not generated when datanode sees 
+    HDFS-1715. Federation: warning/error not generated when datanode sees 
     inconsistent/different Cluster ID between namenodes (boryas)
+
+    HDFS-1715. Federation: warning/error not generated when datanode sees 
+    inconsistent/different Cluster ID between namenodes (boryas)
+
+    HDFS-1716: Federation: Add decommission tests for federated namenodes.
+    (suresh)
 
   IMPROVEMENTS
 
