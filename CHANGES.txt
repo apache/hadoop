@@ -191,6 +191,9 @@ Trunk (unreleased changes)
 
     HDFS-1547. Improve decommission mechanism. (suresh)
 
+    HDFS-1588. Remove hardcoded strings for configuration keys, "dfs.hosts"
+    and "dfs.hosts.exlude". (Erik Steffl via suresh)
+
   OPTIMIZATIONS
 
   BUG FIXES

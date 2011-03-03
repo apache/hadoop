@@ -321,8 +321,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       this.dir = new FSDirectory(fsImage, this, conf);
     }
     this.safeMode = new SafeModeInfo(conf);
-    this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
-                        conf.get("dfs.hosts.exclude",""));
+    this.hostsReader = new HostsFileReader(
+      conf.get(DFSConfigKeys.DFS_HOSTS,""),
+      conf.get(DFSConfigKeys.DFS_HOSTS_EXCLUDE,""));
     if (isBlockTokenEnabled) {
       blockTokenSecretManager = new BlockTokenSecretManager(true,
           blockKeyUpdateInterval, blockTokenLifetime);
@@ -3654,8 +3655,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     // Update the file names and refresh internal includes and excludes list
     if (conf == null)
       conf = new HdfsConfiguration();
-    hostsReader.updateFileNames(conf.get("dfs.hosts",""), 
-                                conf.get("dfs.hosts.exclude", ""));
+    hostsReader.updateFileNames(conf.get(DFSConfigKeys.DFS_HOSTS,""), 
+                                conf.get(DFSConfigKeys.DFS_HOSTS_EXCLUDE, ""));
     hostsReader.refresh();
     writeLock();
     try {

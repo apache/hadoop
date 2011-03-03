@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetworkTopology;
@@ -105,8 +106,10 @@ public class NNThroughputBenchmark {
     // by calling name-node methods directly
     config.setInt("dfs.namenode.handler.count", 1);
     // set exclude file
-    config.set("dfs.hosts.exclude", "${hadoop.tmp.dir}/dfs/hosts/exclude");
-    File excludeFile = new File(config.get("dfs.hosts.exclude", "exclude"));
+    config.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE,
+      "${hadoop.tmp.dir}/dfs/hosts/exclude");
+    File excludeFile = new File(config.get(DFSConfigKeys.DFS_HOSTS_EXCLUDE,
+      "exclude"));
     if(! excludeFile.exists()) {
       if(!excludeFile.getParentFile().mkdirs())
         throw new IOException("NNThroughputBenchmark: cannot mkdir " + excludeFile);
@@ -1126,7 +1129,7 @@ public class NNThroughputBenchmark {
     }
 
     private void decommissionNodes() throws IOException {
-      String excludeFN = config.get("dfs.hosts.exclude", "exclude");
+      String excludeFN = config.get(DFSConfigKeys.DFS_HOSTS_EXCLUDE, "exclude");
       FileOutputStream excludeFile = new FileOutputStream(excludeFN);
       excludeFile.getChannel().truncate(0L);
       int nrDatanodes = blockReportObject.getNumDatanodes();

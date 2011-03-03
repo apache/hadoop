@@ -72,7 +72,7 @@ public class TestDecommission {
     
     // Setup conf
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REPLICATION_CONSIDERLOAD_KEY, false);
-    conf.set("dfs.hosts.exclude", excludeFile.toUri().getPath());
+    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, HEARTBEAT_INTERVAL);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_PENDING_TIMEOUT_SEC_KEY, 4);
@@ -373,7 +373,7 @@ public class TestDecommission {
    */
   @Test
   public void testHostsFile() throws IOException, InterruptedException {
-    conf.set("dfs.hosts", hostsFile.toUri().getPath());
+    conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
     int numDatanodes = 1;
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
         .setupHostsFile(true).build();

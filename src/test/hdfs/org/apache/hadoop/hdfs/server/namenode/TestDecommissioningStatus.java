@@ -72,7 +72,7 @@ public class TestDecommissioningStatus {
     dir = new Path(workingDir, "build/test/data/work-dir/decommission");
     assertTrue(localFileSys.mkdirs(dir));
     excludeFile = new Path(dir, "exclude");
-    conf.set("dfs.hosts.exclude", excludeFile.toUri().getPath());
+    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
     conf
         .setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 2000);
     conf.setInt("dfs.heartbeat.interval", 1);

@@ -1703,7 +1703,7 @@ public class MiniDFSCluster {
   
   private void setupDatanodeAddress(Configuration conf, boolean setupHostsFile) throws IOException {
     if (setupHostsFile) {
-      String hostsFile = conf.get("dfs.hosts", "").trim();
+      String hostsFile = conf.get(DFSConfigKeys.DFS_HOSTS, "").trim();
       if (hostsFile.length() == 0) {
         throw new IOException("Parameter dfs.hosts is not setup in conf");
       }
