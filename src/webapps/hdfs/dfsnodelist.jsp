@@ -46,7 +46,7 @@ String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":" + nn.getNameN
 <b><a href="/logs/"><%=namenodeRole%> Logs</a></b><br>
 <b><a href=/dfshealth.jsp> Go back to DFS home</a></b>
 <hr>
-<% nodelistjsp.generateNodesList(out, nn, request); %>
+<% nodelistjsp.generateNodesList(application, out, request); %>
 
 <%
 out.println(ServletUtil.htmlFooter());

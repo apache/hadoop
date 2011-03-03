@@ -101,7 +101,8 @@ public class DatanodeJspHelper {
     final HdfsFileStatus targetStatus = dfs.getFileInfo(target);
     if (targetStatus == null) { // not exists
       out.print("<h3>File or directory : " + target + " does not exist</h3>");
-      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, target);
+      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, target,
+          nnAddr);
     } else {
       if (!targetStatus.isDir()) { // a file
         List<LocatedBlock> blocks = dfs.getNamenode().getBlockLocations(dir, 0, 1)
@@ -140,9 +141,10 @@ public class DatanodeJspHelper {
       String[] headings = { "Name", "Type", "Size", "Replication",
           "Block Size", "Modification Time", "Permission", "Owner", "Group" };
       out.print("<h3>Contents of directory ");
-      JspHelper.printPathWithLinks(dir, out, namenodeInfoPort, tokenString);
+      JspHelper.printPathWithLinks(dir, out, namenodeInfoPort, tokenString,
+          nnAddr);
       out.print("</h3><hr>");
-      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, dir);
+      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, dir, nnAddr);
       out.print("<hr>");
 
       File f = new File(dir);
@@ -151,6 +153,7 @@ public class DatanodeJspHelper {
         out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent
             + "&namenodeInfoPort=" + namenodeInfoPort
             + JspHelper.getDelegationTokenUrlParam(tokenString)
+            + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr)
             + "\">Go to parent directory</a><br>");
 
       DirectoryListing thisListing = 
@@ -274,7 +277,8 @@ public class DatanodeJspHelper {
     String downloadUrl = "http://" + req.getServerName() + ":"
         + req.getServerPort() + "/streamFile?" + "filename="
         + URLEncoder.encode(filename, "UTF-8")
-        + JspHelper.getDelegationTokenUrlParam(tokenString);
+        + JspHelper.getDelegationTokenUrlParam(tokenString)
+        + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
     out.print("<a name=\"viewOptions\"></a>");
     out.print("<a href=\"" + downloadUrl + "\">Download this file</a><br>");
 
@@ -295,6 +299,7 @@ public class DatanodeJspHelper {
         + "&namenodeInfoPort=" + namenodeInfoPort
         + "&chunkSizeToView=" + chunkSizeToView
         + JspHelper.getDelegationTokenUrlParam(tokenString)
+        + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr)
         + "&referrer=" + URLEncoder.encode(
             req.getRequestURL() + "?" + req.getQueryString(), "UTF-8");
     out.print("<a href=\"" + tailUrl + "\">Tail this file</a><br>");
@@ -313,6 +318,8 @@ public class DatanodeJspHelper {
         + datanodePort + "\">");
     out.print("<input type=\"hidden\" name=\"namenodeInfoPort\" value=\""
         + namenodeInfoPort + "\">");
+    out.print("<input type=\"hidden\" name=\"" + JspHelper.NAMENODE_ADDRESS
+        + "\" value=\"" + nnAddr + "\">");
     out.print("<input type=\"text\" name=\"chunkSizeToView\" value="
         + chunkSizeToView + " size=10 maxlength=10>");
     out.print("&nbsp;&nbsp;<input type=\"submit\" name=\"submit\" value=\"Refresh\">");
@@ -452,16 +459,17 @@ public class DatanodeJspHelper {
     datanodePort = Integer.parseInt(datanodePortStr);
     out.print("<h3>File: ");
     JspHelper.printPathWithLinks(filename, out, namenodeInfoPort,
-                                 tokenString);
+                                 tokenString, nnAddr);
     out.print("</h3><hr>");
     String parent = new File(filename).getParent();
-    JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, parent);
+    JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, parent, nnAddr);
     out.print("<hr>");
     out.print("<a href=\"http://"
         + req.getServerName() + ":" + req.getServerPort()
         + "/browseDirectory.jsp?dir=" + URLEncoder.encode(parent, "UTF-8")
         + "&namenodeInfoPort=" + namenodeInfoPort
         + JspHelper.getDelegationTokenUrlParam(tokenString)
+        + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr)
         + "\"><i>Go back to dir listing</i></a><br>");
     out.print("<a href=\"#viewOptions\">Advanced view/download options</a><br>");
     out.print("<hr>");
@@ -516,7 +524,8 @@ public class DatanodeJspHelper {
           + "&chunkSizeToView=" + chunkSizeToView
           + "&datanodePort=" + nextDatanodePort
           + "&namenodeInfoPort=" + namenodeInfoPort
-          + JspHelper.getDelegationTokenUrlParam(tokenString);
+          + JspHelper.getDelegationTokenUrlParam(tokenString)
+          + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
       out.print("<a href=\"" + nextUrl + "\">View Next chunk</a>&nbsp;&nbsp;");
     }
     // determine data for the prev link
@@ -573,7 +582,8 @@ public class DatanodeJspHelper {
           + "&genstamp=" + prevGenStamp
           + "&datanodePort=" + prevDatanodePort
           + "&namenodeInfoPort=" + namenodeInfoPort
-          + JspHelper.getDelegationTokenUrlParam(tokenString);
+          + JspHelper.getDelegationTokenUrlParam(tokenString)
+          + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
       out.print("<a href=\"" + prevUrl + "\">View Prev chunk</a>&nbsp;&nbsp;");
     }
     out.print("<hr>");
@@ -620,7 +630,7 @@ public class DatanodeJspHelper {
     if (!noLink) {
       out.print("<h3>Tail of File: ");
       JspHelper.printPathWithLinks(filename, out, namenodeInfoPort, 
-                                   tokenString);
+                                   tokenString, nnAddr);
       out.print("</h3><hr>");
       out.print("<a href=\"" + referrer + "\">Go Back to File View</a><hr>");
     } else {
@@ -634,6 +644,8 @@ public class DatanodeJspHelper {
         + "\">");
     out.print("<input type=\"hidden\" name=\"namenodeInfoPort\" value=\""
         + namenodeInfoPort + "\">");
+    out.print("<input type=\"hidden\" name=\"" + JspHelper.NAMENODE_ADDRESS
+        + "\" value=\"" + nnAddr + "\">");
     if (!noLink)
       out.print("<input type=\"hidden\" name=\"referrer\" value=\"" + referrer
           + "\">");

@@ -22,6 +22,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
@@ -331,28 +333,26 @@ class NamenodeJspHelper {
   }
 
   static String getDelegationToken(final NameNode nn,
-      HttpServletRequest request, Configuration conf) throws IOException,
-      InterruptedException {
-    final UserGroupInformation ugi = JspHelper.getUGI(request, conf);
-
+      HttpServletRequest request, Configuration conf,
+      final UserGroupInformation ugi) throws IOException, InterruptedException {
     Token<DelegationTokenIdentifier> token = ugi
         .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
           public Token<DelegationTokenIdentifier> run() throws IOException {
             return nn.getDelegationToken(new Text(ugi.getUserName()));
           }
         });
-
     return token == null ? null : token.encodeToUrlString();
   }
 
-  static void redirectToRandomDataNode(final NameNode nn, 
-                                       HttpServletRequest request,
-                                       HttpServletResponse resp,
-                                       Configuration conf
-                                       ) throws IOException,
-                                                InterruptedException {
+  static void redirectToRandomDataNode(ServletContext context,
+      HttpServletRequest request, HttpServletResponse resp) throws IOException,
+      InterruptedException {
+    final NameNode nn = (NameNode) context.getAttribute("name.node");
+    final Configuration conf = (Configuration) context
+        .getAttribute(JspHelper.CURRENT_CONF);
     final DatanodeID datanode = nn.getNamesystem().getRandomDatanode();
-    String tokenString = getDelegationToken(nn, request, conf);
+    UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
+    String tokenString = getDelegationToken(nn, request, conf, ugi);
     // if the user is defined, get a delegation token and stringify it
     final String redirectLocation;
     final String nodeToRedirect;
@@ -412,11 +412,13 @@ class NamenodeJspHelper {
     }
 
     private void generateNodeDataHeader(JspWriter out, DatanodeDescriptor d,
-        String suffix, boolean alive, int nnHttpPort) throws IOException {
+        String suffix, boolean alive, int nnHttpPort, String nnaddr)
+        throws IOException {
       // from nn_browsedfscontent.jsp:
       String url = "http://" + d.getHostName() + ":" + d.getInfoPort()
           + "/browseDirectory.jsp?namenodeInfoPort=" + nnHttpPort + "&dir="
-          + URLEncoder.encode("/", "UTF-8");
+          + URLEncoder.encode("/", "UTF-8")
+          + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnaddr);
 
       String name = d.getHostName() + ":" + d.getPort();
       if (!name.matches("\\d+\\.\\d+.\\d+\\.\\d+.*"))
@@ -431,8 +433,9 @@ class NamenodeJspHelper {
     }
 
     void generateDecommissioningNodeData(JspWriter out, DatanodeDescriptor d,
-        String suffix, boolean alive, int nnHttpPort) throws IOException {
-      generateNodeDataHeader(out, d, suffix, alive, nnHttpPort);
+        String suffix, boolean alive, int nnHttpPort, String nnaddr)
+        throws IOException {
+      generateNodeDataHeader(out, d, suffix, alive, nnHttpPort, nnaddr);
       if (!alive) {
         return;
       }
@@ -455,8 +458,8 @@ class NamenodeJspHelper {
           + "\n");
     }
     
-    void generateNodeData(JspWriter out, DatanodeDescriptor d,
-        String suffix, boolean alive, int nnHttpPort) throws IOException {
+    void generateNodeData(JspWriter out, DatanodeDescriptor d, String suffix,
+        boolean alive, int nnHttpPort, String nnaddr) throws IOException {
       /*
        * Say the datanode is dn1.hadoop.apache.org with ip 192.168.0.5 we use:
        * 1) d.getHostName():d.getPort() to display. Domain and port are stripped
@@ -468,7 +471,7 @@ class NamenodeJspHelper {
        * interact with datanodes.
        */
 
-      generateNodeDataHeader(out, d, suffix, alive, nnHttpPort);
+      generateNodeDataHeader(out, d, suffix, alive, nnHttpPort, nnaddr);
       if (!alive) {
         out.print("<td class=\"decommissioned\"> " + 
             d.isDecommissioned() + "\n");
@@ -520,11 +523,16 @@ class NamenodeJspHelper {
           + "\n");
     }
 
-    void generateNodesList(JspWriter out, NameNode nn,
+    void generateNodesList(ServletContext context, JspWriter out,
         HttpServletRequest request) throws IOException {
       ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
       ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+      final NameNode nn = (NameNode)context.getAttribute("name.node");
       nn.getNamesystem().DFSNodesStatus(live, dead);
+      InetSocketAddress nnSocketAddress = (InetSocketAddress) context
+          .getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+      String nnaddr = nnSocketAddress.getAddress().getHostAddress() + ":"
+          + nnSocketAddress.getPort();
 
       whatNodes = request.getParameter("whatNodes"); // show only live or only
                                                      // dead nodes
@@ -601,7 +609,8 @@ class NamenodeJspHelper {
 
             JspHelper.sortNodeList(live, sorterField, sorterOrder);
             for (int i = 0; i < live.size(); i++) {
-              generateNodeData(out, live.get(i), port_suffix, true, nnHttpPort);
+              generateNodeData(out, live.get(i), port_suffix, true, nnHttpPort,
+                  nnaddr);
             }
           }
           out.print("</table>\n");
@@ -618,7 +627,8 @@ class NamenodeJspHelper {
 
             JspHelper.sortNodeList(dead, sorterField, sorterOrder);
             for (int i = 0; i < dead.size(); i++) {
-              generateNodeData(out, dead.get(i), port_suffix, false, nnHttpPort);
+              generateNodeData(out, dead.get(i), port_suffix, false,
+                  nnHttpPort, nnaddr);
             }
 
             out.print("</table>\n");
@@ -648,7 +658,7 @@ class NamenodeJspHelper {
             JspHelper.sortNodeList(decommissioning, "name", "ASC");
             for (int i = 0; i < decommissioning.size(); i++) {
               generateDecommissioningNodeData(out, decommissioning.get(i),
-                  port_suffix, true, nnHttpPort);
+                  port_suffix, true, nnHttpPort, nnaddr);
             }
             out.print("</table>\n");
           }

@@ -33,10 +33,7 @@
 
 <body>
 <% 
-  NameNode nn = (NameNode)application.getAttribute("name.node");
-  Configuration conf = 
-     (Configuration) application.getAttribute(JspHelper.CURRENT_CONF);
-  NamenodeJspHelper.redirectToRandomDataNode(nn, request, response, conf); 
+  NamenodeJspHelper.redirectToRandomDataNode(application, request, response); 
 %>
 <hr>
 

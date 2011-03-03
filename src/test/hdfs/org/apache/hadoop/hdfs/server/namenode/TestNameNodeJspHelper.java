@@ -56,8 +56,9 @@ public class TestNameNodeJspHelper {
   public void testDelegationToken() throws IOException, InterruptedException {
     NameNode nn = cluster.getNameNode();
     HttpServletRequest request = mock(HttpServletRequest.class);
-    String tokenString = NamenodeJspHelper
-        .getDelegationToken(nn, request, conf);
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser("auser");
+    String tokenString = NamenodeJspHelper.getDelegationToken(nn, request,
+        conf, ugi);
     //tokenString returned must be null because security is disabled
     Assert.assertEquals(null, tokenString);
   }

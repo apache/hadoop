@@ -162,6 +162,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
+  
+  public static final String NAMENODE_ADDRESS_ATTRIBUTE_KEY = "name.node.address";
 
   protected FSNamesystem namesystem; 
   protected NamenodeRole role;
@@ -494,7 +496,8 @@ public class NameNode implements NamenodeProtocols, FSConstants {
                 .getPort());
           }
           httpServer.setAttribute("name.node", NameNode.this);
-          httpServer.setAttribute("name.node.address", getNameNodeAddress());
+          httpServer.setAttribute(NAMENODE_ADDRESS_ATTRIBUTE_KEY,
+              getNameNodeAddress());
           httpServer.setAttribute("name.system.image", getFSImage());
           httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
           httpServer.addInternalServlet("getDelegationToken",

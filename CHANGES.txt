@@ -170,6 +170,9 @@ Trunk (unreleased changes)
     HDFS-1712. when looking up datanode we should use machineNmae 
     (in testOverReplicatedBlocks) (boryas)
 
+    HDFS-1709. Federation: Error "nnaddr url param is null" when clicking on a 
+    node from NN Live Node Link. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

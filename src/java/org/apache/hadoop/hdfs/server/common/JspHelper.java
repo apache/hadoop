@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.TreeSet;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspWriter;
 
@@ -361,14 +362,16 @@ public class JspHelper {
 
   public static void printPathWithLinks(String dir, JspWriter out, 
                                         int namenodeInfoPort,
-                                        String tokenString
+                                        String tokenString,
+                                        String nnAddress
                                         ) throws IOException {
     try {
       String[] parts = dir.split(Path.SEPARATOR);
       StringBuilder tempPath = new StringBuilder(dir.length());
       out.print("<a href=\"browseDirectory.jsp" + "?dir="+ Path.SEPARATOR
           + "&namenodeInfoPort=" + namenodeInfoPort
-          + getDelegationTokenUrlParam(tokenString) + "\">" + Path.SEPARATOR
+          + getDelegationTokenUrlParam(tokenString) 
+          + getUrlParam(NAMENODE_ADDRESS, nnAddress) + "\">" + Path.SEPARATOR
           + "</a>");
       tempPath.append(Path.SEPARATOR);
       for (int i = 0; i < parts.length-1; i++) {
@@ -376,7 +379,8 @@ public class JspHelper {
           tempPath.append(parts[i]);
           out.print("<a href=\"browseDirectory.jsp" + "?dir="
               + tempPath.toString() + "&namenodeInfoPort=" + namenodeInfoPort
-              + getDelegationTokenUrlParam(tokenString));
+              + getDelegationTokenUrlParam(tokenString)
+              + getUrlParam(NAMENODE_ADDRESS, nnAddress));
           out.print("\">" + parts[i] + "</a>" + Path.SEPARATOR);
           tempPath.append(Path.SEPARATOR);
         }
@@ -393,7 +397,8 @@ public class JspHelper {
   public static void printGotoForm(JspWriter out,
                                    int namenodeInfoPort,
                                    String tokenString,
-                                   String file) throws IOException {
+                                   String file,
+                                   String nnAddress) throws IOException {
     out.print("<form action=\"browseDirectory.jsp\" method=\"get\" name=\"goto\">");
     out.print("Goto : ");
     out.print("<input name=\"dir\" type=\"text\" width=\"50\" id\"dir\" value=\""+ file+"\">");
@@ -404,6 +409,8 @@ public class JspHelper {
       out.print("<input name=\"" + DELEGATION_PARAMETER_NAME
           + "\" type=\"hidden\" value=\"" + tokenString + "\">");
     }
+    out.print("<input name=\""+ NAMENODE_ADDRESS +"\" type=\"hidden\" "
+        + "value=\"" + nnAddress  + "\">");
     out.print("</form>");
   }
   
@@ -477,16 +484,44 @@ public class JspHelper {
     return UserGroupInformation.createRemoteUser(strings[0]);
   }
 
+  private static String getNNServiceAddress(ServletContext context,
+      HttpServletRequest request) {
+    String namenodeAddressInUrl = (String) request
+        .getParameter(NAMENODE_ADDRESS);
+    InetSocketAddress namenodeAddress = null;
+    if (namenodeAddressInUrl != null) {
+      namenodeAddress = DFSUtil.getSocketAddress(namenodeAddressInUrl);
+    } else if (context != null) {
+      namenodeAddress = (InetSocketAddress) context
+          .getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+    }
+    if (namenodeAddress != null) {
+      return (namenodeAddress.getAddress().getHostAddress() + ":" 
+          + namenodeAddress.getPort());
+    }
+    return null;
+  }
+
+  /**
+   * See
+   * {@link JspHelper#getUGI(ServletContext, HttpServletRequest, Configuration)}
+   * , ServletContext is passed as null.
+   */
+  public static UserGroupInformation getUGI(HttpServletRequest request,
+      Configuration conf) throws IOException {
+    return getUGI(null, request, conf);
+  }
+  
   /**
    * Get {@link UserGroupInformation} and possibly the delegation token out of
    * the request.
+   * @param context the ServletContext that is serving this request.
    * @param request the http request
    * @return a new user from the request
    * @throws AccessControlException if the request has no token
    */
-  public static UserGroupInformation getUGI(HttpServletRequest request,
-                                            Configuration conf
-                                           ) throws IOException {
+  public static UserGroupInformation getUGI(ServletContext context,
+      HttpServletRequest request, Configuration conf) throws IOException {
     UserGroupInformation ugi = null;
     if(UserGroupInformation.isSecurityEnabled()) {
       String user = request.getRemoteUser();
@@ -495,19 +530,12 @@ public class JspHelper {
         Token<DelegationTokenIdentifier> token = 
           new Token<DelegationTokenIdentifier>();
         token.decodeFromUrlString(tokenString);
-        String namenodeAddress = (String) request
-            .getParameter(NAMENODE_ADDRESS);
-        if (namenodeAddress == null) {
-          throw new IOException("Url parameter '" + NAMENODE_ADDRESS
-              + "' not found.");
+        String serviceAddress = getNNServiceAddress(context, request);
+        if (serviceAddress != null) {
+          LOG.info("Setting service in token: "
+              + new Text(serviceAddress));
+          token.setService(new Text(serviceAddress));
         }
-        InetSocketAddress serviceAddr = DFSUtil
-            .getSocketAddress(namenodeAddress);
-        LOG.info("Setting service in token: "
-            + new Text(serviceAddr.getAddress().getHostAddress() + ":"
-                + serviceAddr.getPort()));
-        token.setService(new Text(serviceAddr.getAddress().getHostAddress()
-            + ":" + serviceAddr.getPort()));
         ByteArrayInputStream buf = new ByteArrayInputStream(token
             .getIdentifier());
         DataInputStream in = new DataInputStream(buf);

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfsproxy;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** {@inheritDoc} */
@@ -44,10 +46,15 @@ public class ProxyFileDataServlet extends FileDataServlet {
     if (dt != null) {
       dtParam=JspHelper.getDelegationTokenUrlParam(dt);
     }
-
+    InetSocketAddress nnAddress = (InetSocketAddress) getServletContext()
+        .getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY);
+    String nnHostPort = nnAddress == null ? null : NameNode
+        .getHostPortString(nnAddress);
+    String addrParam = JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS,
+        nnHostPort);
     return new URI(request.getScheme(), null, request.getServerName(), request
         .getServerPort(), "/streamFile" + i.getFullName(parent),
-        "&ugi=" + ugi.getShortUserName() + dtParam, null);
+        "&ugi=" + ugi.getShortUserName() + dtParam + addrParam, null);
   }
 
   /** {@inheritDoc} */

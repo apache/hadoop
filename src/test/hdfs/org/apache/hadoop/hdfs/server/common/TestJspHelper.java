@@ -23,6 +23,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.conf.Configuration;
@@ -67,6 +68,7 @@ public class TestJspHelper {
   public void testGetUgi() throws IOException {
     conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "hdfs://localhost:4321/");
     HttpServletRequest request = mock(HttpServletRequest.class);
+    ServletContext context = mock(ServletContext.class);
     String user = "TheDoctor";
     Text userText = new Text(user);
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(userText,
@@ -78,17 +80,43 @@ public class TestJspHelper {
         tokenString);
     when(request.getRemoteUser()).thenReturn(user);
 
+    //Test attribute in the url to be used as service in the token.
     when(request.getParameter(JspHelper.NAMENODE_ADDRESS)).thenReturn(
         "1.1.1.1:1111");
 
     conf.set(DFSConfigKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
 
-    UserGroupInformation ugi = JspHelper.getUGI(request, conf);
+    verifyServiceInToken(context, request, "1.1.1.1:1111");
+    
+    //Test attribute name.node.address 
+    //Set the nnaddr url parameter to null.
+    when(request.getParameter(JspHelper.NAMENODE_ADDRESS)).thenReturn(null);
+    InetSocketAddress addr = new InetSocketAddress("localhost", 2222);
+    when(context.getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY))
+        .thenReturn(addr);
+    verifyServiceInToken(context, request, addr.getAddress().getHostAddress()
+        + ":2222");
+    
+    //Test service already set in the token
+    token.setService(new Text("3.3.3.3:3333"));
+    tokenString = token.encodeToUrlString();
+    //Set the name.node.address attribute in Servlet context to null
+    when(context.getAttribute(NameNode.NAMENODE_ADDRESS_ATTRIBUTE_KEY))
+        .thenReturn(null);
+    when(request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME)).thenReturn(
+        tokenString);
+    verifyServiceInToken(context, request, "3.3.3.3:3333");
+  }
+  
+  private void verifyServiceInToken(ServletContext context,
+      HttpServletRequest request, String expected) throws IOException {
+    UserGroupInformation ugi = JspHelper.getUGI(context, request, conf);
     Token<? extends TokenIdentifier> tokenInUgi = ugi.getTokens().iterator()
         .next();
-    Assert.assertEquals(tokenInUgi.getService().toString(), "1.1.1.1:1111");
+    Assert.assertEquals(tokenInUgi.getService().toString(), expected);
   }
+  
   
   @Test
   public void testDelegationTokenUrlParam() {
