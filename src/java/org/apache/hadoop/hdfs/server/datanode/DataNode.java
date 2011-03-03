@@ -389,10 +389,13 @@ public class DataNode extends Configured
     }
   }
 
-  private synchronized void setClusterId(String cid) {
-    if(clusterId==null) {
-      clusterId = cid;
+  private synchronized void setClusterId(String cid) throws IOException {
+    if(clusterId != null && !clusterId.equals(cid)) {
+      throw new IOException ("cluster id doesn't match. old cid=" + clusterId 
+          + " new cid="+ cid);
     }
+    // else
+    clusterId = cid;    
   }
 
   private void initConfig(Configuration conf) throws UnknownHostException {
@@ -732,9 +735,20 @@ public class DataNode extends Configured
       // handshake with NN
       NamespaceInfo nsInfo = handshake();
       setNamespaceInfo(nsInfo);
-      setClusterId(nsInfo.clusterID);
-      
-      setupBPStorage();
+      synchronized(DataNode.this) {
+        // we do not allow namenode from different cluster to register
+        if(clusterId != null && !clusterId.equals(nsInfo.clusterID)) {
+          throw new IOException(
+              "cannot register with the namenode because clusterid do not match:"
+              + " nn=" + nsInfo.getBlockPoolID() + "; nn cid=" + nsInfo.clusterID + 
+              ";dn cid=" + clusterId);
+        }
+
+        setupBPStorage();
+
+        setClusterId(nsInfo.clusterID);
+      }
+    
       initPeriodicScanners(conf);
     }
     
@@ -948,7 +962,7 @@ public class DataNode extends Configured
     }
     
     //Cleanup method to be called by current thread before exiting.
-    private void cleanUp() {
+    private synchronized void cleanUp() {
       
       if(upgradeManager != null)
         upgradeManager.shutdownUpgrade();
@@ -2533,7 +2547,7 @@ public class DataNode extends Configured
   }
   
   @Override // DataNodeMXBean
-  public String getClusterId() {
+  public synchronized String getClusterId() {
     return clusterId;
   }
   

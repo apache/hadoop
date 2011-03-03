@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertEquals;
+
 import java.io.IOException;
 import java.util.Collection;
 
@@ -26,11 +31,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
-import static org.junit.Assert.*;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -175,4 +181,38 @@ public class TestDataNodeMultipleRegistrations {
       }
     }
   }
+  
+  @Test
+  public void testClusterIdMismatch() throws IOException {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
+    nameNodePort(9928).build();
+    try {
+      cluster.waitActive();
+
+      DataNode dn = cluster.getDataNodes().get(0);
+      BPOfferService [] bposs = dn.getAllBpOs(); 
+      LOG.info("dn bpos len (should be 2):" + bposs.length);
+      Assert.assertEquals("should've registered with two namenodes", bposs.length,2);
+      
+      // add another namenode
+      cluster.addNameNode(conf, 9938);
+      bposs = dn.getAllBpOs(); 
+      LOG.info("dn bpos len (should be 3):" + bposs.length);
+      Assert.assertEquals("should've registered with three namenodes", bposs.length,3);
+      
+      // change cluster id and another Namenode
+      StartupOption.FORMAT.setClusterId("DifferentCID");
+      cluster.addNameNode(conf, 9948);
+      NameNode nn4 = cluster.getNameNode(3);
+      assertNotNull("cannot create nn4", nn4);
+      
+      bposs = dn.getAllBpOs(); 
+      LOG.info("dn bpos len (still should be 3):" + bposs.length);
+      Assert.assertEquals("should've registered with three namenodes", 3, bposs.length);
+    } finally {
+      if(cluster != null) 
+        cluster.shutdown();
+    }
+  }
+
 }

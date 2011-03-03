@@ -1337,12 +1337,13 @@ public class MiniDFSCluster {
     if (nameNodes.length == 0 || nameNodes[nnIndex] == null) {
       return;
     }
+    String bpid = nameNodes[nnIndex].nameNode.getFSImage().getBlockPoolID();
     InetSocketAddress addr = new InetSocketAddress("localhost",
         getNameNodePort(nnIndex));
     DFSClient client = new DFSClient(addr, conf);
 
     // ensure all datanodes have registered and sent heartbeat to the namenode
-    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE))) {
+    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), bpid)) {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
@@ -1361,12 +1362,17 @@ public class MiniDFSCluster {
     }
   }
   
-  private synchronized boolean shouldWait(DatanodeInfo[] dnInfo) {
+  private synchronized boolean shouldWait(DatanodeInfo[] dnInfo, String bpid) {
     for (DataNodeProperties dn : dataNodes) {
       // If any one of the datanode is down, then do not continue to wait
       // since the subsequent checks to stop waiting in this method are never
       // going to be be met resulting in waiting forever.
       if (!dn.datanode.isDatanodeUp()) {
+        return false;
+      }
+
+      // if registration of this datanode with the namenode failed -  don't wait
+      if(!dn.datanode.isBPServiceAlive(bpid)) {
         return false;
       }
     }

@@ -41,7 +41,10 @@ public abstract class GenericTestUtils {
    * @throws IOException
    */
   public static void formatNamenode(Configuration conf) throws IOException {
-    StartupOption.FORMAT.setClusterId("testClusterID");
+    String clusterId = StartupOption.FORMAT.getClusterId();
+    if(clusterId == null || clusterId.isEmpty())
+      StartupOption.FORMAT.setClusterId("testClusterID");
+
     NameNode.format(conf);
   }
 }

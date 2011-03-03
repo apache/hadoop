@@ -175,6 +175,9 @@ Trunk (unreleased changes)
 
     HDFS-1714. HDFS Federation: refactor upgrade object in DataNode (boryas) 
 
+    HDFS-1715. HDFS Federation: warning/error not generated when datanode sees 
+    inconsistent/different Cluster ID between namenodes (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
