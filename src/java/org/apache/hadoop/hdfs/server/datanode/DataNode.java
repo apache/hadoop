@@ -1062,11 +1062,10 @@ public class DataNode extends Configured
           bpRegistration.name = machineName + ":" + bpRegistration.getPort();
           
           bpRegistration = bpNamenode.registerDatanode(bpRegistration);
-          // make sure we got the machine name right (same as NN sees it)
-          String [] mNames = bpRegistration.getName().split(":");
-          synchronized (datanodeId) {
-            datanodeId.name = mNames[0] + ":" + datanodeId.getPort();
-          }
+
+          //datanode's machine name may be different from the Namenode's side, 
+          // so we need to reset it to the one received from the registration 
+          setMachineName(bpRegistration);
 
           LOG.info("bpReg after =" + bpRegistration.storageInfo + 
               ";sid=" + bpRegistration.storageID + ";name="+bpRegistration.getName());
@@ -1369,6 +1368,15 @@ public class DataNode extends Configured
   
   public String getMachineName() {
     return datanodeId.name;
+  }
+  
+  private void setMachineName(DatanodeRegistration bpReg) {
+    String [] mNames = bpReg.getName().split(":");
+    synchronized (datanodeId) {
+      datanodeId.name = mNames[0] + ":" + datanodeId.getPort();
+    }
+
+
   }
   
   public int getIpcPort() {

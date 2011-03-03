@@ -165,6 +165,8 @@ Trunk (unreleased changes)
     HDFS-1704. Federation: Add a tool that lists namenodes, secondary and
     backup from configuration file. (suresh)
 
+    HDFS-1711. create method for updating machine name in DataNode.java (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
