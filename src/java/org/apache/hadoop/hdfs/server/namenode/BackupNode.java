@@ -68,7 +68,11 @@ public class BackupNode extends NameNode {
   String nnHttpAddress;
   /** Checkpoint manager */
   Checkpointer checkpointManager;
-
+  /** ClusterID to which BackupNode belongs to */
+  String clusterId;
+  /** Block pool Id of the peer namenode of this BackupNode */
+  String blockPoolId;
+  
   BackupNode(Configuration conf, NamenodeRole role) throws IOException {
     super(conf, role);
   }
@@ -141,6 +145,10 @@ public class BackupNode extends NameNode {
     // therefore lease hard limit should never expire.
     namesystem.leaseManager.setLeasePeriod(
         FSConstants.LEASE_SOFTLIMIT_PERIOD, Long.MAX_VALUE);
+    
+    clusterId = nsInfo.getClusterID();
+    blockPoolId = nsInfo.getBlockPoolID();
+
     // register with the active name-node 
     registerWith(nsInfo);
     // Checkpoint daemon should start after the rpc server started
@@ -373,5 +381,13 @@ public class BackupNode extends NameNode {
       "Active and backup node layout versions must be the same. Expected: "
       + FSConstants.LAYOUT_VERSION + " actual "+ nsInfo.getLayoutVersion();
     return nsInfo;
+  }
+  
+  String getBlockPoolId() {
+    return blockPoolId;
+  }
+  
+  String getClusterId() {
+    return clusterId;
   }
 }

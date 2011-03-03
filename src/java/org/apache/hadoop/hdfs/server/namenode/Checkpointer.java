@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.io.File;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 
@@ -251,6 +250,8 @@ class Checkpointer extends Daemon {
     }
 
     BackupStorage bnImage = getFSImage();
+    bnImage.blockpoolID = backupNode.getBlockPoolId();
+    bnImage.clusterID = backupNode.getClusterId();
     bnImage.loadCheckpoint(sig);
     sig.validateStorageInfo(bnImage);
     bnImage.saveCheckpoint();

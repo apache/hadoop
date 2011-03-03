@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
 import org.junit.Test;
@@ -43,6 +44,7 @@ public class TestRefreshNamenodes {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = null;
     try {
+      conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId1");
       cluster = new MiniDFSCluster.Builder(conf).numNameNodes(1)
           .nameNodePort(nnPort1).build();
 

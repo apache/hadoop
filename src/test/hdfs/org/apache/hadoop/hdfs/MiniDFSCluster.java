@@ -1588,7 +1588,7 @@ public class MiniDFSCluster {
     NameNodeInfo[] newlist = new NameNodeInfo[numNameNodes];
     System.arraycopy(nameNodes, 0, newlist, 0, nameNodes.length);
     nameNodes = newlist;
-    String nameserviceId = NAMESERVICE_ID_PREFIX + nnIndex;
+    String nameserviceId = NAMESERVICE_ID_PREFIX + (nnIndex + 1);
     
     String nameserviceIds = conf.get(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES);
     nameserviceIds += "," + nameserviceId;
@@ -1601,9 +1601,7 @@ public class MiniDFSCluster {
     // Refresh datanodes with the newly started namenode
     for (DataNodeProperties dn : dataNodes) {
       DataNode datanode = dn.datanode;
-      Configuration dnConf = datanode.getConf();
-      dnConf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, nameserviceIds);
-      datanode.refreshNamenodes(dnConf);
+      datanode.refreshNamenodes(conf);
     }
 
     // Wait for new namenode to get registrations from all the datanodes
