@@ -130,6 +130,7 @@ Release 0.90.2 - Unreleased
    HBASE-3572  memstore lab can leave half inited data structs (bad!)
    HBASE-3589  test jar should not include mapred-queues.xml and
                log4j.properties
+   HBASE-3591  completebulkload doesn't honor generic -D options
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
