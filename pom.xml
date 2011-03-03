@@ -497,7 +497,6 @@
     <!-- Dependencies -->
     <avro.version>1.4.1</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
-    <commons-el.version>1.0</commons-el.version>
     <commons-codec.version>1.4</commons-codec.version>
     <commons-httpclient.version>3.1</commons-httpclient.version><!-- pretty outdated -->
     <commons-lang.version>2.5</commons-lang.version>
@@ -546,11 +545,6 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${guava.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-el</groupId>
-      <artifactId>commons-el</artifactId>
-      <version>${commons-el.version}</version>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>

@@ -46,7 +46,6 @@ Release 0.91.0 - Unreleased
                AlreadyBeingCreatedException
    HBASE-3501  Remove the deletion limit in LogCleaner
    HBASE-3500  Documentation update for replicatio
-   HBASE-3525  mvn assembly is over-filling the hbase lib dir
    HBASE-3531  When under global memstore pressure, dont try to flush
                unflushable regions.
    HBASE-3550  FilterList reports false positives (Bill Graham via Andrew
