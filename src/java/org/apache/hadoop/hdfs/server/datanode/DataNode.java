@@ -745,6 +745,8 @@ public class DataNode extends Configured
         conf.getBoolean("dfs.datanode.simulateddatastorage", false);
       
       if (simulatedFSDataset) {
+        initFsDataSet(conf, dataDirs);
+
         bpRegistration.setStorageID(datanodeId.getStorageID()); //same as DN
         bpRegistration.storageInfo.layoutVersion = FSConstants.LAYOUT_VERSION;
         bpRegistration.storageInfo.namespaceID = bpNSInfo.namespaceID;
@@ -758,8 +760,8 @@ public class DataNode extends Configured
 
         bpRegistration.setStorageID(storage.getStorageID());
         bpRegistration.setStorageInfo(storage.getBPStorage(blockPoolId));
+        initFsDataSet(conf, dataDirs);
       }
-      initFsDataSet(conf, dataDirs);
       data.addBlockPool(blockPoolId, conf);
     }
 

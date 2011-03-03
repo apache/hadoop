@@ -168,6 +168,8 @@ Trunk (unreleased changes)
 
     HDFS-1707. Federation: Failure in browsing data on new namenodes. (jitendra)
 
+    HDFS-1683. Test Balancer with multiple NameNodes.  (szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES

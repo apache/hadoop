@@ -719,7 +719,7 @@ public class MiniDFSCluster {
         conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dirs);
       }
       if (simulatedCapacities != null) {
-        dnConf.setBoolean("dfs.datanode.simulateddatastorage", true);
+        dnConf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
         dnConf.setLong(SimulatedFSDataset.CONFIG_PROPERTY_CAPACITY,
             simulatedCapacities[i-curDatanodesNum]);
       }
@@ -1404,7 +1404,25 @@ public class MiniDFSCluster {
     sdataset.injectBlocks(bpid, blocksToInject);
     dataNodes.get(dataNodeIndex).datanode.scheduleAllBlockReport(0);
   }
-  
+
+  /**
+   * Multiple-NameNode version of {@link #injectBlocks(Iterable[])}.
+   */
+  public void injectBlocks(int nameNodeIndex, int dataNodeIndex,
+      Iterable<Block> blocksToInject) throws IOException {
+    if (dataNodeIndex < 0 || dataNodeIndex > dataNodes.size()) {
+      throw new IndexOutOfBoundsException();
+    }
+    FSDatasetInterface dataSet = dataNodes.get(dataNodeIndex).datanode.getFSDataset();
+    if (!(dataSet instanceof SimulatedFSDataset)) {
+      throw new IOException("injectBlocks is valid only for SimilatedFSDataset");
+    }
+    String bpid = getNamesystem(nameNodeIndex).getBlockPoolId();
+    SimulatedFSDataset sdataset = (SimulatedFSDataset) dataSet;
+    sdataset.injectBlocks(bpid, blocksToInject);
+    dataNodes.get(dataNodeIndex).datanode.scheduleAllBlockReport(0);
+  }
+
   /**
    * This method is valid only if the data nodes have simulated data
    * @param blocksToInject - blocksToInject[] is indexed in the same order as the list 

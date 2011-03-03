@@ -57,18 +57,18 @@ public class TestBalancer extends TestCase {
   ClientProtocol client;
 
   static final int DEFAULT_BLOCK_SIZE = 10;
-  private Random r = new Random();
+  private static final Random r = new Random();
 
   static {
     Balancer.setBlockMoveWaitTime(1000L) ;
   }
 
-  private void initConf(Configuration conf) {
+  static void initConf(Configuration conf) {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE);
-    conf.setLong("dfs.heartbeat.interval", 1L);
+    conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setBoolean(SimulatedFSDataset.CONFIG_PROPERTY_SIMULATED, true);
-    conf.setLong("dfs.balancer.movedWinWidth", 2000L);
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
   }
 
   /* create a file with a length of <code>fileLen</code> */
@@ -113,8 +113,8 @@ public class TestBalancer extends TestCase {
   }
 
   /* Distribute all blocks according to the given distribution */
-  Block[][] distributeBlocks(ExtendedBlock[] blocks, short replicationFactor, 
-      final long[] distribution ) {
+  static Block[][] distributeBlocks(ExtendedBlock[] blocks,
+      short replicationFactor, final long[] distribution) {
     // make a copy
     long[] usedSpace = new long[distribution.length];
     System.arraycopy(distribution, 0, usedSpace, 0, distribution.length);
@@ -145,6 +145,14 @@ public class TestBalancer extends TestCase {
     return results;
   }
 
+  static long sum(long[] x) {
+    long s = 0L;
+    for(long a : x) {
+      s += a;
+    }
+    return s;
+  }
+
   /* we first start a cluster and fill the cluster up to a certain size.
    * then redistribute blocks according the required distribution.
    * Afterwards a balancer is running to balance the cluster.
@@ -157,10 +165,7 @@ public class TestBalancer extends TestCase {
     }
 
     // calculate total space that need to be filled
-    long totalUsedSpace=0L;
-    for(int i=0; i<distribution.length; i++) {
-      totalUsedSpace += distribution[i];
-    }
+    final long totalUsedSpace = sum(distribution);
 
     // fill the cluster
     ExtendedBlock[] blocks = generateBlocks(conf, totalUsedSpace,
@@ -183,10 +188,7 @@ public class TestBalancer extends TestCase {
     for(int i = 0; i < blocksDN.length; i++)
       cluster.injectBlocks(i, Arrays.asList(blocksDN[i]));
 
-    long totalCapacity = 0L;
-    for(long capacity:capacities) {
-      totalCapacity += capacity;
-    }
+    final long totalCapacity = sum(capacities);
     runBalancer(conf, totalUsedSpace, totalCapacity);
     cluster.shutdown();
   }
@@ -222,10 +224,8 @@ public class TestBalancer extends TestCase {
       cluster.waitActive();
       client = DFSClient.createNamenode(conf);
 
-      long totalCapacity=0L;
-      for(long capacity:capacities) {
-        totalCapacity += capacity;
-      }
+      long totalCapacity = sum(capacities);
+      
       // fill up the cluster to be 30% full
       long totalUsedSpace = totalCapacity*3/10;
       createFile(totalUsedSpace/numOfDatanodes, (short)numOfDatanodes);
@@ -333,10 +333,8 @@ public class TestBalancer extends TestCase {
       cluster.waitActive();
       client = DFSClient.createNamenode(conf);
 
-      long totalCapacity = 0L;
-      for (long capacity : capacities) {
-        totalCapacity += capacity;
-      }
+      long totalCapacity = sum(capacities);
+
       // fill up the cluster to be 30% full
       long totalUsedSpace = totalCapacity * 3 / 10;
       createFile(totalUsedSpace / numOfDatanodes, (short) numOfDatanodes);

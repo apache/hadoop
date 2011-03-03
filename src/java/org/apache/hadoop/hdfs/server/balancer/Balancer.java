@@ -471,6 +471,12 @@ public class Balancer {
     private List<PendingBlockMove> pendingBlocks = 
       new ArrayList<PendingBlockMove>(MAX_NUM_CONCURRENT_MOVES); 
     
+    @Override
+    public String toString() {
+      return getClass().getSimpleName() + "[" + getName()
+          + ", utilization=" + utilization + "]";
+    }
+
     /* Constructor 
      * Depending on avgutil & threshold, calculate maximum bytes to move 
      */
@@ -844,7 +850,7 @@ public class Balancer {
     }
 
     //logging
-    logImbalancedNodes();
+    logNodes();
     
     assert (this.datanodes.size() == 
       overUtilizedDatanodes.size()+underUtilizedDatanodes.size()+
@@ -856,25 +862,20 @@ public class Balancer {
   }
 
   /* log the over utilized & under utilized nodes */
-  private void logImbalancedNodes() {
-    StringBuilder msg = new StringBuilder();
-    msg.append(overUtilizedDatanodes.size());
-    msg.append(" over utilized nodes:");
-    for (Source node : overUtilizedDatanodes) {
-      msg.append( " " );
-      msg.append( node.getName() );
+  private void logNodes() {
+    logNodes("over-utilized", overUtilizedDatanodes);
+    if (LOG.isTraceEnabled()) {
+      logNodes("above-average", aboveAvgUtilizedDatanodes);
+      logNodes("below-average", belowAvgUtilizedDatanodes);
     }
-    LOG.info(msg);
-    msg = new StringBuilder();
-    msg.append(underUtilizedDatanodes.size());
-    msg.append(" under utilized nodes: ");
-    for (BalancerDatanode node : underUtilizedDatanodes) {
-      msg.append( " " );
-      msg.append( node.getName() );
-    }
-    LOG.info(msg);
+    logNodes("underutilized", underUtilizedDatanodes);
   }
-  
+
+  private static <T extends BalancerDatanode> void logNodes(
+      String name, Collection<T> nodes) {
+    LOG.info(nodes.size() + " " + name + ": " + nodes);
+  }
+
   /* Decide all <source, target> pairs and
    * the number of bytes to move from a source to a target
    * Maximum bytes to be moved per node is
@@ -1310,7 +1311,7 @@ public class Balancer {
         return ReturnStatus.SUCCESS;
       } else {
         LOG.info( "Need to move "+ StringUtils.byteDesc(bytesLeftToMove)
-            +" bytes to make the cluster balanced." );
+            + " to make the cluster balanced." );
       }
       
       /* Decide all the nodes that will participate in the block move and
@@ -1324,7 +1325,7 @@ public class Balancer {
         return ReturnStatus.NO_MOVE_BLOCK;
       } else {
         LOG.info( "Will move " + StringUtils.byteDesc(bytesToMove) +
-            "bytes in this iteration");
+            " in this iteration");
       }
 
       formatter.format("%-24s %10d  %19s  %18s  %17s\n", 
@@ -1395,12 +1396,12 @@ public class Balancer {
       }
     
       boolean done = false;
-      for(int iterations = 0; !done; iterations++) {
+      for(int iteration = 0; !done; iteration++) {
         done = true;
         Collections.shuffle(connectors);
         for(NameNodeConnector nnc : connectors) {
           final Balancer b = new Balancer(nnc, p, conf);
-          final ReturnStatus r = b.run(iterations, formatter);
+          final ReturnStatus r = b.run(iteration, formatter);
           if (r == ReturnStatus.IN_PROGRESS) {
             done = false;
           } else if (r != ReturnStatus.SUCCESS) {
