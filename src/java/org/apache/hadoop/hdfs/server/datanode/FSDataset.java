@@ -802,14 +802,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
       
     /**
-     * goes over all the volumes and checkDir eachone of them
-     * if one throws DiskErrorException - removes from the list of active 
-     * volumes. 
-     * @return list of all the removed volumes
+     * Calls {@link FSVolume#checkDirs()} on each volume, removing any
+     * volumes from the active list that result in a DiskErrorException.
+     * @return list of all the removed volumes.
      */
     synchronized List<FSVolume> checkDirs() {
-      
-      ArrayList<FSVolume> removed_vols = null;  
+      ArrayList<FSVolume> removedVols = null;  
       
       for (int idx = 0; idx < volumes.length; idx++) {
         FSVolume fsv = volumes[idx];
@@ -817,31 +815,30 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           fsv.checkDirs();
         } catch (DiskErrorException e) {
           DataNode.LOG.warn("Removing failed volume " + fsv + ": ",e);
-          if(removed_vols == null) {
-            removed_vols = new ArrayList<FSVolume>(1);
+          if (removedVols == null) {
+            removedVols = new ArrayList<FSVolume>(1);
           }
-          removed_vols.add(volumes[idx]);
-          volumes[idx] = null; //remove the volume
+          removedVols.add(volumes[idx]);
+          volumes[idx] = null; // Remove the volume
         }
       }
       
-      // repair array - copy non null elements
-      int removed_size = (removed_vols==null)? 0 : removed_vols.size();
-      if(removed_size > 0) {
-        FSVolume fsvs[] = new FSVolume [volumes.length-removed_size];
-        for(int idx=0,idy=0; idx<volumes.length; idx++) {
-          if(volumes[idx] != null) {
-            fsvs[idy] = volumes[idx];
-            idy++;
+      // Remove null volumes from the volumes array
+      if (removedVols != null && removedVols.size() > 0) {
+        FSVolume newVols[] = new FSVolume[volumes.length - removedVols.size()];
+        int i = 0;
+        for (FSVolume vol : volumes) {
+          if (vol != null) {
+            newVols[i++] = vol;
           }
         }
-        volumes = fsvs; // replace array of volumes
+        volumes = newVols; // Replace array of volumes
         DataNode.LOG.info("Completed FSVolumeSet.checkDirs. Removed "
-            + removed_vols.size() + " volumes. List of current volumes: "
+            + removedVols.size() + " volumes. List of current volumes: "
             + this);
       }
 
-      return removed_vols;
+      return removedVols;
     }
       
     public String toString() {
@@ -1948,46 +1945,45 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    */
   @Override // FSDatasetInterface
   public void checkDataDir() throws DiskErrorException {
-    long total_blocks=0, removed_blocks=0;
-    List<FSVolume> failed_vols =  volumes.checkDirs();
+    long totalBlocks=0, removedBlocks=0;
+    List<FSVolume> failedVols =  volumes.checkDirs();
     
-    //if there no failed volumes return
-    if(failed_vols == null) 
+    // If there no failed volumes return
+    if (failedVols == null) { 
       return;
+    }
     
-    // else 
-    // remove related blocks
+    // Otherwise remove blocks for the failed volumes
     long mlsec = System.currentTimeMillis();
     synchronized (this) {
-      for(FSVolume fv: failed_vols) {
+      for (FSVolume fv: failedVols) {
         for (String bpid : fv.map.keySet()) {
           Iterator<ReplicaInfo> ib = volumeMap.replicas(bpid).iterator();
           while(ib.hasNext()) {
             ReplicaInfo b = ib.next();
-            total_blocks ++;
+            totalBlocks++;
             // check if the volume block belongs to still valid
             if(b.getVolume() == fv) {
-              DataNode.LOG.warn("removing " + bpid + ":" + b.getBlockId()
-                  + " from vol " + fv.currentDir.getAbsolutePath());
+              DataNode.LOG.warn("Removing replica " + bpid + ":" + b.getBlockId()
+                  + " on failed volume " + fv.currentDir.getAbsolutePath());
               ib.remove();
-              removed_blocks++;
+              removedBlocks++;
             }
           }
         }
       }
     } // end of sync
     mlsec = System.currentTimeMillis() - mlsec;
-    DataNode.LOG.warn("Removed " + removed_blocks + " out of " + total_blocks +
+    DataNode.LOG.warn("Removed " + removedBlocks + " out of " + totalBlocks +
         "(took " + mlsec + " millisecs)");
 
     // report the error
     StringBuilder sb = new StringBuilder();
-    for(FSVolume fv : failed_vols) {
+    for (FSVolume fv : failedVols) {
       sb.append(fv.currentDir.getAbsolutePath() + ";");
     }
 
     throw  new DiskErrorException("DataNode failed volumes:" + sb);
-  
   }
     
 

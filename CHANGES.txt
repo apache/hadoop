@@ -362,6 +362,11 @@ Release 0.22.0 - Unreleased
 
     HDFS-1408. Herriot NN and DN clients should vend statistics. (cos)
 
+    HDFS-1491  Update Hdfs to match the change of methods from protected to public
+    in AbstractFileSystem (Hadoop-6903) (sanjay)
+
+    HDFS-1160. Improve some FSDataset warnings and comments. (eli)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)

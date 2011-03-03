@@ -1620,9 +1620,11 @@ public class DataNode extends Configured
   }
   
   private void handleDiskError(String errMsgr) {
-    boolean hasEnoughResources = data.hasEnoughResource();
+    final boolean hasEnoughResources = data.hasEnoughResource();
     LOG.warn("DataNode.handleDiskError: Keep Running: " + hasEnoughResources);
     
+    // If we have enough active valid volumes then we do not want to 
+    // shutdown the DN completely.
     int dpError = hasEnoughResources ? DatanodeProtocol.DISK_ERROR  
                                      : DatanodeProtocol.FATAL_DISK_ERROR;  
     //inform NameNodes
@@ -1630,7 +1632,10 @@ public class DataNode extends Configured
       DatanodeProtocol nn = bpos.bpNamenode;
       try {
         nn.errorReport(bpos.bpRegistration, dpError, errMsgr);
-      } catch(IOException ignored) { }
+      } catch(IOException e) {
+        LOG.warn("Error reporting disk failure to NameNode: " + 
+            StringUtils.stringifyException(e));
+      }
     }
     
     if(hasEnoughResources) {
@@ -1638,7 +1643,7 @@ public class DataNode extends Configured
       return; // do not shutdown
     }
     
-    LOG.warn("DataNode is shutting down.\n" + errMsgr);
+    LOG.warn("DataNode is shutting down: " + errMsgr);
     shouldRun = false;
   }
     

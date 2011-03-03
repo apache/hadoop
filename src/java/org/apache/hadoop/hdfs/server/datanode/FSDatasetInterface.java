@@ -322,8 +322,9 @@ public interface FSDatasetInterface extends FSDatasetMBean {
       int checksumSize) throws IOException;
 
   /**
-   * checks how many valid storage volumes are there in the DataNode
-   * @return true if more then minimum valid volumes left in the FSDataSet
+   * Checks how many valid storage volumes there are in the DataNode.
+   * @return true if more than the minimum number of valid volumes are left 
+   * in the FSDataSet.
    */
   public boolean hasEnoughResource();
 
