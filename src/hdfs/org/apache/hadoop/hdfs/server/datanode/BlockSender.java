@@ -357,6 +357,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
     long totalRead = 0;
     OutputStream streamForSendChunks = out;
     
+    final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0; 
     try {
       try {
         checksum.writeHeader(out);
@@ -412,7 +413,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
       }
     } finally {
       if (clientTraceFmt != null) {
-        ClientTraceLog.info(String.format(clientTraceFmt, totalRead, initialOffset));
+        final long endTime = System.nanoTime();
+        ClientTraceLog.info(String.format(clientTraceFmt, totalRead, initialOffset, endTime - startTime));
       }
       close();
     }

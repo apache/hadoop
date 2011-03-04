@@ -164,7 +164,7 @@ class DataXceiver implements Runnable, FSConstants {
       clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
         ? String.format(DN_CLIENTTRACE_FORMAT, localAddress, remoteAddress,
             "%d", "HDFS_READ", clientName, "%d", 
-            datanode.dnRegistration.getStorageID(), block)
+            datanode.dnRegistration.getStorageID(), block, "%d")
         : datanode.dnRegistration + " Served block " + block + " to " +
             s.getInetAddress();
     try {

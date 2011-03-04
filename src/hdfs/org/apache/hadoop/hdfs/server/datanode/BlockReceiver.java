@@ -747,6 +747,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     private synchronized void lastDataNodeRun() {
       long lastHeartbeat = System.currentTimeMillis();
       boolean lastPacket = false;
+      final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
 
       while (running && datanode.shouldRun && !lastPacket) {
         long now = System.currentTimeMillis();
@@ -794,6 +795,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             if (pkt.lastPacketInBlock) {
               if (!receiver.finalized) {
                 receiver.close();
+                final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
                 block.setNumBytes(receiver.offsetInBlock);
                 datanode.data.finalizeBlock(block);
                 datanode.myMetrics.blocksWritten.inc();
@@ -805,7 +807,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                   ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT,
                         receiver.inAddr, receiver.myAddr, block.getNumBytes(), 
                         "HDFS_WRITE", receiver.clientName, offset,
-                        datanode.dnRegistration.getStorageID(), block));
+                        datanode.dnRegistration.getStorageID(), block, endTime-startTime));
                 } else {
                   LOG.info("Received block " + block + 
                            " of size " + block.getNumBytes() + 
@@ -843,6 +845,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       }
 
       boolean lastPacketInBlock = false;
+      final long startTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
       while (running && datanode.shouldRun && !lastPacketInBlock) {
 
         try {
@@ -918,6 +921,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             // file and finalize the block before responding success
             if (lastPacketInBlock && !receiver.finalized) {
               receiver.close();
+              final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
               block.setNumBytes(receiver.offsetInBlock);
               datanode.data.finalizeBlock(block);
               datanode.myMetrics.blocksWritten.inc();
@@ -929,7 +933,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                 ClientTraceLog.info(String.format(DN_CLIENTTRACE_FORMAT,
                       receiver.inAddr, receiver.myAddr, block.getNumBytes(), 
                       "HDFS_WRITE", receiver.clientName, offset, 
-                      datanode.dnRegistration.getStorageID(), block));
+                      datanode.dnRegistration.getStorageID(), block, endTime-startTime));
               } else {
                 LOG.info("Received block " + block + 
                          " of size " + block.getNumBytes() + 

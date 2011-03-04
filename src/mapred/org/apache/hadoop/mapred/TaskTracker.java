@@ -129,7 +129,8 @@ public class TaskTracker
         ", dest: %s" +  // dst IP
         ", bytes: %s" + // byte count
         ", op: %s" +    // operation
-        ", cliID: %s";  // task id
+        ", cliID: %s" +  // task id
+        ", duration: %s"; // duration
   public static final Log ClientTraceLog =
     LogFactory.getLog(TaskTracker.class.getName() + ".clienttrace");
 
@@ -2978,8 +2979,11 @@ public class TaskTracker
       TaskTracker tracker = 
         (TaskTracker) context.getAttribute("task.tracker");
 
+      long startTime = 0;
       try {
         shuffleMetrics.serverHandlerBusy();
+        if(ClientTraceLog.isInfoEnabled())
+          startTime = System.nanoTime();
         outStream = response.getOutputStream();
         JobConf conf = (JobConf) context.getAttribute("conf");
         LocalDirAllocator lDirAlloc = 
@@ -3071,12 +3075,13 @@ public class TaskTracker
         if (null != mapOutputIn) {
           mapOutputIn.close();
         }
+        final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
         shuffleMetrics.serverHandlerFree();
         if (ClientTraceLog.isInfoEnabled()) {
           ClientTraceLog.info(String.format(MR_CLIENTTRACE_FORMAT,
                 request.getLocalAddr() + ":" + request.getLocalPort(),
                 request.getRemoteAddr() + ":" + request.getRemotePort(),
-                totalRead, "MAPRED_SHUFFLE", mapId));
+                totalRead, "MAPRED_SHUFFLE", mapId, endTime-startTime));
         }
       }
       outStream.close();

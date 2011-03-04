@@ -141,7 +141,9 @@ public class DataNode extends Configured
         ", cliID: %s" +  // DFSClient id
         ", offset: %s" + // offset
         ", srvID: %s" +  // DatanodeRegistration
-        ", blockid: %s"; // block id
+        ", blockid: %s" + // block id
+        ", duration: %s"; // duration time
+
   static final Log ClientTraceLog =
     LogFactory.getLog(DataNode.class.getName() + ".clienttrace");
 
