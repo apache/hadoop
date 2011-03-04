@@ -18,6 +18,7 @@
 -->
 
 <project name="Hadoop" default="compile" 
+   xmlns:artifact="urn:maven-artifact-ant"
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
   <!-- Load all the default properties, and any the user wants    -->
@@ -27,10 +28,17 @@
  
   <property name="Name" value="Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="0.20.100.0-dev"/>
+  <property name="version" value="0.20.100.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${final.name}-test"/>
   <property name="year" value="2009"/>
+  
+  <property name="core.final.name" value="${name}-core-${version}"/>
+  <property name="test.final.name" value="${name}-test-${version}"/>
+  <property name="examples.final.name" value="${name}-examples-${version}"/>
+  <property name="tools.final.name" value="${name}-tools-${version}"/>
+  <property name="ant.final.name" value="${name}-ant-${version}"/>
+  <property name="streaming.final.name" value="${name}-streaming-${version}"/>
 
   <property name="src.dir" value="${basedir}/src"/>  	
   <property name="core.src.dir" value="${src.dir}/core"/>
@@ -167,29 +175,67 @@
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
+  <property name="mvnrepo" value="http://repo2.maven.org/maven2"/>
+  <property name="asfrepo" value="https://repository.apache.org"/> 
   <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
-  <property name="ivy_repo_url" value="http://repo2.maven.org/maven2/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
-  <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml" />
+  <property name="ivy_repo_url" 
+    value="${mvnrepo}/org/apache/ivy/ivy/${ivy.version}/ivy-${ivy.version}.jar"/>
+  <property name="ant_task.jar" 
+    location="${ivy.dir}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="tsk.org" value="/org/apache/maven/maven-ant-tasks/"/>
+  <property name="ant_task_repo_url"
+    value="${mvnrepo}${tsk.org}${ant-task.version}/maven-ant-tasks-${ant-task.version}.jar"/>
+  <property name="repo" value="snapshots"/>
+  <property name="asfsnapshotrepo" 
+    value="${asfrepo}/content/repositories/snapshots"/> 
+  <property name="asfstagingrepo"
+    value="${asfrepo}/service/local/staging/deploy/maven2"/> 
+  <property name="ivysettings.xml" location="${ivy.dir}/ivysettings.xml"/>
   <property name="ivy.org" value="org.apache.hadoop"/>
   <property name="build.dir" location="build" />
   <property name="dist.dir" value="${build.dir}/${final.name}"/>
   <property name="build.ivy.dir" location="${build.dir}/ivy" />
-  <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib" />
-  <property name="common.ivy.lib.dir" location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
-  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report" />
-  <property name="build.ivy.maven.dir" location="${build.ivy.dir}/maven" />
-  <property name="build.ivy.maven.pom" location="${build.ivy.maven.dir}/hadoop-core-${hadoop.version}.pom" />
-  <property name="build.ivy.maven.jar" location="${build.ivy.maven.dir}/hadoop-core-${hadoop.version}.jar" />
+  <property name="build.ivy.lib.dir" location="${build.ivy.dir}/lib"/>
+  <property name="common.ivy.lib.dir" 
+    location="${build.ivy.lib.dir}/${ant.project.name}/common"/>
+  <property name="build.ivy.report.dir" location="${build.ivy.dir}/report"/>
 
+  <property name="hadoop-core.pom" location="${ivy.dir}/hadoop-core-pom.xml"/>
+  <property name="hadoop-core-pom-template.xml" 
+    location="${ivy.dir}/hadoop-core-pom-template.xml"/>
+  <property name="hadoop-core.jar" location="${build.dir}/${core.final.name}.jar"/>
+  <property name="hadoop-test.pom" location="${ivy.dir}/hadoop-test-pom.xml"/>
+  <property name="hadoop-test-pom-template.xml" 
+    location="${ivy.dir}/hadoop-test-pom-template.xml" />
+  <property name="hadoop-test.jar" location="${build.dir}/${test.final.name}.jar"/>
+  <property name="hadoop-tools.pom" location="${ivy.dir}/hadoop-tools-pom.xml"/>
+  <property name="hadoop-tools-pom-template.xml" 
+    location="${ivy.dir}/hadoop-tools-pom-template.xml" />
+  <property name="hadoop-tools.jar" location="${build.dir}/${tools.final.name}.jar"/>
+  <property name="hadoop-examples.pom" location="${ivy.dir}/hadoop-examples-pom.xml"/>
+  <property name="hadoop-examples-pom-template.xml" 
+    location="${ivy.dir}/hadoop-examples-pom-template.xml"/>
+  <property name="hadoop-examples.jar" 
+    location="${build.dir}/${examples.final.name}.jar"/>
+  <property name="hadoop-streaming.pom" 
+    location="${ivy.dir}/hadoop-streaming-pom.xml"/>
+  <property name="hadoop-streaming-pom-template.xml" 
+    location="${ivy.dir}/hadoop-streaming-pom-template.xml"/>
+  <property name="hadoop-streaming.jar" 
+    location="${build.dir}/contrib/streaming/${streaming.final.name}.jar"/>
+   
   <!--this is the naming policy for artifacts we want pulled down-->
-  <property name="ivy.artifact.retrieve.pattern" value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
+  <property name="ivy.artifact.retrieve.pattern" 
+    value="${ant.project.name}/[conf]/[artifact]-[revision].[ext]"/>
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="hadoop-[revision]-core.[ext]"/>
-  <property name="hadoop.jar" location="${build.dir}/hadoop-${hadoop.version}-core.jar" />
+  <property name="hadoop.jar" 
+    location="${build.dir}/hadoop-${hadoop.version}-core.jar"/>
 
   <!-- jdiff.home property set -->
-  <property name="jdiff.home" value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
+  <property name="jdiff.home" 
+    value="${build.ivy.lib.dir}/${ant.project.name}/jdiff"/>
   <property name="jdiff.jar" value="${jdiff.home}/jdiff-${jdiff.version}.jar"/>
   <property name="xerces.jar" value="${jdiff.home}/xerces-${xerces.version}.jar"/>
 
@@ -202,6 +248,10 @@
         <isset property="run.clover"/>
         <isset property="clover.present"/>
     </and>
+  </condition>
+
+  <condition property="staging">
+     <equals arg1="${repo}" arg2="staging"/>
   </condition>
 
   <!-- the normal classpath -->
@@ -225,8 +275,8 @@
     <pathelement location="${build.tools}"/>
     <pathelement path="${clover.jar}"/>
     <fileset dir="${test.lib.dir}">
-      <include name="**/*.jar" />
-      <exclude name="**/excluded/" />
+      <include name="**/*.jar"/>
+      <exclude name="**/excluded/"/>
     </fileset>
     <path refid="classpath"/>
   </path>
@@ -238,9 +288,6 @@
     <pathelement location="${test.src.dir}"/>
     <pathelement location="${build.dir}"/>
   </path>
-
-  <!-- properties dependent on the items defined above. -->
-  <!--<available classname="${rat.reporting.classname}" classpathref="classpath" property="rat.present" value="true"/> -->
 
   <!-- ====================================================== -->
   <!-- Macro definitions                                      -->
@@ -553,7 +600,7 @@
     </tar>
     <property name="jar.properties.list"
       value="commons-logging.properties, log4j.properties, hadoop-metrics.properties"/>
-    <jar jarfile="${build.dir}/${final.name}-core.jar"
+    <jar jarfile="${build.dir}/${core.final.name}.jar"
          basedir="${build.classes}">
       <manifest>
         <section name="org/apache/hadoop">
@@ -574,7 +621,7 @@
   <!--                                                                    -->
   <!-- ================================================================== -->
   <target name="examples" depends="jar, compile-examples" description="Make the Hadoop examples jar.">
-    <jar jarfile="${build.dir}/${final.name}-examples.jar"
+    <jar jarfile="${build.dir}/${examples.final.name}.jar"
          basedir="${build.examples}">
       <manifest>
         <attribute name="Main-Class" 
@@ -585,7 +632,7 @@
 
   <target name="tools-jar" depends="jar, compile-tools" 
           description="Make the Hadoop tools jar.">
-    <jar jarfile="${build.dir}/${final.name}-tools.jar"
+    <jar jarfile="${build.dir}/${tools.final.name}.jar"
          basedir="${build.tools}">
       <manifest>
         <attribute name="Main-Class" 
@@ -1169,7 +1216,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
+  <target name="package" depends="compile, jar, javadoc, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1383,11 +1430,28 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-fi" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-sign " description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
+    <delete file="${basedir}/ivy/hadoop-core-pom.xml"/>
+    <delete file="${basedir}/ivy/hadoop-test-pom.xml"/>
+    <delete file="${basedir}/ivy/hadoop-examples-pom.xml"/>
+    <delete file="${basedir}/ivy/hadoop-tools-pom.xml"/>
+    <delete file="${basedir}/ivy/hadoop-streaming-pom.xml"/>
   </target>
+
+  <target name="clean-sign" description="Clean.  Delete .asc files">
+    <delete>
+      <fileset dir="." includes="**/**/*.asc"/>
+    </delete>
+  </target>  
+ 
+  <target name="veryclean" depends="clean" description="Delete mvn ant task jar and ivy ant taks jar">
+    <delete file="${ant_task.jar}"/>
+    <delete file="${ivy.jar}"/>
+  </target>
+
 
   <!-- ================================================================== -->
   <!-- Clean contrib target. For now, must be called explicitly           -->
@@ -1613,7 +1677,7 @@
   <target name="ant-tasks" depends="jar, compile-ant-tasks">
     <copy file="${anttasks.dir}/org/apache/hadoop/ant/antlib.xml"
           todir="${build.anttasks}/org/apache/hadoop/ant"/>
-    <jar destfile="${build.dir}/${final.name}-ant.jar">
+    <jar destfile="${build.dir}/${ant.final.name}.jar">
       <fileset dir="${build.anttasks}"/>
     </jar>
   </target>
@@ -1727,7 +1791,6 @@
     <mkdir dir="${build.ivy.dir}" />
     <mkdir dir="${build.ivy.lib.dir}" />
     <mkdir dir="${build.ivy.report.dir}" />
-    <mkdir dir="${build.ivy.maven.dir}" />
   </target>
 
   <target name="ivy-probe-antlib" >
@@ -1857,70 +1920,181 @@
     </echo>
   </target>
 
-  <target name="assert-hadoop-jar-exists" depends="ivy-init">
-    <fail>
-      <condition >
-        <not>
-          <available file="${hadoop.jar}" />
-        </not>
-      </condition>
-      Not found: ${hadoop.jar}
-      Please run the target "jar" in the main build file
-    </fail>
-
+  <target name="ant-task-download" description="To download mvn-ant-task">
+    <get src="${ant_task_repo_url}" dest="${ant_task.jar}" usetimestamp="true"/>
   </target>
 
-  <target name="ready-to-publish" depends="jar,assert-hadoop-jar-exists,ivy-resolve"/>
+  <target name="mvn-taskdef" depends="ant-task-download">
+     <path id="mvn-ant-task.classpath" path="${ant_task.jar}"/>
+     <typedef resource="org/apache/maven/artifact/ant/antlib.xml"
+         uri="urn:maven-artifact-ant"
+         classpathref="mvn-ant-task.classpath"/>
+  </target>  
 
-  <target name="ivy-publish-local" depends="ready-to-publish,ivy-resolve">
-    <ivy:publish
-      settingsRef="${ant.project.name}.ivy.settings"
-      resolver="local"
-      pubrevision="${hadoop.version}"
-      overwrite="true"
-      artifactspattern="${build.dir}/${ivy.publish.pattern}" />
+  <target name="mvn-install" depends="mvn-taskdef,bin-package,set-version"
+     description="To install hadoop core and test jars to local filesystem's m2 cache">
+     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-test.pom}" id="hadoop.test"/>
+     <artifact:pom file="${hadoop-examples.pom}" id="hadoop.examples"/>
+     <artifact:pom file="${hadoop-tools.pom}" id="hadoop.tools"/>
+     <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
+
+     <artifact:install file="${hadoop-core.jar}">
+        <pom refid="hadoop.core"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-test.jar}">
+        <pom refid="hadoop.test"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-tools.jar}">
+        <pom refid="hadoop.tools"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-examples.jar}">
+        <pom refid="hadoop.examples"/>
+     </artifact:install>
+     <artifact:install file="${hadoop-streaming.jar}">
+        <pom refid="hadoop.streaming"/>
+     </artifact:install>
   </target>
 
+  <target name="mvn-deploy" depends="mvn-taskdef, bin-package, set-version, signanddeploy, simpledeploy"
+     description="To deploy hadoop core and test jar's to apache maven repository"/>
 
-  <!-- this is here for curiosity, to see how well the makepom task works
-  Answer: it depends whether you want transitive dependencies excluded or not
-  -->
-  <target name="makepom" depends="ivy-resolve">
-    <ivy:makepom settingsRef="${ant.project.name}.ivy.settings"
-      ivyfile="ivy.xml"
-      pomfile="${build.ivy.maven.dir}/generated.pom">
-      <ivy:mapping conf="default" scope="default"/>
-      <ivy:mapping conf="master" scope="master"/>
-      <ivy:mapping conf="runtime" scope="runtime"/>
-    </ivy:makepom>
+  <target name="signanddeploy" if="staging" depends="sign">
+     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-test.pom}" id="hadoop.core.test"/>
+     <artifact:pom file="${hadoop-examples.pom}" id="hadoop.examples"/>
+     <artifact:pom file="${hadoop-tools.pom}" id="hadoop.tools"/>
+     <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
+     <artifact:install-provider artifactId="wagon-http"
+       version="${wagon-http.version}"/>
+     <artifact:deploy file="${hadoop-core.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/>
+         <pom refid="hadoop.core"/>
+         <attach file="${hadoop-core.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-core.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-test.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/> 
+         <pom refid="hadoop.core.test"/>
+         <attach file="${hadoop-test.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-test.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-tools.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/> 
+         <pom refid="hadoop.tools"/>
+         <attach file="${hadoop-tools.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-tools.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-examples.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/> 
+         <pom refid="hadoop.examples"/>
+         <attach file="${hadoop-examples.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-examples.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-streaming.jar}">
+         <remoteRepository id="apache.staging.https" url="${asfstagingrepo}"/> 
+         <pom refid="hadoop.streaming"/>
+         <attach file="${hadoop-streaming.jar}.asc" type="jar.asc"/>
+         <attach file="${hadoop-streaming.pom}.asc" type="pom.asc"/>
+     </artifact:deploy>
   </target>
 
-
-  <target name="copy-jar-to-maven" depends="ready-to-publish">
-    <copy file="${hadoop.jar}"
-      tofile="${build.ivy.maven.jar}"/>
-    <checksum file="${build.ivy.maven.jar}" algorithm="md5"/>
+  <target name="sign" depends="clean-sign" if="staging">
+    <input message="password:>" addproperty="gpg.passphrase">
+     <handler classname="org.apache.tools.ant.input.SecureInputHandler" />
+    </input>
+    <macrodef name="sign-artifact" description="Signs the artifact">
+      <attribute name="input.file"/>
+      <attribute name="output.file" default="@{input.file}.asc"/>
+      <attribute name="gpg.passphrase"/>
+      <sequential>
+        <echo>Signing @{input.file} Sig File: @{output.file}</echo>
+        <exec executable="gpg" >
+          <arg value="--armor"/>
+          <arg value="--output"/>
+          <arg value="@{output.file}"/>
+          <arg value="--passphrase"/>
+          <arg value="@{gpg.passphrase}"/>
+          <arg value="--detach-sig"/>
+          <arg value="@{input.file}"/>
+        </exec>
+      </sequential>
+    </macrodef>
+    <echo> phassphrase : ${gpg.passphrase} </echo>
+    <sign-artifact input.file="${hadoop-core.jar}" 
+     output.file="${hadoop-core.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-test.jar}" 
+     output.file="${hadoop-test.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-tools.jar}" 
+     output.file="${hadoop-tools.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-examples.jar}" 
+     output.file="${hadoop-examples.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-streaming.jar}" 
+     output.file="${hadoop-streaming.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-core.pom}" 
+     output.file="${hadoop-core.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-test.pom}" 
+     output.file="${hadoop-test.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-tools.pom}" 
+     output.file="${hadoop-tools.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-examples.pom}" 
+     output.file="${hadoop-examples.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
+    <sign-artifact input.file="${hadoop-streaming.pom}" 
+     output.file="${hadoop-streaming.pom}.asc" gpg.passphrase="${gpg.passphrase}"/>
   </target>
 
-  <target name="copypom" depends="ivy-init-dirs">
+  <target name="simpledeploy" unless="staging">
+     <artifact:pom file="${hadoop-core.pom}" id="hadoop.core"/>
+     <artifact:pom file="${hadoop-test.pom}" id="hadoop.test"/>
+     <artifact:pom file="${hadoop-examples.pom}" id="hadoop.examples"/>
+     <artifact:pom file="${hadoop-tools.pom}" id="hadoop.tools"/>
+     <artifact:pom file="${hadoop-streaming.pom}" id="hadoop.streaming"/>
 
-   <presetdef name="expandingcopy" >
-    <copy overwrite="true">
-      <filterchain>
-        <expandproperties/>
-      </filterchain>
-    </copy>
-   </presetdef>
-
-   <expandingcopy file="ivy/hadoop-core.pom"
-      tofile="${build.ivy.maven.pom}"/>
-   <checksum file="${build.ivy.maven.pom}" algorithm="md5"/>
+     <artifact:install-provider artifactId="wagon-http" version="${wagon-http.version}"/>
+     <artifact:deploy file="${hadoop-core.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.core"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-test.jar}">
+         <remoteRepository id="apache.snapshosts.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.test"/>
+     </artifact:deploy> 
+     <artifact:deploy file="${hadoop-examples.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.examples"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-tools.jar}">
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.tools"/>
+     </artifact:deploy>
+     <artifact:deploy file="${hadoop-streaming.jar}">
+         <remoteRepository id="apache.snapshosts.https" url="${asfsnapshotrepo}"/>
+         <pom refid="hadoop.streaming"/>
+     </artifact:deploy>
   </target>
 
-  <target name="maven-artifacts" depends="copy-jar-to-maven,copypom" />
-
-  <target name="published" depends="ivy-publish-local,maven-artifacts">
-
+  <target name="set-version">
+    <delete file="${hadoop-core.pom}"/>
+    <delete file="${hadoop-test.pom}"/>
+    <delete file="${hadoop-examples.pom}"/>
+    <delete file="${hadoop-tools.pom}"/>
+    <delete file="${hadoop-streaming.pom}"/>
+    <copy file="${hadoop-core-pom-template.xml}" tofile="${hadoop-core.pom}"/>
+    <copy file="${hadoop-test-pom-template.xml}" tofile="${hadoop-test.pom}"/>
+    <copy file="${hadoop-examples-pom-template.xml}" tofile="${hadoop-examples.pom}"/>
+    <copy file="${hadoop-tools-pom-template.xml}" tofile="${hadoop-tools.pom}"/>
+    <copy file="${hadoop-streaming-pom-template.xml}" tofile="${hadoop-streaming.pom}"/>
+    <replaceregexp byline="true">
+      <regexp pattern="@version"/>
+      <substitution expression="${version}"/>
+      <fileset dir="${basedir}/ivy">
+        <include name="hadoop-core-pom.xml"/>
+        <include name="hadoop-test-pom.xml"/>
+        <include name="hadoop-tools-pom.xml"/>
+        <include name="hadoop-examples-pom.xml"/>
+        <include name="hadoop-streaming-pom.xml"/>
+      </fileset>
+    </replaceregexp>
   </target>
 
   <!-- taskcontroller targets -->

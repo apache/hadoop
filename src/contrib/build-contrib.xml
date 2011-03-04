@@ -177,7 +177,7 @@
   <target name="jar" depends="compile" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
     <jar
-      jarfile="${build.dir}/hadoop-${version}-${name}.jar"
+      jarfile="${build.dir}/hadoop-${name}-${version}.jar"
       basedir="${build.classes}"      
     />
   </target>
@@ -189,7 +189,7 @@
   <target name="jar-examples" depends="compile-examples"
           if="examples.available" unless="skip.contrib">
     <echo message="contrib: ${name}"/>
-    <jar jarfile="${build.dir}/hadoop-${version}-${name}-examples.jar">
+    <jar jarfile="${build.dir}/hadoop-${name}-examples-${version}.jar">
       <fileset dir="${build.classes}">
       </fileset>
       <fileset dir="${build.examples}">
@@ -204,7 +204,7 @@
     <mkdir dir="${dist.dir}/contrib/${name}"/>
     <copy todir="${dist.dir}/contrib/${name}" includeEmptyDirs="false" flatten="true">
       <fileset dir="${build.dir}">
-        <include name="hadoop-${version}-${name}.jar" />
+        <include name="hadoop-${name}-${version}.jar" />
       </fileset>
     </copy>
   </target>

@@ -1,6 +1,5 @@
-<?xml version="1.0"?>
-
-<!--
+<?xml version="1.0" encoding="UTF-8"?>
+ <!--
    Licensed to the Apache Software Foundation (ASF) under one or more
    contributor license agreements.  See the NOTICE file distributed with
    this work for additional information regarding copyright ownership.
@@ -17,28 +16,13 @@
    limitations under the License.
 -->
 
-<!-- 
-Before you can run these subtargets directly, you need 
-to call at top-level: ant deploy-contrib compile-core-test
--->
-<project name="datajoin" default="jar">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-  <import file="../build-contrib.xml"/>
-
-  <!-- Override jar target to specify main class -->
-  <target name="jar" depends="compile">
-    <jar
-      jarfile="${build.dir}/hadoop-${name}-${version}.jar"
-      basedir="${build.classes}">      
-  	<manifest>
-	    <attribute name="Main-Class" value="org.apache.hadoop.contrib.utils.join.DataJoinJob"/>
-	</manifest>
-    </jar>
-  </target>
-
-  <target name="jar-examples" depends="jar">
-   <antcall target="hadoopbuildcontrib.jar-examples">
-   </antcall>
-  </target>
-
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.hadoop</groupId>
+  <artifactId>hadoop-examples</artifactId>
+  <packaging>jar</packaging>
+  <version>@version</version>
+  <dependencies/>
 </project>
