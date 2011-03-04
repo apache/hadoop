@@ -30,6 +30,7 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.DelegationTokenServlet;
 import org.apache.hadoop.io.Text;
@@ -127,6 +128,7 @@ public class DelegationTokenFetcher {
     ts.addToken(new Text(shortName), token);
     ts.write(out);
   }
+
   /**
    * Utility method to obtain a delegation token over http
    * @param nnHttpAddr Namenode http addr, such as http://namenode:50070
@@ -148,6 +150,7 @@ public class DelegationTokenFetcher {
      }
      System.out.println("Retrieving token from: " + url);
      URL remoteURL = new URL(url.toString());
+     SecurityUtil.fetchServiceTicket(remoteURL);
      URLConnection connection = remoteURL.openConnection();
      
      InputStream in = connection.getInputStream();
