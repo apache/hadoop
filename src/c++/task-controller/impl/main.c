@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
     break;
   case DELETE_LOG_AS_USER:
     dir_to_be_deleted = argv[optind++];
-    exit_code= delete_log_dir(user_detail->pw_name, dir_to_be_deleted);
+    exit_code= delete_log_directory(user_detail->pw_name, dir_to_be_deleted);
     break;
   default:
     exit_code = INVALID_COMMAND_PROVIDED;
