@@ -122,22 +122,23 @@ public class HadoopArchives implements Tool {
   /**
    * this assumes that there are two types of files file/dir
    * @param fs the input filesystem
-   * @param p the top level path 
+   * @param fdir the filestatusdir of the path  
    * @param out the list of paths output of recursive ls
    * @throws IOException
    */
-  private void recursivels(FileSystem fs, Path p, List<FileStatus> out) 
+  private void recursivels(FileSystem fs, FileStatusDir fdir, List<FileStatusDir> out) 
   throws IOException {
-    FileStatus fstatus = fs.getFileStatus(p);
-    if (!fstatus.isDir()) {
-      out.add(fstatus);
+    if (!fdir.getFileStatus().isDir()) {
+      out.add(fdir);
       return;
     }
     else {
-      out.add(fstatus);
-      FileStatus[] listStatus = fs.listStatus(p);
+      out.add(fdir);
+      FileStatus[] listStatus = fs.listStatus(fdir.getFileStatus().getPath());
+      fdir.setChildren(listStatus);
       for (FileStatus stat: listStatus) {
-        recursivels(fs, stat.getPath(), out);
+        FileStatusDir fstatDir = new FileStatusDir(stat, null);
+        recursivels(fs, fstatDir, out);
       }
     }
   }
@@ -338,6 +339,50 @@ public class HadoopArchives implements Tool {
       }
     }
   }
+    
+  /**
+   * A static class that keeps
+   * track of status of a path 
+   * and there children if path is a dir
+   */
+  static class FileStatusDir {
+    private FileStatus fstatus;
+    private FileStatus[] children = null;
+    
+    /**
+     * constructor for filestatusdir
+     * @param fstatus the filestatus object that maps to filestatusdir
+     * @param children the children list if fs is a directory
+     */
+    FileStatusDir(FileStatus fstatus, FileStatus[] children) {
+      this.fstatus  = fstatus;
+      this.children = children;
+    }
+    
+    /**
+     * set children of this object
+     * @param listStatus the list of children
+     */
+    public void setChildren(FileStatus[] listStatus) {
+      this.children = listStatus;
+    }
+
+    /**
+     * the filestatus of this object
+     * @return the filestatus of this object
+     */
+    FileStatus getFileStatus() {
+      return this.fstatus;
+    }
+    
+    /**
+     * the children list of this object, null if  
+     * @return the children list
+     */
+    FileStatus[] getChildren() {
+      return this.children;
+    }
+  }
   
   /**archive the given source paths into
    * the dest
@@ -395,15 +440,18 @@ public class HadoopArchives implements Tool {
       // and then write them to the input file 
       // one at a time
       for (Path src: srcPaths) {
-        ArrayList<FileStatus> allFiles = new ArrayList<FileStatus>();
-        recursivels(fs, src, allFiles);
-        for (FileStatus stat: allFiles) {
+        ArrayList<FileStatusDir> allFiles = new ArrayList<FileStatusDir>();
+        FileStatus fstatus = fs.getFileStatus(src);
+        FileStatusDir fdir = new FileStatusDir(fstatus, null);
+        recursivels(fs, fdir, allFiles);
+        for (FileStatusDir statDir: allFiles) {
+          FileStatus stat = statDir.getFileStatus();
           String toWrite = "";
           long len = stat.isDir()? 0:stat.getLen();
           if (stat.isDir()) {
             toWrite = "" + relPathToRoot(stat.getPath(), parentPath) + " dir ";
             //get the children 
-            FileStatus[] list = fs.listStatus(stat.getPath());
+            FileStatus[] list = statDir.getChildren();
             StringBuffer sbuff = new StringBuffer();
             sbuff.append(toWrite);
             for (FileStatus stats: list) {
