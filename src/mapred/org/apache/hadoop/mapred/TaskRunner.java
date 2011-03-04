@@ -401,6 +401,25 @@ abstract class TaskRunner extends Thread {
         ldLibraryPath.append(oldLdLibraryPath);
       }
       env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
+      
+      // add the env variables passed by the user
+      String mapredChildEnv = conf.get("mapred.child.env");
+      if (mapredChildEnv != null && mapredChildEnv.length() > 0) {
+        String childEnvs[] = mapredChildEnv.split(",");
+        for (String cEnv : childEnvs) {
+          String[] parts = cEnv.split("="); // split on '='
+          String value = env.get(parts[0]);
+          if (value != null) {
+            // replace $env with the tt's value of env
+            value = parts[1].replaceAll("$" + parts[0], value);
+          } else {
+            // for cases where x=$x:/tmp is passed and x doesnt exist
+            value = parts[1].replaceAll("$" + parts[0], "");
+          }
+          env.put(parts[0], value);
+        }
+      }
+
       jvmManager.launchJvm(this, 
           jvmManager.constructJvmEnv(setup,vargs,stdout,stderr,logSize, 
               workDir, env, pidFile, conf));

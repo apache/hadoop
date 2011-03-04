@@ -336,6 +336,16 @@
 </property>
 
 <property>
+  <name>mapred.child.env</name>
+  <value></value>
+  <description>User added environment variables for the task tracker child 
+  processes. Example :
+  1) A=foo  This will set the env variable A to foo
+  2) B=$B:c This is inherit tasktracker's B env variable.  
+  </description>
+</property>
+
+<property>
   <name>mapred.child.ulimit</name>
   <value></value>
   <description>The maximum virtual memory, in KB, of a process launched by the 
