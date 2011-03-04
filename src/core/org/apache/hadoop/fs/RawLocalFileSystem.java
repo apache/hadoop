@@ -470,10 +470,59 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public void setPermission(Path p, FsPermission permission
       ) throws IOException {
-    execCommand(pathToFile(p), Shell.SET_PERMISSION_COMMAND,
-        String.format("%04o", permission.toShort()));
+    FsAction user = permission.getUserAction();
+    FsAction group = permission.getGroupAction();
+    FsAction other = permission.getOtherAction();
+    
+    File f = pathToFile(p);
+    
+    // Fork chmod if group and other permissions are different...
+    if (group != other) {
+      execSetPermission(f, permission);
+      return;
+    }
+    
+    boolean rv = true;
+    
+    // read perms
+    rv = f.setReadable(group.implies(FsAction.READ), false);
+    checkReturnValue(rv, p, permission);
+    if (group.implies(FsAction.READ) != user.implies(FsAction.READ)) {
+      f.setReadable(user.implies(FsAction.READ), true);
+      checkReturnValue(rv, p, permission);
+    }
+
+    // write perms
+    rv = f.setWritable(group.implies(FsAction.WRITE), false);
+    checkReturnValue(rv, p, permission);
+    if (group.implies(FsAction.WRITE) != user.implies(FsAction.WRITE)) {
+      f.setWritable(user.implies(FsAction.WRITE), true);
+      checkReturnValue(rv, p, permission);
+    }
+
+    // exec perms
+    rv = f.setExecutable(group.implies(FsAction.EXECUTE), false);
+    checkReturnValue(rv, p, permission);
+    if (group.implies(FsAction.EXECUTE) != user.implies(FsAction.EXECUTE)) {
+      f.setExecutable(user.implies(FsAction.EXECUTE), true);
+      checkReturnValue(rv, p, permission);
+    }
   }
 
+  private void checkReturnValue(boolean rv, Path p, FsPermission permission) 
+  throws IOException {
+    if (!rv) {
+      throw new IOException("Failed to set permissions of path: " + p + " to " + 
+                            String.format("%04o", permission.toShort()));
+    }
+  }
+  
+  private void execSetPermission(File f, FsPermission permission) 
+  throws IOException {
+    execCommand(f, Shell.SET_PERMISSION_COMMAND,
+        String.format("%04o", permission.toShort()));
+  }
+  
   private static String execCommand(File f, String... cmd) throws IOException {
     String[] args = new String[cmd.length + 1];
     System.arraycopy(cmd, 0, args, 0, cmd.length);
