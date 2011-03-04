@@ -47,13 +47,6 @@ class KeyFieldHelper {
     int endChar = 0;
     boolean numeric;
     boolean reverse;
-    @Override
-    public String toString() {
-      return "-k" 
-             + beginFieldIdx + "." + beginChar + "," 
-             + endFieldIdx + "." + endChar 
-             + (numeric ? "n" : "") + (reverse ? "r" : "");
-    }
   }
   
   private List<KeyDescription> allKeySpecs = new ArrayList<KeyDescription>();
@@ -137,7 +130,7 @@ class KeyFieldHelper {
     if (k.endFieldIdx == 0) {
       //there is no end field specified for this keyspec. So the remaining
       //part of the key is considered in its entirety.
-      return end - 1; 
+      return end; 
     }
     if (lengthIndices[0] >= k.endFieldIdx) {
       int position = 0;
@@ -151,9 +144,9 @@ class KeyFieldHelper {
       if (position + k.endChar <= (end - start)) {
         return start + position + k.endChar - 1;
       }
-      return end - 1;
+      return end;
     }
-    return end - 1;
+    return end;
   }
   public void parseOption(String option) {
     if (option == null || option.equals("")) {
