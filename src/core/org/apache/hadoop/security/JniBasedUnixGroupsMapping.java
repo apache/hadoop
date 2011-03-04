@@ -33,7 +33,8 @@ import org.apache.hadoop.util.NativeCodeLoader;
  */
 public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
   
-  private static final Log LOG = LogFactory.getLog(ShellBasedUnixGroupsMapping.class);
+  private static final Log LOG = LogFactory.getLog(
+    JniBasedUnixGroupsMapping.class);
   
   native String[] getGroupForUser(String user);
   

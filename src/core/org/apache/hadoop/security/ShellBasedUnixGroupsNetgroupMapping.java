@@ -40,11 +40,11 @@ public class ShellBasedUnixGroupsNetgroupMapping extends ShellBasedUnixGroupsMap
   
   private static final Log LOG = LogFactory.getLog(ShellBasedUnixGroupsNetgroupMapping.class);
 
-  private static boolean netgroupToUsersMapUpdated = true;
-  private static Map<String, Set<String>> netgroupToUsersMap =
+  protected static boolean netgroupToUsersMapUpdated = true;
+  protected static Map<String, Set<String>> netgroupToUsersMap =
     new ConcurrentHashMap<String, Set<String>>();
 
-  private static Map<String, Set<String>> userToNetgroupsMap =
+  protected static Map<String, Set<String>> userToNetgroupsMap =
     new ConcurrentHashMap<String, Set<String>>();
   
   @Override
@@ -76,7 +76,7 @@ public class ShellBasedUnixGroupsNetgroupMapping extends ShellBasedUnixGroupsMap
     }
   }
 
-  private void cacheNetgroup(String group) throws IOException {
+  protected void cacheNetgroup(String group) throws IOException {
     if(netgroupToUsersMap.containsKey(group)) {
       return;
     } else {
@@ -123,7 +123,7 @@ public class ShellBasedUnixGroupsNetgroupMapping extends ShellBasedUnixGroupsMap
     }
   }
 
-  private void getNetgroups(final String user,
+  protected void getNetgroups(final String user,
       List<String> groups) throws IOException {
     if(netgroupToUsersMapUpdated) {
       netgroupToUsersMapUpdated = false; // at the beginning to avoid race
@@ -161,7 +161,9 @@ public class ShellBasedUnixGroupsNetgroupMapping extends ShellBasedUnixGroupsMap
       throws IOException {
     String result = "";
     try {
-      result = Shell.execCommand(Shell.getUsersForNetgroupCommand(netgroup));
+      // shell command does not expect '@' at the begining of the group name
+      result = Shell.execCommand(
+        Shell.getUsersForNetgroupCommand(netgroup.substring(1)));
     } catch (ExitCodeException e) {
       // if we didn't get the group - just return empty list;
       LOG.warn("error while getting users for netgroup " + netgroup, e);

@@ -93,7 +93,7 @@ libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libhadoop_la_DEPENDENCIES =
 am_libhadoop_la_OBJECTS = ZlibCompressor.lo ZlibDecompressor.lo \
-	getGroup.lo JniBasedUnixGroupsMapping.lo
+	getGroup.lo JniBasedUnixGroupsMapping.lo JniBasedUnixGroupsNetgroupMapping.lo
 libhadoop_la_OBJECTS = $(am_libhadoop_la_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I.
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -230,7 +230,8 @@ lib_LTLIBRARIES = libhadoop.la
 libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
                        src/org/apache/hadoop/io/compress/zlib/ZlibDecompressor.c \
                        src/org/apache/hadoop/security/getGroup.c \
-                       src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c
+                       src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c \
+                       src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c
 
 libhadoop_la_LDFLAGS = -version-info 1:0:0
 libhadoop_la_LIBADD = -ldl -ljvm
@@ -326,6 +327,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/JniBasedUnixGroupsMapping.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ZlibCompressor.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ZlibDecompressor.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getGroup.Plo@am__quote@
@@ -378,6 +380,13 @@ JniBasedUnixGroupsMapping.lo: src/org/apache/hadoop/security/JniBasedUnixGroupsM
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c' object='JniBasedUnixGroupsMapping.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o JniBasedUnixGroupsMapping.lo `test -f 'src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c' || echo '$(srcdir)/'`src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c
+
+JniBasedUnixGroupsNetgroupMapping.lo: src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT JniBasedUnixGroupsNetgroupMapping.lo -MD -MP -MF "$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Tpo" -c -o JniBasedUnixGroupsNetgroupMapping.lo `test -f 'src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c' || echo '$(srcdir)/'`src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Tpo" "$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Plo"; else rm -f "$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c' object='JniBasedUnixGroupsNetgroupMapping.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o JniBasedUnixGroupsNetgroupMapping.lo `test -f 'src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c' || echo '$(srcdir)/'`src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

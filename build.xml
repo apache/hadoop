@@ -562,6 +562,15 @@
   	  <class name="org.apache.hadoop.security.JniBasedUnixGroupsMapping" />
   	</javah>
 
+  	<javah
+  	  classpath="${build.classes}"
+  	  destdir="${build.native}/src/org/apache/hadoop/security"
+      force="yes"
+  	  verbose="yes"
+  	  >
+  	  <class name="org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping" />
+  	</javah>
+
 	<exec dir="${build.native}" executable="sh" failonerror="true">
 	  <env key="OS_NAME" value="${os.name}"/>
 	  <env key="OS_ARCH" value="${os.arch}"/>
