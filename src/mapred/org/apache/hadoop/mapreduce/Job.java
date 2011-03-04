@@ -47,7 +47,6 @@ public class Job extends JobContext {
 
   public Job(Configuration conf) throws IOException {
     super(conf, null);
-    jobClient = new JobClient((JobConf) getConfiguration());
   }
 
   public Job(Configuration conf, String jobName) throws IOException {
@@ -55,10 +54,19 @@ public class Job extends JobContext {
     setJobName(jobName);
   }
 
+  JobClient getJobClient() {
+    return jobClient;
+  }
+  
   private void ensureState(JobState state) throws IllegalStateException {
     if (state != this.state) {
       throw new IllegalStateException("Job in state "+ this.state + 
                                       " instead of " + state);
+    }
+
+    if (state == JobState.RUNNING && jobClient == null) {
+      throw new IllegalStateException("Job in state " + JobState.RUNNING + 
+                                      " however jobClient is not initialized!");
     }
   }
 
@@ -450,9 +458,20 @@ public class Job extends JobContext {
                               ClassNotFoundException {
     ensureState(JobState.DEFINE);
     setUseNewAPI();
+    
+    // Connect to the JobTracker and submit the job
+    connect();
     info = jobClient.submitJobInternal(conf);
     state = JobState.RUNNING;
    }
+  
+  /**
+   * Open a connection to the JobTracker
+   * @throws IOException
+   */
+  private void connect() throws IOException {
+    jobClient = new JobClient((JobConf) getConfiguration());
+  }
   
   /**
    * Submit the job to the cluster and wait for it to finish.

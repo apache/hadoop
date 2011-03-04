@@ -112,8 +112,12 @@ public class TestChild extends HadoopTestCase {
                 numMaps, numReds);
     job.setMapperClass(MyMapper.class);
     job.setReducerClass(MyReducer.class);
+    assertNull("Job.jobClient already initialized before job-submission!", 
+               job.getJobClient());
     job.waitForCompletion(true);
     assertTrue(job.isSuccessful());
+    assertNotNull("Job.jobClient not initialized after job-completion!", 
+                  job.getJobClient());
 
     // Check output directory
     FileSystem fs = FileSystem.get(conf);
