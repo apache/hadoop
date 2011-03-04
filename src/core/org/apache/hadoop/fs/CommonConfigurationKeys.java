@@ -133,10 +133,5 @@ public class CommonConfigurationKeys {
       "hadoop.security.authorization";
   public static final String  HADOOP_SECURITY_SERVICE_USER_NAME_KEY = 
       "hadoop.security.service.user.name.key";
-  /**
-   * ACL denoting the administrator ACLs for a hadoop cluster.
-   */
-  public final static String HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY =
-      "hadoop.cluster.administrators";
 }
 

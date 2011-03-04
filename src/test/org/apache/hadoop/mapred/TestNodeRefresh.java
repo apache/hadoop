@@ -53,7 +53,7 @@ public class TestNodeRefresh extends TestCase {
   private JobTracker jt = null;
   private String[] hosts = null;
   private String[] trackerHosts = null;
-  private UserGroupInformation owner, user1, user2, user3, user4;
+  private UserGroupInformation owner, user1, user2, user3, user4, user5;
   private static final Log LOG = 
     LogFactory.getLog(TestNodeRefresh.class);
   
@@ -76,6 +76,8 @@ public class TestNodeRefresh extends TestCase {
                                                        new String[] {"abc"});
       user4= UserGroupInformation.createUserForTesting("user4", 
                                                    new String[] {"supergroup"});
+      user5= UserGroupInformation.createUserForTesting("user5", 
+          new String[] {"user5"});
       conf.setBoolean("dfs.replication.considerLoad", false);
       
       // prepare hosts info
@@ -146,7 +148,7 @@ public class TestNodeRefresh extends TestCase {
 
   /**
    * Check default value of mapred.hosts.exclude. Also check if only 
-   * owner/supergroup user is allowed to this command.
+   * owner is allowed to this command.
    */
   public void testMRRefreshDefault() throws IOException {  
     // start a cluster with 2 hosts and no exclude-hosts file
@@ -176,14 +178,14 @@ public class TestNodeRefresh extends TestCase {
     assertTrue("Privileged user denied permission for refresh operation",
                success);
 
-    // refresh with super user
+    // refresh with supergroup
     success = false;
     client = getClient(conf, user4);
     try {
       client.refreshNodes();
       success = true;
     } catch (IOException ioe){}
-    assertTrue("Super user denied permission for refresh operation",
+    assertFalse("Invalid user performed privileged refresh operation",
                success);
 
     // check the cluster status and tracker size
@@ -204,13 +206,13 @@ public class TestNodeRefresh extends TestCase {
   }
 
   /**
-   * Check refresh with a specific user is set in the conf along with supergroup
+   * Check refresh with a specific user/group is set in the conf
    */
   public void testMRSuperUsers() throws IOException {  
-    // start a cluster with 1 host and specified superuser and supergroup
+    // start a cluster with 1 host and specified cluster administrators
     Configuration conf = new Configuration();
-    // set the supergroup
-    conf.set(JobConf.MR_SUPERGROUP, "abc");
+    // set the admin acl
+    conf.set(JobConf.MR_ADMINS, "user5 abc");
     startCluster(2, 1, 0, UserGroupInformation.createRemoteUser("user1"), conf);
     
     conf = mr.createJobConf(new JobConf(conf));
@@ -235,14 +237,24 @@ public class TestNodeRefresh extends TestCase {
     assertTrue("Privileged user denied permission for refresh operation",
                success);
 
-    // refresh with super user
+    // refresh with admin group
     success = false;
     client = getClient(conf, user3);
     try {
       client.refreshNodes();
       success = true;
     } catch (IOException ioe){}
-    assertTrue("Super user denied permission for refresh operation",
+    assertTrue("Admin group member denied permission for refresh operation",
+               success);
+
+    // refresh with admin user
+    success = false;
+    client = getClient(conf, user5);
+    try {
+      client.refreshNodes();
+      success = true;
+    } catch (IOException ioe){}
+    assertTrue("Admin user denied permission for refresh operation",
                success);
 
     stopCluster();
@@ -250,7 +262,7 @@ public class TestNodeRefresh extends TestCase {
 
   /**
    * Check node refresh for decommissioning. Check if an allowed host is 
-   * disallowed upon refresh. Also check if only owner/supergroup user is 
+   * disallowed upon refresh. Also check if only owner/cluster administrator is 
    * allowed to fire this command.
    */
   public void testMRRefreshDecommissioning() throws IOException {

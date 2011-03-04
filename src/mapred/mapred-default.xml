@@ -942,13 +942,15 @@
     have the authorization to satisfy either the queue-level ACL or the
     job-level ACL.
 
-    Irrespective of this ACL configuration, job-owner, superuser, members
-    of supergroup configured on JobTracker via mapred.permissions.supergroup
+    Irrespective of this ACL configuration, job-owner, the user who started the
+    cluster, cluster administrators configured on JobTracker via 
+    mapreduce.cluster.administrators
     and administrators of the queue to which this job is submitted to 
     can do all the modification operations.
 
-    By default, nobody else besides job-owner, superuser, members of supergroup
-    and queue administrators can perform modification operations on a job.
+    By default, nobody else besides job-owner, the user who started the cluster,
+    cluster administrators and queue administrators can perform modification
+    operations on a job.
   </description>
 </property>
 
@@ -974,11 +976,11 @@
     user, for e.g., JobStatus, JobProfile, list of jobs in the queue, etc.
     
     Irrespective of this ACL configuration, job-owner, the user who started the
-    cluster, members of supergroup configured on JobTracker via
-    mapred.permissions.supergroup can do all the view operations.
+    cluster, cluster administrators configured on JobTracker via
+    mapreduce.cluster.administrators can do all the view operations.
     
-    By default, nobody else besides job-owner, superuser, members of supergroup
-    can perform view operations on a job.
+    By default, nobody else besides job-owner, the user who started the
+    cluster and cluster administrators can perform view operations on a job.
   </description>
 </property>
 

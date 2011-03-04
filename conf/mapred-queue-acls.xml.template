@@ -18,9 +18,9 @@
     It is only used if authorization is enabled in Map/Reduce by setting the
     configuration property mapred.acls.enabled to true.
 
-    Irrespective of this ACL configuration, the user who started the cluster,
-    members of supergroup configured on JobTracker via
-    mapred.permissions.supergroup can submit jobs.
+    Irrespective of this ACL configuration, the user who started the cluster and
+    cluster administrators configured on JobTracker via
+    mapreduce.cluster.administrators can submit jobs.
   </description>
 </property>
 
@@ -38,9 +38,9 @@
     It is only used if authorization is enabled in Map/Reduce by setting the
     configuration property mapred.acls.enabled to true.
 
-    Irrespective of this ACL configuration, the user who started the cluster,
-    members of supergroup configured on JobTracker via
-    mapred.permissions.supergroup can do this operation.
+    Irrespective of this ACL configuration, the user who started the cluster and
+    cluster administrators configured on JobTracker via
+    mapreduce.cluster.administrators can do this operation.
   </description>
 </property>
 

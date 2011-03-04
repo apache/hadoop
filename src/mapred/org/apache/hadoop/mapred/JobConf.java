@@ -166,7 +166,7 @@ public class JobConf extends Configuration {
 
   static final String MR_ACLS_ENABLED = "mapred.acls.enabled";
 
-  static final String MR_SUPERGROUP = "mapred.permissions.supergroup";
+  static final String MR_ADMINS = "mapreduce.cluster.administrators";
 
   /**
    * Configuration key to set the java command line options for the child

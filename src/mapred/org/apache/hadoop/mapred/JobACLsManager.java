@@ -61,7 +61,7 @@ class JobACLsManager {
 	      String aclConfigured = conf.get(aclConfigName);
 	      if (aclConfigured == null) {
 	        // If ACLs are not configured at all, we grant no access to anyone. So
-	        // jobOwner and superuser/supergroup _only_ can do 'stuff'
+	        // jobOwner and cluster administrators _only_ can do 'stuff'
 	        aclConfigured = "";
 	      }
 	      acls.put(aclName, new AccessControlList(aclConfigured));

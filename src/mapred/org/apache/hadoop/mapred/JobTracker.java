@@ -2086,8 +2086,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     aclsManager = new ACLsManager(conf, new JobACLsManager(conf), queueManager);
 
     LOG.info("Starting jobtracker with owner as " +
-        getMROwner().getShortUserName() + " and supergroup as " +
-        getSuperGroup());
+        getMROwner().getShortUserName());
 
     // Create the scheduler
     Class<? extends TaskScheduler> schedulerClass
@@ -2123,7 +2122,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     int tmpInfoPort = infoSocAddr.getPort();
     this.startTime = clock.getTime();
     infoServer = new HttpServer("job", infoBindAddress, tmpInfoPort, 
-        tmpInfoPort == 0, conf);
+        tmpInfoPort == 0, conf, aclsManager.getAdminsAcl());
     infoServer.setAttribute("job.tracker", this);
     // initialize history parameters.
     final JobTracker jtFinal = this;
@@ -4540,9 +4539,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public synchronized void refreshNodes() throws IOException {
     String user = UserGroupInformation.getCurrentUser().getShortUserName();
     // check access
-    if (!isMRAdmin(UserGroupInformation.getCurrentUser())) {
+    if (!aclsManager.isMRAdmin(UserGroupInformation.getCurrentUser())) {
       AuditLogger.logFailure(user, Constants.REFRESH_NODES, 
-          getMROwner() + " " + getSuperGroup(), Constants.JOBTRACKER, 
+          aclsManager.getAdminsAcl().toString(), Constants.JOBTRACKER, 
           Constants.UNAUTHORIZED_USER);
       throw new AccessControlException(user + 
                                        " is not authorized to refresh nodes.");
@@ -4555,14 +4554,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
   UserGroupInformation getMROwner() {
     return aclsManager.getMROwner();
-  }
-
-  String getSuperGroup() {
-    return aclsManager.getSuperGroup();
-  }
-
-  boolean isMRAdmin(UserGroupInformation ugi) {
-    return aclsManager.isMRAdmin(ugi);
   }
 
   private synchronized void refreshHosts() throws IOException {

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.security.authorize;
 
-import java.util.Iterator;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -76,6 +75,10 @@ public class AccessControlList {
     return allAllowed;
   }
   
+  public void addUser(String user) {
+    users.add(user);
+  }
+
   /**
    * Get the names of users allowed for this service.
    * @return the set of user names. the set must not be modified.

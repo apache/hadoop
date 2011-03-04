@@ -119,9 +119,12 @@ public class TestQueueManager extends TestCase {
     String groupName = "group1";
     verifyJobSubmissionToDefaultQueue(conf, false, userName + "," + groupName);
     
-    // Check if member of supergroup can submit job
-    conf.set(JobConf.MR_SUPERGROUP, groupName);
+    // Check if admins can submit job
+    String user2 = "user2";
+    String group2 = "group2";
+    conf.set(JobConf.MR_ADMINS, user2 + " " + groupName);
     verifyJobSubmissionToDefaultQueue(conf, true, userName + "," + groupName);
+    verifyJobSubmissionToDefaultQueue(conf, true, user2 + "," + group2);
     
     // Check if MROwner(user who started the mapreduce cluster) can submit job
     UserGroupInformation mrOwner = UserGroupInformation.getCurrentUser();
@@ -234,9 +237,11 @@ public class TestQueueManager extends TestCase {
     // Create a fake superuser for all processes to execute within
     final UserGroupInformation ugi = createNecessaryUsers();
 
-    // create other user who will try to kill the job of ugi.
-    final UserGroupInformation otherUGI = UserGroupInformation.
+    // create other users who will try to kill the job of ugi.
+    final UserGroupInformation otherUGI1 = UserGroupInformation.
         createUserForTesting("user1", new String [] {"group1"});
+    final UserGroupInformation otherUGI2 = UserGroupInformation.
+    createUserForTesting("user2", new String [] {"group2"});
 
     ugi.doAs(new PrivilegedExceptionAction<Object>() {
 
@@ -247,11 +252,13 @@ public class TestQueueManager extends TestCase {
             "default", adminAcl), " ");
         // Run job as ugi and try to kill job as user1, who (obviously)
         // should not be able to kill the job.
-        verifyJobKill(otherUGI, conf, false);
+        verifyJobKill(otherUGI1, conf, false);
+        verifyJobKill(otherUGI2, conf, false);
 
-        // Check if member of supergroup can kill job
-        conf.set(JobConf.MR_SUPERGROUP, "group1");
-        verifyJobKill(otherUGI, conf, true);
+        // Check if cluster administrator can kill job
+        conf.set(JobConf.MR_ADMINS, "user1 group2");
+        verifyJobKill(otherUGI1, conf, true);
+        verifyJobKill(otherUGI2, conf, true);
         
         // Check if MROwner(user who started the mapreduce cluster) can kill job
         verifyJobKill(ugi, conf, true);

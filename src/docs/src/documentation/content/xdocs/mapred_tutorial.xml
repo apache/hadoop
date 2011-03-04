@@ -1524,8 +1524,8 @@
           nobody is given access in these properties.</p> 
           
           <p>However, irrespective of the ACLs configured, a job's owner,
-          the superuser and the members of an admin configured supergroup
-          (<code>mapred.permissions.supergroup</code>) always have access to
+          the superuser and cluster administrators
+          (<code>mapreduce.cluster.administrators</code>) always have access to
           view and modify a job.</p>
           
           <p> A job view ACL authorizes users against the configured 

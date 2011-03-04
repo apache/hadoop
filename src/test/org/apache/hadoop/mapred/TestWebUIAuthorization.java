@@ -35,6 +35,7 @@ import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.TaskAttempt;
 import org.apache.hadoop.mapred.QueueManager.QueueOperation;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -61,10 +62,14 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
   // mrOwner starts the cluster
   private static String mrOwner = null;
-  // member of supergroup
-  private static final String superGroupMember = "user2";
   // admin of "default" queue
   private static final String qAdmin = "user3";
+  // mrAdmin
+  private static final String mrAdminUser = "user4";
+  // Group for mrAdmins
+  private static final String mrAdminGroup = "admingroup";
+  // member of mrAdminGroup
+  private static final String mrAdminGroupMember = "user2";
   // "colleague1" is there in job-view-acls config
   private static final String viewColleague = "colleague1";
   // "colleague2" is there in job-modify-acls config
@@ -114,7 +119,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
    * Validates the given jsp/servlet against different user names who
    * can(or cannot) view the job.
    * (1) jobSubmitter can view the job
-   * (2) superGroupMember can view any job
+   * (2) mrAdmin can view any job
    * (3) mrOwner can view any job
    * (4) user mentioned in job-view-acls should be able to view the
    *     job irrespective of job-modify-acls.
@@ -127,9 +132,12 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     assertEquals("Incorrect return code for job submitter " + jobSubmitter,
         HttpURLConnection.HTTP_OK, getHttpStatusCode(url, jobSubmitter,
             method));
-    assertEquals("Incorrect return code for supergroup-member " +
-        superGroupMember, HttpURLConnection.HTTP_OK,
-        getHttpStatusCode(url, superGroupMember, method));
+    assertEquals("Incorrect return code for admin user " +
+        mrAdminUser, HttpURLConnection.HTTP_OK,
+        getHttpStatusCode(url, mrAdminUser, method));
+    assertEquals("Incorrect return code for admingroup-member " +
+        mrAdminGroupMember, HttpURLConnection.HTTP_OK,
+        getHttpStatusCode(url, mrAdminGroupMember, method));
     assertEquals("Incorrect return code for MR-owner " + mrOwner,
         HttpURLConnection.HTTP_OK, getHttpStatusCode(url, mrOwner, method));
     assertEquals("Incorrect return code for user in job-view-acl " +
@@ -149,7 +157,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
   /**
    * Validates the given jsp/servlet against different user names who
    * can(or cannot) modify the job.
-   * (1) jobSubmitter, mrOwner, qAdmin and superGroupMember can modify the job.
+   * (1) jobSubmitter, mrOwner, qAdmin and mrAdmin can modify the job.
    *     But we are not validating this in this method. Let the caller
    *     explicitly validate this, if needed.
    * (2) user mentioned in job-view-acls but not in job-modify-acls cannot
@@ -257,11 +265,32 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     }
   }
 
-  public void testAuthorizationForJobHistoryPages() throws Exception {
-    JobConf conf = new JobConf();
+  static void setupGroupsProvider() throws IOException {
+    Configuration conf = new Configuration();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         MyGroupsProvider.class.getName());
     Groups.getUserToGroupsMappingService(conf);
+    MyGroupsProvider.mapping.put(jobSubmitter, Arrays.asList("group1"));
+    MyGroupsProvider.mapping.put(viewColleague, Arrays.asList("group2"));
+    MyGroupsProvider.mapping.put(modifyColleague, Arrays.asList("group1"));
+    MyGroupsProvider.mapping.put(unauthorizedUser, Arrays.asList("evilSociety"));
+    MyGroupsProvider.mapping.put(mrAdminGroupMember, Arrays.asList(mrAdminGroup));
+    MyGroupsProvider.mapping.put(viewAndModifyColleague, Arrays.asList("group3"));
+    MyGroupsProvider.mapping.put(qAdmin, Arrays.asList("group4"));
+
+    mrOwner = UserGroupInformation.getCurrentUser().getShortUserName();
+    MyGroupsProvider.mapping.put(mrOwner, Arrays.asList(
+        new String[] { "group5", "group6" }));
+    
+    MyGroupsProvider.mapping.put(jobSubmitter1, Arrays.asList("group7"));
+    MyGroupsProvider.mapping.put(jobSubmitter2, Arrays.asList("group7"));
+    MyGroupsProvider.mapping.put(jobSubmitter3, Arrays.asList("group7"));
+
+    MyGroupsProvider.mapping.put(mrAdminUser, Arrays.asList("group8"));
+  }
+
+  public void testAuthorizationForJobHistoryPages() throws Exception {
+    setupGroupsProvider();
     Properties props = new Properties();
     props.setProperty("hadoop.http.filter.initializers",
         DummyFilterInitializer.class.getName());
@@ -278,25 +307,14 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     props.setProperty("mapred.job.tracker.history.completed.location",
         "historyDoneFolderOnHDFS");
 
-    props.setProperty(JobConf.MR_SUPERGROUP, "superGroup");
+    props.setProperty(JobConf.MR_ADMINS, mrAdminUser + " " + mrAdminGroup);
 
-    MyGroupsProvider.mapping.put(jobSubmitter, Arrays.asList("group1"));
-    MyGroupsProvider.mapping.put(viewColleague, Arrays.asList("group2"));
-    MyGroupsProvider.mapping.put(modifyColleague, Arrays.asList("group1"));
-    MyGroupsProvider.mapping.put(unauthorizedUser, Arrays.asList("evilSociety"));
-    MyGroupsProvider.mapping.put(superGroupMember, Arrays.asList("superGroup"));
-    MyGroupsProvider.mapping.put(viewAndModifyColleague, Arrays.asList("group3"));
-    MyGroupsProvider.mapping.put(qAdmin, Arrays.asList("group4"));
-
-    mrOwner = UserGroupInformation.getCurrentUser().getShortUserName();
-    MyGroupsProvider.mapping.put(mrOwner, Arrays.asList(
-        new String[] { "group5", "group6" }));
 
     startCluster(true, props);
     MiniMRCluster cluster = getMRCluster();
     int infoPort = cluster.getJobTrackerRunner().getJobTrackerInfoPort();
 
-    conf = new JobConf(cluster.createJobConf());
+    JobConf conf = new JobConf(cluster.createJobConf());
     conf.set(JobContext.JOB_ACL_VIEW_JOB, viewColleague + " group3");
 
     // Let us add group1 and group3 to modify-job-acl. So modifyColleague and
@@ -418,12 +436,12 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
   /**
    * Starts a sleep job and tries to kill the job using jobdetails.jsp as
    * (1) viewColleague (2) unauthorizedUser (3) modifyColleague
-   * (4) viewAndModifyColleague (5) mrOwner (6) superGroupMember and
+   * (4) viewAndModifyColleague (5) mrOwner (6) mrAdmin and
    * (7) jobSubmitter
    *
    * Validates the given jsp/servlet against different user names who
    * can(or cannot) do both view and modify on the job.
-   * (1) jobSubmitter, mrOwner and superGroupMember can do both view and modify
+   * (1) jobSubmitter, mrOwner and mrAdmin can do both view and modify
    *     on the job. But we are not validating this in this method. Let the
    *     caller explicitly validate this, if needed.
    * (2) user mentioned in job-view-acls and job-modify-acls can do this
@@ -478,14 +496,16 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
       }
     }
 
-    // check if jobSubmitter, mrOwner superGroupMember can do
+    // check if jobSubmitter, mrOwner and mrAdmin can do
     // killJob using jobdetails.jsp url
     confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
                                        jobSubmitter);
     confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
                                        mrOwner);
     confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
-                                       superGroupMember);
+                                       mrAdminGroupMember);
+    confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
+        mrAdminUser);
   }
 
   /**
@@ -555,7 +575,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     conf.set(JobContext.JOB_ACL_VIEW_JOB, " ");
     
     // Let us start 4 jobs as 4 different users(none of these 4 users is
-    // mrOwner and none of these users is a member of superGroup and none of
+    // mrOwner and none of these users is a member of mrAdmin and none of
     // these 4 users is a queue admin for the default queue). So only
     // based on the config JobContext.JOB_ACL_MODIFY_JOB being set here and the
     // job-submitter, killJob on each of the jobs will be succeeded.
@@ -620,10 +640,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
    */
   @Test
   public void testWebUIAuthorization() throws Exception {
-    JobConf conf = new JobConf();
-    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
-        MyGroupsProvider.class.getName());
-    Groups.getUserToGroupsMappingService(conf);
+    setupGroupsProvider();
     Properties props = new Properties();
     props.setProperty("hadoop.http.filter.initializers",
         DummyFilterInitializer.class.getName());
@@ -641,30 +658,13 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     props.setProperty("mapred.tasktracker.map.tasks.maximum", "6");
 
     props.setProperty(JSPUtil.PRIVATE_ACTIONS_KEY, "true");
-    props.setProperty(JobConf.MR_SUPERGROUP, "superGroup");
-
-    MyGroupsProvider.mapping.put(jobSubmitter, Arrays.asList("group1"));
-    MyGroupsProvider.mapping.put(viewColleague, Arrays.asList("group2"));
-    MyGroupsProvider.mapping.put(modifyColleague, Arrays.asList("group1"));
-    MyGroupsProvider.mapping.put(unauthorizedUser, Arrays.asList("evilSociety"));
-    MyGroupsProvider.mapping.put(superGroupMember, Arrays.asList("superGroup"));
-    MyGroupsProvider.mapping.put(viewAndModifyColleague, Arrays.asList("group3"));
-    MyGroupsProvider.mapping.put(qAdmin, Arrays.asList("group4"));
-
-    mrOwner = UserGroupInformation.getCurrentUser().getShortUserName();
-    MyGroupsProvider.mapping.put(mrOwner, Arrays.asList(
-        new String[] { "group5", "group6" }));
-    
-    MyGroupsProvider.mapping.put(jobSubmitter1, Arrays.asList("group7"));
-    MyGroupsProvider.mapping.put(jobSubmitter2, Arrays.asList("group7"));
-    MyGroupsProvider.mapping.put(jobSubmitter3, Arrays.asList("group7"));
-
+    props.setProperty(JobConf.MR_ADMINS, mrAdminUser + " " + mrAdminGroup);
     startCluster(true, props);
     MiniMRCluster cluster = getMRCluster();
     int infoPort = cluster.getJobTrackerRunner().getJobTrackerInfoPort();
 
     JobConf clusterConf = cluster.createJobConf();
-    conf = new JobConf(clusterConf);
+    JobConf conf = new JobConf(clusterConf);
     conf.set(JobContext.JOB_ACL_VIEW_JOB, viewColleague + " group3");
 
     // Let us add group1 and group3 to modify-job-acl. So modifyColleague and
@@ -707,18 +707,61 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     validateJobDetailsJSPKillJob(cluster, clusterConf, jtURL);
 
     // validate killJob of jobtracker.jsp as users viewAndModifyColleague,
-    // jobSubmitter, mrOwner and superGroupMember
+    // jobSubmitter, mrOwner and mrAdmin
     confirmJobTrackerJSPKillJobAsUser(cluster, conf, jtURL,
         viewAndModifyColleague);
     confirmJobTrackerJSPKillJobAsUser(cluster, conf, jtURL, jobSubmitter);
     confirmJobTrackerJSPKillJobAsUser(cluster, conf, jtURL, mrOwner);
-    confirmJobTrackerJSPKillJobAsUser(cluster, conf, jtURL, superGroupMember);
+    confirmJobTrackerJSPKillJobAsUser(cluster, conf, jtURL, mrAdminUser);
+    confirmJobTrackerJSPKillJobAsUser(cluster, conf, jtURL, mrAdminGroupMember);
     confirmJobTrackerJSPKillJobAsUser(cluster, conf, jtURL, qAdmin);
 
     // validate killing of multiple jobs using jobtracker jsp and check
     // if all the jobs which can be killed by user are actually the ones that
     // got killed
     validateKillMultipleJobs(cluster, conf, jtURL);
+  }
+
+  public void testWebUIAuthorizationForCommonServlets() throws Exception {
+    setupGroupsProvider();
+    Properties props = new Properties();
+    props.setProperty("hadoop.http.filter.initializers",
+        DummyFilterInitializer.class.getName());
+    props.setProperty(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, "true");
+    props.setProperty(JobConf.MR_ADMINS, mrAdminUser + " " + mrAdminGroup);
+
+    startCluster(true, props);
+    validateCommonServlets(getMRCluster());
+    stopCluster();
+  }
+
+  private void validateCommonServlets(MiniMRCluster cluster) throws IOException {
+    int infoPort = cluster.getJobTrackerRunner().getJobTrackerInfoPort();
+    String jtURL = "http://localhost:" + infoPort;
+    for (String servlet : new String[] { "logs", "stacks", "logLevel" }) {
+      String url = jtURL + "/" + servlet;
+      checkAccessToCommonServlet(url);
+    }
+    // validate access to common servlets for TaskTracker.
+    String ttURL = "http://localhost:"
+        + cluster.getTaskTrackerRunner(0).getTaskTracker().getHttpPort();
+    for (String servlet : new String[] { "logs", "stacks", "logLevel" }) {
+      String url = ttURL + "/" + servlet;
+      checkAccessToCommonServlet(url);
+    }
+  }
+
+  private void checkAccessToCommonServlet(String url) throws IOException {
+    url = url + "?a=b";
+    assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(url, mrAdminUser,
+        "GET"));
+    assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(url,
+        mrAdminGroupMember, "GET"));
+    assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(url,
+        mrOwner, "GET"));
+    // no access for any other user
+    assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, getHttpStatusCode(url,
+        jobSubmitter, "GET"));
   }
 
   // validate killJob of jobtracker.jsp
@@ -761,13 +804,15 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
         "&changeJobPriority=true&setJobPriority="+"HIGH"+"&jobCheckBox=" +
         jobid.toString();
     validateModifyJob(jobTrackerJSPSetJobPriorityAction, "GET");
-    // jobSubmitter, mrOwner, qAdmin and superGroupMember are not validated for
+    // jobSubmitter, mrOwner, qAdmin and mrAdmin are not validated for
     // job-modify permission in validateModifyJob(). So let us do it
     // explicitly here
     assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(
         jobTrackerJSPSetJobPriorityAction, jobSubmitter, "GET"));
     assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(
-        jobTrackerJSPSetJobPriorityAction, superGroupMember, "GET"));
+        jobTrackerJSPSetJobPriorityAction, mrAdminUser, "GET"));
+    assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(
+        jobTrackerJSPSetJobPriorityAction, mrAdminGroupMember, "GET"));
     assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(
         jobTrackerJSPSetJobPriorityAction, qAdmin, "GET"));
     assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(
@@ -848,6 +893,8 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     assertEquals(HttpURLConnection.HTTP_OK,
         getHttpStatusCode(jobTrackerJSP, qAdmin, "GET"));
     assertEquals(HttpURLConnection.HTTP_OK,
-        getHttpStatusCode(jobTrackerJSP, superGroupMember, "GET"));
+        getHttpStatusCode(jobTrackerJSP, mrAdminUser, "GET"));
+    assertEquals(HttpURLConnection.HTTP_OK,
+        getHttpStatusCode(jobTrackerJSP, mrAdminGroupMember, "GET"));
   }
 }

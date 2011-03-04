@@ -50,6 +50,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -276,9 +277,6 @@ public class TestHttpServer {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
         true);
-    conf.set(
-        CommonConfigurationKeys.HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY,
-        "userA,userB groupC,groupD");
     conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
         DummyFilterInitializer.class.getName());
 
@@ -292,7 +290,8 @@ public class TestHttpServer {
     MyGroupsProvider.mapping.put("userD", Arrays.asList("groupD"));
     MyGroupsProvider.mapping.put("userE", Arrays.asList("groupE"));
 
-    HttpServer myServer = new HttpServer("test", "0.0.0.0", 0, true, conf);
+    HttpServer myServer = new HttpServer("test", "0.0.0.0", 0, true, conf,
+        new AccessControlList("userA,userB groupC,groupD"));
     myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
     myServer.start();
     int port = myServer.getPort();

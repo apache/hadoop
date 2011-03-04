@@ -113,7 +113,7 @@ public class TaskLogServlet extends HttpServlet {
   /**
    * Validates if the given user has job view permissions for this job.
    * conf contains jobOwner and job-view-ACLs.
-   * We allow jobOwner, superUser(i.e. mrOwner) and members of superGroup and
+   * We allow jobOwner, superUser(i.e. mrOwner) and cluster administrators and
    * users and groups specified in configuration using
    * mapreduce.job.acl-view-job to view job.
    */

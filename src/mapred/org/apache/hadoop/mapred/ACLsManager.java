@@ -38,8 +38,7 @@ class ACLsManager {
 
   // MROwner(user who started this mapreduce cluster)'s ugi
   private final UserGroupInformation mrOwner;
-  // members of supergroup are mapreduce cluster administrators
-  private final String superGroup;
+  private final AccessControlList adminAcl;
   
   private final JobACLsManager jobACLsManager;
   private final QueueManager queueManager;
@@ -55,9 +54,10 @@ class ACLsManager {
       mrOwner = UserGroupInformation.getCurrentUser();
     }
 
-    superGroup = conf.get(JobConf.MR_SUPERGROUP, "supergroup");
-    
     aclsEnabled = conf.getBoolean(JobConf.MR_ACLS_ENABLED, false);
+
+    adminAcl = new AccessControlList(conf.get(JobConf.MR_ADMINS, " "));
+    adminAcl.addUser(mrOwner.getShortUserName());
 
     this.jobACLsManager = jobACLsManager;
 
@@ -68,8 +68,8 @@ class ACLsManager {
     return mrOwner;
   }
 
-  String getSuperGroup() {
-    return superGroup;
+  AccessControlList getAdminsAcl() {
+    return adminAcl;
   }
 
   JobACLsManager getJobACLsManager() {
@@ -78,18 +78,12 @@ class ACLsManager {
 
   /**
    * Is the calling user an admin for the mapreduce cluster ?
-   * i.e. either cluster owner or member of mapred.permissions.supergroup.
+   * i.e. either cluster owner or member of mapreduce.cluster.administrators
    * @return true, if user is an admin
    */
   boolean isMRAdmin(UserGroupInformation callerUGI) {
-    if (mrOwner.getShortUserName().equals(callerUGI.getShortUserName())) {
+    if (adminAcl.isUserAllowed(callerUGI)) {
       return true;
-    }
-    String[] groups = callerUGI.getGroupNames();
-    for(int i=0; i < groups.length; ++i) {
-      if (groups[i].equals(superGroup)) {
-        return true;
-      }
     }
     return false;
   }
@@ -100,10 +94,10 @@ class ACLsManager {
    * <ul>
    * <li>If ACLs are disabled, allow all users.</li>
    * <li>If the operation is not a job operation(for eg. submit-job-to-queue),
-   *  then allow only (a) clusterOwner(who started the cluster), (b) members of
-   *  supergroup and (c) members of queue admins acl for the queue.</li>
+   *  then allow only (a) clusterOwner(who started the cluster), (b) cluster 
+   *  administrators (c) members of queue admins acl for the queue.</li>
    * <li>If the operation is a job operation, then allow only (a) jobOwner,
-   * (b) clusterOwner(who started the cluster), (c) members of supergroup,
+   * (b) clusterOwner(who started the cluster), (c) cluster administrators,
    * (d) members of queue admins acl for the queue and (e) members of job
    * acl for the jobOperation</li>
    * </ul>
@@ -134,7 +128,7 @@ class ACLsManager {
    * <ul>
    * <li>If ACLs are disabled, allow all users.</li>
    * <li>Otherwise, allow only (a) jobOwner,
-   * (b) clusterOwner(who started the cluster), (c) members of supergroup,
+   * (b) clusterOwner(who started the cluster), (c) cluster administrators,
    * (d) members of job acl for the jobOperation</li>
    * </ul>
    */
@@ -154,7 +148,7 @@ class ACLsManager {
    * <ul>
    * <li>If ACLs are disabled, allow all users.</li>
    * <li>Otherwise, allow only (a) jobOwner,
-   * (b) clusterOwner(who started the cluster), (c) members of supergroup,
+   * (b) clusterOwner(who started the cluster), (c) cluster administrators,
    * (d) members of job acl for the jobOperation</li>
    * </ul>
    */
@@ -171,10 +165,10 @@ class ACLsManager {
    * <ul>
    * <li>If ACLs are disabled, allow all users.</li>
    * <li>If the operation is not a job operation(for eg. submit-job-to-queue),
-   *  then allow only (a) clusterOwner(who started the cluster), (b) members of
-   *  supergroup and (c) members of queue admins acl for the queue.</li>
+   *  then allow only (a) clusterOwner(who started the cluster), (b)cluster 
+   *  administrators and (c) members of queue admins acl for the queue.</li>
    * <li>If the operation is a job operation, then allow only (a) jobOwner,
-   * (b) clusterOwner(who started the cluster), (c) members of supergroup,
+   * (b) clusterOwner(who started the cluster), (c) cluster administrators,
    * (d) members of queue admins acl for the queue and (e) members of job
    * acl for the jobOperation</li>
    * </ul>
