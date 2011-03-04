@@ -306,7 +306,24 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.policy.file=$HADOOP_POLICYFILE"
 # Check to see if we should start a secure datanode
 if [ "$COMMAND" = "datanode" ]; then
   if [[ $EUID -eq 0 ]]; then
-    exec "jsvc" -outfile /dev/stdout -errfile /dev/stderr -cp "$CLASSPATH" -nodetach -user hdfs -cp "$CLASSPATH" $JAVA_HEAP_MAX $HADOOP_OPTS org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+    if [ "$HADOOP_SECURE_DN_USER" = "" ]; then
+      HADOOP_SECURE_DN_PID="hdfs"
+    fi
+
+    if [ "$HADOOP_PID_DIR" = "" ]; then
+      HADOOP_SECURE_DN_PID="/tmp/hadoop_secure_dn.pid"
+    else
+      HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
+    fi
+
+    exec "jsvc" -outfile "$HADOOP_LOG_DIR/jsvc.out" \
+                -errfile "$HADOOP_LOG_DIR/jsvc.err" \
+                -pidfile "$HADOOP_SECURE_DN_PID" \
+                -nodetach \
+                -user "$HADOOP_SECURE_DN_USER" \
+                -cp "$CLASSPATH" \
+                $JAVA_HEAP_MAX $HADOOP_OPTS \
+                org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
   fi
 else
   # run it
