@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.security.token;
+package org.apache.hadoop.security.token.delegation;
+
+//import org.apache.hadoop.classification.InterfaceAudience;
+//import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
+//import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -27,8 +31,9 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
-public class DelegationTokenIdentifier extends TokenIdentifier {
-  static final Text KIND_NAME = new Text("HDFS_DELEGATION_TOKEN");
+//@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+public abstract class AbstractDelegationTokenIdentifier 
+extends TokenIdentifier {
 
   private Text owner;
   private Text renewer;
@@ -38,11 +43,11 @@ public class DelegationTokenIdentifier extends TokenIdentifier {
   private int sequenceNumber;
   private int masterKeyId = 0;
   
-  public DelegationTokenIdentifier() {
+  public AbstractDelegationTokenIdentifier() {
     this(new Text(), new Text(), new Text());
   }
   
-  public DelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
+  public AbstractDelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
     this.owner = owner;
     this.renewer = renewer;
     if (realUser == null) {
@@ -55,9 +60,7 @@ public class DelegationTokenIdentifier extends TokenIdentifier {
   }
 
   @Override
-  public Text getKind() {
-    return KIND_NAME;
-  }
+  public abstract Text getKind();
   
   /**
    * Get the username encoded in the token identifier
@@ -123,8 +126,8 @@ public class DelegationTokenIdentifier extends TokenIdentifier {
     if (obj == this) {
       return true;
     }
-    if (obj instanceof DelegationTokenIdentifier) {
-      DelegationTokenIdentifier that = (DelegationTokenIdentifier) obj;
+    if (obj instanceof AbstractDelegationTokenIdentifier) {
+      AbstractDelegationTokenIdentifier that = (AbstractDelegationTokenIdentifier) obj;
       return this.sequenceNumber == that.sequenceNumber 
           && this.issueDate == that.issueDate 
           && this.maxDate == that.maxDate

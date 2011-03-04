@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.hdfs.security;
 
 
 
@@ -29,14 +29,15 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
-import org.apache.hadoop.hdfs.security.token.DelegationTokenIdentifier;
-import org.apache.hadoop.hdfs.security.token.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +45,6 @@ import org.mortbay.log.Log;
 
 public class TestDelegationToken {
   private MiniDFSCluster cluster;
-  FSNamesystem nameSystem;
   Configuration config;
   final private static String GROUP1_NAME = "group1";
   final private static String GROUP2_NAME = "group2";
@@ -54,12 +54,11 @@ public class TestDelegationToken {
   @Before
   public void setUp() throws Exception {
     config = new Configuration();
-    config.setLong("dfs.namenode.delegation.token.max-lifetime", 10000);
-    config.setLong("dfs.namenode.delegation.token.renew-interval", 5000);
+    config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
+    config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 5000);
     FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
     cluster = new MiniDFSCluster(0, config, 1, true, true, true,  null, null, null, null);
     cluster.waitActive();
-    nameSystem = cluster.getNameNode().namesystem;
   }
 
   @After
@@ -71,8 +70,8 @@ public class TestDelegationToken {
 
   private Token<DelegationTokenIdentifier> generateDelegationToken(
       String owner, String renewer) {
-    DelegationTokenSecretManager dtSecretManager = 
-        nameSystem.getDelegationTokenSecretManager();
+    DelegationTokenSecretManager dtSecretManager = cluster.getNameNode()
+        .getNamesystem().getDelegationTokenSecretManager();
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(new Text(
         owner), new Text(renewer), null);
     return new Token<DelegationTokenIdentifier>(dtId, dtSecretManager);
@@ -80,8 +79,8 @@ public class TestDelegationToken {
   
   @Test
   public void testDelegationTokenSecretManager() throws Exception {
-    DelegationTokenSecretManager dtSecretManager = 
-        nameSystem.getDelegationTokenSecretManager();
+    DelegationTokenSecretManager dtSecretManager = cluster.getNameNode()
+        .getNamesystem().getDelegationTokenSecretManager();
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
     // Fake renewer should not be able to renew
@@ -110,8 +109,8 @@ public class TestDelegationToken {
   
   @Test 
   public void testCancelDelegationToken() throws Exception {
-    DelegationTokenSecretManager dtSecretManager = 
-        nameSystem.getDelegationTokenSecretManager();
+    DelegationTokenSecretManager dtSecretManager = cluster.getNameNode()
+        .getNamesystem().getDelegationTokenSecretManager();
     Token<DelegationTokenIdentifier> token = generateDelegationToken(
         "SomeUser", "JobTracker");
     //Fake renewer should not be able to renew
@@ -122,7 +121,8 @@ public class TestDelegationToken {
   
   @Test
   public void testDelegationTokenDFSApi() throws Exception {
-    DelegationTokenSecretManager dtSecretManager = nameSystem.getDelegationTokenSecretManager();
+    DelegationTokenSecretManager dtSecretManager = cluster.getNameNode()
+        .getNamesystem().getDelegationTokenSecretManager();
     DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
     Token<DelegationTokenIdentifier> token = dfs.getDelegationToken(new Text("JobTracker"));
     DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();

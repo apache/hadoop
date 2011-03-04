@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.security.token;
+package org.apache.hadoop.security.token.delegation;
 
+//import org.apache.hadoop.classification.InterfaceAudience;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -26,10 +27,13 @@ import javax.crypto.SecretKey;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+//import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
+//import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
 
 /**
  * Key used for generating and verifying delegation tokens
  */
+//@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
 public class DelegationKey implements Writable {
   private int keyId;
   private long expiryDate;
@@ -79,6 +83,6 @@ public class DelegationKey implements Writable {
     int len = WritableUtils.readVInt(in);
     byte[] keyBytes = new byte[len];
     in.readFully(keyBytes);
-    key = DelegationTokenSecretManager.createSecretKey(keyBytes);
+    key = AbstractDelegationTokenSecretManager.createSecretKey(keyBytes);
   }
 }

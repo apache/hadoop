@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.security.token;
+package org.apache.hadoop.security.token.delegation;
+
+//import org.apache.hadoop.classification.InterfaceAudience;
+//import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.HDFS;
+//import static org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate.Project.MAPREDUCE;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -30,23 +34,25 @@ import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 
-public class DelegationTokenSecretManager 
-   extends SecretManager<DelegationTokenIdentifier> {
+//@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
+public abstract 
+class AbstractDelegationTokenSecretManager<TokenIdent 
+extends AbstractDelegationTokenIdentifier> 
+   extends SecretManager<TokenIdent> {
   private static final Log LOG = LogFactory
-      .getLog(DelegationTokenSecretManager.class);
+      .getLog(AbstractDelegationTokenSecretManager.class);
 
   /** 
    * Cache of currently valid tokens, mapping from DelegationTokenIdentifier 
    * to DelegationTokenInformation. Protected by its own lock.
    */
-  private final Map<DelegationTokenIdentifier, DelegationTokenInformation> currentTokens 
-      = new HashMap<DelegationTokenIdentifier, DelegationTokenInformation>();
+  private final Map<TokenIdent, DelegationTokenInformation> currentTokens 
+      = new HashMap<TokenIdent, DelegationTokenInformation>();
   
   /**
    * Sequence number to create DelegationTokenIdentifier
@@ -68,9 +74,8 @@ public class DelegationTokenSecretManager
   private long tokenRenewInterval;
   private Thread tokenRemoverThread;
   private volatile boolean running;
-  
 
-  public DelegationTokenSecretManager(long delegationKeyUpdateInterval,
+  public AbstractDelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
       long delegationTokenRemoverScanInterval) {
     this.keyUpdateInterval = delegationKeyUpdateInterval;
@@ -78,7 +83,7 @@ public class DelegationTokenSecretManager
     this.tokenRenewInterval = delegationTokenRenewInterval;
     this.tokenRemoverScanInterval = delegationTokenRemoverScanInterval;
   }
-  
+
   /** should be called before this object is used */
   public synchronized void startThreads() throws IOException {
     updateCurrentKey();
@@ -140,7 +145,7 @@ public class DelegationTokenSecretManager
   }
   
   @Override
-  protected byte[] createPassword(DelegationTokenIdentifier identifier) {
+  protected byte[] createPassword(TokenIdent identifier) {
     int sequenceNum;
     int id;
     DelegationKey key;
@@ -163,7 +168,7 @@ public class DelegationTokenSecretManager
   }
 
   @Override
-  public byte[] retrievePassword(DelegationTokenIdentifier identifier
+  public byte[] retrievePassword(TokenIdent identifier
                                  ) throws InvalidToken {
     DelegationTokenInformation info = null;
     synchronized (currentTokens) {
@@ -183,12 +188,12 @@ public class DelegationTokenSecretManager
    * Renew a delegation token. Canceled tokens are not renewed. Return true if
    * the token is successfully renewed; false otherwise.
    */
-  public Boolean renewToken(Token<DelegationTokenIdentifier> token,
+  public Boolean renewToken(Token<TokenIdent> token,
       String renewer) throws InvalidToken, IOException {
     long now = System.currentTimeMillis();
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
-    DelegationTokenIdentifier id = new DelegationTokenIdentifier();
+    TokenIdent id = createIdentifier();
     id.readFields(in);
     synchronized (currentTokens) {
       if (currentTokens.get(id) == null) {
@@ -232,11 +237,11 @@ public class DelegationTokenSecretManager
    * Cancel a token by removing it from cache. Return true if 
    * token exists in cache; false otherwise.
    */
-  public Boolean cancelToken(Token<DelegationTokenIdentifier> token,
+  public Boolean cancelToken(Token<TokenIdent> token,
       String canceller) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
-    DelegationTokenIdentifier id = new DelegationTokenIdentifier();
+    TokenIdent id = createIdentifier();
     id.readFields(in);
     if (id.getRenewer() == null) {
       LOG.warn("Renewer is null: Invalid Identifier");
@@ -267,16 +272,6 @@ public class DelegationTokenSecretManager
   public static SecretKey createSecretKey(byte[] key) {
     return SecretManager.createSecretKey(key);
   }
-  
-  /**
-   * Create an empty delegation token identifier
-   * @return a newly created empty delegation token identifier
-   */
-  @Override
-  public DelegationTokenIdentifier createIdentifier() {
-    return new DelegationTokenIdentifier();
-  }
-
 
   /** Utility class to encapsulate a token's renew date and password. */
   private static class DelegationTokenInformation {
