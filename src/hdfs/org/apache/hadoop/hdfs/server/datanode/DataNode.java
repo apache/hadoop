@@ -1471,7 +1471,7 @@ public class DataNode extends Configured
       try {
         DiskChecker.checkDir(localFS, new Path(dir), dataDirPermission);
         dirs.add(new File(dir));
-      } catch(DiskErrorException e) {
+      } catch(IOException e) {
         LOG.warn("Invalid directory in " + DATA_DIR_KEY +  ": " + 
                  e.getMessage());
       }
