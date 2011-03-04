@@ -36,6 +36,7 @@ import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.test.system.TaskInfo;
+import org.apache.hadoop.mapred.UtilsForTests;
 import static org.junit.Assert.*;
 
 /**
@@ -325,5 +326,50 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
           "when job is completed" , st);
     }
     LOG.info("Verified the job history for the jobId : " + jobId);
+  }
+
+  /**
+   * It uses to check whether job is started or not.
+   * @param id job id
+   * @return true if job is running.
+   * @throws IOException if an I/O error occurs.
+   */
+  public boolean isJobStarted(JobID id) throws IOException {
+    JobInfo jInfo = getJobInfo(id);
+    int counter = 0;
+    while (counter < 60) {
+      if (jInfo.getStatus().getRunState() == JobStatus.RUNNING) {
+        break;
+      } else {
+        UtilsForTests.waitFor(1000);
+        jInfo = getJobInfo(jInfo.getID());
+        Assert.assertNotNull("Job information is null",jInfo);
+      }
+      counter++;
+    }
+    return (counter != 60)? true : false ;
+  }
+
+  /**
+   * It uses to check whether task is started or not.
+   * @param taskInfo task information
+   * @return true if task is running.
+   * @throws IOException if an I/O error occurs.
+   */
+  public boolean isTaskStarted(TaskInfo taskInfo) throws IOException { 
+    JTProtocol wovenClient = getProxy();
+    int counter = 0;
+    while (counter < 60) {
+      if (taskInfo.getTaskStatus().length > 0) {
+        if (taskInfo.getTaskStatus()[0].getRunState() == 
+            TaskStatus.State.RUNNING) {
+          break;
+        }
+      }
+      UtilsForTests.waitFor(1000);
+      taskInfo = wovenClient.getTaskInfo(taskInfo.getTaskID());
+      counter++;
+    }
+    return (counter != 60)? true : false;
   }
 }

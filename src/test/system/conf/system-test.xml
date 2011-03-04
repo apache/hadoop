@@ -68,6 +68,14 @@ neutral at the forward-port stage -->
   the clusters is pointed out this directory. 
   </description>
 </property>
+<property>
+  <name>test.system.hdrc.hadoop.local.confdir</name>
+  <value>$(TO_DO_GLOBAL_TMP_DIR)/localconf</value>
+  <description>
+  It's a local conf directory where the new config file is store temporarily
+  before pushing into new config folder location in the cluster.
+  </description>
+</property>
 
 <!-- Mandatory keys to be set for the multi user support to be enabled.  -->
 
