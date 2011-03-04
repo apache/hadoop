@@ -171,6 +171,12 @@ public abstract class TaskController implements Configurable {
         controller.deleteAsUser(user, subDir);
       }
     }
+
+    @Override
+    public String toString() {
+      return (isLog ? "log(" : "dir(") +
+        user + "," + subDir + ")";
+    }
   }
   
    /**

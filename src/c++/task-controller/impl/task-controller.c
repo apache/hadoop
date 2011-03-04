@@ -903,8 +903,8 @@ static int delete_path(const char *full_path,
     // check to make sure the directory exists
     if (access(full_path, F_OK) != 0) {
       if (errno == ENOENT) {
-	free(paths[0]);
-	return 0;
+        free(paths[0]);
+        return 0;
       }
     }
     FTS* tree = fts_open(paths, FTS_PHYSICAL | FTS_XDEV, NULL);
@@ -922,14 +922,14 @@ static int delete_path(const char *full_path,
       switch (entry->fts_info) {
 
       case FTS_DP:        // A directory being visited in post-order
-	if (!needs_tt_user ||
+        if (!needs_tt_user ||
             strcmp(entry->fts_path, full_path) != 0) {
-	  if (rmdir(entry->fts_accpath) != 0) {
-	    fprintf(LOGFILE, "Couldn't delete directory %s - %s\n", 
-		    entry->fts_path, strerror(errno));
-	    exit_code = -1;
-	  }
-	}
+          if (rmdir(entry->fts_accpath) != 0) {
+            fprintf(LOGFILE, "Couldn't delete directory %s - %s\n", 
+                    entry->fts_path, strerror(errno));
+            exit_code = -1;
+          }
+        }
         break;
 
       case FTS_F:         // A regular file
@@ -939,7 +939,7 @@ static int delete_path(const char *full_path,
         if (unlink(entry->fts_accpath) != 0) {
           fprintf(LOGFILE, "Couldn't delete file %s - %s\n", entry->fts_path,
                   strerror(errno));
-	  exit_code = -1;
+          exit_code = -1;
         }
         break;
 
@@ -957,13 +957,13 @@ static int delete_path(const char *full_path,
             fprintf(LOGFILE, "Error chmoding %s - %s, continuing\n", 
                     entry->fts_path, strerror(errno));
           }
-	}
+        }
         break;
 
       case FTS_NS:        // A file with no stat(2) information
         // usually a root directory that doesn't exist
         fprintf(LOGFILE, "Directory not found %s\n", entry->fts_path);
-	break;
+        break;
 
       case FTS_DC:        // A directory that causes a cycle
       case FTS_DOT:       // A dot directory

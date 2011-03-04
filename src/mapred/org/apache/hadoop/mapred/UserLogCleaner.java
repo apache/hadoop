@@ -61,7 +61,7 @@ public class UserLogCleaner extends Thread {
     this.userLogManager = userLogManager;
     threadSleepTime = conf.getLong(USERLOGCLEANUP_SLEEPTIME,
         DEFAULT_THREAD_SLEEP_TIME);
-    cleanupQueue = new CleanupQueue();
+    cleanupQueue = CleanupQueue.getInstance();
     localFs = FileSystem.getLocal(conf);
     setClock(new Clock());
     setDaemon(true);

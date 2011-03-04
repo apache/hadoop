@@ -281,6 +281,9 @@ class LinuxTaskController extends TaskController {
                    Integer.toString(Commands.DELETE_AS_USER.getValue()),
                    subDir};
     ShellCommandExecutor shExec = new ShellCommandExecutor(command);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("deleteAsUser: " + Arrays.toString(command));
+    }
     shExec.execute();
   }
 
@@ -292,6 +295,9 @@ class LinuxTaskController extends TaskController {
                    Integer.toString(Commands.DELETE_LOG_AS_USER.getValue()),
                    subDir};
     ShellCommandExecutor shExec = new ShellCommandExecutor(command);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("deleteLogAsUser: " + Arrays.toString(command));
+    }
     shExec.execute();
   }
 
@@ -305,6 +311,9 @@ class LinuxTaskController extends TaskController {
                    Integer.toString(taskPid),
                    Integer.toString(signal.getValue())};
     ShellCommandExecutor shExec = new ShellCommandExecutor(command);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("signalTask: " + Arrays.toString(command));
+    }
     try {
       shExec.execute();
     } catch (ExitCodeException e) {

@@ -32,7 +32,11 @@ class CleanupQueue {
   public static final Log LOG =
     LogFactory.getLog(CleanupQueue.class);
 
-  private static PathCleanupThread cleanupThread;
+  private static final PathCleanupThread cleanupThread =
+    new PathCleanupThread();
+  private static final CleanupQueue inst = new CleanupQueue();
+
+  public static CleanupQueue getInstance() { return inst; }
 
   /**
    * Create a singleton path-clean-up queue. It can be used to delete
@@ -42,20 +46,14 @@ class CleanupQueue {
    * {@link CleanupQueue#addToQueue(PathDeletionContext...)} to add paths for
    * deletion.
    */
-  public CleanupQueue() {
-    synchronized (PathCleanupThread.class) {
-      if (cleanupThread == null) {
-        cleanupThread = new PathCleanupThread();
-      }
-    }
-  }
+  private CleanupQueue() { }
   
   /**
    * Contains info related to the path of the file/dir to be deleted
    */
   static class PathDeletionContext {
-    Path fullPath;// full path of file or dir
-    Configuration conf;
+    final Path fullPath;// full path of file or dir
+    final Configuration conf;
 
     public PathDeletionContext(Path fullPath, Configuration conf) {
       this.fullPath = fullPath;
@@ -70,14 +68,21 @@ class CleanupQueue {
      * Deletes the path (and its subdirectories recursively)
      */
     protected void deletePath() throws IOException {
-      fullPath.getFileSystem(conf).delete(fullPath, true);
+      final Path p = getPathForCleanup();
+      p.getFileSystem(conf).delete(p, true);
+    }
+
+    @Override
+    public String toString() {
+      final Path p = getPathForCleanup();
+      return (null == p) ? "undefined" : p.toString();
     }
   }
 
   /**
    * Adds the paths to the queue of paths to be deleted by cleanupThread.
    */
-  void addToQueue(PathDeletionContext... contexts) {
+  public void addToQueue(PathDeletionContext... contexts) {
     cleanupThread.addToQueue(contexts);
   }
 
@@ -102,6 +107,7 @@ class CleanupQueue {
       for (PathDeletionContext context : contexts) {
         try {
           queue.put(context);
+          LOG.debug("Added " + context + " to queue");
         } catch(InterruptedException ie) {}
       }
     }
@@ -117,13 +123,13 @@ class CleanupQueue {
           context.deletePath();
           // delete the path.
           if (LOG.isDebugEnabled()) {
-            LOG.debug("DELETED " + context.fullPath);
+            LOG.debug("DELETED " + context);
           }
         } catch (InterruptedException t) {
-          LOG.warn("Interrupted deletion of " + context.fullPath);
+          LOG.warn("Interrupted deletion of " + context);
           return;
-        } catch (Exception e) {
-          LOG.warn("Error deleting path " + context.fullPath + ": " + e);
+        } catch (Throwable e) {
+          LOG.warn("Error deleting path " + context, e);
         } 
       }
     }

@@ -1285,7 +1285,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   private void startCleanupThreads() throws IOException {
     taskCleanupThread.setDaemon(true);
     taskCleanupThread.start();
-    directoryCleanupThread = new CleanupQueue();
+    directoryCleanupThread = CleanupQueue.getInstance();
   }
 
   // only used by tests
