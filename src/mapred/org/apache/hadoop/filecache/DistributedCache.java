@@ -396,15 +396,6 @@ public class DistributedCache {
       return null;
     }
   }
-  
-  private static FileSystem getFileSystem(URI cache, Configuration conf)
-    throws IOException {
-    String fileSysName = getFileSysName(cache);
-    if (fileSysName != null)
-      return FileSystem.getNamed(fileSysName, conf);
-    else
-      return FileSystem.get(conf);
-  }
 
   /**
    * Set the configuration with the given set of archives. Intended
@@ -567,18 +558,39 @@ public class DistributedCache {
   /**
    * Add a file path to the current set of classpath entries. It adds the file
    * to cache as well.  Intended to be used by user code.
+   *
+   * @deprecated
+   *
+   * Please use {@link #addFileToClassPath(Path, Configuration, FileSystem)} 
+   * instead.  The {@code FileSystem} should be obtained within an
+   * appropriate {@code doAs}.
    * 
    * @param file Path of the file to be added
    * @param conf Configuration that contains the classpath setting
    */
+  @Deprecated
   public static void addFileToClassPath(Path file, Configuration conf)
+        throws IOException {
+    addFileToClassPath(file, conf, FileSystem.get(conf));
+  }
+
+  /**
+   * Add a file path to the current set of classpath entries. It adds the file
+   * to cache as well.  Intended to be used by user code.
+   * 
+   * @param file Path of the file to be added
+   * @param conf Configuration that contains the classpath setting
+   * @param fs FileSystem with respect to which {@code archivefile} should
+   *              be interpreted. 
+   */
+  public static void addFileToClassPath
+           (Path file, Configuration conf, FileSystem fs)
         throws IOException {
     String classpath = conf.get("mapred.job.classpath.files");
     conf.set("mapred.job.classpath.files", classpath == null ? file.toString()
-             : classpath + System.getProperty("path.separator") + file.toString());
-    FileSystem fs = FileSystem.get(conf);
+             : classpath
+                 + System.getProperty("path.separator") + file.toString());
     URI uri = fs.makeQualified(file).toUri();
-
     addCacheFile(uri, conf);
   }
 
@@ -604,17 +616,38 @@ public class DistributedCache {
   /**
    * Add an archive path to the current set of classpath entries. It adds the
    * archive to cache as well.  Intended to be used by user code.
+   *
+   * @deprecated
+   *
+   * Please use {@link #addArchiveToClassPath(Path, Configuration, FileSystem)} 
+   * instead.  The {@code FileSystem} should be obtained within an
+   * appropriate {@code doAs}.
    * 
    * @param archive Path of the archive to be added
    * @param conf Configuration that contains the classpath setting
    */
-  public static void addArchiveToClassPath(Path archive, Configuration conf)
-    throws IOException {
+  @Deprecated
+  public static void addArchiveToClassPath
+         (Path archive, Configuration conf)
+      throws IOException {
+    addArchiveToClassPath(archive, conf, FileSystem.get(conf));
+  }
+
+  /**
+   * Add an archive path to the current set of classpath entries. It adds the
+   * archive to cache as well.  Intended to be used by user code.
+   * 
+   * @param archive Path of the archive to be added
+   * @param conf Configuration that contains the classpath setting
+   * @param fs FileSystem with respect to which {@code archive} should be interpreted. 
+   */
+  public static void addArchiveToClassPath
+         (Path archive, Configuration conf, FileSystem fs)
+      throws IOException {
     String classpath = conf.get("mapred.job.classpath.archives");
     conf.set("mapred.job.classpath.archives", classpath == null ? archive
              .toString() : classpath + System.getProperty("path.separator")
              + archive.toString());
-    FileSystem fs = FileSystem.get(conf);
     URI uri = fs.makeQualified(archive).toUri();
 
     addCacheArchive(uri, conf);

@@ -138,8 +138,9 @@ public class TestMRWithDistributedCache extends TestCase {
     DistributedCache.addCacheFile(
         new URI(first.toUri().toString() + "#distributed.first.symlink"),
         conf);
-    DistributedCache.addFileToClassPath(second, conf);
-    DistributedCache.addArchiveToClassPath(third, conf);
+    FileSystem fs = FileSystem.get(conf);
+    DistributedCache.addFileToClassPath(second, conf, fs);
+    DistributedCache.addArchiveToClassPath(third, conf, fs);
     DistributedCache.addCacheArchive(fourth.toUri(), conf);
     DistributedCache.createSymlink(conf);
 

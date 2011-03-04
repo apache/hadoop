@@ -145,7 +145,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     String userName = getJobOwnerName();
     subConf.set("user.name", userName);
     DistributedCache.addCacheFile(firstCacheFile.toUri(), subConf);
-    DistributedCache.addFileToClassPath(secondCacheFile, subConf);
+    DistributedCache.addFileToClassPath(secondCacheFile, subConf, 
+                                        FileSystem.get(subConf));
     TrackerDistributedCacheManager.determineTimestamps(subConf);
     TrackerDistributedCacheManager.determineCacheVisibilities(subConf);
     // ****** End of imitating JobClient code
