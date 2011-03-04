@@ -823,11 +823,12 @@ public class JobHistory {
     }
     builder.append(LINE_DELIMITER_CHAR);
     
-    for (PrintWriter out : writers) {
+    for (Iterator<PrintWriter> iter = writers.iterator(); iter.hasNext();) {
+      PrintWriter out = iter.next();
       out.println(builder.toString());
       if (out.checkError() && id != null) {
         LOG.info("Logging failed for job " + id + "removing PrintWriter from FileManager");
-        fileManager.removeWriter(id, out);
+        iter.remove();
       }
     }
   }
