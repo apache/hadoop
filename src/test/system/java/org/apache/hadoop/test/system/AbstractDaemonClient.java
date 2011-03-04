@@ -27,6 +27,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.system.process.RemoteProcess;
 /**
  * Abstract class which encapsulates the DaemonClient which is used in the 
@@ -163,6 +165,56 @@ public abstract class AbstractDaemonClient<PROXY extends DaemonProtocol> {
    */
   public FileStatus getFileStatus(String path, boolean local) throws IOException {
     return getProxy().getFileStatus(path, local);
+  }
+
+  /**
+   * Create a file with full permissions in a file system.
+   * @param path - source path where the file has to create.
+   * @param fileName - file name
+   * @param local - identifying the path whether its local or not.
+   * @throws IOException - if an I/O error occurs.
+   */
+  public void createFile(String path, String fileName, 
+      boolean local) throws IOException {
+    getProxy().createFile(path, fileName, null, local);
+  }
+
+  /**
+   * Create a file with given permissions in a file system.
+   * @param path - source path where the file has to create.
+   * @param fileName - file name.
+   * @param permission - file permissions.
+   * @param local - identifying the path whether its local or not.
+   * @throws IOException - if an I/O error occurs.
+   */
+  public void createFile(String path, String fileName, 
+     FsPermission permission,  boolean local) throws IOException {
+    getProxy().createFile(path, fileName, permission, local);
+  }
+
+  /**
+   * Create a folder with default permissions in a file system.
+   * @param path - source path where the file has to be creating.
+   * @param folderName - folder name.
+   * @param local - identifying the path whether its local or not.
+   * @throws IOException - if an I/O error occurs. 
+   */
+  public void createFolder(String path, String folderName, 
+     boolean local) throws IOException {
+    getProxy().createFolder(path, folderName, null, local);
+  }
+
+  /**
+   * Create a folder with given permissions in a file system.
+   * @param path - source path where the file has to be creating.
+   * @param folderName - folder name.
+   * @param permission - folder permissions.
+   * @param local - identifying the path whether its local or not.
+   * @throws IOException - if an I/O error occurs.
+   */
+  public void createFolder(String path, String folderName, 
+     FsPermission permission,  boolean local) throws IOException {
+    getProxy().createFolder(path, folderName, permission, local);
   }
 
   /**

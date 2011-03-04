@@ -34,6 +34,8 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 
@@ -53,6 +55,10 @@ public aspect DaemonProtocolAspect {
     new HashMap<Object, List<ControlAction>>();
   private static final Log LOG = LogFactory.getLog(
       DaemonProtocolAspect.class.getName());
+
+  private static FsPermission defaultPermission = new FsPermission(
+     FsAction.READ_WRITE, FsAction.READ_WRITE, FsAction.READ_WRITE);
+
   /**
    * Set if the daemon process is ready or not, concrete daemon protocol should
    * implement pointcuts to determine when the daemon is ready and use the
@@ -125,6 +131,50 @@ public aspect DaemonProtocolAspect {
     p.makeQualified(fs);
     FileStatus fileStatus = fs.getFileStatus(p);
     return cloneFileStatus(fileStatus);
+  }
+
+  /**
+   * Create a file with given permissions in a file system.
+   * @param path - source path where the file has to create.
+   * @param fileName - file name.
+   * @param permission - file permissions.
+   * @param local - identifying the path whether its local or not.
+   * @throws IOException - if an I/O error occurs.
+   */
+  public void DaemonProtocol.createFile(String path, String fileName, 
+     FsPermission permission, boolean local) throws IOException {
+    Path p = new Path(path); 
+    FileSystem fs = getFS(p, local);
+    Path filePath = new Path(path, fileName);
+    fs.create(filePath);
+    if (permission == null) {
+      fs.setPermission(filePath, defaultPermission);
+    } else {
+      fs.setPermission(filePath, permission);
+    }
+    fs.close();
+  }
+
+  /**
+   * Create a folder with given permissions in a file system.
+   * @param path - source path where the file has to be creating.
+   * @param folderName - folder name.
+   * @param permission - folder permissions.
+   * @param local - identifying the path whether its local or not.
+   * @throws IOException - if an I/O error occurs.
+   */
+  public void DaemonProtocol.createFolder(String path, String folderName, 
+     FsPermission permission, boolean local) throws IOException {
+    Path p = new Path(path);
+    FileSystem fs = getFS(p, local);
+    Path folderPath = new Path(path, folderName);
+    fs.mkdirs(folderPath);
+    if (permission ==  null) {
+      fs.setPermission(folderPath, defaultPermission);
+    } else {
+      fs.setPermission(folderPath, permission);
+    }
+    fs.close();
   }
 
   public FileStatus[] DaemonProtocol.listStatus(String path, boolean local) 

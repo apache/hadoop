@@ -23,8 +23,10 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.fs.permission.FsPermission;
 
 /**
  * RPC interface of a given Daemon.
@@ -75,6 +77,28 @@ public interface DaemonProtocol extends VersionedProtocol{
    *         IOException see specific implementation
    */
   FileStatus getFileStatus(String path, boolean local) throws IOException;
+
+  /**
+   * Create a file with given permissions in a file system.
+   * @param path - source path where the file has to create.
+   * @param fileName - file name.
+   * @param permission - file permissions.
+   * @param local - identifying the path whether its local or not.
+   * @throws IOException - if an I/O error occurs.
+   */
+  void createFile(String path, String fileName, 
+      FsPermission permission, boolean local) throws IOException;
+   
+  /**
+   * Create a folder with given permissions in a file system.
+   * @param path - source path where the file has to be creating.
+   * @param folderName - folder name.
+   * @param permission - folder permissions.
+   * @param local - identifying the path whether its local or not.
+   * @throws IOException - if an I/O error occurs.
+   */
+  public void createFolder(String path, String folderName, 
+      FsPermission permission, boolean local) throws IOException;
 
   /**
    * List the statuses of the files/directories in the given path if the path is
