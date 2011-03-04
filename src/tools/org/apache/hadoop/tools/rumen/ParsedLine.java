@@ -18,14 +18,33 @@
 package org.apache.hadoop.tools.rumen;
 
 import java.util.Properties;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class ParsedLine {
   Properties content;
   LogRecordType type;
 
-  static final Pattern keyValPair =
-      Pattern.compile(" *([a-zA-Z0-9_]+)=\"((?:[^\"\\\\]|\\\\[ .\"\\\\])*)\"");
+  static final String KEY = "(\\w+)";
+  /**
+   * The value string is enclosed in double quotation marks ('"') and
+   * occurrences of '"' and '\' are escaped with a '\'. So the escaped value
+   * string is essentially a string of escaped sequence ('\' followed by any
+   * character) or any character other than '"' and '\'.
+   * 
+   * The straightforward REGEX to capture the above is "((?:[^\"\\\\]|\\\\.)*)".
+   * Unfortunately Java's REGEX implementation is "broken" that it does not
+   * perform the NFA-to-DFA conversion and such expressions would lead to
+   * backtracking and stack overflow when matching with long strings. The
+   * following is a manual "unfolding" of the REGEX to get rid of backtracking.
+   */
+  static final String VALUE = "([^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+)";
+  /**
+   * REGEX to match the Key-Value pairs in an input line. Capture group 1
+   * matches the key and capture group 2 matches the value (without quotation
+   * marks).
+   */
+  static final Pattern keyValPair = Pattern.compile(KEY + "=" + "\"" + VALUE + "\"");
 
   @SuppressWarnings("unused")
   ParsedLine(String fullLine, int version) {
@@ -47,65 +66,12 @@ class ParsedLine {
 
     String propValPairs = fullLine.substring(firstSpace + 1);
 
-    int pvPairsFirstNonBlank = 0;
-    int pvPairsLength = propValPairs.length();
+    Matcher matcher = keyValPair.matcher(propValPairs);
 
-    while (pvPairsLength > pvPairsFirstNonBlank
-        && propValPairs.charAt(pvPairsFirstNonBlank) == ' ') {
-      ++pvPairsFirstNonBlank;
-    }
-
-    if (pvPairsFirstNonBlank != 0) {
-      propValPairs = propValPairs.substring(pvPairsFirstNonBlank);
-    }
-
-    int cursor = 0;
-
-    while (cursor < propValPairs.length()) {
-      int equals = propValPairs.indexOf('=', cursor);
-
-      if (equals < 0) {
-        // maybe we do some error processing
-        return;
-      }
-
-      int nextCursor;
-
-      int endValue;
-
-      if (propValPairs.charAt(equals + 1) == '\"') {
-        int closeQuote = propValPairs.indexOf('\"', equals + 2);
-
-        nextCursor = closeQuote + 1;
-
-        endValue = closeQuote;
-
-        if (closeQuote < 0) {
-          endValue = propValPairs.length();
-
-          nextCursor = endValue;
-        }
-      } else {
-        int closeSpace = propValPairs.indexOf(' ', equals + 1);
-
-        if (closeSpace < 0) {
-          closeSpace = propValPairs.length();
-        }
-
-        endValue = closeSpace;
-
-        nextCursor = endValue;
-      }
-
-      content.setProperty(propValPairs.substring(cursor, equals), propValPairs
-          .substring(equals + 2, endValue));
-
-      cursor = nextCursor;
-
-      while (cursor < propValPairs.length()
-          && propValPairs.charAt(cursor) == ' ') {
-        ++cursor;
-      }
+    while(matcher.find()){
+      String key = matcher.group(1);
+      String value = matcher.group(2);
+      content.setProperty(key, value);
     }
   }
 
