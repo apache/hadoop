@@ -74,6 +74,7 @@ int change_user(const char * user) {
 // function to check if the passed tt_root is present in hadoop.tmp.dir
 int check_tt_root(const char *tt_root) {
   char ** mapred_local_dir;
+  char ** iter;
   int found = -1;
 
   if (tt_root == NULL) {
@@ -81,17 +82,18 @@ int check_tt_root(const char *tt_root) {
   }
 
   mapred_local_dir = (char **)get_values(TT_SYS_DIR_KEY);
+  iter = mapred_local_dir;
 
   if (mapred_local_dir == NULL) {
     return -1;
   }
 
-  while(*mapred_local_dir != NULL) {
-    if(strcmp(*mapred_local_dir,tt_root) == 0) {
+  while(*iter != NULL) {
+    if(strcmp(*iter, tt_root) == 0) {
       found = 0;
       break;
     }
-    ++mapred_local_dir; 
+    ++iter; 
   }
   free(mapred_local_dir);
   return found;
