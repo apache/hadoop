@@ -1002,11 +1002,24 @@
   </macrodef>
 
   <target name="test-core" depends="test-commit, test-smoke,
-    test-core-excluding-commit-and-smoke, jar-test"
+    test-core-excluding-commit-and-smoke,
+    test-core-all-withtestcaseonly, jar-test"
     description="Run core unit tests">
   </target>
 
-  <target name="test-core-excluding-commit-and-smoke" depends="jar-test">
+  <target name="test-core-all-withtestcaseonly" depends="jar-test" if="testcase">
+    <macro-test-runner test.file="${test.all.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf="java.security.krb5.conf"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       >
+    </macro-test-runner>
+  </target>
+
+  <target name="test-core-excluding-commit-and-smoke" depends="jar-test"
+    unless="testcase">
     <macro-test-runner test.file="${test.all.tests.file}"
                        classpath="${test.classpath.id}"
                        test.dir="${test.build.dir}"
@@ -1019,7 +1032,8 @@
   </target>   
 
   <target name="test-commit" depends="jar-test" 
-    description="Run approx 10-minute set of unit tests prior to commiting">
+    description="Run approx 10-minute set of unit tests prior to commiting"
+    unless="testcase">
     <macro-test-runner test.file="${test.commit.tests.file}"
                        classpath="${test.classpath.id}"
                        test.dir="${test.build.dir}"
@@ -1032,7 +1046,7 @@
 
   <target name="test-smoke" depends="jar-test"
     description="Run approx 30-minute set of functional tests prior to
-      guarantee that the build is not DOA">
+      guarantee that the build is not DOA" unless="testcase">
     <macro-test-runner test.file="${test.smoke.tests.file}"
                        classpath="${test.classpath.id}"
                        test.dir="${test.build.dir}"
