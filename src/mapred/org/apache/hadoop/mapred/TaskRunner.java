@@ -101,6 +101,7 @@ abstract class TaskRunner extends Thread {
   
   @Override
   public final void run() {
+    String errorInfo = "Child Error";
     try {
       
       //before preparing the job localize 
@@ -407,16 +408,36 @@ abstract class TaskRunner extends Thread {
       if (mapredChildEnv != null && mapredChildEnv.length() > 0) {
         String childEnvs[] = mapredChildEnv.split(",");
         for (String cEnv : childEnvs) {
-          String[] parts = cEnv.split("="); // split on '='
-          String value = env.get(parts[0]);
-          if (value != null) {
-            // replace $env with the tt's value of env
-            value = parts[1].replaceAll("$" + parts[0], value);
-          } else {
-            // for cases where x=$x:/tmp is passed and x doesnt exist
-            value = parts[1].replaceAll("$" + parts[0], "");
+          try {
+            String[] parts = cEnv.split("="); // split on '='
+            String value = env.get(parts[0]);
+            if (value != null) {
+              // replace $env with the child's env constructed by tt's
+              // example LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp
+              value = parts[1].replace("$" + parts[0], value);
+            } else {
+              // this key is not configured by the tt for the child .. get it 
+              // from the tt's env
+              // example PATH=$PATH:/tmp
+              value = System.getenv(parts[0]);
+              if (value != null) {
+                // the env key is present in the tt's env
+                value = parts[1].replace("$" + parts[0], value);
+              } else {
+                // the env key is note present anywhere .. simply set it
+                // example X=$X:/tmp or X=/tmp
+                value = parts[1].replace("$" + parts[0], "");
+              }
+            }
+            env.put(parts[0], value);
+          } catch (Throwable t) {
+            // set the error msg
+            errorInfo = "Invalid User environment settings : " + mapredChildEnv 
+                        + ". Failed to parse user-passed environment param."
+                        + " Expecting : env1=value1,env2=value2...";
+            LOG.warn(errorInfo);
+            throw t;
           }
-          env.put(parts[0], value);
         }
       }
 
@@ -446,9 +467,10 @@ abstract class TaskRunner extends Thread {
         LOG.fatal(t.getTaskID()+" reporting FSError", ie);
       }
     } catch (Throwable throwable) {
-      LOG.warn(t.getTaskID()+" Child Error", throwable);
+      LOG.warn(t.getTaskID() + errorInfo, throwable);
+      Throwable causeThrowable = new Throwable(errorInfo, throwable);
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      throwable.printStackTrace(new PrintStream(baos));
+      causeThrowable.printStackTrace(new PrintStream(baos));
       try {
         tracker.reportDiagnosticInfo(t.getTaskID(), baos.toString());
       } catch (IOException e) {

@@ -84,7 +84,8 @@ public class TestMiniMRChildTask extends TestCase {
   }
 
   // configure a job
-  private void configure(JobConf conf, Path inDir, Path outDir, String input) 
+  private void configure(JobConf conf, Path inDir, Path outDir, String input,
+                         Class<? extends Mapper> map) 
   throws IOException {
     // set up the input file system and write input text.
     FileSystem inFs = inDir.getFileSystem(conf);
@@ -102,7 +103,7 @@ public class TestMiniMRChildTask extends TestCase {
 
     // configure the mapred Job which creates a tempfile in map.
     conf.setJobName("testmap");
-    conf.setMapperClass(MapClass.class);        
+    conf.setMapperClass(map);
     conf.setReducerClass(IdentityReducer.class);
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(0);
@@ -126,7 +127,7 @@ public class TestMiniMRChildTask extends TestCase {
                          Path outDir,
                          String input)
   throws IOException {
-    configure(conf, inDir, outDir, input);
+    configure(conf, inDir, outDir, input, MapClass.class);
 
     FileSystem outFs = outDir.getFileSystem(conf);
     
@@ -149,17 +150,27 @@ public class TestMiniMRChildTask extends TestCase {
   // Mappers that simply checks if the desired user env are present or not
   static class EnvCheckMapper extends MapReduceBase implements
       Mapper<WritableComparable, Writable, WritableComparable, Writable> {
+    private static String PATH;
+    
     public void map(WritableComparable key, Writable value,
         OutputCollector<WritableComparable, Writable> out, Reporter reporter)
         throws IOException {
-      // check if X=$X:/abc works
+      // check if the pwd is there in LD_LIBRARY_PATH
+      String pwd = System.getenv("PWD");
+      assertTrue("LD doesnt contain pwd", 
+                 System.getenv("LD_LIBRARY_PATH").contains(pwd));
+      
+      // check if X=$X:/abc works for LD_LIBRARY_PATH
       checkEnv("LD_LIBRARY_PATH", "/tmp", "append");
       // check if X=/tmp works for an already existing parameter
       checkEnv("HOME", "/tmp", "noappend");
-      // check if my_path=/tmp for a new env variable
+      // check if X=/tmp for a new env variable
       checkEnv("MY_PATH", "/tmp", "noappend");
-      // check if new_path=$new_path:/tmp works and results into :/tmp
+      // check if X=$X:/tmp works for a new env var and results into :/tmp
       checkEnv("NEW_PATH", ":/tmp", "noappend");
+      // check if X=$(tt's X var):/tmp for an old env variable inherited from 
+      // the tt
+      checkEnv("PATH",  PATH + ":/tmp", "noappend");
     }
 
     private void checkEnv(String envName, String expValue, String mode) 
@@ -180,6 +191,10 @@ public class TestMiniMRChildTask extends TestCase {
           throw new  IOException("Wrong env variable in noappend mode");
         }
       }
+    }
+    
+    public void configure(JobConf conf) {
+      PATH = conf.get("path");
     }
   }
 
@@ -256,13 +271,20 @@ public class TestMiniMRChildTask extends TestCase {
       Path outDir = new Path("testing/wc/output1");
       String input = "The input";
       
-      configure(conf, inDir, outDir, input);
+      configure(conf, inDir, outDir, input, EnvCheckMapper.class);
 
       FileSystem outFs = outDir.getFileSystem(conf);
       
+      // test 
+      //  - new SET of new var (MY_PATH)
+      //  - set of old var (HOME)
+      //  - append to an old var from modified env (LD_LIBRARY_PATH)
+      //  - append to an old var from tt's env (PATH)
+      //  - append to a new var (NEW_PATH)
       conf.set("mapred.child.env", 
                "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp,"
-               + "NEW_PATH=$NEW_PATH:/tmp");
+               + "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
+      conf.set("path", System.getenv("PATH"));
 
       JobClient.runJob(conf);
       outFs.delete(outDir, true);
