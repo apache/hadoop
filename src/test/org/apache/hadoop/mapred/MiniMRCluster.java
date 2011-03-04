@@ -163,7 +163,7 @@ public class MiniMRCluster {
       StringBuffer localPath = new StringBuffer();
       for(int i=0; i < numDir; ++i) {
         File ttDir = new File(localDirBase, 
-                              Integer.toString(trackerId) + "_" + 0);
+                              Integer.toString(trackerId) + "_" + i);
         if (!ttDir.mkdirs()) {
           if (!ttDir.isDirectory()) {
             throw new IOException("Mkdirs failed to create " + ttDir);

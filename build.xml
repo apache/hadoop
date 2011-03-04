@@ -740,8 +740,8 @@
       <sysproperty key="test.debug.data" value="${test.debug.data}"/>
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-    	<sysproperty key="taskcontroller-path" value="${taskcontroller-path}"/>
-    	<sysproperty key="taskcontroller-user" value="${taskcontroller-user}"/>
+      <sysproperty key="taskcontroller-path" value="${taskcontroller-path}"/>
+      <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}"/>
       <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
       <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
       <sysproperty key="java.library.path"
@@ -1820,10 +1820,8 @@
   <target name="init-task-controller-build">
     <mkdir dir="${build.c++.task-controller}" />
     <copy todir="${build.c++.task-controller}">
-      <fileset dir="${c++.task-controller.src}" includes="*.c">
-      </fileset>
-      <fileset dir="${c++.task-controller.src}" includes="*.h">
-      </fileset>
+      <fileset dir="${c++.task-controller.src}" includes="*.c"/>
+      <fileset dir="${c++.task-controller.src}" includes="*.h"/>
     </copy>
     <chmod file="${c++.task-controller.src}/configure" perm="ugo+x"/> 
     <condition property="task-controller.conf.dir.passed">
@@ -1863,5 +1861,20 @@
       <arg value="install" />
     </exec>
   </target>
-  <!-- end of task-controller target -->
+  <target name="test-task-controller" depends="task-controller">
+    <copy todir="${build.c++.task-controller}" verbose="true">
+      <fileset dir="${c++.task-controller.src}" includes="tests/"/>
+    </copy>
+    <exec executable="${make.cmd}" dir="${build.c++.task-controller}" 
+        searchpath="yes" failonerror="yes">
+      <arg value="clean" />
+      <arg value="test" />
+    </exec>
+    <exec executable="${build.c++.task-controller}/tests/test-task-controller"
+        dir="${build.c++.task-controller}/tests/"
+        failonerror="yes">
+    </exec>
+  </target>
+
+  <!-- end of task-controller targets -->
 </project>

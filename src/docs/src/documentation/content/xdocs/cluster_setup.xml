@@ -509,11 +509,13 @@
             distribution. The task tracker uses this executable to 
             launch and kill tasks. The setuid executable switches to
             the user who has submitted the job and launches or kills
-            the tasks. Currently, this task controller 
-            opens up permissions to local files and directories used 
-            by the tasks such as the job jar files, distributed archive 
-            files, intermediate files and task log files. In future,
-            it is expected that stricter file permissions are used.
+            the tasks. For maximum security, this task controller 
+            sets up restricted permissions and user/group ownership of
+            local files and directories used by the tasks such as the
+            job jar files, intermediate files and task log files. Currently
+            permissions on distributed cache files are opened up to be
+            accessible by all users. In future, it is expected that stricter
+            file permissions are set for these files too.
             </td>
             </tr>
             </table>
@@ -555,18 +557,32 @@
             </p>
             
             <p>
-            The executable must be deployed as a setuid executable, by changing
-            the ownership to <em>root</em>, group ownership to that of tasktracker
-            and giving it permissions <em>4510</em>.Please take a note that,
-            group which owns task-controller should contain only tasktracker
-            as its memeber and not users who submit jobs.
+            The executable must have specific permissions as follows. The
+            executable should have <em>6050 or --Sr-s---</em> permissions
+            user-owned by root(super-user) and group-owned by a group 
+            of which only the TaskTracker's user is the sole group member. 
+            For example, let's say that the TaskTracker is run as user
+            <em>mapred</em> who is part of the groups <em>users</em> and
+            <em>mapredGroup</em> any of them being the primary group.
+            Let also be that <em>users</em> has both <em>mapred</em> and
+            another user <em>X</em> as its members, while <em>mapredGroup</em>
+            has only <em>mapred</em> as its member. Going by the above
+            description, the setuid/setgid executable should be set
+            <em>6050 or --Sr-s---</em> with user-owner as <em>mapred</em> and
+            group-owner as <em>mapredGroup</em> which has
+            only <em>mapred</em> as its member(and not <em>users</em> which has
+            <em>X</em> also as its member besides <em>mapred</em>).
             </p>
             
             <p>The executable requires a configuration file called 
             <em>taskcontroller.cfg</em> to be
             present in the configuration directory passed to the ant target 
             mentioned above. If the binary was not built with a specific 
-            conf directory, the path defaults to <em>/path-to-binary/../conf</em>.
+            conf directory, the path defaults to
+            <em>/path-to-binary/../conf</em>. The configuration file must be
+            owned by the user running TaskTracker (user <em>mapred</em> in the
+            above example), group-owned by anyone and should have the
+            permissions <em>0400 or r--------</em>.
             </p>
             
             <p>The executable requires following configuration items to be 
@@ -581,13 +597,20 @@
             validate paths passed to the setuid executable in order to prevent
             arbitrary paths being passed to it.</td>
             </tr>
+            <tr>
+            <td>hadoop.log.dir</td>
+            <td>Path to hadoop log directory. Should be same as the value which
+            the TaskTracker is started with. This is required to set proper
+            permissions on the log files so that they can be written to by the user's
+            tasks and read by the TaskTracker for serving on the web UI.</td>
+            </tr>
             </table>
 
             <p>
-            The LinuxTaskController requires that paths leading up to
+            The LinuxTaskController requires that paths including and leading up to
             the directories specified in
-            <em>mapred.local.dir</em> and <em>hadoop.log.dir</em> to be 755
-            and directories themselves having 777 permissions.
+            <em>mapred.local.dir</em> and <em>hadoop.log.dir</em> to be set 755
+            permissions.
             </p>
             </section>
             

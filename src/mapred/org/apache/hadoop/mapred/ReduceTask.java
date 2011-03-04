@@ -213,7 +213,7 @@ class ReduceTask extends Task {
     if (isLocal) {
       // for local jobs
       for(int i = 0; i < numMaps; ++i) {
-        fileList.add(mapOutputFile.getInputFile(i, getTaskID()));
+        fileList.add(mapOutputFile.getInputFile(i));
       }
     } else {
       // for non local jobs
@@ -1287,12 +1287,11 @@ class ReduceTask extends Task {
         // else, we will check the localFS to find a suitable final location
         // for this path
         TaskAttemptID reduceId = reduceTask.getTaskID();
-        Path filename = new Path("/" + TaskTracker.getIntermediateOutputDir(
-                                 reduceId.getJobID().toString(),
-                                 reduceId.toString()) 
-                                 + "/map_" +
-                                 loc.getTaskId().getId() + ".out");
-        
+        Path filename =
+            new Path(String.format(
+                MapOutputFile.REDUCE_INPUT_FILE_FORMAT_STRING,
+                TaskTracker.OUTPUT, loc.getTaskId().getId()));
+
         // Copy the map output to a temp file whose name is unique to this attempt 
         Path tmpMapOutput = new Path(filename+"-"+id);
         
@@ -2350,8 +2349,8 @@ class ReduceTask extends Task {
         if (numMemDiskSegments > 0 &&
               ioSortFactor > mapOutputFilesOnDisk.size()) {
           // must spill to disk, but can't retain in-mem for intermediate merge
-          final Path outputPath = mapOutputFile.getInputFileForWrite(mapId,
-                            reduceTask.getTaskID(), inMemToDiskBytes);
+          final Path outputPath =
+              mapOutputFile.getInputFileForWrite(mapId, inMemToDiskBytes);
           final RawKeyValueIterator rIter = Merger.merge(job, fs,
               keyClass, valueClass, memDiskSegments, numMemDiskSegments,
               tmpDir, comparator, reporter, spilledRecordsCounter, null);
@@ -2649,8 +2648,8 @@ class ReduceTask extends Task {
         long mergeOutputSize = createInMemorySegments(inMemorySegments, 0);
         int noInMemorySegments = inMemorySegments.size();
 
-        Path outputPath = mapOutputFile.getInputFileForWrite(mapId, 
-                          reduceTask.getTaskID(), mergeOutputSize);
+        Path outputPath =
+            mapOutputFile.getInputFileForWrite(mapId, mergeOutputSize);
 
         Writer writer = 
           new Writer(conf, rfs, outputPath,

@@ -154,6 +154,10 @@ class Child {
         // set the jobTokenFile into task
         task.setJobTokenSecret(JobTokenSecretManager.createSecretKey(jt.getPassword()));
 
+        // setup the child's mapred-local-dir. The child is now sandboxed and
+        // can only see files down and under attemtdir only.
+        TaskRunner.setupChildMapredLocalDirs(task, job);
+
         //setupWorkDir actually sets up the symlinks for the distributed
         //cache. After a task exits we wipe the workdir clean, and hence
         //the symlinks have to be rebuilt.
@@ -164,8 +168,6 @@ class Child {
         TaskLog.cleanup(job.getInt("mapred.userlog.retain.hours", 24));
 
         task.setConf(job);
-
-        defaultConf.addResource(new Path(task.getJobFile()));
 
         // Initiate Java VM metrics
         JvmMetrics.init(task.getPhase().toString(), job.getSessionId());
@@ -191,7 +193,7 @@ class Child {
           task.taskCleanup(umbilical);
         }
       } catch (Exception e) {
-        LOG.info("Error cleaning up" + e);
+        LOG.info("Error cleaning up", e);
       }
       // Report back any failures, for diagnostic purposes
       ByteArrayOutputStream baos = new ByteArrayOutputStream();

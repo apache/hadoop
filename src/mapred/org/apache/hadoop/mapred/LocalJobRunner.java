@@ -21,12 +21,17 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.serializer.SerializationFactory;
+import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.JobTrackerMetricsInst;
 import org.apache.hadoop.mapred.JvmTask;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
@@ -62,7 +67,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
 
     private JobStatus status;
     private ArrayList<TaskAttemptID> mapIds = new ArrayList<TaskAttemptID>();
-    private MapOutputFile mapoutputFile;
+
     private JobProfile profile;
     private Path localFile;
     private FileSystem localFs;
@@ -83,8 +88,6 @@ class LocalJobRunner implements JobSubmissionProtocol {
       this.systemJobDir = new Path(jobSubmitDir);
       this.file = new Path(systemJobDir, "job.xml");
       this.id = jobid;
-      this.mapoutputFile = new MapOutputFile(jobid);
-      this.mapoutputFile.setConf(conf);
 
       this.localFile = new JobConf(conf).getLocalPath(jobDir+id+".xml");
       this.localFs = FileSystem.getLocal(conf);
@@ -120,7 +123,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
         }
         outputCommitter.setupJob(jContext);
         status.setSetupProgress(1.0f);
-        
+
+        Map<TaskAttemptID, MapOutputFile> mapOutputFiles =
+          new HashMap<TaskAttemptID, MapOutputFile>();
         for (int i = 0; i < taskSplitMetaInfos.length; i++) {
           if (!this.isInterrupted()) {
             TaskAttemptID mapId = new TaskAttemptID(new TaskID(jobId, true, i),0);  
@@ -129,6 +134,12 @@ class LocalJobRunner implements JobSubmissionProtocol {
                                       mapId, i,
                                       taskSplitMetaInfos[i].getSplitIndex(), 1);
             JobConf localConf = new JobConf(job);
+            TaskRunner.setupChildMapredLocalDirs(map, localConf);
+
+            MapOutputFile mapOutput = new MapOutputFile();
+            mapOutput.setConf(localConf);
+            mapOutputFiles.put(mapId, mapOutput);
+
             map.setJobFile(localFile.toString());
             map.localizeConfiguration(localConf);
             map.setConf(localConf);
@@ -146,14 +157,21 @@ class LocalJobRunner implements JobSubmissionProtocol {
           new TaskAttemptID(new TaskID(jobId, false, 0), 0);
         try {
           if (numReduceTasks > 0) {
+            ReduceTask reduce =
+                new ReduceTask(file.toString(), reduceId, 0, mapIds.size(),
+                    1);
+            JobConf localConf = new JobConf(job);
+            TaskRunner.setupChildMapredLocalDirs(reduce, localConf);
             // move map output to reduce input  
             for (int i = 0; i < mapIds.size(); i++) {
               if (!this.isInterrupted()) {
                 TaskAttemptID mapId = mapIds.get(i);
-                Path mapOut = this.mapoutputFile.getOutputFile(mapId);
-                Path reduceIn = this.mapoutputFile.getInputFileForWrite(
-                                  mapId.getTaskID(),reduceId,
-                                  localFs.getLength(mapOut));
+                Path mapOut = mapOutputFiles.get(mapId).getOutputFile();
+                MapOutputFile localOutputFile = new MapOutputFile();
+                localOutputFile.setConf(localConf);
+                Path reduceIn =
+                  localOutputFile.getInputFileForWrite(mapId.getTaskID(),
+                        localFs.getFileStatus(mapOut).getLen());
                 if (!localFs.mkdirs(reduceIn.getParent())) {
                   throw new IOException("Mkdirs failed to create "
                       + reduceIn.getParent().toString());
@@ -165,10 +183,6 @@ class LocalJobRunner implements JobSubmissionProtocol {
               }
             }
             if (!this.isInterrupted()) {
-              ReduceTask reduce = new ReduceTask(file.toString(), 
-                                                 reduceId, 0, mapIds.size(), 
-                                                 1);
-              JobConf localConf = new JobConf(job);
               reduce.setJobFile(localFile.toString());
               reduce.localizeConfiguration(localConf);
               reduce.setConf(localConf);
@@ -183,11 +197,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
             }
           }
         } finally {
-          for (TaskAttemptID mapId: mapIds) {
-            this.mapoutputFile.removeAll(mapId);
-          }
-          if (numReduceTasks == 1) {
-            this.mapoutputFile.removeAll(reduceId);
+          for (MapOutputFile output : mapOutputFiles.values()) {
+            output.removeAll();
           }
         }
         // delete the temporary directory in output directory

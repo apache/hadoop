@@ -350,15 +350,26 @@ public class TestKillSubProcesses extends TestCase {
     if (ProcessTree.isSetsidAvailable) {
       FileSystem fs = FileSystem.getLocal(conf);
 
-      if(fs.exists(scriptDir)){
+      if (fs.exists(scriptDir)) {
         fs.delete(scriptDir, true);
       }
-      // create shell script
-      Random rm = new Random();
+
+      // Create the directory and set open permissions so that the TT can
+      // access.
+      fs.mkdirs(scriptDir);
+      fs.setPermission(scriptDir, new FsPermission(FsAction.ALL, FsAction.ALL,
+          FsAction.ALL));
+
+     // create shell script
+     Random rm = new Random();
       Path scriptPath = new Path(scriptDirName, "_shellScript_" + rm.nextInt()
         + ".sh");
       String shellScript = scriptPath.toString();
+
+      // Construct the script. Set umask to 0000 so that TT can access all the
+      // files.
       String script =
+        "umask 000\n" + 
         "echo $$ > " + scriptDirName + "/childPidFile" + "$1\n" +
         "echo hello\n" +
         "trap 'echo got SIGTERM' 15 \n" +
@@ -373,7 +384,10 @@ public class TestKillSubProcesses extends TestCase {
       file.writeBytes(script);
       file.close();
 
-      LOG.info("Calling script from map task of failjob : " + shellScript);
+      // Set executable permissions on the script.
+      new File(scriptPath.toUri().getPath()).setExecutable(true);
+
+      LOG.info("Calling script from map task : " + shellScript);
       Runtime.getRuntime()
           .exec(shellScript + " " + numLevelsOfSubProcesses);
     

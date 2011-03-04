@@ -65,7 +65,7 @@ public class TestStreamingAsDifferentUser extends
             "stream.tmpdir=" + System.getProperty("test.build.data", "/tmp") };
     StreamJob streamJob = new StreamJob(args, true);
     streamJob.setConf(myConf);
-    streamJob.go();
+    assertTrue("Job has not succeeded", streamJob.go() == 0);
     assertOwnerShip(outputPath);
   }
 }

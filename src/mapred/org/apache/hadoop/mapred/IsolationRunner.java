@@ -167,17 +167,24 @@ public class IsolationRunner {
     // setup the local and user working directories
     FileSystem local = FileSystem.getLocal(conf);
     LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
+
     File workDirName = TaskRunner.formWorkDir(lDirAlloc, taskId, false, conf);
     local.setWorkingDirectory(new Path(workDirName.toString()));
     FileSystem.get(conf).setWorkingDirectory(conf.getWorkingDirectory());
     
     // set up a classloader with the right classpath
-    ClassLoader classLoader = makeClassLoader(conf, workDirName);
+    ClassLoader classLoader =
+        makeClassLoader(conf, new File(workDirName.toString()));
     Thread.currentThread().setContextClassLoader(classLoader);
     conf.setClassLoader(classLoader);
     
+    // split.dta file is used only by IsolationRunner. The file can now be in
+    // any of the configured local disks, so use LocalDirAllocator to find out
+    // where it is.
     Path localMetaSplit = 
-      new Path(new Path(jobFilename.toString()).getParent(), "split.info");
+        new LocalDirAllocator("mapred.local.dir").getLocalPathToRead(
+            TaskTracker.getLocalSplitFile(taskId.getJobID().toString(), taskId
+                .toString()), conf);
     DataInputStream splitFile = FileSystem.getLocal(conf).open(localMetaSplit);
     TaskSplitIndex splitIndex = new TaskSplitIndex();
     splitIndex.readFields(splitFile);

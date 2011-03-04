@@ -277,14 +277,12 @@ public class TestMapRed extends TestCase implements Tool {
   private static class MyReduce extends IdentityReducer {
     private JobConf conf;
     private boolean compressInput;
-    private TaskAttemptID taskId;
     private boolean first = true;
       
     @Override
     public void configure(JobConf conf) {
       this.conf = conf;
       compressInput = conf.getCompressMapOutput();
-      taskId = TaskAttemptID.forName(conf.get("mapred.task.id"));
     }
       
     public void reduce(WritableComparable key, Iterator values,
@@ -292,9 +290,9 @@ public class TestMapRed extends TestCase implements Tool {
                        ) throws IOException {
       if (first) {
         first = false;
-        MapOutputFile mapOutputFile = new MapOutputFile(taskId.getJobID());
+        MapOutputFile mapOutputFile = new MapOutputFile();
         mapOutputFile.setConf(conf);
-        Path input = mapOutputFile.getInputFile(0, taskId);
+        Path input = mapOutputFile.getInputFile(0);
         FileSystem fs = FileSystem.get(conf);
         assertTrue("reduce input exists " + input, fs.exists(input));
         SequenceFile.Reader rdr = 

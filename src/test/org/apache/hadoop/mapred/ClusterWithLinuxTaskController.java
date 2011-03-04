@@ -47,7 +47,7 @@ import junit.framework.TestCase;
  * <li>Make the built binary to setuid executable</li>
  * <li>Execute following targets:
  * <code>ant test -Dcompile.c++=true -Dtaskcontroller-path=<em>path to built binary</em> 
- * -Dtaskcontroller-user=<em>user,group</em></code></li>
+ * -Dtaskcontroller-ugi=<em>user,group</em></code></li>
  * </ol>
  * 
  */
@@ -82,6 +82,9 @@ public class ClusterWithLinuxTaskController extends TestCase {
 
   private static final int NUMBER_OF_NODES = 1;
 
+  static final String TASKCONTROLLER_PATH = "taskcontroller-path";
+  static final String TASKCONTROLLER_UGI = "taskcontroller-ugi";
+
   private File configurationFile = null;
 
   private UserGroupInformation taskControllerUser;
@@ -98,18 +101,20 @@ public class ClusterWithLinuxTaskController extends TestCase {
         MyLinuxTaskController.class.getName());
     mrCluster =
         new MiniMRCluster(NUMBER_OF_NODES, dfsCluster.getFileSystem().getUri()
-            .toString(), 1, null, null, conf);
+            .toString(), 4, null, null, conf);
 
     // Get the configured taskcontroller-path
-    String path = System.getProperty("taskcontroller-path");
-    createTaskControllerConf(path);
+    String path = System.getProperty(TASKCONTROLLER_PATH);
+    configurationFile =
+        createTaskControllerConf(path, mrCluster.getTaskTrackerRunner(0)
+            .getLocalDirs());
     String execPath = path + "/task-controller";
     TaskTracker tracker = mrCluster.getTaskTrackerRunner(0).tt;
     // TypeCasting the parent to our TaskController instance as we
     // know that that would be instance which should be present in TT.
     ((MyLinuxTaskController) tracker.getTaskController())
         .setTaskControllerExe(execPath);
-    String ugi = System.getProperty("taskcontroller-user");
+    String ugi = System.getProperty(TASKCONTROLLER_UGI);
     clusterConf = mrCluster.createJobConf();
     String[] splits = ugi.split(",");
     taskControllerUser = new UnixUserGroupInformation(splits);
@@ -140,21 +145,39 @@ public class ClusterWithLinuxTaskController extends TestCase {
         taskControllerUser.getGroupNames()[0]);
   }
 
-  private void createTaskControllerConf(String path)
+  /**
+   * Create taskcontroller.cfg.
+   * 
+   * @param path Path to the taskcontroller binary.
+   * @param localDirs
+   * @return the created conf file
+   * @throws IOException
+   */
+  static File createTaskControllerConf(String path, String[] localDirs)
       throws IOException {
     File confDirectory = new File(path, "../conf");
     if (!confDirectory.exists()) {
       confDirectory.mkdirs();
     }
-    configurationFile = new File(confDirectory, "taskcontroller.cfg");
+    File configurationFile = new File(confDirectory, "taskcontroller.cfg");
     PrintWriter writer =
         new PrintWriter(new FileOutputStream(configurationFile));
 
-    writer.println(String.format("mapred.local.dir=%s", mrCluster
-        .getTaskTrackerLocalDir(0)));
+    StringBuffer sb = new StringBuffer();
+    for (int i = 0; i < localDirs.length; i++) {
+      sb.append(localDirs[i]);
+      if ((i + 1) != localDirs.length) {
+        sb.append(",");
+      }
+    }
+    writer.println(String.format("mapred.local.dir=%s", sb.toString()));
+
+    writer
+        .println(String.format("hadoop.log.dir=%s", TaskLog.getBaseLogDir()));
 
     writer.flush();
     writer.close();
+    return configurationFile;
   }
 
   /**
@@ -162,28 +185,35 @@ public class ClusterWithLinuxTaskController extends TestCase {
    * 
    * @return boolean
    */
-  protected boolean shouldRun() {
-    return isTaskExecPathPassed() && isUserPassed();
-  }
-
-  private boolean isTaskExecPathPassed() {
-    String path = System.getProperty("taskcontroller-path");
-    if (path == null || path.isEmpty()
-        || path.equals("${taskcontroller-path}")) {
+  protected static boolean shouldRun() {
+    if (!isTaskExecPathPassed() || !isUserPassed()) {
+      LOG.info("Not running test.");
       return false;
     }
     return true;
   }
 
-  private boolean isUserPassed() {
-    String ugi = System.getProperty("taskcontroller-user");
-    if (ugi != null && !(ugi.equals("${taskcontroller-user}"))
+  private static boolean isTaskExecPathPassed() {
+    String path = System.getProperty(TASKCONTROLLER_PATH);
+    if (path == null || path.isEmpty()
+        || path.equals("${" + TASKCONTROLLER_PATH + "}")) {
+      LOG.info("Invalid taskcontroller-path : " + path); 
+      return false;
+    }
+    return true;
+  }
+
+  private static boolean isUserPassed() {
+    String ugi = System.getProperty(TASKCONTROLLER_UGI);
+    if (ugi != null && !(ugi.equals("${" + TASKCONTROLLER_UGI + "}"))
         && !ugi.isEmpty()) {
       if (ugi.indexOf(",") > 1) {
         return true;
       }
+      LOG.info("Invalid taskcontroller-ugi : " + ugi); 
       return false;
     }
+    LOG.info("Invalid taskcontroller-ugi : " + ugi);
     return false;
   }
 

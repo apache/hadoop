@@ -20,14 +20,11 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
+import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileSystem;
-import java.io.DataOutputStream;
-import java.io.IOException;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Test a java-based mapred job with LinuxTaskController running the jobs as a
@@ -43,42 +40,34 @@ public class TestJobExecutionAsDifferentUser extends
       return;
     }
     startCluster();
-    submitWordCount(getClusterConf());
-  }
-  
-  private void submitWordCount(JobConf clientConf) throws IOException {
-    Path inDir = new Path("testing/wc/input");
-    Path outDir = new Path("testing/wc/output");
-    JobConf conf = new JobConf(clientConf);
-    FileSystem fs = FileSystem.get(conf);
-    fs.delete(outDir, true);
-    if (!fs.mkdirs(inDir)) {
-      throw new IOException("Mkdirs failed to create " + inDir.toString());
-    }
+    Path inDir = new Path("input");
+    Path outDir = new Path("output");
 
-    DataOutputStream file = fs.create(new Path(inDir, "part-0"));
-    file.writeBytes("a b c d e f g h");
-    file.close();
+    RunningJob job;
 
-    conf.setJobName("wordcount");
-    conf.setInputFormat(TextInputFormat.class);
-
-    // the keys are words (strings)
-    conf.setOutputKeyClass(Text.class);
-    // the values are counts (ints)
-    conf.setOutputValueClass(IntWritable.class);
-
-    conf.setMapperClass(WordCount.MapClass.class);
-    conf.setCombinerClass(WordCount.Reduce.class);
-    conf.setReducerClass(WordCount.Reduce.class);
-
-    FileInputFormat.setInputPaths(conf, inDir);
-    FileOutputFormat.setOutputPath(conf, outDir);
-    conf.setNumMapTasks(1);
-    conf.setNumReduceTasks(1);
-    RunningJob rj = JobClient.runJob(conf);
-    assertTrue("Job Failed", rj.isSuccessful());
+    // Run a job with zero maps/reduces
+    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 0, 0);
+    job.waitForCompletion();
+    assertTrue("Job failed", job.isSuccessful());
     assertOwnerShip(outDir);
+
+    // Run a job with 1 map and zero reduces
+    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 1, 0);
+    job.waitForCompletion();
+    assertTrue("Job failed", job.isSuccessful());
+    assertOwnerShip(outDir);
+
+    // Run a normal job with maps/reduces
+    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 1, 1);
+    job.waitForCompletion();
+    assertTrue("Job failed", job.isSuccessful());
+    assertOwnerShip(outDir);
+
+    // Run a job with jvm reuse
+    JobConf myConf = getClusterConf();
+    myConf.set("mapred.job.reuse.jvm.num.tasks", "-1");
+    String[] args = { "-m", "6", "-r", "3", "-mt", "1000", "-rt", "1000" };
+    assertEquals(0, ToolRunner.run(myConf, new SleepJob(), args));
   }
   
   public void testEnvironment() throws IOException {

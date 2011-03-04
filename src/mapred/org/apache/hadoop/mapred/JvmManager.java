@@ -112,7 +112,8 @@ class JvmManager {
     }
   }
 
-  public TaskInProgress getTaskForJvm(JVMId jvmId) {
+  public TaskInProgress getTaskForJvm(JVMId jvmId)
+      throws IOException {
     if (jvmId.isMapJVM()) {
       return mapJvmManager.getTaskForJvm(jvmId);
     } else {
@@ -177,7 +178,8 @@ class JvmManager {
       jvmIdToRunner.get(jvmId).setBusy(true);
     }
     
-    synchronized public TaskInProgress getTaskForJvm(JVMId jvmId) {
+    synchronized public TaskInProgress getTaskForJvm(JVMId jvmId)
+        throws IOException {
       if (jvmToRunningTask.containsKey(jvmId)) {
         //Incase of JVM reuse, tasks are returned to previously launched
         //JVM via this method. However when a new task is launched
@@ -185,15 +187,24 @@ class JvmManager {
         TaskRunner taskRunner = jvmToRunningTask.get(jvmId);
         JvmRunner jvmRunner = jvmIdToRunner.get(jvmId);
         Task task = taskRunner.getTaskInProgress().getTask();
-        TaskControllerContext context = 
-          new TaskController.TaskControllerContext();
+
+        // Initialize task dirs
+        TaskControllerContext context =
+            new TaskController.TaskControllerContext();
         context.env = jvmRunner.env;
         context.task = task;
-        //If we are returning the same task as which the JVM was launched
-        //we don't initialize task once again.
-        if(!jvmRunner.env.conf.get("mapred.task.id").
-            equals(task.getTaskID().toString())) {
-          tracker.getTaskController().initializeTask(context);
+        // If we are returning the same task as which the JVM was launched
+        // we don't initialize task once again.
+        if (!jvmRunner.env.conf.get("mapred.task.id").equals(
+            task.getTaskID().toString())) {
+          try {
+            tracker.getTaskController().initializeTask(context);
+          } catch (IOException e) {
+            LOG.warn("Failed to initialize the new task "
+                + task.getTaskID().toString() + " to be given to JVM with id "
+                + jvmId);
+            throw e;
+          }
         }
 
         jvmRunner.taskGiven(task);
@@ -405,7 +416,6 @@ class JvmManager {
           //Launch the task controller to run task JVM
           initalContext.task = jvmToRunningTask.get(jvmId).getTask();
           initalContext.env = env;
-          tracker.getTaskController().initializeTask(initalContext);
           tracker.getTaskController().launchTaskJVM(initalContext);
         } catch (IOException ioe) {
           // do nothing
@@ -415,13 +425,13 @@ class JvmManager {
           if (shexec == null) {
             return;
           }
-          
+
           kill();
-          
+
           int exitCode = shexec.getExitCode();
           updateOnJvmExit(jvmId, exitCode);
-          LOG.info("JVM : " + jvmId +" exited. Number of tasks it ran: " + 
-              numTasksRan);
+          LOG.info("JVM : " + jvmId + " exited with exit code " + exitCode
+              + ". Number of tasks it ran: " + numTasksRan);
           try {
             // In case of jvm-reuse,
             //the task jvm cleans up the common workdir for every 
@@ -445,6 +455,8 @@ class JvmManager {
             initalContext.sleeptimeBeforeSigkill = tracker.getJobConf()
               .getLong("mapred.tasktracker.tasks.sleeptime-before-sigkill",
                   ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+
+            // Destroy the task jvm
             controller.destroyTaskJVM(initalContext);
           } else {
             LOG.info(String.format("JVM Not killed %s but just removed", jvmId

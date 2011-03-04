@@ -38,7 +38,7 @@ AC_PROG_CC
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h string.h unistd.h])
+AC_CHECK_HEADERS([stdlib.h string.h unistd.h fcntl.h])
 
 #check for HADOOP_CONF_DIR
 
@@ -50,12 +50,17 @@ fi
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_TYPE_PID_T
+AC_TYPE_MODE_T
+AC_TYPE_SIZE_T
 
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
-AC_CHECK_FUNCS([strerror])
+AC_FUNC_CHOWN
+AC_CHECK_FUNCS([strerror memset mkdir rmdir strdup])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 
+AC_HEADER_STDBOOL
+AC_PROG_MAKE_SET

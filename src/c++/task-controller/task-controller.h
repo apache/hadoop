@@ -28,14 +28,20 @@
 #include <sys/stat.h>
 #include <sys/signal.h>
 #include <getopt.h>
-#include<grp.h>
+#include <grp.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <fts.h>
+
 #include "configuration.h"
 
 //command definitions
 enum command {
+  INITIALIZE_JOB,
   LAUNCH_TASK_JVM,
+  INITIALIZE_TASK,
   TERMINATE_TASK_JVM,
-  KILL_TASK_JVM
+  KILL_TASK_JVM,
 };
 
 enum errorcodes {
@@ -45,23 +51,33 @@ enum errorcodes {
   SUPER_USER_NOT_ALLOWED_TO_RUN_TASKS, //4
   INVALID_TT_ROOT, //5
   SETUID_OPER_FAILED, //6
-  INVALID_TASK_SCRIPT_PATH, //7
-  UNABLE_TO_EXECUTE_TASK_SCRIPT, //8
-  UNABLE_TO_KILL_TASK, //9
-  INVALID_PROCESS_LAUNCHING_TASKCONTROLLER, //10
-  INVALID_TASK_PID, //11
-  ERROR_RESOLVING_FILE_PATH, //12
-  RELATIVE_PATH_COMPONENTS_IN_FILE_PATH, //13
-  UNABLE_TO_STAT_FILE, //14
-  FILE_NOT_OWNED_BY_TASKTRACKER //15
+  UNABLE_TO_EXECUTE_TASK_SCRIPT, //7
+  UNABLE_TO_KILL_TASK, //8
+  INVALID_TASK_PID, //9
+  ERROR_RESOLVING_FILE_PATH, //10
+  RELATIVE_PATH_COMPONENTS_IN_FILE_PATH, //11
+  UNABLE_TO_STAT_FILE, //12
+  FILE_NOT_OWNED_BY_TASKTRACKER, //13
+  PREPARE_ATTEMPT_DIRECTORIES_FAILED, //14
+  INITIALIZE_JOB_FAILED, //15
+  PREPARE_TASK_LOGS_FAILED, //16
+  INVALID_TT_LOG_DIR, //17
+  OUT_OF_MEMORY, //18
 };
 
+#define TT_JOB_DIR_PATTERN "%s/taskTracker/jobcache/%s"
 
-#define TT_LOCAL_TASK_SCRIPT_PATTERN "%s/taskTracker/jobcache/%s/%s/taskjvm.sh"
+#define JOB_DIR_TO_JOB_WORK_PATTERN "%s/work"
+
+#define JOB_DIR_TO_ATTEMPT_DIR_PATTERN "%s/%s"
+
+#define ATTEMPT_LOG_DIR_PATTERN "%s/userlogs/%s"
+
+#define TASK_SCRIPT_PATTERN "%s/%s/taskjvm.sh"
 
 #define TT_SYS_DIR_KEY "mapred.local.dir"
 
-#define MAX_ITEMS 10
+#define TT_LOG_DIR_KEY "hadoop.log.dir"
 
 #ifndef HADOOP_CONF_DIR
   #define EXEC_PATTERN "/bin/task-controller"
@@ -72,10 +88,22 @@ extern struct passwd *user_detail;
 
 extern FILE *LOGFILE;
 
-void display_usage(FILE *stream);
+int run_task_as_user(const char * user, const char *jobid, const char *taskid,
+    const char *tt_root);
 
-int run_task_as_user(const char * user, const char *jobid, const char *taskid, const char *tt_root);
+int initialize_task(const char *jobid, const char *taskid, const char *user);
+
+int initialize_job(const char *jobid, const char *user);
 
 int kill_user_task(const char *user, const char *task_pid, int sig);
 
+int prepare_attempt_directory(const char *attempt_dir, const char *user);
+
+// The following functions are exposed for testing
+
+int check_variable_against_config(const char *config_key,
+    const char *passed_value);
+
 int get_user_details(const char *user);
+
+char *get_task_launcher_file(const char *job_dir, const char *attempt_dir);

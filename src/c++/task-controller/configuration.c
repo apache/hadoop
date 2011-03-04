@@ -72,8 +72,9 @@ void get_configs() {
 #endif
 
 #ifdef DEBUG
-  fprintf(LOGFILE,"get_configs :Conf file name is : %s \n", file_name);
+  fprintf(LOGFILE, "get_configs :Conf file name is : %s \n", file_name);
 #endif
+
   //allocate space for ten configuration items.
   config.confdetails = (struct confentry **) malloc(sizeof(struct confentry *)
       * MAX_SIZE);
@@ -87,7 +88,7 @@ void get_configs() {
   while(!feof(conf_file)) {
     line = (char *) malloc(linesize);
     if(line == NULL) {
-      fprintf(LOGFILE,"malloc failed while reading configuration file.\n");
+      fprintf(LOGFILE, "malloc failed while reading configuration file.\n");
       goto cleanup;
     }
     size_read = getline(&line,&linesize,conf_file);
@@ -123,9 +124,11 @@ void get_configs() {
           "Failed allocating memory for single configuration item\n");
       goto cleanup;
     }
+
 #ifdef DEBUG
-    fprintf(LOGFILE,"get_configs : Adding conf key : %s \n", equaltok);
+    fprintf(LOGFILE, "get_configs : Adding conf key : %s \n", equaltok);
 #endif
+
     memset(config.confdetails[config.size], 0, sizeof(struct confentry));
     config.confdetails[config.size]->key = (char *) malloc(
             sizeof(char) * (strlen(equaltok)+1));
@@ -142,9 +145,11 @@ void get_configs() {
       free(config.confdetails[config.size]);
       continue;
     }
+
 #ifdef DEBUG
-    fprintf(LOGFILE,"get_configs : Adding conf value : %s \n", equaltok);
+    fprintf(LOGFILE, "get_configs : Adding conf value : %s \n", equaltok);
 #endif
+
     config.confdetails[config.size]->value = (char *) malloc(
             sizeof(char) * (strlen(equaltok)+1));
     strcpy((char *)config.confdetails[config.size]->value, equaltok);
@@ -184,8 +189,7 @@ void get_configs() {
  * array, next time onwards used the populated array.
  *
  */
-
-const char * get_value(char* key) {
+const char * get_value(const char* key) {
   int count;
   if (config.size == 0) {
     get_configs();
@@ -196,22 +200,27 @@ const char * get_value(char* key) {
   }
   for (count = 0; count < config.size; count++) {
     if (strcmp(config.confdetails[count]->key, key) == 0) {
-      return config.confdetails[count]->value;
+      return strdup(config.confdetails[count]->value);
     }
   }
   return NULL;
 }
 
-const char ** get_values(char * key) {
+/**
+ * Function to return an array of values for a key.
+ * Value delimiter is assumed to be a comma.
+ */
+const char ** get_values(const char * key) {
+  const char ** toPass = NULL;
+  const char *value = get_value(key);
   char *tempTok = NULL;
   char *tempstr = NULL;
   int size = 0;
   int toPassSize = MAX_SIZE;
-  const char** toPass = (const char **) malloc(sizeof(char *) * toPassSize);
 
   //first allocate any array of 10
-  const char * value = get_value(key);
   if(value != NULL) {
+    toPass = (const char **) malloc(sizeof(char *) * toPassSize);
     tempTok = strtok_r((char *)value, ",", &tempstr);
     while (tempTok != NULL) {
       toPass[size++] = tempTok;

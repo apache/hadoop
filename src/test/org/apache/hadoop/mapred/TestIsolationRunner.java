@@ -26,6 +26,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
@@ -99,20 +100,17 @@ public class TestIsolationRunner extends TestCase {
   
   private Path getAttemptJobXml(JobConf conf, JobID jobId, boolean isMap)
       throws IOException {
-    String[] localDirs = conf.getLocalDirs();
-    assertEquals(1, localDirs.length);
-    Path jobCacheDir = new Path(localDirs[0], "0_0" + Path.SEPARATOR +
-        "taskTracker" + Path.SEPARATOR + "jobcache" + Path.SEPARATOR + jobId);    
-    Path attemptDir = new Path(jobCacheDir,
-        new TaskAttemptID(new TaskID(jobId, isMap, 0), 0).toString());    
-    return new Path(attemptDir, "job.xml");
+    String taskid =
+        new TaskAttemptID(new TaskID(jobId, isMap, 0), 0).toString();
+    return new LocalDirAllocator("mapred.local.dir").getLocalPathToRead(
+        TaskTracker.getTaskConfFile(jobId.toString(), taskid, false), conf);
   }
 
   public void testIsolationRunOfMapTask() throws 
       IOException, InterruptedException, ClassNotFoundException {
     MiniMRCluster mr = null;
     try {
-      mr = new MiniMRCluster(1, "file:///", 1);
+      mr = new MiniMRCluster(1, "file:///", 4);
 
       // Run a job succesfully; keep task files.
       JobConf conf = mr.createJobConf();
@@ -131,7 +129,9 @@ public class TestIsolationRunner extends TestCase {
       // run IsolationRunner against the map task.
       FileSystem localFs = FileSystem.getLocal(conf);
       Path mapJobXml =
-          getAttemptJobXml(conf, jobId, true).makeQualified(localFs);
+          getAttemptJobXml(
+              mr.getTaskTrackerRunner(0).getTaskTracker().getJobConf(),
+              jobId, true).makeQualified(localFs);
       assertTrue(localFs.exists(mapJobXml));
       
       new IsolationRunner().run(new String[] {

@@ -17,6 +17,32 @@
  */
 #include "task-controller.h"
 
+void open_log_file(const char *log_file) {
+  if (log_file == NULL) {
+    LOGFILE = stdout;
+  } else {
+    LOGFILE = fopen(log_file, "a");
+    if (LOGFILE == NULL) {
+      fprintf(stdout, "Unable to open LOGFILE : %s \n", log_file);
+      LOGFILE = stdout;
+    }
+    if (LOGFILE != stdout) {
+      if (chmod(log_file, S_IREAD | S_IEXEC | S_IWRITE | S_IROTH | S_IWOTH
+          | S_IRGRP | S_IWGRP) < 0) {
+        fprintf(stdout, "Unable to change permission of the log file %s \n",
+            log_file);
+        fclose(LOGFILE);
+        fprintf(stdout, "changing log file to stdout");
+        LOGFILE = stdout;
+      }
+    }
+  }
+}
+
+void display_usage(FILE *stream) {
+  fprintf(stream,
+      "Usage: task-controller [-l logfile] user command command-args\n");
+}
 
 int main(int argc, char **argv) {
   int command;
@@ -24,6 +50,7 @@ int main(int argc, char **argv) {
   const char * job_id = NULL;
   const char * task_id = NULL;
   const char * tt_root = NULL;
+  const char *log_dir = NULL;
   int exit_code = 0;
   const char * task_pid = NULL;
   const char* const short_options = "l:";
@@ -35,7 +62,7 @@ int main(int argc, char **argv) {
   //Minimum number of arguments required to run the task-controller
   //command-name user command tt-root
   if (argc < 3) {
-    display_usage(stderr);
+    display_usage(stdout);
     return INVALID_ARGUMENT_NUMBER;
   }
 
@@ -54,24 +81,9 @@ int main(int argc, char **argv) {
       break;
     }
   } while (next_option != -1);
-  if (log_file == NULL) {
-    LOGFILE = stderr;
-  } else {
-    LOGFILE = fopen(log_file, "a");
-    if (LOGFILE == NULL) {
-      fprintf(stderr, "Unable to open LOGFILE : %s \n", log_file);
-      LOGFILE = stderr;
-    }
-    if (LOGFILE != stderr) {
-      if (chmod(log_file, S_IREAD | S_IEXEC | S_IWRITE | S_IROTH | S_IWOTH
-          | S_IRGRP | S_IWGRP) < 0) {
-        fprintf(stderr, "Unable to change permission of the log file %s \n",
-            log_file);
-        fprintf(stderr, "changing log file to stderr");
-        LOGFILE = stderr;
-      }
-    }
-  }
+
+  open_log_file(log_file);
+
   //checks done for user name
   //checks done if the user is root or not.
   if (argv[optind] == NULL) {
@@ -88,17 +100,26 @@ int main(int argc, char **argv) {
   }
   optind = optind + 1;
   command = atoi(argv[optind++]);
-#ifdef DEBUG
+
   fprintf(LOGFILE, "main : command provided %d\n",command);
   fprintf(LOGFILE, "main : user is %s\n", user_detail->pw_name);
-#endif
+
   switch (command) {
+  case INITIALIZE_JOB:
+    job_id = argv[optind++];
+    exit_code = initialize_job(job_id, user_detail->pw_name);
+    break;
   case LAUNCH_TASK_JVM:
     tt_root = argv[optind++];
     job_id = argv[optind++];
     task_id = argv[optind++];
     exit_code
         = run_task_as_user(user_detail->pw_name, job_id, task_id, tt_root);
+    break;
+  case INITIALIZE_TASK:
+    job_id = argv[optind++];
+    task_id = argv[optind++];
+    exit_code = initialize_task(job_id, task_id, user_detail->pw_name);
     break;
   case TERMINATE_TASK_JVM:
     task_pid = argv[optind++];

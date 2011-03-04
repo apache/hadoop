@@ -24,12 +24,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -73,52 +72,27 @@ class LinuxTaskController extends TaskController {
         new File(hadoopBin, "task-controller").getAbsolutePath();
   }
   
-  // The list of directory paths specified in the
-  // variable mapred.local.dir. This is used to determine
-  // which among the list of directories is picked up
-  // for storing data for a particular task.
-  private String[] mapredLocalDirs;
-  
-  // permissions to set on files and directories created.
-  // When localized files are handled securely, this string
-  // will change to something more restrictive. Until then,
-  // it opens up the permissions for all, so that the tasktracker
-  // and job owners can access files together.
-  private static final String FILE_PERMISSIONS = "ugo+rwx";
-  
-  // permissions to set on components of the path leading to
-  // localized files and directories. Read and execute permissions
-  // are required for different users to be able to access the
-  // files.
-  private static final String PATH_PERMISSIONS = "go+rx";
-  
   public LinuxTaskController() {
     super();
-  }
-  
-  @Override
-  public void setConf(Configuration conf) {
-    super.setConf(conf);
-    mapredLocalDirs = conf.getStrings("mapred.local.dir");
-    //Setting of the permissions of the local directory is done in 
-    //setup()
   }
   
   /**
    * List of commands that the setuid script will execute.
    */
   enum TaskCommands {
+    INITIALIZE_JOB,
     LAUNCH_TASK_JVM,
+    INITIALIZE_TASK,
     TERMINATE_TASK_JVM,
-    KILL_TASK_JVM
+    KILL_TASK_JVM,
   }
-  
+
   /**
    * Launch a task JVM that will run as the owner of the job.
    * 
-   * This method launches a task JVM by executing a setuid
-   * executable that will switch to the user and run the
-   * task.
+   * This method launches a task JVM by executing a setuid executable that will
+   * switch to the user and run the task. Also does initialization of the first
+   * task in the same setuid process launch.
    */
   @Override
   void launchTaskJVM(TaskController.TaskControllerContext context) 
@@ -150,20 +124,108 @@ class LinuxTaskController extends TaskController {
     ShellCommandExecutor shExec =  buildTaskControllerExecutor(
                                     TaskCommands.LAUNCH_TASK_JVM, 
                                     env.conf.getUser(),
-                                    launchTaskJVMArgs, env);
+                                    launchTaskJVMArgs, env.workDir, env.env);
     context.shExec = shExec;
     try {
       shExec.execute();
     } catch (Exception e) {
-      LOG.warn("Exception thrown while launching task JVM : " + 
-          StringUtils.stringifyException(e));
-      LOG.warn("Exit code from task is : " + shExec.getExitCode());
-      LOG.warn("Output from task-contoller is : " + shExec.getOutput());
+      int exitCode = shExec.getExitCode();
+      LOG.warn("Exit code from task is : " + exitCode);
+      // 143 (SIGTERM) and 137 (SIGKILL) exit codes means the task was
+      // terminated/killed forcefully. In all other cases, log the
+      // task-controller output
+      if (exitCode != 143 && exitCode != 137) {
+        LOG.warn("Exception thrown while launching task JVM : "
+            + StringUtils.stringifyException(e));
+        LOG.info("Output from LinuxTaskController's launchTaskJVM follows:");
+        logOutput(shExec.getOutput());
+      }
       throw new IOException(e);
     }
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("output after executing task jvm = " + shExec.getOutput()); 
+    if (LOG.isDebugEnabled()) {
+      LOG.info("Output from LinuxTaskController's launchTaskJVM follows:");
+      logOutput(shExec.getOutput());
     }
+  }
+
+  /**
+   * Helper method that runs a LinuxTaskController command
+   * 
+   * @param taskCommand
+   * @param user
+   * @param cmdArgs
+   * @param env
+   * @throws IOException
+   */
+  private void runCommand(TaskCommands taskCommand, String user,
+      List<String> cmdArgs, File workDir, Map<String, String> env)
+      throws IOException {
+
+    ShellCommandExecutor shExec =
+        buildTaskControllerExecutor(taskCommand, user, cmdArgs, workDir, env);
+    try {
+      shExec.execute();
+    } catch (Exception e) {
+      LOG.warn("Exit code from " + taskCommand.toString() + " is : "
+          + shExec.getExitCode());
+      LOG.warn("Exception thrown by " + taskCommand.toString() + " : "
+          + StringUtils.stringifyException(e));
+      LOG.info("Output from LinuxTaskController's " + taskCommand.toString()
+          + " follows:");
+      logOutput(shExec.getOutput());
+      throw new IOException(e);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.info("Output from LinuxTaskController's " + taskCommand.toString()
+          + " follows:");
+      logOutput(shExec.getOutput());
+    }
+  }
+
+  /**
+   * Returns list of arguments to be passed while initializing a new task. See
+   * {@code buildTaskControllerExecutor(TaskCommands, String, List<String>,
+   * JvmEnv)} documentation.
+   * 
+   * @param context
+   * @return Argument to be used while launching Task VM
+   */
+  private List<String> buildInitializeTaskArgs(TaskControllerContext context) {
+    List<String> commandArgs = new ArrayList<String>(3);
+    String taskId = context.task.getTaskID().toString();
+    String jobId = getJobId(context);
+    commandArgs.add(jobId);
+    if (!context.task.isTaskCleanupTask()) {
+      commandArgs.add(taskId);
+    } else {
+      commandArgs.add(taskId + TaskTracker.TASK_CLEANUP_SUFFIX);
+    }
+    return commandArgs;
+  }
+
+  @Override
+  void initializeTask(TaskControllerContext context)
+      throws IOException {
+    LOG.debug("Going to do " + TaskCommands.INITIALIZE_TASK.toString()
+        + " for " + context.task.getTaskID().toString());
+    runCommand(TaskCommands.INITIALIZE_TASK, context.env.conf.getUser(),
+        buildInitializeTaskArgs(context), context.env.workDir, context.env.env);
+  }
+
+  private void logOutput(String output) {
+    String shExecOutput = output;
+    if (shExecOutput != null) {
+      for (String str : shExecOutput.split("\n")) {
+        LOG.info(str);
+      }
+    }
+  }
+
+  private String getJobId(TaskControllerContext context) {
+    String taskId = context.task.getTaskID().toString();
+    TaskAttemptID tId = TaskAttemptID.forName(taskId);
+    String jobId = tId.getJobID().toString();
+    return jobId;
   }
 
   /**
@@ -175,28 +237,16 @@ class LinuxTaskController extends TaskController {
    */
   private List<String> buildLaunchTaskArgs(TaskControllerContext context) {
     List<String> commandArgs = new ArrayList<String>(3);
-    String taskId = context.task.getTaskID().toString();
-    String jobId = getJobId(context);
     LOG.debug("getting the task directory as: " 
         + getTaskCacheDirectory(context));
+    LOG.debug("getting the tt_root as " +getDirectoryChosenForTask(
+        new File(getTaskCacheDirectory(context)), 
+        context) );
     commandArgs.add(getDirectoryChosenForTask(
         new File(getTaskCacheDirectory(context)), 
         context));
-    commandArgs.add(jobId);
-    if(!context.task.isTaskCleanupTask()) {
-      commandArgs.add(taskId);
-    }else {
-      commandArgs.add(taskId + TaskTracker.TASK_CLEANUP_SUFFIX);
-    }
+    commandArgs.addAll(buildInitializeTaskArgs(context));
     return commandArgs;
-  }
-  
-  // get the Job ID from the information in the TaskControllerContext
-  private String getJobId(TaskControllerContext context) {
-    String taskId = context.task.getTaskID().toString();
-    TaskAttemptID tId = TaskAttemptID.forName(taskId);
-    String jobId = tId.getJobID().toString();
-    return jobId;
   }
 
   // Get the directory from the list of directories configured
@@ -208,8 +258,8 @@ class LinuxTaskController extends TaskController {
     String taskId = context.task.getTaskID().toString();
     for (String dir : mapredLocalDirs) {
       File mapredDir = new File(dir);
-      File taskDir = new File(mapredDir, TaskTracker.getLocalTaskDir(
-          jobId, taskId, context.task.isTaskCleanupTask()));
+      File taskDir = new File(mapredDir, TaskTracker.getTaskWorkDir(
+          jobId, taskId, context.task.isTaskCleanupTask())).getParentFile();
       if (directory.equals(taskDir)) {
         return dir;
       }
@@ -219,68 +269,7 @@ class LinuxTaskController extends TaskController {
     throw new IllegalArgumentException("invalid task cache directory "
                 + directory.getAbsolutePath());
   }
-  
-  /**
-   * Setup appropriate permissions for directories and files that
-   * are used by the task.
-   * 
-   * As the LinuxTaskController launches tasks as a user, different
-   * from the daemon, all directories and files that are potentially 
-   * used by the tasks are setup with appropriate permissions that
-   * will allow access.
-   * 
-   * Until secure data handling is implemented (see HADOOP-4491 and
-   * HADOOP-4493, for e.g.), the permissions are set up to allow
-   * read, write and execute access for everyone. This will be 
-   * changed to restricted access as data is handled securely.
-   */
-  void initializeTask(TaskControllerContext context) {
-    // Setup permissions for the job and task cache directories.
-    setupTaskCacheFileAccess(context);
-    // setup permissions for task log directory
-    setupTaskLogFileAccess(context);    
-  }
-  
-  // Allows access for the task to create log files under 
-  // the task log directory
-  private void setupTaskLogFileAccess(TaskControllerContext context) {
-    TaskAttemptID taskId = context.task.getTaskID();
-    File f = TaskLog.getTaskLogFile(taskId, TaskLog.LogName.SYSLOG);
-    String taskAttemptLogDir = f.getParentFile().getAbsolutePath();
-    changeDirectoryPermissions(taskAttemptLogDir, FILE_PERMISSIONS, false);
-  }
 
-  // Allows access for the task to read, write and execute 
-  // the files under the job and task cache directories
-  private void setupTaskCacheFileAccess(TaskControllerContext context) {
-    String taskId = context.task.getTaskID().toString();
-    JobID jobId = JobID.forName(getJobId(context));
-    //Change permission for the task across all the disks
-    for(String localDir : mapredLocalDirs) {
-      File f = new File(localDir);
-      File taskCacheDir = new File(f,TaskTracker.getLocalTaskDir(
-          jobId.toString(), taskId, context.task.isTaskCleanupTask()));
-      if(taskCacheDir.exists()) {
-        changeDirectoryPermissions(taskCacheDir.getPath(), 
-            FILE_PERMISSIONS, true);
-      }          
-    }//end of local directory Iteration 
-  }
-
-  // convenience method to execute chmod.
-  private void changeDirectoryPermissions(String dir, String mode, 
-                                              boolean isRecursive) {
-    int ret = 0;
-    try {
-      ret = FileUtil.chmod(dir, mode, isRecursive);
-    } catch (Exception e) {
-      LOG.warn("Exception in changing permissions for directory " + dir + 
-                  ". Exception: " + e.getMessage());
-    }
-    if (ret != 0) {
-      LOG.warn("Could not change permissions for directory " + dir);
-    }
-  }
   /**
    * Builds the command line for launching/terminating/killing task JVM.
    * Following is the format for launching/terminating/killing task JVM
@@ -295,14 +284,15 @@ class LinuxTaskController extends TaskController {
    * @param command command to be executed.
    * @param userName user name
    * @param cmdArgs list of extra arguments
+   * @param workDir working directory for the task-controller
    * @param env JVM environment variables.
    * @return {@link ShellCommandExecutor}
    * @throws IOException
    */
-  private ShellCommandExecutor buildTaskControllerExecutor(TaskCommands command, 
-                                          String userName, 
-                                          List<String> cmdArgs, JvmEnv env) 
-                                    throws IOException {
+  private ShellCommandExecutor buildTaskControllerExecutor(
+      TaskCommands command, String userName, List<String> cmdArgs,
+      File workDir, Map<String, String> env)
+      throws IOException {
     String[] taskControllerCmd = new String[3 + cmdArgs.size()];
     taskControllerCmd[0] = getTaskControllerExecutablePath();
     taskControllerCmd[1] = userName;
@@ -317,9 +307,9 @@ class LinuxTaskController extends TaskController {
       }
     }
     ShellCommandExecutor shExec = null;
-    if(env.workDir != null && env.workDir.exists()) {
+    if(workDir != null && workDir.exists()) {
       shExec = new ShellCommandExecutor(taskControllerCmd,
-          env.workDir, env.env);
+          workDir, env);
     } else {
       shExec = new ShellCommandExecutor(taskControllerCmd);
     }
@@ -376,66 +366,20 @@ class LinuxTaskController extends TaskController {
     return taskControllerExe;
   }  
 
-  /**
-   * Sets up the permissions of the following directories:
-   * 
-   * Job cache directory
-   * Archive directory
-   * Hadoop log directories
-   * 
-   */
-  @Override
-  void setup() {
-    //set up job cache directory and associated permissions
-    String localDirs[] = this.mapredLocalDirs;
-    for(String localDir : localDirs) {
-      //Cache root
-      File cacheDirectory = new File(localDir,TaskTracker.getCacheSubdir());
-      File jobCacheDirectory = new File(localDir,TaskTracker.getJobCacheSubdir());
-      if(!cacheDirectory.exists()) {
-        if(!cacheDirectory.mkdirs()) {
-          LOG.warn("Unable to create cache directory : " + 
-              cacheDirectory.getPath());
-        }
-      }
-      if(!jobCacheDirectory.exists()) {
-        if(!jobCacheDirectory.mkdirs()) {
-          LOG.warn("Unable to create job cache directory : " + 
-              jobCacheDirectory.getPath());
-        }
-      }
-      //Give world writable permission for every directory under
-      //mapred-local-dir.
-      //Child tries to write files under it when executing.
-      changeDirectoryPermissions(localDir, FILE_PERMISSIONS, true);
-    }//end of local directory manipulations
-    //setting up perms for user logs
-    File taskLog = TaskLog.getUserLogDir();
-    changeDirectoryPermissions(taskLog.getPath(), FILE_PERMISSIONS,false);
+  private List<String> buildInitializeJobCommandArgs(
+      JobInitializationContext context) {
+    List<String> initJobCmdArgs = new ArrayList<String>();
+    initJobCmdArgs.add(context.jobid.toString());
+    return initJobCmdArgs;
   }
 
-  /*
-   * Create Job directories across disks and set their permissions to 777
-   * This way when tasks are run we just need to setup permissions for
-   * task folder.
-   */
   @Override
-  void initializeJob(JobID jobid) {
-    for(String localDir : this.mapredLocalDirs) {
-      File jobDirectory = new File(localDir, 
-          TaskTracker.getLocalJobDir(jobid.toString()));
-      if(!jobDirectory.exists()) {
-        if(!jobDirectory.mkdir()) {
-          LOG.warn("Unable to create job cache directory : " 
-              + jobDirectory.getPath());
-          continue;
-        }
-      }
-      //Should be recursive because the jar and work folders might be 
-      //present under the job cache directory
-      changeDirectoryPermissions(
-          jobDirectory.getPath(), FILE_PERMISSIONS, true);
-    }
+  void initializeJob(JobInitializationContext context)
+      throws IOException {
+    LOG.debug("Going to initialize job " + context.jobid.toString()
+        + " on the TT");
+    runCommand(TaskCommands.INITIALIZE_JOB, context.user,
+        buildInitializeJobCommandArgs(context), context.workDir, null);
   }
   
   /**
@@ -470,7 +414,7 @@ class LinuxTaskController extends TaskController {
     }
     ShellCommandExecutor shExec = buildTaskControllerExecutor(
         command, context.env.conf.getUser(), 
-        buildKillTaskCommandArgs(context), context.env);
+        buildKillTaskCommandArgs(context), context.env.workDir, context.env.env);
     try {
       shExec.execute();
     } catch (Exception e) {

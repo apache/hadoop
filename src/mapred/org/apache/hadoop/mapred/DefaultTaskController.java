@@ -49,6 +49,8 @@ class DefaultTaskController extends TaskController {
    */
   void launchTaskJVM(TaskController.TaskControllerContext context) 
                                       throws IOException {
+    initializeTask(context);
+
     JvmEnv env = context.env;
     List<String> wrappedCommand = 
       TaskLog.captureOutAndError(env.setup, env.vargs, env.stdout, env.stderr,
@@ -73,20 +75,13 @@ class DefaultTaskController extends TaskController {
     // So this is a dummy method.
     return;
   }
-  
-
-  @Override
-  void setup() {
-    // nothing to setup
-    return;
-  }
 
   /*
    * No need to do anything as we don't need to do as we dont need anything
    * extra from what TaskTracker has done.
    */
   @Override
-  void initializeJob(JobID jobId) {
+  void initializeJob(JobInitializationContext context) {
   }
 
   @Override

@@ -57,9 +57,10 @@ public class TaskLog {
   private static final Log LOG =
     LogFactory.getLog(TaskLog.class);
 
+  static final String USERLOGS_DIR_NAME = "userlogs";
+
   private static final File LOG_DIR = 
-    new File(System.getProperty("hadoop.log.dir"), 
-             "userlogs").getAbsoluteFile();
+    new File(getBaseLogDir(), USERLOGS_DIR_NAME).getAbsoluteFile();
   
   // localFS is set in (and used by) writeToIndexFile()
   static LocalFileSystem localFS = null;
@@ -178,7 +179,11 @@ public class TaskLog {
       return new File(getBaseDir(taskid), "log.index");
     }
   }
-  
+
+  static String getBaseLogDir() {
+    return System.getProperty("hadoop.log.dir");
+  }
+
   static File getBaseDir(String taskid) {
     return new File(LOG_DIR, taskid);
   }
