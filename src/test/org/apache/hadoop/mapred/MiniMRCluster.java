@@ -33,6 +33,7 @@ import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.StaticMapping;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -529,8 +530,12 @@ public class MiniMRCluster {
 
   /**
    * Change the job's priority
+   * 
+   * @throws IOException
+   * @throws AccessControlException
    */
-  public void setJobPriority(JobID jobId, JobPriority priority) {
+  public void setJobPriority(JobID jobId, JobPriority priority)
+      throws AccessControlException, IOException {
     jobTracker.getJobTracker().setJobPriority(jobId, priority);
   }
 

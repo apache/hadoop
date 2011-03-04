@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JobHistory.Values;
+import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -60,6 +61,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -300,6 +302,7 @@ public class JobInProgress {
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
     this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
+    this.status.setUsername(conf.getUser());
     this.profile = new JobProfile(conf.getUser(), jobid, "", "",
                                   conf.getJobName(), conf.getQueueName());
     this.memoryPerMap = conf.getMemoryForMapTask();
@@ -340,6 +343,7 @@ public class JobInProgress {
         + jobtracker.getInfoPort() + "/jobdetails.jsp?jobid=" + jobId;
     this.jobtracker = jobtracker;
     this.status = new JobStatus(jobId, 0.0f, 0.0f, JobStatus.PREP);
+    this.status.setUsername(jobInfo.getUser().toString());
     this.jobtracker.getInstrumentation().addPrepJob(conf, jobId);
     this.startTime = jobtracker.getClock().getTime();
     status.setStartTime(startTime);
@@ -387,6 +391,9 @@ public class JobInProgress {
     
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
        (numMapTasks + numReduceTasks + 10);
+
+    // Construct the jobACLs
+    status.setJobACLs(jobtracker.getJobACLsManager().constructJobACLs(conf));
 
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
@@ -707,6 +714,25 @@ public class JobInProgress {
     TaskSplitMetaInfo[] allTaskSplitMetaInfo =
       SplitMetaInfoReader.readSplitMetaInfo(jobId, fs, conf, jobSubmitDir);
     return allTaskSplitMetaInfo;
+  }
+
+  /**
+   * If authorization is enabled on the JobTracker, checks whether the user (in
+   * the callerUGI) is authorized to perform the operation specify by
+   * 'jobOperation' on the job.
+   * <ul>
+   * <li>The owner of the job can do any operation on the job</li>
+   * <li>The superuser/supergroup of the JobTracker is always permitted to do
+   * operations on any job.</li>
+   * <li>For all other users/groups job-acls are checked</li>
+   * </ul>
+   * 
+   * @param callerUGI
+   * @param jobOperation
+   */
+  void checkAccess(UserGroupInformation callerUGI, JobACL jobOperation)
+      throws AccessControlException {
+    jobtracker.getJobACLsManager().checkAccess(status, callerUGI, jobOperation);
   }
 
   /////////////////////////////////////////////////////

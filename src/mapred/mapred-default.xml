@@ -917,6 +917,72 @@
 </property>
 
 <property>
+  <name>mapreduce.cluster.job-authorization-enabled</name>
+  <value>false</value>
+  <description> Boolean flag that specifies if job-level authorization checks
+  should be enabled on the jobs submitted to the cluster.  Job-level
+  authorization is enabled if this flag is set to true or disabled otherwise.
+  It is disabled by default. If enabled, access control checks are made by
+  JobTracker and TaskTracker when requests are made by users for viewing the
+  job-details (See mapreduce.job.acl-view-job) or for modifying the job
+  (See mapreduce.job.acl-modify-job) using Map/Reduce APIs, RPCs or via the
+  console and web user interfaces.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.acl-modify-job</name>
+  <value></value>
+  <description> Job specific access-control list for 'modifying' the job. It
+    is only used if authorization is enabled in Map/Reduce by setting the
+    configuration property mapreduce.cluster.job-authorization-enabled to true.
+    This specifies the list of users and/or groups who can do modification
+    operations on the job. For specifying a list of users and groups the
+    format to use is "user1,user2 group1,group". If set to '*', it allows all
+    users/groups to modify this job. If set to '', it allows none. This
+    configuration is used to guard all the modifications with respect to this
+    job and takes care of all the following operations:
+      o killing this job
+      o killing a task of this job, failing a task of this job
+      o setting the priority of this job
+    Each of these operations are also protected by the per-queue level ACL
+    "acl-administer-jobs" configured via mapred-queues.xml. So a caller should
+    have the authorization to satisfy both the queue-level ACL and the
+    job-level ACL.
+
+    Irrespective of this ACL configuration, job-owner, superuser and members
+    of supergroup configured on JobTracker via mapred.permissions.supergroup,
+    can do all the modification operations.
+
+    By default, nobody else besides job-owner, superuser/supergroup can
+    perform modification operations on a job that they don't own.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.acl-view-job</name>
+  <value></value>
+  <description> Job specific access-control list for 'viewing' the job. It is
+    only used if authorization is enabled in Map/Reduce by setting the
+    configuration property mapreduce.cluster.job-authorization-enabled to true.
+    This specifies the list of users and/or groups who can view private details
+    about the job. For specifying a list of users and groups the
+    format to use is "user1,user2 group1,group". If set to '*', it allows all
+    users/groups to modify this job. If set to '', it allows none. This
+    configuration is used to guard some of the job-views and at present only
+    protects APIs that can return possibly sensitive information of the
+    job-owner like
+      o job-level counters
+      o task-level counters
+      o tasks' diagnostic information
+      o task-logs displayed on the TaskTracker web-UI and
+      o job.xml showed by the JobTracker's web-UI
+    Every other piece information of jobs is still accessible by any other
+    users, for e.g., JobStatus, JobProfile, list of jobs in the queue, etc.
+  </description>
+</property>
+
+<property>
   <name>mapred.tasktracker.indexcache.mb</name>
   <value>10</value>
   <description> The maximum memory that a task tracker allows for the 

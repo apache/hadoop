@@ -51,6 +51,10 @@ public class JobContext {
 
   public static final String JOB_NAMENODES = "mapreduce.job.hdfs-servers";
 
+  public static final String JOB_ACL_VIEW_JOB = "mapreduce.job.acl-view-job";
+  public static final String JOB_ACL_MODIFY_JOB =
+    "mapreduce.job.acl-modify-job";
+
   public static final String CACHE_FILE_VISIBILITIES = 
     "mapreduce.job.cache.files.visibilities";
   public static final String CACHE_ARCHIVES_VISIBILITIES = 
