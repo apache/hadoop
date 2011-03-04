@@ -68,17 +68,4 @@ public interface ClusterProcessManager {
    */
   void stop() throws IOException;
 
-  /**
-   * Method cleans the remote hosts' directories used by a deployed cluster
-   * @throws IOException is thrown if cleaning process fails or terminates with
-   * non-zero exit code
-   */
-  void cleanDirs() throws Exception;
-
-  /**
-   * Method (re)reploys cluster bits to the remote hosts
-   * @throws IOException is thrown if cleaning process fails or terminates with
-   * non-zero exit code
-  */
-  void deploy() throws IOException;
 }
