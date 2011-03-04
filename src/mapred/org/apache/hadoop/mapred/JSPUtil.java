@@ -437,13 +437,7 @@ class JSPUtil {
   }
 
   static Path getJobConfFilePath(Path logFile) {
-    String[] jobDetails = logFile.getName().split("_");
-    String jobId = getJobID(logFile.getName());
-    String jobUniqueString =
-        jobDetails[0] + "_" + jobDetails[1] + "_" + jobId;
-    Path logDir = logFile.getParent();
-    Path jobFilePath = new Path(logDir, jobUniqueString + "_conf.xml");
-    return jobFilePath;
+    return JobHistory.confPathFromLogFilePath(logFile);
   }
 
   /**
@@ -539,18 +533,15 @@ class JSPUtil {
   }
 
   static String getJobID(String historyFileName) {
-    String[] jobDetails = historyFileName.split("_");
-    return jobDetails[2] + "_" + jobDetails[3] + "_" + jobDetails[4];
+    return JobHistory.jobIdNameFromLogFileName(historyFileName);
   }
 
   static String getUserName(String historyFileName) {
-    String[] jobDetails = historyFileName.split("_");
-    return jobDetails[5];
+    return JobHistory.userNameFromLogFileName(historyFileName);
   }
 
   static String getJobName(String historyFileName) {
-    String[] jobDetails = historyFileName.split("_");
-    return jobDetails[6];
+    return JobHistory.jobNameFromLogFileName(historyFileName);
   }
 
   /**

@@ -434,18 +434,7 @@ public class TestJobHistory extends TestCase {
    * @param running whether the job is running or completed
    */
   private static Path getPathForConf(Path path) {
-    //TODO this is all a hack :(
-    // jobtracker-hostname_jobtracker-identifier_
-    String parts[] = path.getName().split("_");
-    Path parent = path.getParent();
-    Path ancestor = parent;
-    for (int i = 0; i < 4; ++i) { // serial #, 3 laysers of date
-      ancestor = ancestor.getParent();
-    }
-    String jobtrackerID = ancestor.getName();
-    String id = parts[0] + "_" + parts[1] + "_" + parts[2];
-    String jobUniqueString = jobtrackerID +  id;
-    return new Path(parent, jobUniqueString + "_conf.xml");
+    return JobHistory.confPathFromLogFilePath(path);
   }
 
   /**
@@ -1034,13 +1023,20 @@ public class TestJobHistory extends TestCase {
   }
   // Returns the output path where user history log file is written to with
   // default configuration setting for hadoop.job.history.user.location
-  private static Path getLogLocationInOutputPath(String logFileName,
-                                                      JobConf conf) {
+  private static Path getLogLocationInOutputPath
+         (String logFileName, JobConf conf) {
     JobConf jobConf = new JobConf(true);//default JobConf
     FileOutputFormat.setOutputPath(jobConf,
                      FileOutputFormat.getOutputPath(conf));
-    return JobHistory.JobInfo.getJobHistoryLogLocationForUser(
-                                             logFileName, jobConf);
+
+    Path result = JobHistory.JobInfo.getJobHistoryLogLocationForUser
+      (logFileName, jobConf);
+    return result;
+  }
+
+  static private String coreLogLocation(String subdirLogLocation) {
+    return subdirLogLocation.substring
+      (subdirLogLocation.lastIndexOf(Path.SEPARATOR_CHAR) + 1);    
   }
 
   /**
@@ -1056,12 +1052,15 @@ public class TestJobHistory extends TestCase {
 
     // User history log file location
     Path logFile = JobHistory.JobInfo.getJobHistoryLogLocationForUser(
-                                                     logFileName, conf);
+                                                     coreLogLocation(logFileName), conf);
+
     if(logFile == null) {
       // get the output path where history file is written to when
       // hadoop.job.history.user.location is not set
-      logFile = getLogLocationInOutputPath(logFileName, conf);
-    }
+
+      logFile = getLogLocationInOutputPath(coreLogLocation(logFileName), conf);
+    } 
+
     FileSystem fileSys = null;
     fileSys = logFile.getFileSystem(conf);
 
@@ -1101,9 +1100,6 @@ public class TestJobHistory extends TestCase {
   // hadoop.job.history.user.location as
   // (1)null(default case), (2)"none", and (3)some user specified dir.
   public void testJobHistoryUserLogLocation() throws IOException {
-    // Disabled
-    if (true) return;
-
     MiniMRCluster mr = null;
     try {
       mr = new MiniMRCluster(2, "file:///", 3);

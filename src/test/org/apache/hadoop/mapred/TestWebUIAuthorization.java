@@ -293,10 +293,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     MyGroupsProvider.mapping.put(mrAdminUser, Arrays.asList("group8"));
   }
 
-  public void testAuthorizationForJobHistoryPages() throws Exception {
-    // Disabled
-    if (true) return;
-    
+  public void testAuthorizationForJobHistoryPages() throws Exception {    
     setupGroupsProvider();
     Properties props = new Properties();
     props.setProperty("hadoop.http.filter.initializers",

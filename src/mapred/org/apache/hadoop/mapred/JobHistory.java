@@ -351,7 +351,9 @@ public class JobHistory {
         dateString = String.format
           ("%04d/%02d/%02d",
            timestamp.get(Calendar.YEAR),
-           timestamp.get(DEBUG_MODE ? Calendar.HOUR : Calendar.MONTH),
+           // months are 0-based in Calendar, but people will expect January
+           // to be month #1.
+           timestamp.get(DEBUG_MODE ? Calendar.HOUR : Calendar.MONTH) + 1,
            timestamp.get(DEBUG_MODE ? Calendar.MINUTE : Calendar.DAY_OF_MONTH));
 
         dateString = dateString.intern();
@@ -946,6 +948,29 @@ public class JobHistory {
 
       throw e;
     }
+
+  static Path confPathFromLogFilePath(Path logFile) {
+    String jobId = jobIdNameFromLogFileName(logFile.getName());
+      
+    Path logDir = logFile.getParent();
+
+    return new Path(logDir, jobId + CONF_FILE_NAME_SUFFIX);
+  }
+
+  static String jobIdNameFromLogFileName(String logFileName) {
+    String[] jobDetails = logFileName.split("_");
+    return jobDetails[0] + "_" + jobDetails[1] + "_" + jobDetails[2];
+  }
+
+  static String userNameFromLogFileName(String logFileName) {
+    String[] jobDetails = logFileName.split("_");
+    return jobDetails[3];
+  }
+
+  static String jobNameFromLogFileName(String logFileName) {
+    String[] jobDetails = logFileName.split("_");
+    return jobDetails[4];
+  }
   
   /**
    * Helper class for logging or reading back events related to job start, finish or failure. 
@@ -1007,6 +1032,7 @@ public class JobHistory {
       return System.getProperty("hadoop.log.dir") + File.separator +
                jobId + CONF_FILE_NAME_SUFFIX;
     }
+                      
     
     /**
      * Helper function to encode the URL of the path of the job-history
@@ -1472,7 +1498,7 @@ public class JobHistory {
     throws IOException {
       FileSystem fs = null;
       String userLogDir = null;
-      String jobUniqueString = JOBTRACKER_UNIQUE_STRING + jobId;
+      String jobUniqueString = jobId.toString();
 
       // Get the username and job name to be used in the actual log filename;
       // sanity check them too        
@@ -1492,7 +1518,7 @@ public class JobHistory {
           //TODO this is a hack :(
           // jobtracker-hostname_jobtracker-identifier_
           String jtUniqueString = parts[0] + "_" + parts[1] + "_";
-          jobUniqueString = jtUniqueString + jobId.toString();
+          jobUniqueString = jobId.toString();
         }
       } else {
         logFileName = 
@@ -2356,8 +2382,12 @@ public class JobHistory {
 
     result.set(Calendar.YEAR, Integer.parseInt(year));
 
+    // months are 0-based in Calendar, but people will expect January
+    // to be month #1 .  Therefore the number is bumped before we make the 
+    // directory name and must be debumped to seek the time.
     result.set(DEBUG_MODE ? Calendar.HOUR : Calendar.MONTH,
-               Integer.parseInt(seg2));
+               Integer.parseInt(seg2) - 1);
+
     result.set(DEBUG_MODE ? Calendar.MINUTE : Calendar.DAY_OF_MONTH,
                Integer.parseInt(seg3));
 
