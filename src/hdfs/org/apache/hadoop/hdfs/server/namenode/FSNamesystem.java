@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
@@ -919,16 +920,31 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
       LocatedBlock b = new LocatedBlock(blocks[curBlk], machineSet, curPos,
           blockCorrupt);
-      if (isAccessTokenEnabled) {
-        b.setBlockToken(accessTokenHandler.generateToken(b.getBlock(), 
-            EnumSet.of(BlockTokenSecretManager.AccessMode.READ)));
-      }
+
       results.add(b); 
       curPos += blocks[curBlk].getNumBytes();
       curBlk++;
     } while (curPos < endOff 
           && curBlk < blocks.length 
           && results.size() < nrBlocksToReturn);
+    
+    if(isAccessTokenEnabled) {
+      // Generate a list of the blockIds to be returned for this request
+      long [] blockIds = new long[results.size()];
+      for(int i = 0; i < results.size(); i++) {
+        blockIds[i] = results.get(i).getBlock().getBlockId();
+      }
+      
+      // Generate a single BlockTokenIdentifier for all ids
+      Token<BlockTokenIdentifier> bti 
+        = accessTokenHandler.generateToken(blockIds, 
+            EnumSet.of(BlockTokenSecretManager.AccessMode.READ));
+      
+      // Assign a reference to this BlockTokenIdentifier to all blocks
+      for(LocatedBlock lb : results) {
+        lb.setBlockToken(bti);
+      }
+    }
     
     return inode.createLocatedBlocks(results);
   }

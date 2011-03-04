@@ -22,6 +22,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -111,7 +112,7 @@ public class TestBlockToken {
         LOG.info("Got: " + id.toString());
         assertTrue("Received BlockTokenIdentifier is wrong", ident.equals(id));
         sm.checkAccess(id, null, block, BlockTokenSecretManager.AccessMode.WRITE);
-        result = new LocatedBlock(new Block(id.getBlockId()), null);
+        result = new LocatedBlock(new Block(id.getBlockIds()[0]), null);
       }
       return result;
     }
@@ -225,4 +226,28 @@ public class TestBlockToken {
     }
   }
 
+  @Test
+  public void collectionOfBlocksActsSanely() {
+    final long[][] testBlockIds = new long [][] {{99l, 7l, -32l, 0l},
+                                                 {},
+                                                 {42l},
+                                                 {-5235l, 2352}};
+    final long [] notBlockIds = new long [] { 32l, 1l, -23423423l};
+    
+    for(long [] bids : testBlockIds) {
+      BlockTokenIdentifier bti = new BlockTokenIdentifier("Madame Butterfly", 
+          bids, EnumSet.noneOf(BlockTokenSecretManager.AccessMode.class));
+      
+      for(long bid : bids) assertTrue(bti.isBlockIncluded(bid));
+      
+      for(long nbid : notBlockIds) assertFalse(bti.isBlockIncluded(nbid));
+      
+      // BlockTokenIdentifiers maintain a sorted array of the block Ids.
+      long[] sorted = Arrays.copyOf(bids, bids.length);
+      Arrays.sort(sorted);
+      
+      assertTrue(Arrays.toString(bids)+" doesn't equal "+Arrays.toString(sorted), 
+          Arrays.equals(bti.getBlockIds(), sorted));
+    }
+  }
 }
