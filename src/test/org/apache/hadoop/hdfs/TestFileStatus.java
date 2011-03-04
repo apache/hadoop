@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -110,6 +111,10 @@ public class TestFileStatus extends TestCase {
       assertEquals(fs.makeQualified(file1).toString(), 
           status.getPath().toString());
 
+      // test getVisbileLen
+      DFSDataInputStream fin = (DFSDataInputStream)fs.open(file1);
+      assertEquals(status.getLen(), fin.getVisibleLength());
+      
       // test listStatus on a file
       FileStatus[] stats = fs.listStatus(file1);
       assertEquals(1, stats.length);
