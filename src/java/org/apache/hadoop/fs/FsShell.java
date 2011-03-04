@@ -539,7 +539,7 @@ public class FsShell extends Configured implements Tool {
       setFileReplication(src, srcFs, newRep, waitingList);
       return;
     }
-    FileStatus items[] = srcFs.listStatus(src);
+    FileStatus items[];
     try {
       items = srcFs.listStatus(src);
     } catch (FileNotFoundException fnfe) {
