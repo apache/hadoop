@@ -58,13 +58,9 @@ public class TaskLog {
     new File(System.getProperty("hadoop.log.dir"), 
              "userlogs").getAbsoluteFile();
   
+  // localFS is set in (and used by) writeToIndexFile()
   static LocalFileSystem localFS = null;
   static {
-    try {
-      localFS = FileSystem.getLocal(new Configuration());
-    } catch (IOException ioe) {
-      LOG.warn("Getting local file system failed.");
-    }
     if (!LOG_DIR.exists()) {
       LOG_DIR.mkdirs();
     }
@@ -192,6 +188,10 @@ public class TaskLog {
     File indexFile = getIndexFile(currentTaskid.toString(), isCleanup);
     Path indexFilePath = new Path(indexFile.getAbsolutePath());
     Path tmpIndexFilePath = new Path(tmpIndexFile.getAbsolutePath());
+
+    if (localFS == null) {// set localFS once
+      localFS = FileSystem.getLocal(new Configuration());
+    }
     localFS.rename (tmpIndexFilePath, indexFilePath);
   }
   private static void resetPrevLengths(TaskAttemptID firstTaskid) {

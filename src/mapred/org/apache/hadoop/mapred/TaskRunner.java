@@ -447,6 +447,18 @@ abstract class TaskRunner extends Thread {
         ldLibraryPath.append(oldLdLibraryPath);
       }
       env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
+
+      // for the child of task jvm, set hadoop.root.logger
+      env.put("HADOOP_ROOT_LOGGER","INFO,TLA");
+      String hadoopClientOpts = System.getenv("HADOOP_CLIENT_OPTS");
+      if (hadoopClientOpts == null) {
+        hadoopClientOpts = "";
+      } else {
+        hadoopClientOpts = hadoopClientOpts + " ";
+      }
+      hadoopClientOpts = hadoopClientOpts + "-Dhadoop.tasklog.taskid=" + taskid
+                         + " -Dhadoop.tasklog.totalLogFileSize=" + logSize;
+      env.put("HADOOP_CLIENT_OPTS", "\"" + hadoopClientOpts + "\"");
       
       // add the env variables passed by the user
       String mapredChildEnv = getChildEnv(conf);
