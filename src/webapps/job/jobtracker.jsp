@@ -115,6 +115,7 @@
 <thead style="font-weight: bold">
 <tr>
 <td> Queue Name </td>
+<td> State </td>
 <td> Scheduling Information</td>
 </tr>
 </thead>
@@ -122,6 +123,7 @@
 <%
 for(JobQueueInfo queue: queues) {
   String queueName = queue.getQueueName();
+  String state = queue.getQueueState();
   String schedulingInformation = queue.getSchedulingInfo();
   if(schedulingInformation == null || schedulingInformation.trim().equals("")) {
     schedulingInformation = "NA";
@@ -129,6 +131,7 @@ for(JobQueueInfo queue: queues) {
 %>
 <tr>
 <td><a href="jobqueue_details.jsp?queueName=<%=queueName%>"><%=queueName%></a></td>
+<td><%=state%></td>
 <td><%=HtmlQuoting.quoteHtmlChars(schedulingInformation).replaceAll("\n","<br/>") %>
 </td>
 </tr>

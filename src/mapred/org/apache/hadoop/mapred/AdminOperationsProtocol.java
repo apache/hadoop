@@ -34,13 +34,17 @@ public interface AdminOperationsProtocol extends VersionedProtocol {
   /**
    * Version 1: Initial version. Added refreshQueueAcls.
    * Version 2: Added node refresh facility
+   * Version 3: Changed refreshQueueAcls to refreshQueues
    */
-  public static final long versionID = 2L;
+  public static final long versionID = 3L;
 
   /**
    * Refresh the queue acls in use currently.
+   * Refresh the queues used by the jobtracker and scheduler.
+   *
+   * Access control lists and queue states are refreshed.
    */
-  void refreshQueueAcls() throws IOException;
+  void refreshQueues() throws IOException;
   
   /**
    * Refresh the node list at the {@link JobTracker} 

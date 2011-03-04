@@ -912,6 +912,16 @@
 </property>
 
 <property>
+  <name>mapred.queue.default.state</name>
+  <value>RUNNING</value>
+  <description>
+   This values defines the state , default queue is in.
+   the values can be either "STOPPED" or "RUNNING"
+   This value can be changed at runtime.
+  </description>
+</property>
+
+<property>
   <name>mapred.job.queue.name</name>
   <value>default</value>
   <description> Queue to which a job is submitted. This must match one of the

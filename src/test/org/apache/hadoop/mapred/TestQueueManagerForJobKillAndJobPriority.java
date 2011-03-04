@@ -196,7 +196,7 @@ public class TestQueueManagerForJobKillAndJobPriority extends TestQueueManager {
         //write out queue-acls.xml.
         UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
         //refresh configuration
-        queueManager.refreshAcls(conf);
+        queueManager.refreshQueues(conf);
         //Submission should succeed
         assertTrue("User Job Submission failed after refresh.",
                    queueManager.hasAccess("default", QueueACL.SUBMIT_JOB, ugi));
@@ -214,7 +214,7 @@ public class TestQueueManagerForJobKillAndJobPriority extends TestQueueManager {
         hadoopConfProps.put(QueueManager.toFullPropertyName
                             ("q1", submitAcl), ugi.getShortUserName());
         UtilsForTests.setUpConfigFile(hadoopConfProps, hadoopConfigFile);
-        queueManager.refreshAcls(conf);
+        queueManager.refreshQueues(conf);
         assertTrue("User Job Submission allowed after refresh and no queue acls file.",
                    queueManager.hasAccess("q1", QueueACL.SUBMIT_JOB, ugi));
       } finally{
@@ -235,7 +235,7 @@ public class TestQueueManagerForJobKillAndJobPriority extends TestQueueManager {
       String queueConfigPath =
         System.getProperty("test.build.extraconf", "build/test/extraconf");
       File queueConfigFile =
-        new File(queueConfigPath, QueueManager.QUEUE_ACLS_FILE_NAME);
+        new File(queueConfigPath, QueueManager.QUEUE_ACLS_FILE_NAME );
       File hadoopConfigFile = new File(queueConfigPath, "hadoop-site.xml");
       try {
         // queue properties with which the cluster is started.
@@ -274,7 +274,7 @@ public class TestQueueManagerForJobKillAndJobPriority extends TestQueueManager {
         try {
           //Exception to be thrown by queue manager because configuration passed
           //is invalid.
-          queueManager.refreshAcls(conf);
+          queueManager.refreshQueues(conf);
           fail("Refresh of ACLs should have failed with invalid conf file.");
         } catch (Exception e) {
         }

@@ -3677,7 +3677,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         throw new IOException("Queue \"" + queue + "\" does not exist");
       }
 
-      // check for access
+      // check if queue is RUNNING
+      if (!queueManager.isRunning(queue)) {
+        throw new IOException("Queue \"" + queue + "\" is not running");
+      }
       try {
         aclsManager.checkAccess(job, ugi, Operation.SUBMIT_JOB);
       } catch (IOException ioe) {
@@ -4874,10 +4877,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   @Override
-  public void refreshQueueAcls() throws IOException{
-    LOG.info("Refreshing queue acls. requested by : " + 
+  public void refreshQueues() throws IOException {
+    LOG.info("Refreshing queue information. requested by : " +
         UserGroupInformation.getCurrentUser().getShortUserName());
-    this.queueManager.refreshAcls(new Configuration(this.conf));
+    this.queueManager.refreshQueues(new Configuration(this.conf));
   }
   
   synchronized String getReasonsForBlacklisting(String host) {

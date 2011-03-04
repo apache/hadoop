@@ -32,19 +32,19 @@ import org.apache.hadoop.io.Writable;
 
 public class JobQueueInfo implements Writable {
 
+  /**
+   * String used for empty (null) scheduling information.
+   */
+  static final String EMPTY_INFO = "N/A";
+
   private String queueName = "";
+  private String queueState = Queue.QueueState.RUNNING.getStateName();
   //The scheduling Information object is read back as String.
   //Once the scheduling information is set there is no way to recover it.
-  private String schedulingInfo; 
-  
-  
-  /**
-   * Default constructor for Job Queue Info.
-   * 
-   */
-  public JobQueueInfo() {
-    
-  }
+  private String schedulingInfo = EMPTY_INFO;
+
+  public JobQueueInfo() { }
+
   /**
    * Construct a new JobQueueInfo object using the queue name and the
    * scheduling information passed.
@@ -83,7 +83,9 @@ public class JobQueueInfo implements Writable {
    * @param schedulingInfo
    */
   public void setSchedulingInfo(String schedulingInfo) {
-    this.schedulingInfo = schedulingInfo;
+    this.schedulingInfo = (schedulingInfo != null)
+      ? schedulingInfo
+      : EMPTY_INFO;
   }
 
   /**
@@ -93,26 +95,36 @@ public class JobQueueInfo implements Writable {
    * @return Scheduling information associated to particular Job Queue
    */
   public String getSchedulingInfo() {
-    if(schedulingInfo != null) {
-      return schedulingInfo;
-    }else {
-      return "N/A";
-    }
+    return schedulingInfo;
   }
   
+  /**
+   * Set the state of the queue
+   * @param state state of the queue.
+   */
+  public void setQueueState(String state) {
+    queueState = state;
+  }
+
+  /**
+   * Return the queue state
+   * @return the queue state.
+   */
+  public String getQueueState() {
+    return queueState;
+  }
+
   @Override
   public void readFields(DataInput in) throws IOException {
     queueName = Text.readString(in);
+    queueState = Text.readString(in);
     schedulingInfo = Text.readString(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     Text.writeString(out, queueName);
-    if(schedulingInfo!= null) {
-      Text.writeString(out, schedulingInfo);
-    }else {
-      Text.writeString(out, "N/A");
-    }
+    Text.writeString(out, queueState);
+    Text.writeString(out, schedulingInfo);
   }
 }

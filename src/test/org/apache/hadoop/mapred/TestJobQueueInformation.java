@@ -109,6 +109,8 @@ public class TestJobQueueInformation extends TestCase {
     assertNotNull(queueInfos);
     assertEquals(1, queueInfos.length);
     assertEquals("default", queueInfos[0].getQueueName());
+    assertEquals(Queue.QueueState.RUNNING.getStateName(),
+                  queueInfos[0].getQueueState());
     JobConf conf = mrCluster.createJobConf();
     FileSystem fileSys = dfsCluster.getFileSystem();
     

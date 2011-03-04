@@ -26,7 +26,7 @@ import junit.framework.TestCase;
 
 /**
  * Test case to check if {@link AdminOperationsProtocol#refreshNodes()} and 
- * {@link AdminOperationsProtocol#refreshQueueAcls()} works with service-level
+ * {@link AdminOperationsProtocol#refreshQueues()} works with service-level
  * authorization enabled i.e 'hadoop.security.authorization' set to true.
  */
 public class TestAdminOperationsProtocolWithServiceAuthorization 
@@ -46,7 +46,7 @@ extends TestCase {
 
       // Invoke MRAdmin commands
       MRAdmin mrAdmin = new MRAdmin(mr.createJobConf());
-      assertEquals(0, mrAdmin.run(new String[] { "-refreshQueueAcls" }));
+      assertEquals(0, mrAdmin.run(new String[] { "-refreshQueues" }));
       assertEquals(0, mrAdmin.run(new String[] { "-refreshNodes" }));
     } finally {
       if (mr != null) { 

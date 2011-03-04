@@ -34,13 +34,13 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
-import org.apache.hadoop.conf.Configuration;
-
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 import org.apache.hadoop.mapreduce.split.JobSplit;
+import org.apache.hadoop.security.authorize.AccessControlList;
 
 public class TestCapacityScheduler extends TestCase {
 
@@ -402,15 +402,26 @@ public class TestCapacityScheduler extends TestCase {
   }
   
   static class FakeQueueManager extends QueueManager {
-    private Set<String> queues = null;
+    private static final Map<String,AccessControlList> acls =
+      new HashMap<String,AccessControlList>() {
+        final AccessControlList allEnabledAcl = new AccessControlList("*");
+        @Override
+        public AccessControlList get(Object key) {
+          return allEnabledAcl;
+        }
+      };
     FakeQueueManager() {
       super(new Configuration());
     }
-    void setQueues(Set<String> queues) {
-      this.queues = queues;
-    }
-    public synchronized Set<String> getQueues() {
-      return queues;
+    void setQueues(Set<String> newQueues) {
+      queues.clear();
+      for (String qName : newQueues) {
+        try {
+          queues.put(qName, new Queue(qName, acls, Queue.QueueState.RUNNING));
+        } catch (Throwable t) {
+          throw new RuntimeException("Unable to initialize queue " + qName, t);
+        }
+      }
     }
   }
   

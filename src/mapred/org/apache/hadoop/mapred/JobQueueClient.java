@@ -111,13 +111,14 @@ class JobQueueClient extends Configured implements  Tool {
    * @throws IOException
    */
 
-  private void displayQueueInfo(String queue, boolean showJobs) throws IOException {
-    JobQueueInfo schedInfo = jc.getQueueInfo(queue);
-    if (schedInfo == null) {
-      System.out.printf("Queue Name : %s has no scheduling information \n", queue);
+  private void displayQueueInfo(String queue, boolean showJobs)
+      throws IOException {
+    JobQueueInfo jobQueueInfo = jc.getQueueInfo(queue);
+    if (jobQueueInfo == null) {
+      System.out.println("Queue Name : " + queue +
+          " has no scheduling information");
     } else {
-      System.out.printf("Queue Name : %s \n", schedInfo.getQueueName());
-      System.out.printf("Scheduling Info : %s \n",schedInfo.getSchedulingInfo());
+      printJobQueueInfo(jobQueueInfo);
     }
     if (showJobs) {
       System.out.printf("Job List\n");
@@ -129,6 +130,19 @@ class JobQueueClient extends Configured implements  Tool {
   }
 
   /**
+   * format and print information about the passed in job queue.
+   */
+  private void printJobQueueInfo(JobQueueInfo jobQueueInfo) {
+    System.out.println("Queue Name : " + jobQueueInfo.getQueueName());
+    System.out.println("Queue State : " + jobQueueInfo.getQueueState());
+    String schedInfo = jobQueueInfo.getSchedulingInfo();
+    if (null == schedInfo || "".equals(schedInfo.trim())) {
+      schedInfo = JobQueueInfo.EMPTY_INFO;
+    }
+    System.out.println("Scheduling Info : " + schedInfo);
+  }
+
+  /**
    * Method used to display the list of the JobQueues registered
    * with the {@link QueueManager}
    * 
@@ -137,12 +151,7 @@ class JobQueueClient extends Configured implements  Tool {
   private void displayQueueList() throws IOException {
     JobQueueInfo[] queues = jc.getQueues();
     for (JobQueueInfo queue : queues) {
-      String schedInfo = queue.getSchedulingInfo();
-      if(schedInfo.trim().equals("")){
-        schedInfo = "N/A";
-      }
-      System.out.printf("Queue Name : %s \n", queue.getQueueName());
-      System.out.printf("Scheduling Info : %s \n",queue.getSchedulingInfo());
+      printJobQueueInfo(queue);
     }
   }
 

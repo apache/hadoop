@@ -23,6 +23,9 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Set;
 import java.util.TreeSet;
 
+import java.io.File;
+import java.util.Properties;
+
 import javax.security.auth.login.LoginException;
 
 import junit.framework.TestCase;
@@ -183,8 +186,90 @@ public class TestQueueManager extends TestCase {
       tearDownCluster();
     }
   }
-  
-  
+
+  /**
+   * Test to verify refreshing of queue properties by using MRAdmin tool.
+   *
+   * @throws Exception
+   */
+  public void testStateRefresh() throws Exception {
+    String queueConfigPath =
+        System.getProperty("test.build.extraconf", "build/test/extraconf");
+    File queueConfigFile =
+        new File(queueConfigPath, QueueManager.QUEUE_ACLS_FILE_NAME);
+    try {
+      //Setting up default mapred-site.xml
+      Properties queueConfProps = new Properties();
+      //these properties should be retained.
+      queueConfProps.put("mapred.queue.names", "default,qu1");
+      queueConfProps.put("mapred.acls.enabled", "true");
+      //These property should always be overridden
+      queueConfProps.put("mapred.queue.default.state", "RUNNING");
+      queueConfProps.put("mapred.queue.qu1.state", "STOPPED");
+      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
+
+      //Create a new configuration to be used with QueueManager
+      JobConf conf = new JobConf();
+      setUpCluster(conf);
+      QueueManager queueManager =
+        miniMRCluster.getJobTrackerRunner().getJobTracker().getQueueManager();
+
+      RunningJob job = submitSleepJob(1, 1, 100, 100, true,null, "default" );
+      assertTrue(job.isSuccessful());
+
+      try {
+        submitSleepJob(1, 1, 100, 100, true,null, "qu1" );
+        fail("submit job in default queue should be failed ");
+      } catch (Exception e) {
+        assertTrue(e.getMessage().contains(
+              "Queue \"" + "qu1" + "\" is not running"));
+      }
+
+      // verify state of queues before refresh
+      JobQueueInfo queueInfo = queueManager.getJobQueueInfo("default");
+      assertEquals(Queue.QueueState.RUNNING.getStateName(),
+                    queueInfo.getQueueState());
+      queueInfo = queueManager.getJobQueueInfo("qu1");
+      assertEquals(Queue.QueueState.STOPPED.getStateName(),
+                    queueInfo.getQueueState());
+
+      queueConfProps.put("mapred.queue.default.state", "STOPPED");
+      queueConfProps.put("mapred.queue.qu1.state", "RUNNING");
+      UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
+
+      //refresh configuration
+      queueManager.refreshQueues(conf);
+
+      //Job Submission should pass now because ugi to be used is set to blank.
+      try {
+        submitSleepJob(1, 1, 100, 100, true,null,"qu1");
+      } catch (Exception e) {
+        fail("submit job in qu1 queue should be sucessful ");
+      }
+
+      try {
+        submitSleepJob(1, 1, 100, 100, true,null, "default" );
+        fail("submit job in default queue should be failed ");
+      } catch (Exception e){
+        assertTrue(e.getMessage().contains(
+              "Queue \"" + "default" + "\" is not running"));
+      }
+
+      // verify state of queues after refresh
+      queueInfo = queueManager.getJobQueueInfo("default");
+      assertEquals(Queue.QueueState.STOPPED.getStateName(),
+                    queueInfo.getQueueState());
+      queueInfo = queueManager.getJobQueueInfo("qu1");
+      assertEquals(Queue.QueueState.RUNNING.getStateName(),
+                    queueInfo.getQueueState());
+    } finally{
+      if(queueConfigFile.exists()) {
+        queueConfigFile.delete();
+      }
+      this.tearDownCluster();
+    }
+  }
+
   JobConf setupConf(String aclName, String aclValue) {
     JobConf conf = new JobConf();
     conf.setBoolean(JobConf.MR_ACLS_ENABLED, true);

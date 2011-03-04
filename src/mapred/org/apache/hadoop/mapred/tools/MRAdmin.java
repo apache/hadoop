@@ -55,16 +55,15 @@ public class MRAdmin extends Configured implements Tool {
   private static void printHelp(String cmd) {
     String summary = "hadoop mradmin is the command to execute Map-Reduce administrative commands.\n" +
     "The full syntax is: \n\n" +
-    "hadoop mradmin [-refreshServiceAcl] [-refreshQueueAcls] " +
+    "hadoop mradmin [-refreshServiceAcl] [-refreshQueues] " +
     "[-refreshNodes] [-refreshUserToGroupsMappings] " +
     "[-refreshSuperUserGroupsConfiguration] [-help [cmd]]\n";
 
   String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
     "\t\tJobtracker will reload the authorization policy file.\n";
 
-  String refreshQueueAcls =
-        "-refreshQueueAcls: Reload the queue acls\n"
-            + "\t\tJobTracker will reload the mapred-queue-acls.xml file.\n";
+  String refreshQueues = "-refreshQueues: Reload the queue acls and state\n" +
+    "\t\tJobTracker will reload the mapred-queues.xml file.\n";
 
   String refreshUserToGroupsMappings = 
     "-refreshUserToGroupsMappings: Refresh user-to-groups mappings\n";
@@ -80,8 +79,8 @@ public class MRAdmin extends Configured implements Tool {
 
   if ("refreshServiceAcl".equals(cmd)) {
     System.out.println(refreshServiceAcl);
-  } else if ("refreshQueueAcls".equals(cmd)) {
-    System.out.println(refreshQueueAcls);
+  } else if ("refreshQueues".equals(cmd)) {
+    System.out.println(refreshQueues);
   } else if ("refreshUserToGroupsMappings".equals(cmd)) {
     System.out.println(refreshUserToGroupsMappings);
   } else if ("refreshSuperUserGroupsConfiguration".equals(cmd)) {
@@ -93,7 +92,7 @@ public class MRAdmin extends Configured implements Tool {
   } else {
     System.out.println(summary);
     System.out.println(refreshServiceAcl);
-    System.out.println(refreshQueueAcls);
+    System.out.println(refreshQueues);
     System.out.println(refreshUserToGroupsMappings);
     System.out.println(refreshSuperUserGroupsConfiguration);
     System.out.println(refreshNodes);
@@ -111,8 +110,8 @@ public class MRAdmin extends Configured implements Tool {
   private static void printUsage(String cmd) {
     if ("-refreshServiceAcl".equals(cmd)) {
       System.err.println("Usage: java MRAdmin" + " [-refreshServiceAcl]");
-    } else if ("-refreshQueueAcls".equals(cmd)) {
-      System.err.println("Usage: java MRAdmin" + " [-refreshQueueAcls]");
+    } else if ("-refreshQueues".equals(cmd)) {
+      System.err.println("Usage: java MRAdmin" + " [-refreshQueues]");
     } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
       System.err.println("Usage: java MRAdmin" + " [-refreshUserToGroupsMappings]");
     } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
@@ -123,7 +122,7 @@ public class MRAdmin extends Configured implements Tool {
     } else {
       System.err.println("Usage: java MRAdmin");
       System.err.println("           [-refreshServiceAcl]");
-      System.err.println("           [-refreshQueueAcls]");
+      System.err.println("           [-refreshQueues]");
       System.err.println("           [-refreshUserToGroupsMappings]");
       System.err.println("           [-refreshSuperUserGroupsConfiguration]");
       System.err.println("           [-refreshNodes]");
@@ -165,7 +164,7 @@ public class MRAdmin extends Configured implements Tool {
     return 0;
   }
 
-  private int refreshQueueAcls() throws IOException {
+  private int refreshQueues() throws IOException {
     // Get the current configuration
     Configuration conf = getConf();
     
@@ -179,7 +178,7 @@ public class MRAdmin extends Configured implements Tool {
                                              AdminOperationsProtocol.class));
     
     // Refresh the queue properties
-    adminOperationsProtocol.refreshQueueAcls();
+    adminOperationsProtocol.refreshQueues();
     
     return 0;
   }
@@ -288,7 +287,7 @@ public class MRAdmin extends Configured implements Tool {
     //
     // verify that we have enough command line parameters
     //
-    if ("-refreshServiceAcl".equals(cmd) || "-refreshQueueAcls".equals(cmd)
+    if ("-refreshServiceAcl".equals(cmd) || "-refreshQueues".equals(cmd)
         || "-refreshNodes".equals(cmd) ||
         "-refreshUserToGroupsMappings".equals(cmd) ||
         "-refreshSuperUserGroupsConfiguration".equals(cmd)
@@ -303,8 +302,8 @@ public class MRAdmin extends Configured implements Tool {
     try {
       if ("-refreshServiceAcl".equals(cmd)) {
         exitCode = refreshAuthorizationPolicy();
-      } else if ("-refreshQueueAcls".equals(cmd)) {
-        exitCode = refreshQueueAcls();
+      } else if ("-refreshQueues".equals(cmd)) {
+        exitCode = refreshQueues();
       } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
         exitCode = refreshUserToGroupsMappings();
       } else if ("-refreshSuperUserGroupsConfiguration".equals(cmd)) {
