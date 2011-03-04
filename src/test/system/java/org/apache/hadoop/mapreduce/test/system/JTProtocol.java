@@ -126,4 +126,22 @@ public interface JTProtocol extends DaemonProtocol {
    * @throws IOException is thrown in case of RPC error
    */
   public boolean isBlackListed(String trackerID) throws IOException;
+
+  /**
+   * Get the job summary details from the jobtracker log files.
+   * @param jobID - job id
+   * @param filePattern - jobtracker log file pattern.
+   * @return String - the job summary details
+   * @throws IOException if any I/O error occurs.
+   */
+  public String getJobSummaryFromLog(JobID jobId, String filePattern)
+    throws IOException;
+
+  /**
+   * Get the job summary information of given job id.
+   * @param jobID - job id
+   * @return String - the job summary details as map.
+   * @throws IOException if any I/O error occurs.
+   */
+   public String getJobSummaryInfo(JobID jobId) throws IOException;
 }

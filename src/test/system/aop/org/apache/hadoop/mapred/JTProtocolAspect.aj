@@ -82,4 +82,14 @@ public aspect JTProtocolAspect {
   public boolean JTProtocol.isBlackListed(String trackerID) throws IOException {
     return false;
   }
+  
+  public String JTProtocol.getJobSummaryFromLog(JobID jobId, 
+      String filePattern) throws IOException {
+    return null;
+  }
+
+  public String JTProtocol.getJobSummaryInfo(JobID jobId) throws IOException {
+    return null;
+  }
+
 }

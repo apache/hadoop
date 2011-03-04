@@ -38,6 +38,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.test.system.TaskInfo;
 import org.apache.hadoop.mapred.UtilsForTests;
 import static org.junit.Assert.*;
+import java.util.HashMap;
+import java.util.StringTokenizer;
 
 /**
  * JobTracker client for system tests.
@@ -393,5 +395,31 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
       counter++;
     }
     return (counter != 60)? true : false;
+  }
+  /**
+   * Get the jobtracker log files as pattern.
+   * @return String - Jobtracker log file pattern.
+   * @throws IOException - if I/O error occurs.
+   */
+  public String getJobTrackerLogFilePattern() throws IOException  {
+    return getProxy().getFilePattern();
+  }
+
+  /**
+   * It uses to get the job summary details of given job id. .
+   * @param jobID - job id
+   * @return HashMap -the job summary details as map.
+   * @throws IOException if any I/O error occurs.
+   */
+  public HashMap<String,String> getJobSummary(JobID jobID)
+      throws IOException {
+    String output = getProxy().getJobSummaryInfo(jobID);
+    StringTokenizer strToken = new StringTokenizer(output,",");
+    HashMap<String,String> mapcollect = new HashMap<String,String>();
+    while(strToken.hasMoreTokens()) {
+      String keypair = strToken.nextToken();
+      mapcollect.put(keypair.split("=")[0], keypair.split("=")[1]);
+    }
+    return mapcollect;
   }
 }

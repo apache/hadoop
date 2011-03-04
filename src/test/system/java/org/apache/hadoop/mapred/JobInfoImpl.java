@@ -51,6 +51,10 @@ class JobInfoImpl implements JobInfo {
   private int numMaps;
   private int numReduces;
   private boolean historyCopied;
+  private long finishTime;
+  private long launchTime;
+  private int numOfSlotsPerMap;
+  private int numOfSlotsPerReduce;
 
   public JobInfoImpl() {
     id = new JobID();
@@ -164,6 +168,42 @@ class JobInfoImpl implements JobInfo {
   public boolean isHistoryFileCopied() {
     return historyCopied;
   }
+
+  public void setFinishTime(long finishTime) {
+    this.finishTime = finishTime;
+  }
+  
+  public void setLaunchTime(long launchTime) {
+    this.launchTime = launchTime;
+  }
+
+  @Override
+  public long getFinishTime() {
+    return finishTime;
+  }
+
+  @Override
+  public long getLaunchTime() {
+    return launchTime;
+  }
+
+  public void setNumSlotsPerMap(int numOfSlotsPerMap) {
+    this.numOfSlotsPerMap = numOfSlotsPerMap;
+  } 
+
+  public void setNumSlotsPerReduce(int numOfSlotsPerReduce) {
+    this.numOfSlotsPerReduce = numOfSlotsPerReduce;
+  }
+
+  @Override
+  public int getNumSlotsPerMap() {
+    return numOfSlotsPerMap;
+  }
+
+  @Override
+  public int getNumSlotsPerReduce() {
+    return numOfSlotsPerReduce;
+  }
   
   @Override
   public void readFields(DataInput in) throws IOException {
@@ -186,6 +226,10 @@ class JobInfoImpl implements JobInfo {
     numMaps = in.readInt();
     numReduces = in.readInt();
     historyCopied = in.readBoolean();
+    finishTime = in.readLong();
+    launchTime = in.readLong();
+    numOfSlotsPerMap = in.readInt();
+    numOfSlotsPerReduce = in.readInt();
   }
 
   @Override
@@ -209,6 +253,10 @@ class JobInfoImpl implements JobInfo {
     out.writeInt(numMaps);
     out.writeInt(numReduces);
     out.writeBoolean(historyCopied);
+    out.writeLong(finishTime);
+    out.writeLong(launchTime);
+    out.writeInt(numOfSlotsPerMap);
+    out.writeInt(numOfSlotsPerReduce);
   }
 
 
