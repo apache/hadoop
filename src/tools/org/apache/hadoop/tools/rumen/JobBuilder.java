@@ -336,8 +336,6 @@ public class JobBuilder {
         100);
     result.setSuccessfulReduceAttemptCDF(succReduce);
 
-    result.setFailedMapAttemptCDFs(null);
-
     long totalSuccessfulAttempts = 0L;
     long maxTriesToSucceed = 0L;
 

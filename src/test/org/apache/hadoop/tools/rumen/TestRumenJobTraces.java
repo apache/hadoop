@@ -210,7 +210,7 @@ public class TestRumenJobTraces {
             lfs);
 
     final Path rootInputPath = new Path(rootInputDir, "rumen/small-trace-test");
-    final Path tempDir = new Path(rootTempDir, "TestRumenViaDispatch");
+    final Path tempDir = new Path(rootTempDir, "TestHadoop20JHParser");
     lfs.delete(tempDir, true);
 
     final Path inputPath = new Path(rootInputPath, "v20-single-input-log.gz");
