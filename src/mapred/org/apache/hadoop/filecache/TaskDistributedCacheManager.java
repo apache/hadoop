@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.TrackerDistributedCacheManager.CacheStatus;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -72,9 +73,10 @@ public class TaskDistributedCacheManager {
     boolean localized = false;
     /** The owner of the localized file. Relevant only on the tasktrackers */
     final String owner;
+    private CacheStatus status;
 
-    private CacheFile(URI uri, FileType type, boolean isPublic, long timestamp, 
-        boolean classPath) throws IOException {
+    CacheFile(URI uri, FileType type, boolean isPublic, long timestamp, 
+                      boolean classPath) throws IOException {
       this.uri = uri;
       this.type = type;
       this.isPublic = isPublic;
@@ -84,6 +86,21 @@ public class TaskDistributedCacheManager {
           TrackerDistributedCacheManager.getLocalizedCacheOwner(isPublic);
     }
 
+    /**
+     * Set the status for this cache file.
+     * @param status
+     */
+    public void setStatus(CacheStatus status) {
+      this.status = status;
+    }
+    
+    /**
+     * Get the status for this cache file.
+     * @return the status object
+     */
+    public CacheStatus getStatus() {
+      return status;
+    }
     /**
      * Converts the scheme used by DistributedCache to serialize what files to
      * cache in the configuration into CacheFile objects that represent those 
@@ -167,12 +184,12 @@ public class TaskDistributedCacheManager {
         p = distributedCacheManager.getLocalCache(uri, taskConf,
             publicCacheSubdir, fileStatus, 
             cacheFile.type == CacheFile.FileType.ARCHIVE,
-            cacheFile.timestamp, cacheFile.isPublic);
+            cacheFile.timestamp, cacheFile.isPublic, cacheFile);
       } else {
         p = distributedCacheManager.getLocalCache(uri, taskConf,
             privateCacheSubdir, fileStatus, 
             cacheFile.type == CacheFile.FileType.ARCHIVE,
-            cacheFile.timestamp, cacheFile.isPublic);
+            cacheFile.timestamp, cacheFile.isPublic, cacheFile);
       }
       cacheFile.setLocalized(true);
 
@@ -257,9 +274,8 @@ public class TaskDistributedCacheManager {
    */
   public void release() throws IOException {
     for (CacheFile c : cacheFiles) {
-      if (c.getLocalized()) {
-        distributedCacheManager.releaseCache(c.uri, taskConf, c.timestamp, 
-            c.owner);
+      if (c.getLocalized() && c.status != null) {
+        distributedCacheManager.releaseCache(c.status);
       }
     }
   }
@@ -267,9 +283,8 @@ public class TaskDistributedCacheManager {
   public void setSizes(long[] sizes) throws IOException {
     int i = 0;
     for (CacheFile c: cacheFiles) {
-      if (!c.isPublic) {
-        distributedCacheManager.setSize(c.uri, taskConf, c.timestamp, c.owner, 
-                                        sizes[i++]);
+      if (!c.isPublic && c.status != null) {
+        distributedCacheManager.setSize(c.status, sizes[i++]);
       }
     }
   }

@@ -36,6 +36,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.TaskDistributedCacheManager.CacheFile;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -139,10 +140,9 @@ public class TrackerDistributedCacheManager {
    * @throws IOException
    */
   Path getLocalCache(URI cache, Configuration conf,
-      String subDir, FileStatus fileStatus,
-      boolean isArchive, long confFileStamp,
-      boolean isPublic)
-      throws IOException {
+                     String subDir, FileStatus fileStatus,
+                     boolean isArchive, long confFileStamp,
+                     boolean isPublic, CacheFile file) throws IOException {
     String key;
     String user = getLocalizedCacheOwner(isPublic);
     key = getKey(cache, conf, confFileStamp, user);
@@ -168,8 +168,11 @@ public class TrackerDistributedCacheManager {
         cachedArchives.put(key, lcacheStatus);
       }
 
-      //mark the cache for use. 
-      lcacheStatus.refcount++;
+      //mark the cache for use.
+      file.setStatus(lcacheStatus);
+      synchronized (lcacheStatus) {
+        lcacheStatus.refcount++;
+      }
     }
     
     boolean initSuccessful = false;
@@ -234,50 +237,26 @@ public class TrackerDistributedCacheManager {
    * @param owner the owner of the localized file
    * @throws IOException
    */
-  void releaseCache(URI cache, Configuration conf, long timeStamp,
-      String owner) throws IOException {
-    String key = getKey(cache, conf, timeStamp, owner);
-    synchronized (cachedArchives) {
-      CacheStatus lcacheStatus = cachedArchives.get(key);
-      if (lcacheStatus == null) {
-        LOG.warn("Cannot find localized cache: " + cache + 
-                 " (key: " + key + ") in releaseCache!");
-        return;
-      }
-      
-      // decrement ref count 
-      lcacheStatus.refcount--;
+  void releaseCache(CacheStatus status) throws IOException {
+	synchronized (status) {
+      status.refcount--;
     }
   }
 
-  void setSize(URI cache, Configuration conf, long timeStamp,
-               String owner, long size) throws IOException {
-    String key = getKey(cache, conf, timeStamp, owner);
-    synchronized (cachedArchives) {
-      CacheStatus lcacheStatus = cachedArchives.get(key);
-      if (lcacheStatus == null) {
-        LOG.warn("Cannot find localized cache: " + cache + 
-                 " (key: " + key + ") in setSize!");
-        return;
-      }
-      lcacheStatus.size = size;
-      addCacheInfoUpdate(lcacheStatus);
+  void setSize(CacheStatus status, long size) throws IOException {
+    synchronized (status) {
+      status.size = size;
+      addCacheInfoUpdate(status);
     }
   }
 
   /*
    * This method is called from unit tests. 
    */
-  int getReferenceCount(URI cache, Configuration conf, long timeStamp,
-      String owner) throws IOException {
-    String key = getKey(cache, conf, timeStamp, owner);
-    synchronized (cachedArchives) {
-      CacheStatus lcacheStatus = cachedArchives.get(key);
-      if (lcacheStatus == null) {
-        throw new IOException("Cannot find localized cache: " + cache);
-      }
-      return lcacheStatus.refcount;
-    }
+  int getReferenceCount(CacheStatus status) throws IOException {
+	synchronized (status) {
+	  return status.refcount;
+	}
   }
 
   /**
