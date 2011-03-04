@@ -90,10 +90,22 @@ class JobQueuesManager extends JobInProgressListener {
       }
     }
     
+    int getNumWaitingJobs() {
+      synchronized (waitingJobs) {
+        return waitingJobs.size();
+      }
+    }
+    
     Collection<JobInProgress> getRunningJobs() {
       synchronized (runningJobs) {
        return Collections.unmodifiableCollection(
            new LinkedList<JobInProgress>(runningJobs.values())); 
+      }
+    }
+    
+    int getNumRunningJobs() {
+      synchronized (runningJobs) {
+        return runningJobs.size();
       }
     }
     
@@ -156,12 +168,20 @@ class JobQueuesManager extends JobInProgressListener {
     return jobQueues.get(queueName).getRunningJobs();
   }
   
+  public int getNumRunningJobs(String queueName) {
+    return jobQueues.get(queueName).getNumRunningJobs();
+  }
+  
   /**
    * Returns the queue of waiting jobs associated with queue name.
    * 
    */
   Collection<JobInProgress> getWaitingJobs(String queueName) {
     return jobQueues.get(queueName).getWaitingJobs();
+  }
+  
+  public int getNumWaitingJobs(String queueName) {
+    return jobQueues.get(queueName).getNumWaitingJobs();
   }
   
   @Override

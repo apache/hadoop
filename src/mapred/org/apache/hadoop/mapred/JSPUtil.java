@@ -264,8 +264,7 @@ class JSPUtil {
     boolean isModifiable = label.equals("Running") 
                                 && privateActionsAllowed(conf);
     StringBuffer sb = new StringBuffer();
-    
-    sb.append("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\">\n");
+    sb.append("<table border=\"1\" cellpadding=\"5\" cellspacing=\"0\" class=\"sortable\">\n");
 
     if (jobs.size() > 0) {
       if (isModifiable) {
@@ -307,6 +306,7 @@ class JSPUtil {
       sb.append("<td><b>Reduces Completed</b></td>");
       sb.append("<td><b>Job Scheduling Information</b></td>");
       sb.append("</tr>\n");
+
       for (Iterator<JobInProgress> it = jobs.iterator(); it.hasNext(); ++rowId) {
         JobInProgress job = it.next();
         JobProfile profile = job.getProfile();

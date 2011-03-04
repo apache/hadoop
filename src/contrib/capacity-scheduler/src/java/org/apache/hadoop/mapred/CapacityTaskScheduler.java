@@ -31,6 +31,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
@@ -74,7 +75,7 @@ class CapacityTaskScheduler extends TaskScheduler {
    *   
    **********************************************************************/
 
-  private static class TaskSchedulingInfo {
+  static class TaskSchedulingInfo {
 
     /** 
      * the actual capacity, which depends on how many slots are available
@@ -128,6 +129,19 @@ class CapacityTaskScheduler extends TaskScheduler {
         this.capacity = capacity;
     }
 
+    /**
+     * @return the numRunningTasks
+     */
+    int getNumRunningTasks() {
+      return numRunningTasks;
+    }
+
+    /**
+     * @return the numSlotsOccupied
+     */
+    int getNumSlotsOccupied() {
+      return numSlotsOccupied;
+    }
 
     /**
      * return information about the tasks
@@ -178,7 +192,7 @@ class CapacityTaskScheduler extends TaskScheduler {
     }
   }
   
-  private static class QueueSchedulingInfo {
+  static class QueueSchedulingInfo {
     String queueName;
 
     /**
@@ -205,7 +219,7 @@ class CapacityTaskScheduler extends TaskScheduler {
      * min value of user limit (same for all users)
      */
     int ulMin;
-    
+
     /**
      * We keep track of the JobQueuesManager only for reporting purposes 
      * (in toString()). 
@@ -231,6 +245,35 @@ class CapacityTaskScheduler extends TaskScheduler {
       this.reduceTSI = new TaskSchedulingInfo();
     }
     
+
+    /**
+     * @return the queueName
+     */
+    String getQueueName() {
+      return queueName;
+    }
+
+    /**
+     * @return the capacityPercent
+     */
+    float getCapacityPercent() {
+      return capacityPercent;
+    }
+
+    /**
+     * @return the mapTSI
+     */
+    TaskSchedulingInfo getMapTSI() {
+      return mapTSI;
+    }
+
+    /**
+     * @return the reduceTSI
+     */
+    TaskSchedulingInfo getReduceTSI() {
+      return reduceTSI;
+    }
+
     /**
      * return information about the queue
      *
@@ -268,7 +311,7 @@ class CapacityTaskScheduler extends TaskScheduler {
   }
 
   /** quick way to get qsi object given a queue name */
-  private Map<String, QueueSchedulingInfo> queueInfoMap = 
+  Map<String, QueueSchedulingInfo> queueInfoMap = 
     new HashMap<String, QueueSchedulingInfo>();
   
   /**
@@ -345,7 +388,7 @@ class CapacityTaskScheduler extends TaskScheduler {
    * There may be slight variations later, in which case we can make this
    * an abstract base class and have derived classes for Map and Reduce.  
    */
-  private static abstract class TaskSchedulingMgr {
+  static abstract class TaskSchedulingMgr {
 
     /** our TaskScheduler object */
     protected CapacityTaskScheduler scheduler;
@@ -1155,6 +1198,14 @@ class CapacityTaskScheduler extends TaskScheduler {
     initializationPoller.setDaemon(true);
     initializationPoller.start();
 
+    if (taskTrackerManager instanceof JobTracker) {
+      JobTracker jobTracker = (JobTracker) taskTrackerManager;
+      HttpServer infoServer = jobTracker.infoServer;
+      infoServer.setAttribute("scheduler", this);
+      infoServer.addServlet("scheduler", "/scheduler",
+          CapacitySchedulerServlet.class);
+    }
+
     started = true;
     LOG.info("Capacity scheduler initialized " + queues.size() + " queues");  
   }
@@ -1534,6 +1585,31 @@ class CapacityTaskScheduler extends TaskScheduler {
   
   JobInitializationPoller getInitializationPoller() {
     return initializationPoller;
+  }
+
+  /**
+   * @return the jobQueuesManager
+   */
+  JobQueuesManager getJobQueuesManager() {
+    return jobQueuesManager;
+  }
+
+  Map<String, QueueSchedulingInfo> getQueueInfoMap() {
+    return queueInfoMap;
+  }
+
+  /**
+   * @return the mapScheduler
+   */
+  TaskSchedulingMgr getMapScheduler() {
+    return mapScheduler;
+  }
+
+  /**
+   * @return the reduceScheduler
+   */
+  TaskSchedulingMgr getReduceScheduler() {
+    return reduceScheduler;
   }
 
   synchronized String getDisplayInfo(String queueName) {
