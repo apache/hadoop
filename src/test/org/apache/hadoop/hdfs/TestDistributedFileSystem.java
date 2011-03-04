@@ -27,11 +27,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
+import org.junit.Test;
+import static org.junit.Assert.*;
 
-public class TestDistributedFileSystem extends junit.framework.TestCase {
+public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
 
   private boolean dualPortTesting = false;
@@ -45,6 +50,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     return conf;
   }
 
+  @Test
   public void testFileSystemCloseAll() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 0, true, null);
@@ -68,6 +74,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
    * Tests DFSClient.close throws no ConcurrentModificationException if 
    * multiple files are open.
    */
+  @Test
   public void testDFSClose() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
@@ -85,6 +92,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     }
   }
 
+  @Test
   public void testDFSClient() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
@@ -129,6 +137,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     }
   }
   
+  @Test
   public void testFileChecksum() throws IOException {
     ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
 
@@ -202,6 +211,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     cluster.shutdown();
   }
   
+  @Test
   public void testAllWithDualPort() throws Exception {
     dualPortTesting = true;
 
@@ -209,5 +219,97 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     testDFSClose();
     testDFSClient();
     testFileChecksum();
+  }
+  
+  @Test
+  public void testStatistics() throws Exception {
+    int lsLimit = 2;
+    final Configuration conf = getTestConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, lsLimit);
+    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+    try {
+      final FileSystem fs = cluster.getFileSystem();
+      Path dir = new Path("/test");
+      Path file = new Path(dir, "file");
+      
+      int readOps = DFSTestUtil.getStatistics(fs).getReadOps();
+      int writeOps = DFSTestUtil.getStatistics(fs).getWriteOps();
+      int largeReadOps = DFSTestUtil.getStatistics(fs).getLargeReadOps();
+      fs.mkdirs(dir);
+      checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      
+      FSDataOutputStream out = fs.create(file, (short)1);
+      out.close();
+      checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      
+      FileStatus status = fs.getFileStatus(file);
+      checkStatistics(fs, ++readOps, writeOps, largeReadOps);
+      
+      fs.getFileBlockLocations(status, 0, 0);
+      checkStatistics(fs, ++readOps, writeOps, largeReadOps);
+      
+      FSDataInputStream in = fs.open(file);
+      in.close();
+      checkStatistics(fs, ++readOps, writeOps, largeReadOps);
+      
+      fs.setReplication(file, (short)2);
+      checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      
+      Path file1 = new Path(dir, "file1");
+      fs.rename(file, file1);
+      checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      
+      fs.getContentSummary(file1);
+      checkStatistics(fs, ++readOps, writeOps, largeReadOps);
+      
+      
+      // Iterative ls test
+      for (int i = 0; i < 10; i++) {
+        Path p = new Path(dir, Integer.toString(i));
+        fs.mkdirs(p);
+        FileStatus[] list = fs.listStatus(dir);
+        if (list.length > lsLimit) {
+          // if large directory, then count readOps and largeReadOps by 
+          // number times listStatus iterates
+          int iterations = (int)Math.ceil((double)list.length/lsLimit);
+          largeReadOps += iterations;
+          readOps += iterations;
+        } else {
+          // Single iteration in listStatus - no large read operation done
+          readOps++;
+        }
+        
+        // writeOps incremented by 1 for mkdirs
+        // readOps and largeReadOps incremented by 1 or more
+        checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      }
+      
+      fs.getFileChecksum(file1);
+      checkStatistics(fs, ++readOps, writeOps, largeReadOps);
+      
+      fs.setPermission(file1, new FsPermission((short)0777));
+      checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      
+      fs.setTimes(file1, 0L, 0L);
+      checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      fs.setOwner(file1, ugi.getUserName(), ugi.getGroupNames()[0]);
+      checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      
+      fs.delete(dir, true);
+      checkStatistics(fs, readOps, ++writeOps, largeReadOps);
+      
+    } finally {
+      if (cluster != null) cluster.shutdown();
+    }
+    
+  }
+  
+  /** Checks statistics. -1 indicates do not check for the operations */
+  private void checkStatistics(FileSystem fs, int readOps, int writeOps, int largeReadOps) {
+    assertEquals(readOps, DFSTestUtil.getStatistics(fs).getReadOps());
+    assertEquals(writeOps, DFSTestUtil.getStatistics(fs).getWriteOps());
+    assertEquals(largeReadOps, DFSTestUtil.getStatistics(fs).getLargeReadOps());
   }
 }

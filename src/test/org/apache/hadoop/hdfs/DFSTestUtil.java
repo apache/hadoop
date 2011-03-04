@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -357,4 +358,8 @@ public class DFSTestUtil {
                     }
                   });
   }  
+
+  public static Statistics getStatistics(FileSystem fs) {
+    return FileSystem.getStatistics(fs.getUri().getScheme(), fs.getClass());
+  }
 }
