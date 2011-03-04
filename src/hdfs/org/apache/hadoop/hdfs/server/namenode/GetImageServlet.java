@@ -35,6 +35,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
@@ -55,7 +56,7 @@ public class GetImageServlet extends HttpServlet {
       ServletContext context = getServletContext();
       final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
       final TransferFsImage ff = new TransferFsImage(pmap, request, response);
-      Configuration conf = (Configuration)getServletContext().getAttribute("name.conf");
+      final Configuration conf = (Configuration)getServletContext().getAttribute("name.conf");
       if(UserGroupInformation.isSecurityEnabled() && 
           !isValidRequestor(request.getRemoteUser(), conf)) {
         response.sendError(HttpServletResponse.SC_FORBIDDEN, 
@@ -80,11 +81,29 @@ public class GetImageServlet extends HttpServlet {
           } else if (ff.putImage()) {
             // issue a HTTP get request to download the new fsimage 
             nnImage.validateCheckpointUpload(ff.getToken());
-            TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
-                                          nnImage.getFsImageNameCheckpoint());
+            reloginIfNecessary().doAs(new PrivilegedExceptionAction<Void>() {
+              @Override
+              public Void run() throws Exception {
+                TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
+                    nnImage.getFsImageNameCheckpoint());
+                return null;
+              }
+            });
+
             nnImage.checkpointUploadDone();
           }
           return null;
+        }
+
+        // We may have lost our ticket since the last time we tried to open
+        // an http connection, so log in just in case.
+        private UserGroupInformation reloginIfNecessary() throws IOException {
+          // This method is only called on the NN, therefore it is safe to
+          // use these key values.
+          return UserGroupInformation
+          .loginUserFromKeytabAndReturnUGI(
+              conf.get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), 
+              conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
         }
       });
 
