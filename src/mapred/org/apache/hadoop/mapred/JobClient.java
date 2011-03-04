@@ -1075,7 +1075,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * Get status information about the Map-Reduce cluster.
    *  
    * @param  detailed if true then get a detailed status including the
-   *         tracker names
+   *         tracker names and memory usage of the JobTracker
    * @return the status information about the Map-Reduce cluster as an object
    *         of {@link ClusterStatus}.
    * @throws IOException

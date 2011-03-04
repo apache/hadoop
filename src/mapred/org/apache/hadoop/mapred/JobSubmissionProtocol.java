@@ -96,7 +96,7 @@ interface JobSubmissionProtocol extends VersionedProtocol {
 
   /**
    * Get the current status of the cluster
-   * @param detailed if true then report tracker names as well
+   * @param detailed if true then report tracker names and memory usage
    * @return summary of the state of the cluster
    */
   public ClusterStatus getClusterStatus(boolean detailed) throws IOException;

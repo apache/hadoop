@@ -307,4 +307,32 @@ public class TestClusterStatus extends TestCase {
     assertEquals("reduce slots should have been unreserved",
         0, metrics.getReservedReduceSlots());
   }
+  
+  public void testClusterStatus() throws Exception {
+    ClusterStatus clusterStatus = client.getClusterStatus();
+    assertEquals("JobTracker used-memory is " + clusterStatus.getUsedMemory() + 
+                 ", expected " + ClusterStatus.UNINITIALIZED_MEMORY_VALUE, 
+                 ClusterStatus.UNINITIALIZED_MEMORY_VALUE, clusterStatus.getUsedMemory());
+    assertEquals("JobTracker max-memory is " + clusterStatus.getMaxMemory() + 
+        ", expected " + ClusterStatus.UNINITIALIZED_MEMORY_VALUE, 
+        ClusterStatus.UNINITIALIZED_MEMORY_VALUE, clusterStatus.getMaxMemory());
+    
+    clusterStatus = client.getClusterStatus(false);
+    assertEquals("JobTracker used-memory is " + clusterStatus.getUsedMemory() + 
+                 ", expected " + ClusterStatus.UNINITIALIZED_MEMORY_VALUE, 
+                 ClusterStatus.UNINITIALIZED_MEMORY_VALUE, clusterStatus.getUsedMemory());
+    assertEquals("JobTracker max-memory is " + clusterStatus.getMaxMemory() + 
+                 ", expected " + ClusterStatus.UNINITIALIZED_MEMORY_VALUE, 
+                 ClusterStatus.UNINITIALIZED_MEMORY_VALUE, clusterStatus.getMaxMemory());
+    
+    clusterStatus = client.getClusterStatus(true);
+    if (ClusterStatus.UNINITIALIZED_MEMORY_VALUE == clusterStatus.getUsedMemory()) {
+      assertEquals("JobTracker used-memory is " + clusterStatus.getUsedMemory(), 
+                   true, false);
+    }
+    if (ClusterStatus.UNINITIALIZED_MEMORY_VALUE == clusterStatus.getMaxMemory()) {
+      assertEquals("JobTracker max-memory is " + clusterStatus.getMaxMemory(),
+                    true, false);
+    }
+  }
 }
