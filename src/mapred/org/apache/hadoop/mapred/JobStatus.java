@@ -35,9 +35,9 @@ import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
 /**************************************************
- * Describes the current status of a job.  This is
- * not intended to be a comprehensive piece of data.
- * For that, look at JobProfile.
+ * Describes the current status of a job.
+ * 
+ * @see JobProfile for some more information.
  **************************************************/
 public class JobStatus implements Writable, Cloneable {
 
@@ -172,6 +172,11 @@ public class JobStatus implements Writable, Cloneable {
    */
   public synchronized float mapProgress() { return mapProgress; }
 
+  /**
+   * Set the job acls
+   * 
+   * @param acls {@link Map} from {@link JobACL}  to {@link AccessControlList} 
+   */
   protected synchronized void setJobACLs(Map<JobACL, AccessControlList> acls) {
     this.jobACLs = acls;
   }
@@ -283,6 +288,11 @@ public class JobStatus implements Writable, Cloneable {
     this.schedulingInfo = schedulingInfo;
   }
   
+  /**
+   * Get the acls for Job.
+   * 
+   * @return a {@link Map} from {@link JobACL} to {@link AccessControlList}
+   */
   public synchronized Map<JobACL, AccessControlList> getJobACLs() {
     return jobACLs;
   }

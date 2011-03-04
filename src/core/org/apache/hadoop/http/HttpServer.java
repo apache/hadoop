@@ -83,7 +83,7 @@ public class HttpServer implements FilterContainer {
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
-  public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
+  static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
 
   protected final Server webServer;
   protected final Connector listener;
@@ -93,6 +93,7 @@ public class HttpServer implements FilterContainer {
       new HashMap<Context, Boolean>();
   protected final List<String> filterNames = new ArrayList<String>();
   private static final int MAX_RETRIES = 10;
+  private final Configuration conf;
 
   /** Same as this(name, bindAddress, port, findPort, null); */
   public HttpServer(String name, String bindAddress, int port, boolean findPort
@@ -113,6 +114,7 @@ public class HttpServer implements FilterContainer {
       boolean findPort, Configuration conf) throws IOException {
     webServer = new Server();
     this.findPort = findPort;
+    this.conf = conf;
 
     listener = createBaseListener(conf);
     listener.setHost(bindAddress);
@@ -132,7 +134,7 @@ public class HttpServer implements FilterContainer {
     webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     webServer.addHandler(webAppContext);
 
-    addDefaultApps(contexts, appDir, conf);
+    addDefaultApps(contexts, appDir);
     
     defineFilter(webAppContext, "krb5Filter", 
         Krb5AndCertsSslSocketConnector.Krb5SslFilter.class.getName(), 
@@ -188,7 +190,7 @@ public class HttpServer implements FilterContainer {
    * @throws IOException
    */
   protected void addDefaultApps(ContextHandlerCollection parent,
-      final String appDir, Configuration conf) throws IOException {
+      final String appDir) throws IOException {
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hadoop.log.dir");
     if (logDir != null) {

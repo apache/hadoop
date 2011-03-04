@@ -696,6 +696,11 @@ public class JobHistory {
      */
     public Map<String, Task> getAllTasks() { return allTasks; }
 
+    /**
+     * Get the job acls.
+     * 
+     * @return a {@link Map} from {@link JobACL} to {@link AccessControlList}
+     */
     public Map<JobACL, AccessControlList> getJobACLs() {
       return jobACLs;
     }

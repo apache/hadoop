@@ -62,10 +62,7 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
       }
     }; 
 
-  /**
-   * {@link #NUM_INPUT_FILES} is not a public constant.
-   */
-  public static final String NUM_INPUT_FILES = "mapreduce.input.num.files";
+  static final String NUM_INPUT_FILES = "mapreduce.input.num.files";
 
   /**
    * Proxy PathFilter that accepts a path only if all filters given in the
