@@ -162,9 +162,7 @@ public class TestDiskError extends TestCase {
     
     try {
       // Start the cluster
-      cluster = 
-        new MiniDFSCluster(0, conf, 1, true,  
-                          true, false,  null, null, null, null);
+      cluster = new MiniDFSCluster(conf, 1, true, null);
       cluster.waitActive();
       
       // Check permissions on directories in 'dfs.data.dir'
