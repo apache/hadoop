@@ -3460,7 +3460,8 @@ public class TaskTracker
       String urlHashStr = request.getHeader(SecureShuffleUtils.HTTP_HEADER_URL_HASH);
       if(urlHashStr == null) {
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-        throw new IOException("fetcher cannot be authenticated");
+        throw new IOException("fetcher cannot be authenticated " + 
+            request.getRemoteHost());
       }
       int len = urlHashStr.length();
       LOG.debug("verifying request. enc_str="+enc_str+"; hash=..."+
