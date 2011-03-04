@@ -2031,8 +2031,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         tmpInfoPort == 0, conf);
     infoServer.setAttribute("job.tracker", this);
     // initialize history parameters.
-    boolean historyInitialized = JobHistory.init(this, conf, this.localMachine,
-                                                 this.startTime);
+    final JobTracker jtFinal = this;
+    boolean historyInitialized = 
+      mrOwner.doAs(new PrivilegedExceptionAction<Boolean>() {
+        @Override
+        public Boolean run() throws Exception {
+          return JobHistory.init(jtFinal, conf,jtFinal.localMachine, 
+              jtFinal.startTime);
+        }
+      });
     
     infoServer.addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
     infoServer.start();
@@ -2147,16 +2154,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
     // Initialize history DONE folder
     if (historyInitialized) {
-      JobHistory.initDone(conf, fs);
-      final String historyLogDir = 
-        JobHistory.getCompletedJobHistoryLocation().toString();
-      infoServer.setAttribute("historyLogDir", historyLogDir);
       FileSystem historyFS = mrOwner.doAs(new PrivilegedExceptionAction<FileSystem>() {
         public FileSystem run() throws IOException {
+          JobHistory.initDone(conf, fs);
+          final String historyLogDir = 
+            JobHistory.getCompletedJobHistoryLocation().toString();
+          infoServer.setAttribute("historyLogDir", historyLogDir);
+          
           return new Path(historyLogDir).getFileSystem(conf);
         }
       });
-      infoServer.setAttribute("historyLogDir", historyLogDir);
       infoServer.setAttribute("fileSys", historyFS);
     }
 
@@ -3570,13 +3577,22 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getStagingAreaDir()
    */
   public String getStagingAreaDir() throws IOException {
-    Path stagingRootDir =
-      new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
-          "/tmp/hadoop/mapred/staging"));
-    FileSystem fs = stagingRootDir.getFileSystem(conf);
-    String user = UserGroupInformation.getCurrentUser().getShortUserName();
-    return fs.makeQualified(new Path(stagingRootDir,
-                                user+"/.staging")).toString();
+    try{
+      final String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      return mrOwner.doAs(new PrivilegedExceptionAction<String>() {
+        @Override
+        public String run() throws Exception {
+          Path stagingRootDir =
+            new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
+                "/tmp/hadoop/mapred/staging"));
+          FileSystem fs = stagingRootDir.getFileSystem(conf);
+          return fs.makeQualified(new Path(stagingRootDir,
+                                    user+"/.staging")).toString();
+        }
+      });
+    } catch(InterruptedException ie) {
+      throw new IOException(ie);
+    }
   }
 
   /**
