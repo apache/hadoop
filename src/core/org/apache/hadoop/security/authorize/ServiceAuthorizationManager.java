@@ -50,7 +50,7 @@ public class ServiceAuthorizationManager {
   public static final String SERVICE_AUTHORIZATION_CONFIG = 
     "hadoop.security.authorization";
   
-  public static final Log auditLOG =
+  private static final Log AUDITLOG =
     LogFactory.getLog("SecurityLogger."+ServiceAuthorizationManager.class.getName());
 
   private static final String AUTHZ_SUCCESSFULL_FOR = "Authorization successfull for ";
@@ -99,12 +99,12 @@ public class ServiceAuthorizationManager {
     }
     if((clientPrincipal != null && !clientPrincipal.equals(user.getUserName())) || 
         !acl.isUserAllowed(user)) {
-      auditLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol="+protocol);
+      AUDITLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol="+protocol);
       throw new AuthorizationException("User " + user + 
           " is not authorized for protocol " + 
           protocol);
     }
-    auditLOG.info(AUTHZ_SUCCESSFULL_FOR + user + " for protocol="+protocol);
+    AUDITLOG.info(AUTHZ_SUCCESSFULL_FOR + user + " for protocol="+protocol);
   }
 
   public static synchronized void refresh(Configuration conf,

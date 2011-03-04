@@ -119,7 +119,7 @@ public abstract class Server {
   static final int IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT = 1024*1024;
   
   public static final Log LOG = LogFactory.getLog(Server.class);
-  public static final Log auditLOG = 
+  private static final Log AUDITLOG = 
     LogFactory.getLog("SecurityLogger."+Server.class.getName());
   private static final String AUTH_FAILED_FOR = "Auth failed for ";
   private static final String AUTH_SUCCESSFULL_FOR = "Auth successfull for "; 
@@ -932,7 +932,7 @@ public abstract class Server {
           rpcMetrics.authenticationFailures.inc();
           String clientIP = this.toString();
           // attempting user could be null
-          auditLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser, e);
+          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser, e);
           throw e;
         }
         if (replyToken != null) {
@@ -950,7 +950,7 @@ public abstract class Server {
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
           LOG.info("SASL server successfully authenticated client: " + user);
           rpcMetrics.authenticationSuccesses.inc();
-          auditLOG.info(AUTH_SUCCESSFULL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFULL_FOR + user);
           saslContextEstablished = true;
         }
       } else {
@@ -1328,12 +1328,21 @@ public abstract class Server {
   }
   
   protected Server(String bindAddress, int port,
-                  Class<? extends Writable> paramClass, int handlerCount, 
-                  Configuration conf)
-    throws IOException 
+      Class<? extends Writable> paramClass, int handlerCount, 
+      Configuration conf)
+  throws IOException 
   {
     this(bindAddress, port, paramClass, handlerCount,  conf, Integer.toString(port), null);
   }
+
+  protected Server(String bindAddress, int port,
+      Class<? extends Writable> paramClass, int handlerCount, 
+      Configuration conf, String serverName)
+  throws IOException 
+  {
+    this(bindAddress, port, paramClass, handlerCount,  conf, serverName, null);
+  }
+  
   /** Constructs a server listening on the named port and address.  Parameters passed must
    * be of the named class.  The <code>handlerCount</handlerCount> determines
    * the number of handler threads that will be used to process calls.

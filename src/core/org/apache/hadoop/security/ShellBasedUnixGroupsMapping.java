@@ -60,7 +60,7 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
   private static List<String> getUnixGroups(final String user) throws IOException {
     String result = "";
     try {
-      result = Shell.execCommand(Shell.getGROUPS_FOR_USER_COMMAND(user));
+      result = Shell.execCommand(Shell.getGroupsForUserCommand(user));
     } catch (ExitCodeException e) {
       // if we didn't get the group - just return empty list;
       LOG.warn("got exception trying to get groups for user " + user, e);
