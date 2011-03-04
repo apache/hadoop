@@ -154,12 +154,6 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
       numTrackersBlackListed = 0;
     }
     metricsRecord.update();
-
-    if (tracker != null) {
-      for (JobInProgress jip : tracker.getRunningJobs()) {
-        jip.updateMetrics();
-      }
-    }
   }
 
   @Override
