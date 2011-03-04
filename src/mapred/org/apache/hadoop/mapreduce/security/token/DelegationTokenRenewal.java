@@ -21,6 +21,9 @@ package org.apache.hadoop.mapreduce.security.token;
 import java.io.IOException;
 import java.net.URI;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -194,12 +197,20 @@ public class DelegationTokenRenewal {
   }
   
   private static DistributedFileSystem getDFSForToken(
-      Token<DelegationTokenIdentifier> token, Configuration conf) 
+      Token<DelegationTokenIdentifier> token, final Configuration conf) 
   throws Exception {
     DistributedFileSystem dfs = null;
     try {
-      URI uri = new URI (SCHEME + "://" + token.getService().toString());
-      dfs =  (DistributedFileSystem) FileSystem.get(uri, conf);
+      final URI uri = new URI (SCHEME + "://" + token.getService().toString());
+      dfs = (DistributedFileSystem)
+      UserGroupInformation.getLoginUser().doAs(
+          new PrivilegedExceptionAction<DistributedFileSystem>() {
+        public DistributedFileSystem run() throws IOException {
+          return (DistributedFileSystem) FileSystem.get(uri, conf);  
+        }
+      });
+
+      
     } catch (Exception e) {
       LOG.warn("Failed to create a dfs to renew for:" + token.getService(), e);
       throw e;
