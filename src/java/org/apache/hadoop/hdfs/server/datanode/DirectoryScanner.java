@@ -411,18 +411,18 @@ public class DirectoryScanner implements Runnable {
   /** Get lists of blocks on the disk sorted by blockId, per blockpool */
   private Map<String, ScanInfo[]> getDiskReport() {
     // First get list of data directories
-    FSDataset.FSVolume[] volumes = dataset.volumes.volumes;
+    List<FSVolume> volumes = dataset.volumes.getVolumes();
     ArrayList<ScanInfoPerBlockPool> dirReports =
-      new ArrayList<ScanInfoPerBlockPool>(volumes.length);
+      new ArrayList<ScanInfoPerBlockPool>(volumes.size());
     
     Map<Integer, Future<ScanInfoPerBlockPool>> compilersInProgress =
       new HashMap<Integer, Future<ScanInfoPerBlockPool>>();
-    for (int i = 0; i < volumes.length; i++) {
-      if (!dataset.volumes.isValid(volumes[i])) { // volume is still valid
+    for (int i = 0; i < volumes.size(); i++) {
+      if (!dataset.volumes.isValid(volumes.get(i))) { // volume is still valid
         dirReports.add(i, null);
       } else {
         ReportCompiler reportCompiler =
-          new ReportCompiler(volumes[i]);
+          new ReportCompiler(volumes.get(i));
         Future<ScanInfoPerBlockPool> result = 
           reportCompileThreadPool.submit(reportCompiler);
         compilersInProgress.put(i, result);
@@ -442,8 +442,8 @@ public class DirectoryScanner implements Runnable {
 
     // Compile consolidated report for all the volumes
     ScanInfoPerBlockPool list = new ScanInfoPerBlockPool();
-    for (int i = 0; i < volumes.length; i++) {
-      if (dataset.volumes.isValid(volumes[i])) { // volume is still valid
+    for (int i = 0; i < volumes.size(); i++) {
+      if (dataset.volumes.isValid(volumes.get(i))) { // volume is still valid
         list.addAll(dirReports.get(i));
       }
     }

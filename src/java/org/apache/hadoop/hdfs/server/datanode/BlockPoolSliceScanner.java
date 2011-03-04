@@ -221,8 +221,8 @@ class BlockPoolSliceScanner {
      * otherwise, pick the first directory.
      */
     File dir = null;
-    FSDataset.FSVolume[] volumes = dataset.volumes.volumes;
-    for (FSDataset.FSVolume vol : volumes) {
+    List<FSVolume> volumes = dataset.volumes.getVolumes();
+    for (FSDataset.FSVolume vol : dataset.volumes.getVolumes()) {
       File bpDir = vol.getBlockPoolSlice(blockPoolId).getDirectory();
       if (LogFileHandler.isFilePresent(bpDir, verificationLogFile)) {
         dir = bpDir;
@@ -230,7 +230,7 @@ class BlockPoolSliceScanner {
       }
     }
     if (dir == null) {
-      dir = volumes[0].getBlockPoolSlice(blockPoolId).getDirectory();
+      dir = volumes.get(0).getBlockPoolSlice(blockPoolId).getDirectory();
     }
     
     try {

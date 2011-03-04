@@ -136,7 +136,7 @@ public class DataBlockScanner implements Runnable {
               .iterator();
           while (bpidIterator.hasNext()) {
             String bpid = bpidIterator.next();
-            for (FSDataset.FSVolume vol : dataset.volumes.volumes) {
+            for (FSDataset.FSVolume vol : dataset.volumes.getVolumes()) {
               try {
                 File currFile = BlockPoolSliceScanner.getCurrentFile(vol, bpid);
                 if (currFile.exists()) {

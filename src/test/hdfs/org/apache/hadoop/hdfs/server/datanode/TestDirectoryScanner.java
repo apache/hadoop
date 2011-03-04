@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -141,10 +142,10 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create a block file in a random volume*/
   private long createBlockFile() throws IOException {
-    FSVolume[] volumes = fds.volumes.volumes;
-    int index = rand.nextInt(volumes.length - 1);
+    List<FSVolume> volumes = fds.volumes.getVolumes();
+    int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes[index].getBlockPoolSlice(bpid).getFinalizedDir();
+    File finalizedDir = volumes.get(index).getBlockPoolSlice(bpid).getFinalizedDir();
     File file = new File(finalizedDir, getBlockFile(id));
     if (file.createNewFile()) {
       LOG.info("Created block file " + file.getName());
@@ -154,10 +155,10 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create a metafile in a random volume*/
   private long createMetaFile() throws IOException {
-    FSVolume[] volumes = fds.volumes.volumes;
-    int index = rand.nextInt(volumes.length - 1);
+    List<FSVolume> volumes = fds.volumes.getVolumes();
+    int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes[index].getBlockPoolSlice(bpid).getFinalizedDir();
+    File finalizedDir = volumes.get(index).getBlockPoolSlice(bpid).getFinalizedDir();
     File file = new File(finalizedDir, getMetaFile(id));
     if (file.createNewFile()) {
       LOG.info("Created metafile " + file.getName());
@@ -167,10 +168,10 @@ public class TestDirectoryScanner extends TestCase {
 
   /** Create block file and corresponding metafile in a rondom volume */
   private long createBlockMetaFile() throws IOException {
-    FSVolume[] volumes = fds.volumes.volumes;
-    int index = rand.nextInt(volumes.length - 1);
+    List<FSVolume> volumes = fds.volumes.getVolumes();
+    int index = rand.nextInt(volumes.size() - 1);
     long id = getFreeBlockId();
-    File finalizedDir = volumes[index].getBlockPoolSlice(bpid).getFinalizedDir();
+    File finalizedDir = volumes.get(index).getBlockPoolSlice(bpid).getFinalizedDir();
     File file = new File(finalizedDir, getBlockFile(id));
     if (file.createNewFile()) {
       LOG.info("Created block file " + file.getName());
