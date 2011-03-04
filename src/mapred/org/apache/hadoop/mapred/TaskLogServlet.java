@@ -31,7 +31,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobACL;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -129,7 +128,8 @@ public class TaskLogServlet extends HttpServlet {
         constructJobACLs(conf).get(JobACL.VIEW_JOB);
 
     String jobOwner = conf.get("user.name");
-    UserGroupInformation callerUGI = UserGroupInformation.createRemoteUser(user);
+    UserGroupInformation callerUGI =
+        UserGroupInformation.createRemoteUser(user);
 
     tracker.getJobACLsManager().checkAccess(jobId, callerUGI, JobACL.VIEW_JOB,
         jobOwner, jobViewACL);
@@ -138,11 +138,21 @@ public class TaskLogServlet extends HttpServlet {
   /**
    * Builds a Configuration object by reading the xml file.
    * This doesn't load the default resources.
+   *
+   * Returns null if job-acls.xml is not there in userlogs/$jobid/attempt-dir on
+   * local file system. This can happen when we restart the cluster with job
+   * level authorization enabled(but was disabled on earlier cluster) and
+   * viewing task logs of old jobs(i.e. jobs finished on earlier unsecure
+   * cluster).
    */
   static Configuration getConfFromJobACLsFile(String attemptIdStr) {
-    Configuration conf = new Configuration(false);
-    conf.addResource(new Path(TaskLog.getAttemptDir(attemptIdStr).toString(),
-        TaskRunner.jobACLsFile));
+    Path jobAclsFilePath = new Path(
+        TaskLog.getAttemptDir(attemptIdStr).toString(), TaskRunner.jobACLsFile);
+    Configuration conf = null;
+    if (new File(jobAclsFilePath.toUri().getPath()).exists()) {
+      conf = new Configuration(false);
+      conf.addResource(jobAclsFilePath);
+    }
     return conf;
   }
 
@@ -167,24 +177,34 @@ public class TaskLogServlet extends HttpServlet {
     }
 
     TaskAttemptID attemptId = TaskAttemptID.forName(attemptIdStr);
+    if (!TaskLog.getAttemptDir(attemptIdStr).exists()) {
+      response.sendError(HttpServletResponse.SC_GONE,
+          "Task log directory for task " + attemptId +
+          " does not exist. May be cleaned up by Task Tracker, if older logs.");
+      return;
+    }
 
     // get user name who is accessing
     String user = request.getRemoteUser();
     if (user != null) {
-      // get jobACLConf from ACLs file
-      JobConf jobACLConf = new JobConf(getConfFromJobACLsFile(attemptIdStr));
       ServletContext context = getServletContext();
       TaskTracker taskTracker = (TaskTracker) context.getAttribute(
           "task.tracker");
-      JobID jobId = attemptId.getJobID();
+      // get jobACLConf from ACLs file
+      Configuration jobACLConf = getConfFromJobACLsFile(attemptIdStr);
+      // Ignore authorization if job-acls.xml is not found
+      if (jobACLConf != null) {
+        JobID jobId = attemptId.getJobID();
 
-      try {
-        checkAccessForTaskLogs(jobACLConf, user, jobId, taskTracker);
-      } catch (AccessControlException e) {
-        String errMsg = "User " + user + " failed to view tasklogs of job " +
-            jobId + "!\n\n" + e.getMessage();
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, errMsg);
-        return;
+        try {
+          checkAccessForTaskLogs(new JobConf(jobACLConf), user, jobId,
+              taskTracker);
+        } catch (AccessControlException e) {
+          String errMsg = "User " + user + " failed to view tasklogs of job " +
+              jobId + "!\n\n" + e.getMessage();
+          response.sendError(HttpServletResponse.SC_UNAUTHORIZED, errMsg);
+          return;
+        }
       }
     }
 

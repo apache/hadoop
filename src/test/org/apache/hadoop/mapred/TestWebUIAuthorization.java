@@ -28,13 +28,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.http.TestHttpServer.DummyFilterInitializer;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.TaskAttempt;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -47,7 +46,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Map.Entry;
 
 public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
@@ -366,9 +364,25 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
             + attempt.toString() + "&logFile=" + urlEncodedHistoryFileName, "GET");
 
         // validate access to tasklogs
-        validateViewJob(TaskLogServlet.getTaskLogUrl("localhost",
-            attemptsMap.get(attempt).get(Keys.HTTP_PORT),
-            attempt.toString()), "GET");
+        String taskLogURL = TaskLogServlet.getTaskLogUrl("localhost",
+            attemptsMap.get(attempt).get(Keys.HTTP_PORT), attempt.toString());
+        validateViewJob(taskLogURL, "GET");
+
+        // delete job-acls.xml file from the task log dir of attempt and verify
+        // if unauthorized users can view task logs of attempt.
+        Path jobACLsFilePath = new Path(TaskLog.getAttemptDir(attempt).
+            toString(), TaskRunner.jobACLsFile);
+        new File(jobACLsFilePath.toUri().getPath()).delete();
+        assertEquals("Incorrect return code for " + unauthorizedUser,
+            HttpURLConnection.HTTP_OK, getHttpStatusCode(taskLogURL,
+                unauthorizedUser, "GET"));
+
+        // delete the whole task log dir of attempt and verify that we get
+        // correct response code (i.e. HTTP_GONE) when task logs are accessed.
+        FileUtil.fullyDelete(TaskLog.getAttemptDir(attempt));
+        assertEquals("Incorrect return code for " + jobSubmitter,
+            HttpURLConnection.HTTP_GONE, getHttpStatusCode(taskLogURL,
+                jobSubmitter, "GET"));
       }
     }
 
