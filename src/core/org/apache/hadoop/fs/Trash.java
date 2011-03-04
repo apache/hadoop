@@ -123,7 +123,8 @@ public class Trash extends Configured {
         }
       } catch (IOException e) {
         LOG.warn("Can't create trash directory: "+baseTrashPath);
-        return false;
+        cause = e;
+        break;
       }
       try {
         //
