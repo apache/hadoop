@@ -21,6 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.TokenStorage;
 
 /** 
@@ -28,6 +30,7 @@ import org.apache.hadoop.security.TokenStorage;
  * JobClient can use these methods to submit a Job for execution, and learn about
  * the current system status.
  */ 
+@KerberosInfo(JobContext.JOB_JOBTRACKER_ID)
 interface JobSubmissionProtocol extends VersionedProtocol {
   /* 
    *Changing the versionID to 2L since the getTaskCompletionEvents method has
