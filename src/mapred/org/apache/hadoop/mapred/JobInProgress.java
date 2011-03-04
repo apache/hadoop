@@ -2000,7 +2000,7 @@ public class JobInProgress {
     while (iter.hasNext()) {
       TaskInProgress tip = iter.next();
       // should never be true! (since we delete completed/failed tasks)
-      if (!tip.isRunning()) {
+      if (!tip.isRunning() || !tip.isRunnable()) {
         iter.remove();
         continue;
       }
