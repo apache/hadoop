@@ -30,12 +30,9 @@
     trackerName = StringUtils.simpleHostname(infoSocAddr.getHostName());
   }
 %>
-<%!	
-  private static SimpleDateFormat dateFormat = 
-                                    new SimpleDateFormat("d/MM HH:mm:ss");
-%>
-<%!	private static final long serialVersionUID = 1L;
-%>
+<%!private static SimpleDateFormat dateFormat = new SimpleDateFormat(
+      "d/MM HH:mm:ss");%>
+<%!private static final long serialVersionUID = 1L;%>
 <html>
 <head>
 <script type="text/JavaScript">
@@ -74,7 +71,7 @@ window.location.href = url;
 
     final int FILENAME_JOBNAME_PART = FILENAME_JOBID_END + 2;
 
-    final int[] SCAN_SIZES = { 20, 50, 200 };
+    final int[] SCAN_SIZES = { 20, 50, 200, 1000 };
 
     final int FILES_PER_SCAN = 1000;
 
@@ -104,7 +101,9 @@ window.location.href = url;
 
     final int currentScanSizeIndex
       = (request.getParameter("scansize") == null)
-           ? 0 : Integer.parseInt(request.getParameter("scansize"));
+           ? 0 : 
+             Math.min(Integer.parseInt(request.getParameter("scansize")), 
+                 SCAN_SIZES.length-1);
 
     final String SEARCH_PARSE_REGEX
       = "([0-1]?[0-9])/([0-3]?[0-9])/((?:2[0-9])[0-9][0-9])";
@@ -152,12 +151,12 @@ window.location.href = url;
       return;
     }
 
-    Comparator<Path> lastPathFirst
-      = new Comparator<Path>() {
-          public int compare(Path path1, Path path2) {
-            // these are backwards because we want the lexically lesser names
-            // to occur later in the sort.
-            return path2.getName().compareTo(path1.getName());
+    Comparator<FileStatus> mtimeComparator
+      = new Comparator<FileStatus>() {
+          public int compare(FileStatus status1, FileStatus status2) {
+            Long time1 = new Long(status1.getModificationTime());
+            Long time2 = new Long(status2.getModificationTime());
+            return time2.compareTo(time1);
           }
     };
 
@@ -239,35 +238,16 @@ window.location.href = url;
     // I would have used MutableBoxedBoolean if such had been provided.
     AtomicBoolean hasLegacyFiles = new AtomicBoolean(false);
 
-    Path[] snPaths
-      = FileUtil.stat2Paths(JobHistory.localGlobber
-                            (fs, historyPath, "/" + leadGlob, null, hasLegacyFiles));
+    FileStatus[] buckets = 
+      JobHistory.localGlobber
+                            (fs, historyPath, "/" + leadGlob, null, hasLegacyFiles);
+    Arrays.sort(buckets, mtimeComparator);
 
-    Arrays.sort(snPaths, lastPathFirst);
-
-    int arrayLimit = 0;
-    int tranchesSeen = 0;
-
-    Path lastPath = null;
-
-    while (arrayLimit < snPaths.length
-           && tranchesSeen <= SCAN_SIZES[currentScanSizeIndex]) {
-      if (lastPath == null
-          || lastPathFirst.compare(lastPath, snPaths[arrayLimit]) != 0) {
-        ++tranchesSeen;
-        lastPath = snPaths[arrayLimit];
-      }
-
-      ++arrayLimit;
-    }
-
-    if (tranchesSeen > SCAN_SIZES[currentScanSizeIndex]) {
-      --arrayLimit;
-    }
-
-    // arrayLimit points to the first element [which could be element 0] that 
-    // we shouldn't consider
-
+    int arrayLimit = SCAN_SIZES[currentScanSizeIndex] > buckets.length ? 
+        buckets.length : SCAN_SIZES[currentScanSizeIndex];
+    FileStatus[] scanSizeBuckets = Arrays.copyOf(buckets, arrayLimit);
+    Path[] snPaths = FileUtil.stat2Paths(scanSizeBuckets);
+    
     int numHistoryFiles = 0;
 
     Path[] jobFiles = null;
@@ -307,9 +287,16 @@ window.location.href = url;
 
     out.println("<!--  user : " + rawUser +
         ", jobname : " + rawJobname + "-->");
-    if (null == jobFiles || jobFiles.length == 0)  {
-      out.println("No files found!"); 
-      return ; 
+    final String searchMore = "&search=" + search;
+    if (null == jobFiles || jobFiles.length == 0) {
+      if (currentScanSizeIndex < SCAN_SIZES.length -1) {
+        out.println(" [<span class=\"small\"><a href=\"jobhistoryhome.jsp?pageno=1"
+          + searchMore + "&scansize=" + (currentScanSizeIndex +1)
+          + "\">No files found - try and get more results</a></span>]");
+      } else {
+        out.println("No files found!"); 
+      }
+      return;
     }
 
     // get the pageno
@@ -400,7 +387,7 @@ window.location.href = url;
     final String searchPlusScan = searchPart + scansizePart;
 
     // show the expand scope link, if we're restricted
-    if (sizeIsExact || currentScanSizeIndex == SCAN_SIZES.length - 1) {
+    if (currentScanSizeIndex == SCAN_SIZES.length - 1) {
       out.println("[<span class=\"small\">get more results</span>]");
     } else {
       out.println(" [<span class=\"small\"><a href=\"jobhistoryhome.jsp?pageno=1"

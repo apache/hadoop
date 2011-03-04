@@ -119,6 +119,8 @@ public class JobHistory {
   
   public static final int JOB_NAME_TRIM_LENGTH = 50;
   private static String JOBTRACKER_UNIQUE_STRING = null;
+  private static final String JOBHISTORY_DEBUG_MODE =
+    "mapreduce.jobhistory.debug.mode";
   private static String LOG_DIR = null;
   private static final String SECONDARY_FILE_SUFFIX = ".recover";
   private static long jobHistoryBlockSize = 0;
@@ -139,15 +141,11 @@ public class JobHistory {
   static final String CONF_FILE_NAME_SUFFIX = "_conf.xml";
 
   // XXXXX debug mode -- set this to false for production
-  private static final boolean DEBUG_MODE = false;
-
+  private static boolean DEBUG_MODE;
   private static final int SERIAL_NUMBER_DIRECTORY_DIGITS = 6;
-  private static final int SERIAL_NUMBER_LOW_DIGITS = DEBUG_MODE ? 1 : 3;
+  private static int SERIAL_NUMBER_LOW_DIGITS;
 
-  private static final String SERIAL_NUMBER_FORMAT
-    = ("%0"
-       + (SERIAL_NUMBER_DIRECTORY_DIGITS + SERIAL_NUMBER_LOW_DIGITS)
-       + "d");
+  private static String SERIAL_NUMBER_FORMAT;
 
   private static final Set<Path> existingDoneSubdirs = new HashSet<Path>();
 
@@ -499,6 +497,11 @@ public class JobHistory {
   public static void init(JobTracker jobTracker, JobConf conf,
              String hostname, long jobTrackerStartTime) throws IOException {
     initLogDir(conf);
+    DEBUG_MODE = conf.getBoolean(JOBHISTORY_DEBUG_MODE, false);
+    SERIAL_NUMBER_LOW_DIGITS = DEBUG_MODE ? 1 : 3;
+    SERIAL_NUMBER_FORMAT = ("%0"
+       + (SERIAL_NUMBER_DIRECTORY_DIGITS + SERIAL_NUMBER_LOW_DIGITS)
+       + "d");
     JOBTRACKER_UNIQUE_STRING = hostname + "_" + 
                                   String.valueOf(jobTrackerStartTime) + "_";
     jobtrackerHostname = hostname;
