@@ -36,5 +36,13 @@
       name="lucene-core"
       rev="${lucene-core.version}"
       conf="common->default"/>
+    <dependency org="commons-configuration"
+      name="commons-configuration"
+      rev="${commons-configuration.version}"
+      conf="common->default"/>
+    <dependency org="org.apache.commons"
+      name="commons-math"
+      rev="${commons-math.version}"
+      conf="common->default"/>
     </dependencies>
 </ivy-module>

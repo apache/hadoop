@@ -34,6 +34,8 @@ conf/capacity-scheduler.xml
 docs/api/
 ivy/ivy-*.jar
 ivy/maven-ant-tasks-*.jar
+junitvmwatch*.properties
+junit[0-9]*.properties
 logs/
 src/contrib/ec2/bin/hadoop-ec2-env.sh
 src/contrib/index/conf/index-config.xml
