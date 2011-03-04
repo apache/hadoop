@@ -101,53 +101,48 @@ public class TestReduceFetch extends TestCase {
   }
 
   public void testReduceFromDisk() throws Exception {
-    final int MAP_TASKS = 8;
     JobConf job = mrCluster.createJobConf();
     job.set("mapred.job.reduce.input.buffer.percent", "0.0");
-    job.setNumMapTasks(MAP_TASKS);
-    job.setInt("mapred.job.reduce.total.mem.bytes", 128 << 20);
-    job.set("mapred.job.shuffle.input.buffer.percent", "0.14");
-    job.setInt("io.sort.factor", 2);
-    job.setInt("mapred.inmem.merge.threshold", 4);
+    job.setNumMapTasks(3);
     Counters c = runJob(job);
-    final long spill = c.findCounter(Task.Counter.SPILLED_RECORDS).getCounter();
-    final long out = c.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).getCounter();
-    assertTrue("Expected all records spilled during reduce (" + spill + ")",
-        spill >= 2 * out); // all records spill at map, reduce
-    assertTrue("Expected intermediate merges (" + spill + ")",
-        spill >= 2 * out + (out / MAP_TASKS)); // some records hit twice
+    final long hdfsWritten = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("hdfs")[1]).getCounter();
+    final long localRead = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("file")[0]).getCounter();
+    assertTrue("Expected more bytes read from local (" +
+        localRead + ") than written to HDFS (" + hdfsWritten + ")",
+        hdfsWritten <= localRead);
   }
 
   public void testReduceFromPartialMem() throws Exception {
-    final int MAP_TASKS = 5;
     JobConf job = mrCluster.createJobConf();
-    job.setNumMapTasks(MAP_TASKS);
+    job.setNumMapTasks(5);
     job.setInt("mapred.inmem.merge.threshold", 0);
     job.set("mapred.job.reduce.input.buffer.percent", "1.0");
     job.setInt("mapred.reduce.parallel.copies", 1);
     job.setInt("io.sort.mb", 10);
-    job.setInt("mapred.job.reduce.total.mem.bytes", 128 << 20);
+    job.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, "-Xmx128m");
     job.set("mapred.job.shuffle.input.buffer.percent", "0.14");
     job.setNumTasksToExecutePerJvm(1);
     job.set("mapred.job.shuffle.merge.percent", "1.0");
     Counters c = runJob(job);
-    final long out = c.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).getCounter();
-    final long spill = c.findCounter(Task.Counter.SPILLED_RECORDS).getCounter();
-    assertTrue("Expected some records not spilled during reduce" + spill + ")",
-        spill < 2 * out); // spilled map records, some records at the reduce
+    final long hdfsWritten = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("hdfs")[1]).getCounter();
+    final long localRead = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("file")[0]).getCounter();
+    assertTrue("Expected at least 1MB fewer bytes read from local (" +
+        localRead + ") than written to HDFS (" + hdfsWritten + ")",
+        hdfsWritten >= localRead + 1024 * 1024);
   }
 
   public void testReduceFromMem() throws Exception {
-    final int MAP_TASKS = 3;
     JobConf job = mrCluster.createJobConf();
     job.set("mapred.job.reduce.input.buffer.percent", "1.0");
-    job.set("mapred.job.shuffle.input.buffer.percent", "1.0");
-    job.setInt("mapred.job.reduce.total.mem.bytes", 128 << 20);
-    job.setNumMapTasks(MAP_TASKS);
+    job.setNumMapTasks(3);
     Counters c = runJob(job);
-    final long spill = c.findCounter(Task.Counter.SPILLED_RECORDS).getCounter();
-    final long out = c.findCounter(Task.Counter.MAP_OUTPUT_RECORDS).getCounter();
-    assertEquals("Spilled records: " + spill, out, spill); // no reduce spill
+    final long localRead = c.findCounter(Task.FILESYSTEM_COUNTER_GROUP, 
+        Task.getFileSystemCounterNames("file")[0]).getCounter();
+    assertTrue("Non-zero read from local: " + localRead, localRead == 0);
   }
 
 }
