@@ -3611,7 +3611,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return fs.getUri().toString();
   }
 
-
+  /**
+   * Returns a handle to the JobTracker's Configuration
+   */
+  public JobConf getConf() {
+    return conf;
+  }
+  
   public void reportTaskTrackerError(String taskTracker,
                                      String errorClass,
                                      String errorMessage) throws IOException {

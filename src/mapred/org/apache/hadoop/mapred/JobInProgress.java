@@ -413,7 +413,7 @@ public class JobInProgress {
     
     // register job's tokens for renewal
     DelegationTokenRenewal.registerDelegationTokensForRenewal(
-         jobInfo.getJobID(), ts, this.conf);
+         jobInfo.getJobID(), ts, jobtracker.getConf());
   }
 
   /**
@@ -2980,6 +2980,14 @@ public class JobInProgress {
     if(conf.getBoolean(JobContext.JOB_CANCEL_DELEGATION_TOKEN, true)) {
       DelegationTokenRenewal.removeDelegationTokenRenewalForJob(jobId);
     } // else don't remove it.May be used by spawned tasks
+
+    //close the user's FS
+    try {
+      FileSystem.closeAllForUGI(userUGI);
+    } catch (IOException ie) {
+      LOG.warn("Ignoring exception " + StringUtils.stringifyException(ie) + 
+          " while closing FileSystem for " + userUGI);
+    }
   }
 
   /**
@@ -3256,7 +3264,7 @@ public class JobInProgress {
     TokenCache.setJobToken(token, tokenStorage);
         
     // write TokenStorage out
-    tokenStorage.writeTokenStorageFile(keysFile, conf);
+    tokenStorage.writeTokenStorageFile(keysFile, jobtracker.getConf());
     LOG.info("jobToken generated and stored with users keys in "
         + keysFile.toUri().getPath());
   }

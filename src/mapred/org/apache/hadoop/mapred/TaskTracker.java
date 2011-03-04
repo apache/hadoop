@@ -1842,6 +1842,13 @@ public class TaskTracker
 
         // Remove this job 
         rjob.tasks.clear();
+        // Close all FileSystems for this job
+        try {
+          FileSystem.closeAllForUGI(rjob.getUGI());
+        } catch (IOException ie) {
+          LOG.warn("Ignoring exception " + StringUtils.stringifyException(ie) + 
+              " while closing FileSystem for " + rjob.getUGI());
+        }
       }
     }
 
