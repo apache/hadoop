@@ -155,6 +155,20 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <compressioncodec href="CompressionCodec.html" />
               </compress>
             </io>
+            <security href="security/">
+              <credentials href="Credentials.html">
+                <addtoken href="#addToken(org.apache.hadoop.io.Text,org.apache.hadoop.security.token.Token)" />
+                <addsecretkey href="#addSecretKey(org.apache.hadoop.io.Text,byte[])" />
+              </credentials> 
+            </security>
+            <mapreduce href="mapreduce/">
+              <mapper href="Mapper.html">
+                <setup href="#setup(org.apache.hadoop.mapreduce.Mapper.Context)" />
+              </mapper>
+              <jobcontext href="JobContext.html">
+                <getcredentials href="#getcredentials" />
+              </jobcontext>
+            </mapreduce>
             <mapred href="mapred/">
               <clusterstatus href="ClusterStatus.html" />
               <counters href="Counters.html" />
@@ -178,6 +192,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
               <jobclient href="JobClient.html">
                 <runjob href="#runJob(org.apache.hadoop.mapred.JobConf)" />
                 <submitjob href="#submitJob(org.apache.hadoop.mapred.JobConf)" />
+                <getdelegationtoken href="#getDelegationToken(org.apache.hadoop.io.Text)" />
               </jobclient>
               <jobconf href="JobConf.html">
                 <setnummaptasks href="#setNumMapTasks(int)" />
@@ -203,6 +218,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
                 <setqueuename href="#setQueueName(java.lang.String)" />
                 <getjoblocaldir href="#getJobLocalDir()" />
                 <getjar href="#getJar()" />
+                <getcredentials href="#getCredentials()" />
               </jobconf>
               <jobconfigurable href="JobConfigurable.html">
                 <configure href="#configure(org.apache.hadoop.mapred.JobConf)" />
