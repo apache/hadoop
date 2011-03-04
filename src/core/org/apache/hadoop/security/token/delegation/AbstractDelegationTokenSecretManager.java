@@ -102,6 +102,14 @@ extends AbstractDelegationTokenIdentifier>
     tokenRemoverThread.start();
   }
   
+  /**
+   * is secretMgr running
+   * @return true if secret mgr is running
+   */
+  public synchronized boolean isRunning() {
+    return running;
+  }
+  
   /** 
    * Add a previously used master key to cache (when NN restarts), 
    * should be called before activate().

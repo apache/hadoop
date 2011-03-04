@@ -123,8 +123,10 @@ public class TokenCache {
         }
         // get the token
         token = dfs.getDelegationToken(delegTokenRenewer);
-        if(token==null) 
-          throw new IOException("Token from " + fs_addr + " is null");
+        if(token==null) {
+          LOG.warn("Token from " + fs_addr + " is null");
+          continue;
+        }
 
         token.setService(new Text(fs_addr));
         credentials.addToken(new Text(fs_addr), token);

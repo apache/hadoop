@@ -4947,6 +4947,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new IOException(
           "Delegation Token can be issued only with kerberos or web authentication");
     }
+    if(dtSecretManager == null || !dtSecretManager.isRunning()) {
+      LOG.warn("trying to get DT with no secret manager running");
+      return null;
+    }
+    
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String user = ugi.getUserName();
     Text owner = new Text(user);
