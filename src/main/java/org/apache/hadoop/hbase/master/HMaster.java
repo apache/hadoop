@@ -431,6 +431,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       this.assignmentManager.assignRoot();
       this.catalogTracker.waitForRoot();
       assigned++;
+    } else {
+      // Region already assigned.  We didnt' assign it.  Add to in-memory state.
+      this.assignmentManager.regionOnline(HRegionInfo.ROOT_REGIONINFO,
+        this.serverManager.getHServerInfo(this.catalogTracker.getRootLocation()));
     }
     LOG.info("-ROOT- assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getRootLocation());
@@ -445,6 +449,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       // guarantee that the transition has completed
       this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
       assigned++;
+    } else {
+      // Region already assigned.  We didnt' assign it.  Add to in-memory state.
+      this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
+        this.serverManager.getHServerInfo(this.catalogTracker.getMetaLocation()));
     }
     LOG.info(".META. assigned=" + assigned + ", rit=" + rit +
       ", location=" + catalogTracker.getMetaLocation());
