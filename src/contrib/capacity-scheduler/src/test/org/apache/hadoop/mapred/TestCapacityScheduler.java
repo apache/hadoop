@@ -168,7 +168,7 @@ public class TestCapacityScheduler extends TestCase {
     private int speculativeReduceTaskCounter = 0;
     public FakeJobInProgress(JobID jId, JobConf jobConf,
         FakeTaskTrackerManager taskTrackerManager, String user, 
-        JobTracker jt) {
+        JobTracker jt) throws IOException {
       super(jId, jobConf, jt);
       if (user == null) {
         user = "drwho";
@@ -327,7 +327,7 @@ public class TestCapacityScheduler extends TestCase {
 
     public FakeFailingJobInProgress(JobID id, JobConf jobConf,
         FakeTaskTrackerManager taskTrackerManager, String user, 
-        JobTracker jt) {
+        JobTracker jt) throws IOException {
       super(id, jobConf, taskTrackerManager, user, jt);
     }
     
@@ -1364,9 +1364,10 @@ public class TestCapacityScheduler extends TestCase {
 
 
     //high ram map from job 1 and normal reduce task from job 1
-    List<Task> tasks = checkMultipleAssignment(
-      "tt1", "attempt_test_0001_m_000001_0 on tt1",
-      "attempt_test_0001_r_000001_0 on tt1");
+    List<Task> tasks = checkAssignments("tt1", 
+        new String[] {
+        "attempt_test_0001_m_000001_0 on tt1",
+        "attempt_test_0001_r_000001_0 on tt1"});
 
     checkOccupiedSlots("defaultXYZ", TaskType.MAP, 1, 2, 200.0f,1,0);
     checkOccupiedSlots("defaultXYZ", TaskType.REDUCE, 1, 1, 100.0f,0,2);
@@ -2958,8 +2959,8 @@ public class TestCapacityScheduler extends TestCase {
     jConf.setNumMapTasks(2);
     jConf.setNumReduceTasks(0);
     jConf.setQueueName("default");
-    jConf.setUser("u1");
-    FakeJobInProgress job4= submitJobAndInit(JobStatus.PREP, jConf);
+    jConf.setUser("u2");
+    FakeJobInProgress job4 = submitJobAndInit(JobStatus.PREP, jConf);
 
     LOG.debug("Submit another regular memory(1GB vmem maps/reduces) job of "
         + "2 map/red tasks");
@@ -2969,7 +2970,7 @@ public class TestCapacityScheduler extends TestCase {
     jConf.setNumMapTasks(2);
     jConf.setNumReduceTasks(2);
     jConf.setQueueName("default");
-    jConf.setUser("u2");
+    jConf.setUser("u3");
     FakeJobInProgress job5 = submitJobAndInit(JobStatus.PREP, jConf);
 
     // Job4, a high memory job cannot be accommodated on a any TT. But with each

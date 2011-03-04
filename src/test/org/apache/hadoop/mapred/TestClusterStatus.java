@@ -128,7 +128,7 @@ public class TestClusterStatus extends TestCase {
    */
   static class FakeJobInProgress extends JobInProgress {
     public FakeJobInProgress(JobID jId, JobConf jobConf,
-                JobTracker jt) {
+                JobTracker jt) throws IOException {
       super(jId, jobConf, jt);
     }
   }

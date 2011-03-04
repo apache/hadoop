@@ -319,7 +319,8 @@ public class JobInProgress {
   /**
    * Create an almost empty JobInProgress, which can be used only for tests
    */
-  protected JobInProgress(JobID jobid, JobConf conf, JobTracker tracker) {
+  protected JobInProgress(JobID jobid, JobConf conf, JobTracker tracker) 
+  throws IOException {
     this.conf = conf;
     this.jobId = jobid;
     this.numMapTasks = conf.getNumMapTasks();
@@ -346,6 +347,9 @@ public class JobInProgress {
     this.maxTaskFailuresPerTracker = conf.getMaxTaskFailuresPerTracker();
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
+
+    // Check task limits
+    checkTaskLimits();
 
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
       (numMapTasks + numReduceTasks + 10);
@@ -387,6 +391,7 @@ public class JobInProgress {
         public FileSystem run() throws IOException {
           return jobSubmitDir.getFileSystem(default_conf);
         }});
+      
       /** check for the size of jobconf **/
       Path submitJobFile = JobSubmissionFiles.getJobConfPath(jobSubmitDir);
       FileStatus fstatus = fs.getFileStatus(submitJobFile);
@@ -411,6 +416,7 @@ public class JobInProgress {
             jobId.toString(), desc);
         throw new IOException(desc);
       }
+      
       this.priority = conf.getJobPriority();
       this.status.setJobPriority(this.priority);
       this.profile = new JobProfile(user, jobId, 
@@ -458,6 +464,9 @@ public class JobInProgress {
       // register job's tokens for renewal
       DelegationTokenRenewal.registerDelegationTokensForRenewal(
           jobInfo.getJobID(), ts, jobtracker.getConf());
+      
+      // Check task limits
+      checkTaskLimits();
     } finally {
       //close all FileSystems that was created above for the current user
       //At this point, this constructor is called in the context of an RPC, and
@@ -467,6 +476,19 @@ public class JobInProgress {
     }
   }
     
+  private void checkTaskLimits() throws IOException {
+    // if the number of tasks is larger than a configured value
+    // then fail the job.
+    int maxTasks = jobtracker.getMaxTasksPerJob();
+    LOG.info(jobId + ": nMaps=" + numMapTasks + " nReduces=" + numReduceTasks + " max=" + maxTasks);
+    if (maxTasks > 0 && (numMapTasks + numReduceTasks) > maxTasks) {
+      throw new IOException(
+                "The number of tasks for this job " + 
+                (numMapTasks + numReduceTasks) +
+                " exceeds the configured limit " + maxTasks);
+    }
+  }
+  
   /**
    * Called when the job is complete
    */
@@ -649,18 +671,13 @@ public class JobInProgress {
     // read input splits and create a map per a split
     //
     TaskSplitMetaInfo[] splits = createSplits(jobId);
+    if (numMapTasks != splits.length) {
+      throw new IOException("Number of maps in JobConf doesn't match number of " +
+      		"recieved splits for job " + jobId + "! " +
+      		"numMapTasks=" + numMapTasks + ", #splits=" + splits.length);
+    }
     numMapTasks = splits.length;
 
-
-    // if the number of splits is larger than a configured value
-    // then fail the job.
-    int maxTasks = jobtracker.getMaxTasksPerJob();
-    if (maxTasks > 0 && numMapTasks + numReduceTasks > maxTasks) {
-      throw new IOException(
-                "The number of tasks for this job " + 
-                (numMapTasks + numReduceTasks) +
-                " exceeds the configured limit " + maxTasks);
-    }
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
 

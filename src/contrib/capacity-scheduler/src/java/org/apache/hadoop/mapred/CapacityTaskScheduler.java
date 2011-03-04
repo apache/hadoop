@@ -410,12 +410,6 @@ class CapacityTaskScheduler extends TaskScheduler {
       
       
       for (CapacitySchedulerQueue queue : queuesForAssigningTasks) {
-        // we may have queues with capacity=0. We shouldn't look at jobs from 
-        // these queues
-        if (0 == queue.getCapacity(TaskType.MAP)) {
-          continue;
-        }
-
         //This call is for optimization if we are already over the
         //maximum-capacity we avoid traversing the queues.
         if (!queue.assignSlotsToQueue(type, 1)) {
