@@ -34,15 +34,26 @@ import org.apache.log4j.Level;
 public class TestDistributedFileSystem extends junit.framework.TestCase {
   private static final Random RAN = new Random();
 
-  public void testFileSystemCloseAll() throws Exception {
+  private boolean dualPortTesting = false;
+  
+  private Configuration getTestConfiguration() {
     Configuration conf = new Configuration();
+    if (dualPortTesting) {
+      conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+              "localhost:0");
+    }
+    return conf;
+  }
+
+  public void testFileSystemCloseAll() throws Exception {
+    Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 0, true, null);
     URI address = FileSystem.getDefaultUri(conf);
 
     try {
       FileSystem.closeAll();
 
-      conf = new Configuration();
+      conf = getTestConfiguration();
       FileSystem.setDefaultUri(conf, address);
       FileSystem.get(conf);
       FileSystem.get(conf);
@@ -58,7 +69,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
    * multiple files are open.
    */
   public void testDFSClose() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     FileSystem fileSys = cluster.getFileSystem();
 
@@ -75,7 +86,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
   }
 
   public void testDFSClient() throws Exception {
-    Configuration conf = new Configuration();
+    Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
 
     try {
@@ -125,7 +136,7 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
     System.out.println("seed=" + seed);
     RAN.setSeed(seed);
 
-    final Configuration conf = new Configuration();
+    final Configuration conf = getTestConfiguration();
     conf.set("slave.host.name", "localhost");
 
     final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
@@ -188,5 +199,15 @@ public class TestDistributedFileSystem extends junit.framework.TestCase {
         assertEquals(qfoocs, barcs);
       }
     }
+    cluster.shutdown();
+  }
+  
+  public void testAllWithDualPort() throws Exception {
+    dualPortTesting = true;
+
+    testFileSystemCloseAll();
+    testDFSClose();
+    testDFSClient();
+    testFileChecksum();
   }
 }

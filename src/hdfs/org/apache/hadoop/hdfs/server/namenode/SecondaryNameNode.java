@@ -158,7 +158,7 @@ public class SecondaryNameNode implements Runnable {
     
     // Create connection to the namenode.
     shouldRun = true;
-    nameNodeAddr = NameNode.getAddress(conf);
+    nameNodeAddr = NameNode.getServiceAddress(conf, true);
 
     this.conf = conf;
     this.namenode =

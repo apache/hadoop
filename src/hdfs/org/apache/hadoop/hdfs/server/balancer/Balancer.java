@@ -908,7 +908,7 @@ public class Balancer implements Tool {
    * set up the retry policy */ 
   private static NamenodeProtocol createNamenode(Configuration conf)
     throws IOException {
-    InetSocketAddress nameNodeAddr = NameNode.getAddress(conf);
+    InetSocketAddress nameNodeAddr = NameNode.getServiceAddress(conf, true);
     RetryPolicy timeoutPolicy = RetryPolicies.exponentialBackoffRetry(
         5, 200, TimeUnit.MILLISECONDS);
     Map<Class<? extends Exception>,RetryPolicy> exceptionToPolicyMap =

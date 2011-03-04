@@ -290,7 +290,7 @@ public class DataNode extends Configured
                                      conf.get("dfs.datanode.dns.interface","default"),
                                      conf.get("dfs.datanode.dns.nameserver","default"));
     }
-    InetSocketAddress nameNodeAddr = NameNode.getAddress(conf);
+    InetSocketAddress nameNodeAddr = NameNode.getServiceAddress(conf, true);
     
     this.socketTimeout =  conf.getInt("dfs.socket.timeout",
                                       HdfsConstants.READ_TIMEOUT);
