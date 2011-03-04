@@ -1124,10 +1124,11 @@ public class TaskTracker
     }
   }
 
-  private void launchTaskForJob(TaskInProgress tip, JobConf jobConf)
-      throws IOException{
+  private void launchTaskForJob(TaskInProgress tip, JobConf jobConf,
+      UserGroupInformation ugi) throws IOException {
     synchronized (tip) {
       tip.setJobConf(jobConf);
+      tip.setUGI(ugi);
       tip.launchTask();
     }
   }
@@ -2103,7 +2104,8 @@ public class TaskTracker
   void startNewTask(TaskInProgress tip) {
     try {
       RunningJob rjob = localizeJob(tip);
-      launchTaskForJob(tip, new JobConf(rjob.jobConf)); 
+      // Localization is done. Neither rjob.jobConf nor rjob.ugi can be null
+      launchTaskForJob(tip, new JobConf(rjob.jobConf), rjob.ugi); 
     } catch (Throwable e) {
       String msg = ("Error initializing " + tip.getTask().getTaskID() + 
                     ":\n" + StringUtils.stringifyException(e));
@@ -2232,7 +2234,19 @@ public class TaskTracker
     private String debugCommand;
     private volatile boolean slotTaken = false;
     private TaskLauncher launcher;
-        
+
+    // The ugi of the user who is running the job. This contains all the tokens
+    // too which will be populated during job-localization
+    private UserGroupInformation ugi;
+
+    UserGroupInformation getUGI() {
+      return ugi;
+    }
+
+    void setUGI(UserGroupInformation userUGI) {
+      ugi = userUGI;
+    }
+
     /**
      */
     public TaskInProgress(Task task, JobConf conf) {

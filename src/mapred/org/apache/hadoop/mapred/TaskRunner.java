@@ -164,10 +164,7 @@ abstract class TaskRunner extends Thread {
       
       // We don't create any symlinks yet, so presence/absence of workDir
       // actually on the file system doesn't matter.
-      UserGroupInformation ugi =
-        //UserGroupInformation.createRemoteUser(conf.getUser());
-        tracker.getRunningJob(t.getJobID()).getUGI();
-      ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      tip.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
         public Void run() throws IOException {
           taskDistributedCacheManager =
             tracker.getTrackerDistributedCacheManager()
@@ -242,8 +239,9 @@ abstract class TaskRunner extends Thread {
       }
     } finally {
       try{
-        taskDistributedCacheManager.release();
-
+        if (taskDistributedCacheManager != null) {
+          taskDistributedCacheManager.release();
+        }
       }catch(IOException ie){
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
       }
