@@ -1060,10 +1060,20 @@ public class FsShell extends Configured implements Tool {
     }
     
     if(!skipTrash) {
-      Trash trashTmp = new Trash(srcFs, getConf());
-      if (trashTmp.moveToTrash(src)) {
-        System.out.println("Moved to trash: " + src);
-        return;
+      try {
+	      Trash trashTmp = new Trash(srcFs, getConf());
+        if (trashTmp.moveToTrash(src)) {
+          System.out.println("Moved to trash: " + src);
+          return;
+        }
+      } catch (IOException e) {
+        Exception cause = (Exception) e.getCause();
+        String msg = "";
+        if(cause != null) {
+          msg = cause.getLocalizedMessage();
+        }
+        System.err.println("Problem with Trash." + msg +". Consider using -skipTrash option");        
+        throw e;
       }
     }
     
