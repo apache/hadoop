@@ -620,6 +620,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   throws IOException {
     DirectoryListing files = namesystem.getListing(src, startAfter);
     myMetrics.numGetListingOps.inc();
+    if (files != null) {
+      myMetrics.numFilesInGetListingOps.inc(files.getPartialListing().length);
+    }
     return files;
   }
   

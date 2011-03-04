@@ -81,6 +81,8 @@ public class NameNodeMetrics implements Updater {
                     new MetricsIntValue("fsImageLoadTime", registry, "Time loading FS Image at Startup");
     public MetricsIntValue numBlocksCorrupted =
                     new MetricsIntValue("BlocksCorrupted", registry);
+    public MetricsTimeVaryingInt numFilesInGetListingOps = 
+                    new MetricsTimeVaryingInt("FilesInGetListingOps", registry);
 
       
     public NameNodeMetrics(Configuration conf, NameNode nameNode) {
