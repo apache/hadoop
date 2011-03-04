@@ -546,10 +546,13 @@ public class JobInProgress {
     
     // Calibrate the localityWaitFactor - Do not override user intent!
     if (localityWaitFactor == DEFAULT_LOCALITY_WAIT_FACTOR) {
-      float jobNodes = uniqueHosts.size();
-      float clusterNodes = jobtracker.getNumberOfUniqueHosts();
+      int jobNodes = uniqueHosts.size();
+      int clusterNodes = jobtracker.getNumberOfUniqueHosts();
       
-      localityWaitFactor = Math.min(jobNodes/clusterNodes, localityWaitFactor);
+      if (clusterNodes > 0) {
+        localityWaitFactor = 
+          Math.min((float)jobNodes/clusterNodes, localityWaitFactor);
+      }
       LOG.info(jobId + " LOCALITY_WAIT_FACTOR=" + localityWaitFactor);
     }
     
