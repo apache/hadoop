@@ -185,8 +185,8 @@ class JvmManager {
     File logdir = TaskLog.getAttemptDir(firstTask.getTaskID(), 
         firstTask.isTaskCleanupTask());
     //allow for 10% over the limit
-    if (FileUtil.getDU(logdir) >
-        (1.1 * tracker.getRetainSize(firstTask.getTaskID()))){
+    final long retainSize = tracker.getRetainSize(firstTask.getTaskID());
+    if (retainSize >= 0 && FileUtil.getDU(logdir) > (1.1 * retainSize)){
       LOG.info("Deleting user log path since the amount of data in the logs" +
       		" exceeded the allowed " +
       		"log limits " + logdir);
