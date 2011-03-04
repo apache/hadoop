@@ -150,7 +150,7 @@ class FsShellPermissions {
     }
   }
 
-  static void changePermissions(FileSystem fs, String cmd, 
+  static int changePermissions(FileSystem fs, String cmd, 
                                 String argv[], int startIndex, FsShell shell)
                                 throws IOException {
     CmdHandler handler = null;
@@ -174,6 +174,6 @@ class FsShellPermissions {
       handler = new ChgrpHandler(fs, argv[startIndex++]);
     }
 
-    shell.runCmdHandler(handler, argv, startIndex, recursive);
+    return shell.runCmdHandler(handler, argv, startIndex, recursive);
   } 
 }

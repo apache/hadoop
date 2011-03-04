@@ -1216,6 +1216,12 @@ public class FsShell extends Configured implements Tool {
       Path srcPath = new Path(args[i]);
       FileSystem srcFs = srcPath.getFileSystem(getConf());
       Path[] paths = FileUtil.stat2Paths(srcFs.globStatus(srcPath), srcPath);
+      // if nothing matches to given glob pattern then increment error count
+      if(paths.length==0) {
+        System.err.println(handler.getName() + 
+            ": could not get status for '" + args[i] + "'");
+        errors++;
+      }
       for(Path path : paths) {
         try {
           FileStatus file = srcFs.getFileStatus(path);
@@ -1231,7 +1237,8 @@ public class FsShell extends Configured implements Tool {
             (e.getCause().getMessage() != null ? 
                 e.getCause().getLocalizedMessage() : "null"));
           System.err.println(handler.getName() + ": could not get status for '"
-                                        + path + "': " + msg.split("\n")[0]);        
+                                        + path + "': " + msg.split("\n")[0]);
+          errors++;
         }
       }
     }
@@ -1776,7 +1783,7 @@ public class FsShell extends Configured implements Tool {
       } else if ("-chmod".equals(cmd) || 
                  "-chown".equals(cmd) ||
                  "-chgrp".equals(cmd)) {
-        FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
+        exitCode = FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, i);
