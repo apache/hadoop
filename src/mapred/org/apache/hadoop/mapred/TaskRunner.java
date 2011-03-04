@@ -65,6 +65,8 @@ abstract class TaskRunner extends Thread {
   private boolean exitCodeSet = false;
   
   private static String SYSTEM_PATH_SEPARATOR = System.getProperty("path.separator");
+  static final String MAPREDUCE_USER_CLASSPATH_FIRST =
+        "mapreduce.user.classpath.first"; //a semi-hidden config
 
   
   private TaskTracker tracker;
@@ -482,8 +484,14 @@ abstract class TaskRunner extends Thread {
       throws IOException {
     // Accumulates class paths for child.
     List<String> classPaths = new ArrayList<String>();
-    // start with same classpath as parent process
-    appendSystemClasspaths(classPaths);
+    
+    boolean userClassesTakesPrecedence = 
+      conf.getBoolean(MAPREDUCE_USER_CLASSPATH_FIRST,false);
+    
+    if (!userClassesTakesPrecedence) {
+      // start with same classpath as parent process
+      appendSystemClasspaths(classPaths);
+    }
 
     // include the user specified classpath
     appendJobJarClasspaths(conf.getJar(), classPaths);
@@ -493,6 +501,12 @@ abstract class TaskRunner extends Thread {
     
     // Include the working dir too
     classPaths.add(workDir.toString());
+
+    if (userClassesTakesPrecedence) {
+      // parent process's classpath is added last
+      appendSystemClasspaths(classPaths);
+    }
+    
     return classPaths;
   }
 

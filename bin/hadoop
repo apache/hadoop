@@ -24,6 +24,12 @@
 #
 #   HADOOP_CLASSPATH Extra Java CLASSPATH entries.
 #
+#   HADOOP_USER_CLASSPATH_FIRST      When defined, the HADOOP_CLASSPATH is 
+#                                    added in the beginning of the global
+#                                    classpath. Can be defined, for example,
+#                                    by doing 
+#                                    export HADOOP_USER_CLASSPATH_FIRST=true
+#
 #   HADOOP_HEAPSIZE  The maximum amount of heap to use, in MB. 
 #                    Default is 1000.
 #
@@ -123,6 +129,9 @@ fi
 # CLASSPATH initially contains $HADOOP_CONF_DIR
 CLASSPATH="${HADOOP_CONF_DIR}"
 CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
+if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ] && [ "$HADOOP_CLASSPATH" != "" ] ; then
+  CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
+fi
 
 # for developers, add Hadoop classes to CLASSPATH
 if [ -d "$HADOOP_HOME/build/classes" ]; then
@@ -172,7 +181,7 @@ for f in $HADOOP_HOME/build/hadoop-tools-*.jar; do
 done
 
 # add user-specified CLASSPATH last
-if [ "$HADOOP_CLASSPATH" != "" ]; then
+if [ "$HADOOP_USER_CLASSPATH_FIRST" = "" ] && [ "$HADOOP_CLASSPATH" != "" ]; then
   CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
 fi
 
