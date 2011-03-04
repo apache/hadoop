@@ -179,17 +179,17 @@ public class TrackerDistributedCacheManager {
         if (!lcacheStatus.isInited()) {
           if (isPublic) {
             localizedPath = localizePublicCacheObject(conf, 
-                cache, 
-                confFileStamp,
-                lcacheStatus, fileStatus, 
-                isArchive);
+                                                      cache, 
+                                                      confFileStamp,
+                                                      lcacheStatus, fileStatus, 
+                                                      isArchive);
           } else {
             localizedPath = localPath;
           }
           lcacheStatus.initComplete();
         } else {
           localizedPath = checkCacheStatusValidity(conf, cache, confFileStamp,
-              lcacheStatus, fileStatus, isArchive);            
+                                                   lcacheStatus, fileStatus, isArchive);            
         }
       }
 
@@ -214,14 +214,14 @@ public class TrackerDistributedCacheManager {
         compactCache(conf);
       }
       initSuccessful = true;
-      return localizedPath;
-    } finally {
-      if (!initSuccessful) {
-        synchronized (cachedArchives) {
-          lcacheStatus.refcount--;
-        }
+    } catch (IOException ie) {
+      synchronized (lcacheStatus) {
+        // release this cache
+        lcacheStatus.refcount -= 1;
+        throw ie;
       }
     }
+    return localizedPath;
   }
 
   /**

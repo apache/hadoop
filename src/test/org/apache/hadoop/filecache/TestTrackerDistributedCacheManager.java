@@ -294,8 +294,10 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     th = null;
     for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
       try {
-        assertEquals(0, manager.getReferenceCount(c.uri, conf2, c.timestamp, 
-            c.owner));
+        int refcount = manager.getReferenceCount(c.uri, conf2, c.timestamp, 
+                                                 c.owner);
+        LOG.info("checking refcount " + c.uri + " of " + refcount);
+        assertEquals(0, refcount);
       } catch (IOException ie) {
         th = ie;
         LOG.info("Exception getting reference count for " + c.uri, ie);
