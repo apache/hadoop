@@ -141,18 +141,20 @@ public class TokenCache {
         //the initialize method of hftp, called via FileSystem.get() done
         //earlier gets a delegation token
         Token<? extends TokenIdentifier> t = ((HftpFileSystem) fs).getDelegationToken(); 
-        credentials.addToken(new Text(fs_addr), t);
+        if (t != null) {
+          credentials.addToken(new Text(fs_addr), t);
         
-        // in this case port in fs_addr is port for hftp request, but
-        // token's port is for RPC
-        // to find the correct DT we need to know the mapping between Hftp port 
-        // and RPC one. hence this new setting in the conf.
-        URI uri = ((HftpFileSystem) fs).getUri();
-        String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+
-           SecurityUtil.buildDTServiceName(uri, NameNode.DEFAULT_PORT);
-        conf.set(key, t.getService().toString());
-        LOG.info("GOT dt for " + p + " and stored in conf as " + key + "=" 
-            + t.getService());
+          // in this case port in fs_addr is port for hftp request, but
+          // token's port is for RPC
+          // to find the correct DT we need to know the mapping between Hftp port 
+          // and RPC one. hence this new setting in the conf.
+          URI uri = ((HftpFileSystem) fs).getUri();
+          String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+
+             SecurityUtil.buildDTServiceName(uri, NameNode.DEFAULT_PORT);
+          conf.set(key, t.getService().toString());
+          LOG.info("GOT dt for " + p + " and stored in conf as " + key + "=" 
+              + t.getService());
+        }
       }
     }
   }
