@@ -523,17 +523,27 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         int usableReplicas = numReplicas.liveReplicas() + 
                              numReplicas.decommissionedReplicas(); 
         // l: == live:, d: == decommissioned c: == corrupt e: == excess
-        out.print(block + " (replicas:" +
+        out.print(block + ((usableReplicas > 0)? "" : " MISSING") +
+                  " (replicas:" +
                   " l: " + numReplicas.liveReplicas() + 
                   " d: " + numReplicas.decommissionedReplicas() + 
                   " c: " + numReplicas.corruptReplicas() + 
-                  " e: " + numReplicas.excessReplicas() + 
-                  ((usableReplicas > 0)? "" : " MISSING") + ")"); 
+                  " e: " + numReplicas.excessReplicas() + ") ");
+
+        Collection<DatanodeDescriptor> corruptNodes =
+                                       corruptReplicas.getNodes(block);
 
         for (Iterator<DatanodeDescriptor> jt = blocksMap.nodeIterator(block);
              jt.hasNext();) {
           DatanodeDescriptor node = jt.next();
-          out.print(" " + node + " : ");
+          String state = "";
+          if (corruptNodes != null && corruptNodes.contains(node)) {
+            state = "(corrupt)";
+          } else if (node.isDecommissioned() ||
+                     node.isDecommissionInProgress()) {
+            state = "(decommissioned)";
+          }
+          out.print(" " + node + state + " : ");
         }
         out.println("");
       }
