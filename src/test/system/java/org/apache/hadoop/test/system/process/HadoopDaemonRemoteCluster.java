@@ -53,6 +53,13 @@ public class HadoopDaemonRemoteCluster implements ClusterProcessManager {
   public final static String CONF_DEPLOYED_HADOOPCONFDIR =
     "test.system.hdrc.deployed.hadoopconfdir";
 
+  /**
+   * Key is used to configure the location of deployment control directory
+   * where additional helper scripts might reside
+   */
+  public final static String CONF_STAGED_HADOOP_CONTROLDIR =
+    "test.system.hdrc.staged.controldir";
+
   private String hadoopHome;
   private String hadoopConfDir;
   private String deployed_hadoopConfDir;
@@ -176,6 +183,32 @@ public class HadoopDaemonRemoteCluster implements ClusterProcessManager {
     }
   }
 
+  @Override
+  public void cleanDirs() throws Exception {
+    File controlDir = getControlDirectory();
+    if (controlDir == null) {
+      LOG.warn("External tools for cluster control aren't available");
+      return;
+    }
+    String [] cmd = new String[]{"clusterCleanupFs.sh"};
+    ShellCommandExecutor cleanScript =
+      new ShellCommandExecutor(cmd, controlDir);
+    cleanScript.execute();
+  }
+
+  @Override
+  public void deploy() throws IOException {
+    File controlDir = getControlDirectory();
+    if (controlDir == null) {
+      LOG.warn("External tools for cluster control aren't available");
+      return;
+    }
+    String [] cmd = new String[]{"clusterInstall.sh"};
+    ShellCommandExecutor installScript =
+      new ShellCommandExecutor(cmd, controlDir);
+    installScript.execute();
+  }
+
   private void populateDaemons(String confLocation) throws IOException {
     File mastersFile = new File(confLocation, MASTERS_FILE);
     File slavesFile = new File(confLocation, SLAVES_FILE);
@@ -218,6 +251,16 @@ public class HadoopDaemonRemoteCluster implements ClusterProcessManager {
             System.getProperty("file.separator", "/") + SLAVES_FILE);
       }
     }
+  }
+
+  private static File getControlDirectory () {
+    String controlDirLocation = System.getProperty(CONF_STAGED_HADOOP_CONTROLDIR);
+    if (controlDirLocation != null) {
+      File controlDir = new File(controlDirLocation);
+      if (!controlDir.exists())
+        return controlDir;
+    }
+    return null;
   }
 
   /**
