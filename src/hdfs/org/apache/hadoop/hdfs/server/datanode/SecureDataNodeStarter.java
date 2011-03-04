@@ -91,11 +91,14 @@ public class SecureDataNodeStarter implements Daemon {
     if(listener.getPort() != infoSocAddr.getPort())
       throw new RuntimeException("Unable to bind on specified info port in secure " +
           "context. Needed " + socAddr.getPort() + ", got " + ss.getLocalPort());
+   
+    if(ss.getLocalPort() >= 1023 || listener.getPort() >= 1023)
+      throw new RuntimeException("Cannot start secure datanode on non-privileged "
+         +" ports. (streaming port = " + ss + " ) (http listener port = " + 
+         listener.getConnection() + "). Exiting.");
+ 
     System.err.println("Successfully obtained privileged resources (streaming port = "
         + ss + " ) (http listener port = " + listener.getConnection() +")");
-    
-    if(ss.getLocalPort() >= 1023 || listener.getPort() >= 1023)
-      System.err.println("Warning: Starting secure datanode with unprivileged ports");
     
     resources = new SecureResources(ss, listener);
   }
