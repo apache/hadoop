@@ -168,7 +168,13 @@ throws IOException {
 	ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
 	jspHelper.DFSNodesStatus(live, dead);
 
-	whatNodes = request.getParameter("whatNodes"); // show only live or only dead nodes
+       //verify input for correctness 
+       String whatNodes = request.getParameter("whatNodes");// show only live or only dead nodes
+       if (whatNodes == null || whatNodes.length() == 0) {
+         out.print("Invalid input");
+         return;
+       }
+
 	sorterField = request.getParameter("sorter/field");
 	sorterOrder = request.getParameter("sorter/order");
 	if ( sorterField == null )
@@ -293,6 +299,9 @@ throws IOException {
                           out.print("</table>\n");
                         }
                         out.print("</div>");
+                  } else {
+                    // if nothing matches then print invalid input
+                    out.println("Invalid input");
                   }
 	}
 }%>
