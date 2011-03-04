@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -163,7 +164,8 @@ public class DefaultTaskController extends TaskController {
   @Override
   public void initializeJob(String user, String jobid, 
                             Path credentials, Path jobConf, 
-                            TaskUmbilicalProtocol taskTracker
+                            TaskUmbilicalProtocol taskTracker,
+                            InetSocketAddress ttAddr
                             ) throws IOException {
     final LocalDirAllocator lDirAlloc = allocator;
     FileSystem localFs = FileSystem.getLocal(getConf());

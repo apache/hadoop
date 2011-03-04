@@ -941,10 +941,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     Task t = tip.getTask();
     JobID jobId = t.getJobID();
     RunningJob rjob = addTaskToJob(jobId, tip);
+    InetSocketAddress ttAddr = getTaskTrackerReportAddress();
 
     synchronized (rjob) {
       if (!rjob.localized) {
-        Path localJobConfPath = initializeJob(t, rjob);
+        Path localJobConfPath = initializeJob(t, rjob, ttAddr);
         JobConf localJobConf = new JobConf(localJobConfPath);
         //to be doubly sure, overwrite the user in the config with the one the TT 
         //thinks it is
@@ -976,11 +977,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    *
    * @param t task whose job has to be localized on this TT
    * @param rjob the {@link RunningJob}
+   * @param ttAddr the tasktracker's RPC address
    * @return the path to the job configuration to be used for all the tasks
    *         of this job as a starting point.
    * @throws IOException
    */
-  Path initializeJob(final Task t, final RunningJob rjob)
+  Path initializeJob(final Task t, final RunningJob rjob, 
+      final InetSocketAddress ttAddr)
   throws IOException, InterruptedException {
     final JobID jobId = t.getJobID();
 
@@ -1038,7 +1041,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           // distributed cache manager makes as well)
           JobLocalizer.writeLocalJobFile(localJobFile, localJobConf);
           taskController.initializeJob(t.getUser(), jobId.toString(), 
-              new Path(localJobTokenFile), localJobFile, TaskTracker.this);
+              new Path(localJobTokenFile), localJobFile, TaskTracker.this,
+              ttAddr);
         } catch (IOException e) {
           LOG.warn("Exception while localization " + 
               StringUtils.stringifyException(e));

@@ -142,7 +142,8 @@ class LinuxTaskController extends TaskController {
 
   @Override
   public void initializeJob(String user, String jobid, Path credentials,
-                            Path jobConf, TaskUmbilicalProtocol taskTracker
+                            Path jobConf, TaskUmbilicalProtocol taskTracker,
+                            InetSocketAddress ttAddr
                             ) throws IOException {
     List<String> command = new ArrayList<String>(
       Arrays.asList(taskControllerExe, 
@@ -162,8 +163,6 @@ class LinuxTaskController extends TaskController {
     command.add(user);
     command.add(jobid);
     // add the task tracker's reporting address
-    InetSocketAddress ttAddr = 
-      ((TaskTracker) taskTracker).getTaskTrackerReportAddress();
     command.add(ttAddr.getHostName());
     command.add(Integer.toString(ttAddr.getPort()));
     String[] commandArray = command.toArray(new String[0]);

@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -88,11 +89,13 @@ public abstract class TaskController implements Configurable {
    * @param credentials a filename containing the job secrets
    * @param jobConf the path to the localized configuration file
    * @param taskTracker the connection the task tracker
+   * @param ttAddr the tasktracker's RPC address
    * @throws IOException
    */
   public abstract void initializeJob(String user, String jobid, 
                                      Path credentials, Path jobConf,
-                                     TaskUmbilicalProtocol taskTracker) 
+                                     TaskUmbilicalProtocol taskTracker,
+                                     InetSocketAddress ttAddr) 
   throws IOException;
   
   /**
