@@ -1,3 +1,4 @@
+# -------------------------- common --------------------------
 **/TestAccessControlList.java
 **/TestArrayFile.java
 **/TestArrayWritable.java
@@ -84,3 +85,52 @@
 **/TestWritableName.java
 **/TestWritableSerialization.java
 **/TestWritableUtils.java
+# -------------------------- hdfs --------------------------
+**/TestAbandonBlock.java
+**/TestBlockReplacement.java
+**/TestBlocksScheduledCounter.java
+**/TestCheckpoint.java
+**/TestDatanodeDescriptor.java
+**/TestDatanodeReport.java
+**/TestDataTransferProtocol.java
+**/TestDefaultNameNodePort.java
+**/TestDFSShellGenericOptions.java
+**/TestDFSShell.java
+**/TestDFSUpgradeFromImage.java
+**/TestDiskError.java
+**/TestDistributedFileSystem.java
+**/TestEditLog.java
+**/TestFileAppend2.java
+**/TestFileAppend3.java
+**/TestFileAppend.java
+**/TestFileCorruption.java
+**/TestFileLimit.java
+**/TestFileStatus.java
+**/TestFSInputChecker.java
+**/TestFSOutputSummer.java
+**/TestGetBlocks.java
+**/TestHDFSServerPorts.java
+**/TestHDFSTrash.java
+**/TestHeartbeatHandling.java
+**/TestHost2NodesMap.java
+**/TestInterDatanodeProtocol.java
+**/TestLease.java
+**/TestLeaseRecovery.java
+**/TestLocalDFS.java
+**/TestMissingBlocksAlert.java
+**/TestNamenodeCapacityReport.java
+**/TestNetworkTopology.java
+**/TestOverReplicatedBlocks.java
+**/TestPendingReplication.java
+**/TestPermission.java
+**/TestPread.java
+**/TestQuota.java
+**/TestReplicationPolicy.java
+**/TestRestartDFS.java
+**/TestSafeMode.java
+**/TestSimulatedFSDataset.java
+**/TestStartup.java
+**/TestUrlStreamHandler.java
+# -------------------------- mapred --------------------------
+**/TestCommandLineJobSubmission.java
+# -------------------------- eof --------------------------
