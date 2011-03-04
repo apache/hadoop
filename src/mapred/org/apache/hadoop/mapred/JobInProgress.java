@@ -203,6 +203,8 @@ class JobInProgress {
     OTHER_LOCAL_MAPS,
     DATA_LOCAL_MAPS,
     RACK_LOCAL_MAPS,
+    SLOTS_MILLIS_MAPS,
+    SLOTS_MILLIS_REDUCES,
     FALLOW_SLOTS_MILLIS_MAPS,
     FALLOW_SLOTS_MILLIS_REDUCES
   }
@@ -2129,7 +2131,24 @@ class JobInProgress {
     }
     return true;
   }
+  
 
+  /**
+   * Metering: Occupied Slots * (Finish - Start)
+   * @param tip {@link TaskInProgress} to be metered which just completed, 
+   *            cannot be <code>null</code> 
+   * @param status {@link TaskStatus} of the completed task, cannot be 
+   *               <code>null</code>
+   */
+  private void meterTaskAttempt(TaskInProgress tip, TaskStatus status) {
+    Counter slotCounter = 
+      (tip.isMapTask()) ? Counter.SLOTS_MILLIS_MAPS : 
+                          Counter.SLOTS_MILLIS_REDUCES;
+    jobCounters.incrCounter(slotCounter, 
+                            tip.getNumSlotsRequired() * 
+                            (status.getFinishTime() - status.getStartTime()));
+  }
+  
   /**
    * A taskid assigned to this JobInProgress has reported in successfully.
    */
@@ -2140,6 +2159,9 @@ class JobInProgress {
     int oldNumAttempts = tip.getActiveTasks().size();
     final JobTrackerInstrumentation metrics = jobtracker.getInstrumentation();
         
+    // Metering
+    meterTaskAttempt(tip, status);
+    
     // Sanity check: is the TIP already complete? 
     // It _is_ safe to not decrement running{Map|Reduce}Tasks and
     // finished{Map|Reduce}Tasks variables here because one and only
@@ -2281,6 +2303,12 @@ class JobInProgress {
       this.finishTime = System.currentTimeMillis();
       LOG.info("Job " + this.status.getJobID() + 
                " has completed successfully.");
+      
+      // Log the job summary (this should be done prior to logging to 
+      // job-history to ensure job-counters are in-sync 
+      JobSummary.logJobSummary(this, jobtracker.getClusterStatus(false));
+      
+      // Log job-history
       JobHistory.JobInfo.logFinished(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks, failedMapTasks, 
@@ -2296,6 +2324,9 @@ class JobInProgress {
   private synchronized void terminateJob(int jobTerminationState) {
     if ((status.getRunState() == JobStatus.RUNNING) ||
         (status.getRunState() == JobStatus.PREP)) {
+      // Log the job summary
+      JobSummary.logJobSummary(this, jobtracker.getClusterStatus(false));
+      
       if (jobTerminationState == JobStatus.FAILED) {
         this.status = new JobStatus(status.getJobID(),
                                     1.0f, 1.0f, 1.0f, JobStatus.FAILED,
@@ -2314,6 +2345,7 @@ class JobInProgress {
                                      this.finishedReduceTasks);
       }
       garbageCollect();
+      
       jobtracker.getInstrumentation().terminateJob(
           this.conf, this.status.getJobID());
     }
@@ -2474,9 +2506,13 @@ class JobInProgress {
           failReduce(tip);
         }
       }
+      
+      // Metering
+      meterTaskAttempt(tip, status);
     }
         
-    // the case when the map was complete but the task tracker went down.
+    // The case when the map was complete but the task tracker went down.
+    // However, we don't need to do any metering here...
     if (wasComplete && !isComplete) {
       if (tip.isMapTask()) {
         // Put the task back in the cache. This will help locality for cases
@@ -2667,8 +2703,9 @@ class JobInProgress {
    * from the various tables.
    */
   synchronized void garbageCollect() {
-    //Cancel task tracker reservation
+    // Cancel task tracker reservation
     cancelReservedSlots();
+    
     // Let the JobTracker know that a job is complete
     jobtracker.getInstrumentation().decWaitingMaps(getJobID(), pendingMaps());
     jobtracker.getInstrumentation().decWaitingReduces(getJobID(), pendingReduces());
@@ -2852,5 +2889,65 @@ class JobInProgress {
    */
   void setClusterSize(int clusterSize) {
     this.clusterSize = clusterSize;
+  }
+
+  static class JobSummary {
+    static final Log LOG = LogFactory.getLog(JobSummary.class);
+    
+    // Escape sequences 
+    static final char EQUALS = '=';
+    static final char[] charsToEscape = 
+      {StringUtils.COMMA, EQUALS, StringUtils.ESCAPE_CHAR};
+    
+    /**
+     * Log a summary of the job's runtime.
+     * 
+     * @param job {@link JobInProgress} whose summary is to be logged, cannot
+     *            be <code>null</code>.
+     * @param cluster {@link ClusterStatus} of the cluster on which the job was
+     *                run, cannot be <code>null</code>
+     */
+    public static void logJobSummary(JobInProgress job, ClusterStatus cluster) {
+      JobStatus status = job.getStatus();
+      JobProfile profile = job.getProfile();
+      String user = StringUtils.escapeString(profile.getUser(), 
+                                             StringUtils.ESCAPE_CHAR, 
+                                             charsToEscape);
+      String queue = StringUtils.escapeString(profile.getQueueName(), 
+                                              StringUtils.ESCAPE_CHAR, 
+                                              charsToEscape);
+      Counters jobCounters = job.getJobCounters();
+      long mapSlotSeconds = 
+        (jobCounters.getCounter(Counter.SLOTS_MILLIS_MAPS) +
+         jobCounters.getCounter(Counter.FALLOW_SLOTS_MILLIS_MAPS)) / 1000;
+      long reduceSlotSeconds = 
+        (jobCounters.getCounter(Counter.SLOTS_MILLIS_REDUCES) +
+         jobCounters.getCounter(Counter.FALLOW_SLOTS_MILLIS_REDUCES)) / 1000;
+
+      LOG.info("jobId=" + job.getJobID() + StringUtils.COMMA +
+               "submitTime" + EQUALS + job.getStartTime() + StringUtils.COMMA +
+               "launchTime" + EQUALS + job.getLaunchTime() + StringUtils.COMMA +
+               "finishTime" + EQUALS + job.getFinishTime() + StringUtils.COMMA +
+               "numMaps" + EQUALS + job.getMapTasks().length + 
+                           StringUtils.COMMA +
+               "numSlotsPerMap" + EQUALS + job.getNumSlotsPerMap() + 
+                                  StringUtils.COMMA +
+               "numReduces" + EQUALS + job.getReduceTasks().length + 
+                              StringUtils.COMMA +
+               "numSlotsPerReduce" + EQUALS + job.getNumSlotsPerReduce() + 
+                                     StringUtils.COMMA +
+               "user" + EQUALS + user + StringUtils.COMMA +
+               "queue" + EQUALS + queue + StringUtils.COMMA +
+               "status" + EQUALS + 
+                          JobStatus.getJobRunState(status.getRunState()) + 
+                          StringUtils.COMMA + 
+               "mapSlotSeconds" + EQUALS + mapSlotSeconds + StringUtils.COMMA +
+               "reduceSlotsSeconds" + EQUALS + reduceSlotSeconds  + 
+                                      StringUtils.COMMA +
+               "clusterMapCapacity" + EQUALS + cluster.getMaxMapTasks() + 
+                                      StringUtils.COMMA +
+               "clusterReduceCapacity" + EQUALS + cluster.getMaxReduceTasks()
+      );
+    }
   }
 }
