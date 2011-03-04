@@ -242,6 +242,7 @@ jarray constructNewArrayString(JNIEnv *env, Exc *exc, const char **elements, int
       fprintf(stderr, "ERROR: jelem == NULL\n");
     }
     (*env)->SetObjectArrayElement(env, result, i, jelem);
+    (*env)->DeleteLocalRef(env, jelem);
   }
   return result;
 }
