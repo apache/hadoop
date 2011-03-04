@@ -728,7 +728,7 @@ You can specify multiple input directories with multiple '-input' options:
 <section>
 <title>How do I generate output files with gzip format? </title>
 <p>
-Instead of plain text files, you can generate gzip files as your generated output. Pass '-D mapred.output.compress=true -D  mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCode' as option to your streaming job.
+Instead of plain text files, you can generate gzip files as your generated output. Pass '-D mapred.output.compress=true -D  mapred.output.compression.codec=org.apache.hadoop.io.compress.GzipCodec' as option to your streaming job.
 </p>
 </section>
 
