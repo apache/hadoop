@@ -23,6 +23,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -146,7 +148,10 @@ public class TrackerDistributedCacheManager {
       lcacheStatus = cachedArchives.get(key);
       if (lcacheStatus == null) {
         // was never localized
-        String uniqueString = String.valueOf(random.nextLong());
+        String uniqueString
+          = (String.valueOf(random.nextLong())
+             + "_" + cache.hashCode()
+             + "_" + (confFileStamp % Integer.MAX_VALUE));
         String cachePath = new Path (subDir, 
           new Path(uniqueString, makeRelative(cache, conf))).toString();
         Path localPath = lDirAllocator.getLocalPathForWrite(cachePath,
@@ -194,7 +199,7 @@ public class TrackerDistributedCacheManager {
 
       if (allowedCacheSize < size || allowedCacheSubdirs < numberSubdirs) {
         // try some cache deletions
-        deleteCache(conf);
+        compactCache(conf);
       }
       initSuccessful = true;
       return localizedPath;
@@ -248,8 +253,8 @@ public class TrackerDistributedCacheManager {
 
   // To delete the caches which have a refcount of zero
 
-  private void deleteCache(Configuration conf) throws IOException {
-    Set<CacheStatus> deleteSet = new HashSet<CacheStatus>();
+  private void compactCache(Configuration conf) throws IOException {
+    List<CacheStatus> deleteList = new LinkedList<CacheStatus>();
     // try deleting cache Status with refcount of zero
     synchronized (cachedArchives) {
       for (Iterator<String> it = cachedArchives.keySet().iterator(); 
@@ -262,19 +267,30 @@ public class TrackerDistributedCacheManager {
         if (lcacheStatus.refcount == 0) {
           // delete this cache entry from the global list 
           // and mark the localized file for deletion
-          deleteSet.add(lcacheStatus);
+          deleteList.add(lcacheStatus);
           it.remove();
         }
       }
     }
     
     // do the deletion, after releasing the global lock
-    for (CacheStatus lcacheStatus : deleteSet) {
+    for (CacheStatus lcacheStatus : deleteList) {
       synchronized (lcacheStatus) {
-        FileSystem.getLocal(conf).delete(lcacheStatus.localizedLoadPath, true);
+        FileSystem localFS = FileSystem.getLocal(conf);
+
+        Path potentialDeletee = lcacheStatus.localizedLoadPath;
+
+        localFS.delete(potentialDeletee, true);
 
         // Update the maps baseDirSize and baseDirNumberSubDir
-        LOG.info("Deleted path " + lcacheStatus.localizedLoadPath);
+        LOG.info("Deleted path " + potentialDeletee);
+
+        try {
+          localFS.delete(lcacheStatus.getLocalizedUniqueDir(), true);
+        } catch (IOException e) {
+          LOG.warn("Could not delete distributed cache empty directory "
+                   + lcacheStatus.getLocalizedUniqueDir());
+        }
 
         deleteCacheInfoUpdate(lcacheStatus);
       }
