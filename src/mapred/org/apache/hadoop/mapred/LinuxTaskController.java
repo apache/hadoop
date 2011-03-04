@@ -403,7 +403,7 @@ class LinuxTaskController extends TaskController {
       File workDir, Map<String, String> env) 
       throws IOException {
     String[] taskControllerCmd = new String[3 + cmdArgs.size()];
-    taskControllerCmd[0] = taskControllerExe;
+    taskControllerCmd[0] = getTaskControllerExecutablePath();
     taskControllerCmd[1] = userName;
     taskControllerCmd[2] = String.valueOf(command.ordinal());
     int i = 3;
@@ -470,7 +470,10 @@ class LinuxTaskController extends TaskController {
       }
     }
   }
-  
+
+  protected String getTaskControllerExecutablePath() {
+    return taskControllerExe;
+  }  
 
   /**
    * Sets up the permissions of the following directories:

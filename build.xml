@@ -738,6 +738,8 @@
       <sysproperty key="test.debug.data" value="${test.debug.data}"/>
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
       <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+    	<sysproperty key="taskcontroller-path" value="${taskcontroller-path}"/>
+    	<sysproperty key="taskcontroller-user" value="${taskcontroller-user}"/>
       <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
       <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
       <sysproperty key="java.library.path"
