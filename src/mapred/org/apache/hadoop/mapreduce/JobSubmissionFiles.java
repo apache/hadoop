@@ -28,7 +28,9 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
 /**
- * A utility to manage job submission files.
+ * A utility to manage job submission files.<br/>
+ * <b><i>Note that this class is for framework internal usage only and is
+ * not to be used by users directly.</i></b>
  */
 public class JobSubmissionFiles {
 
