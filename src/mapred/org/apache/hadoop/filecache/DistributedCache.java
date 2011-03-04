@@ -705,39 +705,41 @@ public class DistributedCache {
    * @param uriFiles The uri array of urifiles
    * @param uriArchives the uri array of uri archives
    */
-  public static boolean checkURIs(URI[]  uriFiles, URI[] uriArchives){
+  public static boolean checkURIs(URI[]  uriFiles, URI[] uriArchives) {
     if ((uriFiles == null) && (uriArchives == null)){
       return true;
     }
-    if (uriFiles != null){
-      for (int i = 0; i < uriFiles.length; i++){
-        String frag1 = uriFiles[i].getFragment();
-        if (frag1 == null)
+    // check if fragment is null for any uri
+    // also check if there are any conflicts in fragment names
+    Set<String> fragments = new HashSet<String>();
+    
+    // iterate over file uris
+    if (uriFiles != null) {
+      for (int i = 0; i < uriFiles.length; i++) {
+        String fragment = uriFiles[i].getFragment();
+        if (fragment == null) {
           return false;
-        for (int j=i+1; j < uriFiles.length; j++){
-          String frag2 = uriFiles[j].getFragment();
-          if (frag2 == null)
-            return false;
-          if (frag1.equalsIgnoreCase(frag2))
-            return false;
         }
-        if (uriArchives != null){
-          for (int j = 0; j < uriArchives.length; j++){
-            String frag2 = uriArchives[j].getFragment();
-            if (frag2 == null){
-              return false;
-            }
-            if (frag1.equalsIgnoreCase(frag2))
-              return false;
-            for (int k=j+1; k < uriArchives.length; k++){
-              String frag3 = uriArchives[k].getFragment();
-              if (frag3 == null)
-                return false;
-              if (frag2.equalsIgnoreCase(frag3))
-                return false;
-            }
-          }
+        String lowerCaseFragment = fragment.toLowerCase();
+        if (fragments.contains(lowerCaseFragment)) {
+          return false;
         }
+        fragments.add(lowerCaseFragment);
+      }
+    }
+    
+    // iterate over archive uris
+    if (uriArchives != null) {
+      for (int i = 0; i < uriArchives.length; i++) {
+        String fragment = uriArchives[i].getFragment();
+        if (fragment == null) {
+          return false;
+        }
+        String lowerCaseFragment = fragment.toLowerCase();
+        if (fragments.contains(lowerCaseFragment)) {
+          return false;
+        }
+        fragments.add(lowerCaseFragment);
       }
     }
     return true;
