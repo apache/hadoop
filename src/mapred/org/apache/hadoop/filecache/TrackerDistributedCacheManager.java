@@ -175,7 +175,6 @@ public class TrackerDistributedCacheManager {
       }
     }
     
-    boolean initSuccessful = false;
     try {
       // do the localization, after releasing the global lock
       synchronized (lcacheStatus) {
@@ -216,7 +215,6 @@ public class TrackerDistributedCacheManager {
         // try some cache deletions
         compactCache(conf);
       }
-      initSuccessful = true;
     } catch (IOException ie) {
       synchronized (lcacheStatus) {
         // release this cache

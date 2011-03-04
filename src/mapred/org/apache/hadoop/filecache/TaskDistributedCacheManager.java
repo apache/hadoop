@@ -246,28 +246,6 @@ public class TaskDistributedCacheManager {
     return classPaths;
   }
   
-  private List<String> formClasspath(Path[] paths, URI[] uris, 
-                                     Path[] localizedFiles) {
-    if (uris == null) {
-      return new ArrayList<String>();
-    }
-    Map<String, Path> clMap = new HashMap<String, Path>();
-    List<String> classPaths = new ArrayList<String>();
-    if (paths != null) {
-      for (Path p : paths) {
-        clMap.put(p.toUri().getPath().toString(), p);
-      }
-    }
-    for (int i = 0; i < uris.length; ++i) {
-      URI u = uris[i];
-      boolean isClassPath = (null != clMap.get(u.getPath()));
-      if (isClassPath) {
-        classPaths.add(localizedFiles[i].toString());
-      }
-    }
-    return classPaths;
-  }
-
   /**
    * Releases the cached files/archives, so that space
    * can be reclaimed by the {@link TrackerDistributedCacheManager}.
@@ -283,7 +261,8 @@ public class TaskDistributedCacheManager {
   public void setSizes(long[] sizes) throws IOException {
     int i = 0;
     for (CacheFile c: cacheFiles) {
-      if (!c.isPublic && c.status != null) {
+      if (!c.isPublic && c.type == CacheFile.FileType.ARCHIVE && 
+    	  c.status != null) {
         distributedCacheManager.setSize(c.status, sizes[i++]);
       }
     }
