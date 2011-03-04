@@ -461,7 +461,24 @@ class CapacityTaskScheduler extends TaskScheduler {
       Collections.sort(qsiForAssigningTasks, queueComparator);
     }
 
-
+    /**
+     * Ceil of result of dividing two integers.
+     * 
+     * This is *not* a utility method. 
+     * Neither <code>a</code> or <code>b</code> should be negative.
+     *  
+     * @param a
+     * @param b
+     * @return ceil of the result of a/b
+     */
+    private int divideAndCeil(int a, int b) {
+      if (b == 0) {
+        LOG.info("divideAndCeil called with a=" + a + " b=" + b);
+        return 0;
+      }
+      return (a + (b - 1)) / b;
+    }
+    
     private boolean isUserOverLimit(JobInProgress j, QueueSchedulingInfo qsi) {
       // what is our current capacity? It is equal to the queue-capacity if
       // we're running below capacity. If we're running over capacity, then its
@@ -475,13 +492,15 @@ class CapacityTaskScheduler extends TaskScheduler {
       else {
         currentCapacity = tsi.numSlotsOccupied + getSlotsPerTask(j);
       }
-      int limit = Math.max((int)(Math.ceil((double)currentCapacity/
-          (double)qsi.numJobsByUser.size())), 
-          (int)(Math.ceil((double)(qsi.ulMin*currentCapacity)/100.0)));
+      int limit = 
+        Math.max(divideAndCeil(currentCapacity, qsi.numJobsByUser.size()), 
+                 divideAndCeil(qsi.ulMin*currentCapacity, 100));
       String user = j.getProfile().getUser();
       if (tsi.numSlotsOccupiedByUser.get(user) >= limit) {
-        LOG.debug("User " + user + " is over limit, num slots occupied = " + 
-            tsi.numSlotsOccupiedByUser.get(user) + ", limit = " + limit);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("User " + user + " is over limit, num slots occupied=" + 
+                    tsi.numSlotsOccupiedByUser.get(user) + ", limit=" + limit);
+        }
         return true;
       }
       else {
@@ -814,8 +833,7 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     @Override
     int getSlotsPerTask(JobInProgress job) {
-      return 
-        job.getJobConf().computeNumSlotsPerMap(scheduler.getMemSizeForMapSlot());
+      return job.getNumSlotsPerTask(TaskType.MAP);
     }
 
     @Override
@@ -831,7 +849,7 @@ class CapacityTaskScheduler extends TaskScheduler {
     boolean hasSpeculativeTask(JobInProgress job, TaskTrackerStatus tts) {
       //Check if job supports speculative map execution first then 
       //check if job has speculative maps.
-      return (job.getJobConf().getMapSpeculativeExecution())&& (
+      return (job.getMapSpeculativeExecution())&& (
           hasSpeculativeTask(job.getTasks(TaskType.MAP), 
               job.getStatus().mapProgress(), tts));
     }
@@ -877,8 +895,7 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     @Override
     int getSlotsPerTask(JobInProgress job) {
-      return
-        job.getJobConf().computeNumSlotsPerReduce(scheduler.getMemSizeForReduceSlot());    
+      return job.getNumSlotsPerTask(TaskType.REDUCE);    
     }
 
     @Override
@@ -894,7 +911,7 @@ class CapacityTaskScheduler extends TaskScheduler {
     boolean hasSpeculativeTask(JobInProgress job, TaskTrackerStatus tts) {
       //check if the job supports reduce speculative execution first then
       //check if the job has speculative tasks.
-      return (job.getJobConf().getReduceSpeculativeExecution()) && (
+      return (job.getReduceSpeculativeExecution()) && (
           hasSpeculativeTask(job.getTasks(TaskType.REDUCE), 
               job.getStatus().reduceProgress(), tts));
     }

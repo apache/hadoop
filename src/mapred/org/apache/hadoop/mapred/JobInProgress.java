@@ -98,8 +98,11 @@ public class JobInProgress {
   TaskInProgress setup[] = new TaskInProgress[0];
   int numMapTasks = 0;
   int numReduceTasks = 0;
-  int numSlotsPerMap = 1;
-  int numSlotsPerReduce = 1;
+  final long memoryPerMap;
+  final long memoryPerReduce;
+  volatile int numSlotsPerMap = 1;
+  volatile int numSlotsPerReduce = 1;
+  final int maxTaskFailuresPerTracker;
   
   // Counters to track currently running/finished/failed Map/Reduce task-attempts
   int runningMapTasks = 0;
@@ -207,8 +210,8 @@ public class JobInProgress {
   private LocalFileSystem localFs;
   private FileSystem fs;
   private JobID jobId;
-  private boolean hasSpeculativeMaps;
-  private boolean hasSpeculativeReduces;
+  volatile private boolean hasSpeculativeMaps;
+  volatile private boolean hasSpeculativeReduces;
   private long inputLength = 0;
   private String user;
   private String historyFile = "";
@@ -299,6 +302,10 @@ public class JobInProgress {
     this.status = new JobStatus(jobid, 0.0f, 0.0f, JobStatus.PREP);
     this.profile = new JobProfile(conf.getUser(), jobid, "", "",
                                   conf.getJobName(), conf.getQueueName());
+    this.memoryPerMap = conf.getMemoryForMapTask();
+    this.memoryPerReduce = conf.getMemoryForReduceTask();
+    this.maxTaskFailuresPerTracker = conf.getMaxTaskFailuresPerTracker();
+
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
       (numMapTasks + numReduceTasks + 10);
     try {
@@ -374,12 +381,18 @@ public class JobInProgress {
 
     this.numMapTasks = conf.getNumMapTasks();
     this.numReduceTasks = conf.getNumReduceTasks();
+    
+    this.memoryPerMap = conf.getMemoryForMapTask();
+    this.memoryPerReduce = conf.getMemoryForReduceTask();
+    
     this.taskCompletionEvents = new ArrayList<TaskCompletionEvent>
        (numMapTasks + numReduceTasks + 10);
 
     this.mapFailuresPercent = conf.getMaxMapTaskFailuresPercent();
     this.reduceFailuresPercent = conf.getMaxReduceTaskFailuresPercent();
         
+    this.maxTaskFailuresPerTracker = conf.getMaxTaskFailuresPerTracker();
+    
     MetricsContext metricsContext = MetricsUtil.getContext("mapred");
     this.jobMetrics = MetricsUtil.createRecord(metricsContext, "job");
     this.jobMetrics.setTag("user", conf.getUser());
@@ -499,11 +512,27 @@ public class JobInProgress {
     return restartCount > 0;
   }
 
+  boolean getMapSpeculativeExecution() {
+    return hasSpeculativeMaps;
+  }
+  
+  boolean getReduceSpeculativeExecution() {
+    return hasSpeculativeReduces;
+  }
+  
+  long getMemoryForMapTask() {
+    return memoryPerMap;
+  }
+  
+  long getMemoryForReduceTask() {
+    return memoryPerReduce;
+  }
+  
   /**
    * Get the number of slots required to run a single map task-attempt.
    * @return the number of slots required to run a single map task-attempt
    */
-  synchronized int getNumSlotsPerMap() {
+  int getNumSlotsPerMap() {
     return numSlotsPerMap;
   }
 
@@ -512,7 +541,7 @@ public class JobInProgress {
    * This is typically set by schedulers which support high-ram jobs.
    * @param slots the number of slots required to run a single map task-attempt
    */
-  synchronized void setNumSlotsPerMap(int numSlotsPerMap) {
+  void setNumSlotsPerMap(int numSlotsPerMap) {
     this.numSlotsPerMap = numSlotsPerMap;
   }
 
@@ -520,7 +549,7 @@ public class JobInProgress {
    * Get the number of slots required to run a single reduce task-attempt.
    * @return the number of slots required to run a single reduce task-attempt
    */
-  synchronized int getNumSlotsPerReduce() {
+  int getNumSlotsPerReduce() {
     return numSlotsPerReduce;
   }
 
@@ -530,7 +559,7 @@ public class JobInProgress {
    * @param slots the number of slots required to run a single reduce 
    *              task-attempt
    */
-  synchronized void setNumSlotsPerReduce(int numSlotsPerReduce) {
+  void setNumSlotsPerReduce(int numSlotsPerReduce) {
     this.numSlotsPerReduce = numSlotsPerReduce;
   }
 
@@ -724,7 +753,7 @@ public class JobInProgress {
     return numReduceTasks - runningReduceTasks - failedReduceTIPs - 
     finishedReduceTasks + speculativeReduceTasks;
   }
-  public synchronized int getNumSlotsPerTask(TaskType taskType) {
+  public int getNumSlotsPerTask(TaskType taskType) {
     if (taskType == TaskType.MAP) {
       return numSlotsPerMap;
     } else if (taskType == TaskType.REDUCE) {
@@ -1594,7 +1623,7 @@ public class JobInProgress {
       trackerToFailuresMap.put(trackerHostName, ++trackerFailures);
 
       // Check if this tasktracker has turned 'flaky'
-      if (trackerFailures.intValue() == conf.getMaxTaskFailuresPerTracker()) {
+      if (trackerFailures.intValue() == maxTaskFailuresPerTracker) {
         ++flakyTaskTrackers;
         
         // Cancel reservations if appropriate
@@ -1704,7 +1733,7 @@ public class JobInProgress {
   List<String> getBlackListedTrackers() {
     List<String> blackListedTrackers = new ArrayList<String>();
     for (Map.Entry<String,Integer> e : trackerToFailuresMap.entrySet()) {
-       if (e.getValue().intValue() >= conf.getMaxTaskFailuresPerTracker()) {
+       if (e.getValue().intValue() >= maxTaskFailuresPerTracker) {
          blackListedTrackers.add(e.getKey());
        }
     }
@@ -2261,7 +2290,7 @@ public class JobInProgress {
     //
     int taskTrackerFailedTasks = getTrackerTaskFailures(taskTracker);
     if ((flakyTaskTrackers < (clusterSize * CLUSTER_BLACKLIST_PERCENT)) && 
-        taskTrackerFailedTasks >= conf.getMaxTaskFailuresPerTracker()) {
+        taskTrackerFailedTasks >= maxTaskFailuresPerTracker) {
       if (LOG.isDebugEnabled()) {
         String flakyTracker = convertTrackerNameToHostName(taskTracker); 
         LOG.debug("Ignoring the black-listed tasktracker: '" + flakyTracker 
