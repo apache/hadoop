@@ -545,6 +545,9 @@ public class RPC {
           throw ioe;
         }
       } catch (Throwable e) {
+        if (!(e instanceof IOException)) {
+          LOG.error("Unexpected throwable object ", e);
+        }
         IOException ioe = new IOException(e.toString());
         ioe.setStackTrace(e.getStackTrace());
         throw ioe;
