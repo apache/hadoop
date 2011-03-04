@@ -41,7 +41,10 @@
                             HttpServletResponse resp,
                             Configuration conf
                            ) throws IOException, InterruptedException {
-    String tokenString = getDelegationToken(nn, request, conf);
+    String tokenString = null;
+    if (UserGroupInformation.isSecurityEnabled()) {
+      tokenString = getDelegationToken(nn, request, conf);
+    }
     FSNamesystem fsn = nn.getNamesystem();
     String datanode = fsn.randomDataNode();
     String redirectLocation;
