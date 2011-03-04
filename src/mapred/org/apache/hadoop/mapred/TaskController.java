@@ -23,9 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -127,63 +124,6 @@ abstract class TaskController implements Configurable {
   }
 
   /**
-   * Contains info related to the path of the file/dir to be deleted. This info
-   * is needed by task-controller to build the full path of the file/dir
-   */
-  static class TaskControllerPathDeletionContext extends PathDeletionContext {
-    Task task;
-    boolean isWorkDir;
-    TaskController taskController;
-
-    /**
-     * mapredLocalDir is the base dir under which to-be-deleted taskWorkDir or
-     * taskAttemptDir exists. fullPath of taskAttemptDir or taskWorkDir
-     * is built using mapredLocalDir, jobId, taskId, etc.
-     */
-    Path mapredLocalDir;
-
-    public TaskControllerPathDeletionContext(FileSystem fs, Path mapredLocalDir,
-        Task task, boolean isWorkDir, TaskController taskController) {
-      super(fs, null);
-      this.task = task;
-      this.isWorkDir = isWorkDir;
-      this.taskController = taskController;
-      this.mapredLocalDir = mapredLocalDir;
-    }
-
-    @Override
-    protected String getPathForCleanup() {
-      if (fullPath == null) {
-        fullPath = buildPathForDeletion();
-      }
-      return fullPath;
-    }
-
-    /**
-     * Builds the path of taskAttemptDir OR taskWorkDir based on
-     * mapredLocalDir, jobId, taskId, etc
-     */
-    String buildPathForDeletion() {
-      String subDir = TaskTracker.getLocalTaskDir(task.getJobID().toString(),
-          task.getTaskID().toString(), task.isTaskCleanupTask());
-      if (isWorkDir) {
-        subDir = subDir + Path.SEPARATOR + "work";
-      }
-      return mapredLocalDir.toUri().getPath() + Path.SEPARATOR + subDir;
-    }
-
-    /**
-     * Makes the path(and its subdirectories recursively) fully deletable by
-     * setting proper permissions(777) by task-controller
-     */
-    @Override
-    protected void enablePathForCleanup() throws IOException {
-      getPathForCleanup();// allow init of fullPath
-      taskController.enableTaskForCleanup(this);
-    }
-  }
-
-  /**
    * Method which is called after the job is localized so that task controllers
    * can implement their own job localization logic.
    * 
@@ -206,12 +146,4 @@ abstract class TaskController implements Configurable {
    */
   
   abstract void killTask(TaskControllerContext context);
-  
-  /**
-   * Enable the task for cleanup by changing permissions of the path
-   * @param context   path deletion context
-   * @throws IOException
-   */
-  abstract void enableTaskForCleanup(PathDeletionContext context)
-      throws IOException;
 }

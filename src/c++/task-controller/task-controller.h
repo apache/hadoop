@@ -29,16 +29,13 @@
 #include <sys/signal.h>
 #include <getopt.h>
 #include<grp.h>
-#include <fts.h>
-
 #include "configuration.h"
 
 //command definitions
 enum command {
   LAUNCH_TASK_JVM,
   TERMINATE_TASK_JVM,
-  KILL_TASK_JVM,
-  ENABLE_TASK_FOR_CLEANUP
+  KILL_TASK_JVM
 };
 
 enum errorcodes {
@@ -56,14 +53,11 @@ enum errorcodes {
   ERROR_RESOLVING_FILE_PATH, //12
   RELATIVE_PATH_COMPONENTS_IN_FILE_PATH, //13
   UNABLE_TO_STAT_FILE, //14
-  FILE_NOT_OWNED_BY_TASKTRACKER, //15
-  UNABLE_TO_BUILD_PATH //16
+  FILE_NOT_OWNED_BY_TASKTRACKER //15
 };
 
 
 #define TT_LOCAL_TASK_SCRIPT_PATTERN "%s/taskTracker/jobcache/%s/%s/taskjvm.sh"
-
-#define TT_LOCAL_TASK_DIR_PATTERN    "%s/taskTracker/jobcache/%s/%s"
 
 #define TT_SYS_DIR_KEY "mapred.local.dir"
 
@@ -83,8 +77,5 @@ void display_usage(FILE *stream);
 int run_task_as_user(const char * user, const char *jobid, const char *taskid, const char *tt_root);
 
 int kill_user_task(const char *user, const char *task_pid, int sig);
-
-int enable_task_for_cleanup(char * base_path, const char *user,
- const char *jobid, const char *dir_to_be_deleted);
 
 int get_user_details(const char *user);

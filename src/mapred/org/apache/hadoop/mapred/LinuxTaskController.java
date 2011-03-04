@@ -24,16 +24,13 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
@@ -113,8 +110,7 @@ class LinuxTaskController extends TaskController {
   enum TaskCommands {
     LAUNCH_TASK_JVM,
     TERMINATE_TASK_JVM,
-    KILL_TASK_JVM,
-    ENABLE_TASK_FOR_CLEANUP
+    KILL_TASK_JVM
   }
   
   /**
@@ -154,7 +150,7 @@ class LinuxTaskController extends TaskController {
     ShellCommandExecutor shExec =  buildTaskControllerExecutor(
                                     TaskCommands.LAUNCH_TASK_JVM, 
                                     env.conf.getUser(),
-                                    launchTaskJVMArgs, env.workDir, env.env);
+                                    launchTaskJVMArgs, env);
     context.shExec = shExec;
     try {
       shExec.execute();
@@ -167,40 +163,6 @@ class LinuxTaskController extends TaskController {
     }
     if(LOG.isDebugEnabled()) {
       LOG.debug("output after executing task jvm = " + shExec.getOutput()); 
-    }
-  }
-
-  /**
-   * Helper method that runs a LinuxTaskController command
-   * 
-   * @param taskCommand
-   * @param user
-   * @param cmdArgs
-   * @param env
-   * @throws IOException
-   */
-  private void runCommand(TaskCommands taskCommand, String user,
-      List<String> cmdArgs, File workDir, Map<String, String> env)
-      throws IOException {
-
-    ShellCommandExecutor shExec =
-        buildTaskControllerExecutor(taskCommand, user, cmdArgs, workDir, env);
-    try {
-      shExec.execute();
-    } catch (Exception e) {
-      LOG.warn("Exit code from " + taskCommand.toString() + " is : "
-          + shExec.getExitCode());
-      LOG.warn("Exception thrown by " + taskCommand.toString() + " : "
-          + StringUtils.stringifyException(e));
-      LOG.info("Output from LinuxTaskController's " + taskCommand.toString()
-          + " follows:");
-      logOutput(shExec.getOutput());
-      throw new IOException(e);
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.info("Output from LinuxTaskController's " + taskCommand.toString()
-          + " follows:");
-      logOutput(shExec.getOutput());
     }
   }
 
@@ -229,67 +191,6 @@ class LinuxTaskController extends TaskController {
     return commandArgs;
   }
   
-  private List<String> buildTaskCleanupArgs(
-      TaskControllerPathDeletionContext context) {
-    List<String> commandArgs = new ArrayList<String>(3);
-    commandArgs.add(context.mapredLocalDir.toUri().getPath());
-    commandArgs.add(context.task.getJobID().toString());
-
-    String workDir = "";
-    if (context.isWorkDir) {
-      workDir = "/work";
-    }
-    if (context.task.isTaskCleanupTask()) {
-      commandArgs.add(context.task.getTaskID() + TaskTracker.TASK_CLEANUP_SUFFIX
-                      + workDir);
-    } else {
-      commandArgs.add(context.task.getTaskID() + workDir);
-    }
-
-    return commandArgs;
-  }
-
-  /**
-   * Enables the task for cleanup by changing permissions of the specified path
-   * in the local filesystem
-   */
-  @Override
-  void enableTaskForCleanup(PathDeletionContext context)
-      throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Going to do " + TaskCommands.ENABLE_TASK_FOR_CLEANUP.toString()
-                + " for " + context.fullPath);
-    }
-
-    if (context instanceof TaskControllerPathDeletionContext) {
-      TaskControllerPathDeletionContext tContext =
-        (TaskControllerPathDeletionContext) context;
-    
-      if (tContext.task.getUser() != null && tContext.fs instanceof LocalFileSystem) {
-        runCommand(TaskCommands.ENABLE_TASK_FOR_CLEANUP,
-                   tContext.task.getUser(),
-                   buildTaskCleanupArgs(tContext), null, null);
-      }
-      else {
-        throw new IllegalArgumentException("Either user is null or the "  +
-                               "file system is not local file system.");
-      }
-    }
-    else {
-      throw new IllegalArgumentException("PathDeletionContext provided is not "
-          + "TaskControllerPathDeletionContext.");
-    }
-  }
-
-  private void logOutput(String output) {
-    String shExecOutput = output;
-    if (shExecOutput != null) {
-      for (String str : shExecOutput.split("\n")) {
-        LOG.info(str);
-      }
-    }
-  }
-
   // get the Job ID from the information in the TaskControllerContext
   private String getJobId(TaskControllerContext context) {
     String taskId = context.task.getTaskID().toString();
@@ -398,10 +299,10 @@ class LinuxTaskController extends TaskController {
    * @return {@link ShellCommandExecutor}
    * @throws IOException
    */
-  private ShellCommandExecutor buildTaskControllerExecutor(
-      TaskCommands command, String userName, List<String> cmdArgs,
-      File workDir, Map<String, String> env) 
-      throws IOException {
+  private ShellCommandExecutor buildTaskControllerExecutor(TaskCommands command, 
+                                          String userName, 
+                                          List<String> cmdArgs, JvmEnv env) 
+                                    throws IOException {
     String[] taskControllerCmd = new String[3 + cmdArgs.size()];
     taskControllerCmd[0] = taskControllerExe;
     taskControllerCmd[1] = userName;
@@ -416,9 +317,9 @@ class LinuxTaskController extends TaskController {
       }
     }
     ShellCommandExecutor shExec = null;
-    if(workDir != null && workDir.exists()) {
+    if(env.workDir != null && env.workDir.exists()) {
       shExec = new ShellCommandExecutor(taskControllerCmd,
-          workDir, env);
+          env.workDir, env.env);
     } else {
       shExec = new ShellCommandExecutor(taskControllerCmd);
     }
@@ -566,8 +467,7 @@ class LinuxTaskController extends TaskController {
     }
     ShellCommandExecutor shExec = buildTaskControllerExecutor(
         command, context.env.conf.getUser(), 
-        buildKillTaskCommandArgs(context), context.env.workDir,
-        context.env.env);
+        buildKillTaskCommandArgs(context), context.env);
     try {
       shExec.execute();
     } catch (Exception e) {

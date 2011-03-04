@@ -21,9 +21,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.fs.FileUtil;
+
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -135,18 +134,4 @@ class DefaultTaskController extends TaskController {
     }
   }
   
-  /**
-   * Enables the task for cleanup by changing permissions of the specified path
-   * in the local filesystem
-   */
-  @Override
-  void enableTaskForCleanup(PathDeletionContext context)
-         throws IOException {
-    try {
-      FileUtil.chmod(context.fullPath, "a+rwx", true);
-    } catch(InterruptedException e) {
-      LOG.warn("Interrupted while setting permissions for " + context.fullPath +
-          " for deletion.");
-    }
-  }
 }

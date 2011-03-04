@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.filecache.*;
 import org.apache.hadoop.util.*;
 
@@ -556,53 +557,12 @@ abstract class TaskRunner extends Thread {
     }
   }
   
-  /**
-   * Sets permissions recursively and then deletes the contents of dir.
-   * Makes dir empty directory(does not delete dir itself).
-   */
-  static void deleteDirContents(JobConf conf, File dir) throws IOException {
-    FileSystem fs = FileSystem.getLocal(conf);
-    if (fs.exists(new Path(dir.getAbsolutePath()))) {
-      File contents[] = dir.listFiles();
-      if (contents != null) {
-        for (int i = 0; i < contents.length; i++) {
-          try {
-            int ret = 0;
-            if ((ret = FileUtil.chmod(contents[i].getAbsolutePath(),
-                                      "a+rwx", true)) != 0) {
-              LOG.warn("Unable to chmod for " + contents[i] + 
-                  "; chmod exit status = " + ret);
-            }
-          } catch(InterruptedException e) {
-            LOG.warn("Interrupted while setting permissions for contents of " +
-                "workDir. Not deleting the remaining contents of workDir.");
-            return;
-          }
-          if (!fs.delete(new Path(contents[i].getAbsolutePath()), true)) {
-            LOG.warn("Unable to delete "+ contents[i]);
-          }
-        }
-      }
-    }
-    else {
-      LOG.warn(dir + " does not exist.");
-    }
-  }
-  
   //Mostly for setting up the symlinks. Note that when we setup the distributed
   //cache, we didn't create the symlinks. This is done on a per task basis
   //by the currently executing task.
   public static void setupWorkDir(JobConf conf) throws IOException {
     File workDir = new File(".").getAbsoluteFile();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Fully deleting contents of " + workDir);
-    }
-
-    /** delete only the contents of workDir leaving the directory empty. We
-     * can't delete the workDir as it is the current working directory.
-     */
-    deleteDirContents(conf, workDir);
-    
+    FileUtil.fullyDelete(workDir);
     if (DistributedCache.getSymlink(conf)) {
       URI[] archives = DistributedCache.getCacheArchives(conf);
       URI[] files = DistributedCache.getCacheFiles(conf);

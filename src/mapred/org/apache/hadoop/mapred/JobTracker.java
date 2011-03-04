@@ -68,6 +68,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.mapred.JobHistory.Keys;
@@ -75,7 +76,6 @@ import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
-import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
@@ -3544,9 +3544,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
     String queue = job.getProfile().getQueueName();
     if(!(queueManager.getQueues().contains(queue))) {      
-      new CleanupQueue().addToQueue(new PathDeletionContext(
-          FileSystem.get(conf),
-          getSystemDirectoryForJob(jobId).toUri().getPath()));
+      new CleanupQueue().addToQueue(conf,getSystemDirectoryForJob(jobId));
       job.fail();
       if (userFileForJob != null) {
         userFileForJob.delete();
@@ -3564,9 +3562,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       if (userFileForJob != null) {
         userFileForJob.delete();
       }
-      new CleanupQueue().addToQueue(new PathDeletionContext(
-          FileSystem.get(conf),
-          getSystemDirectoryForJob(jobId).toUri().getPath()));
+      new CleanupQueue().addToQueue(conf, getSystemDirectoryForJob(jobId));
       throw ioe;
     }
 
@@ -3575,9 +3571,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     try {
       checkMemoryRequirements(job);
     } catch (IOException ioe) {
-      new CleanupQueue().addToQueue(new PathDeletionContext(
-          FileSystem.get(conf),
-          getSystemDirectoryForJob(jobId).toUri().getPath()));
+      new CleanupQueue().addToQueue(conf, getSystemDirectoryForJob(jobId));
       throw ioe;
     }
 

@@ -428,12 +428,7 @@ class JvmManager {
             //task at the beginning of each task in the task JVM.
             //For the last task, we do it here.
             if (env.conf.getNumTasksToExecutePerJvm() != 1) {
-              tracker.directoryCleanupThread.addToQueue(
-                  TaskTracker.buildTaskControllerPathDeletionContexts(
-                      tracker.getLocalFileSystem(), tracker.getLocalDirs(),
-                      initalContext.task,
-                      true /* workDir */,
-                      tracker.getTaskController()));
+              FileUtil.fullyDelete(env.workDir);
             }
           } catch (IOException ie){}
         }

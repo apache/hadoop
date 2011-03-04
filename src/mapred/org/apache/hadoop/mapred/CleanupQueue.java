@@ -39,7 +39,7 @@ class CleanupQueue {
    * paths(directories/files) in a separate thread. This constructor creates a
    * clean-up thread and also starts it as a daemon. Callers can instantiate one
    * CleanupQueue per JVM and can use it for deleting paths. Use
-   * {@link CleanupQueue#addToQueue(PathDeletionContext...)} to add paths for
+   * {@link CleanupQueue#addToQueue(JobConf, Path...)} to add paths for
    * deletion.
    */
   public CleanupQueue() {
@@ -49,53 +49,23 @@ class CleanupQueue {
       }
     }
   }
-
-  /**
-   * Contains info related to the path of the file/dir to be deleted
-   */
-  static class PathDeletionContext {
-    String fullPath;// full path of file or dir
-    FileSystem fs;
-
-    public PathDeletionContext(FileSystem fs, String fullPath) {
-      this.fs = fs;
-      this.fullPath = fullPath;
-    }
-    
-    protected String getPathForCleanup() {
-      return fullPath;
-    }
-
-    /**
-     * Makes the path(and its subdirectories recursively) fully deletable
-     */
-    protected void enablePathForCleanup() throws IOException {
-      // do nothing
-    }
-  }
-
-  /**
-   * Adds the paths to the queue of paths to be deleted by cleanupThread.
-   */
-  void addToQueue(PathDeletionContext... contexts) {
-    cleanupThread.addToQueue(contexts);
-  }
-
-  protected static boolean deletePath(PathDeletionContext context)
-            throws IOException {
-    context.enablePathForCleanup();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Trying to delete " + context.fullPath);
-    }
-    return context.fs.delete(new Path(context.fullPath), true);
+  
+  public void addToQueue(JobConf conf, Path...paths) {
+    cleanupThread.addToQueue(conf,paths);
   }
 
   private static class PathCleanupThread extends Thread {
 
+    static class PathAndConf {
+      JobConf conf;
+      Path path;
+      PathAndConf(JobConf conf, Path path) {
+        this.conf = conf;
+        this.path = path;
+      }
+    }
     // cleanup queue which deletes files/directories of the paths queued up.
-    private LinkedBlockingQueue<PathDeletionContext> queue =
-      new LinkedBlockingQueue<PathDeletionContext>();
+    private LinkedBlockingQueue<PathAndConf> queue = new LinkedBlockingQueue<PathAndConf>();
 
     public PathCleanupThread() {
       setName("Directory/File cleanup thread");
@@ -103,34 +73,28 @@ class CleanupQueue {
       start();
     }
 
-    void addToQueue(PathDeletionContext[] contexts) {
-      for (PathDeletionContext context : contexts) {
+    public void addToQueue(JobConf conf,Path... paths) {
+      for (Path p : paths) {
         try {
-          queue.put(context);
-        } catch(InterruptedException ie) {}
+          queue.put(new PathAndConf(conf,p));
+        } catch (InterruptedException ie) {}
       }
     }
 
     public void run() {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getName() + " started.");
-      }
-      PathDeletionContext context = null;
+      LOG.debug(getName() + " started.");
+      PathAndConf pathAndConf = null;
       while (true) {
         try {
-          context = queue.take();
+          pathAndConf = queue.take();
           // delete the path.
-          if (!deletePath(context)) {
-            LOG.warn("CleanupThread:Unable to delete path " + context.fullPath);
-          }
-          else if (LOG.isDebugEnabled()) {
-            LOG.debug("DELETED " + context.fullPath);
-          }
+          FileSystem fs = pathAndConf.path.getFileSystem(pathAndConf.conf);
+          fs.delete(pathAndConf.path, true);
+          LOG.debug("DELETED " + pathAndConf.path);
         } catch (InterruptedException t) {
-          LOG.warn("Interrupted deletion of " + context.fullPath);
           return;
         } catch (Exception e) {
-          LOG.warn("Error deleting path " + context.fullPath + ": " + e);
+          LOG.warn("Error deleting path" + pathAndConf.path);
         } 
       }
     }
