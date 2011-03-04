@@ -45,10 +45,11 @@ public abstract class SecretManager<T extends TokenIdentifier> {
   
   /**
    * Create the password for the given identifier.
+   * identifier may be modified inside this method.
    * @param identifier the identifier to use
    * @return the new password
    */
-  public abstract byte[] createPassword(T identifier);
+  protected abstract byte[] createPassword(T identifier);
   
   /**
    * Retrieve the password for the given token identifier. Should check the date
