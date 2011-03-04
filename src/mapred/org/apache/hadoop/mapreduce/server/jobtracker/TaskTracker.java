@@ -183,10 +183,13 @@ public class TaskTracker {
   }
   
   /**
-   * Cleanup when the {@link TaskTracker} is declared as 'lost' by the 
-   * JobTracker.
+   * Cleanup when the {@link TaskTracker} is declared as 'lost/blacklisted'
+   * by the JobTracker.
+   * 
+   * The method assumes that the lock on the {@link JobTracker} is obtained
+   * by the caller.
    */
-  public void lost() {
+  public void cancelAllReservations() {
     // Inform jobs which have reserved slots on this tasktracker
     if (jobForFallowMapSlot != null) {
       unreserveSlots(TaskType.MAP, jobForFallowMapSlot);
