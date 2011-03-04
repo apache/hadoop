@@ -32,6 +32,7 @@ import java.net.UnknownHostException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -40,6 +41,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -170,7 +172,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     * The minimum time (in ms) that a job's information has to remain
     * in the JobTracker's memory before it is retired.
     */
-  static final int MIN_TIME_BEFORE_RETIRE = 60000;
+  static final int MIN_TIME_BEFORE_RETIRE = 0;
 
 
   private int nextJobId = 1;
@@ -413,13 +415,88 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         
   }
 
+  synchronized void historyFileCopied(JobID jobid, String historyFile) {
+    JobInProgress job = getJob(jobid);
+    if (job != null) { //found in main cache
+      job.setHistoryFileCopied();
+      if (historyFile != null) {
+        job.setHistoryFile(historyFile);
+      }
+      return;
+    }
+    RetireJobInfo jobInfo = retireJobs.get(jobid);
+    if (jobInfo != null) { //found in retired cache
+      if (historyFile != null) {
+        jobInfo.setHistoryFile(historyFile);
+      }
+    }
+  }
+
+  static class RetireJobInfo {
+    final JobStatus status;
+    final JobProfile profile;
+    final long finishTime;
+    private String historyFile;
+    RetireJobInfo(JobStatus status, JobProfile profile, long finishTime, 
+        String historyFile) {
+      this.status = status;
+      this.profile = profile;
+      this.finishTime = finishTime;
+      this.historyFile = historyFile;
+    }
+    void setHistoryFile(String file) {
+      this.historyFile = file;
+    }
+    String getHistoryFile() {
+      return historyFile;
+    }
+  }
   ///////////////////////////////////////////////////////
   // Used to remove old finished Jobs that have been around for too long
   ///////////////////////////////////////////////////////
   class RetireJobs implements Runnable {
+    private final Map<JobID, RetireJobInfo> jobIDStatusMap = 
+      new HashMap<JobID, RetireJobInfo>();
+    private final LinkedList<RetireJobInfo> jobRetireInfoQ = 
+      new LinkedList<RetireJobInfo>();
     public RetireJobs() {
     }
 
+    synchronized void addToCache(JobInProgress job) {
+      RetireJobInfo info = new RetireJobInfo(job.getStatus(), 
+          job.getProfile(), job.getFinishTime(), job.getHistoryFile());
+      jobRetireInfoQ.add(info);
+      jobIDStatusMap.put(info.status.getJobID(), info);
+      if (jobRetireInfoQ.size() > retiredJobsCacheSize) {
+        RetireJobInfo removed = jobRetireInfoQ.remove();
+        jobIDStatusMap.remove(removed.status.getJobID());
+        LOG.info("Retired job removed from cache " + removed.status.getJobID());
+      }
+    }
+
+    synchronized RetireJobInfo get(JobID jobId) {
+      return jobIDStatusMap.get(jobId);
+    }
+
+    @SuppressWarnings("unchecked")
+    synchronized LinkedList<RetireJobInfo> getAll() {
+      return (LinkedList<RetireJobInfo>) jobRetireInfoQ.clone();
+    }
+
+    synchronized LinkedList<JobStatus> getAllJobStatus() {
+      LinkedList<JobStatus> list = new LinkedList<JobStatus>();
+      for (RetireJobInfo info : jobRetireInfoQ) {
+        list.add(info.status);
+      }
+      return list;
+    }
+
+    private boolean minConditionToRetire(JobInProgress job, long now) {
+      return job.getStatus().getRunState() != JobStatus.RUNNING &&
+          job.getStatus().getRunState() != JobStatus.PREP &&
+          (job.getFinishTime() + MIN_TIME_BEFORE_RETIRE < now) &&
+          job.isHistoryFileCopied();
+    }
     /**
      * The run method lives for the life of the JobTracker,
      * and removes Jobs that are not still running, but which
@@ -435,11 +512,32 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
           synchronized (jobs) {
             for(JobInProgress job: jobs.values()) {
-              if (job.getStatus().getRunState() != JobStatus.RUNNING &&
-                  job.getStatus().getRunState() != JobStatus.PREP &&
-                  (job.getFinishTime() + MIN_TIME_BEFORE_RETIRE < now) &&
+              if (minConditionToRetire(job, now) &&
                   (job.getFinishTime()  < retireBefore)) {
                 retiredJobs.add(job);
+              }
+            }
+          }
+          synchronized (userToJobsMap) {
+            for (Map.Entry<String, ArrayList<JobInProgress>> entry : 
+                userToJobsMap.entrySet()) {
+              String user = entry.getKey();
+              ArrayList<JobInProgress> userJobs = entry.getValue();
+              Iterator<JobInProgress> it = userJobs.iterator();
+              while (it.hasNext() && 
+                  userJobs.size() > MAX_COMPLETE_USER_JOBS_IN_MEMORY) {
+                JobInProgress jobUser = it.next();
+                if (retiredJobs.contains(jobUser)) {
+                  it.remove();
+                } else if (minConditionToRetire(jobUser, now)) {
+                  LOG.info("User limit exceeded. Marking job: " + 
+                      jobUser.getJobID() + " for retire.");
+                  retiredJobs.add(jobUser);
+                  it.remove();
+                }
+              }
+              if (userJobs.isEmpty()) {
+                userToJobsMap.remove(user);
               }
             }
           }
@@ -454,22 +552,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                       l.jobRemoved(job);
                     }
                     String jobUser = job.getProfile().getUser();
-                    synchronized (userToJobsMap) {
-                      ArrayList<JobInProgress> userJobs =
-                        userToJobsMap.get(jobUser);
-                      synchronized (userJobs) {
-                        userJobs.remove(job);
-                      }
-                      if (userJobs.isEmpty()) {
-                        userToJobsMap.remove(jobUser);
-                      }
-                    }
                     LOG.info("Retired job with id: '" + 
                              job.getProfile().getJobID() + "' of user '" +
                              jobUser + "'");
 
                     // clean up job files from the local disk
                     JobHistory.JobInfo.cleanupJob(job.getProfile().getJobID());
+                    addToCache(job);
                   }
                 }
               }
@@ -1715,6 +1804,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   Thread expireTrackersThread = null;
   RetireJobs retireJobs = new RetireJobs();
   Thread retireJobsThread = null;
+  final int retiredJobsCacheSize;
   ExpireLaunchingTasks expireLaunchingTasks = new ExpireLaunchingTasks();
   Thread expireLaunchingTaskThread = new Thread(expireLaunchingTasks,
                                                 "expireLaunchingTasks");
@@ -1795,6 +1885,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       conf.getLong("mapred.tasktracker.expiry.interval", 10 * 60 * 1000);
     RETIRE_JOB_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.interval", 24 * 60 * 60 * 1000);
     RETIRE_JOB_CHECK_INTERVAL = conf.getLong("mapred.jobtracker.retirejob.check", 60 * 1000);
+    retiredJobsCacheSize =
+             conf.getInt("mapred.job.tracker.retiredjobs.cache.size", 1000);
     MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
     MAX_BLACKLISTS_PER_TRACKER = 
         conf.getInt("mapred.max.tracker.blacklists", 4);
@@ -1864,7 +1956,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         tmpInfoPort == 0, conf);
     infoServer.setAttribute("job.tracker", this);
     // initialize history parameters.
-    boolean historyInitialized = JobHistory.init(conf, this.localMachine,
+    boolean historyInitialized = JobHistory.init(this, conf, this.localMachine,
                                                  this.startTime);
     
     infoServer.addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
@@ -2375,76 +2467,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
       }
     }
-    
-    // Purge oldest jobs and keep at-most MAX_COMPLETE_USER_JOBS_IN_MEMORY jobs of a given user
-    // in memory; information about the purged jobs is available via
-    // JobHistory.
-    synchronized (jobs) {
-      synchronized (taskScheduler) {
-        synchronized (userToJobsMap) {
-          String jobUser = job.getProfile().getUser();
-          if (!userToJobsMap.containsKey(jobUser)) {
-            userToJobsMap.put(jobUser, 
-                              new ArrayList<JobInProgress>());
-          }
-          ArrayList<JobInProgress> userJobs = 
-            userToJobsMap.get(jobUser);
-          synchronized (userJobs) {
-            // Add the currently completed 'job'
-            userJobs.add(job);
 
-            // Check if we need to retire some jobs of this user
-            while (userJobs.size() > 
-                   MAX_COMPLETE_USER_JOBS_IN_MEMORY) {
-              JobInProgress rjob = userJobs.get(0);
-                
-              // Do not delete 'current'
-              // finished job just yet.
-              if (rjob == job) {
-                break;
-              }
-
-              // do not retire jobs that finished in the very recent past.
-              if (rjob.getFinishTime() + MIN_TIME_BEFORE_RETIRE > now) {
-                break;
-              }
-                
-              // Cleanup all datastructures
-              int rjobRunState = 
-                rjob.getStatus().getRunState();
-              if (rjobRunState == JobStatus.SUCCEEDED || 
-                  rjobRunState == JobStatus.FAILED ||
-                  rjobRunState == JobStatus.KILLED) {
-                // Ok, this call to removeTaskEntries
-                // is dangerous is some very very obscure
-                // cases; e.g. when rjob completed, hit
-                // MAX_COMPLETE_USER_JOBS_IN_MEMORY job
-                // limit and yet some task (taskid)
-                // wasn't complete!
-                removeJobTasks(rjob);
-                  
-                userJobs.remove(0);
-                jobs.remove(rjob.getProfile().getJobID());
-                for (JobInProgressListener listener : jobInProgressListeners) {
-                  listener.jobRemoved(rjob);
-                }
-                  
-                LOG.info("Retired job with id: '" + 
-                         rjob.getProfile().getJobID() + "' of user: '" +
-                         jobUser + "'");
-              } else {
-                // Do not remove jobs that aren't complete.
-                // Stop here, and let the next pass take
-                // care of purging jobs.
-                break;
-              }
-            }
-          }
-          if (userJobs.isEmpty()) {
-            userToJobsMap.remove(jobUser);
-          }
-        }
+    String jobUser = job.getProfile().getUser();
+    //add to the user to jobs mapping
+    synchronized (userToJobsMap) {
+      ArrayList<JobInProgress> userJobs = userToJobsMap.get(jobUser);
+      if (userJobs == null) {
+        userJobs =  new ArrayList<JobInProgress>();
+        userToJobsMap.put(jobUser, userJobs);
       }
+      userJobs.add(job);
     }
   }
 
@@ -3646,7 +3678,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       JobInProgress job = jobs.get(jobid);
       if (job != null) {
         return job.getProfile();
-      } 
+      }  else {
+        RetireJobInfo info = retireJobs.get(jobid);
+        if (info != null) {
+          return info.profile;
+        }
+      }
     }
     return completedJobStatusStore.readJobProfile(jobid);
   }
@@ -3659,7 +3696,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       JobInProgress job = jobs.get(jobid);
       if (job != null) {
         return job.getStatus();
-      } 
+      } else {
+        
+        RetireJobInfo info = retireJobs.get(jobid);
+        if (info != null) {
+          return info.status;
+        }
+      }
     }
     return completedJobStatusStore.readJobStatus(jobid);
   }
@@ -3798,19 +3841,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   public synchronized String[] getTaskDiagnostics(TaskAttemptID taskId)  
     throws IOException {
-    
+    List<String> taskDiagnosticInfo = null;
     JobID jobId = taskId.getJobID();
     TaskID tipId = taskId.getTaskID();
     JobInProgress job = jobs.get(jobId);
-    if (job == null) {
-      throw new IllegalArgumentException("Job " + jobId + " not found.");
+    if (job != null) {
+      TaskInProgress tip = job.getTaskInProgress(tipId);
+      if (tip != null) {
+        taskDiagnosticInfo = tip.getDiagnosticInfo(taskId);
+      }
+      
     }
-    TaskInProgress tip = job.getTaskInProgress(tipId);
-    if (tip == null) {
-      throw new IllegalArgumentException("TIP " + tipId + " not found.");
-    }
-    List<String> taskDiagnosticInfo = tip.getDiagnosticInfo(taskId);
-    return ((taskDiagnosticInfo == null) ? null 
+    
+    return ((taskDiagnosticInfo == null) ? new String[0] 
             : taskDiagnosticInfo.toArray(new String[0]));
   }
     
@@ -3879,7 +3922,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   } 
   
   public JobStatus[] getAllJobs() {
-    return getJobStatus(jobs.values(),false);
+    List<JobStatus> list = new ArrayList<JobStatus>();
+    list.addAll(Arrays.asList(getJobStatus(jobs.values(),false)));
+    list.addAll(retireJobs.getAllJobStatus());
+    return list.toArray(new JobStatus[list.size()]);
   }
     
   /**

@@ -323,6 +323,21 @@
 </property>
 
 <property>
+  <name>mapred.job.tracker.retiredjobs.cache.size</name>
+  <value>1000</value>
+  <description>The number of retired job status to keep in the cache.
+  </description>
+</property>
+
+<property>
+  <name>mapred.job.tracker.jobhistory.lru.cache.size</name>
+  <value>5</value>
+  <description>The number of job history files loaded in memory. The jobs are 
+  loaded when they are first accessed. The cache is cleared based on LRU.
+  </description>
+</property>
+
+<property>
   <name>mapred.jobtracker.instrumentation</name>
   <value>org.apache.hadoop.mapred.JobTrackerMetricsInst</value>
   <description>Expert: The instrumentation class to associate with each JobTracker.

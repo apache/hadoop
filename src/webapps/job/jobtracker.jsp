@@ -79,8 +79,7 @@
   <ul id="quicklinks-list">
     <li><a href="#scheduling_info">Scheduling Info</a></li>
     <li><a href="#running_jobs">Running Jobs</a></li>
-    <li><a href="#completed_jobs">Completed Jobs</a></li>
-    <li><a href="#failed_jobs">Failed Jobs</a></li>
+    <li><a href="#retired_jobs">Retired Jobs</a></li>
     <li><a href="#local_logs">Local Logs</a></li>
   </ul>
 </div>
@@ -135,13 +134,27 @@ for(JobQueueInfo queue: queues) {
 <%=JSPUtil.generateJobTable("Running", runningJobs, 30, 0)%>
 <hr>
 
-<h2 id="completed_jobs">Completed Jobs</h2>
-<%=JSPUtil.generateJobTable("Completed", completedJobs, 0, runningJobs.size())%>
-<hr>
+<%
+if (completedJobs.size() > 0) {
+  out.print("<h2 id=\"completed_jobs\">Completed Jobs</h2>");
+  out.print(JSPUtil.generateJobTable("Completed", completedJobs, 0, 
+    runningJobs.size()));
+  out.print("<hr>");
+}
+%>
 
-<h2 id="failed_jobs">Failed Jobs</h2>
-<%=JSPUtil.generateJobTable("Failed", failedJobs, 0, 
-    (runningJobs.size()+completedJobs.size()))%>
+<%
+if (failedJobs.size() > 0) {
+  out.print("<h2 id=\"failed_jobs\">Failed Jobs</h2>");
+  out.print(JSPUtil.generateJobTable("Failed", failedJobs, 0, 
+    (runningJobs.size()+completedJobs.size())));
+  out.print("<hr>");
+}
+%>
+
+<h2 id="retired_jobs">Retired Jobs</h2>
+<%=JSPUtil.generateRetiredJobTable(tracker, 
+  (runningJobs.size()+completedJobs.size()+failedJobs.size()))%>
 <hr>
 
 <h2 id="local_logs">Local Logs</h2>

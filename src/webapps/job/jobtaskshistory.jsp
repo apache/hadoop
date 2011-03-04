@@ -4,14 +4,12 @@
   import="java.io.*"
   import="java.util.*"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"
   import="org.apache.hadoop.mapred.JobHistory.*"
 %>
-<jsp:include page="loadhistory.jsp">
-	<jsp:param name="jobid" value="<%=request.getParameter("jobid") %>"/>
-	<jsp:param name="logFile" value="<%=request.getParameter("logFile") %>"/>
-</jsp:include>
+
 <%!	
   private static SimpleDateFormat dateFormat =
                                     new SimpleDateFormat("d/MM HH:mm:ss") ; 
@@ -24,8 +22,8 @@
   String taskStatus = request.getParameter("status"); 
   String taskType = request.getParameter("taskType"); 
   
-  JobHistory.JobInfo job = (JobHistory.JobInfo)request.
-                            getSession().getAttribute("job");
+  FileSystem fs = (FileSystem) application.getAttribute("fileSys");
+  JobInfo job = JSPUtil.getJobInfo(request, fs);
   Map<String, JobHistory.Task> tasks = job.getAllTasks(); 
 %>
 <html>

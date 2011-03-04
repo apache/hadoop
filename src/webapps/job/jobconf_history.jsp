@@ -30,7 +30,7 @@
   Path logDir = new Path(request.getParameter("jobLogDir"));
   Path jobFilePath = new Path(logDir, 
                        request.getParameter("jobUniqueString") + "_conf.xml");
-  FileSystem fs = (FileSystem)request.getSession().getAttribute("fs");
+  FileSystem fs = (FileSystem) application.getAttribute("fileSys");
   FSDataInputStream jobFile = null; 
   try {
     jobFile = fs.open(jobFilePath);

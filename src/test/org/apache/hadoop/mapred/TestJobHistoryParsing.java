@@ -59,7 +59,7 @@ public class TestJobHistoryParsing  extends TestCase {
     JobConf conf = new JobConf();
     conf.set("hadoop.job.history.location", historyDir.toString());
     FileSystem fs = FileSystem.getLocal(new JobConf());
-    JobHistory.init(conf, "localhost", 1234);
+    JobHistory.init(null, conf, "localhost", 1234);
     Path historyLog = new Path(historyDir, "testlog");
     PrintWriter out = new PrintWriter(fs.create(historyLog));
     historyWriter.add(out);

@@ -1341,7 +1341,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       }
     }
     LOG.info("Job complete: " + jobId);
-    job.getCounters().log(LOG);
+    Counters counters = job.getCounters();
+    if (counters != null) {
+      counters.log(LOG);
+    }
     return job.isSuccessful();
   }
 
@@ -1682,7 +1685,12 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         } else {
           System.out.println();
           System.out.println(job);
-          System.out.println(job.getCounters());
+          Counters counters = job.getCounters();
+          if (counters != null) {
+            System.out.println(counters);
+          } else {
+            System.out.println("Counters not available. Job is retired.");
+          }
           exitCode = 0;
         }
       } else if (getCounter) {
@@ -1691,10 +1699,16 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           System.out.println("Could not find job " + jobid);
         } else {
           Counters counters = job.getCounters();
-          Group group = counters.getGroup(counterGroupName);
-          Counter counter = group.getCounterForName(counterName);
-          System.out.println(counter.getCounter());
-          exitCode = 0;
+          if (counters == null) {
+            System.out.println("Counters not available for retired job " + 
+                jobid);
+            exitCode = -1;
+          } else {
+            Group group = counters.getGroup(counterGroupName);
+            Counter counter = group.getCounterForName(counterName);
+            System.out.println(counter.getCounter());
+            exitCode = 0;
+          }
         }
       } else if (killJob) {
         RunningJob job = getJob(JobID.forName(jobid));

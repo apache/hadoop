@@ -797,7 +797,7 @@ public class TestJobHistory extends TestCase {
       JobConf conf = new JobConf();
       // keep for less time
       conf.setLong("mapred.jobtracker.retirejob.check", 1000);
-      conf.setLong("mapred.jobtracker.retirejob.interval", 1000);
+      conf.setLong("mapred.jobtracker.retirejob.interval", 100000);
 
       //set the done folder location
       String doneFolder = "history_done";
@@ -886,7 +886,7 @@ public class TestJobHistory extends TestCase {
       JobConf conf = new JobConf();
       // keep for less time
       conf.setLong("mapred.jobtracker.retirejob.check", 1000);
-      conf.setLong("mapred.jobtracker.retirejob.interval", 1000);
+      conf.setLong("mapred.jobtracker.retirejob.interval", 100000);
 
       //set the done folder location
       String doneFolder = TEST_ROOT_DIR + "history_done";
