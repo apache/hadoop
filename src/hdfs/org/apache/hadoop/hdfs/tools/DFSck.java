@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -142,6 +143,7 @@ public class DFSck extends Configured implements Tool {
             else if (args[idx].equals("-racks")) { url.append("&racks=1"); }
           }
           URL path = new URL(url.toString());
+          SecurityUtil.fetchServiceTicket(path);
           URLConnection connection = path.openConnection();
           InputStream stream = connection.getInputStream();
           BufferedReader input = new BufferedReader(new InputStreamReader(
