@@ -123,6 +123,7 @@
     <subant target="test-system-contrib">
        <property name="hadoop.home" value="${hadoop.home}"/>
        <property name="hadoop.conf.dir" value="${hadoop.conf.dir}"/>
+       <property name="version" value="${version}"/>
        <property name="hadoop.conf.dir.deployed"
            value="${hadoop.conf.dir.deployed}"/>
        <fileset file="${contrib.dir}/build.xml"/>

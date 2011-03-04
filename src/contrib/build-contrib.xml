@@ -143,6 +143,10 @@
       <include name="**/*.jar" />
       <exclude name="**/excluded/" />
     </fileset>
+    <fileset dir="${hadoop.root}/build/contrib/${name}">
+      <include name="**/*.jar" />
+      <exclude name="**/excluded/" />
+    </fileset>
   </path>
 
   <!-- to be overridden by sub-projects -->
@@ -313,7 +317,7 @@
   <!-- ================================================================== -->
   <!-- Run system tests                                                   -->
   <!-- ================================================================== -->
-  <target name="test-system" depends="compile, compile-test-system"
+  <target name="test-system" depends="compile, compile-test-system, jar"
      if="test.system.available">
      <delete dir="${build.test.system}/extraconf"/>
      <mkdir dir="${build.test.system}/extraconf"/>
