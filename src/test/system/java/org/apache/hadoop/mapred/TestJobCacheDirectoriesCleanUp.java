@@ -186,7 +186,9 @@ public class TestJobCacheDirectoriesCleanUp {
           TaskID taskId = TaskID.downgrade(taskinfo.getTaskID());
           TaskAttemptID taskAttID = new TaskAttemptID(taskId, 
               taskinfo.numFailedAttempts());
-          while(taskinfo.numFailedAttempts() < 4) {
+          int MAX_MAP_TASK_ATTEMPTS = Integer.
+               parseInt(jobConf.get("mapred.map.max.attempts"));
+          while(taskinfo.numFailedAttempts() < MAX_MAP_TASK_ATTEMPTS) {
             NetworkedJob networkJob = jtClient.getClient().
                new NetworkedJob(jobInfo.getStatus());
             networkJob.killTask(taskAttID, true);

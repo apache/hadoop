@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.test.system.JTProtocol;
 import org.apache.hadoop.mapreduce.test.system.JobInfo;
 import org.apache.hadoop.mapreduce.test.system.TaskInfo;
 import org.apache.hadoop.mapreduce.test.system.TTClient;
+import org.apache.hadoop.mapreduce.test.system.JTClient;
 import org.apache.hadoop.mapreduce.test.system.FinishTaskControlAction;
 import org.apache.hadoop.mapred.JobClient.NetworkedJob;
 import org.apache.hadoop.io.NullWritable;
@@ -53,18 +54,17 @@ public class TestTaskKilling {
   private static final Log LOG = LogFactory.getLog(TestTaskKilling.class);
   private static MRCluster cluster;
   private static JobClient jobClient = null;
+  private static JTClient jtClient = null;
   private static JTProtocol remoteJTClient = null;
-
-  public TestTaskKilling() {
-  }
+  private static Configuration conf = new Configuration();
 
   @BeforeClass
-  public static void before() throws Exception {
-    Configuration conf = new Configuration();
+  public static void before() throws Exception {    
     cluster = MRCluster.createCluster(conf);
     cluster.setUp();
-    jobClient = cluster.getJTClient().getClient();
-    remoteJTClient = cluster.getJTClient().getProxy();
+    jtClient = cluster.getJTClient();
+    jobClient = jtClient.getClient();
+    remoteJTClient = jtClient.getProxy();
   }
 
   @AfterClass
@@ -79,64 +79,39 @@ public class TestTaskKilling {
   @Test
   public void testFailedTaskJobStatus() throws IOException, 
           InterruptedException {
-    Configuration conf = new Configuration(cluster.getConf());
+    conf = remoteJTClient.getDaemonConf();
     TaskInfo taskInfo = null;
     SleepJob job = new SleepJob();
     job.setConf(conf);
-    conf = job.setupJobConf(3, 1, 4000, 4000, 100, 100);
-    JobConf jobConf = new JobConf(conf);
-    jobConf.setMaxMapAttempts(20);
-    jobConf.setMaxReduceAttempts(20);
+    JobConf jobConf = job.setupJobConf(1, 1, 10000, 4000, 100, 100);
     RunningJob runJob = jobClient.submitJob(jobConf);
-    JobID id = runJob.getID();
-    JobInfo jInfo = remoteJTClient.getJobInfo(id);
-    int counter = 0;
-    while (counter < 60) {
-      if (jInfo.getStatus().getRunState() == JobStatus.RUNNING) {
-        break;
-      } else {
-        UtilsForTests.waitFor(1000);
-        jInfo = remoteJTClient.getJobInfo(id);
-      }
-      counter ++;
-    }
-    Assert.assertTrue("Job has not been started for 1 min.", counter != 60);
-
-    TaskInfo[] taskInfos = remoteJTClient.getTaskInfo(id);
+    JobID jobId = runJob.getID();
+    JobInfo jInfo = remoteJTClient.getJobInfo(jobId);
+    Assert.assertTrue("Job has not been started for 1 min.", 
+        jtClient.isJobStarted(jobId));
+    TaskInfo[] taskInfos = remoteJTClient.getTaskInfo(jobId);
     for (TaskInfo taskinfo : taskInfos) {
-      if (!taskinfo.isSetupOrCleanup()) {
+      if (!taskinfo.isSetupOrCleanup() && taskinfo.getTaskID().isMap()) {
         taskInfo = taskinfo;
+        break;
       }
     }
+    Assert.assertTrue("Task has not been started for 1 min.", 
+        jtClient.isTaskStarted(taskInfo));
 
-    counter = 0;
-    taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
-    while (counter < 60) {
-      if (taskInfo.getTaskStatus().length > 0) {
-        if (taskInfo.getTaskStatus()[0].getRunState() 
-                == TaskStatus.State.RUNNING) {
-          break;
-        }
-      }
-      UtilsForTests.waitFor(1000);
-      taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
-      counter++;
-    }
-    Assert.assertTrue("Task has not been started for 1 min.", counter != 60);
-
+    // Fail the running task.
     NetworkedJob networkJob = jobClient.new NetworkedJob(jInfo.getStatus());
     TaskID tID = TaskID.downgrade(taskInfo.getTaskID());
     TaskAttemptID taskAttID = new TaskAttemptID(tID , 0);
-    networkJob.killTask(taskAttID, false);
+    networkJob.killTask(taskAttID, true);
 
     LOG.info("Waiting till the job is completed...");
     while (!jInfo.getStatus().isJobComplete()) {
       UtilsForTests.waitFor(100);
-      jInfo = remoteJTClient.getJobInfo(id);
+      jInfo = remoteJTClient.getJobInfo(jobId);
     }
-
-    Assert.assertEquals("JobStatus", jInfo.getStatus().getRunState(), 
-            JobStatus.SUCCEEDED);
+    Assert.assertEquals("JobStatus", JobStatus.SUCCEEDED, 
+       jInfo.getStatus().getRunState());
   }
 
 
@@ -151,7 +126,6 @@ public class TestTaskKilling {
     boolean isTempFolderExists = false;
     String localTaskDir = null;
     TTClient ttClient = null;
-    TaskID tID = null;
     FileStatus filesStatus [] = null;
     Path inputDir = new Path("input");
     Path outputDir = new Path("output");
@@ -164,8 +138,6 @@ public class TestTaskKilling {
     jconf.setReducerClass(WordCount.Reduce.class);
     jconf.setNumMapTasks(1);
     jconf.setNumReduceTasks(1);
-    jconf.setMaxMapAttempts(20);
-    jconf.setMaxReduceAttempts(20);
     jconf.setOutputKeyClass(Text.class);
     jconf.setOutputValueClass(IntWritable.class);
 
@@ -177,61 +149,46 @@ public class TestTaskKilling {
     RunningJob runJob = jobClient.submitJob(jconf);
     JobID id = runJob.getID();
     JobInfo jInfo = remoteJTClient.getJobInfo(id);
-    int counter = 0;
-    while (counter < 60) {
-      if (jInfo.getStatus().getRunState() == JobStatus.RUNNING) {
-        break;
-      } else {
-        UtilsForTests.waitFor(1000);
-        jInfo = remoteJTClient.getJobInfo(id);
-      }
-      counter ++;
-    }
-    Assert.assertTrue("Job has not been started for 1 min.", counter != 60);
+    Assert.assertTrue("Job has not been started for 1 min.", 
+       jtClient.isJobStarted(id));
 
     JobStatus[] jobStatus = jobClient.getAllJobs();
     String userName = jobStatus[0].getUsername();
     TaskInfo[] taskInfos = remoteJTClient.getTaskInfo(id);
     for (TaskInfo taskinfo : taskInfos) {
-      if (!taskinfo.isSetupOrCleanup()) {
+      if (!taskinfo.isSetupOrCleanup() && taskinfo.getTaskID().isMap()) {
         taskInfo = taskinfo;
         break;
       }
     }
 
-    counter = 0;
-    while (counter < 30) {
-      if (taskInfo.getTaskStatus().length > 0) {
-        if (taskInfo.getTaskStatus()[0].getRunState() 
-                == TaskStatus.State.RUNNING) {
-          break;
-        }
-      }
-      UtilsForTests.waitFor(1000);
-      taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
-      counter ++;
-    }
-    Assert.assertTrue("Task has not been started for 30 sec.", 
-            counter != 30);
+    Assert.assertTrue("Task has not been started for 1 min.", 
+       jtClient.isTaskStarted(taskInfo));
 
-    tID = TaskID.downgrade(taskInfo.getTaskID());
+    TaskID tID = TaskID.downgrade(taskInfo.getTaskID());
     FinishTaskControlAction action = new FinishTaskControlAction(tID);
 
     String[] taskTrackers = taskInfo.getTaskTrackers();
-    counter = 0;
-    while (counter < 30) {
-      if (taskTrackers.length != 0) {
+    int counter = 0;
+    TaskInfo prvTaskInfo = taskInfo;
+    while (counter++ < 30) {
+      if (taskTrackers.length > 0) {
         break;
+      } else {
+        UtilsForTests.waitFor(100);
+        taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
+        if (taskInfo == null) {
+          taskInfo = prvTaskInfo;
+        } else {
+          prvTaskInfo = taskInfo;
+        }
+        taskTrackers = taskInfo.getTaskTrackers();
       }
-      UtilsForTests.waitFor(100);
-      taskTrackers = taskInfo.getTaskTrackers();
-      counter ++;
     }
-
+    Assert.assertTrue("TaskTracker is not found.", taskTrackers.length > 0);
     String hostName = taskTrackers[0].split("_")[1];
     hostName = hostName.split(":")[0];
-    ttClient = cluster.getTTClient(hostName);
-    ttClient.getProxy().sendAction(action);
+    ttClient = cluster.getTTClient(hostName);    
     String localDirs[] = ttClient.getMapredLocalDirs();
     TaskAttemptID taskAttID = new TaskAttemptID(tID, 0);
     for (String localDir : localDirs) {
@@ -241,46 +198,49 @@ public class TestTaskKilling {
       filesStatus = ttClient.listStatus(localTaskDir, true);
       if (filesStatus.length > 0) {
         isTempFolderExists = true;
-        NetworkedJob networkJob = jobClient.new NetworkedJob(jInfo.getStatus());
-        networkJob.killTask(taskAttID, false);
         break;
       }
     }
-
+    
     Assert.assertTrue("Task Attempt directory " + 
             taskAttID + " has not been found while task was running.", 
                     isTempFolderExists);
+    
+    NetworkedJob networkJob = jobClient.new NetworkedJob(jInfo.getStatus());
+    networkJob.killTask(taskAttID, false);
+    ttClient.getProxy().sendAction(action);
     taskInfo = remoteJTClient.getTaskInfo(tID);
-
+    while(taskInfo.getTaskStatus()[0].getRunState() == 
+       TaskStatus.State.RUNNING) {
+    UtilsForTests.waitFor(1000);
+    taskInfo = remoteJTClient.getTaskInfo(tID);
+    }
+    UtilsForTests.waitFor(1000);
+    taskInfo = remoteJTClient.getTaskInfo(tID);
+    Assert.assertTrue("Task status has not been changed to KILLED.", 
+       (TaskStatus.State.KILLED == 
+       taskInfo.getTaskStatus()[0].getRunState()
+       || TaskStatus.State.KILLED_UNCLEAN == 
+       taskInfo.getTaskStatus()[0].getRunState()));
+    taskInfo = remoteJTClient.getTaskInfo(tID);
     counter = 0;
-    while (counter < 60) {
-      UtilsForTests.waitFor(1000);
-      taskInfo = remoteJTClient.getTaskInfo(tID);
+    while (counter++ < 60) {
       filesStatus = ttClient.listStatus(localTaskDir, true);
       if (filesStatus.length == 0) {
         break;
+      } else {
+        UtilsForTests.waitFor(100);
       }
-      counter ++;
     }
-
     Assert.assertTrue("Task attempt temporary folder has not been cleaned.", 
             isTempFolderExists && filesStatus.length == 0);
-    counter = 0;
-    while (counter < 30) {
-      UtilsForTests.waitFor(1000);
-      taskInfo = remoteJTClient.getTaskInfo(tID);
-      counter ++;
+    UtilsForTests.waitFor(1000);
+    jInfo = remoteJTClient.getJobInfo(id);
+    LOG.info("Waiting till the job is completed...");
+    while (!jInfo.getStatus().isJobComplete()) {
+      UtilsForTests.waitFor(100);
+      jInfo = remoteJTClient.getJobInfo(id);
     }
-    taskInfo = remoteJTClient.getTaskInfo(tID);
-    Assert.assertEquals("Task status has not been changed to KILLED.", 
-            TaskStatus.State.KILLED, 
-                    taskInfo.getTaskStatus()[0].getRunState());
-    //Kill the job before testcase finishes.
-    runJob.killJob();
-
-    Assert.assertTrue("Job has not been stopped for 1 min.",
-         ((cluster.getJTClient()).isJobStopped(id)));
-
   }
 
   private void cleanup(Path dir, Configuration conf) throws 
@@ -323,81 +283,51 @@ public class TestTaskKilling {
     TaskInfo taskInfo = null;
     TaskID tID = null;
     boolean isTempFolderExists = false;
-    Path inputDir = new Path("input");
-    Path outputDir = new Path("output");
-    Configuration conf = new Configuration(cluster.getConf());
-    JobConf jconf = new JobConf(conf);
-    jconf.setJobName("Task Failed job");
-    jconf.setJarByClass(UtilsForTests.class);
-    jconf.setMapperClass(FailedMapperClass.class);
-    jconf.setNumMapTasks(1);
-    jconf.setNumReduceTasks(0);
-    jconf.setMaxMapAttempts(1);
-    cleanup(inputDir, conf);
-    cleanup(outputDir, conf);
-    createInput(inputDir, conf);
-    FileInputFormat.setInputPaths(jconf, inputDir);
-    FileOutputFormat.setOutputPath(jconf, outputDir);
-    RunningJob runJob = jobClient.submitJob(jconf);
+    conf = remoteJTClient.getDaemonConf();
+    SleepJob job = new SleepJob();
+    job.setConf(conf);
+    JobConf jobConf = job.setupJobConf(1, 0, 10000,100, 10, 10);
+    RunningJob runJob = jobClient.submitJob(jobConf);
     JobID id = runJob.getID();
     JobInfo jInfo = remoteJTClient.getJobInfo(id);
-    
-    int counter = 0;
-    while (counter < 60) {
-      if (jInfo.getStatus().getRunState() == JobStatus.RUNNING) {
-        break;
-      } else {
-        UtilsForTests.waitFor(1000);
-        jInfo = remoteJTClient.getJobInfo(id);
-      }
-      counter ++;
-    }
-    Assert.assertTrue("Job has not been started for 1 min.", counter != 60);
+    Assert.assertTrue("Job has not been started for 1 min.", 
+       jtClient.isJobStarted(id));
 
     JobStatus[] jobStatus = jobClient.getAllJobs();
     String userName = jobStatus[0].getUsername();
     TaskInfo[] taskInfos = remoteJTClient.getTaskInfo(id);
     for (TaskInfo taskinfo : taskInfos) {
-      if (!taskinfo.isSetupOrCleanup()) {
+      if (!taskinfo.isSetupOrCleanup() && taskinfo.getTaskID().isMap()) {
         taskInfo = taskinfo;
         break;
       }
     }
-
+    Assert.assertTrue("Task has not been started for 1 min.", 
+       jtClient.isTaskStarted(taskInfo));
+    
     tID = TaskID.downgrade(taskInfo.getTaskID());
     FinishTaskControlAction action = new FinishTaskControlAction(tID);
     String[] taskTrackers = taskInfo.getTaskTrackers();
-    counter = 0;
-    while (counter < 30) {
-      if (taskTrackers.length != 0) {
+    int counter = 0;
+    TaskInfo prvTaskInfo = taskInfo;
+    while (counter++ < 30) {
+      if (taskTrackers.length > 0) {
         break;
+      } else {
+        UtilsForTests.waitFor(1000);
+        taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
+        if (taskInfo == null) {
+          taskInfo = prvTaskInfo;
+        } else {
+          prvTaskInfo = taskInfo;
+        }
+        taskTrackers = taskInfo.getTaskTrackers();
       }
-      UtilsForTests.waitFor(1000);
-      taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
-      taskTrackers = taskInfo.getTaskTrackers();
-      counter ++;
     }
-    Assert.assertTrue("Task tracker not found.", taskTrackers.length != 0);
+    Assert.assertTrue("Task tracker not found.", taskTrackers.length > 0);
     String hostName = taskTrackers[0].split("_")[1];
     hostName = hostName.split(":")[0];
     ttClient = cluster.getTTClient(hostName);
-    ttClient.getProxy().sendAction(action);
-
-    counter = 0;
-    while(counter < 60) {
-      if (taskInfo.getTaskStatus().length > 0) {
-        if (taskInfo.getTaskStatus()[0].getRunState() 
-                == TaskStatus.State.RUNNING) {
-          break;
-        }
-      }
-      UtilsForTests.waitFor(1000);
-      taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
-      counter ++;
-    }
-    Assert.assertTrue("Task has not been started for 1 min.", 
-            counter != 60);
-
     String localDirs[] = ttClient.getMapredLocalDirs();
     TaskAttemptID taskAttID = new TaskAttemptID(tID, 0);
     for (String localDir : localDirs) {
@@ -409,57 +339,49 @@ public class TestTaskKilling {
         isTempFolderExists = true;
         break;
       }
-    }
-
-    taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
+    }    
+    
     Assert.assertTrue("Task Attempt directory " + 
             taskAttID + " has not been found while task was running.", 
                     isTempFolderExists);
-    counter = 0;
-    while (counter < 30) {
-      if (taskInfo.getTaskStatus().length > 0) {
-        break;
+    boolean isFailTask = false;
+    JobInfo jobInfo = remoteJTClient.getJobInfo(id);
+    int MAX_MAP_TASK_ATTEMPTS = Integer.parseInt(
+       jobConf.get("mapred.map.max.attempts"));
+    if (!isFailTask) {        
+        TaskID taskId = TaskID.downgrade(taskInfo.getTaskID());
+        TaskAttemptID tAttID = new TaskAttemptID(taskId, 
+            taskInfo.numFailedAttempts());
+        while(taskInfo.numFailedAttempts() < MAX_MAP_TASK_ATTEMPTS) {
+          NetworkedJob networkJob = jtClient.getClient().
+             new NetworkedJob(jobInfo.getStatus());
+          networkJob.killTask(taskAttID, true);
+          taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
+          taskAttID = new TaskAttemptID(taskId, taskInfo.numFailedAttempts());
+        }
+        isFailTask=true;
       }
-      UtilsForTests.waitFor(1000);
-      taskInfo = remoteJTClient.getTaskInfo(tID);
-      counter ++;
-    }
-
-    while (taskInfo.getTaskStatus()[0].getRunState() == 
-      TaskStatus.State.RUNNING) {
-      UtilsForTests.waitFor(1000);
-      taskInfo = remoteJTClient.getTaskInfo(tID);
-    } 
-    Assert.assertEquals("Task status has not been changed to FAILED.", 
-            taskInfo.getTaskStatus()[0].getRunState(), 
-                    TaskStatus.State.FAILED);
-
+    
+    ttClient.getProxy().sendAction(action);
+    taskInfo = remoteJTClient.getTaskInfo(tID);
+    Assert.assertTrue("Task status has not been changed to FAILED.", 
+       TaskStatus.State.FAILED == 
+       taskInfo.getTaskStatus()[0].getRunState() 
+       || TaskStatus.State.FAILED_UNCLEAN ==
+       taskInfo.getTaskStatus()[0].getRunState());
+    UtilsForTests.waitFor(1000);
     filesStatus = ttClient.listStatus(localTaskDir, true);
     Assert.assertTrue("Temporary folder has not been cleanup.", 
             filesStatus.length == 0);
-
-  }
-
-  public static class FailedMapperClass implements 
-          Mapper<NullWritable, NullWritable, NullWritable, NullWritable> {
-    public void configure(JobConf job) {
-    }
-    public void map(NullWritable key, NullWritable value, 
-            OutputCollector<NullWritable, NullWritable> output, 
-                    Reporter reporter) throws IOException {
-      int counter = 0;
-      while (counter < 240) {
-        UtilsForTests.waitFor(1000);
-        counter ++;
-      }
-      if (counter == 240) {
-        throw new IOException();
-      }
-    }
-    public void close() {
+    UtilsForTests.waitFor(1000);
+    jInfo = remoteJTClient.getJobInfo(id);
+    LOG.info("Waiting till the job is completed...");
+    while (!jInfo.getStatus().isJobComplete()) {
+      UtilsForTests.waitFor(100);
+      jInfo = remoteJTClient.getJobInfo(id);
     }
   }
-  
+
   @Test
   /**
    * This tests verification of job killing by killing of all task 

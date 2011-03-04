@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.common.RemoteExecution;
 
 import java.util.Collection;
 import java.util.Hashtable;
@@ -61,7 +62,7 @@ public class TestChildsKillingOfSuspendTask {
     prop.put("mapred.task.timeout",30000L);
     prop.put("mapreduce.job.complete.cancel.delegation.tokens", false);
     String [] expExcludeList = {"java.net.ConnectException",
-    "java.io.IOException"};
+    "java.io.IOException","org.apache.hadoop.metrics2.MetricsException"};
     cluster = MRCluster.createCluster(conf);
     cluster.setExcludeExpList(expExcludeList);
     cluster.setUp();
@@ -75,7 +76,7 @@ public class TestChildsKillingOfSuspendTask {
     cleanup(inputDir, conf);
     cleanup(outputDir, conf);
     cluster.tearDown();
-    cluster.restart();
+   // cluster.restart();
   }
   
   /**
@@ -85,7 +86,7 @@ public class TestChildsKillingOfSuspendTask {
    */
   @Test
   public void testProcessTreeCleanupOfSuspendTask() throws 
-      IOException {
+      Exception {
     TaskInfo taskInfo = null;
     TaskID tID = null;
     TTTaskInfo [] ttTaskinfo = null;
@@ -115,6 +116,8 @@ public class TestChildsKillingOfSuspendTask {
 
     Assert.assertTrue("Job has not been started for 1 min.", 
 	jtClient.isJobStarted(id));
+    JobStatus[] jobStatus = client.getAllJobs();
+    String userName = jobStatus[0].getUsername();
 
     TaskInfo[] taskInfos = wovenClient.getTaskInfo(id);
     for (TaskInfo taskinfo : taskInfos) {
@@ -151,44 +154,17 @@ public class TestChildsKillingOfSuspendTask {
     Assert.assertTrue("Map process tree is not alive before task suspend.", 
         ttIns.isProcessTreeAlive(pid));
     LOG.info("Suspend the task of process id " + pid);
-    boolean exitCode = ttIns.suspendProcess(pid);
+    ExecuteShellCommand execcmd = new ExecuteShellCommand(userName, 
+           ttClientIns.getHostName(), "kill -SIGSTOP " + pid);
+    execcmd.start();
+    execcmd.join();
+    UtilsForTests.waitFor(30000);
     Assert.assertTrue("Process(" + pid + ") has not been suspended", 
-        exitCode);
-    
-    LOG.info("Waiting till the task is failed...");
-    taskInfo = wovenClient.getTaskInfo(taskInfo.getTaskID());
-    counter = 0;
-    while (counter < 60) {
-      if (taskInfo.getTaskStatus().length > 0) {
-        if (taskInfo.getTaskStatus()[0].getRunState() == 
-            TaskStatus.State.FAILED) {
-          break;
-        } 
-      }
-      UtilsForTests.waitFor(1000);
-      taskInfo = wovenClient.getTaskInfo(taskInfo.getTaskID());
-      counter ++;
-    }
-    Assert.assertTrue("Suspended task is failed " 
-        + "before the timeout interval.", counter > 30 && 
-        taskInfo.getTaskStatus()[0].getRunState() == TaskStatus.State.FAILED);
-
-    LOG.info("Waiting till the job is completed...");
-    counter = 0;
-    while (counter < 60) {
-      if (jInfo.getStatus().isJobComplete()) {
-        break;
-      }
-      UtilsForTests.waitFor(1000);
-      jInfo = wovenClient.getJobInfo(id);
-      counter ++;
-    }
-    Assert.assertTrue("Job has not been completed for 1 min.", 
-        counter != 60);
+        execcmd.getStatus());
     ttIns = ttClientIns.getProxy();
     UtilsForTests.waitFor(1000);
     Assert.assertTrue("Map process is still alive after task has been failed.", 
-        !ttIns.isProcessTreeAlive(pid));    
+        !ttIns.isProcessTreeAlive(pid));
   }
 
   /**
@@ -197,7 +173,7 @@ public class TestChildsKillingOfSuspendTask {
    */
   @Test
   public void testProcessTreeCleanupOfSuspendAndResumeTask() throws
-      IOException {
+      Exception {
     TaskInfo taskInfo = null;
     TaskID tID = null;
     TTTaskInfo [] ttTaskinfo = null;
@@ -228,6 +204,9 @@ public class TestChildsKillingOfSuspendTask {
     Assert.assertTrue("Job has not been started for 1 min.", 
         jtClient.isJobStarted(id));
 
+    JobStatus[] jobStatus = client.getAllJobs();
+    String userName = jobStatus[0].getUsername();
+
     TaskInfo[] taskInfos = wovenClient.getTaskInfo(id);
     for (TaskInfo taskinfo : taskInfos) {
       if (!taskinfo.isSetupOrCleanup()) {
@@ -263,21 +242,23 @@ public class TestChildsKillingOfSuspendTask {
     Assert.assertTrue("Map process tree is not alive before task suspend.", 
         ttIns.isProcessTreeAlive(pid));
     LOG.info("Suspend the task of process id " + pid);
-    boolean exitCode = ttIns.suspendProcess(pid);
+    ExecuteShellCommand execcmd = new ExecuteShellCommand(userName, 
+           ttClientIns.getHostName(), "kill -SIGSTOP " + pid);
+    execcmd.start();
+    execcmd.join();
+
     Assert.assertTrue("Process(" + pid + ") has not been suspended", 
-        exitCode);
+        execcmd.getStatus());
     Assert.assertTrue("Map process is not alive after task "
         + "has been suspended.", ttIns.isProcessTreeAlive(pid));
     UtilsForTests.waitFor(5000);
-    exitCode = ttIns.resumeProcess(pid);
+    ExecuteShellCommand execcmd1 = new ExecuteShellCommand(userName, 
+           ttClientIns.getHostName(), "kill -SIGCONT " + pid);
+    execcmd1.start();
+    execcmd1.join();
     Assert.assertTrue("Suspended process(" + pid + ") has not been resumed", 
-        exitCode);
-    UtilsForTests.waitFor(35000);
-    taskInfo = wovenClient.getTaskInfo(taskInfo.getTaskID());
-    Assert.assertTrue("Suspended task has not been resumed", 
-        taskInfo.getTaskStatus()[0].getRunState() == 
-        TaskStatus.State.RUNNING);
-    UtilsForTests.waitFor(1000);
+        execcmd1.getStatus());
+    UtilsForTests.waitFor(5000);
     Assert.assertTrue("Map process tree is not alive after task is resumed.", 
         ttIns.isProcessTreeAlive(pid));
   }
@@ -309,4 +290,30 @@ public class TestChildsKillingOfSuspendTask {
     file.close();
   }
 
+  class ExecuteShellCommand extends Thread {
+    String userName;
+    String cmd;
+    String hostName;
+    boolean exitStatus;
+    public ExecuteShellCommand(String userName, String hostName, String cmd) {
+      this.userName = userName;
+      this.hostName = hostName;
+      this.cmd = cmd;
+    }
+    public void run() {
+      try {
+        RemoteExecution.executeCommand(hostName, userName, cmd);
+        exitStatus = true;
+      } catch(InterruptedException iexp) {
+        LOG.warn("Thread is interrupted:" + iexp.getMessage());
+        exitStatus = false;
+      } catch(Exception exp) {
+        LOG.warn("Exception:" + exp.getMessage());
+        exitStatus = false;
+      }
+    }
+    public boolean getStatus(){
+      return exitStatus;
+    }
+  }
 }
