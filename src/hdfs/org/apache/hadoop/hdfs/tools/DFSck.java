@@ -17,18 +17,22 @@
  */
 package org.apache.hadoop.hdfs.tools;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.BufferedReader;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+
+import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -57,16 +61,21 @@ import org.apache.hadoop.util.ToolRunner;
  *  
  */
 public class DFSck extends Configured implements Tool {
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
 
-  DFSck() {}
-  
+  private final UserGroupInformation ugi;
+
   /**
    * Filesystem checker.
    * @param conf current Configuration
-   * @throws Exception
+   * @throws LoginException if login failed 
    */
-  public DFSck(Configuration conf) throws Exception {
+  public DFSck(Configuration conf) throws LoginException {
     super(conf);
+    this.ugi = UnixUserGroupInformation.login(conf, true);
   }
   
   private String getInfoServer() throws IOException {
@@ -96,13 +105,15 @@ public class DFSck extends Configured implements Tool {
   /**
    * @param args
    */
-  public int run(String[] args) throws Exception {
-    String fsName = getInfoServer();
+  public int run(String[] args) throws IOException {
     if (args.length == 0) {
       printUsage();
       return -1;
     }
-    StringBuffer url = new StringBuffer("http://"+fsName+"/fsck?path=");
+
+    final StringBuffer url = new StringBuffer("http://");
+    url.append(getInfoServer()).append("/fsck?ugi=").append(ugi).append("&path=");
+
     String dir = "/";
     // find top-level dir first
     for (int idx = 0; idx < args.length; idx++) {
