@@ -786,10 +786,9 @@ public class UserGroupInformation {
   /**
    * Create a proxy user using username of the effective user and the ugi of the
    * real user.
-   *
-   * @param effective
-   *          user, UGI for real user.
-   * @return
+   * @param user
+   * @param realUser
+   * @return proxyUser ugi
    */
   public static UserGroupInformation createProxyUser(String user,
       UserGroupInformation realUser) {
