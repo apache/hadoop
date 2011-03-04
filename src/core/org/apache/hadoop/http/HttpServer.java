@@ -448,7 +448,7 @@ public class HttpServer implements FilterContainer {
    * Configure an ssl listener on the server.
    * @param addr address to listen on
    * @param sslConf conf to retrieve ssl options
-   * @param needClientAuth whether client authentication is required
+   * @param needCertsAuth whether x509 certificate authentication is required
    * @param needKrbAuth whether to allow kerberos auth
    */
   public void addSslListener(InetSocketAddress addr, Configuration sslConf,

@@ -177,7 +177,7 @@ public class Krb5AndCertsSslSocketConnector extends SslSocketConnector {
   
   /**
    * Filter that takes the Kerberos principal identified in the 
-   * {@link Krb5SslSocketConnector} and provides it the to the servlet
+   * {@link Krb5AndCertsSslSocketConnector} and provides it the to the servlet
    * at runtime, setting the principal and short name.
    */
   public static class Krb5SslFilter implements Filter {
