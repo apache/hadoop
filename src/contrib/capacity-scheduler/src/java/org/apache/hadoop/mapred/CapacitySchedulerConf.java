@@ -75,17 +75,14 @@ class CapacitySchedulerConf {
   static final String UPPER_LIMIT_ON_TASK_PMEM_PROPERTY =
     "mapred.capacity-scheduler.task.limit.maxpmem";
 
-  /**
-   *  Configuration that provides the maximum cap for the map task in a queue
-   *  at any given point of time.
-   */
-  static final String MAX_MAP_CAP_PROPERTY = "max.map.slots";
+
+  private static final String CAPACITY_PROPERTY = "capacity";
 
   /**
-   *  Configuration that provides the maximum cap for the reduce task in a queue
-   *  at any given point of time.
+    * A maximum capacity defines a limit beyond which a queue
+    * cannot expand .
    */
-  static final String MAX_REDUCE_CAP_PROPERTY = "max.reduce.slots";
+   static final String MAX_CAPACITY_PROPERTY ="maximum-capacity";
 
   /**
    * The constant which defines the default initialization thread
@@ -104,9 +101,9 @@ class CapacitySchedulerConf {
   private int defaultMaxJobsPerUsersToInitialize;
   
   /**
-   * Create a new ResourceManagerConf.
+   * Create a new Capacity scheduler conf.
    * This method reads from the default configuration file mentioned in
-   * {@link RM_CONF_FILE}, that must be present in the classpath of the
+   * {@link SCHEDULER_CONF_FILE}, that must be present in the classpath of the
    * application.
    */
   public CapacitySchedulerConf() {
@@ -116,7 +113,7 @@ class CapacitySchedulerConf {
   }
 
   /**
-   * Create a new ResourceManagerConf reading the specified configuration
+   * Create a new Cacpacity scheduler conf reading the specified configuration
    * file.
    * 
    * @param configFile {@link Path} to the configuration file containing
@@ -163,16 +160,15 @@ class CapacitySchedulerConf {
     //In case of both capacity and default capacity not configured.
     //Last check is if the configuration is specified and is marked as
     //negative we throw exception
-    String raw = rmConf.getRaw(toFullPropertyName(queue, 
-        "capacity"));
+    String raw = rmConf.getRaw(toFullPropertyName(queue, CAPACITY_PROPERTY));
     if(raw == null) {
       return -1;
     }
-    float result = rmConf.getFloat(toFullPropertyName(queue, 
-                                   "capacity"), 
-                                   -1);
+    float result = rmConf.getFloat(
+      toFullPropertyName(queue, CAPACITY_PROPERTY), -1);
     if (result < 0.0 || result > 100.0) {
-      throw new IllegalArgumentException("Illegal capacity for queue " + queue +
+      throw new IllegalArgumentException(
+        "Illegal capacity for queue " + queue +
                                          " of " + result);
     }
     return result;
@@ -185,7 +181,53 @@ class CapacitySchedulerConf {
    * @param capacity percent of the cluster for the queue.
    */
   public void setCapacity(String queue,float capacity) {
-    rmConf.setFloat(toFullPropertyName(queue, "capacity"),capacity);
+    rmConf.setFloat(toFullPropertyName(queue, CAPACITY_PROPERTY),capacity);
+  }
+
+  /**
+   * Return the maximum percentage of the cluster capacity that can be used by
+   * the given queue.
+   * This percentage defines a limit beyond which a
+   * queue cannot use the capacity of cluster.
+   * This provides a means to limit how much excess capacity a
+   * queue can use. By default, there is no limit.
+   *
+   * The maximum-capacity of a queue can only be
+   * greater than or equal to its minimum capacity.
+   *
+   * @param queue name of the queue.
+   * @return maximum-capacity for the given queue
+   */
+  public float getMaxCapacity(String queue) {
+    float result = rmConf.getFloat(
+      toFullPropertyName(queue, MAX_CAPACITY_PROPERTY), -1);
+
+    //if result is 0 or less than 0 set it to -1
+    result = (result <= 0) ? -1 : result;
+
+    if (result > 100.0) {
+      throw new IllegalArgumentException(
+        "Illegal " + MAX_CAPACITY_PROPERTY +
+          " for queue " + queue + " of " + result);
+    }
+
+    if ((result != -1) && (result < getCapacity(queue))) {
+      throw new IllegalArgumentException(
+        MAX_CAPACITY_PROPERTY + " " + result +
+          " for a queue should be greater than or equal to capacity ");
+    }
+    return result;
+  }
+
+    /**
+   * Sets the maxCapacity of the given queue.
+   *
+   * @param queue name of the queue
+   * @param maxCapacity percent of the cluster for the queue.
+   */
+  public void setMaxCapacity(String queue,float maxCapacity) {
+      rmConf.setFloat(
+        toFullPropertyName(queue, MAX_CAPACITY_PROPERTY), maxCapacity);
   }
   
   /**
@@ -368,41 +410,5 @@ class CapacitySchedulerConf {
   public void setMaxWorkerThreads(int poolSize) {
     rmConf.setInt(
         "mapred.capacity-scheduler.init-worker-threads", poolSize);
-  }
-
-  /**
-   * get the max map slots cap
-   * @param queue
-   * @return
-   */
-  public int getMaxMapCap(String queue) {
-    return rmConf.getInt(toFullPropertyName(queue,MAX_MAP_CAP_PROPERTY),-1);
-  }
-
-  /**
-   * Used for testing
-   * @param queue
-   * @param val
-   */
-  public void setMaxMapCap(String queue,int val) {
-    rmConf.setInt(toFullPropertyName(queue,MAX_MAP_CAP_PROPERTY),val);
-  }
-
-  /**
-   * get the max reduce slots cap
-   * @param queue
-   * @return
-   */
-  public int getMaxReduceCap(String queue) {
-    return rmConf.getInt(toFullPropertyName(queue,MAX_REDUCE_CAP_PROPERTY),-1);    
-  }
-
-  /**
-   * Used for testing
-   * @param queue
-   * @param val
-   */
-  public void setMaxReduceCap(String queue,int val) {
-    rmConf.setInt(toFullPropertyName(queue,MAX_REDUCE_CAP_PROPERTY),val);
   }
 }

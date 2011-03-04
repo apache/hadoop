@@ -16,6 +16,25 @@
   </property>
   
   <property>
+    <name>mapred.capacity-scheduler.queue.default.maximum-capacity</name>
+    <value>-1</value>
+    <description>
+	maximum-capacity defines a limit beyond which a queue cannot use the capacity of the cluster.
+	This provides a means to limit how much excess capacity a queue can use. By default, there is no limit.
+	The maximum-capacity of a queue can only be greater than or equal to its minimum capacity.
+        Default value of -1 implies a queue can use complete capacity of the cluster.
+
+        This property could be to curtail certain jobs which are long running in nature from occupying more than a 
+        certain percentage of the cluster, which in the absence of pre-emption, could lead to capacity guarantees of 
+        other queues being affected.
+        
+        One important thing to note is that maximum-capacity is a percentage , so based on the cluster's capacity
+        the max capacity would change. So if large no of nodes or racks get added to the cluster , max Capacity in 
+        absolute terms would increase accordingly.
+    </description>    
+  </property>
+  
+  <property>
     <name>mapred.capacity-scheduler.queue.default.supports-priority</name>
     <value>false</value>
     <description>If true, priorities of jobs will be taken into 
@@ -46,44 +65,6 @@
     </description>
   </property>
 
-<property>
-  <name>mapred.capacity-scheduler.queue.default.max.map.slots</name>
-  <value>-1</value>
-  <description>
-    This value is the maximum map slots that can be used in a
-    queue at any point of time. So for example assuming above config value
-    is 100 , not more than 100 tasks would be in the queue at any point of
-    time, assuming each task takes one slot.
-
-    Default value of -1 would disable this capping feature
-
-    Typically the queue capacity should be equal to this limit.
-    If queue capacity is more than this limit, excess capacity will be
-    used by the other queues. If queue capacity is less than the above
-    limit , then the limit would be the queue capacity - as in the current
-    implementation
-  </description>
-</property>
-
-<property>
-  <name>mapred.capacity-scheduler.queue.default.max.reduce.slots</name>
-  <value>-1</value>
-  <description>
-    This value is the maximum reduce slots that can be used in a
-    queue at any point of time. So for example assuming above config value
-      is 100 , not more than 100 reduce tasks would be in the queue at any point
-      of time, assuming each task takes one slot.
-
-    Default value of -1 would disable this capping feature
-
-    Typically the queue capacity should be equal to this limit.
-    If queue capacity is more than this limit, excess capacity will be
-    used by the other queues. If queue capacity is less than the above
-    limit , then the limit would be the queue capacity - as in the current
-    implementation
-  </description>
-</property>
-  
   <!-- The default configuration settings for the capacity task scheduler -->
   <!-- The default values would be applied to all the queues which don't have -->
   <!-- the appropriate property for the particular queue -->

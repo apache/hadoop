@@ -31,8 +31,6 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.JobTracker.IllegalStateException;
-import org.apache.hadoop.mapred.TaskTrackerStatus;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
@@ -77,10 +75,7 @@ class CapacityTaskScheduler extends TaskScheduler {
    **********************************************************************/
 
   private static class TaskSchedulingInfo {
-    
-    private static final String LIMIT_NORMALIZED_CAPACITY_STRING
-      = "(Capacity is restricted to max limit of %d slots.\n" +
-        "Remaining %d slots will be used by other queues.)\n";
+
     /** 
      * the actual capacity, which depends on how many slots are available
      * in the cluster at any given time. 
@@ -91,14 +86,9 @@ class CapacityTaskScheduler extends TaskScheduler {
     // number of slots occupied by running tasks
     int numSlotsOccupied = 0;
 
-    /**
-     * max task limit
-     * This value is the maximum slots that can be used in a
-     * queue at any point of time. So for example assuming above config value
-     * is 100 , not more than 100 tasks would be in the queue at any point of
-     * time, assuming each task takes one slot.
-     */
-    private int maxTaskLimit = -1;
+    //the actual maximum capacity which depends on how many slots are available
+    //in cluster at any given time.
+    private int maxCapacity = -1;
 
     /**
      * for each user, we need to keep track of number of slots occupied by
@@ -119,26 +109,19 @@ class CapacityTaskScheduler extends TaskScheduler {
     }
 
 
-    int getMaxTaskLimit() {
-      return maxTaskLimit;
-    }
-
-    void setMaxTaskLimit(int maxTaskCap) {
-      this.maxTaskLimit = maxTaskCap;
-    }
-
     /**
-     * This method checks for maxTaskLimit and sends minimum of maxTaskLimit and
+     * Returns the actual capacity.
      * capacity.
+     *
      * @return
      */
     int getCapacity() {
-      return ((maxTaskLimit >= 0) && (maxTaskLimit < capacity)) ? maxTaskLimit :
-        capacity;
+      return capacity;
     }
 
     /**
      * Mutator method for capacity
+     *
      * @param capacity
      */
     void setCapacity(int capacity) {
@@ -157,13 +140,9 @@ class CapacityTaskScheduler extends TaskScheduler {
       StringBuffer sb = new StringBuffer();
       
       sb.append("Capacity: " + capacity + " slots\n");
-      //If maxTaskLimit is less than the capacity
-      if (maxTaskLimit >= 0 && maxTaskLimit < capacity) {
-        sb.append(String.format(LIMIT_NORMALIZED_CAPACITY_STRING,   
-                        maxTaskLimit, (capacity-maxTaskLimit)));
-      }
-      if (maxTaskLimit >= 0) {
-        sb.append(String.format("Maximum Slots Limit: %d\n", maxTaskLimit));
+      
+      if(getMaxCapacity() >= 0) {
+        sb.append("Maximum capacity: " + getMaxCapacity() +" slots\n");
       }
       sb.append(String.format("Used capacity: %d (%.1f%% of Capacity)\n",
           Integer.valueOf(numSlotsOccupied), Float
@@ -189,21 +168,42 @@ class CapacityTaskScheduler extends TaskScheduler {
       }
       return sb.toString();
     }
+
+    int getMaxCapacity() {
+      return maxCapacity;
+    }
+
+    void setMaxCapacity(int maxCapacity) {
+      this.maxCapacity = maxCapacity;
+    }
   }
   
   private static class QueueSchedulingInfo {
     String queueName;
 
-    /** capacity(%) is set in the config */ 
+    /**
+     * capacity(%) is set in the config
+     */
     float capacityPercent = 0;
     
+    
+  /**
+   * maxCapacityPercent(%) is set in config as
+   * mapred.capacity-scheduler.queue.<queue-name>.maximum-capacity
+   * maximum-capacity percent defines a limit beyond which a queue
+   * cannot expand. Remember this limit is dynamic and changes w.r.t
+   * cluster size.
+   */
+    float maxCapacityPercent = -1;
     /** 
      * to handle user limits, we need to know how many users have jobs in 
      * the queue.
      */  
     Map<String, Integer> numJobsByUser = new HashMap<String, Integer>();
       
-    /** min value of user limit (same for all users) */
+    /**
+     * min value of user limit (same for all users)
+     */
     int ulMin;
     
     /**
@@ -218,21 +218,22 @@ class CapacityTaskScheduler extends TaskScheduler {
     TaskSchedulingInfo mapTSI;
     TaskSchedulingInfo reduceTSI;
     
-    public QueueSchedulingInfo(String queueName, float capacityPercent,
-                               int ulMin, JobQueuesManager jobQueuesManager,
-                               int mapCap, int reduceCap) {
+    public QueueSchedulingInfo(
+      String queueName, float capacityPercent,
+      float maxCapacityPercent, int ulMin, JobQueuesManager jobQueuesManager
+    ) {
       this.queueName = new String(queueName);
       this.capacityPercent = capacityPercent;
+      this.maxCapacityPercent = maxCapacityPercent;
       this.ulMin = ulMin;
       this.jobQueuesManager = jobQueuesManager;
       this.mapTSI = new TaskSchedulingInfo();
       this.reduceTSI = new TaskSchedulingInfo();
-      this.mapTSI.setMaxTaskLimit(mapCap);
-      this.reduceTSI.setMaxTaskLimit(reduceCap);
     }
     
     /**
      * return information about the queue
+     *
      * @return a String representing the information about the queue.
      */
     @Override
@@ -508,6 +509,10 @@ class CapacityTaskScheduler extends TaskScheduler {
         if (j.getStatus().getRunState() != JobStatus.RUNNING) {
           continue;
         }
+        //Check if queue is over maximum-capacity
+        if(this.areTasksInQueueOverMaxCapacity(qsi,j.getNumSlotsPerTask(type))) {
+          continue;
+        }
         // check if the job's user is over limit
         if (isUserOverLimit(j, qsi)) {
           continue;
@@ -572,6 +577,12 @@ class CapacityTaskScheduler extends TaskScheduler {
         if (j.getStatus().getRunState() != JobStatus.RUNNING) {
           continue;
         }
+        //Check if queue is over maximum-capacity
+        if (this.areTasksInQueueOverMaxCapacity(
+          qsi, j.getNumSlotsPerTask(type))) {
+          continue;
+        }
+        
         if (scheduler.memoryMatcher.matchesMemoryRequirements(j, type,
             taskTrackerStatus)) {
           // We found a suitable job. Get task from it.
@@ -657,8 +668,10 @@ class CapacityTaskScheduler extends TaskScheduler {
         if (0 == getTSI(qsi).getCapacity()) {
           continue;
         }
-        
-        if(this.areTasksInQueueOverLimit(qsi)) {
+
+        //This call is for optimization if we are already over the
+        //maximum-capacity we avoid traversing the queues.
+        if(this.areTasksInQueueOverMaxCapacity(qsi,1)) {
           continue;
         }
         TaskLookupResult tlr = getTaskFromQueue(taskTracker, qsi);
@@ -685,22 +698,32 @@ class CapacityTaskScheduler extends TaskScheduler {
 
 
     /**
-     * Check if the max task limit is set for this queue
-     * if set , ignore this qsi if current num of occupied
-     * slots  of a TYPE in the queue is >= getMaxTaskCap().
+     * Check if maximum-capacity is set for this queue.
+     * If set and greater than 0 ,
+     * check if numofslotsoccupied+numSlotsPerTask is greater than
+     * maximum-capacity , if yes , implies this queue is over limit.
+     *
+     * Incase noOfSlotsOccupied is less than maximum-capacity ,but ,
+     * numOfSlotsOccupied + noSlotsPerTask is more than maximum-capacity we
+     * still dont assign the task . This may lead to under utilization of very
+     * small set of slots. But this is ok , as we strictly respect the
+     * maximum-capacity limit.
+     * 
      * @param qsi
-     * @return
+     * @return true if queue is over limit.
      */
 
-    private boolean areTasksInQueueOverLimit(QueueSchedulingInfo qsi) {
+    private boolean areTasksInQueueOverMaxCapacity(
+      QueueSchedulingInfo qsi, int numSlotsPerTask) {
       TaskSchedulingInfo tsi = getTSI(qsi);
-      if (tsi.getMaxTaskLimit() >= 0) {
-        if (tsi.numSlotsOccupied >= tsi.getCapacity()) {
+      if (tsi.getMaxCapacity() >= 0) {
+        if ((tsi.numSlotsOccupied + numSlotsPerTask) > tsi.getMaxCapacity()) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(
-              "Queue " + qsi.queueName + " has reached its  max " + type +
-                " limit ");
+              "Queue " + qsi.queueName + " " + "has reached its  max " + type +
+                "Capacity");
             LOG.debug("Current running tasks " + tsi.getCapacity());
+
           }
           return true;
         }
@@ -719,12 +742,12 @@ class CapacityTaskScheduler extends TaskScheduler {
           s.append(
             String.format(
               " Queue '%s'(%s): runningTasks=%d, "
-                + "occupiedSlots=%d, capacity=%d, runJobs=%d  maxTaskLimit=%d ",
+                + "occupiedSlots=%d, capacity=%d, runJobs=%d  maxCapacity=%d ",
               qsi.queueName,
               this.type, Integer.valueOf(tsi.numRunningTasks), Integer
                 .valueOf(tsi.numSlotsOccupied), Integer
                 .valueOf(tsi.getCapacity()), Integer.valueOf(runJobs.size()),
-              Integer.valueOf(tsi.getMaxTaskLimit())));
+              Integer.valueOf(tsi.getMaxCapacity())));
         }
         LOG.debug(s);
       }
@@ -792,7 +815,7 @@ class CapacityTaskScheduler extends TaskScheduler {
     @Override
     int getSlotsPerTask(JobInProgress job) {
       return 
-        job.getJobConf().computeNumSlotsPerMap(scheduler.getMemSizeForMapSlot());    
+        job.getJobConf().computeNumSlotsPerMap(scheduler.getMemSizeForMapSlot());
     }
 
     @Override
@@ -1051,19 +1074,20 @@ class CapacityTaskScheduler extends TaskScheduler {
     }
 
     Set<String> queuesWithoutConfiguredCapacity = new HashSet<String>();
-    float totalCapacity = 0.0f;
+    float totalCapacityPercent = 0.0f;
     for (String queueName: queues) {
-      float capacity = schedConf.getCapacity(queueName);
-      if(capacity == -1.0) {
+      float capacityPercent = schedConf.getCapacity(queueName);
+      if (capacityPercent == -1.0) {
         queuesWithoutConfiguredCapacity.add(queueName);
       }else {
-        totalCapacity += capacity;
+        totalCapacityPercent += capacityPercent;
       }
+
+      float maxCapacityPercent = schedConf.getMaxCapacity(queueName);
       int ulMin = schedConf.getMinimumUserLimitPercent(queueName);
       // create our QSI and add to our hashmap
       QueueSchedulingInfo qsi = new QueueSchedulingInfo(
-        queueName, capacity, ulMin, jobQueuesManager, schedConf.getMaxMapCap(
-          queueName), schedConf.getMaxReduceCap(queueName));
+        queueName, capacityPercent, maxCapacityPercent ,ulMin, jobQueuesManager);
       queueInfoMap.put(queueName, qsi);
 
       // create the queues of job objects
@@ -1075,18 +1099,27 @@ class CapacityTaskScheduler extends TaskScheduler {
       queueManager.setSchedulerInfo(queueName, schedulingInfo);
       
     }
-    float remainingQuantityToAllocate = 100 - totalCapacity;
+    float remainingQuantityToAllocate = 100 - totalCapacityPercent;
     float quantityToAllocate = 
       remainingQuantityToAllocate/queuesWithoutConfiguredCapacity.size();
     for(String queue: queuesWithoutConfiguredCapacity) {
       QueueSchedulingInfo qsi = queueInfoMap.get(queue); 
       qsi.capacityPercent = quantityToAllocate;
+      if(qsi.maxCapacityPercent >= 0) {
+        if(qsi.capacityPercent > qsi.maxCapacityPercent) {
+          throw new IllegalStateException(
+            " Allocated capacity of " + qsi.capacityPercent +
+              " to unconfigured queue " + qsi.queueName +
+              " is greater than maximum Capacity " + qsi.maxCapacityPercent);
+        }
+      }
       schedConf.setCapacity(queue, quantityToAllocate);
     }    
     
-    if (totalCapacity > 100.0) {
-      throw new IllegalArgumentException("Sum of queue capacities over 100% at "
-                                         + totalCapacity);
+    if (totalCapacityPercent > 100.0) {
+      throw new IllegalArgumentException(
+        "Sum of queue capacities over 100% at "
+          + totalCapacityPercent);
     }    
     
     // let our mgr objects know about the queues
@@ -1151,22 +1184,37 @@ class CapacityTaskScheduler extends TaskScheduler {
    * to make scheduling decisions. For example, we don't need an exact count
    * of numRunningTasks. Once we count upto the grid capacity, any
    * number beyond that will make no difference.
-   *
-   **/
-  private synchronized void updateQSIObjects(int mapClusterCapacity,
+   */
+  private synchronized void updateQSIObjects(
+    int mapClusterCapacity,
       int reduceClusterCapacity) {
     // if # of slots have changed since last time, update.
     // First, compute whether the total number of TT slots have changed
     for (QueueSchedulingInfo qsi: queueInfoMap.values()) {
       // compute new capacities, if TT slots have changed
       if (mapClusterCapacity != prevMapClusterCapacity) {
-        qsi.mapTSI.setCapacity((int)
+        qsi.mapTSI.setCapacity(
+          (int)
           (qsi.capacityPercent*mapClusterCapacity/100));
+
+        //compute new max map capacities
+        if(qsi.maxCapacityPercent > 0) {
+          qsi.mapTSI.setMaxCapacity(
+            (int) (qsi.maxCapacityPercent * mapClusterCapacity / 100));
+        }
       }
       if (reduceClusterCapacity != prevReduceClusterCapacity) {
-        qsi.reduceTSI.setCapacity((int)
-          (qsi.capacityPercent*reduceClusterCapacity/100));
+        qsi.reduceTSI.setCapacity(
+          (int)
+            (qsi.capacityPercent * reduceClusterCapacity / 100));
+
+        //compute new max reduce capacities
+        if (qsi.maxCapacityPercent > 0) {
+          qsi.reduceTSI.setMaxCapacity(
+            (int) (qsi.maxCapacityPercent * reduceClusterCapacity / 100));
+        }
       }
+
       // reset running/pending tasks, tasks per user
       qsi.mapTSI.resetTaskVars();
       qsi.reduceTSI.resetTaskVars();
