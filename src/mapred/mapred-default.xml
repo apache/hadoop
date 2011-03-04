@@ -608,6 +608,15 @@
 </property>
 
 <property>
+  <name>mapred.heartbeats.in.second</name>
+  <value>100</value>
+  <description>Expert: Approximate number of heart-beats that could arrive 
+               JobTracker in a second. Assuming each RPC can be processed 
+               in 10msec, the default value is made 100 RPCs in a second.
+  </description>
+</property> 
+
+<property>
   <name>mapred.max.tracker.blacklists</name>
   <value>4</value>
   <description>The number of blacklists for a taskTracker by various jobs
