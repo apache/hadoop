@@ -1,10 +1,11 @@
 <?xml version="1.0"?>
 <!--
-  Copyright 2002-2004 The Apache Software Foundation
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
 
       http://www.apache.org/licenses/LICENSE-2.0
 
@@ -33,17 +34,15 @@
     </section>
     
     <section>
-      <title>Pre-requisites</title>
+      <title>Prerequisites</title>
       
-      <p>Ensure that Hadoop is installed, configured and setup correctly. More
-      details:</p> 
+      <p>Make sure Hadoop is installed, configured and setup correctly. For more information see: </p> 
       <ul>
         <li>
-          <a href="quickstart.html">Hadoop Quick Start</a> for first-time users.
+          <a href="single_node_setup.html">Single Node Setup</a> for first-time users.
         </li>
         <li>
-          <a href="cluster_setup.html">Hadoop Cluster Setup</a> for large, 
-          distributed clusters.
+          <a href="cluster_setup.html">Cluster Setup</a> for large, distributed clusters.
         </li>
       </ul>
     </section>
@@ -54,7 +53,7 @@
       <p>Service Level Authorization is the initial authorization mechanism to
       ensure clients connecting to a particular Hadoop <em>service</em> have the
       necessary, pre-configured, permissions and are authorized to access the given
-      service. For e.g. a Map/Reduce cluster can use this mechanism to allow a
+      service. For example, a MapReduce cluster can use this mechanism to allow a
       configured list of users/groups to submit jobs.</p>
       
       <p>The <code>${HADOOP_CONF_DIR}/hadoop-policy.xml</code> configuration file 
@@ -197,33 +196,33 @@
         <title>Examples</title>
         
         <p>Allow only users <code>alice</code>, <code>bob</code> and users in the 
-        <code>mapreduce</code> group to submit jobs to the Map/Reduce cluster:</p>
+        <code>mapreduce</code> group to submit jobs to the MapReduce cluster:</p>
         
-        <table>
-          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;security.job.submission.protocol.acl&lt;/name&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;alice,bob mapreduce&lt;/value&gt;</td></tr>
-          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
-        </table>
+<source>
+&lt;property&gt;
+     &lt;name&gt;security.job.submission.protocol.acl&lt;/name&gt;
+     &lt;value&gt;alice,bob mapreduce&lt;/value&gt;
+&lt;/property&gt;
+</source>        
         
         <p></p><p>Allow only DataNodes running as the users who belong to the 
         group <code>datanodes</code> to communicate with the NameNode:</p> 
-        
-        <table>
-          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;security.datanode.protocol.acl&lt;/name&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt; datanodes&lt;/value&gt;</td></tr>
-          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
-        </table>
+ 
+<source>
+&lt;property&gt;
+     &lt;name&gt;security.datanode.protocol.acl&lt;/name&gt;
+     &lt;value&gt;datanodes&lt;/value&gt;
+&lt;/property&gt;
+</source>        
         
         <p></p><p>Allow any user to talk to the HDFS cluster as a DFSClient:</p>
-        
-        <table>
-          <tr><td>&nbsp;&nbsp;&lt;property&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;name&gt;security.client.protocol.acl&lt;/name&gt;</td></tr>
-            <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&lt;value&gt;*&lt;/value&gt;</td></tr>
-          <tr><td>&nbsp;&nbsp;&lt;/property&gt;</td></tr>
-        </table>
+
+<source>
+&lt;property&gt;
+     &lt;name&gt;security.client.protocol.acl&lt;/name&gt;
+     &lt;value&gt;*&lt;/value&gt;
+&lt;/property&gt;
+</source>        
         
       </section>
     </section>

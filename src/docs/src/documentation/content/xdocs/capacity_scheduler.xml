@@ -29,7 +29,7 @@
       <title>Purpose</title>
       
       <p>This document describes the Capacity Scheduler, a pluggable 
-      Map/Reduce scheduler for Hadoop which provides a way to share 
+      MapReduce scheduler for Hadoop which provides a way to share 
       large clusters.</p>
     </section>
     
@@ -237,8 +237,8 @@
         <p>The Capacity Scheduler supports scheduling of tasks on a
         <code>TaskTracker</code>(TT) based on a job's memory requirements
         and the availability of RAM and Virtual Memory (VMEM) on the TT node.
-        See the <a href="mapred_tutorial.html#Memory+monitoring">Hadoop 
-        Map/Reduce tutorial</a> for details on how the TT monitors
+        See the <a href="mapred_tutorial.html#Memory+monitoring"> 
+        MapReduce Tutorial</a> for details on how the TT monitors
         memory usage.</p>
         <p>Currently the memory based scheduling is only supported
         in Linux platform.</p>
@@ -251,8 +251,8 @@
           <code>mapred.task.limit.maxvmem</code>, disables memory-based
           scheduling, just as it disables memory monitoring for a TT. These
           config parameters are described in the 
-          <a href="mapred_tutorial.html#Memory+monitoring">Hadoop Map/Reduce 
-          tutorial</a>. The value of  
+          <a href="mapred_tutorial.html#Memory+monitoring">MapReduce 
+          Tutorial</a>. The value of  
           <code>mapred.tasktracker.vmem.reserved</code> is 
           obtained from the TT via its heartbeat. 
           </li>
@@ -277,8 +277,8 @@
           set, the Scheduler computes the available RAM on the node. Next, 
           the Scheduler figures out the RAM requirements of the job, if any. 
           As with VMEM, users can optionally specify a RAM limit for their job
-          (<code>mapred.task.maxpmem</code>, described in the Map/Reduce 
-          tutorial). The Scheduler also maintains a limit for this value 
+          (<code>mapred.task.maxpmem</code>, described in the MapReduce 
+          Tutorial). The Scheduler also maintains a limit for this value 
           (<code>mapred.capacity-scheduler.task.default-pmem-percentage-in-vmem</code>, 
           described below). All these three values must be set for the 
           Scheduler to schedule tasks based on RAM constraints.
@@ -361,10 +361,10 @@
         <title>Reviewing the configuration of the Capacity Scheduler</title>
         <p>
           Once the installation and configuration is completed, you can review
-          it after starting the Map/Reduce cluster from the admin UI.
+          it after starting the MapReduce cluster from the admin UI.
         </p>
         <ul>
-          <li>Start the Map/Reduce cluster as usual.</li>
+          <li>Start the MapReduce cluster as usual.</li>
           <li>Open the JobTracker web UI.</li>
           <li>The queues you have configured should be listed under the <em>Scheduling
               Information</em> section of the page.</li>

@@ -33,20 +33,20 @@
       Hadoop clusters ranging from a few nodes to extremely large clusters with 
       thousands of nodes.</p>
       <p>
-      To play with Hadoop, you may first want to install Hadoop on a single machine (see <a href="quickstart.html"> Hadoop Quick Start</a>).
+      To play with Hadoop, you may first want to install Hadoop on a single machine (see <a href="single_node_setup.html"> Single Node Setup</a>).
       </p>
     </section>
     
     <section>
-      <title>Pre-requisites</title>
+      <title>Prerequisites</title>
       
       <ol>
         <li>
-          Make sure all <a href="quickstart.html#PreReqs">requisite</a> software 
+          Make sure all <a href="single_node_setup.html#PreReqs">required software</a> 
           is installed on all nodes in your cluster.
         </li>
         <li>
-          <a href="quickstart.html#Download">Get</a> the Hadoop software.
+          <a href="single_node_setup.html#Download">Download</a> the Hadoop software.
         </li>
       </ol>
     </section>
@@ -228,7 +228,7 @@
 		    <tr>
 		      <td>mapred.system.dir</td>
 		      <td>
-		        Path on the HDFS where where the Map/Reduce framework stores 
+		        Path on the HDFS where where the MapReduce framework stores 
 		        system files e.g. <code>/hadoop/mapred/system/</code>.
 		      </td>
 		      <td>
@@ -240,14 +240,14 @@
 		      <td>mapred.local.dir</td>
 		      <td>
 		        Comma-separated list of paths on the local filesystem where 
-		        temporary Map/Reduce data is written.
+		        temporary MapReduce data is written.
 		      </td>
 		      <td>Multiple paths help spread disk i/o.</td>
 		    </tr>
 		    <tr>
 		      <td>mapred.tasktracker.{map|reduce}.tasks.maximum</td>
 		      <td>
-		        The maximum number of Map/Reduce tasks, which are run 
+		        The maximum number of MapReduce tasks, which are run 
 		        simultaneously on a given <code>TaskTracker</code>, individually.
 		      </td>
 		      <td>
@@ -275,7 +275,7 @@
           <td>mapred.queue.names</td>
           <td>Comma separated list of queues to which jobs can be submitted.</td>
           <td>
-            The Map/Reduce system always supports atleast one queue
+            The MapReduce system always supports atleast one queue
             with the name as <em>default</em>. Hence, this parameter's
             value should always contain the string <em>default</em>.
             Some job schedulers supported in Hadoop, like the 
@@ -503,7 +503,7 @@
           
           <section>
             <title>Task Controllers</title>
-            <p>Task controllers are classes in the Hadoop Map/Reduce 
+            <p>Task controllers are classes in the Hadoop MapReduce 
             framework that define how user's map and reduce tasks 
             are launched and controlled. They can 
             be used in clusters that require some customization in 
@@ -662,7 +662,7 @@
           </section>
           <section>
             <title>Monitoring Health of TaskTracker Nodes</title>
-            <p>Hadoop Map/Reduce provides a mechanism by which administrators 
+            <p>Hadoop MapReduce provides a mechanism by which administrators 
             can configure the TaskTracker to run an administrator supplied
             script periodically to determine if a node is healthy or not.
             Administrators can determine if the node is in a healthy state
@@ -892,7 +892,7 @@
     <section>
       <title>Cluster Restartability</title>
       <section>
-        <title>Map/Reduce</title>
+        <title>MapReduce</title>
         <p>The job tracker restart can recover running jobs if 
         <code>mapred.jobtracker.restart.recover</code> is set true and 
         <a href="#Logging">JobHistory logging</a> is enabled. Also 

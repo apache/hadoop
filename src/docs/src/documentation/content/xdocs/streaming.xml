@@ -552,6 +552,8 @@ if __name__ == "__main__":
 </source>
 </section>
 
+
+<!-- QUESTION -->
 <section>
 <title>Hadoop Field Selection Class</title>
 <p>
@@ -784,6 +786,17 @@ to stderr.
 <title>How do I get the JobConf variables in a streaming job's mapper/reducer?</title>
 <p>
 See <a href="mapred_tutorial.html#Configured+Parameters">Configured Parameters</a>. 
+During the execution of a streaming job, the names of the "mapred" parameters are transformed. The dots ( . ) become underscores ( _ ).
+For example, mapred.job.id becomes mapred_job_id and mapred.jar becomes mapred_jar. In your code, use the parameter names with the underscores.
+</p>
+</section>
+
+
+<!-- QUESTION -->
+<section>
+<title>How do I get the JobConf variables in a streaming job's mapper/reducer?</title>
+<p>
+See the <a href="mapred_tutorial.html#Configured+Parameters">Configured Parameters</a>. 
 During the execution of a streaming job, the names of the "mapred" parameters are transformed. The dots ( . ) become underscores ( _ ).
 For example, mapred.job.id becomes mapred_job_id and mapred.jar becomes mapred_jar. In your code, use the parameter names with the underscores.
 </p>

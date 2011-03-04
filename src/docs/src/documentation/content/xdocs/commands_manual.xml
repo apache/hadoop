@@ -161,7 +161,7 @@
 					Runs a generic filesystem user client.
 				</p>
 				<p>
-					The various COMMAND_OPTIONS can be found at <a href="hdfs_shell.html">Hadoop FS Shell Guide</a>.
+					The various COMMAND_OPTIONS can be found at <a href="file_system_shell.html">File System Shell Guide</a>.
 				</p>   
 			</section>
 			

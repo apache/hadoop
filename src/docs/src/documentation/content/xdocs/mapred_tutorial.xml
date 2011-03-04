@@ -20,7 +20,7 @@
 <document>
   
   <header>
-    <title>Map/Reduce Tutorial</title>
+    <title>MapReduce Tutorial</title>
   </header>
   
   <body>
@@ -29,21 +29,21 @@
       <title>Purpose</title>
       
       <p>This document comprehensively describes all user-facing facets of the 
-      Hadoop Map/Reduce framework and serves as a tutorial.
+      Hadoop MapReduce framework and serves as a tutorial.
       </p>
     </section>
     
     <section>
-      <title>Pre-requisites</title>
+      <title>Prerequisites</title>
       
       <p>Ensure that Hadoop is installed, configured and is running. More
       details:</p> 
       <ul>
         <li>
-          <a href="quickstart.html">Hadoop Quick Start</a> for first-time users.
+          <a href="single_node_setup.html">Single Node Setup</a> for first-time users.
         </li>
         <li>
-          <a href="cluster_setup.html">Hadoop Cluster Setup</a> for large, 
+          <a href="cluster_setup.html">Cluster Setup</a> for large, 
           distributed clusters.
         </li>
       </ul>
@@ -52,12 +52,12 @@
     <section>
       <title>Overview</title>
       
-      <p>Hadoop Map/Reduce is a software framework for easily writing 
+      <p>Hadoop MapReduce is a software framework for easily writing 
       applications which process vast amounts of data (multi-terabyte data-sets) 
       in-parallel on large clusters (thousands of nodes) of commodity 
       hardware in a reliable, fault-tolerant manner.</p>
       
-      <p>A Map/Reduce <em>job</em> usually splits the input data-set into 
+      <p>A MapReduce <em>job</em> usually splits the input data-set into 
       independent chunks which are processed by the <em>map tasks</em> in a
       completely parallel manner. The framework sorts the outputs of the maps, 
       which are then input to the <em>reduce tasks</em>. Typically both the 
@@ -66,13 +66,13 @@
       tasks.</p>
       
       <p>Typically the compute nodes and the storage nodes are the same, that is, 
-      the Map/Reduce framework and the Hadoop Distributed File System (see <a href="hdfs_design.html">HDFS Architecture </a>) 
+      the MapReduce framework and the Hadoop Distributed File System (see <a href="hdfs_design.html">HDFS Architecture Guide</a>) 
       are running on the same set of nodes. This configuration
       allows the framework to effectively schedule tasks on the nodes where data 
       is already present, resulting in very high aggregate bandwidth across the 
       cluster.</p>
       
-      <p>The Map/Reduce framework consists of a single master 
+      <p>The MapReduce framework consists of a single master 
       <code>JobTracker</code> and one slave <code>TaskTracker</code> per 
       cluster-node. The master is responsible for scheduling the jobs' component 
       tasks on the slaves, monitoring them and re-executing the failed tasks. The 
@@ -89,7 +89,7 @@
       information to the job-client.</p>
       
       <p>Although the Hadoop framework is implemented in Java<sup>TM</sup>, 
-      Map/Reduce applications need not be written in Java.</p>
+      MapReduce applications need not be written in Java.</p>
       <ul>
         <li>
           <a href="ext:api/org/apache/hadoop/streaming/package-summary">
@@ -100,7 +100,7 @@
         <li>
           <a href="ext:api/org/apache/hadoop/mapred/pipes/package-summary">
           Hadoop Pipes</a> is a <a href="http://www.swig.org/">SWIG</a>-
-          compatible <em>C++ API</em> to implement Map/Reduce applications (non 
+          compatible <em>C++ API</em> to implement MapReduce applications (non 
           JNI<sup>TM</sup> based).
         </li>
       </ul>
@@ -109,7 +109,7 @@
     <section>
       <title>Inputs and Outputs</title>
 
-      <p>The Map/Reduce framework operates exclusively on 
+      <p>The MapReduce framework operates exclusively on 
       <code>&lt;key, value&gt;</code> pairs, that is, the framework views the 
       input to the job as a set of <code>&lt;key, value&gt;</code> pairs and 
       produces a set of <code>&lt;key, value&gt;</code> pairs as the output of 
@@ -123,7 +123,7 @@
       WritableComparable</a> interface to facilitate sorting by the framework.
       </p>
 
-      <p>Input and Output types of a Map/Reduce job:</p>
+      <p>Input and Output types of a MapReduce job:</p>
       <p>
         (input) <code>&lt;k1, v1&gt;</code> 
         -&gt; 
@@ -144,14 +144,14 @@
     <section>
       <title>Example: WordCount v1.0</title>
       
-      <p>Before we jump into the details, lets walk through an example Map/Reduce 
+      <p>Before we jump into the details, lets walk through an example MapReduce 
       application to get a flavour for how they work.</p>
       
       <p><code>WordCount</code> is a simple application that counts the number of
       occurences of each word in a given input set.</p>
       
       <p>This works with a local-standalone, pseudo-distributed or fully-distributed 
-      Hadoop installation(see <a href="quickstart.html"> Hadoop Quick Start</a>).</p>
+      Hadoop installation (<a href="single_node_setup.html">Single Node Setup</a>).</p>
       
       <section>
         <title>Source Code</title>
@@ -608,7 +608,7 @@
         as arguments that are unzipped/unjarred and a link with name of the
         jar/zip are created in the current working directory of tasks. More
         details about the command line options are available at 
-        <a href="commands_manual.html"> Hadoop Command Guide.</a></p>
+        <a href="commands_manual.html">Commands Guide.</a></p>
         
         <p>Running <code>wordcount</code> example with 
         <code>-libjars</code> and <code>-files</code>:<br/>
@@ -696,10 +696,10 @@
     </section>
     
     <section>
-      <title>Map/Reduce - User Interfaces</title>
+      <title>MapReduce - User Interfaces</title>
       
       <p>This section provides a reasonable amount of detail on every user-facing 
-      aspect of the Map/Reduce framwork. This should help users implement, 
+      aspect of the MapReduce framework. This should help users implement, 
       configure and tune their jobs in a fine-grained manner. However, please 
       note that the javadoc for each class/interface remains the most 
       comprehensive documentation available; this is only meant to be a tutorial.
@@ -738,7 +738,7 @@
           to be of the same type as the input records. A given input pair may 
           map to zero or many output pairs.</p> 
  
-          <p>The Hadoop Map/Reduce framework spawns one map task for each 
+          <p>The Hadoop MapReduce framework spawns one map task for each 
           <code>InputSplit</code> generated by the <code>InputFormat</code> for 
           the job.</p>
           
@@ -949,7 +949,7 @@
           <title>Reporter</title>
         
           <p><a href="ext:api/org/apache/hadoop/mapred/reporter">
-          Reporter</a> is a facility for Map/Reduce applications to report 
+          Reporter</a> is a facility for MapReduce applications to report 
           progress, set application-level status messages and update 
           <code>Counters</code>.</p>
  
@@ -972,12 +972,12 @@
         
           <p><a href="ext:api/org/apache/hadoop/mapred/outputcollector">
           OutputCollector</a> is a generalization of the facility provided by
-          the Map/Reduce framework to collect data output by the 
+          the MapReduce framework to collect data output by the 
           <code>Mapper</code> or the <code>Reducer</code> (either the 
           intermediate outputs or the output of the job).</p>
         </section>
       
-        <p>Hadoop Map/Reduce comes bundled with a 
+        <p>Hadoop MapReduce comes bundled with a 
         <a href="ext:api/org/apache/hadoop/mapred/lib/package-summary">
         library</a> of generally useful mappers, reducers, and partitioners.</p>
       </section>
@@ -986,10 +986,10 @@
         <title>Job Configuration</title>
         
         <p><a href="ext:api/org/apache/hadoop/mapred/jobconf">
-        JobConf</a> represents a Map/Reduce job configuration.</p>
+        JobConf</a> represents a MapReduce job configuration.</p>
  
         <p><code>JobConf</code> is the primary interface for a user to describe
-        a Map/Reduce job to the Hadoop framework for execution. The framework 
+        a MapReduce job to the Hadoop framework for execution. The framework 
         tries to faithfully execute the job as described by <code>JobConf</code>, 
         however:</p> 
         <ul>
@@ -1057,7 +1057,7 @@
         <code>-Djava.library.path=&lt;&gt;</code> etc. If the 
         <code>mapred.{map|reduce}.child.java.opts</code> parameters contains the 
         symbol <em>@taskid@</em> it is interpolated with value of 
-        <code>taskid</code> of the Map/Reduce task.</p>
+        <code>taskid</code> of the MapReduce task.</p>
         
         <p>Here is an example with multiple arguments and substitutions, 
         showing jvm GC logging, and start of a passwordless JVM JMX agent so that
@@ -1110,7 +1110,7 @@
         for configuring the launched child tasks from task tracker. Configuring 
         the memory options for daemons is documented in 
         <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
-        cluster_setup.html </a></p>
+       Configuring the Environment of the Hadoop Daemons</a>.</p>
         
         <p>The memory available to some parts of the framework is also
         configurable. In map and reduce tasks, performance may be influenced
@@ -1460,7 +1460,7 @@
         with the <code>JobTracker</code>.</p>
  
         <p><code>JobClient</code> provides facilities to submit jobs, track their 
-        progress, access component-tasks' reports and logs, get the Map/Reduce 
+        progress, access component-tasks' reports and logs, get the MapReduce 
         cluster's status information and so on.</p>
  
         <p>The job submission process involves:</p>
@@ -1472,7 +1472,7 @@
             <code>DistributedCache</code> of the job, if necessary.
           </li>
           <li>
-            Copying the job's jar and configuration to the Map/Reduce system 
+            Copying the job's jar and configuration to the MapReduce system 
             directory on the <code>FileSystem</code>.
           </li>
           <li>
@@ -1512,7 +1512,7 @@
           <code>mapreduce.cluster.job-authorization-enabled</code> is set to
           true. When enabled, access control checks are done by the JobTracker
           and the TaskTracker before allowing users to view
-          job details or to modify a job using Map/Reduce APIs,
+          job details or to modify a job using MapReduce APIs,
           CLI or web user interfaces.</p>
           
           <p>A job submitter can specify access control lists for viewing or
@@ -1563,8 +1563,8 @@
         <section>
           <title>Job Control</title>
  
-          <p>Users may need to chain Map/Reduce jobs to accomplish complex
-          tasks which cannot be done via a single Map/Reduce job. This is fairly
+          <p>Users may need to chain MapReduce jobs to accomplish complex
+          tasks which cannot be done via a single MapReduce job. This is fairly
           easy since the output of the job typically goes to distributed 
           file-system, and the output, in turn, can be used as the input for the 
           next job.</p>
@@ -1675,10 +1675,10 @@
         <title>Job Input</title>
         
         <p><a href="ext:api/org/apache/hadoop/mapred/inputformat">
-        InputFormat</a> describes the input-specification for a Map/Reduce job.
+        InputFormat</a> describes the input-specification for a MapReduce job.
         </p> 
  
-        <p>The Map/Reduce framework relies on the <code>InputFormat</code> of 
+        <p>The MapReduce framework relies on the <code>InputFormat</code> of 
         the job to:</p>
         <ol>
           <li>Validate the input-specification of the job.</li>
@@ -1757,10 +1757,10 @@
         <title>Job Output</title>
         
         <p><a href="ext:api/org/apache/hadoop/mapred/outputformat">
-        OutputFormat</a> describes the output-specification for a Map/Reduce 
+        OutputFormat</a> describes the output-specification for a MapReduce 
         job.</p>
 
-        <p>The Map/Reduce framework relies on the <code>OutputFormat</code> of 
+        <p>The MapReduce framework relies on the <code>OutputFormat</code> of 
         the job to:</p>
         <ol>
           <li>
@@ -1782,9 +1782,9 @@
         
         <p><a href="ext:api/org/apache/hadoop/mapred/outputcommitter">
         OutputCommitter</a> describes the commit of task output for a 
-        Map/Reduce job.</p>
+        MapReduce job.</p>
 
-        <p>The Map/Reduce framework relies on the <code>OutputCommitter</code>
+        <p>The MapReduce framework relies on the <code>OutputCommitter</code>
         of the job to:</p>
         <ol>
           <li>
@@ -1842,7 +1842,7 @@
           (using the attemptid, say <code>attempt_200709221812_0001_m_000000_0</code>), 
           not just per task.</p> 
  
-          <p>To avoid these issues the Map/Reduce framework, when the 
+          <p>To avoid these issues the MapReduce framework, when the 
           <code>OutputCommitter</code> is <code>FileOutputCommitter</code>, 
           maintains a special 
           <code>${mapred.output.dir}/_temporary/_${taskid}</code> sub-directory
@@ -1866,10 +1866,10 @@
           <p>Note: The value of <code>${mapred.work.output.dir}</code> during 
           execution of a particular task-attempt is actually 
           <code>${mapred.output.dir}/_temporary/_{$taskid}</code>, and this value is 
-          set by the Map/Reduce framework. So, just create any side-files in the 
+          set by the MapReduce framework. So, just create any side-files in the 
           path  returned by
           <a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/getworkoutputpath">
-          FileOutputFormat.getWorkOutputPath() </a>from Map/Reduce 
+          FileOutputFormat.getWorkOutputPath() </a>from MapReduce 
           task to take advantage of this feature.</p>
           
           <p>The entire discussion holds true for maps of jobs with 
@@ -1918,7 +1918,7 @@
           <title>Counters</title>
           
           <p><code>Counters</code> represent global counters, defined either by 
-          the Map/Reduce framework or applications. Each <code>Counter</code> can 
+          the MapReduce framework or applications. Each <code>Counter</code> can 
           be of any <code>Enum</code> type. Counters of a particular 
           <code>Enum</code> are bunched into groups of type 
           <code>Counters.Group</code>.</p>
@@ -1942,7 +1942,7 @@
           files efficiently.</p>
  
           <p><code>DistributedCache</code> is a facility provided by the 
-          Map/Reduce framework to cache files (text, archives, jars and so on) 
+          MapReduce framework to cache files (text, archives, jars and so on) 
           needed by applications.</p>
  
           <p>Applications specify the files to be cached via urls (hdfs://)
@@ -2049,7 +2049,7 @@
           interface supports the handling of generic Hadoop command-line options.
           </p>
           
-          <p><code>Tool</code> is the standard for any Map/Reduce tool or 
+          <p><code>Tool</code> is the standard for any MapReduce tool or 
           application. The application should delegate the handling of 
           standard command-line options to 
           <a href="ext:api/org/apache/hadoop/util/genericoptionsparser">
@@ -2082,7 +2082,7 @@
           <title>IsolationRunner</title>
           
           <p><a href="ext:api/org/apache/hadoop/mapred/isolationrunner">
-          IsolationRunner</a> is a utility to help debug Map/Reduce programs.</p>
+          IsolationRunner</a> is a utility to help debug MapReduce programs.</p>
           
           <p>To use the <code>IsolationRunner</code>, first set 
           <code>keep.failed.task.files</code> to <code>true</code> 
@@ -2122,7 +2122,7 @@
           <p>Once user configures that profiling is needed, she/he can use
           the configuration property 
           <code>mapred.task.profile.{maps|reduces}</code> to set the ranges
-          of Map/Reduce tasks to profile. The value can be set using the api 
+          of MapReduce tasks to profile. The value can be set using the api 
           <a href="ext:api/org/apache/hadoop/mapred/jobconf/setprofiletaskrange">
           JobConf.setProfileTaskRange(boolean,String)</a>.
           By default, the specified range is <code>0-2</code>.</p>
@@ -2143,8 +2143,8 @@
         
         <section>
           <title>Debugging</title>
-          <p>The Map/Reduce framework provides a facility to run user-provided 
-          scripts for debugging. When a Map/Reduce task fails, a user can run 
+          <p>The MapReduce framework provides a facility to run user-provided 
+          scripts for debugging. When a MapReduce task fails, a user can run 
           a debug script, to process task logs for example. The script is 
           given access to the task's stdout and stderr outputs, syslog and 
           jobconf. The output from the debug script's stdout and stderr is 
@@ -2177,7 +2177,7 @@
             
           <p>The arguments to the script are the task's stdout, stderr, 
           syslog and jobconf files. The debug command, run on the node where
-          the Map/Reduce task failed, is: <br/>
+          the MapReduce task failed, is: <br/>
           <code> $script $stdout $stderr $syslog $jobconf </code> </p> 
 
           <p> Pipes programs have the c++ program name as a fifth argument
@@ -2197,14 +2197,14 @@
           <title>JobControl</title>
           
           <p><a href="ext:api/org/apache/hadoop/mapred/jobcontrol/package-summary">
-          JobControl</a> is a utility which encapsulates a set of Map/Reduce jobs
+          JobControl</a> is a utility which encapsulates a set of MapReduce jobs
           and their dependencies.</p>
         </section>
         
         <section>
           <title>Data Compression</title>
           
-          <p>Hadoop Map/Reduce provides facilities for the application-writer to
+          <p>Hadoop MapReduce provides facilities for the application-writer to
           specify compression for both intermediate map-outputs and the
           job-outputs i.e. output of the reduces. It also comes bundled with
           <a href="ext:api/org/apache/hadoop/io/compress/compressioncodec">
@@ -2333,12 +2333,12 @@
       <title>Example: WordCount v2.0</title>
       
       <p>Here is a more complete <code>WordCount</code> which uses many of the
-      features provided by the Map/Reduce framework we discussed so far.</p>
+      features provided by the MapReduce framework we discussed so far.</p>
       
       <p>This needs the HDFS to be up and running, especially for the 
       <code>DistributedCache</code>-related features. Hence it only works with a 
-      <a href="quickstart.html#SingleNodeSetup">pseudo-distributed</a> or
-      <a href="quickstart.html#Fully-Distributed+Operation">fully-distributed</a> 
+      <a href="single_node_setup.html#SingleNodeSetup">pseudo-distributed</a> or
+      <a href="single_node_setup.html#Fully-Distributed+Operation">fully-distributed</a>
       Hadoop installation.</p>      
       
       <section>
@@ -3285,7 +3285,7 @@
         <title>Highlights</title>
         
         <p>The second version of <code>WordCount</code> improves upon the 
-        previous one by using some features offered by the Map/Reduce framework:
+        previous one by using some features offered by the MapReduce framework:
         </p>
         <ul>
           <li>

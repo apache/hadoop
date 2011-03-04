@@ -26,7 +26,7 @@
       <title>Purpose</title>
 
       <p>This document describes the Fair Scheduler, a pluggable
-        Map/Reduce scheduler for Hadoop which provides a way to share
+        MapReduce scheduler for Hadoop which provides a way to share
         large clusters.</p>
     </section>
 

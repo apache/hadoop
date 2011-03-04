@@ -1,18 +1,19 @@
 <?xml version="1.0"?>
 <!--
-  Copyright 2002-2004 The Apache Software Foundation
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+       http://www.apache.org/licenses/LICENSE-2.0
 
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
 -->
 
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN"
@@ -21,17 +22,20 @@
 
 <document>
 <header>
-<title>C API to HDFS: libhdfs</title>
+<title>C API libhdfs</title>
 <meta name="http-equiv">Content-Type</meta>
 <meta name="content">text/html;</meta>
 <meta name="charset">utf-8</meta>
 </header>
 <body>
 <section>
-<title>C API to HDFS: libhdfs</title>
+<title>Overview</title>
 
 <p>
-libhdfs is a JNI based C api for Hadoop's DFS. It provides C apis to a subset of the HDFS APIs to manipulate DFS files and the filesystem. libhdfs is part of the hadoop distribution and comes pre-compiled in ${HADOOP_HOME}/libhdfs/libhdfs.so .
+libhdfs is a JNI based C API for Hadoop's Distributed File System (HDFS).
+It provides C APIs to a subset of the HDFS APIs to manipulate HDFS files and
+the filesystem. libhdfs is part of the Hadoop distribution and comes 
+pre-compiled in ${HADOOP_HOME}/libhdfs/libhdfs.so .
 </p>
 
 </section>
@@ -46,7 +50,7 @@ The header file for libhdfs describes each API in detail and is available in ${H
 </p>
 </section>
 <section>
-<title>A sample program</title>
+<title>A Sample Program</title>
 
 <source>
 #include "hdfs.h" 
@@ -73,24 +77,36 @@ int main(int argc, char **argv) {
 </section>
 
 <section>
-<title>How to link with the library</title>
+<title>How To Link With The Library</title>
 <p>
-See the Makefile for hdfs_test.c in the libhdfs source directory (${HADOOP_HOME}/src/c++/libhdfs/Makefile) or something like:
+See the Makefile for hdfs_test.c in the libhdfs source directory (${HADOOP_HOME}/src/c++/libhdfs/Makefile) or something like:<br />
 gcc above_sample.c -I${HADOOP_HOME}/src/c++/libhdfs -L${HADOOP_HOME}/libhdfs -lhdfs -o above_sample
 </p>
 </section>
 <section>
-<title>Common problems</title>
+<title>Common Problems</title>
 <p>
-The most common problem is the CLASSPATH is not set properly when calling a program that uses libhdfs. Make sure you set it to all the hadoop jars needed to run Hadoop itself. Currently, there is no way to programmatically generate the classpath, but a good bet is to include all the jar files in ${HADOOP_HOME} and ${HADOOP_HOME}/lib as well as the right configuration directory containing hdfs-site.xml
+The most common problem is the CLASSPATH is not set properly when calling a program that uses libhdfs. 
+Make sure you set it to all the Hadoop jars needed to run Hadoop itself. Currently, there is no way to 
+programmatically generate the classpath, but a good bet is to include all the jar files in ${HADOOP_HOME} 
+and ${HADOOP_HOME}/lib as well as the right configuration directory containing hdfs-site.xml
 </p>
 </section>
 <section>
-<title>libhdfs is thread safe</title>
-<p>Concurrency and Hadoop FS "handles" - the hadoop FS implementation includes a FS handle cache which caches based on the URI of the namenode along with the user connecting. So, all calls to hdfsConnect will return the same handle but calls to hdfsConnectAsUser with different users will return different handles.  But, since HDFS client handles are completely thread safe, this has no bearing on concurrency. 
-</p>
-<p>Concurrency and libhdfs/JNI - the libhdfs calls to JNI should always be creating thread local storage, so (in theory), libhdfs should be as thread safe as the underlying calls to the Hadoop FS.
-</p>
+<title>Thread Safe</title>
+<p>libhdfs is thread safe</p>
+<ul>
+<li>Concurrency and Hadoop FS "handles" 
+<br />The Hadoop FS implementation includes a FS handle cache which caches based on the URI of the 
+namenode along with the user connecting. So, all calls to hdfsConnect will return the same handle but 
+calls to hdfsConnectAsUser with different users will return different handles.  But, since HDFS client 
+handles are completely thread safe, this has no bearing on concurrency. 
+</li>
+<li>Concurrency and libhdfs/JNI 
+<br />The libhdfs calls to JNI should always be creating thread local storage, so (in theory), libhdfs 
+should be as thread safe as the underlying calls to the Hadoop FS.
+</li>
+</ul>
 </section>
 </body>
 </document>

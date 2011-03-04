@@ -31,52 +31,50 @@ See http://forrest.apache.org/docs/linking.html for more info.
 
 <site label="Hadoop" href="" xmlns="http://apache.org/forrest/linkmap/1.0">
   
-   <docs label="Getting Started"> 
-		<overview   				label="Overview" 					href="index.html" />
-		<quickstart 				label="Quick Start"        		href="quickstart.html" />
-		<setup     					label="Cluster Setup"      		href="cluster_setup.html" />
-		<mapred    				label="Map/Reduce Tutorial" 	href="mapred_tutorial.html" />
-  </docs>	
-		
- <docs label="Programming Guides">
-		<commands 				label="Commands"     					href="commands_manual.html" />
-		<distcp    					label="DistCp"       						href="distcp.html" />
-		<native_lib    				label="Native Libraries" 					href="native_libraries.html" />
-		<streaming 				label="Streaming"          				href="streaming.html" />
-		<fair_scheduler 			label="Fair Scheduler" 					href="fair_scheduler.html"/>
-		<cap_scheduler 		label="Capacity Scheduler" 			href="capacity_scheduler.html"/>
-		<SLA					 	label="Service Level Authorization" 	href="service_level_auth.html"/>
-		<vaidya    					label="Vaidya" 								href="vaidya.html"/>
-		<archives  				label="Archives"     						href="hadoop_archives.html"/>
- 		<gridmix  				label="Gridmix"     href="gridmix.html"/>
-		<sec_impersonation			label="Secure Impersonation" 			href="Secure_Impersonation.html"/>
-   </docs>
-   
-   <docs label="HDFS">
-		<hdfs_user      				label="User Guide"    							href="hdfs_user_guide.html" />
-		<hdfs_arch     				label="Architecture"  								href="hdfs_design.html" />	
-		<hdfs_fs       	 				label="File System Shell Guide"     		href="hdfs_shell.html" />
-		<hdfs_perm      				label="Permissions Guide"    					href="hdfs_permissions_guide.html" />
-		<hdfs_quotas     			label="Quotas Guide" 							href="hdfs_quota_admin_guide.html" />
-		<hdfs_SLG        			label="Synthetic Load Generator Guide"  href="SLG_user_guide.html" />
-		<hdfs_libhdfs   				label="C API libhdfs"         						href="libhdfs.html" /> 
-   </docs> 
-   
-   <docs label="HOD">
-		<hod_user 	label="User Guide" 	href="hod_user_guide.html"/>
-		<hod_admin 	label="Admin Guide" 	href="hod_admin_guide.html"/>
-		<hod_config 	label="Config Guide" 	href="hod_config_guide.html"/> 
-   </docs> 
-   
-   <docs label="Miscellaneous"> 
-		<api       	label="API Docs"           href="ext:api/index" />
-		<jdiff     	label="API Changes"      href="ext:jdiff/changes" />
-		<wiki      	label="Wiki"               	href="ext:wiki" />
-		<faq       	label="FAQ"                	href="ext:faq" />
-		<relnotes  label="Release Notes" 	href="ext:relnotes" />
-		<changes	label="Change Log"       href="ext:changes" />
-   </docs> 
-   
+  <docs label="Getting Started">
+    <overview label="Overview"  href="index.html" />  
+    <single   label="Single Node Setup"  href="single_node_setup.html" />
+    <cluster  label="Cluster Setup"  href="cluster_setup.html" />
+  </docs>  
+       
+  <docs label="MapReduce">
+    <mapred     label="MapReduce Tutorial"   href="mapred_tutorial.html" />
+    <streaming  label="Hadoop Streaming"  href="streaming.html" />
+    <commands label="Hadoop Commands"  href="commands_manual.html" />
+    <distcp         label="DistCp"  href="distcp.html" />
+    <vaidya         label="Vaidya"  href="vaidya.html"/>
+    <archives     label="Hadoop Archives" href="hadoop_archives.html"/>
+    <gridmix       label="Gridmix"  href="gridmix.html"/>
+    <cap_scheduler  label="Capacity Scheduler" href="capacity_scheduler.html"/>
+    <fair_scheduler    label="Fair Scheduler"  href="fair_scheduler.html"/>
+    <cap_scheduler  label="Hod Scheduler"  href="hod_scheduler.html"/>
+  </docs>
+  
+  <docs label="HDFS">
+    <hdfs_user          label="HDFS Users "  href="hdfs_user_guide.html" />
+    <hdfs_arch          label="HDFS Architecture" href="hdfs_design.html" />
+    <hdfs_perm        label="Permissions" href="hdfs_permissions_guide.html" />
+    <hdfs_quotas      label="Quotas" href="hdfs_quota_admin_guide.html" />
+    <hdfs_SLG         label="Synthetic Load Generator"  href="SLG_user_guide.html" />
+    <hdfs_libhdfs       label="C API libhdfs" href="libhdfs.html" />
+  </docs>
+  
+  <docs label="Common"> 
+    <fsshell       label="File System Shell" href="file_system_shell.html" />
+    <SLA      label="Service Level Authorization" href="service_level_auth.html"/>
+    <native_lib   label="Native Libraries" href="native_libraries.html" />
+  </docs>    
+  
+  <docs label="Miscellaneous"> 
+    <sec_impersonation label="Secure Impersonation" href="Secure_Impersonation.html"/>
+    <api         label="API Docs"           href="ext:api/index" />
+    <jdiff       label="API Changes"      href="ext:jdiff/changes" />
+    <wiki        label="Wiki"                 href="ext:wiki" />
+    <faq         label="FAQ"                  href="ext:faq" />
+    <relnotes  label="Release Notes"   href="ext:relnotes" />
+    <changes  label="Change Log"       href="ext:changes" />
+  </docs> 
+
   <external-refs>
     <site      href="http://hadoop.apache.org/core/"/>
     <lists     href="http://hadoop.apache.org/core/mailing_lists.html"/>

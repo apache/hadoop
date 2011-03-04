@@ -17,11 +17,11 @@
 <!DOCTYPE document PUBLIC "-//APACHE//DTD Documentation V2.0//EN" "http://forrest.apache.org/dtd/document-v20.dtd">
 <document>
         <header>
-        <title>Archives Guide</title>
+        <title>Hadoop Archives Guide</title>
         </header>
         <body>
         <section>
-        <title> What are Hadoop archives? </title>
+        <title>Overview</title>
         <p>
         Hadoop archives are special format archives. A Hadoop archive
         maps to a file system directory. A Hadoop archive always has a *.har
@@ -33,7 +33,7 @@
         </section>
         
         <section>
-        <title> How to create an archive? </title>
+        <title>How to Create an Archive</title>
         <p>
         <code>Usage: hadoop archive -archiveName name -p &lt;parent&gt; &lt;src&gt;* &lt;dest&gt;</code>
         </p>
@@ -51,7 +51,7 @@
         </section>
         
         <section>
-        <title> How to look up files in archives? </title>
+        <title>How to Look Up Files in Archives</title>
         <p>
         The archive exposes itself as a file system layer. So all the fs shell
         commands in the archives work but with a different URI. Also, note that
@@ -64,7 +64,10 @@
         </section>
 
  		<section>
- 		<title> Example on creating and looking up archives </title>
+ 		<title>Archives Examples</title>
+ 		<section>
+	    <title>Creating an Archive</title>
+			
         <p><code>hadoop archive -archiveName foo.har -p /user/hadoop dir1 dir2 /user/zoo </code></p>
         <p>
          The above example is creating an archive using /user/hadoop as the relative archive directory.
@@ -73,11 +76,11 @@
         files. If you want to delete the input files after creating the archives (to reduce namespace), you
         will have to do it on your own. 
         </p>
-
+        </section>
         <section>
-        <title> Looking up files and understanding the -p option </title>
+        <title> Looking Up Files</title>
 		 <p> Looking up files in hadoop archives is as easy as doing an ls on the filesystem. After you have
-		 archived the directories /user/hadoop/dir1 and /user/hadoop/dir2 as in the exmaple above, to see all
+		 archived the directories /user/hadoop/dir1 and /user/hadoop/dir2 as in the example above, to see all
 		 the files in the archives you can just run: </p>
 		 <p><code>hadoop dfs -lsr har:///user/zoo/foo.har/</code></p>
 		 <p> To understand the significance of the -p argument, lets go through the above example again. If you just do
@@ -87,7 +90,7 @@
 		 <source>
 har:///user/zoo/foo.har/dir1
 har:///user/zoo/foo.har/dir2
-		 </source>
+</source>
 		 <p> As you can recall the archives were created with the following command </p>
         <p><code>hadoop archive -archiveName foo.har -p /user/hadoop dir1 dir2 /user/zoo </code></p>
         <p> If we were to change the command to: </p>
@@ -98,7 +101,7 @@ har:///user/zoo/foo.har/dir2
         <source>
 har:///user/zoo/foo.har/hadoop/dir1
 har:///user/zoo/foo.har/hadoop/dir2
-		</source>
+</source>
 		<p>
 		Notice that the archived files have been archived relative to /user/ rather than /user/hadoop.
 		</p>
@@ -106,11 +109,11 @@ har:///user/zoo/foo.har/hadoop/dir2
 		</section>
 		
 		<section>
-		<title> Using Hadoop Archives with Map Reduce </title> 
-		<p>Using Hadoop Archives in Map Reduce is as easy as specifying a different input filesystem than the default file system.
-		If you have a hadoop archive stored in HDFS in /user/zoo/foo.har then for using this archive for Map Reduce input, all
+		<title>Hadoop Archives and MapReduce </title> 
+		<p>Using Hadoop Archives in MapReduce is as easy as specifying a different input filesystem than the default file system.
+		If you have a hadoop archive stored in HDFS in /user/zoo/foo.har then for using this archive for MapReduce input, all
 		you need to specify the input directory as har:///user/zoo/foo.har. Since Hadoop Archives is exposed as a file system 
-		Map Reduce will be able to use all the logical input files in Hadoop Archives as input.</p>
+		MapReduce will be able to use all the logical input files in Hadoop Archives as input.</p>
         </section>
   </body>
 </document>

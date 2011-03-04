@@ -67,7 +67,7 @@ which will be used to configure the chosen Forrest skin.
   <project-name>Hadoop</project-name>
   <project-description>Scalable Computing Platform</project-description>
   <project-url>http://hadoop.apache.org/core/</project-url>
-  <project-logo>images/core-logo.gif</project-logo>
+  <project-logo>images/hadoop-logo-2.gif</project-logo>
 
   <!-- group logo -->
   <group-name>Hadoop</group-name>

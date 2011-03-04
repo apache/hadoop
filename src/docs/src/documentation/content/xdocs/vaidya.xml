@@ -40,7 +40,7 @@
     </section>
     
     <section>
-      <title>Pre-requisites</title>
+      <title>Prerequisites</title>
       
       <p>Ensure that Hadoop is installed and configured. More details:</p> 
       <ul>
@@ -58,11 +58,11 @@
       
       <p>Hadoop Vaidya (Vaidya in Sanskrit language means "one who knows", or "a physician") 
 	    is a rule based performance diagnostic tool for 
-        Map/Reduce jobs. It performs a post execution analysis of map/reduce 
+        MapReduce jobs. It performs a post execution analysis of map/reduce 
         job by parsing and collecting execution statistics through job history 
         and job configuration files. It runs a set of predefined tests/rules 
         against job execution statistics to diagnose various performance problems. 
-        Each test rule detects a specific performance problem with the Map/Reduce job and provides 
+        Each test rule detects a specific performance problem with the MapReduce job and provides 
         a targeted advice to the user. This tool generates an XML report based on 
         the evaluation results of individual test rules.
       </p>
@@ -74,9 +74,9 @@
 	 
 	 <p> This section describes main concepts and terminology involved with Hadoop Vaidya,</p>
 		<ul>
-			<li> <em>PostExPerformanceDiagnoser</em>: This class extends the base Diagnoser class and acts as a driver for post execution performance analysis of Map/Reduce Jobs. 
+			<li> <em>PostExPerformanceDiagnoser</em>: This class extends the base Diagnoser class and acts as a driver for post execution performance analysis of MapReduce Jobs. 
                        It detects performance inefficiencies by executing a set of performance diagnosis rules against the job execution statistics.</li>
-			<li> <em>Job Statistics</em>: This includes the job configuration information (job.xml) and various counters logged by Map/Reduce job as a part of the job history log
+			<li> <em>Job Statistics</em>: This includes the job configuration information (job.xml) and various counters logged by MapReduce job as a part of the job history log
 		           file. The counters are parsed and collected into the Job Statistics data structures, which contains global job level aggregate counters and 
 			     a set of counters for each Map and Reduce task.</li>
 			<li> <em>Diagnostic Test/Rule</em>: This is a program logic that detects the inefficiency of M/R job based on the job statistics. The
@@ -140,8 +140,7 @@
     <section>
 		<title>How to Write and Execute your own Tests</title>
 		<p>Writing and executing your own test rules is not very hard. You can take a look at Hadoop Vaidya source code for existing set of tests. 
-		   The source code is at this <a href="http://svn.apache.org/viewvc/hadoop/core/trunk/src/contrib/vaidya/src/java/org/apache/hadoop/vaidya/">hadoop svn repository location</a>
-		   . The default set of tests are under <code>"postexdiagnosis/tests/"</code> folder.</p>
+		   The source code is at this <a href="http://svn.apache.org/viewvc/hadoop/core/trunk/src/contrib/vaidya/src/java/org/apache/hadoop/vaidya/">hadoop svn repository location</a>. The default set of tests are under <code>"postexdiagnosis/tests/"</code> folder.</p>
 		<ul>
 		  <li>Writing a test class for your new test case should extend the <code>org.apache.hadoop.vaidya.DiagnosticTest</code> class and 
 		       it should override following three methods from the base class, 
