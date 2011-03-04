@@ -114,6 +114,12 @@ public class TestIPCServerResponder extends TestCase {
     }
   }
 
+  public void testResponseBuffer() throws Exception {
+    Server.INITIAL_RESP_BUF_SIZE = 1;
+    Server.MAX_RESP_BUF_SIZE = 1;
+    testServerResponder(1, true, 1, 1, 5);
+  }
+
   public void testServerResponder() throws Exception {
     testServerResponder(10, true, 1, 10, 200);
   }

@@ -100,6 +100,12 @@ public abstract class Server {
    */
   private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
   
+  /**
+   * Initial and max size of response buffer
+   */
+  static int INITIAL_RESP_BUF_SIZE = 10240;
+  static int MAX_RESP_BUF_SIZE = 1024*1024;
+    
   public static final Log LOG = LogFactory.getLog(Server.class);
 
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
@@ -1146,7 +1152,8 @@ public abstract class Server {
     public void run() {
       LOG.info(getName() + ": starting");
       SERVER.set(Server.this);
-      ByteArrayOutputStream buf = new ByteArrayOutputStream(10240);
+      ByteArrayOutputStream buf = 
+        new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
       while (running) {
         try {
           final Call call = callQueue.take(); // pop the queue; maybe blocked here
@@ -1186,10 +1193,16 @@ public abstract class Server {
             error = StringUtils.stringifyException(e);
           }
           CurCall.set(null);
-
           setupResponse(buf, call, 
                         (error == null) ? Status.SUCCESS : Status.ERROR, 
                         value, errorClass, error);
+          // Discard the large buf and reset it back to 
+          // smaller size to freeup heap
+          if (buf.size() > MAX_RESP_BUF_SIZE) {
+            LOG.warn("Large response size " + buf.size() + " for call " + 
+                call.toString());
+            buf = new ByteArrayOutputStream(INITIAL_RESP_BUF_SIZE);
+          }
           responder.doRespond(call);
         } catch (InterruptedException e) {
           if (running) {                          // unexpected -- log it
