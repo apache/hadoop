@@ -222,14 +222,13 @@ public class TestDFSClientRetries extends TestCase {
       return null;
     }
 
-    public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+    public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
         throws InvalidToken, IOException {
-      return false;
+      return 0;
     }
 
-    public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+    public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
         throws IOException {
-      return false;
     }
   }
   

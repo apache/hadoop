@@ -360,14 +360,16 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     return namesystem.getDelegationToken(renewer);
   }
 
-  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  @Override
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     return namesystem.renewDelegationToken(token);
   }
 
-  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+  @Override
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    return namesystem.cancelDelegationToken(token);
+    namesystem.cancelDelegationToken(token);
   }
   
   /** {@inheritDoc} */

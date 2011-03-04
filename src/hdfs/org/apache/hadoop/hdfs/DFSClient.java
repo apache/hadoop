@@ -262,18 +262,24 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     return namenode.getDelegationToken(renewer);
   }
 
-  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     try {
       return namenode.renewDelegationToken(token);
     } catch (RemoteException re) {
-      throw re.unwrapRemoteException(InvalidToken.class);
+      throw re.unwrapRemoteException(InvalidToken.class,
+                                     AccessControlException.class);
     }
   }
 
-  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws IOException {
-    return namenode.cancelDelegationToken(token);
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws InvalidToken, IOException {
+    try {
+      namenode.cancelDelegationToken(token);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(InvalidToken.class,
+                                     AccessControlException.class);
+    }
   }
   
   /**

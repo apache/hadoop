@@ -497,19 +497,18 @@ public interface ClientProtocol extends VersionedProtocol {
    * Renew an existing delegation token.
    *
    * @param token delegation token obtained earlier
-   * @return True if renewed successfully else false
+   * @return the new expiration time
    * @throws IOException
    */
-  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException;
 
   /**
    * Cancel an existing delegation token.
    *
    * @param token delegation token
-   * @return True if canceled successfully else false
    * @throws IOException
    */
-  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException;
 }

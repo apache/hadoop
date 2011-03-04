@@ -19,6 +19,8 @@
 .settings
 .svn
 build/
+build.properties
+build-fi/
 conf/masters
 conf/slaves
 conf/hadoop-env.sh
@@ -29,6 +31,8 @@ conf/hdfs-site.xml
 conf/hadoop-policy.xml
 conf/capacity-scheduler.xml
 docs/api/
+ivy/ivy-*.jar
+ivy/maven-ant-tasks-*.jar
 logs/
 src/contrib/ec2/bin/hadoop-ec2-env.sh
 src/contrib/index/conf/index-config.xml

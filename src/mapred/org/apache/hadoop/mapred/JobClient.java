@@ -69,6 +69,7 @@ import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -1803,29 +1804,34 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   /**
    * Renew a delegation token
    * @param token the token to renew
-   * @return true if the renewal went well
+   * @return the new expiration time
    * @throws InvalidToken
    * @throws IOException
    */
-  public boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
   throws InvalidToken, IOException, InterruptedException {
     try {
       return jobSubmitClient.renewDelegationToken(token);
     } catch (RemoteException re) {
-      throw re.unwrapRemoteException(InvalidToken.class);
+      throw re.unwrapRemoteException(InvalidToken.class,
+                                     AccessControlException.class);
     }
   }
 
   /**
    * Cancel a delegation token from the JobTracker
    * @param token the token to cancel
-   * @return true if everything went well
    * @throws IOException
    */
-  public boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token
-                                       ) throws IOException, 
-                                                InterruptedException {
-    return jobSubmitClient.cancelDelegationToken(token);
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token
+                                    ) throws IOException, 
+                                             InterruptedException {
+    try {
+      jobSubmitClient.cancelDelegationToken(token);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(InvalidToken.class,
+                                     AccessControlException.class);
+    }
   }
  
   /**

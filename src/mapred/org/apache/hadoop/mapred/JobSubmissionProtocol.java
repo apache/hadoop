@@ -262,21 +262,20 @@ interface JobSubmissionProtocol extends VersionedProtocol {
   /**
    * Renew an existing delegation token
    * @param token the token to renew
-   * @return true if the token was successfully renewed
+   * @return the new expiration time
    * @throws IOException
    * @throws InterruptedException
    */ 
-  public boolean renewDelegationToken(Token<DelegationTokenIdentifier> token
-                                      ) throws IOException,
-                                               InterruptedException;
+  public long renewDelegationToken(Token<DelegationTokenIdentifier> token
+                                   ) throws IOException,
+                                            InterruptedException;
 
   /**
    * Cancel a delegation token.
    * @param token the token to cancel
-   * @return true if the token was successfully canceled
    * @throws IOException
    * @throws InterruptedException
    */ 
-  public boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token
-                                       ) throws IOException,InterruptedException;
+  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token
+                                    ) throws IOException,InterruptedException;
 }

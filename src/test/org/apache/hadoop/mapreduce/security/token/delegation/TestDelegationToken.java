@@ -28,8 +28,11 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -85,12 +88,27 @@ public class TestDelegationToken {
     System.out.println("max time: " + maxTime);
     assertTrue("createTime < current", createTime < currentTime);
     assertTrue("current < maxTime", currentTime < maxTime);
-    assertTrue("alice renew", client.renewDelegationToken(token));
-    assertTrue("alice renew", client.renewDelegationToken(token));
-    assertFalse("bob renew", bobClient.renewDelegationToken(token));
-    assertFalse("bob cancel", bobClient.cancelDelegationToken(token));
-    assertTrue("alice cancel", client.cancelDelegationToken(token));
-    assertFalse("second alice cancel", client.cancelDelegationToken(token));
+    client.renewDelegationToken(token);
+    client.renewDelegationToken(token);
+    try {
+      bobClient.renewDelegationToken(token);
+      Assert.fail("bob renew");
+    } catch (AccessControlException ace) {
+      // PASS
+    }
+    try {
+      bobClient.cancelDelegationToken(token);
+      Assert.fail("bob renew");
+    } catch (AccessControlException ace) {
+      // PASS
+    }
+    client.cancelDelegationToken(token);
+    try {
+      client.cancelDelegationToken(token);
+      Assert.fail("second alice cancel");
+    } catch (InvalidToken it) {
+      // PASS
+    }
   }
 }
 

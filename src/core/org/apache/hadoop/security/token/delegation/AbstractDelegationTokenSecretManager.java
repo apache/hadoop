@@ -34,6 +34,8 @@ import javax.crypto.SecretKey;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
@@ -185,11 +187,15 @@ extends AbstractDelegationTokenIdentifier>
   }
 
   /**
-   * Renew a delegation token. Canceled tokens are not renewed. Return true if
-   * the token is successfully renewed; false otherwise.
+   * Renew a delegation token.
+   * @param token the token to renew
+   * @param renewer the full principal name of the user doing the renewal
+   * @return the new expiration time
+   * @throws InvalidToken if the token is invalid
+   * @throws AccessControlException if the user can't renew token
    */
-  public Boolean renewToken(Token<TokenIdent> token,
-      String renewer) throws InvalidToken, IOException {
+  public long renewToken(Token<TokenIdent> token,
+                         String renewer) throws InvalidToken, IOException {
     long now = System.currentTimeMillis();
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
@@ -197,71 +203,76 @@ extends AbstractDelegationTokenIdentifier>
     id.readFields(in);
     synchronized (currentTokens) {
       if (currentTokens.get(id) == null) {
-        LOG.warn("Renewal request for unknown token");
-        return false;
+        throw new InvalidToken("Renewal request for unknown token");
       }
     }
     if (id.getMaxDate() < now) {
-      LOG.warn("Client " + renewer + " tries to renew an expired token");
-      return false;
+      throw new InvalidToken("User " + renewer + 
+                             " tried to renew an expired token");
     }
-    if (id.getRenewer() == null || !id.getRenewer().toString().equals(renewer)) {
-      LOG.warn("Client " + renewer + " tries to renew a token with "
-          + "renewer specified as " + id.getRenewer());
-      return false;
+    if (id.getRenewer() == null) {
+      throw new AccessControlException("User " + renewer + 
+                                       " tried to renew a token without " +
+                                       "a renewer");
+    }
+    if (!id.getRenewer().toString().equals(renewer)) {
+      throw new AccessControlException("Client " + renewer + 
+                                       " tries to renew a token with " +
+                                       "renewer specified as " + 
+                                       id.getRenewer());
     }
     DelegationKey key = null;
     synchronized (this) {
       key = allKeys.get(id.getMasterKeyId());
     }
     if (key == null) {
-      LOG.warn("Unable to find master key for keyId=" + id.getMasterKeyId() 
-          + " from cache. Failed to renew an unexpired token with sequenceNumber=" 
-          + id.getSequenceNumber() + ", issued by this key");
-      return false;
+      throw new InvalidToken("Unable to find master key for keyId=" + 
+                             id.getMasterKeyId() +
+                             " from cache. Failed to renew an unexpired token"+
+                             " with sequenceNumber=" + id.getSequenceNumber());
     }
     byte[] password = createPassword(token.getIdentifier(), key.getKey());
     if (!Arrays.equals(password, token.getPassword())) {
-      LOG.warn("Client " + renewer + " is trying to renew a token with wrong password");
-      return false;
+      throw new AccessControlException("Client " + renewer + 
+                                       " is trying to renew a token with " +
+                                       "wrong password");
     }
     DelegationTokenInformation info = new DelegationTokenInformation(
         Math.min(id.getMaxDate(), now + tokenRenewInterval), password);
     synchronized (currentTokens) {
       currentTokens.put(id, info);
     }
-    return true;
+    return info.getRenewDate();
   }
   
   /**
-   * Cancel a token by removing it from cache. Return true if 
-   * token exists in cache; false otherwise.
+   * Cancel a token by removing it from cache.
+   * @throws InvalidToken for invalid token
+   * @throws AccessControlException if the user isn't allowed to cancel
    */
-  public Boolean cancelToken(Token<TokenIdent> token,
+  public void cancelToken(Token<TokenIdent> token,
       String canceller) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
-    if (id.getRenewer() == null) {
-      LOG.warn("Renewer is null: Invalid Identifier");
-      return false;
-    }
     if (id.getUser() == null) {
-      LOG.warn("owner is null: Invalid Identifier");
-      return false;
+      throw new InvalidToken("Token with no owner");
     }
     String owner = id.getUser().getUserName();
-    String renewer = id.getRenewer().toString();
-    if (!canceller.equals(owner) && !canceller.equals(renewer)) {
-      LOG.warn(canceller + " is not authorized to cancel the token");
-      return false;
+    Text renewer = id.getRenewer();
+    if (!canceller.equals(owner) && 
+        (renewer == null || !canceller.equals(renewer.toString()))) {
+      throw new AccessControlException(canceller + 
+                                      " is not authorized to cancel the token");
     }
     DelegationTokenInformation info = null;
     synchronized (currentTokens) {
       info = currentTokens.remove(id);
     }
-    return info != null;
+    if (info == null) {
+      throw new InvalidToken("Token not found");
+    }
   }
   
   /**
