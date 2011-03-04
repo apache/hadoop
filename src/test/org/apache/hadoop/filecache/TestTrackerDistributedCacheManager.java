@@ -175,7 +175,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
       manager.newTaskDistributedCacheManager(jobid, subConf);
     assertNull(null, DistributedCache.getLocalCacheFiles(subConf));
     File workDir = new File(new Path(TEST_ROOT_DIR, "workdir").toString());
-    handle.setupCache(TaskTracker.getPublicDistributedCacheDir(), 
+    handle.setupCache(subConf, TaskTracker.getPublicDistributedCacheDir(), 
         TaskTracker.getPrivateDistributedCacheDir(userName));
     JobLocalizer.downloadPrivateCache(subConf);
     // DOESN'T ACTUALLY HAPPEN IN THE TaskRunner (THIS IS A TODO)
@@ -251,7 +251,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     // Task localizing for first job
     TaskDistributedCacheManager handle = manager
         .newTaskDistributedCacheManager(new JobID("jt", 1), conf1);
-    handle.setupCache(TaskTracker.getPublicDistributedCacheDir(), 
+    handle.setupCache(conf1, TaskTracker.getPublicDistributedCacheDir(), 
         TaskTracker.getPrivateDistributedCacheDir(userName));
     JobLocalizer.downloadPrivateCache(conf1);
     handle.release();
@@ -281,7 +281,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     handle = manager.newTaskDistributedCacheManager(new JobID("jt", 2), conf2);
     Throwable th = null;
     try {
-      handle.setupCache(TaskTracker.getPublicDistributedCacheDir(),
+      handle.setupCache(conf2, TaskTracker.getPublicDistributedCacheDir(),
           TaskTracker.getPrivateDistributedCacheDir(userName));
       JobLocalizer.downloadPrivateCache(conf2);
     } catch (IOException e) {
@@ -403,7 +403,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     // Task localizing for job
     TaskDistributedCacheManager handle = manager
         .newTaskDistributedCacheManager(new JobID("jt", 1), conf1);
-    handle.setupCache(TaskTracker.getPublicDistributedCacheDir(),
+    handle.setupCache(conf1, TaskTracker.getPublicDistributedCacheDir(),
         TaskTracker.getPrivateDistributedCacheDir(userName));
     JobLocalizer.downloadPrivateCache(conf1);
     TaskDistributedCacheManager.CacheFile c = handle.getCacheFiles().get(0);
@@ -756,7 +756,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
       manager.newTaskDistributedCacheManager(new JobID("jt", 1), subConf);
     assertNull(null, DistributedCache.getLocalCacheFiles(subConf));
     File workDir = new File(new Path(TEST_ROOT_DIR, "workdir").toString());
-    handle.setupCache(TaskTracker.getPublicDistributedCacheDir(), 
+    handle.setupCache(subConf, TaskTracker.getPublicDistributedCacheDir(), 
         TaskTracker.getPrivateDistributedCacheDir(userName));
     //TODO this doesn't really happen in the TaskRunner
 //    handle.setupPrivateCache(localDirAllocator, TaskTracker
@@ -780,7 +780,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     // running a task of the same job
     Throwable th = null;
     try {
-      handle.setupCache(TaskTracker.getPublicDistributedCacheDir(),
+      handle.setupCache(subConf, TaskTracker.getPublicDistributedCacheDir(),
           TaskTracker.getPrivateDistributedCacheDir(userName));
 //      handle.setupPrivateCache(localDirAllocator, TaskTracker
 //          .getPrivateDistributedCacheDir(userName));
@@ -802,7 +802,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     
     handle =
       manager.newTaskDistributedCacheManager(new JobID("jt", 2), subConf2);
-    handle.setupCache(TaskTracker.getPublicDistributedCacheDir(), 
+    handle.setupCache(subConf2, TaskTracker.getPublicDistributedCacheDir(), 
         TaskTracker.getPrivateDistributedCacheDir(userName));
     Path[] localCacheFiles2 = DistributedCache.getLocalCacheFiles(subConf2);
     assertNotNull(null, localCacheFiles2);

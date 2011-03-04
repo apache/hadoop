@@ -46,7 +46,6 @@ import org.apache.hadoop.mapred.JobLocalizer;
  */
 public class TaskDistributedCacheManager {
   private final TrackerDistributedCacheManager distributedCacheManager;
-  private final Configuration taskConf;
   private final List<CacheFile> cacheFiles = new ArrayList<CacheFile>();
   private final List<String> classPaths = new ArrayList<String>();
   
@@ -143,7 +142,6 @@ public class TaskDistributedCacheManager {
       TrackerDistributedCacheManager distributedCacheManager,
       Configuration taskConf) throws IOException {
     this.distributedCacheManager = distributedCacheManager;
-    this.taskConf = taskConf;
     
     this.cacheFiles.addAll(
         CacheFile.makeCacheFiles(DistributedCache.getCacheFiles(taskConf),
@@ -169,8 +167,8 @@ public class TaskDistributedCacheManager {
    * It is the caller's responsibility to re-write the task configuration XML
    * file, if necessary.
    */
-  public void setupCache(String publicCacheSubdir, String privateCacheSubdir) 
-  throws IOException {
+  public void setupCache(Configuration taskConf, String publicCacheSubdir,
+      String privateCacheSubdir) throws IOException {
     setupCalled = true;
     ArrayList<Path> localArchives = new ArrayList<Path>();
     ArrayList<Path> localFiles = new ArrayList<Path>();

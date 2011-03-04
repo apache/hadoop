@@ -118,10 +118,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
       this.trackerDistributedCacheManager =
         new TrackerDistributedCacheManager(conf, taskController);
       this.taskDistributedCacheManager =
-        trackerDistributedCacheManager.newTaskDistributedCacheManager(jobid, conf);
-      taskDistributedCacheManager.setupCache(
-          "archive",
-          "archive");
+        trackerDistributedCacheManager.newTaskDistributedCacheManager(
+            jobid, conf);
+      taskDistributedCacheManager.setupCache(conf, "archive", "archive");
       
       if (DistributedCache.getSymlink(conf)) {
         // This is not supported largely because,

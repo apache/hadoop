@@ -1035,8 +1035,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             getTrackerDistributedCacheManager()
            .newTaskDistributedCacheManager(jobId, localJobConf);
           rjob.distCacheMgr = taskDistributedCacheManager;
-          taskDistributedCacheManager.setupCache(TaskTracker.getPublicDistributedCacheDir(),
-              TaskTracker.getPrivateDistributedCacheDir(userName));
+          taskDistributedCacheManager.setupCache(localJobConf,
+            TaskTracker.getPublicDistributedCacheDir(),
+            TaskTracker.getPrivateDistributedCacheDir(userName));
 
           // Set some config values
           localJobConf.set(JobConf.MAPRED_LOCAL_DIR_PROPERTY,
