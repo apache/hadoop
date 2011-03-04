@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.security.token;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -203,7 +204,17 @@ public class DelegationTokenRenewal {
   throws Exception {
     DistributedFileSystem dfs = null;
     try {
-      final URI uri = new URI (SCHEME + "://" + token.getService().toString());
+      //TODO: The service is usually an IPaddress:port. We convert
+      //it to dns name and then obtain the filesystem just so that
+      //we reuse the existing filesystem handle (that the jobtracker
+      //might have for this namenode; the namenode is usually
+      //specified as the dns name in the jobtracker).
+      //THIS IS A WORKAROUND FOR NOW. NEED TO SOLVE THIS PROBLEM 
+      //IN A BETTER WAY.
+      String[] ipaddr = token.getService().toString().split(":");
+      InetAddress iaddr = InetAddress.getByName(ipaddr[0]);
+      String dnsName = iaddr.getCanonicalHostName();
+      final URI uri = new URI (SCHEME + "://" + dnsName+":"+ipaddr[1]);
       dfs = (DistributedFileSystem)
       UserGroupInformation.getLoginUser().doAs(
           new PrivilegedExceptionAction<DistributedFileSystem>() {
