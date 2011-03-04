@@ -460,7 +460,7 @@ public class JspHelper {
       if(user == null) { // not specified in request
         ugi = getDefaultWebUser(conf);
       } else {
-        ugi = UserGroupInformation.createRemoteUser(user);
+        ugi = UserGroupInformation.createRemoteUser(user.split(",")[0]);
       }
       ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
     }

@@ -172,6 +172,20 @@ public class HftpFileSystem extends FileSystem {
       return null;
     } 
   }
+  
+  /**
+   * ugi parameter for http connection
+   * 
+   * @return user_shortname,group1,group2...
+   */
+  private String getUgiParameter() {
+    StringBuilder ugiParamenter = new StringBuilder(ugi.getShortUserName());
+    for(String g: ugi.getGroupNames()) {
+      ugiParamenter.append(",");
+      ugiParamenter.append(g);
+    }
+    return ugiParamenter.toString();
+  }
 
   /**
    * Open an HTTP connection to the namenode to read file data and metadata.
@@ -207,7 +221,8 @@ public class HftpFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
     HttpURLConnection connection = null;
-    connection = openConnection("/data" + f.toUri().getPath(), "ugi=" + ugi.getShortUserName());
+    connection = openConnection("/data" + f.toUri().getPath(),
+        "ugi=" + getUgiParameter());
     connection.setRequestMethod("GET");
     connection.connect();
     final InputStream in = connection.getInputStream();
@@ -275,13 +290,13 @@ public class HftpFileSystem extends FileSystem {
                 .makeQualified(HftpFileSystem.this));
       fslist.add(fs);
     }
-
+    
     private void fetchList(String path, boolean recur) throws IOException {
       try {
         XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
         HttpURLConnection connection = openConnection("/listPaths" + path,
-            "ugi=" + ugi.getCurrentUser() + (recur? "&recursive=yes" : ""));
+            "ugi=" + getUgiParameter() + (recur? "&recursive=yes" : ""));
         connection.setRequestMethod("GET");
         connection.connect();
 
@@ -347,7 +362,7 @@ public class HftpFileSystem extends FileSystem {
 
     private FileChecksum getFileChecksum(String f) throws IOException {
       final HttpURLConnection connection = openConnection(
-          "/fileChecksum" + f, "ugi=" + ugi.getShortUserName());
+          "/fileChecksum" + f, "ugi=" + getUgiParameter());
       try {
         final XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);
@@ -448,7 +463,7 @@ public class HftpFileSystem extends FileSystem {
      */
     private ContentSummary getContentSummary(String path) throws IOException {
       final HttpURLConnection connection = openConnection(
-          "/contentSummary" + path, "ugi=" + ugi);
+          "/contentSummary" + path, "ugi=" + getUgiParameter());
       InputStream in = null;
       try {
         in = connection.getInputStream();        
