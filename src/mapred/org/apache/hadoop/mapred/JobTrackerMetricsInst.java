@@ -63,6 +63,10 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   private int numTrackers = 0;
   private int numTrackersBlackListed = 0;
   private int numTrackersDecommissioned = 0;
+
+  // long, because 2^31 could well be only about a month's worth of
+  // heartbeats, with reasonable assumptions and JobTracker improvements.
+  private long numHeartbeats = 0L;
   
   public JobTrackerMetricsInst(JobTracker tracker, JobConf conf) {
     super(tracker, conf);
@@ -120,6 +124,8 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
       metricsRecord.setMetric("trackers_decommissioned", 
           numTrackersDecommissioned);
 
+      metricsRecord.incrMetric("heartbeats", numHeartbeats);
+
       numMapTasksLaunched = 0;
       numMapTasksCompleted = 0;
       numMapTasksFailed = 0;
@@ -152,6 +158,8 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
 
       numTrackers = 0;
       numTrackersBlackListed = 0;
+
+      numHeartbeats = 0L;
     }
     metricsRecord.update();
   }
@@ -399,4 +407,9 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   {
     numTrackersDecommissioned = trackers;
   }  
+
+  @Override
+  public synchronized void heartbeat() {
+    ++numHeartbeats;
+  }
 }

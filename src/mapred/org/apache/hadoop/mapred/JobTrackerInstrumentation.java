@@ -158,6 +158,8 @@ class JobTrackerInstrumentation {
   { }
 
   public void setDecommissionedTrackers(int trackers)
-  { }  
+  { }   
 
+  public void heartbeat() {
+  }
 }
