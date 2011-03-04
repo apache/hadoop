@@ -861,6 +861,15 @@
     </and>
   </condition>
   <!-- ================================================================== -->
+  <!-- Define exclude lists for different kinds of testing -->
+  <!-- ================================================================== -->
+  <patternset id="empty.exclude.list.id" />
+    <patternset id="commit.smoke.exclude.list.id">
+    <excludesfile name="${test.commit.tests.file}"/>
+    <excludesfile name="${test.smoke.tests.file}"/>
+  </patternset>
+
+  <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
   
@@ -873,6 +882,7 @@
     <attribute name="hadoop.conf.dir.deployed" default="" />
     <attribute name="test.krb5.conf" default="" />
     <attribute name="test.krb5.conf.filename" default="" />
+    <attribute name="exclude.list.id" default="empty.exclude.list.id" />
     <sequential>
       <delete file="${test.build.dir}/testsfailed"/>
       <delete dir="${test.build.data}"/>
@@ -935,6 +945,7 @@
             <patternset>
               <includesfile name="@{test.file}"/>
             </patternset>
+            <patternset refid="@{exclude.list.id}"/>
           </fileset>
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
@@ -959,13 +970,19 @@
     </sequential>
   </macrodef>
 
-  <target name="test-core" depends="jar-test" description="Run core unit tests">
+  <target name="test-core" depends="test-commit, test-smoke,
+    test-core-excluding-commit-and-smoke, jar-test"
+    description="Run core unit tests">
+  </target>
+
+  <target name="test-core-excluding-commit-and-smoke" depends="jar-test">
     <macro-test-runner test.file="${test.all.tests.file}"
                        classpath="${test.classpath.id}"
                        test.dir="${test.build.dir}"
                        fileset.dir="${test.src.dir}"
                        test.krb5.conf="java.security.krb5.conf"
                        test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       exclude.list.id="commit.smoke.exclude.list.id"
                        >
     </macro-test-runner>
   </target>   
