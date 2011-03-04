@@ -693,7 +693,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
     private int numFaultBuckets;
     private long bucketWidth;
-    private boolean isHealthy;
     private HashMap<ReasonForBlackListing, String> blackRfbMap;
     private HashMap<ReasonForBlackListing, String> grayRfbMap;
 
@@ -704,7 +703,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       lastRotated = (time / bucketWidth) * bucketWidth;
       blacklisted = false;
       graylisted = false;
-      isHealthy = true;
       blackRfbMap = new HashMap<ReasonForBlackListing, String>();
       grayRfbMap = new HashMap<ReasonForBlackListing, String>();
     }
@@ -765,14 +763,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         blacklisted = true;
         this.blackRfbMap.put(rfb, trackerFaultReport);
       }
-    }
-
-    public void setHealth(boolean isHealthy) {
-      this.isHealthy = isHealthy;
-    }
-
-    public boolean isHealthy() {
-      return isHealthy;
     }
 
     public String getTrackerBlackOrGraylistReport(boolean gray) {
@@ -845,8 +835,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         long now = clock.getTime();
         FaultInfo fi = getFaultInfo(hostName, true);
         fi.incrFaultCount(now);
-        // check heuristics, and add either to blacklist (original behavior)
-        // or to graylist (new, optional behavior):
+        // check heuristics, and add to the graylist if over the limit:
         if (exceedsFaults(fi, now)) {
           LOG.info("Adding " + hostName + " to the graylist across all jobs");
           String reason = String.format(FaultInfo.FAULT_FORMAT_STRING,
@@ -877,7 +866,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     private boolean exceedsFaults(FaultInfo fi, long timeStamp) {
       int faultCount = fi.getFaultCount(timeStamp);
       if (faultCount >= TRACKER_FAULT_THRESHOLD) {
-        // calculate avgBlackLists
+        // calculate average faults across all nodes
         long clusterSize = getClusterStatus().getTaskTrackers();
         long sum = 0;
         for (FaultInfo f : potentiallyFaultyTrackers.values()) {
@@ -961,8 +950,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
      * newest ("current") bucket.  Thus TRACKER_FAULT_TIMEOUT_WINDOW
      * determines the timeout value for TaskTracker faults (in combination
      * with TRACKER_FAULT_BUCKET_WIDTH), and the sum over all buckets is
-     * compared with TRACKER_FAULT_THRESHOLD to determine whether global
-     * blacklisting is warranted (or, alternatively, if it should be lifted).
+     * compared with TRACKER_FAULT_THRESHOLD to determine whether graylisting
+     * is warranted (or, alternatively, if it should be lifted).
      *
      * Assumes JobTracker is locked on entry.
      * 
@@ -1038,13 +1027,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       synchronized (potentiallyFaultyTrackers) {
         FaultInfo fi = potentiallyFaultyTrackers.remove(hostName);
         if (fi != null) {
+          // a tracker can be both blacklisted and graylisted, so check both
           if (fi.isGraylisted()) {
             LOG.info("Removing " + hostName + " from graylist");
             decrGraylistedTrackers(getNumTaskTrackersOnHost(hostName));
-          } else if (fi.isBlacklisted()) {
+          }
+          if (fi.isBlacklisted()) {
             LOG.info("Removing " + hostName + " from blacklist");
             addHostCapacity(hostName);
           }
+          // no need for fi.unBlacklist() for either one:  fi is already gone
         }
       }
     }
@@ -1067,7 +1059,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       }
     }
     
-    // This is called on tracker's restart or after a day of blacklist.
+    // This is called when a tracker is restarted or when the health-check
+    // script reports it healthy.  (Not called for graylisting.)
     private void addHostCapacity(String hostName) {
       synchronized (taskTrackers) {
         int numTrackersOnHost = 0;
@@ -1144,7 +1137,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       // MAPREDUCE-211 for details.  We never use graylisting for this path.)
       if (!isHealthy) {
         fi = getFaultInfo(hostName, true);
-        fi.setHealth(isHealthy);
         synchronized (potentiallyFaultyTrackers) {
           blacklistTracker(hostName, reason,
                            ReasonForBlackListing.NODE_UNHEALTHY, false);
@@ -2076,7 +2068,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Number of resolved entries
   int numResolved;
 
-  // statistics about TaskTrackers with faults; may lead to blacklisting
+  // statistics about TaskTrackers with faults; may lead to graylisting
   private FaultyTrackersInfo faultyTrackers = new FaultyTrackersInfo();
   
   private JobTrackerStatistics statistics = 
@@ -2216,8 +2208,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
              conf.getInt("mapred.job.tracker.retiredjobs.cache.size", 1000);
     MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
 
-    // values related to heuristic blacklisting ("fault" == a per-job
-    // blacklisting; too many faults => node blacklisted across all jobs):
+    // values related to heuristic graylisting (a "fault" is a per-job
+    // blacklisting; too many faults => node is graylisted across all jobs):
     TRACKER_FAULT_TIMEOUT_WINDOW =  // 3 hours
       conf.getInt("mapred.jobtracker.blacklist.fault-timeout-window", 3 * 60);
     TRACKER_FAULT_BUCKET_WIDTH =    // 15 minutes
@@ -2865,7 +2857,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     addJobForCleanup(id);
 
     // add the (single-job) blacklisted trackers to potentially faulty list
-    // for possible heuristic blacklisting across all jobs
+    // for possible heuristic graylisting across all jobs
     if (job.getStatus().getRunState() == JobStatus.SUCCEEDED) {
       if (job.getNoOfBlackListedTrackers() > 0) {
         for (String hostName : job.getBlackListedTrackers()) {
@@ -3003,13 +2995,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * cluster. The first element in the returned list contains the list of
    * active tracker names; the second element in the returned list contains
    * the list of blacklisted tracker names; and the third contains the list
-   * of graylisted tracker names.  Note that the blacklist is disjoint from
-   * the active list, but the graylist is not:  graylisted trackers are still
-   * active and therefore may appear in both lists.  (Graylisted trackers
-   * could conceivably appear on the blacklist rather than the active list;
-   * blacklisting comes about via the health-check script, while graylisting
-   * is heuristically based on the number of per-job blacklistings in a
-   * specified time interval.)
+   * of graylisted tracker names.  Note that the blacklist is disjoint
+   * from the active list, but the graylist is not:  initially, graylisted
+   * trackers are still active and therefore will appear in both lists.
+   * (Graylisted trackers can later be blacklisted, in which case they'll
+   * be removed from the active list and added to the blacklist, but they
+   * remain on the graylist in this case.  Blacklisting comes about via the
+   * health-check script, while graylisting is heuristically based on the
+   * number of per-job blacklistings in a specified time interval.)
    */
   // This method is synchronized to make sure that the locking order
   // "taskTrackers lock followed by faultyTrackers.potentiallyFaultyTrackers
@@ -4875,8 +4868,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     String trackerName = tracker.getTrackerName();
     // Remove completely after marking the tasks as 'KILLED'
     lostTaskTracker(tracker);
-    // tracker is lost, and if it is blacklisted, remove
-    // it from the count of blacklisted trackers in the cluster
+    // tracker is lost; if it is blacklisted and/or graylisted, remove
+    // it from the relevant count(s) of trackers in the cluster
     if (isBlacklisted(trackerName)) {
      faultyTrackers.decrBlacklistedTrackers(1);
     }

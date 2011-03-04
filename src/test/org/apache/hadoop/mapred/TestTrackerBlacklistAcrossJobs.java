@@ -61,7 +61,7 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     MiniMRCluster mr = null;
     FileSystem fileSys = null;
     Configuration conf = new Configuration();
-    // setup dfs and input
+    // set up dfs and input
     dfs = new MiniDFSCluster(conf, 1, true, null, hosts);
     fileSys = dfs.getFileSystem();
     if (!fileSys.mkdirs(inDir)) {
@@ -75,7 +75,7 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     mr = new MiniMRCluster(3, fileSys.getUri().toString(),
                            1, null, hosts, jtConf);
 
-    // setup job configuration
+    // set up job configuration
     JobConf mrConf = mr.createJobConf();
     JobConf job = new JobConf(mrConf);
     job.setInt("mapred.max.tracker.failures", 1);
@@ -93,16 +93,24 @@ public class TestTrackerBlacklistAcrossJobs extends TestCase {
     JobClient jc = new JobClient(mrConf);
     RunningJob running = JobClient.runJob(job);
     assertEquals("Job failed", JobStatus.SUCCEEDED, running.getJobState());
-    assertEquals("Didn't blacklist the host", 1, 
+    // heuristic blacklisting is graylisting as of 0.20.Fred
+    assertEquals("Blacklisted the host", 0,
       jc.getClusterStatus().getBlacklistedTrackers());
+    assertEquals("Didn't graylist the host", 1,
+      jc.getClusterStatus().getGraylistedTrackers());
     assertEquals("Fault count should be 1", 1, mr.getFaultCount(hosts[0]));
 
     // run the same job once again 
-    // there should be no change in blacklist count
+    // there should be no change in blacklist or graylist count, but fault
+    // count (per-job blacklistings) should go up by one
     running = JobClient.runJob(job);
     assertEquals("Job failed", JobStatus.SUCCEEDED, running.getJobState());
-    assertEquals("Didn't blacklist the host", 1,
+    assertEquals("Blacklisted the host", 0,
       jc.getClusterStatus().getBlacklistedTrackers());
-    assertEquals("Fault count should be 1", 1, mr.getFaultCount(hosts[0]));
+    assertEquals("Didn't graylist the host", 1,
+      jc.getClusterStatus().getGraylistedTrackers());
+    // previously this asserted 1, but makes no sense:  each per-job
+    // blacklisting counts as a new fault, so 2 runs => 2 faults:
+    assertEquals("Fault count should be 2", 2, mr.getFaultCount(hosts[0]));
   }
 }
