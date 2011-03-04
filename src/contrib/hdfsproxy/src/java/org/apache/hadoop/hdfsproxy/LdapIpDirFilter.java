@@ -68,6 +68,8 @@ public class LdapIpDirFilter implements Filter {
     }
   }
 
+  protected String contextPath;
+
   public void initialize(String bName, InitialLdapContext ctx) {
     // hook to cooperate unit test
     baseName = bName;
@@ -81,6 +83,8 @@ public class LdapIpDirFilter implements Filter {
   /** {@inheritDoc} */
   public void init(FilterConfig filterConfig) throws ServletException {
     ServletContext context = filterConfig.getServletContext();
+
+    contextPath = context.getContextPath();
 
     Configuration conf = new Configuration(false);
     conf.addResource("hdfsproxy-default.xml");
@@ -120,7 +124,7 @@ public class LdapIpDirFilter implements Filter {
       hdfsPathSchemaStr = conf.get("hdfsproxy.ldap.hdfs.path.schema.string",
           "documentLocation");
     }
-    LOG.info("LdapIpDirFilter initialization successful");
+    LOG.info(contextPath + ":: LdapIpDirFilter initialization successful");
   }
 
   private String getNamenode(Configuration conf) throws ServletException {
@@ -140,49 +144,55 @@ public class LdapIpDirFilter implements Filter {
   public void doFilter(ServletRequest request, ServletResponse response,
       FilterChain chain) throws IOException, ServletException {
 
-    HttpServletRequest rqst = (HttpServletRequest) request;
-    HttpServletResponse rsp = (HttpServletResponse) response;
-
-    if (LOG.isDebugEnabled()) {
-      StringBuilder b = new StringBuilder("Request from ").append(
-          rqst.getRemoteHost()).append("/").append(rqst.getRemoteAddr())
-          .append(":").append(rqst.getRemotePort());
-      b.append("\n The Scheme is " + rqst.getScheme());
-      b.append("\n The Path Info is " + rqst.getPathInfo());
-      b.append("\n The Translated Path Info is " + rqst.getPathTranslated());
-      b.append("\n The Context Path is " + rqst.getContextPath());
-      b.append("\n The Query String is " + rqst.getQueryString());
-      b.append("\n The Request URI is " + rqst.getRequestURI());
-      b.append("\n The Request URL is " + rqst.getRequestURL());
-      b.append("\n The Servlet Path is " + rqst.getServletPath());
-      LOG.debug(b.toString());
-    }
-    LdapRoleEntry ldapent = new LdapRoleEntry();
-    // check ip address
-    String userIp = rqst.getRemoteAddr();
+    String prevThreadName = Thread.currentThread().getName();
     try {
-      boolean isAuthorized = getLdapRoleEntryFromUserIp(userIp, ldapent);
-      if (!isAuthorized) {
-        rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "IP " + userIp
-            + " is not authorized to access");
-        return;
-      }
-    } catch (NamingException ne) {
-      throw new IOException("NamingException while searching ldap"
-          + ne.toString());
-    }
+      Thread.currentThread().setName(contextPath);
+      HttpServletRequest rqst = (HttpServletRequest) request;
+      HttpServletResponse rsp = (HttpServletResponse) response;
 
-    // since we cannot pass ugi object cross context as they are from
-    // different classloaders in different war file, we have to use String attribute.
-    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
+      if (LOG.isDebugEnabled()) {
+        StringBuilder b = new StringBuilder("Request from ").append(
+            rqst.getRemoteHost()).append("/").append(rqst.getRemoteAddr())
+            .append(":").append(rqst.getRemotePort());
+        b.append("\n The Scheme is " + rqst.getScheme());
+        b.append("\n The Path Info is " + rqst.getPathInfo());
+        b.append("\n The Translated Path Info is " + rqst.getPathTranslated());
+        b.append("\n The Context Path is " + rqst.getContextPath());
+        b.append("\n The Query String is " + rqst.getQueryString());
+        b.append("\n The Request URI is " + rqst.getRequestURI());
+        b.append("\n The Request URL is " + rqst.getRequestURL());
+        b.append("\n The Servlet Path is " + rqst.getServletPath());
+        LOG.debug(b.toString());
+      }
+      LdapRoleEntry ldapent = new LdapRoleEntry();
+      // check ip address
+      String userIp = rqst.getRemoteAddr();
+      try {
+        boolean isAuthorized = getLdapRoleEntryFromUserIp(userIp, ldapent);
+        if (!isAuthorized) {
+          rsp.sendError(HttpServletResponse.SC_FORBIDDEN, "IP " + userIp
+              + " is not authorized to access");
+          return;
+        }
+      } catch (NamingException ne) {
+        throw new IOException("NamingException while searching ldap"
+            + ne.toString());
+      }
+
+      // since we cannot pass ugi object cross context as they are from
+      // different classloaders in different war file, we have to use String attribute.
+      rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID",
         ldapent.userId);
-    rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
+      rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.paths",
         ldapent.paths);
 
-    LOG.info("User: " + ldapent.userId + " Request: " + rqst.getPathInfo() +
-        " From: " + rqst.getRemoteAddr());
+      LOG.info("User: " + ldapent.userId + " Request: " + rqst.getPathInfo() +
+          " From: " + rqst.getRemoteAddr());
 
-    chain.doFilter(request, response);
+      chain.doFilter(request, response);
+    } finally {
+      Thread.currentThread().setName(prevThreadName);
+    }
   }
 
   /**

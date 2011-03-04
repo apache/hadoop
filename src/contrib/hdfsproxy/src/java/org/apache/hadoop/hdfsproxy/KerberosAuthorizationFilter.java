@@ -42,7 +42,7 @@ public class KerberosAuthorizationFilter extends AuthorizationFilter {
           conf.get("hdfsproxy.kerberos.principal"),
           conf.get("hdfsproxy.kerberos.keytab"));
 
-      LOG.info("Logged in user: " +
+      LOG.info(contextPath + " :: Logged in user: " +
           UserGroupInformation.getLoginUser().getUserName() +
           ", Current User: " + UserGroupInformation.getCurrentUser().getUserName());
 

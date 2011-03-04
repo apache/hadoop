@@ -48,8 +48,11 @@ public class AuthorizationFilter implements Filter {
   protected static final Pattern FILEPATH_PATTERN = Pattern
       .compile("^(/listPaths|/data|/file)$");
 
+  protected String contextPath;
+
   /** {@inheritDoc} **/
   public void init(FilterConfig filterConfig) throws ServletException {
+    contextPath = filterConfig.getServletContext().getContextPath();
   }
 
   /** {@inheritDoc} **/
