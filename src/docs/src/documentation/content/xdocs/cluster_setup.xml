@@ -556,7 +556,10 @@
             
             <p>
             The executable must be deployed as a setuid executable, by changing
-            the ownership to <em>root</em> and giving it permissions <em>4755</em>. 
+            the ownership to <em>root</em>, group ownership to that of tasktracker
+            and giving it permissions <em>4510</em>.Please take a note that,
+            group which owns task-controller should contain only tasktracker
+            as its memeber and not users who submit jobs.
             </p>
             
             <p>The executable requires a configuration file called 

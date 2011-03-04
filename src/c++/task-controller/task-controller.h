@@ -28,50 +28,36 @@
 #include <sys/stat.h>
 #include <sys/signal.h>
 #include <getopt.h>
-#include <grp.h>
+#include<grp.h>
 #include "configuration.h"
 
 //command definitions
 enum command {
-  RUN_TASK,
-  KILL_TASK
+  LAUNCH_TASK_JVM,
+  TERMINATE_TASK_JVM,
+  KILL_TASK_JVM
 };
 
 enum errorcodes {
   INVALID_ARGUMENT_NUMBER = 1,
-  INVALID_USER_NAME,
-  INVALID_COMMAND_PROVIDED,
-  SUPER_USER_NOT_ALLOWED_TO_RUN_TASKS,
-  OUT_OF_MEMORY,
-  INVALID_TT_ROOT,
-  INVALID_PID_PATH,
-  UNABLE_TO_OPEN_PID_FILE_WRITE_MODE,
-  UNABLE_TO_OPEN_PID_FILE_READ_MODE,
-  UNABLE_TO_WRITE_TO_PID_FILE,
-  UNABLE_TO_CHANGE_PERMISSION_OF_PID_FILE,
-  UNABLE_TO_CHANGE_PERMISSION_AND_DELETE_PID_FILE,
-  SETUID_OPER_FAILED,
-  INVALID_TASK_SCRIPT_PATH,
-  UNABLE_TO_EXECUTE_TASK_SCRIPT,
-  UNABLE_TO_READ_PID,
-  UNABLE_TO_KILL_TASK,
-  UNABLE_TO_FIND_PARENT_PID_FILE,
-  UNABLE_TO_READ_PARENT_PID,
-  SETSID_FAILED,
-  ERROR_RESOLVING_FILE_PATH,
-  RELATIVE_PATH_COMPONENTS_IN_FILE_PATH,
-  UNABLE_TO_STAT_FILE,
-  FILE_NOT_OWNED_BY_TASKTRACKER,
-  UNABLE_TO_CHANGE_OWNERSHIP_OF_PID_FILE,
-  UNABLE_TO_CHANGE_OWNERSHIP_AND_DELETE_PID_FILE
+  INVALID_USER_NAME, //2
+  INVALID_COMMAND_PROVIDED, //3
+  SUPER_USER_NOT_ALLOWED_TO_RUN_TASKS, //4
+  INVALID_TT_ROOT, //5
+  SETUID_OPER_FAILED, //6
+  INVALID_TASK_SCRIPT_PATH, //7
+  UNABLE_TO_EXECUTE_TASK_SCRIPT, //8
+  UNABLE_TO_KILL_TASK, //9
+  INVALID_PROCESS_LAUNCHING_TASKCONTROLLER, //10
+  INVALID_TASK_PID, //11
+  ERROR_RESOLVING_FILE_PATH, //12
+  RELATIVE_PATH_COMPONENTS_IN_FILE_PATH, //13
+  UNABLE_TO_STAT_FILE, //14
+  FILE_NOT_OWNED_BY_TASKTRACKER //15
 };
 
 
-#define TT_PID_PATTERN "%s/hadoop-%s-tasktracker.pid"
-
 #define TT_LOCAL_TASK_SCRIPT_PATTERN "%s/taskTracker/jobcache/%s/%s/taskjvm.sh"
-
-#define TT_SYS_DIR "%s/taskTracker/jobcache/%s/%s/.pid"
 
 #define TT_SYS_DIR_KEY "mapred.local.dir"
 
@@ -90,8 +76,6 @@ void display_usage(FILE *stream);
 
 int run_task_as_user(const char * user, const char *jobid, const char *taskid, const char *tt_root);
 
-int verify_parent();
-
-int kill_user_task(const char *user, const char *jobid, const char *taskid, const char *tt_root);
+int kill_user_task(const char *user, const char *task_pid, int sig);
 
 int get_user_details(const char *user);

@@ -47,7 +47,7 @@ FILE *LOGFILE;
   #define CONF_FILE_PATTERN "%s/conf/taskcontroller.cfg"
 #endif
 
-struct configuration config;
+extern struct configuration config;
 //configuration file contents
 #ifndef HADOOP_CONF_DIR
   extern char *hadoop_conf_dir;
@@ -57,3 +57,6 @@ const char * get_value(char* key);
 //method to free allocated configuration
 void free_configurations();
 
+//function to return array of values pointing to the key. Values are
+//comma seperated strings.
+const char ** get_values(char* key);

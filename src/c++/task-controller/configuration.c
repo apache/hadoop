@@ -18,7 +18,10 @@
 
 #include "configuration.h"
 
+
 char * hadoop_conf_dir;
+
+struct configuration config={.size=0, .confdetails=NULL};
 
 //clean up method for freeing configuration
 void free_configurations() {
@@ -197,5 +200,38 @@ const char * get_value(char* key) {
     }
   }
   return NULL;
+}
+
+const char ** get_values(char * key) {
+  const char ** toPass = NULL;
+  const char * value = get_value(key);
+  char *tempTok = NULL;
+  char *tempstr = NULL;
+  int size = 0;
+  int len;
+  //first allocate any array of 10
+  if(value != NULL) {
+    toPass = (const char **) malloc(sizeof(char *) * MAX_SIZE);
+    tempTok = strtok_r((char *)value, ",", &tempstr);
+    if (tempTok != NULL) {
+      while (1) {
+        toPass[size++] = tempTok;
+        tempTok = strtok_r(NULL, ",", &tempstr);
+        if(tempTok == NULL){
+          break;
+        }
+        if((size % MAX_SIZE) == 0) {
+          toPass = (const char **) realloc(toPass,(sizeof(char *) *
+              (MAX_SIZE * ((size/MAX_SIZE) +1))));
+        }
+      }
+    } else {
+      toPass[size] = (char *)value;
+    }
+  }
+  if(size > 0) {
+    toPass[size] = NULL;
+  }
+  return toPass;
 }
 

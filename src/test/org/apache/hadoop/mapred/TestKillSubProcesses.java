@@ -23,17 +23,22 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 import java.util.Iterator;
+import java.util.StringTokenizer;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ExitCodeException;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -48,11 +53,11 @@ public class TestKillSubProcesses extends TestCase {
             .getLog(TestKillSubProcesses.class);
 
   private static String TEST_ROOT_DIR = new File(System.getProperty(
-      "test.build.data", "/tmp")).toURI().toString().replace(' ', '+');
+      "test.build.data", "/tmp"), "killjob").toURI().toString().replace(' ', '+');
 
   private static JobClient jobClient = null;
 
-  private static MiniMRCluster mr = null;
+  static MiniMRCluster mr = null;
   private static Path scriptDir = null;
   private static String scriptDirName = null;
   private static String pid = null;
@@ -69,7 +74,7 @@ public class TestKillSubProcesses extends TestCase {
     conf.setJobName("testkilljobsubprocesses");
     conf.setMapperClass(KillingMapperWithChildren.class);
     
-    scriptDir = new Path(TEST_ROOT_DIR + "/script");
+    scriptDir = new Path(TEST_ROOT_DIR , "script");
     RunningJob job = runJobAndSetProcessHandle(jt, conf);
 
     // kill the job now
@@ -180,9 +185,8 @@ public class TestKillSubProcesses extends TestCase {
           }
         }
         LOG.info("pid of map task is " + pid);
-
-        // Checking if the map task is alive
-        assertTrue(ProcessTree.isAlive(pid));
+        //Checking if the map task is alive
+        assertTrue("Map is no more alive", isAlive(pid));
         LOG.info("The map task is alive before Job completion, as expected.");
       }
     }
@@ -215,7 +219,7 @@ public class TestKillSubProcesses extends TestCase {
                  " is " + childPid);
         assertTrue("Unexpected: The subprocess at level " + i +
                    " in the subtree is not alive before Job completion",
-                   ProcessTree.isAlive(childPid));
+                   isAlive(childPid));
       }
     }
     return job;
@@ -249,10 +253,10 @@ public class TestKillSubProcesses extends TestCase {
                  " is " + childPid);
         assertTrue("Unexpected: The subprocess at level " + i +
                    " in the subtree is alive after Job completion",
-                   !ProcessTree.isAlive(childPid));
+                   !isAlive(childPid));
       }
     }
-    FileSystem fs = FileSystem.get(conf);
+    FileSystem fs = FileSystem.getLocal(mr.createJobConf());
     if(fs.exists(scriptDir)) {
       fs.delete(scriptDir, true);
     }
@@ -260,10 +264,23 @@ public class TestKillSubProcesses extends TestCase {
   
   private static RunningJob runJob(JobConf conf) throws IOException {
 
-    final Path inDir = new Path(TEST_ROOT_DIR + "/killjob/input");
-    final Path outDir = new Path(TEST_ROOT_DIR + "/killjob/output");
+    final Path inDir;
+    final Path outDir;
+    FileSystem fs = FileSystem.getLocal(conf);
+    FileSystem tempFs = FileSystem.get(conf);
+    //Check if test is run with hdfs or local file system.
+    //if local filesystem then prepend TEST_ROOT_DIR, otherwise
+    //killjob folder would be created in workspace root.
+    if (!tempFs.getUri().toASCIIString().equals(
+        fs.getUri().toASCIIString())) {
+      inDir = new Path("killjob/input");
+      outDir = new Path("killjob/output");
+    } else {
+      inDir = new Path(TEST_ROOT_DIR, "input");
+      outDir = new Path(TEST_ROOT_DIR, "output");
+    }
 
-    FileSystem fs = FileSystem.get(conf);
+    
     if(fs.exists(scriptDir)) {
       fs.delete(scriptDir, true);
     }
@@ -289,9 +306,7 @@ public class TestKillSubProcesses extends TestCase {
       // run the TCs
       conf = mr.createJobConf();
       JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
-      runKillingJobAndValidate(jt, conf);
-      runFailingJobAndValidate(jt, conf);
-      runSuccessfulJobAndValidate(jt, conf);
+      runTests(conf, jt);
     } finally {
       if (mr != null) {
         mr.shutdown();
@@ -299,12 +314,25 @@ public class TestKillSubProcesses extends TestCase {
     }
   }
 
+  void runTests(JobConf conf, JobTracker jt) throws IOException {
+    FileSystem fs = FileSystem.getLocal(mr.createJobConf());
+    Path rootDir = new Path(TEST_ROOT_DIR);
+    if(!fs.exists(rootDir)) {
+      fs.mkdirs(rootDir);
+    }
+    fs.setPermission(rootDir, 
+        new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
+    runKillingJobAndValidate(jt, conf);
+    runFailingJobAndValidate(jt, conf);
+    runSuccessfulJobAndValidate(jt, conf);
+  }
+
   /**
    * Creates signal file
    */
   private static void signalTask(String signalFile, JobConf conf) {
     try {
-      FileSystem fs = FileSystem.get(conf);
+      FileSystem fs = FileSystem.getLocal(conf);
       fs.createNewFile(new Path(signalFile));
     } catch(IOException e) {
       LOG.warn("Unable to create signal file. " + e);
@@ -316,10 +344,12 @@ public class TestKillSubProcesses extends TestCase {
    */
   private static void runChildren(JobConf conf) throws IOException {
     if (ProcessTree.isSetsidAvailable) {
-      FileSystem fs = FileSystem.get(conf);
+      FileSystem fs = FileSystem.getLocal(conf);
       TEST_ROOT_DIR = new Path(conf.get("test.build.data")).toUri().getPath();
-      scriptDir = new Path(TEST_ROOT_DIR + "/script");  
-    
+      scriptDir = new Path(TEST_ROOT_DIR + "/script");
+      if(fs.exists(scriptDir)){
+        fs.delete(scriptDir, true);
+      }
       // create shell script
       Random rm = new Random();
       Path scriptPath = new Path(scriptDir, "_shellScript_" + rm.nextInt()
@@ -328,6 +358,7 @@ public class TestKillSubProcesses extends TestCase {
       String script =
         "echo $$ > " + scriptDir.toString() + "/childPidFile" + "$1\n" +
         "echo hello\n" +
+        "trap 'echo got SIGTERM' 15 \n" +
         "if [ $1 != 0 ]\nthen\n" +
         " sh " + shellScript + " $(($1-1))\n" +
         "else\n" +
@@ -446,4 +477,46 @@ public class TestKillSubProcesses extends TestCase {
       throw new RuntimeException("failing map");
     }
   }
+  
+  /**
+   * Check for presence of the process with the pid passed is alive or not
+   * currently.
+   * 
+   * @param pid pid of the process
+   * @return if a process is alive or not.
+   */
+  private static boolean isAlive(String pid) throws IOException {
+    String commandString ="ps -o pid,command -e";
+    String args[] = new String[] {"bash", "-c" , commandString};
+    ShellCommandExecutor shExec = new ShellCommandExecutor(args);
+    try {
+      shExec.execute(); 
+    }catch(ExitCodeException e) {
+      return false;
+    } catch (IOException e) {
+      LOG.warn("IOExecption thrown while checking if process is alive" + 
+          StringUtils.stringifyException(e));
+      throw e;
+    }
+
+    String output = shExec.getOutput();
+
+    //Parse the command output and check for pid, ignore the commands
+    //which has ps or grep in it.
+    StringTokenizer strTok = new StringTokenizer(output, "\n");
+    boolean found = false;
+    while(strTok.hasMoreTokens()) {
+      StringTokenizer pidToken = new StringTokenizer(strTok.nextToken(), 
+          " ");
+      String pidStr = pidToken.nextToken();
+      String commandStr = pidToken.nextToken();
+      if(pid.equals(pidStr) && !(commandStr.contains("ps") 
+          || commandStr.contains("grep"))) {
+        found = true;
+        break;
+      }
+    }
+    return found; 
+  }
+  
 }

@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
@@ -32,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
@@ -109,6 +109,7 @@ class LinuxTaskController extends TaskController {
    */
   enum TaskCommands {
     LAUNCH_TASK_JVM,
+    TERMINATE_TASK_JVM,
     KILL_TASK_JVM
   }
   
@@ -127,8 +128,11 @@ class LinuxTaskController extends TaskController {
     String cmdLine = 
       TaskLog.buildCommandLine(env.setup, env.vargs, env.stdout, env.stderr,
           env.logSize, true);
+
     StringBuffer sb = new StringBuffer();
-    //export out all the environment variable before child command.
+    //export out all the environment variable before child command as
+    //the setuid/setgid binaries would not be getting, any environmental
+    //variables which begin with LD_*.
     for(Entry<String, String> entry : env.env.entrySet()) {
       sb.append("export ");
       sb.append(entry.getKey());
@@ -140,34 +144,50 @@ class LinuxTaskController extends TaskController {
     // write the command to a file in the
     // task specific cache directory
     writeCommand(sb.toString(), getTaskCacheDirectory(context));
+    
     // Call the taskcontroller with the right parameters.
-    List<String> launchTaskJVMArgs = buildTaskCommandArgs(context);
+    List<String> launchTaskJVMArgs = buildLaunchTaskArgs(context);
     ShellCommandExecutor shExec =  buildTaskControllerExecutor(
                                     TaskCommands.LAUNCH_TASK_JVM, 
-                                    context.task.getUser(),
+                                    env.conf.getUser(),
                                     launchTaskJVMArgs, env);
     context.shExec = shExec;
-    shExec.execute();
-    LOG.debug("output after executing task jvm = " + shExec.getOutput());
+    try {
+      shExec.execute();
+    } catch (Exception e) {
+      LOG.warn("Exception thrown while launching task JVM : " + 
+          StringUtils.stringifyException(e));
+      LOG.warn("Exit code from task is : " + shExec.getExitCode());
+      LOG.warn("Output from task-contoller is : " + shExec.getOutput());
+      throw new IOException(e);
+    }
+    if(LOG.isDebugEnabled()) {
+      LOG.debug("output after executing task jvm = " + shExec.getOutput()); 
+    }
   }
 
-  // convenience API for building command arguments for specific commands
-  private List<String> buildTaskCommandArgs(TaskControllerContext context) {
+  /**
+   * Returns list of arguments to be passed while launching task VM.
+   * See {@code buildTaskControllerExecutor(TaskCommands, 
+   * String, List<String>, JvmEnv)} documentation.
+   * @param context
+   * @return Argument to be used while launching Task VM
+   */
+  private List<String> buildLaunchTaskArgs(TaskControllerContext context) {
     List<String> commandArgs = new ArrayList<String>(3);
     String taskId = context.task.getTaskID().toString();
     String jobId = getJobId(context);
+    LOG.debug("getting the task directory as: " 
+        + getTaskCacheDirectory(context));
+    commandArgs.add(getDirectoryChosenForTask(
+        new File(getTaskCacheDirectory(context)), 
+        context));
     commandArgs.add(jobId);
     if(!context.task.isTaskCleanupTask()) {
       commandArgs.add(taskId);
     }else {
       commandArgs.add(taskId + TaskTracker.TASK_CLEANUP_SUFFIX);
     }
-    
-    LOG.debug("getting the task directory as: " 
-                + getTaskCacheDirectory(context));
-    commandArgs.add(getDirectoryChosenForTask(
-                              new File(getTaskCacheDirectory(context)), 
-                              context));
     return commandArgs;
   }
   
@@ -183,7 +203,7 @@ class LinuxTaskController extends TaskController {
   // in mapred.local.dir chosen for storing data pertaining to
   // this task.
   private String getDirectoryChosenForTask(File directory,
-                                            TaskControllerContext context) {
+      TaskControllerContext context) {
     String jobId = getJobId(context);
     String taskId = context.task.getTaskID().toString();
     for (String dir : mapredLocalDirs) {
@@ -200,34 +220,6 @@ class LinuxTaskController extends TaskController {
                 + directory.getAbsolutePath());
   }
   
-  /**
-   * Kill a launched task JVM running as the user of the job.
-   * 
-   * This method will launch the task controller setuid executable
-   * that in turn will kill the task JVM by sending a kill signal.
-   */
-  void killTaskJVM(TaskControllerContext context) {
-   
-    if(context.task == null) {
-      LOG.info("Context task null not killing the JVM");
-      return;
-    }
-    
-    JvmEnv env = context.env;
-    List<String> killTaskJVMArgs = buildTaskCommandArgs(context);
-    try {
-      ShellCommandExecutor shExec = buildTaskControllerExecutor(
-                                      TaskCommands.KILL_TASK_JVM,
-                                      context.task.getUser(),
-                                      killTaskJVMArgs, 
-                                      context.env);
-      shExec.execute();
-      LOG.debug("Command output :" +shExec.getOutput());
-    } catch (IOException ioe) {
-      LOG.warn("IOException in killing task: " + ioe.getMessage());
-    }
-  }
-
   /**
    * Setup appropriate permissions for directories and files that
    * are used by the task.
@@ -289,9 +281,24 @@ class LinuxTaskController extends TaskController {
       LOG.warn("Could not change permissions for directory " + dir);
     }
   }
-  
-  // convenience API to create the executor for launching the
-  // setuid script.
+  /**
+   * Builds the command line for launching/terminating/killing task JVM.
+   * Following is the format for launching/terminating/killing task JVM
+   * <br/>
+   * For launching following is command line argument:
+   * <br/>
+   * {@code user-name command tt-root job_id task_id} 
+   * <br/>
+   * For terminating/killing task jvm.
+   * {@code user-name command tt-root task-pid}
+   * 
+   * @param command command to be executed.
+   * @param userName user name
+   * @param cmdArgs list of extra arguments
+   * @param env JVM environment variables.
+   * @return {@link ShellCommandExecutor}
+   * @throws IOException
+   */
   private ShellCommandExecutor buildTaskControllerExecutor(TaskCommands command, 
                                           String userName, 
                                           List<String> cmdArgs, JvmEnv env) 
@@ -428,5 +435,65 @@ class LinuxTaskController extends TaskController {
     }
   }
   
+  /**
+   * API which builds the command line to be pass to LinuxTaskController
+   * binary to terminate/kill the task. See 
+   * {@code buildTaskControllerExecutor(TaskCommands, 
+   * String, List<String>, JvmEnv)} documentation.
+   * 
+   * 
+   * @param context context of task which has to be passed kill signal.
+   * 
+   */
+  private List<String> buildKillTaskCommandArgs(TaskControllerContext 
+      context){
+    List<String> killTaskJVMArgs = new ArrayList<String>();
+    killTaskJVMArgs.add(context.pid);
+    return killTaskJVMArgs;
+  }
+  
+  /**
+   * Convenience method used to sending appropriate Kill signal to the task 
+   * VM
+   * @param context
+   * @param command
+   * @throws IOException
+   */
+  private void finishTask(TaskControllerContext context,
+      TaskCommands command) throws IOException{
+    if(context.task == null) {
+      LOG.info("Context task null not killing the JVM");
+      return;
+    }
+    ShellCommandExecutor shExec = buildTaskControllerExecutor(
+        command, context.env.conf.getUser(), 
+        buildKillTaskCommandArgs(context), context.env);
+    try {
+      shExec.execute();
+    } catch (Exception e) {
+      LOG.warn("Output from task-contoller is : " + shExec.getOutput());
+      throw new IOException(e);
+    }
+  }
+  
+  @Override
+  void terminateTask(TaskControllerContext context) {
+    try {
+      finishTask(context, TaskCommands.TERMINATE_TASK_JVM);
+    } catch (Exception e) {
+      LOG.warn("Exception thrown while sending kill to the Task VM " + 
+          StringUtils.stringifyException(e));
+    }
+  }
+  
+  @Override
+  void killTask(TaskControllerContext context) {
+    try {
+      finishTask(context, TaskCommands.KILL_TASK_JVM);
+    } catch (Exception e) {
+      LOG.warn("Exception thrown while sending destroy to the Task VM " + 
+          StringUtils.stringifyException(e));
+    }
+  }
 }
 
