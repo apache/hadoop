@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.DateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -69,7 +70,8 @@ public class TrackerDistributedCacheManager {
   private TreeMap<String, CacheStatus> cachedArchives = 
     new TreeMap<String, CacheStatus>();
   private Map<JobID, TaskDistributedCacheManager> jobArchives =
-    new HashMap<JobID, TaskDistributedCacheManager>();
+    Collections.synchronizedMap(
+        new HashMap<JobID, TaskDistributedCacheManager>());
   private final TaskController taskController;
   private static final FsPermission PUBLIC_CACHE_OBJECT_PERM =
     FsPermission.createImmutable((short) 0755);
