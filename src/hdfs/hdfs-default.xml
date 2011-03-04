@@ -417,4 +417,13 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.datanode.failed.volumes.tolerated</name>
+  <value>0</value>
+  <description>The number of volumes that are allowed to
+  fail before a datanode stops offering service. By default
+  any volume failure will cause a datanode to shutdown.
+  </description>
+</property>
+
 </configuration>

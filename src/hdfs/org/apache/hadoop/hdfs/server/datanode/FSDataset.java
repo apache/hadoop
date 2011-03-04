@@ -746,12 +746,24 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   private int maxBlocksPerDir = 0;
   private HashMap<Block,DatanodeBlockInfo> volumeMap = null;
   static  Random random = new Random();
+  private int validVolsRequired;
   
   /**
    * An FSDataset has a directory where it loads its data files.
    */
   public FSDataset(DataStorage storage, Configuration conf) throws IOException {
     this.maxBlocksPerDir = conf.getInt("dfs.datanode.numblocks", 64);
+    // The number of volumes required for operation is the total number 
+    // of volumes minus the number of failed volumes we can tolerate.
+    final int volFailuresTolerated =
+      conf.getInt("dfs.datanode.failed.volumes.tolerated",
+                  0);
+    this.validVolsRequired = storage.getNumStorageDirs() - volFailuresTolerated; 
+    if (validVolsRequired < 1 ||
+        validVolsRequired > storage.getNumStorageDirs()) {
+      DataNode.LOG.error("Invalid value " + volFailuresTolerated + " for " +
+          "dfs.datanode.failed.volumes.tolerated");
+    }
     FSVolume[] volArray = new FSVolume[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
@@ -768,12 +780,12 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   public long getDfsUsed() throws IOException {
     return volumes.getDfsUsed();
   }
+
   /**
-   * Return true - if there are still valid volumes 
-   * on the DataNode
+   * Return true - if there are still valid volumes on the DataNode. 
    */
-  public boolean hasEnoughResource(){
-    return volumes.numberOfVolumes() >= MIN_NUM_OF_VALID_VOLUMES;
+  public boolean hasEnoughResource() {
+    return volumes.numberOfVolumes() >= validVolsRequired; 
   }
 
   /**
