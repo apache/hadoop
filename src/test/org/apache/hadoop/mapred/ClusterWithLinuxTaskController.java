@@ -113,7 +113,7 @@ public class ClusterWithLinuxTaskController extends TestCase {
 
   private static File configurationFile = null;
 
-  protected UserGroupInformation taskControllerUser;
+  protected UserGroupInformation jobOwner;
   
   protected static String taskTrackerSpecialGroup = null;
   /**
@@ -159,7 +159,7 @@ public class ClusterWithLinuxTaskController extends TestCase {
     String ugi = System.getProperty(TASKCONTROLLER_UGI);
     clusterConf = mrCluster.createJobConf();
     String[] splits = ugi.split(",");
-    taskControllerUser = UserGroupInformation.createUserForTesting(splits[0],
+    jobOwner = UserGroupInformation.createUserForTesting(splits[0],
         new String[]{splits[1]});
     createHomeAndStagingDirectory(clusterConf);
   }
@@ -167,7 +167,7 @@ public class ClusterWithLinuxTaskController extends TestCase {
   private void createHomeAndStagingDirectory(JobConf conf)
       throws IOException {
     FileSystem fs = dfsCluster.getFileSystem();
-    String path = "/user/" + taskControllerUser.getUserName();
+    String path = "/user/" + jobOwner.getUserName();
     homeDirectory = new Path(path);
     LOG.info("Creating Home directory : " + homeDirectory);
     fs.mkdirs(homeDirectory);
@@ -182,8 +182,8 @@ public class ClusterWithLinuxTaskController extends TestCase {
 
   private void changePermission(FileSystem fs)
       throws IOException {
-    fs.setOwner(homeDirectory, taskControllerUser.getUserName(),
-        taskControllerUser.getGroupNames()[0]);
+    fs.setOwner(homeDirectory, jobOwner.getUserName(),
+        jobOwner.getGroupNames()[0]);
   }
 
   static File getTaskControllerConfFile(String path) {
@@ -309,11 +309,11 @@ public class ClusterWithLinuxTaskController extends TestCase {
       LOG.info("Ownership of the file is " + status.getPath() + " is " + owner
           + "," + group);
       assertTrue("Output part-file's owner is not correct. Expected : "
-          + taskControllerUser.getUserName() + " Found : " + owner, owner
-          .equals(taskControllerUser.getUserName()));
+          + jobOwner.getUserName() + " Found : " + owner, owner
+          .equals(jobOwner.getUserName()));
       assertTrue("Output part-file's group is not correct. Expected : "
-          + taskControllerUser.getGroupNames()[0] + " Found : " + group, group
-          .equals(taskControllerUser.getGroupNames()[0]));
+          + jobOwner.getGroupNames()[0] + " Found : " + group, group
+          .equals(jobOwner.getGroupNames()[0]));
     }
   }
   
@@ -321,13 +321,24 @@ public class ClusterWithLinuxTaskController extends TestCase {
    * Validates permissions of private distcache dir and its contents fully
    */
   public static void checkPermissionsOnPrivateDistCache(String[] localDirs,
-      String user, String groupOwner) throws IOException {
+      String user, String taskTrackerUser, String groupOwner)
+      throws IOException {
+    // user-dir, jobcache and distcache will have
+    //     2770 permissions if jobOwner is same as tt_user
+    //     2570 permissions for any other user
+    String expectedDirPerms  = taskTrackerUser.equals(user)
+                               ? "drwxrws---"
+                               : "dr-xrws---";
+    String expectedFilePerms = taskTrackerUser.equals(user)
+                               ? "-rwxrwx---"
+                               : "-r-xrwx---";
+
     for (String localDir : localDirs) {
       File distCacheDir = new File(localDir,
           TaskTracker.getPrivateDistributedCacheDir(user));
       if (distCacheDir.exists()) {
-        checkPermissionsOnDir(distCacheDir, user, groupOwner, "dr-xrws---",
-            "-r-xrwx---");
+        checkPermissionsOnDir(distCacheDir, user, groupOwner, expectedDirPerms,
+            expectedFilePerms);
       }
     }
   }

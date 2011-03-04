@@ -41,7 +41,7 @@ public class TestJobExecutionAsDifferentUser extends
       return;
     }
     startCluster();
-    taskControllerUser.doAs(new PrivilegedExceptionAction<Object>() {
+    jobOwner.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws Exception {
         Path inDir = new Path("input");
         Path outDir = new Path("output");
@@ -81,7 +81,7 @@ public class TestJobExecutionAsDifferentUser extends
       return;
     }
     startCluster();
-    taskControllerUser.doAs(new PrivilegedExceptionAction<Object>() {
+    jobOwner.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws Exception {
 
         TestMiniMRChildTask childTask = new TestMiniMRChildTask();

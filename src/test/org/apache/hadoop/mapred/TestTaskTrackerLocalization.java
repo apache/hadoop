@@ -293,7 +293,9 @@ public class TestTaskTrackerLocalization extends TestCase {
     // don't create directories any more.
     for (String dir : localDirs) {
       File userDir = new File(dir, TaskTracker.getUserDir(task.getUser()));
-      FileUtil.fullyDelete(userDir);
+      if (!FileUtil.fullyDelete(userDir)) {
+        throw new IOException("Uanble to delete " + userDir);
+      }
     }
 
     // Now call the method again.

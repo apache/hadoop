@@ -378,18 +378,6 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
     if (!process_path) {
       continue;
     }
-    if (should_check_ownership &&
-          (compare_ownership(uid, gid, entry->fts_path) == 0)) {
-      // already set proper permissions.
-      // This might happen with distributed cache.
-#ifdef DEBUG
-      fprintf(
-          LOGFILE,
-          "already has private permissions. Not trying to change again for %s",
-          entry->fts_path);
-#endif
-      continue;
-    }
 
     if (should_check_ownership && (check_ownership(entry->fts_path) != 0)) {
       fprintf(LOGFILE,
@@ -567,20 +555,6 @@ int get_user_details(const char *user) {
   return 0;
 }
 
-/**
- * Compare ownership of a file with the given ids.
- */
-int compare_ownership(uid_t uid, gid_t gid, char *path) {
-  struct stat filestat;
-  if (stat(path, &filestat) != 0) {
-    return UNABLE_TO_STAT_FILE;
-  }
-  if (uid == filestat.st_uid && gid == filestat.st_gid) {
-    return 0;
-  }
-  return 1;
-}
-
 /*
  * Function to check if the TaskTracker actually owns the file.
   */
@@ -603,7 +577,10 @@ int check_ownership(char *path) {
  * Function to initialize the user directories of a user.
  * It does the following:
  *     *  sudo chown user:mapred -R taskTracker/$user
- *     *  sudo chmod 2570 -R taskTracker/$user
+ *     *  if user is not $tt_user,
+ *     *    sudo chmod 2570 -R taskTracker/$user
+ *     *  else // user is tt_user
+ *     *    sudo chmod 2770 -R taskTracker/$user
  * This is done once per every user on the TaskTracker.
  */
 int initialize_user(const char *user) {
@@ -633,6 +610,11 @@ int initialize_user(const char *user) {
       full_local_dir_str);
 #endif
 
+  int is_tt_user = (user_detail->pw_uid == getuid());
+  
+  // for tt_user, set 770 permissions; otherwise set 570
+  mode_t permissions = is_tt_user ? (S_IRWXU | S_IRWXG)
+                                  : (S_IRUSR | S_IXUSR | S_IRWXG);
   char *user_dir;
   char **local_dir_ptr = local_dir;
   int failed = 0;
@@ -660,11 +642,11 @@ int initialize_user(const char *user) {
         break;
       }
     } else if (secure_path(user_dir, user_detail->pw_uid,
-        tasktracker_gid, S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR |
-                         S_IXUSR | S_IRWXG, 1) != 0) {
-      // No setgid on files and setgid on dirs, 570
+        tasktracker_gid, permissions, S_ISGID | permissions, 1) != 0) {
+      // No setgid on files and setgid on dirs,
+      // 770 for tt_user and 570 for any other user
       fprintf(LOGFILE, "Failed to secure the user_dir %s\n",
-          user_dir);
+              user_dir);
       failed = 1;
       free(user_dir);
       break;
@@ -685,9 +667,13 @@ int initialize_user(const char *user) {
 /**
  * Function to prepare the job directories for the task JVM.
  * We do the following:
- *     *  sudo chown user:mapred -R taskTracker/jobcache/$jobid
- *     *  sudo chmod 2570 -R taskTracker/jobcache/$jobid
- *     *  sudo chmod 2770 taskTracker/jobcache/$jobid/work
+ *     *  sudo chown user:mapred -R taskTracker/$user/jobcache/$jobid
+ *     *  if user is not $tt_user,
+ *     *    sudo chmod 2570 -R taskTracker/$user/jobcache/$jobid
+ *     *  else // user is tt_user
+ *     *    sudo chmod 2770 -R taskTracker/$user/jobcache/$jobid
+ *     *
+ *     *  For any user, sudo chmod 2770 taskTracker/$user/jobcache/$jobid/work
  */
 int initialize_job(const char *jobid, const char *user) {
   if (jobid == NULL || user == NULL) {
@@ -715,6 +701,11 @@ int initialize_job(const char *jobid, const char *user) {
       full_local_dir_str);
 #endif
 
+  int is_tt_user = (user_detail->pw_uid == getuid());
+  
+  // for tt_user, set 770 permissions; for any other user, set 570 for job-dir
+  mode_t permissions = is_tt_user ? (S_IRWXU | S_IRWXG)
+                                  : (S_IRUSR | S_IXUSR | S_IRWXG);
   char *job_dir, *job_work_dir;
   char **local_dir_ptr = local_dir;
   int failed = 0;
@@ -741,14 +732,16 @@ int initialize_job(const char *jobid, const char *user) {
         break;
       }
     } else if (secure_path(job_dir, user_detail->pw_uid, tasktracker_gid,
-        S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR | S_IXUSR | S_IRWXG, 1)
-        != 0) {
-      // No setgid on files and setgid on dirs, 570
+               permissions, S_ISGID | permissions, 1) != 0) {
+      // No setgid on files and setgid on dirs,
+      // 770 for tt_user and 570 for any other user
       fprintf(LOGFILE, "Failed to secure the job_dir %s\n", job_dir);
       failed = 1;
       free(job_dir);
       break;
-    } else {
+    } else if (!is_tt_user) {
+      // For tt_user, we don't need this as we already set 2770 for
+      // job-work-dir because of "chmod -R" done above
       job_work_dir = get_job_work_directory(job_dir);
       if (job_work_dir == NULL) {
         fprintf(LOGFILE, "Couldn't get job-work directory for %s.\n", jobid);
@@ -801,7 +794,10 @@ int initialize_job(const char *jobid, const char *user) {
  * Function to initialize the distributed cache file for a user.
  * It does the following:
  *     *  sudo chown user:mapred -R taskTracker/$user/distcache/<randomdir>
- *     *  sudo chmod 2570 -R taskTracker/$user/distcache/<randomdir>
+ *     *  if user is not $tt_user,
+ *     *    sudo chmod 2570 -R taskTracker/$user/distcache/<randomdir>
+ *     *  else // user is tt_user
+ *     *    sudo chmod 2770 -R taskTracker/$user/distcache/<randomdir>
  * This is done once per localization. Tasks reusing JVMs just create
  * symbolic links themselves and so there isn't anything specific to do in
  * that case.
@@ -843,6 +839,12 @@ int initialize_distributed_cache_file(const char *tt_root,
   }
 
   gid_t binary_gid = getegid(); // the group permissions of the binary.
+  
+  int is_tt_user = (user_detail->pw_uid == getuid());
+  
+  // for tt_user, set 770 permissions; for any other user, set 570
+  mode_t permissions = is_tt_user ? (S_IRWXU | S_IRWXG)
+                                  : (S_IRUSR | S_IXUSR | S_IRWXG);
   int failed = 0;
   struct stat filestat;
   if (stat(localized_unique_dir, &filestat) != 0) {
@@ -851,9 +853,9 @@ int initialize_distributed_cache_file(const char *tt_root,
         localized_unique_dir);
     failed = INITIALIZE_DISTCACHEFILE_FAILED;
   } else if (secure_path(localized_unique_dir, user_detail->pw_uid,
-        binary_gid, S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR
-            | S_IXUSR | S_IRWXG, 1) != 0) {
-    // No setgid on files and setgid on dirs, 570
+        binary_gid, permissions, S_ISGID | permissions, 1) != 0) {
+    // No setgid on files and setgid on dirs,
+    // 770 for tt_user and 570 for any other user
     fprintf(LOGFILE, "Failed to secure the localized_unique_dir %s\n",
         localized_unique_dir);
     failed = INITIALIZE_DISTCACHEFILE_FAILED;

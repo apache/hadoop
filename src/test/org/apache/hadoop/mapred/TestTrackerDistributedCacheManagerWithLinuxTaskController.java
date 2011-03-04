@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterWithLinuxTaskController.MyLinuxTaskController;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.filecache.TestTrackerDistributedCacheManager;
 
 /**
@@ -105,11 +106,13 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
   protected void checkFilePermissions(Path[] localCacheFiles)
       throws IOException {
     String userName = getJobOwnerName();
+    String filePermissions = UserGroupInformation.getLoginUser()
+        .getShortUserName().equals(userName) ? "-rwxrwx---" : "-r-xrwx---";
 
     for (Path p : localCacheFiles) {
       // First make sure that the cache file has proper permissions.
       TestTaskTrackerLocalization.checkFilePermissions(p.toUri().getPath(),
-          "-r-xrwx---", userName,
+          filePermissions, userName,
           ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
       // Now. make sure that all the path components also have proper
       // permissions.
@@ -141,11 +144,14 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     LOG.info("Leading path for cacheFirstFile is : "
         + leadingStringForFirstFile);
 
+    String dirPermissions = UserGroupInformation.getLoginUser()
+        .getShortUserName().equals(userName) ? "drwxrws---" : "dr-xrws---";
+
     // Now check path permissions, starting with cache file's parent dir.
     File path = new File(cachedFilePath).getParentFile();
     while (!path.getAbsolutePath().equals(leadingStringForFirstFile)) {
       TestTaskTrackerLocalization.checkFilePermissions(path.getAbsolutePath(),
-          "dr-xrws---", userName, 
+          dirPermissions, userName, 
           ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
       path = path.getParentFile();
     }

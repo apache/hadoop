@@ -48,7 +48,7 @@ public class TestPipesAsDifferentUser extends ClusterWithLinuxTaskController {
     }
 
     super.startCluster();
-    taskControllerUser.doAs(new PrivilegedExceptionAction<Object>() {
+    jobOwner.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws Exception {
         JobConf clusterConf = getClusterConf();
         Path inputPath = new Path(homeDirectory, "in");

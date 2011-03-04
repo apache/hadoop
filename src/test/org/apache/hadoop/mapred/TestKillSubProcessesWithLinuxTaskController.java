@@ -34,7 +34,7 @@ public class TestKillSubProcessesWithLinuxTaskController extends
       return;
     }
     startCluster();
-    taskControllerUser.doAs(new PrivilegedExceptionAction<Object>() {
+    jobOwner.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws Exception {
         JobConf myConf = getClusterConf();
         JobTracker jt = mrCluster.getJobTrackerRunner().getJobTracker();
