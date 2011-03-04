@@ -506,7 +506,10 @@ public class TrackerDistributedCacheManager {
         // and copy the file into the dir as it is
       }
     }
-    // set proper permissions for the localized directory
+    // set proper permissions for the localized copy
+    if (isArchive) {
+      localFs.setPermission(parchive, permission);
+    }
     localFs.setPermission(destination, permission);
 
     LOG.info(String.format("Cached %s as %s",
