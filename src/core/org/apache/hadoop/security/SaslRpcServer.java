@@ -42,6 +42,7 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -68,11 +69,16 @@ public class SaslRpcServer {
   }
 
   public static TokenIdentifier getIdentifier(String id,
-      SecretManager<TokenIdentifier> secretManager) throws IOException {
+      SecretManager<TokenIdentifier> secretManager) throws InvalidToken {
     byte[] tokenId = decodeIdentifier(id);
     TokenIdentifier tokenIdentifier = secretManager.createIdentifier();
-    tokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(
-        tokenId)));
+    try {
+      tokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(
+          tokenId)));
+    } catch (IOException e) {
+      throw (InvalidToken) new InvalidToken(
+          "Can't de-serialize tokenIdentifier").initCause(e);
+    }
     return tokenIdentifier;
   }
 
@@ -85,6 +91,16 @@ public class SaslRpcServer {
     return fullName.split("[/@]");
   }
 
+  public enum SaslStatus {
+    SUCCESS (0),
+    ERROR (1);
+    
+    public final int state;
+    private SaslStatus(int state) {
+      this.state = state;
+    }
+  }
+  
   /** Authentication method */
   public static enum AuthMethod {
     SIMPLE((byte) 80, "", AuthenticationMethod.SIMPLE),
@@ -139,13 +155,13 @@ public class SaslRpcServer {
       this.connection = connection;
     }
 
-    private char[] getPassword(TokenIdentifier tokenid) throws IOException {
+    private char[] getPassword(TokenIdentifier tokenid) throws InvalidToken {
       return encodePassword(secretManager.retrievePassword(tokenid));
     }
 
     /** {@inheritDoc} */
     @Override
-    public void handle(Callback[] callbacks) throws IOException,
+    public void handle(Callback[] callbacks) throws InvalidToken,
         UnsupportedCallbackException {
       NameCallback nc = null;
       PasswordCallback pc = null;
@@ -201,7 +217,7 @@ public class SaslRpcServer {
 
     /** {@inheritDoc} */
     @Override
-    public void handle(Callback[] callbacks) throws IOException,
+    public void handle(Callback[] callbacks) throws
         UnsupportedCallbackException {
       AuthorizeCallback ac = null;
       for (Callback callback : callbacks) {

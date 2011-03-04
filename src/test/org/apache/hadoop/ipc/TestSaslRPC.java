@@ -19,6 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+import static org.junit.Assert.*;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -41,6 +42,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.security.token.TokenSelector;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -57,6 +59,7 @@ public class TestSaslRPC {
   public static final Log LOG =
     LogFactory.getLog(TestSaslRPC.class);
   
+  static final String ERROR_MESSAGE = "Token is invalid";
   static final String SERVER_PRINCIPAL_KEY = "test.ipc.server.principal";
   private static Configuration conf;
   static {
@@ -131,6 +134,14 @@ public class TestSaslRPC {
       return new TestTokenIdentifier();
     }
   }
+  
+  public static class BadTokenSecretManager extends TestTokenSecretManager {
+
+    public byte[] retrievePassword(TestTokenIdentifier id) 
+        throws InvalidToken {
+      throw new InvalidToken(ERROR_MESSAGE);
+    }
+  }
 
   public static class TestTokenSelector implements
       TokenSelector<TestTokenIdentifier> {
@@ -181,6 +192,24 @@ public class TestSaslRPC {
     server.disableSecurity();
     TestTokenSecretManager sm = new TestTokenSecretManager();
     doDigestRpc(server, sm);
+  }
+  
+  @Test
+  public void testErrorMessage() throws Exception {
+    BadTokenSecretManager sm = new BadTokenSecretManager();
+    final Server server = RPC.getServer(
+        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
+
+    boolean succeeded = false;
+    try {
+      doDigestRpc(server, sm);
+    } catch (RemoteException e) {
+      LOG.info("LOGGING MESSAGE: " + e.getLocalizedMessage());
+      assertTrue(ERROR_MESSAGE.equals(e.getLocalizedMessage()));
+      assertTrue(e.unwrapRemoteException() instanceof InvalidToken);
+      succeeded = true;
+    }
+    assertTrue(succeeded);
   }
   
   private void doDigestRpc(Server server, TestTokenSecretManager sm)
