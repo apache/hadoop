@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.*;
 
@@ -1459,6 +1459,9 @@ public abstract class FileSystem extends Configured implements Closeable {
     private final String scheme;
     private AtomicLong bytesRead = new AtomicLong();
     private AtomicLong bytesWritten = new AtomicLong();
+    private AtomicInteger readOps = new AtomicInteger();
+    private AtomicInteger largeReadOps = new AtomicInteger();
+    private AtomicInteger writeOps = new AtomicInteger();
     
     public Statistics(String scheme) {
       this.scheme = scheme;
@@ -1481,6 +1484,30 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
     
     /**
+     * Increment the number of read operations
+     * @param count number of read operations
+     */
+    public void incrementReadOps(int count) {
+      readOps.getAndAdd(count);
+    }
+
+    /**
+     * Increment the number of large read operations
+     * @param count number of large read operations
+     */
+    public void incrementLargeReadOps(int count) {
+      largeReadOps.getAndAdd(count);
+    }
+
+    /**
+     * Increment the number of write operations
+     * @param count number of write operations
+     */
+    public void incrementWriteOps(int count) {
+      writeOps.getAndAdd(count);
+    }
+
+    /**
      * Get the total number of bytes read
      * @return the number of bytes
      */
@@ -1496,9 +1523,36 @@ public abstract class FileSystem extends Configured implements Closeable {
       return bytesWritten.get();
     }
     
+    /**
+     * Get the number of file system read operations such as list files
+     * @return number of read operations
+     */
+    public int getReadOps() {
+      return readOps.get() + largeReadOps.get();
+    }
+
+    /**
+     * Get the number of large file system read operations such as list files
+     * under a large directory
+     * @return number of large read operations
+     */
+    public int getLargeReadOps() {
+      return largeReadOps.get();
+    }
+
+    /**
+     * Get the number of file system write operations such as create, append 
+     * rename etc.
+     * @return number of write operations
+     */
+    public int getWriteOps() {
+      return writeOps.get();
+    }
+
     public String toString() {
-      return bytesRead + " bytes read and " + bytesWritten + 
-             " bytes written";
+      return bytesRead + " bytes read, " + bytesWritten + " bytes written, "
+          + readOps + " read ops, " + largeReadOps + " large read ops, "
+          + writeOps + " write ops";
     }
     
     /**
