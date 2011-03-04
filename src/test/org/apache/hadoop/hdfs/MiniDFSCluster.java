@@ -381,7 +381,7 @@ public class MiniDFSCluster {
           throw new IOException("Mkdirs failed to create directory for DataNode "
                                 + i + ": " + dir1 + " or " + dir2);
         }
-        dnConf.set("dfs.data.dir", dir1.getPath() + "," + dir2.getPath()); 
+        dnConf.set(DataNode.DATA_DIR_KEY, dir1.getPath() + "," + dir2.getPath());
       }
       if (simulatedCapacities != null) {
         dnConf.setBoolean("dfs.datanode.simulateddatastorage", true);

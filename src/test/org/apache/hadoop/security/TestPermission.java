@@ -175,7 +175,7 @@ public class TestPermission extends TestCase {
       RAN.nextBytes(data);
       out.write(data);
       out.close();
-      nnfs.setPermission(CHILD_FILE1, new FsPermission((short)0700));
+      nnfs.setPermission(CHILD_FILE1, new FsPermission("700"));
 
       // following read is legal
       byte dataIn[] = new byte[FILE_LEN];
@@ -207,7 +207,7 @@ public class TestPermission extends TestCase {
       assertTrue(!canOpen(userfs, CHILD_FILE1));
 
       nnfs.setPermission(ROOT_PATH, new FsPermission((short)0755));
-      nnfs.setPermission(CHILD_DIR1, new FsPermission((short)0777));
+      nnfs.setPermission(CHILD_DIR1, new FsPermission("777"));
       nnfs.setPermission(new Path("/"), new FsPermission((short)0777));
       final Path RENAME_PATH = new Path("/foo/bar");
       userfs.mkdirs(RENAME_PATH);

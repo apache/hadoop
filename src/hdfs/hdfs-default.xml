@@ -225,6 +225,14 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
+  <name>dfs.datanode.data.dir.perm</name>
+  <value>755</value>
+  <description>Permissions for the directories on on the local filesystem where 
+  the DFS data node store its blocks. The permissions can either be octal or 
+  symbolic.</description>
+</property>
+
+<property>
   <name>dfs.replication</name>
   <value>3</value>
   <description>Default block replication. 

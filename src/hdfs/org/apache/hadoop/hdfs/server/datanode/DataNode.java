@@ -46,6 +46,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -204,6 +209,11 @@ public class DataNode extends Configured
   
   private final static String KEYTAB_FILE_KEY = "dfs.datanode.keytab.file";
   private final static String USER_NAME_KEY = "dfs.datanode.user.name.key";
+  
+  public static final String DATA_DIR_KEY = "dfs.data.dir";
+  public final static String DATA_DIR_PERMISSION_KEY = 
+    "dfs.datanode.data.dir.perm";
+  private static final String DEFAULT_DATA_DIR_PERMISSION = "755";
   
   // For InterDataNodeProtocol
   public Server ipcServer;
@@ -1303,7 +1313,7 @@ public class DataNode extends Configured
           " anymore. RackID resolution is handled by the NameNode.");
       System.exit(-1);
     }
-    String[] dataDirs = conf.getStrings("dfs.data.dir");
+    String[] dataDirs = conf.getStrings(DATA_DIR_KEY);
     dnThreadName = "DataNode: [" +
                         StringUtils.arrayToString(dataDirs) + "]";
     return makeInstance(dataDirs, conf);
@@ -1340,19 +1350,23 @@ public class DataNode extends Configured
    */
   public static DataNode makeInstance(String[] dataDirs, Configuration conf)
     throws IOException {
+    LocalFileSystem localFS = FileSystem.getLocal(conf);
     ArrayList<File> dirs = new ArrayList<File>();
-    for (int i = 0; i < dataDirs.length; i++) {
-      File data = new File(dataDirs[i]);
+    FsPermission dataDirPermission = 
+      new FsPermission(conf.get(DATA_DIR_PERMISSION_KEY, 
+                                DEFAULT_DATA_DIR_PERMISSION));
+    for (String dir : dataDirs) {
       try {
-        DiskChecker.checkDir(data);
-        dirs.add(data);
+        DiskChecker.checkDir(localFS, new Path(dir), dataDirPermission);
+        dirs.add(new File(dir));
       } catch(DiskErrorException e) {
-        LOG.warn("Invalid directory in dfs.data.dir: " + e.getMessage());
+        LOG.warn("Invalid directory in " + DATA_DIR_KEY +  ": " + 
+                 e.getMessage());
       }
     }
     if (dirs.size() > 0) 
       return new DataNode(conf, dirs);
-    LOG.error("All directories in dfs.data.dir are invalid.");
+    LOG.error("All directories in " + DATA_DIR_KEY + " are invalid.");
     return null;
   }
 

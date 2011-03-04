@@ -86,6 +86,15 @@ public class FsPermission implements Writable {
     this.otheraction = other.otheraction;
   }
   
+  /**
+   * Construct by given mode, either in octal or symbolic format.
+   * @param mode mode as a string, either in octal or symbolic format
+   * @throws IllegalArgumentException if <code>mode</code> is invalid
+   */
+  public FsPermission(String mode) {
+    this(new UmaskParser(mode).getUMask());
+  }
+  
   /** Return user {@link FsAction}. */
   public FsAction getUserAction() {return useraction;}
 
@@ -180,13 +189,14 @@ public class FsPermission implements Writable {
       } else {
         String confUmask = conf.get(UMASK_LABEL);
         if(confUmask != null) { // UMASK_LABEL is set
-          umask = new UmaskParser(confUmask).getUMask();
+          return new FsPermission(confUmask);
         }
       }
     }
     
     return new FsPermission((short)umask);
   }
+  
   /** Set the user file creation mask (umask) */
   public static void setUMask(Configuration conf, FsPermission umask) {
     conf.set(UMASK_LABEL, String.format("%1$03o", umask.toShort()));
