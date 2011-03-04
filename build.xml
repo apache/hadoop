@@ -164,7 +164,7 @@
 
   <property name="jsvc.build.dir" value="${build.dir}/jsvc" />
   <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
-  <property name="jsvc.location" value="http://apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-i386.tar.gz" />
+  <property name="jsvc.location" value="http://archive.apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-i386.tar.gz" />
   <property name="jsvc.dest.name" value="jsvc.tar.gz" />
 
   <!-- task-controller properties set here -->
