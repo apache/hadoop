@@ -242,6 +242,7 @@ class MapTask extends Task {
           throw new IOException("IO error in map input file "
               + conf.get("map.input.file"), ioe);
         }
+        throw ioe;
       }
       return ret;
     }
@@ -543,6 +544,7 @@ class MapTask extends Task {
           throw new IOException("IO error in map input file "
               + fileSplit.getPath().toString(), ioe);
         }
+        throw ioe;
       }
       return result;
     }
