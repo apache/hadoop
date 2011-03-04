@@ -33,7 +33,10 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
+import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
@@ -129,6 +132,7 @@ public class TestTaskTrackerLocalization extends TestCase {
 
     // for test case system FS is the local FS
     tracker.systemFS = FileSystem.getLocal(trackerFConf);
+    tracker.systemDirectory = new Path(TEST_ROOT_DIR.getAbsolutePath());
     tracker.setLocalFileSystem(tracker.systemFS);
     
     taskTrackerUGI = UserGroupInformation.login(trackerFConf);
@@ -141,6 +145,9 @@ public class TestTaskTrackerLocalization extends TestCase {
     task =
         new MapTask(jobConfFile.toURI().toString(), taskId, 1, null, 1);
     task.setConf(jobConf); // Set conf. Set user name in particular.
+
+    // create jobTokens file
+    uploadJobTokensFile();
 
     taskController = new DefaultTaskController();
     taskController.setConf(trackerFConf);
@@ -189,6 +196,25 @@ public class TestTaskTrackerLocalization extends TestCase {
     return jobConfFile;
    }
   
+  /**
+   * create fake JobTokens file
+   * @return
+   * @throws IOException
+   */
+  protected void uploadJobTokensFile() throws IOException {
+
+    File dir = new File(TEST_ROOT_DIR, jobId.toString());
+    if(!dir.exists())
+      assertTrue("faild to create dir="+dir.getAbsolutePath(), dir.mkdirs());
+
+    File jobTokenFile = new File(dir, SecureShuffleUtils.JOB_TOKEN_FILENAME);
+    FileOutputStream fos = new FileOutputStream(jobTokenFile);
+    java.io.DataOutputStream out = new java.io.DataOutputStream(fos);
+    Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>();
+    jt.write(out); // writing empty file, we don't need the keys for this test
+    out.close();
+  }
+
   @Override
   protected void tearDown()
       throws Exception {

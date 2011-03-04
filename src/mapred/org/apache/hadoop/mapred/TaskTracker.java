@@ -922,8 +922,7 @@ public class TaskTracker
         rjob.jobConf = localJobConf;  
         rjob.keepJobFiles = ((localJobConf.getKeepTaskFilesPattern() != null) ||
                              localJobConf.getKeepFailedTaskFiles());
-        // save local copy of JobToken file
-        localizeJobTokenFile(t.getUser(), jobId, localJobConf);       
+
         TokenStorage ts = TokenCache.loadTokens(rjob.jobConf);
         Token<JobTokenIdentifier> jt = (Token<JobTokenIdentifier>)ts.getJobToken(); 
         getJobTokenSecretManager().addTokenForJob(jobId.toString(), jt);
@@ -984,6 +983,9 @@ public class TaskTracker
 
     // Download the job.jar for this job from the system FS
     localizeJobJarFile(userName, jobId, userFs, localJobConf);
+
+    // save local copy of JobToken file
+    localizeJobTokenFile(userName, jobId, localJobConf);
 
     return localJobConf;
   }
