@@ -44,21 +44,26 @@ class OutputHandler<K extends WritableComparable,
   private OutputCollector<K, V> collector;
   private float progressValue = 0.0f;
   private boolean done = false;
+  
   private Throwable exception = null;
   RecordReader<FloatWritable,NullWritable> recordReader = null;
   private Map<Integer, Counters.Counter> registeredCounters = 
     new HashMap<Integer, Counters.Counter>();
 
+  private String expectedDigest = null;
+  private boolean digestReceived = false;
   /**
    * Create a handler that will handle any records output from the application.
    * @param collector the "real" collector that takes the output
    * @param reporter the reporter for reporting progress
    */
   public OutputHandler(OutputCollector<K, V> collector, Reporter reporter, 
-                       RecordReader<FloatWritable,NullWritable> recordReader) {
+                       RecordReader<FloatWritable,NullWritable> recordReader,
+                       String expectedDigest) {
     this.reporter = reporter;
     this.collector = collector;
     this.recordReader = recordReader;
+    this.expectedDigest = expectedDigest;
   }
 
   /**
@@ -155,5 +160,32 @@ class OutputHandler<K extends WritableComparable,
       throw new IOException("Invalid counter with id: " + id);
     }
   }
+  
+  public synchronized boolean authenticate(String digest) throws IOException {
+    boolean success = true;
+    if (!expectedDigest.equals(digest)) {
+      exception = new IOException("Authentication Failed: Expected digest="
+          + expectedDigest + ", received=" + digestReceived);
+      success = false;
+    }
+    digestReceived = true;
+    notify();
+    return success;
+  }
 
+  /**
+   * This is called by Application and blocks the thread until
+   * authentication response is received.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  synchronized void waitForAuthentication()
+      throws IOException, InterruptedException {
+    while (digestReceived == false && exception == null) {
+      wait();
+    }
+    if (exception != null) {
+      throw new IOException(exception.getMessage());
+    }
+  }
 }

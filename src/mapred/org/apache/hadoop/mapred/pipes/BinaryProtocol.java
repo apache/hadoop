@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import javax.crypto.SecretKey;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.BytesWritable;
@@ -34,6 +36,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -69,13 +73,15 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
                                     REDUCE_VALUE(7),
                                     CLOSE(8),
                                     ABORT(9),
+                                    AUTHENTICATION_REQ(10),
                                     OUTPUT(50),
                                     PARTITIONED_OUTPUT(51),
                                     STATUS(52),
                                     PROGRESS(53),
                                     DONE(54),
                                     REGISTER_COUNTER(55),
-                                    INCREMENT_COUNTER(56);
+                                    INCREMENT_COUNTER(56),
+                                    AUTHENTICATION_RESP(57);
     final int code;
     MessageType(int code) {
       this.code = code;
@@ -90,6 +96,7 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     private UpwardProtocol<K2, V2> handler;
     private K2 key;
     private V2 value;
+    private boolean authPending = true;
     
     public UplinkReaderThread(InputStream stream,
                               UpwardProtocol<K2, V2> handler, 
@@ -113,7 +120,14 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
           }
           int cmd = WritableUtils.readVInt(inStream);
           LOG.debug("Handling uplink command " + cmd);
-          if (cmd == MessageType.OUTPUT.code) {
+          if (cmd == MessageType.AUTHENTICATION_RESP.code) {
+            String digest = Text.readString(inStream);
+            authPending = !handler.authenticate(digest);
+          } else if (authPending) {
+            LOG.warn("Message " + cmd + " received before authentication is "
+                + "complete. Ignoring");
+            continue;
+          } else if (cmd == MessageType.OUTPUT.code) {
             readObject(key);
             readObject(value);
             handler.output(key, value);
@@ -244,6 +258,15 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
     uplink.interrupt();
     uplink.join();
   }
+  
+  public void authenticate(String digest, String challenge)
+      throws IOException {
+    LOG.debug("Sending AUTHENTICATION_REQ, digest=" + digest + ", challenge="
+        + challenge);
+    WritableUtils.writeVInt(stream, MessageType.AUTHENTICATION_REQ.code);
+    Text.writeString(stream, digest);
+    Text.writeString(stream, challenge);
+  }
 
   public void start() throws IOException {
     LOG.debug("starting downlink");
@@ -344,5 +367,4 @@ class BinaryProtocol<K1 extends WritableComparable, V1 extends Writable,
       stream.write(buffer.getData(), 0, length);
     }
   }
-  
 }
