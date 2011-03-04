@@ -158,4 +158,17 @@ public class TTClient extends MRDaemonClient<TTProtocol> {
       }
     }
   }
+
+  /**
+   * Concrete implementation of abstract super class method
+   * @param attributeName name of the attribute to be retrieved
+   * @return Object value of the given attribute
+   * @throws IOException is thrown in case of communication errors
+   */
+  @Override
+  public Object getDaemonAttribute (String attributeName) throws IOException {
+    return getJmxAttribute("TaskTracker", "TaskTrackerInfo", attributeName);
+//    throw new UnsupportedOperationException(
+//      "TaskTracker doesn't support JMX instrumentation yet...");
+  }
 }

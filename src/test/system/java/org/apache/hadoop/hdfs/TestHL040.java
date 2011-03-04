@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -31,6 +32,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mortbay.util.ajax.JSON;
 
 public class TestHL040 {
   private HDFSCluster cluster = null;
@@ -64,6 +66,21 @@ public class TestHL040 {
           dnC.getProcessInfo());
       Assert.assertNotNull("Datanode process info isn't suppose to be null",
           dnC.getProcessInfo());
+      LOG.info("Free space " + readAttr(dnC));
     }
+  }
+
+  private long readAttr(DNClient dnC) throws IOException {
+    Object volObj = dnC.getDaemonAttribute("VolumeInfo");
+    Assert.assertNotNull("Attribute value is expected to be not null", volObj);
+    LOG.debug("Got object: " + volObj);
+    Map volInfoMap = (Map) JSON.parse(volObj.toString());
+    long totalFreeSpace = 0L;
+    for (Object key : volInfoMap.keySet()) {
+      Map attrMap = (Map) volInfoMap.get(key);
+      long freeSpace = (Long) attrMap.get("freeSpace");
+      totalFreeSpace += freeSpace;
+    }
+    return totalFreeSpace;
   }
 }
