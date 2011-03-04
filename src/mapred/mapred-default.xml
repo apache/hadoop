@@ -494,7 +494,8 @@
   next multiple of mapred.cluster.map.memory.mb and upto the limit 
   specified by mapred.cluster.max.map.memory.mb, if the scheduler supports 
   the feature. 
-  The value of -1 indicates that this feature is turned off.
+  The value of -1 indicates that this feature is turned off iff 
+  mapred.cluster.map.memory.mb is also turned off (-1).
   </description>
 </property>
 
@@ -507,7 +508,9 @@
   next multiple of mapred.cluster.reduce.memory.mb and upto the limit 
   specified by mapred.cluster.max.reduce.memory.mb, if the scheduler supports 
   the feature. 
-  The value of -1 indicates that this feature is turned off.  </description>
+  The value of -1 indicates that this feature is turned off iff
+  mapred.cluster.reduce.memory.mb is also turned off (-1).  
+  </description>
 </property>
 
 <property>
