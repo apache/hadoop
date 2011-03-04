@@ -413,6 +413,81 @@ public class TestCopyFiles extends TestCase {
     }
   }
 
+ public void testCopyDfsToDfsUpdateWithSkipCRC() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      Configuration conf = new Configuration();
+      cluster = new MiniDFSCluster(conf, 2, true, null);
+      final FileSystem hdfs = cluster.getFileSystem();
+      final String namenode = hdfs.getUri().toString();
+      
+      FileSystem fs = FileSystem.get(URI.create(namenode), new Configuration());
+      // Create two files of the same name, same length but different
+      // contents
+      final String testfilename = "test";
+      final String srcData = "act act act";
+      final String destData = "cat cat cat";
+      
+      if (namenode.startsWith("hdfs://")) {
+        deldir(hdfs,"/logs");
+        
+        Path srcPath = new Path("/srcdat", testfilename);
+        Path destPath = new Path("/destdat", testfilename);
+        FSDataOutputStream out = fs.create(srcPath, true);
+        out.writeUTF(srcData);
+        out.close();
+
+        out = fs.create(destPath, true);
+        out.writeUTF(destData);
+        out.close();
+        
+        // Run with -skipcrccheck option
+        ToolRunner.run(new DistCp(conf), new String[] {
+          "-p",
+          "-update",
+          "-skipcrccheck",
+          "-log",
+          namenode+"/logs",
+          namenode+"/srcdat",
+          namenode+"/destdat"});
+        
+        // File should not be overwritten
+        FSDataInputStream in = hdfs.open(destPath);
+        String s = in.readUTF();
+        System.out.println("Dest had: " + s);
+        assertTrue("Dest got over written even with skip crc",
+            s.equalsIgnoreCase(destData));
+        in.close();
+        
+        deldir(hdfs, "/logs");
+
+        // Run without the option        
+        ToolRunner.run(new DistCp(conf), new String[] {
+          "-p",
+          "-update",
+          "-log",
+          namenode+"/logs",
+          namenode+"/srcdat",
+          namenode+"/destdat"});
+        
+        // File should be overwritten
+        in = hdfs.open(destPath);
+        s = in.readUTF();
+        System.out.println("Dest had: " + s);
+
+        assertTrue("Dest did not get overwritten without skip crc",
+            s.equalsIgnoreCase(srcData));
+        in.close();
+
+        deldir(hdfs, "/destdat");
+        deldir(hdfs, "/srcdat");
+        deldir(hdfs, "/logs");
+       }
+    } finally {
+      if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
   public void testCopyDuplication() throws Exception {
     final FileSystem localfs = FileSystem.get(LOCAL_FS, new Configuration());
     try {    
