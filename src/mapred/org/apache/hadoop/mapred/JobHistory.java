@@ -486,8 +486,6 @@ public class JobHistory {
    * @param conf Jobconf of the job tracker.
    * @param hostname jobtracker's hostname
    * @param jobTrackerStartTime jobtracker's start time
-   * @return true if intialized properly
-   *         false otherwise
    */
   public static void init(JobTracker jobTracker, JobConf conf,
              String hostname, long jobTrackerStartTime) throws IOException {
