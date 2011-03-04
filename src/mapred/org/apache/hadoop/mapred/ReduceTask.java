@@ -554,11 +554,14 @@ class ReduceTask extends Task {
     org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE> output =
       (org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE>)
         outputFormat.getRecordWriter(taskContext);
+     org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE> trackedRW = 
+       new NewTrackingRecordWriter<OUTKEY, OUTVALUE>(output, reduceOutputCounter);
     job.setBoolean("mapred.skip.on", isSkipping());
     org.apache.hadoop.mapreduce.Reducer.Context 
          reducerContext = createReduceContext(reducer, job, getTaskID(),
-                                               rIter, reduceInputValueCounter, 
-                                               output, committer,
+                                               rIter, reduceInputKeyCounter,
+                                               reduceInputValueCounter, 
+                                               trackedRW, committer,
                                                reporter, comparator, keyClass,
                                                valueClass);
     reducer.run(reducerContext);

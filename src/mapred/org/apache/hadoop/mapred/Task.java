@@ -1031,6 +1031,7 @@ abstract public class Task implements Writable, Configurable {
             org.apache.hadoop.mapreduce.TaskAttemptID.class,
             RawKeyValueIterator.class,
             org.apache.hadoop.mapreduce.Counter.class,
+            org.apache.hadoop.mapreduce.Counter.class,
             org.apache.hadoop.mapreduce.RecordWriter.class,
             org.apache.hadoop.mapreduce.OutputCommitter.class,
             org.apache.hadoop.mapreduce.StatusReporter.class,
@@ -1050,7 +1051,8 @@ abstract public class Task implements Writable, Configurable {
                       Configuration job,
                       org.apache.hadoop.mapreduce.TaskAttemptID taskId, 
                       RawKeyValueIterator rIter,
-                      org.apache.hadoop.mapreduce.Counter inputCounter,
+                      org.apache.hadoop.mapreduce.Counter inputKeyCounter,
+                      org.apache.hadoop.mapreduce.Counter inputValueCounter,
                       org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE> output, 
                       org.apache.hadoop.mapreduce.OutputCommitter committer,
                       org.apache.hadoop.mapreduce.StatusReporter reporter,
@@ -1060,7 +1062,8 @@ abstract public class Task implements Writable, Configurable {
     try {
 
       return contextConstructor.newInstance(reducer, job, taskId,
-                                            rIter, inputCounter, output, 
+                                            rIter, inputKeyCounter, 
+                                            inputValueCounter, output, 
                                             committer, reporter, comparator, 
                                             keyClass, valueClass);
     } catch (InstantiationException e) {
@@ -1215,7 +1218,7 @@ abstract public class Task implements Writable, Configurable {
           ReflectionUtils.newInstance(reducerClass, job);
       org.apache.hadoop.mapreduce.Reducer.Context 
            reducerContext = createReduceContext(reducer, job, taskId,
-                                                iterator, inputCounter, 
+                                                iterator, null, inputCounter, 
                                                 new OutputConverter(collector),
                                                 committer,
                                                 reporter, comparator, keyClass,

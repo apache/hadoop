@@ -152,9 +152,14 @@ public class TestMapReduceLocal extends TestCase {
                                      "REDUCE_INPUT_RECORDS").getValue();
     long mapOut = ctrs.findCounter(COUNTER_GROUP, 
                                    "MAP_OUTPUT_RECORDS").getValue();
+    long reduceOut = ctrs.findCounter(COUNTER_GROUP,
+                                      "REDUCE_OUTPUT_RECORDS").getValue();
+    long reduceGrps = ctrs.findCounter(COUNTER_GROUP,
+                                       "REDUCE_INPUT_GROUPS").getValue();
     assertEquals("map out = combine in", mapOut, combineIn);
     assertEquals("combine out = reduce in", combineOut, reduceIn);
     assertTrue("combine in > combine out", combineIn > combineOut);
+    assertEquals("reduce groups = reduce out", reduceGrps, reduceOut);
     String group = "Random Group";
     CounterGroup ctrGrp = ctrs.getGroup(group);
     assertEquals(0, ctrGrp.size());
