@@ -678,11 +678,41 @@
 <property>
   <name>mapred.max.tracker.blacklists</name>
   <value>4</value>
-  <description>The number of blacklists for a taskTracker by various jobs
-               after which the task tracker could be blacklisted across
-               all jobs. The tracker will be given a tasks later
-               (after a day). The tracker will become a healthy
-               tracker after a restart.
+  <description>The number of blacklists for a tasktracker by various jobs
+               after which the tasktracker will be marked as potentially
+               faulty and is a candidate for graylisting across all jobs.
+               (Unlike blacklisting, this is advisory; the tracker remains
+               active.  However, it is reported as graylisted in the web UI,
+               with the expectation that chronically graylisted trackers
+               will be manually decommissioned.)  This value is tied to
+               mapred.jobtracker.blacklist.fault-timeout-window; faults
+               older than the window width are forgiven, so the tracker
+               will recover from transient problems.  It will also become
+               healthy after a restart.
+  </description>
+</property> 
+
+<property>
+  <name>mapred.jobtracker.blacklist.fault-timeout-window</name>
+  <value>180</value>
+  <description>The timeout (in minutes) after which per-job tasktracker
+               faults are forgiven.  The window is logically a circular
+               buffer of time-interval buckets whose width is defined by
+               mapred.jobtracker.blacklist.fault-bucket-width; when the
+               "now" pointer moves across a bucket boundary, the previous
+               contents (faults) of the new bucket are cleared.  In other
+               words, the timeout's granularity is determined by the bucket
+               width.
+  </description>
+</property> 
+
+<property>
+  <name>mapred.jobtracker.blacklist.fault-bucket-width</name>
+  <value>15</value>
+  <description>The width (in minutes) of each bucket in the tasktracker
+               fault timeout window.  Each bucket is reused in a circular
+               manner after a full timeout-window interval (defined by
+               mapred.jobtracker.blacklist.fault-timeout-window).
   </description>
 </property> 
 

@@ -24,6 +24,9 @@
     if (("blacklisted").equals(type)) {
       out.println("<h2>Blacklisted Task Trackers</h2>");
       c = tracker.blacklistedTaskTrackers();
+    } else if (("graylisted").equals(type)) {
+      out.println("<h2>Graylisted Task Trackers</h2>");
+      c = tracker.graylistedTaskTrackers();
     } else if (("active").equals(type)) {
       out.println("<h2>Active Task Trackers</h2>");
       c = tracker.activeTaskTrackers();
@@ -33,7 +36,7 @@
     }
     int noCols = 9 + 
       (2 * tracker.getStatistics().collector.DEFAULT_COLLECT_WINDOWS.length);
-    if(type.equals("blacklisted")) {
+    if (type.equals("blacklisted") || type.equals("graylisted")) {
       noCols = noCols + 1;
     }
     if (c.size() == 0) {
@@ -49,10 +52,12 @@
                 "<td><b>Failures</b></td>" +
                 "<td><b>Node Health Status</b></td>" +
                 "<td><b>Seconds Since Node Last Healthy</b></td>");
-      if(type.equals("blacklisted")) {
-      	out.print("<td><b>Reason For blacklisting</b></td>");
+      if (type.equals("blacklisted")) {
+        out.print("<td><b>Reason for Blacklisting</b></td>");
+      } else if (type.equals("graylisted")) {
+        out.print("<td><b>Reason for Graylisting</b></td>");
       }
-      for(StatisticsCollector.TimeWindow window : tracker.getStatistics().
+      for (StatisticsCollector.TimeWindow window : tracker.getStatistics().
            collector.DEFAULT_COLLECT_WINDOWS) {
          out.println("<td><b>Total Tasks "+window.name+"</b></td>");
          out.println("<td><b>Succeeded Tasks "+window.name+"</b></td>");
@@ -97,10 +102,12 @@
                   "</td><td>" + numFailures +
                   "</td><td>" + healthString +
                   "</td><td>" + sinceHealthCheck); 
-        if(type.equals("blacklisted")) {
+        if (type.equals("blacklisted")) {
           out.print("</td><td>" + tracker.getReasonsForBlacklisting(tt.getHost()));
+        } else if (type.equals("graylisted")) {
+          out.print("</td><td>" + tracker.getReasonsForGraylisting(tt.getHost()));
         }
-        for(StatisticsCollector.TimeWindow window : tracker.getStatistics().
+        for (StatisticsCollector.TimeWindow window : tracker.getStatistics().
           collector.DEFAULT_COLLECT_WINDOWS) {
           JobTrackerStatistics.TaskTrackerStat ttStat = tracker.getStatistics().
              getTaskTrackerStat(tt.getTrackerName());

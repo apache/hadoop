@@ -157,6 +157,12 @@ class JobTrackerInstrumentation {
   public void decBlackListedTrackers(int trackers)
   { }
 
+  public void addGrayListedTrackers(int trackers)
+  { }
+
+  public void decGrayListedTrackers(int trackers)
+  { }
+
   public void setDecommissionedTrackers(int trackers)
   { }   
 

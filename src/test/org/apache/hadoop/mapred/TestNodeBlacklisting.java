@@ -99,16 +99,17 @@ public class TestNodeBlacklisting extends TestCase {
       job.waitForCompletion();
 
       // validate the total tracker count
-      assertEquals("Active tracker count mismatch", 
-                   1, jt.getClusterStatus(false).getTaskTrackers());
-      // validate blacklisted count
-      assertEquals("Blacklisted tracker count mismatch", 
-                   1, jt.getClusterStatus(false).getBlacklistedTrackers());
+      // (graylisted trackers remain active, unlike blacklisted ones)
+      assertEquals("Active tracker count mismatch",
+                   2, jt.getClusterStatus(false).getTaskTrackers());
+      // validate graylisted count
+      assertEquals("Graylisted tracker count mismatch",
+                   1, jt.getClusterStatus(false).getGraylistedTrackers());
 
-      // find the blacklisted tracker
+      // find the graylisted tracker
       String trackerName = null;
       for (TaskTrackerStatus status : jt.taskTrackers()) {
-        if (jt.isBlacklisted(status.getTrackerName())) {
+        if (jt.isGraylisted(status.getTrackerName())) {
           trackerName = status.getTrackerName();
           break;
         }
@@ -127,9 +128,9 @@ public class TestNodeBlacklisting extends TestCase {
       // check the cluster status and tracker size
       assertEquals("Tracker is not lost upon host decommissioning", 
                    1, jt.getClusterStatus(false).getTaskTrackers());
-      assertEquals("Blacklisted tracker count incorrect in cluster status "
+      assertEquals("Graylisted tracker count incorrect in cluster status "
                    + "after decommissioning", 
-                   0, jt.getClusterStatus(false).getBlacklistedTrackers());
+                   0, jt.getClusterStatus(false).getGraylistedTrackers());
       assertEquals("Tracker is not lost upon host decommissioning", 
                    1, jt.taskTrackers().size());
     } finally {

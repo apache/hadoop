@@ -41,6 +41,7 @@
               "<th>Map Task Capacity</th>" +
               "<th>Reduce Task Capacity</th><th>Avg. Tasks/Node</th>" + 
               "<th>Blacklisted Nodes</th>" +
+              "<th>Graylisted Nodes</th>" +
               "<th>Excluded Nodes</th></tr>\n");
     out.print("<tr><td>" + metrics.getRunningMaps() + "</td><td>" +
               metrics.getRunningReduces() + "</td><td>" + 
@@ -56,6 +57,8 @@
               "</td><td>" + tasksPerNode +
               "</td><td><a href=\"machines.jsp?type=blacklisted\">" +
               metrics.getBlackListedTaskTrackerCount() + "</a>" +
+              "</td><td><a href=\"machines.jsp?type=graylisted\">" +
+              metrics.getGrayListedTaskTrackerCount() + "</a>" +
               "</td><td><a href=\"machines.jsp?type=excluded\">" +
               metrics.getDecommissionedTaskTrackerCount() + "</a>" +
               "</td></tr></table>\n");

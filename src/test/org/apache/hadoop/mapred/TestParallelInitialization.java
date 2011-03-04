@@ -97,7 +97,7 @@ public class TestParallelInitialization extends TestCase {
     
     public ClusterStatus getClusterStatus() {
       int numTrackers = trackers.size();
-      return new ClusterStatus(numTrackers, 0, 
+      return new ClusterStatus(numTrackers, 0, 0,
                                JobTracker.TASKTRACKER_EXPIRY_INTERVAL,
                                maps, reduces,
                                numTrackers * maxMapTasksPerTracker,

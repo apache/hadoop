@@ -62,6 +62,7 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
 
   private int numTrackers = 0;
   private int numTrackersBlackListed = 0;
+  private int numTrackersGrayListed = 0;
   private int numTrackersDecommissioned = 0;
 
   // long, because 2^31 could well be only about a month's worth of
@@ -400,6 +401,18 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   public synchronized void decBlackListedTrackers(int trackers)
   {
     numTrackersBlackListed -= trackers;
+  }
+
+  @Override
+  public synchronized void addGrayListedTrackers(int trackers)
+  {
+    numTrackersGrayListed += trackers;
+  }
+
+  @Override
+  public synchronized void decGrayListedTrackers(int trackers)
+  {
+    numTrackersGrayListed -= trackers;
   }
 
   @Override

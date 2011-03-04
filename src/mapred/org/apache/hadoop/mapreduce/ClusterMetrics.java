@@ -61,6 +61,7 @@ public class ClusterMetrics implements Writable {
   private int totalJobSubmissions;
   private int numTrackers;
   private int numBlacklistedTrackers;
+  private int numGraylistedTrackers;
   private int numDecommissionedTrackers;
 
   public ClusterMetrics() {
@@ -71,7 +72,7 @@ public class ClusterMetrics implements Writable {
       int reservedMapSlots, int reservedReduceSlots,
       int mapSlots, int reduceSlots, 
       int totalJobSubmissions,
-      int numTrackers, int numBlacklistedTrackers,
+      int numTrackers, int numBlacklistedTrackers, int numGraylistedTrackers,
       int numDecommissionedNodes) {
     this.runningMaps = runningMaps;
     this.runningReduces = runningReduces;
@@ -84,6 +85,7 @@ public class ClusterMetrics implements Writable {
     this.totalJobSubmissions = totalJobSubmissions;
     this.numTrackers = numTrackers;
     this.numBlacklistedTrackers = numBlacklistedTrackers;
+    this.numGraylistedTrackers = numGraylistedTrackers;
     this.numDecommissionedTrackers = numDecommissionedNodes;
   }
 
@@ -184,6 +186,15 @@ public class ClusterMetrics implements Writable {
    */
   public int getBlackListedTaskTrackerCount() {
     return numBlacklistedTrackers;
+  }
+  
+  /**
+   * Get the number of graylisted trackers in the cluster.
+   * 
+   * @return graylisted tracker count
+   */
+  public int getGrayListedTaskTrackerCount() {
+    return numGraylistedTrackers;
   }
   
   /**

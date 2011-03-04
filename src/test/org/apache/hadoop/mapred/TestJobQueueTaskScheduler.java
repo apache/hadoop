@@ -144,7 +144,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     @Override
     public ClusterStatus getClusterStatus() {
       int numTrackers = trackers.size();
-      return new ClusterStatus(numTrackers, 0, 
+      return new ClusterStatus(numTrackers, 0, 0,
                                JobTracker.TASKTRACKER_EXPIRY_INTERVAL,
                                maps, reduces,
                                numTrackers * maxMapTasksPerTracker,
