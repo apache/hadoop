@@ -99,7 +99,7 @@ public class TestNodeCount extends TestCase {
       // check if excessive replica is detected
       do {
        num = namesystem.countNodes(block);
-      } while (num.excessReplicas() == 2);
+      } while (num.excessReplicas() != 2);
     } finally {
       cluster.shutdown();
     }

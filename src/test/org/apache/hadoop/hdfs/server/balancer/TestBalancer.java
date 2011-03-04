@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.AccessTokenHandler;
 
 import junit.framework.TestCase;
 /**
@@ -60,7 +59,6 @@ public class TestBalancer extends TestCase {
   }
 
   private void initConf(Configuration conf) {
-    conf.setBoolean(AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, false);
     conf.setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     conf.setInt("io.bytes.per.checksum", DEFAULT_BLOCK_SIZE);
     conf.setLong("dfs.heartbeat.interval", 1L);
@@ -259,23 +257,32 @@ public class TestBalancer extends TestCase {
     } while(!balanced);
 
   }
+  
+  /** one-node cluster test*/
+  private void oneNodeTest(Configuration conf) throws Exception {
+    // add an empty node with half of the CAPACITY & the same rack
+    test(conf, new long[]{CAPACITY}, new String[]{RACK0}, CAPACITY/2, RACK0);
+  }
+  
+  /** two-node cluster test */
+  private void twoNodeTest(Configuration conf) throws Exception {
+    test(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
+        CAPACITY, RACK2);
+  }
+  
+  /** test using a user-supplied conf */
+  public void integrationTest(Configuration conf) throws Exception {
+    initConf(conf);
+    oneNodeTest(conf);
+  }
+  
   /** Test a cluster with even distribution, 
    * then a new empty node is added to the cluster*/
   public void testBalancer0() throws Exception {
     Configuration conf = new Configuration();
     initConf(conf);
-    /** one-node cluster test*/
-    // add an empty node with half of the CAPACITY & the same rack
-    test(conf, new long[]{CAPACITY}, new String[]{RACK0}, CAPACITY/2, RACK0);
-
-    /** two-node cluster test */
-    test(conf, new long[]{CAPACITY, CAPACITY}, new String[]{RACK0, RACK1},
-        CAPACITY, RACK2);
-    
-    /** End-to-end testing of access token, involving NN, DN, and Balancer */
-    Configuration newConf = new Configuration(conf);
-    newConf.setBoolean(AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, true);
-    test(newConf, new long[]{CAPACITY}, new String[]{RACK0}, CAPACITY/2, RACK0);
+    oneNodeTest(conf);
+    twoNodeTest(conf);
   }
 
   /** Test unevenly distributed cluster */

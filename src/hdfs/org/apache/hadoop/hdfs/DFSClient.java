@@ -1402,11 +1402,15 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       if (status != DataTransferProtocol.OP_STATUS_SUCCESS) {
         if (status == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN) {
           throw new InvalidAccessTokenException(
-              "Got access token error in response to OP_READ_BLOCK "
-                  + "for file " + file + " for block " + blockId);
+              "Got access token error for OP_READ_BLOCK, self="
+                  + sock.getLocalSocketAddress() + ", remote="
+                  + sock.getRemoteSocketAddress() + ", for file " + file
+                  + ", for block " + blockId + "_" + genStamp);
         } else {
-          throw new IOException("Got error in response to OP_READ_BLOCK "
-              + "for file " + file + " for block " + blockId);
+          throw new IOException("Got error for OP_READ_BLOCK, self="
+              + sock.getLocalSocketAddress() + ", remote="
+              + sock.getRemoteSocketAddress() + ", for file " + file
+              + ", for block " + blockId + "_" + genStamp);
         }
       }
       DataChecksum checksum = DataChecksum.newDataChecksum( in );
@@ -1684,9 +1688,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               buffersize, verifyChecksum, clientName);
           return chosenNode;
         } catch (IOException ex) {
-          LOG.debug("Failed to connect to " + targetAddr + ":" 
-                    + StringUtils.stringifyException(ex));
-          if (ex instanceof InvalidAccessTokenException && refetchToken-- > 0) {
+          if (ex instanceof InvalidAccessTokenException && refetchToken > 0) {
+            LOG.info("Will fetch a new access token and retry, " 
+                + "access token was invalid when connecting to " + targetAddr
+                + " : " + ex);
             /*
              * Get a new access token and retry. Retry is needed in 2 cases. 1)
              * When both NN and DN re-started while DFSClient holding a cached
@@ -1697,8 +1702,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
              * access key from its memory since it's considered expired based on
              * the estimated expiration date.
              */
+            refetchToken--;
             fetchBlockAt(target);
           } else {
+            LOG.info("Failed to connect to " + targetAddr
+                + ", add to deadNodes and continue", ex);
             // Put chosen node into dead list, continue
             addToDeadNodes(chosenNode);
           }
@@ -1919,12 +1927,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                    e.getPos() + " from " + chosenNode.getName());
           reportChecksumFailure(src, block.getBlock(), chosenNode);
         } catch (IOException e) {
-          if (e instanceof InvalidAccessTokenException && refetchToken-- > 0) {
-            LOG.info("Invalid access token when connecting to " + targetAddr
-                + " for file " + src + " for block "
-                + block.getBlock() + ":"
-                + StringUtils.stringifyException(e)
-                + ", get a new access token and retry...");
+          if (e instanceof InvalidAccessTokenException && refetchToken > 0) {
+            LOG.info("Will get a new access token and retry, "
+                + "access token was invalid when connecting to " + targetAddr
+                + " : " + e);
+            refetchToken--;
             fetchBlockAt(block.getStartOffset());
             continue;
           } else {
@@ -2188,6 +2195,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private int maxRecoveryErrorCount = 5; // try block recovery 5 times
     private volatile boolean appendChunk = false;   // appending to existing partial block
     private long initialFileSize = 0; // at time of file open
+
+    AccessToken getAccessToken() {
+      return accessToken;
+    }
 
     private void setLastException(IOException e) {
       if (lastException == null) {
