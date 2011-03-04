@@ -114,8 +114,8 @@ public class SecurityUtil {
   }
   
   /**
-   * Convert Kerberos principal name conf values to valid Kerberos principal
-   * names. It replaces $host in the conf values with hostname, which should be
+   * Convert Kerberos principal name pattern to valid Kerberos principal
+   * names. It replaces hostname pattern with hostname, which should be
    * fully-qualified domain name. If hostname is null or "0.0.0.0", it uses
    * dynamically looked-up fqdn of the current host instead.
    * 
@@ -128,24 +128,57 @@ public class SecurityUtil {
    */
   public static String getServerPrincipal(String principalConfig,
       String hostname) throws IOException {
+    String[] components = getComponents(principalConfig);
+    if (components == null || components.length != 3
+        || !components[1].equals(HOSTNAME_PATTERN)) {
+      return principalConfig;
+    } else {
+      return replacePattern(components, hostname);
+    }
+  }
+  
+  /**
+   * Convert Kerberos principal name pattern to valid Kerberos principal names.
+   * This method is similar to {@link #getServerPrincipal(String, String)},
+   * except 1) the reverse DNS lookup from addr to hostname is done only when
+   * necessary, 2) param addr can't be null (no default behavior of using local
+   * hostname when addr is null).
+   * 
+   * @param principalConfig
+   *          Kerberos principal name pattern to convert
+   * @param addr
+   *          InetAddress of the host used for substitution
+   * @return converted Kerberos principal name
+   * @throws IOException
+   */
+  public static String getServerPrincipal(String principalConfig,
+      InetAddress addr) throws IOException {
+    String[] components = getComponents(principalConfig);
+    if (components == null || components.length != 3
+        || !components[1].equals(HOSTNAME_PATTERN)) {
+      return principalConfig;
+    } else {
+      if (addr == null) {
+        throw new IOException("Can't replace " + HOSTNAME_PATTERN
+            + " pattern since client address is null");
+      }
+      return replacePattern(components, addr.getCanonicalHostName());
+    }
+  }
+  
+  private static String[] getComponents(String principalConfig) {
     if (principalConfig == null)
       return null;
-    String[] components = principalConfig.split("[/@]");
-    if (components.length != 3) {
-      throw new IOException(
-          "Kerberos service principal name isn't configured properly "
-              + "(should have 3 parts): " + principalConfig);
+    return principalConfig.split("[/@]");
+  }
+  
+  private static String replacePattern(String[] components, String hostname)
+      throws IOException {
+    String fqdn = hostname;
+    if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
+      fqdn = getLocalHostName();
     }
-
-    if (components[1].equals(HOSTNAME_PATTERN)) {
-      String fqdn = hostname;
-      if (fqdn == null || fqdn.equals("") || fqdn.equals("0.0.0.0")) {
-        fqdn = getLocalHostName();
-      }
-      return components[0] + "/" + fqdn + "@" + components[2];
-    } else {
-      return principalConfig;
-    }
+    return components[0] + "/" + fqdn + "@" + components[2];
   }
   
   static String getLocalHostName() throws UnknownHostException {
