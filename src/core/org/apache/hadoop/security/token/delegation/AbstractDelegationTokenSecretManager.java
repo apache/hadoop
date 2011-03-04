@@ -178,6 +178,7 @@ extends AbstractDelegationTokenIdentifier>
   
   @Override
   protected synchronized byte[] createPassword(TokenIdent identifier) {
+    LOG.info("Creating password for identifier: "+identifier);
     int sequenceNum;
     long now = System.currentTimeMillis();
     sequenceNum = ++delegationTokenSequenceNumber;
@@ -220,12 +221,13 @@ extends AbstractDelegationTokenIdentifier>
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
-
+    LOG.info("Token renewal requested for identifier: "+id);
+    
     if (id.getMaxDate() < now) {
       throw new InvalidToken("User " + renewer + 
                              " tried to renew an expired token");
     }
-    if (id.getRenewer() == null) {
+    if ((id.getRenewer() == null) || ("".equals(id.getRenewer().toString()))) {
       throw new AccessControlException("User " + renewer + 
                                        " tried to renew a token without " +
                                        "a renewer");
@@ -271,13 +273,16 @@ extends AbstractDelegationTokenIdentifier>
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
+    LOG.info("Token cancelation requested for identifier: "+id);
+    
     if (id.getUser() == null) {
       throw new InvalidToken("Token with no owner");
     }
     String owner = id.getUser().getUserName();
     Text renewer = id.getRenewer();
     if (!canceller.equals(owner)
-        && (renewer == null || !canceller.equals(renewer.toString()))) {
+        && (renewer == null || "".equals(renewer.toString()) || !canceller
+            .equals(renewer.toString()))) {
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token");
     }
