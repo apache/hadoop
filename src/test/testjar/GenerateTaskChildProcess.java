@@ -158,6 +158,20 @@ public class GenerateTaskChildProcess {
     }
   }
 
+ /**
+   *  It uses for failing the map tasks.
+   *
+   */
+  public static class FailMapper extends MapReduceBase implements
+      Mapper<LongWritable, Text, NullWritable, NullWritable> {
+
+    public void map(LongWritable key, Text value,
+          OutputCollector<NullWritable, NullWritable> out,
+                  Reporter reporter) throws IOException {
+      throw new RuntimeException("failing the map");
+    }
+  }
+
   /** 
    * It uses for creating the child processes for a task.
    * @param conf configuration for a job.
