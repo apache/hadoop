@@ -126,7 +126,7 @@ public class DelegationTokenFetcher {
     
     Credentials ts = new Credentials();
     ts.addToken(new Text(shortName), token);
-    ts.write(out);
+    ts.writeTokenStorageToStream(out);
   }
 
   /**
@@ -137,7 +137,6 @@ public class DelegationTokenFetcher {
   throws IOException {
     // Enable Kerberos sockets
    System.setProperty("https.cipherSuites", "TLS_KRB5_WITH_3DES_EDE_CBC_SHA");
-   DataOutputStream file = null;
    DataInputStream dis = null;
    
    try {
@@ -162,7 +161,6 @@ public class DelegationTokenFetcher {
      throw new IOException("Unable to obtain remote token", e);
    } finally {
      if(dis != null) dis.close();
-     if(file != null) file.close();
    }
  }
   /**
@@ -173,8 +171,9 @@ public class DelegationTokenFetcher {
   static private void getDTfromRemoteIntoFile(String nnAddr, String filename) 
   throws IOException {
     Credentials ts = getDTfromRemote(nnAddr, null); 
+
     DataOutputStream file = new DataOutputStream(new FileOutputStream(filename));
-    ts.write(file);
+    ts.writeTokenStorageToStream(file);
     file.flush();
     System.out.println("Successfully wrote token of " + file.size() 
         + " bytes  to " + filename);

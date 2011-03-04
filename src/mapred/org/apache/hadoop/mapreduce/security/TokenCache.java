@@ -87,7 +87,10 @@ public class TokenCache {
   throws IOException {
     // get jobtracker principal id (for the renewer)
     Text jtCreds = new Text(conf.get(JobTracker.JT_USER_NAME, ""));
+    boolean notReadFile = true;
     for(Path p: ps) {
+      //TODO: Connecting to the namenode is not required in the case,
+      //where we already have the credentials in the file
       FileSystem fs = FileSystem.get(p.toUri(), conf);
       if(fs instanceof DistributedFileSystem) {
         DistributedFileSystem dfs = (DistributedFileSystem)fs;
@@ -100,6 +103,21 @@ public class TokenCache {
         if(token != null) {
           LOG.debug("DT for " + token.getService()  + " is already present");
           continue;
+        }
+        if (notReadFile) { //read the file only once
+          String binaryTokenFilename =
+            conf.get("mapreduce.job.credentials.binary");
+          if (binaryTokenFilename != null) {
+            credentials.readTokenStorageFile(new Path("file:///" +  
+                binaryTokenFilename), conf);
+          }
+          notReadFile = false;
+          token = 
+            TokenCache.getDelegationToken(credentials, fs_addr); 
+          if(token != null) {
+            LOG.debug("DT for " + token.getService()  + " is already present");
+            continue;
+          }
         }
         // get the token
         token = dfs.getDelegationToken(jtCreds);

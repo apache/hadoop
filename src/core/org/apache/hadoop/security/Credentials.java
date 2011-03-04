@@ -19,23 +19,24 @@
 package org.apache.hadoop.security;
 
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * A class that provides the facilities of reading and writing 
@@ -114,29 +115,47 @@ public class Credentials implements Writable {
   public void readTokenStorageFile(Path filename, 
                                    Configuration conf) throws IOException {
     FSDataInputStream in = filename.getFileSystem(conf).open(filename);
+    try {
+    readTokenStorageStream(in);
+    } catch(IOException ioe) {
+      throw new IOException("Exception reading " + filename, ioe);
+    } finally {
+      in.close();
+    }
+  }
+  
+  /**
+   * Convenience method for reading a token storage file directly from a 
+   * datainputstream
+   */
+  public void readTokenStorageStream(DataInputStream in) throws IOException {
     byte[] magic = new byte[TOKEN_STORAGE_MAGIC.length];
     in.readFully(magic);
     if (!Arrays.equals(magic, TOKEN_STORAGE_MAGIC)) {
-      throw new IOException("Bad header found in token storage " + filename);
+      throw new IOException("Bad header found in token storage.");
     }
     byte version = in.readByte();
     if (version != TOKEN_STORAGE_VERSION) {
       throw new IOException("Unknown version " + version + 
-                            " in token storage " + filename);
+                            " in token storage.");
     }
     readFields(in);
-    in.close();
   }
   
   private static final byte[] TOKEN_STORAGE_MAGIC = "HDTS".getBytes();
   private static final byte TOKEN_STORAGE_VERSION = 0;
   
-  public void writeTokenStorageFile(Path filename, 
-                                    Configuration conf) throws IOException {
-    FSDataOutputStream os = filename.getFileSystem(conf).create(filename);
+  public void writeTokenStorageToStream(DataOutputStream os)
+    throws IOException {
     os.write(TOKEN_STORAGE_MAGIC);
     os.write(TOKEN_STORAGE_VERSION);
     write(os);
+  }
+
+  public void writeTokenStorageFile(Path filename, 
+                                    Configuration conf) throws IOException {
+    FSDataOutputStream os = filename.getFileSystem(conf).create(filename);
+    writeTokenStorageToStream(os);
     os.close();
   }
 

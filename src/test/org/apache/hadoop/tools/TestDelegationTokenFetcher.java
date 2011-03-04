@@ -83,7 +83,8 @@ public class TestDelegationTokenFetcher {
     Credentials ts = new Credentials();
     DataInputStream dis = 
       new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
-    ts.readFields(dis);
+    
+    ts.readTokenStorageStream(dis);
     Token<? extends TokenIdentifier> newToken = ts.getToken(new Text(SHORT_NAME));
     
     assertEquals("Should only be one token in storage", ts.numberOfTokens(), 1);
