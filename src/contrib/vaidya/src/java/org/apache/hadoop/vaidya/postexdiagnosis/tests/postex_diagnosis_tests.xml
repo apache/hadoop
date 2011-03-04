@@ -86,6 +86,7 @@
   <SuccessThreshold><![CDATA[0.05]]></SuccessThreshold>
   <Prescription><![CDATA[default advice]]></Prescription>
   <InputElement>
+    <NormalizationFactor>2.0</NormalizationFactor>
   </InputElement>
 </DiagnosticTest>
 
