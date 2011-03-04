@@ -105,9 +105,19 @@
                 t2.getLong(Keys.START_TIME); 
       return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
     }
-  }; 
-  Arrays.sort(mapTasks, cMap);
-  JobHistory.Task minMap = mapTasks[mapTasks.length-1] ;
+  };
+  Comparator<JobHistory.Task> cFinishMapRed = 
+    new Comparator<JobHistory.Task>() {
+    public int compare(JobHistory.Task t1, JobHistory.Task t2){
+      long l1 = t1.getLong(Keys.FINISH_TIME); 
+      long l2 = t2.getLong(Keys.FINISH_TIME);
+      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
+    }
+  };
+
+  if (mapTasks.length > 0) {
+    Arrays.sort(mapTasks, cMap);
+    JobHistory.Task minMap = mapTasks[mapTasks.length-1] ;
 %>
 
 <h3>Time taken by best performing Map task 
@@ -131,16 +141,9 @@
 %>
 </table>
 <%  
-  Comparator<JobHistory.Task> cFinishMapRed = 
-    new Comparator<JobHistory.Task>() {
-    public int compare(JobHistory.Task t1, JobHistory.Task t2){
-      long l1 = t1.getLong(Keys.FINISH_TIME); 
-      long l2 = t2.getLong(Keys.FINISH_TIME);
-      return (l2<l1 ? -1 : (l2==l1 ? 0 : 1));
-    }
-  };
-  Arrays.sort(mapTasks, cFinishMapRed);
-  JobHistory.Task lastMap = mapTasks[0] ;
+
+    Arrays.sort(mapTasks, cFinishMapRed);
+    JobHistory.Task lastMap = mapTasks[0] ;
 %>
 
 <h3>The last Map task 
@@ -153,6 +156,8 @@ finished at (relative to the Job launch time):
 <hr/>
 
 <%
+  }//end if(mapTasks.length > 0)
+
   if (reduceTasks.length <= 0) return;
   Arrays.sort(reduceTasks, cShuffle); 
   JobHistory.Task minShuffle = reduceTasks[reduceTasks.length-1] ;
