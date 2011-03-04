@@ -1011,9 +1011,10 @@ class ReduceTask extends Task {
           throw new IOException("mapred.job.shuffle.input.buffer.percent" +
                                 maxInMemCopyUse);
         }
-        maxSize = (long)Math.min(
-            Runtime.getRuntime().maxMemory() * maxInMemCopyUse,
-            Integer.MAX_VALUE);
+        // Allow unit tests to fix Runtime memory
+        maxSize = (int)(conf.getInt("mapred.job.reduce.total.mem.bytes",
+            (int)Math.min(Runtime.getRuntime().maxMemory(), Integer.MAX_VALUE))
+          * maxInMemCopyUse);
         maxSingleShuffleLimit = (long)(maxSize * MAX_SINGLE_SHUFFLE_SEGMENT_FRACTION);
         LOG.info("ShuffleRamManager: MemoryLimit=" + maxSize + 
                  ", MaxSingleShuffleLimit=" + maxSingleShuffleLimit);
