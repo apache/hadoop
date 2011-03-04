@@ -129,6 +129,17 @@ import java.net.URI;
  */
 public class DistributedCache {
   /**
+   * Warning: {@link #CACHE_FILES_SIZES} is not a *public* constant.
+   */
+  public static final String CACHE_FILES_SIZES = "mapred.cache.files.filesizes";
+  
+  /**
+   * Warning: {@link #CACHE_ARCHIVES_SIZES} is not a *public* constant.
+   */
+  public static final String CACHE_ARCHIVES_SIZES = 
+    "mapred.cache.archives.filesizes";
+  
+  /**
    * Get the locally cached file or archive; it could either be 
    * previously cached (and valid) or copy it from the {@link FileSystem} now.
    * 
@@ -300,6 +311,21 @@ public class DistributedCache {
   }
 
   /**
+   * Returns {@link FileStatus} of a given cache file on hdfs.
+   * @param conf configuration
+   * @param cache cache file 
+   * @return <code>FileStatus</code> of a given cache file on hdfs
+   * @throws IOException
+   */
+  public static FileStatus getFileStatus(Configuration conf, URI cache)
+    throws IOException {
+    FileSystem fileSystem = FileSystem.get(cache, conf);
+    Path filePath = new Path(cache.getPath());
+
+    return fileSystem.getFileStatus(filePath);
+  }
+  
+  /**
    * Returns mtime of a given cache file on hdfs.
    * @param conf configuration
    * @param cache cache file 
@@ -308,10 +334,7 @@ public class DistributedCache {
    */
   public static long getTimestamp(Configuration conf, URI cache)
     throws IOException {
-    FileSystem fileSystem = FileSystem.get(cache, conf);
-    Path filePath = new Path(cache.getPath());
-
-    return fileSystem.getFileStatus(filePath).getModificationTime();
+    return getFileStatus(conf, cache).getModificationTime();
   }
   
   /**
