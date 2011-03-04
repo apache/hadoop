@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -41,7 +42,6 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
-import org.apache.hadoop.mapred.AuditLogger;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
@@ -199,6 +199,10 @@ public class JobInProgress {
   long startTime;
   long launchTime;
   long finishTime;
+
+  // First *task launch time
+  final Map<TaskType, Long> firstTaskLaunchTimes =
+      new EnumMap<TaskType, Long>(TaskType.class);
   
   // Indicates how many times the job got restarted
   private final int restartCount;
@@ -717,6 +721,9 @@ public class JobInProgress {
   }
   public synchronized long getLaunchTime() {
     return launchTime;
+  }
+  Map<TaskType, Long> getFirstTaskLaunchTimes() {
+    return firstTaskLaunchTimes;
   }
   public long getStartTime() {
     return startTime;
@@ -1536,6 +1543,7 @@ public class JobInProgress {
     if (tip.isFirstAttempt(id)) {
       JobHistory.Task.logStarted(tip.getTIPId(), name,
                                  tip.getExecStartTime(), splits);
+      setFirstTaskLaunchTime(tip);
     }
     if (!tip.isJobSetupTask() && !tip.isJobCleanupTask()) {
       jobCounters.incrCounter(counter, 1);
@@ -1590,7 +1598,18 @@ public class JobInProgress {
       }
     }
   }
-    
+
+  void setFirstTaskLaunchTime(TaskInProgress tip) {
+    TaskType key = tip.getFirstTaskType();
+
+    synchronized(firstTaskLaunchTimes) {
+      // Could be optimized to do only one lookup with a little more code
+      if (!firstTaskLaunchTimes.containsKey(key)) {
+        firstTaskLaunchTimes.put(key, tip.getExecStartTime());
+      }
+    }
+  }
+
   static String convertTrackerNameToHostName(String trackerName) {
     // Ugly!
     // Convert the trackerName to it's host name
@@ -3133,6 +3152,49 @@ public class JobInProgress {
     static final char[] charsToEscape = 
       {StringUtils.COMMA, EQUALS, StringUtils.ESCAPE_CHAR};
     
+    static class SummaryBuilder {
+      final StringBuilder buffer = new StringBuilder();
+
+      // A little optimization for a very common case
+      SummaryBuilder add(String key, long value) {
+        return _add(key, Long.toString(value));
+      }
+
+      <T> SummaryBuilder add(String key, T value) {
+        return _add(key, StringUtils.escapeString(String.valueOf(value),
+                    StringUtils.ESCAPE_CHAR, charsToEscape));
+      }
+
+      SummaryBuilder add(SummaryBuilder summary) {
+        if (buffer.length() > 0) buffer.append(StringUtils.COMMA);
+        buffer.append(summary.buffer);
+        return this;
+      }
+
+      SummaryBuilder _add(String key, String value) {
+        if (buffer.length() > 0) buffer.append(StringUtils.COMMA);
+        buffer.append(key).append(EQUALS).append(value);
+        return this;
+      }
+
+      @Override public String toString() {
+        return buffer.toString();
+      }
+    }
+
+    static SummaryBuilder getTaskLaunchTimesSummary(JobInProgress job) {
+      SummaryBuilder summary = new SummaryBuilder();
+      Map<TaskType, Long> timeMap = job.getFirstTaskLaunchTimes();
+
+      synchronized(timeMap) {
+        for (Map.Entry<TaskType, Long> e : timeMap.entrySet()) {
+          summary.add("first"+ StringUtils.camelize(e.getKey().name()) +
+                      "TaskLaunchTime", e.getValue().longValue());
+        }
+      }
+      return summary;
+    }
+
     /**
      * Log a summary of the job's runtime.
      * 
@@ -3144,12 +3206,6 @@ public class JobInProgress {
     public static void logJobSummary(JobInProgress job, ClusterStatus cluster) {
       JobStatus status = job.getStatus();
       JobProfile profile = job.getProfile();
-      String user = StringUtils.escapeString(profile.getUser(), 
-                                             StringUtils.ESCAPE_CHAR, 
-                                             charsToEscape);
-      String queue = StringUtils.escapeString(profile.getQueueName(), 
-                                              StringUtils.ESCAPE_CHAR, 
-                                              charsToEscape);
       Counters jobCounters = job.getJobCounters();
       long mapSlotSeconds = 
         (jobCounters.getCounter(Counter.SLOTS_MILLIS_MAPS) +
@@ -3158,30 +3214,25 @@ public class JobInProgress {
         (jobCounters.getCounter(Counter.SLOTS_MILLIS_REDUCES) +
          jobCounters.getCounter(Counter.FALLOW_SLOTS_MILLIS_REDUCES)) / 1000;
 
-      LOG.info("jobId=" + job.getJobID() + StringUtils.COMMA +
-               "submitTime" + EQUALS + job.getStartTime() + StringUtils.COMMA +
-               "launchTime" + EQUALS + job.getLaunchTime() + StringUtils.COMMA +
-               "finishTime" + EQUALS + job.getFinishTime() + StringUtils.COMMA +
-               "numMaps" + EQUALS + job.getTasks(TaskType.MAP).length + 
-                           StringUtils.COMMA +
-               "numSlotsPerMap" + EQUALS + job.getNumSlotsPerMap() + 
-                                  StringUtils.COMMA +
-               "numReduces" + EQUALS + job.getTasks(TaskType.REDUCE).length + 
-                              StringUtils.COMMA +
-               "numSlotsPerReduce" + EQUALS + job.getNumSlotsPerReduce() + 
-                                     StringUtils.COMMA +
-               "user" + EQUALS + user + StringUtils.COMMA +
-               "queue" + EQUALS + queue + StringUtils.COMMA +
-               "status" + EQUALS + 
-                          JobStatus.getJobRunState(status.getRunState()) + 
-                          StringUtils.COMMA + 
-               "mapSlotSeconds" + EQUALS + mapSlotSeconds + StringUtils.COMMA +
-               "reduceSlotsSeconds" + EQUALS + reduceSlotSeconds  + 
-                                      StringUtils.COMMA +
-               "clusterMapCapacity" + EQUALS + cluster.getMaxMapTasks() + 
-                                      StringUtils.COMMA +
-               "clusterReduceCapacity" + EQUALS + cluster.getMaxReduceTasks()
-      );
+      SummaryBuilder summary = new SummaryBuilder()
+          .add("jobId", job.getJobID())
+          .add("submitTime", job.getStartTime())
+          .add("launchTime", job.getLaunchTime())
+          .add(getTaskLaunchTimesSummary(job))
+          .add("finishTime", job.getFinishTime())
+          .add("numMaps", job.getTasks(TaskType.MAP).length)
+          .add("numSlotsPerMap", job.getNumSlotsPerMap())
+          .add("numReduces", job.getTasks(TaskType.REDUCE).length)
+          .add("numSlotsPerReduce", job.getNumSlotsPerReduce())
+          .add("user", profile.getUser())
+          .add("queue", profile.getQueueName())
+          .add("status", JobStatus.getJobRunState(status.getRunState()))
+          .add("mapSlotSeconds", mapSlotSeconds)
+          .add("reduceSlotsSeconds", reduceSlotSeconds)
+          .add("clusterMapCapacity", cluster.getMaxMapTasks())
+          .add("clusterReduceCapacity", cluster.getMaxReduceTasks());
+
+      LOG.info(summary);
     }
   }
 

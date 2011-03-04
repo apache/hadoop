@@ -132,4 +132,39 @@ public class TestStringUtils extends TestCase {
     assertEquals("a:b", StringUtils.join(":", s.subList(0, 2)));
     assertEquals("a:b:c", StringUtils.join(":", s.subList(0, 3)));
   }
+
+  public void testCamelize() {
+    // common use cases
+    assertEquals("Map", StringUtils.camelize("MAP"));
+    assertEquals("JobSetup", StringUtils.camelize("JOB_SETUP"));
+    assertEquals("SomeStuff", StringUtils.camelize("some_stuff"));
+
+    // sanity checks for ascii alphabet against unexpected locale issues.
+    assertEquals("Aa", StringUtils.camelize("aA"));
+    assertEquals("Bb", StringUtils.camelize("bB"));
+    assertEquals("Cc", StringUtils.camelize("cC"));
+    assertEquals("Dd", StringUtils.camelize("dD"));
+    assertEquals("Ee", StringUtils.camelize("eE"));
+    assertEquals("Ff", StringUtils.camelize("fF"));
+    assertEquals("Gg", StringUtils.camelize("gG"));
+    assertEquals("Hh", StringUtils.camelize("hH"));
+    assertEquals("Ii", StringUtils.camelize("iI"));
+    assertEquals("Jj", StringUtils.camelize("jJ"));
+    assertEquals("Kk", StringUtils.camelize("kK"));
+    assertEquals("Ll", StringUtils.camelize("lL"));
+    assertEquals("Mm", StringUtils.camelize("mM"));
+    assertEquals("Nn", StringUtils.camelize("nN"));
+    assertEquals("Oo", StringUtils.camelize("oO"));
+    assertEquals("Pp", StringUtils.camelize("pP"));
+    assertEquals("Qq", StringUtils.camelize("qQ"));
+    assertEquals("Rr", StringUtils.camelize("rR"));
+    assertEquals("Ss", StringUtils.camelize("sS"));
+    assertEquals("Tt", StringUtils.camelize("tT"));
+    assertEquals("Uu", StringUtils.camelize("uU"));
+    assertEquals("Vv", StringUtils.camelize("vV"));
+    assertEquals("Ww", StringUtils.camelize("wW"));
+    assertEquals("Xx", StringUtils.camelize("xX"));
+    assertEquals("Yy", StringUtils.camelize("yY"));
+    assertEquals("Zz", StringUtils.camelize("zZ"));
+  }
 }

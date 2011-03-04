@@ -709,4 +709,33 @@ public class StringUtils {
     }
     return sb.toString();
   }
+
+  /**
+   * Capitalize a word
+   *
+   * @param s the input string
+   * @return capitalized string
+   */
+  public static String capitalize(String s) {
+    int len = s.length();
+    if (len == 0) return s;
+    return new StringBuilder(len).append(Character.toTitleCase(s.charAt(0)))
+                                 .append(s.substring(1)).toString();
+  }
+
+  /**
+   * Convert SOME_STUFF to SomeStuff
+   *
+   * @param s input string
+   * @return camelized string
+   */
+  public static String camelize(String s) {
+    StringBuilder sb = new StringBuilder();
+    String[] words = split(s.toLowerCase(Locale.US), ESCAPE_CHAR, '_');
+
+    for (String word : words)
+      sb.append(capitalize(word));
+
+    return sb.toString();
+  }
 }

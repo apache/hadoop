@@ -316,6 +316,11 @@ class TaskInProgress {
       return TaskType.REDUCE;
     }
   }
+
+  TaskType getFirstTaskType() {
+    assert firstTaskId != null : "got first task";
+    return getAttemptType(firstTaskId);
+  }
   
   /**
    * Is the Task associated with taskid is the first attempt of the tip? 
