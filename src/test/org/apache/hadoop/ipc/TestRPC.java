@@ -387,30 +387,22 @@ public class TestRPC extends TestCase {
         RPC.stopProxy(proxy);
       }
       if (expectFailure) {
-        assertTrue("Expected 1 but got " + 
+        assertEquals("Wrong number of authorizationFailures ", 1,  
             server.getRpcMetrics().authorizationFailures
-            .getCurrentIntervalValue(), 
-            server.getRpcMetrics().authorizationFailures
-            .getCurrentIntervalValue() == 1);
+            .getCurrentIntervalValue());
       } else {
-        assertTrue("Expected 1 but got " + 
+        assertEquals("Wrong number of authorizationSuccesses ", 1, 
             server.getRpcMetrics().authorizationSuccesses
-            .getCurrentIntervalValue(),
-            server.getRpcMetrics().authorizationSuccesses
-            .getCurrentIntervalValue() == 1);
+            .getCurrentIntervalValue());
       }
       //since we don't have authentication turned ON, we should see 
-      // >0 for the authentication successes and 0 for failure
-      assertTrue("Expected 0 but got " + 
+      // 0 for the authentication successes and 0 for failure
+      assertEquals("Wrong number of authenticationFailures ", 0, 
           server.getRpcMetrics().authenticationFailures
-          .getCurrentIntervalValue(),
-          server.getRpcMetrics().authenticationFailures
-          .getCurrentIntervalValue() == 0);
-      assertTrue("Expected greater than 0 but got " + 
+          .getCurrentIntervalValue());
+      assertEquals("Wrong number of authenticationSuccesses ", 0, 
           server.getRpcMetrics().authenticationSuccesses
-          .getCurrentIntervalValue(),
-          server.getRpcMetrics().authenticationSuccesses
-          .getCurrentIntervalValue() > 0);
+          .getCurrentIntervalValue());
     }
   }
   

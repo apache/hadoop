@@ -23,8 +23,8 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.TreeMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
@@ -38,6 +38,7 @@ import javax.security.sasl.Sasl;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -125,10 +126,13 @@ public class SaslRpcServer {
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */
   public static class SaslDigestCallbackHandler implements CallbackHandler {
     private SecretManager<TokenIdentifier> secretManager;
+    private Server.Connection connection;
 
     public SaslDigestCallbackHandler(
-        SecretManager<TokenIdentifier> secretManager) {
+        SecretManager<TokenIdentifier> secretManager,
+        Server.Connection connection) {
       this.secretManager = secretManager;
+      this.connection = connection;
     }
 
     private char[] getPassword(TokenIdentifier tokenid) throws IOException {
@@ -159,6 +163,9 @@ public class SaslRpcServer {
       if (pc != null) {
         TokenIdentifier tokenIdentifier = getIdentifier(nc.getDefaultName(), secretManager);
         char[] password = getPassword(tokenIdentifier);
+        UserGroupInformation user = null;
+        user = tokenIdentifier.getUser(); // may throw exception
+        connection.attemptingUser = user;
         if (LOG.isDebugEnabled()) {
           LOG.debug("SASL server DIGEST-MD5 callback: setting password "
               + "for client: " + tokenIdentifier.getUser());

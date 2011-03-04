@@ -65,15 +65,15 @@ import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -113,6 +113,10 @@ public abstract class Server {
   static final int IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT = 1024*1024;
   
   public static final Log LOG = LogFactory.getLog(Server.class);
+  public static final Log auditLOG = 
+    LogFactory.getLog("SecurityLogger."+Server.class.getName());
+  private static final String AUTH_FAILED_FOR = "Auth failed for ";
+  private static final String AUTH_SUCCESSFULL_FOR = "Auth successfull for "; 
 
   private static final ThreadLocal<Server> SERVER = new ThreadLocal<Server>();
 
@@ -726,7 +730,7 @@ public abstract class Server {
   }
 
   /** Reads calls from a connection and queues them for handling. */
-  private class Connection {
+  public class Connection {
     private boolean rpcHeaderRead = false; // if initial rpc header is read
     private boolean headerRead = false;  //if the connection header that
                                          //follows version is read.
@@ -756,6 +760,7 @@ public abstract class Server {
     private ByteBuffer unwrappedDataLengthBuffer;
     
     UserGroupInformation user = null;
+    public UserGroupInformation attemptingUser = null; // user name before auth
 
     // Fake 'call' for failed authorization response
     private final int AUTHROIZATION_FAILED_CALLID = -1;
@@ -852,7 +857,7 @@ public abstract class Server {
             saslServer = Sasl.createSaslServer(AuthMethod.DIGEST
                 .getMechanismName(), null, SaslRpcServer.SASL_DEFAULT_REALM,
                 SaslRpcServer.SASL_PROPS, new SaslDigestCallbackHandler(
-                    secretManager));
+                    secretManager, this));
             break;
           default:
             UserGroupInformation current = UserGroupInformation
@@ -892,6 +897,9 @@ public abstract class Server {
           replyToken = saslServer.evaluateResponse(saslToken);
         } catch (SaslException se) {
           rpcMetrics.authenticationFailures.inc();
+          String clientIP = this.toString();
+          // attempting user could be null
+          auditLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser, se);
           throw se;
         }
         if (replyToken != null) {
@@ -913,6 +921,8 @@ public abstract class Server {
           }
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
           LOG.info("SASL server successfully authenticated client: " + user);
+          rpcMetrics.authenticationSuccesses.inc();
+          auditLOG.info(AUTH_SUCCESSFULL_FOR + user);
           saslContextEstablished = true;
         }
       } else {
@@ -1111,7 +1121,6 @@ public abstract class Server {
     
     private void processOneRpc(byte[] buf) throws IOException,
         InterruptedException {
-      rpcMetrics.authenticationSuccesses.inc();
       if (headerRead) {
         processData(buf);
       } else {
