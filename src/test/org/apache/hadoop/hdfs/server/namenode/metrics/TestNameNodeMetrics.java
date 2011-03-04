@@ -74,7 +74,7 @@ public class TestNameNodeMetrics extends TestCase {
     namesystem = cluster.getNameNode().getNamesystem();
     fs = (DistributedFileSystem) cluster.getFileSystem();
     nnMetrics = NameNode.getNameNodeMetrics();
-    fsnMetrics = nnMetrics.fsNamesystemMetrics();
+    fsnMetrics = namesystem;
   }
   
   @Override

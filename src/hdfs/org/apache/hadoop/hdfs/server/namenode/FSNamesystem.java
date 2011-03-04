@@ -99,6 +99,10 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocat
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.metrics2.MetricsBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
@@ -130,7 +134,7 @@ import org.mortbay.util.ajax.JSON;
  * 5)  LRU cache of updated-heartbeat machines
  ***************************************************/
 public class FSNamesystem implements FSConstants, FSNamesystemMBean,
-    NameNodeMXBean {
+    NameNodeMXBean, MetricsSource {
   public static final Log LOG = LogFactory.getLog(FSNamesystem.class);
   public static final String AUDIT_FORMAT =
     "ugi=%s\t" +  // ugi
@@ -412,6 +416,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     
     registerMXBean();
+    registerWith(DefaultMetricsSystem.INSTANCE);
   }
 
   public static Collection<File> getNamespaceDirs(Configuration conf) {
@@ -5291,4 +5296,36 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private long getDfsUsed(DatanodeDescriptor alivenode) {
     return alivenode.getDfsUsed();
   }
+
+  private static int roundBytesToGBytes(long bytes) {
+    return Math.round(((float)bytes/(1024 * 1024 * 1024)));
+  }
+
+  @Override
+  public void getMetrics(MetricsBuilder builder, boolean all) {
+    builder.addRecord("FSNamesystem").setContext("dfs")
+      .addGauge("FilesTotal", "", getFilesTotal())
+      .addGauge("BlocksTotal", "", getBlocksTotal())
+      .addGauge("CapacityTotalGB", "",
+                roundBytesToGBytes(getCapacityTotal()))
+      .addGauge("CapacityUsedGB", "",
+                roundBytesToGBytes(getCapacityUsed()))
+      .addGauge("CapacityRemainingGB", "",
+                roundBytesToGBytes(getCapacityRemaining()))
+      .addGauge("TotalLoad", "", getTotalLoad())
+      .addGauge("CorruptBlocks", "", getCorruptReplicaBlocks())
+      .addGauge("ExcessBlocks", "", getExcessBlocks())
+      .addGauge("PendingDeletionBlocks", "", getPendingDeletionBlocks())
+      .addGauge("PendingReplicationBlocks", "", getPendingReplicationBlocks())
+      .addGauge("UnderReplicatedBlocks", "", getUnderReplicatedBlocks())
+      .addGauge("ScheduledReplicationBlocks", "",
+                getScheduledReplicationBlocks())
+      .addGauge("MissingBlocks", "", getMissingBlocksCount())
+      .addGauge("BlockCapacity", "", getBlockCapacity());
+  }
+
+  private void registerWith(MetricsSystem ms) {
+    ms.register("FSNamesystemMetrics", "FSNamesystem metrics", this);
+  }
+
 }

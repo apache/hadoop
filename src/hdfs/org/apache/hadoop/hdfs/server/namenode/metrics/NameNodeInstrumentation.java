@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.metrics2.MetricsBuilder;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsSystem;
@@ -35,7 +34,6 @@ import org.apache.hadoop.metrics2.source.JvmMetricsSource;
 public class NameNodeInstrumentation implements MetricsSource {
   static final Log LOG = LogFactory.getLog(NameNodeInstrumentation.class);
 
-  static final String FSNAMESYSTEM_RECORD_NAME = "FSNamesystem";
   final String sessionId;
   final MetricsRegistry registry = new MetricsRegistry("namenode");
   final MetricMutableCounterInt numFilesCreated =
@@ -70,11 +68,8 @@ public class NameNodeInstrumentation implements MetricsSource {
   final MetricMutableCounterInt numFilesInGetListingOps =
       registry.newCounter("FilesInGetListingOps", "", 0);
 
-  final MetricsSource fsNamesystemMetrics;
-
   NameNodeInstrumentation(Configuration conf) {
     sessionId = conf.get("session.id");
-    fsNamesystemMetrics = new FSNamesystemMetrics();
     JvmMetricsSource.create("NameNode", sessionId);
     registry.setContext("dfs").tag("sessionId", "", sessionId);
   }
@@ -91,20 +86,13 @@ public class NameNodeInstrumentation implements MetricsSource {
    */
   public static NameNodeInstrumentation create(Configuration conf,
                                                MetricsSystem ms) {
-    NameNodeInstrumentation v2 = new NameNodeInstrumentation(conf);
-    ms.register("FSNamesystemState", "FS name system state",
-                v2.fsNamesystemMetrics());
-    return ms.register("NameNode", "NameNode metrics", v2);
-  }
-
-  public MetricsSource fsNamesystemMetrics() {
-    return fsNamesystemMetrics;
+    return ms.register("NameNode", "NameNode metrics",
+                       new NameNodeInstrumentation(conf));
   }
 
   public void shutdown() {
     // metrics system shutdown would suffice
   }
-
 
   public final void incrNumGetBlockLocations() {
     numGetBlockLocations.incr();
@@ -192,47 +180,6 @@ public class NameNodeInstrumentation implements MetricsSource {
 
   public void getMetrics(MetricsBuilder builder, boolean all) {
     registry.snapshot(builder.addRecord(registry.name()), all);
-  }
-
-  private static int roundBytesToGBytes(long bytes) {
-    return Math.round(((float)bytes/(1024 * 1024 * 1024)));
-  }
-
-  private class FSNamesystemMetrics implements MetricsSource {
-
-    public void getMetrics(MetricsBuilder builder, boolean all) {
-      // Since fsnamesystem metrics are poll based, we just put them here
-      // to avoid an extra copy per metric.
-      FSNamesystem fsNamesystem = FSNamesystem.getFSNamesystem();
-      if (fsNamesystem == null) {
-        LOG.debug("FSNamesystem not ready yet!");
-        return;
-      }
-      builder.addRecord(FSNAMESYSTEM_RECORD_NAME).setContext("dfs")
-        .tag("sessionId", "", sessionId)
-        .addGauge("FilesTotal", "", fsNamesystem.getFilesTotal())
-        .addGauge("BlocksTotal", "", fsNamesystem.getBlocksTotal())
-        .addGauge("CapacityTotalGB", "",
-                  roundBytesToGBytes(fsNamesystem.getCapacityTotal()))
-        .addGauge("CapacityUsedGB", "",
-                  roundBytesToGBytes(fsNamesystem.getCapacityUsed()))
-        .addGauge("CapacityRemainingGB", "",
-                  roundBytesToGBytes(fsNamesystem.getCapacityRemaining()))
-        .addGauge("TotalLoad", "", fsNamesystem.getTotalLoad())
-        .addGauge("CorruptBlocks", "", fsNamesystem.getCorruptReplicaBlocks())
-        .addGauge("ExcessBlocks", "", fsNamesystem.getExcessBlocks())
-        .addGauge("PendingDeletionBlocks", "",
-                  fsNamesystem.getPendingDeletionBlocks())
-        .addGauge("PendingReplicationBlocks", "",
-                  fsNamesystem.getPendingReplicationBlocks())
-        .addGauge("UnderReplicatedBlocks", "",
-                  fsNamesystem.getUnderReplicatedBlocks())
-        .addGauge("ScheduledReplicationBlocks", "",
-                  fsNamesystem.getScheduledReplicationBlocks())
-        .addGauge("MissingBlocks", "", fsNamesystem.getMissingBlocksCount())
-        .addGauge("BlockCapacity", "", fsNamesystem.getBlockCapacity());
-    }
-
   }
 
 }
