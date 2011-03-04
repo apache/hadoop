@@ -131,7 +131,7 @@ public class HftpFileSystem extends FileSystem {
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
     HttpURLConnection connection = null;
-    connection = openConnection("/data" + f.toUri().getPath(), "ugi=" + ugi.getUserName());
+    connection = openConnection("/data" + f.toUri().getPath(), "ugi=" + ugi.getShortUserName());
     connection.setRequestMethod("GET");
     connection.connect();
     final InputStream in = connection.getInputStream();
@@ -271,7 +271,7 @@ public class HftpFileSystem extends FileSystem {
 
     private FileChecksum getFileChecksum(String f) throws IOException {
       final HttpURLConnection connection = openConnection(
-          "/fileChecksum" + f, "ugi=" + ugi.getUserName());
+          "/fileChecksum" + f, "ugi=" + ugi.getShortUserName());
       try {
         final XMLReader xr = XMLReaderFactory.createXMLReader();
         xr.setContentHandler(this);

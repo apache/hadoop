@@ -40,7 +40,7 @@ public class ProxyFileDataServlet extends FileDataServlet {
       URISyntaxException {
     return new URI(request.getScheme(), null, request.getServerName(), request
         .getServerPort(), "/streamFile", "filename=" + i.getPath() + "&ugi="
-        + ugi.getUserName(), null);
+        + ugi.getShortUserName(), null);
   }
 
   /** {@inheritDoc} */

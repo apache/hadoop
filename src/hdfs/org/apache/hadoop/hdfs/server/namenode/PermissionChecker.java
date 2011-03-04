@@ -47,7 +47,7 @@ class PermissionChecker {
       LOG.debug("ugi=" + ugi);
     }
 
-    user = ugi.getUserName();
+    user = ugi.getShortUserName();
     groups.addAll(Arrays.asList(ugi.getGroupNames()));
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
   }
@@ -64,7 +64,7 @@ class PermissionChecker {
                                              String supergroup)
   throws AccessControlException {
     PermissionChecker checker = 
-      new PermissionChecker(owner.getUserName(), supergroup);
+      new PermissionChecker(owner.getShortUserName(), supergroup);
     if (!checker.isSuper) {
       throw new AccessControlException("Access denied for user " 
           + checker.user + ". Superuser privilege is required");

@@ -226,7 +226,7 @@ public class AccessTokenHandler {
   public BlockAccessToken generateToken(long blockID, EnumSet<AccessMode> modes)
       throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    String userID = (ugi == null ? null : ugi.getUserName());
+    String userID = (ugi == null ? null : ugi.getShortUserName());
     return generateToken(userID, blockID, modes);
   }
 

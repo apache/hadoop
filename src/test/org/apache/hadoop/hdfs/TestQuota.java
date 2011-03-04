@@ -252,7 +252,7 @@ public class TestQuota extends TestCase {
         @Override
         public Object run() throws Exception {
           assertEquals("Not running as new user", username, 
-              UserGroupInformation.getCurrentUser().getUserName());
+              UserGroupInformation.getCurrentUser().getShortUserName());
           DFSAdmin userAdmin = new DFSAdmin(conf);
           
           args2[1] = "100";

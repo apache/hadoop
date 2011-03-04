@@ -48,7 +48,7 @@ private final UserGroupInformation ugi;
     } 
 
     groups.addAll(Arrays.asList(ugi.getGroupNames()));
-    user = ugi.getUserName();
+    user = ugi.getShortUserName();
 
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
   }
@@ -69,7 +69,7 @@ private final UserGroupInformation ugi;
                                              String supergroup) 
                      throws AccessControlException {
     FSPermissionChecker checker = 
-      new FSPermissionChecker(owner.getUserName(), supergroup);
+      new FSPermissionChecker(owner.getShortUserName(), supergroup);
     if (!checker.isSuper) {
       throw new AccessControlException("Access denied for user " 
           + checker.user + ". Superuser privilege is required");

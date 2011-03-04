@@ -70,7 +70,7 @@ abstract class DfsServlet extends HttpServlet {
     }
 
     if(LOG.isDebugEnabled())
-      LOG.debug("getUGI is returning: " + u.getUserName());
+      LOG.debug("getUGI is returning: " + u.getShortUserName());
     return u;
   }
 
@@ -96,7 +96,7 @@ abstract class DfsServlet extends HttpServlet {
         : host.getInfoPort();
     final String filename = request.getPathInfo();
     return new URI(scheme, null, hostname, port, servletpath,
-        "filename=" + filename + "&ugi=" + ugi.getUserName(), null);
+        "filename=" + filename + "&ugi=" + ugi.getShortUserName(), null);
   }
 
   /** Get filename from the request */

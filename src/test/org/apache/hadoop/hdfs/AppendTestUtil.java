@@ -83,7 +83,7 @@ class AppendTestUtil {
 
   public static FileSystem createHdfsWithDifferentUsername(final Configuration conf
       ) throws IOException, InterruptedException {
-    String username = UserGroupInformation.getCurrentUser().getUserName()+"_XXX";
+    String username = UserGroupInformation.getCurrentUser().getShortUserName()+"_XXX";
     UserGroupInformation ugi = 
       UserGroupInformation.createUserForTesting(username, new String[]{"supergroup"});
     

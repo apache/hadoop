@@ -108,7 +108,7 @@ public class DFSck extends Configured implements Tool {
     }
 
     final StringBuffer url = new StringBuffer("http://");
-    url.append(getInfoServer()).append("/fsck?ugi=").append(ugi.getUserName()).append("&path=");
+    url.append(getInfoServer()).append("/fsck?ugi=").append(ugi.getShortUserName()).append("&path=");
 
     String dir = "/";
     // find top-level dir first

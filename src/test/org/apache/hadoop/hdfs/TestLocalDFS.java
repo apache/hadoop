@@ -51,7 +51,7 @@ public class TestLocalDFS extends TestCase {
 
   static String getUserName(FileSystem fs) {
     if (fs instanceof DistributedFileSystem) {
-      return ((DistributedFileSystem)fs).dfs.ugi.getUserName();
+      return ((DistributedFileSystem)fs).dfs.ugi.getShortUserName();
     }
     return System.getProperty("user.name");
   }

@@ -1256,7 +1256,7 @@ public class TestDFSShell extends TestCase {
       dfs.setPermission(sub, new FsPermission((short)0));
 
       final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      final String tmpusername = ugi.getUserName() + "1";
+      final String tmpusername = ugi.getShortUserName() + "1";
       UserGroupInformation tmpUGI = UserGroupInformation.createUserForTesting(
           tmpusername, new String[] {tmpusername});
       String results = tmpUGI.doAs(new PrivilegedExceptionAction<String>() {

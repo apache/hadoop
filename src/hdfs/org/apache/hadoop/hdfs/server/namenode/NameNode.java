@@ -403,7 +403,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     namesystem.startFile(src,
-        new PermissionStatus(UserGroupInformation.getCurrentUser().getUserName(),
+        new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
             null, masked),
         clientName, clientMachine, overwrite, replication, blockSize);
     myMetrics.numFilesCreated.inc();
@@ -568,7 +568,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                             + MAX_PATH_LENGTH + " characters, " + MAX_PATH_DEPTH + " levels.");
     }
     return namesystem.mkdirs(src,
-        new PermissionStatus(UserGroupInformation.getCurrentUser().getUserName(),
+        new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
             null, masked));
   }
 
@@ -929,7 +929,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   @Override
   public void refreshUserToGroupsMappings(Configuration conf) throws IOException {
     LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
-             UserGroupInformation.getCurrentUser().getUserName());
+             UserGroupInformation.getCurrentUser().getShortUserName());
     Groups.getUserToGroupsMappingService(conf).refresh();
   }
 
