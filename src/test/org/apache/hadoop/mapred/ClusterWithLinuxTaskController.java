@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
@@ -45,7 +44,11 @@ import junit.framework.TestCase;
  * <ol>
  * <li>Build LinuxTaskController by not passing any
  * <code>-Dhadoop.conf.dir</code></li>
- * <li>Make the built binary to setuid executable</li>
+ * <li>Change ownership of the built binary to root:group1, where group1 is
+ * a secondary group of the test runner.</li>
+ * <li>Change permissions on the binary so that <em>others</em> component does
+ * not have any permissions on binary</li> 
+ * <li>Make the built binary to setuid and setgid executable</li>
  * <li>Execute following targets:
  * <code>ant test -Dcompile.c++=true -Dtaskcontroller-path=<em>path to built binary</em> 
  * -Dtaskcontroller-ugi=<em>user,group</em></code></li>
@@ -69,10 +72,7 @@ public class ClusterWithLinuxTaskController extends TestCase {
     @Override
     public void setup() throws IOException {
       // get the current ugi and set the task controller group owner
-      Groups groups = new Groups(new Configuration());
-      String ttGroup = groups.getGroups(
-          UserGroupInformation.getCurrentUser().getUserName()).get(0);
-      getConf().set(TT_GROUP, ttGroup);
+      getConf().set(TT_GROUP, taskTrackerSpecialGroup);
 
       // write configuration file
       configurationFile = createTaskControllerConf(System
@@ -110,6 +110,21 @@ public class ClusterWithLinuxTaskController extends TestCase {
   private static File configurationFile = null;
 
   protected UserGroupInformation taskControllerUser;
+  
+  protected static String taskTrackerSpecialGroup = null;
+  static {
+    if (isTaskExecPathPassed()) {
+      try {
+        taskTrackerSpecialGroup = FileSystem.getLocal(new Configuration())
+            .getFileStatus(
+                new Path(System.getProperty(TASKCONTROLLER_PATH),
+                    "task-controller")).getGroup();
+      } catch (IOException e) {
+        LOG.warn("Could not get group of the binary", e);
+        fail("Could not get group of the binary");
+      }
+    }
+  }
 
   /*
    * Utility method which subclasses use to start and configure the MR Cluster

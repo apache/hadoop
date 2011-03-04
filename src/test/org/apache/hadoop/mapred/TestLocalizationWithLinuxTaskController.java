@@ -41,8 +41,6 @@ public class TestLocalizationWithLinuxTaskController extends
 
   private File configFile;
 
-  private static String taskTrackerSpecialGroup;
-
   @Override
   protected boolean canRun() {
     return ClusterWithLinuxTaskController.shouldRun();
@@ -63,7 +61,6 @@ public class TestLocalizationWithLinuxTaskController extends
         System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_PATH);
     String execPath = path + "/task-controller";
     ((MyLinuxTaskController) taskController).setTaskControllerExe(execPath);
-    taskTrackerSpecialGroup = getFilePermissionAttrs(execPath)[2];
     taskController.setConf(trackerFConf);
     taskController.setup();
 
@@ -121,13 +118,13 @@ public class TestLocalizationWithLinuxTaskController extends
       assertTrue("user-dir in taskTrackerSubdir " + taskTrackerSubDir
           + "is not created!", userDir.exists());
       checkFilePermissions(userDir.getAbsolutePath(), "dr-xrws---", task
-          .getUser(), taskTrackerSpecialGroup);
+          .getUser(), ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
 
       File jobCache = new File(userDir, TaskTracker.JOBCACHE);
       assertTrue("jobcache in the userDir " + userDir + " isn't created!",
           jobCache.exists());
       checkFilePermissions(jobCache.getAbsolutePath(), "dr-xrws---", task
-          .getUser(), taskTrackerSpecialGroup);
+          .getUser(), ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
 
       // Verify the distributed cache dir.
       File distributedCacheDir =
@@ -136,7 +133,8 @@ public class TestLocalizationWithLinuxTaskController extends
       assertTrue("distributed cache dir " + distributedCacheDir
           + " doesn't exists!", distributedCacheDir.exists());
       checkFilePermissions(distributedCacheDir.getAbsolutePath(),
-          "dr-xrws---", task.getUser(), taskTrackerSpecialGroup);
+          "dr-xrws---", task.getUser(),
+          ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
     }
   }
 
@@ -149,7 +147,7 @@ public class TestLocalizationWithLinuxTaskController extends
               .toString()));
       // check the private permissions on the job directory
       checkFilePermissions(jobDir.getAbsolutePath(), "dr-xrws---", task
-          .getUser(), taskTrackerSpecialGroup);
+          .getUser(), ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
     }
 
     // check the private permissions of various directories
@@ -161,7 +159,8 @@ public class TestLocalizationWithLinuxTaskController extends
     dirs.add(new Path(jarsDir, "lib"));
     for (Path dir : dirs) {
       checkFilePermissions(dir.toUri().getPath(), "dr-xrws---",
-          task.getUser(), taskTrackerSpecialGroup);
+          task.getUser(),
+          ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
     }
 
     // job-work dir needs user writable permissions
@@ -169,7 +168,7 @@ public class TestLocalizationWithLinuxTaskController extends
         lDirAlloc.getLocalPathToRead(TaskTracker.getJobWorkDir(task.getUser(),
             jobId.toString()), trackerFConf);
     checkFilePermissions(jobWorkDir.toUri().getPath(), "drwxrws---", task
-        .getUser(), taskTrackerSpecialGroup);
+        .getUser(), ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
 
     // check the private permissions of various files
     List<Path> files = new ArrayList<Path>();
@@ -181,7 +180,7 @@ public class TestLocalizationWithLinuxTaskController extends
     files.add(new Path(jarsDir, "lib" + Path.SEPARATOR + "lib2.jar"));
     for (Path file : files) {
       checkFilePermissions(file.toUri().getPath(), "-r-xrwx---", task
-          .getUser(), taskTrackerSpecialGroup);
+          .getUser(), ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
     }
   }
 
@@ -197,7 +196,8 @@ public class TestLocalizationWithLinuxTaskController extends
     dirs.add(new Path(attemptLogFiles[1].getParentFile().getAbsolutePath()));
     for (Path dir : dirs) {
       checkFilePermissions(dir.toUri().getPath(), "drwxrws---",
-          task.getUser(), taskTrackerSpecialGroup);
+          task.getUser(),
+          ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
     }
 
     // check the private permissions of various files
@@ -207,7 +207,7 @@ public class TestLocalizationWithLinuxTaskController extends
         task.isTaskCleanupTask()), trackerFConf));
     for (Path file : files) {
       checkFilePermissions(file.toUri().getPath(), "-rwxrwx---", task
-          .getUser(), taskTrackerSpecialGroup);
+          .getUser(), ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
     }
   }
 }

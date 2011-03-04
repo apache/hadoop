@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapred.pipes;
 
+import java.security.PrivilegedExceptionAction;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,29 +48,35 @@ public class TestPipesAsDifferentUser extends ClusterWithLinuxTaskController {
     }
 
     super.startCluster();
-    JobConf clusterConf = getClusterConf();
-    Path inputPath = new Path(homeDirectory, "in");
-    Path outputPath = new Path(homeDirectory, "out");
+    taskControllerUser.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws Exception {
+        JobConf clusterConf = getClusterConf();
+        Path inputPath = new Path(homeDirectory, "in");
+        Path outputPath = new Path(homeDirectory, "out");
 
-    TestPipes.writeInputFile(FileSystem.get(clusterConf), inputPath);
-    TestPipes.runProgram(mrCluster, dfsCluster, TestPipes.wordCountSimple,
-        inputPath, outputPath, 3, 2, TestPipes.twoSplitOutput, clusterConf);
-    assertOwnerShip(outputPath);
-    TestPipes.cleanup(dfsCluster.getFileSystem(), outputPath);
+        TestPipes.writeInputFile(FileSystem.get(clusterConf), inputPath);
+        TestPipes.runProgram(mrCluster, dfsCluster, TestPipes.wordCountSimple,
+            inputPath, outputPath, 3, 2, TestPipes.twoSplitOutput, clusterConf);
+        assertOwnerShip(outputPath);
+        TestPipes.cleanup(dfsCluster.getFileSystem(), outputPath);
 
-    TestPipes.runProgram(mrCluster, dfsCluster, TestPipes.wordCountSimple,
-        inputPath, outputPath, 3, 0, TestPipes.noSortOutput, clusterConf);
-    assertOwnerShip(outputPath);
-    TestPipes.cleanup(dfsCluster.getFileSystem(), outputPath);
+        TestPipes.runProgram(mrCluster, dfsCluster, TestPipes.wordCountSimple,
+            inputPath, outputPath, 3, 0, TestPipes.noSortOutput, clusterConf);
+        assertOwnerShip(outputPath);
+        TestPipes.cleanup(dfsCluster.getFileSystem(), outputPath);
 
-    TestPipes.runProgram(mrCluster, dfsCluster, TestPipes.wordCountPart,
-        inputPath, outputPath, 3, 2, TestPipes.fixedPartitionOutput,
-        clusterConf);
-    assertOwnerShip(outputPath);
-    TestPipes.cleanup(dfsCluster.getFileSystem(), outputPath);
+        TestPipes.runProgram(mrCluster, dfsCluster, TestPipes.wordCountPart,
+            inputPath, outputPath, 3, 2, TestPipes.fixedPartitionOutput,
+            clusterConf);
+        assertOwnerShip(outputPath);
+        TestPipes.cleanup(dfsCluster.getFileSystem(), outputPath);
 
-    TestPipes.runNonPipedProgram(mrCluster, dfsCluster,
-        TestPipes.wordCountNoPipes, clusterConf);
-    assertOwnerShip(TestPipes.nonPipedOutDir, FileSystem.getLocal(clusterConf));
+        TestPipes.runNonPipedProgram(mrCluster, dfsCluster,
+            TestPipes.wordCountNoPipes, clusterConf);
+        assertOwnerShip(TestPipes.nonPipedOutDir, FileSystem
+            .getLocal(clusterConf));
+        return null;
+      }
+    });
   }
 }

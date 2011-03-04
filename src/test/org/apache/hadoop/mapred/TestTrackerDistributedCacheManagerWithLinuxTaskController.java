@@ -37,7 +37,6 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     TestTrackerDistributedCacheManager {
 
   private File configFile;
-  private String taskTrackerSpecialGroup;
 
   private static final Log LOG =
       LogFactory
@@ -65,9 +64,6 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     ((MyLinuxTaskController)taskController).setTaskControllerExe(execPath);
     taskController.setConf(conf);
     taskController.setup();
-
-    taskTrackerSpecialGroup =
-        TestTaskTrackerLocalization.getFilePermissionAttrs(execPath)[2];
   }
 
   @Override
@@ -113,7 +109,8 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     for (Path p : localCacheFiles) {
       // First make sure that the cache file has proper permissions.
       TestTaskTrackerLocalization.checkFilePermissions(p.toUri().getPath(),
-          "-r-xrwx---", userName, taskTrackerSpecialGroup);
+          "-r-xrwx---", userName,
+          ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
       // Now. make sure that all the path components also have proper
       // permissions.
       checkPermissionOnPathComponents(p.toUri().getPath(), userName);
@@ -148,7 +145,8 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     File path = new File(cachedFilePath).getParentFile();
     while (!path.getAbsolutePath().equals(leadingStringForFirstFile)) {
       TestTaskTrackerLocalization.checkFilePermissions(path.getAbsolutePath(),
-          "dr-xrws---", userName, taskTrackerSpecialGroup);
+          "dr-xrws---", userName, 
+          ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
       path = path.getParentFile();
     }
   }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,57 +41,68 @@ public class TestJobExecutionAsDifferentUser extends
       return;
     }
     startCluster();
-    Path inDir = new Path("input");
-    Path outDir = new Path("output");
+    taskControllerUser.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws Exception {
+        Path inDir = new Path("input");
+        Path outDir = new Path("output");
 
-    RunningJob job;
+        RunningJob job;
 
-    // Run a job with zero maps/reduces
-    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 0, 0);
-    job.waitForCompletion();
-    assertTrue("Job failed", job.isSuccessful());
-    assertOwnerShip(outDir);
+        // Run a job with zero maps/reduces
+        job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 0, 0);
+        job.waitForCompletion();
+        assertTrue("Job failed", job.isSuccessful());
+        assertOwnerShip(outDir);
 
-    // Run a job with 1 map and zero reduces
-    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 1, 0);
-    job.waitForCompletion();
-    assertTrue("Job failed", job.isSuccessful());
-    assertOwnerShip(outDir);
+        // Run a job with 1 map and zero reduces
+        job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 1, 0);
+        job.waitForCompletion();
+        assertTrue("Job failed", job.isSuccessful());
+        assertOwnerShip(outDir);
 
-    // Run a normal job with maps/reduces
-    job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 1, 1);
-    job.waitForCompletion();
-    assertTrue("Job failed", job.isSuccessful());
-    assertOwnerShip(outDir);
+        // Run a normal job with maps/reduces
+        job = UtilsForTests.runJob(getClusterConf(), inDir, outDir, 1, 1);
+        job.waitForCompletion();
+        assertTrue("Job failed", job.isSuccessful());
+        assertOwnerShip(outDir);
 
-    // Run a job with jvm reuse
-    JobConf myConf = getClusterConf();
-    myConf.set("mapred.job.reuse.jvm.num.tasks", "-1");
-    String[] args = { "-m", "6", "-r", "3", "-mt", "1000", "-rt", "1000" };
-    assertEquals(0, ToolRunner.run(myConf, new SleepJob(), args));
+        // Run a job with jvm reuse
+        JobConf myConf = getClusterConf();
+        myConf.set("mapred.job.reuse.jvm.num.tasks", "-1");
+        String[] args = { "-m", "6", "-r", "3", "-mt", "1000", "-rt", "1000" };
+        assertEquals(0, ToolRunner.run(myConf, new SleepJob(), args));
+        return null;
+      }
+    });
   }
-  
+
   public void testEnvironment() throws Exception {
     if (!shouldRun()) {
       return;
     }
     startCluster();
-    TestMiniMRChildTask childTask = new TestMiniMRChildTask();
-    Path inDir = new Path("input1");
-    Path outDir = new Path("output1");
-    try {
-      childTask.runTestTaskEnv(getClusterConf(), inDir, outDir, false);
-    } catch (IOException e) {
-      fail("IOException thrown while running enviroment test."
-          + e.getMessage());
-    } finally {
-      FileSystem outFs = outDir.getFileSystem(getClusterConf());
-      if (outFs.exists(outDir)) {
-        assertOwnerShip(outDir);
-        outFs.delete(outDir, true);
-      } else {
-        fail("Output directory does not exist" + outDir.toString());
+    taskControllerUser.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws Exception {
+
+        TestMiniMRChildTask childTask = new TestMiniMRChildTask();
+        Path inDir = new Path("input1");
+        Path outDir = new Path("output1");
+        try {
+          childTask.runTestTaskEnv(getClusterConf(), inDir, outDir, false);
+        } catch (IOException e) {
+          fail("IOException thrown while running enviroment test."
+              + e.getMessage());
+        } finally {
+          FileSystem outFs = outDir.getFileSystem(getClusterConf());
+          if (outFs.exists(outDir)) {
+            assertOwnerShip(outDir);
+            outFs.delete(outDir, true);
+          } else {
+            fail("Output directory does not exist" + outDir.toString());
+          }
+          return null;
+        }
       }
-    }
+    });
   }
 }

@@ -73,8 +73,8 @@ public class TestPipes extends TestCase {
     }
     MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
-    Path inputPath = new Path("/testing/in");
-    Path outputPath = new Path("/testing/out");
+    Path inputPath = new Path("testing/in");
+    Path outputPath = new Path("testing/out");
     try {
       final int numSlaves = 2;
       Configuration conf = new Configuration();
@@ -151,7 +151,7 @@ public class TestPipes extends TestCase {
                           int numMaps, int numReduces, String[] expectedResults,
                           JobConf conf
                          ) throws IOException {
-    Path wordExec = new Path("/testing/bin/application");
+    Path wordExec = new Path("testing/bin/application");
     JobConf job = null;
     if(conf == null) {
       job = mr.createJobConf();
@@ -231,7 +231,7 @@ public class TestPipes extends TestCase {
                             "pipes");
     Path inDir = new Path(testDir, "input");
     nonPipedOutDir = new Path(testDir, "output");
-    Path wordExec = new Path("/testing/bin/application");
+    Path wordExec = new Path("testing/bin/application");
     Path jobXml = new Path(testDir, "job.xml");
     {
       FileSystem fs = dfs.getFileSystem();
