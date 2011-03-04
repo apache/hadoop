@@ -267,36 +267,6 @@ public class HttpServer implements FilterContainer {
     defaultContexts.put(ctxt, isFiltered);
   }
 
-  public WebAppContext addContext(String name, boolean isFiltered)
-      throws IOException {
-    if (0 == webServer.getHandlers().length) {
-      throw new RuntimeException("Couldn't find handler");
-    }
-    WebAppContext webAppCtx = new WebAppContext();
-    webAppCtx.setDisplayName("AppContext-" + name);
-    webAppCtx.setContextPath("/" + name);
-    webAppCtx.setWar(getWebAppsPath() + "/" + name);
-    setContextAttributes(webAppCtx);
-    addContext(webAppCtx, isFiltered);
-
-    if (isFiltered) {
-      defineFilter(webAppCtx, "krb5Filter",
-          Krb5AndCertsSslSocketConnector.Krb5SslFilter.class.getName(),
-          null, null);
-
-      defineFilter(webAppCtx, "safety", QuotingInputFilter.class.getName(), null,
-          new String[] {"/*"});
-
-      final FilterInitializer[] initializers = getFilterInitializers(conf);
-      if (initializers != null) {
-        for(FilterInitializer c : initializers) {
-          c.initFilter(this, conf);
-        }
-      }
-    }
-    return webAppCtx;
-  }
-
   /**
    * Add a context 
    * @param pathSpec The path spec for the context

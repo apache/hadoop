@@ -167,19 +167,11 @@ public class JobHistoryServer {
       JobHistory.getCompletedJobHistoryLocation().toString();
     FileSystem historyFS = new Path(historyLogDir).getFileSystem(conf);    
 
-    context = historyServer.addContext("history", true);
+    historyServer.setAttribute("historyLogDir", historyLogDir);
+    historyServer.setAttribute("fileSys", historyFS);
+    historyServer.setAttribute("jobConf", conf);
+    historyServer.setAttribute("aclManager", aclsManager);
 
-    historyServer.setAttribute(context, "historyLogDir", historyLogDir);
-    historyServer.setAttribute(context, "fileSys", historyFS);
-    historyServer.setAttribute(context, "jobConf", conf);
-    historyServer.setAttribute(context, "aclManager", aclsManager);
-
-    if (!isEmbedded(conf)) {
-      historyServer.setAttribute("historyLogDir", historyLogDir);
-      historyServer.setAttribute("fileSys", historyFS);
-      historyServer.setAttribute("jobConf", conf);
-      historyServer.setAttribute("aclManager", aclsManager);
-    }
     historyServer.addServlet("historyfile", "/historyfile",
         RawHistoryFileServlet.class);
   }
@@ -189,19 +181,13 @@ public class JobHistoryServer {
       throws IOException {
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(historyInfoAddr);
     int tmpInfoPort = infoSocAddr.getPort();
-    return new HttpServer("/", infoSocAddr.getHostName(),
+    return new HttpServer("history", infoSocAddr.getHostName(),
         tmpInfoPort, tmpInfoPort == 0, conf, aclsManager.getAdminsAcl());
   }
 
   public void start() throws IOException {
     if (!isEmbedded(conf)) {
       historyServer.start();
-    } else {
-      try {
-        context.start();
-      } catch (Exception e) {
-        throw new IOException("Unable to start history context", e);
-      }
     }
 
     InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(historyInfoAddr);
@@ -252,8 +238,7 @@ public class JobHistoryServer {
   }
 
   static String getHistoryUrlPrefix(JobConf conf) {
-    return (isEmbedded(conf) ? "" : "http://" + getAddress(conf))
-      + "/history";
+    return (isEmbedded(conf) ? "" : "http://" + getAddress(conf));
   }
 
   private static String getBindAddress(JobConf conf) {

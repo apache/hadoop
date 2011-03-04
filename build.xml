@@ -436,18 +436,24 @@
      webxml="${build.webapps}/task/WEB-INF/web.xml">
     </jsp-compile>
 
-    <jsp-compile
-     uriroot="${src.webapps}/job"
-     outputdir="${build.src}"
-     package="org.apache.hadoop.mapred"
-     webxml="${build.webapps}/job/WEB-INF/web.xml">
-    </jsp-compile>
-
+    <!-- Compile Java files (excluding JSPs) checking warnings -->
     <jsp-compile
      uriroot="${src.webapps}/history"
      outputdir="${build.src}"
      package="org.apache.hadoop.mapred"
      webxml="${build.webapps}/history/WEB-INF/web.xml">
+    </jsp-compile>
+    
+    <copy todir="${build.webapps}/job">
+      <fileset dir="${src.webapps}/job" includes="**/*.jsp"/>
+      <fileset dir="${src.webapps}/history" includes="**/*.jsp"/>
+    </copy>
+     
+    <jsp-compile
+     uriroot="${build.webapps}/job"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.mapred"
+     webxml="${build.webapps}/job/WEB-INF/web.xml">
     </jsp-compile>
 
     <!-- Compile Java files (excluding JSPs) checking warnings -->
