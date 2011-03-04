@@ -84,9 +84,18 @@ public class TestMultipleCachefiles extends TestCase
           "-jobconf", strNamenode,
           "-jobconf", strJobtracker,
           "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
-          "-jobconf", "mapred.child.java.opts=-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
-                      "-Dbuild.test=" + System.getProperty("build.test") + " " +
-                      conf.get("mapred.child.java.opts",""),
+          "-jobconf", 
+            JobConf.MAPRED_MAP_TASK_JAVA_OPTS + "=" +
+              "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
+              "-Dbuild.test=" + System.getProperty("build.test") + " " +
+              conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
+                       conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
+          "-jobconf", 
+            JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + "=" +
+              "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
+              "-Dbuild.test=" + System.getProperty("build.test") + " " +
+              conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
+                       conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
           "-cacheFile", "hdfs://"+fileSys.getName()+CACHE_FILE + "#" + mapString,
           "-cacheFile", "hdfs://"+fileSys.getName()+CACHE_FILE_2 + "#" + mapString2
         };

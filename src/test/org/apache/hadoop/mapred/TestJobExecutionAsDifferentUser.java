@@ -79,7 +79,7 @@ public class TestJobExecutionAsDifferentUser extends
     Path inDir = new Path("input1");
     Path outDir = new Path("output1");
     try {
-      childTask.runTestTaskEnv(getClusterConf(), inDir, outDir);
+      childTask.runTestTaskEnv(getClusterConf(), inDir, outDir, false);
     } catch (IOException e) {
       fail("IOException thrown while running enviroment test."
           + e.getMessage());

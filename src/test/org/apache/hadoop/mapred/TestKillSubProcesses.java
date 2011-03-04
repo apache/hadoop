@@ -290,8 +290,14 @@ public class TestKillSubProcesses extends TestCase {
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(0);
 
-    conf.set("mapred.child.java.opts", conf.get("mapred.child.java.opts") +
-                                  " -Dtest.build.data=" + BASE_TEST_ROOT_DIR);
+    conf.set(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
+             conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
+                      conf.get(JobConf.MAPRED_TASK_JAVA_OPTS)) +
+             " -Dtest.build.data=" + BASE_TEST_ROOT_DIR);
+    conf.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
+             conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
+                      conf.get(JobConf.MAPRED_TASK_JAVA_OPTS)) +
+             " -Dtest.build.data=" + BASE_TEST_ROOT_DIR);
 
     return UtilsForTests.runJob(conf, inDir, outDir);
   }
