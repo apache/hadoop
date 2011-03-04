@@ -1871,7 +1871,8 @@
    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
    <mkdir dir="${clover.db.dir}"/>
    <clover-setup initString="${clover.db.dir}/hadoop_coverage.db">
-     <fileset dir="src" includes="core/**/* tools/**/* hdfs/**/* mapred/**/*"/>
+     <fileset dir="${src.dir}" includes="core/**/* tools/**/* hdfs/**/* mapred/**/*"/>
+     <testsources dir="${test.src.dir}" />
    </clover-setup>
 </target>
 
