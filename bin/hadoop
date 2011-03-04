@@ -307,7 +307,7 @@ HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.policy.file=$HADOOP_POLICYFILE"
 if [ "$COMMAND" = "datanode" ]; then
   if [[ $EUID -eq 0 ]]; then
     if [ "$HADOOP_SECURE_DN_USER" = "" ]; then
-      HADOOP_SECURE_DN_PID="hdfs"
+      HADOOP_SECURE_DN_USER="hdfs"
     fi
 
     if [ "$HADOOP_PID_DIR" = "" ]; then
