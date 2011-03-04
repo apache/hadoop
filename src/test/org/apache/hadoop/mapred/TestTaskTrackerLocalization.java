@@ -130,7 +130,7 @@ public class TestTaskTrackerLocalization extends TestCase {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
 
-  private static String[] getFilePermissionAttrs(String path)
+  protected static String[] getFilePermissionAttrs(String path)
       throws IOException {
     String output = Shell.execCommand("stat", path, "-c", "%A:%U:%G");
     return output.split(":|\n");

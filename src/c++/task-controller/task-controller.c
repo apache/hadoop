@@ -333,7 +333,7 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
       continue;
     }
 
-    if (check_ownership(getuid(), getgid(), entry->fts_path) != 0) {
+    if (check_ownership(entry->fts_path) != 0) {
       fprintf(LOGFILE,
           "Invalid file path. %s not user/group owned by the tasktracker.\n",
           entry->fts_path);
@@ -369,12 +369,12 @@ int prepare_attempt_directories(const char *job_id, const char *attempt_id,
     return INVALID_ARGUMENT_NUMBER;
   }
 
+  gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
+
   if (get_user_details(user) < 0) {
     fprintf(LOGFILE, "Couldn't get the user details of %s.\n", user);
     return INVALID_USER_NAME;
   }
-
-  int tasktracker_gid = getgid();
 
   char **local_dir = (char **) get_values(TT_SYS_DIR_KEY);
 
@@ -485,7 +485,7 @@ int prepare_task_logs(const char *log_dir, const char *task_id) {
     }
   }
 
-  int tasktracker_gid = getgid();
+  gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
   if (secure_path(task_log_dir, user_detail->pw_uid, tasktracker_gid, S_IRWXU
       | S_IRWXG, S_ISGID | S_IRWXU | S_IRWXG) != 0) {
     // setgid on dirs but not files, 770. As of now, there are no files though
@@ -509,15 +509,18 @@ int get_user_details(const char *user) {
 }
 
 /*
- * Function to check if a user/group actually owns the file.
+ * Function to check if the TaskTracker actually owns the file.
   */
-int check_ownership(uid_t uid, gid_t gid, char *path) {
+int check_ownership(char *path) {
   struct stat filestat;
   if (stat(path, &filestat) != 0) {
     return UNABLE_TO_STAT_FILE;
   }
-  // check user/group.
-  if (uid != filestat.st_uid || gid != filestat.st_gid) {
+  // check user/group. User should be TaskTracker user, group can either be
+  // TaskTracker's primary group or the special group to which binary's
+  // permissions are set.
+  if (getuid() != filestat.st_uid || (getgid() != filestat.st_gid && getegid()
+      != filestat.st_gid)) {
     return FILE_NOT_OWNED_BY_TASKTRACKER;
   }
   return 0;
@@ -541,7 +544,7 @@ int initialize_job(const char *jobid, const char *user) {
     return INVALID_USER_NAME;
   }
 
-  gid_t tasktracker_gid = getgid(); // TaskTracker's group-id
+  gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
 
   char **local_dir = (char **) get_values(TT_SYS_DIR_KEY);
   if (local_dir == NULL) {

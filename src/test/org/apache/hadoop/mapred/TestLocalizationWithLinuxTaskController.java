@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.TaskController.JobInitializationContext;
 import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.mapred.ClusterWithLinuxTaskController.MyLinuxTaskController;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 
@@ -47,6 +46,8 @@ public class TestLocalizationWithLinuxTaskController extends
 
   private File configFile;
   private MyLinuxTaskController taskController;
+
+  private static String taskTrackerSpecialGroup;
 
   @Override
   protected void setUp()
@@ -66,6 +67,7 @@ public class TestLocalizationWithLinuxTaskController extends
             localDirs);
     String execPath = path + "/task-controller";
     taskController.setTaskControllerExe(execPath);
+    taskTrackerSpecialGroup = getFilePermissionAttrs(execPath)[2];
     taskController.setConf(trackerFConf);
     taskController.setup();
   }
@@ -120,14 +122,12 @@ public class TestLocalizationWithLinuxTaskController extends
     taskController.initializeJob(context);
     // ///////////
 
-    UserGroupInformation taskTrackerugi =
-        UserGroupInformation.login(localizedJobConf);
     for (String localDir : trackerFConf.getStrings("mapred.local.dir")) {
       File jobDir =
           new File(localDir, TaskTracker.getLocalJobDir(jobId.toString()));
       // check the private permissions on the job directory
       checkFilePermissions(jobDir.getAbsolutePath(), "dr-xrws---",
-          localizedJobConf.getUser(), taskTrackerugi.getGroupNames()[0]);
+          localizedJobConf.getUser(), taskTrackerSpecialGroup);
     }
 
     // check the private permissions of various directories
@@ -139,7 +139,7 @@ public class TestLocalizationWithLinuxTaskController extends
     dirs.add(new Path(jarsDir, "lib"));
     for (Path dir : dirs) {
       checkFilePermissions(dir.toUri().getPath(), "dr-xrws---",
-          localizedJobConf.getUser(), taskTrackerugi.getGroupNames()[0]);
+          localizedJobConf.getUser(), taskTrackerSpecialGroup);
     }
 
     // job-work dir needs user writable permissions
@@ -147,7 +147,7 @@ public class TestLocalizationWithLinuxTaskController extends
         lDirAlloc.getLocalPathToRead(TaskTracker.getJobWorkDir(jobId
             .toString()), trackerFConf);
     checkFilePermissions(jobWorkDir.toUri().getPath(), "drwxrws---",
-        localizedJobConf.getUser(), taskTrackerugi.getGroupNames()[0]);
+        localizedJobConf.getUser(), taskTrackerSpecialGroup);
 
     // check the private permissions of various files
     List<Path> files = new ArrayList<Path>();
@@ -159,7 +159,7 @@ public class TestLocalizationWithLinuxTaskController extends
     files.add(new Path(jarsDir, "lib" + Path.SEPARATOR + "lib2.jar"));
     for (Path file : files) {
       checkFilePermissions(file.toUri().getPath(), "-r-xrwx---",
-          localizedJobConf.getUser(), taskTrackerugi.getGroupNames()[0]);
+          localizedJobConf.getUser(), taskTrackerSpecialGroup);
     }
   }
 
@@ -223,11 +223,9 @@ public class TestLocalizationWithLinuxTaskController extends
     dirs.add(workDir);
     dirs.add(new Path(workDir, "tmp"));
     dirs.add(new Path(logFiles[1].getParentFile().getAbsolutePath()));
-    UserGroupInformation taskTrackerugi =
-        UserGroupInformation.login(localizedJobConf);
     for (Path dir : dirs) {
       checkFilePermissions(dir.toUri().getPath(), "drwxrws---",
-          localizedJobConf.getUser(), taskTrackerugi.getGroupNames()[0]);
+          localizedJobConf.getUser(), taskTrackerSpecialGroup);
     }
 
     // check the private permissions of various files
@@ -237,7 +235,7 @@ public class TestLocalizationWithLinuxTaskController extends
         .isTaskCleanupTask()), trackerFConf));
     for (Path file : files) {
       checkFilePermissions(file.toUri().getPath(), "-rwxrwx---",
-          localizedJobConf.getUser(), taskTrackerugi.getGroupNames()[0]);
+          localizedJobConf.getUser(), taskTrackerSpecialGroup);
     }
   }
 }
