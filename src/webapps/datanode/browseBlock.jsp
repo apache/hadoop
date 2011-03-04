@@ -88,9 +88,10 @@
     //Add the various links for looking at the file contents
     //URL for downloading the full file
     String downloadUrl = "http://" + req.getServerName() + ":" +
-                         + req.getServerPort() + "/streamFile?" + "filename="
+                         + req.getServerPort() + "/streamFile"
                          + URLEncoder.encode(filename, "UTF-8")
-                         + JspHelper.SET_DELEGATION + tokenString;
+                         + "?" + JspHelper.DELEGATION_PARAMETER_NAME
+                         + "=" + tokenString;
     out.print("<a name=\"viewOptions\"></a>");
     out.print("<a href=\"" + downloadUrl + "\">Download this file</a><br>");
     

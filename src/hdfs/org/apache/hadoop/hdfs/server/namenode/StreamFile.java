@@ -17,16 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import javax.servlet.*;
-import javax.servlet.http.*;
-import java.io.*;
-import java.net.*;
-import java.security.PrivilegedExceptionAction;
-import org.apache.hadoop.fs.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.InetSocketAddress;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.conf.*;
 
 public class StreamFile extends DfsServlet {
   static InetSocketAddress nameNodeAddr;
@@ -41,7 +45,8 @@ public class StreamFile extends DfsServlet {
     throws ServletException, IOException {
     Configuration conf = 
       (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
-    String filename = request.getParameter("filename");
+    final String filename = request.getPathInfo() != null ?
+        request.getPathInfo() : "/";
     if (filename == null || filename.length() == 0) {
       response.setContentType("text/plain");
       PrintWriter out = response.getWriter();

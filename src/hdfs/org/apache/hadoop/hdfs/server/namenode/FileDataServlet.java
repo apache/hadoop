@@ -62,8 +62,8 @@ public class FileDataServlet extends DfsServlet {
         "https".equals(scheme)
           ? (Integer)getServletContext().getAttribute("datanode.https.port")
           : host.getInfoPort(),
-        "/streamFile", "filename=" + i.getFullName(parent) + 
-        "&ugi=" + ugi.getShortUserName() + dtParam, null);
+        "/streamFile" + i.getFullName(parent), 
+        "ugi=" + ugi.getShortUserName() + dtParam, null);
   }
 
   private static JspHelper jspHelper = null;

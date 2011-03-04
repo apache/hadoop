@@ -50,8 +50,8 @@ public class ProxyFileDataServlet extends FileDataServlet {
     }
     
     return new URI(request.getScheme(), null, request.getServerName(), request
-        .getServerPort(), "/streamFile", "filename=" + i.getFullName(parent) 
-        + "&ugi=" + ugi.getShortUserName() + dtParam, null);
+        .getServerPort(), "/streamFile" + i.getFullName(parent),
+         "&ugi=" + ugi.getShortUserName() + dtParam, null);
   }
 
   /** {@inheritDoc} */
