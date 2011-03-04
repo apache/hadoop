@@ -90,6 +90,7 @@ public class TestTaskEnvironment {
   public void testTaskEnv() throws Throwable {
     ttConf.set("mapreduce.admin.user.shell", "/bin/testshell");
     ttConf.set("mapreduce.admin.user.env", "key1=value1,key2=value2");
+    ttConf.set("mapred.child.env", "ROOT=$HOME");
     final Map<String, String> env = new HashMap<String, String>();
     String user = "test";
     JobConf taskConf = new JobConf(ttConf);
@@ -99,7 +100,9 @@ public class TestTaskEnvironment {
     TaskInProgress tip = tt.new TaskInProgress(task, taskConf);
     final TaskRunner taskRunner = task.createRunner(tt, tip);
     String errorInfo = "Child error";
+    String mapredChildEnv = taskRunner.getChildEnv(taskConf);
     taskRunner.updateUserLoginEnv(errorInfo, user, taskConf, env);
+    taskRunner.setEnvFromInputString(errorInfo, env, mapredChildEnv);
 
     final Vector<String> vargs = new Vector<String>(1);
     File pidFile = new File(TEST_DIR, "pid");
@@ -120,5 +123,8 @@ public class TestTaskEnvironment {
     assertTrue(jvmenvmap.containsValue("value2"));
     assertTrue(javaOpts, javaOpts.contains("Xmx"));
     assertTrue(javaOpts, javaOpts.contains("IPv4"));
+    
+    String root = jvmenvmap.get("ROOT");
+    assertTrue(root, root.contentEquals(System.getenv("HOME")));
   }
 }

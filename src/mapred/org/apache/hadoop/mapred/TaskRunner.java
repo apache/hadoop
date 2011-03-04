@@ -562,7 +562,8 @@ abstract class TaskRunner extends Thread {
     hadoopClientOpts = hadoopClientOpts + "-Dhadoop.tasklog.taskid=" + taskid
                        + " -Dhadoop.tasklog.iscleanup=" + t.isTaskCleanupTask()
                        + " -Dhadoop.tasklog.totalLogFileSize=" + logSize;
-    env.put("HADOOP_CLIENT_OPTS", "\"" + hadoopClientOpts + "\"");
+    // following line is a backport from jira MAPREDUCE-1286 
+    env.put("HADOOP_CLIENT_OPTS", hadoopClientOpts);
 
     // add the env variables passed by the user
     String mapredChildEnv = getChildEnv(conf);
@@ -588,7 +589,7 @@ abstract class TaskRunner extends Thread {
    * @return
    * @throws Throwable
    */
-  private String setEnvFromInputString(String errorInfo, Map<String, String> env,
+  String setEnvFromInputString(String errorInfo, Map<String, String> env,
       String mapredChildEnv) throws Throwable {
     if (mapredChildEnv != null && mapredChildEnv.length() > 0) {
       String childEnvs[] = mapredChildEnv.split(",");
@@ -596,6 +597,7 @@ abstract class TaskRunner extends Thread {
         try {
           String[] parts = cEnv.split("="); // split on '='
           String value = env.get(parts[0]);
+          
           if (value != null) {
             // replace $env with the child's env constructed by tt's
             // example LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp
@@ -609,9 +611,16 @@ abstract class TaskRunner extends Thread {
               // the env key is present in the tt's env
               value = parts[1].replace("$" + parts[0], value);
             } else {
-              // the env key is note present anywhere .. simply set it
-              // example X=$X:/tmp or X=/tmp
-              value = parts[1].replace("$" + parts[0], "");
+              // check for simple variable substitution
+              // for e.g. ROOT=$HOME
+              String envValue = System.getenv(parts[1].substring(1)); 
+              if (envValue != null) {
+                value = envValue;
+              } else {
+                // the env key is note present anywhere .. simply set it
+                // example X=$X:/tmp or X=/tmp
+                value = parts[1].replace("$" + parts[0], "");
+              }
             }
           }
           env.put(parts[0], value);
