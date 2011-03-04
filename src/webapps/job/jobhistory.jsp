@@ -3,6 +3,9 @@
   import="java.io.*"
   import="java.net.URLEncoder"
   import="java.util.*"
+  import="java.util.regex.Pattern"
+  import="java.util.regex.Matcher"
+  import="java.util.concurrent.atomic.AtomicBoolean"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="org.apache.hadoop.fs.*"
@@ -48,15 +51,57 @@ window.location.href = url;
      <a href="jobhistory.jsp">History Viewer</a></h1>
 <hr>
 <%
+  //{ // these braces are here to make indentation work and 
+  //  {// must be removed.
+
+    final int JOB_ID_START = 0;
+
+    final int FILENAME_JOBID_END = JOB_ID_START + 3;
+
+    final int FILENAME_SUBMIT_TIMESTAMP_PART = FILENAME_JOBID_END;
+    
+    final int FILENAME_USER_PART = FILENAME_JOBID_END + 1;
+
+    final int FILENAME_JOBNAME_PART = FILENAME_JOBID_END + 2;
+
+    // XXXXXXXX debug code -- should start with 20
+    final int[] SCAN_SIZES = { 3, 5, 20, 50, 200 };
+
+    final int FILES_PER_SCAN = 1000;
+
+    // XXXXX debug -- this should be 100.
+    final int DEFAULT_PAGE_SIZE = 10;
+
+    final String DEFAULT_DATE_GLOB_COMPONENT = "*/*/*";
+
+    final String SERIAL_NUMBER_GLOB_COMPONENT = "/*";
+
     final String search = (request.getParameter("search") == null)
                           ? ""
                           : request.getParameter("search");
 
-    String parts[] = search.split(":");
+    final String dateSplit[] = search.split(";");
+
+    final String soughtDate = dateSplit.length > 1 ? dateSplit[1] : "";
+
+    final String parts[] = dateSplit[0].split(":");
 
     final String user = (parts.length >= 1)
                         ? parts[0].toLowerCase()
                         : "";
+
+    final int currentScanSizeIndex
+      = (request.getParameter("scansize") == null)
+           ? 0 : Integer.parseInt(request.getParameter("scansize"));
+
+    // DEBUG we temporarily allow a "date" with a leading digit of 4 or 5,
+    //  and a "month" with a leading digit of 2, because for testing we will 
+    //  use hours resp. minutes for months resp. days.
+    final String SEARCH_PARSE_REGEX
+      = "([0-2]?[0-9])/([0-5]?[0-9])/((?:2[0-9])[0-9][0-9])";
+
+    final Pattern dateSearchParse = Pattern.compile(SEARCH_PARSE_REGEX);
+
     final String jobname = (parts.length >= 2)
                            ? parts[1].toLowerCase()
                            : "";
@@ -70,14 +115,14 @@ window.location.href = url;
         // return true if 
         //  - user is not specified
         //  - user matches
-        return "".equals(uqUser) || uqUser.equals(fileName.split("_")[5]);
+        return "".equals(uqUser) || uqUser.equals(fileName.split("_")[FILENAME_USER_PART]);
       }
 
       private boolean matchJobName(String fileName) {
         // return true if 
         //  - jobname is not specified
         //  - jobname contains the keyword
-        return "".equals(uqJobname) || fileName.split("_")[6].toLowerCase().contains(uqJobname);
+        return "".equals(uqJobname) || fileName.split("_")[FILENAME_JOBNAME_PART].toLowerCase().contains(uqJobname);
       }
 
       public boolean accept(Path path) {
@@ -91,8 +136,156 @@ window.location.href = url;
       out.println("Null file system. May be namenode is in safemode!");
       return;
     }
-    Path[] jobFiles = FileUtil.stat2Paths(fs.listStatus(new Path(historyLogDir),
-                                          jobLogFileFilter));
+
+    Comparator<Path> lastPathFirst
+      = new Comparator<Path>() {
+          public int compare(Path path1, Path path2) {
+            // these are backwards because we want the lexically lesser names
+            // to occur later in the sort.
+            return path2.getName().compareTo(path1.getName());
+          }
+    };
+
+    Comparator<Path> latestFirstCreationTimeComparator
+      = new Comparator<Path>() {
+          public int compare(Path p1, Path p2) {
+            String dp1 = null;
+            String dp2 = null;
+        
+            try {
+              dp1 = JobHistory.JobInfo.decodeJobHistoryFileName(p1.getName());
+              dp2 = JobHistory.JobInfo.decodeJobHistoryFileName(p2.getName());
+            } catch (IOException ioe) {
+              throw new RuntimeException(ioe);
+            }
+                
+            String[] split1 = dp1.split("_");
+            String[] split2 = dp2.split("_");
+        
+            // compare job tracker start time
+            // reverse the sense, because we want the newest records first
+            int res = new Date(Long.parseLong(split2[1]))
+               .compareTo(new Date(Long.parseLong(split1[1])));
+            // compare the submit times next
+            // again, reverse the sense
+            if (res == 0) {
+              res = new Date(Long.parseLong(split2[3]))
+                .compareTo(new Date(Long.parseLong(split1[3])));
+            }
+            // lastly, compare the serial numbers [a certain tiebreaker]
+            // again, reverse the sense
+            if (res == 0) {
+              Long l1 = Long.parseLong(split2[2]);
+              res = l1.compareTo(Long.parseLong(split1[2]));
+            }
+            return res;
+      }
+    };
+
+    String trackerComponent = "*";
+
+    // build the glob
+    // first find the date component
+    String dateComponent = DEFAULT_DATE_GLOB_COMPONENT;
+
+    Matcher dateMatcher = dateSearchParse.matcher(soughtDate);
+
+    // burst the sought date: must be [m]m/[d]d/[2y]yy
+    if (dateMatcher.matches()) {
+      String year = dateMatcher.group(3);
+      if (year.length() == 2) {
+        year = "20" + year;
+      }
+
+      String month = dateMatcher.group(1);
+      if (month.length() == 1) {
+        month = "0" + month;
+      }
+
+      String date = dateMatcher.group(2);
+      if (date.length() == 1) {
+        date = "0" + date;
+      }
+
+      dateComponent = year + "/" + month + "/" + date;
+    }
+
+    // now we find all of the serial numbers.  This looks up all the serial
+    // number directories, but not the individual files.
+    Path historyPath = new Path(historyLogDir);
+
+    String leadGlob = (trackerComponent + "/" + dateComponent);
+
+    // Atomicity is unimportant here.
+    // I would have used MutableBoxedBoolean if such had been provided.
+    AtomicBoolean hasLegacyFiles = new AtomicBoolean(false);
+
+    Path[] snPaths
+      = FileUtil.stat2Paths(JobHistory.localGlobber
+                            (fs, historyPath, "/" + leadGlob, null, hasLegacyFiles));
+
+    Arrays.sort(snPaths, lastPathFirst);
+
+    int arrayLimit = 0;
+    int tranchesSeen = 0;
+
+    Path lastPath = null;
+
+    while (arrayLimit < snPaths.length
+           && tranchesSeen <= SCAN_SIZES[currentScanSizeIndex]) {
+      if (lastPath == null
+          || lastPathFirst.compare(lastPath, snPaths[arrayLimit]) != 0) {
+        ++tranchesSeen;
+        lastPath = snPaths[arrayLimit];
+      }
+
+      ++arrayLimit;
+    }
+
+    if (tranchesSeen > SCAN_SIZES[currentScanSizeIndex]) {
+      --arrayLimit;
+    }
+
+    // arrayLimit points to the first element [which could be element 0] that 
+    // we shouldn't consider
+
+    int numHistoryFiles = 0;
+
+    Path[] jobFiles = null;
+
+    {
+      Path[][] pathVectorVector = new Path[arrayLimit][];
+
+      for (int i = 0; i < arrayLimit; ++i) {
+        pathVectorVector[i]
+          = FileUtil.stat2Paths(fs.listStatus(snPaths[i], jobLogFileFilter));
+        numHistoryFiles += pathVectorVector[i].length;
+      }
+
+      jobFiles = new Path[numHistoryFiles];
+
+      int pathsCursor = 0;
+
+      for (int i = 0; i < arrayLimit; ++i) {
+        System.arraycopy(pathVectorVector[i], 0, jobFiles, pathsCursor,
+                         pathVectorVector[i].length);
+        pathsCursor += pathVectorVector[i].length;
+      }
+    }
+
+    boolean sizeIsExact = arrayLimit == snPaths.length;
+
+    // sizeIsExact will be true if arrayLimit is zero.
+    long lengthEstimate
+      = sizeIsExact ? numHistoryFiles
+                    : (long) numHistoryFiles * snPaths.length / arrayLimit;
+
+    if (hasLegacyFiles.get()) {
+      out.println("<h2>This history has some legacy files.  "
+                  + "<a href=\"legacyjobhistory.jsp\">go to Legacy History Viewer</a>"
+                  + "</h2>");
+    }
+
     out.println("<!--  user : " + user +
         ", jobname : " + jobname + "-->");
     if (null == jobFiles || jobFiles.length == 0)  {
@@ -106,7 +299,7 @@ window.location.href = url;
                 : Integer.parseInt(request.getParameter("pageno"));
 
     // get the total number of files to display
-    int size = 100;
+    int size = DEFAULT_PAGE_SIZE;
 
     // if show-all is requested or jobfiles < size(100)
     if (pageno == -1 || size > jobFiles.length) {
@@ -117,7 +310,8 @@ window.location.href = url;
       pageno = 1;
     }
 
-    int maxPageNo = (int)Math.ceil((float)jobFiles.length / size);
+    int maxPageNo = (jobFiles.length + size - 1) / size;
+    // int maxPageNo = (int)Math.ceil((float)jobFiles.length / size);
 
     // check and fix pageno
     if (pageno < 1 || pageno > maxPageNo) {
@@ -134,87 +328,98 @@ window.location.href = url;
 
     // Display the search box
     out.println("<form name=search><b> Filter (username:jobname) </b>"); // heading
-    out.println("<input type=text name=search size=\"20\" value=\"" + search + "\">"); // search box
-    out.println("<input type=submit value=\"Filter!\" onClick=\"showUserHistory(document.getElementById('search').value)\"></form>");
-    out.println("<span class=\"small\">Example: 'smith' will display jobs either submitted by user 'smith'. 'smith:sort' will display jobs from user 'smith' having 'sort' keyword in the jobname.</span>"); // example
+    out.println("<input type=text name=search size=\"20\" "
+                + "value=\"" + search + "\">"); // search box
+    out.println("<input type=submit value=\"Filter!\" onClick=\"showUserHistory"
+                + "(document.getElementById('search').value)\"></form>");
+    out.println("<p><span class=\"small\">Specify [user][:jobname keyword(s)]"
+                + "[;MM/DD/YYYY] .  Each of the three components is "
+                + "optional.  Filter components are conjunctive.</span></p>");
+    out.println("<p><span class=\"small\">Example: 'smith' will display jobs"
+                + " submitted by user 'smith'. 'smith:sort' will display "
+                + "jobs from user 'smith' having a 'sort' keyword in the jobname."
+                + " ';07/04/2010' restricts to July 4, 2010</span></p>"); // example
     out.println("<hr>");
 
     //Show the status
     int start = (pageno - 1) * size + 1;
 
     // DEBUG
-    out.println("<!-- pageno : " + pageno + ", size : " + size + ", length : " + length + ", start : " + start + ", maxpg : " + maxPageNo + "-->");
+    out.println("<!-- pageno : " + pageno + ", size : " + size + ", length : "
+                + length + ", start : " + start + ", maxpg : "
+                + maxPageNo + "-->");
 
     out.println("<font size=5><b>Available Jobs in History </b></font>");
     // display the number of jobs, start index, end index
-    out.println("(<i> <span class=\"small\">Displaying <b>" + length + "</b> jobs from <b>" + start + "</b> to <b>" + (start + length - 1) + "</b> out of <b>" + jobFiles.length + "</b> jobs");
+    out.println("(<i> <span class=\"small\">Displaying <b>" + length
+                + "</b> jobs from <b>" + start + "</b> to <b>"
+                + (start + length - 1) + "</b> out of "
+                + (sizeIsExact
+                   ? "" : "approximately ") + "<b>"
+                + lengthEstimate + "</b> jobs"
+                + (sizeIsExact
+                   ? ""
+                   : ", <b>" + numHistoryFiles + "</b> gotten"));
     if (!"".equals(user)) {
       // show the user if present
       out.println(" for user <b>" + user + "</b>");
     }
     if (!"".equals(jobname)) {
       out.println(" with jobname having the keyword <b>" +
-          jobname + "</b> in it."); // show the jobname keyword if present
+          jobname + "</b> in it.");
+      // show the jobname keyword if present
+    }
+    if (!DEFAULT_DATE_GLOB_COMPONENT.equals(dateComponent)) {
+      out.println(" for the date <b>" + soughtDate + "</b>");
     }
     out.print("</span></i>)");
 
+    final String searchPart = "&search=" + search;
+
+    final String scansizePart = "&scansize=" + currentScanSizeIndex;
+
+    final String searchPlusScan = searchPart + scansizePart;
+
+    // show the expand scope link, if we're restricted
+    if (sizeIsExact || currentScanSizeIndex == SCAN_SIZES.length - 1) {
+      out.println("[<span class=\"small\">get more results</span>]");
+    } else {
+      out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=1"
+                  + searchPart + "&scansize=" + (currentScanSizeIndex + 1)
+                  + "\">get more results</a></span>]");
+    }
+
     // show the 'show-all' link
-    out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=-1&search=" + search + "\">show all</a></span>]");
+    out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=-1"
+                + searchPlusScan + "\">show in one page</a></span>]");
 
     // show the 'first-page' link
     if (pageno > 1) {
-      out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=1&search=" + search + "\">first page</a></span>]");
+      out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=1"
+                  + searchPlusScan + "\">first page</a></span>]");
     } else {
       out.println("[<span class=\"small\">first page]</span>");
     }
 
     // show the 'last-page' link
     if (pageno < maxPageNo) {
-      out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=" + maxPageNo + "&search=" + search + "\">last page</a></span>]");
+      out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno="
+                  + maxPageNo + searchPlusScan + "\">last page</a></span>]");
     } else {
       out.println("<span class=\"small\">[last page]</span>");
     }
 
     // sort the files on creation time.
-    Arrays.sort(jobFiles, new Comparator<Path>() {
-      public int compare(Path p1, Path p2) {
-        String dp1 = null;
-        String dp2 = null;
-        
-        try {
-          dp1 = JobHistory.JobInfo.decodeJobHistoryFileName(p1.getName());
-          dp2 = JobHistory.JobInfo.decodeJobHistoryFileName(p2.getName());
-        } catch (IOException ioe) {
-            throw new RuntimeException(ioe);
-        }
-                
-        String[] split1 = dp1.split("_");
-        String[] split2 = dp2.split("_");
-        
-        // compare job tracker start time
-        int res = new Date(Long.parseLong(split1[1])).compareTo(
-                             new Date(Long.parseLong(split2[1])));
-        if (res == 0) {
-          res = new Date(Long.parseLong(split1[3])).compareTo(
-                           new Date(Long.parseLong(split2[3])));
-        }
-        if (res == 0) {
-          Long l1 = Long.parseLong(split1[4]);
-          res = l1.compareTo(Long.parseLong(split2[4]));
-        }
-        return res;
-      }
-    });
+    Arrays.sort(jobFiles, latestFirstCreationTimeComparator);
 
     out.println("<br><br>");
 
     // print the navigation info (top)
-    printNavigation(pageno, size, maxPageNo, search, out);
+    printNavigationTool(pageno, size, maxPageNo, searchPlusScan, out);
 
     out.print("<table align=center border=2 cellpadding=\"5\" cellspacing=\"2\">");
     out.print("<tr>");
-    out.print("<td>Job tracker Host Name</td>" +
-              "<td>Job tracker Start time</td>" +
+    out.print("<td>Job submit time</td>" +
               "<td>Job Id</td><td>Name</td><td>User</td>") ; 
     out.print("</tr>"); 
     
@@ -226,11 +431,13 @@ window.location.href = url;
           JobHistory.JobInfo.decodeJobHistoryFileName(jobFile.getName());
 
       String[] jobDetails = decodedJobFileName.split("_");
-      String trackerHostName = jobDetails[0];
       String trackerStartTime = jobDetails[1];
-      String jobId = jobDetails[2] + "_" +jobDetails[3] + "_" + jobDetails[4] ;
-      String userName = jobDetails[5];
-      String jobName = jobDetails[6];
+      String jobId = (jobDetails[JOB_ID_START]
+                      + "_" + jobDetails[JOB_ID_START + 1]
+                      + "_" + jobDetails[JOB_ID_START + 2]);
+      String submitTimestamp = jobDetails[FILENAME_SUBMIT_TIMESTAMP_PART];
+      String userName = jobDetails[FILENAME_USER_PART];
+      String jobName = jobDetails[FILENAME_JOBNAME_PART];
       
       // Check if the job is already displayed. There can be multiple job 
       // history files for jobs that have restarted
@@ -246,7 +453,7 @@ window.location.href = url;
 %>
 <center>
 <%	
-      printJob(trackerHostName, trackerStartTime, jobId,
+      printJob(submitTimestamp, jobId,
                jobName, userName, new Path(jobFile.getParent(), encodedJobFileName), 
                out) ; 
 %>
@@ -256,16 +463,15 @@ window.location.href = url;
     out.print("</table>");
 
     // show the navigation info (bottom)
-    printNavigation(pageno, size, maxPageNo, search, out);
+    printNavigationTool(pageno, size, maxPageNo, searchPlusScan, out);
 %>
 <%!
-    private void printJob(String trackerHostName, String trackerid,
+    private void printJob(String timestamp,
                           String jobId, String jobName,
                           String user, Path logFile, JspWriter out)
     throws IOException {
       out.print("<tr>"); 
-      out.print("<td>" + trackerHostName + "</td>"); 
-      out.print("<td>" + new Date(Long.parseLong(trackerid)) + "</td>"); 
+      out.print("<td>" + new Date(Long.parseLong(timestamp)) + "</td>"); 
       out.print("<td>" + "<a href=\"jobdetailshistory.jsp?logFile=" 
           + logFile.toString() + "\">" + jobId + "</a></td>");
       out.print("<td>" + HtmlQuoting.quoteHtmlChars(jobName) + "</td>"); 
@@ -273,17 +479,21 @@ window.location.href = url;
       out.print("</tr>");
     }
 
-    private void printNavigation(int pageno, int size, int max, String search, 
-                                 JspWriter out) throws IOException {
-      int numIndexToShow = 5; // num indexes to show on either side
+    private void printNavigationTool(int pageno, int size, int max,
+                                     String searchPlusScan, JspWriter out)
+         throws IOException {
+      
+      final int NUMBER_INDICES_TO_SHOW = 5;
+
+      int numIndexToShow = NUMBER_INDICES_TO_SHOW; // num indexes to show on either side
 
       //TODO check this on boundary cases
       out.print("<center> <");
 
       // show previous link
       if (pageno > 1) {
-        out.println("<a href=\"jobhistory.jsp?pageno=" + (pageno - 1) +
-            "&search=" + search + "\">Previous</a>");
+        out.println("<a href=\"jobhistory.jsp?pageno=" + (pageno - 1)
+                    + searchPlusScan + "\">Previous</a>");
       }
 
       // display the numbered index 1 2 3 4
@@ -302,8 +512,8 @@ window.location.href = url;
 
       for (int i = firstPage; i <= lastPage; ++i) {
         if (i != pageno) {// needs hyperlink
-          out.println(" <a href=\"jobhistory.jsp?pageno=" + i + "&search=" +
-              search + "\">" + i + "</a> ");
+          out.println(" <a href=\"jobhistory.jsp?pageno=" + i
+                      + searchPlusScan + "\">" + i + "</a> ");
         } else { // current page
           out.println(i);
         }
@@ -311,7 +521,7 @@ window.location.href = url;
 
       // show the next link
       if (pageno < max) {
-        out.println("<a href=\"jobhistory.jsp?pageno=" + (pageno + 1) + "&search=" + search + "\">Next</a>");
+        out.println("<a href=\"jobhistory.jsp?pageno=" + (pageno + 1) + searchPlusScan + "\">Next</a>");
       }
       out.print("></center>");
     }
