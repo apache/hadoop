@@ -6,6 +6,7 @@ Release 0.20.203
 
     BZ4101537 .  When a queue is built without any access rights we explain the
     problem.  (dking, rvw ramach)  [attachment of 2010-11-24]
+    BUG:4307783 Always propagate IOE in Track*RecordReader. (llu/ramach)
 
 Release 0.20.3 - Unreleased
 
