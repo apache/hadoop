@@ -41,7 +41,7 @@ public class FileDataServlet extends DfsServlet {
 
   /** Create a redirection URI */
   protected URI createUri(String parent, HdfsFileStatus i, UserGroupInformation ugi,
-      ClientProtocol nnproxy, HttpServletRequest request)
+      ClientProtocol nnproxy, HttpServletRequest request, String dt)
       throws IOException, URISyntaxException {
     String scheme = request.getScheme();
     final DatanodeID host = pickSrcDatanode(parent, i, nnproxy);
@@ -51,12 +51,19 @@ public class FileDataServlet extends DfsServlet {
     } else {
       hostname = host.getHost();
     }
+    
+    String dtParam="";
+    if (dt != null) {
+      StringBuilder sb = new StringBuilder(JspHelper.SET_DELEGATION).append(dt);
+      dtParam=sb.toString();
+    }
+    
     return new URI(scheme, null, hostname,
         "https".equals(scheme)
           ? (Integer)getServletContext().getAttribute("datanode.https.port")
           : host.getInfoPort(),
         "/streamFile", "filename=" + i.getFullName(parent) + 
-        "&ugi=" + ugi.getShortUserName(), null);
+        "&ugi=" + ugi.getShortUserName() + dtParam, null);
   }
 
   private static JspHelper jspHelper = null;
@@ -91,7 +98,7 @@ public class FileDataServlet extends DfsServlet {
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws IOException {
     Configuration conf =
-	(Configuration) getServletContext().getAttribute("name.conf");
+	(Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
     final UserGroupInformation ugi = getUGI(request, conf);
 
     try {
@@ -103,13 +110,16 @@ public class FileDataServlet extends DfsServlet {
             }
           });
 
-      final String path = request.getPathInfo() != null ? 
-                                                    request.getPathInfo() : "/";
+      final String path = 
+        request.getPathInfo() != null ? request.getPathInfo() : "/";
+      
+      String delegationToken = 
+        request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
       
       HdfsFileStatus info = nnproxy.getFileInfo(path);
       if ((info != null) && !info.isDir()) {
         response.sendRedirect(createUri(path, info, ugi, nnproxy,
-              request).toURL().toString());
+              request, delegationToken).toURL().toString());
       } else if (info == null){
         response.sendError(400, "cat: File not found " + path);
       } else {

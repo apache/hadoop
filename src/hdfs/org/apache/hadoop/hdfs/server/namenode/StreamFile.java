@@ -40,7 +40,7 @@ public class StreamFile extends DfsServlet {
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
     Configuration conf = 
-      (Configuration) getServletContext().getAttribute("name.conf");
+      (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
     String filename = request.getParameter("filename");
     if (filename == null || filename.length() == 0) {
       response.setContentType("text/plain");
@@ -52,7 +52,7 @@ public class StreamFile extends DfsServlet {
     DFSClient dfs;
     UserGroupInformation ugi = getUGI(request, conf);
     try {
-	dfs = JspHelper.getDFSClient(ugi, nameNodeAddr, conf);
+      dfs = JspHelper.getDFSClient(ugi, nameNodeAddr, conf);
     } catch (InterruptedException e) {
       response.sendError(400, e.getMessage());
       return;

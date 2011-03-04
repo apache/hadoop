@@ -58,6 +58,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 
 public class JspHelper {
+  public static final String CURRENT_CONF = "current.conf";
   final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
   public static final String DELEGATION_PARAMETER_NAME = "delegation";
   public static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +

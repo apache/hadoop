@@ -210,7 +210,7 @@ public class SecondaryNameNode implements Runnable {
           }
           
           infoServer.setAttribute("name.system.image", checkpointImage);
-          infoServer.setAttribute("name.conf", conf);
+          infoServer.setAttribute(JspHelper.CURRENT_CONF, conf);
           infoServer.addInternalServlet("getimage", "/getimage",
               GetImageServlet.class, true);
           infoServer.start();

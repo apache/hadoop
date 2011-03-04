@@ -45,7 +45,7 @@ public class FsckServlet extends DfsServlet {
     final PrintWriter out = response.getWriter();
     final ServletContext context = getServletContext();
     final Configuration conf = 
-      (Configuration) context.getAttribute("name.conf");
+      (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
     final UserGroupInformation ugi = getUGI(request, conf);
     try {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {

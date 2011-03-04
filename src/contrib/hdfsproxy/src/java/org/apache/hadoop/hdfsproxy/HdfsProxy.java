@@ -29,6 +29,7 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLSession;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.hadoop.hdfs.server.namenode.JspHelper;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -74,7 +75,7 @@ public class HdfsProxy {
     this.server = new ProxyHttpServer(sslAddr, sslConf);
     this.server.setAttribute("proxy.https.port", server.getPort());
     this.server.setAttribute("name.node.address", nnAddr);
-    this.server.setAttribute("name.conf", new Configuration());
+    this.server.setAttribute(JspHelper.CURRENT_CONF, new Configuration());
     this.server.addGlobalFilter("ProxyFilter", ProxyFilter.class.getName(), null);
     this.server.addServlet("listPaths", "/listPaths/*", ProxyListPathsServlet.class);
     this.server.addServlet("data", "/data/*", ProxyFileDataServlet.class);

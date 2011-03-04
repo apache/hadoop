@@ -623,21 +623,20 @@ public class DistCp implements Tool {
   }
 
   /** Sanity check for srcPath */
-  private static void checkSrcPath(Configuration conf, 
-                                   List<Path> srcPaths, JobConf jobConf)
+  private static void checkSrcPath(JobConf jobConf, List<Path> srcPaths)
   throws IOException {
     List<IOException> rslt = new ArrayList<IOException>();
     
     // get tokens for all the required FileSystems..
     // also set the renewer as the JobTracker for the hftp case
-    conf.set(HftpFileSystem.HFTP_RENEWER, 
-        conf.get(JobTracker.JT_USER_NAME, ""));
+    jobConf.set(HftpFileSystem.HFTP_RENEWER, 
+        jobConf.get(JobTracker.JT_USER_NAME, ""));
     Path[] ps = new Path[srcPaths.size()];
     ps = srcPaths.toArray(ps);
-    TokenCache.obtainTokensForNamenodes(jobConf.getCredentials(), ps, conf);
+    TokenCache.obtainTokensForNamenodes(jobConf.getCredentials(), ps, jobConf);
 
     for (Path p : srcPaths) {
-      FileSystem fs = p.getFileSystem(conf);
+      FileSystem fs = p.getFileSystem(jobConf);
       if (!fs.exists(p)) {
         rslt.add(new IOException("Input source " + p + " does not exist."));
       }
@@ -658,7 +657,7 @@ public class DistCp implements Tool {
 
     JobConf job = createJobConf(conf);
     
-    checkSrcPath(conf, args.srcs, job);
+    checkSrcPath(job, args.srcs);
     if (args.preservedAttributes != null) {
       job.set(PRESERVE_STATUS_LABEL, args.preservedAttributes);
     }

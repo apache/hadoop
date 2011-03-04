@@ -1919,7 +1919,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
  
     // add the delegation tokens from configuration
     String [] nameNodes = conf.getStrings(JobContext.JOB_NAMENODES);
-    LOG.info("adding the following namenodes' delegation tokens:" + Arrays.toString(nameNodes));
+    LOG.debug("adding the following namenodes' delegation tokens:" + Arrays.toString(nameNodes));
     if(nameNodes != null) {
       Path [] ps = new Path[nameNodes.length];
       for(int i=0; i< nameNodes.length; i++) {

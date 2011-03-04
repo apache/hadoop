@@ -19,52 +19,48 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.io.IOException;
-
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-
 import java.security.PrivilegedExceptionAction;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
 import java.util.TimeZone;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSInputStream;
+import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.server.namenode.JspHelper;
+import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Progressable;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.fs.FileChecksum;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.server.namenode.JspHelper;
-import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
-import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.*;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.Progressable;
 
 /** An implementation of a protocol for accessing filesystems over HTTP.
  * The following implementation provides a limited, read-only interface
@@ -84,6 +80,7 @@ public class HftpFileSystem extends FileSystem {
   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
   private Token<? extends TokenIdentifier> delegationToken;
   public static final String HFTP_RENEWER = "fs.hftp.renewer";
+  public static final String HFTP_SERVICE_NAME_KEY = "hdfs.service.host_";
 
   public static final SimpleDateFormat getDateFormat() {
     final SimpleDateFormat df = new SimpleDateFormat(HFTP_DATE_FORMAT);
@@ -108,17 +105,22 @@ public class HftpFileSystem extends FileSystem {
     nnAddr = NetUtils.createSocketAddr(name.toString());
     
     if (UserGroupInformation.isSecurityEnabled()) {
-      StringBuffer sb = new StringBuffer();
-      final String nnServiceName = 
-        (sb.append(NetUtils.normalizeHostName(name.getHost()))
-                .append(":").append(name.getPort())).toString();
-      Text nnServiceNameText = new Text(nnServiceName);
+      StringBuffer sb = new StringBuffer(HFTP_SERVICE_NAME_KEY);
+      // configuration has the actual service name for this url. Build the key 
+      // and get it.
+      final String key = sb.append(NetUtils.normalizeHostName(name.getHost())).
+        append(".").append(name.getPort()).toString();
+      
+      LOG.debug("Trying to find DT for " + name + " using key=" + key + "; conf=" + conf.get(key, ""));
+      Text nnServiceNameText = new Text(conf.get(key, ""));
+      
       Collection<Token<? extends TokenIdentifier>> tokens =
         ugi.getTokens();
       //try finding a token for this namenode (esp applicable for tasks
       //using hftp). If there exists one, just set the delegationField
       for (Token<? extends TokenIdentifier> t : tokens) {
         if ((t.getService()).equals(nnServiceNameText)) {
+          LOG.debug("Found existing DT for " + name);
           delegationToken = t;
           return;
         }

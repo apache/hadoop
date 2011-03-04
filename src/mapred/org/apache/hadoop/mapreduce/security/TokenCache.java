@@ -20,30 +20,26 @@ package org.apache.hadoop.mapreduce.security;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.Collection;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobTracker;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.KerberosName;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * This class provides user facing APIs for transferring secrets from
@@ -130,7 +126,7 @@ public class TokenCache {
 
         token.setService(new Text(fs_addr));
         credentials.addToken(new Text(fs_addr), token);
-        LOG.info("Got dt for " + p.toString() + ";uri="+ fs_addr + 
+        LOG.info("Got dt for " + p + ";uri="+ fs_addr + 
             ";t.service="+token.getService());
       } else if (fs instanceof HftpFileSystem) {
         String fs_addr = buildDTServiceName(fs.getUri());
@@ -142,8 +138,17 @@ public class TokenCache {
         }
         //the initialize method of hftp, called via FileSystem.get() done
         //earlier gets a delegation token
-        credentials.addToken(new Text(fs_addr), 
-            ((HftpFileSystem) fs).getDelegationToken());
+        Token<? extends TokenIdentifier> t = ((HftpFileSystem) fs).getDelegationToken(); 
+        credentials.addToken(new Text(fs_addr), t);
+        
+        // in this case port in fs_addr is port for hftp request, but
+        // token's port is for RPC
+        // to find the correct DT we need to know the mapping between Hftp port 
+        // and RPC one. hence this new setting in the conf.
+        URI uri = ((HftpFileSystem) fs).getUri();
+        String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+uri.getHost() + "." + uri.getPort();
+        conf.set(key, t.getService().toString());
+        LOG.info("GOT dt for " + p + " and stored in conf as " + key + "=" + t.getService());
       }
     }
   }

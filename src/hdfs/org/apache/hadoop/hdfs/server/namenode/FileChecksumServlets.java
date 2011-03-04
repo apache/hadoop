@@ -53,7 +53,7 @@ public class FileChecksumServlets {
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
       final ServletContext context = getServletContext();
-      Configuration conf = (Configuration) context.getAttribute("name.conf");
+      Configuration conf = (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
       final UserGroupInformation ugi = getUGI(request, conf);
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final DatanodeID datanode = namenode.namesystem.getRandomDatanode();

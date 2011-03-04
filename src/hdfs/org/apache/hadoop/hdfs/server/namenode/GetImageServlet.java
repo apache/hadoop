@@ -57,7 +57,7 @@ public class GetImageServlet extends HttpServlet {
       ServletContext context = getServletContext();
       final FSImage nnImage = (FSImage)context.getAttribute("name.system.image");
       final TransferFsImage ff = new TransferFsImage(pmap, request, response);
-      final Configuration conf = (Configuration)getServletContext().getAttribute("name.conf");
+      final Configuration conf = (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
       if(UserGroupInformation.isSecurityEnabled() && 
           !isValidRequestor(request.getRemoteUser(), conf)) {
         response.sendError(HttpServletResponse.SC_FORBIDDEN, 
