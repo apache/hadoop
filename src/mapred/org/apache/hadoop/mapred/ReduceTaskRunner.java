@@ -23,7 +23,7 @@ import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 
 /** Runs a reduce task. */
 class ReduceTaskRunner extends TaskRunner {
-
+  
   public ReduceTaskRunner(TaskInProgress task, TaskTracker tracker, 
                           JobConf conf) throws IOException {
     
@@ -48,24 +48,4 @@ class ReduceTaskRunner extends TaskRunner {
     getTask().getProgress().setStatus("closed");
     mapOutputFile.removeAll(getTask().getTaskID());
   }
-
-  @Override
-  public String getChildJavaOpts(JobConf jobConf, String defaultValue) {
-    return jobConf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
-                       super.getChildJavaOpts(jobConf, 
-                           JobConf.DEFAULT_MAPRED_TASK_JAVA_OPTS));
-  }
- 
-  @Override
-  public int getChildUlimit(JobConf jobConf) {
-    return jobConf.getInt(JobConf.MAPRED_REDUCE_TASK_ULIMIT, 
-                          super.getChildUlimit(jobConf));
-  }
-
-  @Override
-  public String getChildEnv(JobConf jobConf) {
-    return jobConf.get(JobConf.MAPRED_REDUCE_TASK_ENV, 
-                       super.getChildEnv(jobConf));
-  }
-
 }

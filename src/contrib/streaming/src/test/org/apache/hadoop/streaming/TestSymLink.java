@@ -81,18 +81,9 @@ public class TestSymLink extends TestCase
           "-jobconf", strNamenode,
           "-jobconf", strJobtracker,
           "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
-          "-jobconf", 
-            JobConf.MAPRED_MAP_TASK_JAVA_OPTS + "=" +
-              "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
-              "-Dbuild.test=" + System.getProperty("build.test") + " " +
-              conf.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, 
-                       conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
-          "-jobconf", 
-            JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + "=" +
-              "-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
-              "-Dbuild.test=" + System.getProperty("build.test") + " " +
-              conf.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, 
-                       conf.get(JobConf.MAPRED_TASK_JAVA_OPTS, "")),
+          "-jobconf", "mapred.child.java.opts=-Dcontrib.name=" + System.getProperty("contrib.name") + " " +
+                      "-Dbuild.test=" + System.getProperty("build.test") + " " +
+                      conf.get("mapred.child.java.opts",""),
           "-cacheFile", "hdfs://"+fileSys.getName()+CACHE_FILE + "#testlink"
         };
 

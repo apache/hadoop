@@ -100,47 +100,6 @@ abstract class TaskRunner extends Thread {
     return str.toString();
   }
   
-  /**
-   * Get the java command line options for the child map/reduce tasks.
-   * @param jobConf job configuration
-   * @param defaultValue default value
-   * @return the java command line options for child map/reduce tasks
-   * @deprecated Use command line options specific to map or reduce tasks set 
-   *             via {@link JobConf#MAPRED_MAP_TASK_JAVA_OPTS} or 
-   *             {@link JobConf#MAPRED_REDUCE_TASK_JAVA_OPTS}
-   */
-  @Deprecated
-  public String getChildJavaOpts(JobConf jobConf, String defaultValue) {
-    return jobConf.get(JobConf.MAPRED_TASK_JAVA_OPTS, defaultValue);
-  }
-  
-  /**
-   * Get the maximum virtual memory of the child map/reduce tasks.
-   * @param jobConf job configuration
-   * @return the maximum virtual memory of the child task or <code>-1</code> if
-   *         none is specified
-   * @deprecated Use limits specific to the map or reduce tasks set via
-   *             {@link JobConf#MAPRED_MAP_TASK_ULIMIT} or
-   *             {@link JobConf#MAPRED_REDUCE_TASK_ULIMIT} 
-   */
-  @Deprecated
-  public int getChildUlimit(JobConf jobConf) {
-    return jobConf.getInt(JobConf.MAPRED_TASK_ULIMIT, -1);
-  }
-  
-  /**
-   * Get the environment variables for the child map/reduce tasks.
-   * @param jobConf job configuration
-   * @return the environment variables for the child map/reduce tasks or
-   *         <code>null</code> if unspecified
-   * @deprecated Use environment variables specific to the map or reduce tasks
-   *             set via {@link JobConf#MAPRED_MAP_TASK_ENV} or
-   *             {@link JobConf#MAPRED_REDUCE_TASK_ENV}
-   */
-  public String getChildEnv(JobConf jobConf) {
-    return jobConf.get(JobConf.MAPRED_TASK_ENV);
-  }
-  
   @Override
   public final void run() {
     String errorInfo = "Child Error";
@@ -315,8 +274,8 @@ abstract class TaskRunner extends Thread {
 
       // Add child (task) java-vm options.
       //
-      // The following symbols if present in mapred.{map|reduce}.child.java.opts 
-      // value are replaced:
+      // The following symbols if present in mapred.child.java.opts value are
+      // replaced:
       // + @taskid@ is interpolated with value of TaskID.
       // Other occurrences of @ will not be altered.
       //
@@ -326,23 +285,14 @@ abstract class TaskRunner extends Thread {
       // and get thread dumps.
       //
       //  <property>
-      //    <name>mapred.map.child.java.opts</name>
-      //    <value>-Xmx 512M -verbose:gc -Xloggc:/tmp/@taskid@.gc \
+      //    <name>mapred.child.java.opts</name>
+      //    <value>-verbose:gc -Xloggc:/tmp/@taskid@.gc \
       //           -Dcom.sun.management.jmxremote.authenticate=false \
       //           -Dcom.sun.management.jmxremote.ssl=false \
       //    </value>
       //  </property>
       //
-      //  <property>
-      //    <name>mapred.reduce.child.java.opts</name>
-      //    <value>-Xmx 1024M -verbose:gc -Xloggc:/tmp/@taskid@.gc \
-      //           -Dcom.sun.management.jmxremote.authenticate=false \
-      //           -Dcom.sun.management.jmxremote.ssl=false \
-      //    </value>
-      //  </property>
-      //
-      String javaOpts = getChildJavaOpts(conf, 
-                                         JobConf.DEFAULT_MAPRED_TASK_JAVA_OPTS);
+      String javaOpts = conf.get("mapred.child.java.opts", "-Xmx200m");
       javaOpts = javaOpts.replace("@taskid@", taskid.toString());
       String [] javaOptsSplit = javaOpts.split(" ");
       
@@ -353,7 +303,7 @@ abstract class TaskRunner extends Thread {
       // 2. We also add the 'cwd' of the task to it's java.library.path to help 
       //    users distribute native libraries via the DistributedCache.
       // 3. The user can also specify extra paths to be added to the 
-      //    java.library.path via mapred.{map|reduce}.child.java.opts.
+      //    java.library.path via mapred.child.java.opts.
       //
       String libraryPath = System.getProperty("java.library.path");
       if (libraryPath == null) {
@@ -423,7 +373,7 @@ abstract class TaskRunner extends Thread {
       tracker.addToMemoryManager(t.getTaskID(), t.isMapTask(), conf);
 
       // set memory limit using ulimit if feasible and necessary ...
-      String[] ulimitCmd = Shell.getUlimitMemoryCommand(getChildUlimit(conf));
+      String[] ulimitCmd = Shell.getUlimitMemoryCommand(conf);
       List<String> setup = null;
       if (ulimitCmd != null) {
         setup = new ArrayList<String>();
@@ -466,7 +416,7 @@ abstract class TaskRunner extends Thread {
       env.put("HADOOP_CLIENT_OPTS", "\"" + hadoopClientOpts + "\"");
       
       // add the env variables passed by the user
-      String mapredChildEnv = getChildEnv(conf);
+      String mapredChildEnv = conf.get("mapred.child.env");
       if (mapredChildEnv != null && mapredChildEnv.length() > 0) {
         String childEnvs[] = mapredChildEnv.split(",");
         for (String cEnv : childEnvs) {

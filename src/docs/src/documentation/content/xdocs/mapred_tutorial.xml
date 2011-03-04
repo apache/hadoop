@@ -1051,42 +1051,27 @@
         
         <p>The child-task inherits the environment of the parent 
         <code>TaskTracker</code>. The user can specify additional options to the
-        child-jvm via the <code>mapred.{map|reduce}.child.java.opts</code> 
-        configuration parameter in the <code>JobConf</code> such as non-standard 
-         paths for the run-time linker to search shared libraries via 
+        child-jvm via the <code>mapred.child.java.opts</code> configuration
+        parameter in the <code>JobConf</code> such as non-standard paths for the 
+        run-time linker to search shared libraries via 
         <code>-Djava.library.path=&lt;&gt;</code> etc. If the 
-        <code>mapred.{map|reduce}.child.java.opts</code> parameters contains the 
-        symbol <em>@taskid@</em> it is interpolated with value of 
-        <code>taskid</code> of the map/reduce task.</p>
+        <code>mapred.child.java.opts</code> contains the symbol <em>@taskid@</em> 
+        it is interpolated with value of <code>taskid</code> of the map/reduce
+        task.</p>
         
         <p>Here is an example with multiple arguments and substitutions, 
         showing jvm GC logging, and start of a passwordless JVM JMX agent so that
         it can connect with jconsole and the likes to watch child memory, 
         threads and get thread dumps. It also sets the maximum heap-size of the 
-        map and reduce child jvm to 512MB &amp; 1024MB respectively. It also 
-        adds an additional path to the <code>java.library.path</code> of the 
-        child-jvm.</p>
+        child jvm to 512MB and adds an additional path to the 
+        <code>java.library.path</code> of the child-jvm.</p>
 
         <p>
           <code>&lt;property&gt;</code><br/>
-          &nbsp;&nbsp;<code>&lt;name&gt;mapred.map.child.java.opts&lt;/name&gt;</code><br/>
+          &nbsp;&nbsp;<code>&lt;name&gt;mapred.child.java.opts&lt;/name&gt;</code><br/>
           &nbsp;&nbsp;<code>&lt;value&gt;</code><br/>
           &nbsp;&nbsp;&nbsp;&nbsp;<code>
                     -Xmx512M -Djava.library.path=/home/mycompany/lib
-                    -verbose:gc -Xloggc:/tmp/@taskid@.gc</code><br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;<code>
-                    -Dcom.sun.management.jmxremote.authenticate=false 
-                    -Dcom.sun.management.jmxremote.ssl=false</code><br/>
-          &nbsp;&nbsp;<code>&lt;/value&gt;</code><br/>
-          <code>&lt;/property&gt;</code>
-        </p>
-        
-        <p>
-          <code>&lt;property&gt;</code><br/>
-          &nbsp;&nbsp;<code>&lt;name&gt;mapred.reduce.child.java.opts&lt;/name&gt;</code><br/>
-          &nbsp;&nbsp;<code>&lt;value&gt;</code><br/>
-          &nbsp;&nbsp;&nbsp;&nbsp;<code>
-                    -Xmx1024M -Djava.library.path=/home/mycompany/lib
                     -verbose:gc -Xloggc:/tmp/@taskid@.gc</code><br/>
           &nbsp;&nbsp;&nbsp;&nbsp;<code>
                     -Dcom.sun.management.jmxremote.authenticate=false 
@@ -1099,15 +1084,15 @@
         <title> Memory management</title>
         <p>Users/admins can also specify the maximum virtual memory 
         of the launched child-task, and any sub-process it launches 
-        recursively, using <code>mapred.{map|reduce}.child.ulimit</code>. Note 
-        that the value set here is a per process limit.
-        The value for <code>mapred.{map|reduce}.child.ulimit</code> should be 
-        specified in kilo bytes (KB). And also the value must be greater than
+        recursively, using <code>mapred.child.ulimit</code>. Note that
+        the value set here is a per process limit.
+        The value for <code>mapred.child.ulimit</code> should be specified 
+        in kilo bytes (KB). And also the value must be greater than
         or equal to the -Xmx passed to JavaVM, else the VM might not start. 
         </p>
         
-        <p>Note: <code>mapred.{map|reduce}.child.java.opts</code> are used only 
-        for configuring the launched child tasks from task tracker. Configuring 
+        <p>Note: <code>mapred.child.java.opts</code> are used only for 
+        configuring the launched child tasks from task tracker. Configuring 
         the memory options for daemons is documented in 
         <a href="cluster_setup.html#Configuring+the+Environment+of+the+Hadoop+Daemons">
         cluster_setup.html </a></p>
@@ -1244,7 +1229,7 @@
                 shuffle.</td></tr>
             <tr><td>mapred.job.shuffle.input.buffer.percent</td><td>float</td>
                 <td>The percentage of memory- relative to the maximum heapsize
-                as typically specified in <code>mapred.reduce.child.java.opts</code>-
+                as typically specified in <code>mapred.child.java.opts</code>-
                 that can be allocated to storing map outputs during the
                 shuffle. Though some memory should be set aside for the
                 framework, in general it is advantageous to set this high
