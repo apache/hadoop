@@ -25,7 +25,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.security.KerberosInfo;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
@@ -91,7 +91,7 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * that job.
    * The job files should be submitted in <b>jobSubmitDir</b>.
    */
-  public JobStatus submitJob(JobID jobName, String jobSubmitDir, TokenStorage ts) 
+  public JobStatus submitJob(JobID jobName, String jobSubmitDir, Credentials ts) 
   throws IOException;
 
   /**

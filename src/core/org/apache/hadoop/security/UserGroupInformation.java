@@ -366,7 +366,7 @@ public class UserGroupInformation {
         loginUser = new UserGroupInformation(login.getSubject());
         String tokenFile = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (tokenFile != null && isSecurityEnabled()) {
-          TokenStorage.readTokensAndLoadInUGI(tokenFile, new Configuration(), loginUser);
+          Credentials.readTokensAndLoadInUGI(tokenFile, new Configuration(), loginUser);
         }
       } catch (LoginException le) {
         throw new IOException("failure to login", le);

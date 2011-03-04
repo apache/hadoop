@@ -70,6 +70,7 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -661,7 +662,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     //  set the public/private visibility of the archives and files
     TrackerDistributedCacheManager.determineCacheVisibilities(job);
     // get DelegationTokens for cache files
-    TrackerDistributedCacheManager.getDelegationTokens(job);
+    TrackerDistributedCacheManager.getDelegationTokens(job, 
+                                                       job.getCredentials());
 
     String originalJarPath = job.getJar();
 
@@ -761,8 +763,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           copyAndConfigureFiles(jobCopy, submitJobDir);
 
           // get delegation token for the dir
-          TokenCache.obtainTokensForNamenodes(new Path [] {submitJobDir},
-              jobCopy);
+          TokenCache.obtainTokensForNamenodes(jobCopy.getCredentials(),
+                                              new Path [] {submitJobDir},
+                                              jobCopy);
 
           Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
           int reduces = jobCopy.getNumReduceTasks();
@@ -801,9 +804,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           //
           // Now, actually submit the job (using the submit name)
           //
-          populateTokenCache(jobCopy);
+          populateTokenCache(jobCopy, jobCopy.getCredentials());
           status = jobSubmitClient.submitJob(
-              jobId, submitJobDir.toString(), TokenCache.getTokenStorage());
+              jobId, submitJobDir.toString(), jobCopy.getCredentials());
           if (status != null) {
             return new NetworkedJob(status);
           } else {
@@ -1877,7 +1880,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   
   //get secret keys and tokens and store them into TokenCache
   @SuppressWarnings("unchecked")
-  private void populateTokenCache(Configuration conf) throws IOException{
+  private void populateTokenCache(Configuration conf, Credentials credentials) 
+  throws IOException{
     // create TokenStorage object with user secretKeys
     String tokensFileName = conf.get("tokenCacheFile");
     if(tokensFileName != null) {
@@ -1892,7 +1896,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           mapper.readValue(new File(localFileName), Map.class);
 
         for(Map.Entry<String, String> ent: nm.entrySet()) {
-          TokenCache.addSecretKey(new Text(ent.getKey()), ent.getValue().getBytes());
+          credentials.addSecretKey(new Text(ent.getKey()), 
+                                   ent.getValue().getBytes());
         }
       } catch (JsonMappingException e) {
         json_error = true;
@@ -1911,7 +1916,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       for(int i=0; i< nameNodes.length; i++) {
         ps[i] = new Path(nameNodes[i]);
       }
-      TokenCache.obtainTokensForNamenodes(ps, conf);
+      TokenCache.obtainTokensForNamenodes(credentials, ps, conf);
     }
   }
 }

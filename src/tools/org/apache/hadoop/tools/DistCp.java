@@ -621,14 +621,15 @@ public class DistCp implements Tool {
   }
 
   /** Sanity check for srcPath */
-  private static void checkSrcPath(Configuration conf, List<Path> srcPaths
-      ) throws IOException {
+  private static void checkSrcPath(Configuration conf, 
+                                   List<Path> srcPaths, JobConf jobConf)
+  throws IOException {
     List<IOException> rslt = new ArrayList<IOException>();
     
     // get tokens for all the required FileSystems..
     Path[] ps = new Path[srcPaths.size()];
     ps = srcPaths.toArray(ps);
-    TokenCache.obtainTokensForNamenodes(ps, conf);
+    TokenCache.obtainTokensForNamenodes(jobConf.getCredentials(), ps, conf);
 
     for (Path p : srcPaths) {
       FileSystem fs = p.getFileSystem(conf);
@@ -649,9 +650,10 @@ public class DistCp implements Tool {
       ) throws IOException {
     LOG.info("srcPaths=" + args.srcs);
     LOG.info("destPath=" + args.dst);
-    checkSrcPath(conf, args.srcs);
 
     JobConf job = createJobConf(conf);
+    
+    checkSrcPath(conf, args.srcs, job);
     if (args.preservedAttributes != null) {
       job.set(PRESERVE_STATUS_LABEL, args.preservedAttributes);
     }
@@ -1027,7 +1029,8 @@ public class DistCp implements Tool {
     FileSystem dstfs = args.dst.getFileSystem(conf);
     
     // get tokens for all the required FileSystems..
-    TokenCache.obtainTokensForNamenodes(new Path[] {args.dst}, conf);
+    TokenCache.obtainTokensForNamenodes(jobConf.getCredentials(), 
+                                        new Path[] {args.dst}, conf);
     
     boolean dstExists = dstfs.exists(args.dst);
     boolean dstIsDir = false;

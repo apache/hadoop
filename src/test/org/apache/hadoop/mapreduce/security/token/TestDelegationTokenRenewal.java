@@ -38,7 +38,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.StringUtils;
@@ -238,7 +238,7 @@ public class TestDelegationTokenRenewal {
     String nn2 = DelegationTokenRenewal.SCHEME + "://host2:0";
     String nn3 = DelegationTokenRenewal.SCHEME + "://host3:0";
     
-    TokenStorage ts = new TokenStorage();
+    Credentials ts = new Credentials();
     
     // register the token for renewal
     ts.addToken(new Text(nn1), token1);
@@ -273,7 +273,7 @@ public class TestDelegationTokenRenewal {
     // add another token ( that expires in 2 secs). Then remove it, before
     // time is up.
     // Wait for 3 secs , and make sure no renews were called
-    ts = new TokenStorage();
+    ts = new Credentials();
     MyToken token4 = dfs.getDelegationToken(new Text("user4"));
     
     //to cause this one to be set for renew in 2 secs

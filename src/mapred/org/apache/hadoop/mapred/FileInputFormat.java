@@ -157,7 +157,7 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     }
 
     // get tokens for all the required FileSystems..
-    TokenCache.obtainTokensForNamenodes(dirs, job);
+    TokenCache.obtainTokensForNamenodes(job.getCredentials(), dirs, job);
     
     List<FileStatus> result = new ArrayList<FileStatus>();
     List<IOException> errors = new ArrayList<IOException>();

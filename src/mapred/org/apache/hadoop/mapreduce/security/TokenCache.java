@@ -37,7 +37,7 @@ import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -53,44 +53,17 @@ public class TokenCache {
   
   private static final Log LOG = LogFactory.getLog(TokenCache.class);
 
-  private static TokenStorage tokenStorage;
-  
   /**
    * auxiliary method to get user's secret keys..
    * @param alias
    * @return secret key from the storage
    */
-  public static byte[] getSecretKey(Text alias) {
-    if(tokenStorage == null)
+  public static byte[] getSecretKey(Credentials credentials, Text alias) {
+    if(credentials == null)
       return null;
-    return tokenStorage.getSecretKey(alias);
-  }
-  
-  /**
-   * auxiliary methods to store user'  s secret keys
-   * @param alias
-   * @param key
-   */
-  public static void addSecretKey(Text alias, byte[] key) {
-    getTokenStorage().addSecretKey(alias, key);
-  }
-  
-  /**
-   * auxiliary method to add a delegation token
-   */
-  public static void addDelegationToken(
-      String namenode, Token<? extends TokenIdentifier> t) {
-    getTokenStorage().addToken(new Text(namenode), t);
+    return credentials.getSecretKey(alias);
   }
 
-  /**
-   * auxiliary method 
-   * @return all the available tokens
-   */
-  public static Collection<Token<? extends TokenIdentifier>> getAllTokens() {
-    return getTokenStorage().getAllTokens();
-  }
-  
   /**
    * Convenience method to obtain delegation tokens from namenodes 
    * corresponding to the paths passed.
@@ -98,15 +71,17 @@ public class TokenCache {
    * @param conf configuration
    * @throws IOException
    */
-  public static void obtainTokensForNamenodes(Path [] ps, Configuration conf) 
+  public static void obtainTokensForNamenodes(Credentials credentials,
+                                              Path [] ps, Configuration conf) 
   throws IOException {
     if (!UserGroupInformation.isSecurityEnabled()) {
       return;
     }
-    obtainTokensForNamenodesInternal(ps, conf);
+    obtainTokensForNamenodesInternal(credentials, ps, conf);
   }
 
-  static void obtainTokensForNamenodesInternal(Path [] ps, Configuration conf)
+  static void obtainTokensForNamenodesInternal(Credentials credentials,
+                                               Path [] ps, Configuration conf)
   throws IOException {
     // get jobtracker principal id (for the renewer)
     Text jtCreds = new Text(conf.get(JobTracker.JT_USER_NAME, ""));
@@ -120,7 +95,7 @@ public class TokenCache {
 
         // see if we already have the token
         Token<DelegationTokenIdentifier> token = 
-          TokenCache.getDelegationToken(fs_addr); 
+          TokenCache.getDelegationToken(credentials, fs_addr); 
         if(token != null) {
           LOG.debug("DT for " + token.getService()  + " is already present");
           continue;
@@ -131,7 +106,7 @@ public class TokenCache {
           throw new IOException("Token from " + fs_addr + " is null");
 
         token.setService(new Text(fs_addr));
-        TokenCache.addDelegationToken(fs_addr, token);
+        credentials.addToken(new Text(fs_addr), token);
         LOG.info("getting dt for " + p.toString() + ";uri="+ fs_addr + 
             ";t.service="+token.getService());
       }
@@ -159,64 +134,24 @@ public class TokenCache {
   @SuppressWarnings("unchecked")
   //@InterfaceAudience.Private
   public static Token<DelegationTokenIdentifier> 
-  getDelegationToken(String namenode) {
-    return (Token<DelegationTokenIdentifier>)getTokenStorage().
-    getToken(new Text(namenode));
+  getDelegationToken(Credentials credentials, String namenode) {
+    return (Token<DelegationTokenIdentifier>)
+        credentials.getToken(new Text(namenode));
   }
 
-  /**
-   * @return TokenStore object
-   */
-  //@InterfaceAudience.Private
-  public static TokenStorage getTokenStorage() {
-    if(tokenStorage==null)
-      tokenStorage = new TokenStorage();
-
-    return tokenStorage;
-  }
-
-  /**
-   * sets TokenStorage
-   * @param ts
-   */
-  //@InterfaceAudience.Private
-  public static void setTokenStorage(TokenStorage ts) {
-    if(tokenStorage != null)
-      LOG.warn("Overwriting existing token storage with # keys=" + 
-          tokenStorage.numberOfSecretKeys());
-    tokenStorage = ts;
-  }
-  
-  /**
-   * load token storage and stores it
-   * @param conf
-   * @return Loaded TokenStorage object
-   * @throws IOException
-   */
-  //@InterfaceAudience.Private
-  public static TokenStorage loadTaskTokenStorage(String fileName, JobConf conf)
-  throws IOException {
-    if(tokenStorage != null)
-      return tokenStorage;
-    
-    tokenStorage = loadTokens(fileName, conf);
-    
-    return tokenStorage;
-  }
-  
   /**
    * load job token from a file
    * @param conf
    * @throws IOException
    */
   //@InterfaceAudience.Private
-  public static TokenStorage loadTokens(String jobTokenFile, JobConf conf) 
+  public static Credentials loadTokens(String jobTokenFile, JobConf conf) 
   throws IOException {
     Path localJobTokenFile = new Path (jobTokenFile);
     FileSystem localFS = FileSystem.getLocal(conf);
     FSDataInputStream in = localFS.open(localJobTokenFile);
     
-    TokenStorage ts = new TokenStorage();
+    Credentials ts = new Credentials();
     ts.readFields(in);
 
     if(LOG.isDebugEnabled()) {
@@ -233,8 +168,8 @@ public class TokenCache {
    */
   //@InterfaceAudience.Private
   public static void setJobToken(Token<? extends TokenIdentifier> t, 
-      TokenStorage ts) {
-    ts.addToken(JOB_TOKEN, t);
+      Credentials credentials) {
+    credentials.addToken(JOB_TOKEN, t);
   }
   /**
    * 
@@ -242,8 +177,8 @@ public class TokenCache {
    */
   //@InterfaceAudience.Private
   @SuppressWarnings("unchecked")
-  public static Token<JobTokenIdentifier> getJobToken(TokenStorage ts) {
-    return (Token<JobTokenIdentifier>) ts.getToken(JOB_TOKEN);
+  public static Token<JobTokenIdentifier> getJobToken(Credentials credentials) {
+    return (Token<JobTokenIdentifier>) credentials.getToken(JOB_TOKEN);
   }
 
   /**

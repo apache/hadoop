@@ -41,6 +41,7 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapred.lib.HashPartitioner;
 import org.apache.hadoop.mapred.lib.KeyFieldBasedComparator;
 import org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
 
@@ -314,6 +315,8 @@ public class JobConf extends Configuration {
   public static final String MAPRED_REDUCE_TASK_ENV =
     "mapred.reduce.child.env";
 
+  private Credentials credentials = new Credentials();
+  
   /**
    * Construct a map/reduce job configuration.
    */
@@ -338,6 +341,12 @@ public class JobConf extends Configuration {
    */
   public JobConf(Configuration conf) {
     super(conf);
+    
+    if (conf instanceof JobConf) {
+      JobConf that = (JobConf)conf;
+      credentials = that.credentials;
+    }
+    
     checkAndWarnDeprecation();
   }
 
@@ -384,6 +393,18 @@ public class JobConf extends Configuration {
     checkAndWarnDeprecation();
   }
 
+  /**
+   * Get credentials for the job.
+   * @return credentials for the job
+   */
+  public Credentials getCredentials() {
+    return credentials;
+  }
+  
+  void setCredentials(Credentials credentials) {
+    this.credentials = credentials;
+  }
+  
   /**
    * Get the user jar for the map-reduce job.
    * 

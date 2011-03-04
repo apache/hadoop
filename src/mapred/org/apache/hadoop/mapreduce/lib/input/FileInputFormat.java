@@ -193,7 +193,8 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
     }
     
     // get tokens for all the required FileSystems..
-    TokenCache.obtainTokensForNamenodes(dirs, job.getConfiguration());
+    TokenCache.obtainTokensForNamenodes(job.getCredentials(), dirs, 
+                                        job.getConfiguration());
 
     List<IOException> errors = new ArrayList<IOException>();
     

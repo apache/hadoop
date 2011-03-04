@@ -44,7 +44,7 @@ import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
@@ -409,10 +409,12 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return new JobID("local", ++jobid);
   }
 
-  public JobStatus submitJob(JobID jobid, String jobSubmitDir, TokenStorage ts) 
+  public JobStatus submitJob(JobID jobid, String jobSubmitDir, 
+                             Credentials credentials) 
   throws IOException {
-    TokenCache.setTokenStorage(ts);
-    return new Job(jobid, jobSubmitDir).status;
+    Job job = new Job(jobid, jobSubmitDir);
+    job.job.setCredentials(credentials);
+    return job.status;
   }
 
   public void killJob(JobID id) {

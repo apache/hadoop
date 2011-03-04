@@ -40,14 +40,14 @@ import javax.crypto.KeyGenerator;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class TestTokenStorage {
+public class TestJobCredentials {
   private static final String DEFAULT_HMAC_ALGORITHM = "HmacSHA1";
   private static final File tmpDir =
     new File(System.getProperty("test.build.data", "/tmp"), "mapred");  
@@ -62,7 +62,7 @@ public class TestTokenStorage {
   public <T extends TokenIdentifier> void testReadWriteStorage() 
   throws IOException, NoSuchAlgorithmException{
     // create tokenStorage Object
-    TokenStorage ts = new TokenStorage();
+    Credentials ts = new Credentials();
     
     Token<T> token1 = new Token();
     Token<T> token2 = new Token();
@@ -98,7 +98,7 @@ public class TestTokenStorage {
     // open and read it back
     DataInputStream dis = 
       new DataInputStream(new FileInputStream(tmpFileName));    
-    ts = new TokenStorage();
+    ts = new Credentials();
     ts.readFields(dis);
     dis.close();
     

@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -80,7 +80,7 @@ public class TestDelegationTokenFetcher {
     new DelegationTokenFetcher(dfs, out, ugi).go();
     
     // now read the data back in and verify correct values
-    TokenStorage ts = new TokenStorage();
+    Credentials ts = new Credentials();
     DataInputStream dis = 
       new DataInputStream(new ByteArrayInputStream(baos.toByteArray()));
     ts.readFields(dis);

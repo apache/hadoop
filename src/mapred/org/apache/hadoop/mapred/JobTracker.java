@@ -108,7 +108,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 
 /*******************************************************
  * JobTracker is the central location for submitting and 
@@ -206,7 +206,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   
   private Clock clock;
 
-  private TokenStorage tokenStorage;
+  private Credentials tokenStorage;
   private final JobTokenSecretManager jobTokenSecretManager
     = new JobTokenSecretManager();
 
@@ -3632,7 +3632,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * of the JobTracker.  But JobInProgress adds info that's useful for
    * the JobTracker alone.
    */
-  public JobStatus submitJob(JobID jobId, String jobSubmitDir, TokenStorage ts)
+  public JobStatus submitJob(JobID jobId, String jobSubmitDir, Credentials ts)
       throws IOException {
     JobInfo jobInfo = null;
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -3986,9 +3986,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
   
-  /**
-   * @see ClientProtocol#setJobPriority(JobID, String)
-   */
   public synchronized void setJobPriority(JobID jobid, 
                                           String priority)
                                           throws IOException {

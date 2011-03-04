@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.DelegationTokenServlet;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
@@ -123,7 +123,7 @@ public class DelegationTokenFetcher {
       + ":" + dfs.getUri().getPort();
     token.setService(new Text(nnAddress));
     
-    TokenStorage ts = new TokenStorage();
+    Credentials ts = new Credentials();
     ts.addToken(new Text(shortName), token);
     ts.write(out);
   }
@@ -151,7 +151,7 @@ public class DelegationTokenFetcher {
       URLConnection connection = remoteURL.openConnection();
       
       InputStream in = connection.getInputStream();
-      TokenStorage ts = new TokenStorage();
+      Credentials ts = new Credentials();
       dis = new DataInputStream(in);
       ts.readFields(dis);
       file = new DataOutputStream(new FileOutputStream(filename));

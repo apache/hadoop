@@ -109,7 +109,8 @@ public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
       setOutputPath(job, outDir);
       
       // get delegation token for the outDir's file system
-      TokenCache.obtainTokensForNamenodes(new Path[] {outDir}, job);
+      TokenCache.obtainTokensForNamenodes(job.getCredentials(), 
+                                          new Path[] {outDir}, job);
       
       // check its existence
       if (fs.exists(outDir)) {

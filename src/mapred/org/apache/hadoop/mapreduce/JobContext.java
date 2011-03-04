@@ -27,6 +27,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -47,6 +48,7 @@ public class JobContext {
     "mapreduce.partitioner.class";
 
   protected final org.apache.hadoop.mapred.JobConf conf;
+  protected final Credentials credentials;
   private final JobID jobId;
 
   public static final String JOB_NAMENODES = "mapreduce.job.hdfs-servers";
@@ -67,6 +69,7 @@ public class JobContext {
   
   public JobContext(Configuration conf, JobID jobId) {
     this.conf = new org.apache.hadoop.mapred.JobConf(conf);
+    this.credentials = this.conf.getCredentials();
     this.jobId = jobId;
     try {
       this.ugi = UserGroupInformation.getCurrentUser();
@@ -81,6 +84,14 @@ public class JobContext {
    */
   public Configuration getConfiguration() {
     return conf;
+  }
+
+  /**
+   * Get credentials for the job.
+   * @return credentials for the job
+   */
+  public Credentials getCredentials() {
+    return credentials;
   }
 
   /**

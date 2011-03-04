@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -41,7 +42,7 @@ public class ServiceAuthorizationManager {
    * 
    * @deprecated Use
    *             {@link CommonConfigurationKeys#HADOOP_SECURITY_AUTHORIZATION}
-   *             Instead.
+   *             instead.
    */
   @Deprecated
   public static final String SERVICE_AUTHORIZATION_CONFIG = 
