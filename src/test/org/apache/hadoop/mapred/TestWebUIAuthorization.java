@@ -370,8 +370,10 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
         // delete job-acls.xml file from the task log dir of attempt and verify
         // if unauthorized users can view task logs of attempt.
-        Path jobACLsFilePath = new Path(TaskLog.getAttemptDir(attempt).
-            toString(), TaskRunner.jobACLsFile);
+        File attemptLogDir = TaskLog.getAttemptDir(TaskAttemptID
+            .forName(attempt), false);
+        Path jobACLsFilePath = new Path(attemptLogDir.toString(),
+            TaskRunner.jobACLsFile);
         new File(jobACLsFilePath.toUri().getPath()).delete();
         assertEquals("Incorrect return code for " + unauthorizedUser,
             HttpURLConnection.HTTP_OK, getHttpStatusCode(taskLogURL,
@@ -379,7 +381,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
         // delete the whole task log dir of attempt and verify that we get
         // correct response code (i.e. HTTP_GONE) when task logs are accessed.
-        FileUtil.fullyDelete(TaskLog.getAttemptDir(attempt));
+        FileUtil.fullyDelete(attemptLogDir);
         assertEquals("Incorrect return code for " + jobSubmitter,
             HttpURLConnection.HTTP_GONE, getHttpStatusCode(taskLogURL,
                 jobSubmitter, "GET"));

@@ -78,32 +78,33 @@ public class TestTaskLogsTruncater {
       TaskAttemptID attemptID, LogName logName, long numBytes, char data)
       throws IOException {
 
-    File logFile = TaskLog.getTaskLogFile(firstAttemptID, logName);
+    File logFile = TaskLog.getTaskLogFile(firstAttemptID, false, logName);
+    File logLocation = logFile.getParentFile();
 
     LOG.info("Going to write " + numBytes + " real bytes to the log file "
         + logFile);
 
-    if (!logFile.getParentFile().exists()
-        && !logFile.getParentFile().mkdirs()) {
+    if (!logLocation.exists()
+        && !logLocation.mkdirs()) {
       throw new IOException("Couldn't create all ancestor dirs for "
           + logFile);
     }
 
-    File attemptDir = TaskLog.getAttemptDir(attemptID.toString());
+    File attemptDir = TaskLog.getAttemptDir(attemptID, false);
     if (!attemptDir.exists() && !attemptDir.mkdirs()) {
       throw new IOException("Couldn't create all ancestor dirs for "
           + logFile);
     }
 
     // Need to call up front to set currenttaskid.
-    TaskLog.syncLogs(firstAttemptID, attemptID);
+    TaskLog.syncLogs(logLocation.toString(), attemptID, false);
 
     FileWriter writer = new FileWriter(logFile, true);
     for (long i = 0; i < numBytes; i++) {
       writer.write(data);
     }
     writer.close();
-    TaskLog.syncLogs(firstAttemptID, attemptID);
+    TaskLog.syncLogs(logLocation.toString(), attemptID, false);
     LOG.info("Written " + numBytes + " real bytes to the log file "
         + logFile);
   }
@@ -114,7 +115,7 @@ public class TestTaskLogsTruncater {
 
     // If the index file doesn't exist, we cannot get log-file lengths. So set
     // them to zero.
-    if (!TaskLog.getIndexFile(tid.toString(), isCleanup).exists()) {
+    if (!TaskLog.getIndexFile(tid, isCleanup).exists()) {
       for (LogName log : LogName.values()) {
         allLogsFileLengths.put(log, Long.valueOf(0));
       }
@@ -159,16 +160,16 @@ public class TestTaskLogsTruncater {
     for (LogName log : LogName.values()) {
       writeRealBytes(attemptID, attemptID, log, 500, 'H');
     }
-    File logIndex = TaskLog.getIndexFile(attemptID.toString(), false);
+    File logIndex = TaskLog.getIndexFile(attemptID, false);
     long indexModificationTimeStamp = logIndex.lastModified();
 
-    File attemptDir = TaskLog.getAttemptDir(attemptID.toString());
+    File attemptDir = TaskLog.getAttemptDir(attemptID, false);
     assertTrue(attemptDir + " doesn't exist!", attemptDir.exists());
     assertEquals("index file got modified", indexModificationTimeStamp,
         logIndex.lastModified());
 
     // Finish the task and the JVM too.
-    JVMInfo jvmInfo = new JVMInfo(attemptID, Arrays.asList(task));
+    JVMInfo jvmInfo = new JVMInfo(attemptDir, Arrays.asList(task));
     logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
 
     // There should be no truncation of the log-file.
@@ -178,7 +179,7 @@ public class TestTaskLogsTruncater {
 
     Map<LogName, Long> logLengths = getAllLogsFileLengths(attemptID, false);
     for (LogName log : LogName.values()) {
-      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      File logFile = TaskLog.getTaskLogFile(attemptID, false, log);
       assertEquals(500, logFile.length());
       // The index file should also be proper.
       assertEquals(500, logLengths.get(log).longValue());
@@ -191,7 +192,7 @@ public class TestTaskLogsTruncater {
     
     logLengths = getAllLogsFileLengths(attemptID, false);
     for (LogName log : LogName.values()) {
-      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      File logFile = TaskLog.getTaskLogFile(attemptID, false, log);
       assertEquals(500, logFile.length());
       // The index file should also be proper.
       assertEquals(500, logLengths.get(log).longValue());
@@ -221,18 +222,18 @@ public class TestTaskLogsTruncater {
       writeRealBytes(attemptID, attemptID, log, 1500, 'H');
     }
 
-    File attemptDir = TaskLog.getAttemptDir(attemptID.toString());
+    File attemptDir = TaskLog.getAttemptDir(attemptID, false);
     assertTrue(attemptDir + " doesn't exist!", attemptDir.exists());
 
     // Finish the task and the JVM too.
-    JVMInfo jvmInfo = new JVMInfo(attemptID, Arrays.asList(task));
+    JVMInfo jvmInfo = new JVMInfo(attemptDir, Arrays.asList(task));
     logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
 
     // The log-file should not be truncated.
     assertTrue(attemptDir.exists());
     Map<LogName, Long> logLengths = getAllLogsFileLengths(attemptID, false);
     for (LogName log : LogName.values()) {
-      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      File logFile = TaskLog.getTaskLogFile(attemptID, false, log);
       assertEquals(1500, logFile.length());
       // The index file should also be proper.
       assertEquals(1500, logLengths.get(log).longValue());
@@ -261,11 +262,11 @@ public class TestTaskLogsTruncater {
       writeRealBytes(attemptID, attemptID, log, 1500, 'H');
     }
 
-    File attemptDir = TaskLog.getAttemptDir(attemptID.toString());
+    File attemptDir = TaskLog.getAttemptDir(attemptID, false);
     assertTrue(attemptDir + " doesn't exist!", attemptDir.exists());
 
     // Finish the task and the JVM too.
-    JVMInfo jvmInfo = new JVMInfo(attemptID, Arrays.asList(task));
+    JVMInfo jvmInfo = new JVMInfo(attemptDir, Arrays.asList(task));
     logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
 
     // The log-file should now be truncated.
@@ -273,7 +274,7 @@ public class TestTaskLogsTruncater {
 
     Map<LogName, Long> logLengths = getAllLogsFileLengths(attemptID, false);
     for (LogName log : LogName.values()) {
-      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      File logFile = TaskLog.getTaskLogFile(attemptID, false, log);
       assertEquals(1000, logFile.length());
       // The index file should also be proper.
       assertEquals(1000, logLengths.get(log).longValue());
@@ -282,7 +283,7 @@ public class TestTaskLogsTruncater {
     // truncate once again
     logLengths = getAllLogsFileLengths(attemptID, false);
     for (LogName log : LogName.values()) {
-      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      File logFile = TaskLog.getTaskLogFile(attemptID, false, log);
       assertEquals(1000, logFile.length());
       // The index file should also be proper.
       assertEquals(1000, logLengths.get(log).longValue());
@@ -312,22 +313,22 @@ public class TestTaskLogsTruncater {
     writeRealBytes(attemptID, attemptID, LogName.SYSLOG, 1500, 'H');
     writeRealBytes(attemptID, attemptID, LogName.STDERR, 500, 'H');
 
-    File attemptDir = TaskLog.getAttemptDir(attemptID.toString());
+    File attemptDir = TaskLog.getAttemptDir(attemptID, false);
     assertTrue(attemptDir + " doesn't exist!", attemptDir.exists());
 
     // Finish the task and the JVM too.
-    JVMInfo jvmInfo = new JVMInfo(attemptID, Arrays.asList(task));
+    JVMInfo jvmInfo = new JVMInfo(attemptDir, Arrays.asList(task));
     logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
 
     // The log-file should now be truncated.
     assertTrue(attemptDir.exists());
 
     Map<LogName, Long> logLengths = getAllLogsFileLengths(attemptID, false);
-    File logFile = TaskLog.getTaskLogFile(attemptID, LogName.SYSLOG);
+    File logFile = TaskLog.getTaskLogFile(attemptID, false, LogName.SYSLOG);
     assertEquals(1000, logFile.length());
     // The index file should also be proper.
     assertEquals(1000, logLengths.get(LogName.SYSLOG).longValue());
-    logFile = TaskLog.getTaskLogFile(attemptID, LogName.STDERR);
+    logFile = TaskLog.getTaskLogFile(attemptID, false, LogName.STDERR);
     assertEquals(500, logFile.length());
     // The index file should also be proper.
     assertEquals(500, logLengths.get(LogName.STDERR).longValue());
@@ -335,11 +336,11 @@ public class TestTaskLogsTruncater {
     // truncate once again
     logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
     logLengths = getAllLogsFileLengths(attemptID, false);
-    logFile = TaskLog.getTaskLogFile(attemptID, LogName.SYSLOG);
+    logFile = TaskLog.getTaskLogFile(attemptID, false, LogName.SYSLOG);
     assertEquals(1000, logFile.length());
     // The index file should also be proper.
     assertEquals(1000, logLengths.get(LogName.SYSLOG).longValue());
-    logFile = TaskLog.getTaskLogFile(attemptID, LogName.STDERR);
+    logFile = TaskLog.getTaskLogFile(attemptID, false, LogName.STDERR);
     assertEquals(500, logFile.length());
     // The index file should also be proper.
     assertEquals(500, logLengths.get(LogName.STDERR).longValue());
@@ -366,7 +367,7 @@ public class TestTaskLogsTruncater {
     // Let the tasks write logs more than retain-size
     writeRealBytes(attempt1, attempt1, LogName.SYSLOG, 200, 'A');
 
-    File attemptDir = TaskLog.getAttemptDir(attempt1.toString());
+    File attemptDir = TaskLog.getAttemptDir(attempt1, false);
     assertTrue(attemptDir + " doesn't exist!", attemptDir.exists());
 
     // Start another attempt in the same JVM
@@ -382,13 +383,13 @@ public class TestTaskLogsTruncater {
     // Let attempt3 also write some logs
     writeRealBytes(attempt1, attempt3, LogName.SYSLOG, 225, 'C');
     // Finish the JVM.
-    JVMInfo jvmInfo = new JVMInfo(attempt1, Arrays.asList((new Task[] { task1,
-        task2, task3 })));
+    JVMInfo jvmInfo = new JVMInfo(attemptDir, 
+        Arrays.asList((new Task[] { task1, task2, task3 })));
     logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
 
     // The log-file should now be truncated.
     assertTrue(attemptDir.exists());
-    File logFile = TaskLog.getTaskLogFile(attempt1, LogName.SYSLOG);
+    File logFile = TaskLog.getTaskLogFile(attempt1, false, LogName.SYSLOG);
     assertEquals(400, logFile.length());
     // The index files should also be proper.
     assertEquals(150, getAllLogsFileLengths(attempt1, false).get(
@@ -400,7 +401,7 @@ public class TestTaskLogsTruncater {
 
     // assert the data.
     FileReader reader =
-        new FileReader(TaskLog.getTaskLogFile(attempt1, LogName.SYSLOG));
+        new FileReader(TaskLog.getTaskLogFile(attempt1, false, LogName.SYSLOG));
     int ch, bytesRead = 0;
     boolean dataValid = true;
     while ((ch = reader.read()) != -1) {
@@ -496,7 +497,7 @@ public class TestTaskLogsTruncater {
       assertTrue(job.getJobState() == JobStatus.SUCCEEDED);
       for (TaskCompletionEvent tce : job.getTaskCompletionEvents(0)) {
         long length =
-            TaskLog.getTaskLogFile(tce.getTaskAttemptId(),
+            TaskLog.getTaskLogFile(tce.getTaskAttemptId(), false,
                 TaskLog.LogName.STDOUT).length();
         assertTrue("STDOUT log file length for " + tce.getTaskAttemptId()
             + " is " + length + " and not <=10000", length <= 10000);
@@ -586,7 +587,7 @@ public class TestTaskLogsTruncater {
       } finally{
         for (TaskCompletionEvent tce : job.getTaskCompletionEvents(0)) {
           File debugOutFile =
-              TaskLog.getTaskLogFile(tce.getTaskAttemptId(),
+              TaskLog.getTaskLogFile(tce.getTaskAttemptId(), false,
                   TaskLog.LogName.DEBUGOUT);
           if (debugOutFile.exists()) {
             long length = debugOutFile.length();

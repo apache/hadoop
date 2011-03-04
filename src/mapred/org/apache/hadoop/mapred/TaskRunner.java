@@ -202,7 +202,7 @@ abstract class TaskRunner extends Thread {
       // set memory limit using ulimit if feasible and necessary ...
       List<String> setup = getVMSetupCmd();
       // Set up the redirection of the task's stdout and stderr streams
-      File[] logFiles = prepareLogFiles(taskid);
+      File[] logFiles = prepareLogFiles(taskid, t.isTaskCleanupTask());
       File stdout = logFiles[0];
       File stderr = logFiles[1];
       tracker.getTaskTrackerInstrumentation().reportTaskLaunch(taskid, stdout,
@@ -267,13 +267,17 @@ abstract class TaskRunner extends Thread {
    * Prepare the log files for the task
    * 
    * @param taskid
+   * @param isCleanup
    * @return an array of files. The first file is stdout, the second is stderr.
    * @throws IOException 
    */
-  File[] prepareLogFiles(TaskAttemptID taskid) throws IOException {
+  File[] prepareLogFiles(TaskAttemptID taskid, boolean isCleanup)
+      throws IOException {
     File[] logFiles = new File[2];
-    logFiles[0] = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
-    logFiles[1] = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
+    logFiles[0] = TaskLog.getTaskLogFile(taskid, isCleanup,
+        TaskLog.LogName.STDOUT);
+    logFiles[1] = TaskLog.getTaskLogFile(taskid, isCleanup,
+        TaskLog.LogName.STDERR);
     File logDir = logFiles[0].getParentFile();
     boolean b = logDir.mkdirs();
     if (!b) {
@@ -437,17 +441,13 @@ abstract class TaskRunner extends Thread {
     vargs.add(classPath);
 
     // Setup the log4j prop
-    vargs.add("-Dhadoop.log.dir=" + 
-        new File(System.getProperty("hadoop.log.dir")
-        ).getAbsolutePath());
-    vargs.add("-Dhadoop.root.logger=INFO,TLA");
-    vargs.add("-Dhadoop.tasklog.taskid=" + taskid);
-    vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + logSize);
+    setupLog4jProperties(vargs, taskid, logSize);
 
     if (conf.getProfileEnabled()) {
       if (conf.getProfileTaskRange(t.isMapTask()
                                    ).isIncluded(t.getPartition())) {
-        File prof = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.PROFILE);
+        File prof = TaskLog.getTaskLogFile(taskid, t.isTaskCleanupTask(),
+            TaskLog.LogName.PROFILE);
         vargs.add(String.format(conf.getProfileParams(), prof.toString()));
       }
     }
@@ -459,7 +459,19 @@ abstract class TaskRunner extends Thread {
     vargs.add(address.getAddress().getHostAddress()); 
     vargs.add(Integer.toString(address.getPort())); 
     vargs.add(taskid.toString());                      // pass task identifier
+    // pass task log location
+    vargs.add(TaskLog.getAttemptDir(taskid, t.isTaskCleanupTask()).toString());
     return vargs;
+  }
+
+  private void setupLog4jProperties(Vector<String> vargs, TaskAttemptID taskid,
+      long logSize) {
+    vargs.add("-Dhadoop.log.dir=" + 
+        new File(System.getProperty("hadoop.log.dir")).getAbsolutePath());
+    vargs.add("-Dhadoop.root.logger=INFO,TLA");
+    vargs.add("-Dhadoop.tasklog.taskid=" + taskid);
+    vargs.add("-Dhadoop.tasklog.iscleanup=" + t.isTaskCleanupTask());
+    vargs.add("-Dhadoop.tasklog.totalLogFileSize=" + logSize);
   }
 
   /**
@@ -542,6 +554,7 @@ abstract class TaskRunner extends Thread {
       hadoopClientOpts = hadoopClientOpts + " ";
     }
     hadoopClientOpts = hadoopClientOpts + "-Dhadoop.tasklog.taskid=" + taskid
+                       + " -Dhadoop.tasklog.iscleanup=" + t.isTaskCleanupTask()
                        + " -Dhadoop.tasklog.totalLogFileSize=" + logSize;
     env.put("HADOOP_CLIENT_OPTS", "\"" + hadoopClientOpts + "\"");
 

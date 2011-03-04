@@ -484,8 +484,9 @@ class JvmManager {
       // Post-JVM-exit logs processing. inform user log manager
       private void jvmFinished() {
         Task firstTask = initalContext.task;
-        JvmFinishedEvent jfe = new JvmFinishedEvent(new JVMInfo(firstTask
-            .getTaskID(), tasksGiven));
+        JvmFinishedEvent jfe = new JvmFinishedEvent(new JVMInfo(
+            TaskLog.getAttemptDir(firstTask.getTaskID(), firstTask.isTaskCleanupTask()),
+            tasksGiven));
         tracker.getUserLogManager().addLogEvent(jfe);
       }
 

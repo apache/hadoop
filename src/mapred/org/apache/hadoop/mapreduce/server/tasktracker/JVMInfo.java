@@ -17,22 +17,22 @@
  */
 package org.apache.hadoop.mapreduce.server.tasktracker;
 
+import java.io.File;
 import java.util.List;
 
 import org.apache.hadoop.mapred.Task;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 public class JVMInfo {
-  private TaskAttemptID firstAttemptID; 
+  private File logLocation; 
   private List<Task> allAttempts;
 
-  public JVMInfo(TaskAttemptID firstAttemptID, List<Task> allAttempts) {
-    this.firstAttemptID = firstAttemptID;
+  public JVMInfo(File logLocation, List<Task> allAttempts) {
+    this.logLocation = logLocation;
     this.allAttempts = allAttempts;
   }
   
-  public TaskAttemptID getFirstAttemptID() {
-    return firstAttemptID;
+  public File getLogLocation() {
+    return logLocation;
   }
 
   public List<Task> getAllAttempts() {

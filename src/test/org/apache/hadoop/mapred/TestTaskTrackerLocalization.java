@@ -507,7 +507,7 @@ public class TestTaskTrackerLocalization extends TestCase {
         .getPath(), "tmp").exists());
 
     // Make sure that the logs are setup properly
-    File logDir = TaskLog.getAttemptDir(taskId.toString());
+    File logDir = TaskLog.getAttemptDir(taskId, task.isTaskCleanupTask());
     assertTrue("task's log dir " + logDir.toString() + " doesn't exist!",
         logDir.exists());
     checkFilePermissions(logDir.getAbsolutePath(), "drwx------", task
@@ -536,8 +536,8 @@ public class TestTaskTrackerLocalization extends TestCase {
         taskTrackerUGI.getShortUserName(), taskTrackerUGI.getGroupNames()[0]);
 
     // Validate the contents of jobACLsFile(both user name and job-view-acls)
-    Configuration jobACLsConf =
-        TaskLogServlet.getConfFromJobACLsFile(task.getTaskID().toString());
+    Configuration jobACLsConf = TaskLogServlet.getConfFromJobACLsFile(
+        task.getTaskID(), task.isTaskCleanupTask());
     assertTrue(jobACLsConf.get("user.name").equals(
         localizedJobConf.getUser()));
     assertTrue(jobACLsConf.get(JobContext.JOB_ACL_VIEW_JOB).
@@ -576,7 +576,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * $taskid/work
    * Also see createFileAndSetPermissions for details
    */
-  void validateRemoveFiles(boolean needCleanup, boolean jvmReuse,
+  void validateRemoveTaskFiles(boolean needCleanup, boolean jvmReuse,
                            TaskInProgress tip) throws IOException {
     // create files and set permissions 555. Verify if task controller sets
     // the permissions for TT to delete the taskDir or workDir
@@ -614,7 +614,6 @@ public class TestTaskTrackerLocalization extends TestCase {
       // now try to delete the work dir and verify that there are no stale paths
       JvmManager.deleteWorkDir(tracker, task);
     }
-    tracker.removeJobFiles(task.getUser(), jobId);
 
     assertTrue("Some task files are not deleted!! Number of stale paths is "
         + cleanupQueue.stalePaths.size(), cleanupQueue.stalePaths.size() == 0);
@@ -624,36 +623,45 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Validates if task cleanup is done properly for a succeeded task
    * @throws IOException
    */
-  public void testTaskCleanup()
+  public void testTaskFilesRemoval()
       throws Exception {
     if (!canRun()) {
       return;
     }
-    testTaskCleanup(false, false);// no needCleanup; no jvmReuse
+    testTaskFilesRemoval(false, false);// no needCleanup; no jvmReuse
   }
 
   /**
    * Validates if task cleanup is done properly for a task that is not succeeded
    * @throws IOException
    */
-  public void testFailedTaskCleanup()
+  public void testFailedTaskFilesRemoval()
   throws Exception {
     if (!canRun()) {
       return;
     }
-    testTaskCleanup(true, false);// needCleanup; no jvmReuse
+    testTaskFilesRemoval(true, false);// needCleanup; no jvmReuse
+
+    // initialize a cleanupAttempt for the task.
+    task.setTaskCleanupTask();
+    // localize task cleanup attempt
+    initializeTask();
+    checkTaskLocalization();
+
+    // verify the cleanup of cleanup attempt.
+    testTaskFilesRemoval(true, false);// needCleanup; no jvmReuse
   }
 
   /**
    * Validates if task cleanup is done properly for a succeeded task
    * @throws IOException
    */
-  public void testTaskCleanupWithJvmUse()
+  public void testTaskFilesRemovalWithJvmUse()
       throws Exception {
     if (!canRun()) {
       return;
     }
-    testTaskCleanup(false, true);// no needCleanup; jvmReuse
+    testTaskFilesRemoval(false, true);// no needCleanup; jvmReuse
   }
 
   private void initializeTask() throws IOException {
@@ -687,7 +695,8 @@ public class TestTaskTrackerLocalization extends TestCase {
     runner.setupChildTaskConfiguration(lDirAlloc);
     TaskRunner.createChildTmpDir(new File(attemptWorkDir.toUri().getPath()),
         localizedJobConf);
-    attemptLogFiles = runner.prepareLogFiles(task.getTaskID());
+    attemptLogFiles = runner.prepareLogFiles(task.getTaskID(),
+        task.isTaskCleanupTask());
 
     // Make sure the task-conf file is created
     Path localTaskFile =
@@ -718,7 +727,7 @@ public class TestTaskTrackerLocalization extends TestCase {
   /**
    * Validates if task cleanup is done properly
    */
-  private void testTaskCleanup(boolean needCleanup, boolean jvmReuse)
+  private void testTaskFilesRemoval(boolean needCleanup, boolean jvmReuse)
       throws Exception {
     // Localize job and localize task.
     TaskTracker.RunningJob rjob = tracker.localizeJob(tip);
@@ -732,19 +741,7 @@ public class TestTaskTrackerLocalization extends TestCase {
 
     // create files and set permissions 555. Verify if task controller sets
     // the permissions for TT to delete the task dir or work dir properly
-    validateRemoveFiles(needCleanup, jvmReuse, tip);
-
-    // Check that the empty $mapred.local.dir/taskTracker/$user dirs are still
-    // there.
-    for (String localDir : localDirs) {
-      Path userDir =
-          new Path(localDir, TaskTracker.getUserDir(task.getUser()));
-      assertTrue("User directory " + userDir + " is not present!!",
-          tracker.getLocalFileSystem().exists(userDir));
-    }
-
-    // Test userlogs cleanup.
-    verifyUserLogsCleanup();
+    validateRemoveTaskFiles(needCleanup, jvmReuse, tip);
   }
 
   /**
@@ -752,7 +749,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * 
    * @throws IOException
    */
-  private void verifyUserLogsCleanup()
+  private void verifyUserLogsRemoval()
       throws IOException {
     // verify user logs cleanup
     File jobUserLogDir = TaskLog.getJobDir(jobId);
@@ -772,7 +769,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    *   - create files with no write permissions to TT under job-work-dir
    *   - create files with no write permissions to TT under task-work-dir
    */
-  public void testJobCleanup() throws IOException, InterruptedException {
+  public void testJobFilesRemoval() throws IOException, InterruptedException {
     if (!canRun()) {
       return;
     }
@@ -838,6 +835,17 @@ public class TestTaskTrackerLocalization extends TestCase {
     }
     assertFalse("Job " + task.getJobID() + " work dir exists after cleanup", 
                 jWorkDirExists);
+    // Test userlogs cleanup.
+    verifyUserLogsRemoval();
+
+    // Check that the empty $mapred.local.dir/taskTracker/$user dirs are still
+    // there.
+    for (String localDir : localDirs) {
+      Path userDir =
+          new Path(localDir, TaskTracker.getUserDir(task.getUser()));
+      assertTrue("User directory " + userDir + " is not present!!",
+          tracker.getLocalFileSystem().exists(userDir));
+    }
   }
   
   /**
@@ -922,4 +930,30 @@ public class TestTaskTrackerLocalization extends TestCase {
     checkTaskLocalization();
   }
 
+  /**
+   * Localizes a cleanup task and validates permissions.
+   * 
+   * @throws InterruptedException 
+   * @throws IOException 
+   */
+  public void testCleanupTaskLocalization() throws IOException,
+      InterruptedException {
+    if (!canRun()) {
+      return;
+    }
+
+    task.setTaskCleanupTask();
+    // register task
+    tip = tracker.new TaskInProgress(task, trackerFConf);
+
+    // localize the job again.
+    RunningJob rjob = tracker.localizeJob(tip);
+    localizedJobConf = rjob.getJobConf();
+    checkJobLocalization();
+
+    // localize task cleanup attempt
+    initializeTask();
+    checkTaskLocalization();
+
+  }
 }

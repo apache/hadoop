@@ -43,8 +43,9 @@ import org.apache.hadoop.util.StringUtils;
 public class TaskLogServlet extends HttpServlet {
   private static final long serialVersionUID = -6615764817774487321L;
   
-  private boolean haveTaskLog(TaskAttemptID taskId, TaskLog.LogName type) {
-    File f = TaskLog.getTaskLogFile(taskId, type);
+  private boolean haveTaskLog(TaskAttemptID taskId, boolean isCleanup,
+      TaskLog.LogName type) {
+    File f = TaskLog.getTaskLogFile(taskId, isCleanup, type);
     return f.canRead();
   }
 
@@ -145,9 +146,10 @@ public class TaskLogServlet extends HttpServlet {
    * viewing task logs of old jobs(i.e. jobs finished on earlier unsecure
    * cluster).
    */
-  static Configuration getConfFromJobACLsFile(String attemptIdStr) {
+  static Configuration getConfFromJobACLsFile(TaskAttemptID attemptId,
+      boolean isCleanup) {
     Path jobAclsFilePath = new Path(
-        TaskLog.getAttemptDir(attemptIdStr).toString(), TaskRunner.jobACLsFile);
+        TaskLog.getAttemptDir(attemptId, isCleanup).toString(), TaskRunner.jobACLsFile);
     Configuration conf = null;
     if (new File(jobAclsFilePath.toUri().getPath()).exists()) {
       conf = new Configuration(false);
@@ -174,38 +176,6 @@ public class TaskLogServlet extends HttpServlet {
       response.sendError(HttpServletResponse.SC_BAD_REQUEST, 
                          "Argument attemptid is required");
       return;
-    }
-
-    TaskAttemptID attemptId = TaskAttemptID.forName(attemptIdStr);
-    if (!TaskLog.getAttemptDir(attemptIdStr).exists()) {
-      response.sendError(HttpServletResponse.SC_GONE,
-          "Task log directory for task " + attemptId +
-          " does not exist. May be cleaned up by Task Tracker, if older logs.");
-      return;
-    }
-
-    // get user name who is accessing
-    String user = request.getRemoteUser();
-    if (user != null) {
-      ServletContext context = getServletContext();
-      TaskTracker taskTracker = (TaskTracker) context.getAttribute(
-          "task.tracker");
-      // get jobACLConf from ACLs file
-      Configuration jobACLConf = getConfFromJobACLsFile(attemptIdStr);
-      // Ignore authorization if job-acls.xml is not found
-      if (jobACLConf != null) {
-        JobID jobId = attemptId.getJobID();
-
-        try {
-          checkAccessForTaskLogs(new JobConf(jobACLConf), user, jobId,
-              taskTracker);
-        } catch (AccessControlException e) {
-          String errMsg = "User " + user + " failed to view tasklogs of job " +
-              jobId + "!\n\n" + e.getMessage();
-          response.sendError(HttpServletResponse.SC_UNAUTHORIZED, errMsg);
-          return;
-        }
-      }
     }
 
     String logFilter = request.getParameter("filter");
@@ -240,6 +210,38 @@ public class TaskLogServlet extends HttpServlet {
       isCleanup = Boolean.valueOf(sCleanup);
     }
     
+    TaskAttemptID attemptId = TaskAttemptID.forName(attemptIdStr);
+    if (!TaskLog.getAttemptDir(attemptId, isCleanup).exists()) {
+      response.sendError(HttpServletResponse.SC_GONE,
+          "Task log directory for task " + attemptId +
+          " does not exist. May be cleaned up by Task Tracker, if older logs.");
+      return;
+    }
+
+    // get user name who is accessing
+    String user = request.getRemoteUser();
+    if (user != null) {
+      ServletContext context = getServletContext();
+      TaskTracker taskTracker = (TaskTracker) context.getAttribute(
+          "task.tracker");
+      // get jobACLConf from ACLs file
+      Configuration jobACLConf = getConfFromJobACLsFile(attemptId, isCleanup);
+      // Ignore authorization if job-acls.xml is not found
+      if (jobACLConf != null) {
+        JobID jobId = attemptId.getJobID();
+
+        try {
+          checkAccessForTaskLogs(new JobConf(jobACLConf), user, jobId,
+              taskTracker);
+        } catch (AccessControlException e) {
+          String errMsg = "User " + user + " failed to view tasklogs of job " +
+              jobId + "!\n\n" + e.getMessage();
+          response.sendError(HttpServletResponse.SC_UNAUTHORIZED, errMsg);
+          return;
+        }
+      }
+    }
+
     OutputStream out = response.getOutputStream();
     if( !plainText ) {
       out.write(("<html>\n" +
@@ -252,15 +254,15 @@ public class TaskLogServlet extends HttpServlet {
                      TaskLog.LogName.STDOUT, isCleanup);
         printTaskLog(response, out, attemptId, start, end, plainText, 
                      TaskLog.LogName.STDERR, isCleanup);
-        if (haveTaskLog(attemptId, TaskLog.LogName.SYSLOG)) {
+        if (haveTaskLog(attemptId, isCleanup, TaskLog.LogName.SYSLOG)) {
           printTaskLog(response, out, attemptId, start, end, plainText,
               TaskLog.LogName.SYSLOG, isCleanup);
         }
-        if (haveTaskLog(attemptId, TaskLog.LogName.DEBUGOUT)) {
+        if (haveTaskLog(attemptId, isCleanup, TaskLog.LogName.DEBUGOUT)) {
           printTaskLog(response, out, attemptId, start, end, plainText, 
                        TaskLog.LogName.DEBUGOUT, isCleanup);
         }
-        if (haveTaskLog(attemptId, TaskLog.LogName.PROFILE)) {
+        if (haveTaskLog(attemptId, isCleanup, TaskLog.LogName.PROFILE)) {
           printTaskLog(response, out, attemptId, start, end, plainText, 
                        TaskLog.LogName.PROFILE, isCleanup);
         }

@@ -582,10 +582,6 @@ int prepare_task_logs(const char *log_dir, const char *job_id,
   if (stat(task_log_dir, &filestat) != 0) {
     if (errno == ENOENT) {
       // See TaskRunner.java to see that an absent log-dir doesn't fail the task.
-      // Task log dir for cleanup tasks will not have the name
-      // task-attempt-id.cleanup. Instead a log.index.cleanup is created in
-      // task-attempt log dir. We check if the directory exists and return if
-      // it doesn't. So the following will work for cleanup attempts too.
 #ifdef DEBUG
       fprintf(LOGFILE, "task_log_dir %s doesn't exist. Not doing anything.\n",
           task_log_dir);

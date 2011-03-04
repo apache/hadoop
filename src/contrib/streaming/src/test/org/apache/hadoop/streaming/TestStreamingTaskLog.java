@@ -132,6 +132,7 @@ public class TestStreamingTaskLog extends TestCase {
     long logSize = USERLOG_LIMIT_KB * 1024;
     assertTrue("environment set for child is wrong", env.contains("INFO,TLA")
                && env.contains("-Dhadoop.tasklog.taskid=attempt_")
-               && env.contains("-Dhadoop.tasklog.totalLogFileSize=" + logSize));
+               && env.contains("-Dhadoop.tasklog.totalLogFileSize=" + logSize)
+               && env.contains("-Dhadoop.tasklog.iscleanup=false"));
   }
 }

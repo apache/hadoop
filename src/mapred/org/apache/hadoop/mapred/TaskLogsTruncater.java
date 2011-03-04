@@ -72,8 +72,6 @@ public class TaskLogsTruncater {
    * retainSize.
    */
   public void truncateLogs(JVMInfo lInfo) {
-    TaskAttemptID firstAttempt = TaskAttemptID.downgrade(lInfo
-        .getFirstAttemptID());
 
     // Read the log-file details for all the attempts that ran in this JVM
     Map<Task, Map<LogName, LogFileDetail>> taskLogFileDetails;
@@ -97,14 +95,14 @@ public class TaskLogsTruncater {
           updatedTaskLogFileDetails, logName);
     }
 
-    File attemptLogDir = TaskLog.getAttemptDir(firstAttempt.toString());
+    File attemptLogDir = lInfo.getLogLocation();
 
     FileWriter tmpFileWriter;
     FileReader logFileReader;
     // Now truncate file by file
     logNameLoop: for (LogName logName : LogName.values()) {
 
-      File logFile = TaskLog.getTaskLogFile(firstAttempt, logName);
+      File logFile = new File(attemptLogDir, logName.toString());
 
       // //// Optimization: if no task is over limit, just skip truncation-code
       if (logFile.exists()
@@ -212,7 +210,8 @@ public class TaskLogsTruncater {
 
     if (indexModified) {
       // Update the index files
-      updateIndicesAfterLogTruncation(firstAttempt, updatedTaskLogFileDetails);
+      updateIndicesAfterLogTruncation(attemptLogDir.toString(),
+          updatedTaskLogFileDetails);
     }
   }
 
@@ -363,7 +362,7 @@ public class TaskLogsTruncater {
    * @param firstAttempt
    * @param updatedTaskLogFileDetails
    */
-  private void updateIndicesAfterLogTruncation(TaskAttemptID firstAttempt,
+  private void updateIndicesAfterLogTruncation(String location,
       Map<Task, Map<LogName, LogFileDetail>> updatedTaskLogFileDetails) {
     for (Entry<Task, Map<LogName, LogFileDetail>> entry : 
                                 updatedTaskLogFileDetails.entrySet()) {
@@ -383,7 +382,7 @@ public class TaskLogsTruncater {
         }
       }
       try {
-        TaskLog.writeToIndexFile(firstAttempt, task.getTaskID(),
+        TaskLog.writeToIndexFile(location, task.getTaskID(),
             task.isTaskCleanupTask(), logLengths);
       } catch (IOException ioe) {
         LOG.warn("Exception encountered while updating index file of task "
