@@ -117,10 +117,10 @@ public class TaskLogServlet extends HttpServlet {
    * users and groups specified in configuration using
    * mapreduce.job.acl-view-job to view job.
    */
-  private void checkAccessForTaskLogs(JobConf conf, String user, JobID jobId,
+  private void checkAccessForTaskLogs(JobConf conf, String user, String jobId,
       TaskTracker tracker) throws AccessControlException {
 
-    if (!tracker.isJobLevelAuthorizationEnabled()) {
+    if (!tracker.areACLsEnabled()) {
       return;
     }
 
@@ -132,7 +132,7 @@ public class TaskLogServlet extends HttpServlet {
     UserGroupInformation callerUGI =
         UserGroupInformation.createRemoteUser(user);
 
-    tracker.getJobACLsManager().checkAccess(jobId, callerUGI, JobACL.VIEW_JOB,
+    tracker.getACLsManager().checkAccess(jobId, callerUGI, JobACL.VIEW_JOB,
         jobOwner, jobViewACL);
   }
 
@@ -228,7 +228,7 @@ public class TaskLogServlet extends HttpServlet {
       Configuration jobACLConf = getConfFromJobACLsFile(attemptId, isCleanup);
       // Ignore authorization if job-acls.xml is not found
       if (jobACLConf != null) {
-        JobID jobId = attemptId.getJobID();
+        String jobId = attemptId.getJobID().toString();
 
         try {
           checkAccessForTaskLogs(new JobConf(jobACLConf), user, jobId,

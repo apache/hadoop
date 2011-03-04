@@ -1508,12 +1508,14 @@
         
         <section>
           <title>Job Authorization</title>
-          <p>Job level authorization is enabled on the cluster, if the configuration
-          <code>mapreduce.cluster.job-authorization-enabled</code> is set to
-          true. When enabled, access control checks are done by the JobTracker
-          and the TaskTracker before allowing users to view
-          job details or to modify a job using MapReduce APIs,
-          CLI or web user interfaces.</p>
+          <p>Job level authorization and queue level authorization are enabled
+          on the cluster, if the configuration
+          <code>mapred.acls.enabled</code> is set to
+          true. When enabled, access control checks are done by (a) the
+          JobTracker before allowing users to submit jobs to queues and
+          administering these jobs and (b) by the JobTracker and the TaskTracker 
+          before allowing users to view job details or to modify a job using
+          MapReduce APIs, CLI or web user interfaces.</p>
           
           <p>A job submitter can specify access control lists for viewing or
           modifying a job via the configuration properties
@@ -1547,10 +1549,11 @@
             <li> killing/failing a task of a job </li>
             <li> setting the priority of a job </li>
           </ul>
-          <p>These operations are also protected by the queue level ACL,
-          "acl-administer-jobs", configured via mapred-queue-acls.xml. The caller
-          will be authorized against both queue level ACLs and job level ACLs,
-          depending on what is enabled.</p>
+          <p>These operations are also permitted by the queue level ACL,
+          "mapred.queue.queue-name.acl-administer-jobs", configured via
+          mapred-queue-acls.xml. The caller will be able to do the operation
+          if he/she is part of either queue admins ACL or job modification ACL.
+          </p>
           
           <p>The format of a job level ACL is the same as the format for a
           queue level ACL as defined in the

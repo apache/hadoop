@@ -164,8 +164,8 @@ public class JobConf extends Configuration {
   static final String MAPRED_JOB_REDUCE_MEMORY_MB_PROPERTY =
       "mapred.job.reduce.memory.mb";
 
-  public static final String JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG = 
-	    "mapreduce.cluster.job-authorization-enabled";
+  static final String MR_ACLS_ENABLED = "mapred.acls.enabled";
+
   static final String MR_SUPERGROUP = "mapred.permissions.supergroup";
 
   /**

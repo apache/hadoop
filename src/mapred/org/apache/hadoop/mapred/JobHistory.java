@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -55,7 +54,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobACL;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 
@@ -117,6 +115,7 @@ public class JobHistory {
   private static FileSystem DONEDIR_FS; // Done dir filesystem
   private static JobConf jtConf;
   private static Path DONE = null; // folder for completed jobs
+  private static boolean aclsEnabled = false;
   /**
    * A filter for conf files
    */  
@@ -345,6 +344,9 @@ public class JobHistory {
         conf.getLong("mapred.jobtracker.job.history.block.size", 
                      3 * 1024 * 1024);
       jtConf = conf;
+
+      // queue and job level security is enabled on the mapreduce cluster or not
+      aclsEnabled = conf.getBoolean(JobConf.MR_ACLS_ENABLED, false);
 
       // initialize the file manager
       fileManager = new JobHistoryFilesManager(conf, jobTracker);
@@ -1252,14 +1254,19 @@ public class JobHistory {
           // Log the history meta info
           JobHistory.MetaInfoManager.logMetaInfo(writers);
 
+          String viewJobACL = "*";
+          String modifyJobACL = "*";
+          if (aclsEnabled) {
+            viewJobACL = jobConf.get(JobACL.VIEW_JOB.getAclName(), " ");
+            modifyJobACL = jobConf.get(JobACL.MODIFY_JOB.getAclName(), " ");
+          }
           //add to writer as well 
           JobHistory.log(writers, RecordTypes.Job, 
                          new Keys[]{Keys.JOBID, Keys.JOBNAME, Keys.USER, Keys.SUBMIT_TIME, Keys.JOBCONF, 
                                       Keys.VIEW_JOB, Keys.MODIFY_JOB }, 
                          new String[]{jobId.toString(), jobName, user, 
                                       String.valueOf(submitTime) , jobConfPath,
-                                      jobConf.get(JobACL.VIEW_JOB.getAclName(), ""),
-                                      jobConf.get(JobACL.MODIFY_JOB.getAclName(), "")}
+                                      viewJobACL, modifyJobACL}
                         ); 
              
         }catch(IOException e){

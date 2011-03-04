@@ -49,7 +49,7 @@ class CompletedJobStatusStore implements Runnable {
   private FileSystem fs;
   private static final String JOB_INFO_STORE_DIR = "/jobtracker/jobsInfo";
 
-  private JobACLsManager jobACLsManager = null;
+  private ACLsManager aclsManager;
 
   public static final Log LOG =
           LogFactory.getLog(CompletedJobStatusStore.class);
@@ -57,7 +57,8 @@ class CompletedJobStatusStore implements Runnable {
   private static long HOUR = 1000 * 60 * 60;
   private static long SLEEP_TIME = 1 * HOUR;
 
-  CompletedJobStatusStore(JobACLsManager aclsManager, Configuration conf)
+
+  CompletedJobStatusStore(Configuration conf, ACLsManager aclsManager)
       throws IOException {
     active =
       conf.getBoolean("mapred.job.tracker.persist.jobstatus.active", false);
@@ -87,7 +88,7 @@ class CompletedJobStatusStore implements Runnable {
         deleteJobStatusDirs();
       }
 
-      this.jobACLsManager = aclsManager;
+      this.aclsManager = aclsManager;
 
       LOG.info("Completed job store activated/configured with retain-time : " 
                + retainTime + " , job-info-dir : " + jobInfoDir);
@@ -285,7 +286,7 @@ class CompletedJobStatusStore implements Runnable {
   }
 
   /**
-   * This method retrieves Counters information from DFS stored using
+   * This method retrieves Counters information from file stored using
    * store method.
    *
    * @param jobId the jobId for which Counters is queried
@@ -299,7 +300,8 @@ class CompletedJobStatusStore implements Runnable {
         FSDataInputStream dataIn = getJobInfoFile(jobId);
         if (dataIn != null) {
           JobStatus jobStatus = readJobStatus(dataIn);
-          jobACLsManager.checkAccess(jobStatus,
+          // authorize the user for job view access
+          aclsManager.checkAccess(jobStatus,
               UserGroupInformation.getCurrentUser(), JobACL.VIEW_JOB);
           readJobProfile(dataIn);
           counters = readCounters(dataIn);

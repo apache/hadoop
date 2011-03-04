@@ -291,8 +291,11 @@ abstract class TaskRunner extends Thread {
       Localizer.PermissionsHandler.setPermissions(logDir,
           Localizer.PermissionsHandler.sevenZeroZero);
     }
-    // write job acls into a file to know the access for task logs
-    writeJobACLs(logDir);
+
+    if (tracker.areACLsEnabled()) {
+      // write job acls into a file to know the access for task logs
+      writeJobACLs(logDir);
+    }
     return logFiles;
   }
 
@@ -301,12 +304,12 @@ abstract class TaskRunner extends Thread {
     File aclFile = new File(logDir, TaskRunner.jobACLsFile);
     Configuration aclConf = new Configuration(false);
 
-    // set the job view acls in aclConf
-    String jobViewACLs = conf.get(JobContext.JOB_ACL_VIEW_JOB);
-    if (jobViewACLs != null) {
-      aclConf.set(JobContext.JOB_ACL_VIEW_JOB, jobViewACLs);
-    }
-    // set jobOwner as mapreduce.job.user.name in aclConf
+    // set the job view acl in aclConf
+    String jobViewACL = conf.get(JobContext.JOB_ACL_VIEW_JOB, " ");
+
+    aclConf.set(JobContext.JOB_ACL_VIEW_JOB, jobViewACL);
+
+    // set jobOwner as user.name in aclConf
     String jobOwner = conf.getUser();
     aclConf.set("user.name", jobOwner);
     FileOutputStream out = new FileOutputStream(aclFile);

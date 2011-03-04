@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.UtilsForTests;
+import org.apache.hadoop.mapred.QueueManager.QueueOperation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
@@ -531,10 +532,11 @@ public class TestJobTrackerRestart extends TestCase {
       jtConf.set("mapred.jobtracker.job.history.buffer.size", "1024");
       jtConf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
       jtConf.setLong("mapred.tasktracker.expiry.interval", 25 * 1000);
-      jtConf.setBoolean("mapred.acls.enabled", true);
+      jtConf.setBoolean(JobConf.MR_ACLS_ENABLED, true);
       // get the user group info
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-      jtConf.set("mapred.queue.default.acl-submit-job", ugi.getUserName());
+      jtConf.set(QueueManager.toFullPropertyName("default",
+          QueueOperation.SUBMIT_JOB.getAclName()), ugi.getUserName());
       
       mr = new MiniMRCluster(1, namenode, 1, null, null, jtConf);
       

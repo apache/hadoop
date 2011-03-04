@@ -294,27 +294,22 @@
         </tr>
         <tr>
           <td>mapred.acls.enabled</td>
-          <td>Boolean, specifying whether queue ACLs are supported for 
-              authorizing job submission and job administration in a 
-              queue</td>
+          <td>Boolean, specifying whether checks for queue ACLs and job ACLs
+            are to be done for authorizing users for doing queue operations and
+            job operations.
+          </td>
           <td>
-            If <em>true</em>, queue ACLs would be checked while submitting
-            and administering jobs. ACLs can be specified using the
+            If <em>true</em>, queue ACLs are checked while submitting
+            and administering jobs and job ACLs are checked for authorizing
+            view and modification of jobs. Queue ACLs are specified using the
             configuration parameters of the form
-            <em>mapred.queue.queue-name.acl-name</em>, defined below.
+            <em>mapred.queue.queue-name.acl-name</em>, defined below under
+            mapred-queue-acls.xml. Job ACLs are described at 
+            <a href ="mapred_tutorial.html#Job+Authorization">Job Authorization
+            </a>
           </td>
         </tr>
-        <tr>
-          <td>mapreduce.cluster.job-authorization-enabled</td>
-          <td>Boolean, specifying whether job ACLs are supported for 
-              authorizing view and modification of a job</td>
-          <td>
-            If <em>true</em>, job ACLs would be checked while viewing or
-            modifying a job. More details are available at 
-            <a href ="mapred_tutorial.html#Job+Authorization">Job Authorization</a>. 
-          </td>
-        </tr>
-		  </table>
+        </table>
       
       <p><br/><code> conf/mapred-queue-acls.xml</code></p>
       
@@ -337,7 +332,7 @@
           </td>
         </tr>
         <tr>
-          <td>mapred.queue.<em>queue-name</em>.acl-administer-job</td>
+          <td>mapred.queue.<em>queue-name</em>.acl-administer-jobs</td>
           <td>List of users and groups that can change the priority
               or kill jobs that have been submitted to the
               specified <em>queue-name</em>.</td>

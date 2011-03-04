@@ -20,6 +20,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import javax.security.auth.login.LoginException;
 import junit.framework.TestCase;
+
+import org.apache.hadoop.mapred.QueueManager.QueueOperation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -31,23 +33,23 @@ public class TestQueueAclsForCurrentUser extends TestCase {
   private QueueManager queueManager;
   private JobConf conf = null;
   UserGroupInformation currentUGI = null;
-  String submitAcl = QueueManager.QueueOperation.SUBMIT_JOB.getAclName();
-  String adminAcl  = QueueManager.QueueOperation.ADMINISTER_JOBS.getAclName();
+  String submitAcl = QueueOperation.SUBMIT_JOB.getAclName();
+  String adminAcl  = QueueOperation.ADMINISTER_JOBS.getAclName();
 
   private void setupConfForNoAccess() throws IOException,LoginException {
     currentUGI = UserGroupInformation.getLoginUser();
     String userName = currentUGI.getUserName();
     conf = new JobConf();
 
-    conf.setBoolean("mapred.acls.enabled",true);
+    conf.setBoolean(JobConf.MR_ACLS_ENABLED,true);
 
     conf.set("mapred.queue.names", "qu1,qu2");
     //Only user u1 has access
-    conf.set("mapred.queue.qu1.acl-submit-job", "u1");
-    conf.set("mapred.queue.qu1.acl-administer-jobs", "u1");
+    conf.set(QueueManager.toFullPropertyName("qu1", submitAcl), "u1");
+    conf.set(QueueManager.toFullPropertyName("qu1", adminAcl), "u1");
     //q2 only group g2 has acls for the queues
-    conf.set("mapred.queue.qu2.acl-submit-job", " g2");
-    conf.set("mapred.queue.qu2.acl-administer-jobs", " g2");
+    conf.set(QueueManager.toFullPropertyName("qu2", submitAcl), " g2");
+    conf.set(QueueManager.toFullPropertyName("qu2", adminAcl), " g2");
     queueManager = new QueueManager(conf);
 
   }
@@ -61,27 +63,27 @@ public class TestQueueAclsForCurrentUser extends TestCase {
     String userName = currentUGI.getUserName();
     conf = new JobConf();
 
-    conf.setBoolean("mapred.acls.enabled", aclSwitch);
+    conf.setBoolean(JobConf.MR_ACLS_ENABLED, aclSwitch);
 
     conf.set("mapred.queue.names", "qu1,qu2,qu3,qu4,qu5,qu6,qu7");
     //q1 Has acls for all the users, supports both submit and administer
-    conf.set("mapred.queue.qu1.acl-submit-job", "*");
-    conf.set("mapred.queue.qu1-acl-administer-jobs", "*");
+    conf.set(QueueManager.toFullPropertyName("qu1", submitAcl), "*");
+    conf.set(QueueManager.toFullPropertyName("qu1", adminAcl), "*");
     //q2 only u2 has acls for the queues
-    conf.set("mapred.queue.qu2.acl-submit-job", "u2");
-    conf.set("mapred.queue.qu2.acl-administer-jobs", "u2");
+    conf.set(QueueManager.toFullPropertyName("qu2", submitAcl), "u2");
+    conf.set(QueueManager.toFullPropertyName("qu2", adminAcl), "u2");
     //q3  Only u2 has submit operation access rest all have administer access
-    conf.set("mapred.queue.qu3.acl-submit-job", "u2");
-    conf.set("mapred.queue.qu3.acl-administer-jobs", "*");
+    conf.set(QueueManager.toFullPropertyName("qu3", submitAcl), "u2");
+    conf.set(QueueManager.toFullPropertyName("qu3", adminAcl), "*");
     //q4 Only u2 has administer access , anyone can do submit
-    conf.set("mapred.queue.qu4.acl-submit-job", "*");
-    conf.set("mapred.queue.qu4.acl-administer-jobs", "u2");
+    conf.set(QueueManager.toFullPropertyName("qu4", submitAcl), "*");
+    conf.set(QueueManager.toFullPropertyName("qu4", adminAcl), "u2");
     //qu6 only current user has submit access
-    conf.set("mapred.queue.qu6.acl-submit-job",userName);
-    conf.set("mapred.queue.qu6.acl-administrator-jobs","u2");
+    conf.set(QueueManager.toFullPropertyName("qu6", submitAcl),userName);
+    conf.set(QueueManager.toFullPropertyName("qu6", adminAcl),"u2");
     //qu7 only current user has administrator access
-    conf.set("mapred.queue.qu7.acl-submit-job","u2");
-    conf.set("mapred.queue.qu7.acl-administrator-jobs",userName);
+    conf.set(QueueManager.toFullPropertyName("qu7", submitAcl),"u2");
+    conf.set(QueueManager.toFullPropertyName("qu7", adminAcl),userName);
     //qu8 only current group has access
     StringBuilder groupNames = new StringBuilder("");
     String[] ugiGroupNames = currentUGI.getGroupNames();
@@ -92,9 +94,10 @@ public class TestQueueAclsForCurrentUser extends TestCase {
         groupNames.append(",");
       }
     }
-    conf.set("mapred.queue.qu5.acl-submit-job"," "+groupNames.toString());
-    conf.set("mapred.queue.qu5.acl-administrator-jobs"," "
-            +groupNames.toString());
+    conf.set(QueueManager.toFullPropertyName("qu5", submitAcl),
+        " " + groupNames.toString());
+    conf.set(QueueManager.toFullPropertyName("qu5", adminAcl),
+        " " + groupNames.toString());
 
     queueManager = new QueueManager(conf);
   }
@@ -124,7 +127,7 @@ public class TestQueueAclsForCurrentUser extends TestCase {
 
   private void checkQueueAclsInfo(QueueAclsInfo[] queueAclsInfoList)
           throws IOException {
-    if (conf.get("mapred.acls.enabled").equalsIgnoreCase("true")) {
+    if (conf.get(JobConf.MR_ACLS_ENABLED).equalsIgnoreCase("true")) {
       for (int i = 0; i < queueAclsInfoList.length; i++) {
         QueueAclsInfo acls = queueAclsInfoList[i];
         String queueName = acls.getQueueName();

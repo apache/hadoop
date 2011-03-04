@@ -32,6 +32,7 @@ import org.apache.hadoop.mapred.JobPriority;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.mapred.QueueManager.QueueOperation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,8 +71,11 @@ public class TestJobACLs {
     UserGroupInformation MR_UGI = UserGroupInformation.getLoginUser();
     JobConf conf = new JobConf();
 
-    // Enable job-level authorization
-    conf.setBoolean(JobConf.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, true);
+    // Enable queue and job level authorization
+    conf.setBoolean(JobConf.MR_ACLS_ENABLED, true);
+    // no queue admins for default queue
+    conf.set(QueueManager.toFullPropertyName(
+        "default", QueueOperation.ADMINISTER_JOBS.getAclName()), " ");
 
     // Enable CompletedJobStore
     FileSystem fs = FileSystem.getLocal(conf);

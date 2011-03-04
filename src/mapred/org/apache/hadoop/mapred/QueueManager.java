@@ -19,14 +19,11 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeSet;
-import java.io.IOException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -75,28 +72,23 @@ class QueueManager {
    * Enum representing an operation that can be performed on a queue.
    */
   static enum QueueOperation {
-    SUBMIT_JOB ("acl-submit-job", false),
-    ADMINISTER_JOBS ("acl-administer-jobs", true);
+    SUBMIT_JOB ("acl-submit-job"),
+    ADMINISTER_JOBS ("acl-administer-jobs");
     // TODO: Add ACL for LIST_JOBS when we have ability to authenticate 
     //       users in UI
     // TODO: Add ACL for CHANGE_ACL when we have an admin tool for 
     //       configuring queues.
     
     private final String aclName;
-    private final boolean jobOwnerAllowed;
     
-    QueueOperation(String aclName, boolean jobOwnerAllowed) {
+    QueueOperation(String aclName) {
       this.aclName = aclName;
-      this.jobOwnerAllowed = jobOwnerAllowed;
     }
 
     final String getAclName() {
       return aclName;
     }
     
-    final boolean isJobOwnerAllowed() {
-      return jobOwnerAllowed;
-    }
   }
   
   /**
@@ -126,7 +118,7 @@ class QueueManager {
   }
   
   /**
-   * Return true if the given {@link QueueManager.QueueOperation} can be 
+   * Return true if the given {@link QueueOperation} can be 
    * performed by the specified user on the given queue.
    * 
    * An operation is allowed if all users are provided access for this
@@ -139,37 +131,9 @@ class QueueManager {
    * 
    * @return true if the operation is allowed, false otherwise.
    */
-  public synchronized boolean hasAccess(String queueName, QueueOperation oper,
-                                UserGroupInformation ugi) {
-    return hasAccess(queueName, null, oper, ugi);
-  }
-  
-  /**
-   * Return true if the given {@link QueueManager.QueueOperation} can be 
-   * performed by the specified user on the specified job in the given queue.
-   * 
-   * An operation is allowed either if the owner of the job is the user 
-   * performing the task, all users are provided access for this
-   * operation, or if either the user or any of the groups specified is
-   * provided access.
-   * 
-   * If the {@link QueueManager.QueueOperation} is not job specific then the 
-   * job parameter is ignored.
-   * 
-   * @param queueName Queue on which the operation needs to be performed.
-   * @param job The {@link JobInProgress} on which the operation is being
-   *            performed. 
-   * @param oper The operation to perform
-   * @param ugi The user and groups who wish to perform the operation.
-   * 
-   * @return true if the operation is allowed, false otherwise.
-   */
-  public synchronized boolean hasAccess(String queueName, JobInProgress job, 
+  public synchronized boolean hasAccess(String queueName,
                                 QueueOperation oper, 
                                 UserGroupInformation ugi) {
-    String user = ugi.getShortUserName();
-    String jobId = job == null ? "-" : job.getJobID().toString();
-    
     if (!aclsEnabled) {
       return true;
     }
@@ -179,17 +143,9 @@ class QueueManager {
                                             oper.getAclName()));      
     }
     
-    if (oper.isJobOwnerAllowed()) {
-      if (job != null && job.getJobConf().getUser().equals(ugi.getShortUserName())) {
-        AuditLogger.logSuccess(user, oper.name(), queueName);
-        return true;
-      }
-    }
-    
-    AccessControlList acl = aclsMap.get(toFullPropertyName(queueName, oper.getAclName()));
+    AccessControlList acl = aclsMap.get(toFullPropertyName(
+        queueName, oper.getAclName()));
     if (acl == null) {
-      AuditLogger.logFailure(user, oper.name(), null, queueName, 
-                             "Disabled queue ACLs, job : " + jobId);
       return false;
     }
     
@@ -200,12 +156,6 @@ class QueueManager {
       if (acl.isUserAllowed(ugi)) {
         allowed = true;
       }
-    }
-    if (allowed) {
-      AuditLogger.logSuccess(user, oper.name(), queueName);
-    } else {
-      AuditLogger.logFailure(user, oper.name(), null, queueName,
-                             Constants.UNAUTHORIZED_USER + ", job : " + jobId);
     }
     
     return allowed;    
@@ -286,7 +236,7 @@ class QueueManager {
     for (String queue : queueNames) {
       for (QueueOperation oper : QueueOperation.values()) {
         String key = toFullPropertyName(queue, oper.getAclName());
-        String aclString = conf.get(key, "*");
+        String aclString = conf.get(key, " ");// default is empty list of users
         aclsMap.put(key, new AccessControlList(aclString));
       }
     } 
@@ -294,14 +244,14 @@ class QueueManager {
   }
   
   private void initialize(Configuration conf) {
-    aclsEnabled = conf.getBoolean("mapred.acls.enabled", false);
+    aclsEnabled = conf.getBoolean(JobConf.MR_ACLS_ENABLED, false);
     String[] queues = conf.getStrings("mapred.queue.names", 
         new String[] {JobConf.DEFAULT_QUEUE_NAME});
     addToSet(queueNames, queues);
     aclsMap = getQueueAcls(conf);
   }
   
-  private static final String toFullPropertyName(String queue, 
+  static final String toFullPropertyName(String queue, 
       String property) {
     return QUEUE_CONF_PROPERTY_NAME_PREFIX + queue + "." + property;
   }

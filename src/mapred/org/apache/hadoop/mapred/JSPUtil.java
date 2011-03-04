@@ -95,14 +95,14 @@ class JSPUtil {
    *         and decide if view should be allowed or not. Job will be null if
    *         the job with given jobid doesnot exist at the JobTracker.
    */
-  public static JobWithViewAccessCheck checkAccessAndGetJob(JobTracker jt,
+  public static JobWithViewAccessCheck checkAccessAndGetJob(final JobTracker jt,
       JobID jobid, HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
     final JobInProgress job = jt.getJob(jobid);
     JobWithViewAccessCheck myJob = new JobWithViewAccessCheck(job);
 
     String user = request.getRemoteUser();
-    if (user != null && job != null && jt.isJobLevelAuthorizationEnabled()) {
+    if (user != null && job != null && jt.areACLsEnabled()) {
       final UserGroupInformation ugi =
         UserGroupInformation.createRemoteUser(user);
       try {
@@ -110,7 +110,7 @@ class JSPUtil {
           public Void run() throws IOException, ServletException {
 
             // checks job view permission
-            job.checkAccess(ugi, JobACL.VIEW_JOB);
+            jt.getACLsManager().checkAccess(job, ugi, null, JobACL.VIEW_JOB);
             return null;
           }
         });
@@ -486,9 +486,11 @@ class JSPUtil {
     } else {
       currentUser = UserGroupInformation.createRemoteUser(user);
     }
-    jobTracker.getJobACLsManager().checkAccess(JobID.forName(jobid),
-        currentUser, JobACL.VIEW_JOB,
+
+    // Authorize the user for view access of this job
+    jobTracker.getACLsManager().checkAccess(jobid, currentUser, JobACL.VIEW_JOB,
         jobInfo.get(Keys.USER), jobInfo.getJobACLs().get(JobACL.VIEW_JOB));
+
     return jobInfo;
   }
 
@@ -559,7 +561,7 @@ class JSPUtil {
   static void printJobACLs(JobTracker tracker,
       Map<JobACL, AccessControlList> jobAcls, JspWriter out)
       throws IOException {
-    if (tracker.isJobLevelAuthorizationEnabled()) {
+    if (tracker.areACLsEnabled()) {
       // Display job-view-acls and job-modify-acls configured for this job
       out.print("<b>Job-ACLs:</b><br>");
       for (JobACL aclName : JobACL.values()) {
@@ -571,6 +573,10 @@ class JSPUtil {
               + aclStr + "<br>");
         }
       }
+    }
+    else {
+      out.print("<b>Job-ACLs: " + new AccessControlList("*").toString()
+          + "</b><br>");
     }
   }
 

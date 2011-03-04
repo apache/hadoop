@@ -116,6 +116,7 @@ public class TestTaskTrackerLocalization extends TestCase {
       localDirs[i] = new File(ROOT_MAPRED_LOCAL_DIR, "0_" + i).getPath();
     }
     trackerFConf.setStrings("mapred.local.dir", localDirs);
+    trackerFConf.setBoolean(JobConf.MR_ACLS_ENABLED, true);
 
     // Create the job configuration file. Same as trackerConf in this test.
     jobConf = new JobConf(trackerFConf);

@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobHistory.*;
+import org.apache.hadoop.mapred.QueueManager.QueueOperation;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.commons.logging.Log;
@@ -801,7 +802,7 @@ public class TestJobHistory extends TestCase {
     validateTaskAttemptLevelKeyValues(mr, job, jobInfo);
 
     // Also JobACLs should be correct
-    if (mr.getJobTrackerRunner().getJobTracker().isJobLevelAuthorizationEnabled()) {
+    if (mr.getJobTrackerRunner().getJobTracker().areACLsEnabled()) {
       assertEquals(conf.get(JobACL.VIEW_JOB.getAclName()),
           jobInfo.getJobACLs().get(JobACL.VIEW_JOB).toString());
       assertEquals(conf.get(JobACL.MODIFY_JOB.getAclName()),
@@ -911,7 +912,10 @@ public class TestJobHistory extends TestCase {
       conf.set("mapred.job.tracker.history.completed.location", doneFolder);
 
       // Enable ACLs so that they are logged to history
-      conf.setBoolean(JobConf.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, true);
+      conf.setBoolean(JobConf.MR_ACLS_ENABLED, true);
+      // no queue admins for default queue
+      conf.set(QueueManager.toFullPropertyName(
+          "default", QueueOperation.ADMINISTER_JOBS.getAclName()), " ");
       
       mr = new MiniMRCluster(2, "file:///", 3, null, null, conf);
 
