@@ -66,6 +66,15 @@ public class TestRefreshUserMappings {
       i++;
       return l;
     }
+
+    @Override
+    public void cacheGroupsRefresh() throws IOException {
+    }
+
+    @Override
+    public void cacheGroupsAdd(List<String> groups) throws IOException {
+    }
+
   }
   
   @Before

@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.security.authorize;
 
+import java.util.List;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.apache.hadoop.conf.Configuration;
+
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
@@ -27,6 +31,52 @@ import org.apache.hadoop.security.authorize.AccessControlList;
 import junit.framework.TestCase;
 
 public class TestAccessControlList extends TestCase {
+
+  /**
+   * test the netgroups (groups in ACL rules that start with @),
+   */
+  public void testNetgroups() throws Exception {
+    // set the config for Groups (test mapping class)
+    // we rely on hardcoded groups and netgroups in
+    // ShellBasedUnixGroupsMappingTestWrapper
+    Configuration conf = new Configuration();
+    conf.set("hadoop.security.group.mapping",
+      "org.apache.hadoop.security.ShellBasedUnixGroupsNetgroupMappingTestWrapper");
+
+    Groups groups = Groups.getUserToGroupsMappingService(conf);
+
+    AccessControlList acl;
+
+    // create these ACLs to populate groups cache
+    acl = new AccessControlList("ja my"); // plain
+    acl = new AccessControlList("sinatra ratpack,@lasVegas"); // netgroup
+    acl = new AccessControlList(" somegroups,@somenetgroup"); // no user
+
+    // check that the netgroups are working
+    List<String> elvisGroups = groups.getGroups("elvis");
+    assertTrue(elvisGroups.contains("@lasVegas"));
+
+    // refresh cache - not testing this directly but if the results are ok
+    // after the refresh that means it worked fine (very likely)
+    groups.refresh();
+
+    // create an ACL with netgroups (@xxx)
+    acl = new AccessControlList("ja ratpack,@lasVegas");
+    // elvis is in @lasVegas
+    UserGroupInformation elvis = 
+      UserGroupInformation.createRemoteUser("elvis");
+    // ja's groups are not in ACL
+    UserGroupInformation ja = 
+      UserGroupInformation.createRemoteUser("ja");
+    // unwanted and unwanted's grops are not in ACL
+    UserGroupInformation unwanted = 
+      UserGroupInformation.createRemoteUser("unwanted");
+
+    // test the ACLs!
+    assertUserAllowed(elvis, acl);
+    assertUserAllowed(ja, acl);
+    assertUserNotAllowed(unwanted, acl);
+  }
   
   public void testWildCardAccessControlList() throws Exception {
     AccessControlList acl;

@@ -87,7 +87,20 @@ public class Groups {
    */
   public void refresh() {
     LOG.info("clearing userToGroupsMap cache");
+    try {
+      impl.cacheGroupsRefresh();
+    } catch (IOException e) {
+      LOG.warn("Error refreshing groups cache", e);
+    }
     userToGroupsMap.clear();
+  }
+
+  public void cacheGroupsAdd(List<String> groups) {
+    try {
+      impl.cacheGroupsAdd(groups);
+    } catch (IOException e) {
+      LOG.warn("Error caching groups", e);
+    }
   }
   
   private static class CachedGroups {

@@ -17,17 +17,25 @@
  */
 package org.apache.hadoop.security.authorize;
 
+import java.util.Iterator;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.Arrays;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.ListIterator;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Class representing a configured access control list.
@@ -82,19 +90,22 @@ public class AccessControlList implements Writable {
     } else {
       allAllowed = false;
       String[] userGroupStrings = aclString.split(" ", 2);
-      
+      Configuration conf = new Configuration();
+      Groups groupsMapping = Groups.getUserToGroupsMappingService(conf);
+
       if (userGroupStrings.length >= 1) {
-        String[] usersStr = userGroupStrings[0].split(",");
-        if (usersStr.length >= 1) {
-          addToSet(users, usersStr);
-        }
+        List<String> usersList = new LinkedList<String>(
+          Arrays.asList(userGroupStrings[0].split(",")));
+        cleanupList(usersList);
+        addToSet(users, usersList);
       }
       
       if (userGroupStrings.length == 2) {
-        String[] groupsStr = userGroupStrings[1].split(",");
-        if (groupsStr.length >= 1) {
-          addToSet(groups, groupsStr);
-        }
+        List<String> groupsList = new LinkedList<String>(
+          Arrays.asList(userGroupStrings[1].split(",")));
+        cleanupList(groupsList);
+        addToSet(groups, groupsList);
+        groupsMapping.cacheGroupsAdd(groupsList);
       }
     }
   }
@@ -135,13 +146,23 @@ public class AccessControlList implements Writable {
     }
     return false;
   }
-  
-  private static final void addToSet(Set<String> set, String[] strings) {
-    for (String s : strings) {
-      s = s.trim();
-      if (s.length() > 0) {
-        set.add(s);
+
+  private static final void cleanupList(List<String> list) {
+    ListIterator<String> i = list.listIterator();
+    while(i.hasNext()) {
+      String s = i.next();
+      if(s.length() == 0) {
+        i.remove();
+      } else {
+        s = s.trim();
+        i.set(s);
       }
+    }
+  }
+  
+  private static final void addToSet(Set<String> set, List<String> list) {
+    for(String s : list) {
+      set.add(s);
     }
   }
   

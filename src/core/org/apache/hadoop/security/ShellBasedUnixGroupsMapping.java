@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.HashSet;
 import java.util.StringTokenizer;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -41,6 +43,16 @@ public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider 
   @Override
   public List<String> getGroups(String user) throws IOException {
     return getUnixGroups(user);
+  }
+
+  @Override
+  public void cacheGroupsRefresh() throws IOException {
+    // does nothing in this provider of user to groups mapping
+  }
+
+  @Override
+  public void cacheGroupsAdd(List<String> groups) throws IOException {
+    // does nothing in this provider of user to groups mapping
   }
 
   /** 
