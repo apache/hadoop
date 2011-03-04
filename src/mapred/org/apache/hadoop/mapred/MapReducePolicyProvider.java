@@ -38,6 +38,8 @@ public class MapReducePolicyProvider extends PolicyProvider {
                   RefreshAuthorizationPolicyProtocol.class),
       new Service("security.refresh.usertogroups.mappings.protocol.acl", 
                   RefreshUserToGroupMappingsProtocol.class),
+      new Service("security.admin.operations.protocol.acl", 
+                  AdminOperationsProtocol.class),
   };
   
   @Override
