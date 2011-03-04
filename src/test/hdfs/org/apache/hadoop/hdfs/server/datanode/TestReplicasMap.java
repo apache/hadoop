@@ -26,7 +26,7 @@ import org.junit.Test;
  * Unit test for ReplicasMap class
  */
 public class TestReplicasMap {
-  private static final ReplicasMap map = new ReplicasMap();
+  private static final ReplicasMap map = new ReplicasMap(TestReplicasMap.class);
   private static final String bpid = "BP-TEST";
   private static final  Block block = new Block(1234, 1234, 1234);
   

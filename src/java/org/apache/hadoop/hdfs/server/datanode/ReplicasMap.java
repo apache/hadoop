@@ -21,15 +21,32 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.protocol.Block;
 
+/**
+ * Maintains the replicas map. 
+ */
 class ReplicasMap {
+  // Object using which this class is synchronized
+  private final Object mutex;
+  
   // Map of block pool Id to another map of block Id to ReplicaInfo.
   private Map<String, Map<Long, ReplicaInfo>> map = 
     new HashMap<String, Map<Long, ReplicaInfo>>();
   
-  synchronized String[] getBlockPoolList() {
-    return map.keySet().toArray(new String[map.keySet().size()]);   
+  ReplicasMap(Object mutex) {
+    if (mutex == null) {
+      throw new HadoopIllegalArgumentException(
+          "Object to synchronize on cannot be null");
+    }
+    this.mutex = mutex;
+  }
+  
+  String[] getBlockPoolList() {
+    synchronized(mutex) {
+      return map.keySet().toArray(new String[map.keySet().size()]);   
+    }
   }
   
   private void checkBlockPool(String bpid) {
@@ -72,8 +89,10 @@ class ReplicasMap {
    */
   ReplicaInfo get(String bpid, long blockId) {
     checkBlockPool(bpid);
-    Map<Long, ReplicaInfo> m = map.get(bpid);
-    return m != null ? m.get(blockId) : null;
+    synchronized(mutex) {
+      Map<Long, ReplicaInfo> m = map.get(bpid);
+      return m != null ? m.get(blockId) : null;
+    }
   }
   
   /**
@@ -87,13 +106,15 @@ class ReplicasMap {
   ReplicaInfo add(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    Map<Long, ReplicaInfo> m = map.get(bpid);
-    if (m == null) {
-      // Add an entry for block pool if it does not exist already
-      m = new HashMap<Long, ReplicaInfo>();
-      map.put(bpid, m);
+    synchronized(mutex) {
+      Map<Long, ReplicaInfo> m = map.get(bpid);
+      if (m == null) {
+        // Add an entry for block pool if it does not exist already
+        m = new HashMap<Long, ReplicaInfo>();
+        map.put(bpid, m);
+      }
+      return  m.put(replicaInfo.getBlockId(), replicaInfo);
     }
-    return  m.put(replicaInfo.getBlockId(), replicaInfo);
   }
   
   /**
@@ -107,14 +128,16 @@ class ReplicasMap {
   ReplicaInfo remove(String bpid, Block block) {
     checkBlockPool(bpid);
     checkBlock(block);
-    Map<Long, ReplicaInfo> m = map.get(bpid);
-    if (m != null) {
-      Long key = Long.valueOf(block.getBlockId());
-      ReplicaInfo replicaInfo = m.get(key);
-      if (replicaInfo != null &&
-          block.getGenerationStamp() == replicaInfo.getGenerationStamp()) {
-        return m.remove(key);
-      } 
+    synchronized(mutex) {
+      Map<Long, ReplicaInfo> m = map.get(bpid);
+      if (m != null) {
+        Long key = Long.valueOf(block.getBlockId());
+        ReplicaInfo replicaInfo = m.get(key);
+        if (replicaInfo != null &&
+            block.getGenerationStamp() == replicaInfo.getGenerationStamp()) {
+          return m.remove(key);
+        } 
+      }
     }
     
     return null;
@@ -128,9 +151,11 @@ class ReplicasMap {
    */
   ReplicaInfo remove(String bpid, long blockId) {
     checkBlockPool(bpid);
-    Map<Long, ReplicaInfo> m = map.get(bpid);
-    if (m != null) {
-      return m.remove(blockId);
+    synchronized(mutex) {
+      Map<Long, ReplicaInfo> m = map.get(bpid);
+      if (m != null) {
+        return m.remove(blockId);
+      }
     }
     return null;
   }
@@ -141,27 +166,46 @@ class ReplicasMap {
    * @return the number of replicas in the map
    */
   int size(String bpid) {
-    Map<Long, ReplicaInfo> m = map.get(bpid);
-    return m != null ? m.size() : 0;
+    Map<Long, ReplicaInfo> m = null;
+    synchronized(mutex) {
+      m = map.get(bpid);
+      return m != null ? m.size() : 0;
+    }
   }
   
   /**
    * Get a collection of the replicas for given block pool
+   * This method is <b>not synchronized</b>. It needs to be synchronized
+   * externally using the mutex, both for getting the replicas
+   * values from the map and iterating over it. Mutex can be accessed using
+   * {@link #getMutext()} method.
+   * 
    * @param bpid block pool id
-   * @return a collection of the replicas
+   * @return a collection of the replicas belonging to the block pool
    */
   Collection<ReplicaInfo> replicas(String bpid) {
-    Map<Long, ReplicaInfo> m = map.get(bpid);
+    Map<Long, ReplicaInfo> m = null;
+    m = map.get(bpid);
     return m != null ? m.values() : null;
   }
 
   void initBlockPool(String bpid) {
     checkBlockPool(bpid);
-    Map<Long, ReplicaInfo> m = map.get(bpid);
-    if (m == null) {
-      // Add an entry for block pool if it does not exist already
-      m = new HashMap<Long, ReplicaInfo>();
-      map.put(bpid, m);
+    synchronized(mutex) {
+      Map<Long, ReplicaInfo> m = map.get(bpid);
+      if (m == null) {
+        // Add an entry for block pool if it does not exist already
+        m = new HashMap<Long, ReplicaInfo>();
+        map.put(bpid, m);
+      }
     }
+  }
+  
+  /**
+   * Give access to mutex used for synchronizing ReplicasMap
+   * @return object used as lock
+   */
+  Object getMutext() {
+    return mutex;
   }
 }

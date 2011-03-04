@@ -983,7 +983,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    * @param blockId
    * @return
    */
-  synchronized ReplicaInfo fetchReplicaInfo(String bpid, long blockId) {
+  ReplicaInfo fetchReplicaInfo(String bpid, long blockId) {
     ReplicaInfo r = volumeMap.get(bpid, blockId);
     if(r == null)
       return null;
@@ -1041,17 +1041,17 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     return f;
   }
     
-  FSVolumeSet volumes;
-  private int maxBlocksPerDir = 0;
-  ReplicasMap volumeMap = new ReplicasMap();
-  static  Random random = new Random();
-  FSDatasetAsyncDiskService asyncDiskService;
-  private int validVolsRequired;
+  final FSVolumeSet volumes;
+  private final int maxBlocksPerDir;
+  final ReplicasMap volumeMap;
+  static final Random random = new Random();
+  final FSDatasetAsyncDiskService asyncDiskService;
+  private final int validVolsRequired;
 
   // Used for synchronizing access to usage stats
-  private Object statsLock = new Object();
+  private final Object statsLock = new Object();
 
-  boolean supportAppends = true;
+  final boolean supportAppends;
 
   /**
    * An FSDataset has a directory where it loads its data files.
@@ -1078,6 +1078,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       DataNode.LOG.info("FSDataset added volume - "
           + storage.getStorageDir(idx).getCurrentDir());
     }
+    volumeMap = new ReplicasMap(this);
+    
     volumes = new FSVolumeSet(volArray);
     volumes.getVolumeMap(volumeMap);
 
@@ -1185,25 +1187,38 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /**
-   * Get the meta info of a block stored in volumeMap
-   * @param b block
-   * @return the meta replica information
+   * Get the meta info of a block stored in volumeMap. To find a block,
+   * block pool Id, block Id and generation stamp must match.
+   * @param b extended block
+   * @return the meta replica information; null if block was not found
+   * @throws ReplicaNotFoundException if no entry is in the map or 
+   *                        there is a generation stamp mismatch
    */
-  private ReplicaInfo getReplicaInfo(ExtendedBlock b) {
-    return volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
+  private ReplicaInfo getReplicaInfo(ExtendedBlock b)
+      throws ReplicaNotFoundException {
+    ReplicaInfo info = volumeMap.get(b.getBlockPoolId(), b.getLocalBlock());
+    if (info == null) {
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
+    }
+    return info;
   }
   
   /**
-   * Get the meta info of a block stored in volumeMap
-   * @param b block
-   * @return the meta replica information
-   * @throws IOException if no entry is in the map or 
+   * Get the meta info of a block stored in volumeMap. Block is looked up
+   * without matching the generation stamp.
+   * @param bpid block pool Id
+   * @param blkid block Id
+   * @return the meta replica information; null if block was not found
+   * @throws ReplicaNotFoundException if no entry is in the map or 
    *                        there is a generation stamp mismatch
    */
-  private ReplicaInfo getReplicaInfo(String bpid, Block b) throws IOException {
-    ReplicaInfo info = volumeMap.get(bpid, b);
+  private ReplicaInfo getReplicaInfo(String bpid, long blkid)
+      throws ReplicaNotFoundException {
+    ReplicaInfo info = volumeMap.get(bpid, blkid);
     if (info == null) {
-      throw new IOException("Block " + b + " does not exist in volumeMap.");
+      throw new ReplicaNotFoundException(
+          ReplicaNotFoundException.NON_EXISTENT_REPLICA + bpid + ":" + blkid);
     }
     return info;
   }
@@ -1240,12 +1255,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    *           is not in any snapshot.
    */
   public boolean unlinkBlock(ExtendedBlock block, int numLinks) throws IOException {
-    ReplicaInfo info = null;
-
-    synchronized (this) {
-      info = getReplicaInfo(block);
-    }
-   return info.unlinkBlock(numLinks);
+    ReplicaInfo info = getReplicaInfo(block);
+    return info.unlinkBlock(numLinks);
   }
 
   static private void truncateBlock(File blockFile, File metaFile,
@@ -1328,10 +1339,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
           " should be greater than the replica " + b + "'s generation stamp");
     }
     ReplicaInfo replicaInfo = getReplicaInfo(b);
-    if (replicaInfo == null) {
-      throw new ReplicaNotFoundException(
-          ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
-    }  
     DataNode.LOG.info("Appending to replica " + replicaInfo);
     if (replicaInfo.getState() != ReplicaState.FINALIZED) {
       throw new ReplicaNotFoundException(
@@ -1413,10 +1420,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   private ReplicaInfo recoverCheck(ExtendedBlock b, long newGS, 
       long expectedBlockLen) throws IOException {
     ReplicaInfo replicaInfo = getReplicaInfo(b);
-    if (replicaInfo == null) {
-      throw new ReplicaNotFoundException(
-          ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
-    }
     
     // check state
     if (replicaInfo.getState() != ReplicaState.FINALIZED &&
@@ -1461,6 +1464,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     
     return replicaInfo;
   }
+  
   @Override  // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface recoverAppend(ExtendedBlock b,
       long newGS, long expectedBlockLen) throws IOException {
@@ -1523,7 +1527,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   public synchronized ReplicaInPipelineInterface createRbw(ExtendedBlock b)
       throws IOException {
-    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), b.getBlockId());
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), 
+        b.getBlockId());
     if (replicaInfo != null) {
       throw new ReplicaAlreadyExistsException("Block " + b +
       " already exists in state " + replicaInfo.getState() +
@@ -1545,11 +1550,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
       throws IOException {
     DataNode.LOG.info("Recover the RBW replica " + b);
 
-    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), b.getBlockId());
-    if (replicaInfo == null) {
-      throw new ReplicaNotFoundException(
-          ReplicaNotFoundException.NON_EXISTENT_REPLICA + b);
-    }
+    ReplicaInfo replicaInfo = getReplicaInfo(b.getBlockPoolId(), b.getBlockId());
     
     // check the replica's state
     if (replicaInfo.getState() != ReplicaState.RBW) {
@@ -1626,7 +1627,10 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
   synchronized File createTmpFile(FSVolume vol, String bpid, Block blk) throws IOException {
     if ( vol == null ) {
-      vol = getReplicaInfo(bpid, blk).getVolume();
+      ReplicaInfo replica = volumeMap.get(bpid, blk);
+      if (replica != null) {
+        vol = volumeMap.get(bpid, blk).getVolume();
+      }
       if ( vol == null ) {
         throw new IOException("Could not find volume for block " + blk);
       }
@@ -1684,7 +1688,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    */
   @Override // FSDatasetInterface
   public synchronized void unfinalizeBlock(ExtendedBlock b) throws IOException {
-    ReplicaInfo replicaInfo = getReplicaInfo(b);
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), 
+        b.getLocalBlock());
     if (replicaInfo != null && replicaInfo.getState() == ReplicaState.TEMPORARY) {
       // remove from volumeMap
       volumeMap.remove(b.getBlockPoolId(), b.getLocalBlock());
@@ -1728,7 +1733,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    */
   @Override // FSDatasetInterface
   public BlockListAsLongs getBlockReport(String bpid) {
-    // TODO:FEDERATION volumeMap.size() has not been synchronized - old code
     int size =  volumeMap.size(bpid);
     ArrayList<ReplicaInfo> finalized = new ArrayList<ReplicaInfo>(size);
     ArrayList<ReplicaInfo> uc = new ArrayList<ReplicaInfo>();
@@ -1761,24 +1765,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   }
 
   /**
-   * Get the block list from in-memory blockmap for a block pool.
-   * 
-   * Note if <deepcopy> is false, reference to the block in the volumeMap is
-   * returned. This block should not be changed. Suitable synchronization using
-   * {@link FSDataset} is needed to handle concurrent modification to the block.
-   */
-  synchronized Block[] getBlockList(String bpid, boolean deepcopy) {
-    Block[] list = volumeMap.replicas(bpid).toArray(
-        new Block[volumeMap.size(bpid)]);
-    if (deepcopy) {
-      for (int i = 0; i < list.length; i++) {
-        list[i] = new Block(list[i]);
-      }
-    }
-    return list;
-  }
-
-  /**
    * Get the list of finalized blocks from in-memory blockmap for a block pool.
    */
   synchronized List<Block> getFinalizedBlocks(String bpid) {
@@ -1797,7 +1783,9 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
    */
   @Override // FSDatasetInterface
   public boolean isValidBlock(ExtendedBlock b) {
-    ReplicaInfo replicaInfo = getReplicaInfo(b);
+    ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(), 
+        b.getLocalBlock());
+    
     if (replicaInfo == null || 
         replicaInfo.getState() != ReplicaState.FINALIZED) {
       return false;
@@ -2209,7 +2197,6 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   @Deprecated
   public ReplicaInfo getReplica(String bpid, long blockId) {
-    assert(Thread.holdsLock(this));
     return volumeMap.get(bpid, blockId);
   }
 
@@ -2363,10 +2350,8 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
   @Override // FSDatasetInterface
   public synchronized long getReplicaVisibleLength(final ExtendedBlock block)
   throws IOException {
-    final Replica replica = volumeMap.get(block.getBlockPoolId(), block.getBlockId());
-    if (replica == null) {
-      throw new ReplicaNotFoundException(block);
-    }
+    final Replica replica = getReplicaInfo(block.getBlockPoolId(), 
+        block.getBlockId());
     if (replica.getGenerationStamp() < block.getGenerationStamp()) {
       throw new IOException(
           "replica.getGenerationStamp() < block.getGenerationStamp(), block="

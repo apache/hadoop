@@ -182,7 +182,7 @@ Trunk (unreleased changes)
     HDFS-1715. Federation: warning/error not generated when datanode sees 
     inconsistent/different Cluster ID between namenodes (boryas)
 
-    HDFS-1716: Federation: Add decommission tests for federated namenodes.
+    HDFS-1716. Federation: Add decommission tests for federated namenodes.
     (suresh)
 
     HDFS-1713. Federation: Prevent DataBlockScanner from running in tight loop.
@@ -190,6 +190,9 @@ Trunk (unreleased changes)
 
     HDFS-1721. Federation: Configuration for principal names should not be 
     namenode specific. (jitendra)
+
+    HDFS-1717. Federation: FSDataset volumeMap access is not synchronized
+    correctly. (suresh)
 
   IMPROVEMENTS
 
