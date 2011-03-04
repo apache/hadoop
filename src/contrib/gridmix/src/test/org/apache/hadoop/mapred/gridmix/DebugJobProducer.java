@@ -290,7 +290,8 @@ public class DebugJobProducer implements JobStoryProducer {
 
     @Override
     public String getQueueName() {
-      return JobConf.DEFAULT_QUEUE_NAME;
+      String qName = "q"+((id % 2)+1);
+      return qName;
     }
     
     public static void reset() {

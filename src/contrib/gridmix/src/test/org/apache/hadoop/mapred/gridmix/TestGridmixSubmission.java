@@ -73,8 +73,8 @@ public class TestGridmixSubmission {
   private static MiniDFSCluster dfsCluster = null;
   private static MiniMRCluster mrCluster = null;
 
-  private static final int NJOBS = 2;
-  private static final long GENDATA = 50; // in megabytes
+  private static final int NJOBS = 3;
+  private static final long GENDATA = 30; // in megabytes
   private static final int GENSLOP = 100 * 1024; // +/- 100k for logs
 
   @BeforeClass
@@ -104,13 +104,23 @@ public class TestGridmixSubmission {
       assertEquals("Bad job count", expected, retiredJobs.drainTo(succeeded));
       final HashMap<String,JobStory> sub = new HashMap<String,JobStory>();
       for (JobStory spec : submitted) {
-        sub.put(spec.getName(), spec);
+        sub.put(spec.getJobID().toString(), spec);
       }
       final JobClient client = new JobClient(
         GridmixTestUtils.mrCluster.createJobConf());
       for (Job job : succeeded) {
         final String jobname = job.getJobName();
         if ("GRIDMIX_GENDATA".equals(jobname)) {
+          if (!job.getConfiguration().getBoolean(
+            GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
+            assertEquals(
+              " Improper queue for " + job.getJobName(),
+              job.getConfiguration().get("mapred.job.queue.name"), "q1");
+          } else {
+            assertEquals(
+              " Improper queue for " + job.getJobName(),
+              job.getConfiguration().get("mapred.job.queue.name"), "default");
+          }
           final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs);
           final Path out = new Path("/gridmix").makeQualified(GridmixTestUtils.dfs);
           final ContentSummary generated = GridmixTestUtils.dfs.getContentSummary(in);
@@ -121,8 +131,20 @@ public class TestGridmixSubmission {
           assertEquals("Mismatched job count", NJOBS, outstat.length);
           continue;
         }
+        
+        if (!job.getConfiguration().getBoolean(
+          GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true)) {
+          assertEquals(" Improper queue for  " + job.getJobName() + " " ,
+          job.getConfiguration().get("mapred.job.queue.name"),"q1" );
+        } else {
+          assertEquals(
+            " Improper queue for  " + job.getJobName() + " ",
+            job.getConfiguration().get("mapred.job.queue.name"), sub.get(
+              job.getConfiguration().get(GridmixJob.ORIGNAME)).getQueueName());
+        }
+
         final JobStory spec =
-          sub.get(job.getJobName().replace("GRIDMIX", "MOCKJOB"));
+          sub.get(job.getConfiguration().get(GridmixJob.ORIGNAME));
         assertNotNull("No spec for " + job.getJobName(), spec);
         assertNotNull("No counters for " + job.getJobName(), job.getCounters());
         final String specname = spec.getName();
@@ -314,27 +336,37 @@ public class TestGridmixSubmission {
   public void testReplaySubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.REPLAY;
     System.out.println(" Replay started at " + System.currentTimeMillis());
-    doSubmission();
+    doSubmission(false);
     System.out.println(" Replay ended at " + System.currentTimeMillis());
   }
-
+  
   @Test
   public void testStressSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.STRESS;
     System.out.println(" Stress started at " + System.currentTimeMillis());
-    doSubmission();
+    doSubmission(false);
     System.out.println(" Stress ended at " + System.currentTimeMillis());
+  }
+
+  @Test
+  public void testStressSubmitWithDefaultQueue() throws Exception {
+    policy = GridmixJobSubmissionPolicy.STRESS;
+    System.out.println(
+      " Stress with default q started at " + System.currentTimeMillis());
+    doSubmission(true);
+    System.out.println(
+      " Stress with default q ended at " + System.currentTimeMillis());
   }
 
   @Test
   public void testSerialSubmit() throws Exception {
     policy = GridmixJobSubmissionPolicy.SERIAL;
     System.out.println("Serial started at " + System.currentTimeMillis());
-    doSubmission();
+    doSubmission(false);
     System.out.println("Serial ended at " + System.currentTimeMillis());
   }
 
-  private void doSubmission() throws Exception {
+  private void doSubmission(boolean useDefaultQueue) throws Exception {
     final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs);
     final Path out = GridmixTestUtils.DEST.makeQualified(GridmixTestUtils.dfs);
     final Path root = new Path("/user");
@@ -351,6 +383,12 @@ public class TestGridmixSubmission {
     DebugGridmix client = new DebugGridmix();
     conf = new Configuration();
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy);
+      if (useDefaultQueue) {
+        conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, false);
+        conf.set(GridmixJob.GRIDMIX_DEFAULT_QUEUE, "q1");
+      } else {
+        conf.setBoolean(GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE, true);
+      }
     conf = GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
     // allow synthetic users to create home directories
     GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short)0777));

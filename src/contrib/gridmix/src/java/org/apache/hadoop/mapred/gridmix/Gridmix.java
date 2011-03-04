@@ -399,12 +399,27 @@ public class Gridmix extends Configured implements Tool {
     out.println("Usage: gridmix [-generate <MiB>] [-users URI] <iopath> <trace>");
     out.println("  e.g. gridmix -generate 100m foo -");
     out.println("Configuration parameters:");
-    out.printf("       %-40s : Output directory\n", GRIDMIX_OUT_DIR);
-    out.printf("       %-40s : Submitting threads\n", GRIDMIX_SUB_THR);
-    out.printf("       %-40s : Queued job desc\n", GRIDMIX_QUE_DEP);
-    out.printf("       %-40s : Key fraction of rec\n",
+    out.printf("       %-42s : Output directory\n", GRIDMIX_OUT_DIR);
+    out.printf("       %-42s : Submitting threads\n", GRIDMIX_SUB_THR);
+    out.printf("       %-42s : Queued job desc\n", GRIDMIX_QUE_DEP);
+    out.printf("       %-42s : Key fraction of rec\n",
         AvgRecordFactory.GRIDMIX_KEY_FRC);
-    out.printf("       %-40s : User resolution class\n", GRIDMIX_USR_RSV);
+    out.printf("       %-42s : User resolution class\n", GRIDMIX_USR_RSV);
+    out.printf("       %-42s : Enable/disable using queues in trace\n",
+        GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE);
+    out.printf("       %-42s : Default queue\n",
+        GridmixJob.GRIDMIX_DEFAULT_QUEUE);
+    
+    StringBuilder sb = new StringBuilder();
+    String sep = "";
+    for (GridmixJobSubmissionPolicy policy : GridmixJobSubmissionPolicy
+        .values()) {
+      sb.append(sep);
+      sb.append(policy.name());
+      sep = "|";
+    }
+    out.printf("       %-40s : Job submission policy (%s)\n",
+        GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, sb.toString());
   }
 
   /**

@@ -34,6 +34,7 @@ import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -76,7 +77,16 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
   private static final ConcurrentHashMap<Integer,List<InputSplit>> descCache =
      new ConcurrentHashMap<Integer,List<InputSplit>>();
   protected static final String GRIDMIX_JOB_SEQ = "gridmix.job.seq";
+  protected static final String GRIDMIX_USE_QUEUE_IN_TRACE = 
+      "gridmix.job-submission.use-queue-in-trace";
+  protected static final String GRIDMIX_DEFAULT_QUEUE = 
+      "gridmix.job-submission.default-queue";
 
+  private static void setJobQueue(Job job, String queue) {
+    if (queue != null)
+      job.getConfiguration().set("mapred.job.queue.name", queue);
+  }
+  
   public GridmixJob(
     final Configuration conf, long submissionMillis, final JobStory jobdesc,
     Path outRoot, UserGroupInformation ugi, final int seq) throws IOException {
@@ -94,6 +104,12 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
           ret.getConfiguration().set(ORIGNAME,
               null == jobdesc.getJobID() ? "<unknown>" : jobdesc.getJobID()
                   .toString());
+          if (conf.getBoolean(GRIDMIX_USE_QUEUE_IN_TRACE, false)) {
+            setJobQueue(ret, jobdesc.getQueueName());
+          } else {
+            setJobQueue(ret, conf.get(GRIDMIX_DEFAULT_QUEUE));
+          }
+
           return ret;
         }
       });
@@ -121,6 +137,8 @@ abstract class GridmixJob implements Callable<Job>, Delayed {
         public Job run() throws IOException {
           Job ret = new Job(conf, name);
           ret.getConfiguration().setInt("gridmix.job.seq", seq);
+          setJobQueue(ret, conf.get(GRIDMIX_DEFAULT_QUEUE));
+
           return ret;
         }
       });

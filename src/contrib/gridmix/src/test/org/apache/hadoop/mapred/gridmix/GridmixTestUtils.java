@@ -38,6 +38,7 @@ public class GridmixTestUtils {
 
   public static void initCluster() throws IOException {
     Configuration conf = new Configuration();
+    conf.set("mapred.queue.names", "default,q1,q2");
     dfsCluster = new MiniDFSCluster(conf, 3, true, null);
     dfs = dfsCluster.getFileSystem();
     mrCluster = new MiniMRCluster(
