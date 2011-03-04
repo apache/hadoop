@@ -264,6 +264,15 @@ public class MiniMRCluster {
     return (taskTrackerList.get(taskTracker)).getLocalDir();
   }
 
+  /**
+   * Get all the local directories for the Nth task tracker
+   * @param taskTracker the index of the task tracker to check
+   * @return array of local dirs
+   */
+  public String[] getTaskTrackerLocalDirs(int taskTracker) {
+    return (taskTrackerList.get(taskTracker)).getLocalDirs();
+  }
+
   public JobTrackerRunner getJobTrackerRunner() {
     return jobTracker;
   }

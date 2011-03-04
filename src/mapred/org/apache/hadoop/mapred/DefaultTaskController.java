@@ -144,7 +144,7 @@ public class DefaultTaskController extends TaskController {
   void enableTaskForCleanup(PathDeletionContext context)
          throws IOException {
     try {
-      FileUtil.chmod(context.fullPath, "ug+rwx", true);
+      FileUtil.chmod(context.fullPath, "u+rwx", true);
     } catch(InterruptedException e) {
       LOG.warn("Interrupted while setting permissions for " + context.fullPath +
           " for deletion.");

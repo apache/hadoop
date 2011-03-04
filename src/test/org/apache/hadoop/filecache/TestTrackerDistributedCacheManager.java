@@ -373,16 +373,53 @@ public class TestTrackerDistributedCacheManager extends TestCase {
    */
   private void checkPublicFilePermissions(Path[] localCacheFiles)
       throws IOException {
+    checkPublicFilePermissions(fs, localCacheFiles);
+  }
+
+  /**
+   * Verify the permissions for a file localized as a public distributed
+   * cache file
+   * @param fs The Local FileSystem used to get the permissions
+   * @param localCacheFiles The list of files whose permissions should be 
+   * verified.
+   * @throws IOException
+   */
+  public static void checkPublicFilePermissions(FileSystem fs, 
+      Path[] localCacheFiles) throws IOException {
     // All the files should have read and executable permissions for others
     for (Path p : localCacheFiles) {
       FsPermission perm = fs.getFileStatus(p).getPermission();
-      assertTrue("cache file is not readable by others", perm.getOtherAction()
-          .implies(FsAction.READ));
-      assertTrue("cache file is not executable by others", perm
-          .getOtherAction().implies(FsAction.EXECUTE));
+      assertTrue("cache file is not readable / executable by owner: perm="
+          + perm.getUserAction(), perm.getUserAction()
+          .implies(FsAction.READ_EXECUTE));
+      assertTrue("cache file is not readable / executable by group: perm="
+          + perm.getGroupAction(), perm.getGroupAction()
+          .implies(FsAction.READ_EXECUTE));
+      assertTrue("cache file is not readable / executable by others: perm="
+          + perm.getOtherAction(), perm.getOtherAction()
+          .implies(FsAction.READ_EXECUTE));
     }
   }
-
+  
+  /**
+   * Verify the ownership for files localized as a public distributed cache
+   * file.
+   * @param fs The Local FileSystem used to get the ownership
+   * @param localCacheFiles THe list of files whose ownership should be
+   * verified
+   * @param owner The owner of the files
+   * @param group The group owner of the files.
+   * @throws IOException
+   */
+  public static void checkPublicFileOwnership(FileSystem fs,
+      Path[] localCacheFiles, String owner, String group)
+      throws IOException {
+    for (Path p: localCacheFiles) {
+      assertEquals(owner, fs.getFileStatus(p).getOwner());
+      assertEquals(group, fs.getFileStatus(p).getGroup());
+    }
+  }
+  
   protected String getJobOwnerName() throws IOException {
     return UserGroupInformation.getLoginUser().getUserName();
   }
