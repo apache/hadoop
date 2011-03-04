@@ -48,6 +48,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.crypto.SecretKey;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -85,10 +87,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
-import org.apache.hadoop.mapreduce.security.JobTokens;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
-import org.apache.commons.codec.binary.Base64;
-import java.security.GeneralSecurityException;
 
 /** A Reduce task. */
 class ReduceTask extends Task {
@@ -1152,14 +1151,14 @@ class ReduceTask extends Task {
       private CompressionCodec codec = null;
       private Decompressor decompressor = null;
       
-      private final byte[] shuffleJobToken;
+      private final SecretKey jobTokenSecret;
       
-      public MapOutputCopier(JobConf job, Reporter reporter, byte [] shuffleJobToken) {
+      public MapOutputCopier(JobConf job, Reporter reporter, SecretKey jobTokenSecret) {
         setName("MapOutputCopier " + reduceTask.getTaskID() + "." + id);
         LOG.debug(getName() + " created");
         this.reporter = reporter;
 
-        this.shuffleJobToken = shuffleJobToken;       	
+        this.jobTokenSecret = jobTokenSecret;
  
         shuffleConnectionTimeout =
           job.getInt("mapreduce.reduce.shuffle.connect.timeout", STALLED_COPY_TIMEOUT);
@@ -1389,9 +1388,8 @@ class ReduceTask extends Task {
         URLConnection connection = url.openConnection();
 
         // generate hash of the url
-        SecureShuffleUtils ssutil = new SecureShuffleUtils(shuffleJobToken);
         String msgToEncode = SecureShuffleUtils.buildMsgFrom(url);
-        String encHash = ssutil.hashFromString(msgToEncode);
+        String encHash = SecureShuffleUtils.hashFromString(msgToEncode, jobTokenSecret);
 
         // put url hash into http header
         connection.addRequestProperty(
@@ -1407,7 +1405,7 @@ class ReduceTask extends Task {
         }       
         LOG.debug("url="+msgToEncode+";encHash="+encHash+";replyHash="+replyHash);
         // verify that replyHash is HMac of encHash
-        ssutil.verifyReply(replyHash, encHash);
+        SecureShuffleUtils.verifyReply(replyHash, encHash, jobTokenSecret);
         LOG.info("for url="+msgToEncode+" sent hash and receievd reply");
  
         // Validate header from map output
@@ -1893,8 +1891,8 @@ class ReduceTask extends Task {
       
       // start all the copying threads
       for (int i=0; i < numCopiers; i++) {
-        MapOutputCopier copier = new MapOutputCopier(conf, reporter,
-            reduceTask.getJobTokens().getShuffleJobToken());
+        MapOutputCopier copier = new MapOutputCopier(conf, reporter, 
+            reduceTask.getJobTokenSecret());
         copiers.add(copier);
         copier.start();
       }

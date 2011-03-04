@@ -39,9 +39,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
-import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -49,6 +50,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
+import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -503,7 +505,7 @@ class JobInProgress {
     //
     // generate security keys needed by Tasks
     //
-    generateJobTokens(fs, jobtracker.getSystemDirectoryForJob(jobId));
+    generateJobToken(fs);
     
     //
     // read input splits and create a map per a split
@@ -3077,30 +3079,25 @@ class JobInProgress {
       );
     }
   }
-  
+
   /**
-   * generate keys and save it into the file
-   * @param jobDir
+   * generate job token and save it into the file
    * @throws IOException
    */
-  private void generateJobTokens(FileSystem fs, Path jobDir) throws IOException{
-    Path keysFile = new Path(jobDir, JobTokens.JOB_TOKEN_FILENAME);
+  private void generateJobToken(FileSystem fs) throws IOException {
+    Path jobDir = jobtracker.getSystemDirectoryForJob(jobId);
+    Path keysFile = new Path(jobDir, SecureShuffleUtils.JOB_TOKEN_FILENAME);
+    // we need to create this file using the jobtracker's filesystem
     FSDataOutputStream os = fs.create(keysFile);
-    //create JobTokens file and add key to it
-    JobTokens jt = new JobTokens();
-    byte [] key;
-    try {
-      // new key
-      key = SecureShuffleUtils.getNewEncodedKey();
-    } catch (java.security.GeneralSecurityException e) {
-      throw new IOException(e);
-    }
-    // remember the key 
-    jt.setShuffleJobToken(key);
-    // other keys..
-    jt.write(os);
+    //create JobToken file and write token to it
+    JobTokenIdentifier identifier = new JobTokenIdentifier(new Text(jobId
+        .toString()));
+    Token<JobTokenIdentifier> token = new Token<JobTokenIdentifier>(identifier,
+        jobtracker.getJobTokenSecretManager());
+    token.setService(identifier.getJobId());
+    token.write(os);
     os.close();
-    LOG.debug("jobTokens generated and stored in "+ keysFile.toUri().getPath());
+    LOG.debug("jobToken generated and stored in "+ keysFile.toUri().getPath());
   }
-
+  
 }

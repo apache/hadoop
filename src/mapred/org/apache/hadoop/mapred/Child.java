@@ -34,10 +34,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.JvmTask;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.security.token.Token;
 import org.apache.log4j.LogManager;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -69,7 +71,7 @@ class Child {
     // file name is passed thru env
     String jobTokenFile = System.getenv().get("JOB_TOKEN_FILE");
     FileSystem localFs = FileSystem.getLocal(defaultConf);
-    JobTokens jt = loadJobTokens(jobTokenFile, localFs);
+    Token<JobTokenIdentifier> jt = loadJobToken(jobTokenFile, localFs);
     LOG.debug("Child: got jobTokenfile=" + jobTokenFile);
 
     TaskUmbilicalProtocol umbilical =
@@ -150,7 +152,7 @@ class Child {
         JobConf job = new JobConf(task.getJobFile());
 
         // set the jobTokenFile into task
-        task.setJobTokens(jt);
+        task.setJobTokenSecret(JobTokenSecretManager.createSecretKey(jt.getPassword()));
 
         //setupWorkDir actually sets up the symlinks for the distributed
         //cache. After a task exits we wipe the workdir clean, and hence
@@ -219,16 +221,16 @@ class Child {
   }
   
   /**
-   * load secret keys from a file
+   * load job token from a file
    * @param jobTokenFile
    * @param conf
    * @throws IOException
    */
-  private static JobTokens loadJobTokens(String jobTokenFile, FileSystem localFS) 
+  private static Token<JobTokenIdentifier> loadJobToken(String jobTokenFile, FileSystem localFS) 
   throws IOException {
     Path localJobTokenFile = new Path (jobTokenFile);
     FSDataInputStream in = localFS.open(localJobTokenFile);
-    JobTokens jt = new JobTokens();
+    Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>();
     jt.readFields(in);
         
     LOG.debug("Loaded jobTokenFile from: "+localJobTokenFile.toUri().getPath());

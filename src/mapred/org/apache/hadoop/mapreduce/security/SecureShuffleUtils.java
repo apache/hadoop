@@ -22,15 +22,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 
-import javax.crypto.KeyGenerator;
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
+import javax.crypto.SecretKey;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.record.Utils;
 
 /**
@@ -41,62 +38,17 @@ import org.apache.hadoop.record.Utils;
 public class SecureShuffleUtils {
   public static final String HTTP_HEADER_URL_HASH = "UrlHash";
   public static final String HTTP_HEADER_REPLY_URL_HASH = "ReplyHash";
-  public static KeyGenerator kg = null;
-  public static String DEFAULT_ALG="HmacSHA1";
-  
-  private SecretKeySpec secretKey;
-  private Mac mac;
-  
   /**
-   * static generate keys
-   * @return new encoded key
-   * @throws NoSuchAlgorithmException
+   * file name used on HDFS for generated job token
    */
-  public static byte[] getNewEncodedKey() throws NoSuchAlgorithmException{
-    SecretKeySpec key = generateKey(DEFAULT_ALG);
-    return key.getEncoded();
-  }
-  
-  private static SecretKeySpec generateKey(String alg) throws NoSuchAlgorithmException {
-    if(kg==null) {
-      kg = KeyGenerator.getInstance(alg);
-    }
-    return (SecretKeySpec) kg.generateKey();
-  }
-
-  /**
-   * Create a util object with alg and key
-   * @param sKeyEncoded
-   * @throws NoSuchAlgorithmException
-   * @throws InvalidKeyException
-   */
-  public SecureShuffleUtils(byte [] sKeyEncoded) 
-  throws  IOException{
-    secretKey = new SecretKeySpec(sKeyEncoded, SecureShuffleUtils.DEFAULT_ALG);
-    try {
-      mac = Mac.getInstance(DEFAULT_ALG);
-      mac.init(secretKey);
-    } catch (NoSuchAlgorithmException nae) {
-      throw new IOException(nae);
-    } catch( InvalidKeyException ie) {
-      throw new IOException(ie);
-    }
-  }
-  
-  /** 
-   * get key as byte[]
-   * @return encoded key
-   */
-  public byte [] getEncodedKey() {
-    return secretKey.getEncoded();
-  }
+  public static final String JOB_TOKEN_FILENAME = "jobToken";
   
   /**
    * Base64 encoded hash of msg
    * @param msg
    */
-  public String generateHash(byte[] msg) {
-    return new String(Base64.encodeBase64(generateByteHash(msg)));
+  public static String generateHash(byte[] msg, SecretKey key) {
+    return new String(Base64.encodeBase64(generateByteHash(msg, key)));
   }
   
   /**
@@ -104,8 +56,8 @@ public class SecureShuffleUtils {
    * @param msg
    * @return
    */
-  private byte[] generateByteHash(byte[] msg) {
-    return mac.doFinal(msg);
+  private static byte[] generateByteHash(byte[] msg, SecretKey key) {
+    return JobTokenSecretManager.computeHash(msg, key);
   }
   
   /**
@@ -113,20 +65,21 @@ public class SecureShuffleUtils {
    * @param newHash
    * @return true if is the same
    */
-  private boolean verifyHash(byte[] hash, byte[] msg) {
-    byte[] msg_hash = generateByteHash(msg);
+  private static boolean verifyHash(byte[] hash, byte[] msg, SecretKey key) {
+    byte[] msg_hash = generateByteHash(msg, key);
     return Utils.compareBytes(msg_hash, 0, msg_hash.length, hash, 0, hash.length) == 0;
   }
   
   /**
    * Aux util to calculate hash of a String
    * @param enc_str
+   * @param key
    * @return Base64 encodedHash
    * @throws IOException
    */
-  public String hashFromString(String enc_str) 
+  public static String hashFromString(String enc_str, SecretKey key) 
   throws IOException {
-    return generateHash(enc_str.getBytes()); 
+    return generateHash(enc_str.getBytes(), key); 
   }
   
   /**
@@ -135,11 +88,11 @@ public class SecureShuffleUtils {
    * @param msg
    * @throws IOException if not the same
    */
-  public void verifyReply(String base64Hash, String msg)
+  public static void verifyReply(String base64Hash, String msg, SecretKey key)
   throws IOException {
     byte[] hash = Base64.decodeBase64(base64Hash.getBytes());
     
-    boolean res = verifyHash(hash, msg.getBytes());
+    boolean res = verifyHash(hash, msg.getBytes(), key);
     
     if(res != true) {
       throw new IOException("Verification of the hashReply failed");
