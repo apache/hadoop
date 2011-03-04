@@ -29,7 +29,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  */
 @KerberosInfo(
     serverPrincipal=CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY)
-public interface RefreshUserToGroupMappingsProtocol extends VersionedProtocol {
+public interface RefreshUserMappingsProtocol extends VersionedProtocol {
   
   /**
    * Version 1: Initial version.
@@ -42,4 +42,12 @@ public interface RefreshUserToGroupMappingsProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public void refreshUserToGroupsMappings(Configuration conf) throws IOException;
+  
+  /**
+   * Refresh superuser proxy group list
+   * @param conf
+   * @throws IOException
+   */
+  public void refreshSuperUserGroupsConfiguration(Configuration conf) 
+  throws IOException;
 }

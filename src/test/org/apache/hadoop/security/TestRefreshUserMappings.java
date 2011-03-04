@@ -21,6 +21,9 @@ package org.apache.hadoop.security;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,13 +33,15 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.apache.hadoop.security.GroupMappingServiceProvider;
 
-public class TestGroupMappingServiceRefresh {
+public class TestRefreshUserMappings {
   private MiniDFSCluster cluster;
   Configuration config;
   private static long groupRefreshTimeoutSec = 1;
@@ -46,7 +51,7 @@ public class TestGroupMappingServiceRefresh {
     
     @Override
     public List<String> getGroups(String user) throws IOException {
-      System.err.println("Getting groups in MockUnixGroupsMapping");
+      System.out.println("Getting groups in MockUnixGroupsMapping");
       String g1 = user + (10 * i + 1);
       String g2 = user + (10 * i + 2);
       List<String> l = new ArrayList<String>(2);
@@ -61,7 +66,7 @@ public class TestGroupMappingServiceRefresh {
   public void setUp() throws Exception {
     config = new Configuration();
     config.setClass("hadoop.security.group.mapping",
-        TestGroupMappingServiceRefresh.MockUnixGroupsMapping.class,
+        TestRefreshUserMappings.MockUnixGroupsMapping.class,
         GroupMappingServiceProvider.class);
     config.setLong("hadoop.security.groups.cache.secs", groupRefreshTimeoutSec);
     Groups.getUserToGroupsMappingService(config);
@@ -77,7 +82,7 @@ public class TestGroupMappingServiceRefresh {
       cluster.shutdown();
     }
   }
-  
+    
   @Test
   public void testGroupMappingRefresh() throws Exception {
     DFSAdmin admin = new DFSAdmin(config);
@@ -117,4 +122,80 @@ public class TestGroupMappingServiceRefresh {
       assertFalse("Should be different group ", g3.get(i).equals(g4.get(i)));
     }
   }
+  
+  @Test
+  public void testRefreshSuperUserGroupsConfiguration() throws Exception {
+    final String SUPER_USER = "super_user";
+    final String [] GROUP_NAMES1 = new String [] {"gr1" , "gr2"};
+    final String [] GROUP_NAMES2 = new String [] {"gr3" , "gr4"};
+    
+    //keys in conf
+    String userKeyGroups = ProxyUsers.getProxySuperuserGroupConfKey(SUPER_USER);
+    String userKeyHosts = ProxyUsers.getProxySuperuserIpConfKey (SUPER_USER);
+    
+    config.set(userKeyGroups, "gr3,gr4,gr5"); // superuser can proxy for this group
+    config.set(userKeyHosts,"127.0.0.1");
+    
+    UserGroupInformation ugi1 = mock(UserGroupInformation.class);
+    UserGroupInformation ugi2 = mock(UserGroupInformation.class);
+    UserGroupInformation suUgi = mock(UserGroupInformation.class);
+    when(ugi1.getRealUser()).thenReturn(suUgi);
+    when(ugi2.getRealUser()).thenReturn(suUgi);
+
+    when(suUgi.getShortUserName()).thenReturn(SUPER_USER); // super user
+    when(suUgi.getUserName()).thenReturn(SUPER_USER+"L"); // super user
+     
+    when(ugi1.getShortUserName()).thenReturn("user1");
+    when(ugi2.getShortUserName()).thenReturn("user2");
+    
+    when(ugi1.getUserName()).thenReturn("userL1");
+    when(ugi2.getUserName()).thenReturn("userL2");
+   
+    // set groups for users
+    when(ugi1.getGroupNames()).thenReturn(GROUP_NAMES1);
+    when(ugi2.getGroupNames()).thenReturn(GROUP_NAMES2);
+   
+    
+    // check before
+    try {
+      ProxyUsers.authorize(ugi1, "127.0.0.1", config);
+      fail("first auth for " + ugi1.getShortUserName() + " should've failed ");
+    } catch (AuthorizationException e) {
+      // expected
+      System.err.println("auth for " + ugi1.getUserName() + " failed");
+    }
+    try {
+      ProxyUsers.authorize(ugi2, "127.0.0.1", config);
+      System.err.println("auth for " + ugi2.getUserName() + " succeeded");
+      // expected
+    } catch (AuthorizationException e) {
+      fail("first auth for " + ugi2.getShortUserName() + " should've succeeded: " + e.getLocalizedMessage());
+    }
+    
+    DFSAdmin admin = new DFSAdmin(config);
+    String [] args = new String[]{"-refreshSuperUserGroupsConfiguration"};
+    NameNode nn = cluster.getNameNode();
+    Configuration conf = new Configuration(config);
+    conf.set(userKeyGroups, "gr2"); // superuser can proxy for this group
+    admin.setConf(conf);
+    admin.run(args);
+    
+    //check after...
+    
+    try {
+      ProxyUsers.authorize(ugi2, "127.0.0.1", config);
+      fail("second auth for " + ugi2.getShortUserName() + " should've failed ");
+    } catch (AuthorizationException e) {
+      // expected
+      System.err.println("auth for " + ugi2.getUserName() + " failed");
+    }
+    try {
+      ProxyUsers.authorize(ugi1, "127.0.0.1", config);
+      System.err.println("auth for " + ugi1.getUserName() + " succeeded");
+      // expected
+    } catch (AuthorizationException e) {
+      fail("second auth for " + ugi1.getShortUserName() + " should've succeeded: " + e.getLocalizedMessage());
+    }    
+  }
+
 }
