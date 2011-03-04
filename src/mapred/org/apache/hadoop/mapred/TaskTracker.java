@@ -42,6 +42,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
+import java.util.Map.Entry;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Pattern;
@@ -177,6 +178,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   InterTrackerProtocol jobClient;
   
   private TrackerDistributedCacheManager distributedCacheManager;
+  static int FILE_CACHE_SIZE = 2000;
     
   // last heartbeat response recieved
   short heartbeatResponseId = -1;
@@ -1233,6 +1235,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    */
   public TaskTracker(JobConf conf) throws IOException, InterruptedException {
     originalConf = conf;
+    FILE_CACHE_SIZE = conf.getInt("mapred.tasktracker.file.cache.size", 2000);
     maxMapSlots = conf.getInt(
                   "mapred.tasktracker.map.tasks.maximum", 2);
     maxReduceSlots = conf.getInt(
@@ -1280,6 +1283,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     server.start();
     this.httpPort = server.getPort();
     checkJettyPort(httpPort);
+    LOG.info("FILE_CACHE_SIZE for mapOutputServlet set to : " + FILE_CACHE_SIZE);
     mapRetainSize = conf.getLong(TaskLogsTruncater.MAP_USERLOG_RETAIN_SIZE, 
         TaskLogsTruncater.DEFAULT_RETAIN_SIZE);
     reduceRetainSize = conf.getLong(TaskLogsTruncater.REDUCE_USERLOG_RETAIN_SIZE,
@@ -3360,6 +3364,40 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       System.exit(-1);
     }
   }
+  
+  static class LRUCache<K, V> {
+    private int cacheSize;
+    private LinkedHashMap<K, V> map;
+	
+    public LRUCache(int cacheSize) {
+      this.cacheSize = cacheSize;
+      this.map = new LinkedHashMap<K, V>(cacheSize, 0.75f, true) {
+          protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
+	    return size() > LRUCache.this.cacheSize;
+	  }
+      };
+    }
+	
+    public synchronized V get(K key) {
+      return map.get(key);
+    }
+	
+    public synchronized void put(K key, V value) {
+      map.put(key, value);
+    }
+	
+    public synchronized int size() {
+      return map.size();
+    }
+	
+    public Iterator<Entry<K, V>> getIterator() {
+      return new LinkedList<Entry<K, V>>(map.entrySet()).iterator();
+    }
+   
+    public synchronized void clear() {
+      map.clear();
+    }
+  }
 
   /**
    * This class is used in TaskTracker's Jetty to serve the map outputs
@@ -3368,6 +3406,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   public static class MapOutputServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private static final int MAX_BYTES_TO_READ = 64 * 1024;
+    
+    private static LRUCache<String, Path> fileCache = new LRUCache<String, Path>(FILE_CACHE_SIZE);
+    private static LRUCache<String, Path> fileIndexCache = new LRUCache<String, Path>(FILE_CACHE_SIZE);
+    
     @Override
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
@@ -3422,16 +3464,22 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         runAsUserName = tracker.getTaskController().getRunAsUser(rjob.jobConf);
       }
       // Index file
-      Path indexFileName =
-          lDirAlloc.getLocalPathToRead(TaskTracker.getIntermediateOutputDir(
-              userName, jobId, mapId)
-              + "/file.out.index", conf);
+      String intermediateOutputDir = TaskTracker.getIntermediateOutputDir(userName, jobId, mapId);
+      String indexKey = intermediateOutputDir + "/file.out.index";
+      Path indexFileName = fileIndexCache.get(indexKey);
+      if (indexFileName == null) {
+        indexFileName = lDirAlloc.getLocalPathToRead(indexKey, conf);
+        fileIndexCache.put(indexKey, indexFileName);
+      }
 
       // Map-output file
-      Path mapOutputFileName =
-          lDirAlloc.getLocalPathToRead(TaskTracker.getIntermediateOutputDir(
-              userName, jobId, mapId)
-              + "/file.out", conf);
+      String fileKey = intermediateOutputDir + "/file.out";
+      Path mapOutputFileName = fileCache.get(fileKey);
+      if (mapOutputFileName == null) {
+        mapOutputFileName = lDirAlloc.getLocalPathToRead(fileKey, conf);
+        fileCache.put(fileKey, mapOutputFileName);
+      }
+       
 
         /**
          * Read the index file to get the information about where
@@ -3489,10 +3537,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           len =
             mapOutputIn.read(buffer, 0, (int)Math.min(rem, MAX_BYTES_TO_READ));
         }
-
-        LOG.info("Sent out " + totalRead + " bytes for reduce: " + reduce + 
+        
+        if (LOG.isDebugEnabled()) {
+          LOG.info("Sent out " + totalRead + " bytes for reduce: " + reduce + 
                  " from map: " + mapId + " given " + info.partLength + "/" + 
                  info.rawLength);
+        }
       } catch (IOException ie) {
         Log log = (Log) context.getAttribute("log");
         String errorMsg = ("getMapOutput(" + mapId + "," + reduceId + 
