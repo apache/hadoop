@@ -160,6 +160,7 @@ public class DelegationTokenRenewal {
       } catch (AccessControlException ioe) {
         LOG.warn("failed to renew token:"+token, ioe);
         removeFailedDelegationToken(dttr);
+        throw new IOException("failed to renew token", ioe);
       } catch (Exception e) {
         LOG.warn("failed to renew token:"+token, e);
         // returns default expiration date
