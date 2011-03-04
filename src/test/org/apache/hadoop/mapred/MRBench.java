@@ -161,7 +161,8 @@ public class MRBench extends Configured implements Tool{
     
     jobConf.setNumMapTasks(numMaps);
     jobConf.setNumReduceTasks(numReduces);
-    
+    jobConf
+        .setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
     return jobConf; 
   }
   
