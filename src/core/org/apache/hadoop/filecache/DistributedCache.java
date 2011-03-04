@@ -428,7 +428,8 @@ public class DistributedCache {
       
       // do chmod here 
       try {
-    	FileUtil.chmod(parchive.toString(), "+x");
+        //Setting recursive permission to grant everyone read and execute
+        FileUtil.chmod(cacheStatus.baseDir.toString(), "ugo+rx",true);
       } catch(InterruptedException e) {
     	LOG.warn("Exception in chmod" + e.toString());
       }

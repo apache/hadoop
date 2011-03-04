@@ -448,13 +448,28 @@ public class TaskLog {
                                                 long tailLength,
                                                 String pidFileName
                                                ) throws IOException {
-    String stdout = FileUtil.makeShellPath(stdoutFilename);
-    String stderr = FileUtil.makeShellPath(stderrFilename);
     List<String> result = new ArrayList<String>(3);
     result.add(bashCommand);
     result.add("-c");
-    StringBuffer mergedCmd = new StringBuffer();
+    String mergedCmd = buildCommandLine(setup, cmd,
+        stdoutFilename,
+        stderrFilename, tailLength,
+        pidFileName);
+    result.add(mergedCmd.toString());
+    return result;
+  }
+  
+  
+  static String buildCommandLine(List<String> setup,
+      List<String> cmd, 
+      File stdoutFilename,
+      File stderrFilename,
+      long tailLength, 
+      String pidFileName) throws IOException {
     
+    String stdout = FileUtil.makeShellPath(stdoutFilename);
+    String stderr = FileUtil.makeShellPath(stderrFilename);
+    StringBuffer mergedCmd = new StringBuffer();
     // Spit out the pid to pidFileName
     if (pidFileName != null) {
       mergedCmd.append("echo $$ > ");
@@ -493,8 +508,7 @@ public class TaskLog {
       mergedCmd.append(" 2>> ");
       mergedCmd.append(stderr);
     }
-    result.add(mergedCmd.toString());
-    return result;
+    return mergedCmd.toString();
   }
 
   /**
@@ -561,6 +575,10 @@ public class TaskLog {
     mergedCmd.append(" 2>&1 ");
     result.add(mergedCmd.toString());
     return result;
+  }
+  
+  public static File getUserLogDir() {  
+    return LOG_DIR;
   }
   
 } // TaskLog

@@ -1,10 +1,11 @@
 <?xml version="1.0"?>
 <!--
-  Copyright 2002-2004 The Apache Software Foundation
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
 
       http://www.apache.org/licenses/LICENSE-2.0
 
@@ -460,6 +461,122 @@
                 </table>
               </li>
             </ul>
+          </section>
+          
+          <section>
+            <title>Task Controllers</title>
+            <p>Task controllers are classes in the Hadoop Map/Reduce 
+            framework that define how user's map and reduce tasks 
+            are launched and controlled. They can 
+            be used in clusters that require some customization in 
+            the process of launching or controlling the user tasks.
+            For example, in some 
+            clusters, there may be a requirement to run tasks as 
+            the user who submitted the job, instead of as the task 
+            tracker user, which is how tasks are launched by default.
+            This section describes how to configure and use 
+            task controllers.</p>
+            <p>The following task controllers are the available in
+            Hadoop.
+            </p>
+            <table>
+            <tr><th>Name</th><th>Class Name</th><th>Description</th></tr>
+            <tr>
+            <td>DefaultTaskController</td>
+            <td>org.apache.hadoop.mapred.DefaultTaskController</td>
+            <td> The default task controller which Hadoop uses to manage task
+            execution. The tasks run as the task tracker user.</td>
+            </tr>
+            <tr>
+            <td>LinuxTaskController</td>
+            <td>org.apache.hadoop.mapred.LinuxTaskController</td>
+            <td>This task controller, which is supported only on Linux, 
+            runs the tasks as the user who submitted the job. It requires
+            these user accounts to be created on the cluster nodes 
+            where the tasks are launched. It 
+            uses a setuid executable that is included in the Hadoop
+            distribution. The task tracker uses this executable to 
+            launch and kill tasks. The setuid executable switches to
+            the user who has submitted the job and launches or kills
+            the tasks. Currently, this task controller 
+            opens up permissions to local files and directories used 
+            by the tasks such as the job jar files, distributed archive 
+            files, intermediate files and task log files. In future,
+            it is expected that stricter file permissions are used.
+            </td>
+            </tr>
+            </table>
+            <section>
+            <title>Configuring Task Controllers</title>
+            <p>The task controller to be used can be configured by setting the
+            value of the following key in mapred-site.xml</p>
+            <table>
+            <tr>
+            <th>Property</th><th>Value</th><th>Notes</th>
+            </tr>
+            <tr>
+            <td>mapred.task.tracker.task-controller</td>
+            <td>Fully qualified class name of the task controller class</td>
+            <td>Currently there are two implementations of task controller
+            in the Hadoop system, DefaultTaskController and LinuxTaskController.
+            Refer to the class names mentioned above to determine the value
+            to set for the class of choice.
+            </td>
+            </tr>
+            </table>
+            </section>
+            <section>
+            <title>Using the LinuxTaskController</title>
+            <p>This section of the document describes the steps required to
+            use the LinuxTaskController.</p>
+            
+            <p>In order to use the LinuxTaskController, a setuid executable
+            should be built and deployed on the compute nodes. The
+            executable is named task-controller. To build the executable, 
+            execute 
+            <em>ant task-controller -Dhadoop.conf.dir=/path/to/conf/dir.
+            </em>
+            The path passed in <em>-Dhadoop.conf.dir</em> should be the path
+            on the cluster nodes where a configuration file for the setuid
+            executable would be located. The executable would be built to
+            <em>build.dir/dist.dir/bin</em> and should be installed to 
+            <em>$HADOOP_HOME/bin</em>.
+            </p>
+            
+            <p>
+            The executable must be deployed as a setuid executable, by changing
+            the ownership to <em>root</em> and giving it permissions <em>4755</em>. 
+            </p>
+            
+            <p>The executable requires a configuration file called 
+            <em>taskcontroller.cfg</em> to be
+            present in the configuration directory passed to the ant target 
+            mentioned above. If the binary was not built with a specific 
+            conf directory, the path defaults to <em>/path-to-binary/../conf</em>.
+            </p>
+            
+            <p>The executable requires following configuration items to be 
+            present in the <em>taskcontroller.cfg</em> file. The items should
+            be mentioned as simple <em>key=value</em> pairs.
+            </p>
+            <table><tr><th>Name</th><th>Description</th></tr>
+            <tr>
+            <td>mapred.local.dir</td>
+            <td>Path to mapred local directories. Should be same as the value 
+            which was provided to key in mapred-site.xml. This is required to
+            validate paths passed to the setuid executable in order to prevent
+            arbitrary paths being passed to it.</td>
+            </tr>
+            </table>
+
+            <p>
+            The LinuxTaskController requires that paths leading up to
+            the directories specified in
+            <em>mapred.local.dir</em> and <em>hadoop.log.dir</em> to be 755
+            and directories themselves having 777 permissions.
+            </p>
+            </section>
+            
           </section>
           
         </section>

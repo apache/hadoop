@@ -27,6 +27,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.mortbay.log.Log;
 
 /**
  * A collection of file-processing util methods
@@ -692,11 +693,41 @@ public class FileUtil {
    */
   public static int chmod(String filename, String perm
                           ) throws IOException, InterruptedException {
-    String cmd = "chmod " + perm + " " + filename;
-    Process p = Runtime.getRuntime().exec(cmd, null);
-    return p.waitFor();
+    return chmod(filename, perm, false);
   }
 
+  /**
+   * Change the permissions on a file / directory, recursively, if
+   * needed.
+   * @param filename name of the file whose permissions are to change
+   * @param perm permission string
+   * @param recursive true, if permissions should be changed recursively
+   * @return the exit code from the command.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public static int chmod(String filename, String perm, boolean recursive)
+                            throws IOException, InterruptedException {
+    StringBuffer cmdBuf = new StringBuffer();
+    cmdBuf.append("chmod ");
+    if (recursive) {
+      cmdBuf.append("-R ");
+    }
+    cmdBuf.append(perm).append(" ");
+    cmdBuf.append(filename);
+    String[] shellCmd = {"bash", "-c" ,cmdBuf.toString()};
+    ShellCommandExecutor shExec = new ShellCommandExecutor(shellCmd);
+    try {
+      shExec.execute();
+    }catch(IOException e) {
+      if(Log.isDebugEnabled()) {
+        Log.debug("Error while changing permission : " + filename 
+            +" Exception: " + StringUtils.stringifyException(e));
+      }
+    }
+    return shExec.getExitCode();
+  }
+  
   /**
    * Create a tmp file for a base file.
    * @param basefile the base file of the tmp

@@ -870,4 +870,11 @@
   </description>
 </property>
 
+<property>
+  <name>mapred.task.tracker.task-controller</name>
+  <value>org.apache.hadoop.mapred.DefaultTaskController</value>
+  <description>TaskController which is used to launch and manage task execution 
+  </description>
+</property>
+
 </configuration>
