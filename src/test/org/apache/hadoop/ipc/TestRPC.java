@@ -33,6 +33,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
 
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.spi.NullContext;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -246,7 +249,26 @@ public class TestRPC extends TestCase {
 
     stringResult = proxy.echo((String)null);
     assertEquals(stringResult, null);
-
+    
+    // Check rpcMetrics 
+    server.rpcMetrics.doUpdates(new NullContext());
+    
+    // Number 4 includes getProtocolVersion()
+    assertEquals(4, server.rpcMetrics.rpcProcessingTime.getPreviousIntervalNumOps());
+    assertTrue(server.rpcMetrics.sentBytes.getPreviousIntervalValue() > 0);
+    assertTrue(server.rpcMetrics.receivedBytes.getPreviousIntervalValue() > 0);
+    
+    // Number of calls to echo method should be 2
+    server.rpcDetailedMetrics.doUpdates(new NullContext());
+    MetricsTimeVaryingRate metrics = 
+      (MetricsTimeVaryingRate)server.rpcDetailedMetrics.registry.get("echo");
+    assertEquals(2, metrics.getPreviousIntervalNumOps());
+    
+    // Number of calls to ping method should be 1
+    metrics = 
+      (MetricsTimeVaryingRate)server.rpcDetailedMetrics.registry.get("ping");
+    assertEquals(1, metrics.getPreviousIntervalNumOps());
+    
     String[] stringResults = proxy.echo(new String[]{"foo","bar"});
     assertTrue(Arrays.equals(stringResults, new String[]{"foo","bar"}));
 

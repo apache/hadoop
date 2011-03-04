@@ -61,6 +61,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -171,7 +172,8 @@ public abstract class Server {
                                                   // connections to nuke
                                                   //during a cleanup
   
-  protected RpcMetrics  rpcMetrics;
+  protected RpcMetrics rpcMetrics;
+  protected RpcDetailedMetrics rpcDetailedMetrics;
   
   private Configuration conf;
   private SecretManager<TokenIdentifier> secretManager;
@@ -1302,6 +1304,8 @@ public abstract class Server {
     this.port = listener.getAddress().getPort();    
     this.rpcMetrics = new RpcMetrics(serverName,
                           Integer.toString(this.port), this);
+    this.rpcDetailedMetrics = new RpcDetailedMetrics(serverName,
+                            Integer.toString(this.port));
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
 
 
@@ -1411,6 +1415,9 @@ public abstract class Server {
     if (this.rpcMetrics != null) {
       this.rpcMetrics.shutdown();
     }
+    if (this.rpcDetailedMetrics != null) {
+      this.rpcDetailedMetrics.shutdown();
+    }
   }
 
   /** Wait for the server to be stopped.
@@ -1501,11 +1508,15 @@ public abstract class Server {
    *
    * @see WritableByteChannel#write(ByteBuffer)
    */
-  private static int channelWrite(WritableByteChannel channel, 
-                                  ByteBuffer buffer) throws IOException {
+  private int channelWrite(WritableByteChannel channel, 
+                           ByteBuffer buffer) throws IOException {
     
-    return (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
-           channel.write(buffer) : channelIO(null, channel, buffer);
+    int count =  (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
+                 channel.write(buffer) : channelIO(null, channel, buffer);
+    if (count > 0) {
+      rpcMetrics.sentBytes.inc(count);
+    }
+    return count;
   }
   
   
@@ -1517,11 +1528,15 @@ public abstract class Server {
    * 
    * @see ReadableByteChannel#read(ByteBuffer)
    */
-  private static int channelRead(ReadableByteChannel channel, 
-                                 ByteBuffer buffer) throws IOException {
+  private int channelRead(ReadableByteChannel channel, 
+                          ByteBuffer buffer) throws IOException {
     
-    return (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
-           channel.read(buffer) : channelIO(channel, null, buffer);
+    int count = (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
+                channel.read(buffer) : channelIO(channel, null, buffer);
+    if (count > 0) {
+      rpcMetrics.receivedBytes.inc(count);
+    }
+    return count;
   }
   
   /**

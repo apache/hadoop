@@ -28,6 +28,7 @@ import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsIntValue;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 /**
@@ -43,13 +44,14 @@ import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
  *
  */
 public class RpcMetrics implements Updater {
-  public MetricsRegistry registry = new MetricsRegistry();
-  private MetricsRecord metricsRecord;
-  private Server myServer;
-  private static Log LOG = LogFactory.getLog(RpcMetrics.class);
+  private final MetricsRegistry registry = new MetricsRegistry();
+  private final MetricsRecord metricsRecord;
+  private final Server myServer;
+  private static final Log LOG = LogFactory.getLog(RpcMetrics.class);
   RpcActivityMBean rpcMBean;
   
-  public RpcMetrics(String hostName, String port, Server server) {
+  public RpcMetrics(final String hostName, final String port,
+      final Server server) {
     myServer = server;
     MetricsContext context = MetricsUtil.getContext("rpc");
     metricsRecord = MetricsUtil.createRecord(context, "metrics");
@@ -72,26 +74,30 @@ public class RpcMetrics implements Updater {
    *  -they can also be read directly - e.g. JMX does this.
    */
 
-  public MetricsTimeVaryingRate rpcQueueTime =
+  public final MetricsTimeVaryingLong receivedBytes = 
+         new MetricsTimeVaryingLong("ReceivedBytes", registry);
+  public final MetricsTimeVaryingLong sentBytes = 
+         new MetricsTimeVaryingLong("SentBytes", registry);
+  public final MetricsTimeVaryingRate rpcQueueTime =
           new MetricsTimeVaryingRate("RpcQueueTime", registry);
   public MetricsTimeVaryingRate rpcProcessingTime =
           new MetricsTimeVaryingRate("RpcProcessingTime", registry);
-  public MetricsIntValue numOpenConnections = 
+  public final MetricsIntValue numOpenConnections = 
           new MetricsIntValue("NumOpenConnections", registry);
-  public MetricsIntValue callQueueLen = 
+  public final MetricsIntValue callQueueLen = 
           new MetricsIntValue("callQueueLen", registry);
-  public MetricsTimeVaryingInt authenticationFailures = 
+  public final MetricsTimeVaryingInt authenticationFailures = 
           new MetricsTimeVaryingInt("rpcAuthenticationFailures", registry);
-  public MetricsTimeVaryingInt authenticationSuccesses = 
+  public final MetricsTimeVaryingInt authenticationSuccesses = 
           new MetricsTimeVaryingInt("rpcAuthenticationSuccesses", registry);
-  public MetricsTimeVaryingInt authorizationFailures = 
+  public final MetricsTimeVaryingInt authorizationFailures = 
           new MetricsTimeVaryingInt("rpcAuthorizationFailures", registry);
-  public MetricsTimeVaryingInt authorizationSuccesses = 
+  public final MetricsTimeVaryingInt authorizationSuccesses = 
          new MetricsTimeVaryingInt("rpcAuthorizationSuccesses", registry);
   /**
    * Push the metrics to the monitoring subsystem on doUpdate() call.
    */
-  public void doUpdates(MetricsContext context) {
+  public void doUpdates(final MetricsContext context) {
     
     synchronized (this) {
       // ToFix - fix server to use the following two metrics directly so
