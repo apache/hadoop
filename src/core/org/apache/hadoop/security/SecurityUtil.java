@@ -212,7 +212,13 @@ public class SecurityUtil {
     // for whatever reason using NetUtils.createSocketAddr(target).toString()
     // returns "localhost/ip:port"
     StringBuffer sb = new StringBuffer();
-    sb.append(NetUtils.normalizeHostName(uri.getHost())).append(":").append(port);
+    String host = uri.getHost();
+    if (host != null) {
+      host = NetUtils.normalizeHostName(host);
+    } else {
+      host = "";
+    }
+    sb.append(host).append(":").append(port);
     return sb.toString();
   }
   
