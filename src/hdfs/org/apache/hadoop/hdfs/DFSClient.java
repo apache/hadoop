@@ -29,6 +29,7 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.*;
+import org.apache.hadoop.hdfs.protocol.DataTransferProtocol.PipelineAck;
 import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -2535,14 +2536,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       public void run() {
 
         this.setName("ResponseProcessor for block " + block);
+        PipelineAck ack = new PipelineAck();
   
         while (!closed && clientRunning && !lastPacketInBlock) {
           // process responses from datanodes.
           try {
-            // verify seqno from datanode
-            long seqno = blockReplyStream.readLong();
-            LOG.debug("DFSClient received ack for seqno " + seqno);
-            if (seqno == -1) {
+            // read an ack from the pipeline
+            ack.readFields(blockReplyStream);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("DFSClient " + ack);
+            }
+            long seqno = ack.getSeqno();
+            if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
               continue;
             } else if (seqno == -2) {
               // no nothing
@@ -2560,8 +2565,8 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             }
 
             // processes response status from all datanodes.
-            for (int i = 0; i < targets.length && clientRunning; i++) {
-              short reply = blockReplyStream.readShort();
+            for (int i = ack.getNumOfReplies()-1; i >=0  && clientRunning; i--) {
+              short reply = ack.getReply(i);
               if (reply != DataTransferProtocol.OP_STATUS_SUCCESS) {
                 errorIndex = i; // first bad datanode
                 throw new IOException("Bad response " + reply +

@@ -256,9 +256,9 @@ public class TestDataTransferProtocol extends TestCase {
     sendOut.writeInt(0);           // zero checksum
     //ok finally write a block with 0 len
     recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_SUCCESS);
-    Text.writeString(recvOut, ""); // first bad node
-    recvOut.writeLong(100);        // sequencenumber
-    recvOut.writeShort((short)DataTransferProtocol.OP_STATUS_SUCCESS);
+    Text.writeString(recvOut, "");
+    new DataTransferProtocol.PipelineAck(100, 
+        new short[]{DataTransferProtocol.OP_STATUS_SUCCESS}).write(recvOut);
     sendRecvData("Writing a zero len block blockid " + newBlockId, false);
     
     /* Test OP_READ_BLOCK */

@@ -13,6 +13,10 @@ Release 0.20.2 - Unreleased
     HDFS-927. DFSInputStream retries too many times for new block locations
     (Todd Lipcon via Stack)
 
+    HDFS-793. DataNode should first receive the whole packet ack message
+    before it constructs and sends its own ack message for the packet.
+    (hairong)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
