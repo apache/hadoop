@@ -25,7 +25,7 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.FileUtil.HardLink;
+import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.io.IOUtils;
 
 /**
