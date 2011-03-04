@@ -380,7 +380,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       RunningJob rJob = null;
       if (!runningJobs.containsKey(jobId)) {
         rJob = new RunningJob(jobId);
-        rJob.localized = false;
         rJob.tasks = new HashSet<TaskInProgress>();
         runningJobs.put(jobId, rJob);
       } else {
@@ -768,6 +767,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       List <FetchStatus> fList = new ArrayList<FetchStatus>();
       for (Map.Entry <JobID, RunningJob> item : runningJobs.entrySet()) {
         RunningJob rjob = item.getValue();
+        if (!rjob.localized) {
+          continue;
+        }
         JobID jobId = item.getKey();
         FetchStatus f;
         synchronized (rjob) {
@@ -3157,7 +3159,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     private Path localizedJobConf;
     // keep this for later use
     volatile Set<TaskInProgress> tasks;
-    boolean localized;
+    volatile boolean localized;
     boolean keepJobFiles;
     UserGroupInformation ugi;
     FetchStatus f;
