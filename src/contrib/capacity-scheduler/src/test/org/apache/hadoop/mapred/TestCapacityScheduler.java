@@ -338,7 +338,8 @@ public class TestCapacityScheduler extends TestCase {
     
     FakeTaskInProgress(JobID jId, JobConf jobConf, Task t, 
         boolean isMap, FakeJobInProgress job) {
-      super(jId, "", JobSplit.EMPTY_TASK_SPLIT, null, jobConf, job, 0, 1);
+      super(jId, "", JobSplit.EMPTY_TASK_SPLIT, job.jobtracker, jobConf, job, 
+            0, 1);
       this.isMap = isMap;
       this.fakeJob = job;
       activeTasks = new TreeMap<TaskAttemptID, String>();

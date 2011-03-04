@@ -48,7 +48,7 @@ public class TestResourceEstimation extends TestCase {
       JobSplit.TaskSplitMetaInfo split =
           new JobSplit.TaskSplitMetaInfo(new String[0], 0, 0);
       TaskInProgress tip = 
-        new TaskInProgress(jid, "", split, null, jc, jip, 0, 1);
+        new TaskInProgress(jid, "", split, jip.jobtracker, jc, jip, 0, 1);
       re.updateWithCompletedTask(ts, tip);
     }
     assertEquals(2* singleMapOutputSize, re.getEstimatedMapOutputSize());
@@ -86,7 +86,7 @@ public class TestResourceEstimation extends TestCase {
               new JobSplit.TaskSplitMetaInfo(new String[0], 0,
                                            singleMapInputSize);
       TaskInProgress tip = 
-        new TaskInProgress(jid, "", split, null, jc, jip, 0, 1);
+        new TaskInProgress(jid, "", split, jip.jobtracker, jc, jip, 0, 1);
       re.updateWithCompletedTask(ts, tip);
     }
     
@@ -99,7 +99,7 @@ public class TestResourceEstimation extends TestCase {
     JobSplit.TaskSplitMetaInfo split =
         new JobSplit.TaskSplitMetaInfo(new String[0], 0, 0);
     TaskInProgress tip = 
-      new TaskInProgress(jid, "", split, null, jc, jip, 0, 1);
+      new TaskInProgress(jid, "", split, jip.jobtracker, jc, jip, 0, 1);
     re.updateWithCompletedTask(ts, tip);
     
     long expectedTotalMapOutSize = (singleMapOutputSize*11) * 

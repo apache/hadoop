@@ -89,4 +89,16 @@
        <Class name="org.apache.hadoop.mapred.FileOutputCommitter" />
        <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
      </Match>
+    <!--
+       JobTracker's static variables should be ignored
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.JobTracker" />
+       <Or>
+       <Field name="RETIRE_JOB_INTERVAL" />
+       <Field name="TASKTRACKER_EXPIRY_INTERVAL" />
+       <Field name="RETIRE_JOB_CHECK_INTERVAL" />
+       </Or>
+       <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD" />
+     </Match>
 </FindBugsFilter>
