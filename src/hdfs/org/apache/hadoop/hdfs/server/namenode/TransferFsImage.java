@@ -24,14 +24,17 @@ import java.util.Map;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode.ErrorSimulator;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * This class provides fetching a specified file from the NameNode.
  */
 class TransferFsImage implements FSConstants {
-  
+  private static final Log LOG = LogFactory.getLog(TransferFsImage.class);
   private boolean isGetImage;
   private boolean isGetEdit;
   private boolean isPutImage;
@@ -140,7 +143,9 @@ class TransferFsImage implements FSConstants {
   static void getFileClient(String fsName, String id, File[] localPath)
     throws IOException {
     byte[] buf = new byte[BUFFER_SIZE];
-    StringBuffer str = new StringBuffer("http://"+fsName+"/getimage?");
+    String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
+    
+    StringBuffer str = new StringBuffer(proto+fsName+"/getimage?");
     str.append(id);
 
     //
