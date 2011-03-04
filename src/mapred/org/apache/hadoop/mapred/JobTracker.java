@@ -401,16 +401,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                   // tracker has already been destroyed.
                   if (newProfile != null) {
                     if ((now - newProfile.getLastSeen()) > TASKTRACKER_EXPIRY_INTERVAL) {
-                      // Remove completely after marking the tasks as 'KILLED'
-                      lostTaskTracker(current);
-                      // tracker is lost, and if it is blacklisted, remove 
-                      // it from the count of blacklisted trackers in the cluster
-                      if (isBlacklisted(trackerName)) {
-                    	  faultyTrackers.decrBlackListedTrackers(1);
-                      }
-                      updateTaskTrackerStatus(trackerName, null);
-                      statistics.taskTrackerRemoved(trackerName);
-                      getInstrumentation().decTrackers(1);
+                      removeTracker(current);
                       // remove the mapping from the hosts list
                       String hostname = newProfile.getHost();
                       hostnameToTaskTracker.get(hostname).remove(trackerName);
@@ -877,17 +868,20 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     private void removeHostCapacity(String hostName) {
       synchronized (taskTrackers) {
         // remove the capacity of trackers on this host
+        int numTrackersOnHost = 0;
         for (TaskTrackerStatus status : getStatusesOnHost(hostName)) {
           int mapSlots = status.getMaxMapSlots();
           totalMapTaskCapacity -= mapSlots;
           int reduceSlots = status.getMaxReduceSlots();
           totalReduceTaskCapacity -= reduceSlots;
+          ++numTrackersOnHost;
           getInstrumentation().addBlackListedMapSlots(
               mapSlots);
           getInstrumentation().addBlackListedReduceSlots(
               reduceSlots);
         }
-        incrBlackListedTrackers(uniqueHostsMap.remove(hostName));
+        uniqueHostsMap.remove(hostName);
+        incrBlackListedTrackers(numTrackersOnHost);
       }
     }
     
@@ -3095,12 +3089,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         taskTrackers.remove(trackerName);
         Integer numTaskTrackersInHost = 
           uniqueHostsMap.get(oldStatus.getHost());
-        numTaskTrackersInHost --;
-        if (numTaskTrackersInHost > 0)  {
-          uniqueHostsMap.put(oldStatus.getHost(), numTaskTrackersInHost);
-        }
-        else {
-          uniqueHostsMap.remove(oldStatus.getHost());
+        if (numTaskTrackersInHost != null) {
+          numTaskTrackersInHost --;
+          if (numTaskTrackersInHost > 0)  {
+            uniqueHostsMap.put(oldStatus.getHost(), numTaskTrackersInHost);
+          }
+          else {
+            uniqueHostsMap.remove(oldStatus.getHost());
+          }
         }
       }
     }
@@ -4291,6 +4287,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     decommissionNodes(excludeSet);
   }
 
+  // Remove a tracker from the system
+  private void removeTracker(TaskTracker tracker) {
+    String trackerName = tracker.getTrackerName();
+    // Remove completely after marking the tasks as 'KILLED'
+    lostTaskTracker(tracker);
+    // tracker is lost, and if it is blacklisted, remove 
+    // it from the count of blacklisted trackers in the cluster
+    if (isBlacklisted(trackerName)) {
+     faultyTrackers.decrBlackListedTrackers(1);
+    }
+    updateTaskTrackerStatus(trackerName, null);
+    statistics.taskTrackerRemoved(trackerName);
+    getInstrumentation().decTrackers(1);
+  }
+  
   // main decommission
   synchronized void decommissionNodes(Set<String> hosts) 
   throws IOException {  
@@ -4304,11 +4315,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           Set<TaskTracker> trackers = hostnameToTaskTracker.remove(host);
           if (trackers != null) {
             for (TaskTracker tracker : trackers) {
-              LOG.info("Decommission: Losing tracker " + tracker + 
+              LOG.info("Decommission: Losing tracker " + tracker.getTrackerName() + 
                        " on host " + host);
-              lostTaskTracker(tracker); // lose the tracker
-              updateTaskTrackerStatus(
-                tracker.getStatus().getTrackerName(), null);
+              removeTracker(tracker);
             }
             trackersDecommissioned += trackers.size();
           }
