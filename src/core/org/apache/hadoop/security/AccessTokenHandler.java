@@ -60,7 +60,7 @@ public class AccessTokenHandler {
    * sync'ed their access keys with NN at least once during each interval.
    */
   private final long keyUpdateInterval;
-  private final long tokenLifetime;
+  private long tokenLifetime;
   private long serialNo = new SecureRandom().nextLong();
   private KeyGenerator keyGen;
   private AccessKey currentKey;
@@ -203,7 +203,7 @@ public class AccessTokenHandler {
   }
 
   /** Check if token is well formed */
-  private synchronized Boolean verifyToken(long keyID, AccessToken token)
+  private synchronized boolean verifyToken(long keyID, AccessToken token)
       throws IOException {
     AccessKey key = allKeys.get(keyID);
     if (key == null) {
@@ -252,7 +252,7 @@ public class AccessTokenHandler {
   }
 
   /** Check if access should be allowed. userID is not checked if null */
-  public Boolean checkAccess(AccessToken token, String userID, long blockID,
+  public boolean checkAccess(AccessToken token, String userID, long blockID,
       AccessMode mode) throws IOException {
     long oExpiry = 0;
     long oKeyID = 0;
@@ -282,8 +282,26 @@ public class AccessTokenHandler {
           + blockID + ", access mode=" + mode + ", keyID=" + oKeyID);
     }
     return (userID == null || userID.equals(oUserID)) && oBlockID == blockID
-        && System.currentTimeMillis() < oExpiry && oModes.contains(mode)
+        && !isExpired(oExpiry) && oModes.contains(mode)
         && verifyToken(oKeyID, token);
   }
 
+  private static boolean isExpired(long expiryDate) {
+    return System.currentTimeMillis() > expiryDate;
+  }
+
+  /** check if a token is expired. for unit test only.
+   *  return true when token is expired, false otherwise */
+  static boolean isTokenExpired(AccessToken token) throws IOException {
+    ByteArrayInputStream buf = new ByteArrayInputStream(token.getTokenID()
+        .getBytes());
+    DataInputStream in = new DataInputStream(buf);
+    long expiryDate = WritableUtils.readVLong(in);
+    return isExpired(expiryDate);
+  }
+
+  /** set token lifetime. for unit test only */
+  synchronized void setTokenLifetime(long tokenLifetime) {
+    this.tokenLifetime = tokenLifetime;
+  }
 }
