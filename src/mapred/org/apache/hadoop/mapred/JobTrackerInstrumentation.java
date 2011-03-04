@@ -66,4 +66,22 @@ class JobTrackerInstrumentation {
   
   public void decWaitingReduces(JobID id, int task)
   { }
+
+  public void setMapSlots(int slots)
+  { }
+
+  public void setReduceSlots(int slots)
+  { }
+
+  public void addBlackListedMapSlots(int slots)
+  { }
+
+  public void decBlackListedMapSlots(int slots)
+  { }
+
+  public void addBlackListedReduceSlots(int slots)
+  { }
+
+  public void decBlackListedReduceSlots(int slots)
+  { }
 }
