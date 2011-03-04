@@ -152,6 +152,10 @@ public class MapReduceTestUtil {
   public static Job createFailJob(Configuration conf, Path outdir, 
       Path... indirs) throws Exception {
 
+    FileSystem fs = outdir.getFileSystem(conf);
+    if (fs.exists(outdir)) {
+      fs.delete(outdir, true);
+    }
     conf.setInt("mapred.map.max.attempts", 2);
     Job theJob = new Job(conf);
     theJob.setJobName("Fail-Job");

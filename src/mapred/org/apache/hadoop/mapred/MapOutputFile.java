@@ -26,6 +26,12 @@ import org.apache.hadoop.fs.Path;
 
 /**
  * Manipulate the working area for the transient store for maps and reduces.
+ * 
+ * This class is used by map and reduce tasks to identify the directories that
+ * they need to write to/read from for intermediate files. The callers of 
+ * these methods are from child space and see mapreduce.cluster.local.dir as 
+ * taskTracker/jobCache/jobId/attemptId
+ * This class should not be used from TaskTracker space.
  */ 
 class MapOutputFile {
 

@@ -54,7 +54,7 @@ public abstract class TaskStatus implements Writable, Cloneable {
     
   private long startTime; 
   private long finishTime; 
-  private long outputSize;
+  private long outputSize = -1L;
     
   private volatile Phase phase = Phase.STARTING; 
   private Counters counters;

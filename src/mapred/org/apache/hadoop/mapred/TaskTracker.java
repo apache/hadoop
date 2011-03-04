@@ -1948,44 +1948,6 @@ public class TaskTracker
     return biggestSeenSoFar;
   }
     
-  /**
-   * Try to get the size of output for this task.
-   * Returns -1 if it can't be found.
-   * @return
-   */
-  long tryToGetOutputSize(TaskAttemptID taskId, JobConf conf) {
-    
-    try{
-      TaskInProgress tip;
-      synchronized(this) {
-        tip = tasks.get(taskId);
-      }
-      if(tip == null)
-         return -1;
-      
-      if (!tip.getTask().isMapTask() || 
-          tip.getRunState() != TaskStatus.State.SUCCEEDED) {
-        return -1;
-      }
-      
-      MapOutputFile mapOutputFile = new MapOutputFile();
-      mapOutputFile.setConf(conf);
-      
-      Path tmp_output =  mapOutputFile.getOutputFile();
-      if(tmp_output == null)
-        return 0;
-      FileSystem localFS = FileSystem.getLocal(conf);
-      FileStatus stat = localFS.getFileStatus(tmp_output);
-      if(stat == null)
-        return 0;
-      else
-        return stat.getLen();
-    } catch(IOException e) {
-      LOG.info(e);
-      return -1;
-    }
-  }
-
   private TaskLauncher mapLauncher;
   private TaskLauncher reduceLauncher;
   public JvmManager getJvmManagerInstance() {
@@ -3268,7 +3230,6 @@ public class TaskTracker
     for(TaskInProgress tip: runningTasks.values()) {
       TaskStatus status = tip.getStatus();
       status.setIncludeCounters(sendCounters);
-      status.setOutputSize(tryToGetOutputSize(status.getTaskID(), fConf));
       // send counters for finished or failed tasks and commit pending tasks
       if (status.getRunState() != TaskStatus.State.RUNNING) {
         status.setIncludeCounters(true);
