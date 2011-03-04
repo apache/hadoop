@@ -893,21 +893,26 @@ public class DataNode extends Configured
           }
         }
 
-        // send block report
+        // Send latest blockinfo report if timer has expired.
         if (startTime - lastBlockReport > blockReportInterval) {
-          //
-          // Send latest blockinfo report if timer has expired.
-          // Get back a list of local block(s) that are obsolete
-          // and can be safely GC'ed.
-          //
-          long brStartTime = now();
+          
+          // Create block report
+          long brCreateStartTime = now();
           Block[] bReport = data.getBlockReport();
+          
+          // Send block report
+          long brSendStartTime = now();
           DatanodeCommand cmd = namenode.blockReport(dnRegistration,
                   BlockListAsLongs.convertToArrayLongs(bReport));
-          long brTime = now() - brStartTime;
-          myMetrics.addBlockReport(brTime);
-          LOG.info("BlockReport of " + bReport.length +
-              " blocks got processed in " + brTime + " msecs");
+          
+          // Log the block report processing stats from Datanode perspective
+          long brSendCost = now() - brSendStartTime;
+          long brCreateCost = brSendStartTime - brCreateStartTime;
+          myMetrics.addBlockReport(brSendCost);
+          LOG.info("BlockReport of " + bReport.length
+              + " blocks took " + brCreateCost + " msec to generate and "
+              + brSendCost + " msecs for RPC and NN processing");
+
           //
           // If we have sent the first block report, then wait a random
           // time before we start the periodic block reports.

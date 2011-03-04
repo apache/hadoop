@@ -115,6 +115,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.util.QueueProcessingStatistics;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
@@ -264,12 +265,12 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   ArrayList<DatanodeDescriptor> heartbeats = new ArrayList<DatanodeDescriptor>();
 
-  //
-  // Store set of Blocks that need to be replicated 1 or more times.
-  // We also store pending replication-orders.
-  // Set of: Block
-  //
+/**
+ * Store set of Blocks that need to be replicated 1 or more times.
+ * Set of: Block
+ */
   private UnderReplicatedBlocks neededReplications = new UnderReplicatedBlocks();
+  // We also store pending replication-orders.
   private PendingReplicationBlocks pendingReplications;
 
   public LeaseManager leaseManager = new LeaseManager(this); 
@@ -282,6 +283,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   public Daemon lmthread = null;   // LeaseMonitor thread
   Daemon smmthread = null;  // SafeModeMonitor thread
   public Daemon replthread = null;  // Replication thread
+  private ReplicationMonitor replmon = null; // Replication metrics
   
   private volatile boolean fsRunning = true;
   long systemStart = 0;
@@ -390,7 +392,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(leaseManager.new Monitor());
-    this.replthread = new Daemon(new ReplicationMonitor());
+    this.replmon = new ReplicationMonitor();
+    this.replthread = new Daemon(replmon);
     hbthread.start();
     lmthread.start();
     replthread.start();
@@ -561,6 +564,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       if (pendingReplications != null) pendingReplications.stop();
       if (hbthread != null) hbthread.interrupt();
       if (replthread != null) replthread.interrupt();
+      if (replmon != null) replmon = null;
       if (dnthread != null) dnthread.interrupt();
       if (smmthread != null) smmthread.interrupt();
       if (dtSecretManager != null) dtSecretManager.stopThreads();
@@ -2499,6 +2503,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   class ReplicationMonitor implements Runnable {
     static final int INVALIDATE_WORK_PCT_PER_ITERATION = 32;
     static final float REPLICATION_WORK_MULTIPLIER_PER_ITERATION = 2;
+    ReplicateQueueProcessingStats replicateQueueStats = 
+        new ReplicateQueueProcessingStats();
+    InvalidateQueueProcessingStats invalidateQueueStats = 
+        new InvalidateQueueProcessingStats();
+    
     public void run() {
       while (fsRunning) {
         try {
@@ -2516,8 +2525,61 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         }
       }
     }
-  }
 
+    /**
+     * Just before exiting safe mode, {@link SafeModeInfo.leave()} scans all 
+     * blocks and identifies under-replicated and invalid blocks.  These are 
+     * placed in work queues.  Immediately after leaving safe mode,
+     * {@link ReplicationMonitor} starts processing these queues via calls to
+     * {@link #computeDatanodeWork()}.  Each call does a chunk of work, then
+     * waits 3 seconds before doing the next chunk of work, to avoid monopolizing
+     * the CPUs and the global lock.  It may take several cycles before the
+     * queue is completely flushed.
+     * 
+     * Here we use two concrete subclasses of {@link QueueProcessingStatistics}
+     * to collect stats about these processes.
+     */
+    private class ReplicateQueueProcessingStats 
+    extends QueueProcessingStatistics {
+      
+      ReplicateQueueProcessingStats() {
+        super("ReplicateQueue", "blocks", FSNamesystem.LOG);
+      }
+      
+      // @see org.apache.hadoop.hdfs.server.namenode.FSNamesystem.QueueProcessingStatistics#preCheckIsLastCycle(int)
+      @Override
+      public boolean preCheckIsLastCycle(int maxWorkToProcess) {
+        return (maxWorkToProcess >= neededReplications.size());
+      }
+  
+      // @see org.apache.hadoop.hdfs.server.namenode.FSNamesystem.QueueProcessingStatistics#postCheckIsLastCycle(int)
+      @Override
+      public boolean postCheckIsLastCycle(int workFound) {
+        return false;
+      }
+    }
+  
+    private class InvalidateQueueProcessingStats 
+    extends QueueProcessingStatistics {
+      
+      InvalidateQueueProcessingStats() {
+        super("InvalidateQueue", "blocks", FSNamesystem.LOG);
+      }
+  
+      // @see org.apache.hadoop.hdfs.server.namenode.FSNamesystem.QueueProcessingStatistics#preCheckIsLastCycle(int)
+      @Override
+      public boolean preCheckIsLastCycle(int maxWorkToProcess) {
+        return false;
+      }
+  
+      // @see org.apache.hadoop.hdfs.server.namenode.FSNamesystem.QueueProcessingStatistics#postCheckIsLastCycle(int)
+      @Override
+      public boolean postCheckIsLastCycle(int workFound) {
+        return recentInvalidateSets.isEmpty();
+      }
+    }
+  }
+  
   /////////////////////////////////////////////////////////
   //
   // These methods are called by the Namenode system, to see
@@ -2532,12 +2594,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    * @return number of blocks scheduled for replication or removal.
    */
   public int computeDatanodeWork() throws IOException {
-    int workFound = 0;
+    int replicationWorkFound = 0;
+    int invalidationWorkFound = 0;
     int blocksToProcess = 0;
     int nodesToProcess = 0;
+
     // blocks should not be replicated or removed if safe mode is on
-    if (isInSafeMode())
-      return workFound;
+    if (isInSafeMode()) {
+      replmon.replicateQueueStats.checkRestart();
+      replmon.invalidateQueueStats.checkRestart();
+      return 0;
+    }
     synchronized(heartbeats) {
       blocksToProcess = (int)(heartbeats.size() 
           * ReplicationMonitor.REPLICATION_WORK_MULTIPLIER_PER_ITERATION);
@@ -2545,18 +2612,23 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
           * ReplicationMonitor.INVALIDATE_WORK_PCT_PER_ITERATION / 100);
     }
 
-    workFound = computeReplicationWork(blocksToProcess); 
+    replmon.replicateQueueStats.startCycle(blocksToProcess);
+    replicationWorkFound = computeReplicationWork(blocksToProcess);
+    replmon.replicateQueueStats.endCycle(replicationWorkFound);
     
     // Update FSNamesystemMetrics counters
     synchronized (this) {
       pendingReplicationBlocksCount = pendingReplications.size();
       underReplicatedBlocksCount = neededReplications.size();
-      scheduledReplicationBlocksCount = workFound;
+      scheduledReplicationBlocksCount = replicationWorkFound;
       corruptReplicaBlocksCount = corruptReplicas.size();
     }
     
-    workFound += computeInvalidateWork(nodesToProcess);
-    return workFound;
+    replmon.invalidateQueueStats.startCycle(nodesToProcess);
+    invalidationWorkFound = computeInvalidateWork(nodesToProcess);
+    replmon.invalidateQueueStats.endCycle(invalidationWorkFound);
+
+    return replicationWorkFound + invalidationWorkFound;
   }
 
   private int computeInvalidateWork(int nodesToProcess) {
@@ -3102,7 +3174,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
           + " does not belong to any file.");
       addToInvalidates(b, node);
     }
-    NameNode.getNameNodeMetrics().addBlockReport(now() - startTime);
+    long endTime = now();
+    NameNode.getNameNodeMetrics().addBlockReport(endTime - startTime);
+    NameNode.stateChangeLog.info("*BLOCK* NameSystem.processReport: from "
+        + nodeID.getName() + ", blocks: " + newReport.getNumberOfBlocks()
+        + ", processing time: " + (endTime - startTime) + " msecs");
   }
 
   /**
@@ -4301,7 +4377,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
         }
       }
       // verify blocks replications
+      long startTimeMisReplicatedScan = now();
       processMisReplicatedBlocks();
+      NameNode.stateChangeLog.info("STATE* Safe mode termination "
+          + "scan for invalid, over- and under-replicated blocks "
+          + "completed in " + (now() - startTimeMisReplicatedScan)
+          + " msec");
+
       long timeInSafemode = now() - systemStart;
       NameNode.stateChangeLog.info("STATE* Leaving safe mode after " 
                                     + timeInSafemode/1000 + " secs.");
