@@ -136,7 +136,7 @@ IFS=
 if [ -d "$HADOOP_HOME/webapps" ]; then
   CLASSPATH=${CLASSPATH}:$HADOOP_HOME
 fi
-for f in $HADOOP_HOME/hadoop-*-core.jar; do
+for f in $HADOOP_HOME/hadoop-core-*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
@@ -155,10 +155,10 @@ for f in $HADOOP_HOME/lib/jsp-2.1/*.jar; do
   CLASSPATH=${CLASSPATH}:$f;
 done
 
-for f in $HADOOP_HOME/hadoop-*-tools.jar; do
+for f in $HADOOP_HOME/hadoop-tools-*.jar; do
   TOOL_PATH=${TOOL_PATH}:$f;
 done
-for f in $HADOOP_HOME/build/hadoop-*-tools.jar; do
+for f in $HADOOP_HOME/build/hadoop-tools-*.jar; do
   TOOL_PATH=${TOOL_PATH}:$f;
 done
 
