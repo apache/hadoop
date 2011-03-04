@@ -128,8 +128,6 @@ public class UserGroupInformation {
   private static boolean useKerberos;
   /** Server-side groups fetching service */
   private static Groups groups;
-  /** The last authentication time */
-  private static long lastUnsuccessfulAuthenticationAttemptTime;
   /** The configuration to use */
   private static Configuration conf;
   
@@ -138,6 +136,9 @@ public class UserGroupInformation {
   /**Environment variable pointing to the token cache file*/
   public static final String HADOOP_TOKEN_FILE_LOCATION = 
     "HADOOP_TOKEN_FILE_LOCATION";
+  
+  /** The last relogin attempt */
+  private long lastReloginTime = 0;
   
   /** 
    * A method to initialize the fields that depend on a configuration.
@@ -214,7 +215,7 @@ public class UserGroupInformation {
 
   private final Subject subject;
   
-  private static LoginContext login;
+  private LoginContext login;
   
   private static final String OS_LOGIN_MODULE_NAME;
   private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
@@ -368,12 +369,16 @@ public class UserGroupInformation {
   static UserGroupInformation getLoginUser() throws IOException {
     if (loginUser == null) {
       try {
+        Subject subject = new Subject();
+        loginUser = new UserGroupInformation(subject);
+        LoginContext login;
         if (isSecurityEnabled()) {
-          login = new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME);
+          login = new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, subject);
         } else {
-          login = new LoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME);
+          login = new LoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, subject);
         }
         login.login();
+        loginUser.login = login;
         loginUser = new UserGroupInformation(login.getSubject());
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null && isSecurityEnabled()) {
@@ -408,11 +413,14 @@ public class UserGroupInformation {
 
     keytabFile = path;
     keytabPrincipal = user;
+    Subject subject = new Subject();
+    LoginContext login;   
     try {
       login = 
-        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME);
+        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
       login.login();
-      loginUser = new UserGroupInformation(login.getSubject());
+      loginUser = new UserGroupInformation(subject);
+      loginUser.login = login;
     } catch (LoginException le) {
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
@@ -476,13 +484,15 @@ public class UserGroupInformation {
     if (login == null || keytabFile == null) {
       throw new IOException("loginUserFromKeyTab must be done first");
     }
-    if (System.currentTimeMillis() -lastUnsuccessfulAuthenticationAttemptTime <
-          MIN_TIME_BEFORE_RELOGIN) {
+    long now = System.currentTimeMillis();
+    if (now - lastReloginTime < MIN_TIME_BEFORE_RELOGIN ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
           "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
           " before.");
       return;
     }
+    // register most recent relogin
+    lastReloginTime = System.currentTimeMillis();
     try {
       LOG.info("Initiating logout for " + getUserName());
       //clear up the kerberos state. But the tokens are not cleared! As per 
@@ -502,11 +512,6 @@ public class UserGroupInformation {
     } 
   }
 
-  public synchronized static void 
-    setLastUnsuccessfulAuthenticationAttemptTime(long time) {
-    lastUnsuccessfulAuthenticationAttemptTime = time;
-  }
-  
   public synchronized static boolean isLoginKeytabBased() {
     return keytabFile != null;
   }

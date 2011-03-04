@@ -359,26 +359,33 @@ public class Client {
             serverPrincipal);
         return saslRpcClient.saslConnect(in2, out2);
       } catch (javax.security.sasl.SaslException je) {
+        UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
+        UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+        UserGroupInformation realUser = currentUser.getRealUser();
         if (authMethod == AuthMethod.KERBEROS && 
-            UserGroupInformation.isLoginKeytabBased()) {
-          //try re-login
-          UserGroupInformation.getCurrentUser().reloginFromKeytab();
+            UserGroupInformation.isLoginKeytabBased() &&
+            // relogin only in case it is the login user (e.g. JT)
+            // or superuser (like oozie).
+            (currentUser.equals(loginUser) || realUser.equals(loginUser))) {
           //try setting up the connection again
           try {
+            //try re-login
+            loginUser.reloginFromKeytab();
             disposeSasl();
             saslRpcClient = new SaslRpcClient(authMethod, token,
                 serverPrincipal);
             return saslRpcClient.saslConnect(in2, out2);
           } catch (javax.security.sasl.SaslException jee) {
-            UserGroupInformation.
-            setLastUnsuccessfulAuthenticationAttemptTime
-            (System.currentTimeMillis());
             LOG.warn("Couldn't setup connection for " + 
-                UserGroupInformation.getCurrentUser().getUserName() +
+                loginUser.getUserName() +
                 " to " + serverPrincipal + " even after relogin.");
             throw jee;
+          } catch (IOException ie) {
+            ie.initCause(je);
+            throw ie;
           }
-        } else throw je;
+        } 
+        throw je;
       }
     }
     /** Connect to the server and set up the I/O streams. It then sends

@@ -2228,7 +2228,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                  + ") because of permissions.");
         LOG.warn("Manually delete the mapred.system.dir (" + systemDir 
                  + ") and then start the JobTracker.");
-        LOG.warn("Bailing out ... ");
+        LOG.warn("Bailing out ... ", ace);
         throw ace;
       } catch (IOException ie) {
         LOG.info("problem cleaning system directory: " + systemDir, ie);
