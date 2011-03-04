@@ -736,8 +736,7 @@ abstract public class Task implements Writable, Configurable {
              + " And is in the process of commiting");
     updateCounters();
 
-    // check whether the commit is required.
-    boolean commitRequired = committer.needsTaskCommit(taskContext);
+    boolean commitRequired = isCommitRequired();
     if (commitRequired) {
       int retries = MAX_RETRIES;
       setState(TaskStatus.State.COMMIT_PENDING);
@@ -764,6 +763,22 @@ abstract public class Task implements Writable, Configurable {
     sendLastUpdate(umbilical);
     //signal the tasktracker that we are done
     sendDone(umbilical);
+  }
+
+  /**
+   * Checks if this task has anything to commit, depending on the
+   * type of task, as well as on whether the {@link OutputCommitter}
+   * has anything to commit.
+   * 
+   * @return true if the task has to commit
+   * @throws IOException
+   */
+  boolean isCommitRequired() throws IOException {
+    boolean commitRequired = false;
+    if (isMapOrReduce()) {
+      commitRequired = committer.needsTaskCommit(taskContext);
+    }
+    return commitRequired;
   }
 
   protected void statusUpdate(TaskUmbilicalProtocol umbilical) 
