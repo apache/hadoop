@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
  * UmaskParser and ChmodParser classes.
  */
 class PermissionParser {
+  protected boolean symbolic = false;
   protected short userMode;
   protected short groupMode;
   protected short othersMode;
@@ -132,6 +133,7 @@ class PermissionParser {
 
       commaSeperated = matcher.group(4).contains(",");
     }
+    symbolic = true;
   }
 
   private void applyOctalPattern(String modeStr, Matcher matcher) {

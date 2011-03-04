@@ -173,7 +173,20 @@ public class FsPermission implements Writable {
   public static final String UMASK_LABEL = "dfs.umaskmode";
   public static final int DEFAULT_UMASK = 0022;
 
-  /** Get the user file creation mask (umask) */
+  /** 
+   * Get the user file creation mask (umask)
+   * 
+   * {@code UMASK_LABEL} config param has umask value that is either symbolic 
+   * or octal.
+   * 
+   * Symbolic umask is applied relative to file mode creation mask; 
+   * the permission op characters '+' clears the corresponding bit in the mask, 
+   * '-' sets bits in the mask.
+   * 
+   * Octal umask, the specified bits are set in the file mode creation mask.
+   * 
+   * {@code DEPRECATED_UMASK_LABEL} config param has umask value set to decimal.
+   */
   public static FsPermission getUMask(Configuration conf) {
     int umask = DEFAULT_UMASK;
     
