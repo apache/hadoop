@@ -206,11 +206,12 @@ extends AbstractDelegationTokenIdentifier>
       throws InvalidToken {
     DelegationTokenInformation info = currentTokens.get(identifier);
     if (info == null) {
-      throw new InvalidToken("token is expired or doesn't exist");
+      throw new InvalidToken("token (" + identifier.toString()
+          + ") can't be found in cache");
     }
     long now = System.currentTimeMillis();
     if (info.getRenewDate() < now) {
-      throw new InvalidToken("token is expired");
+      throw new InvalidToken("token (" + identifier.toString() + ") is expired");
     }
     return info.getPassword();
   }

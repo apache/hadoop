@@ -37,6 +37,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.Random;
+import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -80,11 +81,6 @@ public class Client {
   private int counter;                            // counter for call ids
   private AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final private Configuration conf;
-  final private int maxIdleTime; //connections will be culled if it was idle for 
-                           //maxIdleTime msecs
-  final private int maxRetries; //the max. no. of retries for socket connections
-  private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
-  private int pingInterval; // how often sends ping to the server in msecs
 
   private SocketFactory socketFactory;           // how to create sockets
   private int refCount = 1;
@@ -198,6 +194,11 @@ public class Client {
     private Socket socket = null;                 // connected socket
     private DataInputStream in;
     private DataOutputStream out;
+    private int maxIdleTime; //connections will be culled if it was idle for
+         //maxIdleTime msecs
+    private int maxRetries; //the max. no. of retries for socket connections
+    private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+    private int pingInterval; // how often sends ping to the server in msecs
     
     // currently active calls
     private Hashtable<Integer, Call> calls = new Hashtable<Integer, Call>();
@@ -211,6 +212,13 @@ public class Client {
       if (server.isUnresolved()) {
         throw new UnknownHostException("unknown host: " + 
                                        remoteId.getAddress().getHostName());
+      }
+      this.maxIdleTime = remoteId.getMaxIdleTime();
+      this.maxRetries = remoteId.getMaxRetries();
+      this.tcpNoDelay = remoteId.getTcpNoDelay();
+      this.pingInterval = remoteId.getPingInterval();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("The ping interval is" + this.pingInterval + "ms.");
       }
       
       UserGroupInformation ticket = remoteId.getTicket();
@@ -234,15 +242,9 @@ public class Client {
         }
         KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
         if (krbInfo != null) {
-          String serverKey = krbInfo.serverPrincipal();
-          if (serverKey == null) {
-            throw new IOException(
-                "Can't obtain server Kerberos config key from KerberosInfo");
-          }
-          serverPrincipal = SecurityUtil.getServerPrincipal(
-              conf.get(serverKey), server.getAddress().getCanonicalHostName());
+          serverPrincipal = remoteId.getServerPrincipal();
           if (LOG.isDebugEnabled()) {
-            LOG.debug("RPC Server Kerberos principal name for protocol="
+            LOG.debug("RPC Server's Kerberos principal name for protocol="
                 + protocol.getCanonicalName() + " is " + serverPrincipal);
           }
         }
@@ -838,14 +840,6 @@ public class Client {
   public Client(Class<? extends Writable> valueClass, Configuration conf, 
       SocketFactory factory) {
     this.valueClass = valueClass;
-    this.maxIdleTime = 
-      conf.getInt("ipc.client.connection.maxidletime", 10000); //10s
-    this.maxRetries = conf.getInt("ipc.client.connect.max.retries", 10);
-    this.tcpNoDelay = conf.getBoolean("ipc.client.tcpnodelay", false);
-    this.pingInterval = getPingInterval(conf);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("The ping interval is" + this.pingInterval + "ms.");
-    }
     this.conf = conf;
     this.socketFactory = factory;
   }
@@ -897,7 +891,7 @@ public class Client {
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code>, returning the value.  Throws exceptions if there are
    * network problems or if the remote code threw an exception.
-   * @deprecated Use {@link #call(Writable, InetSocketAddress, Class, UserGroupInformation)} instead 
+   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
    */
   @Deprecated
   public Writable call(Writable param, InetSocketAddress address)
@@ -910,25 +904,56 @@ public class Client {
    * the value.  
    * Throws exceptions if there are network problems or if the remote code 
    * threw an exception.
-   * @deprecated Use {@link #call(Writable, InetSocketAddress, Class, UserGroupInformation)} instead 
+   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
    */
   @Deprecated
   public Writable call(Writable param, InetSocketAddress addr, 
       UserGroupInformation ticket)  
       throws InterruptedException, IOException {
-    return call(param, addr, null, ticket);
+    ConnectionId remoteId = ConnectionId.getConnectionId(addr, null, ticket,
+        conf);
+    return call(param, remoteId);
   }
   
   /** Make a call, passing <code>param</code>, to the IPC server running at
    * <code>address</code> which is servicing the <code>protocol</code> protocol, 
    * with the <code>ticket</code> credentials, returning the value.  
    * Throws exceptions if there are network problems or if the remote code 
-   * threw an exception. */
+   * threw an exception. 
+   * @deprecated Use {@link #call(Writable, ConnectionId)} instead 
+   */
+  @Deprecated
   public Writable call(Writable param, InetSocketAddress addr, 
                        Class<?> protocol, UserGroupInformation ticket)  
                        throws InterruptedException, IOException {
+    ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
+        ticket, conf);
+    return call(param, remoteId);
+  }
+  
+  /** Make a call, passing <code>param</code>, to the IPC server running at
+   * <code>address</code> which is servicing the <code>protocol</code> protocol, 
+   * with the <code>ticket</code> credentials and <code>conf</code> as 
+   * configuration for this connection, returning the value.  
+   * Throws exceptions if there are network problems or if the remote code 
+   * threw an exception. */
+  public Writable call(Writable param, InetSocketAddress addr, 
+                       Class<?> protocol, UserGroupInformation ticket,
+                       Configuration conf)  
+                       throws InterruptedException, IOException {
+    ConnectionId remoteId = ConnectionId.getConnectionId(addr, protocol,
+        ticket, conf);
+    return call(param, remoteId);
+  }
+  
+  /** Make a call, passing <code>param</code>, to the IPC server defined by
+   * <code>remoteId</code>, returning the value.  
+   * Throws exceptions if there are network problems or if the remote code 
+   * threw an exception. */
+  public Writable call(Writable param, ConnectionId remoteId)  
+                       throws InterruptedException, IOException {
     Call call = new Call(param);
-    Connection connection = getConnection(addr, protocol, ticket, call);
+    Connection connection = getConnection(remoteId, call);
     connection.sendParam(call);                 // send the parameter
     boolean interrupted = false;
     synchronized (call) {
@@ -951,7 +976,7 @@ public class Client {
           call.error.fillInStackTrace();
           throw call.error;
         } else { // local exception
-          throw wrapException(addr, call.error);
+          throw wrapException(remoteId.getAddress(), call.error);
         }
       } else {
         return call.value;
@@ -991,25 +1016,34 @@ public class Client {
   }
 
   /** 
-   * Makes a set of calls in parallel.  Each parameter is sent to the
-   * corresponding address.  When all values are available, or have timed out
-   * or errored, the collected results are returned in an array.  The array
-   * contains nulls for calls that timed out or errored.
-   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], Class, UserGroupInformation)} instead 
+   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], 
+   * Class, UserGroupInformation, Configuration)} instead 
    */
   @Deprecated
   public Writable[] call(Writable[] params, InetSocketAddress[] addresses)
     throws IOException, InterruptedException {
-    return call(params, addresses, null, null);
+    return call(params, addresses, null, null, conf);
   }
   
+  /**  
+   * @deprecated Use {@link #call(Writable[], InetSocketAddress[], 
+   * Class, UserGroupInformation, Configuration)} instead 
+   */
+  @Deprecated
+  public Writable[] call(Writable[] params, InetSocketAddress[] addresses, 
+                         Class<?> protocol, UserGroupInformation ticket)
+    throws IOException, InterruptedException {
+    return call(params, addresses, protocol, ticket, conf);
+  }
+  
+
   /** Makes a set of calls in parallel.  Each parameter is sent to the
    * corresponding address.  When all values are available, or have timed out
    * or errored, the collected results are returned in an array.  The array
    * contains nulls for calls that timed out or errored.  */
-  public Writable[] call(Writable[] params, InetSocketAddress[] addresses, 
-                         Class<?> protocol, UserGroupInformation ticket)
-    throws IOException, InterruptedException {
+  public Writable[] call(Writable[] params, InetSocketAddress[] addresses,
+      Class<?> protocol, UserGroupInformation ticket, Configuration conf)
+      throws IOException, InterruptedException {
     if (addresses.length == 0) return new Writable[0];
 
     ParallelResults results = new ParallelResults(params.length);
@@ -1017,8 +1051,9 @@ public class Client {
       for (int i = 0; i < params.length; i++) {
         ParallelCall call = new ParallelCall(params[i], results, i);
         try {
-          Connection connection = 
-            getConnection(addresses[i], protocol, ticket, call);
+          ConnectionId remoteId = ConnectionId.getConnectionId(addresses[i],
+              protocol, ticket, conf);
+          Connection connection = getConnection(remoteId, call);
           connection.sendParam(call);             // send each parameter
         } catch (IOException e) {
           // log errors
@@ -1037,11 +1072,16 @@ public class Client {
     }
   }
 
+  //for unit testing only
+  Set<ConnectionId> getConnectionIds() {
+    synchronized (connections) {
+      return connections.keySet();
+    }
+  }
+
   /** Get a connection from the pool, or create a new one and add it to the
-   * pool.  Connections to a given host/port are reused. */
-  private Connection getConnection(InetSocketAddress addr,
-                                   Class<?> protocol,
-                                   UserGroupInformation ticket,
+   * pool.  Connections to a given ConnectionId are reused. */
+   private Connection getConnection(ConnectionId remoteId,
                                    Call call)
                                    throws IOException, InterruptedException {
     if (!running.get()) {
@@ -1053,7 +1093,6 @@ public class Client {
      * connectionsId object and with set() method. We need to manage the
      * refs for keys in HashMap properly. For now its ok.
      */
-    ConnectionId remoteId = new ConnectionId(addr, protocol, ticket);
     do {
       synchronized (connections) {
         connection = connections.get(remoteId);
@@ -1072,51 +1111,136 @@ public class Client {
     return connection;
   }
 
-  /**
-   * This class holds the address and the user ticket. The client connections
-   * to servers are uniquely identified by <remoteAddress, protocol, ticket>
-   */
-  private static class ConnectionId {
-    InetSocketAddress address;
-    UserGroupInformation ticket;
-    Class<?> protocol;
-    private static final int PRIME = 16777619;
-    
-    ConnectionId(InetSocketAddress address, Class<?> protocol, 
-                 UserGroupInformation ticket) {
-      this.protocol = protocol;
-      this.address = address;
-      this.ticket = ticket;
-    }
-    
-    InetSocketAddress getAddress() {
-      return address;
-    }
-    
-    Class<?> getProtocol() {
-      return protocol;
-    }
-    
-    UserGroupInformation getTicket() {
-      return ticket;
-    }
-    
-    
-    @Override
-    public boolean equals(Object obj) {
-     if (obj instanceof ConnectionId) {
-       ConnectionId id = (ConnectionId) obj;
-       return address.equals(id.address) && protocol == id.protocol && 
-              ((ticket != null && ticket.equals(id.ticket)) ||
-               (ticket == id.ticket));
+   /**
+    * This class holds the address and the user ticket. The client connections
+    * to servers are uniquely identified by <remoteAddress, protocol, ticket>
+    */
+   static class ConnectionId {
+     InetSocketAddress address;
+     UserGroupInformation ticket;
+     Class<?> protocol;
+     private static final int PRIME = 16777619;
+     private String serverPrincipal;
+     private int maxIdleTime; //connections will be culled if it was idle for 
+     //maxIdleTime msecs
+     private int maxRetries; //the max. no. of retries for socket connections
+     private boolean tcpNoDelay; // if T then disable Nagle's Algorithm
+     private int pingInterval; // how often sends ping to the server in msecs
+     
+     ConnectionId(InetSocketAddress address, Class<?> protocol, 
+                  UserGroupInformation ticket,
+                  String serverPrincipal, int maxIdleTime, 
+                  int maxRetries, boolean tcpNoDelay,
+                  int pingInterval) {
+       this.protocol = protocol;
+       this.address = address;
+       this.ticket = ticket;
+       this.serverPrincipal = serverPrincipal;
+       this.maxIdleTime = maxIdleTime;
+       this.maxRetries = maxRetries;
+       this.tcpNoDelay = tcpNoDelay;
+       this.pingInterval = pingInterval;
      }
-     return false;
-    }
-    
-    @Override
-    public int hashCode() {
-      return (address.hashCode() + PRIME * System.identityHashCode(protocol)) ^ 
-             (ticket == null ? 0 : ticket.hashCode());
-    }
-  }  
+     
+     InetSocketAddress getAddress() {
+       return address;
+     }
+     
+     Class<?> getProtocol() {
+       return protocol;
+     }
+     
+     UserGroupInformation getTicket() {
+       return ticket;
+     }
+     
+     String getServerPrincipal() {
+       return serverPrincipal;
+     }
+     
+     int getMaxIdleTime() {
+       return maxIdleTime;
+     }
+     
+     int getMaxRetries() {
+       return maxRetries;
+     }
+     
+     boolean getTcpNoDelay() {
+       return tcpNoDelay;
+     }
+     
+     int getPingInterval() {
+       return pingInterval;
+     }
+     
+     static ConnectionId getConnectionId(InetSocketAddress addr,
+         Class<?> protocol, UserGroupInformation ticket,
+         Configuration conf) throws IOException {
+       String remotePrincipal = getRemotePrincipal(conf, addr, protocol);
+       return new ConnectionId(addr, protocol, ticket,
+           remotePrincipal,
+           conf.getInt("ipc.client.connection.maxidletime", 10000), // 10s
+           conf.getInt("ipc.client.connect.max.retries", 10),
+           conf.getBoolean("ipc.client.tcpnodelay", false),
+           Client.getPingInterval(conf));
+     }
+     
+     private static String getRemotePrincipal(Configuration conf,
+         InetSocketAddress address, Class<?> protocol) throws IOException {
+       if (!UserGroupInformation.isSecurityEnabled() || protocol == null) {
+         return null;
+       }
+       KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
+       if (krbInfo != null) {
+         String serverKey = krbInfo.serverPrincipal();
+         if (serverKey == null) {
+           throw new IOException(
+               "Can't obtain server Kerberos config key from protocol="
+                   + protocol.getCanonicalName());
+         }
+         return SecurityUtil.getServerPrincipal(conf.get(serverKey), address
+             .getAddress().getCanonicalHostName());
+       }
+       return null;
+     }
+     
+     static boolean isEqual(Object a, Object b) {
+       return a == null ? b == null : a.equals(b);
+     }
+
+     @Override
+     public boolean equals(Object obj) {
+       if (obj == this) {
+         return true;
+       }
+       if (obj instanceof ConnectionId) {
+         ConnectionId that = (ConnectionId) obj;
+         return isEqual(this.address, that.address)
+             && this.maxIdleTime == that.maxIdleTime
+             && this.maxRetries == that.maxRetries
+             && this.pingInterval == that.pingInterval
+             && isEqual(this.protocol, that.protocol)
+             && isEqual(this.serverPrincipal, that.serverPrincipal)
+             && this.tcpNoDelay == that.tcpNoDelay
+             && isEqual(this.ticket, that.ticket);
+       }
+       return false;
+     }
+     
+     @Override
+     public int hashCode() {
+       int result = 1;
+       result = PRIME * result + ((address == null) ? 0 : address.hashCode());
+       result = PRIME * result + maxIdleTime;
+       result = PRIME * result + maxRetries;
+       result = PRIME * result + pingInterval;
+       result = PRIME * result + ((protocol == null) ? 0 : protocol.hashCode());
+       result = PRIME * result
+           + ((serverPrincipal == null) ? 0 : serverPrincipal.hashCode());
+       result = PRIME * result + (tcpNoDelay ? 1231 : 1237);
+       result = PRIME * result + ((ticket == null) ? 0 : ticket.hashCode());
+       return result;
+     }
+   }  
 }

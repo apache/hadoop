@@ -195,19 +195,21 @@ public class RPC {
 
   private static ClientCache CLIENTS=new ClientCache();
   
+  //for unit testing only
+  static Client getClient(Configuration conf) {
+    return CLIENTS.getClient(conf);
+  }
+  
   private static class Invoker implements InvocationHandler {
-    private Class<? extends VersionedProtocol> protocol;
-    private InetSocketAddress address;
-    private UserGroupInformation ticket;
+    private Client.ConnectionId remoteId;
     private Client client;
     private boolean isClosed = false;
 
     public Invoker(Class<? extends VersionedProtocol> protocol,
         InetSocketAddress address, UserGroupInformation ticket,
-        Configuration conf, SocketFactory factory) {
-      this.protocol = protocol;
-      this.address = address;
-      this.ticket = ticket;
+        Configuration conf, SocketFactory factory) throws IOException {
+      this.remoteId = Client.ConnectionId.getConnectionId(address, protocol,
+          ticket, conf);
       this.client = CLIENTS.getClient(conf, factory);
     }
 
@@ -220,8 +222,7 @@ public class RPC {
       }
 
       ObjectWritable value = (ObjectWritable)
-        client.call(new Invocation(method, args), address, 
-                    protocol, ticket);
+        client.call(new Invocation(method, args), remoteId);
       if (logDebug) {
         long callTime = System.currentTimeMillis() - startTime;
         LOG.debug("Call: " + method.getName() + " " + callTime);
@@ -421,7 +422,7 @@ public class RPC {
     Client client = CLIENTS.getClient(conf);
     try {
     Writable[] wrappedValues = 
-      client.call(invocations, addrs, method.getDeclaringClass(), ticket);
+      client.call(invocations, addrs, method.getDeclaringClass(), ticket, conf);
     
     if (method.getReturnType() == Void.TYPE) {
       return null;

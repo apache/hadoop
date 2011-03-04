@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.Set;
 
 import junit.framework.Assert;
 
@@ -35,6 +36,7 @@ import org.apache.commons.logging.impl.Log4JLogger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.SecretManager;
@@ -64,6 +66,9 @@ public class TestSaslRPC {
   static final String ERROR_MESSAGE = "Token is invalid";
   static final String SERVER_PRINCIPAL_KEY = "test.ipc.server.principal";
   static final String SERVER_KEYTAB_KEY = "test.ipc.server.keytab";
+  static final String SERVER_PRINCIPAL_1 = "p1/foo@BAR";
+  static final String SERVER_PRINCIPAL_2 = "p2/foo@BAR";
+  
   private static Configuration conf;
   static {
     conf = new Configuration();
@@ -242,6 +247,85 @@ public class TestSaslRPC {
       if (proxy != null) {
         RPC.stopProxy(proxy);
       }
+    }
+  }
+  
+  @Test
+  public void testGetRemotePrincipal() throws Exception {
+    try {
+      Configuration newConf = new Configuration(conf);
+      newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_1);
+      ConnectionId remoteId = ConnectionId.getConnectionId(
+          new InetSocketAddress(0), TestSaslProtocol.class, null, newConf);
+      assertEquals(SERVER_PRINCIPAL_1, remoteId.getServerPrincipal());
+      // this following test needs security to be off
+      newConf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+      UserGroupInformation.setConfiguration(newConf);
+      remoteId = ConnectionId.getConnectionId(new InetSocketAddress(0),
+          TestSaslProtocol.class, null, newConf);
+      assertEquals(
+          "serverPrincipal should be null when security is turned off", null,
+          remoteId.getServerPrincipal());
+    } finally {
+      // revert back to security is on
+      UserGroupInformation.setConfiguration(conf);
+    }
+  }
+  
+  @Test
+  public void testPerConnectionConf() throws Exception {
+    TestTokenSecretManager sm = new TestTokenSecretManager();
+    final Server server = RPC.getServer(
+        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
+    server.start();
+    final UserGroupInformation current = UserGroupInformation.getCurrentUser();
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
+        .getUserName()));
+    Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,
+        sm);
+    Text host = new Text(addr.getAddress().getHostAddress() + ":"
+        + addr.getPort());
+    token.setService(host);
+    LOG.info("Service IP address for token is " + host);
+    current.addToken(token);
+
+    Configuration newConf = new Configuration(conf);
+    newConf.set("hadoop.rpc.socket.factory.class.default", "");
+    newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_1);
+
+    TestSaslProtocol proxy1 = null;
+    TestSaslProtocol proxy2 = null;
+    TestSaslProtocol proxy3 = null;
+    try {
+      proxy1 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+          TestSaslProtocol.versionID, addr, newConf);
+      Client client = RPC.getClient(conf);
+      Set<ConnectionId> conns = client.getConnectionIds();
+      assertEquals("number of connections in cache is wrong", 1, conns.size());
+      // same conf, connection should be re-used
+      proxy2 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+          TestSaslProtocol.versionID, addr, newConf);
+      assertEquals("number of connections in cache is wrong", 1, conns.size());
+      // different conf, new connection should be set up
+      newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_2);
+      proxy3 = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+          TestSaslProtocol.versionID, addr, newConf);
+      ConnectionId[] connsArray = conns.toArray(new ConnectionId[0]);
+      assertEquals("number of connections in cache is wrong", 2,
+          connsArray.length);
+      String p1 = connsArray[0].getServerPrincipal();
+      String p2 = connsArray[1].getServerPrincipal();
+      assertFalse("should have different principals", p1.equals(p2));
+      assertTrue("principal not as expected", p1.equals(SERVER_PRINCIPAL_1)
+          || p1.equals(SERVER_PRINCIPAL_2));
+      assertTrue("principal not as expected", p2.equals(SERVER_PRINCIPAL_1)
+          || p2.equals(SERVER_PRINCIPAL_2));
+    } finally {
+      server.stop();
+      RPC.stopProxy(proxy1);
+      RPC.stopProxy(proxy2);
+      RPC.stopProxy(proxy3);
     }
   }
   
