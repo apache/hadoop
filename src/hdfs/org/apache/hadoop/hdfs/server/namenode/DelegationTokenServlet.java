@@ -41,6 +41,7 @@ import org.apache.hadoop.security.token.Token;
 public class DelegationTokenServlet extends DfsServlet {
   private static final Log LOG = LogFactory.getLog(DelegationTokenServlet.class);
   public static final String PATH_SPEC = "/getDelegationToken";
+  public static final String RENEWER = "renewer";
   
   @Override
   protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
@@ -59,6 +60,9 @@ public class DelegationTokenServlet extends DfsServlet {
     LOG.info("Sending token: {" + ugi.getUserName() + "," + req.getRemoteAddr() +"}");
     final ServletContext context = getServletContext();
     final NameNode nn = (NameNode) context.getAttribute("name.node");
+    String renewer = req.getParameter(RENEWER);
+    final String renewerFinal = (renewer == null) ? 
+        req.getUserPrincipal().getName() : renewer;
     
     DataOutputStream dos = null;
     try {
@@ -69,7 +73,7 @@ public class DelegationTokenServlet extends DfsServlet {
         public Void run() throws Exception {
           
           Token<DelegationTokenIdentifier> token = 
-            nn.getDelegationToken(new Text(req.getUserPrincipal().getName()));
+            nn.getDelegationToken(new Text(renewerFinal));
           String s = NameNode.getAddress(conf).getAddress().getHostAddress()
                      + ":" + NameNode.getAddress(conf).getPort();
           token.setService(new Text(s));

@@ -29,8 +29,10 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobTracker;
@@ -85,7 +87,6 @@ public class TokenCache {
   throws IOException {
     // get jobtracker principal id (for the renewer)
     Text jtCreds = new Text(conf.get(JobTracker.JT_USER_NAME, ""));
-
     for(Path p: ps) {
       FileSystem fs = FileSystem.get(p.toUri(), conf);
       if(fs instanceof DistributedFileSystem) {
@@ -107,8 +108,20 @@ public class TokenCache {
 
         token.setService(new Text(fs_addr));
         credentials.addToken(new Text(fs_addr), token);
-        LOG.info("getting dt for " + p.toString() + ";uri="+ fs_addr + 
+        LOG.info("Got dt for " + p.toString() + ";uri="+ fs_addr + 
             ";t.service="+token.getService());
+      } else if (fs instanceof HftpFileSystem) {
+        String fs_addr = buildDTServiceName(fs.getUri());
+        Token<DelegationTokenIdentifier> token = 
+          TokenCache.getDelegationToken(credentials, fs_addr); 
+        if(token != null) {
+          LOG.debug("DT for " + token.getService()  + " is already present");
+          continue;
+        }
+        //the initialize method of hftp, called via FileSystem.get() done
+        //earlier gets a delegation token
+        credentials.addToken(new Text(fs_addr), 
+            ((HftpFileSystem) fs).getDelegationToken());
       }
     }
   }
@@ -186,7 +199,7 @@ public class TokenCache {
    * @param uri
    * @return "ip:port"
    */
-  static String buildDTServiceName(URI uri) {
+  public static String buildDTServiceName(URI uri) {
     int port = uri.getPort();
     if(port == -1) 
       port = NameNode.DEFAULT_PORT;

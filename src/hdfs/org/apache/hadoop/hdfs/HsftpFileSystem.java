@@ -68,6 +68,7 @@ public class HsftpFileSystem extends HftpFileSystem {
   protected HttpURLConnection openConnection(String path, String query)
       throws IOException {
     try {
+      query = updateQuery(query);
       final URL url = new URI("https", null, nnAddr.getHostName(),
           nnAddr.getPort(), path, query, null).toURL();
       HttpsURLConnection conn = (HttpsURLConnection)url.openConnection();

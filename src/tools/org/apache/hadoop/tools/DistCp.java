@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.SequenceFile;
@@ -57,6 +58,7 @@ import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.InvalidInputException;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.Mapper;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.RecordReader;
@@ -627,6 +629,9 @@ public class DistCp implements Tool {
     List<IOException> rslt = new ArrayList<IOException>();
     
     // get tokens for all the required FileSystems..
+    // also set the renewer as the JobTracker for the hftp case
+    conf.set(HftpFileSystem.HFTP_RENEWER, 
+        conf.get(JobTracker.JT_USER_NAME, ""));
     Path[] ps = new Path[srcPaths.size()];
     ps = srcPaths.toArray(ps);
     TokenCache.obtainTokensForNamenodes(jobConf.getCredentials(), ps, conf);

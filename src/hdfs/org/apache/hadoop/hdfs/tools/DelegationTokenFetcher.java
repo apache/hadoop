@@ -62,7 +62,7 @@ public class DelegationTokenFetcher {
       public Object run() throws Exception {
         
         if(args.length == 3 && "--webservice".equals(args[0])) {
-          getDTfromRemote(args[1], args[2]);
+          getDTfromRemoteIntoFile(args[1], args[2]);
           return null;
         }
         // avoid annoying mistake
@@ -127,43 +127,53 @@ public class DelegationTokenFetcher {
     ts.addToken(new Text(shortName), token);
     ts.write(out);
   }
-  
+  /**
+   * Utility method to obtain a delegation token over http
+   * @param nnHttpAddr Namenode http addr, such as http://namenode:50070
+   */
+  static public Credentials getDTfromRemote(String nnAddr, String renewer) 
+  throws IOException {
+    // Enable Kerberos sockets
+   System.setProperty("https.cipherSuites", "TLS_KRB5_WITH_3DES_EDE_CBC_SHA");
+   DataOutputStream file = null;
+   DataInputStream dis = null;
+   
+   try {
+     StringBuffer url = new StringBuffer();
+     if (renewer != null) {
+       url.append(nnAddr).append(DelegationTokenServlet.PATH_SPEC).append("?").
+       append(DelegationTokenServlet.RENEWER).append("=").append(renewer);
+     } else {
+       url.append(nnAddr).append(DelegationTokenServlet.PATH_SPEC);
+     }
+     System.out.println("Retrieving token from: " + url);
+     URL remoteURL = new URL(url.toString());
+     URLConnection connection = remoteURL.openConnection();
+     
+     InputStream in = connection.getInputStream();
+     Credentials ts = new Credentials();
+     dis = new DataInputStream(in);
+     ts.readFields(dis);
+     return ts;
+   } catch (Exception e) {
+     throw new IOException("Unable to obtain remote token", e);
+   } finally {
+     if(dis != null) dis.close();
+     if(file != null) file.close();
+   }
+ }
   /**
    * Utility method to obtain a delegation token over http
    * @param nnHttpAddr Namenode http addr, such as http://namenode:50070
    * @param filename Name of file to store token in
    */
-   static private void getDTfromRemote(String nnAddr, String filename) 
-   throws IOException {
-     // Enable Kerberos sockets
-    System.setProperty("https.cipherSuites", "TLS_KRB5_WITH_3DES_EDE_CBC_SHA");
-    String ugiPostfix = "";
-    DataOutputStream file = null;
-    DataInputStream dis = null;
-    
-    if(nnAddr.startsWith("http:"))
-      ugiPostfix = "?ugi=" + UserGroupInformation.getCurrentUser().getShortUserName();
-    
-    try {
-      System.out.println("Retrieving token from: " + 
-          nnAddr + DelegationTokenServlet.PATH_SPEC + ugiPostfix);
-      URL remoteURL = new URL(nnAddr + DelegationTokenServlet.PATH_SPEC + ugiPostfix);
-      URLConnection connection = remoteURL.openConnection();
-      
-      InputStream in = connection.getInputStream();
-      Credentials ts = new Credentials();
-      dis = new DataInputStream(in);
-      ts.readFields(dis);
-      file = new DataOutputStream(new FileOutputStream(filename));
-      ts.write(file);
-      file.flush();
-      System.out.println("Successfully wrote token of " + file.size() 
-          + " bytes  to " + filename);
-    } catch (Exception e) {
-      throw new IOException("Unable to obtain remote token", e);
-    } finally {
-      if(dis != null) dis.close();
-      if(file != null) file.close();
-    }
+  static private void getDTfromRemoteIntoFile(String nnAddr, String filename) 
+  throws IOException {
+    Credentials ts = getDTfromRemote(nnAddr, null); 
+    DataOutputStream file = new DataOutputStream(new FileOutputStream(filename));
+    ts.write(file);
+    file.flush();
+    System.out.println("Successfully wrote token of " + file.size() 
+        + " bytes  to " + filename);
   }
 }

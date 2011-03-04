@@ -25,8 +25,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -94,13 +96,10 @@ public class DelegationTokenRenewal {
   
   //managing the list of tokens using Map
   // jobId=>List<tokens>
-  private static List<DelegationTokenToRenew> delegationTokens = 
-    Collections.synchronizedList(new ArrayList<DelegationTokenToRenew>());
+  private static Set<DelegationTokenToRenew> delegationTokens = 
+    Collections.synchronizedSet(new HashSet<DelegationTokenToRenew>());
   //adding token
   private static void addTokenToList(DelegationTokenToRenew t) {
-    //check to see if the token already exists in the list
-    if (delegationTokens.contains(t))
-      return;
     delegationTokens.add(t);
   }
   

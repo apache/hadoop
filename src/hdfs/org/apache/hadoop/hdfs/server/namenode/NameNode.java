@@ -267,13 +267,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
           httpServer.addInternalServlet("getimage", "/getimage", 
               GetImageServlet.class, true);
           httpServer.addInternalServlet("listPaths", "/listPaths/*", 
-              ListPathsServlet.class, true);
+              ListPathsServlet.class, false);
           httpServer.addInternalServlet("data", "/data/*", 
-              FileDataServlet.class, true);
+              FileDataServlet.class, false);
           httpServer.addInternalServlet("checksum", "/fileChecksum/*",
-              FileChecksumServlets.RedirectServlet.class, true);
+              FileChecksumServlets.RedirectServlet.class, false);
           httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
-              ContentSummaryServlet.class, true);
+              ContentSummaryServlet.class, false);
           httpServer.start();
       
           // The web-server port can be ephemeral... ensure we have the correct info
