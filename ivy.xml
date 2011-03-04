@@ -145,7 +145,7 @@
     <dependency org="org.mortbay.jetty"
       name="jetty"
       rev="${jetty.version}"
-      conf="jetty->master"/>
+      conf="jetty->default"/>
     <dependency org="org.mortbay.jetty"
       name="jetty-util"
       rev="${jetty-util.version}"
@@ -212,10 +212,6 @@
       name="commons-net"
       rev="${commons-net.version}"
       conf="s3-client->master"/> 
-    <dependency org="org.mortbay.jetty"
-      name="servlet-api-2.5"
-      rev="${servlet-api-2.5.version}"
-      conf="s3-client->master"/>
 
     <!--Configuration: kfs -->
 

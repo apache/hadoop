@@ -401,7 +401,6 @@
         <include name="xmlenc-${xmlenc.version}.jar"/>
         <include name="jetty-util-${jetty-util.version}.jar"/>
         <include name="jetty-${jetty.version}.jar"/>
-        <include name="servlet-api-2.5-${servlet-api-2.5.version}.jar"/>
         <include name="core-${core.vesion}.jar"/>
       </fileset>
       <fileset dir="${hadoop.root}/lib/jsp-${jsp.version}">

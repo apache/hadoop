@@ -38,10 +38,6 @@
       name="log4j"
       rev="${log4j.version}"
       conf="common->master"/>
-    <dependency org="org.mortbay.jetty"
-      name="servlet-api-2.5"
-      rev="${servlet-api-2.5.version}"
-      conf="common->default"/>
     <dependency org="commons-logging"
       name="commons-logging"
       rev="${commons-logging.version}"
@@ -69,10 +65,6 @@
     <dependency org="org.mortbay.jetty"
       name="jetty"
       rev="${jetty.version}"
-      conf="common->default"/>
-    <dependency org="org.mortbay.jetty"
-      name="servlet-api-2.5"
-      rev="${servlet-api-2.5.version}"
       conf="common->default"/>
     <dependency org="org.eclipse.jdt"
       name="core"
