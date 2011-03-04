@@ -56,6 +56,9 @@ public class JobContext {
   public static final String CACHE_ARCHIVES_VISIBILITIES = 
     "mapreduce.job.cache.archives.visibilities";
   
+  public static final String JOB_CANCEL_DELEGATION_TOKEN = 
+    "mapreduce.job.complete.cancel.delegation.tokens";
+  
   public JobContext(Configuration conf, JobID jobId) {
     this.conf = new org.apache.hadoop.mapred.JobConf(conf);
     this.jobId = jobId;

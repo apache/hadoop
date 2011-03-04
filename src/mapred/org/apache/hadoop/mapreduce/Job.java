@@ -387,6 +387,15 @@ public class Job extends JobContext {
       throw new IOException(attr + " is incompatible with " + msg + " mode.");
     }    
   }
+  
+  /**
+   * Sets the flag that will allow the JobTracker to cancel the HDFS delegation
+   * tokens upon job completion. Defaults to true.
+   */
+  public void setCancelDelegationTokenUponJobCompletion(boolean value) {
+    ensureState(JobState.DEFINE);
+    conf.setBoolean(JOB_CANCEL_DELEGATION_TOKEN, value);
+  }
 
   /**
    * Default to the new APIs unless they are explicitly set or the old mapper or

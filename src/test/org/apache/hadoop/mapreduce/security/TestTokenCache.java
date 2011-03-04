@@ -18,8 +18,7 @@
 package org.apache.hadoop.mapreduce.security;
 
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,7 +58,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 
 public class TestTokenCache {
@@ -275,7 +273,7 @@ public class TestTokenCache {
     for(Token<? extends TokenIdentifier> t: tns) {
       System.out.println("kind="+t.getKind() + ";servic=" + t.getService() + ";str=" + t.toString());
 
-      if(t.getKind().equals(new Text("HDFS_DELEGATION_TOKEN")) &&
+      if(t.getKind().equals(DelegationTokenIdentifier.HDFS_DELEGATION_KIND) &&
           t.getService().equals(new Text(fs_addr))) {
         found = true;
       }

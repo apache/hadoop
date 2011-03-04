@@ -717,6 +717,14 @@
   </property>
 
   <property>
+    <name>mapreduce.job.complete.cancel.delegation.tokens</name>
+    <value>true</value>
+    <description> if false - do not unregister/cancel delegation tokens
+    from renewal, because same tokens may be used by spawned jobs
+    </description>
+  </property>
+
+  <property>
     <name>mapred.task.profile</name>
     <value>false</value>
     <description>To set whether the system should collect profiler
