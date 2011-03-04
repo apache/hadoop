@@ -572,7 +572,7 @@ public class TaskTracker
                             protocol);
     }
   }
-  public static final String TT_USER_NAME = "mapreduce.tasktracker.user.name";
+  public static final String TT_USER_NAME = "mapreduce.tasktracker.kerberos.principal";
   public static final String TT_KEYTAB_FILE =
     "mapreduce.tasktracker.keytab.file";  
   /**

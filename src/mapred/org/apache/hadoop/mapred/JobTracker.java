@@ -1991,7 +1991,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     this(conf, generateNewIdentifier(), clock);
   }
   
-  public static final String JT_USER_NAME = "mapreduce.jobtracker.user.name";
+  public static final String JT_USER_NAME = "mapreduce.jobtracker.kerberos.principal";
   public static final String JT_KEYTAB_FILE =
     "mapreduce.jobtracker.keytab.file";
   
