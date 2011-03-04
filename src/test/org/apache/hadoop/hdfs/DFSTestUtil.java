@@ -31,8 +31,8 @@ import junit.framework.TestCase;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.security.AccessToken;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -255,7 +255,7 @@ public class DFSTestUtil extends TestCase {
     return ((DFSClient.DFSDataInputStream) in).getAllBlocks();
   }
 
-  public static AccessToken getAccessToken(FSDataOutputStream out) {
+  public static BlockAccessToken getAccessToken(FSDataOutputStream out) {
     return ((DFSClient.DFSOutputStream) out.getWrappedStream()).getAccessToken();
   }
 

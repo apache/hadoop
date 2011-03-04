@@ -43,7 +43,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.*;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
 
 public class JspHelper {
   final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
@@ -116,7 +117,7 @@ public class JspHelper {
     return chosenNode;
   }
   public void streamBlockInAscii(InetSocketAddress addr, long blockId, 
-                                 AccessToken accessToken, long genStamp, long blockSize, 
+                                 BlockAccessToken accessToken, long genStamp, long blockSize, 
                                  long offsetIntoBlock, long chunkSizeToView, JspWriter out) 
     throws IOException {
     if (chunkSizeToView == 0) return;

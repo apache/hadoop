@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.hdfs.security;
 
 import java.io.IOException;
 
@@ -27,7 +27,7 @@ public class SecurityTestUtil {
    * check if an access token is expired. return true when token is expired,
    * false otherwise
    */
-  public static boolean isAccessTokenExpired(AccessToken token)
+  public static boolean isAccessTokenExpired(BlockAccessToken token)
       throws IOException {
     return AccessTokenHandler.isTokenExpired(token);
   }

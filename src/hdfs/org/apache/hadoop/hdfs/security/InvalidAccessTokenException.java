@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.hdfs.security;
 
 import java.io.IOException;
 

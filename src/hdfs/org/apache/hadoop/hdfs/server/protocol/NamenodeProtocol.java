@@ -21,9 +21,9 @@ package org.apache.hadoop.hdfs.server.protocol;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.security.ExportedAccessKeys;
 
 /*****************************************************************************
  * Protocol that a secondary NameNode uses to communicate with the NameNode.

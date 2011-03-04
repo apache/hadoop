@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.hdfs.security;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -39,6 +39,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * AccessTokenHandler can be instantiated in 2 modes, master mode and slave
@@ -49,9 +50,12 @@ import org.apache.hadoop.io.WritableUtils;
  */
 public class AccessTokenHandler {
   private static final Log LOG = LogFactory.getLog(AccessTokenHandler.class);
-  public static final String STRING_ENABLE_ACCESS_TOKEN = "dfs.access.token.enable";
-  public static final String STRING_ACCESS_KEY_UPDATE_INTERVAL = "dfs.access.key.update.interval";
-  public static final String STRING_ACCESS_TOKEN_LIFETIME = "dfs.access.token.lifetime";
+  public static final String STRING_ENABLE_ACCESS_TOKEN =
+                        "dfs.block.access.token.enable";
+  public static final String STRING_ACCESS_KEY_UPDATE_INTERVAL =
+                        "dfs.block.access.key.update.interval";
+  public static final String STRING_ACCESS_TOKEN_LIFETIME =
+                        "dfs.block.access.token.lifetime";
 
   private final boolean isMaster;
   /*
@@ -63,9 +67,9 @@ public class AccessTokenHandler {
   private long tokenLifetime;
   private long serialNo = new SecureRandom().nextLong();
   private KeyGenerator keyGen;
-  private AccessKey currentKey;
-  private AccessKey nextKey;
-  private Map<Long, AccessKey> allKeys;
+  private BlockAccessKey currentKey;
+  private BlockAccessKey nextKey;
+  private Map<Long, BlockAccessKey> allKeys;
 
   public static enum AccessMode {
     READ, WRITE, COPY, REPLACE
@@ -84,7 +88,7 @@ public class AccessTokenHandler {
     this.isMaster = isMaster;
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenLifetime = tokenLifetime;
-    this.allKeys = new HashMap<Long, AccessKey>();
+    this.allKeys = new HashMap<Long, BlockAccessKey>();
     if (isMaster) {
       try {
         generateKeys();
@@ -112,11 +116,11 @@ public class AccessTokenHandler {
      * more.
      */
     serialNo++;
-    currentKey = new AccessKey(serialNo, new Text(keyGen.generateKey()
+    currentKey = new BlockAccessKey(serialNo, new Text(keyGen.generateKey()
         .getEncoded()), System.currentTimeMillis() + 2 * keyUpdateInterval
         + tokenLifetime);
     serialNo++;
-    nextKey = new AccessKey(serialNo, new Text(keyGen.generateKey()
+    nextKey = new BlockAccessKey(serialNo, new Text(keyGen.generateKey()
         .getEncoded()), System.currentTimeMillis() + 3 * keyUpdateInterval
         + tokenLifetime);
     allKeys.put(currentKey.getKeyID(), currentKey);
@@ -124,7 +128,7 @@ public class AccessTokenHandler {
   }
 
   /** Initialize Mac function */
-  private synchronized void initMac(AccessKey key) throws IOException {
+  private synchronized void initMac(BlockAccessKey key) throws IOException {
     try {
       Mac mac = Mac.getInstance("HmacSHA1");
       mac.init(new SecretKeySpec(key.getKey().getBytes(), "HmacSHA1"));
@@ -143,14 +147,14 @@ public class AccessTokenHandler {
     if (LOG.isDebugEnabled())
       LOG.debug("Exporting access keys");
     return new ExportedAccessKeys(true, keyUpdateInterval, tokenLifetime,
-        currentKey, allKeys.values().toArray(new AccessKey[0]));
+        currentKey, allKeys.values().toArray(new BlockAccessKey[0]));
   }
 
   private synchronized void removeExpiredKeys() {
     long now = System.currentTimeMillis();
-    for (Iterator<Map.Entry<Long, AccessKey>> it = allKeys.entrySet()
+    for (Iterator<Map.Entry<Long, BlockAccessKey>> it = allKeys.entrySet()
         .iterator(); it.hasNext();) {
-      Map.Entry<Long, AccessKey> e = it.next();
+      Map.Entry<Long, BlockAccessKey> e = it.next();
       if (e.getValue().getExpiryDate() < now) {
         it.remove();
       }
@@ -168,7 +172,7 @@ public class AccessTokenHandler {
     removeExpiredKeys();
     this.currentKey = exportedKeys.getCurrentKey();
     initMac(currentKey);
-    AccessKey[] receivedKeys = exportedKeys.getAllKeys();
+    BlockAccessKey[] receivedKeys = exportedKeys.getAllKeys();
     for (int i = 0; i < receivedKeys.length; i++) {
       if (receivedKeys[i] == null)
         continue;
@@ -185,27 +189,27 @@ public class AccessTokenHandler {
     LOG.info("Updating access keys");
     removeExpiredKeys();
     // set final expiry date of retiring currentKey
-    allKeys.put(currentKey.getKeyID(), new AccessKey(currentKey.getKeyID(),
+    allKeys.put(currentKey.getKeyID(), new BlockAccessKey(currentKey.getKeyID(),
         currentKey.getKey(), System.currentTimeMillis() + keyUpdateInterval
             + tokenLifetime));
     // update the estimated expiry date of new currentKey
-    currentKey = new AccessKey(nextKey.getKeyID(), nextKey.getKey(), System
+    currentKey = new BlockAccessKey(nextKey.getKeyID(), nextKey.getKey(), System
         .currentTimeMillis()
         + 2 * keyUpdateInterval + tokenLifetime);
     initMac(currentKey);
     allKeys.put(currentKey.getKeyID(), currentKey);
     // generate a new nextKey
     serialNo++;
-    nextKey = new AccessKey(serialNo, new Text(keyGen.generateKey()
+    nextKey = new BlockAccessKey(serialNo, new Text(keyGen.generateKey()
         .getEncoded()), System.currentTimeMillis() + 3 * keyUpdateInterval
         + tokenLifetime);
     allKeys.put(nextKey.getKeyID(), nextKey);
   }
 
   /** Check if token is well formed */
-  private synchronized boolean verifyToken(long keyID, AccessToken token)
+  private synchronized boolean verifyToken(long keyID, BlockAccessToken token)
       throws IOException {
-    AccessKey key = allKeys.get(keyID);
+    BlockAccessKey key = allKeys.get(keyID);
     if (key == null) {
       LOG.warn("Access key for keyID=" + keyID + " doesn't exist.");
       return false;
@@ -219,7 +223,7 @@ public class AccessTokenHandler {
   }
 
   /** Generate an access token for current user */
-  public AccessToken generateToken(long blockID, EnumSet<AccessMode> modes)
+  public BlockAccessToken generateToken(long blockID, EnumSet<AccessMode> modes)
       throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
     String userID = (ugi == null ? null : ugi.getUserName());
@@ -227,7 +231,7 @@ public class AccessTokenHandler {
   }
 
   /** Generate an access token for a specified user */
-  public synchronized AccessToken generateToken(String userID, long blockID,
+  public synchronized BlockAccessToken generateToken(String userID, long blockID,
       EnumSet<AccessMode> modes) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Generating access token for user=" + userID + ", blockID="
@@ -247,12 +251,12 @@ public class AccessTokenHandler {
       WritableUtils.writeEnum(out, aMode);
     }
     Text tokenID = new Text(buf.toByteArray());
-    return new AccessToken(tokenID, new Text(currentKey.getMac().doFinal(
+    return new BlockAccessToken(tokenID, new Text(currentKey.getMac().doFinal(
         tokenID.getBytes())));
   }
 
   /** Check if access should be allowed. userID is not checked if null */
-  public boolean checkAccess(AccessToken token, String userID, long blockID,
+  public boolean checkAccess(BlockAccessToken token, String userID, long blockID,
       AccessMode mode) throws IOException {
     long oExpiry = 0;
     long oKeyID = 0;
@@ -292,7 +296,7 @@ public class AccessTokenHandler {
 
   /** check if a token is expired. for unit test only.
    *  return true when token is expired, false otherwise */
-  static boolean isTokenExpired(AccessToken token) throws IOException {
+  static boolean isTokenExpired(BlockAccessToken token) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getTokenID()
         .getBytes());
     DataInputStream in = new DataInputStream(buf);

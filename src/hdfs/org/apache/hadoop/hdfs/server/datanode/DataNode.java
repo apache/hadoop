@@ -84,9 +84,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessToken;
-import org.apache.hadoop.security.AccessTokenHandler;
-import org.apache.hadoop.security.ExportedAccessKeys;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authorize.ConfiguredPolicy;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -97,6 +94,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.AccessTokenHandler;
+import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
 
 /**********************************************************
  * DataNode is a class (and program) that stores a set of
@@ -1211,7 +1211,7 @@ public class DataNode extends Configured
         for (int i = 1; i < targets.length; i++) {
           targets[i].write(out);
         }
-        AccessToken accessToken = AccessToken.DUMMY_TOKEN;
+        BlockAccessToken accessToken = BlockAccessToken.DUMMY_TOKEN;
         if (isAccessTokenEnabled) {
           accessToken = accessTokenHandler.generateToken(null, b.getBlockId(),
               EnumSet.of(AccessTokenHandler.AccessMode.WRITE));

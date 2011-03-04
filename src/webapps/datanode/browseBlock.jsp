@@ -12,8 +12,8 @@
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
-  import="org.apache.hadoop.security.AccessToken"
-  import="org.apache.hadoop.security.AccessTokenHandler"
+  import="org.apache.hadoop.hdfs.security.BlockAccessToken"
+  import="org.apache.hadoop.hdfs.security.AccessTokenHandler"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
 %>
@@ -194,7 +194,7 @@
 
     final DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
     
-    AccessToken accessToken = AccessToken.DUMMY_TOKEN;
+    BlockAccessToken accessToken = BlockAccessToken.DUMMY_TOKEN;
     if (JspHelper.conf
         .getBoolean(AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, false)) {
       List<LocatedBlock> blks = dfs.namenode.getBlockLocations(filename, 0,

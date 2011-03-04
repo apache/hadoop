@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.hdfs.security;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -35,15 +35,15 @@ public class ExportedAccessKeys implements Writable {
   private boolean isAccessTokenEnabled;
   private long keyUpdateInterval;
   private long tokenLifetime;
-  private AccessKey currentKey;
-  private AccessKey[] allKeys;
+  private BlockAccessKey currentKey;
+  private BlockAccessKey[] allKeys;
 
   public ExportedAccessKeys() {
-    this(false, 0, 0, new AccessKey(), new AccessKey[0]);
+    this(false, 0, 0, new BlockAccessKey(), new BlockAccessKey[0]);
   }
 
   ExportedAccessKeys(boolean isAccessTokenEnabled, long keyUpdateInterval,
-      long tokenLifetime, AccessKey currentKey, AccessKey[] allKeys) {
+      long tokenLifetime, BlockAccessKey currentKey, BlockAccessKey[] allKeys) {
     this.isAccessTokenEnabled = isAccessTokenEnabled;
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenLifetime = tokenLifetime;
@@ -63,11 +63,11 @@ public class ExportedAccessKeys implements Writable {
     return tokenLifetime;
   }
 
-  public AccessKey getCurrentKey() {
+  public BlockAccessKey getCurrentKey() {
     return currentKey;
   }
 
-  public AccessKey[] getAllKeys() {
+  public BlockAccessKey[] getAllKeys() {
     return allKeys;
   }
 
@@ -128,9 +128,9 @@ public class ExportedAccessKeys implements Writable {
     keyUpdateInterval = in.readLong();
     tokenLifetime = in.readLong();
     currentKey.readFields(in);
-    this.allKeys = new AccessKey[in.readInt()];
+    this.allKeys = new BlockAccessKey[in.readInt()];
     for (int i = 0; i < allKeys.length; i++) {
-      allKeys[i] = new AccessKey();
+      allKeys[i] = new BlockAccessKey();
       allKeys[i].readFields(in);
     }
   }

@@ -21,10 +21,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
-import org.apache.hadoop.security.ExportedAccessKeys;
 
 public class KeyUpdateCommand extends DatanodeCommand {
   private ExportedAccessKeys keys;

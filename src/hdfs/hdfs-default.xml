@@ -190,7 +190,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.access.token.enable</name>
+  <name>dfs.block.access.token.enable</name>
   <value>false</value>
   <description>
     If "true", access tokens are used as capabilities for accessing datanodes.
@@ -199,7 +199,7 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.access.key.update.interval</name>
+  <name>dfs.block.access.key.update.interval</name>
   <value>600</value>
   <description>
     Interval in minutes at which namenode updates its access keys.
@@ -207,10 +207,11 @@ creations/deletions), or "all".</description>
 </property>
 
 <property>
-  <name>dfs.access.token.lifetime</name>
+  <name>dfs.block.access.token.lifetime</name>
   <value>600</value>
   <description>The lifetime of access tokens in minutes.</description>
 </property>
+
 
 <property>
   <name>dfs.data.dir</name>

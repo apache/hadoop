@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.hdfs.security;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -25,16 +25,16 @@ import java.io.IOException;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 
-public class AccessToken implements Writable {
-  public static final AccessToken DUMMY_TOKEN = new AccessToken();
+public class BlockAccessToken implements Writable {
+  public static final BlockAccessToken DUMMY_TOKEN = new BlockAccessToken();
   private Text tokenID;
   private Text tokenAuthenticator;
 
-  public AccessToken() {
+  public BlockAccessToken() {
     this(new Text(), new Text());
   }
 
-  public AccessToken(Text tokenID, Text tokenAuthenticator) {
+  public BlockAccessToken(Text tokenID, Text tokenAuthenticator) {
     this.tokenID = tokenID;
     this.tokenAuthenticator = tokenAuthenticator;
   }
@@ -56,8 +56,8 @@ public class AccessToken implements Writable {
     if (obj == this) {
       return true;
     }
-    if (obj instanceof AccessToken) {
-      AccessToken that = (AccessToken) obj;
+    if (obj instanceof BlockAccessToken) {
+      BlockAccessToken that = (BlockAccessToken) obj;
       return isEqual(this.tokenID, that.tokenID)
           && isEqual(this.tokenAuthenticator, that.tokenAuthenticator);
     }

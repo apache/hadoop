@@ -32,14 +32,14 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.AccessTokenHandler;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.AccessToken;
-import org.apache.hadoop.security.AccessTokenHandler;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
@@ -151,7 +151,7 @@ class DataXceiver implements Runnable, FSConstants {
     long startOffset = in.readLong();
     long length = in.readLong();
     String clientName = Text.readString(in);
-    AccessToken accessToken = new AccessToken();
+    BlockAccessToken accessToken = new BlockAccessToken();
     accessToken.readFields(in);
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         datanode.socketWriteTimeout);
@@ -258,7 +258,7 @@ class DataXceiver implements Runnable, FSConstants {
       tmp.readFields(in);
       targets[i] = tmp;
     }
-    AccessToken accessToken = new AccessToken();
+    BlockAccessToken accessToken = new BlockAccessToken();
     accessToken.readFields(in);
     DataOutputStream replyOut = null;   // stream to prev target
     replyOut = new DataOutputStream(
@@ -423,7 +423,7 @@ class DataXceiver implements Runnable, FSConstants {
    */
   void getBlockChecksum(DataInputStream in) throws IOException {
     final Block block = new Block(in.readLong(), 0 , in.readLong());
-    AccessToken accessToken = new AccessToken();
+    BlockAccessToken accessToken = new BlockAccessToken();
     accessToken.readFields(in);
     DataOutputStream out = new DataOutputStream(NetUtils.getOutputStream(s,
         datanode.socketWriteTimeout));
@@ -484,7 +484,7 @@ class DataXceiver implements Runnable, FSConstants {
     // Read in the header
     long blockId = in.readLong(); // read block id
     Block block = new Block(blockId, 0, in.readLong());
-    AccessToken accessToken = new AccessToken();
+    BlockAccessToken accessToken = new BlockAccessToken();
     accessToken.readFields(in);
     if (datanode.isAccessTokenEnabled
         && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
@@ -562,7 +562,7 @@ class DataXceiver implements Runnable, FSConstants {
     String sourceID = Text.readString(in); // read del hint
     DatanodeInfo proxySource = new DatanodeInfo(); // read proxy source
     proxySource.readFields(in);
-    AccessToken accessToken = new AccessToken();
+    BlockAccessToken accessToken = new BlockAccessToken();
     accessToken.readFields(in);
     if (datanode.isAccessTokenEnabled
         && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security;
+package org.apache.hadoop.hdfs.security;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -31,17 +31,17 @@ import org.apache.hadoop.io.WritableUtils;
 /**
  * Key used for generating and verifying access tokens
  */
-public class AccessKey implements Writable {
+public class BlockAccessKey implements Writable {
   private long keyID;
   private Text key;
   private long expiryDate;
   private Mac mac;
 
-  public AccessKey() {
+  public BlockAccessKey() {
     this(0L, new Text(), 0L);
   }
 
-  public AccessKey(long keyID, Text key, long expiryDate) {
+  public BlockAccessKey(long keyID, Text key, long expiryDate) {
     this.keyID = keyID;
     this.key = key;
     this.expiryDate = expiryDate;
@@ -76,8 +76,8 @@ public class AccessKey implements Writable {
     if (obj == this) {
       return true;
     }
-    if (obj instanceof AccessKey) {
-      AccessKey that = (AccessKey) obj;
+    if (obj instanceof BlockAccessKey) {
+      BlockAccessKey that = (BlockAccessKey) obj;
       return this.keyID == that.keyID && isEqual(this.key, that.key)
           && this.expiryDate == that.expiryDate;
     }
