@@ -47,6 +47,7 @@ import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
 import org.apache.hadoop.mapreduce.split.JobSplit;
 
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -163,7 +164,7 @@ public class TestTaskLogsTruncater {
   @Test
   public void testNoTruncationNeeded() throws IOException {
     Configuration conf = setRetainSizes(1000L, 1000L);
-    UserLogManager logManager = new UtilsForTests.InLineUserLogManager(conf);
+    TaskLogsTruncater trunc = new TaskLogsTruncater(conf);
 
     TaskID baseId = new TaskID();
     int taskcount = 0;
@@ -186,7 +187,7 @@ public class TestTaskLogsTruncater {
 
     // Finish the task and the JVM too.
     JVMInfo jvmInfo = new JVMInfo(attemptDir, Arrays.asList(task));
-    logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
+    trunc.truncateLogs(jvmInfo);
 
     // There should be no truncation of the log-file.
     assertTrue(attemptDir.exists());
@@ -202,7 +203,7 @@ public class TestTaskLogsTruncater {
     }
 
     // truncate it once again
-    logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
+    trunc.truncateLogs(jvmInfo);
     assertEquals("index file got modified", indexModificationTimeStamp,
         logIndex.lastModified());
     
@@ -224,7 +225,7 @@ public class TestTaskLogsTruncater {
   public void testDisabledLogTruncation() throws IOException {
     // Anything less than 0 disables the truncation.
     Configuration conf = setRetainSizes(-1L, -1L);
-    UserLogManager logManager = new UtilsForTests.InLineUserLogManager(conf);
+    TaskLogsTruncater trunc = new TaskLogsTruncater(conf);
 
     TaskID baseId = new TaskID();
     int taskcount = 0;
@@ -243,7 +244,7 @@ public class TestTaskLogsTruncater {
 
     // Finish the task and the JVM too.
     JVMInfo jvmInfo = new JVMInfo(attemptDir, Arrays.asList(task));
-    logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
+    trunc.truncateLogs(jvmInfo);
 
     // The log-file should not be truncated.
     assertTrue(attemptDir.exists());
@@ -264,7 +265,7 @@ public class TestTaskLogsTruncater {
   @Test
   public void testLogTruncationOnFinishing() throws IOException {
     Configuration conf = setRetainSizes(1000L, 1000L);
-    UserLogManager logManager = new UtilsForTests.InLineUserLogManager(conf);
+    TaskLogsTruncater trunc = new TaskLogsTruncater(conf);
 
     TaskID baseId = new TaskID();
     int taskcount = 0;
@@ -283,7 +284,7 @@ public class TestTaskLogsTruncater {
 
     // Finish the task and the JVM too.
     JVMInfo jvmInfo = new JVMInfo(attemptDir, Arrays.asList(task));
-    logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
+    trunc.truncateLogs(jvmInfo);
 
     // The log-file should now be truncated.
     assertTrue(attemptDir.exists());
@@ -316,7 +317,7 @@ public class TestTaskLogsTruncater {
   @Test
   public void testLogTruncation() throws IOException {
     Configuration conf = setRetainSizes(1000L, 1000L);
-    UserLogManager logManager = new UtilsForTests.InLineUserLogManager(conf);
+    TaskLogsTruncater trunc = new TaskLogsTruncater(conf);
 
     TaskID baseId = new TaskID();
     int taskcount = 0;
@@ -334,7 +335,7 @@ public class TestTaskLogsTruncater {
 
     // Finish the task and the JVM too.
     JVMInfo jvmInfo = new JVMInfo(attemptDir, Arrays.asList(task));
-    logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
+    trunc.truncateLogs(jvmInfo);
 
     // The log-file should now be truncated.
     assertTrue(attemptDir.exists());
@@ -357,7 +358,7 @@ public class TestTaskLogsTruncater {
     assertFalse(stderr.startsWith(TaskLogsTruncater.TRUNCATED_MSG));
 
     // truncate once again
-    logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
+    trunc.truncateLogs(jvmInfo);
     logLengths = getAllLogsFileLengths(attemptID, false);
     logFile = TaskLog.getTaskLogFile(attemptID, false, LogName.SYSLOG);
     assertEquals(1000 + truncatedMsgSize, logFile.length());
@@ -378,7 +379,7 @@ public class TestTaskLogsTruncater {
   @Test
   public void testLogTruncationOnFinishingWithJVMReuse() throws IOException {
     Configuration conf = setRetainSizes(150L, 150L);
-    UserLogManager logManager = new UtilsForTests.InLineUserLogManager(conf);
+    TaskLogsTruncater trunc = new TaskLogsTruncater(conf);
 
     TaskID baseTaskID = new TaskID();
     int attemptsCount = 0;
@@ -409,7 +410,7 @@ public class TestTaskLogsTruncater {
     // Finish the JVM.
     JVMInfo jvmInfo = new JVMInfo(attemptDir, 
         Arrays.asList((new Task[] { task1, task2, task3 })));
-    logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
+    trunc.truncateLogs(jvmInfo);
 
     // The log-file should now be truncated.
     assertTrue(attemptDir.exists());
@@ -454,7 +455,7 @@ public class TestTaskLogsTruncater {
          + truncatedLog.charAt(i), 'C', truncatedLog.charAt(i));
     }
 
-    logManager.addLogEvent(new JvmFinishedEvent(jvmInfo));
+    trunc.truncateLogs(jvmInfo);
     // First and third attempts' logs are only truncated, so include 2*length of
     // TRUNCATED_MSG header
     assertEquals(400 + 2 * truncatedMsgSize, logFile.length());
@@ -486,13 +487,18 @@ public class TestTaskLogsTruncater {
    * @throws IOException
    */
   @Test
+  @Ignore // Trunction is now done in the Child JVM, because the TaskTracker
+          // no longer has write access to the user log dir. MiniMRCluster
+          // needs to be modified to put the config params set here in a config
+          // on the Child's classpath
   public void testLogsMonitoringWithMiniMR() throws IOException {
 
     MiniMRCluster mr = null;
     try {
+      final long LSIZE = 10000L;
       JobConf clusterConf = new JobConf();
-      clusterConf.setLong(TaskLogsTruncater.MAP_USERLOG_RETAIN_SIZE, 10000L);
-      clusterConf.setLong(TaskLogsTruncater.REDUCE_USERLOG_RETAIN_SIZE, 10000L);
+      clusterConf.setLong(TaskLogsTruncater.MAP_USERLOG_RETAIN_SIZE, LSIZE);
+      clusterConf.setLong(TaskLogsTruncater.REDUCE_USERLOG_RETAIN_SIZE, LSIZE);
       mr = new MiniMRCluster(1, "file:///", 3, null, null, clusterConf);
 
       JobConf conf = mr.createJobConf();
@@ -528,8 +534,8 @@ public class TestTaskLogsTruncater {
             TaskLog.getTaskLogFile(tce.getTaskAttemptId(), false,
                 TaskLog.LogName.STDOUT).length();
         assertTrue("STDOUT log file length for " + tce.getTaskAttemptId()
-            + " is " + length + " and not <=" + 10000 + truncatedMsgSize,
-            length <= 10000 + truncatedMsgSize);
+            + " is " + length + " and not <=" + LSIZE,
+            length <= LSIZE + truncatedMsgSize);
         if (tce.isMap) {
           String stderr = TestMiniMRMapRedDebugScript.readTaskLog(
               LogName.STDERR, tce.getTaskAttemptId(), false);
@@ -549,13 +555,18 @@ public class TestTaskLogsTruncater {
    * @throws IOException 
    */
   @Test
+  @Ignore // Trunction is now done in the Child JVM, because the TaskTracker
+          // no longer has write access to the user log dir. MiniMRCluster
+          // needs to be modified to put the config params set here in a config
+          // on the Child's classpath
   public void testDebugLogsTruncationWithMiniMR() throws IOException {
 
     MiniMRCluster mr = null;
     try {
+      final long LSIZE = 10000L;
       JobConf clusterConf = new JobConf();
-      clusterConf.setLong(TaskLogsTruncater.MAP_USERLOG_RETAIN_SIZE, 10000L);
-      clusterConf.setLong(TaskLogsTruncater.REDUCE_USERLOG_RETAIN_SIZE, 10000L);
+      clusterConf.setLong(TaskLogsTruncater.MAP_USERLOG_RETAIN_SIZE, LSIZE);
+      clusterConf.setLong(TaskLogsTruncater.REDUCE_USERLOG_RETAIN_SIZE, LSIZE);
       mr = new MiniMRCluster(1, "file:///", 3, null, null, clusterConf);
 
       JobConf conf = mr.createJobConf();
@@ -618,9 +629,9 @@ public class TestTaskLogsTruncater {
                   TaskLog.LogName.DEBUGOUT);
           if (debugOutFile.exists()) {
             long length = debugOutFile.length();
-            assertTrue("DEBUGOUT log file length for " + tce.getTaskAttemptId()
-                + " is " + length + " and not " + 10000 + truncatedMsgSize,
-                length == 10000 + truncatedMsgSize);
+            assertEquals("DEBUGOUT log file length for " +
+                tce.getTaskAttemptId() + " is " + length + " and not " + LSIZE,
+                length, LSIZE + truncatedMsgSize);
           }
         }
       }
