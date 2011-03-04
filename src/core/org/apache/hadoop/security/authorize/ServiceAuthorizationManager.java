@@ -80,7 +80,7 @@ public class ServiceAuthorizationManager {
         clientPrincipal = conf.get(clientKey);
       }
     }
-    if((clientPrincipal != null && clientPrincipal != user.getUserName()) || 
+    if((clientPrincipal != null && !clientPrincipal.equals(user.getUserName())) || 
         !acl.isUserAllowed(user)) {
       auditLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol="+protocol);
       throw new AuthorizationException("User " + user + 
