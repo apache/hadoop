@@ -836,7 +836,7 @@
         <propertyref regex="fi.*"/>
       </syspropertyset>
       <formatter type="${test.junit.output.format}" />
-      <batchtest todir="${test.build.dir}/org" if="tests.notestcase">
+      <batchtest todir="${test.build.dir}" if="tests.notestcase">
         <fileset dir="${test.src.dir}"
            includes="**/${test.include}.java"
            excludes="**/${test.exclude}.java" />
@@ -847,7 +847,7 @@
           excludes="**/${test.exclude}.java" />
       </batchtest>
       <batchtest todir="${test.build.dir}" if="tests.testcase">
-        <fileset dir="${test.src.dir}/org" includes="**/${testcase}.java"/>
+        <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
       </batchtest>
       <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
         <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
