@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.streaming;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import org.junit.Before;
+import static org.junit.Assert.*;
+
 import java.io.*;
 import java.util.*;
 import org.apache.hadoop.conf.Configuration;
@@ -30,10 +33,12 @@ import org.apache.hadoop.fs.Path;
  * reducers have non-zero exit status and the
  * stream.non.zero.exit.status.is.failure jobconf is set.
  */
-public class TestStreamingExitStatus extends TestCase
+public class TestStreamingExitStatus
 {
-  protected File INPUT_FILE = new File("input.txt");
-  protected File OUTPUT_DIR = new File("out");  
+  protected File TEST_DIR =
+    new File("TestStreamingExitStatus").getAbsoluteFile();
+  protected File INPUT_FILE = new File(TEST_DIR, "input.txt");
+  protected File OUTPUT_DIR = new File(TEST_DIR, "out");
 
   protected String failingTask = StreamUtil.makeJavaCommand(FailApp.class, new String[]{"true"});
   protected String echoTask = StreamUtil.makeJavaCommand(FailApp.class, new String[]{"false"});
@@ -56,52 +61,48 @@ public class TestStreamingExitStatus extends TestCase
     };
   }
 
+  @Before
   public void setUp() throws IOException {
-    UtilTest.recursiveDelete(INPUT_FILE);
-    UtilTest.recursiveDelete(OUTPUT_DIR);
-    
+    UtilTest.recursiveDelete(TEST_DIR);
+    assertTrue(TEST_DIR.mkdirs());
+
     FileOutputStream out = new FileOutputStream(INPUT_FILE.getAbsoluteFile());
     out.write("hello\n".getBytes());
     out.close();
   }
 
-  public void runStreamJob(boolean exitStatusIsFailure, boolean failMap) {
-    try {
-      boolean mayExit = false;
-      int returnStatus = 0;
+  public void runStreamJob(boolean exitStatusIsFailure, boolean failMap) throws Exception {
+    boolean mayExit = false;
+    int returnStatus = 0;
 
-      StreamJob job = new StreamJob(genArgs(exitStatusIsFailure, failMap), mayExit);
-      returnStatus = job.go();
-      
-      if (exitStatusIsFailure) {
-        assertEquals("Streaming Job failure code expected", /*job not successful:*/1, returnStatus);
-      } else {
-        assertEquals("Streaming Job expected to succeed", 0, returnStatus);
-      }
-    } catch (Exception e) {
-      failTrace(e);
+    StreamJob job = new StreamJob(genArgs(exitStatusIsFailure, failMap), mayExit);
+    returnStatus = job.go();
+    
+    if (exitStatusIsFailure) {
+      assertEquals("Streaming Job failure code expected", /*job not successful:*/1, returnStatus);
+    } else {
+      assertEquals("Streaming Job expected to succeed", 0, returnStatus);
     }
   }
-  
-  public void testMapFailOk() {
+
+  @Test
+  public void testMapFailOk() throws Exception {
     runStreamJob(false, true);
   }
-  
-  public void testMapFailNotOk() {
+
+  @Test
+  public void testMapFailNotOk() throws Exception {
     runStreamJob(true, true);
   }
-  
-  public void testReduceFailOk() {
+
+  @Test
+  public void testReduceFailOk() throws Exception {
     runStreamJob(false, false);
   }
   
-  public void testReduceFailNotOk() {
+  @Test
+  public void testReduceFailNotOk() throws Exception {
     runStreamJob(true, false);
   }  
   
-  protected void failTrace(Exception e) {
-    StringWriter sw = new StringWriter();
-    e.printStackTrace(new PrintWriter(sw));
-    fail(sw.toString());
-  }
 }
