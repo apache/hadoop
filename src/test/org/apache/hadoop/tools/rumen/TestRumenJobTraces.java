@@ -26,6 +26,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +37,12 @@ import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.Compressor;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobHistory;
+import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.mapred.UtilsForTests;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -323,6 +330,146 @@ public class TestRumenJobTraces {
     }
   }
 
+  /**
+   * Tests if {@link TraceBuilder} can correctly identify and parse jobhistory
+   * filenames. The testcase checks if {@link TraceBuilder}
+   *   - correctly identifies a jobhistory filename
+   *   - correctly parses a jobhistory filename to extract out the jobid
+   *   - correctly identifies a job-configuration filename stored along with the 
+   *     jobhistory files
+   */
+  @Test
+  public void testJobHistoryFilenameParsing() throws IOException {
+    final Configuration conf = new Configuration();
+    final FileSystem lfs = FileSystem.getLocal(conf);
+    String user = "test";
+    org.apache.hadoop.mapred.JobID jid = 
+      new org.apache.hadoop.mapred.JobID("12345", 1);
+    final Path rootInputDir =
+      new Path(System.getProperty("test.tools.input.dir", ""))
+      .makeQualified(lfs);
+    
+    // Check if jobhistory filename are detected properly
+    Path jhFilename = new Path(jid + "_1234_user_jobname");
+    JobID extractedJID = 
+      JobID.forName(TraceBuilder.extractJobID(jhFilename.getName()));
+    assertEquals("TraceBuilder failed to parse the current JH filename", 
+                 jid, extractedJID);
+    
+    // Check if the conf filename in jobhistory are detected properly
+    Path jhConfFilename = new Path(jid + "_conf.xml");
+    assertTrue("TraceBuilder failed to parse the current JH conf filename", 
+               TraceBuilder.isJobConfXml(jhConfFilename.getName(), null));
+  }
+
+  /**
+   * Test if {@link CurrentJHParser} can read events from current JH files.
+   */
+  @Test
+  public void testCurrentJHParser() throws Exception {
+    final Configuration conf = new Configuration();
+    final FileSystem lfs = FileSystem.getLocal(conf);
+
+    final Path rootTempDir =
+      new Path(System.getProperty("test.build.data", "/tmp"))
+          .makeQualified(lfs);
+
+    final Path tempDir = new Path(rootTempDir, "TestCurrentJHParser");
+    lfs.delete(tempDir, true);
+    
+    // Run a MR job
+    // create a MR cluster
+    conf.setInt("mapred.tasktracker.map.tasks.maximum", 1);
+    conf.setInt("mapred.tasktracker.reduce.tasks.maximum", 1);
+    MiniMRCluster mrCluster = new MiniMRCluster(1, "file:///", 1, null, null, 
+                                                new JobConf(conf));
+    
+    // run a job
+    Path inDir = new Path(tempDir, "input");
+    Path outDir = new Path(tempDir, "output");
+    JobHistoryParser parser = null;
+    RewindableInputStream ris = null;
+    ArrayList<String> seenEvents = new ArrayList<String>(10);
+    RunningJob rJob = null;
+    
+    try {
+      // construct a job with 1 map and 1 reduce task.
+      rJob = UtilsForTests.runJob(mrCluster.createJobConf(), inDir, outDir, 1, 
+                                  1);
+      rJob.waitForCompletion();
+      assertTrue("Job failed", rJob.isSuccessful());
+      
+      JobID id = rJob.getID();
+
+      // get the jobhistory filepath
+      Path inputPath =  
+        new Path(JobHistory.getHistoryFilePath(
+            org.apache.hadoop.mapred.JobID.downgrade(id)));
+      // wait for 10 secs for the jobhistory file to move into the done folder
+      for (int i = 0; i < 100; ++i) {
+        if (lfs.exists(inputPath)) {
+          break;
+        }
+        TimeUnit.MILLISECONDS.wait(100);
+      }
+    
+      assertTrue("Missing job history file", lfs.exists(inputPath));
+    
+      InputDemuxer inputDemuxer = new DefaultInputDemuxer();
+      inputDemuxer.bindTo(inputPath, conf);
+    
+      Pair<String, InputStream> filePair = inputDemuxer.getNext();
+    
+      assertNotNull(filePair);
+    
+      ris = new RewindableInputStream(filePair.second());
+
+      // Test if the JobHistoryParserFactory can detect the parser correctly
+      parser = JobHistoryParserFactory.getParser(ris);
+        
+      HistoryEvent e;
+      while ((e = parser.nextEvent()) != null) {
+        String eventString = e.getEventType().toString();
+        System.out.println(eventString);
+        seenEvents.add(eventString);
+      }
+    } finally {
+      // stop the MR cluster
+      mrCluster.shutdown();
+      
+      if (ris != null) {
+          ris.close();
+      }
+      if (parser != null) {
+        parser.close();
+      }
+      
+      // cleanup the filesystem
+      lfs.delete(tempDir, true);
+    }
+
+    // Check against the gold standard
+    System.out.println("testCurrentJHParser validating using gold std ");
+    String[] goldLines = new String[] {"JOB_SUBMITTED", "JOB_PRIORITY_CHANGED",
+        "JOB_STATUS_CHANGED", "JOB_INITED", "JOB_INFO_CHANGED", "TASK_STARTED",
+        "MAP_ATTEMPT_STARTED", "MAP_ATTEMPT_FINISHED", "MAP_ATTEMPT_FINISHED",
+        "TASK_UPDATED", "TASK_FINISHED", "JOB_STATUS_CHANGED", "TASK_STARTED",
+        "MAP_ATTEMPT_STARTED", "MAP_ATTEMPT_FINISHED", "MAP_ATTEMPT_FINISHED",
+        "TASK_UPDATED", "TASK_FINISHED", "TASK_STARTED", "MAP_ATTEMPT_STARTED",
+        "MAP_ATTEMPT_FINISHED", "REDUCE_ATTEMPT_FINISHED", "TASK_UPDATED",
+        "TASK_FINISHED", "TASK_STARTED", "MAP_ATTEMPT_STARTED", 
+        "MAP_ATTEMPT_FINISHED", "MAP_ATTEMPT_FINISHED", "TASK_UPDATED",
+        "TASK_FINISHED", "JOB_STATUS_CHANGED", "JOB_FINISHED"};
+    
+    // Check the output with gold std
+    assertEquals("Size mismatch", goldLines.length, seenEvents.size());
+    
+    int index = 0;
+    for (String goldLine : goldLines) {
+      assertEquals("Content mismatch", goldLine, seenEvents.get(index++));
+    }
+  }
+  
   @Test
   public void testJobConfigurationParser() throws Exception {
     String[] list1 =

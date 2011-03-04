@@ -583,8 +583,8 @@ public class UtilsForTests {
   }
 
   // Start a job and return its RunningJob object
-  static RunningJob runJob(JobConf conf, Path inDir, Path outDir, int numMaps, 
-                           int numReds) throws IOException {
+  public static RunningJob runJob(JobConf conf, Path inDir, Path outDir, 
+                                  int numMaps, int numReds) throws IOException {
 
     FileSystem fs = FileSystem.get(conf);
     if (fs.exists(outDir)) {

@@ -168,6 +168,13 @@ public class JobHistory {
   private static final SortedMap<Long, String>jobToDirectoryMap
     = new TreeMap<Long, String>();
 
+  // JobHistory filename regex
+  public static final Pattern JOBHISTORY_FILENAME_REGEX = 
+    Pattern.compile("(" + JobID.JOBID_REGEX + ")_.+");
+  // JobHistory conf-filename regex
+  public static final Pattern CONF_FILENAME_REGEX =
+    Pattern.compile("(" + JobID.JOBID_REGEX + ")_conf.xml");
+  
   private static class MovedFileInfo {
     private final String historyFile;
     private final long timestamp;

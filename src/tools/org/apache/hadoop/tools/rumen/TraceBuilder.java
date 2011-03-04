@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.mapred.JobHistory;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -51,20 +52,6 @@ public class TraceBuilder extends Configured implements Tool {
   JobConfigurationParser jobConfParser;
   Outputter<LoggedJob> traceWriter;
   Outputter<LoggedNetworkTopology> topologyWriter;
-
-  // Needs to be interpreted greedily or otherwise constrained
-  static final String jobIDRegex = "job_[0-9]+_[0-9]+";
-
-  // returns jobID in Capturing Group 1
-  static final Pattern confFileNameRegex =
-      Pattern.compile("[^.].+_(" + jobIDRegex
-          + ")_conf.xml(?:\\.[0-9a-zA-Z]+)?");
-
-  // This can match text that confFileNameRegex will also match. The code
-  // gives precedence to confFileNameRegex . Returns jobID
-  // in Capturing Group 1
-  static final Pattern jobFileNameRegex =
-      Pattern.compile("[^.].+_(" + jobIDRegex + ")_.+");
 
   static class MyOptions {
     Class<? extends InputDemuxer> inputDemuxerClass = DefaultInputDemuxer.class;
@@ -163,11 +150,23 @@ public class TraceBuilder extends Configured implements Tool {
    *         [especially for .crc files] we return null.
    */
   static String extractJobID(String fileName) {
-    return applyParser(fileName, jobFileNameRegex);
+    String jobId = applyParser(fileName, JobHistory.JOBHISTORY_FILENAME_REGEX);
+    if (jobId == null) {
+      // check if its a pre21 jobhistory file
+      jobId = applyParser(fileName, 
+                          Pre21JobHistoryConstants.JOBHISTORY_FILENAME_REGEX);
+    }
+    return jobId;
   }
 
   static boolean isJobConfXml(String fileName, InputStream input) {
-    return applyParser(fileName, confFileNameRegex) != null;
+    String jobId = applyParser(fileName, JobHistory.CONF_FILENAME_REGEX);
+    if (jobId == null) {
+      // check if its a pre21 jobhistory conf file
+      jobId = applyParser(fileName, 
+                          Pre21JobHistoryConstants.CONF_FILENAME_REGEX);
+    }
+    return jobId != null;
   }
 
   private void addInterestedProperties(List<String> interestedProperties,

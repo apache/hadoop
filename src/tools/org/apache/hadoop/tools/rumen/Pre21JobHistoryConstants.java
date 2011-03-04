@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.tools.rumen;
 
+import java.util.regex.Pattern;
+
+import org.apache.hadoop.mapreduce.JobID;
+
 /**
  * 
  *
@@ -45,5 +49,20 @@ public class Pre21JobHistoryConstants {
   public static enum Values {
     SUCCESS, FAILED, KILLED, MAP, REDUCE, CLEANUP, RUNNING, PREP, SETUP
   }
+  
+  /**
+   * Pre21 regex for jobhistory filename 
+   *   i.e jt-identifier_job-id_user-name_job-name
+   */
+  static final Pattern JOBHISTORY_FILENAME_REGEX =
+    Pattern.compile("[^.].+_(" + JobID.JOBID_REGEX + ")_.+");
+
+  /**
+   * Pre21 regex for jobhistory conf filename 
+   *   i.e jt-identifier_job-id_conf.xml
+   */
+  static final Pattern CONF_FILENAME_REGEX =
+    Pattern.compile("[^.].+_(" + JobID.JOBID_REGEX 
+                    + ")_conf.xml(?:\\.[0-9a-zA-Z]+)?");
  
 }
