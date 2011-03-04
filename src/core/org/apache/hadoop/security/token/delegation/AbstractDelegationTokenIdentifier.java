@@ -34,6 +34,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 //@InterfaceAudience.LimitedPrivate({HDFS, MAPREDUCE})
 public abstract class AbstractDelegationTokenIdentifier 
 extends TokenIdentifier {
+  private static final byte VERSION = 0;
 
   private Text owner;
   private Text renewer;
@@ -145,6 +146,11 @@ extends TokenIdentifier {
   }
   
   public void readFields(DataInput in) throws IOException {
+    byte version = in.readByte();
+    if (version != VERSION) {
+	throw new IOException("Unknown version of delegation token " + 
+                              version);
+    }
     owner.readFields(in);
     renewer.readFields(in);
     realUser.readFields(in);
@@ -155,6 +161,7 @@ extends TokenIdentifier {
   }
 
   public void write(DataOutput out) throws IOException {
+    out.writeByte(VERSION);
     owner.write(out);
     renewer.write(out);
     realUser.write(out);
