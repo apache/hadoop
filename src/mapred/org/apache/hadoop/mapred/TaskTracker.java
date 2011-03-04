@@ -384,14 +384,7 @@ public class TaskTracker
               if (action instanceof KillJobAction) {
                 purgeJob((KillJobAction) action);
               } else if (action instanceof KillTaskAction) {
-                TaskInProgress tip;
-                KillTaskAction killAction = (KillTaskAction) action;
-                synchronized (TaskTracker.this) {
-                  tip = tasks.get(killAction.getTaskID());
-                }
-                LOG.info("Received KillTaskAction for task: " + 
-                         killAction.getTaskID());
-                purgeTask(tip, false);
+                processKillTaskAction((KillTaskAction) action);
               } else {
                 LOG.error("Non-delete action given to cleanup thread: "
                           + action);
@@ -402,6 +395,15 @@ public class TaskTracker
           }
         }
       }, "taskCleanup");
+
+  void processKillTaskAction(KillTaskAction killAction) throws IOException {
+    TaskInProgress tip;
+    synchronized (TaskTracker.this) {
+      tip = tasks.get(killAction.getTaskID());
+    }
+    LOG.info("Received KillTaskAction for task: " + killAction.getTaskID());
+    purgeTask(tip, false);
+  }
 
   public TaskController getTaskController() {
     return taskController;
@@ -706,7 +708,7 @@ public class TaskTracker
         getReduceUserLogRetainSize()));
     getTaskLogsMonitor().start();
 
-    this.indexCache = new IndexCache(this.fConf);
+    setIndexCache(new IndexCache(this.fConf));
 
     mapLauncher = new TaskLauncher(TaskType.MAP, maxMapSlots);
     reduceLauncher = new TaskLauncher(TaskType.REDUCE, maxReduceSlots);
@@ -1460,6 +1462,10 @@ public class TaskTracker
 
   private long previousUpdate = 0;
 
+  void setIndexCache(IndexCache cache) {
+    this.indexCache = cache;
+  }
+
   /**
    * Build and transmit the heart beat to the JobTracker
    * @param now current time
@@ -1950,7 +1956,7 @@ public class TaskTracker
     }
   }
   
-  private class TaskLauncher extends Thread {
+  class TaskLauncher extends Thread {
     private IntWritable numFreeSlots;
     private final int maxSlots;
     private List<TaskInProgress> tasksToLaunch;
@@ -1984,6 +1990,18 @@ public class TaskTracker
       }
     }
     
+    void notifySlots() {
+      synchronized (numFreeSlots) {
+        numFreeSlots.notifyAll();
+      }
+    }
+
+    int getNumWaitingTasksToLaunch() {
+      synchronized (tasksToLaunch) {
+        return tasksToLaunch.size();
+      }
+    }
+
     public void run() {
       while (!Thread.interrupted()) {
         try {
@@ -2001,11 +2019,32 @@ public class TaskTracker
           }
           //wait for free slots to run
           synchronized (numFreeSlots) {
+            boolean canLaunch = true;
             while (numFreeSlots.get() < task.getNumSlotsRequired()) {
+              //Make sure that there is no kill task action for this task!
+              //We are not locking tip here, because it would reverse the
+              //locking order!
+              //Also, Lock for the tip is not required here! because :
+              // 1. runState of TaskStatus is volatile
+              // 2. Any notification is not missed because notification is
+              // synchronized on numFreeSlots. So, while we are doing the check,
+              // if the tip is half way through the kill(), we don't miss
+              // notification for the following wait().
+              if (!tip.canBeLaunched()) {
+                //got killed externally while still in the launcher queue
+                LOG.info("Not blocking slots for " + task.getTaskID()
+                    + " as it got killed externally. Task's state is "
+                    + tip.getRunState());
+                canLaunch = false;
+                break;
+              }
               LOG.info("TaskLauncher : Waiting for " + task.getNumSlotsRequired() + 
                        " to launch " + task.getTaskID() + ", currently we have " + 
                        numFreeSlots.get() + " free slots");
               numFreeSlots.wait();
+            }
+            if (!canLaunch) {
+              continue;
             }
             LOG.info("In TaskLauncher, current free slots : " + numFreeSlots.get()+
                      " and trying to launch "+tip.getTask().getTaskID() + 
@@ -2015,10 +2054,10 @@ public class TaskTracker
           }
           synchronized (tip) {
             //to make sure that there is no kill task action for this
-            if (tip.getRunState() != TaskStatus.State.UNASSIGNED &&
-                tip.getRunState() != TaskStatus.State.FAILED_UNCLEAN &&
-                tip.getRunState() != TaskStatus.State.KILLED_UNCLEAN) {
+            if (!tip.canBeLaunched()) {
               //got killed externally while still in the launcher queue
+              LOG.info("Not launching task " + task.getTaskID() + " as it got"
+                + " killed externally. Task's state is " + tip.getRunState());
               addFreeSlots(task.getNumSlotsRequired());
               continue;
             }
@@ -2058,7 +2097,7 @@ public class TaskTracker
    * All exceptions are handled locally, so that we don't mess up the
    * task tracker.
    */
-  private void startNewTask(TaskInProgress tip) {
+  void startNewTask(TaskInProgress tip) {
     try {
       localizeJob(tip);
     } catch (Throwable e) {
@@ -2344,6 +2383,13 @@ public class TaskTracker
    	  return this.taskStatus.inTaskCleanupPhase();
     }
     
+    // checks if state has been changed for the task to be launched
+    boolean canBeLaunched() {
+      return (getRunState() == TaskStatus.State.UNASSIGNED ||
+          getRunState() == TaskStatus.State.FAILED_UNCLEAN ||
+          getRunState() == TaskStatus.State.KILLED_UNCLEAN);
+    }
+
     /**
      * The task is reporting its progress
      */
@@ -2774,6 +2820,11 @@ public class TaskTracker
           launcher.addFreeSlots(task.getNumSlotsRequired());
         }
         slotTaken = false;
+      } else {
+        // wake up the launcher. it may be waiting to block slots for this task.
+        if (launcher != null) {
+          launcher.notifySlots();
+        }
       }
     }
 
@@ -3648,7 +3699,7 @@ public class TaskTracker
     }
   }
 
-  private void setTaskMemoryManagerEnabledFlag() {
+  void setTaskMemoryManagerEnabledFlag() {
     if (!ProcfsBasedProcessTree.isAvailable()) {
       LOG.info("ProcessTree implementation is missing on this system. "
           + "TaskMemoryManager is disabled.");
