@@ -107,7 +107,6 @@ class CleanupQueue {
       for (PathDeletionContext context : contexts) {
         try {
           queue.put(context);
-          LOG.debug("Added " + context + " to queue");
         } catch(InterruptedException ie) {}
       }
     }
