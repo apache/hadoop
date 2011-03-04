@@ -92,7 +92,7 @@ public class TestClientProtocolWithDelegationToken {
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     String user = current.getUserName();
     Text owner = new Text(user);
-    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(owner, owner);
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(owner, owner, null);
     Token<DelegationTokenIdentifier> token = new Token<DelegationTokenIdentifier>(
         dtId, sm);
     Text host = new Text(addr.getAddress().getHostAddress() + ":"

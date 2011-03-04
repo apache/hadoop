@@ -71,29 +71,52 @@ public class TestSaslRPC {
 
   public static class TestTokenIdentifier extends TokenIdentifier {
     private Text tokenid;
+    private Text realUser;
     final static Text KIND_NAME = new Text("test.token");
     
     public TestTokenIdentifier() {
       this.tokenid = new Text();
+      this.realUser = new Text();
     }
     public TestTokenIdentifier(Text tokenid) {
       this.tokenid = tokenid;
+      this.realUser = new Text();
+    }
+    public TestTokenIdentifier(Text tokenid, Text realUser) {
+      this.tokenid = tokenid;
+      if (realUser == null) {
+        this.realUser = new Text();
+      } else {
+        this.realUser = realUser;
+      }
     }
     @Override
     public Text getKind() {
       return KIND_NAME;
     }
     @Override
-    public Text getUsername() {
-      return tokenid;
+    public UserGroupInformation getUser() {
+      if ((realUser == null) || ("".equals(realUser.toString()))) {
+        return UserGroupInformation.createRemoteUser(tokenid.toString());
+      } else {
+        UserGroupInformation realUgi = UserGroupInformation
+            .createRemoteUser(realUser.toString());
+        return UserGroupInformation
+            .createProxyUser(tokenid.toString(), realUgi);
+      }
     }
+
     @Override
     public void readFields(DataInput in) throws IOException {
       tokenid.readFields(in);
+      realUser.readFields(in);
     }
     @Override
     public void write(DataOutput out) throws IOException {
       tokenid.write(out);
+      if (realUser != null) {
+        realUser.write(out);
+      }
     }
   }
   

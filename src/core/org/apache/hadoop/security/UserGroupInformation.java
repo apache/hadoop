@@ -212,6 +212,43 @@ public class UserGroupInformation {
     }
   }
   
+  private static class RealUser implements Principal {
+    private final UserGroupInformation realUser;
+    
+    RealUser(UserGroupInformation realUser) {
+      this.realUser = realUser;
+    }
+    
+    public String getName() {
+      return realUser.getUserName();
+    }
+    
+    public UserGroupInformation getRealUser() {
+      return realUser;
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      } else if (o == null || getClass() != o.getClass()) {
+        return false;
+      } else {
+        return realUser.equals(((RealUser) o).realUser);
+      }
+    }
+    
+    @Override
+    public int hashCode() {
+      return realUser.hashCode();
+    }
+    
+    @Override
+    public String toString() {
+      return realUser.toString();
+    }
+  }
+  
   /**
    * A JAAS configuration that defines the login modules that we want
    * to use for login.
@@ -372,6 +409,36 @@ public class UserGroupInformation {
     subject.getPrincipals().add(new User(user));
     return new UserGroupInformation(subject);
   }
+
+  /* Create a proxy user using username of the effective user and the ugi of the
+   * real user.
+   *
+   * @param effective
+   *          user, UGI for real user.
+   * @return
+   */
+  public static UserGroupInformation createProxyUser(String user,
+      UserGroupInformation realUser) {
+    if (user == null || "".equals(user)) {
+      throw new IllegalArgumentException("Null user");
+    }
+    if (realUser == null) {
+      throw new IllegalArgumentException("Null real user");
+    }
+    Subject subject = new Subject();
+    subject.getPrincipals().add(new User(user));
+    subject.getPrincipals().add(new RealUser(realUser));
+    return new UserGroupInformation(subject);
+  }
+
+  public UserGroupInformation getRealUser() {
+    for (RealUser p: subject.getPrincipals(RealUser.class)) {
+      return p.getRealUser();
+    }
+    return null;
+  }
+
+
   
   /**
    * This class is used for storing the groups for testing. It stores a local
@@ -418,6 +485,31 @@ public class UserGroupInformation {
     return ugi;
   }
 
+
+  /**
+   * Create a proxy user UGI for testing HDFS and MapReduce
+   * 
+   * @param user
+   *          the full user principal name for effective user
+   * @param realUser
+   *          UGI of the real user
+   * @param userGroups
+   *          the names of the groups that the user belongs to
+   * @return a fake user for running unit tests
+   */
+  public static UserGroupInformation createProxyUserForTesting(String user,
+      UserGroupInformation realUser, String[] userGroups) {
+    ensureInitialized();
+    UserGroupInformation ugi = createProxyUser(user, realUser);
+    // make sure that the testing object is setup
+    if (!(groups instanceof TestingGroups)) {
+      groups = new TestingGroups();
+    }
+    // add the user groups
+    ((TestingGroups) groups).setUserGroups(ugi.getShortUserName(), userGroups);
+    return ugi;
+  }
+  
   /**
    * Get the user's login name.
    * @return the user's name up to the first '/' or '@'.
@@ -488,7 +580,11 @@ public class UserGroupInformation {
    */
   @Override
   public String toString() {
-    return getUserName();
+    if (getRealUser() != null) {
+      return getUserName() + " via " +  getRealUser().toString();
+    } else {
+      return getUserName();
+    }
   }
 
   /**
@@ -594,4 +690,5 @@ public class UserGroupInformation {
       System.out.println("Keytab: " + ugi);
     }
   }
+
 }

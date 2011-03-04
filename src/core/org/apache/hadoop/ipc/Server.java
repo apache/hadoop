@@ -68,6 +68,7 @@ import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -810,6 +811,17 @@ public abstract class Server {
         return true;
       return false;
     }
+    
+    private UserGroupInformation getAuthorizedUgi(String authorizedId)
+        throws IOException {
+      if (authMethod == SaslRpcServer.AuthMethod.DIGEST) {
+        TokenIdentifier tokenId = SaslRpcServer.getIdentifier(authorizedId,
+            secretManager);
+        return tokenId.getUser();
+      } else {
+        return UserGroupInformation.createRemoteUser(authorizedId);
+      }
+    }
 
     private void saslReadAndProcess(byte[] saslToken) throws IOException,
         InterruptedException {
@@ -873,8 +885,7 @@ public abstract class Server {
             LOG.debug("SASL server context established. Negotiated QoP is "
                 + saslServer.getNegotiatedProperty(Sasl.QOP));
           }
-          user = UserGroupInformation.createRemoteUser(saslServer
-              .getAuthorizationID());
+          user = getAuthorizedUgi(saslServer.getAuthorizationID());
           LOG.info("SASL server successfully authenticated client: " + user);
           saslContextEstablished = true;
         }
@@ -1000,10 +1011,19 @@ public abstract class Server {
       UserGroupInformation protocolUser = header.getUgi();
       if (!useSasl) {
         user = protocolUser;
-      } else if (protocolUser != null && !protocolUser.equals(user)) {
-        throw new AccessControlException("Authenticated user (" + user
-            + ") doesn't match what the client claims to be (" + protocolUser
-            + ")");
+      } else if ((protocolUser != null)
+          && (!protocolUser.getUserName().equals(user.getUserName()))) {
+        if (authMethod == AuthMethod.DIGEST) {
+          // Not allowed to doAs if token authentication is used
+          throw new AccessControlException("Authenticated user (" + user
+              + ") doesn't match what the client claims to be (" + protocolUser
+              + ")");
+        } else {
+          //Effective user can be different from authenticated user
+          //for simple auth or kerberos auth
+          user = UserGroupInformation.createProxyUser(protocolUser
+              .getUserName(), user);
+        }
       }
     }
     
@@ -1079,6 +1099,14 @@ public abstract class Server {
 
     private boolean authorizeConnection() throws IOException {
       try {
+        // If auth method is DIGEST, the token was obtained by the
+        // real user for the effective user, therefore not required to
+        // authorize real user. doAs is allowed only for simple or kerberos
+        // authentication
+        if (user != null && user.getRealUser() != null
+            && (authMethod != AuthMethod.DIGEST)) {
+          ProxyUsers.authorize(user, this.getHostAddress(), conf);
+        }
         authorize(user, header);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Successfully authorized " + header);

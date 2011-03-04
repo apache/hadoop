@@ -242,11 +242,11 @@ public class DelegationTokenSecretManager
       LOG.warn("Renewer is null: Invalid Identifier");
       return false;
     }
-    if (id.getUsername() == null) {
+    if (id.getUser() == null) {
       LOG.warn("owner is null: Invalid Identifier");
       return false;
     }
-    String owner = id.getUsername().toString();
+    String owner = id.getUser().getUserName();
     String renewer = id.getRenewer().toString();
     if (!canceller.equals(owner) && !canceller.equals(renewer)) {
       LOG.warn(canceller + " is not authorized to cancel the token");
@@ -315,10 +315,6 @@ public class DelegationTokenSecretManager
       LOG.debug("Stopping expired delegation token remover thread");
     running = false;
     tokenRemoverThread.interrupt();
-    try {
-      tokenRemoverThread.join();
-    } catch (InterruptedException e) {
-    }
   }
   
   private class ExpiredTokenRemover extends Thread {
@@ -345,12 +341,14 @@ public class DelegationTokenSecretManager
             removeExpiredToken();
             lastTokenCacheCleanup = now;
           }
-          Thread.sleep(5000); // 5 seconds
-        }
-      } catch (InterruptedException ie) {
-        LOG
+          try {
+            Thread.sleep(5000); // 5 seconds
+          } catch (InterruptedException ie) {
+            LOG
             .error("InterruptedExcpetion recieved for ExpiredTokenRemover thread "
                 + ie);
+          }
+        }
       } catch (Throwable t) {
         LOG.error("ExpiredTokenRemover thread received unexpected exception. "
             + t);

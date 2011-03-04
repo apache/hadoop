@@ -24,6 +24,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * The token identifier for job token
@@ -55,8 +56,11 @@ public class JobTokenIdentifier extends TokenIdentifier {
   
   /** {@inheritDoc} */
   @Override
-  public Text getUsername() {
-    return getJobId();
+  public UserGroupInformation getUser() {
+    if (jobid == null || "".equals(jobid.toString())) {
+      return null;
+    }
+    return UserGroupInformation.createRemoteUser(jobid.toString());
   }
 
   /**

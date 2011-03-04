@@ -153,6 +153,21 @@ public class TestUserGroupInformation {
   }
   
   @Test
+  public void testEqualsWithRealUser() throws Exception {
+    UserGroupInformation realUgi1 = UserGroupInformation.createUserForTesting(
+        "RealUser", GROUP_NAMES);
+    UserGroupInformation realUgi2 = UserGroupInformation.createUserForTesting(
+        "RealUser", GROUP_NAMES);
+    UserGroupInformation proxyUgi1 = UserGroupInformation.createProxyUser(
+        USER_NAME, realUgi1);
+    UserGroupInformation proxyUgi2 = UserGroupInformation.createProxyUser(
+        USER_NAME, realUgi2);
+    UserGroupInformation remoteUgi = UserGroupInformation.createRemoteUser(USER_NAME);
+    assertEquals(proxyUgi1, proxyUgi2);
+    assertFalse(remoteUgi.equals(proxyUgi1));
+  }
+  
+  @Test
   public void testGettingGroups() throws Exception {
     UserGroupInformation uugi = 
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);

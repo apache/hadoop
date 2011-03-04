@@ -502,6 +502,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       if (replthread != null) replthread.interrupt();
       if (dnthread != null) dnthread.interrupt();
       if (smmthread != null) smmthread.interrupt();
+      if (dtSecretManager != null) dtSecretManager.stopThreads();
     } catch (Exception e) {
       LOG.warn("Exception shutting down FSNamesystem", e);
     } finally {
@@ -4907,11 +4908,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private DelegationTokenSecretManager createDelegationTokenSecretManager(
       Configuration conf) {
     return new DelegationTokenSecretManager(conf.getLong(
-        "dfs.namenode.delegation.key.update-interval", 86400),
+        "dfs.namenode.delegation.key.update-interval", 24*60*60*1000),
         conf.getLong(
-            "dfs.namenode.delegation.token.max-lifetime", 604800),
+            "dfs.namenode.delegation.token.max-lifetime", 7*24*60*60*1000),
         conf.getLong(
-            "dfs.namenode.delegation.token.renew-interval", 86400),
+            "dfs.namenode.delegation.token.renew-interval", 24*60*60*1000),
         DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL);
   }
 
@@ -4921,9 +4922,15 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    String user = ugi.getUserName();
     Text owner = new Text(user);
-    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(owner, renewer);
+    Text realUser = null;
+    if (ugi.getRealUser() != null) {
+      realUser = new Text(ugi.getRealUser().getUserName());
+    }
+    DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(owner,
+        renewer, realUser);
     return new Token<DelegationTokenIdentifier>(dtId, dtSecretManager);
   }
 

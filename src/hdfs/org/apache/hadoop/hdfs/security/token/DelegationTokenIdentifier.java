@@ -23,10 +23,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 public class DelegationTokenIdentifier extends TokenIdentifier {
@@ -34,18 +32,24 @@ public class DelegationTokenIdentifier extends TokenIdentifier {
 
   private Text owner;
   private Text renewer;
+  private Text realUser;
   private long issueDate;
   private long maxDate;
   private int sequenceNumber;
   private int masterKeyId = 0;
   
   public DelegationTokenIdentifier() {
-    this(new Text(), new Text());
+    this(new Text(), new Text(), new Text());
   }
   
-  public DelegationTokenIdentifier(Text owner, Text renewer) {
+  public DelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {
     this.owner = owner;
     this.renewer = renewer;
+    if (realUser == null) {
+      this.realUser = new Text();
+    } else {
+      this.realUser = realUser;
+    }
     issueDate = 0;
     maxDate = 0;
   }
@@ -60,10 +64,20 @@ public class DelegationTokenIdentifier extends TokenIdentifier {
    * 
    * @return the username or owner
    */
-  public Text getUsername() {
-    return owner;
+  public UserGroupInformation getUser() {
+    if ( (owner == null) || ("".equals(owner.toString()))) {
+      return null;
+    }
+    if ((realUser == null) || ("".equals(realUser.toString()))
+        || realUser.equals(owner)) {
+      return UserGroupInformation.createRemoteUser(owner.toString());
+    } else {
+      UserGroupInformation realUgi = UserGroupInformation
+          .createRemoteUser(realUser.toString());
+      return UserGroupInformation.createProxyUser(owner.toString(), realUgi);
+    }
   }
-  
+
   public Text getRenewer() {
     return renewer;
   }
@@ -116,7 +130,8 @@ public class DelegationTokenIdentifier extends TokenIdentifier {
           && this.maxDate == that.maxDate
           && this.masterKeyId == that.masterKeyId
           && isEqual(this.owner, that.owner) 
-          && isEqual(this.renewer, that.renewer);
+          && isEqual(this.renewer, that.renewer)
+          && isEqual(this.realUser, that.realUser);
     }
     return false;
   }
@@ -129,6 +144,7 @@ public class DelegationTokenIdentifier extends TokenIdentifier {
   public void readFields(DataInput in) throws IOException {
     owner.readFields(in);
     renewer.readFields(in);
+    realUser.readFields(in);
     issueDate = WritableUtils.readVLong(in);
     maxDate = WritableUtils.readVLong(in);
     sequenceNumber = WritableUtils.readVInt(in);
@@ -138,6 +154,7 @@ public class DelegationTokenIdentifier extends TokenIdentifier {
   public void write(DataOutput out) throws IOException {
     owner.write(out);
     renewer.write(out);
+    realUser.write(out);
     WritableUtils.writeVLong(out, issueDate);
     WritableUtils.writeVLong(out, maxDate);
     WritableUtils.writeVInt(out, sequenceNumber);

@@ -64,6 +64,15 @@ public class SaslRpcServer {
     return Base64.decodeBase64(identifier.getBytes());
   }
 
+  public static TokenIdentifier getIdentifier(String id,
+      SecretManager<TokenIdentifier> secretManager) throws IOException {
+    byte[] tokenId = decodeIdentifier(id);
+    TokenIdentifier tokenIdentifier = secretManager.createIdentifier();
+    tokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(
+        tokenId)));
+    return tokenIdentifier;
+  }
+
   static char[] encodePassword(byte[] password) {
     return new String(Base64.encodeBase64(password)).toCharArray();
   }
@@ -121,14 +130,6 @@ public class SaslRpcServer {
       this.secretManager = secretManager;
     }
 
-    private TokenIdentifier getIdentifier(String id) throws IOException {
-      byte[] tokenId = decodeIdentifier(id);
-      TokenIdentifier tokenIdentifier = secretManager.createIdentifier();
-      tokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(
-          tokenId)));
-      return tokenIdentifier;
-    }
-
     private char[] getPassword(TokenIdentifier tokenid) throws IOException {
       return encodePassword(secretManager.retrievePassword(tokenid));
     }
@@ -155,11 +156,11 @@ public class SaslRpcServer {
         }
       }
       if (pc != null) {
-        TokenIdentifier tokenIdentifier = getIdentifier(nc.getDefaultName());
+        TokenIdentifier tokenIdentifier = getIdentifier(nc.getDefaultName(), secretManager);
         char[] password = getPassword(tokenIdentifier);
         if (LOG.isDebugEnabled()) {
           LOG.debug("SASL server DIGEST-MD5 callback: setting password "
-              + "for client: " + tokenIdentifier.getUsername());
+              + "for client: " + tokenIdentifier.getUser());
         }
         pc.setPassword(password);
       }
@@ -172,11 +173,12 @@ public class SaslRpcServer {
           ac.setAuthorized(false);
         }
         if (ac.isAuthorized()) {
-          String username = getIdentifier(authzid).getUsername().toString();
+          String username = getIdentifier(authzid, secretManager).getUser()
+              .getUserName().toString();
           if (LOG.isDebugEnabled())
             LOG.debug("SASL server DIGEST-MD5 callback: setting "
                 + "canonicalized client ID: " + username);
-          ac.setAuthorizedID(username);
+          ac.setAuthorizedID(authzid);
         }
       }
     }

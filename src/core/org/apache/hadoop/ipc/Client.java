@@ -213,8 +213,6 @@ public class Client {
       
       UserGroupInformation ticket = remoteId.getTicket();
       Class<?> protocol = remoteId.getProtocol();
-      header = 
-        new ConnectionHeader(protocol == null ? null : protocol.getName(), ticket);
       this.useSasl = UserGroupInformation.isSecurityEnabled();
       if (useSasl && protocol != null) {
         TokenInfo tokenInfo = protocol.getAnnotation(TokenInfo.class);
@@ -248,6 +246,10 @@ public class Client {
       } else {
         authMethod = AuthMethod.KERBEROS;
       }
+      
+      header = new ConnectionHeader(protocol == null ? null : protocol
+          .getName(), ticket, authMethod);
+      
       if (LOG.isDebugEnabled())
         LOG.debug("Use " + authMethod + " authentication for protocol "
             + protocol.getSimpleName());
@@ -379,7 +381,13 @@ public class Client {
         if (useSasl) {
           final InputStream in2 = inStream;
           final OutputStream out2 = outStream;
-          remoteId.getTicket().doAs(new PrivilegedExceptionAction<Object>() {
+          UserGroupInformation ticket = remoteId.getTicket();
+          if (authMethod == AuthMethod.KERBEROS) {
+            if (ticket.getRealUser() != null) {
+              ticket = ticket.getRealUser();
+            }
+          }
+          ticket.doAs(new PrivilegedExceptionAction<Object>() {
             @Override
             public Object run() throws IOException {
               saslRpcClient = new SaslRpcClient(authMethod, token,
