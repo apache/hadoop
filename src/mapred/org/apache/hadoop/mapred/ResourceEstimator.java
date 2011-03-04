@@ -56,9 +56,11 @@ class ResourceEstimator {
       completedMapsInputSize+=(tip.getMapInputSize()+1);
       completedMapsOutputSize+=ts.getOutputSize();
 
-      LOG.info("completedMapsUpdates:"+completedMapsUpdates+"  "+
-          "completedMapsInputSize:"+completedMapsInputSize+"  " +
-        "completedMapsOutputSize:"+completedMapsOutputSize);
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("completedMapsUpdates:"+completedMapsUpdates+"  "+
+                  "completedMapsInputSize:"+completedMapsInputSize+"  " +
+                  "completedMapsOutputSize:"+completedMapsOutputSize);
+      }
     }
   }
 
@@ -73,7 +75,9 @@ class ResourceEstimator {
       //add desiredMaps() so that randomwriter case doesn't blow up
       long estimate = Math.round((inputSize * 
           completedMapsOutputSize * 2.0)/completedMapsInputSize);
-      LOG.debug("estimate total map output will be " + estimate);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("estimate total map output will be " + estimate);
+      }
       return estimate;
     }
   }
