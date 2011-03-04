@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
@@ -26,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.security.UserGroupInformation;
 
 class CleanupQueue {
 
@@ -66,10 +68,17 @@ class CleanupQueue {
 
     /**
      * Deletes the path (and its subdirectories recursively)
+     * @throws IOException, InterruptedException 
      */
-    protected void deletePath() throws IOException {
+    protected void deletePath() throws IOException, InterruptedException {
       final Path p = getPathForCleanup();
-      p.getFileSystem(conf).delete(p, true);
+      UserGroupInformation.getLoginUser().doAs(
+          new PrivilegedExceptionAction<Object>() {
+            public Object run() throws IOException {
+             p.getFileSystem(conf).delete(p, true);
+             return null;
+            }
+          });
     }
 
     @Override

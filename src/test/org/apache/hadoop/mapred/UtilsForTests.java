@@ -451,20 +451,27 @@ public class UtilsForTests {
     public void addToQueue(PathDeletionContext... contexts) {
       // delete paths in-line
       for (PathDeletionContext context : contexts) {
+        Exception exc = null;
         try {
           if (!deletePath(context)) {
             LOG.warn("Stale path " + context.fullPath);
             stalePaths.add(context.fullPath);
           }
         } catch (IOException e) {
+          exc = e;
+        } catch (InterruptedException ie) {
+          exc = ie;
+        }
+        if (exc != null) {
           LOG.warn("Caught exception while deleting path "
               + context.fullPath);
-          LOG.info(StringUtils.stringifyException(e));
+          LOG.info(StringUtils.stringifyException(exc));
           stalePaths.add(context.fullPath);
         }
       }
     }
-    static boolean deletePath(PathDeletionContext context) throws IOException {
+    static boolean deletePath(PathDeletionContext context) 
+    throws IOException, InterruptedException {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Trying to delete " + context.fullPath);
       }
