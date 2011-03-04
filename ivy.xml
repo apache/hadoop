@@ -174,6 +174,12 @@
       name="commons-daemon" 
       rev="${commons-daemon.version}"
       conf="server->default" /> 
+
+    <dependency org="com.jcraft"
+      name="jsch"
+      rev="${jsch.version}"
+      conf="common->master">
+    </dependency>
     
     <!--Configuration: commons-logging -->
 
