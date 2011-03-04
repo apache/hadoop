@@ -43,14 +43,6 @@ public class AuthorizationFilter implements Filter {
   protected static final Pattern HFTP_PATTERN = Pattern
       .compile("^(/listPaths|/data|/streamFile|/file)$");
 
-  /**
-   * Pattern for a filter to find out if an HFTP/HSFTP request stores its file
-   * path in the extra path information associated with the URL; if not, the
-   * file path is stored in request parameter "filename"
-   */
-  protected static final Pattern FILEPATH_PATTERN = Pattern
-      .compile("^(/listPaths|/data|/file)$");
-
   protected String contextPath;
 
   protected String namenode;
@@ -116,14 +108,8 @@ public class AuthorizationFilter implements Filter {
     // check request path
     String servletPath = rqst.getServletPath();
     if (HFTP_PATTERN.matcher(servletPath).matches()) {
-      // request is an HSFTP request
-      if (FILEPATH_PATTERN.matcher(servletPath).matches()) {
         // file path as part of the URL
         filePath = rqst.getPathInfo() != null ? rqst.getPathInfo() : "/";
-      } else {
-        // file path is stored in "filename" parameter
-        filePath = rqst.getParameter("filename");
-      }
     }
     return filePath;
   }
