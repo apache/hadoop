@@ -132,7 +132,7 @@
     <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
-      <version>1.3</version>
+      <version>1.4</version>
       <scope>optional</scope>
     </dependency>
 

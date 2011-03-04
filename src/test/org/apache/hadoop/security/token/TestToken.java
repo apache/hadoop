@@ -22,6 +22,7 @@ import java.io.*;
 import java.util.Arrays;
 
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 
 import junit.framework.TestCase;
 
@@ -58,4 +59,40 @@ public class TestToken extends TestCase {
     destToken.readFields(in);
     assertTrue(checkEqual(sourceToken, destToken));
   }
+  
+  private static void checkUrlSafe(String str) throws Exception {
+    int len = str.length();
+    for(int i=0; i < len; ++i) {
+      char ch = str.charAt(i);
+      if (ch == '-') continue;
+      if (ch == '_') continue;
+      if (ch >= '0' && ch <= '9') continue;
+      if (ch >= 'A' && ch <= 'Z') continue;
+      if (ch >= 'a' && ch <= 'z') continue;
+      fail("Encoded string " + str + 
+           " has invalid character at position " + i);
+    }
+  }
+
+  public static void testEncodeWritable() throws Exception {
+    String[] values = new String[]{"", "a", "bb", "ccc", "dddd", "eeeee",
+        "ffffff", "ggggggg", "hhhhhhhh", "iiiiiiiii",
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLM" +
+             "NOPQRSTUVWXYZ01234567890!@#$%^&*()-=_+[]{}|;':,./<>?"};
+    Token<AbstractDelegationTokenIdentifier> orig;
+    Token<AbstractDelegationTokenIdentifier> copy = 
+      new Token<AbstractDelegationTokenIdentifier>();
+    // ensure that for each string the input and output values match
+    for(int i=0; i< values.length; ++i) {
+      String val = values[i];
+      System.out.println("Input = " + val);
+      orig = new Token<AbstractDelegationTokenIdentifier>(val.getBytes(),
+          val.getBytes(), new Text(val), new Text(val));
+      String encode = orig.encodeToUrlString();
+      copy.decodeFromUrlString(encode);
+      assertEquals(orig, copy);
+      checkUrlSafe(encode);
+    }
+  }
+
 }
