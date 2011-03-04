@@ -179,7 +179,7 @@ public class TaskTracker
   
   // The filesystem where job files are stored
   FileSystem systemFS = null;
-  
+  private FileSystem localFs = null;
   private final HttpServer server;
     
   volatile boolean shuttingDown = false;
@@ -500,6 +500,7 @@ public class TaskTracker
   synchronized void initialize() throws IOException {
     // use configured nameserver & interface to get local hostname
     this.fConf = new JobConf(originalConf);
+    localFs = FileSystem.getLocal(fConf);
     if (fConf.get("slave.host.name") != null) {
       this.localHostname = fConf.get("slave.host.name");
     }
@@ -1511,7 +1512,7 @@ public class TaskTracker
         // Delete the job directory for this  
         // task if the job is done/failed
         if (!rjob.keepJobFiles){
-          directoryCleanupThread.addToQueue(fConf, getLocalFiles(fConf, 
+          directoryCleanupThread.addToQueue(localFs, getLocalFiles(fConf, 
             getLocalJobDir(rjob.getJobID().toString())));
         }
         // Remove this job 
@@ -2629,19 +2630,19 @@ public class TaskTracker
             //might be using the dir. The JVM running the tasks would clean
             //the workdir per a task in the task process itself.
             if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-              directoryCleanupThread.addToQueue(defaultJobConf,
+              directoryCleanupThread.addToQueue(localFs,
                   getLocalFiles(defaultJobConf,
                   taskDir));
             }  
             
             else {
-              directoryCleanupThread.addToQueue(defaultJobConf,
+              directoryCleanupThread.addToQueue(localFs,
                   getLocalFiles(defaultJobConf,
                 taskDir+"/job.xml"));
             }
           } else {
             if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-              directoryCleanupThread.addToQueue(defaultJobConf,
+              directoryCleanupThread.addToQueue(localFs,
                   getLocalFiles(defaultJobConf,
                   taskDir+"/work"));
             }  

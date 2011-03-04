@@ -63,6 +63,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -2194,6 +2195,29 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
            : 0;
   }
 
+  /**
+   * Get JobTracker's FileSystem. This is the filesystem for mapred.system.dir.
+   */
+  FileSystem getFileSystem() {
+    return fs;
+  }
+
+  /**
+   * Get the FileSystem for the given path. This can be used to resolve
+   * filesystem for job history, local job files or mapred.system.dir path.
+   */
+  FileSystem getFileSystem(Path path) throws IOException {
+    return path.getFileSystem(conf);
+  }
+
+  /**
+   * Get JobTracker's LocalFileSystem handle. This is used by jobs for 
+   * localizing job files to the local disk.
+   */
+  LocalFileSystem getLocalFileSystem() throws IOException {
+    return FileSystem.getLocal(conf);
+  }
+
   public static Class<? extends JobTrackerInstrumentation> getInstrumentationClass(Configuration conf) {
     return conf.getClass("mapred.jobtracker.instrumentation",
         JobTrackerMetricsInst.class, JobTrackerInstrumentation.class);
@@ -3544,7 +3568,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
     String queue = job.getProfile().getQueueName();
     if(!(queueManager.getQueues().contains(queue))) {      
-      new CleanupQueue().addToQueue(conf,getSystemDirectoryForJob(jobId));
+      new CleanupQueue().addToQueue(fs,getSystemDirectoryForJob(jobId));
       job.fail();
       if (userFileForJob != null) {
         userFileForJob.delete();
@@ -3562,7 +3586,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       if (userFileForJob != null) {
         userFileForJob.delete();
       }
-      new CleanupQueue().addToQueue(conf, getSystemDirectoryForJob(jobId));
+      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
       throw ioe;
     }
 
@@ -3571,7 +3595,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     try {
       checkMemoryRequirements(job);
     } catch (IOException ioe) {
-      new CleanupQueue().addToQueue(conf, getSystemDirectoryForJob(jobId));
+      new CleanupQueue().addToQueue(fs, getSystemDirectoryForJob(jobId));
       throw ioe;
     }
 
