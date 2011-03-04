@@ -32,10 +32,6 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  */
 public class HadoopDaemonRemoteCluster implements ClusterProcessManager {
 
-  private final static String CONF_HADOOP_MASTERSFILE_NAME="test.system.hdrc.masters.file";
-  private final static String MASTERS_FILE = System.getProperty(CONF_HADOOP_MASTERSFILE_NAME, "masters");
-  private final static String SLAVES_FILE = "slaves";
-
   private static final Log LOG = LogFactory
       .getLog(HadoopDaemonRemoteCluster.class.getName());
 
@@ -178,8 +174,8 @@ public class HadoopDaemonRemoteCluster implements ClusterProcessManager {
   }
 
   private void populateDaemons(String confLocation) throws IOException {
-    File mastersFile = new File(confLocation, MASTERS_FILE);
-    File slavesFile = new File(confLocation, SLAVES_FILE);
+    File mastersFile = new File(confLocation, "masters");
+    File slavesFile = new File(confLocation, "slaves");
     BufferedReader reader = null;
     try {
       reader = new BufferedReader(new FileReader(mastersFile));
@@ -187,16 +183,12 @@ public class HadoopDaemonRemoteCluster implements ClusterProcessManager {
       masterHost = reader.readLine();
       if (masterHost != null && !masterHost.trim().isEmpty()) {
         master = new ScriptDaemon(masterCommand, masterHost);
-      } else {
-        LOG.error(confLocation + System.getProperty("file.separator", "/") +
-            MASTERS_FILE + " has no content");
       }
     } finally {
       try {
         reader.close();
       } catch (Exception e) {
-        LOG.error("Can't read masters file from " + confLocation +
-            System.getProperty("file.separator", "/") + MASTERS_FILE);
+        LOG.error("Can't read masters file from " + confLocation);
       }
 
     }
@@ -209,16 +201,11 @@ public class HadoopDaemonRemoteCluster implements ClusterProcessManager {
             addr.getCanonicalHostName());
         slaves.put(addr.getCanonicalHostName(), slave);
       }
-      if (slaves.size() == 0) {
-        LOG.error(confLocation + System.getProperty("file.separator", "/") +
-            SLAVES_FILE + " has no content");
-      }
     } finally {
       try {
         reader.close();
       } catch (Exception e) {
-        LOG.error("Can't read slaves file from " + confLocation +
-            System.getProperty("file.separator", "/") + SLAVES_FILE);
+        LOG.error("Can't read slaves file from " + confLocation);
       }
     }
   }
