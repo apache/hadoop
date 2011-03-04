@@ -2,8 +2,13 @@ package org.apache.hadoop.test.system;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 
+import junit.framework.Assert;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.test.system.process.RemoteProcess;
@@ -18,6 +23,8 @@ public abstract class AbstractDaemonClient<PROXY extends DaemonProtocol> {
   private RemoteProcess process;
   private boolean connected;
 
+  private static final Log LOG = LogFactory.getLog(AbstractDaemonClient.class);
+  
   /**
    * Create a Daemon client.<br/>
    * 
@@ -195,4 +202,117 @@ public abstract class AbstractDaemonClient<PROXY extends DaemonProtocol> {
     }
   }
 
+  /**
+   * Gets number of times FATAL log messages where logged in Daemon logs. 
+   * <br/>
+   * Pattern used for searching is FATAL. <br/>
+   * 
+   * @return number of occurrence of fatal message.
+   * @throws IOException
+   */
+  public int getNumberOfFatalStatementsInLog() throws IOException {
+    DaemonProtocol proxy = getProxy();
+    String pattern = "FATAL";
+    return proxy.getNumberOfMatchesInLogFile(pattern);
+  }
+
+  /**
+   * Gets number of times ERROR log messages where logged in Daemon logs. 
+   * <br/>
+   * Pattern used for searching is ERROR. <br/>
+   * 
+   * @return number of occurrence of error message.
+   * @throws IOException
+   */
+  public int getNumberOfErrorStatementsInLog() throws IOException {
+    DaemonProtocol proxy = getProxy();
+    String pattern = "ERROR";
+    return proxy.getNumberOfMatchesInLogFile(pattern);
+  }
+
+  /**
+   * Gets number of times Warning log messages where logged in Daemon logs. 
+   * <br/>
+   * Pattern used for searching is WARN. <br/>
+   * 
+   * @return number of occurrence of warning message.
+   * @throws IOException
+   */
+  public int getNumberOfWarnStatementsInLog() throws IOException {
+    DaemonProtocol proxy = getProxy();
+    String pattern = "WARN";
+    return proxy.getNumberOfMatchesInLogFile(pattern);
+  }
+
+  /**
+   * Gets number of time given Exception were present in log file. <br/>
+   * 
+   * @param e exception class.
+   * @return number of exceptions in log
+   * @throws IOException
+   */
+  public int getNumberOfExceptionsInLog(Exception e)
+      throws IOException {
+    DaemonProtocol proxy = getProxy();
+    String pattern = e.getClass().getSimpleName();
+    return proxy.getNumberOfMatchesInLogFile(pattern);
+  }
+
+  /**
+   * Number of times ConcurrentModificationException present in log file. 
+   * <br/>
+   * @return number of times exception in log file.
+   * @throws IOException
+   */
+  public int getNumberOfConcurrentModificationExceptionsInLog()
+      throws IOException {
+    return getNumberOfExceptionsInLog(new ConcurrentModificationException());
+  }
+
+  private int errorCount;
+  private int fatalCount;
+  private int concurrentExceptionCount;
+
+  /**
+   * Populate the initial exception counts to be used to assert once a testcase
+   * is done there was no exception in the daemon when testcase was run.
+   * 
+   * @throws IOException
+   */
+  protected void populateExceptionCount() throws IOException {
+    errorCount = getNumberOfErrorStatementsInLog();
+    LOG.info("Number of error messages in logs : " + errorCount);
+    fatalCount = getNumberOfFatalStatementsInLog();
+    LOG.info("Number of fatal statement in logs : " + fatalCount);
+    concurrentExceptionCount =
+        getNumberOfConcurrentModificationExceptionsInLog();
+    LOG.info("Number of concurrent modification in logs : "
+        + concurrentExceptionCount);
+  }
+
+  /**
+   * Assert if the new exceptions were logged into the log file.
+   * <br/>
+   * <b><i>
+   * Pre-req for the method is that populateExceptionCount() has 
+   * to be called before calling this method.</b></i>
+   * @throws IOException
+   */
+  protected void assertNoExceptionsOccurred() throws IOException {
+    int newerrorCount = getNumberOfErrorStatementsInLog();
+    LOG.info("Number of error messages while asserting : " + newerrorCount);
+    int newfatalCount = getNumberOfFatalStatementsInLog();
+    LOG.info("Number of fatal messages while asserting : " + newfatalCount);
+    int newconcurrentExceptionCount =
+        getNumberOfConcurrentModificationExceptionsInLog();
+    LOG.info("Number of concurrentmodification execption while asserting :"
+        + newconcurrentExceptionCount);
+    Assert.assertEquals(
+        "New Error Messages logged in the log file", errorCount, newerrorCount);
+    Assert.assertEquals(
+        "New Fatal messages logged in the log file", fatalCount, newfatalCount);
+    Assert.assertEquals(
+        "New ConcurrentModificationException in log file",
+        concurrentExceptionCount, newconcurrentExceptionCount);
+  }
 }

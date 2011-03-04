@@ -1,5 +1,6 @@
 package org.apache.hadoop.test.system;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -207,4 +209,32 @@ public aspect DaemonProtocolAspect {
       actions.clear();
     }
   }
+
+  public String DaemonProtocol.getFilePattern() {
+    //We use the environment variable HADOOP_LOGFILE to get the
+    //pattern to use in the search.
+    String logDir = System.getenv("HADOOP_LOG_DIR");
+    String daemonLogPattern = System.getenv("HADOOP_LOGFILE");
+    if(daemonLogPattern == null && daemonLogPattern.isEmpty()) {
+      return "*";
+    }
+    return  logDir+File.separator+daemonLogPattern+"*";
+  }
+
+  public int DaemonProtocol.getNumberOfMatchesInLogFile(String pattern)
+      throws IOException {
+    String filePattern = getFilePattern();
+    String[] cmd =
+        new String[] {
+            "bash",
+            "-c",
+            "grep -c "
+                + pattern + " " + filePattern
+                + " | awk -F: '{s+=$2} END {print s}'" };
+    ShellCommandExecutor shexec = new ShellCommandExecutor(cmd);
+    shexec.execute();
+    String output = shexec.getOutput();
+    return Integer.parseInt(output.replaceAll("\n", "").trim());
+  }
 }
+

@@ -122,4 +122,16 @@ public interface DaemonProtocol extends VersionedProtocol{
    */
   @SuppressWarnings("unchecked")
   ControlAction[] getActions(Writable key) throws IOException;
+
+  /**
+   * Gets the number of times a particular pattern has been found in the 
+   * daemons log file.<br/>
+   * <b><i>Please note that search spans across all previous messages of
+   * Daemon, so better practise is to get previous counts before an operation
+   * and then recheck if the sequence of action has caused any problems</i></b>
+   * @param pattern
+   * @return number of times the pattern if found in log file.
+   * @throws IOException
+   */
+  int getNumberOfMatchesInLogFile(String pattern) throws IOException;
 }

@@ -192,6 +192,7 @@ public abstract class AbstractDaemonCluster {
     ping();
     clearAllControlActions();
     ensureClean();
+    populateExceptionCounts();
   }
 
   public void clearAllControlActions() throws IOException {
@@ -217,7 +218,34 @@ public abstract class AbstractDaemonCluster {
   public void tearDown() throws IOException {
     ensureClean();
     clearAllControlActions();
+    assertNoExceptionMessages();
     disconnect();
+  }
+
+  /**
+   * Populate the exception counts in all the daemons so that it can be checked when 
+   * the testcase has finished running.<br/>
+   * @throws IOException
+   */
+  protected void populateExceptionCounts() throws IOException {
+    for(List<AbstractDaemonClient> lst : daemons.values()) {
+      for(AbstractDaemonClient d : lst) {
+        d.populateExceptionCount();
+      }
+    }
+  }
+
+  /**
+   * Assert no exception has been thrown during the sequence of the actions.
+   * <br/>
+   * @throws IOException
+   */
+  protected void assertNoExceptionMessages() throws IOException {
+    for(List<AbstractDaemonClient> lst : daemons.values()) {
+      for(AbstractDaemonClient d : lst) {
+        d.assertNoExceptionsOccurred();
+      }
+    }
   }
 }
 
