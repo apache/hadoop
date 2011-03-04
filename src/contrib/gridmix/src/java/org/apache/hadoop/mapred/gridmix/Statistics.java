@@ -30,11 +30,11 @@ import org.apache.hadoop.tools.rumen.JobStory;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -56,11 +56,11 @@ public class Statistics implements Component<Job> {
 
   //List of cluster status listeners.
   private final List<StatListener<ClusterStats>> clusterStatlisteners =
-    new ArrayList<StatListener<ClusterStats>>();
+    new CopyOnWriteArrayList<StatListener<ClusterStats>>();
 
   //List of job status listeners.
   private final List<StatListener<JobStats>> jobStatListeners =
-    new ArrayList<StatListener<JobStats>>();
+    new CopyOnWriteArrayList<StatListener<JobStats>>();
 
   //List of jobids and noofMaps for each job
   private static final Map<Integer, JobStats> jobMaps =
