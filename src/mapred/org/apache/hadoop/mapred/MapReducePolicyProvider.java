@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
+import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.Service;
@@ -37,7 +37,7 @@ public class MapReducePolicyProvider extends PolicyProvider {
       new Service("security.refresh.policy.protocol.acl", 
                   RefreshAuthorizationPolicyProtocol.class),
       new Service("security.refresh.usertogroups.mappings.protocol.acl", 
-                  RefreshUserToGroupMappingsProtocol.class),
+                  RefreshUserMappingsProtocol.class),
       new Service("security.admin.operations.protocol.acl", 
                   AdminOperationsProtocol.class),
   };

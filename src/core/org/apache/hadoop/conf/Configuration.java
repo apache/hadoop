@@ -1402,5 +1402,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       org.apache.hadoop.io.Text.writeString(out, (String) item.getValue());
     }
   }
-
+  
+  /**
+   * get keys matching the the regex 
+   * @param regex
+   * @return Map<String,String> with matching keys
+   */
+  public Map<String,String> getValByRegex(String regex) {
+    Pattern p = Pattern.compile(regex);
+    
+    Map<String,String> result = new HashMap<String,String>();
+    Matcher m;
+    
+    for(Map.Entry<Object,Object> item: getProps().entrySet()) {
+      if (item.getKey() instanceof String && 
+          item.getValue() instanceof String) {
+        m = p.matcher((String)item.getKey());
+        if(m.find()) { // match
+          result.put((String) item.getKey(), (String) item.getValue());
+        }
+      }
+    }
+    return result;
+  }
 }

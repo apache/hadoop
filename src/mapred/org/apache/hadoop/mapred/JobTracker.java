@@ -92,11 +92,12 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
+import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
@@ -119,7 +120,7 @@ import org.apache.hadoop.security.Credentials;
  *
  *******************************************************/
 public class JobTracker implements MRConstants, InterTrackerProtocol,
-    JobSubmissionProtocol, TaskTrackerManager, RefreshUserToGroupMappingsProtocol,
+    JobSubmissionProtocol, TaskTrackerManager, RefreshUserMappingsProtocol,
     RefreshAuthorizationPolicyProtocol, AdminOperationsProtocol {
 
   static{
@@ -310,8 +311,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return RefreshAuthorizationPolicyProtocol.versionID;
     } else if (protocol.equals(AdminOperationsProtocol.class.getName())){
       return AdminOperationsProtocol.versionID;
-    } else if (protocol.equals(RefreshUserToGroupMappingsProtocol.class.getName())){
-      return RefreshUserToGroupMappingsProtocol.versionID;
+    } else if (protocol.equals(RefreshUserMappingsProtocol.class.getName())){
+      return RefreshUserMappingsProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to job tracker: " + protocol);
     }
@@ -4846,6 +4847,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             limitMaxMemForReduceTasks).append(")"));
   }
 
+  @Override
+  public void refreshSuperUserGroupsConfiguration(Configuration conf) {
+    LOG.info("Refreshing superuser proxy groups mapping ");
+    
+    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+  }
     
   @Override
   public void refreshUserToGroupsMappings(Configuration conf) throws IOException {

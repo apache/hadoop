@@ -28,6 +28,7 @@ import java.io.DataOutputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -605,6 +606,24 @@ public class TestConfiguration extends TestCase {
     for (JsonProperty prop : jconf.getProperties()) {
       assertEquals(fileResource.toString(),prop.getResource());
     }
+  }
+  
+  public void testGetValByRegex() {
+    Configuration conf = new Configuration();
+    String key1 = "t.abc.key1";
+    String key2 = "t.abc.key2";
+    String key3 = "tt.abc.key3";
+    String key4 = "t.abc.ey3";
+    conf.set(key1, "value1");
+    conf.set(key2, "value2");
+    conf.set(key3, "value3");
+    conf.set(key4, "value3");
+    
+    Map<String,String> res = conf.getValByRegex("^t\\..*\\.key\\d");
+    assertTrue("Conf didn't get key " + key1, res.containsKey(key1));
+    assertTrue("Conf didn't get key " + key2, res.containsKey(key2));
+    assertTrue("Picked out wrong key " + key3, !res.containsKey(key3));
+    assertTrue("Picked out wrong key " + key4, !res.containsKey(key4));
   }
 }
 
