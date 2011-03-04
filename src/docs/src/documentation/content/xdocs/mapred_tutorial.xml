@@ -24,7 +24,7 @@
   </header>
   
   <body>
-  
+
     <section>
       <title>Purpose</title>
       
@@ -140,7 +140,7 @@
         <code>&lt;k3, v3&gt;</code> (output)
       </p>
     </section>
-
+    
     <section>
       <title>Example: WordCount v1.0</title>
       
@@ -155,7 +155,7 @@
       
       <section>
         <title>Source Code</title>
-        
+
         <table>
           <tr>
             <th></th>
@@ -164,7 +164,7 @@
           <tr>
             <td>1.</td>
             <td>
-              <code>package org.myorg;</code>
+                <code>package org.myorg;</code>
             </td>
           </tr>
           <tr>
@@ -208,7 +208,7 @@
           <tr>
             <td>9.</td>
             <td>
-              <code>import org.apache.hadoop.mapred.*;</code>
+            <code>import org.apache.hadoop.mapred.*;</code>
             </td>
           </tr>
           <tr>
@@ -1057,7 +1057,7 @@
         <code>-Djava.library.path=&lt;&gt;</code> etc. If the 
         <code>mapred.{map|reduce}.child.java.opts</code> parameters contains the 
         symbol <em>@taskid@</em> it is interpolated with value of 
-        <code>taskid</code> of the map/reduce task.</p>
+        <code>taskid</code> of the Map/Reduce task.</p>
         
         <p>Here is an example with multiple arguments and substitutions, 
         showing jvm GC logging, and start of a passwordless JVM JMX agent so that
@@ -1096,7 +1096,7 @@
         </p>
         
         <section>
-        <title> Memory management</title>
+        <title> Memory Management</title>
         <p>Users/admins can also specify the maximum virtual memory 
         of the launched child-task, and any sub-process it launches 
         recursively, using <code>mapred.{map|reduce}.child.ulimit</code>. Note 
@@ -1370,6 +1370,8 @@
         JobConf.setNumTasksToExecutePerJvm(int)</a></p>
         </section>
 
+        <section>
+                <title>Configured Parameters</title>
         <p>The following properties are localized in the job configuration 
          for each task's execution: </p>
         <table>
@@ -1396,11 +1398,25 @@
           <tr><td>mapred.work.output.dir</td><td> String </td>
               <td>The task's temporary output directory</td></tr>
         </table>
-        
+
+        <p>
+        <strong>Note:</strong>
+        During the execution of a streaming job, the names of the "mapred" parameters are transformed. 
+        The dots ( . ) become underscores ( _ ).
+        For example, mapred.job.id becomes mapred_job_id and mapred.jar becomes mapred_jar. 
+        To get the values in a streaming job's mapper/reducer use the parameter names with the underscores.
+        </p>
+        </section>
+
+        <section>
+                <title>Task Logs</title>
         <p>The standard output (stdout) and error (stderr) streams of the task 
         are read by the TaskTracker and logged to 
         <code>${HADOOP_LOG_DIR}/userlogs</code></p>
-        
+         </section>
+
+         <section>
+                <title>Distributing Libraries</title>
         <p>The <a href="#DistributedCache">DistributedCache</a> can also be used
         to distribute both jars and native libraries for use in the map 
         and/or reduce tasks. The child-jvm always has its 
@@ -1414,6 +1430,7 @@
         distributed cache are documented at 
         <a href="native_libraries.html#Loading+native+libraries+through+DistributedCache">
         native_libraries.html</a></p>
+        </section>
       </section>
       
       <section>
@@ -1702,7 +1719,7 @@
           set by the Map/Reduce framework. So, just create any side-files in the 
           path  returned by
           <a href="ext:api/org/apache/hadoop/mapred/fileoutputformat/getworkoutputpath">
-          FileOutputFormat.getWorkOutputPath() </a>from map/reduce 
+          FileOutputFormat.getWorkOutputPath() </a>from Map/Reduce 
           task to take advantage of this feature.</p>
           
           <p>The entire discussion holds true for maps of jobs with 
@@ -1926,7 +1943,7 @@
           <p>Once user configures that profiling is needed, she/he can use
           the configuration property 
           <code>mapred.task.profile.{maps|reduces}</code> to set the ranges
-          of map/reduce tasks to profile. The value can be set using the api 
+          of Map/Reduce tasks to profile. The value can be set using the api 
           <a href="ext:api/org/apache/hadoop/mapred/jobconf/setprofiletaskrange">
           JobConf.setProfileTaskRange(boolean,String)</a>.
           By default, the specified range is <code>0-2</code>.</p>
@@ -1948,7 +1965,7 @@
         <section>
           <title>Debugging</title>
           <p>The Map/Reduce framework provides a facility to run user-provided 
-          scripts for debugging. When a map/reduce task fails, a user can run 
+          scripts for debugging. When a Map/Reduce task fails, a user can run 
           a debug script, to process task logs for example. The script is 
           given access to the task's stdout and stderr outputs, syslog and 
           jobconf. The output from the debug script's stdout and stderr is 
@@ -1981,7 +1998,7 @@
             
           <p>The arguments to the script are the task's stdout, stderr, 
           syslog and jobconf files. The debug command, run on the node where
-          the map/reduce task failed, is: <br/>
+          the Map/Reduce task failed, is: <br/>
           <code> $script $stdout $stderr $syslog $jobconf </code> </p> 
 
           <p> Pipes programs have the c++ program name as a fifth argument
