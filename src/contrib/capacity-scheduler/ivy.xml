@@ -52,5 +52,9 @@
       name="commons-httpclient"
       rev="${commons-httpclient.version}"
       conf="common->master"/> 
+    <dependency org="commons-codec"
+      name="commons-codec"
+      rev="${commons-codec.version}"
+      conf="common->default"/>
   </dependencies>
 </ivy-module>

@@ -85,6 +85,11 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.commons.codec.binary.Base64;
+import java.security.GeneralSecurityException;
+
 /** A Reduce task. */
 class ReduceTask extends Task {
 
@@ -1147,11 +1152,15 @@ class ReduceTask extends Task {
       private CompressionCodec codec = null;
       private Decompressor decompressor = null;
       
-      public MapOutputCopier(JobConf job, Reporter reporter) {
+      private final byte[] shuffleJobToken;
+      
+      public MapOutputCopier(JobConf job, Reporter reporter, byte [] shuffleJobToken) {
         setName("MapOutputCopier " + reduceTask.getTaskID() + "." + id);
         LOG.debug(getName() + " created");
         this.reporter = reporter;
-        
+
+        this.shuffleJobToken = shuffleJobToken;       	
+ 
         shuffleConnectionTimeout =
           job.getInt("mapreduce.reduce.shuffle.connect.timeout", STALLED_COPY_TIMEOUT);
         shuffleReadTimeout =
@@ -1376,11 +1385,31 @@ class ReduceTask extends Task {
                                      Path filename, int reduce)
       throws IOException, InterruptedException {
         // Connect
-        URLConnection connection = 
-          mapOutputLoc.getOutputLocation().openConnection();
+        URL url = mapOutputLoc.getOutputLocation();
+        URLConnection connection = url.openConnection();
+
+        // generate hash of the url
+        SecureShuffleUtils ssutil = new SecureShuffleUtils(shuffleJobToken);
+        String msgToEncode = SecureShuffleUtils.buildMsgFrom(url);
+        String encHash = ssutil.hashFromString(msgToEncode);
+
+        // put url hash into http header
+        connection.addRequestProperty(
+            SecureShuffleUtils.HTTP_HEADER_URL_HASH, encHash);
+        
         InputStream input = getInputStream(connection, shuffleConnectionTimeout,
                                            shuffleReadTimeout); 
-        
+
+        // get the replyHash which is HMac of the encHash we sent to the server
+        String replyHash = connection.getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH);
+        if(replyHash==null) {
+          throw new IOException("security validation of TT Map output failed");
+        }       
+        LOG.debug("url="+msgToEncode+";encHash="+encHash+";replyHash="+replyHash);
+        // verify that replyHash is HMac of encHash
+        ssutil.verifyReply(replyHash, encHash);
+        LOG.info("for url="+msgToEncode+" sent hash and receievd reply");
+ 
         // Validate header from map output
         TaskAttemptID mapId = null;
         try {
@@ -1864,7 +1893,8 @@ class ReduceTask extends Task {
       
       // start all the copying threads
       for (int i=0; i < numCopiers; i++) {
-        MapOutputCopier copier = new MapOutputCopier(conf, reporter);
+        MapOutputCopier copier = new MapOutputCopier(conf, reporter,
+            reduceTask.getJobTokens().getShuffleJobToken());
         copiers.add(copier);
         copier.start();
       }

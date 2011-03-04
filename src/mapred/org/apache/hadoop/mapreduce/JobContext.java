@@ -47,6 +47,8 @@ public class JobContext {
 
   protected final org.apache.hadoop.mapred.JobConf conf;
   private final JobID jobId;
+
+  public static final String JOB_TOKEN_FILE = "mapreduce.job.jobTokenFile";
   
   public JobContext(Configuration conf, JobID jobId) {
     this.conf = new org.apache.hadoop.mapred.JobConf(conf);

@@ -41,6 +41,8 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
+import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -49,6 +51,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /*************************************************************
@@ -495,13 +498,18 @@ class JobInProgress {
     // log the job priority
     setPriority(this.priority);
     
+    Path jobDir = jobtracker.getSystemDirectoryForJob(jobId);
+    FileSystem fs = jobDir.getFileSystem(conf);
+    //
+    // generate security keys needed by Tasks
+    //
+    generateJobTokens(fs, jobtracker.getSystemDirectoryForJob(jobId));
+    
     //
     // read input splits and create a map per a split
     //
     String jobFile = profile.getJobFile();
 
-    Path sysDir = new Path(this.jobtracker.getSystemDir());
-    FileSystem fs = sysDir.getFileSystem(conf);
     DataInputStream splitFile =
       fs.open(new Path(conf.get("mapred.job.split.file")));
     JobClient.RawSplit[] splits;
@@ -3069,4 +3077,30 @@ class JobInProgress {
       );
     }
   }
+  
+  /**
+   * generate keys and save it into the file
+   * @param jobDir
+   * @throws IOException
+   */
+  private void generateJobTokens(FileSystem fs, Path jobDir) throws IOException{
+    Path keysFile = new Path(jobDir, JobTokens.JOB_TOKEN_FILENAME);
+    FSDataOutputStream os = fs.create(keysFile);
+    //create JobTokens file and add key to it
+    JobTokens jt = new JobTokens();
+    byte [] key;
+    try {
+      // new key
+      key = SecureShuffleUtils.getNewEncodedKey();
+    } catch (java.security.GeneralSecurityException e) {
+      throw new IOException(e);
+    }
+    // remember the key 
+    jt.setShuffleJobToken(key);
+    // other keys..
+    jt.write(os);
+    os.close();
+    LOG.debug("jobTokens generated and stored in "+ keysFile.toUri().getPath());
+  }
+
 }

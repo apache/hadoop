@@ -47,11 +47,14 @@ import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapreduce.JobStatus;
+import org.apache.hadoop.mapreduce.security.JobTokens;
+import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.fs.FSDataInputStream;
 
 /** 
  * Base class for tasks.
@@ -147,6 +150,7 @@ abstract public class Task implements Writable, Configurable {
   private String pidFile = "";
   protected TaskUmbilicalProtocol umbilical;
   private int numSlotsRequired;
+  protected JobTokens jobTokens=null; // storage of the secret keys
 
   ////////////////////////////////////////////
   // Constructors
@@ -198,6 +202,23 @@ abstract public class Task implements Writable, Configurable {
   public JobID getJobID() {
     return taskId.getJobID();
   }
+
+  /**
+   * set JobToken storage 
+   * @param jt
+   */
+  public void setJobTokens(JobTokens jt) {
+    this.jobTokens = jt;
+  }
+
+  /**
+   * get JobToken storage
+   * @return storage object
+   */
+  public JobTokens getJobTokens() {
+    return this.jobTokens;
+  }
+
   
   /**
    * Get the index of this task within the job.
@@ -1264,7 +1285,6 @@ abstract public class Task implements Writable, Configurable {
                                                 reporter, comparator, keyClass,
                                                 valueClass);
       reducer.run(reducerContext);
-    }
-    
+    } 
   }
 }

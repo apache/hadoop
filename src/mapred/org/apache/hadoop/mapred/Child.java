@@ -26,12 +26,15 @@ import java.net.InetSocketAddress;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.JvmTask;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.security.JobTokens;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
@@ -62,6 +65,13 @@ class Child {
     final int SLEEP_LONGER_COUNT = 5;
     int jvmIdInt = Integer.parseInt(args[3]);
     JVMId jvmId = new JVMId(firstTaskid.getJobID(),firstTaskid.isMap(),jvmIdInt);
+
+    // file name is passed thru env
+    String jobTokenFile = System.getenv().get("JOB_TOKEN_FILE");
+    FileSystem localFs = FileSystem.getLocal(defaultConf);
+    JobTokens jt = loadJobTokens(jobTokenFile, localFs);
+    LOG.debug("Child: got jobTokenfile=" + jobTokenFile);
+
     TaskUmbilicalProtocol umbilical =
       (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
           TaskUmbilicalProtocol.versionID,
@@ -138,6 +148,10 @@ class Child {
         //are viewable immediately
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
+
+        // set the jobTokenFile into task
+        task.setJobTokens(jt);
+
         //setupWorkDir actually sets up the symlinks for the distributed
         //cache. After a task exits we wipe the workdir clean, and hence
         //the symlinks have to be rebuilt.
@@ -202,5 +216,23 @@ class Child {
       // there is no more logging done.
       LogManager.shutdown();
     }
+  }
+  
+  /**
+   * load secret keys from a file
+   * @param jobTokenFile
+   * @param conf
+   * @throws IOException
+   */
+  private static JobTokens loadJobTokens(String jobTokenFile, FileSystem localFS) 
+  throws IOException {
+    Path localJobTokenFile = new Path (jobTokenFile);
+    FSDataInputStream in = localFS.open(localJobTokenFile);
+    JobTokens jt = new JobTokens();
+    jt.readFields(in);
+        
+    LOG.debug("Loaded jobTokenFile from: "+localJobTokenFile.toUri().getPath());
+    in.close();
+    return jt;
   }
 }
