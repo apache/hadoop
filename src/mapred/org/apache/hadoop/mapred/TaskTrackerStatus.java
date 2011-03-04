@@ -200,6 +200,12 @@ public class TaskTrackerStatus implements Writable {
     this.healthStatus = new TaskTrackerHealthStatus();
   }
 
+  TaskTrackerStatus(String trackerName, String host) {
+    this();
+    this.trackerName = trackerName;
+    this.host = host;
+  }
+
   /**
    */
   public TaskTrackerStatus(String trackerName, String host, 

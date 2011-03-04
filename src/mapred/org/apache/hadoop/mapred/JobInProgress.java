@@ -1571,6 +1571,7 @@ class JobInProgress {
     else {
       jobtracker.getInstrumentation().addReservedReduceSlots(reservedSlots);
     }
+    jobtracker.incrementReservations(type, reservedSlots);
   }
   
   public synchronized void unreserveTaskTracker(TaskTracker taskTracker,
@@ -1603,6 +1604,7 @@ class JobInProgress {
       jobtracker.getInstrumentation().decReservedReduceSlots(
         info.getNumSlots());
     }
+    jobtracker.decrementReservations(type, info.getNumSlots());
   }
   
   public int getNumReservedTaskTrackersForMaps() {
