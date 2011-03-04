@@ -43,8 +43,9 @@ public class TestDataNodeMXBean {
       DataNode datanode = datanodes.get(0);
 
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
-      ObjectName mxbeanName = new ObjectName("HadoopInfo:type=DataNodeInfo");
-      // get attribute "Version"
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=DataNode,name=DataNodeInfo");
+          // get attribute "Version"
       String version = (String)mbs.getAttribute(mxbeanName, "Version");
       Assert.assertEquals(datanode.getVersion(),version);
       // get attribute "RpcPort"

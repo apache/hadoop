@@ -49,8 +49,6 @@ import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
-import javax.management.InstanceNotFoundException;
-import javax.management.MBeanServer;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
@@ -344,8 +342,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   // precision of access times.
   private long accessTimePrecision = 0;
   
-  private ObjectName mxBeanName = null;
-  
   /**
    * FSNamesystem constructor.
    */
@@ -418,7 +414,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       dnsToSwitchMapping.resolve(new ArrayList<String>(hostsReader.getHosts()));
     }
     
-    registerMXBean();
     registerWith(DefaultMetricsSystem.INSTANCE);
   }
 
@@ -4783,9 +4778,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   }
   
   private ObjectName mbeanName;
+  
+  private ObjectName mxBean = null;
   /**
    * Register the FSNamesystem MBean using the name
    *        "hadoop:service=NameNode,name=FSNamesystemState"
+   * Register the FSNamesystem MXBean using the name
+   *        "hadoop:service=NameNode,name=NameNodeInfo"
    */
   void registerMBean(Configuration conf) {
     // We wrap to bypass standard mbean naming convention.
@@ -4798,8 +4797,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     } catch (NotCompliantMBeanException e) {
       e.printStackTrace();
     }
+    mxBean = MBeans.register("NameNode", "NameNodeInfo", this);
 
-    LOG.info("Registered FSNamesystemStateMBean");
+    LOG.info("Registered FSNamesystemStateMBean and NameNodeMXBean");
   }
 
   /**
@@ -4808,8 +4808,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   public void shutdown() {
     if (mbeanName != null)
       MBeans.unregister(mbeanName);
-    if (mxBeanName != null)
-      unRegisterMXBean();
+    if (mxBean != null)
+      MBeans.unregister(mxBean);
   }
   
 
@@ -5158,38 +5158,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     }
     return authMethod;
   }
-
-  /**
-   * Register NameNodeMXBean
-   */
-  private void registerMXBean() {
-    // register MXBean
-    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-    if (mxBeanName == null) {
-      try {
-        mxBeanName = new ObjectName("HadoopInfo:type=NameNodeInfo");
-        mbs.registerMBean(this, mxBeanName);
-      } catch ( javax.management.JMException e ) {
-        LOG.warn("Failed to register NameNodeMXBean", e);
-      }
-    }
-  }
-
-  private void unRegisterMXBean() {
-    if (mxBeanName == null)
-      return;
-    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-    if (mbs.isRegistered(mxBeanName)){
-      try {
-        mbs.unregisterMBean(mxBeanName);
-      } catch (InstanceNotFoundException e ) {
-        LOG.warn(mxBeanName, e);
-      } catch (javax.management.JMException e) {
-        LOG.warn("Error unregistering "+ mxBeanName, e);
-      }
-      mxBeanName = null;
-    }
-  }
+  
   /**
    * Class representing Namenode information for JMX interfaces
    */

@@ -97,6 +97,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -113,12 +114,8 @@ import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.mortbay.util.ajax.JSON;
 
-import java.lang.management.ManagementFactory;  
-
 import javax.management.InstanceAlreadyExistsException;
-import javax.management.InstanceNotFoundException;
 import javax.management.MBeanRegistrationException;
-import javax.management.MBeanServer; 
 import javax.management.ObjectName;
 
 /**********************************************************
@@ -236,8 +233,6 @@ public class DataNode extends Configured
   public Server ipcServer;
 
   private SecureResources secureResources = null;
-  
-  private ObjectName mxBeanName = null;
   
   /**
    * Current system time.
@@ -364,7 +359,7 @@ public class DataNode extends Configured
     }
       
     // register datanode MXBean
-    registerMXBean();
+    this.registerMXBean(conf); // register the MXBean for DataNode
     
     // find free port or use privileged port provide
     ServerSocket ss;
@@ -466,34 +461,22 @@ public class DataNode extends Configured
 
     LOG.info("dnRegistration = " + dnRegistration);
   }
-
-  private void registerMXBean() {
-    // register MXBean
-    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
-    if (mxBeanName == null) {
-      try {
-        mxBeanName = new ObjectName("HadoopInfo:type=DataNodeInfo");
-        mbs.registerMBean(this, mxBeanName);
-      } catch ( javax.management.JMException e ) {
-        LOG.warn("Failed to register DataNodeMXBean", e);
-      }
-    }
+  
+  private ObjectName mxBean = null;
+  /**
+   * Register the DataNode MXBean using the name
+   *        "hadoop:service=DataNode,name=DataNodeInfo"
+   */
+  void registerMXBean(Configuration conf) {
+    // We wrap to bypass standard mbean naming convention.
+    // This wraping can be removed in java 6 as it is more flexible in 
+    // package naming for mbeans and their impl.
+    mxBean = MBeans.register("DataNode", "DataNodeInfo", this);
   }
   
-  private void unRegisterMXBean() {
-    if (mxBeanName == null)
-      return;
-    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
-    if (mbs.isRegistered(mxBeanName)){
-      try {
-        mbs.unregisterMBean(mxBeanName);
-      } catch (InstanceNotFoundException e ) {
-        LOG.warn(mxBeanName, e);
-      } catch (javax.management.JMException e) {
-        LOG.warn("Error unregistering "+ mxBeanName, e);
-      }
-      mxBeanName = null;
-    }
+  public void unRegisterMXBean() {
+    if (mxBean != null)
+      MBeans.unregister(mxBean);
   }
   
   /**
