@@ -4953,6 +4953,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL, this);
   }
 
+  /**
+   * Returns the DelegationTokenSecretManager instance in the namesystem.
+   * @return delegation token secret manager object
+   */
   public DelegationTokenSecretManager getDelegationTokenSecretManager() {
     return dtSecretManager;
   }
