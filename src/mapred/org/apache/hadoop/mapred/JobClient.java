@@ -1790,7 +1790,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     getDelegationToken(Text renewer) throws IOException, InterruptedException {
     Token<DelegationTokenIdentifier> result =
       jobSubmitClient.getDelegationToken(renewer);
-    InetSocketAddress addr = JobTracker.getAddress(new Configuration());
+    InetSocketAddress addr = JobTracker.getAddress(getConf());
     StringBuilder service = new StringBuilder();
     service.append(NetUtils.normalizeHostName(addr.getAddress().
                                               getHostAddress()));
