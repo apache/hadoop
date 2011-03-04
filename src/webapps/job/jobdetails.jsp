@@ -310,6 +310,8 @@
             job.getFinishTime(), job.getStartTime()) + "<br>\n");
       } else if (runState == JobStatus.FAILED) {
         out.print("<b>Status:</b> Failed<br>\n");
+        out.print("<b>Failure Info:</b>" + 
+                   HtmlQuoting.quoteHtmlChars(status.getFailureInfo()) + "<br>\n");
         out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
         out.print("<b>Failed at:</b> " + new Date(job.getFinishTime()) +
                   "<br>\n");
@@ -317,6 +319,8 @@
             job.getFinishTime(), job.getStartTime()) + "<br>\n");
       } else if (runState == JobStatus.KILLED) {
         out.print("<b>Status:</b> Killed<br>\n");
+        out.print("<b>Failure Info:</b>" + 
+                   HtmlQuoting.quoteHtmlChars(status.getFailureInfo()) + "<br>\n");
         out.print("<b>Started at:</b> " + new Date(job.getStartTime()) + "<br>\n");
         out.print("<b>Killed at:</b> " + new Date(job.getFinishTime()) +
                   "<br>\n");

@@ -305,6 +305,7 @@ class JSPUtil {
       sb.append("<td><b>Reduce Total</b></td>");
       sb.append("<td><b>Reduces Completed</b></td>");
       sb.append("<td><b>Job Scheduling Information</b></td>");
+      sb.append("<td><b>Diagnostic Info </b></td>");
       sb.append("</tr>\n");
 
       for (Iterator<JobInProgress> it = jobs.iterator(); it.hasNext(); ++rowId) {
@@ -321,7 +322,8 @@ class JSPUtil {
         String jobpri = job.getPriority().toString();
         String schedulingInfo =
           HtmlQuoting.quoteHtmlChars(job.getStatus().getSchedulingInfo());
-
+        String diagnosticInfo = 
+          HtmlQuoting.quoteHtmlChars(job.getStatus().getFailureInfo());
         if (isModifiable) {
           sb.append("<tr><td><input TYPE=\"checkbox\" " +
           		"onclick=\"checkButtonVerbage()\" " +
@@ -346,7 +348,7 @@ class JSPUtil {
             + ServletUtil.percentageGraph(status.reduceProgress() * 100, 80)
             + "</td><td>" + desiredReduces + "</td><td> " + completedReduces 
             + "</td><td>" + schedulingInfo
-            + "</td></tr>\n");
+            + "</td><td>" + diagnosticInfo + "</td></tr>\n");
       }
       if (isModifiable) {
         sb.append("</form>\n");
@@ -385,6 +387,7 @@ class JSPUtil {
       sb.append("<td><b>Map % Complete</b></td>");
       sb.append("<td><b>Reduce % Complete</b></td>");
       sb.append("<td><b>Job Scheduling Information</b></td>");
+      sb.append("<td><b>Diagnostic Info </b></td>");
       sb.append("</tr>\n");
       for (int i = 0; i < 100 && iterator.hasNext(); i++) {
         RetireJobInfo info = iterator.next();
@@ -429,7 +432,9 @@ class JSPUtil {
             
             "<td>" +
             HtmlQuoting.quoteHtmlChars(info.status.getSchedulingInfo()) +
-            "</td>" + "</tr>\n");
+            "</td>" + 
+            "<td>" + HtmlQuoting.quoteHtmlChars(info.status.getFailureInfo()) + 
+            "</td></tr>\n");
         rowId++;
       }
     }
