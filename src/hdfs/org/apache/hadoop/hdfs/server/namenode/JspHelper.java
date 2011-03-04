@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -147,7 +148,7 @@ public class JspHelper {
     }
     blockReader = null;
     s.close();
-    out.print(new String(buf));
+    out.print(HtmlQuoting.quoteHtmlChars(new String(buf)));
   }
   public void DFSNodesStatus(ArrayList<DatanodeDescriptor> live,
                              ArrayList<DatanodeDescriptor> dead) {
