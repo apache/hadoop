@@ -70,9 +70,9 @@ public class TestJobConf extends TestCase {
     configuration = new JobConf();
     configuration.set("mapred.task.maxvmem" , "-1");
     configuration.set("mapred.job.map.memory.mb",String.valueOf(300));
-    configuration.set("mapred.job.reduce.memory.mb",String.valueOf(300));
-    Assert.assertEquals(configuration.getMemoryForMapTask(),-1);
-    Assert.assertEquals(configuration.getMemoryForReduceTask(),-1);
+    configuration.set("mapred.job.reduce.memory.mb",String.valueOf(400));
+    Assert.assertEquals(configuration.getMemoryForMapTask(), 300);
+    Assert.assertEquals(configuration.getMemoryForReduceTask(), 400);
 
     configuration = new JobConf();
     configuration.set("mapred.task.maxvmem" , String.valueOf(2*1024 * 1024));
@@ -90,8 +90,46 @@ public class TestJobConf extends TestCase {
 
     configuration = new JobConf();
     configuration.set("mapred.task.maxvmem" , String.valueOf(2*1024 * 1024));
+    configuration.set("mapred.job.map.memory.mb","3");
+    configuration.set("mapred.job.reduce.memory.mb","3");
     Assert.assertEquals(configuration.getMemoryForMapTask(),2);
     Assert.assertEquals(configuration.getMemoryForReduceTask(),2);
+  }
+  
+  /**
+   * Test that negative values for MAPRED_TASK_MAXVMEM_PROPERTY cause
+   * new configuration keys' values to be used.
+   */
+  
+  public void testNegativeValueForTaskVmem() {
+    JobConf configuration = new JobConf();
+    
+    configuration.set(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, "-3");
+    configuration.set("mapred.job.map.memory.mb", "4");
+    configuration.set("mapred.job.reduce.memory.mb", "5");
+    Assert.assertEquals(4, configuration.getMemoryForMapTask());
+    Assert.assertEquals(5, configuration.getMemoryForReduceTask());
+    
+  }
+  
+  /**
+   * Test that negative values for all memory configuration properties causes
+   * APIs to disable memory limits
+   */
+  
+  public void testNegativeValuesForMemoryParams() {
+    JobConf configuration = new JobConf();
+    
+    configuration.set(JobConf.MAPRED_TASK_MAXVMEM_PROPERTY, "-4");
+    configuration.set("mapred.job.map.memory.mb", "-5");
+    configuration.set("mapred.job.reduce.memory.mb", "-6");
+    
+    Assert.assertEquals(JobConf.DISABLED_MEMORY_LIMIT,
+                        configuration.getMemoryForMapTask());
+    Assert.assertEquals(JobConf.DISABLED_MEMORY_LIMIT,
+                        configuration.getMemoryForReduceTask());
+    Assert.assertEquals(JobConf.DISABLED_MEMORY_LIMIT,
+                        configuration.getMaxVirtualMemoryForTask());
   }
 
   /**
