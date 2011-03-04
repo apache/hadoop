@@ -78,8 +78,8 @@ public class TestNodeDecommissioning {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    cluster.tearDown();
     cluster.restart();
+    cluster.tearDown();
   }
 
   /**
@@ -159,8 +159,8 @@ public class TestNodeDecommissioning {
         ";bin/hadoop mradmin -refreshNodes;"; 
     LOG.info("refreshNodeCommand is : " + refreshNodeCommand);
     try {
-    RemoteExecution.executeCommand(testRunningHostName, userName, 
-        refreshNodeCommand);
+      RemoteExecution.executeCommand(testRunningHostName, userName, 
+          refreshNodeCommand);
     } catch (Exception e) { e.printStackTrace();}
 
     //Checked whether the node is really decommissioned.
@@ -168,7 +168,7 @@ public class TestNodeDecommissioning {
     nodeDecommissionedOrNot = remoteJTClientProxy.
         isNodeDecommissioned(ttClientHostName); 
 
-     //The TTClient host is  removed from the exclude path
+    //The TTClient host is removed from the exclude path
     command = "rm " + excludeHostPath;
 
     LOG.info("command is : " + command);
@@ -189,11 +189,11 @@ public class TestNodeDecommissioning {
     //Starting that node
     String ttClientStart = "export HADOOP_CONF_DIR=" + hadoopConfDir +
         "; export HADOOP_HOME=" + hadoopHomeDir + ";cd " + hadoopHomeDir +
-        ";bin/hadoop-daemon.sh start tasktracker;";
+        ";kinit -k -t " + keytabForHadoopqaUser + 
+        ";bin/hadoop-daemons.sh start tasktracker;";
     LOG.info("ttClientStart is : " + ttClientStart);
-    RemoteExecution.executeCommand(ttClientHostName, userName,
+    RemoteExecution.executeCommand(jtClientHostName, userName,
         ttClientStart);
-
   }
 }
 
