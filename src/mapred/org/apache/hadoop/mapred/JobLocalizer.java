@@ -42,10 +42,12 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -494,10 +496,23 @@ public class JobLocalizer {
     for (Token<? extends TokenIdentifier> token : creds.getAllTokens()) {
       ugi.addToken(token);
     }
-    final TaskUmbilicalProtocol taskTracker =
-      (TaskUmbilicalProtocol) RPC.getProxy(TaskUmbilicalProtocol.class,
-                                           TaskUmbilicalProtocol.versionID,
-                                           ttAddr, conf);
+    
+    UserGroupInformation ugiJob = UserGroupInformation.createRemoteUser(jobid);
+    Token<JobTokenIdentifier> jt = TokenCache.getJobToken(creds);
+    jt.setService(new Text(ttAddr.getAddress().getHostAddress() + ":"
+        + ttAddr.getPort()));
+    ugiJob.addToken(jt);
+
+    final TaskUmbilicalProtocol taskTracker = 
+      ugiJob.doAs(new PrivilegedExceptionAction<TaskUmbilicalProtocol>() {
+        public TaskUmbilicalProtocol run() throws IOException {
+          TaskUmbilicalProtocol taskTracker =
+            (TaskUmbilicalProtocol) RPC.getProxy(TaskUmbilicalProtocol.class,
+                TaskUmbilicalProtocol.versionID,
+                ttAddr, conf);
+          return taskTracker;
+        }
+      });
     System.exit(
       ugi.doAs(new PrivilegedExceptionAction<Integer>() {
         public Integer run() {
