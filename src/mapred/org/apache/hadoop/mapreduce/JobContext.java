@@ -67,6 +67,9 @@ public class JobContext {
   public static final String USER_LOG_RETAIN_HOURS = 
     "mapred.userlog.retain.hours";
   
+  /**
+   * The UserGroupInformation object that has a reference to the current user
+   */
   protected UserGroupInformation ugi;
   
   public JobContext(Configuration conf, JobID jobId) {

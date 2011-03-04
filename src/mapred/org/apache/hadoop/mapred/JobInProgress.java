@@ -360,8 +360,9 @@ public class JobInProgress {
       this.conf.setUser(user);
     }
     if (!conf.getUser().equals(user)) {
-      String desc = "The username obtained from the conf doesn't " +
-                      "match the username the user authenticated as";
+      String desc = "The username " + conf.getUser() + " obtained from the " +
+      		"conf doesn't match the username " + user + " the user " +
+      				"authenticated as";
       AuditLogger.logFailure(user, 
           QueueManager.QueueOperation.SUBMIT_JOB.name(), conf.getUser(), 
           jobId.toString(), desc);
