@@ -48,6 +48,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.http.HtmlQuoting;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -354,8 +355,8 @@ public class JspHelper {
       String[] parts = dir.split(Path.SEPARATOR);
       StringBuilder tempPath = new StringBuilder(dir.length());
       out.print("<a href=\"browseDirectory.jsp" + "?dir="+ Path.SEPARATOR
-          + "&namenodeInfoPort=" + namenodeInfoPort
-          + "\">" + Path.SEPARATOR + "</a>");
+          + "&namenodeInfoPort=" + namenodeInfoPort + SET_DELEGATION
+          + tokenString + "\">" + Path.SEPARATOR + "</a>");
       tempPath.append(Path.SEPARATOR);
       for (int i = 0; i < parts.length-1; i++) {
         if (!parts[i].equals("")) {
@@ -435,6 +436,8 @@ public class JspHelper {
         Token<DelegationTokenIdentifier> token = 
           new Token<DelegationTokenIdentifier>();
         token.decodeFromUrlString(tokenString);
+        token.setService(new Text(nameNodeAddr.getAddress().getHostAddress() + ":"
+            + nameNodeAddr.getPort()));
         if (user == null) {
           //this really doesn't break any security since we use the 
           //delegation token for authentication in

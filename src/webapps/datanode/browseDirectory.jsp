@@ -138,7 +138,8 @@
           }
           String datanodeUrl = req.getRequestURL()+"?dir="+
               URLEncoder.encode(files[i].getFullName(target).toString(), "UTF-8") + 
-              "&namenodeInfoPort=" + namenodeInfoPort;
+              "&namenodeInfoPort=" + namenodeInfoPort + JspHelper.SET_DELEGATION + 
+              tokenString;
           cols[0] = "<a href=\""+datanodeUrl+"\">"+localname+"</a>";
           cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
           cols[6] = files[i].getPermission().toString();
