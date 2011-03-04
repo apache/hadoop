@@ -3169,8 +3169,8 @@ public class TaskTracker
           		"It shouldn't be greater than task limits");
           totalMemoryAllottedForTasks = JobConf.DISABLED_MEMORY_LIMIT;
         } else {
-          totalMemoryAllottedForTasks = (maxCurrentMapTasks + 
-              maxCurrentReduceTasks) *  (memoryAllotedForSlot/(1024 * 1024));
+          totalMemoryAllottedForTasks = (maxMapSlots + 
+              maxReduceSlots) *  (memoryAllotedForSlot/(1024 * 1024));
         }
       }
     }
