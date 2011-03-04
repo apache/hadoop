@@ -326,6 +326,20 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
     }
     goto cleanup;
   }
+
+  if(chown(pid_path, uid, getgid()) < 0) {
+    fprintf(LOGFILE, "Error changing ownershipt of %s task-pid file : %s\n",
+      pid_path, strerror(errno));
+    errno = 0;
+    if (remove(pid_path) < 0) {
+      fprintf(LOGFILE, "Error deleting %s task-pid file : %s", pid_path,
+          strerror(errno));
+      exit_code = UNABLE_TO_CHANGE_OWNERSHIP_AND_DELETE_PID_FILE;
+    } else {
+      exit_code = UNABLE_TO_CHANGE_OWNERSHIP_OF_PID_FILE;
+    }
+    goto cleanup;
+  }
   //while checking path make sure the target of the path exists otherwise
   //check_paths would fail always. So write out .pid file then check if
   //it correctly resolves. If not delete the pid file and bail out.
