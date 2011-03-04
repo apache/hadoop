@@ -283,6 +283,10 @@
         HtmlQuoting.quoteHtmlChars(profile.getJobName()) + "<br>\n");
     out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" +
         profile.getJobFile() + "</a><br>\n");
+    out.print("<b>Submit Host:</b> " +
+        HtmlQuoting.quoteHtmlChars(job.getJobSubmitHostName()) + "<br>\n");
+    out.print("<b>Submit Host Address:</b> " +
+        HtmlQuoting.quoteHtmlChars(job.getJobSubmitHostAddress()) + "<br>\n");
 
     Map<JobACL, AccessControlList> jobAcls = status.getJobACLs();
     JSPUtil.printJobACLs(tracker, jobAcls, out);

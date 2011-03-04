@@ -1414,6 +1414,46 @@ public class JobConf extends Configuration {
   }
 
   /**
+   * Set {@link JobSubmitHostName} for this job.
+   * 
+   * @param prio the {@link JobSubmitHostName} for this job.
+   */
+  void setJobSubmitHostName(String hostname) {
+    set("mapreduce.job.submithost", hostname);
+  }
+  
+  /**
+   * Get the {@link JobSubmitHostName} for this job.
+   * 
+   * @return the {@link JobSubmitHostName} for this job.
+   */
+  String getJobSubmitHostName() {
+    String hostname = get("mapreduce.job.submithost");
+    
+    return hostname;
+  }
+
+  /**
+   * Set {@link JobSubmitHostAddress} for this job.
+   * 
+   * @param prio the {@link JobSubmitHostAddress} for this job.
+   */
+  void setJobSubmitHostAddress(String hostadd) {
+    set("mapreduce.job.submithostaddress", hostadd);
+  }
+  
+  /**
+   * Get the {@link JobSubmitHostAddress} for this job.
+   * 
+   * @return the {@link JobSubmitHostAddress} for this job.
+   */
+  String getJobSubmitHostAddress() {
+    String hostadd = get("mapreduce.job.submithostaddress");
+    
+    return hostadd;
+  }
+
+  /**
    * Get whether the task profiling is enabled.
    * @return true if some tasks will be profiled
    */

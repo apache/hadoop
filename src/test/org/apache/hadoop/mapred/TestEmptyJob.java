@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.InetAddress;
 
 import junit.framework.TestCase;
 
@@ -116,7 +117,14 @@ public class TestEmptyJob extends TestCase {
     JobClient jc = new JobClient(conf);
     RunningJob runningJob = jc.submitJob(conf);
     JobInProgress job = mr.getJobTrackerRunner().getJobTracker().getJob(runningJob.getID());
-    
+
+    InetAddress ip = InetAddress.getLocalHost();
+    if (ip != null) {
+      assertTrue(job.getJobSubmitHostAddress().equalsIgnoreCase(
+          ip.getHostAddress()));
+      assertTrue(job.getJobSubmitHostName().equalsIgnoreCase(ip.getHostName()));
+    }
+
     while (true) {
       if (job.isCleanupLaunched()) {
         LOG.info("Waiting for cleanup to be launched for job " 

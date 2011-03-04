@@ -773,6 +773,11 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
           Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
           int reduces = jobCopy.getNumReduceTasks();
+          InetAddress ip = InetAddress.getLocalHost();
+          if (ip != null) {
+            job.setJobSubmitHostAddress(ip.getHostAddress());
+            job.setJobSubmitHostName(ip.getHostName());
+          }
           JobContext context = new JobContext(jobCopy, jobId);
 
           jobCopy = (JobConf)context.getConfiguration();
