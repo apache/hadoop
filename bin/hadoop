@@ -74,6 +74,7 @@ if [ $# = 0 ]; then
   echo "  jobtracker           run the MapReduce job Tracker node" 
   echo "  pipes                run a Pipes job"
   echo "  tasktracker          run a MapReduce task Tracker node" 
+  echo "  historyserver        run job history servers as a standalone daemon"
   echo "  job                  manipulate MapReduce jobs"
   echo "  queue                get information regarding JobQueues" 
   echo "  version              print the version"
@@ -244,6 +245,9 @@ elif [ "$COMMAND" = "fetchdt" ] ; then
 elif [ "$COMMAND" = "jobtracker" ] ; then
   CLASS=org.apache.hadoop.mapred.JobTracker
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOBTRACKER_OPTS"
+elif [ "$COMMAND" = "historyserver" ] ; then
+  CLASS=org.apache.hadoop.mapred.JobHistoryServer
+  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOB_HISTORYSERVER_OPTS"
 elif [ "$COMMAND" = "tasktracker" ] ; then
   CLASS=org.apache.hadoop.mapred.TaskTracker
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_TASKTRACKER_OPTS"

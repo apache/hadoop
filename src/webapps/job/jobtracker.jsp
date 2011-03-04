@@ -174,7 +174,8 @@ if (failedJobs.size() > 0) {
 <hr>
 
 <h2 id="local_logs">Local Logs</h2>
-<a href="logs/">Log</a> directory, <a href="jobhistory.jsp">
+<a href="logs/">Log</a> directory,
+<a href="<%=JobHistoryServer.getHistoryUrlPrefix(tracker.conf)%>/jobhistoryhome.jsp">
 Job Tracker History</a>
 
 <%

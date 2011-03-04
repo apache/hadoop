@@ -25,9 +25,10 @@
   String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
   String jobid = JSPUtil.getJobID(new Path(encodedLogFileName).getName());
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobTracker jobTracker = (JobTracker) application.getAttribute("job.tracker");
+  JobConf jobConf = (JobConf) application.getAttribute("jobConf");
+  ACLsManager aclsManager = (ACLsManager) application.getAttribute("aclManager");
   JobHistory.JobInfo job = JSPUtil.checkAccessAndGetJobInfo(request,
-      response, jobTracker, fs, new Path(logFile));
+      response, jobConf, aclsManager, fs, new Path(logFile));
   if (job == null) {
     return;
   }
@@ -120,7 +121,7 @@
       TaskID tipid = attemptId.getTaskID();
       org.apache.hadoop.mapreduce.JobID jobId = tipid.getJobID();
       out.print("<td>" 
-       + "<a href=\"/taskstatshistory.jsp?attemptid=" + attemptId
+       + "<a href=\"taskstatshistory.jsp?attemptid=" + attemptId
            + "&logFile=" + logFile + "\">"
            + counters.size() + "</a></td>");
     } else {

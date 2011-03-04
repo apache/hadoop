@@ -325,6 +325,7 @@
     <mkdir dir="${build.src}"/>
     <mkdir dir="${build.webapps}/task/WEB-INF"/>
     <mkdir dir="${build.webapps}/job/WEB-INF"/>
+    <mkdir dir="${build.webapps}/history/WEB-INF"/>
     <mkdir dir="${build.webapps}/hdfs/WEB-INF"/>
     <mkdir dir="${build.webapps}/datanode/WEB-INF"/>
     <mkdir dir="${build.webapps}/secondary/WEB-INF"/>
@@ -440,6 +441,13 @@
      outputdir="${build.src}"
      package="org.apache.hadoop.mapred"
      webxml="${build.webapps}/job/WEB-INF/web.xml">
+    </jsp-compile>
+
+    <jsp-compile
+     uriroot="${src.webapps}/history"
+     outputdir="${build.src}"
+     package="org.apache.hadoop.mapred"
+     webxml="${build.webapps}/history/WEB-INF/web.xml">
     </jsp-compile>
 
     <!-- Compile Java files (excluding JSPs) checking warnings -->

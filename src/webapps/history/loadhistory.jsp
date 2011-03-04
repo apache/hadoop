@@ -1,12 +1,7 @@
 <%@ page
   contentType="text/html; charset=UTF-8"
-  import="java.io.*"
-  import="java.util.*"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.fs.*"
-  import="org.apache.hadoop.util.*"
-  import="javax.servlet.jsp.*"
-  import="java.text.SimpleDateFormat"  
   import="org.apache.hadoop.mapred.JobHistory.*"
 %>
 <%!	private static final long serialVersionUID = 1L;
@@ -17,7 +12,7 @@
         return !(path.getName().endsWith(".xml"));
       }
     };
-    
+
     FileSystem fs = (FileSystem) application.getAttribute("fileSys");
     String jobId = request.getParameter("jobid");
     JobHistory.JobInfo job = (JobHistory.JobInfo)

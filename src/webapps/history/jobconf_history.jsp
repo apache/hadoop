@@ -16,8 +16,6 @@
 %>
 
 <%
-  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
-
   String logFileString = request.getParameter("logFile");
   if (logFileString == null) {
     out.println("<h2>Missing 'logFile' for fetching job configuration!</h2>");
@@ -43,10 +41,11 @@
   try {
     jobFile = fs.open(jobFilePath);
     JobConf jobConf = new JobConf(jobFilePath);
-    JobTracker jobTracker = (JobTracker) application.getAttribute("job.tracker");
+    JobConf clusterConf = (JobConf) application.getAttribute("jobConf");
+    ACLsManager aclsManager = (ACLsManager) application.getAttribute("aclManager");
 
     JobHistory.JobInfo job = JSPUtil.checkAccessAndGetJobInfo(request,
-        response, jobTracker, fs, logFile);
+        response, clusterConf, aclsManager, fs, logFile);
     if (job == null) {
       return;
     }

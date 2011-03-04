@@ -518,6 +518,12 @@ public class JobHistory {
   }
 
   static void initDone(JobConf conf, FileSystem fs) throws IOException {
+    initDone(conf, fs, true);
+  }
+
+  static void initDone(JobConf conf, FileSystem fs,
+                                     boolean setup)
+      throws IOException {
     //if completed job history location is set, use that
     String doneLocation = conf.
                      get("mapred.job.tracker.history.completed.location");
@@ -527,6 +533,10 @@ public class JobHistory {
     } else {
       DONE = new Path(LOG_DIR, "done");
       DONEDIR_FS = LOGDIR_FS;
+    }
+
+    if (!setup) {
+        return;
     }
 
     //If not already present create the done folder with appropriate 

@@ -1,7 +1,7 @@
 <%
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file 
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
  * to you under the Apache License, Version 2.0 (the
@@ -17,17 +17,36 @@
  * limitations under the License.
  */
 %>
-
 <%@ page
-    contentType="text/html; charset=UTF-8"
-    import="org.apache.hadoop.mapred.JobHistoryServer"
-    import="org.apache.hadoop.mapred.JobConf" 
+  contentType="text/html; charset=UTF-8"
+  import="javax.servlet.*"
+  import="javax.servlet.http.*"
+  import="java.io.*"
+  import="java.net.URL"
+  import="org.apache.hadoop.util.*"
+%>
+<%!	private static final long serialVersionUID = 1L;
 %>
 
+<html>
+<head>
+<title>Error: User cannot access this Job</title>
+</head>
+<body>
+<h2>Error: User cannot do this operation on this Job</h2><br>
+
 <%
-    JobConf clusterConf = (JobConf) application.getAttribute("jobConf");
-    String historyUrl = JobHistoryServer.getHistoryUrlPrefix(clusterConf) +
-        "/jobhistoryhome.jsp";
-    response.sendRedirect(response.encodeRedirectURL(historyUrl));
-    return;
+  String errorMsg = (String) request.getAttribute("error.msg");
+%>
+
+<font size="5"> 
+<%
+  out.println(errorMsg);
+%>
+</font>
+
+<hr>
+
+<%
+out.println(ServletUtil.htmlFooter());
 %>

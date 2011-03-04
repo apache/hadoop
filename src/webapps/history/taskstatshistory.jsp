@@ -47,9 +47,10 @@
   Format decimal = new DecimalFormat();
 
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobTracker jobTracker = (JobTracker) application.getAttribute("job.tracker");
+  JobConf jobConf = (JobConf) application.getAttribute("jobConf");
+  ACLsManager aclsManager = (ACLsManager) application.getAttribute("aclManager");
   JobHistory.JobInfo job = JSPUtil.checkAccessAndGetJobInfo(request,
-      response, jobTracker, fs, new Path(logFile));
+      response, jobConf, aclsManager, fs, new Path(logFile));
   if (job == null) {
     return;
   }
@@ -110,7 +111,7 @@
 
 <hr>
 <a href="jobdetailshistory.jsp?logFile=<%=encodedLogFileName%>">Go back to the job</a><br>
-<a href="jobtracker.jsp">Go back to JobTracker</a><br>
+<a href="jobhistoryhome.jsp">Go back to Job History Viewer</a><br>
 <%
 out.println(ServletUtil.htmlFooter());
 %>

@@ -1939,6 +1939,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   CompletedJobStatusStore completedJobStatusStore = null;
   Thread completedJobsStoreThread = null;
   RecoveryManager recoveryManager;
+  JobHistoryServer jobHistoryServer;
 
   /**
    * It might seem like a bug to maintain a TreeSet of tasktracker objects,
@@ -2267,6 +2268,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       }
     });
     infoServer.setAttribute("fileSys", historyFS);
+    infoServer.setAttribute("jobConf", conf);
+    infoServer.setAttribute("aclManager", aclsManager);
+
+    if (JobHistoryServer.isEmbedded(conf)) {
+      LOG.info("History server being initialized in embedded mode");
+      jobHistoryServer = new JobHistoryServer(conf, aclsManager, infoServer);
+      jobHistoryServer.start();
+      LOG.info("Job History Server web address: " + JobHistoryServer.getAddress(conf));
+    }
 
     this.dnsToSwitchMapping = ReflectionUtils.newInstance(
         conf.getClass("topology.node.switch.mapping.impl", ScriptBasedMapping.class,
@@ -2470,6 +2480,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         ex.printStackTrace();
       }
     }
+    if (jobHistoryServer != null) {
+      LOG.info("Stopping job history server");
+      try {
+        jobHistoryServer.shutdown();
+      } catch (Exception ex) {
+        LOG.warn("Exception shutting down Job History server", ex);
+      }
+  }
     DelegationTokenRenewal.close();
     LOG.info("stopped all jobtracker services");
     return;
@@ -2533,7 +2551,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       trackerToMarkedTasksMap.put(taskTracker, taskset);
     }
     taskset.add(taskid);
-      
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Marked '" + taskid + "' from '" + taskTracker + "'");
     }

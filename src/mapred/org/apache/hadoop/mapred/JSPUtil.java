@@ -402,7 +402,8 @@ class JSPUtil {
             "<td id=\"job_" + rowId + "\">" + 
             
               (historyFileUrl == null ? "" :
-              "<a href=\"jobdetailshistory.jsp?logFile=" + historyFileUrl + "\">") + 
+              "<a href=\"" + JobHistoryServer.getHistoryUrlPrefix(tracker.conf) +
+                  "/jobdetailshistory.jsp?logFile=" + historyFileUrl + "\">") +
               
               info.status.getJobId() + "</a></td>" +
             
@@ -446,12 +447,11 @@ class JSPUtil {
    * 
    * @param logFile
    * @param fs
-   * @param jobTracker
    * @return JobInfo
    * @throws IOException
    */
   static JobInfo getJobInfo(Path logFile, FileSystem fs,
-      JobTracker jobTracker, String user) throws IOException {
+      JobConf jobConf, ACLsManager acLsManager, String user) throws IOException {
     String jobid = getJobID(logFile.getName());
     JobInfo jobInfo = null;
     synchronized(jobHistoryCache) {
@@ -465,7 +465,7 @@ class JSPUtil {
       }
       jobHistoryCache.put(jobid, jobInfo);
       int CACHE_SIZE = 
-        jobTracker.conf.getInt("mapred.job.tracker.jobhistory.lru.cache.size", 5);
+        jobConf.getInt("mapred.job.tracker.jobhistory.lru.cache.size", 5);
       if (jobHistoryCache.size() > CACHE_SIZE) {
         Iterator<Map.Entry<String, JobInfo>> it = 
           jobHistoryCache.entrySet().iterator();
@@ -483,7 +483,7 @@ class JSPUtil {
     }
 
     // Authorize the user for view access of this job
-    jobTracker.getACLsManager().checkAccess(jobid, currentUser,
+    acLsManager.checkAccess(jobid, currentUser,
         jobInfo.getJobQueue(), Operation.VIEW_JOB_DETAILS,
         jobInfo.get(Keys.USER), jobInfo.getJobACLs().get(JobACL.VIEW_JOB));
 
@@ -495,7 +495,6 @@ class JSPUtil {
    * 
    * @param request
    * @param response
-   * @param jobTracker
    * @param fs
    * @param logFile
    * @return the job if authorization is disabled or if the authorization checks
@@ -505,29 +504,32 @@ class JSPUtil {
    * @throws ServletException
    */
   static JobInfo checkAccessAndGetJobInfo(HttpServletRequest request,
-      HttpServletResponse response, final JobTracker jobTracker,
-      final FileSystem fs, final Path logFile) throws IOException,
+      HttpServletResponse response, final JobConf jobConf,
+      final ACLsManager acLsManager, final FileSystem fs,
+      final Path logFile) throws IOException,
       InterruptedException, ServletException {
     String jobid = getJobID(logFile.getName());
     String user = request.getRemoteUser();
     JobInfo job = null;
     if (user != null) {
       try {
-        job = JSPUtil.getJobInfo(logFile, fs, jobTracker, user);
+        job = JSPUtil.getJobInfo(logFile, fs, jobConf, acLsManager, user);
       } catch (AccessControlException e) {
+        String trackerAddress = jobConf.get("mapred.job.tracker.http.address");
         String errMsg =
             String.format(
                 "User %s failed to view %s!<br><br>%s"
                     + "<hr>"
                     + "<a href=\"jobhistory.jsp\">Go back to JobHistory</a><br>"
-                    + "<a href=\"jobtracker.jsp\">Go back to JobTracker</a>",
+                    + "<a href=\"http://" + trackerAddress +
+                    "/jobtracker.jsp\">Go back to JobTracker</a>",
                 user, jobid, e.getMessage());
         JSPUtil.setErrorAndForward(errMsg, request, response);
         return null;
       }
     } else {
       // no authorization needed
-      job = JSPUtil.getJobInfo(logFile, fs, jobTracker, null);
+      job = JSPUtil.getJobInfo(logFile, fs, jobConf, acLsManager, null);
     }
     return job;
   }
@@ -555,21 +557,38 @@ class JSPUtil {
       Map<JobACL, AccessControlList> jobAcls, JspWriter out)
       throws IOException {
     if (tracker.areACLsEnabled()) {
-      // Display job-view-acls and job-modify-acls configured for this job
-      out.print("<b>Job-ACLs:</b><br>");
-      for (JobACL aclName : JobACL.values()) {
-        String aclConfigName = aclName.getAclName();
-        AccessControlList aclConfigured = jobAcls.get(aclName);
-        if (aclConfigured != null) {
-          String aclStr = aclConfigured.toString();
-          out.print("&nbsp;&nbsp;&nbsp;&nbsp;" + aclConfigName + ": "
-              + aclStr + "<br>");
-        }
-      }
+      printJobACLsInternal(jobAcls, out);
     }
     else {
       out.print("<b>Job-ACLs: " + new AccessControlList("*").toString()
           + "</b><br>");
+    }
+  }
+
+  static void printJobACLs(JobConf conf,
+      Map<JobACL, AccessControlList> jobAcls, JspWriter out)
+      throws IOException {
+    if (conf.getBoolean(JobConf.MR_ACLS_ENABLED, false)) {
+      printJobACLsInternal(jobAcls, out);
+    }
+    else {
+      out.print("<b>Job-ACLs: " + new AccessControlList("*").toString()
+          + "</b><br>");
+    }
+  }
+
+  private static void printJobACLsInternal(Map<JobACL, AccessControlList> jobAcls,
+                                           JspWriter out) throws IOException {
+    // Display job-view-acls and job-modify-acls configured for this job
+    out.print("<b>Job-ACLs:</b><br>");
+    for (JobACL aclName : JobACL.values()) {
+      String aclConfigName = aclName.getAclName();
+      AccessControlList aclConfigured = jobAcls.get(aclName);
+      if (aclConfigured != null) {
+        String aclStr = aclConfigured.toString();
+        out.print("&nbsp;&nbsp;&nbsp;&nbsp;" + aclConfigName + ": "
+            + aclStr + "<br>");
+      }
     }
   }
 

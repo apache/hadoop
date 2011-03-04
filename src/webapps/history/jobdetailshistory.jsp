@@ -24,9 +24,10 @@
     String jobid = JSPUtil.getJobID(new Path(logFile).getName());
 	
     FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-    JobTracker jobTracker = (JobTracker) application.getAttribute("job.tracker");
+    JobConf jobConf = (JobConf) application.getAttribute("jobConf");
+    ACLsManager aclsManager = (ACLsManager) application.getAttribute("aclManager");
     JobHistory.JobInfo job = JSPUtil.checkAccessAndGetJobInfo(request,
-        response, jobTracker, fs, new Path(logFile));
+        response, jobConf, aclsManager, fs, new Path(logFile));
     if (job == null) {
       return;
     }
@@ -41,7 +42,7 @@
 </head>
 <body>
 
-<h2>Hadoop Job <%=jobid %> on <a href="jobhistory.jsp">History Viewer</a></h2>
+<h2>Hadoop Job <%=jobid %> on <a href="jobhistoryhome.jsp">History Viewer</a></h2>
 
 <b>User: </b> <%=HtmlQuoting.quoteHtmlChars(job.get(Keys.USER)) %><br/> 
 <b>JobName: </b> <%=HtmlQuoting.quoteHtmlChars(job.get(Keys.JOBNAME)) %><br/>  
@@ -49,7 +50,7 @@
                  <%=job.get(Keys.JOBCONF) %></a><br/> 
 <%         
   Map<JobACL, AccessControlList> jobAcls = job.getJobACLs();
-  JSPUtil.printJobACLs(jobTracker, jobAcls, out);
+  JSPUtil.printJobACLs(jobConf, jobAcls, out);
 %> 
 <b>Submitted At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.SUBMIT_TIME), 0 )  %><br/> 
 <b>Launched At: </b> <%=StringUtils.getFormattedTimeWithDiff(dateFormat, job.getLong(Keys.LAUNCH_TIME), job.getLong(Keys.SUBMIT_TIME)) %><br/>

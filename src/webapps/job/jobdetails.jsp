@@ -268,7 +268,8 @@
         out.println("<h2>Job " + jobId + " not known!</h2>");
         return;
       }
-      String historyUrl = "/jobdetailshistory.jsp?logFile=" + 
+      String historyUrl = JobHistoryServer.getHistoryUrlPrefix(tracker.conf) +
+          "/jobdetailshistory.jsp?logFile=" +
           JobHistory.JobInfo.encodeJobHistoryFilePath(historyFile);
       response.sendRedirect(response.encodeRedirectURL(historyUrl));
       return;

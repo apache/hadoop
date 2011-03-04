@@ -1,7 +1,6 @@
 <%@ page
   contentType="text/html; charset=UTF-8"
   import="java.io.*"
-  import="java.net.URLEncoder"
   import="java.util.*"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
@@ -10,12 +9,11 @@
   import="java.text.SimpleDateFormat"
   import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
-  import="org.apache.hadoop.mapred.JobHistory.*"
 %>
 <%	
-  JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
-  String trackerName =
-           StringUtils.simpleHostname(tracker.getJobTrackerMachine());
+    JobConf jobConf = (JobConf)application.getAttribute("jobConf");
+    String trackerAddress = jobConf.get("mapred.job.tracker.http.address");
+    String trackerName = StringUtils.simpleHostname(trackerAddress);
 %>
 <%!	
   private static SimpleDateFormat dateFormat = 
@@ -31,9 +29,9 @@ function showUserHistory(search)
 {
 var url
 if (search == null || "".equals(search)) {
-  url="jobhistory.jsp";
+  url="legacyjobhistory.jsp";
 } else {
-  url="jobhistory.jsp?pageno=1&search=" + search;
+  url="legacyjobhistory.jsp?pageno=1&search=" + search;
 }
 window.location.href = url;
 }
@@ -44,8 +42,8 @@ window.location.href = url;
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 </head>
 <body>
-<h1> <a href="jobtracker.jsp"><%= trackerName %></a> Hadoop Map/Reduce 
-     <a href="jobhistory.jsp">History Viewer</a></h1>
+<h1> <a href="http://<%=trackerAddress%>/jobtracker.jsp"><%= trackerName %></a> Hadoop Map/Reduce
+     <a href="jobhistoryhome.jsp">History Viewer</a></h1>
 <hr>
 <%
     final String search = (request.getParameter("search") == null)
@@ -163,18 +161,18 @@ window.location.href = url;
     out.print("</span></i>)");
 
     // show the 'show-all' link
-    out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=-1&search=" + search + "\">show all</a></span>]");
+    out.println(" [<span class=\"small\"><a href=\"legacyjobhistory.jsp?pageno=-1&search=" + search + "\">show all</a></span>]");
 
     // show the 'first-page' link
     if (pageno > 1) {
-      out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=1&search=" + search + "\">first page</a></span>]");
+      out.println(" [<span class=\"small\"><a href=\"legacyjobhistory.jsp?pageno=1&search=" + search + "\">first page</a></span>]");
     } else {
       out.println("[<span class=\"small\">first page]</span>");
     }
 
     // show the 'last-page' link
     if (pageno < maxPageNo) {
-      out.println(" [<span class=\"small\"><a href=\"jobhistory.jsp?pageno=" + maxPageNo + "&search=" + search + "\">last page</a></span>]");
+      out.println(" [<span class=\"small\"><a href=\"legacyjobhistory.jsp?pageno=" + maxPageNo + "&search=" + search + "\">last page</a></span>]");
     } else {
       out.println("<span class=\"small\">[last page]</span>");
     }
@@ -286,7 +284,7 @@ window.location.href = url;
 
       // show previous link
       if (pageno > 1) {
-        out.println("<a href=\"jobhistory.jsp?pageno=" + (pageno - 1) +
+        out.println("<a href=\"legacyjobhistory.jsp?pageno=" + (pageno - 1) +
             "&search=" + search + "\">Previous</a>");
       }
 
@@ -306,7 +304,7 @@ window.location.href = url;
 
       for (int i = firstPage; i <= lastPage; ++i) {
         if (i != pageno) {// needs hyperlink
-          out.println(" <a href=\"jobhistory.jsp?pageno=" + i + "&search=" +
+          out.println(" <a href=\"legacyjobhistory.jsp?pageno=" + i + "&search=" +
               search + "\">" + i + "</a> ");
         } else { // current page
           out.println(i);
@@ -315,7 +313,7 @@ window.location.href = url;
 
       // show the next link
       if (pageno < max) {
-        out.println("<a href=\"jobhistory.jsp?pageno=" + (pageno + 1) + "&search=" + search + "\">Next</a>");
+        out.println("<a href=\"legacyjobhistory.jsp?pageno=" + (pageno + 1) + "&search=" + search + "\">Next</a>");
       }
       out.print("></center>");
     }
