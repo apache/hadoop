@@ -26,9 +26,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -54,10 +54,10 @@ public class TestDeadDatanode {
    * wait for datanode to reach alive or dead state for waitTime given in
    * milliseconds.
    */
-  private void waitForDatanodeState(String nodeID, boolean alive, int waitTime)
-      throws TimeoutException, InterruptedException {
+  private void waitForDatanodeState(DatanodeID nodeID, boolean alive, int waitTime)
+      throws TimeoutException, InterruptedException, IOException {
     long stopTime = System.currentTimeMillis() + waitTime;
-    FSNamesystem namesystem = cluster.getNamesystem();
+    FSNamesystem namesystem = cluster.getNameNode().getNamesystem();
     String state = alive ? "alive" : "dead";
     while (System.currentTimeMillis() < stopTime) {
       if (namesystem.getDatanode(nodeID).isAlive == alive) {
@@ -80,8 +80,8 @@ public class TestDeadDatanode {
    */
   @Test
   public void testDeadDatanode() throws Exception {
-    Configuration conf = new HdfsConfiguration();
-    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
+    Configuration conf = new Configuration();
+    conf.setInt("heartbeat.recheck.interval", 500);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     cluster = new MiniDFSCluster(conf, 1, true, null);
     cluster.waitActive();
@@ -89,12 +89,12 @@ public class TestDeadDatanode {
     // wait for datanode to be marked live
     DataNode dn = cluster.getDataNodes().get(0);
     DatanodeRegistration reg = cluster.getDataNodes().get(0)
-        .getDatanodeRegistration();
-    waitForDatanodeState(reg.getStorageID(), true, 20000);
+        .dnRegistration;
+    waitForDatanodeState(reg, true, 20000);
 
     // Shutdown and wait for datanode to be marked dead
     dn.shutdown();
-    waitForDatanodeState(reg.getStorageID(), false, 20000);
+    waitForDatanodeState(reg, false, 20000);
 
     DatanodeProtocol dnp = cluster.getNameNode();
     Block block = new Block(0);
