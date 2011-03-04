@@ -89,7 +89,7 @@ public class JobHistory {
   
   static final long VERSION = 1L;
   public static final Log LOG = LogFactory.getLog(JobHistory.class);
-  private static final String DELIMITER = " ";
+  private static final char DELIMITER = ' ';
   static final char LINE_DELIMITER_CHAR = '.';
   static final char[] charsToEscape = new char[] {'"', '=', 
                                                 LINE_DELIMITER_CHAR};
@@ -557,20 +557,30 @@ public class JobHistory {
 
   static void log(ArrayList<PrintWriter> writers, RecordTypes recordType, 
                   Keys[] keys, String[] values) {
-    StringBuffer buf = new StringBuffer(recordType.name()); 
-    buf.append(DELIMITER); 
-    for(int i =0; i< keys.length; i++){
-      buf.append(keys[i]);
-      buf.append("=\"");
+
+    // First up calculate the length of buffer, so that we are performant
+    // enough.
+    int length = recordType.name().length() + keys.length * 4 + 2;
+    for (int i = 0; i < keys.length; i++) { 
       values[i] = escapeString(values[i]);
-      buf.append(values[i]);
-      buf.append("\"");
-      buf.append(DELIMITER); 
+      length += values[i].length() + keys[i].toString().length();
     }
-    buf.append(LINE_DELIMITER_CHAR);
+
+    // We have the length of the buffer, now construct it.
+    StringBuilder builder = new StringBuilder(length);
+    builder.append(recordType.name());
+    builder.append(DELIMITER); 
+    for(int i =0; i< keys.length; i++){
+      builder.append(keys[i]);
+      builder.append("=\"");
+      builder.append(values[i]);
+      builder.append("\"");
+      builder.append(DELIMITER); 
+    }
+    builder.append(LINE_DELIMITER_CHAR);
     
     for (PrintWriter out : writers) {
-      out.println(buf.toString());
+      out.println(builder.toString());
     }
   }
   
@@ -1064,7 +1074,9 @@ public class JobHistory {
     throws IOException {
        Path tmpLogPath = fileManager.getHistoryFile(id);
        if (tmpLogPath == null) {
-         LOG.debug("No file for job with " + id + " found in cache!");
+         if (LOG.isDebugEnabled()) {
+           LOG.debug("No file for job with " + id + " found in cache!");
+         }
          return;
        }
        String tmpLogFileName = tmpLogPath.getName();
@@ -1107,7 +1119,9 @@ public class JobHistory {
       File f = new File (localJobFilePath);
       LOG.info("Deleting localized job conf at " + f);
       if (!f.delete()) {
-        LOG.debug("Failed to delete file " + f);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to delete file " + f);
+        }
       }
     }
 

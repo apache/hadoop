@@ -429,8 +429,12 @@ public class StringUtils {
     if (str == null) {
       return null;
     }
-    StringBuilder result = new StringBuilder();
-    for (int i=0; i<str.length(); i++) {
+    int len = str.length();
+    // Let us specify good enough capacity to constructor of StringBuilder sothat
+    // resizing would not be needed(to improve perf).
+    StringBuilder result = new StringBuilder((int)(len * 1.5));
+
+    for (int i=0; i<len; i++) {
       char curChar = str.charAt(i);
       if (curChar == escapeChar || hasChar(charsToEscape, curChar)) {
         // special char

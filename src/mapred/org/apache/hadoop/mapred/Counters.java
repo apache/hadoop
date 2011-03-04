@@ -86,27 +86,36 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * [(actual-name)(display-name)(value)]
      */
     public synchronized String makeEscapedCompactString() {
-      StringBuffer buf = new StringBuffer();
-      buf.append(COUNTER_OPEN);
+
+      // First up, obtain the strings that need escaping. This will help us
+      // determine the buffer length apriori.
+      String escapedName = escape(getName());
+      String escapedDispName = escape(getDisplayName());
+      long currentValue = this.getValue();
+      int length = escapedName.length() + escapedDispName.length() + 4;
+
+      length += 8; // For the following delimiting characters
+      StringBuilder builder = new StringBuilder(length);
+      builder.append(COUNTER_OPEN);
       
       // Add the counter name
-      buf.append(UNIT_OPEN);
-      buf.append(escape(getName()));
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(escapedName);
+      builder.append(UNIT_CLOSE);
       
       // Add the display name
-      buf.append(UNIT_OPEN);
-      buf.append(escape(getDisplayName()));
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(escapedDispName);
+      builder.append(UNIT_CLOSE);
       
       // Add the value
-      buf.append(UNIT_OPEN);
-      buf.append(this.getValue());
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(currentValue);
+      builder.append(UNIT_CLOSE);
       
-      buf.append(COUNTER_CLOSE);
+      builder.append(COUNTER_CLOSE);
       
-      return buf.toString();
+      return builder.toString();
     }
     
     // Checks for (content) equality of two (basic) counters
@@ -148,8 +157,10 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       }
       this.groupName = groupName;
       this.displayName = localize("CounterGroupName", groupName);
-      LOG.debug("Creating group " + groupName + " with " +
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Creating group " + groupName + " with " +
                (bundle == null ? "nothing" : "bundle"));
+      }
     }
     
     /**
@@ -190,26 +201,41 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * counters within.
      */
     public String makeEscapedCompactString() {
-      StringBuffer buf = new StringBuffer();
-      buf.append(GROUP_OPEN); // group start
+      String[] subcountersArray = new String[subcounters.size()];
+
+      // First up, obtain the strings that need escaping. This will help us
+      // determine the buffer length apriori.
+      String escapedName = escape(getName());
+      String escapedDispName = escape(getDisplayName());
+      int i = 0;
+      int length = escapedName.length() + escapedDispName.length();
+      for (Counter counter : subcounters.values()) {
+        String escapedStr = counter.makeEscapedCompactString();
+        subcountersArray[i++] = escapedStr;
+        length += escapedStr.length();
+      }
+
+      length += 6; // for all the delimiting characters below
+      StringBuilder builder = new StringBuilder(length);
+      builder.append(GROUP_OPEN); // group start
       
       // Add the group name
-      buf.append(UNIT_OPEN);
-      buf.append(escape(getName()));
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(escapedName);
+      builder.append(UNIT_CLOSE);
       
       // Add the display name
-      buf.append(UNIT_OPEN);
-      buf.append(escape(getDisplayName()));
-      buf.append(UNIT_CLOSE);
+      builder.append(UNIT_OPEN);
+      builder.append(escapedDispName);
+      builder.append(UNIT_CLOSE);
       
       // write the value
-      for(Counter counter: subcounters.values()) {
-        buf.append(counter.makeEscapedCompactString());
+      for(String str : subcountersArray) {
+        builder.append(str);
       }
       
-      buf.append(GROUP_CLOSE); // group end
-      return buf.toString();
+      builder.append(GROUP_CLOSE); // group end
+      return builder.toString();
     }
 
     @Override
@@ -274,7 +300,9 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     public synchronized Counter getCounterForName(String name) {
       Counter result = subcounters.get(name);
       if (result == null) {
-        LOG.debug("Adding " + name);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Adding " + name);
+        }
         result = new Counter(name, localize(name + ".name", name), 0L);
         subcounters.put(name, result);
       }
@@ -567,11 +595,24 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * {(groupname)(group-displayname)[(countername)(displayname)(value)][][]}{}{}
    */
   public synchronized String makeEscapedCompactString() {
-    StringBuffer buffer = new StringBuffer();
-    for(Group group: this){
-      buffer.append(group.makeEscapedCompactString());
+    String[] groupsArray = new String[counters.size()];
+    int i = 0;
+    int length = 0;
+
+    // First up, obtain the escaped string for each group so that we can
+    // determine the buffer length apriori.
+    for (Group group : this) {
+      String escapedString = group.makeEscapedCompactString();
+      groupsArray[i++] = escapedString;
+      length += escapedString.length();
     }
-    return buffer.toString();
+
+    // Now construct the buffer
+    StringBuilder builder = new StringBuilder(length);
+    for (String group : groupsArray) {
+      builder.append(group);
+    }
+    return builder.toString();
   }
 
   // Extracts a block (data enclosed within delimeters) ignoring escape 

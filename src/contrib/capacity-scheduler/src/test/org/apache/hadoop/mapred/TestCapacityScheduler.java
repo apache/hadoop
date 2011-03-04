@@ -2159,18 +2159,16 @@ public class TestCapacityScheduler extends TestCase {
     checkAssignment("tt1", "attempt_test_0001_m_000001_0 on tt1");
     // Total 1 map slot should be accounted for.
     checkOccupiedSlots("default", TaskType.MAP, 1, 1, 16.7f);
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 
-        1, 1, 0, 0, 0, 0),
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(1, 1, 0, 0, 0, 0),
         (String) job1.getSchedulingInfo());
     checkMemReservedForTasksOnTT("tt1", 1 * 1024L, 0L);
 
     // same for reduces.
     checkAssignment("tt1", "attempt_test_0001_r_000001_0 on tt1");
     checkOccupiedSlots("default", TaskType.REDUCE, 1, 1, 16.7f);
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 
-        1, 1, 0, 1, 1, 0),
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(1, 1, 0, 1, 1, 0),
         (String) job1.getSchedulingInfo());
     checkMemReservedForTasksOnTT("tt1", 1 * 1024L, 1 * 1024L);
 
@@ -2193,17 +2191,15 @@ public class TestCapacityScheduler extends TestCase {
     // job. This will fill up the TT. 
     checkAssignment("tt3", "attempt_test_0002_m_000001_0 on tt3");
     checkOccupiedSlots("default", TaskType.MAP, 1, 4, 66.7f);
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 
-        1, 2, 0, 0, 0, 0),
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(1, 2, 0, 0, 0, 0),
         (String) job2.getSchedulingInfo());
     checkMemReservedForTasksOnTT("tt3", 2 * 1024L, 0L);
 
     checkAssignment("tt3", "attempt_test_0002_r_000001_0 on tt3");
     checkOccupiedSlots("default", TaskType.REDUCE, 1, 4, 66.7f);
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 
-        1, 2, 0, 1, 2, 0),
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(1, 2, 0, 1, 2, 0),
         (String) job2.getSchedulingInfo());
     checkMemReservedForTasksOnTT("tt3", 2 * 1024L, 2 * 1024L);
 
@@ -2227,13 +2223,11 @@ public class TestCapacityScheduler extends TestCase {
     checkOccupiedSlots("default", TaskType.REDUCE, 1, 6, 100.0f);
     checkMemReservedForTasksOnTT("tt1", 1 * 1024L, 1 * 1024L);
     LOG.info(job2.getSchedulingInfo());
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 
-        1, 2, 2, 1, 2, 2),
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(1, 2, 2, 1, 2, 2),
         (String) job2.getSchedulingInfo());
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 
-        0, 0, 0, 0, 0, 0),
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(0, 0, 0, 0, 0, 0),
         (String) job3.getSchedulingInfo());
     
     // Reservations are already done for job2. So job3 should go ahead.
@@ -2788,9 +2782,9 @@ public class TestCapacityScheduler extends TestCase {
     scheduler.updateQSIInfoForTests();
 
     LOG.info(job1.getSchedulingInfo());
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 3, 3, 0, 0,
-        0, 0), (String) job1.getSchedulingInfo());
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(3, 3, 0, 0, 0, 0), 
+        (String) job1.getSchedulingInfo());
 
     LOG.debug("Submit one high memory(2GB maps, 0MB reduces) job of "
         + "2 map tasks");
@@ -2818,16 +2812,16 @@ public class TestCapacityScheduler extends TestCase {
     assertNull(scheduler.assignTasks(tracker("tt1")));
     scheduler.updateQSIInfoForTests();
     LOG.info(job2.getSchedulingInfo());
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 0, 0, 2, 0,
-        0, 0), (String) job2.getSchedulingInfo());
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(0, 0, 2, 0, 0, 0), 
+        (String) job2.getSchedulingInfo());
 
     assertNull(scheduler.assignTasks(tracker("tt2")));
     scheduler.updateQSIInfoForTests();
     LOG.info(job2.getSchedulingInfo());
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 0, 0, 4, 0,
-        0, 0), (String) job2.getSchedulingInfo());
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(0, 0, 4, 0, 0, 0), 
+        (String) job2.getSchedulingInfo());
 
     // Job2 has only 2 pending tasks. So no more reservations. Job3 should get
     // slots on tt3. tt1 and tt2 should not be assigned any slots with the
@@ -2835,23 +2829,23 @@ public class TestCapacityScheduler extends TestCase {
     assertNull(scheduler.assignTasks(tracker("tt1")));
     scheduler.updateQSIInfoForTests();
     LOG.info(job2.getSchedulingInfo());
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 0, 0, 4, 0,
-        0, 0), (String) job2.getSchedulingInfo());
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(0, 0, 4, 0, 0, 0), 
+        (String) job2.getSchedulingInfo());
 
     assertNull(scheduler.assignTasks(tracker("tt2")));
     scheduler.updateQSIInfoForTests();
     LOG.info(job2.getSchedulingInfo());
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 0, 0, 4, 0,
-        0, 0), (String) job2.getSchedulingInfo());
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(0, 0, 4, 0, 0, 0), 
+        (String) job2.getSchedulingInfo());
 
     checkAssignment("tt3", "attempt_test_0003_m_000001_0 on tt3");
     scheduler.updateQSIInfoForTests();
     LOG.info(job2.getSchedulingInfo());
-    assertEquals(String.format(
-        CapacityTaskScheduler.JOB_SCHEDULING_INFO_FORMAT_STRING, 0, 0, 4, 0,
-        0, 0), (String) job2.getSchedulingInfo());
+    assertEquals(
+        CapacityTaskScheduler.getJobQueueSchedInfo(0, 0, 4, 0, 0, 0), 
+        (String) job2.getSchedulingInfo());
 
     // No more tasks there in job3 also
     assertNull(scheduler.assignTasks(tracker("tt3")));

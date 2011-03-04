@@ -93,12 +93,16 @@ class MemoryMatcher {
   boolean matchesMemoryRequirements(JobInProgress job,TaskType taskType, 
                                     TaskTrackerStatus taskTracker) {
 
-    LOG.debug("Matching memory requirements of " + job.getJobID().toString()
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Matching memory requirements of " + job.getJobID().toString()
         + " for scheduling on " + taskTracker.trackerName);
+    }
 
     if (!isSchedulingBasedOnMemEnabled()) {
-      LOG.debug("Scheduling based on job's memory requirements is disabled."
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Scheduling based on job's memory requirements is disabled."
           + " Ignoring any value set by job.");
+      }
       return true;
     }
 

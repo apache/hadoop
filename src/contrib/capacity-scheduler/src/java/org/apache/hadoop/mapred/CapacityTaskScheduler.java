@@ -549,8 +549,10 @@ class CapacityTaskScheduler extends TaskScheduler {
             return TaskLookupResult.getTaskFoundResult(t);
           } else {
             //skip to the next job in the queue.
-            LOG.debug("Job " + j.getJobID().toString()
-                + " returned no tasks of type " + type);
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Job " + j.getJobID().toString()
+                  + " returned no tasks of type " + type);
+            }
             continue;
           }
         } else {
@@ -627,8 +629,10 @@ class CapacityTaskScheduler extends TaskScheduler {
       }//end of for loop
 
       // found nothing for this queue, look at the next one.
-      String msg = "Found no task from the queue " + qsi.queueName;
-      LOG.debug(msg);
+      if (LOG.isDebugEnabled()) {
+        String msg = "Found no task from the queue " + qsi.queueName;
+        LOG.debug(msg);
+      }
       return TaskLookupResult.getNoTaskFoundResult();
     }
 
@@ -935,10 +939,6 @@ class CapacityTaskScheduler extends TaskScheduler {
   /** whether scheduler has started or not */
   private boolean started = false;
 
-  final static String JOB_SCHEDULING_INFO_FORMAT_STRING =
-    "%s running map tasks using %d map slots. %d additional slots reserved." +
-    " %s running reduce tasks using %d reduce slots." +
-    " %d additional slots reserved.";
   /**
    * A clock class - can be mocked out for testing.
    */
@@ -1256,14 +1256,12 @@ class CapacityTaskScheduler extends TaskScheduler {
         int numReservedReduceSlotsForThisJob = 
           (reduceScheduler.getNumReservedTaskTrackers(j) * 
            reduceScheduler.getSlotsPerTask(j)); 
-        j.setSchedulingInfo(
-            String.format(JOB_SCHEDULING_INFO_FORMAT_STRING,
-                          Integer.valueOf(numMapsRunningForThisJob), 
-                          Integer.valueOf(numRunningMapSlots),
-                          Integer.valueOf(numReservedMapSlotsForThisJob),
-                          Integer.valueOf(numReducesRunningForThisJob), 
-                          Integer.valueOf(numRunningReduceSlots),
-                          Integer.valueOf(numReservedReduceSlotsForThisJob)));
+        j.setSchedulingInfo(getJobQueueSchedInfo(numMapsRunningForThisJob, 
+                              numRunningMapSlots,
+                              numReservedMapSlotsForThisJob,
+                              numReducesRunningForThisJob, 
+                              numRunningReduceSlots,
+                              numReservedReduceSlotsForThisJob));
         qsi.mapTSI.numRunningTasks += numMapsRunningForThisJob;
         qsi.reduceTSI.numRunningTasks += numReducesRunningForThisJob;
         qsi.mapTSI.numSlotsOccupied += numMapSlotsForThisJob;
@@ -1307,6 +1305,22 @@ class CapacityTaskScheduler extends TaskScheduler {
     prevReduceClusterCapacity = reduceClusterCapacity;
   }
 
+  private static final int JOBQUEUE_SCHEDULINGINFO_INITIAL_LENGTH = 175;
+
+  static String getJobQueueSchedInfo(int numMapsRunningForThisJob, 
+    int numRunningMapSlots, int numReservedMapSlotsForThisJob, 
+    int numReducesRunningForThisJob, int numRunningReduceSlots, 
+    int numReservedReduceSlotsForThisJob) {
+    StringBuilder sb = new StringBuilder(JOBQUEUE_SCHEDULINGINFO_INITIAL_LENGTH);
+    sb.append(numMapsRunningForThisJob).append(" running map tasks using ")
+      .append(numRunningMapSlots).append(" map slots. ")
+      .append(numReservedMapSlotsForThisJob).append(" additional slots reserved. ")
+      .append(numReducesRunningForThisJob).append(" running reduce tasks using ")
+      .append(numRunningReduceSlots).append(" reduce slots. ")
+      .append(numReservedReduceSlotsForThisJob).append(" additional slots reserved.");
+    return sb.toString();
+  }
+
   /**
    * Sets whether the scheduler can assign multiple tasks in a heartbeat
    * or not.
@@ -1346,12 +1360,14 @@ class CapacityTaskScheduler extends TaskScheduler {
     int currentMapSlots = taskTrackerStatus.countOccupiedMapSlots();
     int maxReduceSlots = taskTrackerStatus.getMaxReduceSlots();
     int currentReduceSlots = taskTrackerStatus.countOccupiedReduceSlots();
-    LOG.debug("TT asking for task, max maps=" + taskTrackerStatus.getMaxMapSlots() + 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("TT asking for task, max maps=" + taskTrackerStatus.getMaxMapSlots() + 
         ", run maps=" + taskTrackerStatus.countMapTasks() + ", max reds=" + 
         taskTrackerStatus.getMaxReduceSlots() + ", run reds=" + 
         taskTrackerStatus.countReduceTasks() + ", map cap=" + 
         mapClusterCapacity + ", red cap = " + 
         reduceClusterCapacity);
+    }
 
     /* 
      * update all our QSI objects.
@@ -1441,8 +1457,10 @@ class CapacityTaskScheduler extends TaskScheduler {
     // setup scheduler specific job information
     preInitializeJob(job);
     
-    LOG.debug("Job " + job.getJobID().toString() + " is added under user " 
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Job " + job.getJobID().toString() + " is added under user " 
               + job.getProfile().getUser() + ", user now has " + i + " jobs");
+    }
   }
 
   /**
@@ -1470,7 +1488,9 @@ class CapacityTaskScheduler extends TaskScheduler {
       queueInfoMap.get(job.getProfile().getQueueName());
     // qsi shouldn't be null
     // update numJobsByUser
-    LOG.debug("JOb to be removed for user " + job.getProfile().getUser());
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Job to be removed for user " + job.getProfile().getUser());
+    }
     Integer i = qsi.numJobsByUser.get(job.getProfile().getUser());
     i--;
     if (0 == i.intValue()) {
@@ -1478,12 +1498,16 @@ class CapacityTaskScheduler extends TaskScheduler {
       // remove job footprint from our TSIs
       qsi.mapTSI.numSlotsOccupiedByUser.remove(job.getProfile().getUser());
       qsi.reduceTSI.numSlotsOccupiedByUser.remove(job.getProfile().getUser());
-      LOG.debug("No more jobs for user, number of users = " + qsi.numJobsByUser.size());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("No more jobs for user, number of users = " + qsi.numJobsByUser.size());
+      }
     }
     else {
       qsi.numJobsByUser.put(job.getProfile().getUser(), i);
-      LOG.debug("User still has " + i + " jobs, number of users = "
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("User still has " + i + " jobs, number of users = "
                 + qsi.numJobsByUser.size());
+      }
     }
   }
   
