@@ -36,7 +36,7 @@ privileged aspect JobInProgressAspect {
   public JobInfo JobInProgress.getJobInfo() {
     String historyLoc = getHistoryPath();
     JobInfoImpl jobInfoImpl;
-    if (tasksInited.get()) {
+    if (tasksInited) {
       jobInfoImpl = new JobInfoImpl(
           this.getJobID(), this.isSetupLaunched(), this.isSetupFinished(), this
               .isCleanupLaunched(), this.runningMaps(), this.runningReduces(),
