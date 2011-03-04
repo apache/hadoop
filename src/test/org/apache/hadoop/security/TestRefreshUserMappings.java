@@ -25,15 +25,20 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
@@ -45,6 +50,7 @@ public class TestRefreshUserMappings {
   private MiniDFSCluster cluster;
   Configuration config;
   private static long groupRefreshTimeoutSec = 1;
+  private String tempResource = null;
   
   public static class MockUnixGroupsMapping implements GroupMappingServiceProvider {
     private int i=0;
@@ -80,6 +86,10 @@ public class TestRefreshUserMappings {
   public void tearDown() throws Exception {
     if(cluster!=null) {
       cluster.shutdown();
+    }
+    if(tempResource!=null) {
+      File f = new File(tempResource);
+      f.delete();
     }
   }
     
@@ -135,6 +145,7 @@ public class TestRefreshUserMappings {
     
     config.set(userKeyGroups, "gr3,gr4,gr5"); // superuser can proxy for this group
     config.set(userKeyHosts,"127.0.0.1");
+    ProxyUsers.refreshSuperUserGroupsConfiguration(config);
     
     UserGroupInformation ugi1 = mock(UserGroupInformation.class);
     UserGroupInformation ugi2 = mock(UserGroupInformation.class);
@@ -172,15 +183,20 @@ public class TestRefreshUserMappings {
       fail("first auth for " + ugi2.getShortUserName() + " should've succeeded: " + e.getLocalizedMessage());
     }
     
+    // refresh will look at configuration on the server side
+    // add additional resource with the new value
+    // so the server side will pick it up
+    String rsrc = "testGroupMappingRefresh_rsrc.xml";
+    addNewConfigResource(rsrc, userKeyGroups, "gr2", userKeyHosts, "127.0.0.1");  
+
+    
     DFSAdmin admin = new DFSAdmin(config);
     String [] args = new String[]{"-refreshSuperUserGroupsConfiguration"};
-    NameNode nn = cluster.getNameNode();
-    Configuration conf = new Configuration(config);
-    conf.set(userKeyGroups, "gr2"); // superuser can proxy for this group
-    admin.setConf(conf);
+    //NameNode nn = cluster.getNameNode();
+    //Configuration conf = new Configuration(config);
+    //conf.set(userKeyGroups, "gr2"); // superuser can proxy for this group
+    //admin.setConf(conf);
     admin.run(args);
-    
-    //check after...
     
     try {
       ProxyUsers.authorize(ugi2, "127.0.0.1", config);
@@ -197,5 +213,27 @@ public class TestRefreshUserMappings {
       fail("second auth for " + ugi1.getShortUserName() + " should've succeeded: " + e.getLocalizedMessage());
     }    
   }
+  
+  // create a resource file with the new settings
+  private void addNewConfigResource(String rsrcName, String keyGroup,
+      String groups, String keyHosts, String hosts)  throws FileNotFoundException {
+    // location for temp resource should be in CLASSPATH
+    Configuration conf = new Configuration();
+    URL url = conf.getResource("hdfs-default.xml");
+    Path p = new Path(url.getPath());
+    Path dir = p.getParent();
+    tempResource = dir.toString() + "/" + rsrcName;
 
+
+    String newResource =
+      "<configuration>"+
+      "<property><name>" + keyGroup + "</name><value>"+groups+"</value></property>" +
+      "<property><name>" + keyHosts + "</name><value>"+hosts+"</value></property>" +
+      "</configuration>";
+    PrintWriter writer = new PrintWriter(new FileOutputStream(tempResource));
+    writer.println(newResource);
+    writer.close();
+
+    Configuration.addDefaultResource(rsrcName);
+  }
 }

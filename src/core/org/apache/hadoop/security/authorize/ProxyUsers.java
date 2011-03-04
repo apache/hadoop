@@ -34,7 +34,7 @@ public class ProxyUsers {
   public static final String CONF_GROUPS = ".groups";
   public static final String CONF_HADOOP_PROXYUSER = "hadoop.proxyuser.";
   public static final String CONF_HADOOP_PROXYUSER_RE = "hadoop\\.proxyuser\\.";
-  private static Configuration conf=null;
+  private static boolean init = false;
   // list of groups and hosts per proxyuser
   private static Map<String, Collection<String>> proxyGroups = 
     new HashMap<String, Collection<String>>();
@@ -44,13 +44,20 @@ public class ProxyUsers {
   /**
    * reread the conf and get new values for "hadoop.proxyuser.*.groups/hosts"
    */
-  public static synchronized void refreshSuperUserGroupsConfiguration(Configuration cn) {
-    conf = cn;
-    
+  public static void refreshSuperUserGroupsConfiguration() {
+    //load server side configuration;
+    refreshSuperUserGroupsConfiguration(new Configuration());
+  }
+
+  /**
+   * refresh configuration
+   * @param conf
+   */
+  public static synchronized void refreshSuperUserGroupsConfiguration(Configuration conf) {
     // remove alle existing stuff
     proxyGroups.clear();
     proxyHosts.clear();
-    
+
     // get all the new keys for groups
     String regex = CONF_HADOOP_PROXYUSER_RE+"[^.]*\\"+CONF_GROUPS;
     Map<String,String> allMatchKeys = conf.getValByRegex(regex);
@@ -66,6 +73,8 @@ public class ProxyUsers {
       proxyHosts.put(entry.getKey(),
           StringUtils.getStringCollection(entry.getValue()));
     }
+    
+    init = true;
   }
 
   /**
@@ -99,8 +108,8 @@ public class ProxyUsers {
   public static synchronized void authorize(UserGroupInformation user, String remoteAddress,
       Configuration newConf) throws AuthorizationException {
     
-    if(conf == null) {
-      refreshSuperUserGroupsConfiguration(newConf); 
+    if(!init) {
+      refreshSuperUserGroupsConfiguration(); 
     }
 
     if (user.getRealUser() == null) {
@@ -113,7 +122,7 @@ public class ProxyUsers {
     Collection<String> allowedUserGroups = proxyGroups.get(
         getProxySuperuserGroupConfKey(superUser.getShortUserName()));
     
-    if (!allowedUserGroups.isEmpty()) {
+    if (allowedUserGroups != null && !allowedUserGroups.isEmpty()) {
       for (String group : user.getGroupNames()) {
         if (allowedUserGroups.contains(group)) {
           groupAuthorized = true;
@@ -130,7 +139,7 @@ public class ProxyUsers {
     Collection<String> ipList = proxyHosts.get(
         getProxySuperuserIpConfKey(superUser.getShortUserName()));
     
-    if (!ipList.isEmpty()) {
+    if (ipList != null && !ipList.isEmpty()) {
       for (String allowedHost : ipList) {
         InetAddress hostAddr;
         try {

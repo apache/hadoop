@@ -4802,18 +4802,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   @Override
-  public void refreshSuperUserGroupsConfiguration(Configuration conf) {
+  public void refreshSuperUserGroupsConfiguration() {
     LOG.info("Refreshing superuser proxy groups mapping ");
     
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    ProxyUsers.refreshSuperUserGroupsConfiguration();
   }
     
   @Override
-  public void refreshUserToGroupsMappings(Configuration conf) throws IOException {
+  public void refreshUserToGroupsMappings() throws IOException {
     LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
              UserGroupInformation.getCurrentUser().getShortUserName());
     
-    Groups.getUserToGroupsMappingService(conf).refresh();
+    Groups.getUserToGroupsMappingService().refresh();
   }
   
   private boolean perTaskMemoryConfigurationSetOnJT() {

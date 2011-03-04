@@ -114,6 +114,10 @@ public class Groups {
    * Get the groups being used to map user-to-groups.
    * @return the groups being used to map user-to-groups.
    */
+  public static Groups getUserToGroupsMappingService() {
+    return getUserToGroupsMappingService(new Configuration()); 
+  }
+
   public static Groups getUserToGroupsMappingService(Configuration conf) {
     if(GROUPS == null) {
       LOG.debug(" Creating new Groups object");

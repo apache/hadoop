@@ -148,6 +148,8 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(new TestImpl(), ADDRESS,
         0, 5, true, conf, null);
 
+    refreshConf(conf);
+    
     try {
       server.start();
 
@@ -188,6 +190,8 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    refreshConf(conf);
+    
     try {
       server.start();
 
@@ -274,6 +278,8 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    refreshConf(conf);
+    
     try {
       server.start();
 
@@ -312,6 +318,8 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    refreshConf(conf);
+    
     try {
       server.start();
 
@@ -352,6 +360,8 @@ public class TestDoAsEffectiveUser {
     Server server = RPC.getServer(new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
 
+    refreshConf(conf);
+    
     try {
       server.start();
 

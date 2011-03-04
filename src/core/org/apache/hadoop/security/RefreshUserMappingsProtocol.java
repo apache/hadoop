@@ -41,13 +41,12 @@ public interface RefreshUserMappingsProtocol extends VersionedProtocol {
    * @param conf
    * @throws IOException
    */
-  public void refreshUserToGroupsMappings(Configuration conf) throws IOException;
+  public void refreshUserToGroupsMappings() throws IOException;
   
   /**
    * Refresh superuser proxy group list
-   * @param conf
    * @throws IOException
    */
-  public void refreshSuperUserGroupsConfiguration(Configuration conf) 
+  public void refreshSuperUserGroupsConfiguration() 
   throws IOException;
 }

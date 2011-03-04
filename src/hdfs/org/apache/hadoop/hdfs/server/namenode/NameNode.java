@@ -1017,17 +1017,17 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   @Override
-  public void refreshUserToGroupsMappings(Configuration conf) throws IOException {
+  public void refreshUserToGroupsMappings() throws IOException {
     LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
              UserGroupInformation.getCurrentUser().getShortUserName());
-    Groups.getUserToGroupsMappingService(conf).refresh();
+    Groups.getUserToGroupsMappingService().refresh();
   }
   
   @Override
-  public void refreshSuperUserGroupsConfiguration(Configuration conf) {
+  public void refreshSuperUserGroupsConfiguration() {
     LOG.info("Refreshing SuperUser proxy group mapping list ");
     
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    ProxyUsers.refreshSuperUserGroupsConfiguration();
   }
 
   private static void printUsage() {
