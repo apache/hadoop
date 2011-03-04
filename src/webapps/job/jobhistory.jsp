@@ -182,6 +182,8 @@ window.location.href = url;
       }
     };
 
+    String versionComponent = JobHistory.DONE_DIRECTORY_FORMAT_DIRNAME;
+
     String trackerComponent = "*";
 
     // build the glob
@@ -214,7 +216,9 @@ window.location.href = url;
     // number directories, but not the individual files.
     Path historyPath = new Path(historyLogDir);
 
-    String leadGlob = (trackerComponent + "/" + dateComponent);
+    String leadGlob = (versionComponent
+            + "/" + trackerComponent
+            + "/" + dateComponent);
 
     // Atomicity is unimportant here.
     // I would have used MutableBoxedBoolean if such had been provided.

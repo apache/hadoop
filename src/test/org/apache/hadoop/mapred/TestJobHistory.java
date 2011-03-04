@@ -473,6 +473,13 @@ public class TestJobHistory extends TestCase {
     // Check if the history file exists
     assertTrue("History file does not exist", fileSys.exists(logFile));
 
+    // Check that the log file name includes a directory level for the version number
+    assertTrue("History filename does not include a directory level "
+                 + "for the version number.",
+               logFile.toString()
+                 .contains("/"
+                           + JobHistory.DONE_DIRECTORY_FORMAT_DIRNAME
+                           + "/"));
 
     // check if the history file is parsable
     String[] jobDetails = JobHistory.JobInfo.decodeJobHistoryFileName(

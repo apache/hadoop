@@ -92,6 +92,12 @@ import org.apache.hadoop.util.StringUtils;
 public class JobHistory {
   
   static final long VERSION = 1L;
+
+  static final int DONE_DIRECTORY_FORMAT_VERSION = 1;
+
+  static final String DONE_DIRECTORY_FORMAT_DIRNAME
+    = "version-" + DONE_DIRECTORY_FORMAT_VERSION;
+
   public static final Log LOG = LogFactory.getLog(JobHistory.class);
   private static final char DELIMITER = ' ';
   static final char LINE_DELIMITER_CHAR = '.';
@@ -411,7 +417,9 @@ public class JobHistory {
   }
 
   private static String historyLogSubdirectory(JobID id, long millisecondTime) {
-    String result = jobtrackerDirectoryComponent(id);
+    String result
+      = (DONE_DIRECTORY_FORMAT_DIRNAME
+         + "/" + jobtrackerDirectoryComponent(id));
 
     String serialNumberDirectory = serialNumberDirectoryComponent(id);
 
@@ -429,7 +437,9 @@ public class JobHistory {
 
   private static String doneSubdirsBeforeSerialTail() {
     // job tracker ID
-    String result = "/*";   // job tracker instance ID
+    String result
+      = ("/" + DONE_DIRECTORY_FORMAT_DIRNAME
+         + "/*");   // job tracker instance ID
 
     // date
     result = result + "/*/*/*";  // YYYY/MM/DD ;
