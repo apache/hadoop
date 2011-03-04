@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.net.NetUtils;
@@ -108,7 +109,7 @@ public class TokenCache {
   static void obtainTokensForNamenodesInternal(Path [] ps, Configuration conf)
   throws IOException {
     // get jobtracker principal id (for the renewer)
-    Text jtCreds = new Text(conf.get(JobContext.JOB_JOBTRACKER_ID, ""));
+    Text jtCreds = new Text(conf.get(JobTracker.JT_USER_NAME, ""));
 
     for(Path p: ps) {
       FileSystem fs = FileSystem.get(p.toUri(), conf);

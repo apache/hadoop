@@ -31,7 +31,9 @@ import org.apache.hadoop.security.KerberosInfo;
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
  * It's used to get part of the name node state
  *****************************************************************************/
-@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+@KerberosInfo(
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY,
+    clientPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 public interface NamenodeProtocol extends VersionedProtocol {
   /**
    * 3: new method added: getAccessKeys()

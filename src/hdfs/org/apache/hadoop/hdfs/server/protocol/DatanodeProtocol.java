@@ -36,7 +36,9 @@ import org.apache.hadoop.security.KerberosInfo;
  * returning values from these functions.
  *
  **********************************************************************/
-@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+@KerberosInfo(
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, 
+    clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
    * 20: SendHeartbeat may return KeyUpdateCommand

@@ -1498,7 +1498,7 @@ public abstract class Server {
         throw new AuthorizationException("Unknown protocol: " + 
                                          connection.getProtocol());
       }
-      ServiceAuthorizationManager.authorize(user, protocol);
+      ServiceAuthorizationManager.authorize(user, protocol, getConf());
     }
   }
   

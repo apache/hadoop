@@ -232,7 +232,7 @@ public class Client {
         }
         KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
         if (krbInfo != null) {
-          String serverKey = krbInfo.value();
+          String serverKey = krbInfo.serverPrincipal();
           if (serverKey != null) {
             serverPrincipal = conf.get(serverKey);
           }

@@ -43,6 +43,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
@@ -214,7 +215,7 @@ public class TestTokenCache {
     URI nnUri = NameNode.getUri(nn.getNameNodeAddress());
     jConf.set(JobContext.JOB_NAMENODES, nnUri + "," + nnUri.toString());
     // job tracker principle id..
-    jConf.set(JobContext.JOB_JOBTRACKER_ID, "jt_id");
+    jConf.set(JobTracker.JT_USER_NAME, "jt_id");
 
     // using argument to pass the file name
     String[] args = {

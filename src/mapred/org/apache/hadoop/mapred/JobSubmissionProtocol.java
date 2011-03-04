@@ -20,11 +20,10 @@ package org.apache.hadoop.mapred;
 
 import java.io.IOException;
 
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.security.token.Token;
@@ -35,7 +34,8 @@ import org.apache.hadoop.security.token.TokenInfo;
  * JobClient can use these methods to submit a Job for execution, and learn about
  * the current system status.
  */ 
-@KerberosInfo(JobContext.JOB_JOBTRACKER_ID)
+@KerberosInfo(
+    serverPrincipal = JobTracker.JT_USER_NAME)
 @TokenInfo(DelegationTokenSelector.class)
 interface JobSubmissionProtocol extends VersionedProtocol {
   /* 

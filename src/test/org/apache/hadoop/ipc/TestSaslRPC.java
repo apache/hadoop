@@ -151,7 +151,8 @@ public class TestSaslRPC {
     }
   }
   
-  @KerberosInfo(SERVER_PRINCIPAL_KEY)
+  @KerberosInfo(
+      serverPrincipal = SERVER_PRINCIPAL_KEY)
   @TokenInfo(TestTokenSelector.class)
   public interface TestSaslProtocol extends TestRPC.TestProtocol {
     public AuthenticationMethod getAuthMethod() throws IOException;

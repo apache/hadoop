@@ -28,7 +28,9 @@ import org.apache.hadoop.security.KerberosInfo;
  * Protocol that a TaskTracker and the central JobTracker use to communicate.
  * The JobTracker is the Server, which implements this protocol.
  */ 
-@KerberosInfo(JobContext.JOB_JOBTRACKER_ID)
+@KerberosInfo(
+    serverPrincipal = JobTracker.JT_USER_NAME,
+    clientPrincipal = TaskTracker.TT_USER_NAME)
 interface InterTrackerProtocol extends VersionedProtocol {
   /**
    * version 3 introduced to replace 

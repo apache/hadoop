@@ -41,7 +41,8 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
  * as well as open/close file streams, etc.
  *
  **********************************************************************/
-@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+@KerberosInfo(
+    serverPrincipal = DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 @TokenInfo(DelegationTokenSelector.class)
 public interface ClientProtocol extends VersionedProtocol {
 
