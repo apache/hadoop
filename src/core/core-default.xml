@@ -31,6 +31,13 @@
   ordering of the filters.</description>
 </property>
 
+ <property>
+  <name>hadoop.security.group.mapping</name>
+  <value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value>
+  <description>Class for user to group mapping (get groups for a given user)
+  </description>
+</property>
+
 <property>
   <name>hadoop.security.authorization</name>
   <value>false</value>
@@ -43,6 +50,16 @@
   <description>Possible values are simple (no authentication), and kerberos
   </description>
 </property>
+
+<!--
+<property>
+  <name>hadoop.security.service.user.name.key</name>
+  <value></value>
+  <description>Name of the kerberos principal of the user that owns
+  a given service daemon
+  </description>
+</property>
+-->
 
 <!--- logging properties -->
 
