@@ -5,6 +5,7 @@
   import="java.io.*"
   import="java.util.*"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapreduce.TaskType"
   import="org.apache.hadoop.util.*"
 %>
 
@@ -125,13 +126,13 @@
     out.print("<tr><th>Attempt</th><th>Task</th><th>Machine</th><th>State</th>" +
               "<th>Error</th><th>Logs</th></tr>\n");
     if (includeMap) {
-      TaskInProgress[] tips = job.getMapTasks();
+      TaskInProgress[] tips = job.getTasks(TaskType.MAP);
       for(int i=0; i < tips.length; ++i) {
         printFailedAttempts(out, tracker, jobId, tips[i], state);
       }
     }
     if (includeReduce) {
-      TaskInProgress[] tips = job.getReduceTasks();
+      TaskInProgress[] tips = job.getTasks(TaskType.REDUCE);
       for(int i=0; i < tips.length; ++i) {
         printFailedAttempts(out, tracker, jobId, tips[i], state);
       }

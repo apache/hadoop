@@ -188,7 +188,7 @@ public class MiniMRCluster {
       try {
         tt = ugi.doAs(new PrivilegedExceptionAction<TaskTracker>() {
           public TaskTracker run() throws InterruptedException, IOException {
-            return new TaskTracker(conf);
+            return createTaskTracker(conf);
           }
         });
         isInitialized = true;
@@ -198,7 +198,14 @@ public class MiniMRCluster {
         LOG.error("task tracker " + trackerId + " crashed", e);
       }
     }
-        
+     
+    /**
+     * Creates a default {@link TaskTracker} using the conf passed. 
+     */
+    TaskTracker createTaskTracker(JobConf conf) throws InterruptedException, IOException {
+      return new TaskTracker(conf);
+    }
+    
     /**
      * Create and run the task tracker.
      */
@@ -679,6 +686,13 @@ public class MiniMRCluster {
     TaskTrackerRunner taskTracker;
     taskTracker = new TaskTrackerRunner(idx, numDir, host, conf);
     
+    addTaskTracker(taskTracker);
+  }
+  
+  /**
+   * Add a tasktracker to the Mini-MR cluster.
+   */
+  void addTaskTracker(TaskTrackerRunner taskTracker) {
     Thread taskTrackerThread = new Thread(taskTracker);
     taskTrackerList.add(taskTracker);
     taskTrackerThreadList.add(taskTrackerThread);

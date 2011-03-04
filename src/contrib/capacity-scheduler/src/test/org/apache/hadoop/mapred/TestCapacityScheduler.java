@@ -172,7 +172,6 @@ public class TestCapacityScheduler extends TestCase {
       super(jId, jobConf, jt);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
-      this.status = new JobStatus(jId, 0f, 0f, JobStatus.PREP);
       this.status.setJobPriority(JobPriority.NORMAL);
       this.status.setStartTime(startTime);
       if (null == jobConf.getQueueName()) {

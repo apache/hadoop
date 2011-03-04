@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobHistory.*;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -604,7 +605,7 @@ public class TestJobHistory extends TestCase {
     TaskID mapTaskId = new TaskID(job.getID(), true, 0);
     TaskID reduceTaskId = new TaskID(job.getID(), false, 0);
 
-    TaskInProgress cleanups[] = jip.getCleanupTasks();
+    TaskInProgress cleanups[] = jip.getTasks(TaskType.JOB_CLEANUP);
     TaskID cleanupTaskId;
     if (cleanups[0].isComplete()) {
       cleanupTaskId = cleanups[0].getTIPId();
@@ -613,7 +614,7 @@ public class TestJobHistory extends TestCase {
       cleanupTaskId = cleanups[1].getTIPId();
     }
 
-    TaskInProgress setups[] = jip.getSetupTasks();
+    TaskInProgress setups[] = jip.getTasks(TaskType.JOB_SETUP);
     TaskID setupTaskId;
     if (setups[0].isComplete()) {
       setupTaskId = setups[0].getTIPId();

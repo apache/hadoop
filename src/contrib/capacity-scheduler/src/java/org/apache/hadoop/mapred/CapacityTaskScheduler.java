@@ -832,7 +832,7 @@ class CapacityTaskScheduler extends TaskScheduler {
       //Check if job supports speculative map execution first then 
       //check if job has speculative maps.
       return (job.getJobConf().getMapSpeculativeExecution())&& (
-          hasSpeculativeTask(job.getMapTasks(), 
+          hasSpeculativeTask(job.getTasks(TaskType.MAP), 
               job.getStatus().mapProgress(), tts));
     }
 
@@ -895,7 +895,7 @@ class CapacityTaskScheduler extends TaskScheduler {
       //check if the job supports reduce speculative execution first then
       //check if the job has speculative tasks.
       return (job.getJobConf().getReduceSpeculativeExecution()) && (
-          hasSpeculativeTask(job.getReduceTasks(), 
+          hasSpeculativeTask(job.getTasks(TaskType.REDUCE), 
               job.getStatus().reduceProgress(), tts));
     }
 

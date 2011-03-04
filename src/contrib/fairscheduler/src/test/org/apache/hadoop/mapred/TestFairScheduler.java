@@ -504,7 +504,8 @@ public class TestFairScheduler extends TestCase {
     // Finish up the tasks and advance time again. Note that we must finish
     // the task since FakeJobInProgress does not properly maintain running
     // tasks, so the scheduler will always get an empty task list from
-    // the JobInProgress's getMapTasks/getReduceTasks and think they finished.
+    // the JobInProgress's getTasks(TaskType.MAP)/getTasks(TaskType.REDUCE) and 
+    // think they finished.
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_m_000001_0");
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_m_000002_0");
     taskTrackerManager.finishTask("tt1", "attempt_test_0001_r_000003_0");

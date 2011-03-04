@@ -48,7 +48,6 @@ public class TestParallelInitialization extends TestCase {
       super(new JobID("test", ++jobCounter), jobConf,
           jt);
       this.startTime = System.currentTimeMillis();
-      this.status = new JobStatus(getJobID(), 0f, 0f, JobStatus.PREP);
       this.status.setJobPriority(JobPriority.NORMAL);
       this.status.setStartTime(startTime);
     }

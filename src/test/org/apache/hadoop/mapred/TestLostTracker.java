@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.mapreduce.TaskType;
 
 import junit.framework.TestCase;
 import java.io.*;
@@ -96,8 +97,8 @@ public class TestLostTracker extends TestCase {
     
     // check if the task statuses for the tasks are sane
     JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
-    for (TaskInProgress taskInProgress : jt.getJob(id).getMapTasks()) {
-      testTaskStatuses(taskInProgress.getTaskStatuses());
+    for (TaskInProgress mtip : jt.getJob(id).getTasks(TaskType.MAP)) {
+      testTaskStatuses(mtip.getTaskStatuses());
     }
     
     // validate the history file
