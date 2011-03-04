@@ -17,6 +17,11 @@ Release 0.20.2 - Unreleased
     before it constructs and sends its own ack message for the packet.
     (hairong)
 
+  IMPROVEMENTS
+
+    HDFS-187. Initialize secondary namenode http address in TestStartup.
+    (Todd Lipcon via szetszwo)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES

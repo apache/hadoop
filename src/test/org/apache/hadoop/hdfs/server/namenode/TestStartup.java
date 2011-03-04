@@ -28,7 +28,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public class TestStartup extends TestCase {
   public static final String NAME_NODE_HOST = "localhost:";
-  public static final String NAME_NODE_HTTP_HOST = "0.0.0.0:";
+  public static final String WILDCARD_HTTP_HOST = "0.0.0.0:";
   private static final Log LOG =
     LogFactory.getLog(TestStartup.class.getName());
   private Configuration config;
@@ -65,6 +65,7 @@ public class TestStartup extends TestCase {
     config.set("dfs.data.dir", new File(hdfsDir, "data").getPath());
 
     config.set("fs.checkpoint.dir",new File(hdfsDir, "secondary").getPath());
+    config.set("dfs.secondary.http.address", WILDCARD_HTTP_HOST + "0");
     //config.set("fs.default.name", "hdfs://"+ NAME_NODE_HOST + "0");
     
     FileSystem.setDefaultUri(config, "hdfs://"+NAME_NODE_HOST + "0");
