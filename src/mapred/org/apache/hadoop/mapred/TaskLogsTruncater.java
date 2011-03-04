@@ -19,9 +19,9 @@
 package org.apache.hadoop.mapred;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -51,6 +51,8 @@ public class TaskLogsTruncater {
   static final String REDUCE_USERLOG_RETAIN_SIZE =
     "mapreduce.cluster.reduce.userlog.retain-size";
   static final int DEFAULT_RETAIN_SIZE = -1;
+  static final String TRUNCATED_MSG =
+      "[ ... this log file was truncated because of excess length]\n";
   
   long mapRetainSize, reduceRetainSize;
 
@@ -97,8 +99,8 @@ public class TaskLogsTruncater {
 
     File attemptLogDir = lInfo.getLogLocation();
 
-    FileWriter tmpFileWriter;
-    FileReader logFileReader;
+    FileOutputStream tmpFileOutputStream;
+    FileInputStream logFileInputStream;
     // Now truncate file by file
     logNameLoop: for (LogName logName : LogName.values()) {
 
@@ -114,9 +116,11 @@ public class TaskLogsTruncater {
       // //// End of optimization
 
       // Truncation is needed for this log-file. Go ahead now.
+
+      // ////// Open truncate.tmp file for writing //////
       File tmpFile = new File(attemptLogDir, "truncate.tmp");
       try {
-        tmpFileWriter = new FileWriter(tmpFile);
+        tmpFileOutputStream = new FileOutputStream(tmpFile);
       } catch (IOException ioe) {
         LOG.warn("Cannot open " + tmpFile.getAbsolutePath()
             + " for writing truncated log-file "
@@ -124,19 +128,28 @@ public class TaskLogsTruncater {
             + ". Continuing with other log files. ", ioe);
         continue;
       }
+      // ////// End of opening truncate.tmp file //////
 
+      // ////// Open logFile for reading //////
       try {
-        logFileReader = new FileReader(logFile);
+        logFileInputStream = new FileInputStream(logFile);
       } catch (FileNotFoundException fe) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Cannot open " + logFile.getAbsolutePath()
               + " for reading. Continuing with other log files");
+        }
+        try {
+          tmpFileOutputStream.close();
+        } catch (IOException e) {
+          LOG.warn("Cannot close tmpFileOutputStream for "
+              + tmpFile.getAbsolutePath(), e);
         }
         if (!tmpFile.delete()) {
           LOG.warn("Cannot delete tmpFile " + tmpFile.getAbsolutePath());
         }
         continue;
       }
+      // ////// End of opening logFile for reading //////
 
       long newCurrentOffset = 0;
       // Process each attempt from the ordered list passed.
@@ -152,7 +165,7 @@ public class TaskLogsTruncater {
           newLogFileDetail =
               truncateALogFileOfAnAttempt(task.getTaskID(),
                   taskLogFileDetails.get(task).get(logName), retainSize,
-                  tmpFileWriter, logFileReader, logName);
+                  tmpFileOutputStream, logFileInputStream, logName);
         } catch (IOException ioe) {
           LOG.warn("Cannot truncate the log file "
               + logFile.getAbsolutePath()
@@ -161,6 +174,18 @@ public class TaskLogsTruncater {
           // revert back updatedTaskLogFileDetails
           copyOriginalIndexFileInfo(lInfo, taskLogFileDetails,
               updatedTaskLogFileDetails, logName);
+          try {
+            logFileInputStream.close();
+          } catch (IOException e) {
+            LOG.warn("Cannot close logFileInputStream for "
+                + logFile.getAbsolutePath(), e);
+          }
+          try {
+            tmpFileOutputStream.close();
+          } catch (IOException e) {
+            LOG.warn("Cannot close tmpFileOutputStream for "
+                + tmpFile.getAbsolutePath(), e);
+          }
           if (!tmpFile.delete()) {
             LOG.warn("Cannot delete tmpFile " + tmpFile.getAbsolutePath());
           }
@@ -183,8 +208,9 @@ public class TaskLogsTruncater {
         }
       }
 
+      // ////// Close the file streams ////////////
       try {
-        tmpFileWriter.close();
+        tmpFileOutputStream.close();
       } catch (IOException ioe) {
         LOG.warn("Couldn't close the tmp file " + tmpFile.getAbsolutePath()
             + ". Deleting it.", ioe);
@@ -194,8 +220,17 @@ public class TaskLogsTruncater {
           LOG.warn("Cannot delete tmpFile " + tmpFile.getAbsolutePath());
         }
         continue;
+      } finally {
+        try {
+          logFileInputStream.close();
+        } catch (IOException e) {
+          LOG.warn("Cannot close logFileInputStream for "
+              + logFile.getAbsolutePath(), e);
+        }
       }
+      // ////// End of closing the file streams ////////////
 
+      // ////// Commit the changes from tmp file to the logFile ////////////
       if (!tmpFile.renameTo(logFile)) {
         // If the tmpFile cannot be renamed revert back
         // updatedTaskLogFileDetails to maintain the consistency of the
@@ -206,6 +241,7 @@ public class TaskLogsTruncater {
           LOG.warn("Cannot delete tmpFile " + tmpFile.getAbsolutePath());
         }
       }
+      // ////// End of committing the changes to the logFile ////////////
     }
 
     if (indexModified) {
@@ -296,18 +332,20 @@ public class TaskLogsTruncater {
    * @param taskID Task whose logs need to be truncated
    * @param oldLogFileDetail contains the original log details for the attempt
    * @param taskRetainSize retain-size
-   * @param tmpFileWriter New log file to write to. Already opened in append
+   * @param tmpFileOutputStream New log file to write to. Already opened in append
    *          mode.
-   * @param logFileReader Original log file to read from.
+   * @param logFileInputStream Original log file to read from.
    * @return
    * @throws IOException
    */
   private LogFileDetail truncateALogFileOfAnAttempt(
       final TaskAttemptID taskID, final LogFileDetail oldLogFileDetail,
-      final long taskRetainSize, final FileWriter tmpFileWriter,
-      final FileReader logFileReader,
-      final LogName logName) throws IOException {
+      final long taskRetainSize,
+      final FileOutputStream tmpFileOutputStream,
+      final FileInputStream logFileInputStream, final LogName logName)
+      throws IOException {
     LogFileDetail newLogFileDetail = new LogFileDetail();
+    long logSize = 0;
 
     // ///////////// Truncate log file ///////////////////////
 
@@ -318,38 +356,42 @@ public class TaskLogsTruncater {
       LOG.info("Truncating " + logName + " logs for " + taskID + " from "
           + oldLogFileDetail.length + "bytes to " + taskRetainSize
           + "bytes.");
-      newLogFileDetail.length = taskRetainSize;
+      logSize = taskRetainSize;
+      byte[] truncatedMsgBytes = TRUNCATED_MSG.getBytes();
+      tmpFileOutputStream.write(truncatedMsgBytes);
+      newLogFileDetail.length += truncatedMsgBytes.length;
     } else {
       LOG.debug("No truncation needed for " + logName + " logs for " + taskID
           + " length is " + oldLogFileDetail.length + " retain size "
           + taskRetainSize + "bytes.");
-      newLogFileDetail.length = oldLogFileDetail.length;
+      logSize = oldLogFileDetail.length;
     }
-    long charsSkipped =
-        logFileReader.skip(oldLogFileDetail.length
-            - newLogFileDetail.length);
-    if (charsSkipped != oldLogFileDetail.length - newLogFileDetail.length) {
-      throw new IOException("Erroneously skipped " + charsSkipped
+    long bytesSkipped =
+        logFileInputStream.skip(oldLogFileDetail.length
+            - logSize);
+    if (bytesSkipped != oldLogFileDetail.length - logSize) {
+      throw new IOException("Erroneously skipped " + bytesSkipped
           + " instead of the expected "
-          + (oldLogFileDetail.length - newLogFileDetail.length)
+          + (oldLogFileDetail.length - logSize)
           + " while truncating " + logName + " logs for " + taskID );
     }
     long alreadyRead = 0;
-    while (alreadyRead < newLogFileDetail.length) {
-      char tmpBuf[]; // Temporary buffer to read logs
-      if (newLogFileDetail.length - alreadyRead >= DEFAULT_BUFFER_SIZE) {
-        tmpBuf = new char[DEFAULT_BUFFER_SIZE];
+    while (alreadyRead < logSize) {
+      byte tmpBuf[]; // Temporary buffer to read logs
+      if (logSize - alreadyRead >= DEFAULT_BUFFER_SIZE) {
+        tmpBuf = new byte[DEFAULT_BUFFER_SIZE];
       } else {
-        tmpBuf = new char[(int) (newLogFileDetail.length - alreadyRead)];
+        tmpBuf = new byte[(int) (logSize - alreadyRead)];
       }
-      int bytesRead = logFileReader.read(tmpBuf);
+      int bytesRead = logFileInputStream.read(tmpBuf);
       if (bytesRead < 0) {
         break;
       } else {
         alreadyRead += bytesRead;
       }
-      tmpFileWriter.write(tmpBuf);
+      tmpFileOutputStream.write(tmpBuf);
     }
+    newLogFileDetail.length += logSize;
     // ////// End of truncating log file ///////////////////////
 
     return newLogFileDetail;
