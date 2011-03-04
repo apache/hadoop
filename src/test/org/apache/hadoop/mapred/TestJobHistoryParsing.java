@@ -56,10 +56,10 @@ public class TestJobHistoryParsing  extends TestCase {
     // open a test history file
     Path historyDir = new Path(System.getProperty("test.build.data", "."), 
                                 "history");
+    JobConf conf = new JobConf();
+    conf.set("hadoop.job.history.location", historyDir.toString());
     FileSystem fs = FileSystem.getLocal(new JobConf());
-    if (!fs.mkdirs(historyDir)) {
-      fail("Failed to create history directory");
-    }
+    JobHistory.init(conf, "localhost", 1234);
     Path historyLog = new Path(historyDir, "testlog");
     PrintWriter out = new PrintWriter(fs.create(historyLog));
     historyWriter.add(out);

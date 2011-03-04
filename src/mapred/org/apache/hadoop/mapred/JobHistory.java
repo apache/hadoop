@@ -92,12 +92,11 @@ public class JobHistory {
   public static final int JOB_NAME_TRIM_LENGTH = 50;
   private static String JOBTRACKER_UNIQUE_STRING = null;
   private static String LOG_DIR = null;
-  private static boolean disableHistory = false; 
+  private static boolean disableHistory = true; 
   private static final String SECONDARY_FILE_SUFFIX = ".recover";
   private static long jobHistoryBlockSize = 0;
   private static String jobtrackerHostname;
-  private static JobHistoryFilesManager fileManager = 
-    new JobHistoryFilesManager();
+  private static JobHistoryFilesManager fileManager = null;
   final static FsPermission HISTORY_DIR_PERMISSION =
     FsPermission.createImmutable((short) 0750); // rwxr-x---
   final static FsPermission HISTORY_FILE_PERMISSION =
@@ -235,6 +234,9 @@ public class JobHistory {
 
       // create the done folder with appropriate permission
       fs.mkdirs(DONE, HISTORY_DIR_PERMISSION);
+
+      // initialize the file manager
+      fileManager = new JobHistoryFilesManager();
     } catch(IOException e) {
         LOG.error("Failed to initialize JobHistory log file", e); 
         disableHistory = true;
