@@ -2829,6 +2829,7 @@ public class JobInProgress {
    
     boolean isRunning = tip.isRunning();
     boolean isComplete = tip.isComplete();
+    boolean metricsDone = isComplete(); // job metrics garbage collected
     
     if (wasAttemptRunning) {
       // We are decrementing counters without looking for isRunning ,
@@ -2840,11 +2841,12 @@ public class JobInProgress {
       //.........
       //      metrics.launchMap(id);
       // hence we are decrementing the same set.
+      // Except after garbageCollect in a different thread.
       if (!tip.isJobCleanupTask() && !tip.isJobSetupTask()) {
-        if (tip.isMapTask()) {
+        if (tip.isMapTask() && !metricsDone) {
           runningMapTasks -= 1;
           metrics.failedMap(taskid);
-        } else {
+        } else if (!metricsDone) {
           runningReduceTasks -= 1;
           metrics.failedReduce(taskid);
         }
