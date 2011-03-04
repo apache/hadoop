@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import java.util.Collection;
-
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.mapreduce.test.system.JTProtocol;
@@ -31,7 +29,6 @@ import org.apache.hadoop.mapreduce.test.system.MRCluster;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.UtilsForTests;
 
-import org.apache.hadoop.mapreduce.test.system.FinishTaskControlAction;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,6 +54,8 @@ public class TestJobHistoryLocation {
   private static int fileCount = 0;
   private static boolean jobFileFound = false;
   private static int retiredJobInterval = 0;
+  private static Configuration conf = null;
+
   static final Log LOG = LogFactory.
       getLog(TestJobHistoryLocation.class);
 
@@ -66,6 +65,11 @@ public class TestJobHistoryLocation {
   @BeforeClass
   public static void setUp() throws Exception {
     cluster = MRCluster.createCluster(new Configuration());
+    String [] expExcludeList = {"java.net.ConnectException",
+        "java.io.IOException", "org.apache.hadoop.metrics2.MetricsException"};
+    cluster.setExcludeExpList(expExcludeList);
+
+    conf = new Configuration(cluster.getConf());
     cluster.setUp();
     jobClient = cluster.getJTClient().getClient();
     dfs = jobClient.getFs();
@@ -88,7 +92,6 @@ public class TestJobHistoryLocation {
    */
   @Test
   public void testRetiredJobsHistoryLocation() throws Exception {
-    Configuration conf = new Configuration(cluster.getConf());
     JTProtocol remoteJTClient = cluster.getJTClient().getProxy();
     int testIterationLoop = 0;
 
@@ -124,8 +127,6 @@ public class TestJobHistoryLocation {
           listStatus(new Path (jobHistoryDonePathString));
       String jobHistoryPathString = jconf.get("hadoop.job.history.location");
 
-      //Controls the job till all verification is done 
-      FinishTaskControlAction.configureControlActionForJob(conf);
       //Submitting the job
       RunningJob rJob = cluster.getJTClient().getClient().submitJob(jconf);
 
@@ -155,16 +156,6 @@ public class TestJobHistoryLocation {
 
       TaskInfo[] taskInfos = cluster.getJTClient().getProxy()
           .getTaskInfo(rJob.getID());
-
-      //Allow the job to continue through MR control job.
-      for (TaskInfo taskInfoRemaining : taskInfos) {
-        FinishTaskControlAction action = new FinishTaskControlAction(TaskID
-          .downgrade(taskInfoRemaining.getTaskID()));
-        Collection<TTClient> tts = cluster.getTTClients();
-        for (TTClient cli : tts) {
-          cli.getProxy().sendAction(action);
-        }
-      }
 
       //Killing this job will happen only in the second iteration.
       if (testIterationLoop == 2) {
@@ -196,6 +187,13 @@ public class TestJobHistoryLocation {
           listStatus(new Path (jobHistoryDonePathString));
 
       checkJobHistoryFileInformation( jobHistoryDoneFileStatuses, jobIDString);  
+      Assert.assertTrue("jobFileFound is false. Job History " +
+        "File is not found in the done directory",
+          jobFileFound);
+
+      Assert.assertEquals("Both the job related files are not found",
+        fileCount, 2);
+
     } while ( testIterationLoop < 2 );
   }
 
@@ -313,23 +311,54 @@ public class TestJobHistoryLocation {
   }
  
   //Checking for job file information in done directory
+  //Since done directory has sub directories search under all 
+  //the sub directories.
   private void checkJobHistoryFileInformation( FileStatus[] 
       jobHistoryDoneFileStatuses, String jobIDString ) throws Exception {
     fileCount = 0;
     jobFileFound = false;
     for (FileStatus jobHistoryDoneFileStatus : jobHistoryDoneFileStatuses) {
-      LOG.info("jobHistoryDoneFileStatus path is :" +
-          jobHistoryDoneFileStatus.getPath().toString());
-      LOG.info("jobIDString path is :" + jobIDString);
-      StringBuffer jobHistoryDoneFileBuffer = new
-          StringBuffer(jobHistoryDoneFileStatus.getPath().toString());
+      FileStatus[] jobHistoryDoneFileStatuses1 = dfs.
+          listStatus(jobHistoryDoneFileStatus.getPath());
+      for (FileStatus jobHistoryDoneFileStatus1 : jobHistoryDoneFileStatuses1) {
+        FileStatus[] jobHistoryDoneFileStatuses2 = dfs.
+          listStatus(jobHistoryDoneFileStatus1.getPath());
+        for (FileStatus jobHistoryDoneFileStatus2 : 
+          jobHistoryDoneFileStatuses2) {
 
-      if ( jobHistoryDoneFileBuffer.indexOf(jobIDString) != -1 ) {
-        jobFileFound = true;
-        fileCount++;
-        //Both the conf file and the job file has to be present
-        if (fileCount == 2) {
-          break;
+          FileStatus[] jobHistoryDoneFileStatuses3 = dfs.
+            listStatus(jobHistoryDoneFileStatus2.getPath());
+          for (FileStatus jobHistoryDoneFileStatus3 : 
+            jobHistoryDoneFileStatuses3) {
+
+            FileStatus[] jobHistoryDoneFileStatuses4 = dfs.
+              listStatus(jobHistoryDoneFileStatus3.getPath());
+            for (FileStatus jobHistoryDoneFileStatus4 : 
+              jobHistoryDoneFileStatuses4) {
+
+              FileStatus[] jobHistoryDoneFileStatuses5 = dfs.
+                listStatus(jobHistoryDoneFileStatus4.getPath());
+              for (FileStatus jobHistoryDoneFileStatus5 : 
+                jobHistoryDoneFileStatuses5) {
+      
+                FileStatus[] jobHistoryDoneFileStatuses6 = dfs.
+                  listStatus(jobHistoryDoneFileStatus5.getPath());
+                for (FileStatus jobHistoryDoneFileStatus6 : 
+                  jobHistoryDoneFileStatuses6) {
+
+                  if ( (jobHistoryDoneFileStatus6.getPath().toString()).
+                      indexOf(jobIDString) != -1 ) {
+                    jobFileFound = true;
+                    fileCount++;
+                    //Both the conf file and the job file has to be present
+                    if (fileCount == 2) {
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
