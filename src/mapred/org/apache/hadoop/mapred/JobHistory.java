@@ -266,7 +266,7 @@ public class JobHistory {
     FINISHED_MAPS, FINISHED_REDUCES, JOB_STATUS, TASKID, HOSTNAME, TASK_TYPE, 
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
     SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
-    TRACKER_NAME, STATE_STRING, VERSION
+    TRACKER_NAME, STATE_STRING, VERSION, MAP_COUNTERS, REDUCE_COUNTERS
   }
 
   /**
@@ -1334,7 +1334,9 @@ public class JobHistory {
     public static void logFinished(JobID jobId, long finishTime, 
                                    int finishedMaps, int finishedReduces,
                                    int failedMaps, int failedReduces,
-                                   Counters counters){
+                                   Counters mapCounters,
+                                   Counters reduceCounters,
+                                   Counters counters) {
       if (!disableHistory){
         // close job file for this job
         ArrayList<PrintWriter> writer = fileManager.getWriters(jobId); 
@@ -1345,6 +1347,7 @@ public class JobHistory {
                                      Keys.JOB_STATUS, Keys.FINISHED_MAPS, 
                                      Keys.FINISHED_REDUCES,
                                      Keys.FAILED_MAPS, Keys.FAILED_REDUCES,
+                                     Keys.MAP_COUNTERS, Keys.REDUCE_COUNTERS,
                                      Keys.COUNTERS},
                          new String[] {jobId.toString(),  Long.toString(finishTime), 
                                        Values.SUCCESS.name(), 
@@ -1352,6 +1355,8 @@ public class JobHistory {
                                        String.valueOf(finishedReduces),
                                        String.valueOf(failedMaps), 
                                        String.valueOf(failedReduces),
+                                       mapCounters.makeEscapedCompactString(),
+                                       reduceCounters.makeEscapedCompactString(),
                                        counters.makeEscapedCompactString()});
           for (PrintWriter out : writer) {
             out.close();

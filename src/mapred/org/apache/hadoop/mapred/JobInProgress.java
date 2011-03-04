@@ -2338,7 +2338,8 @@ class JobInProgress {
       JobHistory.JobInfo.logFinished(this.status.getJobID(), finishTime, 
                                      this.finishedMapTasks, 
                                      this.finishedReduceTasks, failedMapTasks, 
-                                     failedReduceTasks, getCounters());
+                                     failedReduceTasks, getMapCounters(),
+                                     getReduceCounters(), getCounters());
       // Note that finalize will close the job history handles which garbage collect
       // might try to finalize
       garbageCollect();

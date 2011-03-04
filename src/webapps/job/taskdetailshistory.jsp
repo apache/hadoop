@@ -35,10 +35,11 @@
 <%
   }
 %>
-<td>Finish Time</td><td>Host</td><td>Error</td><td>Task Logs</td></tr>
+<td>Finish Time</td><td>Host</td><td>Error</td><td>Task Logs</td>
+<td>Counters</td></tr>
 <%
   for (JobHistory.TaskAttempt attempt : task.getTaskAttempts().values()) {
-    printTaskAttempt(attempt, type, out);
+    printTaskAttempt(attempt, type, out, encodedLogFileName);
   }
 %>
 </table>
@@ -60,8 +61,9 @@
 %>
 <%!
   private void printTaskAttempt(JobHistory.TaskAttempt taskAttempt,
-                                String type, JspWriter out) 
-  throws IOException {
+                                String type, JspWriter out,
+                                String logFile) 
+  throws Exception {
     out.print("<tr>"); 
     out.print("<td>" + taskAttempt.get(Keys.TASK_ATTEMPT_ID) + "</td>");
     out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat,
@@ -97,6 +99,22 @@
         out.print("n/a");
     }
     out.print("</td>");
+    Counters counters = 
+      Counters.fromEscapedCompactString(taskAttempt.get(Keys.COUNTERS));
+    if (counters != null) {
+      TaskAttemptID attemptId = 
+        TaskAttemptID.forName(taskAttempt.get(Keys.TASK_ATTEMPT_ID));
+      TaskID taskId = attemptId.getTaskID();
+      org.apache.hadoop.mapreduce.JobID jobId = taskId.getJobID();
+      out.print("<td>" 
+       + "<a href=\"/taskstatshistory.jsp?jobid=" + jobId
+           + "&taskid=" + taskId
+           + "&attemptid=" + attemptId
+           + "&logFile=" + logFile + "\">"
+           + counters.size() + "</a></td>");
+    } else {
+      out.print("<td></td>");
+    }
     out.print("</tr>"); 
   }
 %>

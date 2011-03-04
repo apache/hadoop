@@ -555,6 +555,14 @@ public class TestJobHistory extends TestCase {
     assertTrue("Counters of job obtained from history file did not " +
                "match the expected value",
                c.makeEscapedCompactString().equals(values.get(Keys.COUNTERS)));
+    Counters m = jip.getMapCounters();
+    assertTrue("Map Counters of job obtained from history file did not " +
+               "match the expected value", m.makeEscapedCompactString().
+               equals(values.get(Keys.MAP_COUNTERS)));
+    Counters r = jip.getReduceCounters();
+    assertTrue("Reduce Counters of job obtained from history file did not " +
+               "match the expected value", r.makeEscapedCompactString().
+               equals(values.get(Keys.REDUCE_COUNTERS)));
 
     // Validate number of total maps, total reduces, finished maps,
     // finished reduces, failed maps, failed recudes
