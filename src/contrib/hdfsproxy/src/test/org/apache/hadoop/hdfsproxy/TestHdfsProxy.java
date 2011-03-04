@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 
 /**
  * A JUnit test for HdfsProxy
@@ -210,6 +211,10 @@ public class TestHdfsProxy extends TestCase {
       dfsConf.set("hadoop.proxyuser." + System.getProperty("user.name") +
           ".hosts", "127.0.0.1,localhost");
       dfsConf.set("hadoop.security.authentication", "simple");
+      
+      //make sure server will look at the right config
+      ProxyUsers.refreshSuperUserGroupsConfiguration(dfsConf);
+      
       cluster = new MiniDFSCluster(dfsConf, 2, true, null);
       cluster.waitActive();
 
