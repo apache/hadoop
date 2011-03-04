@@ -271,7 +271,7 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
     mode_t file_mode, mode_t dir_mode) {
   FTS *tree = NULL; // the file hierarchy
   FTSENT *entry = NULL; // a file in the hierarchy
-  char *paths[] = { (char *) path };
+  char *paths[] = { (char *) path, NULL };//array needs to be NULL-terminated
   int process_path = 0;
   int dir = 0;
   int error_code = 0;
