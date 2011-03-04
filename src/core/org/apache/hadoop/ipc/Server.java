@@ -1062,9 +1062,15 @@ public abstract class Server {
           dataLengthBuffer.flip();
           dataLength = dataLengthBuffer.getInt();
        
-          if (!useSasl && dataLength == Client.PING_CALL_ID) {
-            dataLengthBuffer.clear();
-            return 0;  //ping message
+          if (dataLength == Client.PING_CALL_ID) {
+            if(!useWrap) { //covers the !useSasl too
+              dataLengthBuffer.clear();
+              return 0;  //ping message
+            }
+          }
+          if (dataLength < 0) {
+            LOG.warn("Unexpected data length " + dataLength + "!! from " + 
+                getHostAddress());
           }
           data = ByteBuffer.allocate(dataLength);
         }
