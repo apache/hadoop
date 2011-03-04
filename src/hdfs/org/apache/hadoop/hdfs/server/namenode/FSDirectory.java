@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.hdfs.util.ByteArray;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 
 /*************************************************
@@ -55,6 +56,12 @@ class FSDirectory implements FSConstants, Closeable {
   private MetricsRecord directoryMetrics = null;
   private final int lsLimit;  // max list limit
 
+  /**
+   * Caches frequently used file names used in {@link INode} to reuse 
+   * byte[] objects and reduce heap usage.
+   */
+  private final NameCache<ByteArray> nameCache;
+
   /** Access an existing dfs name directory. */
   FSDirectory(FSNamesystem ns, Configuration conf) {
     this(new FSImage(), ns, conf);
@@ -72,6 +79,14 @@ class FSDirectory implements FSConstants, Closeable {
         DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
     this.lsLimit = configuredLimit>0 ? 
         configuredLimit : DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT;
+    
+    int threshold = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_KEY,
+        DFSConfigKeys.DFS_NAMENODE_NAME_CACHE_THRESHOLD_DEFAULT);
+    NameNode.LOG.info("Caching file names occuring more than " + threshold
+        + " times ");
+    nameCache = new NameCache<ByteArray>(threshold);
+
     initialize(conf);
   }
     
@@ -105,6 +120,7 @@ class FSDirectory implements FSConstants, Closeable {
     }
     synchronized (this) {
       this.ready = true;
+      this.nameCache.initialized();
       this.notifyAll();
     }
   }
@@ -242,6 +258,7 @@ class FSDirectory implements FSConstants, Closeable {
     synchronized (rootDir) {
       try {
         newParent = rootDir.addToParent(src, newNode, parentINode, false);
+        cacheName(newNode);
       } catch (FileNotFoundException e) {
         return null;
       }
@@ -1013,7 +1030,9 @@ class FSDirectory implements FSConstants, Closeable {
         long childDiskspace, boolean inheritPermission) 
   throws QuotaExceededException {
     byte[][] components = INode.getPathComponents(src);
-    child.setLocalName(components[components.length-1]);
+    byte[] path = components[components.length-1];
+    child.setLocalName(path);
+    cacheName(child);
     INode[] inodes = new INode[components.length];
     synchronized (rootDir) {
       rootDir.getExistingPathINodes(components, inodes);
@@ -1376,5 +1395,21 @@ class FSDirectory implements FSConstants, Closeable {
         node.getUserName(),
         node.getGroupName(),
         path);
+  }
+  
+  /**
+   * Caches frequently used file names to reuse file name objects and
+   * reduce heap size.
+   */
+  void cacheName(INode inode) {
+    // Name is cached only for files
+    if (inode.isDirectory()) {
+      return;
+    }
+    ByteArray name = new ByteArray(inode.getLocalNameBytes());
+    name = nameCache.put(name);
+    if (name != null) {
+      inode.setLocalName(name.getBytes());
+    }
   }
 }
