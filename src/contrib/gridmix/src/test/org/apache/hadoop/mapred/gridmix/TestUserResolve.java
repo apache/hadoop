@@ -72,13 +72,15 @@ public class TestUserResolve {
     assertTrue("User list required for RoundRobinUserResolver", fail);
 
     rslv.setTargetUsers(new URI(userlist.toString()), conf);
-    assertEquals("user0", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre0")).getUserName());
+    UserGroupInformation ugi1;
+    assertEquals("user0", 
+        rslv.getTargetUgi((ugi1 = 
+          UserGroupInformation.createRemoteUser("hfre0"))).getUserName());
     assertEquals("user1", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre1")).getUserName());
     assertEquals("user2", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre2")).getUserName());
-    assertEquals("user0", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre0")).getUserName());
+    assertEquals("user0", rslv.getTargetUgi(ugi1).getUserName());
     assertEquals("user3", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre3")).getUserName());
-    assertEquals("user0", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre0")).getUserName());
-    assertEquals("user0", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre4")).getUserName());
+    assertEquals("user0", rslv.getTargetUgi(ugi1).getUserName());
   }
 
   @Test
