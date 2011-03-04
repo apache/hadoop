@@ -26,7 +26,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterWithLinuxTaskController.MyLinuxTaskController;
-import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -58,27 +57,6 @@ public class TestLocalizationWithLinuxTaskController extends
 
     super.setUp();
 
-    taskController = new MyLinuxTaskController();
-    String path =
-        System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_PATH);
-    String execPath = path + "/task-controller";
-    ((MyLinuxTaskController) taskController).setTaskControllerExe(execPath);
-    taskController.setConf(trackerFConf);
-    taskController.setup();
-
-    tracker.setTaskController(taskController);
-    tracker.setLocalizer(new Localizer(tracker.getLocalFileSystem(), localDirs,
-        taskController));
-
-    // Rewrite conf so as to reflect task's correct user name.
-    String ugi =
-        System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_UGI);
-    JobConf jobConf = new JobConf(task.getConf());
-    String user = ugi.split(",")[0];
-    jobConf.setUser(user);
-    File jobConfFile = uploadJobConf(jobConf);
-    task.setConf(jobConf);
-    task.setUser(user);
     taskTrackerUserName = UserGroupInformation.getLoginUser()
                           .getShortUserName();
   }
@@ -93,6 +71,18 @@ public class TestLocalizationWithLinuxTaskController extends
     if (configFile != null) {
       configFile.delete();
     }
+  }
+
+  protected TaskController getTaskController() {
+    return new MyLinuxTaskController();
+  }
+
+  protected UserGroupInformation getJobOwner() {
+    String ugi = System
+        .getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_UGI);
+    String[] splits = ugi.split(",");
+    return UserGroupInformation.createUserForTesting(splits[0],
+        new String[] { splits[1] });
   }
 
   /** @InheritDoc */
@@ -218,7 +208,8 @@ public class TestLocalizationWithLinuxTaskController extends
     // check the private permissions of various directories
     List<Path> dirs = new ArrayList<Path>();
     dirs.add(lDirAlloc.getLocalPathToRead(TaskTracker.getLocalTaskDir(task
-        .getUser(), jobId.toString(), taskId.toString()), trackerFConf));
+        .getUser(), jobId.toString(), taskId.toString(),
+        task.isTaskCleanupTask()), trackerFConf));
     dirs.add(attemptWorkDir);
     dirs.add(new Path(attemptWorkDir, "tmp"));
     dirs.add(new Path(attemptLogFiles[1].getParentFile().getAbsolutePath()));

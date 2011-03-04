@@ -387,25 +387,34 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
       continue;
     }
 
-    if (should_check_ownership && 
-        (check_ownership(entry->fts_path, uid, gid) != 0)) {
-      fprintf(LOGFILE,
-          "Invalid file path. %s not user/group owned by the tasktracker.\n",
-          entry->fts_path);
-      error_code = -1;
-    } else if (change_owner(entry->fts_path, uid, gid) != 0) {
-      fprintf(LOGFILE, "couldn't change the ownership of %s\n",
-          entry->fts_path);
-      error_code = -3;
-    } else if (change_mode(entry->fts_path, (dir ? dir_mode : file_mode)) != 0) {
-      fprintf(LOGFILE, "couldn't change the permissions of %s\n",
-          entry->fts_path);
-      error_code = -3;
-    }
+    error_code = secure_single_path(entry->fts_path, uid, gid,
+     (dir ? dir_mode : file_mode), should_check_ownership);
   }
   if (fts_close(tree) != 0) {
     fprintf(LOGFILE, "couldn't close file traversal structure:%s.\n",
         strerror(errno));
+  }
+  return error_code;
+}
+
+/**
+ * Function to change ownership and permissions of the given path. 
+ * This call sets ownership and permissions just for the path, not recursive.  
+ */
+int secure_single_path(char *path, uid_t uid, gid_t gid,
+    mode_t perm, int should_check_ownership) {
+  int error_code = 0;
+  if (should_check_ownership && 
+      (check_ownership(path, uid, gid) != 0)) {
+    fprintf(LOGFILE,
+      "Invalid file path. %s not user/group owned by the tasktracker.\n", path);
+    error_code = -1;
+  } else if (change_owner(path, uid, gid) != 0) {
+    fprintf(LOGFILE, "couldn't change the ownership of %s\n", path);
+    error_code = -3;
+  } else if (change_mode(path, perm) != 0) {
+    fprintf(LOGFILE, "couldn't change the permissions of %s\n", path);
+    error_code = -3;
   }
   return error_code;
 }
@@ -541,8 +550,10 @@ int prepare_job_logs(const char *log_dir, const char *job_id,
   }
 
   gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
-  if (secure_path(job_log_dir, user_detail->pw_uid, tasktracker_gid,
-      permissions, S_ISGID | permissions, 1) != 0) {
+  // job log directory should not be set permissions recursively
+  // because, on tt restart/reinit, it would contain directories of earlier run
+  if (secure_single_path(job_log_dir, user_detail->pw_uid, tasktracker_gid,
+      S_ISGID | permissions, 1) != 0) {
     fprintf(LOGFILE, "Failed to secure the log_dir %s\n", job_log_dir);
     free(job_log_dir);
     return -1;
