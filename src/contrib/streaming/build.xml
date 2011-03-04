@@ -41,4 +41,10 @@ to call at top-level: ant deploy-contrib compile-core-test
    </antcall>
   </target>  
  
+  <!--Run all system tests.-->
+  <target name="test-system">
+    <antcall target="hadoopbuildcontrib.test-system">
+    </antcall>
+   </target>
+
 </project>

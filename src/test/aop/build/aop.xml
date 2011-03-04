@@ -113,12 +113,21 @@
   <!-- ================ -->
   <!-- run system tests -->
   <!-- ================ -->
-  <target name="test-system" depends="ivy-retrieve-common"
-    description="Run system tests">
+  <target name="test-system" depends="ivy-retrieve-common,
+    compile-core, tools-jar, compile-c++-libhdfs"
+    description="Run system tests, contrib project system tests">
     <subant buildpath="build.xml" target="jar-test-system"/>
     <macro-jar-examples build.dir="${system-test-build-dir}"
                         basedir="${system-test-build-dir}/examples">
     </macro-jar-examples>
+    <!-- For contrib project system tests -->
+    <subant target="test-system-contrib">
+       <property name="hadoop.home" value="${hadoop.home}"/>
+       <property name="hadoop.conf.dir" value="${hadoop.conf.dir}"/>
+       <property name="hadoop.conf.dir.deployed"
+           value="${hadoop.conf.dir.deployed}"/>
+       <fileset file="${contrib.dir}/build.xml"/>
+    </subant>
     <macro-test-runner test.file="${test.all.tests.file}"
                        classpath="test.system.classpath"
                        test.dir="${system-test-build-dir}/test"

@@ -32,11 +32,18 @@
   <property name="hadoop.root" location="${root}/../../../"/>
   <property name="src.dir"  location="${root}/src/java"/>
   <property name="src.test" location="${root}/src/test"/>
+  <!-- Property added for contrib system tests -->
+  <property name="src.test.system" location="${root}/src/test/system"/>
+
   <property name="src.examples" location="${root}/src/examples"/>
 
   <available file="${src.examples}" type="dir" property="examples.available"/>
   <available file="${src.test}" type="dir" property="test.available"/>
 
+  <!-- Property added for contrib system tests -->
+  <available file="${src.test.system}" type="dir" 
+      property="test.system.available"/>
+ 
   <property name="conf.dir" location="${hadoop.root}/conf"/>
   <property name="test.junit.output.format" value="plain"/>
   <property name="test.output" value="no"/>
@@ -59,6 +66,10 @@
 
   <fileset id="lib.jars" dir="${root}" includes="lib/*.jar"/>
 
+  <!-- Property added for contrib system tests -->
+  <property name="build.test.system" location="${build.dir}/system"/>
+  <property name="build.system.classes" 
+      location="${build.test.system}/classes"/>
 
    <!-- IVY properties set here -->
   <property name="ivy.dir" location="ivy" />
@@ -103,6 +114,36 @@
     <path refid="contrib-classpath"/>
   </path>
 
+  <!-- The system test classpath -->
+  <path id="test.system.classpath">
+    <pathelement location="${hadoop.root}/src/contrib/${name}/src/test/system" />
+    <pathelement location="${build.test.system}" />
+    <pathelement location="${build.test.system}/classes"/>
+    <pathelement location="${build.examples}"/>
+    <pathelement location="${hadoop.root}/build-fi/system/classes" />
+    <pathelement location="${hadoop.root}/build-fi/system/test/classes" />
+    <pathelement location="${hadoop.root}/build-fi" />
+    <pathelement location="${hadoop.root}/build-fi/tools" />
+    <pathelement location="${hadoop.home}"/>
+    <pathelement location="${hadoop.conf.dir}"/>
+    <pathelement location="${hadoop.conf.dir.deployed}"/>
+    <pathelement location="${hadoop.root}/build"/>
+    <pathelement location="${hadoop.root}/build/examples"/>
+    <pathelement location="${hadoop.root}/build-fi/test/classes" />
+    <path refid="contrib-classpath"/>
+    <fileset dir="${hadoop.root}/src/test/lib">
+      <include name="**/*.jar" />
+      <exclude name="**/excluded/" />
+    </fileset>
+    <fileset dir="${hadoop.root}/build-fi/system">
+       <include name="**/*.jar" />
+       <exclude name="**/excluded/" />
+     </fileset>
+    <fileset dir="${hadoop.root}/build-fi/test/testjar">
+      <include name="**/*.jar" />
+      <exclude name="**/excluded/" />
+    </fileset>
+  </path>
 
   <!-- to be overridden by sub-projects -->
   <target name="check-contrib"/>
@@ -116,6 +157,9 @@
     <mkdir dir="${build.dir}"/>
     <mkdir dir="${build.classes}"/>
     <mkdir dir="${build.test}"/>
+    <!-- The below two tags  added for contrib system tests -->
+    <mkdir dir="${build.test.system}"/>
+    <mkdir dir="${build.system.classes}"/> 
     <mkdir dir="${build.examples}"/>
     <mkdir dir="${hadoop.log.dir}"/>
     <antcall target="init-contrib"/>
@@ -170,6 +214,21 @@
     </javac>
   </target>
   
+  <!-- ================================================================== -->
+  <!-- Compile system test code                                           -->
+  <!-- ================================================================== -->
+  <target name="compile-test-system" depends="compile-examples"
+     if="test.system.available">
+    <echo message="contrib: ${name}"/>
+    <javac
+       encoding="${build.encoding}"
+       srcdir="${src.test.system}"
+       includes="**/*.java"
+       destdir="${build.system.classes}"
+       debug="${javac.debug}">
+      <classpath refid="test.system.classpath"/>
+    </javac>
+  </target>
 
   <!-- ====================================================== -->
   <!-- Make a Hadoop contrib's jar                            -->
@@ -248,6 +307,56 @@
       </batchtest>
     </junit>
     <antcall target="checkfailure"/>
+  </target>
+
+  <!-- ================================================================== -->
+  <!-- Run system tests                                                   -->
+  <!-- ================================================================== -->
+  <target name="test-system" depends="compile, compile-test-system"
+     if="test.system.available">
+     <delete dir="${build.test.system}/extraconf"/>
+     <mkdir dir="${build.test.system}/extraconf"/>
+     <property name="test.src.dir" location="${hadoop.root}/src/test"/>
+     <property name="test.junit.printsummary" value="yes" />
+     <property name="test.junit.haltonfailure" value="no" />
+     <property name="test.junit.maxmemory" value="512m" />
+     <property name="test.junit.fork.mode" value="perTest" />
+     <property name="test.all.tests.file" value="${test.src.dir}/all-tests" />
+     <property name="test.build.dir" value="${hadoop.root}/build/test"/>
+     <property name="basedir" value="${hadoop.root}"/>
+     <property name="test.timeout" value="900000"/>
+     <property name="test.junit.output.format" value="plain"/>
+     <property name="test.tools.input.dir" value="${basedir}/src/test/tools/data"/>
+     <property name="c++.src" value="${basedir}/src/c++"/>
+     <property name="test.include" value="Test*"/>
+     <property name="c++.libhdfs.src" value="${c++.src}/libhdfs"/>
+     <property name="test.build.data" value="${build.test.system}/data"/>
+     <property name="test.cache.data" value="${build.test.system}/cache"/>
+     <property name="test.debug.data" value="${build.test.system}/debug"/>
+     <property name="test.log.dir" value="${build.test.system}/logs"/>
+     <patternset id="empty.exclude.list.id" />
+        <exec executable="sed" inputstring="${os.name}"
+            outputproperty="nonspace.os">
+          <arg value="s/ /_/g"/>
+        </exec>
+     <property name="build.platform"
+         value="${nonspace.os}-${os.arch}-${sun.arch.data.model}"/>
+     <property name="build.native" 
+         value="${hadoop.root}/build/native/${build.platform}"/>
+     <property name="lib.dir" value="${hadoop.root}/lib"/>
+     <property name="install.c++.examples"
+         value="${hadoop.root}/build/c++-examples/${build.platform}"/>
+    <condition property="tests.testcase">
+       <and>
+         <isset property="testcase" />
+       </and>
+    </condition>
+    <macro-test-runner test.file="${test.all.tests.file}"
+                       classpath="test.system.classpath"
+                       test.dir="${build.test.system}"
+                       fileset.dir="${hadoop.root}/src/contrib/${name}/src/test/system"
+                       hadoop.conf.dir.deployed="${hadoop.conf.dir.deployed}">
+    </macro-test-runner>
   </target>
 
   <target name="checkfailure" if="tests.failed">

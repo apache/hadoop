@@ -62,6 +62,29 @@
   
   
   <!-- ====================================================== -->
+  <!-- Test all the contrib system tests                     -->
+  <!-- ====================================================== -->
+  <target name="test-system-contrib">
+    <property name="hadoop.root" location="${root}/../../../"/>
+    <property name="build.contrib.dir" location="${hadoop.root}/build/contrib"/>
+    <delete file="${build.contrib.dir}/testsfailed"/>
+    <subant target="test-system">
+       <property name="continueOnFailure" value="true"/>
+       <property name="hadoop.home" value="${hadoop.home}"/>
+       <property name="hadoop.conf.dir" value="${hadoop.conf.dir}"/>
+       <property name="hadoop.conf.dir.deployed"
+           value="${hadoop.conf.dir.deployed}"/>
+       <fileset dir="." includes="hdfsproxy/build.xml"/>
+       <fileset dir="." includes="streaming/build.xml"/>
+       <fileset dir="." includes="fairscheduler/build.xml"/>
+       <fileset dir="." includes="capacity-scheduler/build.xml"/>
+       <fileset dir="." includes="gridmix/build.xml"/>
+    </subant>
+    <available file="${build.contrib.dir}/testsfailed" property="testsfailed"/>
+    <fail if="testsfailed">Tests failed!</fail>
+  </target>
+
+  <!-- ====================================================== -->
   <!-- Clean all the contribs.                              -->
   <!-- ====================================================== -->
   <target name="clean">
