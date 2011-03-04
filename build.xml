@@ -857,13 +857,8 @@
         <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-    <antcall target="checkfailure"/>
+    <fail if="tests.failed">Tests failed!</fail>
   </target>   
-
-  <target name="checkfailure" if="tests.failed">
-    <touch file="${test.build.dir}/testsfailed"/>
-    <fail unless="continueOnFailure">Tests failed!</fail>
-  </target>
 
   <target name="test-contrib" depends="compile, compile-core-test" description="Run contrib unit tests">
     <subant target="test">
@@ -872,14 +867,9 @@
     </subant> 
   </target>
 	  
-  <target name="test" description="Run core, contrib, fault injection tests">
-    <delete file="${test.build.dir}/testsfailed"/>
-    <property name="continueOnFailure" value="true"/>
-    <antcall target="test-core"/>
-    <antcall target="test-contrib"/>
-    <antcall target="run-test-core-fault-inject"/>
-    <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
-    <fail if="testsfailed">Tests failed!</fail>
+  <target name="test" depends="test-core, test-contrib,
+    run-test-core-fault-inject"
+    description="Run core, contrib, fault injection tests">
   </target>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
