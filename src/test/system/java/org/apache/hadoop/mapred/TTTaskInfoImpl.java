@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.test.system.TTTaskInfo;
 /**
  * Abstract class which passes the Task view of the TaskTracker to the client.
@@ -30,26 +31,26 @@ import org.apache.hadoop.mapreduce.test.system.TTTaskInfo;
  */
 abstract class TTTaskInfoImpl implements TTTaskInfo {
 
-  private String diagonsticInfo;
   private boolean slotTaken;
   private boolean wasKilled;
   TaskStatus status;
+  Configuration conf;
+  String user;
+  boolean isTaskCleanupTask;
 
   public TTTaskInfoImpl() {
   }
 
   public TTTaskInfoImpl(boolean slotTaken, boolean wasKilled,
-      String diagonsticInfo, TaskStatus status) {
+      TaskStatus status, Configuration conf, String user,
+      boolean isTaskCleanupTask) {
     super();
-    this.diagonsticInfo = diagonsticInfo;
     this.slotTaken = slotTaken;
     this.wasKilled = wasKilled;
     this.status = status;
-  }
-
-  @Override
-  public String getDiagnosticInfo() {
-    return diagonsticInfo;
+    this.conf = conf;
+    this.user = user;
+    this.isTaskCleanupTask = isTaskCleanupTask;
   }
 
   @Override
@@ -63,47 +64,88 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
   }
 
   @Override
-  public TaskStatus getTaskStatus() {
-    return status;
-  }
+  public abstract TaskStatus getTaskStatus();
 
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+  
+  @Override
+  public String getUser() {
+    return user;
+  }
+  
+  @Override
+  public boolean isTaskCleanupTask() {
+    return isTaskCleanupTask;
+  }
+  
   @Override
   public void readFields(DataInput in) throws IOException {
     slotTaken = in.readBoolean();
     wasKilled = in.readBoolean();
-    diagonsticInfo = in.readUTF();
-    status.readFields(in);
+    conf = new Configuration();
+    conf.readFields(in);
+    user = in.readUTF();
+    isTaskCleanupTask = in.readBoolean();
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeBoolean(slotTaken);
     out.writeBoolean(wasKilled);
-    out.writeUTF(diagonsticInfo);
+    conf.write(out);
+    out.writeUTF(user);
+    out.writeBoolean(isTaskCleanupTask);
     status.write(out);
   }
 
   static class MapTTTaskInfo extends TTTaskInfoImpl {
 
     public MapTTTaskInfo() {
-      super(false, false, "", new MapTaskStatus());
+      super();
     }
 
     public MapTTTaskInfo(boolean slotTaken, boolean wasKilled,
-        String diagonsticInfo, MapTaskStatus status) {
-      super(slotTaken, wasKilled, diagonsticInfo, status);
+        MapTaskStatus status, Configuration conf, String user,
+        boolean isTaskCleanup) {
+      super(slotTaken, wasKilled, status, conf, user, isTaskCleanup);
+    }
+
+    @Override
+    public TaskStatus getTaskStatus() {
+      return status;
+    }
+    
+    public void readFields(DataInput in) throws IOException {
+      super.readFields(in);
+      status = new MapTaskStatus();
+      status.readFields(in);
     }
   }
 
   static class ReduceTTTaskInfo extends TTTaskInfoImpl {
 
     public ReduceTTTaskInfo() {
-      super(false, false, "", new ReduceTaskStatus());
+      super();
     }
 
-    public ReduceTTTaskInfo(boolean slotTaken,
-        boolean wasKilled, String diagonsticInfo,ReduceTaskStatus status) {
-      super(slotTaken, wasKilled, diagonsticInfo, status);
+    public ReduceTTTaskInfo(boolean slotTaken, boolean wasKilled,
+        ReduceTaskStatus status, Configuration conf, String user,
+        boolean isTaskCleanup) {
+      super(slotTaken, wasKilled, status, conf, user, isTaskCleanup);
+    }
+
+    @Override
+    public TaskStatus getTaskStatus() {
+      return status;
+    }
+    
+    public void readFields(DataInput in) throws IOException {
+      super.readFields(in);
+      status = new ReduceTaskStatus();
+      status.readFields(in);
     }
   }
 

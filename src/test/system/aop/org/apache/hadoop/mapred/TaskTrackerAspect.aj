@@ -73,14 +73,13 @@ public privileged aspect TaskTrackerAspect {
   private TTTaskInfo TaskTracker.getTTTaskInfo(TaskInProgress tip) {
     TTTaskInfo info;
     if (tip.task.isMapTask()) {
-      info =
-          new MapTTTaskInfo(tip.slotTaken, tip.wasKilled, tip.diagnosticInfo
-              .toString(), (MapTaskStatus) tip.getStatus());
+      info = new MapTTTaskInfo(tip.slotTaken, tip.wasKilled,
+          (MapTaskStatus) tip.getStatus(), tip.getJobConf(), tip.getTask()
+              .getUser(), tip.getTask().isTaskCleanupTask());
     } else {
-      info =
-          new ReduceTTTaskInfo(
-              tip.slotTaken, tip.wasKilled, tip.diagnosticInfo.toString(),
-              (ReduceTaskStatus) tip.getStatus());
+      info = new ReduceTTTaskInfo(tip.slotTaken, tip.wasKilled,
+          (ReduceTaskStatus) tip.getStatus(), tip.getJobConf(), tip.getTask()
+              .getUser(), tip.getTask().isTaskCleanupTask());
     }
     return info;
   }

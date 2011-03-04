@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.test.system;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.TaskStatus;
 import org.apache.hadoop.mapred.TaskTracker;
@@ -26,13 +27,6 @@ import org.apache.hadoop.mapred.TaskTracker;
  * Task state information as seen by the TT.
  */
 public interface TTTaskInfo extends Writable {
-
-  /**
-   * Gets the diagnostic information associated the the task.<br/>
-   * 
-   * @return diagnostic information of the task.
-   */
-  String getDiagnosticInfo();
 
   /**
    * Has task occupied a slot? A task occupies a slot once it starts localizing
@@ -56,4 +50,22 @@ public interface TTTaskInfo extends Writable {
    * @return status of the particular task
    */
   TaskStatus getTaskStatus();
+  
+  /**
+   * Gets the configuration object of the task.
+   * @return
+   */
+  Configuration getConf();
+  
+  /**
+   * Gets the user of the task.
+   * @return
+   */
+  String getUser();
+  
+  /**
+   * Provides information as to whether the task is a cleanup of task.
+   * @return true if it is a clean up of task.
+   */
+  boolean isTaskCleanupTask();
 }

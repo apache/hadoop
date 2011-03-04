@@ -27,7 +27,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.mapred.TaskStatus.State;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.test.system.FinishTaskControlAction;
 import org.apache.hadoop.mapreduce.test.system.JTClient;
 import org.apache.hadoop.mapreduce.test.system.JTProtocol;
@@ -120,25 +122,18 @@ public class TestCluster {
   }
 
   /**
-   * Test to showcase how to get a task status from a TaskTracker.
-   * Does the following;
-   * 1. Contacts the job tracker to get TaskInfo
-   * 2. Uses taskinfo to get list of tts
-   * 3. Contacts TT and gets task info.
-   * 
-   * Care should be taken that the task which you are searching
-   * can need not be around.
+   * Test to verify the common properties of tasks.
    * @throws Exception
    */
   @Test
-  public void testTaskStatus() throws Exception {
+  public void testTaskDetails() throws Exception {
     Configuration conf = new Configuration(cluster.getConf());
     JTProtocol wovenClient = cluster.getJTClient().getProxy();
     FinishTaskControlAction.configureControlActionForJob(conf);
     SleepJob job = new SleepJob();
     job.setConf(conf);
 
-    conf = job.setupJobConf(1, 0, 100, 100, 100, 100);
+    conf = job.setupJobConf(1, 1, 100, 100, 100, 100);
     JobClient client = cluster.getJTClient().getClient();
 
     RunningJob rJob = client.submitJob(new JobConf(conf));
@@ -160,10 +155,22 @@ public class TestCluster {
         for(String taskTracker : taskTrackers) {
           TTInfo ttInfo = wovenClient.getTTInfo(taskTracker);
           TTClient ttCli =  cluster.getTTClient(ttInfo.getStatus().getHost());
-          TTTaskInfo ttTaskInfo = ttCli.getProxy().getTask(info.getTaskID());
+          TaskID taskId = info.getTaskID();
+          TTTaskInfo ttTaskInfo = ttCli.getProxy().getTask(taskId);
           Assert.assertNotNull(ttTaskInfo);
+          Assert.assertNotNull(ttTaskInfo.getConf());
+          Assert.assertNotNull(ttTaskInfo.getUser());
+          Assert.assertTrue(ttTaskInfo.getTaskStatus().getProgress() >= 0.0);
+          Assert.assertTrue(ttTaskInfo.getTaskStatus().getProgress() <= 1.0);
+          LOG.info("verified task progress to be between 0 and 1");
+          State state = ttTaskInfo.getTaskStatus().getRunState();
+          if (ttTaskInfo.getTaskStatus().getProgress() < 1.0 &&
+              ttTaskInfo.getTaskStatus().getProgress() >0.0) {
+            Assert.assertEquals(TaskStatus.State.RUNNING, state);
+            LOG.info("verified run state as " + state);
+          }
           FinishTaskControlAction action = new FinishTaskControlAction(
-              TaskID.downgrade(info.getTaskID()));
+              org.apache.hadoop.mapred.TaskID.downgrade(info.getTaskID()));
           ttCli.getProxy().sendAction(action);
         }
       }
