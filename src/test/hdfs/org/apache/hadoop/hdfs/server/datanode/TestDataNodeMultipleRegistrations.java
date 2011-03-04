@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -214,5 +213,52 @@ public class TestDataNodeMultipleRegistrations {
         cluster.shutdown();
     }
   }
+
+  @Test
+  public void testMiniDFSClusterWithMultipleNN() throws IOException {
+
+    Configuration conf = new HdfsConfiguration();
+    // start Federated cluster and add a node.
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numNameNodes(2).
+    nameNodePort(9928).build();
+    Assert.assertNotNull(cluster);
+    Assert.assertEquals("(1)Should be 2 namenodes", 2, cluster.getNumNameNodes());
+    
+    // add a node
+    cluster.addNameNode(conf, 9929);
+    Assert.assertEquals("(1)Should be 3 namenodes", 3, cluster.getNumNameNodes());
+    cluster.shutdown();
+        
+    // 2. start with Federation flag set
+    conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf).federation(true).
+    nameNodePort(9928).build();
+    Assert.assertNotNull(cluster);
+    Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
+    
+    // add a node
+    cluster.addNameNode(conf, 9929);   
+    Assert.assertEquals("(2)Should be 2 namenodes", 2, cluster.getNumNameNodes());
+    cluster.shutdown();
+
+    // 3. start non-federated
+    conf = new HdfsConfiguration();
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    Assert.assertNotNull(cluster);
+    Assert.assertEquals("(2)Should be 1 namenodes", 1, cluster.getNumNameNodes());
+    
+    // add a node
+    try {
+      cluster.addNameNode(conf, 9929);
+      Assert.fail("shouldn't be able to add another NN to non federated cluster");
+    } catch (IOException e) {
+      // correct 
+      Assert.assertTrue(e.getMessage().startsWith("cannot add namenode"));
+      Assert.assertEquals("(3)Should be 1 namenodes", 1, cluster.getNumNameNodes());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+      
 
 }

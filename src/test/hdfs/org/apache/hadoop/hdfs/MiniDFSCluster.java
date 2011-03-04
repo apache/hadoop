@@ -100,11 +100,21 @@ public class MiniDFSCluster {
     private String clusterId = null;
     private boolean waitSafeMode = true;
     private boolean setupHostsFile = false;
+    private boolean federation = false;
     
     public Builder(Configuration conf) {
       this.conf = conf;
     }
     
+    /**
+     * default false - non federated cluster
+     * @param val
+     * @return Builder object
+     */
+    public Builder federation (boolean val){
+      this.federation = val;
+      return this;
+    }
     /**
      * Default: 0
      */
@@ -222,7 +232,12 @@ public class MiniDFSCluster {
    * Used by builder to create and return an instance of MiniDFSCluster
    */
   private MiniDFSCluster(Builder builder) throws IOException {
+    LOG.info("starting cluster with " + builder.numNameNodes + " namenodes.");
     nameNodes = new NameNodeInfo[builder.numNameNodes];
+    // try to determine if in federation mode
+    if(builder.numNameNodes > 1)
+      builder.federation = true;
+      
     initMiniDFSCluster(builder.nameNodePort,
                        builder.conf,
                        builder.numDataNodes,
@@ -235,7 +250,8 @@ public class MiniDFSCluster {
                        builder.simulatedCapacities,
                        builder.clusterId,
                        builder.waitSafeMode,
-                       builder.setupHostsFile);
+                       builder.setupHostsFile,
+                       builder.federation);
   }
   
   public class DataNodeProperties {
@@ -257,6 +273,7 @@ public class MiniDFSCluster {
                          new ArrayList<DataNodeProperties>();
   private File base_dir;
   private File data_dir;
+  private boolean federation = false; 
   
   /**
    * Stores the information related to a namenode in the cluster
@@ -439,17 +456,19 @@ public class MiniDFSCluster {
     this.nameNodes = new NameNodeInfo[1]; // Single namenode in the cluster
     initMiniDFSCluster(nameNodePort, conf, 1, format,
         manageNameDfsDirs, manageDataDfsDirs, operation, racks, hosts,
-        simulatedCapacities, null, true, false);
+        simulatedCapacities, null, true, false, false);
   }
 
   private void initMiniDFSCluster(int nameNodePort, Configuration conf,
       int numDataNodes, boolean format, boolean manageNameDfsDirs,
       boolean manageDataDfsDirs, StartupOption operation, String[] racks,
       String[] hosts, long[] simulatedCapacities, String clusterId,
-      boolean waitSafeMode, boolean setupHostsFile) throws IOException {
+      boolean waitSafeMode, boolean setupHostsFile, boolean federation) 
+  throws IOException {
     this.conf = conf;
     base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");
+    this.federation = federation;
     
     // use alternate RPC engine if spec'd
     String rpcEngineName = System.getProperty("hdfs.rpc.engine");
@@ -481,7 +500,10 @@ public class MiniDFSCluster {
                    StaticMapping.class, DNSToSwitchMapping.class);
     
     Collection<String> nameserviceIds = DFSUtil.getNameServiceIds(conf);
-    if (nameserviceIds.isEmpty() && nameNodes.length == 1) {
+    if(nameserviceIds.size() > 1)  
+      federation = true;
+  
+    if (!federation) {
       conf.set(DFSConfigKeys.FS_DEFAULT_NAME_KEY, "127.0.0.1:" + nameNodePort);
       conf.set(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, "127.0.0.1:0");
       NameNode nn = createNameNode(0, conf, numDataNodes, manageNameDfsDirs,
@@ -735,7 +757,6 @@ public class MiniDFSCluster {
     }
     //Generate some hostnames if required
     if (racks != null && hosts == null) {
-      System.out.println("Generating host names for datanodes");
       hosts = new String[numDataNodes];
       for (int i = curDatanodesNum; i < curDatanodesNum + numDataNodes; i++) {
         hosts[i - curDatanodesNum] = "host" + i + ".foo.com";
@@ -1666,6 +1687,9 @@ public class MiniDFSCluster {
    */
   public NameNode addNameNode(Configuration conf, int namenodePort)
       throws IOException {
+    if(!federation)
+      throw new IOException("cannot add namenode to non-federated cluster");
+    
     int nnIndex = nameNodes.length;
     int numNameNodes = nameNodes.length + 1;
     NameNodeInfo[] newlist = new NameNodeInfo[numNameNodes];
