@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.security.PrivilegedExceptionAction;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -88,6 +89,21 @@ public abstract class FileSystem extends Configured implements Closeable {
    */
   private Set<Path> deleteOnExit = new TreeSet<Path>();
 
+  public static FileSystem get(final URI uri, final Configuration conf, 
+      final String user)
+  throws IOException, InterruptedException {
+    UserGroupInformation ugi;
+    if (user == null) {
+      ugi = UserGroupInformation.getCurrentUser();
+    } else {
+      ugi = UserGroupInformation.createRemoteUser(user);
+    }
+    return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        return get(uri, conf);
+      }
+    });
+  }
   /** Returns the configured filesystem implementation.*/
   public static FileSystem get(Configuration conf) throws IOException {
     return get(getDefaultUri(conf), conf);
