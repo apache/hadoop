@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobHistory.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -464,8 +465,7 @@ public class TestJobHistory extends TestCase {
 
     // Get the history file name
     Path dir = JobHistory.getCompletedJobHistoryLocation();
-    String logFileName = 
-      JobHistory.JobInfo.getJobHistoryFileName(conf, id, dir);
+    String logFileName = getDoneFile(conf, id, dir);
 
     // Framework history log file location
     Path logFile = new Path(dir, logFileName);
@@ -763,8 +763,7 @@ public class TestJobHistory extends TestCase {
     JobID id = job.getID();
     Path doneDir = JobHistory.getCompletedJobHistoryLocation();
     // Get the history file name
-    String logFileName = JobHistory.JobInfo.getJobHistoryFileName(conf, id, 
-                                                                  doneDir);
+    String logFileName = getDoneFile(conf, id, doneDir);
 
     // Framework history log file location
     Path logFile = new Path(doneDir, logFileName);
@@ -792,6 +791,92 @@ public class TestJobHistory extends TestCase {
     validateTaskAttemptLevelKeyValues(mr, job, jobInfo);
   }
 
+  public void testDoneFolderOnHDFS() throws IOException {
+    MiniMRCluster mr = null;
+    try {
+      JobConf conf = new JobConf();
+      // keep for less time
+      conf.setLong("mapred.jobtracker.retirejob.check", 1000);
+      conf.setLong("mapred.jobtracker.retirejob.interval", 1000);
+
+      //set the done folder location
+      String doneFolder = "history_done";
+      conf.set("mapred.job.tracker.history.completed.location", doneFolder);
+
+      MiniDFSCluster dfsCluster = new MiniDFSCluster(conf, 2, true, null);
+      mr = new MiniMRCluster(2, dfsCluster.getFileSystem().getUri().toString(),
+          3, null, null, conf);
+
+      // run the TCs
+      conf = mr.createJobConf();
+
+      FileSystem fs = FileSystem.get(conf);
+      // clean up
+      fs.delete(new Path("succeed"), true);
+
+      Path inDir = new Path("succeed/input");
+      Path outDir = new Path("succeed/output");
+
+      //Disable speculative execution
+      conf.setSpeculativeExecution(false);
+
+      // Make sure that the job is not removed from memory until we do finish
+      // the validation of history file content
+      conf.setInt("mapred.jobtracker.completeuserjobs.maximum", 10);
+
+      // Run a job that will be succeeded and validate its history file
+      RunningJob job = UtilsForTests.runJobSucceed(conf, inDir, outDir);
+      
+      Path doneDir = JobHistory.getCompletedJobHistoryLocation();
+      assertEquals("History DONE folder not correct", 
+          doneFolder, doneDir.getName());
+      JobID id = job.getID();
+      String logFileName = getDoneFile(conf, id, doneDir);
+
+      // Framework history log file location
+      Path logFile = new Path(doneDir, logFileName);
+      FileSystem fileSys = logFile.getFileSystem(conf);
+   
+      // Check if the history file exists
+      assertTrue("History file does not exist", fileSys.exists(logFile));
+
+      // check if the corresponding conf file exists
+      Path confFile = getPathForConf(logFile, doneDir);
+      assertTrue("Config for completed jobs doesnt exist", 
+                 fileSys.exists(confFile));
+
+      // check if the file exists in a done folder
+      assertTrue("Completed job config doesnt exist in the done folder", 
+                 doneDir.getName().equals(confFile.getParent().getName()));
+
+      // check if the file exists in a done folder
+      assertTrue("Completed jobs doesnt exist in the done folder", 
+                 doneDir.getName().equals(logFile.getParent().getName()));
+      
+
+      // check if the job file is removed from the history location 
+      Path runningJobsHistoryFolder = logFile.getParent().getParent();
+      Path runningJobHistoryFilename = 
+        new Path(runningJobsHistoryFolder, logFile.getName());
+      Path runningJobConfFilename = 
+        new Path(runningJobsHistoryFolder, confFile.getName());
+      assertFalse("History file not deleted from the running folder", 
+                  fileSys.exists(runningJobHistoryFilename));
+      assertFalse("Config for completed jobs not deleted from running folder", 
+                  fileSys.exists(runningJobConfFilename));
+
+      validateJobHistoryFileFormat(job.getID(), conf, "SUCCESS", false);
+      validateJobHistoryFileContent(mr, job, conf);
+
+      // get the job conf filename
+    } finally {
+      if (mr != null) {
+        cleanupLocalFiles(mr);
+        mr.shutdown();
+      }
+    }
+  }
+
   /** Run a job that will be succeeded and validate its history file format
    *  and its content.
    */
@@ -802,6 +887,11 @@ public class TestJobHistory extends TestCase {
       // keep for less time
       conf.setLong("mapred.jobtracker.retirejob.check", 1000);
       conf.setLong("mapred.jobtracker.retirejob.interval", 1000);
+
+      //set the done folder location
+      String doneFolder = TEST_ROOT_DIR + "history_done";
+      conf.set("mapred.job.tracker.history.completed.location", doneFolder);
+      
       mr = new MiniMRCluster(2, "file:///", 3, null, null, conf);
 
       // run the TCs
@@ -825,9 +915,11 @@ public class TestJobHistory extends TestCase {
       RunningJob job = UtilsForTests.runJobSucceed(conf, inDir, outDir);
       
       Path doneDir = JobHistory.getCompletedJobHistoryLocation();
+      assertEquals("History DONE folder not correct", 
+          doneFolder, doneDir.toString());
       JobID id = job.getID();
-      String logFileName = JobHistory.JobInfo.getJobHistoryFileName(conf, id, 
-                                                                    doneDir);
+      String logFileName = getDoneFile(conf, id, doneDir);
+
       // Framework history log file location
       Path logFile = new Path(doneDir, logFileName);
       FileSystem fileSys = logFile.getFileSystem(conf);
@@ -842,11 +934,11 @@ public class TestJobHistory extends TestCase {
 
       // check if the file exists in a done folder
       assertTrue("Completed job config doesnt exist in the done folder", 
-                 "done".equals(confFile.getParent().getName()));
+                 doneDir.getName().equals(confFile.getParent().getName()));
 
       // check if the file exists in a done folder
       assertTrue("Completed jobs doesnt exist in the done folder", 
-                 "done".equals(logFile.getParent().getName()));
+                 doneDir.getName().equals(logFile.getParent().getName()));
       
 
       // check if the job file is removed from the history location 
@@ -880,6 +972,17 @@ public class TestJobHistory extends TestCase {
     }
   }
 
+  //Returns the file in the done folder
+  //Waits for sometime to get the file moved to done
+  private static String getDoneFile(JobConf conf, JobID id, 
+      Path doneDir) throws IOException {
+    String name = null;
+    for (int i = 0; name == null && i < 20; i++) {
+      name = JobHistory.JobInfo.getDoneJobHistoryFileName(conf, id);
+      UtilsForTests.waitFor(1000);
+    }
+    return name;
+  }
   // Returns the output path where user history log file is written to with
   // default configuration setting for hadoop.job.history.user.location
   private static Path getLogLocationInOutputPath(String logFileName,
@@ -900,8 +1003,7 @@ public class TestJobHistory extends TestCase {
           throws IOException  {
     // Get the history file name
     Path doneDir = JobHistory.getCompletedJobHistoryLocation();
-    String logFileName = JobHistory.JobInfo.getJobHistoryFileName(conf, id, 
-                                                                  doneDir);
+    String logFileName = getDoneFile(conf, id, doneDir);
 
     // User history log file location
     Path logFile = JobHistory.JobInfo.getJobHistoryLogLocationForUser(
@@ -1012,8 +1114,7 @@ public class TestJobHistory extends TestCase {
 
     // Get the history file name
     Path doneDir = JobHistory.getCompletedJobHistoryLocation();
-    String logFileName = JobHistory.JobInfo.getJobHistoryFileName(conf, id, 
-                                                                  doneDir);
+    String logFileName = getDoneFile(conf, id, doneDir);
 
     // Framework history log file location
     Path logFile = new Path(doneDir, logFileName);

@@ -320,48 +320,7 @@ public class TestJobTrackerRestart extends TestCase {
     assertTrue("Cluster status is insane", 
                checkClusterStatusOnCompletion(status, prevStatus));
   }
-  
-  /**
-   * Checks if the history files are as expected
-   * @param id job id
-   * @param conf job conf
-   */
-  private void testJobHistoryFiles(JobID id, JobConf conf) 
-  throws IOException  {
-    // Get the history files for users
-    Path dir = JobHistory.getCompletedJobHistoryLocation();
-    String logFileName = JobHistory.JobInfo.getJobHistoryFileName(conf, id, 
-                                                                  dir);
-    String tempLogFileName = 
-      JobHistory.JobInfo.getSecondaryJobHistoryFile(logFileName);
-    
-    // I. User files
-    Path logFile = 
-      JobHistory.JobInfo.getJobHistoryLogLocationForUser(logFileName, conf);
-    FileSystem fileSys = logFile.getFileSystem(conf);
-    
-    // Check if the history file exists
-    assertTrue("User log file does not exist", fileSys.exists(logFile));
-    
-    // Check if the temporary file is deleted
-    Path tempLogFile = 
-      JobHistory.JobInfo.getJobHistoryLogLocationForUser(tempLogFileName, 
-                                                         conf);
-    assertFalse("User temporary log file exists", fileSys.exists(tempLogFile));
-    
-    // II. Framework files
-    // Get the history file
-    logFile = new Path(dir, logFileName);
-    fileSys = logFile.getFileSystem(conf);
-    
-    // Check if the history file exists
-    assertTrue("Log file does not exist", fileSys.exists(logFile));
-    
-    // Check if the temporary file is deleted
-    tempLogFile = JobHistory.JobInfo.getJobHistoryLogLocation(tempLogFileName);
-    assertFalse("Temporary log file exists", fileSys.exists(tempLogFile));
-  }
-  
+
   /**
    * Matches specified number of task reports.
    * @param source the reports to be matched
