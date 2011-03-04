@@ -70,6 +70,9 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
         return !name.startsWith("_") && !name.startsWith("."); 
       }
     }; 
+  
+  static final String NUM_INPUT_FILES = "mapreduce.input.num.files";
+  
   protected void setMinSplitSize(long minSplitSize) {
     this.minSplitSize = minSplitSize;
   }
@@ -204,6 +207,8 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
     throws IOException {
     FileStatus[] files = listStatus(job);
     
+    // Save the number of input files in the job-conf
+    job.setLong(NUM_INPUT_FILES, files.length);
     long totalSize = 0;                           // compute total size
     for (FileStatus file: files) {                // check we have valid files
       if (file.isDir()) {
