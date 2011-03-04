@@ -41,7 +41,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeInstrumentation;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -96,7 +96,7 @@ public class FSEditLog {
   private long numTransactions;        // number of transactions
   private long numTransactionsBatchedInSync;
   private long totalTimeTransactions;  // total time for all transactions
-  private NameNodeMetrics metrics;
+  private NameNodeInstrumentation metrics;
 
   private static class TransactionId {
     public long txid;
@@ -915,7 +915,7 @@ public class FSEditLog {
     numTransactions++;
     totalTimeTransactions += (end-start);
     if (metrics != null) // Metrics is non-null only when used inside name node
-      metrics.transactions.inc((end-start));
+      metrics.addTransaction(end-start);
   }
 
   //
@@ -948,7 +948,7 @@ public class FSEditLog {
       if (mytxid <= synctxid) {
         numTransactionsBatchedInSync++;
         if (metrics != null) // Metrics is non-null only when used inside name node
-          metrics.transactionsBatchedInSync.inc();
+          metrics.incrTransactionsBatchedInSync();
         return;
       }
    
@@ -990,7 +990,7 @@ public class FSEditLog {
     }
 
     if (metrics != null) // Metrics is non-null only when used inside name node
-      metrics.syncs.inc(elapsed);
+      metrics.addSync(elapsed);
   }
 
   //

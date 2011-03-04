@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
+import static org.apache.hadoop.test.MetricsAsserts.*;
+
 /**
  * Test case for FilesInGetListingOps metric in Namenode
  */
@@ -43,7 +45,7 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
   }
      
   private MiniDFSCluster cluster;
-  private NameNodeMetrics nnMetrics;
+  private NameNodeInstrumentation nnMetrics;
   private DistributedFileSystem fs;
   private Random rand = new Random();
 
@@ -52,7 +54,7 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
     cluster = new MiniDFSCluster(CONF, 1, true, null);
     cluster.waitActive();
     cluster.getNameNode();
-	nnMetrics = NameNode.getNameNodeMetrics();
+    nnMetrics = NameNode.getNameNodeMetrics();
     fs = (DistributedFileSystem) cluster.getFileSystem();
   }
 
@@ -74,15 +76,15 @@ public class TestNNMetricFilesInGetListingOps extends TestCase {
     createFile("/tmp2/t1", 3200, (short)3);
     createFile("/tmp2/t2", 3200, (short)3);
     cluster.getNameNode().getListing("/tmp1", HdfsFileStatus.EMPTY_NAME) ;
-    assertEquals(2,nnMetrics.numFilesInGetListingOps.getCurrentIntervalValue());
+    assertCounter("FilesInGetListingOps", 2, nnMetrics);
     cluster.getNameNode().getListing("/tmp2", HdfsFileStatus.EMPTY_NAME) ;
-    assertEquals(4,nnMetrics.numFilesInGetListingOps.getCurrentIntervalValue());
+    assertCounter("FilesInGetListingOps", 4, nnMetrics);
     // test non-existent path
     cluster.getNameNode().getListing("/tmp", HdfsFileStatus.EMPTY_NAME) ;
-    assertEquals(4,nnMetrics.numFilesInGetListingOps.getCurrentIntervalValue());
+    assertCounter("FilesInGetListingOps", 4, nnMetrics);
     // test listing a file
     cluster.getNameNode().getListing("/tmp1/t1", HdfsFileStatus.EMPTY_NAME) ;
-    assertEquals(5,nnMetrics.numFilesInGetListingOps.getCurrentIntervalValue());
+    assertCounter("FilesInGetListingOps", 5, nnMetrics);
   }
 }
 

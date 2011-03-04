@@ -469,7 +469,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
           } else {
             checksumOut.write(pktBuf, checksumOff, checksumLen);
           }
-          datanode.myMetrics.bytesWritten.inc(len);
+          datanode.myMetrics.incrBytesWritten(len);
         }
       } catch (IOException iex) {
         datanode.checkDiskError(iex);
@@ -553,7 +553,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
         // Finalize the block. Does this fsync()?
         block.setNumBytes(offsetInBlock);
         datanode.data.finalizeBlock(block);
-        datanode.myMetrics.blocksWritten.inc();
+        datanode.myMetrics.incrBlocksWritten();
       }
 
     } catch (IOException ioe) {
@@ -810,7 +810,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                 final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
                 block.setNumBytes(receiver.offsetInBlock);
                 datanode.data.finalizeBlock(block);
-                datanode.myMetrics.blocksWritten.inc();
+                datanode.myMetrics.incrBlocksWritten();
                 datanode.notifyNamenodeReceivedBlock(block, 
                     DataNode.EMPTY_DEL_HINT);
                 if (ClientTraceLog.isInfoEnabled() &&
@@ -944,7 +944,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               final long endTime = ClientTraceLog.isInfoEnabled() ? System.nanoTime() : 0;
               block.setNumBytes(receiver.offsetInBlock);
               datanode.data.finalizeBlock(block);
-              datanode.myMetrics.blocksWritten.inc();
+              datanode.myMetrics.incrBlocksWritten();
               datanode.notifyNamenodeReceivedBlock(block, 
                   DataNode.EMPTY_DEL_HINT);
               if (ClientTraceLog.isInfoEnabled() &&

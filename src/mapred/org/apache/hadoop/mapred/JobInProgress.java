@@ -57,9 +57,6 @@ import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 import org.apache.hadoop.mapreduce.split.JobSplit;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
@@ -275,8 +272,6 @@ public class JobInProgress {
   }
   private Counters jobCounters = new Counters();
   
-  private MetricsRecord jobMetrics;
-  
   // Maximum no. of fetch-failure notifications after which
   // the map task is killed
   private static final int MAX_FETCH_FAILURES_NOTIFICATIONS = 3;
@@ -441,12 +436,6 @@ public class JobInProgress {
 
       this.maxTaskFailuresPerTracker = conf.getMaxTaskFailuresPerTracker();
 
-      MetricsContext metricsContext = MetricsUtil.getContext("mapred");
-      this.jobMetrics = MetricsUtil.createRecord(metricsContext, "job");
-      this.jobMetrics.setTag("user", conf.getUser());
-      this.jobMetrics.setTag("sessionId", conf.getSessionId());
-      this.jobMetrics.setTag("jobName", conf.getJobName());
-      this.jobMetrics.setTag("jobId", jobId.toString());
       hasSpeculativeMaps = conf.getMapSpeculativeExecution();
       hasSpeculativeReduces = conf.getReduceSpeculativeExecution();
       // a limit on the input size of the reduce.
@@ -477,34 +466,12 @@ public class JobInProgress {
       FileSystem.closeAllForUGI(UserGroupInformation.getCurrentUser());
     }
   }
-
-  /**
-   * Called periodically by JobTrackerMetrics to update the metrics for
-   * this job.
-   */
-  public void updateMetrics() {
-    Counters counters = getCounters();
-    for (Counters.Group group : counters) {
-      jobMetrics.setTag("group", group.getDisplayName());
-      for (Counters.Counter counter : group) {
-        jobMetrics.setTag("counter", counter.getDisplayName());
-        jobMetrics.setMetric("value", (float) counter.getCounter());
-        jobMetrics.update();
-      }
-    }
-  }
     
   /**
    * Called when the job is complete
    */
   public void cleanUpMetrics() {
-    // Deletes all metric data for this job (in internal table in metrics package).
-    // This frees up RAM and possibly saves network bandwidth, since otherwise
-    // the metrics package implementation might continue to send these job metrics
-    // after the job has finished.
-    jobMetrics.removeTag("group");
-    jobMetrics.removeTag("counter");
-    jobMetrics.remove();
+    // per job metrics is disabled for now.
   }
     
   private void printCache (Map<Node, List<TaskInProgress>> cache) {

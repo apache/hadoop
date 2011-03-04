@@ -24,9 +24,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.Math;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -78,16 +75,20 @@ import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics2.MetricsBuilder;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.metrics2.MetricsException;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricMutableCounterInt;
+import org.apache.hadoop.metrics2.lib.MetricMutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 
 /** A Reduce task. */
 class ReduceTask extends Task {
@@ -690,7 +691,7 @@ class ReduceTask extends Task {
     /**
      * The object for metrics reporting.
      */
-    private ShuffleClientMetrics shuffleClientMetrics = null;
+    private ShuffleClientInstrumentation shuffleClientMetrics;
     
     /**
      * the minimum interval between tasktracker polls
@@ -803,64 +804,64 @@ class ReduceTask extends Task {
      */
     private final Map<String, List<MapOutputLocation>> mapLocations = 
       new ConcurrentHashMap<String, List<MapOutputLocation>>();
-    
-    /**
-     * This class contains the methods that should be used for metrics-reporting
-     * the specific metrics for shuffle. This class actually reports the
-     * metrics for the shuffle client (the ReduceTask), and hence the name
-     * ShuffleClientMetrics.
-     */
-    class ShuffleClientMetrics implements Updater {
-      private MetricsRecord shuffleMetrics = null;
-      private int numFailedFetches = 0;
-      private int numSuccessFetches = 0;
-      private long numBytes = 0;
-      private int numThreadsBusy = 0;
-      ShuffleClientMetrics(JobConf conf) {
-        MetricsContext metricsContext = MetricsUtil.getContext("mapred");
-        this.shuffleMetrics = 
-          MetricsUtil.createRecord(metricsContext, "shuffleInput");
-        this.shuffleMetrics.setTag("user", conf.getUser());
-        this.shuffleMetrics.setTag("jobName", conf.getJobName());
-        this.shuffleMetrics.setTag("jobId", ReduceTask.this.getJobID().toString());
-        this.shuffleMetrics.setTag("taskId", getTaskID().toString());
-        this.shuffleMetrics.setTag("sessionId", conf.getSessionId());
-        metricsContext.registerUpdater(this);
+
+    class ShuffleClientInstrumentation implements MetricsSource {
+      final MetricsRegistry registry = new MetricsRegistry("shuffleInput");
+      final MetricMutableCounterLong inputBytes =
+          registry.newCounter("shuffle_input_bytes", "", 0L);
+      final MetricMutableCounterInt failedFetches =
+          registry.newCounter("shuffle_failed_fetches", "", 0);
+      final MetricMutableCounterInt successFetches =
+          registry.newCounter("shuffle_success_fetches", "", 0);
+      private volatile int threadsBusy = 0;
+
+      @SuppressWarnings("deprecation")
+      ShuffleClientInstrumentation(JobConf conf) {
+        registry.tag("user", "User name", conf.getUser())
+                .tag("jobName", "Job name", conf.getJobName())
+                .tag("jobId", "Job ID", ReduceTask.this.getJobID().toString())
+                .tag("taskId", "Task ID", getTaskID().toString())
+                .tag("sessionId", "Session ID", conf.getSessionId());
       }
-      public synchronized void inputBytes(long numBytes) {
-        this.numBytes += numBytes;
+
+      //@Override
+      void inputBytes(long numBytes) {
+        inputBytes.incr(numBytes);
       }
-      public synchronized void failedFetch() {
-        ++numFailedFetches;
+
+      //@Override
+      void failedFetch() {
+        failedFetches.incr();
       }
-      public synchronized void successFetch() {
-        ++numSuccessFetches;
+
+      //@Override
+      void successFetch() {
+        successFetches.incr();
       }
-      public synchronized void threadBusy() {
-        ++numThreadsBusy;
+
+      //@Override
+      synchronized void threadBusy() {
+        ++threadsBusy;
       }
-      public synchronized void threadFree() {
-        --numThreadsBusy;
+
+      //@Override
+      synchronized void threadFree() {
+        --threadsBusy;
       }
-      public void doUpdates(MetricsContext unused) {
-        synchronized (this) {
-          shuffleMetrics.incrMetric("shuffle_input_bytes", numBytes);
-          shuffleMetrics.incrMetric("shuffle_failed_fetches", 
-                                    numFailedFetches);
-          shuffleMetrics.incrMetric("shuffle_success_fetches", 
-                                    numSuccessFetches);
-          if (numCopiers != 0) {
-            shuffleMetrics.setMetric("shuffle_fetchers_busy_percent",
-                100*((float)numThreadsBusy/numCopiers));
-          } else {
-            shuffleMetrics.setMetric("shuffle_fetchers_busy_percent", 0);
-          }
-          numBytes = 0;
-          numSuccessFetches = 0;
-          numFailedFetches = 0;
-        }
-        shuffleMetrics.update();
+
+      @Override
+      public void getMetrics(MetricsBuilder builder, boolean all) {
+        MetricsRecordBuilder rb = builder.addRecord(registry.name());
+        rb.addGauge("shuffle_fetchers_busy_percent", "", numCopiers == 0 ? 0
+            : 100. * threadsBusy / numCopiers);
+        registry.snapshot(rb, all);
       }
+
+    }
+
+    private ShuffleClientInstrumentation createShuffleClientInstrumentation() {
+      return DefaultMetricsSystem.INSTANCE.register("ShuffleClientMetrics",
+          "Shuffle input metrics", new ShuffleClientInstrumentation(conf));
     }
 
     /** Represents the result of an attempt to copy a map output */
@@ -1809,7 +1810,7 @@ class ReduceTask extends Task {
       
       configureClasspath(conf);
       this.reporter = reporter;
-      this.shuffleClientMetrics = new ShuffleClientMetrics(conf);
+      this.shuffleClientMetrics = createShuffleClientInstrumentation();
       this.umbilical = umbilical;      
       this.reduceTask = ReduceTask.this;
 

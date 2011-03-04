@@ -32,7 +32,6 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMBean;
-import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMetrics;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -42,7 +41,7 @@ import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.util.*;
-import org.apache.hadoop.metrics.util.MBeanUtil;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.CachedDNSToSwitchMapping;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetworkTopology;
@@ -143,7 +142,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   private String supergroup;
   private PermissionStatus defaultPermission;
   // FSNamesystemMetrics counter variables
-  private FSNamesystemMetrics myFSMetrics;
   private long capacityTotal = 0L, capacityUsed = 0L, capacityRemaining = 0L;
   private int totalLoad = 0;
   boolean isAccessTokenEnabled;
@@ -345,8 +343,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
                          getNamespaceEditsDirs(conf), startOpt);
     long timeTakenToLoadFSImage = now() - systemStart;
     LOG.info("Finished loading FSImage in " + timeTakenToLoadFSImage + " msecs");
-    NameNode.getNameNodeMetrics().fsImageLoadTime.set(
-                              (int) timeTakenToLoadFSImage);
+    NameNode.getNameNodeMetrics().setFsImageLoadTime(timeTakenToLoadFSImage);
     this.safeMode = new SafeModeInfo(conf);
     setBlockTotal();
     pendingReplications = new PendingReplicationBlocks(
@@ -3080,7 +3077,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
           + " does not belong to any file.");
       addToInvalidates(b, node);
     }
-    NameNode.getNameNodeMetrics().blockReport.inc((int) (now() - startTime));
+    NameNode.getNameNodeMetrics().addBlockReport(now() - startTime);
   }
 
   /**
@@ -4283,7 +4280,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       long timeInSafemode = now() - systemStart;
       NameNode.stateChangeLog.info("STATE* Leaving safe mode after " 
                                     + timeInSafemode/1000 + " secs.");
-      NameNode.getNameNodeMetrics().safeModeTime.set((int) timeInSafemode);
+      NameNode.getNameNodeMetrics().setSafeModeTime(timeInSafemode);
       
       if (reached >= 0) {
         NameNode.stateChangeLog.info("STATE* Safe mode is OFF."); 
@@ -4777,21 +4774,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     // package naming for mbeans and their impl.
     StandardMBean bean;
     try {
-      myFSMetrics = new FSNamesystemMetrics(conf);
       bean = new StandardMBean(this,FSNamesystemMBean.class);
-      mbeanName = MBeanUtil.registerMBean("NameNode", "FSNamesystemState", bean);
+      mbeanName = MBeans.register("NameNode", "FSNamesystemState", bean);
     } catch (NotCompliantMBeanException e) {
       e.printStackTrace();
     }
 
-    LOG.info("Registered FSNamesystemStatusMBean");
-  }
-
-  /**
-   * get FSNamesystemMetrics
-   */
-  public FSNamesystemMetrics getFSNamesystemMetrics() {
-    return myFSMetrics;
+    LOG.info("Registered FSNamesystemStateMBean");
   }
 
   /**
@@ -4799,7 +4788,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   public void shutdown() {
     if (mbeanName != null)
-      MBeanUtil.unregisterMBean(mbeanName);
+      MBeans.unregister(mbeanName);
   }
   
 

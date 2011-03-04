@@ -66,8 +66,7 @@ import org.apache.hadoop.io.IntWritable;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
-import org.apache.hadoop.ipc.metrics.RpcMetrics;
+import org.apache.hadoop.ipc.metrics.RpcInstrumentation;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.SaslStatus;
@@ -187,8 +186,7 @@ public abstract class Server {
                                                   // connections to nuke
                                                   //during a cleanup
   
-  protected RpcMetrics rpcMetrics;
-  protected RpcDetailedMetrics rpcDetailedMetrics;
+  protected RpcInstrumentation rpcMetrics;
   
   private Configuration conf;
   private SecretManager<TokenIdentifier> secretManager;
@@ -245,7 +243,7 @@ public abstract class Server {
    * Returns a handle to the rpcMetrics (required in tests)
    * @return rpc metrics
    */
-  public RpcMetrics getRpcMetrics() {
+  public RpcInstrumentation getRpcMetrics() {
     return rpcMetrics;
   }
 
@@ -1019,7 +1017,7 @@ public abstract class Server {
           }
           doSaslReply(SaslStatus.ERROR, null, sendToClient.getClass().getName(), 
               sendToClient.getLocalizedMessage());
-          rpcMetrics.authenticationFailures.inc();
+          rpcMetrics.incrAuthenticationFailures();
           String clientIP = this.toString();
           // attempting user could be null
           AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
@@ -1039,7 +1037,7 @@ public abstract class Server {
           useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
           LOG.info("SASL server successfully authenticated client: " + user);
-          rpcMetrics.authenticationSuccesses.inc();
+          rpcMetrics.incrAuthenticationSuccesses();
           AUDITLOG.info(AUTH_SUCCESSFULL_FOR + user);
           saslContextEstablished = true;
         }
@@ -1319,9 +1317,9 @@ public abstract class Server {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Successfully authorized " + header);
         }
-        rpcMetrics.authorizationSuccesses.inc();
+        rpcMetrics.incrAuthorizationSuccesses();
       } catch (AuthorizationException ae) {
-        rpcMetrics.authorizationFailures.inc();
+        rpcMetrics.incrAuthorizationFailures();
         setupResponse(authFailedResponse, authFailedCall, Status.FATAL, null,
             ae.getClass().getName(), ae.getMessage());
         responder.doRespond(authFailedCall);
@@ -1480,10 +1478,7 @@ public abstract class Server {
     // Start the listener here and let it bind to the port
     listener = new Listener();
     this.port = listener.getAddress().getPort();    
-    this.rpcMetrics = new RpcMetrics(serverName,
-                          Integer.toString(this.port), this);
-    this.rpcDetailedMetrics = new RpcDetailedMetrics(serverName,
-                            Integer.toString(this.port));
+    this.rpcMetrics = RpcInstrumentation.create(serverName, this.port);
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
 
     // Create the responder here
@@ -1603,9 +1598,6 @@ public abstract class Server {
     if (this.rpcMetrics != null) {
       this.rpcMetrics.shutdown();
     }
-    if (this.rpcDetailedMetrics != null) {
-      this.rpcDetailedMetrics.shutdown();
-    }
   }
 
   /** Wait for the server to be stopped.
@@ -1704,7 +1696,7 @@ public abstract class Server {
     int count =  (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
                  channel.write(buffer) : channelIO(null, channel, buffer);
     if (count > 0) {
-      rpcMetrics.sentBytes.inc(count);
+      rpcMetrics.incrSentBytes(count);
     }
     return count;
   }
@@ -1724,7 +1716,7 @@ public abstract class Server {
     int count = (buffer.remaining() <= NIO_BUFFER_LIMIT) ?
                 channel.read(buffer) : channelIO(channel, null, buffer);
     if (count > 0) {
-      rpcMetrics.receivedBytes.inc(count);
+      rpcMetrics.incrReceivedBytes(count);
     }
     return count;
   }

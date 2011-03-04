@@ -115,7 +115,7 @@ class FSDirectory implements FSConstants, Closeable {
 
   private void incrDeletedFileCount(int count) {
     if (namesystem != null)
-      NameNode.getNameNodeMetrics().numFilesDeleted.inc(count);
+      NameNode.getNameNodeMetrics().incrFilesDeleted(count);
   }
     
   /**
@@ -977,7 +977,7 @@ class FSDirectory implements FSConstants, Closeable {
         // Directory creation also count towards FilesCreated
         // to match count of FilesDeleted metric. 
         if (namesystem != null)
-          NameNode.getNameNodeMetrics().numFilesCreated.inc();
+          NameNode.getNameNodeMetrics().incrNumFilesCreated();
         fsImage.getEditLog().logMkDir(cur, inodes[i]);
         NameNode.stateChangeLog.debug(
             "DIR* FSDirectory.mkdirs: created directory " + cur);

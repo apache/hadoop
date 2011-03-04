@@ -73,7 +73,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
-import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
+import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeInstrumentation;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.FileChecksumServlets;
 import org.apache.hadoop.hdfs.server.namenode.JspHelper;
@@ -95,6 +95,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -205,7 +206,7 @@ public class DataNode extends Configured
   long heartBeatInterval;
   private DataStorage storage = null;
   private HttpServer infoServer = null;
-  DataNodeMetrics myMetrics;
+  DataNodeInstrumentation myMetrics;
   private static InetSocketAddress nameNodeAddr;
   private InetSocketAddress selfAddr;
   private static DataNode datanodeObject = null;
@@ -260,7 +261,6 @@ public class DataNode extends Configured
   DataNode(final Configuration conf,
            final AbstractList<File> dataDirs, SecureResources resources) throws IOException {
     super(conf);
-    UserGroupInformation.setConfiguration(conf);
     SecurityUtil.login(conf, DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, 
         DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY);
 
@@ -440,7 +440,8 @@ public class DataNode extends Configured
     this.infoServer.start();
     // adjust info port
     this.dnRegistration.setInfoPort(this.infoServer.getPort());
-    myMetrics = new DataNodeMetrics(conf, dnRegistration.getStorageID());
+    myMetrics = DataNodeInstrumentation.create(conf,
+                                               dnRegistration.getStorageID());
     
     // set service-level authorization security policy
     if (conf.getBoolean(
@@ -566,7 +567,7 @@ public class DataNode extends Configured
     return selfAddr;
   }
     
-  DataNodeMetrics getMetrics() {
+  DataNodeInstrumentation getMetrics() {
     return myMetrics;
   }
   
@@ -848,7 +849,7 @@ public class DataNode extends Configured
                                                        data.getRemaining(),
                                                        xmitsInProgress.get(),
                                                        getXceiverCount());
-          myMetrics.heartbeats.inc(now() - startTime);
+          myMetrics.addHeartBeat(now() - startTime);
           //LOG.info("Just sent heartbeat, with name " + localName);
           if (!processCommand(cmds))
             continue;
@@ -899,7 +900,7 @@ public class DataNode extends Configured
           DatanodeCommand cmd = namenode.blockReport(dnRegistration,
                   BlockListAsLongs.convertToArrayLongs(bReport));
           long brTime = now() - brStartTime;
-          myMetrics.blockReports.inc(brTime);
+          myMetrics.addBlockReport(brTime);
           LOG.info("BlockReport of " + bReport.length +
               " blocks got processed in " + brTime + " msecs");
           //
@@ -996,7 +997,7 @@ public class DataNode extends Configured
     case DatanodeProtocol.DNA_TRANSFER:
       // Send a copy of a block to another datanode
       transferBlocks(bcmd.getBlocks(), bcmd.getTargets());
-      myMetrics.blocksReplicated.inc(bcmd.getBlocks().length);
+      myMetrics.incrBlocksReplicated(bcmd.getBlocks().length);
       break;
     case DatanodeProtocol.DNA_INVALIDATE:
       //
@@ -1013,7 +1014,7 @@ public class DataNode extends Configured
         checkDiskError();
         throw e;
       }
-      myMetrics.blocksRemoved.inc(toDelete.length);
+      myMetrics.incrBlocksRemoved(toDelete.length);
       break;
     case DatanodeProtocol.DNA_SHUTDOWN:
       // shut down the data node
@@ -1404,6 +1405,7 @@ public class DataNode extends Configured
     String[] dataDirs = conf.getStrings(DATA_DIR_KEY);
     dnThreadName = "DataNode: [" +
                         StringUtils.arrayToString(dataDirs) + "]";
+    DefaultMetricsSystem.initialize("DataNode");
     return makeInstance(dataDirs, conf, resources);
   }
 
@@ -1449,6 +1451,7 @@ public class DataNode extends Configured
    */
   public static DataNode makeInstance(String[] dataDirs, Configuration conf, 
       SecureResources resources) throws IOException {
+    UserGroupInformation.setConfiguration(conf);
     LocalFileSystem localFS = FileSystem.getLocal(conf);
     ArrayList<File> dirs = new ArrayList<File>();
     FsPermission dataDirPermission = 
@@ -1612,7 +1615,7 @@ public class DataNode extends Configured
     data.updateBlock(oldblock, newblock);
     if (finalize) {
       data.finalizeBlock(newblock);
-      myMetrics.blocksWritten.inc(); 
+      myMetrics.incrBlocksWritten();
       notifyNamenodeReceivedBlock(newblock, EMPTY_DEL_HINT);
       LOG.info("Received block " + newblock +
                 " of size " + newblock.getNumBytes() +

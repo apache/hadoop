@@ -176,12 +176,14 @@
   </description>
 </property>
 
+<!--
 <property>
   <name>mapred.tasktracker.instrumentation</name>
-  <value>org.apache.hadoop.mapred.TaskTrackerMetricsInst</value>
+  <value>com.example.hadoop.TaskTrackerInstrumentation</value>
   <description>Expert: The instrumentation class to associate with each TaskTracker.
   </description>
 </property>
+-->
 
 <property>
   <name>mapred.tasktracker.memory_calculator_plugin</name>
@@ -387,12 +389,14 @@
   </description>
 </property>
 
+<!--
 <property>
   <name>mapred.jobtracker.instrumentation</name>
-  <value>org.apache.hadoop.mapred.JobTrackerMetricsInst</value>
+  <value>com.example.hadoop.JobTrackerInstrumentation</value>
   <description>Expert: The instrumentation class to associate with each JobTracker.
   </description>
 </property>
+-->
 
 <property>
   <name>mapred.child.java.opts</name>

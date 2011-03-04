@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ipc;
 
+import org.apache.hadoop.metrics2.MetricsSource;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
@@ -33,16 +34,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.UTF8;
 import org.apache.hadoop.io.Writable;
-
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.spi.NullContext;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.ipc.metrics.RpcInstrumentation;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.AccessControlException;
+import static org.apache.hadoop.test.MetricsAsserts.*;
 
 /** Unit tests for RPC. */
 public class TestRPC extends TestCase {
@@ -251,24 +251,22 @@ public class TestRPC extends TestCase {
     stringResult = proxy.echo((String)null);
     assertEquals(stringResult, null);
     
-    // Check rpcMetrics 
-    server.rpcMetrics.doUpdates(new NullContext());
-    
+    // Check rpcMetrics
+    RpcInstrumentation rpcMetrics = server.rpcMetrics;
+    MetricsRecordBuilder rb = getMetrics(rpcMetrics);
+
     // Number 4 includes getProtocolVersion()
-    assertEquals(4, server.rpcMetrics.rpcProcessingTime.getPreviousIntervalNumOps());
-    assertTrue(server.rpcMetrics.sentBytes.getPreviousIntervalValue() > 0);
-    assertTrue(server.rpcMetrics.receivedBytes.getPreviousIntervalValue() > 0);
-    
-    // Number of calls to echo method should be 2
-    server.rpcDetailedMetrics.doUpdates(new NullContext());
-    MetricsTimeVaryingRate metrics = 
-      (MetricsTimeVaryingRate)server.rpcDetailedMetrics.registry.get("echo");
-    assertEquals(2, metrics.getPreviousIntervalNumOps());
-    
+    assertCounter("RpcProcessingTime_num_ops", 4L, rb);
+    assertCounterGt("SentBytes", 0L, rb);
+    assertCounterGt("ReceivedBytes", 0L, rb);
+
+    MetricsSource detailed = rpcMetrics.detailed();
+    rb = getMetrics(detailed);
+    assertCounter("getProtocolVersion_num_ops", 1L, rb);
     // Number of calls to ping method should be 1
-    metrics = 
-      (MetricsTimeVaryingRate)server.rpcDetailedMetrics.registry.get("ping");
-    assertEquals(1, metrics.getPreviousIntervalNumOps());
+    assertCounter("ping_num_ops", 1L, rb);
+    // Number of calls to echo method should be 2
+    assertCounter("echo_num_ops", 2L, rb);
     
     String[] stringResults = proxy.echo(new String[]{"foo","bar"});
     assertTrue(Arrays.equals(stringResults, new String[]{"foo","bar"}));
@@ -367,6 +365,7 @@ public class TestRPC extends TestCase {
     server.start();
 
     InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    RpcInstrumentation rpcMetrics = server.getRpcMetrics();
     
     try {
       proxy = (TestProtocol)RPC.getProxy(
@@ -387,23 +386,16 @@ public class TestRPC extends TestCase {
       if (proxy != null) {
         RPC.stopProxy(proxy);
       }
+      MetricsRecordBuilder rb = getMetrics(rpcMetrics);
       if (expectFailure) {
-        assertEquals("Wrong number of authorizationFailures ", 1,  
-            server.getRpcMetrics().authorizationFailures
-            .getCurrentIntervalValue());
+        assertCounter("rpcAuthorizationFailures", 1, rb);
       } else {
-        assertEquals("Wrong number of authorizationSuccesses ", 1, 
-            server.getRpcMetrics().authorizationSuccesses
-            .getCurrentIntervalValue());
+        assertCounter("rpcAuthorizationSuccesses", 1, rb);
       }
       //since we don't have authentication turned ON, we should see 
       // 0 for the authentication successes and 0 for failure
-      assertEquals("Wrong number of authenticationFailures ", 0, 
-          server.getRpcMetrics().authenticationFailures
-          .getCurrentIntervalValue());
-      assertEquals("Wrong number of authenticationSuccesses ", 0, 
-          server.getRpcMetrics().authenticationSuccesses
-          .getCurrentIntervalValue());
+      assertCounter("rpcAuthenticationFailures", 0, rb);
+      assertCounter("rpcAuthenticationSuccesses", 0, rb);
     }
   }
   

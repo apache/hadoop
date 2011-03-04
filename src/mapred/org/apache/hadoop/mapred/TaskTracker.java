@@ -87,11 +87,6 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsException;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -110,6 +105,8 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.security.Credentials;
 
 /*******************************************************
@@ -118,8 +115,9 @@ import org.apache.hadoop.security.Credentials;
  * for Task assignments and reporting results.
  *
  *******************************************************/
-public class TaskTracker 
-             implements MRConstants, TaskUmbilicalProtocol, Runnable {
+public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
+    Runnable, TaskTrackerMXBean {
+  
   /**
    * @deprecated
    */
@@ -132,6 +130,9 @@ public class TaskTracker
   @Deprecated
   static final String MAPRED_TASKTRACKER_PMEM_RESERVED_PROPERTY =
      "mapred.tasktracker.pmem.reserved";
+
+  static final String CONF_VERSION_KEY = "mapreduce.tasktracker.conf.version";
+  static final String CONF_VERSION_DEFAULT = "default";
 
   static final long WAIT_FOR_DONE = 3 * 1000;
   private int httpPort;
@@ -267,7 +268,7 @@ public class TaskTracker
   private IntWritable finishedCount = new IntWritable(0);
   
   private MapEventsFetcherThread mapEventsFetcher;
-  int workerThreads;
+  final int workerThreads;
   CleanupQueue directoryCleanupThread;
   private volatile JvmManager jvmManager;
   
@@ -311,64 +312,8 @@ public class TaskTracker
   private List<TaskAttemptID> commitResponses = 
             Collections.synchronizedList(new ArrayList<TaskAttemptID>());
 
-  private ShuffleServerMetrics shuffleServerMetrics;
-  /** This class contains the methods that should be used for metrics-reporting
-   * the specific metrics for shuffle. The TaskTracker is actually a server for
-   * the shuffle and hence the name ShuffleServerMetrics.
-   */
-  private class ShuffleServerMetrics implements Updater {
-    private MetricsRecord shuffleMetricsRecord = null;
-    private int serverHandlerBusy = 0;
-    private long outputBytes = 0;
-    private int failedOutputs = 0;
-    private int successOutputs = 0;
-    ShuffleServerMetrics(JobConf conf) {
-      MetricsContext context = MetricsUtil.getContext("mapred");
-      shuffleMetricsRecord = 
-                           MetricsUtil.createRecord(context, "shuffleOutput");
-      this.shuffleMetricsRecord.setTag("sessionId", conf.getSessionId());
-      context.registerUpdater(this);
-    }
-    synchronized void serverHandlerBusy() {
-      ++serverHandlerBusy;
-    }
-    synchronized void serverHandlerFree() {
-      --serverHandlerBusy;
-    }
-    synchronized void outputBytes(long bytes) {
-      outputBytes += bytes;
-    }
-    synchronized void failedOutput() {
-      ++failedOutputs;
-    }
-    synchronized void successOutput() {
-      ++successOutputs;
-    }
-    public void doUpdates(MetricsContext unused) {
-      synchronized (this) {
-        if (workerThreads != 0) {
-          shuffleMetricsRecord.setMetric("shuffle_handler_busy_percent", 
-              100*((float)serverHandlerBusy/workerThreads));
-        } else {
-          shuffleMetricsRecord.setMetric("shuffle_handler_busy_percent", 0);
-        }
-        shuffleMetricsRecord.incrMetric("shuffle_output_bytes", 
-                                        outputBytes);
-        shuffleMetricsRecord.incrMetric("shuffle_failed_outputs", 
-                                        failedOutputs);
-        shuffleMetricsRecord.incrMetric("shuffle_success_outputs", 
-                                        successOutputs);
-        outputBytes = 0;
-        failedOutputs = 0;
-        successOutputs = 0;
-      }
-      shuffleMetricsRecord.update();
-    }
-  }
+  private ShuffleServerInstrumentation shuffleServerMetrics;
 
-  
-  
-    
   private TaskTrackerInstrumentation myInstrumentation = null;
 
   public TaskTrackerInstrumentation getTaskTrackerInstrumentation() {
@@ -576,10 +521,6 @@ public class TaskTracker
                             protocol);
     }
   }
-  
-  int getHttpPort() {
-    return httpPort;
-  }
 
   public static final String TT_USER_NAME = "mapreduce.tasktracker.kerberos.principal";
   public static final String TT_KEYTAB_FILE =
@@ -623,19 +564,9 @@ public class TaskTracker
     this.minSpaceKill = this.fConf.getLong("mapred.local.dir.minspacekill", 0L);
     //tweak the probe sample size (make it a function of numCopiers)
     probe_sample_size = this.fConf.getInt("mapred.tasktracker.events.batchsize", 500);
-    
-    Class<? extends TaskTrackerInstrumentation> metricsInst = getInstrumentationClass(fConf);
-    try {
-      java.lang.reflect.Constructor<? extends TaskTrackerInstrumentation> c =
-        metricsInst.getConstructor(new Class[] {TaskTracker.class} );
-      this.myInstrumentation = c.newInstance(this);
-    } catch(Exception e) {
-      //Reflection can throw lots of exceptions -- handle them all by 
-      //falling back on the default.
-      LOG.error("failed to initialize taskTracker metrics", e);
-      this.myInstrumentation = new TaskTrackerMetricsInst(this);
-    }
-    
+
+    createInstrumentation();
+
     // bind address
     String address = 
       NetUtils.getServerAddress(fConf,
@@ -731,6 +662,27 @@ public class TaskTracker
       fConf.getBoolean(TT_OUTOFBAND_HEARBEAT, false);
   }
 
+  private void createInstrumentation() {
+    Class<? extends TaskTrackerInstrumentation> metricsInst =
+        getInstrumentationClass(fConf);
+    LOG.debug("instrumentation class="+ metricsInst);
+    if (metricsInst == null) {
+      myInstrumentation = TaskTrackerInstrumentation.create(this);
+      return;
+    }
+    try {
+      java.lang.reflect.Constructor<? extends TaskTrackerInstrumentation> c =
+        metricsInst.getConstructor(new Class[] {TaskTracker.class} );
+      this.myInstrumentation = c.newInstance(this);
+    } catch(Exception e) {
+      //Reflection can throw lots of exceptions -- handle them all by
+      //falling back on the default.
+      LOG.error("failed to initialize taskTracker metrics", e);
+      this.myInstrumentation = TaskTrackerInstrumentation.create(this);
+    }
+
+  }
+
   UserGroupInformation getMROwner() {
     return aclsManager.getMROwner();
   }
@@ -742,13 +694,13 @@ public class TaskTracker
     return fConf.getBoolean(JobConf.MR_ACLS_ENABLED, false);
   }
 
-  public static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(
+  static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(
     Configuration conf) {
-    return conf.getClass("mapred.tasktracker.instrumentation",
-        TaskTrackerMetricsInst.class, TaskTrackerInstrumentation.class);
+    return conf.getClass("mapred.tasktracker.instrumentation", null,
+                         TaskTrackerInstrumentation.class);
   }
 
-  public static void setInstrumentationClass(
+  static void setInstrumentationClass(
     Configuration conf, Class<? extends TaskTrackerInstrumentation> t) {
     conf.setClass("mapred.tasktracker.instrumentation",
         t, TaskTrackerInstrumentation.class);
@@ -1259,6 +1211,7 @@ public class TaskTracker
    */
   TaskTracker() {
     server = null;
+    workerThreads = 0;
   }
 
   void setConf(JobConf conf) {
@@ -1274,6 +1227,7 @@ public class TaskTracker
                   "mapred.tasktracker.map.tasks.maximum", 2);
     maxReduceSlots = conf.getInt(
                   "mapred.tasktracker.reduce.tasks.maximum", 2);
+    UserGroupInformation.setConfiguration(originalConf);
     aclsManager = new ACLsManager(conf, new JobACLsManager(conf), null);
     this.jobTrackAddr = JobTracker.getAddress(conf);
     String infoAddr = 
@@ -1287,12 +1241,17 @@ public class TaskTracker
     this.server = new HttpServer("task", httpBindAddress, httpPort,
         httpPort == 0, conf, aclsManager.getAdminsAcl());
     workerThreads = conf.getInt("tasktracker.http.threads", 40);
-    this.shuffleServerMetrics = new ShuffleServerMetrics(conf);
     server.setThreads(1, workerThreads);
     // let the jsp pages get to the task tracker, config, and other relevant
     // objects
     FileSystem local = FileSystem.getLocal(conf);
     this.localDirAllocator = new LocalDirAllocator("mapred.local.dir");
+    // create user log manager
+    setUserLogManager(new UserLogManager(conf));
+    SecurityUtil.login(originalConf, TT_KEYTAB_FILE, TT_USER_NAME);
+
+    initialize();
+    this.shuffleServerMetrics = ShuffleServerInstrumentation.create(this);
     server.setAttribute("task.tracker", this);
     server.setAttribute("local.file.system", local);
     server.setAttribute("conf", conf);
@@ -1304,13 +1263,6 @@ public class TaskTracker
     server.start();
     this.httpPort = server.getPort();
     checkJettyPort(httpPort);
-    // create user log manager
-    setUserLogManager(new UserLogManager(conf));
-
-    UserGroupInformation.setConfiguration(originalConf);
-    SecurityUtil.login(originalConf, TT_KEYTAB_FILE, TT_USER_NAME);
-
-    initialize();
   }
 
   private void checkJettyPort(int port) throws IOException { 
@@ -1644,11 +1596,7 @@ public class TaskTracker
           } else {
             reduceTotal--;
           }
-          try {
-            myInstrumentation.completeTask(taskStatus.getTaskID());
-          } catch (MetricsException me) {
-            LOG.warn("Caught: " + StringUtils.stringifyException(me));
-          }
+          myInstrumentation.completeTask(taskStatus.getTaskID());
           runningTasks.remove(taskStatus.getTaskID());
         }
       }
@@ -3430,7 +3378,10 @@ public class TaskTracker
       // enable the server to track time spent waiting on locks
       ReflectionUtils.setContentionTracing
         (conf.getBoolean("tasktracker.contention.tracking", false));
-      new TaskTracker(conf).run();
+      DefaultMetricsSystem.initialize("TaskTracker");
+      TaskTracker tt = new TaskTracker(conf);
+      MBeans.register("TaskTracker", "TaskTrackerInfo", tt);
+      tt.run();
     } catch (Throwable e) {
       LOG.error("Can not start task tracker because "+
                 StringUtils.stringifyException(e));
@@ -3469,8 +3420,8 @@ public class TaskTracker
       FSDataInputStream mapOutputIn = null;
  
       long totalRead = 0;
-      ShuffleServerMetrics shuffleMetrics =
-        (ShuffleServerMetrics) context.getAttribute("shuffleServerMetrics");
+      ShuffleServerInstrumentation shuffleMetrics =
+        (ShuffleServerInstrumentation) context.getAttribute("shuffleServerMetrics");
       TaskTracker tracker = 
         (TaskTracker) context.getAttribute("task.tracker");
 
@@ -3914,4 +3865,70 @@ public class TaskTracker
     ACLsManager getACLsManager() {
       return aclsManager;
     }
+
+  // Begin MXBean implementation
+  @Override
+  public String getHostname() {
+    return localHostname;
+  }
+
+  @Override
+  public String getVersion() {
+    return VersionInfo.getVersion() +", r"+ VersionInfo.getRevision();
+  }
+
+  @Override
+  public String getConfigVersion() {
+    return originalConf.get(CONF_VERSION_KEY, CONF_VERSION_DEFAULT);
+  }
+
+  @Override
+  public String getJobTrackerUrl() {
+    return originalConf.get("mapred.job.tracker");
+  }
+
+  @Override
+  public int getRpcPort() {
+    return taskReportAddress.getPort();
+  }
+
+  @Override
+  public int getHttpPort() {
+    return httpPort;
+  }
+
+  @Override
+  public boolean isHealthy() {
+    boolean healthy = true;
+    TaskTrackerHealthStatus hs = new TaskTrackerHealthStatus();
+    if (healthChecker != null) {
+      healthChecker.setHealthStatus(hs);
+      healthy = hs.isNodeHealthy();
+    }    
+    return healthy;
+  }
+
+  @Override
+  public String getTasksInfoJson() {
+    return getTasksInfo().toJson();
+  }
+
+  InfoMap getTasksInfo() {
+    InfoMap map = new InfoMap();
+    int failed = 0;
+    int commitPending = 0;
+    for (TaskStatus st : getNonRunningTasks()) {
+      if (st.getRunState() == TaskStatus.State.FAILED ||
+          st.getRunState() == TaskStatus.State.FAILED_UNCLEAN) {
+        ++failed;
+      } else if (st.getRunState() == TaskStatus.State.COMMIT_PENDING) {
+        ++commitPending;
+      }
+    }
+    map.put("running", runningTasks.size());
+    map.put("failed", failed);
+    map.put("commit_pending", commitPending);
+    return map;
+  }
+  // End MXBean implemenation
 }

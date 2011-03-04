@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.metrics2.source.JvmMetricsSource;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.SecurityUtil;
@@ -154,7 +154,7 @@ public class SecondaryNameNode implements Runnable {
           infoBindAddress);
     }
     // initiate Java VM metrics
-    JvmMetrics.init("SecondaryNameNode", conf.get("session.id"));
+    JvmMetricsSource.create("SecondaryNameNode", conf.get("session.id"));
     
     // Create connection to the namenode.
     shouldRun = true;

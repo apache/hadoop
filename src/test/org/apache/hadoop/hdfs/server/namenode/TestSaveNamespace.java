@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -83,7 +82,6 @@ public class TestSaveNamespace extends TestCase {
 
   private void saveNamespaceWithInjectedFault(Fault fault) throws IOException {
     Configuration conf = getConf();
-    NameNode.myMetrics = new NameNodeMetrics(conf, null);
     NameNode.format(conf);
     NameNode nn = new NameNode(conf);
     FSNamesystem fsn = nn.getNamesystem();
@@ -159,7 +157,6 @@ public class TestSaveNamespace extends TestCase {
   // @Test
   public void testSaveWhileEditsRolled() throws Exception {
     Configuration conf = getConf();
-    NameNode.myMetrics = new NameNodeMetrics(conf, null);
     NameNode.format(conf);
     NameNode nn = new NameNode(conf);
     FSNamesystem fsn = nn.getNamesystem();

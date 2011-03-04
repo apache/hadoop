@@ -97,32 +97,32 @@ class DataXceiver implements Runnable, FSConstants {
       switch ( op ) {
       case DataTransferProtocol.OP_READ_BLOCK:
         readBlock( in );
-        datanode.myMetrics.readBlockOp.inc(DataNode.now() - startTime);
+        datanode.myMetrics.addReadBlockOp(DataNode.now() - startTime);
         if (local)
-          datanode.myMetrics.readsFromLocalClient.inc();
+          datanode.myMetrics.incrReadsFromLocalClient();
         else
-          datanode.myMetrics.readsFromRemoteClient.inc();
+          datanode.myMetrics.incrReadsFromRemoteClient();
         break;
       case DataTransferProtocol.OP_WRITE_BLOCK:
         writeBlock( in );
-        datanode.myMetrics.writeBlockOp.inc(DataNode.now() - startTime);
+        datanode.myMetrics.addWriteBlockOp(DataNode.now() - startTime);
         if (local)
-          datanode.myMetrics.writesFromLocalClient.inc();
+          datanode.myMetrics.incrWritesFromLocalClient();
         else
-          datanode.myMetrics.writesFromRemoteClient.inc();
+          datanode.myMetrics.incrWritesFromRemoteClient();
         break;
       case DataTransferProtocol.OP_REPLACE_BLOCK: // for balancing purpose; send to a destination
         replaceBlock(in);
-        datanode.myMetrics.replaceBlockOp.inc(DataNode.now() - startTime);
+        datanode.myMetrics.addReplaceBlockOp(DataNode.now() - startTime);
         break;
       case DataTransferProtocol.OP_COPY_BLOCK:
             // for balancing purpose; send to a proxy source
         copyBlock(in);
-        datanode.myMetrics.copyBlockOp.inc(DataNode.now() - startTime);
+        datanode.myMetrics.addCopyBlockOp(DataNode.now() - startTime);
         break;
       case DataTransferProtocol.OP_BLOCK_CHECKSUM: //get the checksum of a block
         getBlockChecksum(in);
-        datanode.myMetrics.blockChecksumOp.inc(DataNode.now() - startTime);
+        datanode.myMetrics.addBlockChecksumOp(DataNode.now() - startTime);
         break;
       default:
         throw new IOException("Unknown opcode " + op + " in data stream");
@@ -207,11 +207,11 @@ class DataXceiver implements Runnable, FSConstants {
         } catch (IOException ignored) {}
       }
       
-      datanode.myMetrics.bytesRead.inc((int) read);
-      datanode.myMetrics.blocksRead.inc();
+      datanode.myMetrics.incrBytesRead((int) read);
+      datanode.myMetrics.incrBlocksRead();
     } catch ( SocketException ignored ) {
       // Its ok for remote side to close the connection anytime.
-      datanode.myMetrics.blocksRead.inc();
+      datanode.myMetrics.incrBlocksRead();
     } catch ( IOException ioe ) {
       /* What exactly should we do here?
        * Earlier version shutdown() datanode if there is disk error.
@@ -540,8 +540,8 @@ class DataXceiver implements Runnable, FSConstants {
       long read = blockSender.sendBlock(reply, baseStream, 
                                         dataXceiverServer.balanceThrottler);
 
-      datanode.myMetrics.bytesRead.inc((int) read);
-      datanode.myMetrics.blocksRead.inc();
+      datanode.myMetrics.incrBytesRead((int) read);
+      datanode.myMetrics.incrBlocksRead();
       
       LOG.info("Copied block " + block + " to " + s.getRemoteSocketAddress());
     } catch (IOException ioe) {

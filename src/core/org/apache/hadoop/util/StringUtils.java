@@ -695,9 +695,32 @@ public class StringUtils {
    *
    * @param separator Separator to join with.
    * @param strings Strings to join.
+   * @return  the joined string
    */
   public static String join(CharSequence separator, Iterable<String> strings) {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
+    boolean first = true;
+    for (String s : strings) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(separator);
+      }
+      sb.append(s);
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Concatenates strings, using a separator.
+   *
+   * @param separator to join with
+   * @param strings to join
+   * @return  the joined string
+   */
+  public static String join(CharSequence separator, String[] strings) {
+    // Ideally we don't have to duplicate the code here if array is iterable.
+    StringBuilder sb = new StringBuilder();
     boolean first = true;
     for (String s : strings) {
       if (first) {

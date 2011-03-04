@@ -401,7 +401,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   public LocalJobRunner(JobConf conf) throws IOException {
     this.fs = FileSystem.getLocal(conf);
     this.conf = conf;
-    myMetrics = new JobTrackerMetricsInst(null, new JobConf(conf));
+    myMetrics = JobTrackerInstrumentation.create(null, new JobConf(conf));
   }
 
   // JobSubmissionProtocol methods

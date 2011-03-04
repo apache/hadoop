@@ -32,7 +32,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.CompleteFileStatus;
-import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeInstrumentation;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
@@ -66,6 +66,7 @@ import java.net.*;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.Iterator;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 /**********************************************************
  * NameNode serves as both directory namespace manager and
@@ -161,13 +162,13 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     format(conf, false);
   }
 
-  static NameNodeMetrics myMetrics;
+  static NameNodeInstrumentation myMetrics;
 
   public FSNamesystem getNamesystem() {
     return namesystem;
   }
 
-  public static NameNodeMetrics getNameNodeMetrics() {
+  public static NameNodeInstrumentation getNameNodeMetrics() {
     return myMetrics;
   }
   
@@ -249,7 +250,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       ServiceAuthorizationManager.refresh(conf, new HDFSPolicyProvider());
     }
     
-    myMetrics = new NameNodeMetrics(conf, this);
+    myMetrics = NameNodeInstrumentation.create(conf);
     this.namesystem = new FSNamesystem(this, conf);
 
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -517,7 +518,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public LocatedBlocks   getBlockLocations(String src, 
                                           long offset, 
                                           long length) throws IOException {
-    myMetrics.numGetBlockLocations.inc();
+    myMetrics.incrNumGetBlockLocations();
     return namesystem.getBlockLocations(getClientMachine(), 
                                         src, offset, length);
   }
@@ -531,7 +532,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                          long offset, 
                                          long length)
       throws IOException {
-    myMetrics.numGetBlockLocations.inc();
+    myMetrics.incrNumGetBlockLocations();
     return namesystem.getBlockLocations(src, offset, length, false);
   }
   
@@ -564,8 +565,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
         new PermissionStatus(UserGroupInformation.getCurrentUser().getShortUserName(),
             null, masked),
         clientName, clientMachine, overwrite, replication, blockSize);
-    myMetrics.numFilesCreated.inc();
-    myMetrics.numCreateFileOps.inc();
+    myMetrics.incrNumFilesCreated();
+    myMetrics.incrNumCreateFileOps();
   }
 
   /** {@inheritDoc} */
@@ -576,7 +577,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
           +src+" for "+clientName+" at "+clientMachine);
     }
     LocatedBlock info = namesystem.appendFile(src, clientName, clientMachine);
-    myMetrics.numFilesAppended.inc();
+    myMetrics.incrNumFilesAppended();
     return info;
   }
 
@@ -607,7 +608,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                          +src+" for "+clientName);
     LocatedBlock locatedBlock = namesystem.getAdditionalBlock(src, clientName);
     if (locatedBlock != null)
-      myMetrics.numAddBlockOps.inc();
+      myMetrics.incrNumAddBlockOps();
     return locatedBlock;
   }
 
@@ -682,7 +683,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     }
     boolean ret = namesystem.renameTo(src, dst);
     if (ret) {
-      myMetrics.numFilesRenamed.inc();
+      myMetrics.incrNumFilesRenamed();
     }
     return ret;
   }
@@ -702,7 +703,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     }
     boolean ret = namesystem.delete(src, recursive);
     if (ret) 
-      myMetrics.numDeleteFileOps.inc();
+      myMetrics.incrNumDeleteFileOps();
     return ret;
   }
 
@@ -740,9 +741,9 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   public DirectoryListing getListing(String src, byte[] startAfter)
   throws IOException {
     DirectoryListing files = namesystem.getListing(src, startAfter);
-    myMetrics.numGetListingOps.inc();
+    myMetrics.incrNumGetListingOps();
     if (files != null) {
-      myMetrics.numFilesInGetListingOps.inc(files.getPartialListing().length);
+      myMetrics.incrNumFilesInGetListingOps(files.getPartialListing().length);
     }
     return files;
   }
@@ -755,7 +756,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    *         or null if file not found
    */
   public HdfsFileStatus getFileInfo(String src)  throws IOException {
-    myMetrics.numFileInfoOps.inc();
+    myMetrics.incrNumFileInfoOps();
     return namesystem.getFileInfo(src);
   }
 
@@ -1161,7 +1162,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
         System.exit(aborted ? 1 : 0);
       default:
     }
-
+    DefaultMetricsSystem.initialize("NameNode");
     NameNode namenode = new NameNode(conf);
     return namenode;
   }

@@ -126,6 +126,16 @@
       rev="${commons-net.version}"
       conf="ftp->default"/>
 
+    <dependency org="commons-configuration"
+      name="commons-configuration"
+      rev="${commons-configuration.version}"
+      conf="common->default"/>
+
+    <dependency org="org.apache.commons"
+      name="commons-math"
+      rev="${commons-math.version}"
+      conf="common->default"/>
+
     <!--Configuration: Jetty -->
 
 <!-- <dependency org="javax.servlet"

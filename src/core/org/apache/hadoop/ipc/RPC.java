@@ -41,7 +41,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 import org.apache.hadoop.net.NetUtils;
 
@@ -528,24 +527,9 @@ public class RPC {
                     " queueTime= " + qTime +
                     " procesingTime= " + processingTime);
         }
-        rpcMetrics.rpcQueueTime.inc(qTime);
-        rpcMetrics.rpcProcessingTime.inc(processingTime);
-
-        MetricsTimeVaryingRate m =
-         (MetricsTimeVaryingRate) rpcDetailedMetrics.registry.get(call.getMethodName());
-      	if (m == null) {
-      	  try {
-      	    m = new MetricsTimeVaryingRate(call.getMethodName(),
-      	                                        rpcDetailedMetrics.registry);
-      	  } catch (IllegalArgumentException iae) {
-      	    // the metrics has been registered; re-fetch the handle
-      	    LOG.info("Error register " + call.getMethodName(), iae);
-      	    m = (MetricsTimeVaryingRate) rpcDetailedMetrics.registry.get(
-      	        call.getMethodName());
-      	  }
-      	}
-        m.inc(processingTime);
-
+        rpcMetrics.addRpcQueueTime(qTime);
+        rpcMetrics.addRpcProcessingTime(processingTime);
+        rpcMetrics.addRpcProcessingTime(call.getMethodName(), processingTime);
         if (verbose) log("Return: "+value);
 
         return new ObjectWritable(method.getReturnType(), value);

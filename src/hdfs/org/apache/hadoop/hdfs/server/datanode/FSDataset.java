@@ -43,9 +43,9 @@ import org.apache.hadoop.fs.DU;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.hdfs.server.datanode.metrics.FSDatasetMBean;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
-import org.apache.hadoop.metrics.util.MBeanUtil;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -1553,7 +1553,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     }
     try {
       bean = new StandardMBean(this,FSDatasetMBean.class);
-      mbeanName = MBeanUtil.registerMBean("DataNode", "FSDatasetState-" + storageName, bean);
+      mbeanName = MBeans.register("DataNode", "FSDatasetState-" + storageName, bean);
     } catch (NotCompliantMBeanException e) {
       e.printStackTrace();
     }
@@ -1563,7 +1563,7 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
 
   public void shutdown() {
     if (mbeanName != null)
-      MBeanUtil.unregisterMBean(mbeanName);
+      MBeans.unregister(mbeanName);
     
     if(volumes != null) {
       for (FSVolume volume : volumes.volumes) {

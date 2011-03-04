@@ -124,13 +124,20 @@ public class TestStringUtils extends TestCase {
 
   public void testJoin() {
     List<String> s = new ArrayList<String>();
+    s.add("");
     s.add("a");
     s.add("b");
     s.add("c");
-    assertEquals("", StringUtils.join(":", s.subList(0, 0)));
-    assertEquals("a", StringUtils.join(":", s.subList(0, 1)));
-    assertEquals("a:b", StringUtils.join(":", s.subList(0, 2)));
-    assertEquals("a:b:c", StringUtils.join(":", s.subList(0, 3)));
+    checkJoin("", s.subList(0, 0));
+    checkJoin(":a", s.subList(0, 2));
+    checkJoin(":a:b", s.subList(0, 3));
+    checkJoin(":a:b:c", s.subList(0, 4));
+  }
+
+  private void checkJoin(String result, List<String> list) {
+    String[] a = new String[list.size()];
+    assertEquals(result, StringUtils.join(":", list));
+    assertEquals(result, StringUtils.join(":", list.toArray(a)));
   }
 
   public void testCamelize() {
