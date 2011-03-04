@@ -405,10 +405,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                       // tracker is lost, and if it is blacklisted, remove 
                       // it from the count of blacklisted trackers in the cluster
                       if (isBlacklisted(trackerName)) {
-                        faultyTrackers.numBlacklistedTrackers -= 1;
+                    	  faultyTrackers.decrBlackListedTrackers(1);
                       }
                       updateTaskTrackerStatus(trackerName, null);
                       statistics.taskTrackerRemoved(trackerName);
+                      getInstrumentation().decTrackers(1);
                       // remove the mapping from the hosts list
                       String hostname = newProfile.getHost();
                       hostnameToTaskTracker.get(hostname).remove(trackerName);
@@ -718,6 +719,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       }        
     }
 
+    private void incrBlackListedTrackers(int count) {
+      numBlacklistedTrackers += count;
+      getInstrumentation().addBlackListedTrackers(count);
+    }
+
+    private void decrBlackListedTrackers(int count) {
+      numBlacklistedTrackers -= count;
+      getInstrumentation().decBlackListedTrackers(count);
+    }
+
     private void blackListTracker(String hostName, String reason, ReasonForBlackListing rfb) {
       FaultInfo fi = getFaultInfo(hostName, true);
       boolean blackListed = fi.isBlacklisted();
@@ -875,7 +886,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           getInstrumentation().addBlackListedReduceSlots(
               reduceSlots);
         }
-        numBlacklistedTrackers += uniqueHostsMap.remove(hostName);
+        incrBlackListedTrackers(uniqueHostsMap.remove(hostName));
       }
     }
     
@@ -895,7 +906,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
         uniqueHostsMap.put(hostName,
                            numTrackersOnHost);
-        numBlacklistedTrackers -= numTrackersOnHost;
+        decrBlackListedTrackers(numTrackersOnHost);
       }
     }
 
@@ -2754,6 +2765,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       hostnameToTaskTracker.put(hostname, trackers);
     }
     statistics.taskTrackerAdded(status.getTrackerName());
+    getInstrumentation().addTrackers(1);
     LOG.info("Adding tracker " + status.getTrackerName() + " to host " 
              + hostname);
     trackers.add(taskTracker);
@@ -3062,6 +3074,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     if (oldStatus != null) {
       totalMaps -= oldStatus.countMapTasks();
       totalReduces -= oldStatus.countReduceTasks();
+      getInstrumentation().decOccupiedMapSlots(oldStatus.countOccupiedMapSlots());
+      getInstrumentation().decOccupiedReduceSlots(oldStatus.countOccupiedReduceSlots());
       if (!faultyTrackers.isBlacklisted(oldStatus.getHost())) {
         int mapSlots = oldStatus.getMaxMapSlots();
         totalMapTaskCapacity -= mapSlots;
@@ -3084,6 +3098,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     if (status != null) {
       totalMaps += status.countMapTasks();
       totalReduces += status.countReduceTasks();
+      getInstrumentation().addOccupiedMapSlots(status.countOccupiedMapSlots());
+      getInstrumentation().addOccupiedReduceSlots(status.countOccupiedReduceSlots());
       if (!faultyTrackers.isBlacklisted(status.getHost())) {
         int mapSlots = status.getMaxMapSlots();
         totalMapTaskCapacity += mapSlots;
@@ -3192,7 +3208,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           // if this is lost tracker that came back now, and if it blacklisted
           // increment the count of blacklisted trackers in the cluster
           if (isBlacklisted(trackerName)) {
-            faultyTrackers.numBlacklistedTrackers += 1;
+            faultyTrackers.incrBlackListedTrackers(1);
           }
           addNewTracker(taskTracker);
         }
@@ -4234,12 +4250,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
 
   // main decommission
-  private synchronized void decommissionNodes(Set<String> hosts) 
+  synchronized void decommissionNodes(Set<String> hosts) 
   throws IOException {  
     LOG.info("Decommissioning " + hosts.size() + " nodes");
     // create a list of tracker hostnames
     synchronized (taskTrackers) {
       synchronized (trackerExpiryQueue) {
+        int trackersDecommissioned = 0;
         for (String host : hosts) {
           LOG.info("Decommissioning host " + host);
           Set<TaskTracker> trackers = hostnameToTaskTracker.remove(host);
@@ -4248,11 +4265,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
               LOG.info("Decommission: Losing tracker " + tracker + 
                        " on host " + host);
               lostTaskTracker(tracker); // lose the tracker
-              updateTaskTrackerStatus(tracker.getStatus().getTrackerName(), null);
+              updateTaskTrackerStatus(
+                tracker.getStatus().getTrackerName(), null);
             }
+            trackersDecommissioned += trackers.size();
           }
           LOG.info("Host " + host + " is ready for decommissioning");
         }
+        getInstrumentation().setDecommissionedTrackers(trackersDecommissioned);
       }
     }
   }

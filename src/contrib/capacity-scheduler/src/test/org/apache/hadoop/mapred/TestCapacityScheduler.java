@@ -166,8 +166,9 @@ public class TestCapacityScheduler extends TestCase {
     private int speculativeMapTaskCounter = 0;
     private int speculativeReduceTaskCounter = 0;
     public FakeJobInProgress(JobID jId, JobConf jobConf,
-        FakeTaskTrackerManager taskTrackerManager, String user) {
-      super(jId, jobConf);
+        FakeTaskTrackerManager taskTrackerManager, String user, 
+        JobTracker jt) {
+      super(jId, jobConf, jt);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
       this.status = new JobStatus(jId, 0f, 0f, JobStatus.PREP);
@@ -310,8 +311,9 @@ public class TestCapacityScheduler extends TestCase {
   static class FakeFailingJobInProgress extends FakeJobInProgress {
 
     public FakeFailingJobInProgress(JobID id, JobConf jobConf,
-        FakeTaskTrackerManager taskTrackerManager, String user) {
-      super(id, jobConf, taskTrackerManager, user);
+        FakeTaskTrackerManager taskTrackerManager, String user, 
+        JobTracker jt) {
+      super(id, jobConf, taskTrackerManager, user, jt);
     }
     
     @Override
@@ -765,7 +767,7 @@ public class TestCapacityScheduler extends TestCase {
     FakeJobInProgress job =
         new FakeJobInProgress(new JobID("test", ++jobCounter),
             (jobConf == null ? new JobConf(conf) : jobConf), taskTrackerManager,
-            jobConf.getUser());
+            jobConf.getUser(), UtilsForTests.getJobTracker());
     job.getStatus().setRunState(state);
     taskTrackerManager.submitJob(job);
     return job;
@@ -2588,7 +2590,8 @@ public class TestCapacityScheduler extends TestCase {
     //Submit a job whose initialization would fail always.
     FakeJobInProgress job =
       new FakeFailingJobInProgress(new JobID("test", ++jobCounter),
-          new JobConf(), taskTrackerManager,"u1");
+          new JobConf(), taskTrackerManager,"u1", 
+          UtilsForTests.getJobTracker());
     job.getStatus().setRunState(JobStatus.PREP);
     taskTrackerManager.submitJob(job);
     //check if job is present in waiting list.

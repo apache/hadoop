@@ -731,6 +731,18 @@ public class UtilsForTests {
     }
     return pid;
   }
-  
+
+  static JobTracker getJobTracker() {
+    JobConf conf = new JobConf();
+    conf.set("mapred.job.tracker", "localhost:0");
+    conf.set("mapred.job.tracker.http.address", "0.0.0.0:0");
+    JobTracker jt;
+    try {
+      jt = new JobTracker(conf);
+      return jt;
+    } catch (Exception e) {
+      throw new RuntimeException("Could not start jt", e);
+    }
+  }
 }
 

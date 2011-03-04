@@ -32,7 +32,8 @@ public class TestResourceEstimation extends TestCase {
     jc.setNumMapTasks(maps);
     jc.setNumReduceTasks(reduces);
     
-    JobInProgress jip = new JobInProgress(jid, jc);
+    JobInProgress jip = new JobInProgress(jid, jc, 
+        UtilsForTests.getJobTracker());
     //unfortunately, we can't set job input size from here.
     ResourceEstimator re = new ResourceEstimator(jip);
     
@@ -65,7 +66,8 @@ public class TestResourceEstimation extends TestCase {
     jc.setNumMapTasks(maps);
     jc.setNumReduceTasks(reduces);
     
-    JobInProgress jip = new JobInProgress(jid, jc) {
+    JobInProgress jip = new JobInProgress(jid, jc, 
+        UtilsForTests.getJobTracker()) {
       long getInputLength() {
         return singleMapInputSize*desiredMaps();
       }

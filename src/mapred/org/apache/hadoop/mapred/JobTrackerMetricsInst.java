@@ -22,8 +22,6 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
 
 class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater {
   private final MetricsRecord metricsRecord;
@@ -45,6 +43,27 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   private int numBlackListedMapSlots = 0;
   private int numBlackListedReduceSlots = 0;
 
+  private int numReservedMapSlots = 0;
+  private int numReservedReduceSlots = 0;
+  private int numOccupiedMapSlots = 0;
+  private int numOccupiedReduceSlots = 0;
+  
+  private int numJobsFailed = 0;
+  private int numJobsKilled = 0;
+  
+  private int numJobsPreparing = 0;
+  private int numJobsRunning = 0;
+  
+  private int numRunningMaps = 0;
+  private int numRunningReduces = 0;
+  
+  private int numMapTasksKilled = 0;
+  private int numReduceTasksKilled = 0;
+
+  private int numTrackers = 0;
+  private int numTrackersBlackListed = 0;
+  private int numTrackersDecommissioned = 0;
+  
   public JobTrackerMetricsInst(JobTracker tracker, JobConf conf) {
     super(tracker, conf);
     String sessionId = conf.getSessionId();
@@ -78,6 +97,28 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
       metricsRecord.incrMetric("jobs_completed", numJobsCompleted);
       metricsRecord.incrMetric("waiting_maps", numWaitingMaps);
       metricsRecord.incrMetric("waiting_reduces", numWaitingReduces);
+      
+      metricsRecord.incrMetric("reserved_map_slots", numReservedMapSlots);
+      metricsRecord.incrMetric("reserved_reduce_slots", numReservedReduceSlots);
+      metricsRecord.incrMetric("occupied_map_slots", numOccupiedMapSlots);
+      metricsRecord.incrMetric("occupied_reduce_slots", numOccupiedReduceSlots);
+      
+      metricsRecord.incrMetric("jobs_failed", numJobsFailed);
+      metricsRecord.incrMetric("jobs_killed", numJobsKilled);
+      
+      metricsRecord.incrMetric("jobs_preparing", numJobsPreparing);
+      metricsRecord.incrMetric("jobs_running", numJobsRunning);
+      
+      metricsRecord.incrMetric("running_maps", numRunningMaps);
+      metricsRecord.incrMetric("running_reduces", numRunningReduces);
+      
+      metricsRecord.incrMetric("maps_killed", numMapTasksKilled);
+      metricsRecord.incrMetric("reduces_killed", numReduceTasksKilled);
+
+      metricsRecord.incrMetric("trackers", numTrackers);
+      metricsRecord.incrMetric("trackers_blacklisted", numTrackersBlackListed);
+      metricsRecord.setMetric("trackers_decommissioned", 
+          numTrackersDecommissioned);
 
       numMapTasksLaunched = 0;
       numMapTasksCompleted = 0;
@@ -91,6 +132,26 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
       numWaitingReduces = 0;
       numBlackListedMapSlots = 0;
       numBlackListedReduceSlots = 0;
+      
+      numReservedMapSlots = 0;
+      numReservedReduceSlots = 0;
+      numOccupiedMapSlots = 0;
+      numOccupiedReduceSlots = 0;
+      
+      numJobsFailed = 0;
+      numJobsKilled = 0;
+      
+      numJobsPreparing = 0;
+      numJobsRunning = 0;
+      
+      numRunningMaps = 0;
+      numRunningReduces = 0;
+      
+      numMapTasksKilled = 0;
+      numReduceTasksKilled = 0;
+
+      numTrackers = 0;
+      numTrackersBlackListed = 0;
     }
     metricsRecord.update();
 
@@ -166,12 +227,12 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   }
 
   @Override
-  public void setMapSlots(int slots) {
+  public synchronized void setMapSlots(int slots) {
     numMapSlots = slots;
   }
 
   @Override
-  public void setReduceSlots(int slots) {
+  public synchronized void setReduceSlots(int slots) {
     numReduceSlots = slots;
   }
 
@@ -194,4 +255,154 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   public synchronized void decBlackListedReduceSlots(int slots){
     numBlackListedReduceSlots -= slots;
   }
+
+  @Override
+  public synchronized void addReservedMapSlots(int slots)
+  { 
+    numReservedMapSlots += slots;
+  }
+
+  @Override
+  public synchronized void decReservedMapSlots(int slots)
+  {
+    numReservedMapSlots -= slots;
+  }
+
+  @Override
+  public synchronized void addReservedReduceSlots(int slots)
+  {
+    numReservedReduceSlots += slots;
+  }
+
+  @Override
+  public synchronized void decReservedReduceSlots(int slots)
+  {
+    numReservedReduceSlots -= slots;
+  }
+
+  @Override
+  public synchronized void addOccupiedMapSlots(int slots)
+  {
+    numOccupiedMapSlots += slots;
+  }
+
+  @Override
+  public synchronized void decOccupiedMapSlots(int slots)
+  {
+    numOccupiedMapSlots -= slots;
+  }
+
+  @Override
+  public synchronized void addOccupiedReduceSlots(int slots)
+  {
+    numOccupiedReduceSlots += slots;
+  }
+
+  @Override
+  public synchronized void decOccupiedReduceSlots(int slots)
+  {
+    numOccupiedReduceSlots -= slots;
+  }
+
+  @Override
+  public synchronized void failedJob(JobConf conf, JobID id) 
+  {
+    numJobsFailed++;
+  }
+
+  @Override
+  public synchronized void killedJob(JobConf conf, JobID id) 
+  {
+    numJobsKilled++;
+  }
+
+  @Override
+  public synchronized void addPrepJob(JobConf conf, JobID id) 
+  {
+    numJobsPreparing++;
+  }
+
+  @Override
+  public synchronized void decPrepJob(JobConf conf, JobID id) 
+  {
+    numJobsPreparing--;
+  }
+
+  @Override
+  public synchronized void addRunningJob(JobConf conf, JobID id) 
+  {
+    numJobsRunning++;
+  }
+
+  @Override
+  public synchronized void decRunningJob(JobConf conf, JobID id) 
+  {
+    numJobsRunning--;
+  }
+
+  @Override
+  public synchronized void addRunningMaps(JobID id, int task)
+  {
+    numRunningMaps += task;
+  }
+
+  @Override
+  public synchronized void decRunningMaps(JobID id, int task) 
+  {
+    numRunningMaps -= task;
+  }
+
+  @Override
+  public synchronized void addRunningReduces(JobID id, int task)
+  {
+    numRunningReduces += task;
+  }
+
+  @Override
+  public synchronized void decRunningReduces(JobID id, int task)
+  {
+    numRunningReduces -= task;
+  }
+
+  @Override
+  public synchronized void killedMap(TaskAttemptID taskAttemptID)
+  {
+    numMapTasksKilled++;
+  }
+
+  @Override
+  public synchronized void killedReduce(TaskAttemptID taskAttemptID)
+  {
+    numReduceTasksKilled++;
+  }
+
+  @Override
+  public synchronized void addTrackers(int trackers)
+  {
+    numTrackers += trackers;
+  }
+
+  @Override
+  public synchronized void decTrackers(int trackers)
+  {
+    numTrackers -= trackers;
+  }
+
+  @Override
+  public synchronized void addBlackListedTrackers(int trackers)
+  {
+    numTrackersBlackListed += trackers;
+  }
+
+  @Override
+  public synchronized void decBlackListedTrackers(int trackers)
+  {
+    numTrackersBlackListed -= trackers;
+  }
+
+  @Override
+  public synchronized void setDecommissionedTrackers(int trackers)
+  {
+    numTrackersDecommissioned = trackers;
+  }  
 }

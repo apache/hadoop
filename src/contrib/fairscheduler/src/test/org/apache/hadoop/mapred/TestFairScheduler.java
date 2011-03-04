@@ -51,8 +51,9 @@ public class TestFairScheduler extends TestCase {
     private FakeTaskTrackerManager taskTrackerManager;
     
     public FakeJobInProgress(JobConf jobConf,
-        FakeTaskTrackerManager taskTrackerManager) throws IOException {
-      super(new JobID("test", ++jobCounter), jobConf);
+        FakeTaskTrackerManager taskTrackerManager, 
+        JobTracker jt) throws IOException {
+      super(new JobID("test", ++jobCounter), jobConf, jt);
       this.taskTrackerManager = taskTrackerManager;
       this.startTime = System.currentTimeMillis();
       this.status = new JobStatus();
@@ -292,7 +293,8 @@ public class TestFairScheduler extends TestCase {
     jobConf.setNumReduceTasks(reduces);
     if (pool != null)
       jobConf.set(POOL_PROPERTY, pool);
-    JobInProgress job = new FakeJobInProgress(jobConf, taskTrackerManager);
+    JobInProgress job = new FakeJobInProgress(jobConf, taskTrackerManager,
+        UtilsForTests.getJobTracker());
     job.getStatus().setRunState(state);
     taskTrackerManager.submitJob(job);
     job.startTime = clock.time;
