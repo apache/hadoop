@@ -655,7 +655,7 @@ public class TestQueueManager extends TestCase {
       } else {
         LOG.info("exception while submitting/killing job: " + ioe.getMessage());
         assertTrue(ioe.getMessage().
-            contains(" cannot perform operation MODIFY_JOB on "));
+            contains(" cannot perform operation KILL_JOB on "));
       }
     } finally {
       tearDownCluster();
@@ -690,7 +690,7 @@ public class TestQueueManager extends TestCase {
         LOG.info("exception while killing job: " + ioe.getMessage());
         assertTrue(ioe.getMessage().
                         contains("cannot perform operation " +
-                                    "ADMINISTER_JOBS on queue default"));
+                                    "KILL_JOB on queue default"));
       }
       //wait for job to complete on its own
       while (!rjob.isComplete()) {
@@ -745,7 +745,7 @@ public class TestQueueManager extends TestCase {
             LOG.info("exception while changing priority of job: " +
                      ioe.getMessage());
             assertTrue(ioe.getMessage().
-                contains(" cannot perform operation MODIFY_JOB on "));
+                contains(" cannot perform operation SET_JOB_PRIORITY on "));
           }
           return null;
         }

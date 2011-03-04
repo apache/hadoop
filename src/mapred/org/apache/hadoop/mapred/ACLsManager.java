@@ -111,7 +111,7 @@ class ACLsManager {
    */
   void checkAccess(JobInProgress job,
       UserGroupInformation callerUGI, QueueOperation qOperation,
-      JobACL jobOperation) throws AccessControlException {
+      JobACL jobOperation, String operationName) throws AccessControlException {
 
     String queue = job.getProfile().getQueueName();
     String jobId = job.getJobID().toString();
@@ -120,7 +120,7 @@ class ACLsManager {
     AccessControlList jobAcl = jobStatus.getJobACLs().get(jobOperation);
 
     checkAccess(jobId, callerUGI, queue, qOperation,
-        jobOperation, jobOwner, jobAcl);
+        jobOperation, jobOwner, jobAcl, operationName);
   }
 
   /**
@@ -133,14 +133,15 @@ class ACLsManager {
    * </ul>
    */
   void checkAccess(JobStatus jobStatus, UserGroupInformation callerUGI,
-      JobACL jobOperation) throws AccessControlException {
+      JobACL jobOperation, String operationName) throws AccessControlException {
 
     String jobId = jobStatus.getJobID().toString();
     String jobOwner = jobStatus.getUsername();
     AccessControlList jobAcl = jobStatus.getJobACLs().get(jobOperation);
 
     // If acls are enabled, check if jobOwner, cluster admin or part of job ACL
-    checkAccess(jobId, callerUGI, jobOperation, jobOwner, jobAcl);
+    checkAccess(jobId, callerUGI, jobOperation, jobOwner, jobAcl,
+        operationName);
   }
 
   /**
@@ -153,10 +154,12 @@ class ACLsManager {
    * </ul>
    */
   void checkAccess(String jobId, UserGroupInformation callerUGI,
-      JobACL jobOperation, String jobOwner, AccessControlList jobAcl)
+      JobACL jobOperation, String jobOwner, AccessControlList jobAcl,
+      String operationName)
       throws AccessControlException {
     // TODO: Queue admins are to be allowed to do the job view operation.
-    checkAccess(jobId, callerUGI, null, null, jobOperation, jobOwner, jobAcl);
+    checkAccess(jobId, callerUGI, null, null, jobOperation, jobOwner, jobAcl,
+        operationName);
   }
 
   /**
@@ -178,7 +181,8 @@ class ACLsManager {
    */
   void checkAccess(String jobId, UserGroupInformation callerUGI,
       String queue, QueueOperation qOperation,
-      JobACL jobOperation, String jobOwner, AccessControlList jobAcl)
+      JobACL jobOperation, String jobOwner, AccessControlList jobAcl,
+      String operationName)
       throws AccessControlException {
     if (!aclsEnabled) {
       return;
@@ -190,9 +194,9 @@ class ACLsManager {
     // any job operation
     if (isMRAdmin(callerUGI)) {
       if (qOperation == QueueOperation.SUBMIT_JOB) {
-        AuditLogger.logSuccess(user, qOperation.name(), queue);
+        AuditLogger.logSuccess(user, operationName, queue);
       } else {
-        AuditLogger.logSuccess(user, jobOperation.name(), jobId);
+        AuditLogger.logSuccess(user, operationName, jobId);
       }
       return;
     }
@@ -201,16 +205,16 @@ class ACLsManager {
       // This is strictly queue operation(not a job operation) like
       // submit-job-to-queue.
       if (!queueManager.hasAccess(queue, qOperation, callerUGI)) {
-        AuditLogger.logFailure(user, qOperation.name(), null, queue,
+        AuditLogger.logFailure(user, operationName, null, queue,
             Constants.UNAUTHORIZED_USER + ", job : " + jobId);
 
         throw new AccessControlException("User "
             + callerUGI.getShortUserName() + " cannot perform "
-            + "operation " + qOperation + " on queue " + queue
+            + "operation " + operationName + " on queue " + queue
             + ".\n Please run \"hadoop queue -showacls\" "
             + "command to find the queues you have access to .");
       } else {
-        AuditLogger.logSuccess(user, qOperation.name(), queue);
+        AuditLogger.logSuccess(user, operationName, queue);
         return;
       }
     }
@@ -219,41 +223,42 @@ class ACLsManager {
       // check if jobOwner or part of acl-view-job
       if (jobACLsManager.checkAccess(callerUGI, jobOperation,
           jobOwner, jobAcl)) {
-        AuditLogger.logSuccess(user, jobOperation.name(), jobId.toString());
+        AuditLogger.logSuccess(user, operationName, jobId.toString());
         return;
       }
       else {
-        AuditLogger.logFailure(user, jobOperation.name(), null,
+        AuditLogger.logFailure(user, operationName, null,
             jobId.toString(), Constants.UNAUTHORIZED_USER);
         throw new AccessControlException("User "
             + callerUGI.getShortUserName() + " cannot perform operation "
-            + jobOperation + " on " + jobId);
+            + operationName + " on " + jobId);
       }
     }
 
     if (jobOperation == JobACL.MODIFY_JOB) {
       // check if queueAdmin, jobOwner or part of acl-modify-job
       if (queueManager.hasAccess(queue, qOperation, callerUGI)) {
-        AuditLogger.logSuccess(user, qOperation.name(), queue);
+        AuditLogger.logSuccess(user, operationName, queue);
         return;
       } else if (jobACLsManager.checkAccess(callerUGI, jobOperation,
                  jobOwner, jobAcl)) {
-        AuditLogger.logSuccess(user, jobOperation.name(), jobId);
+        AuditLogger.logSuccess(user, operationName, jobId);
         return;
       }
-      AuditLogger.logFailure(user, jobOperation.name(), null,
+      AuditLogger.logFailure(user, operationName, null,
           jobId.toString(), Constants.UNAUTHORIZED_USER + ", queue : "
           + queue);
 
       throw new AccessControlException("User "
           + callerUGI.getShortUserName() + " cannot perform operation "
-          + jobOperation + " on " + jobId + " that is in the queue "
+          + operationName + " on " + jobId + " that is in the queue "
           + queue);
     }
 
     throw new AccessControlException("Unsupported queue operation "
         + qOperation + " on queue " + queue + ", job operation "
-        + jobOperation + " on job " + jobId);
+        + jobOperation + " on job " + jobId + " and the actual-operation "
+        + operationName);
   }
 
 }

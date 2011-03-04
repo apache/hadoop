@@ -302,7 +302,8 @@ class CompletedJobStatusStore implements Runnable {
           JobStatus jobStatus = readJobStatus(dataIn);
           // authorize the user for job view access
           aclsManager.checkAccess(jobStatus,
-              UserGroupInformation.getCurrentUser(), JobACL.VIEW_JOB);
+              UserGroupInformation.getCurrentUser(), JobACL.VIEW_JOB,
+              JobACL.VIEW_JOB.name());
           readJobProfile(dataIn);
           counters = readCounters(dataIn);
           dataIn.close();

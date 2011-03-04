@@ -133,7 +133,7 @@ public class TaskLogServlet extends HttpServlet {
         UserGroupInformation.createRemoteUser(user);
 
     tracker.getACLsManager().checkAccess(jobId, callerUGI, JobACL.VIEW_JOB,
-        jobOwner, jobViewACL);
+        jobOwner, jobViewACL, JobACL.VIEW_JOB.name());
   }
 
   /**
