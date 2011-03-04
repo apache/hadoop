@@ -1,12 +1,5 @@
 Hadoop Change Log
 
-Release 0.20.203
-
-  BUG FIXES
-
-    BZ4101537 .  When a queue is built without any access rights we explain the
-    problem.  (dking, rvw ramach)  [attachment of 2010-11-24]
-
 Release 0.20.3 - Unreleased
 
   IMPROVEMENTS
