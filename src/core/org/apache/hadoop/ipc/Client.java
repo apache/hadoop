@@ -343,6 +343,35 @@ public class Client {
       }
     }
     
+    private synchronized void setupSaslConnection(final InputStream in2, 
+        final OutputStream out2) 
+    throws javax.security.sasl.SaslException,IOException,InterruptedException {
+      try {
+        saslRpcClient = new SaslRpcClient(authMethod, token,
+            serverPrincipal);
+        saslRpcClient.saslConnect(in2, out2);
+      } catch (javax.security.sasl.SaslException je) {
+        if (authMethod == AuthMethod.KERBEROS && 
+            UserGroupInformation.isLoginKeytabBased()) {
+          //try re-login
+          UserGroupInformation.getCurrentUser().reloginFromKeytab();
+          //try setting up the connection again
+          try {
+            saslRpcClient = new SaslRpcClient(authMethod, token,
+                serverPrincipal);
+            saslRpcClient.saslConnect(in2, out2);
+          } catch (javax.security.sasl.SaslException jee) {
+            UserGroupInformation.
+            setLastUnsuccessfulAuthenticationAttemptTime
+            (System.currentTimeMillis());
+            LOG.warn("Couldn't setup connection for " + 
+                UserGroupInformation.getCurrentUser().getUserName() +
+                " to " + serverPrincipal + " even after relogin.");
+            throw jee;
+          }
+        } else throw je;
+      }
+    }
     /** Connect to the server and set up the I/O streams. It then sends
      * a header to the server and starts
      * the connection thread that waits for responses.
@@ -389,10 +418,8 @@ public class Client {
           }
           ticket.doAs(new PrivilegedExceptionAction<Object>() {
             @Override
-            public Object run() throws IOException {
-              saslRpcClient = new SaslRpcClient(authMethod, token,
-                  serverPrincipal);
-              saslRpcClient.saslConnect(in2, out2);
+            public Object run() throws IOException, InterruptedException {
+              setupSaslConnection(in2, out2);
               return null;
             }
           });

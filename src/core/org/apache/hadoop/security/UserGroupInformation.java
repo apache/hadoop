@@ -126,6 +126,10 @@ public class UserGroupInformation {
   private static boolean useKerberos;
   /** Server-side groups fetching service */
   private static Groups groups;
+  /** The last authentication time */
+  private static long lastUnsuccessfulAuthenticationAttemptTime;
+  
+  public static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
   
   /**Environment variable pointing to the token cache file*/
   public static final String HADOOP_TOKEN_FILE_LOCATION = 
@@ -197,6 +201,8 @@ public class UserGroupInformation {
   private static String keytabFile = null;
 
   private final Subject subject;
+  
+  private static LoginContext login;
   
   private static final String OS_LOGIN_MODULE_NAME;
   private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
@@ -274,6 +280,7 @@ public class UserGroupInformation {
     static {
       USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
       USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
+      USER_KERBEROS_OPTIONS.put("renewTGT", "true");
       String ticketCache = System.getenv("KRB5CCNAME");
       if (ticketCache != null) {
         USER_KERBEROS_OPTIONS.put("ticketCache", ticketCache);
@@ -289,8 +296,6 @@ public class UserGroupInformation {
       KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
       KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
       KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("useTicketCache", "true");
-      KEYTAB_KERBEROS_OPTIONS.put("renewTGT", "true");
     }
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
       new AppConfigurationEntry(Krb5LoginModule.class.getName(),
@@ -351,7 +356,6 @@ public class UserGroupInformation {
   static UserGroupInformation getLoginUser() throws IOException {
     if (loginUser == null) {
       try {
-        LoginContext login;
         if (isSecurityEnabled()) {
           login = new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME);
         } else {
@@ -387,7 +391,7 @@ public class UserGroupInformation {
     keytabFile = path;
     keytabPrincipal = user;
     try {
-      LoginContext login = 
+      login = 
         new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME);
       login.login();
       loginUser = new UserGroupInformation(login.getSubject());
@@ -396,7 +400,57 @@ public class UserGroupInformation {
                             path, le);
     }
   }
+  
+  /**
+   * Re-Login a user in from a keytab file. Loads a user identity from a keytab
+   * file and login them in. They become the currently logged-in user. This
+   * method assumes that {@link #loginUserFromKeytab(String, String)} had 
+   * happened already.
+   * The Subject field of this UserGroupInformation object is updated to have
+   * the new credentials.
+   * @throws IOException on a failure
+   */
+  public synchronized void reloginFromKeytab()
+  throws IOException {
+    if (!isSecurityEnabled())
+      return;
+    if (login == null || keytabFile == null) {
+      throw new IOException("loginUserFromKeyTab must be done first");
+    }
+    if (System.currentTimeMillis() -lastUnsuccessfulAuthenticationAttemptTime <
+          MIN_TIME_BEFORE_RELOGIN) {
+      LOG.warn("Not attempting to re-login since the last re-login was " +
+          "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
+          " before.");
+      return;
+    }
+    try {
+      LOG.info("Initiating logout for " + getUserName());
+      //clear up the kerberos state. But the tokens are not cleared! As per 
+      //the Java kerberos login module code, only the kerberos credentials
+      //are cleared
+      login.logout();
+      //login and also update the subject field of this instance to 
+      //have the new credentials (pass it to the LoginContext constructor)
+      login = 
+        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, 
+            getSubject());
+      LOG.info("Initiating re-login for " + keytabPrincipal);
+      login.login();
+    } catch (LoginException le) {
+      throw new IOException("Login failure for " + keytabPrincipal + 
+          " from keytab " + keytabFile, le);
+    } 
+  }
 
+  public synchronized static void 
+    setLastUnsuccessfulAuthenticationAttemptTime(long time) {
+    lastUnsuccessfulAuthenticationAttemptTime = time;
+  }
+  
+  public synchronized static boolean isLoginKeytabBased() {
+    return keytabFile != null;
+  }
   /**
    * Create a user from a login name. It is intended to be used for remote
    * users in RPC, since it won't have any credentials.
