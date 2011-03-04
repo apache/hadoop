@@ -583,9 +583,7 @@ public class TaskTracker
    */
   synchronized void initialize() throws IOException, InterruptedException {
     this.fConf = new JobConf(originalConf);
-    UserGroupInformation.setConfiguration(fConf);
-    SecurityUtil.login(fConf, TT_KEYTAB_FILE, TT_USER_NAME);
-
+    
     LOG.info("Starting tasktracker with owner as "
         + getMROwner().getShortUserName());
 
@@ -684,7 +682,8 @@ public class TaskTracker
         this.fConf, taskController);
 
     this.jobClient = (InterTrackerProtocol) 
-    getMROwner().doAs(new PrivilegedExceptionAction<Object>() {
+    UserGroupInformation.getLoginUser().doAs(
+        new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         return RPC.waitForProxy(InterTrackerProtocol.class,
             InterTrackerProtocol.versionID,
@@ -1247,6 +1246,9 @@ public class TaskTracker
     checkJettyPort(httpPort);
     // create user log manager
     setUserLogManager(new UserLogManager(conf));
+
+    UserGroupInformation.setConfiguration(originalConf);
+    SecurityUtil.login(originalConf, TT_KEYTAB_FILE, TT_USER_NAME);
 
     initialize();
   }
