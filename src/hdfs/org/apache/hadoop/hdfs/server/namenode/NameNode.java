@@ -309,9 +309,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     }
  }
 
-  private final static String KEYTAB_FILE_KEY = "dfs.namenode.keytab.file";
-  private final static String USER_NAME_KEY = "dfs.namenode.user.name.key";
-  
   /**
    * Start NameNode.
    * <p>
@@ -336,7 +333,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
    */
   public NameNode(Configuration conf) throws IOException {
     UserGroupInformation.setConfiguration(conf);
-    DFSUtil.login(conf, KEYTAB_FILE_KEY, USER_NAME_KEY);
+    DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, 
+                        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);
     
     try {
       initialize(conf);

@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -213,9 +214,6 @@ public class DataNode extends Configured
   
   private static final Random R = new Random();
   
-  private final static String KEYTAB_FILE_KEY = "dfs.datanode.keytab.file";
-  private final static String USER_NAME_KEY = "dfs.datanode.user.name.key";
-  
   public static final String DATA_DIR_KEY = "dfs.data.dir";
   public final static String DATA_DIR_PERMISSION_KEY = 
     "dfs.datanode.data.dir.perm";
@@ -240,7 +238,8 @@ public class DataNode extends Configured
            final AbstractList<File> dataDirs) throws IOException {
     super(conf);
     UserGroupInformation.setConfiguration(conf);
-    DFSUtil.login(conf, KEYTAB_FILE_KEY, USER_NAME_KEY);
+    DFSUtil.login(conf, DFSConfigKeys.DFS_DATANODE_KEYTAB_FILE_KEY, 
+        DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY);
 
     datanodeObject = this;
 
