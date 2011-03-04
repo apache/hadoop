@@ -272,10 +272,11 @@ public class TestDFSIO extends Configured implements Tool {
       totalSize *= MEGA;
       // open file
       DataInputStream in = fs.open(new Path(DATA_DIR, name));
+      long actualSize = 0;
       try {
-        long actualSize = 0;
-        for(int curSize = bufferSize; curSize == bufferSize;) {
-          curSize = in.read(buffer, 0, bufferSize);
+        while (actualSize < totalSize) {
+          int curSize = in.read(buffer, 0, bufferSize);
+          if (curSize < 0) break;
           actualSize += curSize;
           reporter.setStatus("reading " + name + "@" + 
                              actualSize + "/" + totalSize 
@@ -284,7 +285,7 @@ public class TestDFSIO extends Configured implements Tool {
       } finally {
         in.close();
       }
-      return Long.valueOf(totalSize);
+      return Long.valueOf(actualSize);
     }
   }
 
