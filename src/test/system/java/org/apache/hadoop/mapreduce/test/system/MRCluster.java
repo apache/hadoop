@@ -37,6 +37,7 @@ import org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster.HadoopDae
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.TaskID;
 import java.util.Collection;
+import org.apache.hadoop.mapred.UtilsForTests;
 
 /**
  * Concrete AbstractDaemonCluster representing a Map-Reduce cluster.
@@ -203,4 +204,34 @@ public class MRCluster extends AbstractDaemonCluster {
       super(mrDaemonInfos);
     }
   }
+
+  /**
+   * Get a TTClient Instance from a running task <br/>
+   * @param Task Information of the running task
+   * @return TTClient instance
+   * @throws IOException
+   */
+  public TTClient getTTClientInstance(TaskInfo taskInfo)
+      throws IOException {
+    JTProtocol remoteJTClient = getJTClient().getProxy();
+    String [] taskTrackers = taskInfo.getTaskTrackers();
+    int counter = 0;
+    TTClient ttClient = null;
+    while (counter < 60) {
+      if (taskTrackers.length != 0) {
+        break;
+      }
+      UtilsForTests.waitFor(100);
+      taskInfo = remoteJTClient.getTaskInfo(taskInfo.getTaskID());
+      taskTrackers = taskInfo.getTaskTrackers();
+      counter ++;
+    }
+    if ( taskTrackers.length != 0 ) {
+      String hostName = taskTrackers[0].split("_")[1];
+      hostName = hostName.split(":")[0];
+      ttClient = getTTClient(hostName);
+    }
+    return ttClient;
+  }
+
 }

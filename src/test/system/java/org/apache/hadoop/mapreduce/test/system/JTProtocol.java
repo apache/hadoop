@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.test.system.DaemonProtocol;
+import org.apache.hadoop.mapred.TaskTrackerStatus;
+import org.apache.hadoop.mapred.StatisticsCollectionHandler;
 
 /**
  * Client side API's exposed from JobTracker.
@@ -144,4 +146,44 @@ public interface JTProtocol extends DaemonProtocol {
    * @throws IOException if any I/O error occurs.
    */
    public String getJobSummaryInfo(JobID jobId) throws IOException;
+
+
+   /**
+    * This gets the value of one task tracker window in the tasktracker page.
+    *
+    * @param TaskTrackerStatus,
+    * timePeriod and totalTasksOrSucceededTasks, which are requried to
+    * identify the window
+    * @return value of one task in a single Job tracker window
+    */
+   public int getTaskTrackerLevelStatistics(TaskTrackerStatus ttStatus,
+       String timePeriod, String totalTasksOrSucceededTasks)
+       throws IOException;
+
+   /**
+    * This gets the value of all task trackers windows in the tasktracker page.
+    *
+    * @param none,
+    * return a object which returns all the tasktracker info
+    */
+   public StatisticsCollectionHandler getInfoFromAllClientsForAllTaskType()
+     throws Exception;
+
+   /**
+    * Get Information for Time Period and TaskType box
+    * from all tasktrackers
+    * @param
+    * timePeriod and totalTasksOrSucceededTasks, which are requried to
+    * identify the window
+    * @return The total number of tasks info for a particular column in
+    * tasktracker page.
+    */
+   public int getInfoFromAllClients(String timePeriod,
+       String totalTasksOrSucceededTasks) throws IOException;
+
+   /**
+    * This gets the value of all task trackers windows in the tasktracker page.
+    */
+   public int getTaskTrackerHeartbeatInterval() throws Exception;
+
 }

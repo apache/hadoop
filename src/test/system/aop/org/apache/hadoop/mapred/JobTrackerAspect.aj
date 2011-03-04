@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,6 +32,9 @@ import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapred.TaskTrackerStatus;
+import org.apache.hadoop.mapred.StatisticsCollector;
+import org.apache.hadoop.mapred.StatisticsCollectionHandler;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 import org.apache.hadoop.mapreduce.test.system.JTProtocol;
 import org.apache.hadoop.mapreduce.test.system.JobInfo;
@@ -339,5 +343,178 @@ public privileged aspect JobTrackerAspect {
     jobSummary.append("clusterReduceCapacity=");
     jobSummary.append(tracker.getClusterMetrics().getReduceSlotCapacity());
     return jobSummary.toString();
+  }
+
+  /**
+   * This gets the value of one task tracker window in the tasktracker page. 
+   *
+   * @param TaskTrackerStatus, 
+   * timePeriod and totalTasksOrSucceededTasks, which are requried to 
+   * identify the window
+   * @return The number of tasks info in a particular window in 
+   * tasktracker page. 
+   */
+  public int JobTracker.getTaskTrackerLevelStatistics( 
+      TaskTrackerStatus ttStatus, String timePeriod,
+      String totalTasksOrSucceededTasks) throws IOException {
+
+    LOG.info("ttStatus host :" + ttStatus.getHost());
+    if (timePeriod.matches("since_start")) {
+      StatisticsCollector.TimeWindow window = getStatistics().
+          collector.DEFAULT_COLLECT_WINDOWS[0];
+      return(getNumberOfTasks(window, ttStatus , 
+          totalTasksOrSucceededTasks));
+    } else if (timePeriod.matches("last_day")) {
+      StatisticsCollector.TimeWindow window = getStatistics().
+          collector.DEFAULT_COLLECT_WINDOWS[1];
+      return(getNumberOfTasks(window, ttStatus, 
+          totalTasksOrSucceededTasks));
+    } else if (timePeriod.matches("last_hour")) {
+      StatisticsCollector.TimeWindow window = getStatistics().
+          collector.DEFAULT_COLLECT_WINDOWS[2];
+      return(getNumberOfTasks(window, ttStatus , 
+          totalTasksOrSucceededTasks));
+    }
+    return -1;
+  }
+
+  /**
+   * Get Information for Time Period and TaskType box
+   * from all tasktrackers
+   *
+   * @param 
+   * timePeriod and totalTasksOrSucceededTasks, which are requried to
+   * identify the window
+   * @return The total number of tasks info for a particular column in
+   * tasktracker page.
+   */
+  public int JobTracker.getInfoFromAllClients(String timePeriod,
+      String totalTasksOrSucceededTasks) throws IOException {
+   
+    int totalTasksCount = 0;
+    int totalTasksRanForJob = 0;
+    for (TaskTracker tt : taskTrackers.values()) {
+      TaskTrackerStatus ttStatus = tt.getStatus();
+      String tasktrackerName = ttStatus.getHost();
+      List<Integer> taskTrackerValues = new LinkedList<Integer>();
+      JobTrackerStatistics.TaskTrackerStat ttStat = getStatistics().
+             getTaskTrackerStat(ttStatus.getTrackerName());
+      int totalTasks = getTaskTrackerLevelStatistics(
+          ttStatus, timePeriod, totalTasksOrSucceededTasks);
+      totalTasksCount += totalTasks;
+    }
+    return totalTasksCount;
+  }
+
+  private int JobTracker.getNumberOfTasks(StatisticsCollector.TimeWindow 
+    window, TaskTrackerStatus ttStatus, String totalTasksOrSucceededTasks ) { 
+    JobTrackerStatistics.TaskTrackerStat ttStat = getStatistics().
+             getTaskTrackerStat(ttStatus.getTrackerName());
+    if (totalTasksOrSucceededTasks.matches("total_tasks")) {
+      return ttStat.totalTasksStat.getValues().
+          get(window).getValue();
+    } else if (totalTasksOrSucceededTasks.matches("succeeded_tasks")) {
+      return ttStat.succeededTasksStat.getValues().
+          get(window).getValue();
+    }
+    return -1;
+  }
+
+  /**
+   * This gets the value of all task trackers windows in the tasktracker page.
+   *
+   * @param none,
+   * @return StatisticsCollectionHandler class which holds the number
+   * of all jobs ran from all tasktrackers, in the sequence given below
+   * "since_start - total_tasks"
+   * "since_start - succeeded_tasks"
+   * "last_hour - total_tasks"
+   * "last_hour - succeeded_tasks"
+   * "last_day - total_tasks"
+   * "last_day - succeeded_tasks"
+   */
+  public StatisticsCollectionHandler JobTracker.
+    getInfoFromAllClientsForAllTaskType() throws Exception { 
+
+    //The outer list will have a list of each tasktracker list.
+    //The inner list will have a list of all number of tasks in 
+    //one tasktracker.
+    List<List<Integer>> ttInfoList = new LinkedList<List<Integer>>();
+
+    // Go through each tasktracker and get all the number of tasks
+    // six window's values of that tasktracker.Each window points to 
+    // specific value for that tasktracker.  
+    //"since_start - total_tasks"
+    //"since_start - succeeded_tasks"
+    //"last_hour - total_tasks"
+    //"last_hour - succeeded_tasks"
+    //"last_day - total_tasks"
+    //"last_day - succeeded_tasks"
+
+    for (TaskTracker tt : taskTrackers.values()) {
+      TaskTrackerStatus ttStatus = tt.getStatus();
+      String tasktrackerName = ttStatus.getHost();
+      List<Integer> taskTrackerValues = new LinkedList<Integer>(); 
+      JobTrackerStatistics.TaskTrackerStat ttStat = getStatistics().
+             getTaskTrackerStat(ttStatus.getTrackerName());
+
+      int value;
+      int totalCount = 0;
+      for (int i = 0; i < 3; i++) { 
+        StatisticsCollector.TimeWindow window = getStatistics().
+          collector.DEFAULT_COLLECT_WINDOWS[i];
+        value=0;
+        value = ttStat.totalTasksStat.getValues().
+          get(window).getValue();
+        taskTrackerValues.add(value);
+        value=0;
+        value  = ttStat.succeededTasksStat.getValues().
+          get(window).getValue(); 
+        taskTrackerValues.add(value);
+      }
+      ttInfoList.add(taskTrackerValues);
+    }
+
+    //The info is collected in the order described above  by going 
+    //through each tasktracker list 
+    int totalInfoValues = 0; 
+    StatisticsCollectionHandler statisticsCollectionHandler = 
+      new StatisticsCollectionHandler();
+    for (int i = 0; i < 6; i++) {
+      totalInfoValues = 0;
+      for (int j = 0; j < ttInfoList.size(); j++) { 
+         List<Integer> list = ttInfoList.get(j);
+         totalInfoValues += list.get(i); 
+      }
+      switch (i) {
+        case 0: statisticsCollectionHandler.
+          setSinceStartTotalTasks(totalInfoValues);
+          break;
+        case 1: statisticsCollectionHandler.
+          setSinceStartSucceededTasks(totalInfoValues);
+          break;
+        case 2: statisticsCollectionHandler.
+          setLastHourTotalTasks(totalInfoValues);
+          break;
+        case 3: statisticsCollectionHandler.
+          setLastHourSucceededTasks(totalInfoValues);
+          break;
+        case 4: statisticsCollectionHandler.
+          setLastDayTotalTasks(totalInfoValues);
+          break;
+        case 5: statisticsCollectionHandler.
+          setLastDaySucceededTasks(totalInfoValues);
+          break;
+      }
+    } 
+      return statisticsCollectionHandler;
+  }
+
+  /*
+   * Get the Tasktrcker Heart beat interval 
+   */
+  public int JobTracker.getTaskTrackerHeartbeatInterval()
+      throws Exception {
+    return (getNextHeartbeatInterval());
   }
 }
