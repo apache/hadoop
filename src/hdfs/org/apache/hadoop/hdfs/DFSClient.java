@@ -2687,12 +2687,11 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
         // If the block recovery generated a new generation stamp, use that
         // from now on.  Also, setup new pipeline
-        //
-        if (newBlock != null) {
-          block = newBlock.getBlock();
-          accessToken = newBlock.getAccessToken();
-          nodes = newBlock.getLocations();
-        }
+        // newBlock should never be null and it should contain a newly
+        // generated access token.
+        block = newBlock.getBlock();
+        accessToken = newBlock.getAccessToken();
+        nodes = newBlock.getLocations();
 
         this.hasError = false;
         lastException = null;
@@ -2787,6 +2786,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       //
       if (lastBlock != null) {
         block = lastBlock.getBlock();
+        accessToken = lastBlock.getAccessToken();
         long usedInLastBlock = stat.getLen() % blockSize;
         int freeInLastBlock = (int)(blockSize - usedInLastBlock);
 
@@ -2911,6 +2911,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     //
     private boolean createBlockOutputStream(DatanodeInfo[] nodes, String client,
                     boolean recoveryFlag) {
+      short pipelineStatus = (short)DataTransferProtocol.OP_STATUS_SUCCESS;
       String firstBadLink = "";
       if (LOG.isDebugEnabled()) {
         for (int i = 0; i < nodes.length; i++) {
@@ -2958,9 +2959,17 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         out.flush();
 
         // receive ack for connect
+        pipelineStatus = blockReplyStream.readShort();
         firstBadLink = Text.readString(blockReplyStream);
-        if (firstBadLink.length() != 0) {
-          throw new IOException("Bad connect ack with firstBadLink " + firstBadLink);
+        if (pipelineStatus != DataTransferProtocol.OP_STATUS_SUCCESS) {
+          if (pipelineStatus == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN) {
+            throw new InvalidAccessTokenException(
+                "Got access token error for connect ack with firstBadLink as "
+                    + firstBadLink);
+          } else {
+            throw new IOException("Bad connect ack with firstBadLink as "
+                + firstBadLink);
+          }
         }
 
         blockStream = out;

@@ -31,11 +31,12 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 15:
-   *    Added a new status OP_STATUS_ERROR_ACCESS_TOKEN
-   *    Access token is now required on all DN operations
+   * Version 16:
+   *    Datanode now needs to send back a status code together 
+   *    with firstBadLink during pipeline setup for dfs write
+   *    (only for DFSClients, not for other datanodes).
    */
-  public static final int DATA_TRANSFER_VERSION = 15;
+  public static final int DATA_TRANSFER_VERSION = 16;
 
   // Processed at datanode stream-handler
   public static final byte OP_WRITE_BLOCK = (byte) 80;
