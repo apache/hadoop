@@ -401,14 +401,23 @@ public class Client {
       }
     }
     /**
-     * If multiple clients with the same principal try to connect 
-     * to the same server at the same time, the server assumes a 
-     * replay attack is in progress. This is a feature of kerberos.
+     * Three failures are handled here -
+     * 1) SocketTimeout failures. We just retry after sleeping for sometime
+     * 2) Kerberos replay attack failure. If multiple clients with the same 
+     * principal try to connect to the same server at the same time, the server
+     * assumes a replay attack is in progress. This is a feature of kerberos.
      * In order to work around this, what is done is that the client
      * backs off randomly and tries to initiate the connection
      * again.
-     * The other problem is to do with ticket expiry. To handle that,
+     * 3) The third problem is to do with ticket expiry. To handle that,
      * a relogin is attempted.
+     * Failure scenarios: 
+     * (1) Client authenticates over kerberos and the
+     * connection fails due to kerberos replay attack, or his ticket has
+     * expired or does not exist. Also connection can fail due to timeout.
+     * (2) Client authenticates over DIGEST and the connection fails due 
+     * to timeout.
+     * For MapReduce tasks, assuming the token is valid, only (2) can happen.
      */
     private synchronized void handleSaslConnectionFailure(
         final int currRetries,
@@ -417,8 +426,30 @@ public class Client {
     throws IOException, InterruptedException{
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
         public Object run() throws IOException, InterruptedException {
-          final short MAX_BACKOFF = 5000;
+          final short maxBackoff = 5000;
           closeConnection();
+          disposeSasl();
+          //TODO: currRetries is overloaded here.For both kerberos and timeout 
+          //failures, currRetries is used to maintain the number of failures 
+          //seen so far. Should fix this to distinguish between the two.
+          //TODO: Refactor the method to remove duplicated code (e.g.,the logic
+          //inside "currRetries < maxRetries" could be factored out to apply
+          //to both SocketTimeoutException and Kerberos exception...
+          if (ex instanceof SocketTimeoutException) {
+            if (currRetries < maxRetries) {
+              LOG.warn("Encountered " + ex + " while trying to establish" +
+              		" SASL connection to the server. Will retry SASL connection"+
+              		" to server with principal " +
+                  serverPrincipal);
+              //we are sleeping with the Connection lock held but since this
+              //connection instance is being used for connecting to the server
+              //in question, it is okay
+              Thread.sleep((rand.nextInt(maxBackoff) + 1));
+              return null;
+            } else {
+              throw new IOException(ex);
+            }
+          }
           if (shouldAuthenticateOverKrb()) {
             if (currRetries < maxRetries) {
               LOG.debug("Exception encountered while connecting to " +
@@ -429,12 +460,11 @@ public class Client {
               } else {
                 UserGroupInformation.getLoginUser().reloginFromTicketCache();
               }
-              disposeSasl();
               //have granularity of milliseconds
               //we are sleeping with the Connection lock held but since this
               //connection instance is being used for connecting to the server
               //in question, it is okay
-              Thread.sleep((rand.nextInt(MAX_BACKOFF) + 1));
+              Thread.sleep((rand.nextInt(maxBackoff) + 1));
               return null;
             } else {
               String msg = "Couldn't setup connection for " + 
@@ -467,7 +497,7 @@ public class Client {
           LOG.debug("Connecting to "+server);
         }
         short numRetries = 0;
-        final short MAX_RETRIES = 5;
+        final short maxRetries = 15;
         Random rand = null;
         while (true) {
           setupConnection();
@@ -496,7 +526,7 @@ public class Client {
               if (rand == null) {
                 rand = new Random();
               }
-              handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, rand, 
+              handleSaslConnectionFailure(numRetries++, maxRetries, ex, rand,
                    ticket);
               continue;
             }
