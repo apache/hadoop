@@ -50,6 +50,10 @@ class TaskMemoryManagerThread extends Thread {
   private Map<TaskAttemptID, ProcessTreeInfo> tasksToBeAdded;
   private List<TaskAttemptID> tasksToBeRemoved;
 
+  private static final String MEMORY_USAGE_STRING =
+    "Memory usage of ProcessTree %s for task-id %s : %d bytes, " +
+      "limit : %d bytes";
+  
   public TaskMemoryManagerThread(TaskTracker taskTracker) {
     
     this(taskTracker.getTotalMemoryAllottedForTasksOnTT() * 1024 * 1024L,
@@ -210,8 +214,8 @@ class TaskMemoryManagerThread extends Thread {
           // are processes more than 1 iteration old.
           long curMemUsageOfAgedProcesses = pTree.getCumulativeVmem(1);
           long limit = ptInfo.getMemLimit();
-          LOG.info("Memory usage of ProcessTree " + pId + " :"
-              + currentMemUsage + "bytes. Limit : " + limit + "bytes");
+          LOG.info(String.format(MEMORY_USAGE_STRING, 
+                                pId, tid.toString(), currentMemUsage, limit));
 
           if (isProcessTreeOverLimit(tid.toString(), currentMemUsage, 
                                       curMemUsageOfAgedProcesses, limit)) {
