@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 /**
@@ -81,7 +82,7 @@ public class TestFileStatus extends TestCase {
                  fs.getFileStatus(path).isDir() == true);
       
       // make sure getFileInfo returns null for files which do not exist
-      FileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
+      HdfsFileStatus fileInfo = dfsClient.getFileInfo("/noSuchFile");
       assertTrue(fileInfo == null);
 
       // create a file in home directory
@@ -91,12 +92,29 @@ public class TestFileStatus extends TestCase {
       System.out.println("Created file filestatus.dat with one "
                          + " replicas.");
       checkFile(fs, file1, 1);
-      assertTrue(file1 + " should be a file", 
-                  fs.getFileStatus(file1).isDir() == false);
-      assertTrue(fs.getFileStatus(file1).getBlockSize() == blockSize);
-      assertTrue(fs.getFileStatus(file1).getReplication() == 1);
-      assertTrue(fs.getFileStatus(file1).getLen() == fileSize);
       System.out.println("Path : \"" + file1 + "\"");
+
+      // test getFileStatus on a file
+      FileStatus status = fs.getFileStatus(file1);
+      assertTrue(file1 + " should be a file", 
+          status.isDir() == false);
+      assertTrue(status.getBlockSize() == blockSize);
+      assertTrue(status.getReplication() == 1);
+      assertTrue(status.getLen() == fileSize);
+      assertEquals(fs.makeQualified(file1), 
+          status.getPath().toString());
+
+      // test listStatus on a file
+      FileStatus[] stats = fs.listStatus(file1);
+      assertEquals(1, stats.length);
+      status = stats[0];
+      assertTrue(file1 + " should be a file", 
+          status.isDir() == false);
+      assertTrue(status.getBlockSize() == blockSize);
+      assertTrue(status.getReplication() == 1);
+      assertTrue(status.getLen() == fileSize);
+      assertEquals(fs.makeQualified(file1).toString(), 
+          status.getPath().toString());
 
       // create an empty directory
       //
@@ -104,8 +122,18 @@ public class TestFileStatus extends TestCase {
       Path dir = new Path("/test/mkdirs");
       assertTrue(fs.mkdirs(dir));
       assertTrue(fs.exists(dir));
-      assertTrue(dir + " should be a directory", 
-                 fs.getFileStatus(path).isDir() == true);
+      System.out.println("Dir : \"" + dir + "\"");
+
+      // test getFileStatus on an empty directory
+      status = fs.getFileStatus(dir);
+      assertTrue(dir + " should be a directory", status.isDir());
+      assertTrue(dir + " should be zero size ", status.getLen() == 0);
+      assertEquals(fs.makeQualified(dir).toString(), 
+          status.getPath().toString());
+
+      // test listStatus on an empty directory
+      stats = fs.listStatus(dir);
+      assertEquals(dir + " should be empty", 0, stats.length);
       assertTrue(dir + " should be zero size ",
                  fs.getContentSummary(dir).getLength() == 0);
       assertTrue(dir + " should be zero size ",
@@ -114,7 +142,7 @@ public class TestFileStatus extends TestCase {
 
       // create another file that is smaller than a block.
       //
-      Path file2 = new Path("/test/mkdirs/filestatus2.dat");
+      Path file2 = new Path(dir, "filestatus2.dat");
       writeFile(fs, file2, 1, blockSize/4, blockSize);
       System.out.println("Created file filestatus2.dat with one "
                          + " replicas.");
@@ -122,11 +150,14 @@ public class TestFileStatus extends TestCase {
       System.out.println("Path : \"" + file2 + "\"");
 
       // verify file attributes
-      assertTrue(fs.getFileStatus(file2).getBlockSize() == blockSize);
-      assertTrue(fs.getFileStatus(file2).getReplication() == 1);
+      status = fs.getFileStatus(file2);
+      assertTrue(status.getBlockSize() == blockSize);
+      assertTrue(status.getReplication() == 1);
+      assertEquals(fs.makeQualified(file2).toString(), 
+          status.getPath().toString());
 
       // create another file in the same directory
-      Path file3 = new Path("/test/mkdirs/filestatus3.dat");
+      Path file3 = new Path(dir, "filestatus3.dat");
       writeFile(fs, file3, 1, blockSize/4, blockSize);
       System.out.println("Created file filestatus3.dat with one "
                          + " replicas.");
@@ -136,7 +167,17 @@ public class TestFileStatus extends TestCase {
       // of the two files
       assertTrue(dir + " size should be " + (blockSize/2), 
                  blockSize/2 == fs.getContentSummary(dir).getLength());
-    } finally {
+       
+       // test listStatus on a non-empty directory
+       stats = fs.listStatus(dir);
+       assertEquals(dir + " should have two entries", 2, stats.length);
+       String qualifiedFile2 = fs.makeQualified(file2).toString();
+       String qualifiedFile3 = fs.makeQualified(file3).toString();
+       for(FileStatus stat:stats) {
+         String statusFullName = stat.getPath().toString();
+         assertTrue(qualifiedFile2.equals(statusFullName)
+           || qualifiedFile3.toString().equals(statusFullName));
+       }    } finally {
       fs.close();
       cluster.shutdown();
     }

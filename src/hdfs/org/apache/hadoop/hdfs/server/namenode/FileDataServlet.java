@@ -24,10 +24,11 @@ import java.security.PrivilegedExceptionAction;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -37,11 +38,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 public class FileDataServlet extends DfsServlet {
 
   /** Create a redirection URI */
-  protected URI createUri(FileStatus i, UserGroupInformation ugi,
+  protected URI createUri(String parent, HdfsFileStatus i, UserGroupInformation ugi,
       ClientProtocol nnproxy, HttpServletRequest request)
       throws IOException, URISyntaxException {
     String scheme = request.getScheme();
-    final DatanodeID host = pickSrcDatanode(i, nnproxy);
+    final DatanodeID host = pickSrcDatanode(parent, i, nnproxy);
     final String hostname;
     if (host instanceof DatanodeInfo) {
       hostname = ((DatanodeInfo)host).getHostName();
@@ -52,7 +53,7 @@ public class FileDataServlet extends DfsServlet {
         "https".equals(scheme)
           ? (Integer)getServletContext().getAttribute("datanode.https.port")
           : host.getInfoPort(),
-        "/streamFile", "filename=" + i.getPath() + 
+        "/streamFile", "filename=" + i.getFullName(parent) + 
         "&ugi=" + ugi.getShortUserName(), null);
   }
 
@@ -62,7 +63,7 @@ public class FileDataServlet extends DfsServlet {
    * Currently, this looks at no more than the first five blocks of a file,
    * selecting a datanode randomly from the most represented.
    */
-  private static DatanodeID pickSrcDatanode(FileStatus i,
+  private static DatanodeID pickSrcDatanode(String parent, HdfsFileStatus i,
       ClientProtocol nnproxy) throws IOException {
     // a race condition can happen by initializing a static member this way.
     // A proper fix should make JspHelper a singleton. Since it doesn't affect 
@@ -70,7 +71,7 @@ public class FileDataServlet extends DfsServlet {
     if (jspHelper == null)
       jspHelper = new JspHelper();
     final LocatedBlocks blks = nnproxy.getBlockLocations(
-        i.getPath().toUri().getPath(), 0, 1);
+        i.getFullPath(new Path(parent)).toUri().getPath(), 0, 1);
     if (i.getLen() == 0 || blks.getLocatedBlocks().size() <= 0) {
       // pick a random datanode
       return jspHelper.randomNode();
@@ -101,9 +102,9 @@ public class FileDataServlet extends DfsServlet {
       final String path = request.getPathInfo() != null ? 
                                                     request.getPathInfo() : "/";
       
-      FileStatus info = nnproxy.getFileInfo(path);
+      HdfsFileStatus info = nnproxy.getFileInfo(path);
       if ((info != null) && !info.isDir()) {
-        response.sendRedirect(createUri(info, ugi, nnproxy,
+        response.sendRedirect(createUri(path, info, ugi, nnproxy,
               request).toURL().toString());
       } else if (info == null){
         response.sendError(400, "cat: File not found " + path);

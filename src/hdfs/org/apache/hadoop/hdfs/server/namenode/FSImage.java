@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -133,7 +134,7 @@ public class FSImage extends Storage {
    * Used for saving the image to disk
    */
   static private final FsPermission FILE_PERM = new FsPermission((short)0);
-  static private final byte[] PATH_SEPARATOR = INode.string2Bytes(Path.SEPARATOR);
+  static private final byte[] PATH_SEPARATOR = DFSUtil.string2Bytes(Path.SEPARATOR);
 
   /**
    */

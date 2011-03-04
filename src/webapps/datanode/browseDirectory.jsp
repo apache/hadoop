@@ -76,7 +76,7 @@
         return;
       }
       // directory
-      FileStatus[] files = dfs.listPaths(target);
+      HdfsFileStatus[] files = dfs.listPaths(target);
       //generate a table and dump the info
       String [] headings = { "Name", "Type", "Size", "Replication", 
                               "Block Size", "Modification Time",
@@ -104,7 +104,8 @@
         String cols [] = new String[headings.length];
         for (int i = 0; i < files.length; i++) {
           //Get the location of the first block of the file
-          if (files[i].getPath().toString().endsWith(".crc")) continue;
+          String localname = files[i].getLocalName();
+          if (localname.endsWith(".crc")) continue;
           if (!files[i].isDir()) {
             cols[1] = "file";
             cols[2] = StringUtils.byteDesc(files[i].getLen());
@@ -118,9 +119,9 @@
             cols[4] = "";
           }
           String datanodeUrl = req.getRequestURL()+"?dir="+
-              URLEncoder.encode(files[i].getPath().toString(), "UTF-8") + 
+              URLEncoder.encode(files[i].getFullName(target).toString(), "UTF-8") + 
               "&namenodeInfoPort=" + namenodeInfoPort;
-          cols[0] = "<a href=\""+datanodeUrl+"\">"+files[i].getPath().getName()+"</a>";
+          cols[0] = "<a href=\""+datanodeUrl+"\">"+localname+"</a>";
           cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
           cols[6] = files[i].getPermission().toString();
           cols[7] = files[i].getOwner();

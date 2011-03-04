@@ -189,7 +189,7 @@ public class TestDFSClientRetries extends TestCase {
 
     public boolean mkdirs(String src, FsPermission masked) throws IOException { return false; }
 
-    public FileStatus[] getListing(String src) throws IOException { return null; }
+    public HdfsFileStatus[] getListing(String src) throws IOException { return null; }
 
     public void renewLease(String clientName) throws IOException {}
 
@@ -213,7 +213,7 @@ public class TestDFSClientRetries extends TestCase {
 
     public void metaSave(String filename) throws IOException {}
 
-    public FileStatus getFileInfo(String src) throws IOException { return null; }
+    public HdfsFileStatus getFileInfo(String src) throws IOException { return null; }
 
     public ContentSummary getContentSummary(String path) throws IOException { return null; }
 

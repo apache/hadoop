@@ -28,9 +28,9 @@ import java.util.zip.CRC32;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -130,11 +130,11 @@ public class TestDFSUpgradeFromImage extends TestCase {
   private void verifyDir(DFSClient client, String dir) 
                                            throws IOException {
     
-    FileStatus[] fileArr = client.listPaths(dir);
+    HdfsFileStatus[] fileArr = client.listPaths(dir);
     TreeMap<String, Boolean> fileMap = new TreeMap<String, Boolean>();
     
-    for(FileStatus file : fileArr) {
-      String path = file.getPath().toString();
+    for(HdfsFileStatus file : fileArr) {
+      String path = file.getFullName(dir);
       fileMap.put(path, Boolean.valueOf(file.isDir()));
     }
     

@@ -32,11 +32,11 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
@@ -140,10 +140,10 @@ public class NamenodeFsck {
     try {
       Result res = new Result(conf);
 
-      final FileStatus[] files = namenode.getListing(path);
+      final HdfsFileStatus[] files = namenode.getListing(path);
       if (files != null) {
         for (int i = 0; i < files.length; i++) {
-          check(files[i], res);
+          check(path, files[i], res);
         }
         out.println(res);
         out.println(" Number of data-nodes:\t\t" + totalDatanodes);
@@ -170,12 +170,12 @@ public class NamenodeFsck {
     }
   }
   
-  private void check(FileStatus file, Result res) throws IOException {
-    String path = file.getPath().toString();
+  private void check(String parent, HdfsFileStatus file, Result res) throws IOException {
+    String path = file.getFullName(parent);
     boolean isOpen = false;
 
     if (file.isDir()) {
-      final FileStatus[] files = namenode.getListing(path);
+      final HdfsFileStatus[] files = namenode.getListing(path);
       if (files == null) {
         return;
       }
@@ -184,7 +184,7 @@ public class NamenodeFsck {
       }
       res.totalDirs++;
       for (int i = 0; i < files.length; i++) {
-        check(files[i], res);
+        check(path, files[i], res);
       }
       return;
     }
@@ -303,7 +303,7 @@ public class NamenodeFsck {
         break;
       case FIXING_MOVE:
         if (!isOpen)
-          lostFoundMove(file, blocks);
+          lostFoundMove(parent, file, blocks);
         break;
       case FIXING_DELETE:
         if (!isOpen)
@@ -322,7 +322,7 @@ public class NamenodeFsck {
     }
   }
   
-  private void lostFoundMove(FileStatus file, LocatedBlocks blocks)
+  private void lostFoundMove(String parent, HdfsFileStatus file, LocatedBlocks blocks)
     throws IOException {
     final DFSClient dfs = new DFSClient(NameNode.getAddress(conf), conf);
     try {
@@ -332,8 +332,9 @@ public class NamenodeFsck {
     if (!lfInitedOk) {
       return;
     }
-    String target = lostFound + file.getPath();
-    String errmsg = "Failed to move " + file.getPath() + " to /lost+found";
+    String fullName = file.getFullName(parent);
+    String target = lostFound + fullName;
+    String errmsg = "Failed to move " + fullName + " to /lost+found";
     try {
       if (!namenode.mkdirs(target, file.getPermission())) {
         LOG.warn(errmsg);
@@ -377,8 +378,8 @@ public class NamenodeFsck {
         }
       }
       if (fos != null) fos.close();
-      LOG.warn("\n - moved corrupted file " + file.getPath() + " to /lost+found");
-      dfs.delete(file.getPath().toString(), true);
+      LOG.warn("\n - moved corrupted file " + fullName + " to /lost+found");
+      dfs.delete(fullName, true);
     }  catch (Exception e) {
       e.printStackTrace();
       LOG.warn(errmsg + ": " + e.getMessage());
