@@ -101,7 +101,7 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     // This password is used as shared secret key between this application and
     // child pipes process
     byte[]  password = jobToken.getPassword();
-    String localPasswordFile = conf.getJobLocalDir() + Path.SEPARATOR
+    String localPasswordFile = new File(".") + Path.SEPARATOR
         + "jobTokenPassword";
     writePasswordToLocalFile(localPasswordFile, password, conf);
     env.put("hadoop.pipes.shared.secret.location", localPasswordFile);
@@ -167,10 +167,6 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
       byte[] password, JobConf conf) throws IOException {
     FileSystem localFs = FileSystem.getLocal(conf);
     Path localPath = new Path(localPasswordFile);
-    if (localFs.isFile(localPath)) {
-      LOG.debug("Password file is already created by previous path");
-      return;
-    }
     FSDataOutputStream out = FileSystem.create(localFs, localPath,
         new FsPermission("400"));
     out.write(password);
