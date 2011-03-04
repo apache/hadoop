@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -52,7 +53,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
           .getAbsolutePath();
 
   protected File ROOT_MAPRED_LOCAL_DIR;
-  private static String TEST_CACHE_BASE_DIR;
+  private static String TEST_CACHE_BASE_DIR = "cachebasedir";
   protected int numLocalDirs = 6;
 
   private static final int TEST_FILE_SIZE = 4 * 1024; // 4K
@@ -60,6 +61,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   protected Configuration conf;
   protected Path firstCacheFile;
   protected Path secondCacheFile;
+  private FileSystem fs;
 
   protected LocalDirAllocator localDirAllocator = 
     new LocalDirAllocator(JobConf.MAPRED_LOCAL_DIR_PROPERTY);
@@ -76,18 +78,13 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     // Prepare the tests' mapred-local-dir
     ROOT_MAPRED_LOCAL_DIR = new File(TEST_ROOT_DIR, "mapred/local");
     ROOT_MAPRED_LOCAL_DIR.mkdirs();
-    String []localDirs = new String[numLocalDirs];
-    for (int i = 0; i < numLocalDirs; i++) {
-      localDirs[i] = new File(ROOT_MAPRED_LOCAL_DIR, "0_" + i).getPath();
-    }
-
-    TEST_CACHE_BASE_DIR =
-        new File(TEST_ROOT_DIR, "cachebasedir").getAbsolutePath();
 
     conf = new Configuration();
     conf.setLong("local.cache.size", LOCAL_CACHE_LIMIT);
-    conf.setStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY, localDirs);
+    conf.set(JobConf.MAPRED_LOCAL_DIR_PROPERTY,
+             ROOT_MAPRED_LOCAL_DIR.toString());
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");
+    fs = FileSystem.get(conf);
 
     // Create the temporary cache files to be used in the tests.
     firstCacheFile = new Path(TEST_ROOT_DIR, "firstcachefile");
@@ -186,20 +183,21 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     TrackerDistributedCacheManager manager = 
         new TrackerDistributedCacheManager(conf);
     FileSystem localfs = FileSystem.getLocal(conf);
+    long now = System.currentTimeMillis();
 
     manager.getLocalCache(firstCacheFile.toUri(), conf, 
-        new Path(TEST_CACHE_BASE_DIR), null, false, 
-        System.currentTimeMillis(), new Path(TEST_ROOT_DIR), false);
-    manager.releaseCache(firstCacheFile.toUri(), conf);
+        TEST_CACHE_BASE_DIR, fs.getFileStatus(firstCacheFile), false,
+        now, new Path(TEST_ROOT_DIR), false);
+    manager.releaseCache(firstCacheFile.toUri(), conf, now);
     //in above code,localized a file of size 4K and then release the cache 
     // which will cause the cache be deleted when the limit goes out. 
     // The below code localize another cache which's designed to
     //sweep away the first cache.
     manager.getLocalCache(secondCacheFile.toUri(), conf, 
-        new Path(TEST_CACHE_BASE_DIR), null, false, 
+        TEST_CACHE_BASE_DIR, fs.getFileStatus(secondCacheFile), false, 
         System.currentTimeMillis(), new Path(TEST_ROOT_DIR), false);
     FileStatus[] dirStatuses = localfs.listStatus(
-        new Path(TEST_CACHE_BASE_DIR));
+      new Path(ROOT_MAPRED_LOCAL_DIR.toString()));
     assertTrue("DistributedCache failed deleting old" + 
         " cache when the cache store is full.",
         dirStatuses.length == 1);
@@ -212,7 +210,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     Path fileToCache = new Path("fakefile:///"
         + firstCacheFile.toUri().getPath());
     Path result = manager.getLocalCache(fileToCache.toUri(), conf,
-        new Path(TEST_CACHE_BASE_DIR), null, false, System.currentTimeMillis(),
+        TEST_CACHE_BASE_DIR, fs.getFileStatus(firstCacheFile), false,
+        System.currentTimeMillis(),
         new Path(TEST_ROOT_DIR), false);
     assertNotNull("DistributedCache cached file on non-default filesystem.",
         result);
@@ -244,4 +243,98 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   protected File pathToFile(Path p) {
     return new File(p.toString());
   }
+  
+  public static class FakeFileSystem extends RawLocalFileSystem {
+    private long increment = 0;
+    public FakeFileSystem() {
+      super();
+    }
+    
+    public FileStatus getFileStatus(Path p) throws IOException {
+      File f = pathToFile(p);
+      return new FileStatus(f.length(), f.isDirectory(), 1, 128,
+      f.lastModified() + increment, makeQualified(new Path(f.getPath())));
+    }
+    
+    void advanceClock(long millis) {
+      increment += millis;
+    }
+  }
+  
+  public void testFreshness() throws Exception {
+    Configuration myConf = new Configuration(conf);
+    myConf.set("fs.default.name", "refresh:///");
+    myConf.setClass("fs.refresh.impl", FakeFileSystem.class, FileSystem.class);
+    TrackerDistributedCacheManager manager = 
+      new TrackerDistributedCacheManager(myConf);
+    // ****** Imitate JobClient code
+    // Configures a task/job with both a regular file and a "classpath" file.
+    Configuration subConf = new Configuration(myConf);
+    DistributedCache.addCacheFile(firstCacheFile.toUri(), subConf);
+    TrackerDistributedCacheManager.determineTimestamps(subConf);
+    // ****** End of imitating JobClient code
+
+    String userName = getJobOwnerName();
+
+    // ****** Imitate TaskRunner code.
+    TaskDistributedCacheManager handle =
+      manager.newTaskDistributedCacheManager(subConf);
+    assertNull(null, DistributedCache.getLocalCacheFiles(subConf));
+    File workDir = new File(new Path(TEST_ROOT_DIR, "workdir").toString());
+    handle.setup(localDirAllocator, workDir, TaskTracker
+        .getDistributedCacheDir(userName));
+    // ****** End of imitating TaskRunner code
+
+    Path[] localCacheFiles = DistributedCache.getLocalCacheFiles(subConf);
+    assertNotNull(null, localCacheFiles);
+    assertEquals(1, localCacheFiles.length);
+    Path cachedFirstFile = localCacheFiles[0];
+    assertFileLengthEquals(firstCacheFile, cachedFirstFile);
+    assertFalse("Paths should be different.", 
+        firstCacheFile.equals(cachedFirstFile));
+    // release
+    handle.release();
+    
+    // change the file timestamp
+    FileSystem fs = FileSystem.get(myConf);
+    ((FakeFileSystem)fs).advanceClock(1);
+
+    // running a task of the same job
+    Throwable th = null;
+    try {
+      handle.setup(localDirAllocator, workDir, TaskTracker
+          .getDistributedCacheDir(userName));
+    } catch (IOException ie) {
+      th = ie;
+    }
+    assertNotNull("Throwable is null", th);
+    assertTrue("Exception message does not match",
+        th.getMessage().contains("has changed on HDFS since job started"));
+    // release
+    handle.release();
+    
+    // submit another job
+    Configuration subConf2 = new Configuration(myConf);
+    DistributedCache.addCacheFile(firstCacheFile.toUri(), subConf2);
+    TrackerDistributedCacheManager.determineTimestamps(subConf2);
+    
+    handle =
+      manager.newTaskDistributedCacheManager(subConf2);
+    handle.setup(localDirAllocator, workDir, TaskTracker
+        .getDistributedCacheDir(userName));
+    Path[] localCacheFiles2 = DistributedCache.getLocalCacheFiles(subConf2);
+    assertNotNull(null, localCacheFiles2);
+    assertEquals(1, localCacheFiles2.length);
+    Path cachedFirstFile2 = localCacheFiles2[0];
+    assertFileLengthEquals(firstCacheFile, cachedFirstFile2);
+    assertFalse("Paths should be different.", 
+        firstCacheFile.equals(cachedFirstFile2));
+    
+    // assert that two localizations point to different paths
+    assertFalse("two jobs with different timestamps did not localize" +
+        " in different paths", cachedFirstFile.equals(cachedFirstFile2));
+    // release
+    handle.release();
+  }
+
 }

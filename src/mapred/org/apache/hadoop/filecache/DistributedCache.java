@@ -197,7 +197,7 @@ public class DistributedCache {
       Path currentWorkDir, boolean honorSymLinkConf) throws IOException {
 
     return new TrackerDistributedCacheManager(conf).getLocalCache(cache, conf,
-        baseDir, fileStatus, isArchive, confFileStamp, currentWorkDir,
+        baseDir.toString(), fileStatus, isArchive, confFileStamp, currentWorkDir,
         honorSymLinkConf);
   }
 
@@ -248,7 +248,35 @@ public class DistributedCache {
    */
   public static void releaseCache(URI cache, Configuration conf)
       throws IOException {
-    new TrackerDistributedCacheManager(conf).releaseCache(cache, conf);
+	// find the timestamp of the uri
+    URI[] archives = DistributedCache.getCacheArchives(conf);
+    URI[] files = DistributedCache.getCacheFiles(conf);
+    String[] archivesTimestamps =
+          DistributedCache.getArchiveTimestamps(conf);
+    String[] filesTimestamps =
+          DistributedCache.getFileTimestamps(conf);
+    String timestamp = null;
+    if (archives != null) {
+      for (int i = 0; i < archives.length; i++) {
+        if (archives[i].equals(cache)) {
+          timestamp = archivesTimestamps[i];
+          break;
+        }
+      }
+    }
+    if (timestamp == null && files != null) {
+      for (int i = 0; i < files.length; i++) {
+        if (files[i].equals(cache)) {
+          timestamp = filesTimestamps[i];
+          break;
+        }
+      }
+    }
+    if (timestamp == null) {
+      throw new IOException("TimeStamp of the uri couldnot be found");
+    }
+    new TrackerDistributedCacheManager(conf).releaseCache(cache, conf,
+          Long.parseLong(timestamp));
   }
   
   /**

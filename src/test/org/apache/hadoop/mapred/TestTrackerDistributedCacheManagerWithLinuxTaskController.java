@@ -183,4 +183,12 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     }
     super.testFileSystemOtherThanDefault();
   }
+  
+  @Override
+  public void testFreshness()  throws Exception { 
+    if (!ClusterWithLinuxTaskController.shouldRun()) {
+      return;
+    }
+    super.testFreshness();
+  }
 }

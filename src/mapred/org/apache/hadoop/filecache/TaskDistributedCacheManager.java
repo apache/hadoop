@@ -152,23 +152,9 @@ public class TaskDistributedCacheManager {
       URI uri = cacheFile.uri;
       FileSystem fileSystem = FileSystem.get(uri, taskConf);
       FileStatus fileStatus = fileSystem.getFileStatus(new Path(uri.getPath()));
-      String cacheId = this.distributedCacheManager.makeRelative(uri, taskConf);
-      String cachePath = cacheSubdir + Path.SEPARATOR + cacheId;
 
-      // Get the local path if the cacheFile is already localized or create one
-      // if it doesn't
-      Path localPath;
-      try {
-        localPath = lDirAlloc.getLocalPathToRead(cachePath, taskConf);
-      } catch (DiskErrorException de) {
-        localPath =
-            lDirAlloc.getLocalPathForWrite(cachePath, fileStatus.getLen(),
-                taskConf);
-      }
-
-      String baseDir = localPath.toString().replace(cacheId, "");
       Path p = distributedCacheManager.getLocalCache(uri, taskConf,
-          new Path(baseDir), fileStatus, 
+          cacheSubdir, fileStatus, 
           cacheFile.type == CacheFile.FileType.ARCHIVE,
           cacheFile.timestamp, workdirPath, false);
 
@@ -224,7 +210,7 @@ public class TaskDistributedCacheManager {
    */
   public void release() throws IOException {
     for (CacheFile c : cacheFiles) {
-      distributedCacheManager.releaseCache(c.uri, taskConf);
+      distributedCacheManager.releaseCache(c.uri, taskConf, c.timestamp);
     }
   }
 
