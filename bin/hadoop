@@ -91,6 +91,14 @@ if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
+# Determine if we're starting a secure datanode, and if so, redefine appropriate variables
+if [ "$COMMAND" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
+  HADOOP_PID_DIR=$HADOOP_SECURE_DN_PID_DIR
+  HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
+  HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER
+  starting_secure_dn="true"
+fi
+
 # some Java parameters
 if [ "$JAVA_HOME" != "" ]; then
   #echo "run java in $JAVA_HOME"
@@ -304,28 +312,22 @@ fi
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.policy.file=$HADOOP_POLICYFILE"
 
 # Check to see if we should start a secure datanode
-if [ "$COMMAND" = "datanode" ]; then
-  if [[ $EUID -eq 0 ]]; then
-    if [ "$HADOOP_SECURE_DN_USER" = "" ]; then
-      HADOOP_SECURE_DN_USER="hdfs"
-    fi
-
-    if [ "$HADOOP_PID_DIR" = "" ]; then
-      HADOOP_SECURE_DN_PID="/tmp/hadoop_secure_dn.pid"
-    else
-      HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
-    fi
-
-    exec "jsvc" -outfile "$HADOOP_LOG_DIR/jsvc.out" \
-                -errfile "$HADOOP_LOG_DIR/jsvc.err" \
-                -pidfile "$HADOOP_SECURE_DN_PID" \
-                -nodetach \
-                -user "$HADOOP_SECURE_DN_USER" \
-                -cp "$CLASSPATH" \
-                $JAVA_HEAP_MAX $HADOOP_OPTS \
-                org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+if [ "$starting_secure_dn" = "true" ]; then
+  if [ "$HADOOP_PID_DIR" = "" ]; then
+    HADOOP_SECURE_DN_PID="/tmp/hadoop_secure_dn.pid"
+  else
+   HADOOP_SECURE_DN_PID="$HADOOP_PID_DIR/hadoop_secure_dn.pid"
   fi
+
+  exec "$HADOOP_HOME/bin/jsvc" -Dproc_$COMMAND -outfile "$HADOOP_LOG_DIR/jsvc.out" \
+                                               -errfile "$HADOOP_LOG_DIR/jsvc.err" \
+                                               -pidfile "$HADOOP_SECURE_DN_PID" \
+                                               -nodetach \
+                                               -user "$HADOOP_SECURE_DN_USER" \
+                                               -cp "$CLASSPATH" \
+                                               $JAVA_HEAP_MAX $HADOOP_OPTS \
+                                               org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
 else
   # run it
-  exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+  exec "$JAVA" -Dproc_$COMMAND $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
 fi

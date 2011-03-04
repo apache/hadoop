@@ -68,18 +68,26 @@ if [ -f "${HADOOP_CONF_DIR}/hadoop-env.sh" ]; then
   . "${HADOOP_CONF_DIR}/hadoop-env.sh"
 fi
 
+# Determine if we're starting a secure datanode, and if so, redefine appropriate variables
+if [ "$command" == "datanode" ] && [ "$EUID" -eq 0 ] && [ -n "$HADOOP_SECURE_DN_USER" ]; then
+  export HADOOP_PID_DIR=$HADOOP_SECURE_DN_PID_DIR
+  export HADOOP_LOG_DIR=$HADOOP_SECURE_DN_LOG_DIR
+  export HADOOP_IDENT_STRING=$HADOOP_SECURE_DN_USER   
+fi
+
+if [ "$HADOOP_IDENT_STRING" = "" ]; then
+  export HADOOP_IDENT_STRING="$USER"
+fi
+
 # get log directory
 if [ "$HADOOP_LOG_DIR" = "" ]; then
   export HADOOP_LOG_DIR="$HADOOP_HOME/logs"
 fi
 mkdir -p "$HADOOP_LOG_DIR"
+chown $HADOOP_IDENT_STRING $HADOOP_LOG_DIR 
 
 if [ "$HADOOP_PID_DIR" = "" ]; then
   HADOOP_PID_DIR=/tmp
-fi
-
-if [ "$HADOOP_IDENT_STRING" = "" ]; then
-  export HADOOP_IDENT_STRING="$USER"
 fi
 
 # some variables
