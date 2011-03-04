@@ -2,11 +2,6 @@ Hadoop Change Log
 
 Release 0.20.3 - Unreleased
 
-  IMPROVEMENTS
-
-    BZ-4182948. Add statistics logging to Fred for better visibility into
-    startup time costs. (Matt Foley)
-
   BUG FIXES
 
     HDFS-955. New implementation of saveNamespace() to avoid loss of edits 
