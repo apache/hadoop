@@ -134,7 +134,8 @@ public class MetricsSystemImpl implements MetricsSystem {
     catch (MetricsConfigException e) {
       // Usually because hadoop-metrics2.properties is missing
       // We can always start the metrics system later via JMX.
-      LOG.warn("Metrics system not started!", e);
+      LOG.warn("Metrics system not started: "+ e.getMessage());
+      LOG.debug("Stacktrace: ", e);
     }
     initSystemMBean();
   }
@@ -496,6 +497,7 @@ public class MetricsSystemImpl implements MetricsSystem {
   }
 
   private void initSystemMBean() {
+    Contracts.checkNotNull(prefix, "prefix should not be null here!");
     mbeanName = MBeans.register(prefix, MS_CONTROL_NAME, this);
   }
 
