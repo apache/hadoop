@@ -14,12 +14,13 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="var" path="ANT_HOME/lib/ant.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-cli-1.2.jar"/>
-	<classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
+  <classpathentry kind="lib" path="lib/hsqldb-1.8.0.10.jar"/>
 	<classpathentry kind="lib" path="lib/kfs-0.2.2.jar"/>
   	<classpathentry kind="lib" path="lib/jsp-2.1/jsp-2.1.jar"/>
   	<classpathentry kind="lib" path="lib/jsp-2.1/jsp-api-2.1.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-codec-1.4.jar"/>
-	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-httpclient-3.0.1.jar"/>
+  <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-daemon-1.0.1.jar" />
+  <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-httpclient-3.0.1.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/commons-el-1.0.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jasper-compiler-5.5.12.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jasper-runtime-5.5.12.jar"/>

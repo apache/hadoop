@@ -98,6 +98,8 @@ public class HttpServer implements FilterContainer {
   private static final int MAX_RETRIES = 10;
   private final Configuration conf;
 
+  private boolean listenerStartedExternally = false;
+
   /** Same as this(name, bindAddress, port, findPort, null); */
   public HttpServer(String name, String bindAddress, int port, boolean findPort
       ) throws IOException {
@@ -106,9 +108,14 @@ public class HttpServer implements FilterContainer {
 
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf) throws IOException {
-    this(name, bindAddress, port, findPort, conf, null);
+    this(name, bindAddress, port, findPort, conf, null, null);
   }
 
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf, Connector connector) throws IOException {
+    this(name, bindAddress, port, findPort, conf, null, connector);
+  }
+  
   /**
    * Create a status server on the given port.
    * The jsp scripts are taken from src/webapps/<name>.
@@ -122,14 +129,27 @@ public class HttpServer implements FilterContainer {
   public HttpServer(String name, String bindAddress, int port,
       boolean findPort, Configuration conf, AccessControlList adminsAcl)
       throws IOException {
+    this(name, bindAddress, port, findPort, conf, adminsAcl, null);
+  }
+
+  public HttpServer(String name, String bindAddress, int port,
+      boolean findPort, Configuration conf, AccessControlList adminsAcl, 
+      Connector connector) throws IOException{
     webServer = new Server();
     this.findPort = findPort;
     this.conf = conf;
     this.adminsAcl = adminsAcl;
 
-    listener = createBaseListener(conf);
-    listener.setHost(bindAddress);
-    listener.setPort(port);
+    if(connector == null) {
+      listenerStartedExternally = false;
+      listener = createBaseListener(conf);
+      listener.setHost(bindAddress);
+      listener.setPort(port);
+    } else {
+      listenerStartedExternally = true;
+      listener = connector;
+    }
+    
     webServer.addConnector(listener);
 
     webServer.setThreadPool(new QueuedThreadPool());
@@ -167,16 +187,21 @@ public class HttpServer implements FilterContainer {
    * provided. This wrapper and all subclasses must create at least one
    * listener.
    */
-  protected Connector createBaseListener(Configuration conf)
+  public Connector createBaseListener(Configuration conf)
       throws IOException {
+    return HttpServer.createDefaultChannelConnector();
+  }
+  
+  // LimitedPrivate for creating secure datanodes
+  public static Connector createDefaultChannelConnector() {
     SelectChannelConnector ret = new SelectChannelConnector();
     ret.setLowResourceMaxIdleTime(10000);
     ret.setAcceptQueueSize(128);
     ret.setResolveNames(false);
     ret.setUseDirectBuffers(false);
-    return ret;
+    return ret;   
   }
-
+  
   /** Get an array of FilterConfiguration specified in the conf */
   private static FilterInitializer[] getFilterInitializers(Configuration conf) {
     if (conf == null) {
@@ -508,68 +533,76 @@ public class HttpServer implements FilterContainer {
    */
   public void start() throws IOException {
     try {
-      int port = 0;
-      int oriPort = listener.getPort(); // The original requested port
-      while (true) {
-        try {
-          port = webServer.getConnectors()[0].getLocalPort();
-          LOG.info("Port returned by webServer.getConnectors()[0]." +
-          		"getLocalPort() before open() is "+ port + 
-          		". Opening the listener on " + oriPort);
-          listener.open();
-          port = listener.getLocalPort();
-          LOG.info("listener.getLocalPort() returned " + listener.getLocalPort() + 
-                " webServer.getConnectors()[0].getLocalPort() returned " +
-                webServer.getConnectors()[0].getLocalPort());
-          //Workaround to handle the problem reported in HADOOP-4744
-          if (port < 0) {
-            Thread.sleep(100);
-            int numRetries = 1;
-            while (port < 0) {
-              LOG.warn("listener.getLocalPort returned " + port);
-              if (numRetries++ > MAX_RETRIES) {
-                throw new Exception(" listener.getLocalPort is returning " +
-                		"less than 0 even after " +numRetries+" resets");
-              }
-              for (int i = 0; i < 2; i++) {
-                LOG.info("Retrying listener.getLocalPort()");
-                port = listener.getLocalPort();
+      if(listenerStartedExternally) { // Expect that listener was started securely
+        if(listener.getLocalPort() == -1) // ... and verify
+          throw new Exception("Exepected webserver's listener to be started" +
+          		"previously but wasn't");
+        // And skip all the port rolling issues.
+        webServer.start();
+      } else {
+        int port = 0;
+        int oriPort = listener.getPort(); // The original requested port
+        while (true) {
+          try {
+            port = webServer.getConnectors()[0].getLocalPort();
+            LOG.info("Port returned by webServer.getConnectors()[0]." +
+            		"getLocalPort() before open() is "+ port + 
+            		". Opening the listener on " + oriPort);
+            listener.open();
+            port = listener.getLocalPort();
+            LOG.info("listener.getLocalPort() returned " + listener.getLocalPort() + 
+                  " webServer.getConnectors()[0].getLocalPort() returned " +
+                  webServer.getConnectors()[0].getLocalPort());
+            //Workaround to handle the problem reported in HADOOP-4744
+            if (port < 0) {
+              Thread.sleep(100);
+              int numRetries = 1;
+              while (port < 0) {
+                LOG.warn("listener.getLocalPort returned " + port);
+                if (numRetries++ > MAX_RETRIES) {
+                  throw new Exception(" listener.getLocalPort is returning " +
+                  		"less than 0 even after " +numRetries+" resets");
+                }
+                for (int i = 0; i < 2; i++) {
+                  LOG.info("Retrying listener.getLocalPort()");
+                  port = listener.getLocalPort();
+                  if (port > 0) {
+                    break;
+                  }
+                  Thread.sleep(200);
+                }
                 if (port > 0) {
                   break;
                 }
-                Thread.sleep(200);
+                LOG.info("Bouncing the listener");
+                listener.close();
+                Thread.sleep(1000);
+                listener.setPort(oriPort == 0 ? 0 : (oriPort += 1));
+                listener.open();
+                Thread.sleep(100);
+                port = listener.getLocalPort();
               }
-              if (port > 0) {
-                break;
+            } //Workaround end
+            LOG.info("Jetty bound to port " + port);
+            webServer.start();
+            break;
+          } catch (IOException ex) {
+            // if this is a bind exception,
+            // then try the next port number.
+            if (ex instanceof BindException) {
+              if (!findPort) {
+                throw (BindException) ex;
               }
-              LOG.info("Bouncing the listener");
-              listener.close();
-              Thread.sleep(1000);
-              listener.setPort(oriPort == 0 ? 0 : (oriPort += 1));
-              listener.open();
-              Thread.sleep(100);
-              port = listener.getLocalPort();
-            }
-          } //Workaround end
-          LOG.info("Jetty bound to port " + port);
-          webServer.start();
-          break;
-        } catch (IOException ex) {
-          // if this is a bind exception,
-          // then try the next port number.
-          if (ex instanceof BindException) {
-            if (!findPort) {
-              throw (BindException) ex;
-            }
-          } else {
-            LOG.info("HttpServer.start() threw a non Bind IOException"); 
+            } else {
+              LOG.info("HttpServer.start() threw a non Bind IOException"); 
+              throw ex;
+           }
+          } catch (MultiException ex) {
+            LOG.info("HttpServer.start() threw a MultiException"); 
             throw ex;
           }
-        } catch (MultiException ex) {
-          LOG.info("HttpServer.start() threw a MultiException"); 
-          throw ex;
+          listener.setPort((oriPort += 1));
         }
-        listener.setPort((oriPort += 1));
       }
     } catch (IOException e) {
       throw e;

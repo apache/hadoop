@@ -199,7 +199,11 @@ elif [ "$COMMAND" = "secondarynamenode" ] ; then
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_SECONDARYNAMENODE_OPTS"
 elif [ "$COMMAND" = "datanode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.datanode.DataNode'
-  HADOOP_OPTS="$HADOOP_OPTS $HADOOP_DATANODE_OPTS"
+  if [[ $EUID -eq 0 ]]; then
+    HADOOP_OPTS="$HADOOP_OPTS -jvm server $HADOOP_DATANODE_OPTS"
+  else
+    HADOOP_OPTS="$HADOOP_OPTS -server $HADOOP_DATANODE_OPTS"
+  fi
 elif [ "$COMMAND" = "fs" ] ; then
   CLASS=org.apache.hadoop.fs.FsShell
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_CLIENT_OPTS"
@@ -299,5 +303,12 @@ if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
 fi  
 HADOOP_OPTS="$HADOOP_OPTS -Dhadoop.policy.file=$HADOOP_POLICYFILE"
 
-# run it
-exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+# Check to see if we should start a secure datanode
+if [ "$COMMAND" = "datanode" ]; then
+  if [[ $EUID -eq 0 ]]; then
+    exec "jsvc" -outfile /dev/stdout -errfile /dev/stderr -cp "$CLASSPATH" -nodetach -user hdfs -cp "$CLASSPATH" $JAVA_HEAP_MAX $HADOOP_OPTS org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter "$@"
+  fi
+else
+  # run it
+  exec "$JAVA" $JAVA_HEAP_MAX $HADOOP_OPTS -classpath "$CLASSPATH" $CLASS "$@"
+fi

@@ -159,7 +159,12 @@
       rev="${commons-el.version}"
       conf="jetty->master"/>
 
-
+    <!--Configuration: secure datanode -->
+    <dependency org="commons-daemon" 
+      name="commons-daemon" 
+      rev="${commons-daemon.version}"
+      conf="server->default" /> 
+    
     <!--Configuration: commons-logging -->
 
     <!--it is essential that only the master JAR of commons logging
@@ -275,5 +280,5 @@
       rev="${aspectj.version}"
       conf="common->default">
     </dependency>
-  </dependencies>
+ </dependencies>
 </ivy-module>

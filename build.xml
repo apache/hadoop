@@ -175,6 +175,13 @@
    -Dtask-controller.install.dir=$HADOOP_HOME/bin -->
   <property name="task-controller.install.dir" value="${dist.dir}/bin" />
   <!-- end of task-controller properties -->
+
+  <!-- jsvc properties set here -->
+  <property name="c++.jsvc.src" 
+    value="${basedir}/src/c++/jsvc" />
+  <property name="build.c++.jsvc"
+    value="${build.c++}/jsvc" />
+  <property name="jsvc.install.dir" value="${dist.dir}/bin" />
 	
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
@@ -1714,7 +1721,7 @@
   </target>
 
   <target name="compile-c++" 
-          depends="compile-c++-pipes"/>
+          depends="compile-c++-pipes, jsvc"/>
 
   <target name="create-c++-examples-pipes-makefile" 
           depends="check-c++-makefiles" 
@@ -2251,4 +2258,16 @@
   </target>
 
   <!-- end of task-controller targets -->
+
+  <!-- jsvc targets -->
+  <target name="jsvc">
+    <mkdir dir="${build.c++.jsvc}" />
+    <exec executable="sh" dir="${build.c++.jsvc}"
+        failonerror="yes">
+        <arg value="${c++.jsvc.src}/build.sh" />
+    </exec>
+    <copy file="${build.c++.jsvc}/jsvc" todir="${jsvc.install.dir}" 
+        verbose="true" />
+  </target>
+
 </project>

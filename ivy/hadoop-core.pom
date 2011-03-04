@@ -253,5 +253,11 @@
       <version>0.52</version>
       <scope>optional</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.directory.daemon</groupId>
+      <artifactId>daemon-plugin</artifactId>
+      <version>${commons-daemon.version}</version>
+    </dependency>
+
   </dependencies>
 </project>
