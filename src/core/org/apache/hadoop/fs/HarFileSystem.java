@@ -301,19 +301,8 @@ public class HarFileSystem extends FilterFileSystem {
     }
 
     URI tmpURI = fsPath.toUri();
-    fsPath = new Path(tmpURI.getPath());
     //change this to Har uri 
-    URI tmp = null;
-    try {
-      tmp = new URI(uri.getScheme(), harAuth, fsPath.toString(),
-                    tmpURI.getQuery(), tmpURI.getFragment());
-    } catch(URISyntaxException ue) {
-      LOG.error("Error in URI ", ue);
-    }
-    if (tmp != null) {
-      return new Path(tmp.toString());
-    }
-    return null;
+    return new Path(uri.getScheme(), harAuth, tmpURI.getPath());
   }
   
   /**
@@ -425,12 +414,13 @@ public class HarFileSystem extends FilterFileSystem {
       // do nothing just a read.
     }
     FSDataInputStream aIn = fs.open(archiveIndex);
-    LineReader aLin = new LineReader(aIn, getConf());
+    LineReader aLin;
     String retStr = null;
     // now start reading the real index file
-     read = 0;
     for (Store s: stores) {
+      read = 0;
       aIn.seek(s.begin);
+      aLin = new LineReader(aIn, getConf());
       while (read + s.begin < s.end) {
         int tmp = aLin.readLine(line);
         read += tmp;
