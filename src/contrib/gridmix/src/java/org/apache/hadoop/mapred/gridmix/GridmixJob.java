@@ -26,6 +26,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -50,6 +51,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 
@@ -79,10 +82,15 @@ class GridmixJob implements Callable<Job>, Delayed {
   private final Path outdir;
   protected final Job job;
   private final JobStory jobdesc;
+  private final UserGroupInformation ugi;
   private final long submissionTimeNanos;
 
   public GridmixJob(Configuration conf, long submissionMillis,
-      JobStory jobdesc, Path outRoot, int seq) throws IOException {
+      JobStory jobdesc, Path outRoot, UserGroupInformation ugi, int seq)
+      throws IOException {
+    this.ugi = ugi;
+    UserGroupInformation.setCurrentUser(ugi);
+    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi.toString());
     ((StringBuilder)nameFormat.get().out()).setLength(JOBNAME.length());
     job = new Job(conf, nameFormat.get().format("%05d", seq).toString());
     submissionTimeNanos = TimeUnit.NANOSECONDS.convert(
@@ -100,6 +108,15 @@ class GridmixJob implements Callable<Job>, Delayed {
     jobdesc = null;
     outdir = null;
     seq = -1;
+    try {
+      ugi = UnixUserGroupInformation.login(conf);
+    } catch (LoginException e) {
+      throw new IOException("Could not identify submitter", e);
+    }
+  }
+
+  public UserGroupInformation getUgi() {
+    return ugi;
   }
 
   public String toString() {

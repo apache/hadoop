@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobClient;
@@ -59,6 +60,8 @@ public class TestGridmixSubmission {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.mapred.gridmix")
         ).getLogger().setLevel(Level.DEBUG);
   }
+
+  private static final Path DEST = new Path("/gridmix");
 
   private static FileSystem dfs = null;
   private static MiniDFSCluster dfsCluster = null;
@@ -124,6 +127,11 @@ public class TestGridmixSubmission {
           sub.get(job.getJobName().replace("GRIDMIX", "MOCKJOB"));
         assertNotNull("No spec for " + job.getJobName(), spec);
         assertNotNull("No counters for " + job.getJobName(), job.getCounters());
+        final String specname = spec.getName();
+        final FileStatus stat = dfs.getFileStatus(new Path(DEST, "" +
+              Integer.valueOf(specname.substring(specname.length() - 5))));
+        assertEquals("Wrong owner for " + job.getJobName(), spec.getUser(),
+            stat.getOwner());
 
         final int nMaps = spec.getNumberMaps();
         final int nReds = spec.getNumberReduces();
@@ -295,9 +303,11 @@ public class TestGridmixSubmission {
     @Override
     protected JobFactory createJobFactory(JobSubmitter submitter,
         String traceIn, Path scratchDir, Configuration conf,
-        CountDownLatch startFlag) throws IOException {
+        CountDownLatch startFlag, UserResolver userResolver)
+        throws IOException {
       factory =
-        new DebugJobFactory(submitter, scratchDir, NJOBS, conf, startFlag);
+        new DebugJobFactory(submitter, scratchDir, NJOBS, conf, startFlag,
+            userResolver);
       return factory;
     }
   }
@@ -305,17 +315,21 @@ public class TestGridmixSubmission {
   @Test
   public void testSubmit() throws Exception {
     final Path in = new Path("foo").makeQualified(dfs);
-    final Path out = new Path("/gridmix").makeQualified(dfs);
+    final Path out = DEST.makeQualified(dfs);
     final String[] argv = {
       "-D" + FilePool.GRIDMIX_MIN_FILE + "=0",
       "-D" + Gridmix.GRIDMIX_OUT_DIR + "=" + out,
+      "-D" + Gridmix.GRIDMIX_USR_RSV + "=" + EchoUserResolver.class.getName(),
       "-generate", String.valueOf(GENDATA) + "m",
       in.toString(),
       "-" // ignored by DebugGridmix
     };
     DebugGridmix client = new DebugGridmix();
     final Configuration conf = mrCluster.createJobConf();
-    //conf.setInt(Gridmix.GRIDMIX_KEY_LEN, 2);
+    // allow synthetic users to create home directories
+    final Path root = new Path("/user");
+    dfs.mkdirs(root, new FsPermission((short)0777));
+    dfs.setPermission(root, new FsPermission((short)0777));
     int res = ToolRunner.run(conf, client, argv);
     assertEquals("Client exited with nonzero status", 0, res);
     client.checkMonitor();

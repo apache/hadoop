@@ -44,9 +44,10 @@ import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;;
 class DebugJobFactory extends JobFactory {
 
   public DebugJobFactory(JobSubmitter submitter, Path scratch, int numJobs,
-      Configuration conf, CountDownLatch startFlag) throws IOException {
+      Configuration conf, CountDownLatch startFlag, UserResolver userResolver)
+      throws IOException {
     super(submitter, new DebugJobProducer(numJobs, conf), scratch, conf,
-        startFlag);
+        startFlag, userResolver);
   }
 
   ArrayList<JobStory> getSubmitted() {
@@ -210,7 +211,7 @@ class DebugJobFactory extends JobFactory {
 
     @Override
     public String getUser() {
-      return "FOOBAR";
+      return String.format("foobar%d", id);
     }
 
     @Override

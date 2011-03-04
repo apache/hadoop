@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.security.UserGroupInformation;
+
 /**
  * Component accepting deserialized job traces, computing split data, and
  * submitting to the cluster on deadline. Each job added from an upstream
@@ -79,9 +81,11 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
       try {
         // pre-compute split information
         try {
+          UserGroupInformation.setCurrentUser(job.getUgi());
           job.buildSplits(inputDir);
         } catch (IOException e) {
-          LOG.warn("Failed to submit " + job.getJob().getJobName(), e);
+          LOG.warn("Failed to submit " + job.getJob().getJobName() + " as " +
+              job.getUgi(), e);
           return;
         }
         // Sleep until deadline
@@ -96,7 +100,8 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
           LOG.debug("SUBMIT " + job + "@" + System.currentTimeMillis() +
               " (" + job.getJob().getJobID() + ")");
         } catch (IOException e) {
-          LOG.warn("Failed to submit " + job.getJob().getJobName(), e);
+          LOG.warn("Failed to submit " + job.getJob().getJobName() + " as " +
+              job.getUgi(), e);
           if (e.getCause() instanceof ClosedByInterruptException) {
             throw new InterruptedException("Failed to submit " +
                 job.getJob().getJobName());

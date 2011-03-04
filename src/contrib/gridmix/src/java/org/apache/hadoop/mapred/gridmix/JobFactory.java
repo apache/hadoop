@@ -60,6 +60,7 @@ class JobFactory implements Gridmix.Component<Void> {
   private final AtomicInteger sequence;
   private final JobSubmitter submitter;
   private final CountDownLatch startFlag;
+  private final UserResolver userResolver;
   private volatile IOException error = null;
   protected final JobStoryProducer jobProducer;
 
@@ -73,10 +74,10 @@ class JobFactory implements Gridmix.Component<Void> {
    * @param startFlag Latch released from main to start pipeline
    */
   public JobFactory(JobSubmitter submitter, InputStream jobTrace,
-      Path scratch, Configuration conf, CountDownLatch startFlag)
-      throws IOException {
+      Path scratch, Configuration conf, CountDownLatch startFlag,
+      UserResolver userResolver) throws IOException {
     this(submitter, new ZombieJobProducer(jobTrace, null), scratch, conf,
-        startFlag);
+        startFlag, userResolver);
   }
 
   /**
@@ -88,7 +89,8 @@ class JobFactory implements Gridmix.Component<Void> {
    * @param startFlag Latch released from main to start pipeline
    */
   protected JobFactory(JobSubmitter submitter, JobStoryProducer jobProducer,
-      Path scratch, Configuration conf, CountDownLatch startFlag) {
+      Path scratch, Configuration conf, CountDownLatch startFlag,
+      UserResolver userResolver) {
     sequence = new AtomicInteger(0);
     this.scratch = scratch;
     this.rateFactor = conf.getFloat(Gridmix.GRIDMIX_SUB_MUL, 1.0f);
@@ -97,6 +99,7 @@ class JobFactory implements Gridmix.Component<Void> {
     this.submitter = submitter;
     this.startFlag = startFlag;
     this.rThread = new ReaderThread();
+    this.userResolver = userResolver;
   }
 
   static class MinTaskInfo extends TaskInfo {
@@ -206,9 +209,10 @@ class JobFactory implements Gridmix.Component<Void> {
               continue;
             }
             last = current;
-            submitter.add(new GridmixJob(conf, initTime +
-                  Math.round(rateFactor * (current - first)),
-                job, scratch, sequence.getAndIncrement()));
+            submitter.add(new GridmixJob(new Configuration(conf), initTime +
+                  Math.round(rateFactor * (current - first)), job, scratch,
+                  userResolver.getTargetUgi(job.getUser()),
+                sequence.getAndIncrement()));
           } catch (IOException e) {
             JobFactory.this.error = e;
             return;
