@@ -1183,17 +1183,20 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         }
         
         // Ignore this parameter if it has already been marked as 'final'
-        if (attr != null && value != null) {
-          if (!finalParameters.contains(attr)) {
-            properties.setProperty(attr, value);
-            if (storeResource) {
-              updatingResource.put(attr, name.toString());
-            }
-            if (finalParameter)
-              finalParameters.add(attr);
-          } else {
-            LOG.warn(name+":a attempt to override final parameter: "+attr
+        if (attr != null) {
+          if (value != null) {
+            if (!finalParameters.contains(attr)) {
+              properties.setProperty(attr, value);
+              if (storeResource) {
+                updatingResource.put(attr, name.toString());
+              }
+            } else {
+              LOG.warn(name+":a attempt to override final parameter: "+attr
                      +";  Ignoring.");
+            }
+          }
+          if (finalParameter) {
+            finalParameters.add(attr);
           }
         }
       }

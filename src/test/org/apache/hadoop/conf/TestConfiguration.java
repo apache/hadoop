@@ -104,7 +104,28 @@ public class TestConfiguration extends TestCase {
     assertTrue(conf.getInt("intvar", -1) == 42);
     assertTrue(conf.getInt("my.int", -1) == 42);
   }
-    
+
+  public void testFinalParam() throws IOException {
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    declareProperty("my.var", "", "", true);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    Configuration conf1 = new Configuration();
+    conf1.addResource(fileResource);
+    assertNull("my var is not null", conf1.get("my.var"));
+	
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    declareProperty("my.var", "myval", "myval", false);
+    endConfig();
+    fileResource = new Path(CONFIG2);
+
+    Configuration conf2 = new Configuration(conf1);
+    conf2.addResource(fileResource);
+    assertNull("my var is not final", conf2.get("my.var"));
+  }
+
   public static void assertEq(Object a, Object b) {
     System.out.println("assertEq: " + a + ", " + b);
     assertEquals(a, b);
