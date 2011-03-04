@@ -405,6 +405,10 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   
   private FileSystem fs = null;
   private UserGroupInformation ugi;
+  private static final String TASKLOG_PULL_TIMEOUT_KEY = 
+    "mapreduce.client.tasklog.timeout";
+  private static final int DEFAULT_TASKLOG_TIMEOUT = 60000;
+  static int tasklogtimeout;
 
   /**
    * Create a job client.
@@ -431,6 +435,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   public void init(JobConf conf) throws IOException {
     String tracker = conf.get("mapred.job.tracker", "local");
+    tasklogtimeout = conf.getInt(
+      TASKLOG_PULL_TIMEOUT_KEY, DEFAULT_TASKLOG_TIMEOUT);
     this.ugi = UserGroupInformation.getCurrentUser();
     if ("local".equals(tracker)) {
       conf.setNumMapTasks(1);
@@ -1283,6 +1289,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
                                   OutputStream out) {
     try {
       URLConnection connection = taskLogUrl.openConnection();
+      connection.setReadTimeout(tasklogtimeout);
+      connection.setConnectTimeout(tasklogtimeout);
       BufferedReader input = 
         new BufferedReader(new InputStreamReader(connection.getInputStream()));
       BufferedWriter output = 
