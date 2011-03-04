@@ -654,6 +654,7 @@ class CapacityTaskScheduler extends TaskScheduler {
   private long limitMaxMemForReduceTasks;
   
   private volatile int maxTasksPerHeartbeat;
+  private volatile int maxTasksToAssignAfterOffSwitch;
 
   public CapacityTaskScheduler() {
     this(new Clock());
@@ -880,7 +881,10 @@ class CapacityTaskScheduler extends TaskScheduler {
     mapScheduler.initialize(queueInfoMap);
     reduceScheduler.initialize(queueInfoMap);
     
+    // scheduling tunables
     maxTasksPerHeartbeat = schedConf.getMaxTasksPerHeartbeat();
+    maxTasksToAssignAfterOffSwitch = 
+      schedConf.getMaxTasksToAssignAfterOffSwitch();
   }
   
   Map<String, CapacitySchedulerQueue> 
@@ -1064,6 +1068,7 @@ class CapacityTaskScheduler extends TaskScheduler {
                     throws IOException {
     int availableSlots = maxMapSlots - currentMapSlots;
     boolean assignOffSwitch = true;
+    int tasksToAssignAfterOffSwitch = this.maxTasksToAssignAfterOffSwitch;
     while (availableSlots > 0) {
       mapScheduler.sortQueues();
       TaskLookupResult tlr = mapScheduler.assignTasks(taskTracker, 
@@ -1089,6 +1094,19 @@ class CapacityTaskScheduler extends TaskScheduler {
         tlr.getLookUpStatus()) {
         // Atmost 1 off-switch task per-heartbeat
         assignOffSwitch = false;
+      }
+      
+      // Respect limits on #tasks to assign after an off-switch task is assigned
+      if (!assignOffSwitch) {
+        if (tasksToAssignAfterOffSwitch == 0) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Hit limit of max tasks after off-switch: " + 
+                this.maxTasksToAssignAfterOffSwitch + " after " + 
+                tasks.size() + " maps.");
+          }
+          return;
+        }
+        --tasksToAssignAfterOffSwitch;
       }
       
       // Assigned some slots

@@ -109,6 +109,8 @@ class CapacitySchedulerConf {
   
   static final int DEFAULT_MAX_SYSTEM_JOBS = 5000;
   
+  static final int DEFAULT_MAX_TASKS_TO_SCHEDULE_AFTER_OFFSWITCH = 0;
+  
   /**
    * Create a new Capacity scheduler conf.
    * This method reads from the default configuration file mentioned in
@@ -509,7 +511,7 @@ class CapacitySchedulerConf {
   public int getMaxTasksPerHeartbeat() {
     return rmConf.getInt(
         "mapred.capacity-scheduler.maximum-tasks-per-heartbeat", 
-        Integer.MAX_VALUE);
+        Short.MAX_VALUE);
   }
 
   /**
@@ -520,5 +522,34 @@ class CapacitySchedulerConf {
   public void setMaxTasksPerHeartbeat(int maxTasksPerHeartbeat) {
     rmConf.setInt("mapred.capacity-scheduler.maximum-tasks-per-heartbeat", 
         maxTasksPerHeartbeat);
+  }
+  
+  /**
+   * Get the maximum number of tasks to schedule, per heartbeat, after an
+   * off-switch task has been assigned.
+   * 
+   * @return the maximum number of tasks to schedule, per heartbeat, after an
+   *         off-switch task has been assigned
+   */
+  public int getMaxTasksToAssignAfterOffSwitch() {
+    return rmConf.getInt(
+        "mapred.capacity-scheduler.maximum-tasks-after-offswitch", 
+        DEFAULT_MAX_TASKS_TO_SCHEDULE_AFTER_OFFSWITCH);
+  }
+  
+  /**
+   * Set the maximum number of tasks to schedule, per heartbeat, after an
+   * off-switch task has been assigned.
+   * 
+   * @param maxTasksToAssignAfterOffSwitch the maximum number of tasks to 
+   *                                       schedule, per heartbeat, after an
+   *                                       off-switch task has been assigned
+   */
+  public void setMaxTasksToAssignAfterOffSwitch(
+      int maxTasksToAssignAfterOffSwitch) {
+    rmConf.setInt(
+        "mapred.capacity-scheduler.maximum-tasks-after-offswitch", 
+        Integer.MAX_VALUE);
+
   }
 }
