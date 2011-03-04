@@ -123,6 +123,10 @@ public class TestDistributedCachePrivateFile {
     Configuration conf = new Configuration(cluster.getConf());
     JTProtocol wovenClient = cluster.getJTClient().getProxy();
 
+    String jobTrackerUserName = wovenClient.getDaemonUser();
+
+    LOG.info("jobTrackerUserName is :" + jobTrackerUserName);
+
     //This counter will check for count of a loop,
     //which might become infinite.
     int count = 0;
@@ -224,8 +228,16 @@ public class TestDistributedCachePrivateFile {
               fileStatusMapredLocalDirUserName.getPath();
           FsPermission fsPermMapredLocalDirUserName =
               fileStatusMapredLocalDirUserName.getPermission();
-          Assert.assertTrue("Directory Permission is not 700",
-            fsPermMapredLocalDirUserName.equals(new FsPermission("700")));
+          //If userName of Jobtracker is same as username
+          //of jobSubmission, then the permissions are 770.
+          //Otherwise 570
+          if ( userName.compareTo(jobTrackerUserName) == 0 ) {
+            Assert.assertTrue("Directory Permission is not 770",
+              fsPermMapredLocalDirUserName.equals(new FsPermission("770")));
+          } else {
+            Assert.assertTrue("Directory Permission is not 570",
+              fsPermMapredLocalDirUserName.equals(new FsPermission("570")));
+          }
 
           //Get file status of all the directories 
           //and files under that path.
@@ -245,8 +257,16 @@ public class TestDistributedCachePrivateFile {
               distributedFileCount++;
               String filename = path.getName();
               FsPermission fsPerm = fileStatus.getPermission();
-              Assert.assertTrue("File Permission is not 777",
-                fsPerm.equals(new FsPermission("777")));
+              //If userName of Jobtracker is same as username
+              //of jobSubmission, then the permissions are 770.
+              //Otherwise 570
+              if ( userName.compareTo(jobTrackerUserName) == 0 ) {
+                Assert.assertTrue("File Permission is not 770",
+                  fsPerm.equals(new FsPermission("770")));
+              } else {
+                Assert.assertTrue("File Permission is not 570",
+                  fsPerm.equals(new FsPermission("570")));
+              }
             }
           }
         }
