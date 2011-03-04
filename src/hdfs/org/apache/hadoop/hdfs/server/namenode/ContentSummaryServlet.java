@@ -41,7 +41,7 @@ public class ContentSummaryServlet extends DfsServlet {
   public void doGet(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
     final Configuration conf = 
-      (Configuration) request.getAttribute("name.conf");
+      (Configuration) getServletContext().getAttribute("name.conf");
     final UserGroupInformation ugi = getUGI(request, conf);
     try {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {

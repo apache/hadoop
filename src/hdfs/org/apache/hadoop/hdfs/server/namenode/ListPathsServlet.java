@@ -136,7 +136,7 @@ public class ListPathsServlet extends DfsServlet {
       final Pattern filter = Pattern.compile(root.get("filter"));
       final Pattern exclude = Pattern.compile(root.get("exclude"));
       final Configuration conf = 
-        (Configuration) request.getAttribute("name.conf");
+        (Configuration) getServletContext().getAttribute("name.conf");
       
       ClientProtocol nnproxy = getUGI(request, conf).doAs
         (new PrivilegedExceptionAction<ClientProtocol>() {

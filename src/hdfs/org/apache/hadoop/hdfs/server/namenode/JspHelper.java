@@ -436,8 +436,12 @@ public class JspHelper {
         Token<DelegationTokenIdentifier> token = 
           new Token<DelegationTokenIdentifier>();
         token.decodeFromUrlString(tokenString);
-        token.setService(new Text(nameNodeAddr.getAddress().getHostAddress() + ":"
-            + nameNodeAddr.getPort()));
+        InetSocketAddress serviceAddr = NameNode.getAddress(conf);
+        LOG.info("Setting service in token: "
+            + new Text(serviceAddr.getAddress().getHostAddress() + ":"
+                + serviceAddr.getPort()));
+        token.setService(new Text(serviceAddr.getAddress().getHostAddress()
+            + ":" + serviceAddr.getPort()));
         if (user == null) {
           //this really doesn't break any security since we use the 
           //delegation token for authentication in
