@@ -44,7 +44,7 @@ import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
@@ -54,6 +54,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -315,13 +316,20 @@ class JobInProgress {
     status.setStartTime(startTime);
     this.localFs = jobtracker.getLocalFileSystem();
 
+    this.tokenStorage = ts;
     // use the user supplied token to add user credentials to the conf
     jobSubmitDir = jobInfo.getJobSubmitDir();
     user = jobInfo.getUser().toString();
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
-      fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
-        public FileSystem run() throws IOException {
-          return jobSubmitDir.getFileSystem(default_conf);
+    if (ts != null) {
+      for (Token<? extends TokenIdentifier> token : ts.getAllTokens()) {
+        ugi.addToken(token);
+      }
+    }
+
+    fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        return jobSubmitDir.getFileSystem(default_conf);
       }});
     this.localJobFile = default_conf.getLocalPath(JobTracker.SUBDIR
         +"/"+jobId + ".xml");
@@ -366,7 +374,6 @@ class JobInProgress {
     this.nonRunningReduces = new LinkedList<TaskInProgress>();    
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
-    this.tokenStorage = ts;
   }
 
   /**
@@ -3104,7 +3111,7 @@ class JobInProgress {
     if(tokenStorage == null)
       tokenStorage = new TokenStorage();
 
-    tokenStorage.setJobToken(token);
+    TokenCache.setJobToken(token, tokenStorage);
         
     // write TokenStorage out
     tokenStorage.write(os);

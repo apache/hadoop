@@ -49,7 +49,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -84,7 +84,7 @@ public class TestTokenCache {
 
       System.out.println("inside MAP: ts==NULL?=" + (ts==null) + 
           "; #keys = " + (ts==null? 0:ts.numberOfSecretKeys()) + 
-          ";jobToken = " +  (ts==null? "n/a":ts.getJobToken()) +
+          ";jobToken = " +  (ts==null? "n/a":TokenCache.getJobToken(ts)) +
           "; alias1 key=" + new String(key1) + 
           "; dts size= " + dts_size);
     
@@ -257,6 +257,7 @@ public class TestTokenCache {
     p1 = fs.makeQualified(p1);
     // do not qualify p2
 
+    TokenCache.setTokenStorage(new TokenStorage());
     TokenCache.obtainTokensForNamenodes(new Path [] {p1, p2}, jConf);
 
     // this token is keyed by hostname:port key.

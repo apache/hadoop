@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapreduce.security;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Collection;
 
@@ -36,27 +35,20 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
- * this class keeps static references to TokenStorage object
- * also it provides auxiliary methods for setting and getting secret keys  
+ * This class provides user facing APIs for transferring secrets from
+ * the job client to the tasks.
+ * The secrets can be stored just before submission of jobs and read during
+ * the task execution.   
  */
 //@InterfaceStability.Evolving
 public class TokenCache {
   
   private static final Log LOG = LogFactory.getLog(TokenCache.class);
-  /**
-   * file name used on HDFS for generated job token
-   */
-  public static final String JOB_TOKEN_HDFS_FILE = "jobToken";
-
-  /**
-   * conf setting for job tokens cache file name
-   */
-
-  public static final String JOB_TOKEN_FILENAME = "mapreduce.job.jobTokenFile";
 
   private static TokenStorage tokenStorage;
   
@@ -76,7 +68,7 @@ public class TokenCache {
    * @param alias
    * @param key
    */
-  public static void setSecretKey(Text alias, byte[] key) {
+  public static void addSecretKey(Text alias, byte[] key) {
     getTokenStorage().addSecretKey(alias, key);
   }
   
@@ -85,17 +77,7 @@ public class TokenCache {
    */
   public static void addDelegationToken(
       String namenode, Token<? extends TokenIdentifier> t) {
-    getTokenStorage().setToken(new Text(namenode), t);
-  }
-  
-  /**
-   * 
-   * @param namenode
-   * @return delegation token
-   */
-  @SuppressWarnings("unchecked")
-  public static Token<DelegationTokenIdentifier> getDelegationToken(String namenode) {
-    return (Token<DelegationTokenIdentifier>)getTokenStorage().getToken(new Text(namenode));
+    getTokenStorage().addToken(new Text(namenode), t);
   }
 
   /**
@@ -107,16 +89,81 @@ public class TokenCache {
   }
   
   /**
+   * Convenience method to obtain delegation tokens from namenodes 
+   * corresponding to the paths passed.
+   * @param ps array of paths
+   * @param conf configuration
+   * @throws IOException
+   */
+  public static void obtainTokensForNamenodes(Path [] ps, Configuration conf) 
+  throws IOException {
+    // get jobtracker principal id (for the renewer)
+    Text jtCreds = new Text(conf.get(JobContext.JOB_JOBTRACKER_ID, ""));
+
+    for(Path p: ps) {
+      FileSystem fs = FileSystem.get(p.toUri(), conf);
+      if(fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem)fs;
+        URI uri = fs.getUri();
+        String fs_addr = buildDTServiceName(uri);
+
+        // see if we already have the token
+        Token<DelegationTokenIdentifier> token = 
+          TokenCache.getDelegationToken(fs_addr); 
+        if(token != null) {
+          LOG.debug("DT for " + token.getService()  + " is already present");
+          continue;
+        }
+        // get the token
+        token = dfs.getDelegationToken(jtCreds);
+        if(token==null) 
+          throw new IOException("Token from " + fs_addr + " is null");
+
+        token.setService(new Text(fs_addr));
+        TokenCache.addDelegationToken(fs_addr, token);
+        LOG.info("getting dt for " + p.toString() + ";uri="+ fs_addr + 
+            ";t.service="+token.getService());
+      }
+    }
+  }
+
+  /**
+   * file name used on HDFS for generated job token
+   */
+  //@InterfaceAudience.Private
+  public static final String JOB_TOKEN_HDFS_FILE = "jobToken";
+
+  /**
+   * conf setting for job tokens cache file name
+   */
+  //@InterfaceAudience.Private
+  public static final String JOB_TOKENS_FILENAME = "mapreduce.job.jobTokenFile";
+  private static final Text JOB_TOKEN = new Text("ShuffleAndJobToken");
+
+  /**
+   * 
+   * @param namenode
+   * @return delegation token
+   */
+  @SuppressWarnings("unchecked")
+  //@InterfaceAudience.Private
+  public static Token<DelegationTokenIdentifier> 
+  getDelegationToken(String namenode) {
+    return (Token<DelegationTokenIdentifier>)getTokenStorage().
+    getToken(new Text(namenode));
+  }
+
+  /**
    * @return TokenStore object
    */
   //@InterfaceAudience.Private
   public static TokenStorage getTokenStorage() {
     if(tokenStorage==null)
       tokenStorage = new TokenStorage();
-    
+
     return tokenStorage;
   }
-  
+
   /**
    * sets TokenStorage
    * @param ts
@@ -169,6 +216,29 @@ public class TokenCache {
     return ts;
   }
 
+  /**
+   * store job token
+   * @param t
+   */
+  //@InterfaceAudience.Private
+  public static void setJobToken(Token<? extends TokenIdentifier> t, 
+      TokenStorage ts) {
+    ts.addToken(JOB_TOKEN, t);
+  }
+  /**
+   * 
+   * @return job token
+   */
+  //@InterfaceAudience.Private
+  public static Token<? extends TokenIdentifier> getJobToken(TokenStorage ts) {
+    return ts.getToken(JOB_TOKEN);
+  }
+
+  /**
+   * create service name for Delegation token ip:port
+   * @param uri
+   * @return "ip:port"
+   */
   static String buildDTServiceName(URI uri) {
     int port = uri.getPort();
     if(port == -1) 
@@ -180,43 +250,5 @@ public class TokenCache {
     StringBuffer sb = new StringBuffer();
     sb.append(NetUtils.normalizeHostName(uri.getHost())).append(":").append(port);
     return sb.toString();
-  }
-    
-  /**
-   * get Delegation for each distinct dfs for given paths.
-   * @param ps
-   * @param conf
-   * @throws IOException
-   */
-  public static void obtainTokensForNamenodes(Path [] ps, Configuration conf) 
-  throws IOException {
-    // get jobtracker principal id (for the renewer)
-    Text jtCreds = new Text(conf.get(JobContext.JOB_JOBTRACKER_ID, ""));
-
-    for(Path p: ps) {
-      FileSystem fs = FileSystem.get(p.toUri(), conf);
-      if(fs instanceof DistributedFileSystem) {
-        DistributedFileSystem dfs = (DistributedFileSystem)fs;
-        URI uri = fs.getUri();
-        String fs_addr = buildDTServiceName(uri);
-        
-        // see if we already have the token
-        Token<DelegationTokenIdentifier> token =
-          TokenCache.getDelegationToken(fs_addr);
-        if(token != null) {
-          LOG.debug("DT for " + token.getService()  + " is already present");
-          continue;
-        }
-        // get the token
-        token = dfs.getDelegationToken(jtCreds);
-        if(token==null)
-          throw new IOException("Token from " + fs_addr + " is null");
-
-        token.setService(new Text(fs_addr));
-        TokenCache.addDelegationToken(fs_addr, token);
-        LOG.info("getting dt for " + p.toString() + ";uri="+ fs_addr +
-            ";t.service="+token.getService());
-      }
-    }
   }
 }

@@ -136,6 +136,11 @@ public class TestTaskTrackerLocalization extends TestCase {
     // Set up the task to be localized
     String jtIdentifier = "200907202331";
     jobId = new JobID(jtIdentifier, 1);
+    
+    TaskTracker.RunningJob rjob = new TaskTracker.RunningJob(jobId);
+    rjob.ugi = UserGroupInformation.getCurrentUser();
+    tracker.runningJobs.put(jobId, rjob);
+    
     taskId =
         new TaskAttemptID(jtIdentifier, jobId.getId(), true, 1, 0);
     task =
@@ -354,7 +359,8 @@ public class TestTaskTrackerLocalization extends TestCase {
     tracker.getLocalizer().initializeUserDirs(task.getUser());
 
     // /////////// The main method being tested
-    localizedJobConf = tracker.localizeJobFiles(task);
+    localizedJobConf = tracker.localizeJobFiles(task, 
+        new TaskTracker.RunningJob(task.getJobID()));
     // ///////////
 
     // Now initialize the job via task-controller so as to set
@@ -448,7 +454,8 @@ public class TestTaskTrackerLocalization extends TestCase {
       return;
     }
     tracker.getLocalizer().initializeUserDirs(task.getUser());
-    localizedJobConf = tracker.localizeJobFiles(task);
+    localizedJobConf = tracker.localizeJobFiles(task, 
+        new TaskTracker.RunningJob(task.getJobID()));
 
     // Now initialize the job via task-controller so as to set
     // ownership/permissions of jars, job-work-dir
@@ -654,7 +661,8 @@ public class TestTaskTrackerLocalization extends TestCase {
       throws Exception {
     // Localize job and localize task.
     tracker.getLocalizer().initializeUserDirs(task.getUser());
-    localizedJobConf = tracker.localizeJobFiles(task);
+    localizedJobConf = tracker.localizeJobFiles(task, 
+        new TaskTracker.RunningJob(task.getJobID()));
     if (jvmReuse) {
       localizedJobConf.setNumTasksToExecutePerJvm(2);
     }

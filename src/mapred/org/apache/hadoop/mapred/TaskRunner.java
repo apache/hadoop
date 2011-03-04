@@ -161,7 +161,8 @@ abstract class TaskRunner extends Thread {
       // We don't create any symlinks yet, so presence/absence of workDir
       // actually on the file system doesn't matter.
       UserGroupInformation ugi =
-        UserGroupInformation.createRemoteUser(conf.getUser());
+        //UserGroupInformation.createRemoteUser(conf.getUser());
+        tracker.getRunningJob(t.getJobID()).getUGI();
       ugi.doAs(new PrivilegedExceptionAction<Void>() {
         public Void run() throws IOException {
           taskDistributedCacheManager =
@@ -498,9 +499,9 @@ abstract class TaskRunner extends Thread {
     }
     env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
 
-    String jobTokenFile = conf.get(TokenCache.JOB_TOKEN_FILENAME);
+    String jobTokenFile = conf.get(TokenCache.JOB_TOKENS_FILENAME);
     LOG.debug("putting jobToken file name into environment fn=" + jobTokenFile);
-    env.put("JOB_TOKEN_FILE", jobTokenFile);
+    env.put(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION, jobTokenFile);
     
     // for the child of task jvm, set hadoop.root.logger
     env.put("HADOOP_ROOT_LOGGER","INFO,TLA");

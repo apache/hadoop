@@ -21,7 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.security.TokenStorage;
 
 /** 
  * Protocol that a JobClient and the central JobTracker use to communicate.  The
