@@ -20,4 +20,14 @@
 
   <import file="../build-contrib.xml"/>
 
+   <!-- Run all unit tests. superdottest -->
+  <target name="test">
+   <antcall target="hadoopbuildcontrib.test" />
+  </target>
+
+  <!--Run all system tests.-->
+  <target name="test-system">
+    <antcall target="hadoopbuildcontrib.test-system" />
+   </target>
+
 </project>
