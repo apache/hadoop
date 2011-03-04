@@ -538,7 +538,12 @@ abstract class TaskRunner extends Thread {
       }catch(IOException ie){
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
       }
-      tip.reportTaskFinished();
+      
+      // It is safe to call TaskTracker.TaskInProgress.reportTaskFinished with
+      // *false* since the task has either
+      // a) SUCCEEDED - which means commit has been done
+      // b) FAILED - which means we do not need to commit
+      tip.reportTaskFinished(false);
     }
   }
   

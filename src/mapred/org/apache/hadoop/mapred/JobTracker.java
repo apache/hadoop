@@ -133,9 +133,21 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // The maximum number of blacklists for a tracker after which the 
   // tracker could be blacklisted across all jobs
   private int MAX_BLACKLISTS_PER_TRACKER = 4;
+  
   // Approximate number of heartbeats that could arrive JobTracker
   // in a second
-  private int NUM_HEARTBEATS_IN_SECOND = 100;
+  static final String JT_HEARTBEATS_IN_SECOND = "mapred.heartbeats.in.second";
+  private int NUM_HEARTBEATS_IN_SECOND;
+  private final int DEFAULT_NUM_HEARTBEATS_IN_SECOND = 100;
+  private final int MIN_NUM_HEARTBEATS_IN_SECOND = 1;
+  
+  // Scaling factor for heartbeats, used for testing only
+  static final String JT_HEARTBEATS_SCALING_FACTOR = 
+    "mapreduce.jobtracker.heartbeats.scaling.factor";
+  private float HEARTBEATS_SCALING_FACTOR;
+  private final float MIN_HEARTBEATS_SCALING_FACTOR = 0.01f;
+  private final float DEFAULT_HEARTBEATS_SCALING_FACTOR = 1.0f;
+  
   public static enum State { INITIALIZING, RUNNING }
   State state = State.INITIALIZING;
   private static final int FS_ACCESS_RETRY_PERIOD = 10000;
@@ -1908,8 +1920,19 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
     MAX_BLACKLISTS_PER_TRACKER = 
         conf.getInt("mapred.max.tracker.blacklists", 4);
+    
     NUM_HEARTBEATS_IN_SECOND = 
-        conf.getInt("mapred.heartbeats.in.second", 100);
+      conf.getInt(JT_HEARTBEATS_IN_SECOND, DEFAULT_NUM_HEARTBEATS_IN_SECOND);
+    if (NUM_HEARTBEATS_IN_SECOND < MIN_NUM_HEARTBEATS_IN_SECOND) {
+      NUM_HEARTBEATS_IN_SECOND = DEFAULT_NUM_HEARTBEATS_IN_SECOND;
+    }
+    
+    HEARTBEATS_SCALING_FACTOR = 
+      conf.getFloat(JT_HEARTBEATS_SCALING_FACTOR, 
+                    DEFAULT_HEARTBEATS_SCALING_FACTOR);
+    if (HEARTBEATS_SCALING_FACTOR < MIN_HEARTBEATS_SCALING_FACTOR) {
+      HEARTBEATS_SCALING_FACTOR = DEFAULT_HEARTBEATS_SCALING_FACTOR;
+    }
 
     //This configuration is there solely for tuning purposes and 
     //once this feature has been tested in real clusters and an appropriate
@@ -2979,15 +3002,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   
   /**
    * Calculates next heartbeat interval using cluster size.
-   * Heartbeat interval is incremented 1second for every 50 nodes. 
+   * Heartbeat interval is incremented by 1 second for every 100 nodes by default. 
    * @return next heartbeat interval.
    */
   public int getNextHeartbeatInterval() {
     // get the no of task trackers
     int clusterSize = getClusterStatus().getTaskTrackers();
     int heartbeatInterval =  Math.max(
-                                (int)(1000 * Math.ceil((double)clusterSize / 
-                                                       NUM_HEARTBEATS_IN_SECOND)),
+                                (int)(1000 * HEARTBEATS_SCALING_FACTOR *
+                                      Math.ceil((double)clusterSize / 
+                                                NUM_HEARTBEATS_IN_SECOND)),
                                 HEARTBEAT_INTERVAL_MIN) ;
     return heartbeatInterval;
   }

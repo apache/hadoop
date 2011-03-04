@@ -223,6 +223,14 @@
 </property>
 
 <property>
+  <name>mapreduce.tasktracker.outofband.heartbeat</name>
+  <value>false</value>
+  <description>Expert: Set this to true to let the tasktracker send an 
+  out-of-band heartbeat on task-completion for better latency.
+  </description>
+</property>
+
+<property>
   <name>mapred.jobtracker.restart.recover</name>
   <value>false</value>
   <description>"true" to enable (job) recovery upon restart,
@@ -611,7 +619,7 @@
   <name>mapred.heartbeats.in.second</name>
   <value>100</value>
   <description>Expert: Approximate number of heart-beats that could arrive 
-               JobTracker in a second. Assuming each RPC can be processed 
+               at JobTracker in a second. Assuming each RPC can be processed 
                in 10msec, the default value is made 100 RPCs in a second.
   </description>
 </property> 
