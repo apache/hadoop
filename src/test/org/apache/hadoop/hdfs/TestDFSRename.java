@@ -27,7 +27,8 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 
 public class TestDFSRename extends junit.framework.TestCase {
-  MiniDFSCluster cluster = null;
+  static Configuration CONF = new Configuration();
+  static MiniDFSCluster cluster = null;
   static int countLease(MiniDFSCluster cluster) {
     return cluster.getNameNode().namesystem.leaseManager.countLease();
   }
@@ -36,8 +37,16 @@ public class TestDFSRename extends junit.framework.TestCase {
 
   @Override
   protected void setUp() throws Exception {
-    Configuration conf = new Configuration();
-    cluster = new MiniDFSCluster(conf, 2, true, null);
+    cluster = new MiniDFSCluster(CONF, 2, true, null);
+  }
+  
+  private void restartCluster() throws IOException {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
+    cluster = new MiniDFSCluster(CONF, 1, false, null);
+    cluster.waitClusterUp();
   }
   
   @Override
@@ -154,6 +163,32 @@ public class TestDFSRename extends junit.framework.TestCase {
     // Test3: src exceeds quota and dst has *no* quota to accommodate rename
     fs.setQuota(src1.getParent(), 1, FSConstants.QUOTA_DONT_SET);
     rename(dst1, src1, false, true);
+  }
+  
+  /**
+   * Perform operations such as setting quota, deletion of files, rename and
+   * ensure system can apply edits log during startup.
+   */
+  public void testEditsLog() throws Exception {
+    DistributedFileSystem fs = (DistributedFileSystem) cluster.getFileSystem();
+    Path src1 = new Path(dir, "testEditsLog/srcdir/src1");
+    Path dst1 = new Path(dir, "testEditsLog/dstdir/dst1");
+    createFile(fs, src1);
+    fs.mkdirs(dst1.getParent());
+    createFile(fs, dst1);
+    
+    // Set quota so that dst1 parent cannot allow under it new files/directories 
+    fs.setQuota(dst1.getParent(), 2, FSConstants.QUOTA_DONT_SET);
+    // Free up quota for a subsequent rename
+    fs.delete(dst1, true);
+    rename(src1, dst1, true, false);
+    
+    // Restart the cluster and ensure the above operations can be
+    // loaded from the edits log
+    restartCluster();
+    fs = (DistributedFileSystem)cluster.getFileSystem();
+    assertFalse(fs.exists(src1));   // ensure src1 is already renamed
+    assertTrue(fs.exists(dst1));    // ensure rename dst exists
   }
   
   private void rename(Path src, Path dst, boolean renameSucceeds,
