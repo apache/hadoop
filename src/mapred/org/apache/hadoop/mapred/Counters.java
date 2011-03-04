@@ -308,8 +308,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
         }
         numCounters = (numCounters == 0) ? Counters.this.size(): numCounters; 
         if (numCounters >= MAX_COUNTER_LIMIT) {
-          throw new RuntimeException("Exceeded the number of counters: " 
-              + "Num = " + numCounters + " " + "Limit: " + MAX_COUNTER_LIMIT);
+          throw new RuntimeException("Error: Exceeded limits on number of counters - " 
+              + "Counters=" + numCounters + " Limit=" + MAX_COUNTER_LIMIT);
         }
         result = new Counter(shortName, localize(shortName + ".name", shortName), 0L);
         subcounters.put(shortName, result);
@@ -406,9 +406,9 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     if (result == null) {
       /** check if we have exceeded the max number on groups **/
       if (counters.size() > MAX_GROUP_LIMIT) {
-        throw new RuntimeException("Number of groups in Counters" +
-        		" exceeded: limit " 
-            + MAX_GROUP_LIMIT);
+        throw new RuntimeException(
+            "Error: Exceeded limits on number of groups in counters - " +
+            "Groups=" + counters.size() +" Limit=" + MAX_GROUP_LIMIT);
       }
       result = new Group(shortGroupName);
       counters.put(shortGroupName, result);

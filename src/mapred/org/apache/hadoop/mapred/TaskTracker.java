@@ -2454,12 +2454,17 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       }
       
       /** check for counter limits and fail the task in case limits are exceeded **/
-      if (taskStatus.getCounters().size() > Counters.MAX_COUNTER_LIMIT ||
-          taskStatus.getCounters().getGroupNames().size() > Counters.MAX_GROUP_LIMIT) {
-        LOG.warn("Killing task " + task.getTaskID() + " :Exceeded limit on counters.");
+      Counters taskCounters = taskStatus.getCounters();
+      if (taskCounters.size() > Counters.MAX_COUNTER_LIMIT ||
+          taskCounters.getGroupNames().size() > Counters.MAX_GROUP_LIMIT) {
+        LOG.warn("Killing task " + task.getTaskID() + ": " +
+        		"Exceeded limit on counters.");
         try { 
-          reportDiagnosticInfo("Error: Exceeded counter limits of counter:" 
-              + Counters.MAX_COUNTER_LIMIT  + " Group:" + Counters.MAX_GROUP_LIMIT);
+          reportDiagnosticInfo("Error: Exceeded counter limits - " +
+          		"Counters=" + taskCounters.size() + " Limit=" 
+              + Counters.MAX_COUNTER_LIMIT  + ". " + 
+              "Groups=" + taskCounters.getGroupNames().size() + " Limit=" +
+              Counters.MAX_GROUP_LIMIT);
           kill(true);
         } catch(IOException ie) {
           LOG.error("Error killing task " + task.getTaskID(), ie);
