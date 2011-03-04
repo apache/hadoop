@@ -37,8 +37,7 @@
   	Later on one can run 'ant jar-fault-inject' to create
   	Hadoop jar file with instrumented classes
   -->
-  <target name="compile-fault-inject" 
-  	depends="-classes-compilation">
+  <target name="-compile-fault-inject" depends="-classes-compilation">
     <!-- AspectJ task definition -->
     <taskdef
       resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties">
@@ -172,7 +171,7 @@
     <attribute name="dest.dir" />
     <attribute name="src.dir" />
     <sequential>
-      <subant buildpath="build.xml" target="compile-fault-inject"
+      <subant buildpath="build.xml" target="-compile-fault-inject"
         output="${compile-inject.output}">
         <property name="build.dir" value="${build-fi.dir}" />
         <property name="src.dir.path" value="@{src.dir}" />
