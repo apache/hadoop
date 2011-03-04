@@ -1813,7 +1813,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       checkPermission(src, false, null, FsAction.WRITE, null, FsAction.ALL);
     }
 
-    return dir.delete(src) != null;
+    return dir.delete(src);
   }
 
   void removePathAndBlocks(String src, List<Block> blocks) throws IOException {

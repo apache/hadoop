@@ -24,9 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.*;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -52,8 +49,6 @@ class FSDirectory implements FSConstants, Closeable {
   final INodeDirectoryWithQuota rootDir;
   FSImage fsImage;  
   private boolean ready = false;
-  // Metrics record
-  private MetricsRecord directoryMetrics = null;
   private final int lsLimit;  // max list limit
 
   /**
@@ -87,13 +82,6 @@ class FSDirectory implements FSConstants, Closeable {
         + " times ");
     nameCache = new NameCache<ByteArray>(threshold);
 
-    initialize(conf);
-  }
-    
-  private void initialize(Configuration conf) {
-    MetricsContext metricsContext = MetricsUtil.getContext("dfs");
-    directoryMetrics = MetricsUtil.createRecord(metricsContext, "FSDirectory");
-    directoryMetrics.setTag("sessionId", conf.get("session.id"));
   }
 
   void loadFSImage(Collection<File> dataDirs,
@@ -126,8 +114,8 @@ class FSDirectory implements FSConstants, Closeable {
   }
 
   private void incrDeletedFileCount(int count) {
-    directoryMetrics.incrMetric("files_deleted", count);
-    directoryMetrics.update();
+    if (namesystem != null)
+      NameNode.getNameNodeMetrics().numFilesDeleted.inc(count);
   }
     
   /**
@@ -593,17 +581,19 @@ class FSDirectory implements FSConstants, Closeable {
   /**
    * Remove the file from management, return blocks
    */
-  INode delete(String src) {
+  boolean delete(String src) {
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       NameNode.stateChangeLog.debug("DIR* FSDirectory.delete: "+src);
     }
     waitForReady();
     long now = FSNamesystem.now();
-    INode deletedNode = unprotectedDelete(src, now);
-    if (deletedNode != null) {
-      fsImage.getEditLog().logDelete(src, now);
+    int filesRemoved = unprotectedDelete(src, now);
+    if (filesRemoved <= 0) {
+      return false;
     }
-    return deletedNode;
+    incrDeletedFileCount(filesRemoved);
+    fsImage.getEditLog().logDelete(src, now);
+    return true;
   }
   
   /** Return if a directory is empty or not **/
@@ -628,9 +618,9 @@ class FSDirectory implements FSConstants, Closeable {
    * @param src a string representation of a path to an inode
    * @param modificationTime the time the inode is removed
    * @param deletedBlocks the place holder for the blocks to be removed
-   * @return if the deletion succeeds
+   * @return the number of inodes deleted; 0 if no inodes are deleted.
    */ 
-  INode unprotectedDelete(String src, long modificationTime) {
+  int unprotectedDelete(String src, long modificationTime) {
     src = normalizePath(src);
 
     synchronized (rootDir) {
@@ -640,12 +630,12 @@ class FSDirectory implements FSConstants, Closeable {
       if (targetNode == null) { // non-existent src
         NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
             +"failed to remove "+src+" because it does not exist");
-        return null;
+        return 0;
       } else if (inodes.length == 1) { // src is the root
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
             "failed to remove " + src +
             " because the root is not allowed to be deleted");
-        return null;
+        return 0;
       } else {
         try {
           // Remove the node from the namespace
@@ -655,17 +645,16 @@ class FSDirectory implements FSConstants, Closeable {
           // GC all the blocks underneath the node.
           ArrayList<Block> v = new ArrayList<Block>();
           int filesRemoved = targetNode.collectSubtreeBlocksAndClear(v);
-          incrDeletedFileCount(filesRemoved);
           namesystem.removePathAndBlocks(src, v);
           if (NameNode.stateChangeLog.isDebugEnabled()) {
             NameNode.stateChangeLog.debug("DIR* FSDirectory.unprotectedDelete: "
               +src+" is removed");
           }
-          return targetNode;
+          return filesRemoved;
         } catch (IOException e) {
           NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedDelete: " +
               "failed to remove " + src + " because " + e.getMessage());
-          return null;
+          return 0;
         }
       }
     }
@@ -986,7 +975,7 @@ class FSDirectory implements FSConstants, Closeable {
           return false;
         }
         // Directory creation also count towards FilesCreated
-        // to match count of files_deleted metric. 
+        // to match count of FilesDeleted metric. 
         if (namesystem != null)
           NameNode.getNameNodeMetrics().numFilesCreated.inc();
         fsImage.getEditLog().logMkDir(cur, inodes[i]);
@@ -1210,7 +1199,6 @@ class FSDirectory implements FSConstants, Closeable {
    * @param dir the root of the tree that represents the directory
    * @param counters counters for name space and disk space
    * @param nodesInPath INodes for the each of components in the path.
-   * @return the size of the tree
    */
   private static void updateCountForINodeWithQuota(INodeDirectory dir, 
                                                INode.DirCounts counts,
