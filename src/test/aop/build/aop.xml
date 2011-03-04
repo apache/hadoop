@@ -123,22 +123,6 @@
                        classpath="test.system.classpath"
                        test.dir="${system-test-build-dir}/test"
                        fileset.dir="${test.src.dir}/system/java"
-                       hadoop.home="${hadoop.home}"
-                       hadoop.conf.dir="${hadoop.conf.dir}">
-    </macro-test-runner>
-  </target>
-  <target name="-test-system-deployed"
-    depends="ivy-retrieve-common, prepare-test-system" 
-    if="hadoop.conf.dir.deployed">
-    <macro-jar-examples
-      build.dir="${system-test-build-dir}"
-      basedir="${system-test-build-dir}/examples">
-    </macro-jar-examples>
-    <macro-test-runner classpath="test.system.classpath"
-                       test.dir="${system-test-build-dir}/test"
-                       fileset.dir="${test.src.dir}/system/java"
-                       hadoop.home="${hadoop.home}"
-                       hadoop.conf.dir="${hadoop.conf.dir}"
                        hadoop.conf.dir.deployed="${hadoop.conf.dir.deployed}">
     </macro-test-runner>
   </target>

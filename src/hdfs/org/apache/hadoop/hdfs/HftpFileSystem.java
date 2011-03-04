@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.namenode.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
@@ -266,13 +267,33 @@ public class HftpFileSystem extends FileSystem {
         "ugi=" + getUgiParameter());
     connection.setRequestMethod("GET");
     connection.connect();
+    final String cl = connection.getHeaderField(StreamFile.CONTENT_LENGTH);
+    final long filelength = cl == null? -1: Long.parseLong(cl);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("filelength = " + filelength);
+    }
     final InputStream in = connection.getInputStream();
     return new FSDataInputStream(new FSInputStream() {
+        long currentPos = 0;
+
+        private void update(final boolean isEOF, final int n
+            ) throws IOException {
+          if (!isEOF) {
+            currentPos += n;
+          } else if (currentPos < filelength) {
+            throw new IOException("Got EOF but byteread = " + currentPos
+                + " < filelength = " + filelength);
+          }
+        }
         public int read() throws IOException {
-          return in.read();
+          final int b = in.read();
+          update(b == -1, 1);
+          return b;
         }
         public int read(byte[] b, int off, int len) throws IOException {
-          return in.read(b, off, len);
+          final int n = in.read(b, off, len);
+          update(n == -1, n);
+          return n;
         }
 
         public void close() throws IOException {

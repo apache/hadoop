@@ -1526,7 +1526,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
    * DFSInputStream provides bytes from a named file.  It handles 
    * negotiation of the namenode and various datanodes as necessary.
    ****************************************************************/
-  class DFSInputStream extends FSInputStream {
+  public class DFSInputStream extends FSInputStream {
     private Socket s = null;
     private boolean closed = false;
 

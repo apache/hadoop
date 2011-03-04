@@ -27,12 +27,16 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.security.UserGroupInformation;
 
 public class StreamFile extends DfsServlet {
+  /** for java.io.Serializable */
+  private static final long serialVersionUID = 1L;
+
+  public static final String CONTENT_LENGTH = "Content-Length";
+
   static InetSocketAddress nameNodeAddr;
   static DataNode datanode = null;
   static {
@@ -63,21 +67,30 @@ public class StreamFile extends DfsServlet {
       return;
     }
     
-    FSInputStream in = dfs.open(filename);
+    final DFSClient.DFSInputStream in = dfs.open(filename);
     OutputStream os = response.getOutputStream();
     response.setHeader("Content-Disposition", "attachment; filename=\"" + 
                        filename + "\"");
     response.setContentType("application/octet-stream");
+    response.setHeader(CONTENT_LENGTH, "" + in.getFileLength());
     byte buf[] = new byte[4096];
     try {
       int bytesRead;
       while ((bytesRead = in.read(buf)) != -1) {
         os.write(buf, 0, bytesRead);
       }
+    } catch(IOException e) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("response.isCommitted()=" + response.isCommitted(), e);
+      }
+      throw e;
     } finally {
-      in.close();
-      os.close();
-      dfs.close();
+      try {
+        in.close();
+        os.close();
+      } finally {
+        dfs.close();
+      }
     }
   }
 }

@@ -26,7 +26,7 @@
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
  
-  <property name="Name" value="Hadoop"/>
+  <property name="Name" value="Yahoo! Distribution of Hadoop"/>
   <property name="name" value="hadoop"/>
   <property name="version" value="0.20.200.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
@@ -616,7 +616,6 @@
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
-
     <property name="jar.properties.list"
       value="commons-logging.properties, log4j.properties, hadoop-metrics.properties"/>
     <jar jarfile="${build.dir}/${core.final.name}.jar"
@@ -625,7 +624,7 @@
         <section name="org/apache/hadoop">
           <attribute name="Implementation-Title" value="Hadoop"/>
           <attribute name="Implementation-Version" value="${version}"/>
-          <attribute name="Implementation-Vendor" value="Apache"/>
+          <attribute name="Implementation-Vendor" value="Yahoo!"/>
         </section>
       </manifest>
       <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
@@ -640,13 +639,10 @@
   <!--                                                                    -->
   <!-- ================================================================== -->
   <target name="examples" depends="jar, compile-examples" description="Make the Hadoop examples jar.">
-    <jar jarfile="${build.dir}/${examples.final.name}.jar"
-         basedir="${build.examples}">
-      <manifest>
-        <attribute name="Main-Class" 
-                   value="org/apache/hadoop/examples/ExampleDriver"/>
-      </manifest>
-    </jar>
+    <macro-jar-examples
+      build.dir="${build.dir}"
+      basedir="${build.examples}">
+    </macro-jar-examples>
   </target>
 
   <macrodef name="macro-jar-examples">
@@ -793,7 +789,7 @@
           <section name="org/apache/hadoop">
             <attribute name="Implementation-Title" value="Hadoop"/>
             <attribute name="Implementation-Version" value="${version}"/>
-            <attribute name="Implementation-Vendor" value="Apache"/>
+            <attribute name="Implementation-Vendor" value="Yahoo!"/>
           </section>
          </manifest>
     </jar>
@@ -882,8 +878,6 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  
-  <!-- Define a macro that will be used for fast and all test runs -->
   <macrodef name="macro-test-runner">
     <attribute name="test.file" />
     <attribute name="classpath" />
@@ -895,14 +889,14 @@
     <attribute name="exclude.list.id" default="empty.exclude.list.id" />
     <sequential>
       <delete file="${test.build.dir}/testsfailed"/>
-      <delete dir="${test.build.data}"/>
-      <mkdir dir="${test.build.data}"/>
-      <delete dir="${test.log.dir}"/>
-      <mkdir dir="${test.log.dir}"/>
-      <copy file="${test.src.dir}/hadoop-policy.xml" 
-        todir="${test.build.extraconf}" />
+      <delete dir="@{test.dir}/data" />
+      <mkdir dir="@{test.dir}/data" />
+      <delete dir="@{test.dir}/logs" />
+      <mkdir dir="@{test.dir}/logs" />
+      <copy file="${test.src.dir}/hadoop-policy.xml"
+            todir="@{test.dir}/extraconf" />
       <copy file="${test.src.dir}/fi-site.xml"
-        todir="${test.build.extraconf}" />
+            todir="@{test.dir}/extraconf" />
       <junit showoutput="${test.output}"
              printsummary="${test.junit.printsummary}"
              haltonfailure="${test.junit.haltonfailure}"
@@ -928,7 +922,7 @@
                      value="@{test.krb5.conf.filename}"/>
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
         <sysproperty key="java.library.path"
-             value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
+                     value="${build.native}/lib:${lib.dir}/native/${build.platform}" />
         <sysproperty key="install.c++.examples"
                      value="${install.c++.examples}" />
         <sysproperty key="testjar"
@@ -938,20 +932,20 @@
                      value="@{hadoop.conf.dir.deployed}" />
         <!-- set io.compression.codec.lzo.class in the child jvm only if it is set -->
         <syspropertyset dynamic="no">
-          <propertyref name="io.compression.codec.lzo.class"/>
+          <propertyref name="io.compression.codec.lzo.class" />
         </syspropertyset>
         <!-- set compile.c++ in the child jvm only if it is set -->
         <syspropertyset dynamic="no">
-          <propertyref name="compile.c++"/>
+          <propertyref name="compile.c++" />
         </syspropertyset>
-        <classpath refid="${test.classpath.id}"/>
+        <classpath refid="@{classpath}" />
         <syspropertyset id="FaultProbabilityProperties">
-          <propertyref regex="fi.*"/>
+          <propertyref regex="fi.*" />
         </syspropertyset>
         <formatter type="${test.junit.output.format}" />
-        <batchtest todir="${test.build.dir}" if="tests.notestcase">
-          <fileset dir="${test.src.dir}" 
-            excludes="**/${test.exclude}.java aop/**">
+        <batchtest todir="@{test.dir}" if="tests.notestcase">
+          <fileset dir="@{fileset.dir}"
+                   excludes="**/${test.exclude}.java aop/** system/**">
             <patternset>
               <includesfile name="@{test.file}"/>
             </patternset>
@@ -960,20 +954,20 @@
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
           <fileset dir="${test.src.dir}/aop"
-            includes="**/${test.include}.java"
-            excludes="**/${test.exclude}.java" />
+                   includes="**/${test.include}.java"
+                   excludes="**/${test.exclude}.java" />
         </batchtest>
-        <batchtest todir="${test.build.dir}" if="tests.testcase">
-          <fileset dir="${test.src.dir}"
-            includes="**/${testcase}.java" excludes="aop/**"/>
+        <batchtest todir="@{test.dir}" if="tests.testcase">
+          <fileset dir="@{fileset.dir}"
+            includes="**/${testcase}.java" excludes="aop/** system/**"/>
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
-          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
+          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java" />
         </batchtest>
         <!--The following batch is for very special occasions only when
-         a non-FI tests are needed to be executed against FI-environment -->
+                a non-FI tests are needed to be executed against FI-environment -->
         <batchtest todir="${test.build.dir}" if="tests.testcaseonly">
-          <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
+          <fileset dir="${test.src.dir}" includes="**/${testcase}.java" />
         </batchtest>
       </junit>
       <antcall target="checkfailure"/>
@@ -1190,7 +1184,7 @@
       use="true"
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} Developer API"
-      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      bottom="This release is based on the Yahoo! Distribution of Hadoop, powering the largest Hadoop clusters in the Universe!&lt;br>Copyright &amp;copy; ${year} The Apache Software Foundation."
       maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
@@ -1233,7 +1227,7 @@
       use="true"
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} API"
-      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      bottom="This release is based on the Yahoo! Distribution of Hadoop, powering the largest Hadoop clusters in the Universe!&lt;br>Copyright &amp;copy; ${year} The Apache Software Foundation."
       maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
@@ -1570,7 +1564,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-sign" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-sign, clean-fi" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
