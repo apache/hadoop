@@ -117,4 +117,11 @@ public aspect JTProtocolAspect {
   public void JTProtocol.accessHistoryData(JobID jobId) throws Exception{
     
   }
+
+  public boolean JTProtocol.isNodeDecommissioned(String ttClientHostName) 
+       throws IOException {
+   return false;
+  }
+
+
 }

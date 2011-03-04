@@ -197,4 +197,11 @@ public interface JTProtocol extends DaemonProtocol {
     */
    public void accessHistoryData(JobID jobId) throws Exception;
 
+
+  /**
+   * Finds out if the given Task tracker client is decommissioned or not
+   */
+  public boolean isNodeDecommissioned(String ttClientHostName) 
+      throws IOException;
+
 }

@@ -539,4 +539,17 @@ public privileged aspect JobTrackerAspect {
     jobInfo.getJobACLs();
   }
   
+  /**
+   * Verifies whether Node is decommissioned or not
+   * @param
+   * tasktracker Client host name
+   * @return boolean true for Decommissoned and false for not decommissioned.
+   */
+  public boolean JobTracker.isNodeDecommissioned(String ttClientHostName)
+      throws IOException {
+    Set<String> excludedNodes = hostsReader.getExcludedHosts();
+    LOG.info("ttClientHostName is :" + ttClientHostName);
+    boolean b =  excludedNodes.contains(ttClientHostName);
+    return b;
+  }
 }
