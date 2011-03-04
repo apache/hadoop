@@ -339,15 +339,14 @@ public class TestTaskTrackerMemoryManager extends TestCase {
 
     startCluster(fConf);
 
-    Pattern taskOverLimitPattern =
-      Pattern.compile(String.format(taskOverLimitPatternString, String
-          .valueOf(PER_TASK_LIMIT)));
+    Pattern taskOverLimitPattern = Pattern.compile(
+        String.format(taskOverLimitPatternString, String.valueOf(PER_TASK_LIMIT)));
 
     Pattern trackerOverLimitPattern =
-      Pattern
-          .compile("Killing one of the least progress tasks - .*, as "
-              + "the cumulative memory usage of all the tasks on the TaskTracker"
-              + " exceeds virtual memory limit " + TASK_TRACKER_LIMIT + ".");
+        Pattern.compile("Killing one of the least progress tasks - .*, as "
+        + "the cumulative memory usage of all the tasks on the TaskTracker"
+        + " host0.foo.com exceeds virtual memory limit " + TASK_TRACKER_LIMIT
+        + ".");
     Matcher mat = null;
 
     // Set up job.
