@@ -346,9 +346,6 @@ public class FsShell extends Configured implements Tool {
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
-        if (srcFs.getFileStatus(p).isDir()) {
-          throw new IOException("Source must be a file.");
-        }
         printToStdout(srcFs.open(p));
       }
     }.globAndProcess(srcPattern, getSrcFileSystem(srcPattern, verifyChecksum));
