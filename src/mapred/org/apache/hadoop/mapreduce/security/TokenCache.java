@@ -40,6 +40,7 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -86,7 +87,8 @@ public class TokenCache {
                                                Path [] ps, Configuration conf)
   throws IOException {
     // get jobtracker principal id (for the renewer)
-    Text jtCreds = new Text(conf.get(JobTracker.JT_USER_NAME, ""));
+    KerberosName jtKrbName = new KerberosName(conf.get(JobTracker.JT_USER_NAME, ""));
+    Text delegTokenRenewer = new Text(jtKrbName.getShortName());
     boolean notReadFile = true;
     for(Path p: ps) {
       //TODO: Connecting to the namenode is not required in the case,
@@ -120,7 +122,7 @@ public class TokenCache {
           }
         }
         // get the token
-        token = dfs.getDelegationToken(jtCreds);
+        token = dfs.getDelegationToken(delegTokenRenewer);
         if(token==null) 
           throw new IOException("Token from " + fs_addr + " is null");
 

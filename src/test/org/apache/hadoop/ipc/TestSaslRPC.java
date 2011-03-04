@@ -46,6 +46,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
@@ -61,6 +62,7 @@ public class TestSaslRPC {
   
   static final String ERROR_MESSAGE = "Token is invalid";
   static final String SERVER_PRINCIPAL_KEY = "test.ipc.server.principal";
+  static final String SERVER_KEYTAB_KEY = "test.ipc.server.keytab";
   private static Configuration conf;
   static {
     conf = new Configuration();
@@ -74,6 +76,7 @@ public class TestSaslRPC {
     ((Log4JLogger) SaslRpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) SaslRpcServer.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger) SaslInputStream.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger) SecurityUtil.LOG).getLogger().setLevel(Level.ALL);
   }
 
   public static class TestTokenIdentifier extends TokenIdentifier {
@@ -244,7 +247,8 @@ public class TestSaslRPC {
   static void testKerberosRpc(String principal, String keytab) throws Exception {
     final Configuration newConf = new Configuration(conf);
     newConf.set(SERVER_PRINCIPAL_KEY, principal);
-    UserGroupInformation.loginUserFromKeytab(principal, keytab);
+    newConf.set(SERVER_KEYTAB_KEY, keytab);
+    SecurityUtil.login(newConf, SERVER_KEYTAB_KEY, SERVER_PRINCIPAL_KEY);
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     System.out.println("UGI: " + current);
 
@@ -265,6 +269,7 @@ public class TestSaslRPC {
         RPC.stopProxy(proxy);
       }
     }
+    System.out.println("Test is successful.");
   }
   
   @Test

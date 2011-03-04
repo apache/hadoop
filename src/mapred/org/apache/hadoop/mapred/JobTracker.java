@@ -93,6 +93,7 @@ import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -2005,15 +2006,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   JobTracker(final JobConf conf, String identifier, Clock clock) 
   throws IOException, InterruptedException { 
     this.clock = clock;
+    // Set ports, start RPC servers, setup security policy etc.
+    InetSocketAddress addr = getAddress(conf);
+    this.localMachine = addr.getHostName();
+    this.port = addr.getPort();
     // find the owner of the process
     // get the desired principal to load
-    String keytabFilename = conf.get(JT_KEYTAB_FILE);
     UserGroupInformation.setConfiguration(conf);
-    if (keytabFilename != null) {
-      String desiredUser = conf.get(JT_USER_NAME,
-                                   System.getProperty("user.name"));
-      UserGroupInformation.loginUserFromKeytab(desiredUser,
-                                               keytabFilename);
+    SecurityUtil.login(conf, JT_KEYTAB_FILE, JT_USER_NAME, localMachine);
+    if (UserGroupInformation.isLoginKeytabBased()) {
       mrOwner = UserGroupInformation.getLoginUser();
     } else {
       mrOwner = UserGroupInformation.getCurrentUser();
@@ -2091,11 +2092,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       = conf.getClass("mapred.jobtracker.taskScheduler",
           JobQueueTaskScheduler.class, TaskScheduler.class);
     taskScheduler = (TaskScheduler) ReflectionUtils.newInstance(schedulerClass, conf);
-                                           
-    // Set ports, start RPC servers, setup security policy etc.
-    InetSocketAddress addr = getAddress(conf);
-    this.localMachine = addr.getHostName();
-    this.port = addr.getPort();
     
     // Set service-level authorization security policy
     if (conf.getBoolean(

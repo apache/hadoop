@@ -417,6 +417,8 @@ public class UserGroupInformation {
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
     }
+    LOG.info("Login successful for user " + keytabPrincipal
+        + " using keytab file " + keytabFile);
   }
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab

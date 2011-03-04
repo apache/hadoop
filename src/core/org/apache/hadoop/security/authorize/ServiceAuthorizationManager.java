@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.security.authorize;
 
+import java.io.IOException;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -25,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -59,11 +61,14 @@ public class ServiceAuthorizationManager {
    * 
    * @param user user accessing the service 
    * @param protocol service being accessed
+   * @param conf configuration to use
+   * @param hostname fully qualified domain name of the client
    * @throws AuthorizationException on authorization failure
    */
   public static void authorize(UserGroupInformation user, 
                                Class<?> protocol,
-                               Configuration conf
+                               Configuration conf,
+                               String hostname
                                ) throws AuthorizationException {
     AccessControlList acl = protocolToAcl.get(protocol);
     if (acl == null) {
@@ -77,7 +82,19 @@ public class ServiceAuthorizationManager {
     if (krbInfo != null) {
       String clientKey = krbInfo.clientPrincipal();
       if (clientKey != null && !clientKey.equals("")) {
-        clientPrincipal = conf.get(clientKey);
+        if (hostname == null) {
+          throw new AuthorizationException(
+              "Can't authorize client when client hostname is null");
+        }
+        try {
+          clientPrincipal = SecurityUtil.getServerPrincipal(
+              conf.get(clientKey), hostname);
+        } catch (IOException e) {
+          throw (AuthorizationException) new AuthorizationException(
+              "Can't figure out Kerberos principal name for connection from "
+                  + hostname + " for user=" + user + " protocol=" + protocol)
+              .initCause(e);
+        }
       }
     }
     if((clientPrincipal != null && !clientPrincipal.equals(user.getUserName())) || 

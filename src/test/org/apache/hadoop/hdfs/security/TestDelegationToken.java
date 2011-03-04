@@ -161,7 +161,7 @@ public class TestDelegationToken {
   public void testDelegationTokenWithDoAs() throws Exception {
     final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
     final Token<DelegationTokenIdentifier> token = dfs.getDelegationToken(new Text(
-        "JobTracker/foo.com@FOO.COM"));
+        "JobTracker"));
     final UserGroupInformation longUgi = UserGroupInformation
         .createRemoteUser("JobTracker/foo.com@FOO.COM");
     final UserGroupInformation shortUgi = UserGroupInformation
@@ -183,20 +183,7 @@ public class TestDelegationToken {
       public Object run() throws IOException {
         final DistributedFileSystem dfs = (DistributedFileSystem) cluster
             .getFileSystem();
-        try {
-          //try renew with long name
-          dfs.renewDelegationToken(token);
-          Assert.fail("Should not renew delegation token for short user name");
-        } catch (IOException e) {
-          //PASS
-        }
-        try {
-          //try cancel with long name
-          dfs.cancelDelegationToken(token);
-          Assert.fail("Should not cancel delegation token for short user name");
-        } catch (IOException e) {
-          //PASS
-        }
+        dfs.renewDelegationToken(token);
         return null;
       }
     });

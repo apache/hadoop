@@ -28,6 +28,7 @@ import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
@@ -77,14 +78,6 @@ public class DFSck extends Configured implements Tool {
     this.ugi = UserGroupInformation.getCurrentUser();
   }
   
-  private String getInfoServer() throws IOException {
-    // select the right config
-    String http = UserGroupInformation.isSecurityEnabled() ? 
-        "dfs.https.address" : "dfs.http.address";
-    return NetUtils.getServerAddress(getConf(), "dfs.info.bindAddress",
-        "dfs.info.port", http);
-  }
-  
   /**
    * Print fsck usage information
    */
@@ -125,7 +118,7 @@ public class DFSck extends Configured implements Tool {
           }
           
           final StringBuffer url = new StringBuffer(proto);
-          url.append(getInfoServer()).append("/fsck?ugi=").append(ugi.getShortUserName()).append("&path=");
+          url.append(NameNode.getInfoServer(getConf())).append("/fsck?ugi=").append(ugi.getShortUserName()).append("&path=");
 
           String dir = "/";
           // find top-level dir first

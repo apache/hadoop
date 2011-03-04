@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,6 +43,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
@@ -61,6 +63,10 @@ import org.apache.hadoop.util.StringUtils;
  **********************************************************/
 public class SecondaryNameNode implements Runnable {
     
+  static{
+    Configuration.addDefaultResource("hdfs-default.xml");
+    Configuration.addDefaultResource("hdfs-site.xml");
+  }
   public static final Log LOG = 
     LogFactory.getLog(SecondaryNameNode.class.getName());
 
@@ -119,9 +125,6 @@ public class SecondaryNameNode implements Runnable {
    * Create a connection to the primary namenode.
    */
   public SecondaryNameNode(Configuration conf)  throws IOException {
-    DFSUtil.login(conf, 
-        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
-        DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY);
     try {
       initialize(conf);
     } catch(IOException e) {
@@ -129,11 +132,27 @@ public class SecondaryNameNode implements Runnable {
       throw e;
     }
   }
-
+  
+  @SuppressWarnings("deprecation")
+  public static InetSocketAddress getHttpAddress(Configuration conf) {
+    String infoAddr = NetUtils.getServerAddress(conf,
+        "dfs.secondary.info.bindAddress", "dfs.secondary.info.port",
+        "dfs.secondary.http.address");
+    return NetUtils.createSocketAddr(infoAddr);
+  }
+  
   /**
    * Initialize SecondaryNameNode.
    */
   private void initialize(final Configuration conf) throws IOException {
+    final InetSocketAddress infoSocAddr = getHttpAddress(conf);
+    infoBindAddress = infoSocAddr.getHostName();
+    if (UserGroupInformation.isSecurityEnabled()) {
+      SecurityUtil.login(conf, 
+          DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
+          DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY,
+          infoBindAddress);
+    }
     // initiate Java VM metrics
     JvmMetrics.init("SecondaryNameNode", conf.get("session.id"));
     
@@ -161,8 +180,12 @@ public class SecondaryNameNode implements Runnable {
 
     // initialize the webserver for uploading files.
     // Kerberized SSL servers must be run from the host principal...
-    DFSUtil.login(conf, DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY, 
-        DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY);
+    if (UserGroupInformation.isSecurityEnabled()) {
+      SecurityUtil.login(conf,
+          DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
+          DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY,
+          infoBindAddress);
+    }
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     try {
       infoServer = ugi.doAs(new PrivilegedExceptionAction<HttpServer>() {
@@ -172,14 +195,6 @@ public class SecondaryNameNode implements Runnable {
           LOG.info("Starting web server as: " +
               UserGroupInformation.getLoginUser().getUserName());
 
-          String infoAddr = 
-            NetUtils.getServerAddress(conf, 
-                "dfs.secondary.info.bindAddress",
-                "dfs.secondary.info.port",
-            "dfs.secondary.http.address");
-
-          InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(infoAddr);
-          infoBindAddress = infoSocAddr.getHostName();
           int tmpInfoPort = infoSocAddr.getPort();
           infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
               tmpInfoPort == 0, conf);
@@ -205,12 +220,15 @@ public class SecondaryNameNode implements Runnable {
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     } finally {
-      // Go back to being the correct Namenode principal
-      LOG.info("Web server init done, returning to: " + 
-          UserGroupInformation.getLoginUser().getUserName());
-      DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
-          DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);
-      
+      if (UserGroupInformation.isSecurityEnabled()) {
+        // Go back to being the correct Namenode principal
+        SecurityUtil.login(conf, 
+            DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
+            DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY,
+            infoBindAddress);
+        LOG.info("Web server init done, returning to: " + 
+            UserGroupInformation.getLoginUser().getUserName());
+      }
     }
     // The web-server port can be ephemeral... ensure we have the correct info
     
@@ -245,10 +263,31 @@ public class SecondaryNameNode implements Runnable {
     }
   }
 
+  public void run() {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      UserGroupInformation ugi = null;
+      try { 
+        ugi = UserGroupInformation.getLoginUser();
+      } catch (IOException e) {
+        LOG.error(StringUtils.stringifyException(e));
+        e.printStackTrace();
+        Runtime.getRuntime().exit(-1);
+      }
+      ugi.doAs(new PrivilegedAction<Object>() {
+        @Override
+        public Object run() {
+          doWork();
+          return null;
+        }
+      });
+    } else {
+      doWork();
+    }
+  }
   //
   // The main work loop
   //
-  public void run() {
+  public void doWork() {
 
     //
     // Poll the Namenode (once every 5 minutes) to find the size of the
@@ -352,11 +391,7 @@ public class SecondaryNameNode implements Runnable {
     if (!"hdfs".equals(fsName.getScheme())) {
       throw new IOException("This is not a DFS");
     }
-    String http = UserGroupInformation.isSecurityEnabled() ? "dfs.https.address" 
-                                                           : "dfs.http.address";
-    String infoAddr = NetUtils.getServerAddress(conf, "dfs.info.bindAddress", 
-                                     "dfs.info.port", http);
-    
+    String infoAddr = NameNode.getInfoServer(conf);
     LOG.debug("infoAddr = " + infoAddr);
     return infoAddr;
   }

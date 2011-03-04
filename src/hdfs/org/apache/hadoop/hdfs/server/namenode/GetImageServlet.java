@@ -31,6 +31,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import org.apache.hadoop.security.SecurityUtil;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -102,7 +103,9 @@ public class GetImageServlet extends HttpServlet {
           // use these key values.
           return UserGroupInformation
           .loginUserFromKeytabAndReturnUGI(
-              conf.get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), 
+                  SecurityUtil.getServerPrincipal(conf
+                      .get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), NameNode
+                      .getAddress(conf).getHostName()),
               conf.get(DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
         }
       });
@@ -116,16 +119,25 @@ public class GetImageServlet extends HttpServlet {
     }
   }
   
-  private boolean isValidRequestor(String remoteUser, Configuration conf) {
+  private boolean isValidRequestor(String remoteUser, Configuration conf)
+      throws IOException {
     if(remoteUser == null) { // This really shouldn't happen...
       LOG.warn("Received null remoteUser while authorizing access to getImage servlet");
       return false;
     }
     
-    String [] validRequestors = {conf.get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-                                 conf.get(DFS_NAMENODE_USER_NAME_KEY),
-                                 conf.get(DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
-                                 conf.get(DFS_SECONDARY_NAMENODE_USER_NAME_KEY) };
+    String[] validRequestors = {
+        SecurityUtil.getServerPrincipal(conf
+            .get(DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY), NameNode.getAddress(
+            conf).getHostName()),
+        SecurityUtil.getServerPrincipal(conf.get(DFS_NAMENODE_USER_NAME_KEY),
+            NameNode.getAddress(conf).getHostName()),
+        SecurityUtil.getServerPrincipal(conf
+            .get(DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY),
+            SecondaryNameNode.getHttpAddress(conf).getHostName()),
+        SecurityUtil.getServerPrincipal(conf
+            .get(DFS_SECONDARY_NAMENODE_USER_NAME_KEY), SecondaryNameNode
+            .getHttpAddress(conf).getHostName()) };
     
     for(String v : validRequestors) {
       if(v != null && v.equals(remoteUser)) {

@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
@@ -280,8 +281,10 @@ extends AbstractDelegationTokenIdentifier>
     }
     String owner = id.getUser().getUserName();
     Text renewer = id.getRenewer();
+    KerberosName cancelerKrbName = new KerberosName(canceller);
+    String cancelerShortName = cancelerKrbName.getShortName();
     if (!canceller.equals(owner)
-        && (renewer == null || "".equals(renewer.toString()) || !canceller
+        && (renewer == null || "".equals(renewer.toString()) || !cancelerShortName
             .equals(renewer.toString()))) {
       throw new AccessControlException(canceller
           + " is not authorized to cancel the token");

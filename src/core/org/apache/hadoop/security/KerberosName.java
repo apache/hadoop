@@ -338,7 +338,6 @@ public class KerberosName {
   public static void setConfiguration(Configuration conf) throws IOException {
     String ruleString = conf.get("hadoop.security.auth_to_local", "DEFAULT");
     rules = parseRules(ruleString);
-    System.out.println("Default realm: " + defaultRealm);
   }
 
   @SuppressWarnings("serial")

@@ -25,6 +25,7 @@ import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -90,7 +91,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
-import java.security.PrivilegedExceptionAction;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -582,18 +583,14 @@ public class TaskTracker
    */
   synchronized void initialize() throws IOException, InterruptedException {
     this.fConf = new JobConf(originalConf);
-    String keytabFilename = fConf.get(TT_KEYTAB_FILE);
     UserGroupInformation.setConfiguration(fConf);
-    if (keytabFilename != null) {
-      String desiredUser = fConf.get(TT_USER_NAME,
-                                    System.getProperty("user.name"));
-      UserGroupInformation.loginUserFromKeytab(desiredUser,
-                                               keytabFilename);
+    SecurityUtil.login(fConf, TT_KEYTAB_FILE, TT_USER_NAME);
+    if (UserGroupInformation.isLoginKeytabBased()) {
       mrOwner = UserGroupInformation.getLoginUser();
-
     } else {
       mrOwner = UserGroupInformation.getCurrentUser();
     }
+
     supergroup = fConf.get(JobConf.MR_SUPERGROUP,
                            "supergroup");
     LOG.info("Starting tasktracker with owner as " + mrOwner.getShortUserName()
