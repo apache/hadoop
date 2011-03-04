@@ -314,4 +314,42 @@ public class Path implements Comparable {
     }
     return new Path(newUri);
   }
+  
+  /** Returns a qualified path object. */
+  public Path makeQualified(URI defaultUri, Path workingDir ) {
+    Path path = this;
+    if (!isAbsolute()) {
+      path = new Path(workingDir, this);
+    }
+
+    URI pathUri = path.toUri();
+      
+    String scheme = pathUri.getScheme();
+    String authority = pathUri.getAuthority();
+    String fragment = pathUri.getFragment();
+
+    if (scheme != null &&
+        (authority != null || defaultUri.getAuthority() == null))
+      return path;
+
+    if (scheme == null) {
+      scheme = defaultUri.getScheme();
+    }
+
+    if (authority == null) {
+      authority = defaultUri.getAuthority();
+      if (authority == null) {
+        authority = "";
+      }
+    }
+    
+    URI newUri = null;
+    try {
+      newUri = new URI(scheme, authority , 
+        normalizePath(pathUri.getPath()), null, fragment);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+    return new Path(newUri);
+  }
 }
