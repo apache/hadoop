@@ -35,15 +35,17 @@
   	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/servlet-api-2.5-6.1.14.jar"/>
   	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/core-3.1.1.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/slf4j-api-1.4.3.jar"/>
-	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/slf4j-log4j12-1.4.3.jar"/>
-	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/xmlenc-0.52.jar"/>
-        <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/aspectjrt-1.6.5.jar"/>
-        <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/aspectjtools-1.6.5.jar"/>
+    <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/slf4j-log4j12-1.4.3.jar"/>
+    <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/xmlenc-0.52.jar"/>
+    <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jackson-mapper-asl-1.0.1.jar"/>
+    <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jackson-core-asl-1.0.1.jar"/>
+    <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/aspectjrt-1.6.5.jar"/>
+    <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/aspectjtools-1.6.5.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftplet-api-1.0.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftpserver-core-1.0.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftpserver-server-1.0.0-SNAPSHOT.jar"/>
-  <classpathentry kind="lib" path="src/test/lib/mina-core-2.0.0-M2-20080407.124109-12.jar"/>
-  <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/mockito-all-1.8.0.jar"/>i
+    <classpathentry kind="lib" path="src/test/lib/mina-core-2.0.0-M2-20080407.124109-12.jar"/>
+    <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/mockito-all-1.8.0.jar"/>
 	<classpathentry kind="lib" path="build/test/classes"/>
 	<classpathentry kind="output" path="build/eclipse-classes"/>
 </classpath>
