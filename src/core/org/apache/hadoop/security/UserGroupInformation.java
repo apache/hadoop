@@ -518,6 +518,7 @@ public class UserGroupInformation {
             getSubject());
       LOG.info("Initiating re-login for " + keytabPrincipal);
       login.login();
+      setLogin(login);
     } catch (LoginException le) {
       throw new IOException("Login failure for " + keytabPrincipal + 
           " from keytab " + keytabFile, le);
