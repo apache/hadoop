@@ -78,8 +78,6 @@ public class DataNodeMetrics implements Updater {
                 new MetricsTimeVaryingRate("readBlockOp", registry);
   public MetricsTimeVaryingRate writeBlockOp = 
                 new MetricsTimeVaryingRate("writeBlockOp", registry);
-  public MetricsTimeVaryingRate readMetadataOp = 
-                new MetricsTimeVaryingRate("readMetadataOp", registry);
   public MetricsTimeVaryingRate blockChecksumOp = 
                 new MetricsTimeVaryingRate("blockChecksumOp", registry);
   public MetricsTimeVaryingRate copyBlockOp = 
@@ -128,7 +126,6 @@ public class DataNodeMetrics implements Updater {
   public void resetAllMinMax() {
     readBlockOp.resetMinMax();
     writeBlockOp.resetMinMax();
-    readMetadataOp.resetMinMax();
     blockChecksumOp.resetMinMax();
     copyBlockOp.resetMinMax();
     replaceBlockOp.resetMinMax();
