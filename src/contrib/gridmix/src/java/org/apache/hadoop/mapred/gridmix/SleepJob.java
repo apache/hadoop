@@ -77,7 +77,7 @@ public class SleepJob extends GridmixJob {
   public static final String GRIDMIX_SLEEP_MAX_REDUCE_TIME = 
     "gridmix.sleep.max-reduce-time";
 
-  private long mapMaxSleepTime, reduceMaxSleepTime;
+  private final long mapMaxSleepTime, reduceMaxSleepTime;
 
   public SleepJob(Configuration conf, long submissionMillis, JobStory jobdesc,
       Path outRoot, UserGroupInformation ugi, int seq, int numLocations,

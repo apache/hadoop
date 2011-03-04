@@ -137,69 +137,6 @@ class FilePool {
         throws IOException;
   }
 
-  interface IndexMapper {
-    int get(int pos);
-    void swap(int a, int b);
-  }
-
-  /**
-   * A sparse index mapping table - useful when we want to
-   * non-destructively permute a small fraction of a large array.
-   */
-  static class SparseIndexMapper implements IndexMapper {
-    Map<Integer, Integer> mapping = new HashMap<Integer, Integer>();
-
-    public int get(int pos) {
-      Integer mapped = mapping.get(pos);
-      if (mapped == null) return pos;
-      return mapped;
-    }
-
-    public void swap(int a, int b) {
-      int valA = get(a);
-      int valB = get(b);
-      if (b == valA) {
-        mapping.remove(b);
-      } else {
-        mapping.put(b, valA);
-      }
-      if (a == valB) {
-        mapping.remove(a);
-      } else {
-        mapping.put(a, valB);
-      }
-    }
-  }
-
-  /**
-   * A dense index mapping table - useful when we want to
-   * non-destructively permute a large fraction of an array.
-   */
-  static class DenseIndexMapper implements IndexMapper {
-    int[] mapping;
-
-    DenseIndexMapper(int size) {
-      mapping = new int[size];
-      for (int i=0; i<size; ++i) {
-        mapping[i] = i;
-      }
-    }
-
-    public int get(int pos) {
-      if ( (pos < 0) || (pos>=mapping.length) ) {
-        throw new IndexOutOfBoundsException();
-      }
-      return mapping[pos];
-    }
-
-    public void swap(int a, int b) {
-      int valA = get(a);
-      int valB = get(b);
-      mapping[a]=valB;
-      mapping[b]=valA;
-    }
-  }
-
   /**
    * Files in current directory of this Node.
    */

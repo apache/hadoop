@@ -394,52 +394,66 @@ public class Gridmix extends Configured implements Tool {
     }
   }
 
+  private <T> String getEnumValues(Enum<? extends T>[] e) {
+    StringBuilder sb = new StringBuilder();
+    String sep = "";
+    for (Enum<? extends T> v : e) {
+      sb.append(sep);
+      sb.append(v.name());
+      sep = "|";
+    }
+    return sb.toString();
+  }
+  
+  private String getJobTypes() {
+    return getEnumValues(JobCreator.values());
+  }
+  
+  private String getSubmissionPolicies() {
+    return getEnumValues(GridmixJobSubmissionPolicy.values());
+  }
+  
   protected void printUsage(PrintStream out) {
     ToolRunner.printGenericCommandUsage(out);
-    out.println("Usage: gridmix [-generate <MiB>] [-users URI] <iopath> <trace>");
+    out.println("Usage: gridmix [-generate <MiB>] [-users URI] [-Dname=value ...] <iopath> <trace>");
     out.println("  e.g. gridmix -generate 100m foo -");
     out.println("Configuration parameters:");
+    out.println("   General parameters:");
     out.printf("       %-48s : Output directory\n", GRIDMIX_OUT_DIR);
     out.printf("       %-48s : Submitting threads\n", GRIDMIX_SUB_THR);
     out.printf("       %-48s : Queued job desc\n", GRIDMIX_QUE_DEP);
-    out.printf("       %-48s : Key fraction of rec\n",
-        AvgRecordFactory.GRIDMIX_KEY_FRC);
     out.printf("       %-48s : User resolution class\n", GRIDMIX_USR_RSV);
-    out.printf("       %-48s : Enable/disable using queues in trace\n",
-        GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE);
+    out.printf("       %-48s : Job types (%s)\n", JobCreator.GRIDMIX_JOB_TYPE, getJobTypes());
+    out.println("   Parameters related to job submission:");    
     out.printf("       %-48s : Default queue\n",
         GridmixJob.GRIDMIX_DEFAULT_QUEUE);
-    out.printf("       %-48s : Throttling - jobs vs task-tracker ratio\n",
-        StressJobFactory.CONF_MAX_JOB_TRACKER_RATIO);
-    out.printf("       %-48s : Throttling - maps vs map-slot ratio\n",
-        StressJobFactory.CONF_OVERLOAD_MAPTASK_MAPSLOT_RATIO);
-    out.printf("       %-48s : Throttling - reduces vs reduce-slot ratio\n",
-        StressJobFactory.CONF_OVERLOAD_REDUCETASK_REDUCESLOT_RATIO);
-    out.printf("       %-48s : Throttling - map-slot share per job\n",
-        StressJobFactory.CONF_MAX_MAPSLOT_SHARE_PER_JOB);
-    out.printf("       %-48s : Throttling - reduce-slot share per job\n",
-        StressJobFactory.CONF_MAX_REDUCESLOT_SHARE_PER_JOB);
-    out.printf("       %-48s : Whether to ignore reduce tasks for sleep jobs\n",
-        SleepJob.SLEEPJOB_MAPTASK_ONLY);
-    out.printf("       %-48s : Number of fake locations for sleep job map tasks\n",
-        JobCreator.SLEEPJOB_RANDOM_LOCATIONS);
-    
-    
-    StringBuilder sb = new StringBuilder();
-    String sep = "";
-    for (GridmixJobSubmissionPolicy policy : GridmixJobSubmissionPolicy
-        .values()) {
-      sb.append(sep);
-      sb.append(policy.name());
-      sep = "|";
-    }
+    out.printf("       %-48s : Enable/disable using queues in trace\n",
+        GridmixJob.GRIDMIX_USE_QUEUE_IN_TRACE);
     out.printf("       %-48s : Job submission policy (%s)\n",
-        GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, sb.toString());
+        GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, getSubmissionPolicies());
+    out.println("   Parameters specific for LOADJOB:");
+    out.printf("       %-48s : Key fraction of rec\n",
+        AvgRecordFactory.GRIDMIX_KEY_FRC);
+    out.println("   Parameters specific for SLEEPJOB:");
+    out.printf("       %-48s : Whether to ignore reduce tasks\n",
+        SleepJob.SLEEPJOB_MAPTASK_ONLY);
+    out.printf("       %-48s : Number of fake locations for map tasks\n",
+        JobCreator.SLEEPJOB_RANDOM_LOCATIONS);
     out.printf("       %-48s : Maximum map task runtime in mili-sec\n",
         SleepJob.GRIDMIX_SLEEP_MAX_MAP_TIME);
     out.printf("       %-48s : Maximum reduce task runtime in mili-sec (merge+reduce)\n",
         SleepJob.GRIDMIX_SLEEP_MAX_REDUCE_TIME);
-
+    out.println("   Parameters specific for STRESS submission throttling policy:");
+    out.printf("       %-48s : jobs vs task-tracker ratio\n",
+        StressJobFactory.CONF_MAX_JOB_TRACKER_RATIO);
+    out.printf("       %-48s : maps vs map-slot ratio\n",
+        StressJobFactory.CONF_OVERLOAD_MAPTASK_MAPSLOT_RATIO);
+    out.printf("       %-48s : reduces vs reduce-slot ratio\n",
+        StressJobFactory.CONF_OVERLOAD_REDUCETASK_REDUCESLOT_RATIO);
+    out.printf("       %-48s : map-slot share per job\n",
+        StressJobFactory.CONF_MAX_MAPSLOT_SHARE_PER_JOB);
+    out.printf("       %-48s : reduce-slot share per job\n",
+        StressJobFactory.CONF_MAX_REDUCESLOT_SHARE_PER_JOB);
   }
 
   /**
