@@ -535,6 +535,18 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     PrintWriter out = new PrintWriter(new BufferedWriter(
                                                          new FileWriter(file, true)));
  
+    long totalInodes = this.dir.totalInodes();
+    long totalBlocks = this.getBlocksTotal();
+
+    ArrayList<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    ArrayList<DatanodeDescriptor> dead = new ArrayList<DatanodeDescriptor>();
+    this.DFSNodesStatus(live, dead);
+    
+    String str = totalInodes + " files and directories, " + totalBlocks
+        + " blocks = " + (totalInodes + totalBlocks) + " total";
+    out.println(str);
+    out.println("Live Datanodes: "+live.size());
+    out.println("Dead Datanodes: "+dead.size());
 
     //
     // Dump contents of neededReplication
@@ -550,6 +562,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         chooseSourceDatanode(block, containingNodes, numReplicas);
         int usableReplicas = numReplicas.liveReplicas() + 
                              numReplicas.decommissionedReplicas(); 
+
+        if (block instanceof BlockInfo) {
+          String fileName = FSDirectory.getFullPathName(((BlockInfo) block)
+              .getINode());
+          out.print(fileName + ": ");
+        }
+
         // l: == live:, d: == decommissioned c: == corrupt e: == excess
         out.print(block + ((usableReplicas > 0)? "" : " MISSING") +
                   " (replicas:" +

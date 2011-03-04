@@ -893,6 +893,23 @@ class FSDirectory implements FSConstants, Closeable {
     return fullPathName.toString();
   }
   
+  /** Return the full path name of the specified inode */
+  static String getFullPathName(INode inode) {
+    // calculate the depth of this inode from root
+    int depth = 0;
+    for (INode i = inode; i != null; i = i.parent) {
+      depth++;
+    }
+    INode[] inodes = new INode[depth];
+
+    // fill up the inodes in the path from this inode to root
+    for (int i = 0; i < depth; i++) {
+      inodes[depth-i-1] = inode;
+      inode = inode.parent;
+    }
+    return getFullPathName(inodes, depth-1);
+  }
+  
   /**
    * Create a directory 
    * If ancestor directories do not exist, automatically create them.
