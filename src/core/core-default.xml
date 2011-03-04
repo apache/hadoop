@@ -32,6 +32,16 @@
 </property>
 
 <property>
+  <name>hadoop.cluster.administrators</name>
+  <value>${user.name}</value>
+  <description>Users and/or groups who are designated as the administrators of a
+  hadoop cluster. For specifying a list of users and groups the format to use
+  is "user1,user2 group1,group2". If set to '*', it allows all users/groups to
+  do administrative operations of the cluster. If set to '', it allows none.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.authorization</name>
   <value>false</value>
   <description>Is service-level authorization enabled?</description>

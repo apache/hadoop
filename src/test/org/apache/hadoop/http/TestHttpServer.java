@@ -23,17 +23,33 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -134,4 +150,161 @@ public class TestHttpServer {
                  readOutput(new URL(baseUrl, "/echomap?a=b&c<=d&a=>")));
   }
 
+  /**
+   * Dummy filter that mimics as an authentication filter. Obtains user identity
+   * from the request parameter user.name. Wraps around the request so that
+   * request.getRemoteUser() returns the user identity.
+   * 
+   */
+  public static class DummyServletFilter implements Filter {
+
+    private static final Log LOG = LogFactory.getLog(
+        DummyServletFilter.class);
+    @Override
+    public void destroy() { }
+
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response,
+        FilterChain filterChain) throws IOException, ServletException {
+      final String userName = request.getParameter("user.name");
+      ServletRequest requestModified =
+        new HttpServletRequestWrapper((HttpServletRequest) request) {
+        @Override
+        public String getRemoteUser() {
+          return userName;
+        }
+      };
+      filterChain.doFilter(requestModified, response);
+    }
+
+    @Override
+    public void init(FilterConfig arg0) throws ServletException { }
+  }
+
+  /**
+   * FilterInitializer that initialized the DummyFilter.
+   *
+   */
+  public static class DummyFilterInitializer extends FilterInitializer {
+    public DummyFilterInitializer() {
+    }
+
+    @Override
+    public void initFilter(FilterContainer container, Configuration conf) {
+      container.addFilter("DummyFilter", DummyServletFilter.class.getName(), null);
+    }
+  }
+
+  /**
+   * Access a URL and get the corresponding return Http status code. The URL
+   * will be accessed as the passed user, by sending user.name request
+   * parameter.
+   * 
+   * @param urlstring
+   * @param userName
+   * @return
+   * @throws IOException
+   */
+  static int getHttpStatusCode(String urlstring, String userName)
+      throws IOException {
+    URL url = new URL(urlstring + "?user.name=" + userName);
+    System.out.println("Accessing " + url + " as user " + userName);
+    HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+    connection.connect();
+    return connection.getResponseCode();
+  }
+
+  /**
+   * Custom user->group mapping service.
+   */
+  public static class MyGroupsProvider extends ShellBasedUnixGroupsMapping {
+    static Map<String, List<String>> mapping = new HashMap<String, List<String>>();
+
+    static void clearMapping() {
+      mapping.clear();
+    }
+
+    @Override
+    public List<String> getGroups(String user) throws IOException {
+      return mapping.get(user);
+    }
+  }
+
+  /**
+   * Verify the access for /logs, /stacks, /conf, /logLevel and /metrics
+   * servlets, when authentication filters are set, but authorization is not
+   * enabled.
+   * @throws Exception 
+   */
+  @Test
+  public void testDisabledAuthorizationOfDefaultServlets() throws Exception {
+
+    Configuration conf = new Configuration();
+
+    // Authorization is disabled by default
+    conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
+        DummyFilterInitializer.class.getName());
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        MyGroupsProvider.class.getName());
+    Groups.getUserToGroupsMappingService(conf);
+    MyGroupsProvider.clearMapping();
+    MyGroupsProvider.mapping.put("userA", Arrays.asList("groupA"));
+    MyGroupsProvider.mapping.put("userB", Arrays.asList("groupB"));
+
+    HttpServer myServer = new HttpServer("test", "0.0.0.0", 0, true, conf);
+    myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.start();
+    int port = myServer.getPort();
+    String serverURL = "http://localhost:" + port + "/";
+    for (String servlet : new String[] { "logs", "stacks", "logLevel" }) {
+      for (String user : new String[] { "userA", "userB" }) {
+        assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
+            + servlet, user));
+      }
+    }
+    myServer.stop();
+  }
+
+  /**
+   * Verify the administrator access for /logs, /stacks, /conf, /logLevel and
+   * /metrics servlets.
+   * 
+   * @throws Exception
+   */
+  @Test
+  public void testAuthorizationOfDefaultServlets() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        true);
+    conf.set(
+        CommonConfigurationKeys.HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY,
+        "userA,userB groupC,groupD");
+    conf.set(HttpServer.FILTER_INITIALIZER_PROPERTY,
+        DummyFilterInitializer.class.getName());
+
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
+        MyGroupsProvider.class.getName());
+    Groups.getUserToGroupsMappingService(conf);
+    MyGroupsProvider.clearMapping();
+    MyGroupsProvider.mapping.put("userA", Arrays.asList("groupA"));
+    MyGroupsProvider.mapping.put("userB", Arrays.asList("groupB"));
+    MyGroupsProvider.mapping.put("userC", Arrays.asList("groupC"));
+    MyGroupsProvider.mapping.put("userD", Arrays.asList("groupD"));
+    MyGroupsProvider.mapping.put("userE", Arrays.asList("groupE"));
+
+    HttpServer myServer = new HttpServer("test", "0.0.0.0", 0, true, conf);
+    myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.start();
+    int port = myServer.getPort();
+    String serverURL = "http://localhost:" + port + "/";
+    for (String servlet : new String[] { "logs", "stacks", "logLevel" }) {
+      for (String user : new String[] { "userA", "userB", "userC", "userD" }) {
+        assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(serverURL
+            + servlet, user));
+      }
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, getHttpStatusCode(
+          serverURL + servlet, "userE"));
+    }
+    myServer.stop();
+  }
 }

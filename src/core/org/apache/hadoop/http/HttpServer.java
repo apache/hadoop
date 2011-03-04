@@ -27,11 +27,11 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -44,7 +44,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.log.LogLevel;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Handler;
@@ -75,6 +78,10 @@ public class HttpServer implements FilterContainer {
 
   static final String FILTER_INITIALIZER_PROPERTY
       = "hadoop.http.filter.initializers";
+
+  // The ServletContext attribute where the daemon Configuration
+  // gets stored.
+  public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
 
   protected final Server webServer;
   protected final Connector listener;
@@ -117,11 +124,13 @@ public class HttpServer implements FilterContainer {
     webServer.setHandler(contexts);
 
     webAppContext = new WebAppContext();
+    webAppContext.setDisplayName("WepAppsContext");
     webAppContext.setContextPath("/");
     webAppContext.setWar(appDir + "/" + name);
+    webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     webServer.addHandler(webAppContext);
 
-    addDefaultApps(contexts, appDir);
+    addDefaultApps(contexts, appDir, conf);
 
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
@@ -173,19 +182,23 @@ public class HttpServer implements FilterContainer {
    * @throws IOException
    */
   protected void addDefaultApps(ContextHandlerCollection parent,
-      final String appDir) throws IOException {
+      final String appDir, Configuration conf) throws IOException {
     // set up the context for "/logs/" if "hadoop.log.dir" property is defined. 
     String logDir = System.getProperty("hadoop.log.dir");
     if (logDir != null) {
       Context logContext = new Context(parent, "/logs");
       logContext.setResourceBase(logDir);
-      logContext.addServlet(DefaultServlet.class, "/");
+      logContext.addServlet(AdminAuthorizedServlet.class, "/");
+      logContext.setDisplayName("logs");
+      logContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
     Context staticContext = new Context(parent, "/static");
     staticContext.setResourceBase(appDir + "/static");
     staticContext.addServlet(DefaultServlet.class, "/*");
+    staticContext.setDisplayName("static");
+    staticContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     defaultContexts.put(staticContext, true);
   }
   
@@ -266,6 +279,8 @@ public class HttpServer implements FilterContainer {
 
     final String[] USER_FACING_URLS = { "*.html", "*.jsp" };
     defineFilter(webAppContext, name, classname, parameters, USER_FACING_URLS);
+    LOG.info("Added filter " + name + " (class=" + classname
+        + ") to context " + webAppContext.getDisplayName());
     final String[] ALL_URLS = { "/*" };
     for (Map.Entry<Context, Boolean> e : defaultContexts.entrySet()) {
       if (e.getValue()) {
@@ -530,6 +545,50 @@ public class HttpServer implements FilterContainer {
   }
 
   /**
+   * Does the user sending the HttpServletRequest has the administrator ACLs? If
+   * it isn't the case, response will be modified to send an error to the user.
+   * 
+   * @param servletContext
+   * @param request
+   * @param response
+   * @return true if admin-authorized, false otherwise
+   * @throws IOException
+   */
+  public static boolean hasAdministratorAccess(
+      ServletContext servletContext, HttpServletRequest request,
+      HttpServletResponse response) throws IOException {
+    Configuration conf =
+        (Configuration) servletContext.getAttribute(CONF_CONTEXT_ATTRIBUTE);
+
+    // If there is no authorization, anybody has administrator access.
+    if (!conf.getBoolean(
+        CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false)) {
+      return true;
+    }
+
+    String remoteUser = request.getRemoteUser();
+    if (remoteUser == null) {
+      return true;
+    }
+
+    String adminsAclString =
+        conf.get(
+            CommonConfigurationKeys.HADOOP_CLUSTER_ADMINISTRATORS_PROPERTY,
+            "*");
+    AccessControlList adminsAcl = new AccessControlList(adminsAclString);
+    UserGroupInformation remoteUserUGI =
+        UserGroupInformation.createRemoteUser(remoteUser);
+    if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
+      response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
+          + remoteUser + " is unauthorized to access this page. "
+          + "Only superusers/supergroup \"" + adminsAclString
+          + "\" can access this page.");
+      return false;
+    }
+    return true;
+  }
+
+  /**
    * A very simple servlet to serve up a text representation of the current
    * stack traces. It both returns the stacks to the caller and logs them.
    * Currently the stack traces are done sequentially rather than exactly the
@@ -541,7 +600,13 @@ public class HttpServer implements FilterContainer {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-      
+
+      // Do the authorization
+      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
+          response)) {
+        return;
+      }
+
       PrintWriter out = new PrintWriter
                     (HtmlQuoting.quoteOutputStream(response.getOutputStream()));
       ReflectionUtils.printThreadInfo(out, "");

@@ -26,6 +26,7 @@ import javax.servlet.http.*;
 
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;
+import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.util.ServletUtil;
 
 /**
@@ -86,6 +87,13 @@ public class LogLevel {
 
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
+
+      // Do the authorization
+      if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
+          response)) {
+        return;
+      }
+
       PrintWriter out = ServletUtil.initHTML(response, "Log Level");
       String logName = ServletUtil.getParameter(request, "log");
       String level = ServletUtil.getParameter(request, "level");

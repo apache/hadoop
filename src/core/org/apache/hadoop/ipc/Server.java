@@ -61,6 +61,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.*;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.metrics.RpcDetailedMetrics;
@@ -1348,8 +1349,7 @@ public abstract class Server {
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
     this.secretManager = (SecretManager<TokenIdentifier>) secretManager;
     this.authorize = 
-      conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
-                      false);
+      conf.getBoolean(HADOOP_SECURITY_AUTHORIZATION, false);
     this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
     
     // Start the listener here and let it bind to the port
