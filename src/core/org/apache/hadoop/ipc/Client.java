@@ -358,7 +358,14 @@ public class Client {
         saslRpcClient = new SaslRpcClient(authMethod, token,
             serverPrincipal);
         return saslRpcClient.saslConnect(in2, out2);
-      } catch (javax.security.sasl.SaslException je) {
+      } catch (Exception e) {
+        LOG.warn("Exception encountered while connecting to the server : " + 
+            e.getMessage() + ". Will attempt a relogin");
+        /*
+         * Catch all exceptions here. Most likely we would have hit one of
+         * the kerberos exceptions. Just attempt to relogin and try to 
+         * connect to the server
+         */
         UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
         UserGroupInformation currentUser = 
           UserGroupInformation.getCurrentUser();
@@ -379,17 +386,16 @@ public class Client {
             saslRpcClient = new SaslRpcClient(authMethod, token,
                 serverPrincipal);
             return saslRpcClient.saslConnect(in2, out2);
-          } catch (javax.security.sasl.SaslException jee) {
-            LOG.warn("Couldn't setup connection for " + 
-                loginUser.getUserName() +
-                " to " + serverPrincipal + " even after relogin.");
-            throw jee;
-          } catch (IOException ie) {
-            ie.initCause(je);
-            throw ie;
+          } catch (Exception ex) {
+            String msg = "Couldn't setup connection for " + 
+                         loginUser.getUserName() +
+                         " to " + serverPrincipal + " even after relogin.";
+            LOG.warn(msg);
+            throw (IOException) new IOException(msg).initCause(ex);
           }
         } 
-        throw je;
+        throw (IOException)new IOException("Failed to connect to the server"
+        ).initCause(e);
       }
     }
     /** Connect to the server and set up the I/O streams. It then sends
