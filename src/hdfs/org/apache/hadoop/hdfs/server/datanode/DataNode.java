@@ -519,12 +519,7 @@ public class DataNode extends Configured
         + nsInfo.getBuildVersion() + "; datanode BV = "
         + Storage.getBuildVersion();
       LOG.fatal( errorMsg );
-      try {
-        namenode.errorReport( dnRegistration,
-                              DatanodeProtocol.NOTIFY, errorMsg );
-      } catch( SocketTimeoutException e ) {  // namenode is busy
-        LOG.info("Problem connecting to server: " + getNameNodeAddr());
-      }
+      notifyNamenode(DatanodeProtocol.NOTIFY, errorMsg);  
       throw new IOException( errorMsg );
     }
     assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
@@ -785,6 +780,17 @@ public class DataNode extends Configured
     }
   }
   
+  private void notifyNamenode(int dpCode, String msg) {
+    //inform NameNode
+    try {
+      namenode.errorReport(
+	                           dnRegistration, dpCode, msg);
+    } catch( SocketTimeoutException e ) {  // namenode is busy
+        LOG.info("Problem connecting to server: " + getNameNodeAddr());
+    } catch(IOException ignored) {              
+    }
+  }
+  
   private void handleDiskError(String errMsgr) {
     boolean hasEnoughResource = data.hasEnoughResource();
     LOG.warn("DataNode.handleDiskError: Keep Running: " + hasEnoughResource);
@@ -796,13 +802,9 @@ public class DataNode extends Configured
       // DN will be shutdown and NN should remove it
       dp_error = DatanodeProtocol.FATAL_DISK_ERROR;
     }
+
     //inform NameNode
-    try {
-      namenode.errorReport(
-                           dnRegistration, dp_error, errMsgr);
-    } catch(IOException ignored) {              
-    }
-    
+    notifyNamenode(dp_error, errMsgr);
     
     if(hasEnoughResource) {
       scheduleBlockReport(0);
@@ -1089,9 +1091,7 @@ public class DataNode extends Configured
       // block does not exist or is under-construction
       String errStr = "Can't send invalid block " + block;
       LOG.info(errStr);
-      namenode.errorReport(dnRegistration, 
-                           DatanodeProtocol.INVALID_BLOCK, 
-                           errStr);
+      notifyNamenode(DatanodeProtocol.INVALID_BLOCK, errStr);
       return;
     }
 
@@ -1491,7 +1491,7 @@ public class DataNode extends Configured
       ", xmitsInProgress=" + xmitsInProgress.get() +
       "}";
   }
-  
+
   private static void printUsage() {
     System.err.println("Usage: java DataNode");
     System.err.println("           [-rollback]");

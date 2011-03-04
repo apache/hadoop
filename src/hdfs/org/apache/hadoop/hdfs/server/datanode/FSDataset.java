@@ -764,12 +764,30 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     final int volFailuresTolerated =
       conf.getInt("dfs.datanode.failed.volumes.tolerated",
                   0);
-    this.validVolsRequired = storage.getNumStorageDirs() - volFailuresTolerated; 
+    
+    String[] dataDirs = conf.getStrings(DataNode.DATA_DIR_KEY);
+    
+    int volsConfigured=0;
+    
+    if(dataDirs != null)
+       volsConfigured = dataDirs.length;
+    
+    int volsFailed =  volsConfigured - storage.getNumStorageDirs();
+    
+    if( volsFailed < 0 ||
+    	volsFailed > volFailuresTolerated ) {
+        throw new DiskErrorException("Invalid value for volsFailed : " 
+        		+ volsFailed + " , Volumes tolerated : " + volFailuresTolerated);
+    }
+    
+    this.validVolsRequired =  volsConfigured - volFailuresTolerated;
+    
     if (validVolsRequired < 1 ||
         validVolsRequired > storage.getNumStorageDirs()) {
-      DataNode.LOG.error("Invalid value " + volFailuresTolerated + " for " +
-          "dfs.datanode.failed.volumes.tolerated");
+      throw new DiskErrorException("Invalid value for validVolsRequired : " 
+    		  + validVolsRequired + " , Current valid volumes: " + storage.getNumStorageDirs());
     }
+    
     FSVolume[] volArray = new FSVolume[storage.getNumStorageDirs()];
     for (int idx = 0; idx < storage.getNumStorageDirs(); idx++) {
       volArray[idx] = new FSVolume(storage.getStorageDir(idx).getCurrentDir(), conf);
