@@ -287,7 +287,7 @@ public class MetricsRegistry {
   /**
    * Set the metrics context tag
    * @param name of the context
-   * @return
+   * @return the registry itself as a convenience
    */
   public MetricsRegistry setContext(String name) {
     return tag(CONTEXT_KEY, CONTEXT_DESC, name);

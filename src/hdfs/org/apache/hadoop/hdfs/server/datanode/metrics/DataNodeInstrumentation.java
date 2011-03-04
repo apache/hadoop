@@ -74,10 +74,12 @@ public class DataNodeInstrumentation implements MetricsSource {
     registry.setContext("dfs").tag("sessionId", "", sessionId);
   }
 
+  //@Override
   public void shutdown() {
     // metrics system shutdown would suffice
   }
 
+  //@Override
   public void resetAllMinMax() {
     readBlockOp.resetMinMax();
     writeBlockOp.resetMinMax();
@@ -88,82 +90,102 @@ public class DataNodeInstrumentation implements MetricsSource {
     blockReports.resetMinMax();
   }
 
+  //@Override
   public void addHeartBeat(long latency) {
     heartbeats.add(latency);
   }
 
+  //@Override
   public void addBlockReport(long latency) {
     blockReports.add(latency);
   }
 
+  //@Override
   public void incrBlocksReplicated(int delta) {
     blocksReplicated.incr(delta);
   }
 
+  //@Override
   public void incrBlocksWritten() {
     blocksWritten.incr();
   }
 
+  //@Override
   public void incrBlocksRemoved(int delta) {
     blocksRemoved.incr(delta);
   }
 
+  //@Override
   public void incrBytesWritten(int delta) {
     bytesWritten.incr(delta);
   }
 
+  //@Override
   public void incrBlockVerificationFailures() {
     blockVerificationFailures.incr();
   }
 
+  //@Override
   public void incrBlocksVerified() {
     blocksVerified.incr();
   }
 
+  //@Override
   public void addReadBlockOp(long latency) {
     readBlockOp.add(latency);
   }
 
+  //@Override
   public void incrReadsFromLocalClient() {
     readsFromLocalClient.incr();
   }
 
+  //@Override
   public void incrReadsFromRemoteClient() {
     readsFromRemoteClient.incr();
   }
 
+  //@Override
   public void addWriteBlockOp(long latency) {
     writeBlockOp.add(latency);
   }
 
+  //@Override
   public void incrWritesFromLocalClient() {
     writesFromLocalClient.incr();
   }
 
+  //@Override
   public void incrWritesFromRemoteClient() {
     writesFromRemoteClient.incr();
   }
 
+  //@Override
   public void addReplaceBlockOp(long latency) {
     replaceBlockOp.add(latency);
   }
 
+  //@Override
   public void addCopyBlockOp(long latency) {
     copyBlockOp.add(latency);
   }
 
+  //@Override
   public void addBlockChecksumOp(long latency) {
     blockChecksumOp.add(latency);
   }
 
+  //@Override
   public void incrBytesRead(int delta) {
     bytesRead.incr(delta);
   }
 
+  //@Override
   public void incrBlocksRead() {
     blocksRead.incr();
   }
 
+  @Override
   public void getMetrics(MetricsBuilder builder, boolean all) {
     registry.snapshot(builder.addRecord(registry.name()), all);
   }

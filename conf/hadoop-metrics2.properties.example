@@ -1,3 +1,16 @@
-#[prefix].[source|sink|jmx].[instance].[options]
-#namenode.sink.file0.class=org.apache.hadoop.metrics2.sink.FileSink
-#namenode.sink.file0.filename=nn.out
+# syntax: [prefix].[source|sink|jmx].[instance].[options]
+# See package.html for org.apache.hadoop.metrics2 for details
+
+*.sink.file.class=org.apache.hadoop.metrics2.sink.FileSink
+
+#namenode.sink.file.filename=namenode-metrics.out
+
+#datanode.sink.file.filename=datanode-metrics.out
+
+#jobtracker.sink.file.filename=jobtracker-metrics.out
+
+#tasktracker.sink.file.filename=tasktracker-metrics.out
+
+#maptask.sink.file.filename=maptask-metrics.out
+
+#reducetask.sink.file.filename=reducetask-metrics.out

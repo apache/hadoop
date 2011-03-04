@@ -22,16 +22,21 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.apache.commons.configuration.SubsetConfiguration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsFilter;
-import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.MetricsTag;
 
 /**
  * Base class for pattern based filters
  */
 abstract class AbstractPatternFilter extends MetricsFilter {
+
+  private static final Log LOG = LogFactory.getLog(AbstractPatternFilter.class);
 
   protected static final String INCLUDE_KEY = "include";
   protected static final String EXCLUDE_KEY = "exclude";
@@ -53,14 +58,17 @@ abstract class AbstractPatternFilter extends MetricsFilter {
   public void init(SubsetConfiguration conf) {
     String patternString = conf.getString(INCLUDE_KEY);
     if (patternString != null && !patternString.isEmpty()) {
+      LOG.debug("got include pattern: "+ patternString);
       setIncludePattern(compile(patternString));
     }
     patternString = conf.getString(EXCLUDE_KEY);
     if (patternString != null && !patternString.isEmpty()) {
+      LOG.debug("got include pattern: "+ patternString);
       setExcludePattern(compile(patternString));
     }
     String[] patternStrings = conf.getStringArray(INCLUDE_TAGS_KEY);
     if (patternStrings != null && patternStrings.length != 0) {
+      LOG.debug("got include tags pattern: "+ patternStrings);
       for (String pstr : patternStrings) {
         Matcher matcher = tagPattern.matcher(pstr);
         if (!matcher.matches()) {
@@ -71,6 +79,7 @@ abstract class AbstractPatternFilter extends MetricsFilter {
     }
     patternStrings = conf.getStringArray(EXCLUDE_TAGS_KEY);
     if (patternStrings != null && patternStrings.length != 0) {
+      LOG.debug("got exclude tags pattern: "+ patternStrings);
       for (String pstr : patternStrings) {
         Matcher matcher = tagPattern.matcher(pstr);
         if (!matcher.matches()) {

@@ -55,6 +55,7 @@ public class TaskTrackerMetricsSource extends TaskTrackerInstrumentation
     registry.setContext("mapred").tag("sessionId", "", sessionId);
   }
 
+  @Override
   public void getMetrics(MetricsBuilder builder, boolean all) {
     mapsRunning.set(tt.mapTotal);
     redsRunning.set(tt.reduceTotal);

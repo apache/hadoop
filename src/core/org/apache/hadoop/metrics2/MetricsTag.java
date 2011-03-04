@@ -63,7 +63,6 @@ public class MetricsTag {
     return value;
   }
 
-  // Mostly for testing
   @Override
   public boolean equals(Object obj) {
     if (obj == null) {

@@ -111,11 +111,13 @@ public class RpcInstrumentation implements MetricsSource {
 
   // Start of public instrumentation methods that could be extracted to an
   // abstract class if we decide to allow custom instrumentation classes a la
-  // JobTrackerInstrumenation.
+  // JobTrackerInstrumenation. The methods with //@Override comment are
+  // candidates for abstract methods in a abstract instrumentation class
 
   /**
    * One authentication failure event
    */
+  //@Override
   public void incrAuthenticationFailures() {
     this.authenticationFailures.incr();
   }
@@ -123,6 +125,7 @@ public class RpcInstrumentation implements MetricsSource {
   /**
    * One authentication success event
    */
+  //@Override
   public void incrAuthenticationSuccesses() {
     this.authenticationSuccesses.incr();
   }
@@ -130,6 +133,7 @@ public class RpcInstrumentation implements MetricsSource {
   /**
    * One authorization success event
    */
+  //@Override
   public void incrAuthorizationSuccesses() {
     this.authorizationSuccesses.incr();
   }
@@ -137,6 +141,7 @@ public class RpcInstrumentation implements MetricsSource {
   /**
    * One authorization failure event
    */
+  //@Override
   public void incrAuthorizationFailures() {
     this.authorizationFailures.incr();
   }
@@ -144,6 +149,7 @@ public class RpcInstrumentation implements MetricsSource {
   /**
    * Shutdown the instrumentation for the process
    */
+  //@Override
   public void shutdown() {
     LOG.info("shut down");
   }
@@ -152,6 +158,7 @@ public class RpcInstrumentation implements MetricsSource {
    * Increment sent bytes by count
    * @param count to increment
    */
+  //@Override
   public void incrSentBytes(int count) {
     this.sentBytes.incr(count);
   }
@@ -160,6 +167,7 @@ public class RpcInstrumentation implements MetricsSource {
    * Increment received bytes by count
    * @param count to increment
    */
+  //@Override
   public void incrReceivedBytes(int count) {
     this.receivedBytes.incr(count);
   }
@@ -168,6 +176,7 @@ public class RpcInstrumentation implements MetricsSource {
    * Add an RPC queue time sample
    * @param qTime
    */
+  //@Override
   public void addRpcQueueTime(int qTime) {
     this.rpcQueueTime.add(qTime);
   }
@@ -176,6 +185,7 @@ public class RpcInstrumentation implements MetricsSource {
    * Add an RPC processing time sample
    * @param processingTime
    */
+  //@Override
   public void addRpcProcessingTime(int processingTime) {
     this.rpcProcessingTime.add(processingTime);
   }
@@ -185,6 +195,7 @@ public class RpcInstrumentation implements MetricsSource {
    * @param methodName  method name of the RPC
    * @param processingTime  elapsed processing time of the RPC
    */
+  //@Override
   public void addRpcProcessingTime(String methodName, int processingTime) {
     detailed.addRpcProcessingTime(methodName, processingTime);
   }

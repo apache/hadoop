@@ -33,6 +33,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.SubsetConfiguration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.metrics2.MetricsFilter;
 import org.apache.hadoop.metrics2.MetricsPlugin;
 
 import org.apache.hadoop.util.StringUtils;
@@ -55,7 +56,7 @@ class MetricsConfig extends SubsetConfiguration {
   static final String RETRY_BACKOFF_KEY = "retry.backoff";
   static final int RETRY_BACKOFF_DEFAULT = 2; // back off factor
   static final String RETRY_COUNT_KEY = "retry.count";
-  static final int RETRY_COUNT_DEFAULT = 3;
+  static final int RETRY_COUNT_DEFAULT = 1;
 
   static final String JMX_CACHE_TTL_KEY = "jmx.cache.ttl";
   static final int JMX_CACHE_TTL_DEFAULT = 10000; // millis
@@ -93,7 +94,8 @@ class MetricsConfig extends SubsetConfiguration {
   static MetricsConfig loadFirst(String prefix, String... fileNames) {
     for (String fname : fileNames) {
       try {
-        PropertiesConfiguration cf = new PropertiesConfiguration(fname);
+        Configuration cf = new PropertiesConfiguration(fname)
+            .interpolatedConfiguration();
         LOG.info("loaded properties from "+ fname);
         return new MetricsConfig(cf, prefix);
       }
@@ -180,6 +182,12 @@ class MetricsConfig extends SubsetConfiguration {
       throw new MetricsConfigException("Error creating plugin: "+
                                        pluginClassName, e);
     }
+  }
+
+  MetricsFilter getFilter(String prefix) {
+    // don't create filter instances without out options
+    if (subset(prefix).isEmpty()) return null;
+    return (MetricsFilter) getPlugin(prefix);
   }
 
   @Override

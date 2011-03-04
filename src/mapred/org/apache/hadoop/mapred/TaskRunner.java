@@ -61,7 +61,8 @@ abstract class TaskRunner extends Thread {
     "mapreduce.admin.reduce.child.java.opts";
 
   static final String DEFAULT_MAPRED_ADMIN_JAVA_OPTS =
-    "-Djava.net.preferIPv4Stack=true";
+    "-Djava.net.preferIPv4Stack=true " +
+    "-Dhadoop.metrics.log.level=WARN ";
 
   static final String MAPRED_ADMIN_USER_SHELL =
     "mapreduce.admin.user.shell";

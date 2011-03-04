@@ -165,7 +165,9 @@
       identify a particular sink instance. The asterisk (<code>*</code>) can be
       used to specify default options.
     </p>
-    <p>Consult the metrics instrumentation in jvm, rpc, hdfs and mapred, etc.
+    <p>Consult the metrics instrumentation in
+      {@link org.apache.hadoop.metrics2.source.JvmMetricsSource},
+      {@link org.apache.hadoop.ipc.metrics.RpcInstrumentation}, etc.
       for more examples.
     </p>
 
@@ -184,7 +186,7 @@
       accept metrics from context <code>foo</code> only.
     </p>
     <pre>
-    *.source.filter.class=org.apache.hadoop.metrics.filter.GlobFilter
+    *.source.filter.class=org.apache.hadoop.metrics2.filter.GlobFilter
     test.*.source.filter.include=foo
     test.*.source.filter.exclude=bar</pre>
     <p>In this example, we specify a source filter that includes source
@@ -217,9 +219,9 @@
       final MetricMutaleStat stat0 =
           registry.newStat("myStat", "my stat description", "ops", "time");
 
-      @Override public void setGauge0(int value) { gauge0.set(value); }
-      @Override public void incrCounter0() { counter0.incr(); }
-      @Override public void addStat0(long elapsed) { stat0.add(elapsed); }
+      &#064;Override public void setGauge0(int value) { gauge0.set(value); }
+      &#064;Override public void incrCounter0() { counter0.incr(); }
+      &#064;Override public void addStat0(long elapsed) { stat0.add(elapsed); }
 
       public void getMetrics(MetricsBuilder builder, boolean all) {
         registry.snapshot(builder.addRecord(registry.name()), all);

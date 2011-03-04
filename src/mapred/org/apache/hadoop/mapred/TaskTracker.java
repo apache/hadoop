@@ -672,7 +672,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     }
     try {
       java.lang.reflect.Constructor<? extends TaskTrackerInstrumentation> c =
-        metricsInst.getConstructor(new Class[] {TaskTracker.class} );
+        metricsInst.getConstructor(new Class<?>[] {TaskTracker.class} );
       this.myInstrumentation = c.newInstance(this);
     } catch(Exception e) {
       //Reflection can throw lots of exceptions -- handle them all by

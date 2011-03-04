@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.metrics2.impl;
 
+import java.util.Random;
 import org.apache.hadoop.metrics2.lib.MetricMutableGaugeInt;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MetricMutableCounterInt;
@@ -77,10 +78,11 @@ class MetricsSinkAdapter {
     this.retryCount = retryCount;
     this.queue = new SinkQueue<MetricsBuffer>(
         Contracts.checkArg(queueCapacity, queueCapacity > 0, "queue capacity"));
-    latency = registry.newStat(name +"_latency", "End to end latency",
-                               "ops", "time");
-    dropped = registry.newCounter(name +"_dropped", "Dropped updates", 0);
-    qsize = registry.newGauge(name + "_qsize", "Queue size", 0);
+    latency = registry.newStat("sink."+ name +".latency",
+                               "Sink end to end latency", "ops", "time");
+    dropped = registry.newCounter("sink."+ name +".dropped",
+                                  "Dropped updates per sink", 0);
+    qsize = registry.newGauge("sink."+ name + ".qsize", "Queue size", 0);
 
     sinkThread = new Thread() {
       @Override public void run() {
@@ -88,6 +90,7 @@ class MetricsSinkAdapter {
       }
     };
     sinkThread.setName(name);
+    sinkThread.setDaemon(true);
   }
 
   boolean putMetrics(MetricsBuffer buffer, long logicalTime) {
@@ -103,6 +106,8 @@ class MetricsSinkAdapter {
   void publishMetricsFromQueue() {
     int retryDelay = firstRetryDelay;
     int n = retryCount;
+    int minDelay = Math.min(500, retryDelay * 1000); // millis
+    Random rng = new Random(System.nanoTime());
     while (!stopping) {
       try {
         queue.consumeAll(consumer);
@@ -115,11 +120,12 @@ class MetricsSinkAdapter {
       }
       catch (Exception e) {
         if (n > 0) {
+          int awhile = rng.nextInt(retryDelay * 1000 - minDelay) + minDelay;
           if (!inError) {
-            LOG.error("Got sink exception, retry in "+ retryDelay +"s", e);
+            LOG.error("Got sink exception, retry in "+ awhile +"ms", e);
           }
           retryDelay *= retryBackoff;
-          try { Thread.sleep(retryDelay * 1000); }
+          try { Thread.sleep(awhile); }
           catch (InterruptedException e2) {
             LOG.info(name +" thread interrupted while waiting for retry", e2);
           }
@@ -127,7 +133,8 @@ class MetricsSinkAdapter {
         }
         else {
           if (!inError) {
-            LOG.error("Got sink exception and over retry limit!", e);
+            LOG.error("Got sink exception and over retry limit, "+
+                      "suppressing further error messages", e);
           }
           queue.clear();
           inError = true; // Don't keep complaining ad infinitum
@@ -139,6 +146,7 @@ class MetricsSinkAdapter {
   void publishMetrics(MetricsBuffer buffer) {
     long ts = 0;
     for (MetricsBuffer.Entry entry : buffer) {
+      LOG.debug("sourceFilter="+ sourceFilter);
       if (sourceFilter == null || sourceFilter.accepts(entry.name())) {
         for (MetricsRecordImpl record : entry.records()) {
           if ((context == null || context.equals(record.context())) &&
@@ -186,7 +194,7 @@ class MetricsSinkAdapter {
     return description;
   }
 
-  void sample(MetricsRecordBuilder rb, boolean all) {
+  void snapshot(MetricsRecordBuilder rb, boolean all) {
     registry.snapshot(rb, all);
   }
 

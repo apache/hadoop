@@ -698,15 +698,15 @@
   </target>
 
   <!-- ================================================================== -->
-  <!-- Make the Hadoop metrics jar. (for use outside Hadoop)              -->
+  <!-- Make the Hadoop metrics plugin dev/sdk jar. (for use outside Hadoop)              -->
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="metrics.jar" depends="compile-core" description="Make the Hadoop metrics jar. (for use outside Hadoop)">
-    <jar jarfile="${build.dir}/hadoop-metrics-${version}.jar"
+  <target name="metrics.jar" depends="compile-core" description="Make the Hadoop metrics plugin dev/sdk jar. (for use outside Hadoop)">
+    <jar jarfile="${build.dir}/hadoop-metrics-dev-${version}.jar"
          basedir="${build.classes}">
-      <include name="**/metrics/**" />
-      <exclude name="**/package.html" />
+      <include name="**/metrics2/*.class" />
+      <include name="**/metrics2/util/*.class" />
     </jar>
   </target>
 

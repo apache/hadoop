@@ -90,94 +90,97 @@ public class NameNodeInstrumentation implements MetricsSource {
                        new NameNodeInstrumentation(conf));
   }
 
+  //@Override
   public void shutdown() {
     // metrics system shutdown would suffice
   }
 
+  //@override
   public final void incrNumGetBlockLocations() {
     numGetBlockLocations.incr();
   }
 
-  
+  //@Override
   public final void incrNumFilesCreated() {
     numFilesCreated.incr();
   }
 
-  
+  //@Override
   public final void incrNumCreateFileOps() {
     numCreateFileOps.incr();
   }
 
-  
+  //@Override
   public final void incrNumFilesAppended() {
     numFilesAppended.incr();
   }
 
-  
+  //@Override
   public final void incrNumAddBlockOps() {
     numAddBlockOps.incr();
   }
 
-  
+  //@Override
   public final void incrNumFilesRenamed() {
     numFilesRenamed.incr();
   }
 
-  
+  //@Override
   public void incrFilesDeleted(int delta) {
     numFilesDeleted.incr(delta);
   }
 
-  
+  //@Override
   public final void incrNumDeleteFileOps() {
     numDeleteFileOps.incr();
   }
 
-  
+  //@Override
   public final void incrNumGetListingOps() {
     numGetListingOps.incr();
   }
 
-  
+  //@Override
   public final void incrNumFilesInGetListingOps(int delta) {
     numFilesInGetListingOps.incr(delta);
   }
 
-  
+  //@Override
   public final void incrNumFileInfoOps() {
     numFileInfoOps.incr();
   }
 
-  
+  //@Override
   public final void addTransaction(long latency) {
     transactions.add(latency);
   }
 
-  
+  //@Override
   public final void incrTransactionsBatchedInSync() {
     transactionsBatchedInSync.incr();
   }
 
-  
+  //@Override
   public final void addSync(long elapsed) {
     syncs.add(elapsed);
   }
 
-  
+  //@Override
   public final void setFsImageLoadTime(long elapsed) {
     fsImageLoadTime.set((int) elapsed);
   }
 
-  
+  //@Override
   public final void addBlockReport(long latency) {
     blockReport.add(latency);
   }
 
-  
+  //@Override
   public final void setSafeModeTime(long elapsed) {
     safeModeTime.set((int) elapsed);
   }
 
+  @Override
   public void getMetrics(MetricsBuilder builder, boolean all) {
     registry.snapshot(builder.addRecord(registry.name()), all);
   }

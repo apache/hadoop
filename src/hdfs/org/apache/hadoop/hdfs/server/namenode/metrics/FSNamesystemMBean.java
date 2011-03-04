@@ -24,13 +24,14 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
  * It is also used for publishing via JMX (hence we follow the JMX naming
  * convention.)
  * 
- * Note we have not used the MetricsDynamicMBeanBase to implement this
- * because the interface for the NameNodeStateMBean is stable and should
+ * Note we have not used the metrics system to implement this MBean,
+ * because the interface for the FSNamesystemMBean is stable and should
  * be published as an interface.
  * 
  * <p>
- * Name Node runtime activity statistic  info is report in another MBean
- * @see org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeActivityMBean
+ * Name Node runtime activity statistics is report in another MBean via the
+ * metrics system.
+ * @see org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeInstrumentation
  *
  */
 public interface FSNamesystemMBean {

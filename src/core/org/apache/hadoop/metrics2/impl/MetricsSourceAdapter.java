@@ -78,8 +78,8 @@ class MetricsSourceAdapter implements DynamicMBean {
                        MetricsSource source, Iterable<MetricsTag> injectedTags,
                        int period, MetricsConfig conf) {
     this(prefix, name, description, source, injectedTags,
-        (MetricsFilter) conf.getPlugin(RECORD_FILTER_KEY),
-        (MetricsFilter) conf.getPlugin(METRIC_FILTER_KEY), period);
+        conf.getFilter(RECORD_FILTER_KEY),
+        conf.getFilter(METRIC_FILTER_KEY), period);
   }
 
   void start() {
@@ -87,7 +87,8 @@ class MetricsSourceAdapter implements DynamicMBean {
       LOG.warn("MBean Source "+ name +" already initialized!");
     }
     mbeanName = MBeans.register(prefix, name, this);
-    LOG.debug("MBean for source "+ name +" registered.", new Throwable());
+    LOG.info("MBean for source "+ name +" registered.");
+    LOG.debug("Stacktrace: "+ new Throwable());
   }
 
   @Override

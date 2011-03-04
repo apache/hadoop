@@ -28,7 +28,7 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 
 class UgiInstrumentation implements MetricsSource {
 
-  final MetricsRegistry registry = new MetricsRegistry("ugi");
+  final MetricsRegistry registry = new MetricsRegistry("ugi").setContext("ugi");
   final MetricMutableStat loginSuccess = registry.newStat("loginSuccess");
   final MetricMutableStat loginFailure = registry.newStat("loginFailure");
 
@@ -37,10 +37,12 @@ class UgiInstrumentation implements MetricsSource {
     registry.snapshot(builder.addRecord(registry.name()), all);
   }
 
+  //@Override
   void addLoginSuccess(long elapsed) {
     loginSuccess.add(elapsed);
   }
 
+  //@Override
   void addLoginFailure(long elapsed) {
     loginFailure.add(elapsed);
   }
