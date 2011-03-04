@@ -722,8 +722,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       FaultInfo fi = getFaultInfo(hostName, true);
       boolean blackListed = fi.isBlacklisted();
       if(blackListed) {
-        LOG.info("Adding blacklisted reason for tracker : " + hostName 
-            + " Reason for blacklisting is : " + rfb);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Adding blacklisted reason for tracker : " + hostName 
+              + " Reason for blacklisting is : " + rfb);
+        }
+        if (!fi.getReasonforblacklisting().contains(rfb)) {
+          LOG.info("Adding blacklisted reason for tracker : " + hostName
+              + " Reason for blacklisting is : " + rfb);
+        }
         fi.addBlackListedReason(rfb, reason);
       } else {
         LOG.info("Blacklisting tracker : " + hostName 
