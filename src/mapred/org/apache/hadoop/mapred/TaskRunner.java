@@ -212,14 +212,7 @@ abstract class TaskRunner extends Thread {
       errorInfo = getVMEnvironment(errorInfo, workDir, conf, env, taskid,
                                    logSize);
 
-      jvmManager.launchJvm(this, 
-          jvmManager.constructJvmEnv(setup,vargs,stdout,stderr,logSize, 
-              workDir, env, conf));
-      synchronized (lock) {
-        while (!done) {
-          lock.wait();
-        }
-      }
+      launchJvmAndWait(setup, vargs, stdout, stderr, logSize, workDir, env);
       tracker.getTaskTrackerInstrumentation().reportTaskEnd(t.getTaskID());
       if (exitCodeSet) {
         if (!killed && exitCode != 0) {
@@ -260,6 +253,18 @@ abstract class TaskRunner extends Thread {
       // a) SUCCEEDED - which means commit has been done
       // b) FAILED - which means we do not need to commit
       tip.reportTaskFinished(false);
+    }
+  }
+
+  void launchJvmAndWait(List<String> setup, Vector<String> vargs, File stdout,
+      File stderr, long logSize, File workDir, Map<String, String> env)
+      throws InterruptedException {
+    jvmManager.launchJvm(this, jvmManager.constructJvmEnv(setup, vargs, stdout,
+        stderr, logSize, workDir, env, conf));
+    synchronized (lock) {
+      while (!done) {
+        lock.wait();
+      }
     }
   }
 

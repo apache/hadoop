@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.JVMInfo;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.JvmFinishedEvent;
 import org.apache.hadoop.util.ProcessTree;
@@ -42,9 +43,9 @@ class JvmManager {
   public static final Log LOG =
     LogFactory.getLog("org.apache.hadoop.mapred.JvmManager");
 
-  JvmManagerForType mapJvmManager;
+  private JvmManagerForType mapJvmManager;
 
-  JvmManagerForType reduceJvmManager;
+  private JvmManagerForType reduceJvmManager;
   
   public JvmEnv constructJvmEnv(List<String> setup, Vector<String>vargs,
       File stdout,File stderr,long logSize, File workDir, 
@@ -57,6 +58,16 @@ class JvmManager {
         true, tracker);
     reduceJvmManager = new JvmManagerForType(tracker.getMaxCurrentReduceTasks(),
         false, tracker);
+  }
+
+  //called from unit tests
+  JvmManagerForType getJvmManagerForType(TaskType type) {
+    if (type.equals(TaskType.MAP)) {
+      return mapJvmManager;
+    } else if (type.equals(TaskType.REDUCE)) {
+      return reduceJvmManager;
+    }
+    return null;
   }
   
   /*
@@ -161,7 +172,7 @@ class JvmManager {
           tracker.getTaskController()));
   }
 
-  private static class JvmManagerForType {
+  static class JvmManagerForType {
     //Mapping from the JVM IDs to running Tasks
     Map <JVMId,TaskRunner> jvmToRunningTask = 
       new HashMap<JVMId, TaskRunner>();
@@ -257,7 +268,7 @@ class JvmManager {
     synchronized public void killJvm(JVMId jvmId) {
       JvmRunner jvmRunner;
       if ((jvmRunner = jvmIdToRunner.get(jvmId)) != null) {
-        jvmRunner.kill();
+        killJvmRunner(jvmRunner);
       }
     }
     
@@ -270,10 +281,15 @@ class JvmManager {
       List <JvmRunner> list = new ArrayList<JvmRunner>();
       list.addAll(jvmIdToRunner.values());
       for (JvmRunner jvm : list) {
-        jvm.kill();
+        killJvmRunner(jvm);
       }
     }
-    
+
+    private synchronized void killJvmRunner(JvmRunner jvmRunner) {
+      jvmRunner.kill();
+      removeJvm(jvmRunner.jvmId);
+    }
+
     synchronized private void removeJvm(JVMId jvmId) {
       jvmIdToRunner.remove(jvmId);
       jvmIdToPid.remove(jvmId);
@@ -334,7 +350,7 @@ class JvmManager {
       if (spawnNewJvm) {
         if (runnerToKill != null) {
           LOG.info("Killing JVM: " + runnerToKill.jvmId);
-          runnerToKill.kill();
+          killJvmRunner(runnerToKill);
         }
         spawnNewJvm(jobId, env, t);
         return;
@@ -396,7 +412,7 @@ class JvmManager {
       }
     }
 
-    private class JvmRunner extends Thread {
+    class JvmRunner extends Thread {
       JvmEnv env;
       volatile boolean killed = false;
       volatile int numTasksRan;
@@ -459,9 +475,8 @@ class JvmManager {
         }
       }
 
-      public void kill() {
+      synchronized void kill() {
         if (!killed) {
-          killed = true;
           TaskController controller = tracker.getTaskController();
           // Check inital context before issuing a kill to prevent situations
           // where kill is issued before task is launched.
@@ -477,7 +492,7 @@ class JvmManager {
             LOG.info(String.format("JVM Not killed %s but just removed", jvmId
                 .toString()));
           }
-          removeJvm(jvmId);
+          killed = true;
         }
       }
 
