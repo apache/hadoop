@@ -34,11 +34,11 @@ class ReduceTaskStatus extends TaskStatus {
   
   public ReduceTaskStatus() {}
 
-  public ReduceTaskStatus(TaskAttemptID taskid, float progress, State runState,
-          String diagnosticInfo, String stateString, String taskTracker,
-          Phase phase, Counters counters) {
-    super(taskid, progress, runState, diagnosticInfo, stateString, taskTracker,
-            phase, counters);
+  public ReduceTaskStatus(TaskAttemptID taskid, float progress, int numSlots,
+                          State runState, String diagnosticInfo, String stateString, 
+                          String taskTracker, Phase phase, Counters counters) {
+    super(taskid, progress, numSlots, runState, diagnosticInfo, stateString, 
+          taskTracker, phase, counters);
   }
 
   @Override

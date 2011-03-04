@@ -703,7 +703,8 @@ public class TestJobHistory extends TestCase {
             ts.getFinishTime() == Long.parseLong(attempt.get(Keys.FINISH_TIME)));
 
 
-        TaskTrackerStatus ttStatus = jt.getTaskTracker(ts.getTaskTracker());
+        TaskTrackerStatus ttStatus = 
+          jt.getTaskTrackerStatus(ts.getTaskTracker());
 
         if (ttStatus != null) {
           assertTrue("http port of task attempt " + idStr + " obtained from " +

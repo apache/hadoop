@@ -26,7 +26,7 @@
       if ((failState == null && (taskState == TaskStatus.State.FAILED || 
           taskState == TaskStatus.State.KILLED)) || taskState == failState) {
         String taskTrackerName = statuses[i].getTaskTracker();
-        TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
+        TaskTrackerStatus taskTracker = tracker.getTaskTrackerStatus(taskTrackerName);
         out.print("<tr><td>" + statuses[i].getTaskID() +
                   "</td><td><a href=\"taskdetails.jsp?jobid="+ jobId + 
                   "&tipid=" + tipId + "\">" + tipId +

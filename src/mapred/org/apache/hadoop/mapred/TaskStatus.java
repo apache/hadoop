@@ -49,6 +49,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   private String diagnosticInfo;
   private String stateString;
   private String taskTracker;
+  private int numSlots;
     
   private long startTime; 
   private long finishTime; 
@@ -61,14 +62,16 @@ abstract class TaskStatus implements Writable, Cloneable {
 
   public TaskStatus() {
     taskid = new TaskAttemptID();
+    numSlots = 0;
   }
 
-  public TaskStatus(TaskAttemptID taskid, float progress,
+  public TaskStatus(TaskAttemptID taskid, float progress, int numSlots,
                     State runState, String diagnosticInfo,
                     String stateString, String taskTracker,
                     Phase phase, Counters counters) {
     this.taskid = taskid;
     this.progress = progress;
+    this.numSlots = numSlots;
     this.runState = runState;
     this.diagnosticInfo = diagnosticInfo;
     this.stateString = stateString;
@@ -80,6 +83,10 @@ abstract class TaskStatus implements Writable, Cloneable {
   
   public TaskAttemptID getTaskID() { return taskid; }
   public abstract boolean getIsMap();
+  public int getNumSlots() {
+    return numSlots;
+  }
+
   public float getProgress() { return progress; }
   public void setProgress(float progress) { this.progress = progress; } 
   public State getRunState() { return runState; }
@@ -358,6 +365,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   public void write(DataOutput out) throws IOException {
     taskid.write(out);
     out.writeFloat(progress);
+    out.writeInt(numSlots);
     WritableUtils.writeEnum(out, runState);
     Text.writeString(out, diagnosticInfo);
     Text.writeString(out, stateString);
@@ -375,6 +383,7 @@ abstract class TaskStatus implements Writable, Cloneable {
   public void readFields(DataInput in) throws IOException {
     this.taskid.readFields(in);
     this.progress = in.readFloat();
+    this.numSlots = in.readInt();
     this.runState = WritableUtils.readEnum(in, State.class);
     this.diagnosticInfo = Text.readString(in);
     this.stateString = Text.readString(in);
@@ -394,24 +403,27 @@ abstract class TaskStatus implements Writable, Cloneable {
   // Factory-like methods to create/read/write appropriate TaskStatus objects
   //////////////////////////////////////////////////////////////////////////////
   
-  static TaskStatus createTaskStatus(DataInput in, TaskAttemptID taskId, float progress,
+  static TaskStatus createTaskStatus(DataInput in, TaskAttemptID taskId, 
+                                     float progress, int numSlots,
                                      State runState, String diagnosticInfo,
                                      String stateString, String taskTracker,
                                      Phase phase, Counters counters) 
   throws IOException {
     boolean isMap = in.readBoolean();
-    return createTaskStatus(isMap, taskId, progress, runState, diagnosticInfo, 
-                          stateString, taskTracker, phase, counters);
+    return createTaskStatus(isMap, taskId, progress, numSlots, runState, 
+                            diagnosticInfo, stateString, taskTracker, phase, 
+                            counters);
   }
   
-  static TaskStatus createTaskStatus(boolean isMap, TaskAttemptID taskId, float progress,
-                                   State runState, String diagnosticInfo,
-                                   String stateString, String taskTracker,
-                                   Phase phase, Counters counters) { 
-    return (isMap) ? new MapTaskStatus(taskId, progress, runState, 
+  static TaskStatus createTaskStatus(boolean isMap, TaskAttemptID taskId, 
+                                     float progress, int numSlots,
+                                     State runState, String diagnosticInfo,
+                                     String stateString, String taskTracker,
+                                     Phase phase, Counters counters) { 
+    return (isMap) ? new MapTaskStatus(taskId, progress, numSlots, runState, 
                                        diagnosticInfo, stateString, taskTracker, 
                                        phase, counters) :
-                     new ReduceTaskStatus(taskId, progress, runState, 
+                     new ReduceTaskStatus(taskId, progress, numSlots, runState, 
                                           diagnosticInfo, stateString, 
                                           taskTracker, phase, counters);
   }

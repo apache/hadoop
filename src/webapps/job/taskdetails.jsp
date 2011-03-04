@@ -118,7 +118,7 @@
     for (int i = 0; i < ts.length; i++) {
       TaskStatus status = ts[i];
       String taskTrackerName = status.getTaskTracker();
-      TaskTrackerStatus taskTracker = tracker.getTaskTracker(taskTrackerName);
+      TaskTrackerStatus taskTracker = tracker.getTaskTrackerStatus(taskTrackerName);
       out.print("<tr><td>" + status.getTaskID() + "</td>");
       String taskAttemptTracker = null;
       String cleanupTrackerName = null;
@@ -127,7 +127,7 @@
       boolean hasCleanupAttempt = false;
       if (tip != null && tip.isCleanupAttempt(status.getTaskID())) {
         cleanupTrackerName = tip.machineWhereCleanupRan(status.getTaskID());
-        cleanupTracker = tracker.getTaskTracker(cleanupTrackerName);
+        cleanupTracker = tracker.getTaskTrackerStatus(cleanupTrackerName);
         if (cleanupTracker != null) {
           cleanupAttemptTracker = "http://" + cleanupTracker.getHost() + ":"
             + cleanupTracker.getHttpPort();

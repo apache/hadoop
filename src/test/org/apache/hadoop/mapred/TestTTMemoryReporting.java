@@ -26,6 +26,7 @@ import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.util.LinuxMemoryCalculatorPlugin;
 import org.apache.hadoop.util.MemoryCalculatorPlugin;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 import junit.framework.TestCase;
 
@@ -66,9 +67,10 @@ public class TestTTMemoryReporting extends TestCase {
     }
     
     @Override
-    public List<Task> assignTasks(TaskTrackerStatus status)
+    public List<Task> assignTasks(TaskTracker taskTracker)
         throws IOException {
-
+      TaskTrackerStatus status = taskTracker.getStatus();
+      
       long totalVirtualMemoryOnTT =
           getConf().getLong("totalVmemOnTT", JobConf.DISABLED_MEMORY_LIMIT);
       long totalPhysicalMemoryOnTT =
@@ -111,7 +113,7 @@ public class TestTTMemoryReporting extends TestCase {
           || reduceSlotMemorySize != reportedReduceSlotMemorySize) {
         hasPassed = false;
       }
-      return super.assignTasks(status);
+      return super.assignTasks(taskTracker);
     }
   }
 
@@ -126,7 +128,7 @@ public class TestTTMemoryReporting extends TestCase {
     try {
       // Memory values are disabled by default.
       conf.setClass(
-          TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
+          org.apache.hadoop.mapred.TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
           DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
       setUpCluster(conf);
       runSleepJob(miniMRCluster.createJobConf());
@@ -150,7 +152,7 @@ public class TestTTMemoryReporting extends TestCase {
     conf.setLong("reduceSlotMemorySize", 1 * 1024L);
 
     conf.setClass(
-        TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
+        org.apache.hadoop.mapred.TaskTracker.MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
         DummyMemoryCalculatorPlugin.class, MemoryCalculatorPlugin.class);
     conf.setLong(DummyMemoryCalculatorPlugin.MAXVMEM_TESTING_PROPERTY,
         4 * 1024 * 1024 * 1024L);

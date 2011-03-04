@@ -27,6 +27,7 @@ import java.util.Map;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 public class TestJobQueueTaskScheduler extends TestCase {
   
@@ -75,7 +76,8 @@ public class TestJobQueueTaskScheduler extends TestCase {
     public Task obtainNewMapTask(final TaskTrackerStatus tts, int clusterSize,
         int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(true);
-      Task task = new MapTask("", attemptId, 0, "", new BytesWritable(), getJobConf().getUser()) {
+      Task task = new MapTask("", attemptId, 0, "", new BytesWritable(), 1, 
+                              getJobConf().getUser()) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -90,7 +92,8 @@ public class TestJobQueueTaskScheduler extends TestCase {
     public Task obtainNewReduceTask(final TaskTrackerStatus tts,
         int clusterSize, int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(false);
-      Task task = new ReduceTask("", attemptId, 0, 10, getJobConf().getUser()) {
+      Task task = new ReduceTask("", attemptId, 0, 10, 1, 
+                                 getJobConf().getUser()) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -118,18 +121,24 @@ public class TestJobQueueTaskScheduler extends TestCase {
       new ArrayList<JobInProgressListener>();
     QueueManager queueManager;
     
-    private Map<String, TaskTrackerStatus> trackers =
-      new HashMap<String, TaskTrackerStatus>();
+    private Map<String, TaskTracker> trackers = 
+      new HashMap<String, TaskTracker>();
 
     public FakeTaskTrackerManager() {
       JobConf conf = new JobConf();
       queueManager = new QueueManager(conf);
-      trackers.put("tt1", new TaskTrackerStatus("tt1", "tt1.host", 1,
-                   new ArrayList<TaskStatus>(), 0,
-                   maxMapTasksPerTracker, maxReduceTasksPerTracker));
-      trackers.put("tt2", new TaskTrackerStatus("tt2", "tt2.host", 2,
-                   new ArrayList<TaskStatus>(), 0,
-                   maxMapTasksPerTracker, maxReduceTasksPerTracker));
+      
+      TaskTracker tt1 = new TaskTracker("tt1");
+      tt1.setStatus(new TaskTrackerStatus("tt1", "tt1.host", 1,
+                    new ArrayList<TaskStatus>(), 0,
+                    maxMapTasksPerTracker, maxReduceTasksPerTracker));
+      trackers.put("tt1", tt1);
+      
+      TaskTracker tt2 = new TaskTracker("tt2");
+      tt2.setStatus(new TaskTrackerStatus("tt2", "tt2.host", 2,
+                    new ArrayList<TaskStatus>(), 0,
+                    maxMapTasksPerTracker, maxReduceTasksPerTracker));
+      trackers.put("tt2", tt2);
     }
     
     @Override
@@ -150,7 +159,11 @@ public class TestJobQueueTaskScheduler extends TestCase {
 
     @Override
     public Collection<TaskTrackerStatus> taskTrackers() {
-      return trackers.values();
+      List<TaskTrackerStatus> taskTrackers = new ArrayList<TaskTrackerStatus>();
+      for (TaskTracker tt : trackers.values()) {
+        taskTrackers.add(tt.getStatus());
+      }
+      return taskTrackers;
     }
 
 
@@ -200,7 +213,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
       }
     }
     
-    public TaskTrackerStatus getTaskTracker(String trackerID) {
+    public TaskTracker getTaskTracker(String trackerID) {
       return trackers.get(trackerID);
     }
     
@@ -217,7 +230,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
         }
       };
       status.setRunState(TaskStatus.State.RUNNING);
-      trackers.get(taskTrackerName).getTaskReports().add(status);
+      trackers.get(taskTrackerName).getStatus().getTaskReports().add(status);
     }
     
   }
@@ -293,14 +306,14 @@ public class TestJobQueueTaskScheduler extends TestCase {
     checkAssignment(scheduler, tracker(taskTrackerManager, "tt2"), new String[] {});
   }
 
-  static TaskTrackerStatus tracker(FakeTaskTrackerManager taskTrackerManager,
+  static TaskTracker tracker(FakeTaskTrackerManager taskTrackerManager,
                                       String taskTrackerName) {
     return taskTrackerManager.getTaskTracker(taskTrackerName);
   }
   
-  static void checkAssignment(TaskScheduler scheduler, TaskTrackerStatus tts,
+  static void checkAssignment(TaskScheduler scheduler, TaskTracker taskTracker,
       String[] expectedTaskStrings) throws IOException {
-    List<Task> tasks = scheduler.assignTasks(tts);
+    List<Task> tasks = scheduler.assignTasks(taskTracker);
     assertNotNull(tasks);
     assertEquals(expectedTaskStrings.length, tasks.size());
     for (int i=0; i < expectedTaskStrings.length; ++i) {

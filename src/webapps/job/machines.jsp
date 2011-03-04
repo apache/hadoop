@@ -63,8 +63,8 @@
         out.print(tt.getHost() + ":" + tt.getHttpPort() + "/\">");
         out.print(tt.getTrackerName() + "</a></td><td>");
         out.print(tt.getHost() + "</td><td>" + numCurTasks +
-                  "</td><td>" + tt.getMaxMapTasks() +
-                  "</td><td>" + tt.getMaxReduceTasks() + 
+                  "</td><td>" + tt.getMaxMapSlots() +
+                  "</td><td>" + tt.getMaxReduceSlots() + 
                   "</td><td>" + numFailures + 
                   "</td><td>" + sinceHeartbeat + "</td></tr>\n");
       }

@@ -32,6 +32,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobTracker.IllegalStateException;
+import org.apache.hadoop.mapred.TaskTrackerStatus;
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
  * A {@link TaskScheduler} that implements the requirements in HADOOP-3421
@@ -290,13 +293,14 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     /** our TaskScheduler object */
     protected CapacityTaskScheduler scheduler;
-    protected CapacityTaskScheduler.TYPE type = null;
+    protected TaskType type = null;
 
     abstract Task obtainNewTask(TaskTrackerStatus taskTracker, 
         JobInProgress job) throws IOException;
 
     int getSlotsOccupied(JobInProgress job) {
-      return getRunningTasks(job) * getSlotsPerTask(job);
+      return (getNumReservedTaskTrackers(job) + getRunningTasks(job)) * 
+             getSlotsPerTask(job);
     }
 
     abstract int getClusterCapacity();
@@ -304,6 +308,8 @@ class CapacityTaskScheduler extends TaskScheduler {
     abstract int getRunningTasks(JobInProgress job);
     abstract int getPendingTasks(JobInProgress job);
     abstract TaskSchedulingInfo getTSI(QueueSchedulingInfo qsi);
+    abstract int getNumReservedTaskTrackers(JobInProgress job);
+    
     /**
      * To check if job has a speculative task on the particular tracker.
      * 
@@ -314,6 +320,18 @@ class CapacityTaskScheduler extends TaskScheduler {
     abstract boolean hasSpeculativeTask(JobInProgress job, 
         TaskTrackerStatus tts);
 
+    /**
+     * Check if the given job has sufficient reserved tasktrackers for all its
+     * pending tasks.
+     * 
+     * @param job job to check for sufficient reserved tasktrackers 
+     * @return <code>true</code> if the job has reserved tasktrackers,
+     *         else <code>false</code>
+     */
+    boolean hasSufficientReservedTaskTrackers(JobInProgress job) {
+      return getNumReservedTaskTrackers(job) >= getPendingTasks(job);
+    }
+    
     /**
      * List of QSIs for assigning tasks.
      * Queues are ordered by a ratio of (# of running tasks)/capacity, which
@@ -419,10 +437,10 @@ class CapacityTaskScheduler extends TaskScheduler {
      * It tries to get a task from jobs in a single queue. 
      * Always return a TaskLookupResult object. Don't return null. 
      */
-    private TaskLookupResult getTaskFromQueue(TaskTrackerStatus taskTracker,
-        QueueSchedulingInfo qsi)
-        throws IOException {
-
+    private TaskLookupResult getTaskFromQueue(TaskTracker taskTracker,
+                                              QueueSchedulingInfo qsi)
+    throws IOException {
+      TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
       // we only look at jobs in the running queues, as these are the ones
       // who have been potentially initialized
 
@@ -442,9 +460,9 @@ class CapacityTaskScheduler extends TaskScheduler {
         //a task to be scheduled on the task tracker.
         //if we find a job then we pass it on.
         if (scheduler.memoryMatcher.matchesMemoryRequirements(j, type,
-            taskTracker)) {
+                                                              taskTrackerStatus)) {
           // We found a suitable job. Get task from it.
-          Task t = obtainNewTask(taskTracker, j);
+          Task t = obtainNewTask(taskTrackerStatus, j);
           //if there is a task return it immediately.
           if (t != null) {
             // we're successful in getting a task
@@ -457,10 +475,18 @@ class CapacityTaskScheduler extends TaskScheduler {
           }
         } else {
           //if memory requirements don't match then we check if the 
-          //job has either pending or speculative task. If the job
-          //has pending or speculative task we block till this job
-          //tasks get scheduled. So that high memory jobs are not starved
-          if (getPendingTasks(j) != 0 || hasSpeculativeTask(j, taskTracker)) {
+          //job has either pending or speculative task or has insufficient number
+          //of 'reserved' tasktrackers to cover all pending tasks. If so
+          //we reserve the current tasktracker for this job so that 
+          //high memory jobs are not starved
+          if (getPendingTasks(j) != 0 || hasSpeculativeTask(j, taskTrackerStatus) || 
+              !hasSufficientReservedTaskTrackers(j)) {
+            // Reserve all available slots on this tasktracker
+            LOG.info(j.getJobID() + ": Reserving " + taskTracker.getTrackerName() + 
+                     " since memory-requirements don't match");
+            taskTracker.reserveSlots(type, j, taskTracker.getAvailableSlots(type));
+            
+            // Block
             return TaskLookupResult.getMemFailedResult();
           } 
         }//end of memory check block
@@ -472,7 +498,9 @@ class CapacityTaskScheduler extends TaskScheduler {
       // the user limit for some user is too strict, i.e., there's at least 
       // one user who doesn't have enough tasks to satisfy his limit. If 
       // it's the latter case, re-look at jobs without considering user 
-      // limits, and get a task from the first eligible job
+      // limits, and get a task from the first eligible job; however
+      // we do not 'reserve' slots on tasktrackers anymore since the user is 
+      // already over the limit
       // Note: some of the code from above is repeated here. This is on 
       // purpose as it improves overall readability.  
       // Note: we walk through jobs again. Some of these jobs, which weren't
@@ -488,9 +516,9 @@ class CapacityTaskScheduler extends TaskScheduler {
           continue;
         }
         if (scheduler.memoryMatcher.matchesMemoryRequirements(j, type,
-            taskTracker)) {
+            taskTrackerStatus)) {
           // We found a suitable job. Get task from it.
-          Task t = obtainNewTask(taskTracker, j);
+          Task t = obtainNewTask(taskTrackerStatus, j);
           //if there is a task return it immediately.
           if (t != null) {
             // we're successful in getting a task
@@ -505,7 +533,7 @@ class CapacityTaskScheduler extends TaskScheduler {
           //has pending or speculative task we block till this job
           //tasks get scheduled, so that high memory jobs are not 
           //starved
-          if (getPendingTasks(j) != 0 || hasSpeculativeTask(j, taskTracker)) {
+          if (getPendingTasks(j) != 0 || hasSpeculativeTask(j, taskTrackerStatus)) {
             return TaskLookupResult.getMemFailedResult();
           } 
         }//end of memory check block
@@ -520,10 +548,52 @@ class CapacityTaskScheduler extends TaskScheduler {
     // Always return a TaskLookupResult object. Don't return null. 
     // The caller is responsible for ensuring that the QSI objects and the 
     // collections are up-to-date.
-    private TaskLookupResult assignTasks(TaskTrackerStatus taskTracker) throws IOException {
+    private TaskLookupResult assignTasks(TaskTracker taskTracker) 
+    throws IOException {
+      TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
 
       printQSIs();
 
+      // Check if this tasktracker has been reserved for a job...
+      JobInProgress job = taskTracker.getJobForFallowSlot(type);
+      if (job != null) {
+        int availableSlots = taskTracker.getAvailableSlots(type);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(job.getJobID() + ": Checking 'reserved' tasktracker " + 
+                    taskTracker.getTrackerName() + " with " + availableSlots + 
+                    " '" + type + "' slots");
+        }
+
+        if (availableSlots >= job.getNumSlotsPerTask(type)) {
+          // Unreserve 
+          taskTracker.unreserveSlots(type, job);
+          
+          // We found a suitable job. Get task from it.
+          Task t = obtainNewTask(taskTrackerStatus, job);
+          //if there is a task return it immediately.
+          if (t != null) {
+            if (LOG.isDebugEnabled()) {
+              LOG.info(job.getJobID() + ": Got " + t.getTaskID() + 
+                       " for reserved tasktracker " + 
+                       taskTracker.getTrackerName());
+            }
+            // we're successful in getting a task
+            return TaskLookupResult.getTaskFoundResult(t);
+          } 
+        } else {
+          // Re-reserve the current tasktracker
+          taskTracker.reserveSlots(type, job, availableSlots);
+          
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(job.getJobID() + ": Re-reserving " + 
+                      taskTracker.getTrackerName());
+          }
+
+          return TaskLookupResult.getMemFailedResult(); 
+        }
+      }
+      
+      
       for (QueueSchedulingInfo qsi : qsiForAssigningTasks) {
         // we may have queues with capacity=0. We shouldn't look at jobs from 
         // these queues
@@ -600,7 +670,7 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     MapSchedulingMgr(CapacityTaskScheduler schedulr) {
       super(schedulr);
-      type = CapacityTaskScheduler.TYPE.MAP;
+      type = TaskType.MAP;
       queueComparator = mapComparator;
     }
 
@@ -631,14 +701,17 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     @Override
     int getSlotsPerTask(JobInProgress job) {
-      long myVmem = job.getJobConf().getMemoryForMapTask();
-      return (int) (Math.ceil((float) myVmem
-          / (float) scheduler.getMemSizeForMapSlot()));
+      return 
+        job.getJobConf().computeNumSlotsPerMap(scheduler.getMemSizeForMapSlot());    
     }
 
     @Override
     TaskSchedulingInfo getTSI(QueueSchedulingInfo qsi) {
       return qsi.mapTSI;
+    }
+
+    int getNumReservedTaskTrackers(JobInProgress job) {
+      return job.getNumReservedTaskTrackersForMaps();
     }
 
     @Override
@@ -659,7 +732,7 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     ReduceSchedulingMgr(CapacityTaskScheduler schedulr) {
       super(schedulr);
-      type = CapacityTaskScheduler.TYPE.REDUCE;
+      type = TaskType.REDUCE;
       queueComparator = reduceComparator;
     }
 
@@ -691,14 +764,17 @@ class CapacityTaskScheduler extends TaskScheduler {
 
     @Override
     int getSlotsPerTask(JobInProgress job) {
-      long myVmem = job.getJobConf().getMemoryForReduceTask();
-      return (int) (Math.ceil((float) myVmem
-          / (float) scheduler.getMemSizeForReduceSlot()));
+      return
+        job.getJobConf().computeNumSlotsPerReduce(scheduler.getMemSizeForReduceSlot());    
     }
 
     @Override
     TaskSchedulingInfo getTSI(QueueSchedulingInfo qsi) {
       return qsi.reduceTSI;
+    }
+
+    int getNumReservedTaskTrackers(JobInProgress job) {
+      return job.getNumReservedTaskTrackersForReduces();
     }
 
     @Override
@@ -729,9 +805,10 @@ class CapacityTaskScheduler extends TaskScheduler {
   /** whether scheduler has started or not */
   private boolean started = false;
 
-  static String JOB_SCHEDULING_INFO_FORMAT_STRING =
-      "%s running map tasks using %d map slots,"
-          + " %s running reduce tasks using %d reduce slots.";
+  final static String JOB_SCHEDULING_INFO_FORMAT_STRING =
+    "%s running map tasks using %d map slots. %d additional slots reserved." +
+    " %s running reduce tasks using %d reduce slots." +
+    " %d additional slots reserved.";
   /**
    * A clock class - can be mocked out for testing.
    */
@@ -739,11 +816,6 @@ class CapacityTaskScheduler extends TaskScheduler {
     long getTime() {
       return System.currentTimeMillis();
     }
-  }
-
-  // can be replaced with a global type, if we have one
-  protected static enum TYPE {
-    MAP, REDUCE
   }
 
   private Clock clock;
@@ -859,10 +931,10 @@ class CapacityTaskScheduler extends TaskScheduler {
     return limitMaxMemForReduceTasks;
   }
 
-  String[] getOrderedQueues(CapacityTaskScheduler.TYPE type) {
-    if (type.equals(CapacityTaskScheduler.TYPE.MAP)) {
+  String[] getOrderedQueues(TaskType type) {
+    if (type == TaskType.MAP) {
       return mapScheduler.getOrderedQueues();
-    } else if (type.equals(CapacityTaskScheduler.TYPE.REDUCE)) {
+    } else if (type == TaskType.REDUCE) {
       return reduceScheduler.getOrderedQueues();
     }
     return null;
@@ -1015,13 +1087,26 @@ class CapacityTaskScheduler extends TaskScheduler {
 
         int numMapsRunningForThisJob = mapScheduler.getRunningTasks(j);
         int numReducesRunningForThisJob = reduceScheduler.getRunningTasks(j);
+        int numRunningMapSlots = 
+          numMapsRunningForThisJob * mapScheduler.getSlotsPerTask(j);
+        int numRunningReduceSlots =
+          numReducesRunningForThisJob * reduceScheduler.getSlotsPerTask(j);
         int numMapSlotsForThisJob = mapScheduler.getSlotsOccupied(j);
         int numReduceSlotsForThisJob = reduceScheduler.getSlotsOccupied(j);
-        j.setSchedulingInfo(String.format(JOB_SCHEDULING_INFO_FORMAT_STRING,
-            Integer.valueOf(numMapsRunningForThisJob), Integer
-                .valueOf(numMapSlotsForThisJob), Integer
-                .valueOf(numReducesRunningForThisJob), Integer
-                .valueOf(numReduceSlotsForThisJob)));
+        int numReservedMapSlotsForThisJob = 
+          (mapScheduler.getNumReservedTaskTrackers(j) * 
+           mapScheduler.getSlotsPerTask(j)); 
+        int numReservedReduceSlotsForThisJob = 
+          (reduceScheduler.getNumReservedTaskTrackers(j) * 
+           reduceScheduler.getSlotsPerTask(j)); 
+        j.setSchedulingInfo(
+            String.format(JOB_SCHEDULING_INFO_FORMAT_STRING,
+                          Integer.valueOf(numMapsRunningForThisJob), 
+                          Integer.valueOf(numRunningMapSlots),
+                          Integer.valueOf(numReservedMapSlotsForThisJob),
+                          Integer.valueOf(numReducesRunningForThisJob), 
+                          Integer.valueOf(numRunningReduceSlots),
+                          Integer.valueOf(numReservedReduceSlotsForThisJob)));
         qsi.mapTSI.numRunningTasks += numMapsRunningForThisJob;
         qsi.reduceTSI.numRunningTasks += numReducesRunningForThisJob;
         qsi.mapTSI.numSlotsOccupied += numMapSlotsForThisJob;
@@ -1077,10 +1162,12 @@ class CapacityTaskScheduler extends TaskScheduler {
    *  
    */
   @Override
-  public synchronized List<Task> assignTasks(TaskTrackerStatus taskTracker)
-      throws IOException {
+  public synchronized List<Task> assignTasks(TaskTracker taskTracker)
+  throws IOException {
     
     TaskLookupResult tlr;
+    TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
+    
     /* 
      * If TT has Map and Reduce slot free, we need to figure out whether to
      * give it a Map or Reduce task.
@@ -1090,14 +1177,14 @@ class CapacityTaskScheduler extends TaskScheduler {
     ClusterStatus c = taskTrackerManager.getClusterStatus();
     int mapClusterCapacity = c.getMaxMapTasks();
     int reduceClusterCapacity = c.getMaxReduceTasks();
-    int maxMapTasks = taskTracker.getMaxMapTasks();
-    int currentMapTasks = taskTracker.countMapTasks();
-    int maxReduceTasks = taskTracker.getMaxReduceTasks();
-    int currentReduceTasks = taskTracker.countReduceTasks();
-    LOG.debug("TT asking for task, max maps=" + taskTracker.getMaxMapTasks() + 
-        ", run maps=" + taskTracker.countMapTasks() + ", max reds=" + 
-        taskTracker.getMaxReduceTasks() + ", run reds=" + 
-        taskTracker.countReduceTasks() + ", map cap=" + 
+    int maxMapSlots = taskTrackerStatus.getMaxMapSlots();
+    int currentMapSlots = taskTrackerStatus.countOccupiedMapSlots();
+    int maxReduceSlots = taskTrackerStatus.getMaxReduceSlots();
+    int currentReduceSlots = taskTrackerStatus.countOccupiedReduceSlots();
+    LOG.debug("TT asking for task, max maps=" + taskTrackerStatus.getMaxMapSlots() + 
+        ", run maps=" + taskTrackerStatus.countMapTasks() + ", max reds=" + 
+        taskTrackerStatus.getMaxReduceSlots() + ", run reds=" + 
+        taskTrackerStatus.countReduceTasks() + ", map cap=" + 
         mapClusterCapacity + ", red cap = " + 
         reduceClusterCapacity);
 
@@ -1111,8 +1198,8 @@ class CapacityTaskScheduler extends TaskScheduler {
     // make sure we get our map or reduce scheduling object to update its 
     // collection of QSI objects too. 
 
-    if ((maxReduceTasks - currentReduceTasks) > 
-    (maxMapTasks - currentMapTasks)) {
+    if ((maxReduceSlots - currentReduceSlots) > 
+    (maxMapSlots - currentMapSlots)) {
       // get a reduce task first
       reduceScheduler.updateCollectionOfQSIs();
       tlr = reduceScheduler.assignTasks(taskTracker);
@@ -1126,7 +1213,7 @@ class CapacityTaskScheduler extends TaskScheduler {
                                   == tlr.getLookUpStatus() ||
                 TaskLookupResult.LookUpStatus.NO_TASK_FOUND
                                   == tlr.getLookUpStatus())
-          && (maxMapTasks > currentMapTasks)) {
+          && (maxMapSlots > currentMapSlots)) {
         mapScheduler.updateCollectionOfQSIs();
         tlr = mapScheduler.assignTasks(taskTracker);
         if (TaskLookupResult.LookUpStatus.TASK_FOUND == 
@@ -1149,7 +1236,7 @@ class CapacityTaskScheduler extends TaskScheduler {
                                     == tlr.getLookUpStatus()
                 || TaskLookupResult.LookUpStatus.NO_TASK_FOUND
                                     == tlr.getLookUpStatus())
-          && (maxReduceTasks > currentReduceTasks)) {
+          && (maxReduceSlots > currentReduceSlots)) {
         reduceScheduler.updateCollectionOfQSIs();
         tlr = reduceScheduler.assignTasks(taskTracker);
         if (TaskLookupResult.LookUpStatus.TASK_FOUND == 
@@ -1181,10 +1268,33 @@ class CapacityTaskScheduler extends TaskScheduler {
       i++;
     }
     qsi.numJobsByUser.put(job.getProfile().getUser(), i);
+    
+    // setup scheduler specific job information
+    preInitializeJob(job);
+    
     LOG.debug("Job " + job.getJobID().toString() + " is added under user " 
               + job.getProfile().getUser() + ", user now has " + i + " jobs");
   }
 
+  /**
+   * Setup {@link CapacityTaskScheduler} specific information prior to
+   * job initialization.
+   */
+  void preInitializeJob(JobInProgress job) {
+    JobConf jobConf = job.getJobConf();
+    
+    // Compute number of slots required to run a single map/reduce task
+    int slotsPerMap = 1;
+    int slotsPerReduce = 1;
+    if (memoryMatcher.isSchedulingBasedOnMemEnabled()) {
+      slotsPerMap = jobConf.computeNumSlotsPerMap(getMemSizeForMapSlot());
+     slotsPerReduce = 
+       jobConf.computeNumSlotsPerReduce(getMemSizeForReduceSlot());
+    }
+    job.setNumSlotsPerMap(slotsPerMap);
+    job.setNumSlotsPerReduce(slotsPerReduce);
+  }
+  
   // called when a job completes
   synchronized void jobCompleted(JobInProgress job) {
     QueueSchedulingInfo qsi = 

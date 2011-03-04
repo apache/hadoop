@@ -93,6 +93,9 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+
 /*******************************************************
  * JobTracker is the central location for submitting and 
  * tracking MR jobs in a network environment.
@@ -278,7 +281,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                     JobInProgress job = tip.getJob();
                     String trackerName = getAssignedTracker(taskId);
                     TaskTrackerStatus trackerStatus = 
-                      getTaskTracker(trackerName);
+                      getTaskTrackerStatus(trackerName); 
+                      
                     // This might happen when the tasktracker has already
                     // expired and this thread tries to call failedtask
                     // again. expire tasktracker should have called failed
@@ -359,22 +363,25 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                 long now = System.currentTimeMillis();
                 TaskTrackerStatus leastRecent = null;
                 while ((trackerExpiryQueue.size() > 0) &&
-                       ((leastRecent = trackerExpiryQueue.first()) != null) &&
-                       (now - leastRecent.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL)) {
+                       (leastRecent = trackerExpiryQueue.first()) != null &&
+                       ((now - leastRecent.getLastSeen()) > TASKTRACKER_EXPIRY_INTERVAL)) {
+
                         
                   // Remove profile from head of queue
                   trackerExpiryQueue.remove(leastRecent);
                   String trackerName = leastRecent.getTrackerName();
                         
                   // Figure out if last-seen time should be updated, or if tracker is dead
-                  TaskTrackerStatus newProfile = taskTrackers.get(leastRecent.getTrackerName());
+                  TaskTracker current = getTaskTracker(trackerName);
+                  TaskTrackerStatus newProfile = 
+                    (current == null ) ? null : current.getStatus();
                   // Items might leave the taskTracker set through other means; the
                   // status stored in 'taskTrackers' might be null, which means the
                   // tracker has already been destroyed.
                   if (newProfile != null) {
-                    if (now - newProfile.getLastSeen() > TASKTRACKER_EXPIRY_INTERVAL) {
+                    if ((now - newProfile.getLastSeen()) > TASKTRACKER_EXPIRY_INTERVAL) {
                       // Remove completely after marking the tasks as 'KILLED'
-                      lostTaskTracker(leastRecent.getTrackerName());
+                      lostTaskTracker(current);
                       // tracker is lost, and if it is blacklisted, remove 
                       // it from the count of blacklisted trackers in the cluster
                       if (isBlacklisted(trackerName)) {
@@ -384,7 +391,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                       
                       // remove the mapping from the hosts list
                       String hostname = newProfile.getHost();
-                      hostnameToTrackerName.get(hostname).remove(trackerName);
+                      hostnameToTaskTracker.get(hostname).remove(trackerName);
                     } else {
                       // Update time by inserting latest profile
                       trackerExpiryQueue.add(newProfile);
@@ -638,9 +645,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       synchronized (taskTrackers) {
         // remove the capacity of trackers on this host
         for (TaskTrackerStatus status : getStatusesOnHost(hostName)) {
-          int mapSlots = status.getMaxMapTasks();
+          int mapSlots = status.getMaxMapSlots();
           totalMapTaskCapacity -= mapSlots;
-          int reduceSlots = status.getMaxReduceTasks();
+          int reduceSlots = status.getMaxReduceSlots();
           totalReduceTaskCapacity -= reduceSlots;
           getInstrumentation().addBlackListedMapSlots(
               mapSlots);
@@ -657,9 +664,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         int numTrackersOnHost = 0;
         // add the capacity of trackers on the host
         for (TaskTrackerStatus status : getStatusesOnHost(hostName)) {
-          int mapSlots = status.getMaxMapTasks();
+          int mapSlots = status.getMaxMapSlots();
           totalMapTaskCapacity += mapSlots;
-          int reduceSlots = status.getMaxReduceTasks();
+          int reduceSlots = status.getMaxReduceSlots();
           totalReduceTaskCapacity += reduceSlots;
           numTrackersOnHost++;
           getInstrumentation().decBlackListedMapSlots(mapSlots);
@@ -707,7 +714,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private List<TaskTrackerStatus> getStatusesOnHost(String hostName) {
     List<TaskTrackerStatus> statuses = new ArrayList<TaskTrackerStatus>();
     synchronized (taskTrackers) {
-      for (TaskTrackerStatus status : taskTrackers.values()) {
+      for (TaskTracker tt : taskTrackers.values()) {
+        TaskTrackerStatus status = tt.getStatus(); 
         if (hostName.equals(status.getHost())) {
           statuses.add(status);
         }
@@ -1041,14 +1049,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       // II. Create the (appropriate) task status
       if (type.equals(Values.MAP.name())) {
         taskStatus = 
-          new MapTaskStatus(attemptId, 0.0f, TaskStatus.State.RUNNING, 
-                            "", "", trackerName, TaskStatus.Phase.MAP, 
-                            new Counters());
+          new MapTaskStatus(attemptId, 0.0f, job.getNumSlotsPerTask(TaskType.MAP),
+                            TaskStatus.State.RUNNING, "", "", trackerName, 
+                            TaskStatus.Phase.MAP, new Counters());
       } else {
         taskStatus = 
-          new ReduceTaskStatus(attemptId, 0.0f, TaskStatus.State.RUNNING, 
-                               "", "", trackerName, TaskStatus.Phase.REDUCE, 
-                               new Counters());
+          new ReduceTaskStatus(attemptId, 0.0f, job.getNumSlotsPerTask(TaskType.REDUCE), 
+                               TaskStatus.State.RUNNING, "", "", trackerName, 
+                               TaskStatus.Phase.REDUCE, new Counters());
       }
 
       // Set the start time
@@ -1067,10 +1075,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         synchronized (taskTrackers) {
           synchronized (trackerExpiryQueue) {
             // IV. Register a new tracker
-            boolean isTrackerRegistered = getTaskTracker(trackerName) != null;
+            TaskTracker taskTracker = getTaskTracker(trackerName);
+            boolean isTrackerRegistered =  (taskTracker != null);
             if (!isTrackerRegistered) {
               markTracker(trackerName); // add the tracker to recovery-manager
-              addNewTracker(ttStatus);
+              taskTracker = new TaskTracker(trackerName);
+              taskTracker.setStatus(ttStatus);
+              addNewTracker(taskTracker);
             }
       
             // V. Update the tracker status
@@ -1441,17 +1452,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         long now = System.currentTimeMillis();
         int size = trackerExpiryQueue.size();
         for (int i = 0; i < size ; ++i) {
-          // Get the first status
-          TaskTrackerStatus status = trackerExpiryQueue.first();
+          // Get the first tasktracker
+          TaskTrackerStatus taskTracker = trackerExpiryQueue.first();
 
           // Remove it
-          trackerExpiryQueue.remove(status);
+          trackerExpiryQueue.remove(taskTracker);
 
           // Set the new time
-          status.setLastSeen(now);
+          taskTracker.setLastSeen(now);
 
           // Add back to get the sorted list
-          trackerExpiryQueue.add(status);
+          trackerExpiryQueue.add(taskTracker);
         }
       }
 
@@ -1516,11 +1527,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // All the known TaskInProgress items, mapped to by taskids (taskid->TIP)
   Map<TaskAttemptID, TaskInProgress> taskidToTIPMap =
     new TreeMap<TaskAttemptID, TaskInProgress>();
-  // (hostname --> Set(trackername))
   // This is used to keep track of all trackers running on one host. While
   // decommissioning the host, all the trackers on the host will be lost.
-  Map<String, Set<String>> hostnameToTrackerName = 
-    Collections.synchronizedMap(new TreeMap<String, Set<String>>());
+  Map<String, Set<TaskTracker>> hostnameToTaskTracker = 
+    Collections.synchronizedMap(new TreeMap<String, Set<TaskTracker>>());
   
 
   // (taskid --> trackerID) 
@@ -1557,8 +1567,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   //
   int totalMaps = 0;
   int totalReduces = 0;
-  private HashMap<String, TaskTrackerStatus> taskTrackers =
-    new HashMap<String, TaskTrackerStatus>();
+  private HashMap<String, TaskTracker> taskTrackers =
+    new HashMap<String, TaskTracker>();
   Map<String,Integer>uniqueHostsMap = new ConcurrentHashMap<String, Integer>();
   ExpireTrackers expireTrackers = new ExpireTrackers();
   Thread expireTrackersThread = null;
@@ -1573,7 +1583,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   RecoveryManager recoveryManager;
 
   /**
-   * It might seem like a bug to maintain a TreeSet of status objects,
+   * It might seem like a bug to maintain a TreeSet of tasktracker objects,
    * which can be updated at any time.  But that's not what happens!  We
    * only update status objects in the taskTrackers table.  Status objects
    * are never updated once they enter the expiry queue.  Instead, we wait
@@ -2382,9 +2392,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * @return {@link Collection} of {@link TaskTrackerStatus} 
    */
   public Collection<TaskTrackerStatus> taskTrackers() {
+    Collection<TaskTrackerStatus> ttStatuses;
     synchronized (taskTrackers) {
-      return taskTrackers.values();
+      ttStatuses = 
+        new ArrayList<TaskTrackerStatus>(taskTrackers.values().size());
+      for (TaskTracker tt : taskTrackers.values()) {
+        ttStatuses.add(tt.getStatus());
+      }
     }
+    return ttStatuses;
   }
   
   /**
@@ -2396,7 +2412,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     Collection<TaskTrackerStatus> activeTrackers = 
       new ArrayList<TaskTrackerStatus>();
     synchronized (taskTrackers) {
-      for (TaskTrackerStatus status : taskTrackers.values()) {
+      for ( TaskTracker tt : taskTrackers.values()) {
+        TaskTrackerStatus status = tt.getStatus();
         if (!faultyTrackers.isBlacklisted(status.getHost())) {
           activeTrackers.add(status);
         }
@@ -2417,7 +2434,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     List<String> blacklistedTrackers = 
       new ArrayList<String>();
     synchronized (taskTrackers) {
-      for (TaskTrackerStatus status : taskTrackers.values()) {
+      for (TaskTracker tt : taskTrackers.values()) {
+        TaskTrackerStatus status = tt.getStatus();
         if (!faultyTrackers.isBlacklisted(status.getHost())) {
           activeTrackers.add(status.getTrackerName());
         } else {
@@ -2440,7 +2458,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     Collection<TaskTrackerStatus> blacklistedTrackers = 
       new ArrayList<TaskTrackerStatus>();
     synchronized (taskTrackers) {
-      for (TaskTrackerStatus status : taskTrackers.values()) {
+      for (TaskTracker tt : taskTrackers.values()) {
+        TaskTrackerStatus status = tt.getStatus(); 
         if (faultyTrackers.isBlacklisted(status.getHost())) {
           blacklistedTrackers.add(status);
         }
@@ -2470,14 +2489,22 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * @return true if blacklisted, false otherwise
    */
   public boolean isBlacklisted(String trackerID) {
-    TaskTrackerStatus status = getTaskTracker(trackerID);
+    TaskTrackerStatus status = getTaskTrackerStatus(trackerID);
     if (status != null) {
       return faultyTrackers.isBlacklisted(status.getHost());
     }
     return false;
   }
   
-  public TaskTrackerStatus getTaskTracker(String trackerID) {
+  public TaskTrackerStatus getTaskTrackerStatus(String trackerID) {
+    TaskTracker taskTracker;
+    synchronized (taskTrackers) {
+      taskTracker = taskTrackers.get(trackerID);
+    }
+    return (taskTracker == null) ? null : taskTracker.getStatus();
+  }
+
+  public TaskTracker getTaskTracker(String trackerID) {
     synchronized (taskTrackers) {
       return taskTrackers.get(trackerID);
     }
@@ -2491,7 +2518,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * 
    * @param status Task Tracker's status
    */
-  private void addNewTracker(TaskTrackerStatus status) {
+  private void addNewTracker(TaskTracker taskTracker) {
+    TaskTrackerStatus status = taskTracker.getStatus();
     trackerExpiryQueue.add(status);
 
     //  Register the tracker if its not registered
@@ -2502,14 +2530,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     // add it to the set of tracker per host
-    Set<String> trackers = hostnameToTrackerName.get(hostname);
+    Set<TaskTracker> trackers = hostnameToTaskTracker.get(hostname);
     if (trackers == null) {
-      trackers = Collections.synchronizedSet(new HashSet<String>());
-      hostnameToTrackerName.put(hostname, trackers);
+      trackers = Collections.synchronizedSet(new HashSet<TaskTracker>());
+      hostnameToTaskTracker.put(hostname, trackers);
     }
     LOG.info("Adding tracker " + status.getTrackerName() + " to host " 
              + hostname);
-    trackers.add(status.getTrackerName());
+    trackers.add(taskTracker);
   }
 
   public Node resolveAndAddToTopology(String name) {
@@ -2621,11 +2649,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                                   boolean acceptNewTasks, 
                                                   short responseId) 
     throws IOException {
-    LOG.debug("Got heartbeat from: " + status.getTrackerName() + 
-              " (restarted: " + restarted + 
-              " initialContact: " + initialContact + 
-              " acceptNewTasks: " + acceptNewTasks + ")" +
-              " with responseId: " + responseId);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Got heartbeat from: " + status.getTrackerName() + 
+                " (restarted: " + restarted + 
+                " initialContact: " + initialContact + 
+                " acceptNewTasks: " + acceptNewTasks + ")" +
+                " with responseId: " + responseId);
+    }
 
     // Make sure heartbeat is from a tasktracker allowed by the jobtracker.
     if (!acceptTaskTracker(status)) {
@@ -2701,13 +2731,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       
     // Check for new tasks to be executed on the tasktracker
     if (recoveryManager.shouldSchedule() && acceptNewTasks && !isBlacklisted) {
-      TaskTrackerStatus taskTrackerStatus = getTaskTracker(trackerName);
+      TaskTrackerStatus taskTrackerStatus = getTaskTrackerStatus(trackerName) ;
       if (taskTrackerStatus == null) {
         LOG.warn("Unknown task tracker polling; ignoring: " + trackerName);
       } else {
         List<Task> tasks = getSetupAndCleanupTasks(taskTrackerStatus);
         if (tasks == null ) {
-          tasks = taskScheduler.assignTasks(taskTrackerStatus);
+          tasks = taskScheduler.assignTasks(taskTrackers.get(trackerName));
         }
         if (tasks != null) {
           for (Task task : tasks) {
@@ -2807,14 +2837,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   private boolean updateTaskTrackerStatus(String trackerName,
                                           TaskTrackerStatus status) {
-    TaskTrackerStatus oldStatus = taskTrackers.get(trackerName);
+    TaskTracker tt = getTaskTracker(trackerName);
+    TaskTrackerStatus oldStatus = (tt == null) ? null : tt.getStatus();
     if (oldStatus != null) {
       totalMaps -= oldStatus.countMapTasks();
       totalReduces -= oldStatus.countReduceTasks();
       if (!faultyTrackers.isBlacklisted(oldStatus.getHost())) {
-        int mapSlots = oldStatus.getMaxMapTasks();
+        int mapSlots = oldStatus.getMaxMapSlots();
         totalMapTaskCapacity -= mapSlots;
-        int reduceSlots = oldStatus.getMaxReduceTasks();
+        int reduceSlots = oldStatus.getMaxReduceSlots();
         totalReduceTaskCapacity -= reduceSlots;
       }
       if (status == null) {
@@ -2834,16 +2865,56 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       totalMaps += status.countMapTasks();
       totalReduces += status.countReduceTasks();
       if (!faultyTrackers.isBlacklisted(status.getHost())) {
-        int mapSlots = status.getMaxMapTasks();
+        int mapSlots = status.getMaxMapSlots();
         totalMapTaskCapacity += mapSlots;
-        int reduceSlots = status.getMaxReduceTasks();
+        int reduceSlots = status.getMaxReduceSlots();
         totalReduceTaskCapacity += reduceSlots;
       }
       boolean alreadyPresent = false;
-      if (taskTrackers.containsKey(trackerName)) {
+      TaskTracker taskTracker = taskTrackers.get(trackerName);
+      if (taskTracker != null) {
         alreadyPresent = true;
+      } else {
+        taskTracker = new TaskTracker(trackerName);
       }
-      taskTrackers.put(trackerName, status);
+      
+      taskTracker.setStatus(status);
+      taskTrackers.put(trackerName, taskTracker);
+      
+      if (LOG.isDebugEnabled()) {
+        int runningMaps = 0, runningReduces = 0;
+        int commitPendingMaps = 0, commitPendingReduces = 0;
+        int unassignedMaps = 0, unassignedReduces = 0;
+        int miscMaps = 0, miscReduces = 0;
+        List<TaskStatus> taskReports = status.getTaskReports();
+        for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
+          TaskStatus ts = (TaskStatus) it.next();
+          boolean isMap = ts.getIsMap();
+          TaskStatus.State state = ts.getRunState();
+          if (state == TaskStatus.State.RUNNING) {
+            if (isMap) { ++runningMaps; }
+            else { ++runningReduces; }
+          } else if (state == TaskStatus.State.UNASSIGNED) {
+            if (isMap) { ++unassignedMaps; }
+            else { ++unassignedReduces; }
+          } else if (state == TaskStatus.State.COMMIT_PENDING) {
+            if (isMap) { ++commitPendingMaps; }
+            else { ++commitPendingReduces; }
+          } else {
+            if (isMap) { ++miscMaps; } 
+            else { ++miscReduces; } 
+          }
+        }
+        LOG.debug(trackerName + ": Status -" +
+                  " running(m) = " + runningMaps + 
+                  " unassigned(m) = " + unassignedMaps + 
+                  " commit_pending(m) = " + commitPendingMaps +
+                  " misc(m) = " + miscMaps +
+                  " running(r) = " + runningReduces + 
+                  " unassigned(r) = " + unassignedReduces + 
+                  " commit_pending(r) = " + commitPendingReduces +
+                  " misc(r) = " + miscReduces); 
+      }
 
       if (!alreadyPresent)  {
         Integer numTaskTrackersInHost = 
@@ -2872,11 +2943,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       synchronized (trackerExpiryQueue) {
         boolean seenBefore = updateTaskTrackerStatus(trackerName,
                                                      trackerStatus);
+        TaskTracker taskTracker = getTaskTracker(trackerName);
         if (initialContact) {
           // If it's first contact, then clear out 
           // any state hanging around
           if (seenBefore) {
-            lostTaskTracker(trackerName);
+            lostTaskTracker(taskTracker);
           }
         } else {
           // If not first contact, there should be some record of the tracker
@@ -2893,7 +2965,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           if (isBlacklisted(trackerName)) {
             faultyTrackers.numBlacklistedTrackers += 1;
           }
-          addNewTracker(trackerStatus);
+          addNewTracker(taskTracker);
         }
       }
     }
@@ -3012,8 +3084,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // returns cleanup tasks first, then setup tasks.
   private synchronized List<Task> getSetupAndCleanupTasks(
     TaskTrackerStatus taskTracker) throws IOException {
-    int maxMapTasks = taskTracker.getMaxMapTasks();
-    int maxReduceTasks = taskTracker.getMaxReduceTasks();
+    int maxMapTasks = taskTracker.getMaxMapSlots();
+    int maxReduceTasks = taskTracker.getMaxReduceSlots();
     int numMaps = taskTracker.countMapTasks();
     int numReduces = taskTracker.countReduceTasks();
     int numTaskTrackers = getClusterStatus().getTaskTrackers();
@@ -3810,7 +3882,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * already been updated.  Just process the contained tasks and any
    * jobs that might be affected.
    */
-  void lostTaskTracker(String trackerName) {
+  void lostTaskTracker(TaskTracker taskTracker) {
+    String trackerName = taskTracker.getTrackerName();
     LOG.info("Lost tracker '" + trackerName + "'");
     
     // remove the tracker from the local structures
@@ -3868,10 +3941,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       
       // Penalize this tracker for each of the jobs which   
       // had any tasks running on it when it was 'lost' 
+      // Also, remove any reserved slots on this tasktracker
       for (JobInProgress job : jobsWithFailures) {
-        job.addTrackerTaskFailure(trackerName);
+        job.addTrackerTaskFailure(trackerName, taskTracker);
       }
-      
+
+      // Cleanup
+      taskTracker.lost();
+
       // Purge 'marked' tasks, needs to be done  
       // here to prevent hanging references!
       removeMarkedTasks(trackerName);
@@ -3901,9 +3978,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     hostsReader.refresh();
     
     Set<String> excludeSet = new HashSet<String>();
-    for(Map.Entry<String, TaskTrackerStatus> eSet : taskTrackers.entrySet()) {
+    for(Map.Entry<String, TaskTracker> eSet : taskTrackers.entrySet()) {
       String trackerName = eSet.getKey();
-      TaskTrackerStatus status = eSet.getValue();
+      TaskTrackerStatus status = eSet.getValue().getStatus();
       // Check if not include i.e not in host list or in hosts list but excluded
       if (!inHostsList(status) || inExcludedHostsList(status)) {
           excludeSet.add(status.getHost()); // add to rejected trackers
@@ -3921,12 +3998,13 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       synchronized (trackerExpiryQueue) {
         for (String host : hosts) {
           LOG.info("Decommissioning host " + host);
-          Set<String> trackers = hostnameToTrackerName.remove(host);
+          Set<TaskTracker> trackers = hostnameToTaskTracker.remove(host);
           if (trackers != null) {
-            for (String tracker : trackers) {
-              LOG.info("Losing tracker " + tracker + " on host " + host);
+            for (TaskTracker tracker : trackers) {
+              LOG.info("Decommission: Losing tracker " + tracker + 
+                       " on host " + host);
               lostTaskTracker(tracker); // lose the tracker
-              updateTaskTrackerStatus(tracker, null);
+              updateTaskTrackerStatus(tracker.getStatus().getTrackerName(), null);
             }
           }
           LOG.info("Host " + host + " is ready for decommissioning");

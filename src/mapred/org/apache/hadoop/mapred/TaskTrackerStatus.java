@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.mapred;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.TaskStatus.State;
 
 import java.io.*;
 import java.util.*;
@@ -28,9 +31,11 @@ import java.util.*;
  * of the most recent TaskTrackerStatus objects for each
  * unique TaskTracker it knows about.
  *
+ * This is NOT a public interface!
  **************************************************/
-class TaskTrackerStatus implements Writable {
-
+public class TaskTrackerStatus implements Writable {
+  public static final Log LOG = LogFactory.getLog(TaskTrackerStatus.class);
+  
   static {                                        // register a ctor
     WritableFactories.setFactory
       (TaskTrackerStatus.class,
@@ -247,19 +252,27 @@ class TaskTrackerStatus implements Writable {
   public List<TaskStatus> getTaskReports() {
     return taskReports;
   }
-    
+   
   /**
-   * Return the current MapTask count
+   * Is the given task considered as 'running' ?
+   * @param taskStatus
+   * @return
+   */
+  private boolean isTaskRunning(TaskStatus taskStatus) {
+    TaskStatus.State state = taskStatus.getRunState();
+    return (state == State.RUNNING || state == State.UNASSIGNED || 
+            taskStatus.inTaskCleanupPhase());
+  }
+  
+  /**
+   * Get the number of running map tasks.
+   * @return the number of running map tasks
    */
   public int countMapTasks() {
     int mapCount = 0;
-    for (Iterator it = taskReports.iterator(); it.hasNext();) {
+    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
       TaskStatus ts = (TaskStatus) it.next();
-      TaskStatus.State state = ts.getRunState();
-      if (ts.getIsMap() &&
-          ((state == TaskStatus.State.RUNNING) ||
-           (state == TaskStatus.State.UNASSIGNED) ||
-           ts.inTaskCleanupPhase())) {
+      if (ts.getIsMap() && isTaskRunning(ts)) {
         mapCount++;
       }
     }
@@ -267,22 +280,66 @@ class TaskTrackerStatus implements Writable {
   }
 
   /**
-   * Return the current ReduceTask count
+   * Get the number of occupied map slots.
+   * @return the number of occupied map slots
+   */
+  public int countOccupiedMapSlots() {
+    int mapSlotsCount = 0;
+    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
+      TaskStatus ts = (TaskStatus) it.next();
+      if (ts.getIsMap() && isTaskRunning(ts)) {
+        mapSlotsCount += ts.getNumSlots();
+      }
+    }
+    return mapSlotsCount;
+  }
+  
+  /**
+   * Get available map slots.
+   * @return available map slots
+   */
+  public int getAvailableMapSlots() {
+    return getMaxMapSlots() - countOccupiedMapSlots();
+  }
+  
+  /**
+   * Get the number of running reduce tasks.
+   * @return the number of running reduce tasks
    */
   public int countReduceTasks() {
     int reduceCount = 0;
-    for (Iterator it = taskReports.iterator(); it.hasNext();) {
+    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
       TaskStatus ts = (TaskStatus) it.next();
-      TaskStatus.State state = ts.getRunState();
-      if ((!ts.getIsMap()) &&
-          ((state == TaskStatus.State.RUNNING) ||  
-           (state == TaskStatus.State.UNASSIGNED) ||
-           ts.inTaskCleanupPhase())) {
+      if ((!ts.getIsMap()) && isTaskRunning(ts)) {
         reduceCount++;
       }
     }
     return reduceCount;
   }
+
+  /**
+   * Get the number of occupied reduce slots.
+   * @return the number of occupied reduce slots
+   */
+  public int countOccupiedReduceSlots() {
+    int reduceSlotsCount = 0;
+    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
+      TaskStatus ts = (TaskStatus) it.next();
+      if ((!ts.getIsMap()) && isTaskRunning(ts)) {
+        reduceSlotsCount += ts.getNumSlots();
+      }
+    }
+    return reduceSlotsCount;
+  }
+  
+  /**
+   * Get available reduce slots.
+   * @return available reduce slots
+   */
+  public int getAvailableReduceSlots() {
+    return getMaxReduceSlots() - countOccupiedReduceSlots();
+  }
+  
 
   /**
    */
@@ -296,15 +353,18 @@ class TaskTrackerStatus implements Writable {
   }
 
   /**
-   * Get the maximum concurrent tasks for this node.  (This applies
-   * per type of task - a node with maxTasks==1 will run up to 1 map
-   * and 1 reduce concurrently).
-   * @return maximum tasks this node supports
+   * Get the maximum map slots for this node.
+   * @return the maximum map slots for this node
    */
-  public int getMaxMapTasks() {
+  public int getMaxMapSlots() {
     return maxMapTasks;
   }
-  public int getMaxReduceTasks() {
+  
+  /**
+   * Get the maximum reduce slots for this node.
+   * @return the maximum reduce slots for this node
+   */
+  public int getMaxReduceSlots() {
     return maxReduceTasks;
   }  
   

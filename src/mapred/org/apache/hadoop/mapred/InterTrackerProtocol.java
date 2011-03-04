@@ -61,8 +61,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    *            (HADOOP-4869) 
    * Version 24: Changed format of Task and TaskStatus for HADOOP-4759 
    * Version 25: JobIDs are passed in response to JobTracker restart 
+   * Version 26: Added numRequiredSlots to TaskStatus for MAPREDUCE-516
    */
-  public static final long versionID = 25L;
+  public static final long versionID = 26L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

@@ -90,8 +90,8 @@ class MapTask extends Task {
 
   public MapTask(String jobFile, TaskAttemptID taskId, 
                  int partition, String splitClass, BytesWritable split,
-                 String username) {
-    super(jobFile, taskId, partition, username);
+                 int numSlotsRequired, String username) {
+    super(jobFile, taskId, partition, numSlotsRequired, username);
     this.splitClass = splitClass;
     this.split = split;
   }

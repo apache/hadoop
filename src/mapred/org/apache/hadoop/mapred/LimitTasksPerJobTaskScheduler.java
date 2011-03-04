@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 /**
  * A {@link TaskScheduler} that limits the maximum number of tasks
@@ -69,9 +70,9 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
   }
 
   @Override
-  public synchronized List<Task> assignTasks(TaskTrackerStatus taskTracker)
+  public synchronized List<Task> assignTasks(TaskTracker taskTracker)
       throws IOException {
-
+    TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
     final int numTaskTrackers =
         taskTrackerManager.getClusterStatus().getTaskTrackers();
     Collection<JobInProgress> jobQueue =
@@ -79,10 +80,10 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
     Task task;
 
     /* Stats about the current taskTracker */
-    final int mapTasksNumber = taskTracker.countMapTasks();
-    final int reduceTasksNumber = taskTracker.countReduceTasks();
-    final int maximumMapTasksNumber = taskTracker.getMaxMapTasks();
-    final int maximumReduceTasksNumber = taskTracker.getMaxReduceTasks();
+    final int mapTasksNumber = taskTrackerStatus.countMapTasks();
+    final int reduceTasksNumber = taskTrackerStatus.countReduceTasks();
+    final int maximumMapTasksNumber = taskTrackerStatus.getMaxMapSlots();
+    final int maximumReduceTasksNumber = taskTrackerStatus.getMaxReduceSlots();
 
     /*
      * Statistics about the whole cluster. Most are approximate because of
@@ -141,11 +142,11 @@ class LimitTasksPerJobTaskScheduler extends JobQueueTaskScheduler {
             continue;
           }
           if (step == 0 || step == 2) {
-            task = job.obtainNewMapTask(taskTracker, numTaskTrackers,
+            task = job.obtainNewMapTask(taskTrackerStatus, numTaskTrackers,
                 taskTrackerManager.getNumberOfUniqueHosts());
           }
           else {
-            task = job.obtainNewReduceTask(taskTracker, numTaskTrackers,
+            task = job.obtainNewReduceTask(taskTrackerStatus, numTaskTrackers,
                 taskTrackerManager.getNumberOfUniqueHosts());
           }
           if (task != null) {

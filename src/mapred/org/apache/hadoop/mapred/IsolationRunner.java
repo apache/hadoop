@@ -206,11 +206,13 @@ public class IsolationRunner {
       BytesWritable split = new BytesWritable();
       split.readFields(splitFile);
       splitFile.close();
-      task = new MapTask(jobFilename.toString(), taskId, partition, splitClass, split, conf.getUser());
+      task = new MapTask(jobFilename.toString(), taskId, partition, 
+                         splitClass, split, 1, conf.getUser());
     } else {
       int numMaps = conf.getNumMapTasks();
       fillInMissingMapOutputs(local, taskId, numMaps, conf);
-      task = new ReduceTask(jobFilename.toString(), taskId, partition, numMaps, conf.getUser());
+      task = new ReduceTask(jobFilename.toString(), taskId, partition, numMaps, 
+                            1, conf.getUser());
     }
     task.setConf(conf);
     task.run(conf, new FakeUmbilical());

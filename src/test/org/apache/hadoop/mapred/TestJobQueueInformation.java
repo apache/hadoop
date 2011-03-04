@@ -35,6 +35,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
 import junit.framework.TestCase;
 
@@ -66,7 +67,7 @@ public class TestJobQueueInformation extends TestCase {
   public static class TestTaskScheduler extends LimitTasksPerJobTaskScheduler {
 
     @Override
-    public synchronized List<Task> assignTasks(TaskTrackerStatus taskTracker)
+    public synchronized List<Task> assignTasks(TaskTracker taskTracker)
         throws IOException {
       Collection<JobInProgress> jips = jobQueueJobInProgressListener
           .getJobQueue();

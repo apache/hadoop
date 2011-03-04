@@ -263,7 +263,8 @@ public class JobInitializationPoller extends Thread {
    * poller
    */
 
-  void init(Set<String> queues, CapacitySchedulerConf capacityConf) {
+  void init(Set<String> queues, 
+            CapacitySchedulerConf capacityConf) {
     for (String queue : queues) {
       int userlimit = capacityConf.getMinimumUserLimitPercent(queue);
       int maxUsersToInitialize = ((100 / userlimit) + MAX_ADDITIONAL_USERS_TO_INIT);

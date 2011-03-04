@@ -1491,6 +1491,39 @@ public class JobConf extends Configuration {
     return val;
   }
 
+  /**
+   * Compute the number of slots required to run a single map task-attempt
+   * of this job.
+   * @param slotSizePerMap cluster-wide value of the amount of memory required
+   *                       to run a map-task
+   * @return the number of slots required to run a single map task-attempt
+   *                1 if memory parameters are disabled.
+   */
+  int computeNumSlotsPerMap(long slotSizePerMap) {
+    if ((slotSizePerMap==DISABLED_MEMORY_LIMIT) ||
+        (getMemoryForMapTask()==DISABLED_MEMORY_LIMIT)) {
+      return 1;
+    }
+    return (int)(Math.ceil((float)getMemoryForMapTask() / (float)slotSizePerMap));
+  }
+  
+  /**
+   * Compute the number of slots required to run a single reduce task-attempt
+   * of this job.
+   * @param slotSizePerReduce cluster-wide value of the amount of memory 
+   *                          required to run a reduce-task
+   * @return the number of slots required to run a single reduce task-attempt
+   *                1 if memory parameters are disabled.
+   */
+  int computeNumSlotsPerReduce(long slotSizePerReduce) {
+    if ((slotSizePerReduce==DISABLED_MEMORY_LIMIT) ||
+        (getMemoryForReduceTask()==DISABLED_MEMORY_LIMIT)) {
+      return 1;
+    }
+    return 
+    (int)(Math.ceil((float)getMemoryForReduceTask() / (float)slotSizePerReduce));
+  }
+  
   /** 
    * Find a jar that contains a class of the same name, if any.
    * It will return a jar file, even if that is not the first thing
