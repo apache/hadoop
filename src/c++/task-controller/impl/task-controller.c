@@ -1042,3 +1042,21 @@ int delete_log_directory(const char *subdir) {
   free(log_subdir);
   return ret;
 }
+
+/**
+ * run command as user
+ */
+int run_command_as_user(const char *user, char* const* args) {
+  if (user == NULL) {
+    fprintf(LOGFILE, "The user passed is null.\n");
+    return INVALID_ARGUMENT_NUMBER;
+  }
+  // give up root privs
+  if (change_user(user_detail->pw_uid, user_detail->pw_gid) != 0) {
+    return -1;
+  }
+  execvp(args[0], args);
+  fprintf(LOGFILE, "Failure to exec command - %s\n",
+	  strerror(errno));
+  return -1;
+} 

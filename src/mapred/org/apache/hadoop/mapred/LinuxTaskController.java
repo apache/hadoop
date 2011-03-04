@@ -23,13 +23,17 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.ProcessTree.Signal;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
@@ -86,7 +90,8 @@ class LinuxTaskController extends TaskController {
     LAUNCH_TASK_JVM(1),
     SIGNAL_TASK(2),
     DELETE_AS_USER(3),
-    DELETE_LOG_AS_USER(4);
+    DELETE_LOG_AS_USER(4),
+    RUN_COMMAND_AS_USER(5);
 
     private int value;
     Commands(int value) {
@@ -329,6 +334,82 @@ class LinuxTaskController extends TaskController {
   @Override
   public String getRunAsUser(JobConf conf) {
     return conf.getUser();
+  }
+  
+  @Override
+  public void truncateLogsAsUser(String user, List<Task> allAttempts)
+    throws IOException {
+    
+    Task firstTask = allAttempts.get(0);
+    String taskid = firstTask.getTaskID().toString();
+    
+    LocalDirAllocator ldirAlloc = new LocalDirAllocator("mapred.local.dir");
+    String taskRanFile = TaskTracker.TT_LOG_TMP_DIR + Path.SEPARATOR + taskid;
+    Configuration conf = new Configuration();
+    
+    //write the serialized task information to a file to pass to the truncater
+    Path taskRanFilePath = 
+      ldirAlloc.getLocalPathForWrite(taskRanFile, conf);
+    LocalFileSystem lfs = FileSystem.getLocal(conf);
+    FSDataOutputStream out = lfs.create(taskRanFilePath);
+    out.writeInt(allAttempts.size());
+    for (Task t : allAttempts) {
+      out.writeBoolean(t.isMapTask());
+      t.write(out);
+    }
+    out.close();
+    lfs.setPermission(taskRanFilePath, 
+                      FsPermission.createImmutable((short)0755));
+    
+    List<String> command = new ArrayList<String>();
+    File jvm =                                  // use same jvm as parent
+      new File(new File(System.getProperty("java.home"), "bin"), "java");
+    command.add(jvm.toString());
+    command.add("-Djava.library.path=" + 
+                System.getProperty("java.library.path"));
+    command.add("-Dhadoop.log.dir=" + TaskLog.getBaseLogDir());
+    command.add("-Dhadoop.root.logger=INFO,console");
+    command.add("-classpath");
+    command.add(System.getProperty("java.class.path"));
+    // main of TaskLogsTruncater
+    command.add(TaskLogsTruncater.class.getName()); 
+    command.add(taskRanFilePath.toString());
+
+    String[] taskControllerCmd = new String[3 + command.size()];
+    taskControllerCmd[0] = taskControllerExe;
+    taskControllerCmd[1] = user;
+    taskControllerCmd[2] = Integer.toString(
+        Commands.RUN_COMMAND_AS_USER.getValue());
+    int i = 3;
+    for (String cmdArg : command) {
+      taskControllerCmd[i++] = cmdArg;
+    }
+    if (LOG.isDebugEnabled()) {
+      for (String cmd : taskControllerCmd) {
+        LOG.debug("taskctrl command = " + cmd);
+      }
+    }
+    ShellCommandExecutor shExec = new ShellCommandExecutor(taskControllerCmd);
+    
+    try {
+      shExec.execute();
+    } catch (Exception e) {
+      LOG.warn("Exit code from " + taskControllerExe.toString() + " is : "
+          + shExec.getExitCode() + " for truncateLogs");
+      LOG.warn("Exception thrown by " + taskControllerExe.toString() + " : "
+          + StringUtils.stringifyException(e));
+      LOG.info("Output from LinuxTaskController's "
+               + taskControllerExe.toString() + " follows:");
+      logOutput(shExec.getOutput());
+      lfs.delete(taskRanFilePath, false);
+      throw new IOException(e);
+    }
+    lfs.delete(taskRanFilePath, false);
+    if (LOG.isDebugEnabled()) {
+      LOG.info("Output from LinuxTaskController's "
+               + taskControllerExe.toString() + " follows:");
+      logOutput(shExec.getOutput());
+    }
   }
 }
 

@@ -190,6 +190,11 @@ class Child {
         // Create the job-conf and set credentials
         final JobConf job = new JobConf(task.getJobFile());
         job.setCredentials(defaultConf.getCredentials());
+        //forcefully turn off caching for localfs. All cached FileSystems
+        //are closed during the JVM shutdown. We do certain
+        //localfs operations in the shutdown hook, and we don't
+        //want the localfs to be "closed"
+        job.setBoolean("fs.file.impl.disable.cache", false);
 
         // set the jobTokenFile into task
         task.setJobTokenSecret(JobTokenSecretManager.

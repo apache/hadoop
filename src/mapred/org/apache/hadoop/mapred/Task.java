@@ -376,7 +376,7 @@ abstract public class Task implements Writable, Configurable {
    * 
    * @return user
    */
-  String getUser() {
+  public String getUser() {
     return user;
   }
   

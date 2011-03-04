@@ -74,6 +74,11 @@ public class TaskLog {
     if (!LOG_DIR.exists()) {
       LOG_DIR.mkdirs();
     }
+    try {
+      localFS = FileSystem.getLocal(new Configuration());
+    } catch (IOException ie) {
+      throw new RuntimeException(ie);
+    }
   }
 
   public static File getTaskLogFile(TaskAttemptID taskid, boolean isCleanup,
@@ -162,14 +167,13 @@ public class TaskLog {
    * determined by checking the job's log directory.
    */
   static String obtainLogDirOwner(TaskAttemptID taskid) throws IOException {
-    Configuration conf = new Configuration();
-    FileSystem raw = FileSystem.getLocal(conf).getRaw();
+    FileSystem raw = localFS.getRaw();
     Path jobLogDir = new Path(getJobDir(taskid.getJobID()).getAbsolutePath());
     FileStatus jobStat = raw.getFileStatus(jobLogDir);
     return jobStat.getOwner();
   }
 
-  static String getBaseLogDir() {
+  public static String getBaseLogDir() {
     return System.getProperty("hadoop.log.dir");
   }
 
@@ -233,9 +237,6 @@ public class TaskLog {
     Path indexFilePath = new Path(indexFile.getAbsolutePath());
     Path tmpIndexFilePath = new Path(tmpIndexFile.getAbsolutePath());
 
-    if (localFS == null) {// set localFS once
-      localFS = FileSystem.getLocal(new Configuration());
-    }
     localFS.rename (tmpIndexFilePath, indexFilePath);
   }
 

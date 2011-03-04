@@ -139,7 +139,12 @@ class MapTask extends Task {
   public void write(DataOutput out) throws IOException {
     super.write(out);
     if (isMapOrReduce()) {
-      splitMetaInfo.write(out);
+      if (splitMetaInfo != null) {
+        splitMetaInfo.write(out);
+      } else {
+        new TaskSplitIndex().write(out);
+      }
+      //TODO do we really need to set this to null?
       splitMetaInfo = null;
     }
   }

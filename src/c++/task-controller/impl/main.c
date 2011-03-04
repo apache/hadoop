@@ -37,16 +37,18 @@ void display_usage(FILE *stream) {
   fprintf(stream,
       "Usage: task-controller user command command-args\n");
   fprintf(stream, "Commands:\n");
-  fprintf(stream, "   initialize job: %2d jobid credentials cmd args\n",
+  fprintf(stream, "   initialize job:       %2d jobid credentials cmd args\n",
 	  INITIALIZE_JOB);
-  fprintf(stream, "   launch task:    %2d jobid taskid task-script\n",
+  fprintf(stream, "   launch task:          %2d jobid taskid task-script\n",
 	  LAUNCH_TASK_JVM);
-  fprintf(stream, "   signal task:    %2d task-pid signal\n",
+  fprintf(stream, "   signal task:          %2d task-pid signal\n",
 	  SIGNAL_TASK);
-  fprintf(stream, "   delete as user: %2d relative-path\n",
+  fprintf(stream, "   delete as user:       %2d relative-path\n",
 	  DELETE_AS_USER);
-  fprintf(stream, "   delete log:     %2d relative-path\n",
+  fprintf(stream, "   delete log:           %2d relative-path\n",
 	  DELETE_LOG_AS_USER);
+  fprintf(stream, "   run command as user:  %2d cmd args\n",
+	  RUN_COMMAND_AS_USER);
 }
 
 int main(int argc, char **argv) {
@@ -182,6 +184,9 @@ int main(int argc, char **argv) {
   case DELETE_LOG_AS_USER:
     dir_to_be_deleted = argv[optind++];
     exit_code= delete_log_directory(dir_to_be_deleted);
+    break;
+  case RUN_COMMAND_AS_USER:
+    exit_code = run_command_as_user(user_detail->pw_name, argv + optind);
     break;
   default:
     exit_code = INVALID_COMMAND_PROVIDED;

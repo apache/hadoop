@@ -17,15 +17,31 @@
  */
 package org.apache.hadoop.mapreduce.server.tasktracker.userlogs;
 
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.DefaultTaskController;
+import org.apache.hadoop.mapred.JobLocalizer;
+import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskController;
+import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskLogsTruncater;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.UserLogCleaner;
@@ -141,8 +157,14 @@ public class UserLogManager {
     userLogCleaner.clearOldUserLogs(conf);
   }
 
-  private void doJvmFinishedAction(JvmFinishedEvent event) {
-    // do nothing
+  private void doJvmFinishedAction(JvmFinishedEvent event) throws IOException {
+    //check whether any of the logs are over the limit, and if so
+    //invoke the truncator to run as the user
+    if (taskLogsTruncater.shouldTruncateLogs(event.getJvmInfo())) {
+      String user = event.getJvmInfo().getAllAttempts().get(0).getUser();
+      taskController.truncateLogsAsUser(user, 
+                                        event.getJvmInfo().getAllAttempts());
+    }
   }
 
   private void doJobStartedAction(JobStartedEvent event) {

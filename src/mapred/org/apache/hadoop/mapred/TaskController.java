@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -148,6 +149,15 @@ public abstract class TaskController implements Configurable {
    */
   public abstract void deleteLogAsUser(String user, 
                                        String subDir) throws IOException;
+  
+  /**
+   * Run the passed command as the user
+   * @param user 
+   * @param allAttempts the list of attempts that the JVM ran
+   * @throws IOException
+   */
+  public abstract void truncateLogsAsUser(String user, List<Task> allAttempts) 
+  throws IOException;
   
   static class DeletionContext extends CleanupQueue.PathDeletionContext {
     private TaskController controller;

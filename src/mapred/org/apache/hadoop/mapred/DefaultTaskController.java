@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,9 +30,11 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.server.tasktracker.JVMInfo;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.util.ProcessTree.Signal;
 import org.apache.hadoop.util.ProcessTree;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import org.apache.commons.logging.Log;
@@ -230,6 +233,18 @@ public class DefaultTaskController extends TaskController {
                               String subDir) throws IOException {
     Path dir = new Path(TaskLog.getUserLogDir().getAbsolutePath(), subDir);
     fs.delete(dir, true);
+  }
+  
+  @Override
+  public void truncateLogsAsUser(String user, List<Task> allAttempts)
+    throws IOException {
+    Task firstTask = allAttempts.get(0);
+    TaskLogsTruncater trunc = new TaskLogsTruncater(getConf());
+
+    trunc.truncateLogs(new JVMInfo(
+            TaskLog.getAttemptDir(firstTask.getTaskID(), 
+                                  firstTask.isTaskCleanupTask()),
+                       allAttempts));
   }
 
   @Override

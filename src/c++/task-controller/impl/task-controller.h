@@ -25,7 +25,8 @@ enum command {
   LAUNCH_TASK_JVM = 1,
   SIGNAL_TASK = 2,
   DELETE_AS_USER = 3,
-  DELETE_LOG_AS_USER = 4
+  DELETE_LOG_AS_USER = 4,
+  RUN_COMMAND_AS_USER = 5
 };
 
 enum errorcodes {
@@ -87,6 +88,10 @@ int signal_user_task(const char *user, int pid, int sig);
 // delete a directory (or file) recursively as the user.
 int delete_as_user(const char *user,
                    const char *dir_to_be_deleted);
+
+// run a command as the user
+int run_command_as_user(const char *user,
+                        char* const* args); 
 
 // set the task tracker's uid and gid
 void set_tasktracker_uid(uid_t user, gid_t group);

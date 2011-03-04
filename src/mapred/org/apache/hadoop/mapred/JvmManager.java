@@ -181,25 +181,6 @@ class JvmManager {
                                            
   }
   
-  static void checkAndDeleteTaskLogs(TaskTracker tracker, Task firstTask) {
-    File logdir = TaskLog.getAttemptDir(firstTask.getTaskID(), 
-        firstTask.isTaskCleanupTask());
-    //allow for 10% over the limit
-    final long retainSize = tracker.getRetainSize(firstTask.getTaskID());
-    if (retainSize >= 0 && FileUtil.getDU(logdir) > (1.1 * retainSize)){
-      LOG.info("Deleting user log path since the amount of data in the logs" +
-      		" exceeded the allowed " +
-      		"log limits " + logdir);
-      String user = firstTask.getUser();
-      String jobLogDir = firstTask.getJobID().toString() + 
-                         Path.SEPARATOR + logdir.getName();
-      PathDeletionContext item = 
-        new TaskController.DeletionContext(tracker.getTaskController(),
-            true, user, jobLogDir);
-      tracker.getCleanupThread().addToQueue(item);
-    }
-  }
-
   static class JvmManagerForType {
     //Mapping from the JVM IDs to running Tasks
     Map <JVMId,TaskRunner> jvmToRunningTask = 
@@ -503,7 +484,6 @@ class JvmManager {
           LOG.info("JVM : " + jvmId + " exited with exit code " + exitCode
               + ". Number of tasks it ran: " + numTasksRan);
           deleteWorkDir(tracker, firstTask);
-          checkAndDeleteTaskLogs(tracker, firstTask);
         }
       }
 

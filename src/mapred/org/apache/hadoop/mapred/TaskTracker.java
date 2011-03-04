@@ -248,6 +248,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   static final String LOCAL_SPLIT_FILE = "split.info";
   static final String JOBFILE = "job.xml";
   static final String TT_PRIVATE_DIR = "ttprivate";
+  public static final String TT_LOG_TMP_DIR = "tt_log_tmp";
   static final String JVM_EXTRA_ENV_FILE = "jvm.extra.env";
 
   static final String JOB_LOCAL_DIR = "job.local.dir";
@@ -600,6 +601,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     final FsPermission priv = FsPermission.createImmutable((short) 0700);
     for (String s : localdirs) {
       localFs.mkdirs(new Path(s, TT_PRIVATE_DIR), priv);
+    }
+    fConf.deleteLocalFiles(TT_LOG_TMP_DIR);
+    final FsPermission pub = FsPermission.createImmutable((short) 0755);
+    for (String s : localdirs) {
+      localFs.mkdirs(new Path(s, TT_LOG_TMP_DIR), pub);
     }
 
     // Clear out state tables
@@ -2994,6 +3000,16 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    */
   public synchronized void reportDiagnosticInfo(TaskAttemptID taskid, String info) throws IOException {
     authorizeJVM(taskid.getJobID());
+    reportDiagnosticInfoInternal(taskid, info);
+  }
+  /**
+   * Meant to be used internally
+   * @param taskid
+   * @param info
+   * @throws IOException
+   */
+  synchronized void reportDiagnosticInfoInternal(TaskAttemptID taskid, 
+      String info) throws IOException {
     TaskInProgress tip = tasks.get(taskid);
     if (tip != null) {
       tip.reportDiagnosticInfo(info);
@@ -3077,6 +3093,16 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   public synchronized void fsError(TaskAttemptID taskId, String message) 
   throws IOException {
     authorizeJVM(taskId.getJobID());
+    fsErrorInternal(taskId, message);  
+  }
+  /**
+   * Meant to be used internally
+   * @param taskId
+   * @param message
+   * @throws IOException
+   */
+  synchronized void fsErrorInternal(TaskAttemptID taskId, String message) 
+  throws IOException {
     LOG.fatal("Task: " + taskId + " - Killed due to FSError: " + message);
     TaskInProgress tip = runningTasks.get(taskId);
     tip.reportDiagnosticInfo("FSError: " + message);
