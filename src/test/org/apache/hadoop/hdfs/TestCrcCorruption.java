@@ -23,11 +23,13 @@ import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
 import java.util.Random;
 import junit.framework.*;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 
 /**
  * A JUnit test for corrupted file handling.
@@ -57,17 +59,7 @@ import org.apache.hadoop.fs.Path;
  *     replica was created from the non-corrupted replica.
  */
 public class TestCrcCorruption extends TestCase {
-  
-  public TestCrcCorruption(String testName) {
-    super(testName);
-  }
 
-  protected void setUp() throws Exception {
-  }
-
-  protected void tearDown() throws Exception {
-  }
-  
   /** 
    * check if DFS can handle corrupted CRC blocks
    */
@@ -221,5 +213,58 @@ public class TestCrcCorruption extends TestCase {
     conf2.setInt("dfs.block.size", 34);
     DFSTestUtil util2 = new DFSTestUtil("TestCrcCorruption", 40, 3, 400);
     thistest(conf2, util2);
+  }
+
+  /**
+   * Make a single-DN cluster, corrupt a block, and make sure
+   * there's no infinite loop, but rather it eventually
+   * reports the exception to the client.
+   */
+  public void testEntirelyCorruptFileOneNode() throws Exception {
+    doTestEntirelyCorruptFile(1);
+  }
+
+  /**
+   * Same thing with multiple datanodes - in history, this has
+   * behaved differently than the above.
+   *
+   * This test usually completes in around 15 seconds - if it
+   * times out, this suggests that the client is retrying
+   * indefinitely.
+   */
+  public void testEntirelyCorruptFileThreeNodes() throws Exception {
+    doTestEntirelyCorruptFile(3);
+  }
+
+  private void doTestEntirelyCorruptFile(int numDataNodes) throws Exception {
+    long fileSize = 4096;
+    Path file = new Path("/testFile");
+
+    Configuration conf = new Configuration();
+    conf.setInt("dfs.replication", numDataNodes);
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, numDataNodes, true, null);
+
+    try {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+
+      DFSTestUtil.createFile(fs, file, fileSize, (short)numDataNodes, 12345L /*seed*/);
+      DFSTestUtil.waitReplication(fs, file, (short)numDataNodes);
+
+      String block = DFSTestUtil.getFirstBlock(fs, file).getBlockName();
+      cluster.corruptBlockOnDataNodes(block);
+
+      try {
+        IOUtils.copyBytes(fs.open(file), new IOUtils.NullOutputStream(), conf,
+                          true);
+        fail("Didn't get exception");
+      } catch (IOException ioe) {
+        DFSClient.LOG.info("Got expected exception", ioe);
+      }
+
+    } finally {
+      cluster.shutdown();
+    }
+    
   }
 }

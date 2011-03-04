@@ -29,6 +29,7 @@
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jets3t-0.6.1.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/junit-3.8.1.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/log4j-1.2.15.jar"/>
+	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/mockito-all-1.8.0.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/oro-2.0.8.jar"/>
   	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jetty-6.1.14.jar"/>
   	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/jetty-util-6.1.14.jar"/>

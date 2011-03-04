@@ -20,16 +20,20 @@ package org.apache.hadoop.hdfs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSClient.DFSInputStream;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.*;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
@@ -39,7 +43,9 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 
 import junit.framework.TestCase;
-
+import static org.mockito.Mockito.*;
+import org.mockito.stubbing.Answer;
+import org.mockito.invocation.InvocationOnMock;
 
 /**
  * These tests make sure that DFSClient retries fetching data from DFS
@@ -251,5 +257,124 @@ public class TestDFSClientRetries extends TestCase {
            e.getMessage().equals(tnn.ADD_BLOCK_EXCEPTION));
     }
   }
-  
+
+  /**
+   * This tests that DFSInputStream failures are counted for a given read
+   * operation, and not over the lifetime of the stream. It is a regression
+   * test for HDFS-127.
+   */
+  public void testFailuresArePerOperation() throws Exception
+  {
+    long fileSize = 4096;
+    Path file = new Path("/testFile");
+
+    Configuration conf = new Configuration();
+    MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
+
+    int maxBlockAcquires = DFSClient.getMaxBlockAcquireFailures(conf);
+    assertTrue(maxBlockAcquires > 0);
+
+    try {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      NameNode preSpyNN = cluster.getNameNode();
+      NameNode spyNN = spy(preSpyNN);
+      DFSClient client = new DFSClient(null, spyNN, conf, null);
+
+      DFSTestUtil.createFile(fs, file, fileSize, (short)1, 12345L /*seed*/);
+
+      // If the client will retry maxBlockAcquires times, then if we fail
+      // any more than that number of times, the operation should entirely
+      // fail.
+      doAnswer(new FailNTimesAnswer(preSpyNN, maxBlockAcquires + 1))
+        .when(spyNN).getBlockLocations(anyString(), anyLong(), anyLong());
+      try {
+        IOUtils.copyBytes(client.open(file.toString()), new IOUtils.NullOutputStream(), conf,
+                          true);
+        fail("Didn't get exception");
+      } catch (IOException ioe) {
+        DFSClient.LOG.info("Got expected exception", ioe);
+      }
+
+      // If we fail exactly that many times, then it should succeed.
+      doAnswer(new FailNTimesAnswer(preSpyNN, maxBlockAcquires))
+        .when(spyNN).getBlockLocations(anyString(), anyLong(), anyLong());
+      IOUtils.copyBytes(client.open(file.toString()), new IOUtils.NullOutputStream(), conf,
+                        true);
+
+      DFSClient.LOG.info("Starting test case for failure reset");
+
+      // Now the tricky case - if we fail a few times on one read, then succeed,
+      // then fail some more on another read, it shouldn't fail.
+      doAnswer(new FailNTimesAnswer(preSpyNN, maxBlockAcquires))
+        .when(spyNN).getBlockLocations(anyString(), anyLong(), anyLong());
+      DFSInputStream is = client.open(file.toString());
+      byte buf[] = new byte[10];
+      IOUtils.readFully(is, buf, 0, buf.length);
+
+      DFSClient.LOG.info("First read successful after some failures.");
+
+      // Further reads at this point will succeed since it has the good block locations.
+      // So, force the block locations on this stream to be refreshed from bad info.
+      // When reading again, it should start from a fresh failure count, since
+      // we're starting a new operation on the user level.
+      doAnswer(new FailNTimesAnswer(preSpyNN, maxBlockAcquires))
+        .when(spyNN).getBlockLocations(anyString(), anyLong(), anyLong());
+      is.openInfo();
+      // Seek to beginning forces a reopen of the BlockReader - otherwise it'll
+      // just keep reading on the existing stream and the fact that we've poisoned
+      // the block info won't do anything.
+      is.seek(0);
+      IOUtils.readFully(is, buf, 0, buf.length);
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Mock Answer implementation of NN.getBlockLocations that will return
+   * a poisoned block list a certain number of times before returning
+   * a proper one.
+   */
+  private static class FailNTimesAnswer implements Answer<LocatedBlocks> {
+    private int failuresLeft;
+    private NameNode realNN;
+
+    public FailNTimesAnswer(NameNode realNN, int timesToFail) {
+      failuresLeft = timesToFail;
+      this.realNN = realNN;
+    }
+
+    public LocatedBlocks answer(InvocationOnMock invocation) throws IOException {
+      Object args[] = invocation.getArguments();
+      LocatedBlocks realAnswer = realNN.getBlockLocations(
+        (String)args[0],
+        (Long)args[1],
+        (Long)args[2]);
+
+      if (failuresLeft-- > 0) {
+        NameNode.LOG.info("FailNTimesAnswer injecting failure.");
+        return makeBadBlockList(realAnswer);
+      }
+      NameNode.LOG.info("FailNTimesAnswer no longer failing.");
+      return realAnswer;
+    }
+
+    private LocatedBlocks makeBadBlockList(LocatedBlocks goodBlockList) {
+      LocatedBlock goodLocatedBlock = goodBlockList.get(0);
+      LocatedBlock badLocatedBlock = new LocatedBlock(
+        goodLocatedBlock.getBlock(),
+        new DatanodeInfo[] {
+          new DatanodeInfo(new DatanodeID("255.255.255.255:234"))
+        },
+        goodLocatedBlock.getStartOffset(),
+        false);
+
+
+      List<LocatedBlock> badBlocks = new ArrayList<LocatedBlock>();
+      badBlocks.add(badLocatedBlock);
+      return new LocatedBlocks(goodBlockList.getFileLength(), badBlocks, false);
+    }
+  }
 }

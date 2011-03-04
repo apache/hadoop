@@ -275,6 +275,5 @@
       rev="${aspectj.version}"
       conf="common->default">
     </dependency>
-    </dependencies>
-  
+  </dependencies>
 </ivy-module>
