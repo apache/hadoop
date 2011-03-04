@@ -27,7 +27,7 @@ package org.apache.hadoop.fs;
 public class CommonConfigurationKeys {
   
   /** See src/core/core-default.xml */
-  public static final String  FS_DEFAULT_NAME_KEY = "fs.defaultFS";
+  public static final String  FS_DEFAULT_NAME_KEY = "fs.default.name";
   public static final String  FS_DEFAULT_NAME_DEFAULT = "file:///";
 
   /** See src/core/core-default.xml */
