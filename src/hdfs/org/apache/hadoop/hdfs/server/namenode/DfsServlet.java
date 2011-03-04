@@ -105,7 +105,7 @@ abstract class DfsServlet extends HttpServlet {
     final String filename = request.getPathInfo();
     String dt="";
     if(tokenString!=null) {
-      dt = JspHelper.SET_DELEGATION + tokenString;
+      dt = JspHelper.getDelegationTokenUrlParam(tokenString);
     }
     return new URI(scheme, null, hostname, port, servletpath,
         "filename=" + filename + "&ugi=" + ugi.getShortUserName() + dt, null);

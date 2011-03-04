@@ -45,8 +45,7 @@ public class ProxyFileDataServlet extends FileDataServlet {
     
     String dtParam="";
     if (dt != null) {
-      StringBuilder sb = new StringBuilder(JspHelper.SET_DELEGATION).append(dt);
-      dtParam=sb.toString();
+      dtParam=JspHelper.getDelegationTokenUrlParam(dt);
     }
     
     return new URI(request.getScheme(), null, request.getServerName(), request

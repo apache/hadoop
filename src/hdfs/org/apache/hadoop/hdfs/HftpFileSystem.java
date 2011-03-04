@@ -253,7 +253,7 @@ public class HftpFileSystem extends FileSystem {
       synchronized (this) {
         if (delegationToken != null) {
           tokenString = delegationToken.encodeToUrlString();
-          return (query + JspHelper.SET_DELEGATION + tokenString);
+          return (query + JspHelper.getDelegationTokenUrlParam(tokenString));
         } // else we are talking to an insecure cluster
       }
     }

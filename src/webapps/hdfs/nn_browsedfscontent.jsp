@@ -65,7 +65,7 @@
                        nn.getHttpAddress().getPort() +
                        "&dir=/" + 
                        (tokenString == null ? "" :
-                        JspHelper.SET_DELEGATION + tokenString);
+                        JspHelper.getDelegationTokenUrlParam(tokenString));
     resp.sendRedirect(redirectLocation);
   }
 %>

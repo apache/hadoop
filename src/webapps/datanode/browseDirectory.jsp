@@ -79,7 +79,7 @@
             "&filename=" + URLEncoder.encode(dir, "UTF-8") + 
             "&datanodePort="
             + datanodePort + "&namenodeInfoPort=" + namenodeInfoPort
-            + JspHelper.SET_DELEGATION + tokenString;
+            + JspHelper.getDelegationTokenUrlParam(tokenString);
           resp.sendRedirect(redirectLocation);
         }
         return;
@@ -100,7 +100,7 @@
       if ((parent = f.getParent()) != null)
         out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent +
                   "&namenodeInfoPort=" + namenodeInfoPort +
-                  JspHelper.SET_DELEGATION + tokenString +
+                  JspHelper.getDelegationTokenUrlParam(tokenString) +
                   "\">Go to parent directory</a><br>");
 
       DirectoryListing thisListing = dfs.listPaths(target, HdfsFileStatus.EMPTY_NAME);
@@ -132,8 +132,8 @@
             }
             String datanodeUrl = req.getRequestURL()+"?dir="+
               URLEncoder.encode(files[i].getFullName(target), "UTF-8") + 
-              "&namenodeInfoPort=" + namenodeInfoPort + JspHelper.SET_DELEGATION + 
-              tokenString;
+              "&namenodeInfoPort=" + namenodeInfoPort + 
+              JspHelper.getDelegationTokenUrlParam(tokenString);
             cols[0] = "<a href=\""+datanodeUrl+"\">"+localname+"</a>";
             cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
             cols[6] = files[i].getPermission().toString();

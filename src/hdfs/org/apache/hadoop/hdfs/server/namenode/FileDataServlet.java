@@ -54,8 +54,7 @@ public class FileDataServlet extends DfsServlet {
     
     String dtParam="";
     if (dt != null) {
-      StringBuilder sb = new StringBuilder(JspHelper.SET_DELEGATION).append(dt);
-      dtParam=sb.toString();
+      dtParam = JspHelper.getDelegationTokenUrlParam(dt);
     }
     
     return new URI(scheme, null, hostname,

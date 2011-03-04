@@ -63,7 +63,7 @@ public class JspHelper {
   public static final String CURRENT_CONF = "current.conf";
   final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
   public static final String DELEGATION_PARAMETER_NAME = "delegation";
-  public static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
+  static final String SET_DELEGATION = "&" + DELEGATION_PARAMETER_NAME +
                                               "=";
   private static final Log LOG = LogFactory.getLog(JspHelper.class);
 
@@ -358,15 +358,16 @@ public class JspHelper {
       String[] parts = dir.split(Path.SEPARATOR);
       StringBuilder tempPath = new StringBuilder(dir.length());
       out.print("<a href=\"browseDirectory.jsp" + "?dir="+ Path.SEPARATOR
-          + "&namenodeInfoPort=" + namenodeInfoPort + SET_DELEGATION
-          + tokenString + "\">" + Path.SEPARATOR + "</a>");
+          + "&namenodeInfoPort=" + namenodeInfoPort
+          + getDelegationTokenUrlParam(tokenString) + "\">" + Path.SEPARATOR
+          + "</a>");
       tempPath.append(Path.SEPARATOR);
       for (int i = 0; i < parts.length-1; i++) {
         if (!parts[i].equals("")) {
           tempPath.append(parts[i]);
           out.print("<a href=\"browseDirectory.jsp" + "?dir="
               + tempPath.toString() + "&namenodeInfoPort=" + namenodeInfoPort
-              + SET_DELEGATION + tokenString);
+              + getDelegationTokenUrlParam(tokenString));
           out.print("\">" + parts[i] + "</a>" + Path.SEPARATOR);
           tempPath.append(Path.SEPARATOR);
         }
@@ -390,8 +391,10 @@ public class JspHelper {
     out.print("<input name=\"go\" type=\"submit\" value=\"go\">");
     out.print("<input name=\"namenodeInfoPort\" type=\"hidden\" "
         + "value=\"" + namenodeInfoPort  + "\">");
-    out.print("<input name=\"" + DELEGATION_PARAMETER_NAME +
-              "\" type=\"hidden\" value=\"" + tokenString + "\">");
+    if (UserGroupInformation.isSecurityEnabled()) {
+      out.print("<input name=\"" + DELEGATION_PARAMETER_NAME
+          + "\" type=\"hidden\" value=\"" + tokenString + "\">");
+    }
     out.print("</form>");
   }
   
@@ -489,6 +492,22 @@ public class JspHelper {
           return new DFSClient(addr, conf);
         }
       });
+  }
+  
+  /**
+   * Returns the url parameter for the given token string.
+   * @param tokenString
+   * @return url parameter
+   */
+  public static String getDelegationTokenUrlParam(String tokenString) {
+    if (tokenString == null ) {
+      return "";
+    }
+    if (UserGroupInformation.isSecurityEnabled()) {
+      return SET_DELEGATION + tokenString;
+    } else {
+      return "";
+    }
   }
 
    /** Convert a String to chunk-size-to-view. */
