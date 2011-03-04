@@ -99,7 +99,8 @@ public class HftpFileSystem extends FileSystem {
     };
 
   @Override
-  public void initialize(URI name, final Configuration conf) throws IOException {
+  public void initialize(final URI name, final Configuration conf) 
+  throws IOException {
     super.initialize(name, conf);
     setConf(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
@@ -126,8 +127,12 @@ public class HftpFileSystem extends FileSystem {
       try {
         ugi.doAs(new PrivilegedExceptionAction<Object>() {
           public Object run() throws IOException {
+            StringBuffer sb = new StringBuffer();
             //try https (on http we NEVER get a delegation token)
-            String nnHttpUrl = "https://" + nnServiceName;
+            String nnHttpUrl = "https://" + 
+            (sb.append(NetUtils.normalizeHostName(name.getHost()))
+                .append(":").append(conf.getInt("dfs.https.port", 50470))).
+                toString();
             Credentials c;
             try {
               c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, 
