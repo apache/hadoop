@@ -1973,6 +1973,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Some jobs are stored in a local system directory.  We can delete
   // the files when we're done with the job.
   static final String SUBDIR = "jobTracker";
+  final LocalFileSystem localFs;
   FileSystem fs = null;
   Path systemDir = null;
   JobConf conf;
@@ -2159,6 +2160,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // ... ensure we have the correct info
     this.port = interTrackerServer.getListenerAddress().getPort();
     this.conf.set("mapred.job.tracker", (this.localMachine + ":" + this.port));
+    this.localFs = FileSystem.getLocal(conf);
     LOG.info("JobTracker up at: " + this.port);
     this.infoPort = this.infoServer.getPort();
     this.conf.set("mapred.job.tracker.http.address", 
@@ -2333,7 +2335,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * localizing job files to the local disk.
    */
   LocalFileSystem getLocalFileSystem() throws IOException {
-    return FileSystem.getLocal(conf);
+    return localFs;
   }
 
   public static Class<? extends JobTrackerInstrumentation> getInstrumentationClass(Configuration conf) {
