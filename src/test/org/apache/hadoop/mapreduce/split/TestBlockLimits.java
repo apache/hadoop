@@ -15,24 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.mapreduce.split;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -49,6 +50,9 @@ public class TestBlockLimits extends TestCase {
     MiniMRCluster mr = null;
     try {
       mr = new MiniMRCluster(2, "file:///", 3);
+      Configuration conf = new Configuration();
+      conf.setInt(JobSplitWriter.MAX_SPLIT_LOCATIONS, 10);
+      mr = new MiniMRCluster(2, "file:///", 3, null, null, new JobConf(conf));
       runCustomFormat(mr);
     } finally {
       if (mr != null) { mr.shutdown(); }
@@ -56,7 +60,8 @@ public class TestBlockLimits extends TestCase {
   }
   
   private void runCustomFormat(MiniMRCluster mr) throws IOException {
-    JobConf job = mr.createJobConf();
+    JobConf job = new JobConf(mr.createJobConf());
+    job.setInt(JobSplitWriter.MAX_SPLIT_LOCATIONS, 100);
     FileSystem fileSys = FileSystem.get(job);
     Path testDir = new Path(TEST_ROOT_DIR + "/test_mini_mr_local");
     Path outDir = new Path(testDir, "out");
@@ -65,16 +70,14 @@ public class TestBlockLimits extends TestCase {
     job.setInputFormat(MyInputFormat.class);
     job.setOutputFormat(MyOutputFormat.class);
     job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(IntWritable.class);
+    job.setOutputValueClass(Text.class);
     
     job.setMapperClass(MyMapper.class);        
-    job.setReducerClass(MyReducer.class);
-    job.setNumMapTasks(100);
-    job.setNumReduceTasks(1);
+    job.setNumReduceTasks(0);
     job.set("non.std.out", outDir.toString());
     try {
       JobClient.runJob(job);
-      assertTrue(false);
+      fail("JobTracker neglected to fail misconfigured job");
     } catch(IOException ie) {
       System.out.println("Failed job " + StringUtils.stringifyException(ie));
     } finally {
@@ -93,17 +96,8 @@ public class TestBlockLimits extends TestCase {
     }
   }
 
-  static class MyReducer extends MapReduceBase
-    implements Reducer<WritableComparable, Writable,
-                    WritableComparable, Writable> {
-      public void reduce(WritableComparable key, Iterator<Writable> values,
-                     OutputCollector<WritableComparable, Writable> output,
-                     Reporter reporter) throws IOException {
-      }
-  }
-
   private static class MyInputFormat
-    implements InputFormat<IntWritable, Text> {
+    implements InputFormat<Text, Text> {
     
     private static class MySplit implements InputSplit {
       int first;
@@ -117,7 +111,9 @@ public class TestBlockLimits extends TestCase {
       }
 
       public String[] getLocations() {
-        return new String[200];
+        final String[] ret = new String[200];
+        Arrays.fill(ret, "SPLIT");
+        return ret;
       }
 
       public long getLength() {
@@ -141,12 +137,19 @@ public class TestBlockLimits extends TestCase {
                            new MySplit(4, 2)};
     }
 
-    public RecordReader<IntWritable, Text> getRecordReader(InputSplit split,
+    public RecordReader<Text, Text> getRecordReader(InputSplit split,
                                                            JobConf job, 
                                                            Reporter reporter)
                                                            throws IOException {
       MySplit sp = (MySplit) split;
-      return null;
+      return new RecordReader<Text,Text>() {
+        @Override public boolean next(Text key, Text value) { return false; }
+        @Override public Text createKey() { return new Text(); }
+        @Override public Text createValue() { return new Text(); }
+        @Override public long getPos() throws IOException { return 0; }
+        @Override public void close() throws IOException { }
+        @Override public float getProgress() throws IOException { return 1.0f; }
+      };
     }
     
   }

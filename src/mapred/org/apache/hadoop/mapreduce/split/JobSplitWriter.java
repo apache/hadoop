@@ -20,6 +20,7 @@ package org.apache.hadoop.mapreduce.split;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -35,15 +36,19 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 /**
  * The class that is used by the Job clients to write splits (both the meta
  * and the raw bytes parts)
  */
 public class JobSplitWriter {
 
+  private static final Log LOG = LogFactory.getLog(JobSplitWriter.class);
   private static final int splitVersion = JobSplit.META_SPLIT_VERSION;
   private static final byte[] SPLIT_FILE_HEADER;
-  private static final int MAX_BLOCK_LOCATIONS = 100;
+  static final String MAX_SPLIT_LOCATIONS = "mapreduce.job.max.split.locations";
   
   static {
     try {
@@ -121,10 +126,12 @@ public class JobSplitWriter {
         serializer.serialize(split);
         int currCount = out.size();
         String[] locations = split.getLocations();
-        if (locations.length > MAX_BLOCK_LOCATIONS) {
-          throw new IOException("Max block location exceeded for split: "
+        final int max_loc = conf.getInt(MAX_SPLIT_LOCATIONS, 10);
+        if (locations.length > max_loc) {
+          LOG.warn("Max block location exceeded for split: "
               + split + " splitsize: " + locations.length +
-              " maxsize: " + MAX_BLOCK_LOCATIONS);
+              " maxsize: " + max_loc);
+          locations = Arrays.copyOf(locations, max_loc);
         }
         info[i++] = 
           new JobSplit.SplitMetaInfo( 
@@ -149,10 +156,12 @@ public class JobSplitWriter {
         split.write(out);
         int currLen = out.size();
         String[] locations = split.getLocations();
-        if (locations.length > MAX_BLOCK_LOCATIONS) {
-          throw new IOException("Max block location exceeded for split: "
+        final int max_loc = conf.getInt(MAX_SPLIT_LOCATIONS, 10);
+        if (locations.length > max_loc) {
+          LOG.warn("Max block location exceeded for split: "
               + split + " splitsize: " + locations.length +
-              " maxsize: " + MAX_BLOCK_LOCATIONS);
+              " maxsize: " + max_loc);
+          locations = Arrays.copyOf(locations, max_loc);
         }
         info[i++] = new JobSplit.SplitMetaInfo( 
             locations, offset,

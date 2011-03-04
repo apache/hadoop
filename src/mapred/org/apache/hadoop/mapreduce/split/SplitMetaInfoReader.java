@@ -62,9 +62,16 @@ public class SplitMetaInfoReader {
     int numSplits = WritableUtils.readVInt(in); //TODO: check for insane values
     JobSplit.TaskSplitMetaInfo[] allSplitMetaInfo = 
       new JobSplit.TaskSplitMetaInfo[numSplits];
+    final int maxLocations =
+      conf.getInt(JobSplitWriter.MAX_SPLIT_LOCATIONS, Integer.MAX_VALUE);
     for (int i = 0; i < numSplits; i++) {
       JobSplit.SplitMetaInfo splitMetaInfo = new JobSplit.SplitMetaInfo();
       splitMetaInfo.readFields(in);
+      final int numLocations = splitMetaInfo.getLocations().length;
+      if (numLocations > maxLocations) {
+        throw new IOException("Max block location exceeded for split: #"  + i +
+              " splitsize: " + numLocations + " maxsize: " + maxLocations);
+      }
       JobSplit.TaskSplitIndex splitIndex = new JobSplit.TaskSplitIndex(
           JobSubmissionFiles.getJobSplitFile(jobSubmitDir).toString(), 
           splitMetaInfo.getStartOffset());

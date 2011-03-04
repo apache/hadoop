@@ -775,7 +775,8 @@ public class JobInProgress {
   TaskSplitMetaInfo[] createSplits(org.apache.hadoop.mapreduce.JobID jobId)
   throws IOException {
     TaskSplitMetaInfo[] allTaskSplitMetaInfo =
-      SplitMetaInfoReader.readSplitMetaInfo(jobId, fs, conf, jobSubmitDir);
+      SplitMetaInfoReader.readSplitMetaInfo(jobId, fs, jobtracker.getConf(),
+          jobSubmitDir);
     return allTaskSplitMetaInfo;
   }
 
