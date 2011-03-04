@@ -1723,7 +1723,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         // Delete the job directory for this  
         // task if the job is done/failed
         if (!rjob.keepJobFiles) {
-          removeJobFiles(rjob.jobConf.getUser(), rjob.getJobID());
+          removeJobFiles(rjob.ugi.getShortUserName(), rjob.getJobID());
         }
         // add job to user log manager
         long now = System.currentTimeMillis();
