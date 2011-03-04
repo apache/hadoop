@@ -460,8 +460,8 @@ public class UserGroupInformation {
         if (fileLocation != null && isSecurityEnabled()) {
           // load the token storage file and put all of the tokens into the
           // user.
-          Credentials cred = new Credentials();
-          cred.readTokenStorageFile(new Path("file:///" + fileLocation), conf);
+          Credentials cred = Credentials.readTokenStorageFile(
+              new Path("file:///" + fileLocation), conf);
           for (Token<?> token: cred.getAllTokens()) {
             loginUser.addToken(token);
           }

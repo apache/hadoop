@@ -22,7 +22,7 @@ import java.io.*;
 /** Utility that wraps a {@link FSInputStream} in a {@link DataInputStream}
  * and buffers input through a {@link BufferedInputStream}. */
 public class FSDataInputStream extends DataInputStream
-    implements Seekable, PositionedReadable {
+    implements Seekable, PositionedReadable, Closeable {
 
   public FSDataInputStream(InputStream in)
     throws IOException {

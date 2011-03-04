@@ -265,14 +265,34 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     }
   }
 
+  /** A test method for printing out tokens */
+  public static String stringifyToken(Token<DelegationTokenIdentifier> token
+                                      ) throws IOException {
+    DelegationTokenIdentifier ident = new DelegationTokenIdentifier();
+    ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
+    DataInputStream in = new DataInputStream(buf);  
+    ident.readFields(in);
+    String str = ident.getKind() + " token " + ident.getSequenceNumber() + 
+                 " for " + ident.getUser().getShortUserName();
+    if (token.getService().getLength() > 0) {
+      return (str + " on " + token.getService());
+    } else {
+      return str;
+    }
+  }
+
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    return namenode.getDelegationToken(renewer);
+    Token<DelegationTokenIdentifier> result =
+      namenode.getDelegationToken(renewer);
+    LOG.info("Created " + stringifyToken(result));
+    return result;
   }
 
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     try {
+      LOG.info("Renewing " + stringifyToken(token));
       return namenode.renewDelegationToken(token);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,
@@ -283,6 +303,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
     try {
+      LOG.info("Cancelling " + stringifyToken(token));
       namenode.cancelDelegationToken(token);
     } catch (RemoteException re) {
       throw re.unwrapRemoteException(InvalidToken.class,

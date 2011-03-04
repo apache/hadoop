@@ -291,7 +291,15 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
           httpServer.setAttribute("name.system.image", getFSImage());
           httpServer.setAttribute(JspHelper.CURRENT_CONF, conf);
           httpServer.addInternalServlet("getDelegationToken", 
-              DelegationTokenServlet.PATH_SPEC, DelegationTokenServlet.class, true);
+                                        GetDelegationTokenServlet.PATH_SPEC, 
+                                        GetDelegationTokenServlet.class, true);
+          httpServer.addInternalServlet("renewDelegationToken", 
+                                        RenewDelegationTokenServlet.PATH_SPEC, 
+                                        RenewDelegationTokenServlet.class, true);
+          httpServer.addInternalServlet("cancelDelegationToken", 
+                                        CancelDelegationTokenServlet.PATH_SPEC, 
+                                        CancelDelegationTokenServlet.class,
+                                        true);
           httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class, true);
           httpServer.addInternalServlet("getimage", "/getimage", 
               GetImageServlet.class, true);

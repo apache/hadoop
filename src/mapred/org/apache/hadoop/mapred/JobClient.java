@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
@@ -761,13 +762,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         jobCopy.set("mapreduce.job.dir", submitJobDir.toString());
         JobStatus status = null;
         try {
-          // load the binary file, if the user has one
-          String binaryTokenFilename = 
-            jobCopy.get("mapreduce.job.credentials.binary");
-          if (binaryTokenFilename != null) {
-            jobCopy.getCredentials().readTokenStorageFile
-               (new Path("file:///" +  binaryTokenFilename), jobCopy);
-          }
+          populateTokenCache(jobCopy, jobCopy.getCredentials());
 
           copyAndConfigureFiles(jobCopy, submitJobDir);
 
@@ -819,7 +814,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           //
           // Now, actually submit the job (using the submit name)
           //
-          populateTokenCache(jobCopy, jobCopy.getCredentials());
+          printTokens(jobId, jobCopy.getCredentials());
           status = jobSubmitClient.submitJob(
               jobId, submitJobDir.toString(), jobCopy.getCredentials());
           if (status != null) {
@@ -836,6 +831,20 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         }
       }
     });
+  }
+
+  @SuppressWarnings("unchecked")
+  private void printTokens(JobID jobId,
+                           Credentials credentials) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Printing tokens for job: " + jobId);
+      for(Token<?> token: credentials.getAllTokens()) {
+        if (token.getKind().toString().equals("HDFS_DELEGATION_TOKEN")) {
+          LOG.debug("Submitting with " +
+              DFSClient.stringifyToken((Token<org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier>) token));
+        }
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -1894,11 +1903,19 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     System.exit(res);
   }
   
-  //get secret keys and tokens and store them into TokenCache
   @SuppressWarnings("unchecked")
-  private void populateTokenCache(Configuration conf, Credentials credentials) 
-  throws IOException{
-    // create TokenStorage object with user secretKeys
+  private void readTokensFromFiles(Configuration conf, Credentials credentials
+                                   ) throws IOException {
+    // add tokens and secrets coming from a token storage file
+    String binaryTokenFilename =
+      conf.get("mapreduce.job.credentials.binary");
+    if (binaryTokenFilename != null) {
+      Credentials binary = 
+        Credentials.readTokenStorageFile(new Path("file:///" +  
+                                                  binaryTokenFilename), conf);
+      credentials.addAll(binary);
+    }
+    // add secret keys coming from a json file
     String tokensFileName = conf.get("mapreduce.job.credentials.json");
     if(tokensFileName != null) {
       LOG.info("loading user's secret keys from " + tokensFileName);
@@ -1923,11 +1940,18 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       if(json_error)
         LOG.warn("couldn't parse Token Cache JSON file with user secret keys");
     }
-    
+  }
+
+  //get secret keys and tokens and store them into TokenCache
+  @SuppressWarnings("unchecked")
+  private void populateTokenCache(Configuration conf, Credentials credentials) 
+  throws IOException{
+    readTokensFromFiles(conf, credentials);
  
     // add the delegation tokens from configuration
     String [] nameNodes = conf.getStrings(JobContext.JOB_NAMENODES);
-    LOG.debug("adding the following namenodes' delegation tokens:" + Arrays.toString(nameNodes));
+    LOG.debug("adding the following namenodes' delegation tokens:" + 
+              Arrays.toString(nameNodes));
     if(nameNodes != null) {
       Path [] ps = new Path[nameNodes.length];
       for(int i=0; i< nameNodes.length; i++) {

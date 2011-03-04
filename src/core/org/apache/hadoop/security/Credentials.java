@@ -34,6 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -119,15 +120,19 @@ public class Credentials implements Writable {
    * @param conf
    * @throws IOException
    */
-  public void readTokenStorageFile(Path filename, 
-                                   Configuration conf) throws IOException {
-    FSDataInputStream in = filename.getFileSystem(conf).open(filename);
+  public static Credentials readTokenStorageFile(Path filename, 
+                                                 Configuration conf
+                                                 ) throws IOException {
+    FSDataInputStream in = null;
+    Credentials credentials = new Credentials();
     try {
-    readTokenStorageStream(in);
-    } catch(IOException ioe) {
-      throw new IOException("Exception reading " + filename, ioe);
-    } finally {
+      in = filename.getFileSystem(conf).open(filename);
+      credentials.readTokenStorageStream(in);
       in.close();
+      return credentials;
+    } catch(IOException ioe) {
+      IOUtils.cleanup(LOG, in);
+      throw new IOException("Exception reading " + filename, ioe);
     }
   }
   

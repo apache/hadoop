@@ -537,7 +537,22 @@ public class DistributedFileSystem extends FileSystem {
       ) throws IOException {
     dfs.setTimes(getPathName(p), mtime, atime);
   }
-  
+
+  @Override
+  protected int getDefaultPort() {
+    return NameNode.DEFAULT_PORT;
+  }
+
+  @Override
+  public 
+  Token<DelegationTokenIdentifier> getDelegationToken(String renewer
+                                                      ) throws IOException {
+    Token<DelegationTokenIdentifier> result =
+      dfs.getDelegationToken(renewer == null ? null : new Text(renewer));
+    result.setService(new Text(getCanonicalServiceName()));
+    return result;
+  }
+
   /** 
    * Delegation Token Operations
    * These are DFS only operations.
@@ -549,7 +564,9 @@ public class DistributedFileSystem extends FileSystem {
    * @param renewer Name of the designated renewer for the token
    * @return Token<DelegationTokenIdentifier>
    * @throws IOException
+   * @Deprecated use {@link #getDelegationToken(String)}
    */
+  @Deprecated
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
     return dfs.getDelegationToken(renewer);
