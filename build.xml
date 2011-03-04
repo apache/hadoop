@@ -120,7 +120,9 @@
   <property name="test.junit.maxmemory" value="512m" />
   <property name="test.tools.input.dir" value="${basedir}/src/test/tools/data"/>
   
-  <property name="test.commit.tests.file" value="${test.src.dir}/commit-tests" />
+  <property name="test.commit.tests.common.file" value="${test.src.dir}/commit-tests-common" />
+  <property name="test.commit.tests.hdfs.file" value="${test.src.dir}/commit-tests-hdfs" />
+  <property name="test.commit.tests.mapred.file" value="${test.src.dir}/commit-tests-mapred" />
   <property name="test.all.tests.file" value="${test.src.dir}/all-tests" />
 
   <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
@@ -943,7 +945,9 @@
          
   <target name="test-commit" depends="jar-test" 
    description="Run approx 10-minute set of unit tests prior to commiting">
-    <macro-test-runner test.file="${test.commit.tests.file}" />
+    <macro-test-runner test.file="${test.commit.tests.common.file}" />
+    <macro-test-runner test.file="${test.commit.tests.hdfs.file}" />
+    <macro-test-runner test.file="${test.commit.tests.mapred.file}" />
   </target>
   
   <target name="checkfailure" if="tests.failed">
