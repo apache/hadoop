@@ -298,11 +298,15 @@ Release 0.22.0 - Unreleased
     HDFS-1500. TestOfflineImageViewer failing on trunk. (Todd Lipcon
     via hairong)
 
+    HDFS-1467. Append pipeline construction not succeeds with more than
+    one replica. (Todd Lipcon via hairong)
+
   IMPROVEMENTS
 
     HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)
 
     HDFS-1096. fix for prev. commit. (boryas)
+
 
     HDFS-1096. allow dfsadmin/mradmin refresh of superuser proxy group
      mappings (boryas)
@@ -432,6 +436,11 @@ Release 0.22.0 - Unreleased
     HDFS-556. Provide info on failed volumes in the web ui. (eli)
 
     HDFS-697. Enable asserts for tests by default. (eli)
+
+    HDFS-1187. Modify fetchdt to allow renewing and canceling token.
+    (Owen O'Malley and Kan Zhang via jghoman)
+
+    HDFS-1387. Update HDFS permissions guide for security. (Todd Lipcon via eli)
 
   OPTIMIZATIONS
 
@@ -591,6 +600,9 @@ Release 0.22.0 - Unreleased
     HDFS-1625. Ignore disk space values in TestDataNodeMXBean.  (szetszwo)
 
     HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
+
+    HDFS-874. TestHDFSFileContextMainOperations fails on weirdly 
+    configured DNS hosts. (Todd Lipcon via eli)
 
 Release 0.21.1 - Unreleased
 

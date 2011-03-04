@@ -110,7 +110,7 @@ public class TestPipelines {
 
       assertTrue("Replica on DN " + dn + " shouldn't be null", r != null);
       assertEquals("Should be RBW replica on " + dn
-          + " after sequence of calls " + "append()/write()/hflush()",
+          + " after sequence of calls append()/write()/hflush()",
           HdfsConstants.ReplicaState.RBW, r.getState());
     }
     ofs.close();

@@ -18,37 +18,40 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.net.HttpURLConnection;
-import java.net.InetAddress;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
+import java.util.Date;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.hdfs.server.namenode.CancelDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.GetDelegationTokenServlet;
 import org.apache.hadoop.hdfs.server.namenode.RenewDelegationTokenServlet;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.GenericOptionsParser;
 
 /**
  * Fetch a DelegationToken from the current Namenode and store it in the
@@ -56,99 +59,153 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class DelegationTokenFetcher {
-  private static final String USAGE =
-    "fetchdt retrieves delegation tokens (optionally over http)\n" +
-    "and writes them to specified file.\n" +
-    "Usage: fetchdt [--webservice <namenode http addr>] <output filename>";
-  
-  private final DistributedFileSystem dfs;
-  private final UserGroupInformation ugi;
-  private final DataOutputStream out;
-  private final Configuration conf;
-  
   private static final Log LOG = 
     LogFactory.getLog(DelegationTokenFetcher.class);
+  private static final String WEBSERVICE = "webservice";
+  private static final String RENEWER = "renewer";
+  private static final String CANCEL = "cancel";
+  private static final String RENEW = "renew";
+  private static final String PRINT = "print";
 
   static {
     // Enable Kerberos sockets
     System.setProperty("https.cipherSuites", "TLS_KRB5_WITH_3DES_EDE_CBC_SHA");
   }
 
+  private static void printUsage(PrintStream err) throws IOException {
+    err.println("fetchdt retrieves delegation tokens from the NameNode");
+    err.println();
+    err.println("fetchdt <opts> <token file>");
+    err.println("Options:");
+    err.println("  --webservice <url>  Url to contact NN on");
+    err.println("  --renewer <name>    Name of the delegation token renewer");
+    err.println("  --cancel            Cancel the delegation token");
+    err.println("  --renew             Renew the delegation token");
+    err.println("  --print             Print the delegation token");
+    err.println();
+    GenericOptionsParser.printGenericCommandUsage(err);
+    System.exit(1);
+  }
+
+  private static Collection<Token<?>> readTokens(Path file, Configuration conf)
+      throws IOException {
+    Credentials creds = Credentials.readTokenStorageFile(file, conf);
+    return creds.getAllTokens();
+  }
+    
   /**
    * Command-line interface
    */
-  public static void main(final String [] args) throws Exception {
+  public static void main(final String[] args) throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    Options fetcherOptions = new Options();
+    fetcherOptions.addOption(WEBSERVICE, true,
+        "HTTPS url to reach the NameNode at");
+    fetcherOptions.addOption(RENEWER, true,
+        "Name of the delegation token renewer");
+    fetcherOptions.addOption(CANCEL, false, "cancel the token");
+    fetcherOptions.addOption(RENEW, false, "renew the token");
+    fetcherOptions.addOption(PRINT, false, "print the token");
+    GenericOptionsParser parser = new GenericOptionsParser(conf,
+        fetcherOptions, args);
+    CommandLine cmd = parser.getCommandLine();
+    
+    // get options
+    final String webUrl = cmd.hasOption(WEBSERVICE) ? cmd
+        .getOptionValue(WEBSERVICE) : null;
+    final String renewer = cmd.hasOption(RENEWER) ? 
+        cmd.getOptionValue(RENEWER) : null;
+    final boolean cancel = cmd.hasOption(CANCEL);
+    final boolean renew = cmd.hasOption(RENEW);
+    final boolean print = cmd.hasOption(PRINT);
+    String[] remaining = parser.getRemainingArgs();
+
+    // check option validity
+    if (cancel && renew || cancel && print || renew && print || cancel && renew
+        && print) {
+      System.err.println("ERROR: Only specify cancel, renew or print.");
+      printUsage(System.err);
+    }
+    if (remaining.length != 1 || remaining[0].charAt(0) == '-') {
+      System.err.println("ERROR: Must specify exacltly one token file");
+      printUsage(System.err);
+    }
+    // default to using the local file system
+    FileSystem local = FileSystem.getLocal(conf);
+    final Path tokenFile = new Path(local.getWorkingDirectory(), remaining[0]);
+
     // Login the current user
-    UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Object run() throws Exception {
-        
-        if(args.length == 3 && "--webservice".equals(args[0])) {
-          getDTfromRemoteIntoFile(args[1], args[2]);
-          return null;
-        }
-        // avoid annoying mistake
-        if(args.length == 1 && "--webservice".equals(args[0])) {
-          System.out.println(USAGE);
-          return null;
-        }
-        if(args.length != 1 || args[0].isEmpty()) {
-          System.out.println(USAGE);
-          return null;
-        }
-        
-        DataOutputStream out = null;
-        
-        try {
-          Configuration conf = new HdfsConfiguration();
-          DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(conf);
-          out = new DataOutputStream(new FileOutputStream(args[0]));
-          UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    UserGroupInformation.getCurrentUser().doAs(
+        new PrivilegedExceptionAction<Object>() {
+          @SuppressWarnings("unchecked")
+          @Override
+          public Object run() throws Exception {
 
-          new DelegationTokenFetcher(dfs, out, ugi, conf).go();
-          
-          out.flush();
-          System.out.println("Succesfully wrote token of size " + 
-              out.size() + " bytes to "+ args[0]);
-        } catch (IOException ioe) {
-          System.out.println("Exception encountered:\n" +
-              StringUtils.stringifyException(ioe));
-        } finally {
-          if(out != null) out.close();
-        }
-        return null;
-      }
-    });
-
-  }
-  
-  public DelegationTokenFetcher(DistributedFileSystem dfs, 
-      DataOutputStream out, UserGroupInformation ugi, Configuration conf) {
-    checkNotNull("dfs", dfs); this.dfs = dfs;
-    checkNotNull("out", out); this.out = out;
-    checkNotNull("ugi", ugi); this.ugi = ugi;
-    checkNotNull("conf",conf); this.conf = conf;
-  }
-  
-  private void checkNotNull(String s, Object o) {
-    if(o == null) throw new IllegalArgumentException(s + " cannot be null.");
-  }
-
-  public void go() throws IOException {
-    String fullName = ugi.getUserName();
-    String shortName = ugi.getShortUserName();
-    Token<DelegationTokenIdentifier> token = 
-      dfs.getDelegationToken(fullName);
-    
-    // Reconstruct the ip:port of the Namenode
-    URI uri = FileSystem.getDefaultUri(conf);
-    String nnAddress = 
-      InetAddress.getByName(uri.getHost()).getHostAddress() + ":" + uri.getPort();
-    token.setService(new Text(nnAddress));
-    
-    Credentials ts = new Credentials();
-    ts.addToken(new Text(shortName), token);
-    ts.writeTokenStorageToStream(out);
+            if (print) {
+              DelegationTokenIdentifier id = new DelegationTokenSecretManager(
+                  0, 0, 0, 0, null).createIdentifier();
+              for (Token<?> token : readTokens(tokenFile, conf)) {
+                DataInputStream in = new DataInputStream(
+                    new ByteArrayInputStream(token.getIdentifier()));
+                id.readFields(in);
+                System.out.println("Token (" + id + ") for " + token.getService());
+              }
+              return null;
+            }
+            
+            if (webUrl != null) {
+              if (renew) {
+                long result;
+                for (Token<?> token : readTokens(tokenFile, conf)) {
+                  result = renewDelegationToken(webUrl,
+                      (Token<DelegationTokenIdentifier>) token);
+                  System.out.println("Renewed token via " + webUrl + " for "
+                      + token.getService() + " until: " + new Date(result));
+                }
+              } else if (cancel) {
+                for (Token<?> token : readTokens(tokenFile, conf)) {
+                  cancelDelegationToken(webUrl,
+                      (Token<DelegationTokenIdentifier>) token);
+                  System.out.println("Cancelled token via " + webUrl + " for "
+                      + token.getService());
+                }
+              } else {
+                Credentials creds = getDTfromRemote(webUrl, renewer);
+                creds.writeTokenStorageFile(tokenFile, conf);
+                for (Token<?> token : creds.getAllTokens()) {
+                  System.out.println("Fetched token via " + webUrl + " for "
+                      + token.getService() + " into " + tokenFile);
+                }
+              }
+            } else {
+              FileSystem fs = FileSystem.get(conf);
+              if (cancel) {
+                for (Token<?> token : readTokens(tokenFile, conf)) {
+                  ((DistributedFileSystem) fs)
+                      .cancelDelegationToken((Token<DelegationTokenIdentifier>) token);
+                  System.out.println("Cancelled token for "
+                      + token.getService());
+                }
+              } else if (renew) {
+                long result;
+                for (Token<?> token : readTokens(tokenFile, conf)) {
+                  result = ((DistributedFileSystem) fs)
+                      .renewDelegationToken((Token<DelegationTokenIdentifier>) token);
+                  System.out.println("Renewed token for " + token.getService()
+                      + " until: " + new Date(result));
+                }
+              } else {
+                Token<?> token = fs.getDelegationToken(renewer);
+                Credentials cred = new Credentials();
+                cred.addToken(token.getService(), token);
+                cred.writeTokenStorageFile(tokenFile, conf);
+                System.out.println("Fetched token for " + token.getService()
+                    + " into " + tokenFile);
+              }
+            }
+            return null;
+          }
+        });
   }
   
   static public Credentials getDTfromRemote(String nnAddr, 
@@ -163,7 +220,6 @@ public class DelegationTokenFetcher {
       } else {
         url.append(nnAddr).append(GetDelegationTokenServlet.PATH_SPEC);
       }
-      System.out.println("Retrieving token from: " + url);
       URL remoteURL = new URL(url.toString());
       SecurityUtil.fetchServiceTicket(remoteURL);
       URLConnection connection = remoteURL.openConnection();
@@ -201,7 +257,11 @@ public class DelegationTokenFetcher {
     try {
       URL url = new URL(buf.toString());
       SecurityUtil.fetchServiceTicket(url);
-      URLConnection connection = url.openConnection();
+      HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+      if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+        throw new IOException("Error renewing token: " + 
+            connection.getResponseMessage());
+      }
       in = new BufferedReader(new InputStreamReader
           (connection.getInputStream()));
       long result = Long.parseLong(in.readLine());
@@ -235,30 +295,12 @@ public class DelegationTokenFetcher {
       SecurityUtil.fetchServiceTicket(url);
       HttpURLConnection connection = (HttpURLConnection) url.openConnection();
       if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-        throw new IOException("Error cancelling token:" + 
+        throw new IOException("Error cancelling token: " + 
             connection.getResponseMessage());
       }
     } catch (IOException ie) {
       IOUtils.cleanup(LOG, in);
       throw ie;
     }
-  }
-
-
-
-  /**
-   * Utility method to obtain a delegation token over http
-   * @param nnHttpAddr Namenode http addr, such as http://namenode:50070
-   * @param filename Name of file to store token in
-   */
-  static private void getDTfromRemoteIntoFile(String nnAddr, String filename) 
-  throws IOException {
-    Credentials ts = getDTfromRemote(nnAddr, null); 
-
-    DataOutputStream file = new DataOutputStream(new FileOutputStream(filename));
-    ts.writeTokenStorageToStream(file);
-    file.flush();
-    System.out.println("Successfully wrote token of " + file.size() 
-        + " bytes  to " + filename);
   }
 }

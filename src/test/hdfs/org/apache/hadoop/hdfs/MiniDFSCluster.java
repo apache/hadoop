@@ -746,7 +746,6 @@ public class MiniDFSCluster {
     // If minicluster's name node is null assume that the conf has been
     // set with the right address:port of the name node.
     //
-    
     if (racks != null && numDataNodes > racks.length ) {
       throw new IllegalArgumentException( "The length of racks [" + racks.length
           + "] is less than the number of datanodes [" + numDataNodes + "].");

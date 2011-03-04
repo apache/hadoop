@@ -84,13 +84,13 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   final private ReplicaInPipelineInterface replicaInfo;
   volatile private boolean mirrorError;
 
-  BlockReceiver(ExtendedBlock block, DataInputStream in, String inAddr,
+  BlockReceiver(ExtendedBlock inBlock, DataInputStream in, String inAddr,
                 String myAddr, BlockConstructionStage stage, 
                 long newGs, long minBytesRcvd, long maxBytesRcvd, 
                 String clientName, DatanodeInfo srcDataNode, DataNode datanode)
                 throws IOException {
     try{
-      this.block = block;
+      this.block = new ExtendedBlock(inBlock);
       this.in = in;
       this.inAddr = inAddr;
       this.myAddr = myAddr;
