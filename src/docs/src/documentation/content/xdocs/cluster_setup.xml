@@ -528,10 +528,11 @@
             the tasks. For maximum security, this task controller 
             sets up restricted permissions and user/group ownership of
             local files and directories used by the tasks such as the
-            job jar files, intermediate files and task log files. Currently
-            permissions on distributed cache files are opened up to be
-            accessible by all users. In future, it is expected that stricter
-            file permissions are set for these files too.
+            job jar files, intermediate files, task log files and distributed
+            cache files. Particularly note that, because of this, except the
+            job owner and tasktracker, no other user can access any of the
+            local files/directories including those localized as part of the
+            distributed cache.
             </td>
             </tr>
             </table>

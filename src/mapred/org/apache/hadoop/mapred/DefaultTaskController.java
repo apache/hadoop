@@ -36,8 +36,12 @@ import org.apache.commons.logging.LogFactory;
  * This class provides an implementation for launching and killing 
  * tasks that need to be run as the tasktracker itself. Hence,
  * many of the initializing or cleanup methods are not required here.
+ * 
+ * <br/>
+ * 
+ *  NOTE: This class is internal only class and not intended for users!!
  */
-class DefaultTaskController extends TaskController {
+public class DefaultTaskController extends TaskController {
 
   private static final Log LOG = 
       LogFactory.getLog(DefaultTaskController.class);
@@ -127,6 +131,16 @@ class DefaultTaskController extends TaskController {
         }
       }
     }
+  }
+
+  @Override
+  public void initializeDistributedCache(InitializationContext context) {
+    // Do nothing.
+  }
+
+  @Override
+  public void initializeUser(InitializationContext context) {
+    // Do nothing.
   }
   
 }

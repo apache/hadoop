@@ -571,8 +571,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
      * set this user's id in job configuration, so later job files can be
      * accessed using this user's id
      */
-    UnixUserGroupInformation ugi = getUGI(job);
-      
+    setUGIAndUserGroupNames(job);
+
     //
     // Figure out what fs the JobTracker is using.  Copy the
     // job to it, under a temporary name.  This allows DFS to work,
@@ -665,14 +665,22 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       LOG.warn("No job jar file set.  User classes may not be found. "+
                "See JobConf(Class) or JobConf#setJar(String).");
     }
+  }
 
-    // Set the user's name and working directory
+  /**
+   * Set the UGI, user name and the group name for the job.
+   * 
+   * @param job
+   * @throws IOException
+   */
+  void setUGIAndUserGroupNames(JobConf job)
+      throws IOException {
+    UnixUserGroupInformation ugi = getUGI(job);
     job.setUser(ugi.getUserName());
     if (ugi.getGroupNames().length > 0) {
       job.set("group.name", ugi.getGroupNames()[0]);
     }
   }
-
 
   private UnixUserGroupInformation getUGI(Configuration job) throws IOException {
     UnixUserGroupInformation ugi = null;

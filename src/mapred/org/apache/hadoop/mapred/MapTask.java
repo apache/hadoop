@@ -118,8 +118,8 @@ class MapTask extends Task {
       // localize the split meta-information
       Path localSplitMeta =
         new LocalDirAllocator("mapred.local.dir").getLocalPathForWrite(
-            TaskTracker.getLocalSplitFile(getJobID().toString(), getTaskID()
-                .toString()), conf);
+            TaskTracker.getLocalSplitFile(conf.getUser(), getJobID()
+                .toString(), getTaskID().toString()), conf);
       LOG.debug("Writing local split to " + localSplitMeta);
       DataOutputStream out = FileSystem.getLocal(conf).create(localSplitMeta);
       splitMetaInfo.write(out);

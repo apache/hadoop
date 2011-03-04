@@ -24,33 +24,72 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
+import javax.security.auth.login.LoginException;
+
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.DefaultTaskController;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskController;
+import org.apache.hadoop.mapred.TaskTracker;
+import org.apache.hadoop.mapred.TaskController.InitializationContext;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.filecache.TaskDistributedCacheManager;
+import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
+import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestTrackerDistributedCacheManager extends TestCase {
-  private static final String TEST_LOCAL_DIR_PROP = "test.local.dir";
-  private static String TEST_CACHE_BASE_DIR =
-    new Path(System.getProperty("test.build.data","/tmp/cachebasedir"))
-    .toString().replace(' ', '+');
-  private static String TEST_ROOT_DIR =
-    System.getProperty("test.build.data", "/tmp/distributedcache");
+
+  protected String TEST_ROOT_DIR =
+      new File(System.getProperty("test.build.data", "/tmp"),
+          TestTrackerDistributedCacheManager.class.getSimpleName())
+          .getAbsolutePath();
+
+  protected File ROOT_MAPRED_LOCAL_DIR;
+  private static String TEST_CACHE_BASE_DIR;
+  protected int numLocalDirs = 6;
+
   private static final int TEST_FILE_SIZE = 4 * 1024; // 4K
   private static final int LOCAL_CACHE_LIMIT = 5 * 1024; //5K
-  private Configuration conf;
-  private Path firstCacheFile;
-  private Path secondCacheFile;
+  protected Configuration conf;
+  protected Path firstCacheFile;
+  protected Path secondCacheFile;
+
+  protected LocalDirAllocator localDirAllocator = 
+    new LocalDirAllocator(JobConf.MAPRED_LOCAL_DIR_PROPERTY);
 
   @Override
   protected void setUp() throws IOException {
+
+    // Prepare the tests' root dir
+    File TEST_ROOT = new File(TEST_ROOT_DIR);
+    if (!TEST_ROOT.exists()) {
+      TEST_ROOT.mkdirs();
+    }
+
+    // Prepare the tests' mapred-local-dir
+    ROOT_MAPRED_LOCAL_DIR = new File(TEST_ROOT_DIR, "mapred/local");
+    ROOT_MAPRED_LOCAL_DIR.mkdirs();
+    String []localDirs = new String[numLocalDirs];
+    for (int i = 0; i < numLocalDirs; i++) {
+      localDirs[i] = new File(ROOT_MAPRED_LOCAL_DIR, "0_" + i).getPath();
+    }
+
+    TEST_CACHE_BASE_DIR =
+        new File(TEST_ROOT_DIR, "cachebasedir").getAbsolutePath();
+
     conf = new Configuration();
     conf.setLong("local.cache.size", LOCAL_CACHE_LIMIT);
-    conf.set(TEST_LOCAL_DIR_PROP, TEST_ROOT_DIR);
+    conf.setStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY, localDirs);
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");
+
+    // Create the temporary cache files to be used in the tests.
     firstCacheFile = new Path(TEST_ROOT_DIR, "firstcachefile");
     secondCacheFile = new Path(TEST_ROOT_DIR, "secondcachefile");
     createTempFile(firstCacheFile);
@@ -59,29 +98,43 @@ public class TestTrackerDistributedCacheManager extends TestCase {
 
   /**
    * This is the typical flow for using the DistributedCache classes.
+   * 
+   * @throws IOException
+   * @throws LoginException
    */
-  public void testManagerFlow() throws IOException {
-    TrackerDistributedCacheManager manager = 
-        new TrackerDistributedCacheManager(conf);
-    LocalDirAllocator localDirAllocator = 
-        new LocalDirAllocator(TEST_LOCAL_DIR_PROP);
+  public void testManagerFlow() throws IOException, LoginException {
 
+    // ****** Imitate JobClient code
     // Configures a task/job with both a regular file and a "classpath" file.
     Configuration subConf = new Configuration(conf);
     DistributedCache.addCacheFile(firstCacheFile.toUri(), subConf);
     DistributedCache.addFileToClassPath(secondCacheFile, subConf);
     TrackerDistributedCacheManager.determineTimestamps(subConf);
+    // ****** End of imitating JobClient code
 
     Path jobFile = new Path(TEST_ROOT_DIR, "job.xml");
     FileOutputStream os = new FileOutputStream(new File(jobFile.toString()));
     subConf.writeXml(os);
     os.close();
 
+    String userName = getJobOwnerName();
+
+    // ****** Imitate TaskRunner code.
+    TrackerDistributedCacheManager manager = 
+      new TrackerDistributedCacheManager(conf);
     TaskDistributedCacheManager handle =
       manager.newTaskDistributedCacheManager(subConf);
     assertNull(null, DistributedCache.getLocalCacheFiles(subConf));
-    handle.setup(localDirAllocator, 
-        new File(new Path(TEST_ROOT_DIR, "workdir").toString()), "distcache");
+    File workDir = new File(new Path(TEST_ROOT_DIR, "workdir").toString());
+    handle.setup(localDirAllocator, workDir, TaskTracker
+        .getDistributedCacheDir(userName));
+
+    InitializationContext context = new InitializationContext();
+    context.user = userName;
+    context.workDir = workDir;
+    getTaskController().initializeDistributedCache(context);
+    // ****** End of imitating TaskRunner code
+
     Path[] localCacheFiles = DistributedCache.getLocalCacheFiles(subConf);
     assertNotNull(null, localCacheFiles);
     assertEquals(2, localCacheFiles.length);
@@ -94,12 +147,39 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     assertEquals(1, handle.getClassPaths().size());
     assertEquals(cachedSecondFile.toString(), handle.getClassPaths().get(0));
 
+    checkFilePermissions(localCacheFiles);
+
     // Cleanup
     handle.release();
     manager.purgeCache();
     assertFalse(pathToFile(cachedFirstFile).exists());
   }
 
+  /**
+   * Check proper permissions on the cache files
+   * 
+   * @param localCacheFiles
+   * @throws IOException
+   */
+  protected void checkFilePermissions(Path[] localCacheFiles)
+      throws IOException {
+    Path cachedFirstFile = localCacheFiles[0];
+    Path cachedSecondFile = localCacheFiles[1];
+    // Both the files should have executable permissions on them.
+    assertTrue("First cache file is not executable!", new File(cachedFirstFile
+        .toUri().getPath()).canExecute());
+    assertTrue("Second cache file is not executable!", new File(
+        cachedSecondFile.toUri().getPath()).canExecute());
+  }
+
+  protected TaskController getTaskController() {
+    return new DefaultTaskController();
+  }
+
+  protected String getJobOwnerName() throws LoginException {
+    UserGroupInformation ugi = UserGroupInformation.login(conf);
+    return ugi.getUserName();
+  }
 
   /** test delete cache */
   public void testDeleteCache() throws Exception {
@@ -122,7 +202,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
         new Path(TEST_CACHE_BASE_DIR));
     assertTrue("DistributedCache failed deleting old" + 
         " cache when the cache store is full.",
-        dirStatuses.length > 1);
+        dirStatuses.length == 1);
   }
   
   public void testFileSystemOtherThanDefault() throws Exception {
@@ -152,15 +232,16 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   protected void tearDown() throws IOException {
     new File(firstCacheFile.toString()).delete();
     new File(secondCacheFile.toString()).delete();
+    FileUtil.fullyDelete(new File(TEST_ROOT_DIR));
   }
 
-  private void assertFileLengthEquals(Path a, Path b) 
+  protected void assertFileLengthEquals(Path a, Path b) 
       throws FileNotFoundException {
     assertEquals("File sizes mismatch.", 
        pathToFile(a).length(), pathToFile(b).length());
   }
 
-  private File pathToFile(Path p) {
+  protected File pathToFile(Path p) {
     return new File(p.toString());
   }
 }

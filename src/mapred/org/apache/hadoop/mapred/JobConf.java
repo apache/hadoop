@@ -145,7 +145,12 @@ public class JobConf extends Configuration {
    * indicates that the options are turned off.
    */
   public static final long DISABLED_MEMORY_LIMIT = -1L;
-  
+
+  /**
+   * Property name for the configuration property mapred.local.dir
+   */
+  public static final String MAPRED_LOCAL_DIR_PROPERTY = "mapred.local.dir";
+
   /**
    * Name of the queue to which jobs will be submitted, if no queue
    * name is mentioned.
@@ -402,7 +407,7 @@ public class JobConf extends Configuration {
   }
 
   public String[] getLocalDirs() throws IOException {
-    return getStrings("mapred.local.dir");
+    return getStrings(MAPRED_LOCAL_DIR_PROPERTY);
   }
 
   public void deleteLocalFiles() throws IOException {
@@ -424,7 +429,7 @@ public class JobConf extends Configuration {
    * local directories.
    */
   public Path getLocalPath(String pathString) throws IOException {
-    return getLocalPath("mapred.local.dir", pathString);
+    return getLocalPath(MAPRED_LOCAL_DIR_PROPERTY, pathString);
   }
 
   /**
@@ -1562,7 +1567,7 @@ public class JobConf extends Configuration {
    * <p>
    * When a job starts, a shared directory is created at location
    * <code>
-   * ${mapred.local.dir}/taskTracker/jobcache/$jobid/work/ </code>.
+   * ${mapred.local.dir}/taskTracker/$user/jobcache/$jobid/work/ </code>.
    * This directory is exposed to the users through 
    * <code>job.local.dir </code>.
    * So, the tasks can use this space 

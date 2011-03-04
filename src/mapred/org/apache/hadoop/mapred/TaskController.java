@@ -19,15 +19,13 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.mapred.TaskTracker.PermissionsHandler;
+import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
@@ -38,9 +36,13 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  * This class defines the API for initializing, finalizing and cleaning
  * up of tasks, as also the launching and killing task JVMs.
  * Subclasses of this class will implement the logic required for
- * performing the actual actions. 
+ * performing the actual actions.
+ * 
+ * <br/>
+ * 
+ * NOTE: This class is internal only class and not intended for users!!
  */
-abstract class TaskController implements Configurable {
+public abstract class TaskController implements Configurable {
   
   private Configuration conf;
   
@@ -78,29 +80,8 @@ abstract class TaskController implements Configurable {
         LOG.warn("Unable to create mapred-local directory : "
             + mapredlocalDir.getPath());
       } else {
-        PermissionsHandler.setPermissions(mapredlocalDir,
-            PermissionsHandler.sevenFiveFive);
-      }
-
-      // Set up the cache directory used for distributed cache files
-      File distributedCacheDir =
-          new File(localDir, TaskTracker.getDistributedCacheDir());
-      if (!distributedCacheDir.exists() && !distributedCacheDir.mkdirs()) {
-        LOG.warn("Unable to create cache directory : "
-            + distributedCacheDir.getPath());
-      } else {
-        PermissionsHandler.setPermissions(distributedCacheDir,
-            PermissionsHandler.sevenFiveFive);
-      }
-
-      // Set up the jobcache directory
-      File jobCacheDir = new File(localDir, TaskTracker.getJobCacheSubdir());
-      if (!jobCacheDir.exists() && !jobCacheDir.mkdirs()) {
-        LOG.warn("Unable to create job cache directory : "
-            + jobCacheDir.getPath());
-      } else {
-        PermissionsHandler.setPermissions(jobCacheDir,
-            PermissionsHandler.sevenFiveFive);
+        Localizer.PermissionsHandler.setPermissions(mapredlocalDir,
+            Localizer.PermissionsHandler.sevenFiveFive);
       }
     }
 
@@ -109,8 +90,8 @@ abstract class TaskController implements Configurable {
     if (!taskLog.exists() && !taskLog.mkdirs()) {
       LOG.warn("Unable to create taskLog directory : " + taskLog.getPath());
     } else {
-      PermissionsHandler.setPermissions(taskLog,
-          PermissionsHandler.sevenFiveFive);
+      Localizer.PermissionsHandler.setPermissions(taskLog,
+          Localizer.PermissionsHandler.sevenFiveFive);
     }
   }
 
@@ -122,6 +103,17 @@ abstract class TaskController implements Configurable {
    * @throws IOException
    */
   abstract void initializeJob(JobInitializationContext context) throws IOException;
+
+  /**
+   * Take task-controller specific actions to initialize the distributed cache
+   * files. This involves setting appropriate permissions for these files so as
+   * to secure them to be accessible only their owners.
+   * 
+   * @param context
+   * @throws IOException
+   */
+  public abstract void initializeDistributedCache(InitializationContext context)
+      throws IOException;
 
   /**
    * Launch a task JVM
@@ -194,10 +186,17 @@ abstract class TaskController implements Configurable {
     long sleeptimeBeforeSigkill; // waiting time before sending SIGKILL to task JVM after sending SIGTERM
   }
 
-  static class JobInitializationContext {
+  /**
+   * NOTE: This class is internal only class and not intended for users!!
+   * 
+   */
+  public static class InitializationContext {
+    public File workDir;
+    public String user;
+  }
+
+  static class JobInitializationContext extends InitializationContext {
     JobID jobid;
-    File workDir;
-    String user;
   }
 
   /**
@@ -214,4 +213,13 @@ abstract class TaskController implements Configurable {
    * @param context task context
    */
   abstract void killTask(TaskControllerContext context);
+
+  /**
+   * Initialize user on this TaskTracer in a TaskController specific manner.
+   * 
+   * @param context
+   * @throws IOException
+   */
+  public abstract void initializeUser(InitializationContext context)
+      throws IOException;
 }

@@ -63,8 +63,9 @@ interface InterTrackerProtocol extends VersionedProtocol {
    * Version 25: JobIDs are passed in response to JobTracker restart 
    * Version 26: Added numRequiredSlots to TaskStatus for MAPREDUCE-516
    * Version 27: Adding node health status to TaskStatus for MAPREDUCE-211
+   * Version 28: Adding user name to the serialized Task for use by TT.
    */
-  public static final long versionID = 27L;
+  public static final long versionID = 28L;
   
   public final static int TRACKERS_OK = 0;
   public final static int UNKNOWN_TASKTRACKER = 1;

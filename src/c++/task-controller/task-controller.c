@@ -120,16 +120,26 @@ int check_variable_against_config(const char *config_key,
 /**
  * Utility function to concatenate argB to argA using the concat_pattern
  */
-char *concatenate(const char *argA, const char *argB, char *concat_pattern,
-    char *return_path_name) {
-  if (argA == NULL || argB == NULL) {
-    fprintf(LOGFILE, "One of the arguments passed for %s in null.\n",
-        return_path_name);
-    return NULL;
+char *concatenate(char *concat_pattern, char *return_path_name, int numArgs,
+    ...) {
+  va_list ap;
+  va_start(ap, numArgs);
+  int strlen_args = 0;
+  char *arg = NULL;
+  int j;
+  for (j = 0; j < numArgs; j++) {
+    arg = va_arg(ap, char*);
+    if (arg == NULL) {
+      fprintf(LOGFILE, "One of the arguments passed for %s in null.\n",
+          return_path_name);
+      return NULL;
+    }
+    strlen_args += strlen(arg);
   }
+  va_end(ap);
 
   char *return_path = NULL;
-  int str_len = strlen(concat_pattern) + strlen(argA) + strlen(argB);
+  int str_len = strlen(concat_pattern) + strlen_args;
 
   return_path = (char *) malloc(sizeof(char) * (str_len + 1));
   if (return_path == NULL) {
@@ -137,43 +147,62 @@ char *concatenate(const char *argA, const char *argB, char *concat_pattern,
     return NULL;
   }
   memset(return_path, '\0', str_len + 1);
-  snprintf(return_path, str_len, concat_pattern, argA, argB);
+  va_start(ap, numArgs);
+  vsnprintf(return_path, str_len, concat_pattern, ap);
+  va_end(ap);
   return return_path;
 }
 
 /**
- * Get the job-directory path from tt_root and job-id
+ * Get the job-directory path from tt_root, user name and job-id
  */
-char *get_job_directory(const char * tt_root, const char *jobid) {
-  return concatenate(tt_root, jobid, TT_JOB_DIR_PATTERN, "job_dir_path");
+char *get_job_directory(const char * tt_root, const char *user,
+    const char *jobid) {
+  return concatenate(TT_JOB_DIR_PATTERN, "job_dir_path", 3, tt_root, user,
+      jobid);
+}
+
+/**
+ * Get the user directory of a particular user
+ */
+char *get_user_directory(const char *tt_root, const char *user) {
+  return concatenate(USER_DIR_PATTERN, "user_dir_path", 2, tt_root, user);
+}
+
+/**
+ * Get the distributed cache directory for a particular user
+ */
+char *get_distributed_cache_directory(const char *tt_root, const char *user) {
+  return concatenate(USER_DISTRIBUTED_CACHE_DIR_PATTERN, "dist_cache_path", 2,
+      tt_root, user);
 }
 
 char *get_job_work_directory(const char *job_dir) {
-  return concatenate(job_dir, "", JOB_DIR_TO_JOB_WORK_PATTERN,
-      "job_work_dir_path");
+  return concatenate(JOB_DIR_TO_JOB_WORK_PATTERN, "job_work_dir_path", 2,
+      job_dir, "");
 }
 /**
  * Get the attempt directory for the given attempt_id
  */
 char *get_attempt_directory(const char *job_dir, const char *attempt_id) {
-  return concatenate(job_dir, attempt_id, JOB_DIR_TO_ATTEMPT_DIR_PATTERN,
-      "attempt_dir_path");
+  return concatenate(JOB_DIR_TO_ATTEMPT_DIR_PATTERN, "attempt_dir_path", 2,
+      job_dir, attempt_id);
 }
 
 /*
  * Get the path to the task launcher file which is created by the TT
  */
 char *get_task_launcher_file(const char *job_dir, const char *attempt_dir) {
-  return concatenate(job_dir, attempt_dir, TASK_SCRIPT_PATTERN,
-      "task_script_path");
+  return concatenate(TASK_SCRIPT_PATTERN, "task_script_path", 2, job_dir,
+      attempt_dir);
 }
 
 /**
  * Get the log directory for the given attempt.
  */
 char *get_task_log_dir(const char *log_dir, const char *attempt_id) {
-  return concatenate(log_dir, attempt_id, ATTEMPT_LOG_DIR_PATTERN,
-      "task_log_dir");
+  return concatenate(ATTEMPT_LOG_DIR_PATTERN, "task_log_dir", 2, log_dir,
+      attempt_id);
 }
 
 /**
@@ -332,6 +361,17 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
     if (!process_path) {
       continue;
     }
+    if (compare_ownership(uid, gid, entry->fts_path) == 0) {
+      // already set proper permissions.
+      // This might happen with distributed cache.
+#ifdef DEBUG
+      fprintf(
+          LOGFILE,
+          "already has private permissions. Not trying to change again for %s",
+          entry->fts_path);
+#endif
+      continue;
+    }
 
     if (check_ownership(entry->fts_path) != 0) {
       fprintf(LOGFILE,
@@ -359,8 +399,8 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
  * Function to prepare the attempt directories for the task JVM.
  * This is done by changing the ownership of the attempt directory recursively
  * to the job owner. We do the following:
- *     *  sudo chown user:mapred -R taskTracker/jobcache/$jobid/$attemptid/
- *     *  sudo chmod 2770 -R taskTracker/jobcache/$jobid/$attemptid/
+ *  *  sudo chown user:mapred -R taskTracker/$user/jobcache/$jobid/$attemptid/
+ *  *  sudo chmod 2770 -R taskTracker/$user/jobcache/$jobid/$attemptid/
  */
 int prepare_attempt_directories(const char *job_id, const char *attempt_id,
     const char *user) {
@@ -395,7 +435,7 @@ int prepare_attempt_directories(const char *job_id, const char *attempt_id,
   char **local_dir_ptr = local_dir;
   int failed = 0;
   while (*local_dir_ptr != NULL) {
-    job_dir = get_job_directory(*local_dir_ptr, job_id);
+    job_dir = get_job_directory(*local_dir_ptr, user, job_id);
     if (job_dir == NULL) {
       fprintf(LOGFILE, "Couldn't get job directory for %s.\n", job_id);
       failed = 1;
@@ -508,6 +548,20 @@ int get_user_details(const char *user) {
   return 0;
 }
 
+/**
+ * Compare ownership of a file with the given ids.
+ */
+int compare_ownership(uid_t uid, gid_t gid, char *path) {
+  struct stat filestat;
+  if (stat(path, &filestat) != 0) {
+    return UNABLE_TO_STAT_FILE;
+  }
+  if (uid == filestat.st_uid && gid == filestat.st_gid) {
+    return 0;
+  }
+  return 1;
+}
+
 /*
  * Function to check if the TaskTracker actually owns the file.
   */
@@ -522,6 +576,89 @@ int check_ownership(char *path) {
   if (getuid() != filestat.st_uid || (getgid() != filestat.st_gid && getegid()
       != filestat.st_gid)) {
     return FILE_NOT_OWNED_BY_TASKTRACKER;
+  }
+  return 0;
+}
+
+/**
+ * Function to initialize the user directories of a user.
+ * It does the following:
+ *     *  sudo chown user:mapred -R taskTracker/$user
+ *     *  sudo chmod 2570 -R taskTracker/$user
+ * This is done once per every user on the TaskTracker.
+ */
+int initialize_user(const char *user) {
+
+  if (user == NULL) {
+    fprintf(LOGFILE, "user passed is null.\n");
+    return INVALID_ARGUMENT_NUMBER;
+  }
+
+  if (get_user_details(user) < 0) {
+    fprintf(LOGFILE, "Couldn't get the user details of %s", user);
+    return INVALID_USER_NAME;
+  }
+
+  gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
+
+  char **local_dir = (char **) get_values(TT_SYS_DIR_KEY);
+  if (local_dir == NULL) {
+    fprintf(LOGFILE, "%s is not configured.\n", TT_SYS_DIR_KEY);
+    cleanup();
+    return INVALID_TT_ROOT;
+  }
+
+  char *full_local_dir_str = (char *) get_value(TT_SYS_DIR_KEY);
+#ifdef DEBUG
+  fprintf(LOGFILE, "Value from config for %s is %s.\n", TT_SYS_DIR_KEY,
+      full_local_dir_str);
+#endif
+
+  char *user_dir;
+  char **local_dir_ptr = local_dir;
+  int failed = 0;
+  while (*local_dir_ptr != NULL) {
+    user_dir = get_user_directory(*local_dir_ptr, user);
+    if (user_dir == NULL) {
+      fprintf(LOGFILE, "Couldn't get userdir directory for %s.\n", user);
+      failed = 1;
+      break;
+    }
+
+    struct stat filestat;
+    if (stat(user_dir, &filestat) != 0) {
+      if (errno == ENOENT) {
+#ifdef DEBUG
+        fprintf(LOGFILE, "user_dir %s doesn't exist. Not doing anything.\n",
+            user_dir);
+#endif
+      } else {
+        // stat failed because of something else!
+        fprintf(LOGFILE, "Failed to stat the user_dir %s\n",
+            user_dir);
+        failed = 1;
+        free(user_dir);
+        break;
+      }
+    } else if (secure_path(user_dir, user_detail->pw_uid, tasktracker_gid,
+        S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR | S_IXUSR | S_IRWXG)
+        != 0) {
+      // No setgid on files and setgid on dirs, 570
+      fprintf(LOGFILE, "Failed to secure the user_dir %s\n",
+          user_dir);
+      failed = 1;
+      free(user_dir);
+      break;
+    }
+
+    local_dir_ptr++;
+    free(user_dir);
+  }
+  free(local_dir);
+  free(full_local_dir_str);
+  cleanup();
+  if (failed) {
+    return INITIALIZE_USER_FAILED;
   }
   return 0;
 }
@@ -563,7 +700,7 @@ int initialize_job(const char *jobid, const char *user) {
   char **local_dir_ptr = local_dir;
   int failed = 0;
   while (*local_dir_ptr != NULL) {
-    job_dir = get_job_directory(*local_dir_ptr, jobid);
+    job_dir = get_job_directory(*local_dir_ptr, user, jobid);
     if (job_dir == NULL) {
       fprintf(LOGFILE, "Couldn't get job directory for %s.\n", jobid);
       failed = 1;
@@ -608,6 +745,7 @@ int initialize_job(const char *jobid, const char *user) {
               "job_work_dir %s doesn't exist. Not doing anything.\n",
               job_work_dir);
 #endif
+          free(job_work_dir);
         } else {
           // stat failed because of something else!
           fprintf(LOGFILE, "Failed to stat the job_work_dir %s\n",
@@ -636,6 +774,97 @@ int initialize_job(const char *jobid, const char *user) {
   cleanup();
   if (failed) {
     return INITIALIZE_JOB_FAILED;
+  }
+  return 0;
+}
+
+/**
+ * Function to initialize the distributed cache files of a user.
+ * It does the following:
+ *     *  sudo chown user:mapred -R taskTracker/$user/distcache
+ *     *  sudo chmod 2570 -R taskTracker/$user/distcache
+ * This is done once per every JVM launch. Tasks reusing JVMs just create
+ * symbolic links themselves and so there isn't anything specific to do in
+ * that case.
+ * Sometimes, it happens that a task uses the whole or part of a directory
+ * structure in taskTracker/$user/distcache. In this case, some paths are
+ * already set proper private permissions by this same function called during
+ * a previous JVM launch. In the current invocation, we only do the
+ * chown/chmod operation of files/directories that are newly created by the
+ * TaskTracker (i.e. those that still are not owned by user:mapred)
+ */
+int initialize_distributed_cache(const char *user) {
+
+  if (user == NULL) {
+    fprintf(LOGFILE, "user passed is null.\n");
+    return INVALID_ARGUMENT_NUMBER;
+  }
+
+  if (get_user_details(user) < 0) {
+    fprintf(LOGFILE, "Couldn't get the user details of %s", user);
+    return INVALID_USER_NAME;
+  }
+
+  gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
+
+  char **local_dir = (char **) get_values(TT_SYS_DIR_KEY);
+  if (local_dir == NULL) {
+    fprintf(LOGFILE, "%s is not configured.\n", TT_SYS_DIR_KEY);
+    cleanup();
+    return INVALID_TT_ROOT;
+  }
+
+  char *full_local_dir_str = (char *) get_value(TT_SYS_DIR_KEY);
+#ifdef DEBUG
+  fprintf(LOGFILE, "Value from config for %s is %s.\n", TT_SYS_DIR_KEY,
+      full_local_dir_str);
+#endif
+
+  char *distcache_dir;
+  char **local_dir_ptr = local_dir;
+  int failed = 0;
+  while (*local_dir_ptr != NULL) {
+    distcache_dir = get_distributed_cache_directory(*local_dir_ptr, user);
+    if (distcache_dir == NULL) {
+      fprintf(LOGFILE, "Couldn't get distcache directory for %s.\n", user);
+      failed = 1;
+      break;
+    }
+
+    struct stat filestat;
+    if (stat(distcache_dir, &filestat) != 0) {
+      if (errno == ENOENT) {
+#ifdef DEBUG
+        fprintf(LOGFILE, "distcache_dir %s doesn't exist. Not doing anything.\n",
+            distcache_dir);
+#endif
+      } else {
+        // stat failed because of something else!
+        fprintf(LOGFILE, "Failed to stat the distcache_dir %s\n",
+            distcache_dir);
+        failed = 1;
+        free(distcache_dir);
+        break;
+      }
+    } else if (secure_path(distcache_dir, user_detail->pw_uid,
+        tasktracker_gid, S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR
+            | S_IXUSR | S_IRWXG) != 0) {
+      // No setgid on files and setgid on dirs, 570
+      fprintf(LOGFILE, "Failed to secure the distcache_dir %s\n",
+          distcache_dir);
+      failed = 1;
+      free(distcache_dir);
+      break;
+    }
+
+    local_dir_ptr++;
+    free(distcache_dir);
+  }
+  free(local_dir);
+  free(full_local_dir_str);
+  cleanup();
+  if (failed) {
+    return INITIALIZE_DISTCACHE_FAILED;
   }
   return 0;
 }
@@ -719,7 +948,7 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
     goto cleanup;
   }
 
-  job_dir = get_job_directory(tt_root, jobid);
+  job_dir = get_job_directory(tt_root, user, jobid);
   if (job_dir == NULL) {
     fprintf(LOGFILE, "Couldn't obtain job_dir for %s in %s.\n", jobid, tt_root);
     exit_code = OUT_OF_MEMORY;

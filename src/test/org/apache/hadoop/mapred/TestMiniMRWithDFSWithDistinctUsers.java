@@ -128,6 +128,10 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
       Path outDir = new Path("/testing/distinct/output");
       TestMiniMRClasspath.configureWordCount(fs, jobTrackerName, job1,
                                              input, 2, 1, inDir, outDir);
+
+      job1 = createJobConf(job1, PI_UGI);
+      runJobAsUser(job1, PI_UGI);
+
       JobConf job2 = mr.createJobConf();
       Path inDir2 = new Path("/testing/distinct/input2");
       Path outDir2 = new Path("/testing/distinct/output2");
@@ -135,8 +139,6 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
                                              input, 2, 1, inDir2, outDir2);
       job2 = createJobConf(job2, WC_UGI);
       runJobAsUser(job2, WC_UGI);
-      JobConf wc = createJobConf(mr, WC_UGI);
-      TestMiniMRWithDFS.runWordCount(mr, wc);
     } finally {
       if (dfs != null) { dfs.shutdown(); }
       if (mr != null) { mr.shutdown();}

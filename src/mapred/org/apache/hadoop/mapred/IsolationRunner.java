@@ -183,8 +183,8 @@ public class IsolationRunner {
     // where it is.
     Path localMetaSplit = 
         new LocalDirAllocator("mapred.local.dir").getLocalPathToRead(
-            TaskTracker.getLocalSplitFile(taskId.getJobID().toString(), taskId
-                .toString()), conf);
+            TaskTracker.getLocalSplitFile(conf.getUser(), taskId.getJobID()
+                .toString(), taskId.toString()), conf);
     DataInputStream splitFile = FileSystem.getLocal(conf).open(localMetaSplit);
     TaskSplitIndex splitIndex = new TaskSplitIndex();
     splitIndex.readFields(splitFile);

@@ -33,6 +33,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -153,8 +154,18 @@ public class TaskDistributedCacheManager {
       FileStatus fileStatus = fileSystem.getFileStatus(new Path(uri.getPath()));
       String cacheId = this.distributedCacheManager.makeRelative(uri, taskConf);
       String cachePath = cacheSubdir + Path.SEPARATOR + cacheId;
-      Path localPath = lDirAlloc.getLocalPathForWrite(cachePath,
-                                fileStatus.getLen(), taskConf);
+
+      // Get the local path if the cacheFile is already localized or create one
+      // if it doesn't
+      Path localPath;
+      try {
+        localPath = lDirAlloc.getLocalPathToRead(cachePath, taskConf);
+      } catch (DiskErrorException de) {
+        localPath =
+            lDirAlloc.getLocalPathForWrite(cachePath, fileStatus.getLen(),
+                taskConf);
+      }
+
       String baseDir = localPath.toString().replace(cacheId, "");
       Path p = distributedCacheManager.getLocalCache(uri, taskConf,
           new Path(baseDir), fileStatus, 
@@ -221,7 +232,7 @@ public class TaskDistributedCacheManager {
    * Creates a class loader that includes the designated
    * files and archives.
    */
-  public ClassLoader makeClassLoader(final ClassLoader parent) 
+  public ClassLoader makeClassLoader(final ClassLoader parent)
       throws MalformedURLException {
     final URL[] urls = new URL[classPaths.size()];
     for (int i = 0; i < classPaths.size(); ++i) {
@@ -231,7 +242,7 @@ public class TaskDistributedCacheManager {
       @Override
       public ClassLoader run() {
         return new URLClassLoader(urls, parent);
-      }     
+      }
     });
   }
 }

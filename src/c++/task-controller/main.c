@@ -105,9 +105,15 @@ int main(int argc, char **argv) {
   fprintf(LOGFILE, "main : user is %s\n", user_detail->pw_name);
 
   switch (command) {
+  case INITIALIZE_USER:
+    exit_code = initialize_user(user_detail->pw_name);
+    break;
   case INITIALIZE_JOB:
     job_id = argv[optind++];
     exit_code = initialize_job(job_id, user_detail->pw_name);
+    break;
+  case INITIALIZE_DISTRIBUTEDCACHE:
+    exit_code = initialize_distributed_cache(user_detail->pw_name);
     break;
   case LAUNCH_TASK_JVM:
     tt_root = argv[optind++];

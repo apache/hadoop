@@ -89,7 +89,11 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     }
 
     String executable = DistributedCache.getLocalCacheFiles(conf)[0].toString();
-    FileUtil.chmod(executable, "a+x");
+    if (!new File(executable).canExecute()) {
+      // LinuxTaskController sets +x permissions on all distcache files already.
+      // In case of DefaultTaskController, set permissions here.
+      FileUtil.chmod(executable, "u+x");
+    }
     cmd.add(executable);
     // wrap the command in a stdout/stderr capture
     TaskAttemptID taskid = TaskAttemptID.forName(conf.get("mapred.task.id"));

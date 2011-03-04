@@ -482,8 +482,8 @@ public class TestQueueManager extends TestCase {
       try {
         conf.set("mapred.job.tracker", "localhost:"
             + miniMRCluster.getJobTrackerPort());
-        JobClient jc = new JobClient(conf);
-        jc.getJob(rjob.getJobID()).killJob();
+        JobClient client = new JobClient(miniMRCluster.createJobConf());
+        client.getJob(rjob.getID()).killJob();
         if (!shouldSucceed) {
           fail("should fail kill operation");  
         }
@@ -524,8 +524,8 @@ public class TestQueueManager extends TestCase {
       try {
         conf.set("mapred.job.tracker", "localhost:"
             + miniMRCluster.getJobTrackerPort());
-        JobClient jc = new JobClient(conf);
-        jc.getJob(rjob.getJobID()).setJobPriority("VERY_LOW");
+        JobClient client = new JobClient(miniMRCluster.createJobConf());
+        client.getJob(rjob.getID()).setJobPriority("VERY_LOW");
         if (!shouldSucceed) {
           fail("changing priority should fail.");
         }
@@ -605,6 +605,8 @@ public class TestQueueManager extends TestCase {
     if (shouldComplete) {
       rJob = JobClient.runJob(jc);  
     } else {
+      // Job should be submitted as 'userInfo'. So both the client as well as
+      // the configuration should point to the same UGI.
       rJob = new JobClient(jc).submitJob(jc);
     }
     return rJob;

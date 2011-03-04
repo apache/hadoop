@@ -54,6 +54,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
+import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.fs.DF;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -184,7 +185,7 @@ public class TaskTracker
   
   // The filesystem where job files are stored
   FileSystem systemFS = null;
-  private FileSystem localFs = null;
+  FileSystem localFs = null;
   private final HttpServer server;
     
   volatile boolean shuttingDown = false;
@@ -222,8 +223,8 @@ public class TaskTracker
   //for serving map output to the other nodes
 
   static Random r = new Random();
-  static final String SUBDIR = "taskTracker";
-  private static final String DISTCACHEDIR = "distcache";
+  public static final String SUBDIR = "taskTracker";
+  static final String DISTCACHEDIR = "distcache";
   static final String JOBCACHE = "jobcache";
   static final String OUTPUT = "output";
   private static final String JARSDIR = "jars";
@@ -235,6 +236,7 @@ public class TaskTracker
 
   private JobConf fConf;
   private JobConf originalConf;
+  private Localizer localizer;
   private int maxMapSlots;
   private int maxReduceSlots;
   private int failures;
@@ -250,7 +252,7 @@ public class TaskTracker
   
   private MapEventsFetcherThread mapEventsFetcher;
   int workerThreads;
-  private CleanupQueue directoryCleanupThread;
+  CleanupQueue directoryCleanupThread;
   volatile JvmManager jvmManager;
   
   private TaskMemoryManagerThread taskMemoryManager;
@@ -347,7 +349,6 @@ public class TaskTracker
       shuffleMetricsRecord.update();
     }
   }
-  
 
   
   
@@ -395,7 +396,7 @@ public class TaskTracker
         }
       }, "taskCleanup");
 
-  TaskController getTaskController() {
+  public TaskController getTaskController() {
     return taskController;
   }
   
@@ -444,72 +445,75 @@ public class TaskTracker
     return TaskTracker.SUBDIR + Path.SEPARATOR + user;
   } 
 
-  static String getDistributedCacheDir() {
-    return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.DISTCACHEDIR;
+  Localizer getLocalizer() {
+    return localizer;
   }
 
-  static String getJobCacheSubdir() {
-    return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.JOBCACHE;
+  void setLocalizer(Localizer l) {
+    localizer = l;
+  }
+
+  public static String getDistributedCacheDir(String user) {
+    return getUserDir(user) + Path.SEPARATOR + TaskTracker.DISTCACHEDIR;
+  }
+
+  public static String getJobCacheSubdir(String user) {
+    return getUserDir(user) + Path.SEPARATOR + TaskTracker.JOBCACHE;
   }
 
   public static String getLocalJobDir(String user, String jobid) {
-    return getUserDir(user) + Path.SEPARATOR + getJobCacheSubdir() 
-        + Path.SEPARATOR + jobid;
-  } 
-
-  static String getLocalJobDir(String jobid) {
-    return getJobCacheSubdir() + Path.SEPARATOR + jobid;
+    return getJobCacheSubdir(user) + Path.SEPARATOR + jobid;
   }
 
-  static String getLocalJobConfFile(String jobid) {
-    return getLocalJobDir(jobid) + Path.SEPARATOR + TaskTracker.JOBFILE;
+  static String getLocalJobConfFile(String user, String jobid) {
+    return getLocalJobDir(user, jobid) + Path.SEPARATOR + TaskTracker.JOBFILE;
   }
 
-  static String getTaskConfFile(String jobid, String taskid,
+  static String getTaskConfFile(String user, String jobid, String taskid,
       boolean isCleanupAttempt) {
-    return getLocalTaskDir(jobid, taskid, isCleanupAttempt) + Path.SEPARATOR
-        + TaskTracker.JOBFILE;
+    return getLocalTaskDir(user, jobid, taskid, isCleanupAttempt)
+    + Path.SEPARATOR + TaskTracker.JOBFILE;
   }
 
-  static String getJobJarsDir(String jobid) {
-    return getLocalJobDir(jobid) + Path.SEPARATOR + TaskTracker.JARSDIR;
+  static String getJobJarsDir(String user, String jobid) {
+    return getLocalJobDir(user, jobid) + Path.SEPARATOR + TaskTracker.JARSDIR;
   }
 
-  static String getJobJarFile(String jobid) {
-    return getJobJarsDir(jobid) + Path.SEPARATOR + "job.jar";
+  static String getJobJarFile(String user, String jobid) {
+    return getJobJarsDir(user, jobid) + Path.SEPARATOR + "job.jar";
+  }
+  
+  static String getJobWorkDir(String user, String jobid) {
+    return getLocalJobDir(user, jobid) + Path.SEPARATOR + MRConstants.WORKDIR;
   }
 
-  static String getJobWorkDir(String jobid) {
-    return getLocalJobDir(jobid) + Path.SEPARATOR + MRConstants.WORKDIR;
-  }
-
-  static String getLocalSplitFile(String jobid, String taskid) {
-    return TaskTracker.getLocalTaskDir(jobid, taskid) + Path.SEPARATOR
+  static String getLocalSplitFile(String user, String jobid, String taskid) {
+    return TaskTracker.getLocalTaskDir(user, jobid, taskid) + Path.SEPARATOR
     + TaskTracker.LOCAL_SPLIT_FILE;
   }
 
-  static String getIntermediateOutputDir(String jobid, String taskid) {
-    return getLocalTaskDir(jobid, taskid) + Path.SEPARATOR
-        + TaskTracker.OUTPUT;
+  static String getIntermediateOutputDir(String user, String jobid,
+      String taskid) {
+    return getLocalTaskDir(user, jobid, taskid) + Path.SEPARATOR
+    + TaskTracker.OUTPUT;
   }
 
-  static String getLocalTaskDir(String jobid, String taskid) {
-    return getLocalTaskDir(jobid, taskid, false);
+  static String getLocalTaskDir(String user, String jobid, String taskid) {
+    return getLocalTaskDir(user, jobid, taskid, false);
   }
-
-  static String getLocalTaskDir(String jobid, String taskid,
+  
+  public static String getLocalTaskDir(String user, String jobid, String taskid,
       boolean isCleanupAttempt) {
-    String taskDir = getLocalJobDir(jobid) + Path.SEPARATOR + taskid;
+    String taskDir = getLocalJobDir(user, jobid) + Path.SEPARATOR + taskid;
     if (isCleanupAttempt) {
       taskDir = taskDir + TASK_CLEANUP_SUFFIX;
     }
     return taskDir;
   }
-
-  static String getTaskWorkDir(String jobid, String taskid,
+  
+  static String getTaskWorkDir(String user, String jobid, String taskid,
       boolean isCleanupAttempt) {
-    String dir =
-      getLocalJobDir(jobid) + Path.SEPARATOR + taskid;
+    String dir = getLocalJobDir(user, jobid) + Path.SEPARATOR + taskid;
     if (isCleanupAttempt) {
       dir = dir + TASK_CLEANUP_SUFFIX;
     }
@@ -677,7 +681,10 @@ public class TaskTracker
     
     //setup and create jobcache directory with appropriate permissions
     taskController.setup();
-    
+
+    // create a localizer instance
+    setLocalizer(new Localizer(localFs, fConf.getLocalDirs(), taskController));
+
     //Start up node health checker service.
     if (shouldStartHealthMonitor(this.fConf)) {
       startHealthMonitor(this.fConf);
@@ -888,8 +895,11 @@ public class TaskTracker
     Path localJarFile = null;
     Task t = tip.getTask();
     JobID jobId = t.getJobID();
-
     RunningJob rjob = addTaskToJob(jobId, tip);
+
+    // Initialize the user directories if needed.
+    getLocalizer().initializeUserDirs(t.getUser());
+
     synchronized (rjob) {
       if (!rjob.localized) {
         JobConf localJobConf = localizeJobFiles(t);
@@ -949,19 +959,19 @@ public class TaskTracker
 
     // Initialize the job directories first
     FileSystem localFs = FileSystem.getLocal(fConf);
-    initializeJobDirs(jobId, localFs, fConf.getStrings("mapred.local.dir"));
+    getLocalizer().initializeJobDirs(userName, jobId);
 
     // Download the job.xml for this job from the system FS
     Path localJobFile =
-        localizeJobConfFile(new Path(t.getJobFile()), userFs, jobId);
+        localizeJobConfFile(new Path(t.getJobFile()), userName, userFs, jobId);
 
     JobConf localJobConf = new JobConf(localJobFile);
 
     // create the 'job-work' directory: job-specific shared directory for use as
     // scratch space by all tasks of the same job running on this TaskTracker.
     Path workDir =
-        lDirAlloc.getLocalPathForWrite(getJobWorkDir(jobId.toString()),
-          fConf);
+        lDirAlloc.getLocalPathForWrite(getJobWorkDir(userName,
+            jobId.toString()), fConf);
     if (!localFs.mkdirs(workDir)) {
       throw new IOException("Mkdirs failed to create "
           + workDir.toString());
@@ -970,152 +980,9 @@ public class TaskTracker
     localJobConf.set(JOB_LOCAL_DIR, workDir.toUri().getPath());
 
     // Download the job.jar for this job from the system FS
-    localizeJobJarFile(jobId, userFs, localJobConf);
+    localizeJobJarFile(userName, jobId, userFs, localJobConf);
 
     return localJobConf;
-  }
-
-  static class PermissionsHandler {
-    /**
-     * Permission information useful for setting permissions for a given path.
-     * Using this, one can set all possible combinations of permissions for the
-     * owner of the file. But permissions for the group and all others can only
-     * be set together, i.e. permissions for group cannot be set different from
-     * those for others and vice versa.
-     */
-    static class PermissionsInfo {
-      public boolean readPermissions;
-      public boolean writePermissions;
-      public boolean executablePermissions;
-      public boolean readPermsOwnerOnly;
-      public boolean writePermsOwnerOnly;
-      public boolean executePermsOwnerOnly;
-
-      /**
-       * Create a permissions-info object with the given attributes
-       *
-       * @param readPerms
-       * @param writePerms
-       * @param executePerms
-       * @param readOwnerOnly
-       * @param writeOwnerOnly
-       * @param executeOwnerOnly
-       */
-      public PermissionsInfo(boolean readPerms, boolean writePerms,
-          boolean executePerms, boolean readOwnerOnly, boolean writeOwnerOnly,
-          boolean executeOwnerOnly) {
-        readPermissions = readPerms;
-        writePermissions = writePerms;
-        executablePermissions = executePerms;
-        readPermsOwnerOnly = readOwnerOnly;
-        writePermsOwnerOnly = writeOwnerOnly;
-        executePermsOwnerOnly = executeOwnerOnly;
-      }
-    }
-
-    /**
-     * Set permission on the given file path using the specified permissions
-     * information. We use java api to set permission instead of spawning chmod
-     * processes. This saves a lot of time. Using this, one can set all possible
-     * combinations of permissions for the owner of the file. But permissions
-     * for the group and all others can only be set together, i.e. permissions
-     * for group cannot be set different from those for others and vice versa.
-     *
-     * This method should satisfy the needs of most of the applications. For
-     * those it doesn't, {@link FileUtil#chmod} can be used.
-     *
-     * @param f file path
-     * @param pInfo permissions information
-     * @return true if success, false otherwise
-     */
-    static boolean setPermissions(File f, PermissionsInfo pInfo) {
-      if (pInfo == null) {
-        LOG.debug(" PermissionsInfo is null, returning.");
-        return true;
-      }
-
-      LOG.debug("Setting permission for " + f.getAbsolutePath());
-
-      boolean ret = true;
-
-      // Clear all the flags
-      ret = f.setReadable(false, false) && ret;
-      ret = f.setWritable(false, false) && ret;
-      ret = f.setExecutable(false, false) && ret;
-
-      ret = f.setReadable(pInfo.readPermissions, pInfo.readPermsOwnerOnly);
-      LOG.debug("Readable status for " + f + " set to " + ret);
-      ret =
-        f.setWritable(pInfo.writePermissions, pInfo.writePermsOwnerOnly)
-        && ret;
-      LOG.debug("Writable status for " + f + " set to " + ret);
-      ret =
-        f.setExecutable(pInfo.executablePermissions,
-            pInfo.executePermsOwnerOnly)
-            && ret;
-
-      LOG.debug("Executable status for " + f + " set to " + ret);
-      return ret;
-    }
-
-    /**
-     * Permissions rwxr_xr_x
-     */
-    static PermissionsInfo sevenFiveFive =
-      new PermissionsInfo(true, true, true, false, true, false);
-    /**
-     * Completely private permissions
-     */
-    static PermissionsInfo sevenZeroZero =
-      new PermissionsInfo(true, true, true, true, true, true);
-  }
-
-  /**
-   * Prepare the job directories for a given job. To be called by the job
-   * localization code, only if the job is not already localized.
-   *
-   * <br>
-   * Here, we set 700 permissions on the job directories created on all disks.
-   * This we do so as to avoid any misuse by other users till the time
-   * {@link TaskController#initializeJob(JobInitializationContext)} is run at a
-   * later time to set proper private permissions on the job directories. <br>
-   *
-   * @param jobId
-   * @param fs
-   * @param localDirs
-   * @throws IOException
-   */
-  private static void initializeJobDirs(JobID jobId, FileSystem fs,
-      String[] localDirs)
-  throws IOException {
-    boolean initJobDirStatus = false;
-    String jobDirPath = getLocalJobDir(jobId.toString());
-    for (String localDir : localDirs) {
-      Path jobDir = new Path(localDir, jobDirPath);
-      if (fs.exists(jobDir)) {
-        // this will happen on a partial execution of localizeJob. Sometimes
-        // copying job.xml to the local disk succeeds but copying job.jar might
-        // throw out an exception. We should clean up and then try again.
-        fs.delete(jobDir, true);
-      }
-
-      boolean jobDirStatus = fs.mkdirs(jobDir);
-      if (!jobDirStatus) {
-        LOG.warn("Not able to create job directory " + jobDir.toString());
-      }
-
-      initJobDirStatus = initJobDirStatus || jobDirStatus;
-
-      // job-dir has to be private to the TT
-      PermissionsHandler.setPermissions(new File(jobDir.toUri().getPath()),
-          PermissionsHandler.sevenZeroZero);
-    }
-
-    if (!initJobDirStatus) {
-      throw new IOException("Not able to initialize job directories "
-          + "in any of the configured local directories for job "
-          + jobId.toString());
-    }
   }
 
   /**
@@ -1126,7 +993,7 @@ public class TaskTracker
    * @return the local file system path of the downloaded file.
    * @throws IOException
    */
-  private Path localizeJobConfFile(Path jobFile, FileSystem userFs, JobID jobId)
+  private Path localizeJobConfFile(Path jobFile, String user, FileSystem userFs, JobID jobId)
   throws IOException {
     // Get sizes of JobFile and JarFile
     // sizes are -1 if they are not present.
@@ -1139,8 +1006,8 @@ public class TaskTracker
       jobFileSize = -1;
     }
     Path localJobFile =
-      lDirAlloc.getLocalPathForWrite(getLocalJobConfFile(jobId.toString()),
-          jobFileSize, fConf);
+      lDirAlloc.getLocalPathForWrite(getLocalJobConfFile(user,
+          jobId.toString()), jobFileSize, fConf);
 
     // Download job.xml
     userFs.copyToLocalFile(jobFile, localJobFile);
@@ -1156,7 +1023,7 @@ public class TaskTracker
    * @param localJobConf
    * @throws IOException
    */
-  private void localizeJobJarFile(JobID jobId, FileSystem userFs,
+  private void localizeJobJarFile(String user, JobID jobId, FileSystem userFs,
       JobConf localJobConf)
   throws IOException {
     // copy Jar file to the local FS and unjar it.
@@ -1171,11 +1038,11 @@ public class TaskTracker
       } catch (FileNotFoundException fe) {
         jarFileSize = -1;
       }
-      // Here we check for and we check five times the size of jarFileSize
-      // to accommodate for unjarring the jar file in userfiles directory
+      // Here we check for five times the size of jarFileSize to accommodate for
+      // unjarring the jar file in the jars directory
       Path localJarFile =
-        lDirAlloc.getLocalPathForWrite(getJobJarFile(jobId.toString()),
-            5 * jarFileSize, fConf);
+        lDirAlloc.getLocalPathForWrite(
+            getJobJarFile(user, jobId.toString()), 5 * jarFileSize, fConf);
 
       //Download job.jar
       userFs.copyToLocalFile(jarFilePath, localJarFile);
@@ -1189,44 +1056,6 @@ public class TaskTracker
     }
   }
 
-  /**
-   * Create taskDirs on all the disks. Otherwise, in some cases, like when
-   * LinuxTaskController is in use, child might wish to balance load across
-   * disks but cannot itself create attempt directory because of the fact that
-   * job directory is writable only by the TT.
-   *
-   * @param jobId
-   * @param attemptId
-   * @param isCleanupAttempt
-   * @param fs
-   * @param localDirs
-   * @throws IOException
-   */
-  private static void initializeAttemptDirs(String jobId, String attemptId,
-      boolean isCleanupAttempt, FileSystem fs, String[] localDirs)
-  throws IOException {
-
-    boolean initStatus = false;
-    String attemptDirPath =
-      getLocalTaskDir(jobId, attemptId, isCleanupAttempt);
-
-    for (String localDir : localDirs) {
-      Path localAttemptDir = new Path(localDir, attemptDirPath);
-
-      boolean attemptDirStatus = fs.mkdirs(localAttemptDir);
-      if (!attemptDirStatus) {
-        LOG.warn("localAttemptDir " + localAttemptDir.toString()
-            + " couldn't be created.");
-      }
-      initStatus = initStatus || attemptDirStatus;
-    }
-
-    if (!initStatus) {
-      throw new IOException("Not able to initialize attempt directories "
-          + "in any of the configured local directories for the attempt "
-          + attemptId);
-    }
-  }
   private void launchTaskForJob(TaskInProgress tip, JobConf jobConf)
       throws IOException{
     synchronized (tip) {
@@ -1266,7 +1095,7 @@ public class TaskTracker
     }
     
     this.running = false;
-        
+
     // Clear local storage
     cleanupStorage();
         
@@ -1814,9 +1643,8 @@ public class TaskTracker
         }
         // Delete the job directory for this  
         // task if the job is done/failed
-        if (!rjob.keepJobFiles){
-          directoryCleanupThread.addToQueue(localFs, getLocalFiles(fConf, 
-            getLocalJobDir(rjob.getJobID().toString())));
+        if (!rjob.keepJobFiles) {
+          removeJobFiles(rjob.jobConf.getUser(), rjob.getJobID().toString());
         }
         // Remove this job 
         rjob.tasks.clear();
@@ -1829,7 +1657,18 @@ public class TaskTracker
     getJobTokenSecretManager().removeTokenForJob(jobId.toString());  
   }      
     
-    
+  /**
+   * This job's files are no longer needed on this TT, remove them.
+   *
+   * @param rjob
+   * @throws IOException
+   */
+  void removeJobFiles(String user, String jobId)
+  throws IOException {
+    directoryCleanupThread.addToQueue(localFs, getLocalFiles(fConf,
+        getLocalJobDir(user, jobId)));
+  }
+
   /**
    * Remove the tip and update all relevant state.
    * 
@@ -2282,14 +2121,14 @@ public class TaskTracker
       FileSystem localFs = FileSystem.getLocal(fConf);
 
       // create taskDirs on all the disks.
-      initializeAttemptDirs(task.getJobID().toString(), task.getTaskID()
-          .toString(), task.isTaskCleanupTask(), localFs, fConf
-          .getStrings("mapred.local.dir"));
+      getLocalizer().initializeAttemptDirs(task.getUser(),
+          task.getJobID().toString(), task.getTaskID().toString(),
+          task.isTaskCleanupTask());
 
       // create the working-directory of the task 
       Path cwd =
-          lDirAlloc.getLocalPathForWrite(getTaskWorkDir(task.getJobID()
-              .toString(), task.getTaskID().toString(), task
+          lDirAlloc.getLocalPathForWrite(getTaskWorkDir(task.getUser(), task
+              .getJobID().toString(), task.getTaskID().toString(), task
               .isTaskCleanupTask()), defaultJobConf);
       if (!localFs.mkdirs(cwd)) {
         throw new IOException("Mkdirs failed to create " 
@@ -2351,8 +2190,12 @@ public class TaskTracker
       return task;
     }
     
-    public TaskRunner getTaskRunner() {
+    TaskRunner getTaskRunner() {
       return runner;
+    }
+
+    void setTaskRunner(TaskRunner rnr) {
+      this.runner = rnr;
     }
 
     public synchronized void setJobConf(JobConf lconf){
@@ -2388,7 +2231,7 @@ public class TaskTracker
         if (this.taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
           this.taskStatus.setRunState(TaskStatus.State.RUNNING);
         }
-        this.runner = task.createRunner(TaskTracker.this, this);
+        setTaskRunner(task.createRunner(TaskTracker.this, this));
         this.runner.start();
         this.taskStatus.setStartTime(System.currentTimeMillis());
       } else {
@@ -2605,13 +2448,13 @@ public class TaskTracker
               }
               File workDir = null;
               try {
-                workDir = new File(lDirAlloc.getLocalPathToRead(
-                                     TaskTracker.getLocalTaskDir( 
-                                       task.getJobID().toString(), 
-                                       task.getTaskID().toString(),
-                                       task.isTaskCleanupTask())
-                                     + Path.SEPARATOR + MRConstants.WORKDIR,
-                                     localJobConf). toString());
+                workDir =
+                    new File(lDirAlloc.getLocalPathToRead(
+                        TaskTracker.getLocalTaskDir(task.getUser(), task
+                            .getJobID().toString(), task.getTaskID()
+                            .toString(), task.isTaskCleanupTask())
+                            + Path.SEPARATOR + MRConstants.WORKDIR,
+                        localJobConf).toString());
               } catch (IOException e) {
                 LOG.warn("Working Directory of the task " + task.getTaskID() +
                                 " doesnt exist. Caught exception " +
@@ -2889,50 +2732,60 @@ public class TaskTracker
         }
       }
       synchronized (this) {
+        // localJobConf could be null if localization has not happened
+        // then no cleanup will be required.
+        if (localJobConf == null) {
+          return;
+        }
         try {
-          // localJobConf could be null if localization has not happened
-          // then no cleanup will be required.
-          if (localJobConf == null) {
-            return;
-          }
-          String localTaskDir =
-              getLocalTaskDir(task.getJobID().toString(), taskId.toString(),
-                  task.isTaskCleanupTask());
-          String taskWorkDir =
-              getTaskWorkDir(task.getJobID().toString(), taskId.toString(),
-                  task.isTaskCleanupTask());
-          if (needCleanup) {
-            if (runner != null) {
-              //cleans up the output directory of the task (where map outputs 
-              //and reduce inputs get stored)
-              runner.close();
-            }
-
-            if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-              // No jvm reuse, remove everything
-              directoryCleanupThread.addToQueue(localFs,
-                  getLocalFiles(defaultJobConf,
-                  localTaskDir));
-            }  
-            else {
-              // Jvm reuse. We don't delete the workdir since some other task
-              // (running in the same JVM) might be using the dir. The JVM
-              // running the tasks would clean the workdir per a task in the
-              // task process itself.
-              directoryCleanupThread.addToQueue(localFs, getLocalFiles(
-                  defaultJobConf, localTaskDir + Path.SEPARATOR
-                      + TaskTracker.JOBFILE));
-            }
-          } else {
-            if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-              directoryCleanupThread.addToQueue(localFs,
-                  getLocalFiles(defaultJobConf,
-                  taskWorkDir));
-            }  
-          }
+          removeTaskFiles(needCleanup, taskId);
         } catch (Throwable ie) {
-          LOG.info("Error cleaning up task runner: " + 
-                   StringUtils.stringifyException(ie));
+          LOG.info("Error cleaning up task runner: "
+              + StringUtils.stringifyException(ie));
+        }
+      }
+    }
+
+    /**
+     * Some or all of the files from this task are no longer required. Remove
+     * them via CleanupQueue.
+     * 
+     * @param needCleanup
+     * @param taskId
+     * @throws IOException 
+     */
+    void removeTaskFiles(boolean needCleanup, TaskAttemptID taskId)
+        throws IOException {
+      if (needCleanup) {
+        if (runner != null) {
+          // cleans up the output directory of the task (where map outputs
+          // and reduce inputs get stored)
+          runner.close();
+        }
+
+        String localTaskDir =
+            getLocalTaskDir(task.getUser(), task.getJobID().toString(), taskId
+                .toString(), task.isTaskCleanupTask());
+        if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
+          // No jvm reuse, remove everything
+          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
+              defaultJobConf, localTaskDir));
+        } else {
+          // Jvm reuse. We don't delete the workdir since some other task
+          // (running in the same JVM) might be using the dir. The JVM
+          // running the tasks would clean the workdir per a task in the
+          // task process itself.
+          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
+              defaultJobConf, localTaskDir + Path.SEPARATOR
+                  + TaskTracker.JOBFILE));
+        }
+      } else {
+        if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
+          String taskWorkDir =
+              getTaskWorkDir(task.getUser(), task.getJobID().toString(),
+                  taskId.toString(), task.isTaskCleanupTask());
+          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
+              defaultJobConf, taskWorkDir));
         }
       }
     }
@@ -3371,15 +3224,25 @@ public class TaskTracker
         FileSystem rfs = ((LocalFileSystem)
             context.getAttribute("local.file.system")).getRaw();
 
-        // Index file
-        Path indexFileName = lDirAlloc.getLocalPathToRead(
-            TaskTracker.getIntermediateOutputDir(jobId, mapId)
-            + "/file.out.index", conf);
-        
-        // Map-output file
-        Path mapOutputFileName = lDirAlloc.getLocalPathToRead(
-            TaskTracker.getIntermediateOutputDir(jobId, mapId)
-            + "/file.out", conf);
+      String userName = null;
+      synchronized (tracker.runningJobs) {
+        RunningJob rjob = tracker.runningJobs.get(JobID.forName(jobId));
+        if (rjob == null) {
+          throw new IOException("Unknown job " + jobId + "!!");
+        }
+        userName = rjob.jobConf.getUser();
+      }
+      // Index file
+      Path indexFileName =
+          lDirAlloc.getLocalPathToRead(TaskTracker.getIntermediateOutputDir(
+              userName, jobId, mapId)
+              + "/file.out.index", conf);
+
+      // Map-output file
+      Path mapOutputFileName =
+          lDirAlloc.getLocalPathToRead(TaskTracker.getIntermediateOutputDir(
+              userName, jobId, mapId)
+              + "/file.out", conf);
 
         /**
          * Read the index file to get the information about where

@@ -120,7 +120,7 @@ abstract public class Task implements Writable, Configurable {
   ////////////////////////////////////////////
 
   private String jobFile;                         // job configuration file
-  private String user;
+  private String user;                            // user running the job
   private TaskAttemptID taskId;                   // unique, includes job id
   private int partition;                          // id within job
   TaskStatus taskStatus;                          // current status of the task
@@ -364,7 +364,7 @@ abstract public class Task implements Writable, Configurable {
   boolean isMapOrReduce() {
     return !jobSetup && !jobCleanup && !taskCleanup;
   }
-  
+
   /**
    * Get the name of the user running the job/task. TaskTracker needs task's
    * user name even before it's JobConf is localized. So we explicitly serialize
