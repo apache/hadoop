@@ -44,6 +44,11 @@ import org.apache.hadoop.io.WritableUtils;
 
  **************************************************/
 public class DatanodeDescriptor extends DatanodeInfo {
+  
+  // Stores status of decommissioning.
+  // If node is not decommissioning, do not use this object for anything.
+  DecommissioningStatus decommissioningStatus = new DecommissioningStatus();
+
   /** Block and targets pair */
   public static class BlockTargetPair {
     public final Block block;
@@ -462,4 +467,53 @@ public class DatanodeDescriptor extends DatanodeInfo {
       lastBlocksScheduledRollTime = now;
     }
   }
+  
+  class DecommissioningStatus {
+    int underReplicatedBlocks;
+    int decommissionOnlyReplicas;
+    int underReplicatedInOpenFiles;
+    long startTime;
+
+    synchronized void set(int underRep, int onlyRep, int underConstruction) {
+      if (isDecommissionInProgress() == false) {
+        return;
+      }
+      underReplicatedBlocks = underRep;
+      decommissionOnlyReplicas = onlyRep;
+      underReplicatedInOpenFiles = underConstruction;
+    }
+
+    synchronized int getUnderReplicatedBlocks() {
+      if (isDecommissionInProgress() == false) {
+        return 0;
+      }
+      return underReplicatedBlocks;
+    }
+
+    synchronized int getDecommissionOnlyReplicas() {
+      if (isDecommissionInProgress() == false) {
+        return 0;
+      }
+      return decommissionOnlyReplicas;
+    }
+
+    synchronized int getUnderReplicatedInOpenFiles() {
+      if (isDecommissionInProgress() == false) {
+        return 0;
+      }
+      return underReplicatedInOpenFiles;
+    }
+
+    synchronized void setStartTime(long time) {
+      startTime = time;
+    }
+
+    synchronized long getStartTime() {
+      if (isDecommissionInProgress() == false) {
+        return 0;
+      }
+      return startTime;
+    }
+  } // End of class DecommissioningStatus
+  
 }

@@ -3626,14 +3626,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (!node.isDecommissionInProgress() && !node.isDecommissioned()) {
       LOG.info("Start Decommissioning node " + node.getName());
       node.startDecommission();
+      node.decommissioningStatus.setStartTime(now());
       //
       // all the blocks that reside on this node have to be 
       // replicated.
-      Iterator<Block> decommissionBlocks = node.getBlockIterator();
-      while(decommissionBlocks.hasNext()) {
-        Block block = decommissionBlocks.next();
-        updateNeededReplications(block, -1, 0);
-      }
+      checkDecommissionStateInternal(node);
     }
   }
 
@@ -3748,12 +3745,40 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     return countNodes(b, blocksMap.nodeIterator(b));
   }
 
+  private void logBlockReplicationInfo(Block block, DatanodeDescriptor srcNode,
+      NumberReplicas num) {
+    int curReplicas = num.liveReplicas();
+    int curExpectedReplicas = getReplication(block);
+    INode fileINode = blocksMap.getINode(block);
+    Iterator<DatanodeDescriptor> nodeIter = blocksMap.nodeIterator(block);
+    StringBuffer nodeList = new StringBuffer();
+    while (nodeIter.hasNext()) {
+      DatanodeDescriptor node = nodeIter.next();
+      nodeList.append(node.name);
+      nodeList.append(" ");
+    }
+    FSNamesystem.LOG.info("Block: " + block + ", Expected Replicas: "
+        + curExpectedReplicas + ", live replicas: " + curReplicas
+        + ", corrupt replicas: " + num.corruptReplicas()
+        + ", decommissioned replicas: " + num.decommissionedReplicas()
+        + ", excess replicas: " + num.excessReplicas() + ", Is Open File: "
+        + fileINode.isUnderConstruction() + ", Datanodes having this block: "
+        + nodeList + ", Current Datanode: " + srcNode.name
+        + ", Is current datanode decommissioning: "
+        + srcNode.isDecommissionInProgress());
+  }
+
+  
   /**
    * Return true if there are any blocks on this node that have not
    * yet reached their replication factor. Otherwise returns false.
    */
   private boolean isReplicationInProgress(DatanodeDescriptor srcNode) {
     boolean status = false;
+    int underReplicatedBlocks = 0;
+    int decommissionOnlyReplicas = 0;
+    int underReplicatedInOpenFiles = 0;
+
     for(final Iterator<Block> i = srcNode.getBlockIterator(); i.hasNext(); ) {
       final Block block = i.next();
       INode fileINode = blocksMap.getINode(block);
@@ -3763,7 +3788,19 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         int curReplicas = num.liveReplicas();
         int curExpectedReplicas = getReplication(block);
         if (curExpectedReplicas > curReplicas) {
-          status = true;
+          // Log info about one block for this node which needs replication
+          if (!status) {
+            status = true;
+            logBlockReplicationInfo(block, srcNode, num);
+          }
+          underReplicatedBlocks++;
+          if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
+            decommissionOnlyReplicas++;
+          }
+          if (fileINode.isUnderConstruction()) {
+            underReplicatedInOpenFiles++;
+          }
+
           if (!neededReplications.contains(block) &&
             pendingReplications.getNumReplicas(block) == 0) {
             //
@@ -3779,6 +3816,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
       }
     }
+    srcNode.decommissioningStatus.set(underReplicatedBlocks,
+        decommissionOnlyReplicas, underReplicatedInOpenFiles);
+
     return status;
   }
 
@@ -4745,5 +4785,17 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
         }
       }
     }
+  }
+  
+  public synchronized ArrayList<DatanodeDescriptor> getDecommissioningNodes() {
+    ArrayList<DatanodeDescriptor> decommissioningNodes = new ArrayList<DatanodeDescriptor>();
+    ArrayList<DatanodeDescriptor> results = getDatanodeListForReport(DatanodeReportType.LIVE);
+    for (Iterator<DatanodeDescriptor> it = results.iterator(); it.hasNext();) {
+      DatanodeDescriptor node = it.next();
+      if (node.isDecommissionInProgress()) {
+        decommissioningNodes.add(node);
+      }
+    }
+    return decommissioningNodes;
   }
 }
