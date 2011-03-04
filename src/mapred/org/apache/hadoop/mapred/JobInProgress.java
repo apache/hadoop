@@ -722,7 +722,10 @@ public class JobInProgress {
           (conf.getFloat("mapred.reduce.slowstart.completed.maps", 
                          DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART) * 
            numMapTasks));
-
+    
+    // ... use the same for estimating the total output of all maps
+    resourceEstimator.setThreshhold(completedMapsForReduceSlowstart);
+    
     // create cleanup two cleanup tips, one map and one reduce.
     cleanup = new TaskInProgress[2];
 
