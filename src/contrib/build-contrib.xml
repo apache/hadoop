@@ -80,6 +80,7 @@
   <!-- the normal classpath -->
   <path id="contrib-classpath">
     <pathelement location="${build.classes}"/>
+    <pathelement location="${hadoop.root}/build/tools"/>
     <fileset refid="lib.jars"/>
     <pathelement location="${hadoop.root}/build/classes"/>
     <fileset dir="${hadoop.root}/lib">

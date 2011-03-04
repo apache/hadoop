@@ -109,6 +109,7 @@
   <property name="test.junit.printsummary" value="yes" />
   <property name="test.junit.haltonfailure" value="no" />
   <property name="test.junit.maxmemory" value="512m" />
+  <property name="test.tools.input.dir" value="${basedir}/src/test/tools/data"/>
 
   <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
@@ -508,7 +509,7 @@
   	description="Compile core only">
   </target>
 
-  <target name="compile-contrib" depends="compile-core,compile-c++-libhdfs">
+  <target name="compile-contrib" depends="compile-core,tools-jar,compile-c++-libhdfs">
      <subant target="compile">
         <property name="version" value="${version}"/>
         <fileset file="${contrib.dir}/build.xml"/>
@@ -734,6 +735,7 @@
       dir="${basedir}" timeout="${test.timeout}"
       errorProperty="tests.failed" failureProperty="tests.failed">
       <sysproperty key="test.build.data" value="${test.build.data}"/>
+      <sysproperty key="test.tools.input.dir" value="${test.tools.input.dir}"/>
       <sysproperty key="test.cache.data" value="${test.cache.data}"/>    	
       <sysproperty key="test.debug.data" value="${test.debug.data}"/>
       <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>

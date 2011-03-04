@@ -63,7 +63,7 @@ abstract public class Task implements Writable, Configurable {
     LogFactory.getLog(Task.class);
 
   // Counters used by Task subclasses
-  protected static enum Counter { 
+  public static enum Counter { 
     MAP_INPUT_RECORDS, 
     MAP_OUTPUT_RECORDS,
     MAP_SKIPPED_RECORDS,

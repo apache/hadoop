@@ -50,6 +50,7 @@
       <fileset dir="." includes="streaming/build.xml"/>
       <fileset dir="." includes="fairscheduler/build.xml"/>
       <fileset dir="." includes="capacity-scheduler/build.xml"/>
+      <fileset dir="." includes="gridmix/build.xml"/>
     </subant>
   </target>
   
