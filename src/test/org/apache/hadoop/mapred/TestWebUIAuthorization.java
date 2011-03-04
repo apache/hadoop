@@ -53,8 +53,12 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
   private static final Log LOG = LogFactory.getLog(
       TestWebUIAuthorization.class);
 
-  // user1 submits the jobs
+  // users who submit the jobs
   private static final String jobSubmitter = "user1";
+  private static final String jobSubmitter1 = "user11";
+  private static final String jobSubmitter2 = "user12";
+  private static final String jobSubmitter3 = "user13";
+
   // mrOwner starts the cluster
   private static String mrOwner = null;
   // member of supergroup
@@ -265,6 +269,8 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     props.setProperty(JobConf.MR_ACLS_ENABLED, String.valueOf(true));
     props.setProperty(QueueManager.toFullPropertyName(
         "default", QueueOperation.ADMINISTER_JOBS.getAclName()), qAdmin);
+    props.setProperty(QueueManager.toFullPropertyName(
+        "default", QueueOperation.SUBMIT_JOB.getAclName()), jobSubmitter);
 
     props.setProperty("dfs.permissions", "false");
 
@@ -546,7 +552,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     // jobTrackerJSP killJob url
     String url = jobTrackerJSP + "&killJobs=true";
     // view-job-acl doesn't matter for killJob from jobtracker jsp page
-    conf.set(JobContext.JOB_ACL_VIEW_JOB, "");
+    conf.set(JobContext.JOB_ACL_VIEW_JOB, " ");
     
     // Let us start 4 jobs as 4 different users(none of these 4 users is
     // mrOwner and none of these users is a member of superGroup and none of
@@ -556,28 +562,28 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
     // start 1st job.
     // Out of these 4 users, only jobSubmitter can do killJob on 1st job
-    conf.set(JobContext.JOB_ACL_MODIFY_JOB, "");
+    conf.set(JobContext.JOB_ACL_MODIFY_JOB, " ");
     RunningJob job1 = startSleepJobAsUser(jobSubmitter, conf, cluster);
     org.apache.hadoop.mapreduce.JobID jobid = job1.getID();
     url = url.concat("&jobCheckBox=" + jobid.toString());
 
     // start 2nd job.
-    // Out of these 4 users, only viewColleague can do killJob on 2nd job
-    RunningJob job2 = startSleepJobAsUser(viewColleague, conf, cluster);
+    // Out of these 4 users, only jobSubmitter1 can do killJob on 2nd job
+    RunningJob job2 = startSleepJobAsUser(jobSubmitter1, conf, cluster);
     jobid = job2.getID();
     url = url.concat("&jobCheckBox=" + jobid.toString());
 
     // start 3rd job.
-    // Out of these 4 users, only modifyColleague can do killJob on 3rd job
-    RunningJob job3 = startSleepJobAsUser(modifyColleague, conf, cluster);
+    // Out of these 4 users, only jobSubmitter2 can do killJob on 3rd job
+    RunningJob job3 = startSleepJobAsUser(jobSubmitter2, conf, cluster);
     jobid = job3.getID();
     url = url.concat("&jobCheckBox=" + jobid.toString());
 
     // start 4rd job.
-    // Out of these 4 users, viewColleague and viewAndModifyColleague
+    // Out of these 4 users, jobSubmitter1 and jobSubmitter3
     // can do killJob on 4th job
-    conf.set(JobContext.JOB_ACL_MODIFY_JOB, viewColleague);
-    RunningJob job4 = startSleepJobAsUser(viewAndModifyColleague,
+    conf.set(JobContext.JOB_ACL_MODIFY_JOB, jobSubmitter1);
+    RunningJob job4 = startSleepJobAsUser(jobSubmitter3,
                                           conf, cluster);
     jobid = job4.getID();
     url = url.concat("&jobCheckBox=" + jobid.toString());
@@ -587,7 +593,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
       // 2nd and 4th jobs. Check if 1st and 3rd jobs are not killed and
       // 2nd and 4th jobs get killed
       assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
-          getHttpStatusCode(url, viewColleague, "POST"));
+          getHttpStatusCode(url, jobSubmitter1, "POST"));
       
       waitForKillJobToFinish(job2);
       assertTrue("killJob failed for a job for which user has "
@@ -625,6 +631,10 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     props.setProperty(JobConf.MR_ACLS_ENABLED, String.valueOf(true));
     props.setProperty(QueueManager.toFullPropertyName(
         "default", QueueOperation.ADMINISTER_JOBS.getAclName()), qAdmin);
+    props.setProperty(QueueManager.toFullPropertyName(
+        "default", QueueOperation.SUBMIT_JOB.getAclName()),
+        jobSubmitter + "," + jobSubmitter1 + "," + jobSubmitter2 + "," +
+        jobSubmitter3);
 
     props.setProperty("dfs.permissions", "false");
     // let us have enough map slots so that there won't be waiting for slots
@@ -644,6 +654,10 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     mrOwner = UserGroupInformation.getCurrentUser().getShortUserName();
     MyGroupsProvider.mapping.put(mrOwner, Arrays.asList(
         new String[] { "group5", "group6" }));
+    
+    MyGroupsProvider.mapping.put(jobSubmitter1, Arrays.asList("group7"));
+    MyGroupsProvider.mapping.put(jobSubmitter2, Arrays.asList("group7"));
+    MyGroupsProvider.mapping.put(jobSubmitter3, Arrays.asList("group7"));
 
     startCluster(true, props);
     MiniMRCluster cluster = getMRCluster();

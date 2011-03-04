@@ -431,12 +431,12 @@ public class TestQueueManager extends TestCase {
       //rewrite the mapred-site.xml
       hadoopConfProps.put(JobConf.MR_ACLS_ENABLED, "true");
       hadoopConfProps.put(QueueManager.toFullPropertyName(
-          "default", submitAcl),
+          "q1", submitAcl),
           ugi.getShortUserName());
       UtilsForTests.setUpConfigFile(hadoopConfProps, hadoopConfigFile);
       queueManager.refreshAcls(conf);
-      assertTrue("User Job Submission failed after refresh and no queue acls file.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
+      assertTrue("User Job Submission allowed after refresh and no queue acls file.",
+          queueManager.hasAccess("q1", QueueManager.QueueOperation.
               SUBMIT_JOB, ugi));
     } finally{
       if(queueConfigFile.exists()) {
