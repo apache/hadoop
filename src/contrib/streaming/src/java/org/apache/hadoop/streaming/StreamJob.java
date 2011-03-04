@@ -453,7 +453,8 @@ public class StreamJob implements Tool {
     System.out.println("  -input    <path>     DFS input file(s) for the Map step");
     System.out.println("  -output   <path>     DFS output directory for the Reduce step");
     System.out.println("  -mapper   <cmd|JavaClassName>      The streaming command to run");
-    System.out.println("  -combiner <JavaClassName> Combiner has to be a Java class");
+    System.out.println("  -combiner <cmd|JavaClassName>" + 
+                       " The streaming command to run");
     System.out.println("  -reducer  <cmd|JavaClassName>      The streaming command to run");
     System.out.println("  -file     <file>     File/dir to be shipped in the Job jar file");
     System.out.println("  -inputformat TextInputFormat(default)|SequenceFileAsTextInputFormat|JavaClassName Optional.");
@@ -710,7 +711,9 @@ public class StreamJob implements Tool {
       if (c != null) {
         jobConf_.setCombinerClass(c);
       } else {
-        fail("-combiner : class not found : " + comCmd_);
+        jobConf_.setCombinerClass(PipeCombiner.class);
+        jobConf_.set("stream.combine.streamprocessor", URLEncoder.encode(
+                comCmd_, "UTF-8"));
       }
     }
 

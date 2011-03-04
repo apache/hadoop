@@ -39,7 +39,7 @@ public class TestStreaming extends TestCase
   protected String reduce = StreamUtil.makeJavaCommand(UniqApp.class, new String[]{"R"});
   protected String outputExpect = "Rare\t\nRblue\t\nRbunnies\t\nRpink\t\nRred\t\nRroses\t\nRviolets\t\n";
 
-  private StreamJob job;
+  protected StreamJob job;
 
   public TestStreaming() throws IOException
   {

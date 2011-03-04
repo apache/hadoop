@@ -124,7 +124,7 @@ Just as with a normal Map/Reduce job, you can specify other plugins for a stream
    -inputformat JavaClassName
    -outputformat JavaClassName
    -partitioner JavaClassName
-   -combiner JavaClassName
+   -combiner streamingCommand or JavaClassName
 </source>
 <p>
 The class you supply for the input format should return key/value pairs of Text class. If you do not specify an input format class, the TextInputFormat is used as the default. Since the TextInputFormat returns keys of LongWritable class, which are actually not part of the input data, the keys will be discarded; only the values will be piped to the streaming mapper.
