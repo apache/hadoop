@@ -28,7 +28,7 @@
  
   <property name="Name" value="Yahoo! Distribution of Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="0.20.201.0-SNAPSHOT"/>
+  <property name="version" value="0.20.202.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="year" value="2009"/>
