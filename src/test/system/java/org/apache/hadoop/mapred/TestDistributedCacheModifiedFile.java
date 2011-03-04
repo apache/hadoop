@@ -288,9 +288,6 @@ public class TestDistributedCacheModifiedFile {
           if (distributedFileCount != 2 && taskTrackerFound) {
             Assert.fail("The distributed cache file has to be two. " +
             		"But found was " + distributedFileCount);
-          } else if (distributedFileCount > 1 && !taskTrackerFound) {
-            Assert.fail("The distributed cache file cannot more than one." +
-            		" But found was " + distributedFileCount);
           } else if (distributedFileCount < 1)
             Assert.fail("The distributed cache file is less than one. " +
             		"But found was " + distributedFileCount);
