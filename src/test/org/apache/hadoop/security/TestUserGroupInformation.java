@@ -156,17 +156,10 @@ public class TestUserGroupInformation {
       UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
 
     assertEquals(uugi, uugi);
-    // The subjects should be different, so this should fail
-    UserGroupInformation ugi2 = 
-      UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES);
-    assertFalse(uugi.equals(ugi2));
-    assertFalse(uugi.hashCode() == ugi2.hashCode());
-
-    // two ugi that have the same subject need to be equal
-    UserGroupInformation ugi3 = new UserGroupInformation(uugi.getSubject());
-    assertEquals(uugi, ugi3);
-    assertEquals(uugi.hashCode(), ugi3.hashCode());
-    
+    // The subjects should be equal, so this should work
+    assertTrue(uugi.equals(
+                 UserGroupInformation.createUserForTesting
+                   (USER_NAME, GROUP_NAMES)));
     // ensure that different UGI with the same subject are equal
     assertEquals(uugi, new UserGroupInformation(uugi.getSubject()));
   }
@@ -179,8 +172,8 @@ public class TestUserGroupInformation {
         "RealUser", GROUP_NAMES);
     UserGroupInformation proxyUgi1 = UserGroupInformation.createProxyUser(
         USER_NAME, realUgi1);
-    UserGroupInformation proxyUgi2 =
-      new UserGroupInformation( proxyUgi1.getSubject());
+    UserGroupInformation proxyUgi2 = UserGroupInformation.createProxyUser(
+        USER_NAME, realUgi2);
     UserGroupInformation remoteUgi = UserGroupInformation.createRemoteUser(USER_NAME);
     assertEquals(proxyUgi1, proxyUgi2);
     assertFalse(remoteUgi.equals(proxyUgi1));
@@ -291,16 +284,16 @@ public class TestUserGroupInformation {
         return null;
       }
     });
-    UserGroupInformation proxyUgi2 = 
-      new UserGroupInformation(proxyUgi.getSubject());
+    UserGroupInformation proxyUgi2 = UserGroupInformation.createProxyUser(
+        "proxy", ugi);
     proxyUgi2.setAuthenticationMethod(AuthenticationMethod.PROXY);
     Assert.assertEquals(proxyUgi, proxyUgi2);
     // Equality should work if authMethod is null
     UserGroupInformation realugi = UserGroupInformation.getCurrentUser();
     UserGroupInformation proxyUgi3 = UserGroupInformation.createProxyUser(
         "proxyAnother", realugi);
-    UserGroupInformation proxyUgi4 = 
-      new UserGroupInformation(proxyUgi3.getSubject());
+    UserGroupInformation proxyUgi4 = UserGroupInformation.createProxyUser(
+        "proxyAnother", realugi);
     Assert.assertEquals(proxyUgi3, proxyUgi4);
   }
 }
