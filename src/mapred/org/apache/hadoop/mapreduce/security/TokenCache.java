@@ -39,6 +39,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * This class provides user facing APIs for transferring secrets from
@@ -97,6 +98,14 @@ public class TokenCache {
    * @throws IOException
    */
   public static void obtainTokensForNamenodes(Path [] ps, Configuration conf) 
+  throws IOException {
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      return;
+    }
+    obtainTokensForNamenodesInternal(ps, conf);
+  }
+
+  static void obtainTokensForNamenodesInternal(Path [] ps, Configuration conf)
   throws IOException {
     // get jobtracker principal id (for the renewer)
     Text jtCreds = new Text(conf.get(JobContext.JOB_JOBTRACKER_ID, ""));

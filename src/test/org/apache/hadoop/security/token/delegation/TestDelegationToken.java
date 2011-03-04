@@ -25,7 +25,10 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import junit.framework.Assert;
 
@@ -36,8 +39,11 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager.DelegationTokenInformation;
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 
@@ -90,6 +96,18 @@ public class TestDelegationToken {
     @Override
     protected byte[] createPassword(TestDelegationTokenIdentifier t) {
       return super.createPassword(t);
+    }
+    
+    public byte[] createPassword(TestDelegationTokenIdentifier t, DelegationKey key) {
+      return SecretManager.createPassword(t.getBytes(), key.getKey());
+    }
+    
+    public Map<TestDelegationTokenIdentifier, DelegationTokenInformation> getAllTokens() {
+      return currentTokens;
+    }
+    
+    public DelegationKey getKey(TestDelegationTokenIdentifier id) {
+      return allKeys.get(id.getMasterKeyId());
     }
   }
   
@@ -295,6 +313,54 @@ public class TestDelegationToken {
       Token<TestDelegationTokenIdentifier> t = 
         ds.selectToken(new Text("MY-SERVICE1"), tokens);
       Assert.assertEquals(t, token1);
+    } finally {
+      dtSecretManager.stopThreads();
+    }
+  }
+  
+  @Test
+  public void testParallelDelegationTokenCreation() throws Exception {
+    final TestDelegationTokenSecretManager dtSecretManager = 
+        new TestDelegationTokenSecretManager(2000, 24 * 60 * 60 * 1000, 
+            7 * 24 * 60 * 60 * 1000, 2000);
+    try {
+      dtSecretManager.startThreads();
+      int numThreads = 100;
+      final int numTokensPerThread = 100;
+      class tokenIssuerThread implements Runnable {
+
+        public void run() {
+          for(int i =0;i <numTokensPerThread; i++) {
+            generateDelegationToken(dtSecretManager, "auser", "arenewer");
+            try {
+              Thread.sleep(250); 
+            } catch (Exception e) {
+            }
+          }
+        }
+      }
+      Thread[] issuers = new Thread[numThreads];
+      for (int i =0; i <numThreads; i++) {
+        issuers[i] = new Daemon(new tokenIssuerThread());
+        issuers[i].start();
+      }
+      for (int i =0; i <numThreads; i++) {
+        issuers[i].join();
+      }
+      Map<TestDelegationTokenIdentifier, DelegationTokenInformation> tokenCache = dtSecretManager
+          .getAllTokens();
+      Assert.assertEquals(numTokensPerThread*numThreads, tokenCache.size());
+      Iterator<TestDelegationTokenIdentifier> iter = tokenCache.keySet().iterator();
+      while (iter.hasNext()) {
+        TestDelegationTokenIdentifier id = iter.next();
+        DelegationTokenInformation info = tokenCache.get(id);
+        Assert.assertTrue(info != null);
+        DelegationKey key = dtSecretManager.getKey(id);
+        Assert.assertTrue(key != null);
+        byte[] storedPassword = dtSecretManager.retrievePassword(id);
+        byte[] password = dtSecretManager.createPassword(id, key);
+        Assert.assertTrue(Arrays.equals(password, storedPassword));
+      }
     } finally {
       dtSecretManager.stopThreads();
     }

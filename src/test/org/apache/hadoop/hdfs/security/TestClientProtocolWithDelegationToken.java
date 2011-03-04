@@ -42,6 +42,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
@@ -75,13 +76,14 @@ public class TestClientProtocolWithDelegationToken {
   @Test
   public void testDelegationTokenRpc() throws Exception {
     ClientProtocol mockNN = mock(ClientProtocol.class);
+    FSNamesystem mockNameSys = mock(FSNamesystem.class);
     when(mockNN.getProtocolVersion(anyString(), anyLong())).thenReturn(
         ClientProtocol.versionID);
     DelegationTokenSecretManager sm = new DelegationTokenSecretManager(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT,
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT,
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT,
-        3600000);
+        3600000, mockNameSys);
     sm.startThreads();
     final Server server = RPC.getServer(mockNN, ADDRESS,
         0, 5, true, conf, sm);

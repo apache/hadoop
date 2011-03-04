@@ -192,6 +192,10 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     myMetrics = new NameNodeMetrics(conf, this);
     this.namesystem = new FSNamesystem(this, conf);
 
+    if (UserGroupInformation.isSecurityEnabled()) {
+      namesystem.activateSecretManager();
+    }
+
     // create rpc server 
     this.server = RPC.getServer(this, socAddr.getHostName(),
         socAddr.getPort(), handlerCount, false, conf, namesystem

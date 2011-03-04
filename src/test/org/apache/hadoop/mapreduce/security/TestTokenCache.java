@@ -122,8 +122,9 @@ public class TestTokenCache {
   private static int numSlaves = 1;
   private static JobConf jConf;
   private static ObjectMapper mapper = new ObjectMapper();
+  private static Path p1;
+  private static Path p2;
   
-
   @BeforeClass
   public static void setUp() throws Exception {
     Configuration conf = new Configuration();
@@ -135,6 +136,17 @@ public class TestTokenCache {
     
     createTokenFileJson();
     verifySecretKeysInJSONFile();
+    dfsCluster.getNameNode().getNamesystem()
+				.getDelegationTokenSecretManager().startThreads();
+    FileSystem fs = dfsCluster.getFileSystem();
+    
+    p1 = new Path("file1");
+    p2 = new Path("file2");
+    
+    p1 = fs.makeQualified(p1);
+    // do not qualify p2
+    TokenCache.setTokenStorage(new TokenStorage());
+    TokenCache.obtainTokensForNamenodesInternal(new Path [] {p1, p2}, jConf);
   }
 
   @AfterClass
@@ -248,15 +260,6 @@ public class TestTokenCache {
   @Test
   public void testGetTokensForNamenodes() throws IOException {
     FileSystem fs = dfsCluster.getFileSystem();
-
-    Path p1 = new Path("file1");
-    Path p2 = new Path("file2");
-
-    p1 = fs.makeQualified(p1);
-    // do not qualify p2
-
-    TokenCache.setTokenStorage(new TokenStorage());
-    TokenCache.obtainTokensForNamenodes(new Path [] {p1, p2}, jConf);
 
     // this token is keyed by hostname:port key.
     String fs_addr = TokenCache.buildDTServiceName(p1.toUri()); 

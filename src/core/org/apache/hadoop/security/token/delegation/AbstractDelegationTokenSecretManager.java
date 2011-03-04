@@ -51,23 +51,30 @@ extends AbstractDelegationTokenIdentifier>
 
   /** 
    * Cache of currently valid tokens, mapping from DelegationTokenIdentifier 
-   * to DelegationTokenInformation. Protected by its own lock.
+   * to DelegationTokenInformation. Protected by this object lock.
    */
-  private final Map<TokenIdent, DelegationTokenInformation> currentTokens 
+  protected final Map<TokenIdent, DelegationTokenInformation> currentTokens 
       = new HashMap<TokenIdent, DelegationTokenInformation>();
   
   /**
-   * Sequence number to create DelegationTokenIdentifier
+   * Sequence number to create DelegationTokenIdentifier.
+   * Protected by this object lock.
    */
-  private int delegationTokenSequenceNumber = 0;
+  protected int delegationTokenSequenceNumber = 0;
   
-  private final Map<Integer, DelegationKey> allKeys 
+  /**
+   * Access to allKeys is protected by this object lock
+   */
+  protected final Map<Integer, DelegationKey> allKeys 
       = new HashMap<Integer, DelegationKey>();
   
   /**
-   * Access to currentId and currentKey is protected by this object lock.
+   * Access to currentId is protected by this object lock.
    */
-  private int currentId = 0;
+  protected int currentId = 0;
+  /**
+   * Access to currentKey is protected by this object lock
+   */
   private DelegationKey currentKey;
   
   private long keyUpdateInterval;
@@ -75,7 +82,7 @@ extends AbstractDelegationTokenIdentifier>
   private long tokenRemoverScanInterval;
   private long tokenRenewInterval;
   private Thread tokenRemoverThread;
-  private volatile boolean running;
+  protected volatile boolean running;
 
   public AbstractDelegationTokenSecretManager(long delegationKeyUpdateInterval,
       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
@@ -111,27 +118,50 @@ extends AbstractDelegationTokenIdentifier>
     return allKeys.values().toArray(new DelegationKey[0]);
   }
   
-  /** Update the current master key */
-  private synchronized void updateCurrentKey() throws IOException {
-    LOG.info("Updating the current master key for generating delegation tokens");
-    /* Create a new currentKey with an estimated expiry date. */
-    currentId++;
-    currentKey = new DelegationKey(currentId, System.currentTimeMillis()
-        + keyUpdateInterval + tokenMaxLifetime, generateSecret());
-    allKeys.put(currentKey.getKeyId(), currentKey);
+  protected void logUpdateMasterKey(DelegationKey key) throws IOException {
+    return;
   }
   
-  /** Update the current master key for generating delegation tokens */
-  public synchronized void rollMasterKey() throws IOException {
-    removeExpiredKeys();
-    /* set final expiry date for retiring currentKey */
-    currentKey.setExpiryDate(System.currentTimeMillis() + tokenMaxLifetime);
-    /*
-     * currentKey might have been removed by removeExpiredKeys(), if
-     * updateMasterKey() isn't called at expected interval. Add it back to
-     * allKeys just in case.
-     */
-    allKeys.put(currentKey.getKeyId(), currentKey);
+  /** 
+   * Update the current master key 
+   * This is called once by startThreads before tokenRemoverThread is created, 
+   * and only by tokenRemoverThread afterwards.
+   */
+  private void updateCurrentKey() throws IOException {
+    LOG.info("Updating the current master key for generating delegation tokens");
+    /* Create a new currentKey with an estimated expiry date. */
+    int newCurrentId;
+    synchronized (this) {
+      newCurrentId = currentId+1;
+    }
+    DelegationKey newKey = new DelegationKey(newCurrentId, System
+        .currentTimeMillis()
+        + keyUpdateInterval + tokenMaxLifetime, generateSecret());
+    //Log must be invoked outside the lock on 'this'
+    logUpdateMasterKey(newKey);
+    synchronized (this) {
+      currentId = newKey.getKeyId();
+      currentKey = newKey;
+      allKeys.put(currentKey.getKeyId(), currentKey);
+    }
+  }
+  
+  /** 
+   * Update the current master key for generating delegation tokens 
+   * It should be called only by tokenRemoverThread.
+   */
+  void rollMasterKey() throws IOException {
+    synchronized (this) {
+      removeExpiredKeys();
+      /* set final expiry date for retiring currentKey */
+      currentKey.setExpiryDate(System.currentTimeMillis() + tokenMaxLifetime);
+      /*
+       * currentKey might have been removed by removeExpiredKeys(), if
+       * updateMasterKey() isn't called at expected interval. Add it back to
+       * allKeys just in case.
+       */
+      allKeys.put(currentKey.getKeyId(), currentKey);
+    }
     updateCurrentKey();
   }
 
@@ -147,35 +177,24 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   @Override
-  protected byte[] createPassword(TokenIdent identifier) {
+  protected synchronized byte[] createPassword(TokenIdent identifier) {
     int sequenceNum;
-    int id;
-    DelegationKey key;
-    long now = System.currentTimeMillis();    
-    synchronized (this) {
-      id = currentId;
-      key = currentKey;
-      sequenceNum = ++delegationTokenSequenceNumber;
-    }
+    long now = System.currentTimeMillis();
+    sequenceNum = ++delegationTokenSequenceNumber;
     identifier.setIssueDate(now);
     identifier.setMaxDate(now + tokenMaxLifetime);
-    identifier.setMasterKeyId(id);
+    identifier.setMasterKeyId(currentId);
     identifier.setSequenceNumber(sequenceNum);
-    byte[] password = createPassword(identifier.getBytes(), key.getKey());
-    synchronized (currentTokens) {
-      currentTokens.put(identifier, new DelegationTokenInformation(now
-          + tokenRenewInterval, password));
-    }
+    byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
+    currentTokens.put(identifier, new DelegationTokenInformation(now
+        + tokenRenewInterval, password));
     return password;
   }
 
   @Override
-  public byte[] retrievePassword(TokenIdent identifier
-                                 ) throws InvalidToken {
-    DelegationTokenInformation info = null;
-    synchronized (currentTokens) {
-      info = currentTokens.get(identifier);
-    }
+  public synchronized byte[] retrievePassword(TokenIdent identifier)
+      throws InvalidToken {
+    DelegationTokenInformation info = currentTokens.get(identifier);
     if (info == null) {
       throw new InvalidToken("token is expired or doesn't exist");
     }
@@ -194,18 +213,14 @@ extends AbstractDelegationTokenIdentifier>
    * @throws InvalidToken if the token is invalid
    * @throws AccessControlException if the user can't renew token
    */
-  public long renewToken(Token<TokenIdent> token,
+  public synchronized long renewToken(Token<TokenIdent> token,
                          String renewer) throws InvalidToken, IOException {
     long now = System.currentTimeMillis();
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
     TokenIdent id = createIdentifier();
     id.readFields(in);
-    synchronized (currentTokens) {
-      if (currentTokens.get(id) == null) {
-        throw new InvalidToken("Renewal request for unknown token");
-      }
-    }
+
     if (id.getMaxDate() < now) {
       throw new InvalidToken("User " + renewer + 
                              " tried to renew an expired token");
@@ -221,36 +236,36 @@ extends AbstractDelegationTokenIdentifier>
                                        "renewer specified as " + 
                                        id.getRenewer());
     }
-    DelegationKey key = null;
-    synchronized (this) {
-      key = allKeys.get(id.getMasterKeyId());
-    }
+    DelegationKey key = allKeys.get(id.getMasterKeyId());
     if (key == null) {
-      throw new InvalidToken("Unable to find master key for keyId=" + 
-                             id.getMasterKeyId() +
-                             " from cache. Failed to renew an unexpired token"+
-                             " with sequenceNumber=" + id.getSequenceNumber());
+      throw new InvalidToken("Unable to find master key for keyId="
+          + id.getMasterKeyId()
+          + " from cache. Failed to renew an unexpired token"
+          + " with sequenceNumber=" + id.getSequenceNumber());
     }
     byte[] password = createPassword(token.getIdentifier(), key.getKey());
     if (!Arrays.equals(password, token.getPassword())) {
-      throw new AccessControlException("Client " + renewer + 
-                                       " is trying to renew a token with " +
-                                       "wrong password");
+      throw new AccessControlException("Client " + renewer
+          + " is trying to renew a token with " + "wrong password");
     }
-    DelegationTokenInformation info = new DelegationTokenInformation(
-        Math.min(id.getMaxDate(), now + tokenRenewInterval), password);
-    synchronized (currentTokens) {
-      currentTokens.put(id, info);
+    long renewTime = Math.min(id.getMaxDate(), now + tokenRenewInterval);
+    DelegationTokenInformation info = new DelegationTokenInformation(renewTime,
+        password);
+
+    if (currentTokens.get(id) == null) {
+      throw new InvalidToken("Renewal request for unknown token");
     }
-    return info.getRenewDate();
+    currentTokens.put(id, info);
+    return renewTime;
   }
   
   /**
    * Cancel a token by removing it from cache.
+   * @return Identifier of the canceled token
    * @throws InvalidToken for invalid token
    * @throws AccessControlException if the user isn't allowed to cancel
    */
-  public void cancelToken(Token<TokenIdent> token,
+  public synchronized TokenIdent cancelToken(Token<TokenIdent> token,
       String canceller) throws IOException {
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
     DataInputStream in = new DataInputStream(buf);
@@ -261,18 +276,17 @@ extends AbstractDelegationTokenIdentifier>
     }
     String owner = id.getUser().getUserName();
     Text renewer = id.getRenewer();
-    if (!canceller.equals(owner) && 
-        (renewer == null || !canceller.equals(renewer.toString()))) {
-      throw new AccessControlException(canceller + 
-                                      " is not authorized to cancel the token");
+    if (!canceller.equals(owner)
+        && (renewer == null || !canceller.equals(renewer.toString()))) {
+      throw new AccessControlException(canceller
+          + " is not authorized to cancel the token");
     }
     DelegationTokenInformation info = null;
-    synchronized (currentTokens) {
-      info = currentTokens.remove(id);
-    }
+    info = currentTokens.remove(id);
     if (info == null) {
       throw new InvalidToken("Token not found");
     }
+    return id;
   }
   
   /**
@@ -284,16 +298,16 @@ extends AbstractDelegationTokenIdentifier>
     return SecretManager.createSecretKey(key);
   }
 
-  /** Utility class to encapsulate a token's renew date and password. */
-  private static class DelegationTokenInformation {
+  /** Class to encapsulate a token's renew date and password. */
+  public static class DelegationTokenInformation {
     long renewDate;
     byte[] password;
-    DelegationTokenInformation(long renewDate, byte[] password) {
+    public DelegationTokenInformation(long renewDate, byte[] password) {
       this.renewDate = renewDate;
       this.password = password;
     }
     /** returns renew date */
-    long getRenewDate() {
+    public long getRenewDate() {
       return renewDate;
     }
     /** returns password */
@@ -303,15 +317,13 @@ extends AbstractDelegationTokenIdentifier>
   }
   
   /** Remove expired delegation tokens from cache */
-  private void removeExpiredToken() {
+  private synchronized void removeExpiredToken() {
     long now = System.currentTimeMillis();
-    synchronized (currentTokens) {
-      Iterator<DelegationTokenInformation> i = currentTokens.values().iterator();
-      while (i.hasNext()) {
-        long renewDate = i.next().getRenewDate();
-        if (now > renewDate) {
-          i.remove();
-        }
+    Iterator<DelegationTokenInformation> i = currentTokens.values().iterator();
+    while (i.hasNext()) {
+      long renewDate = i.next().getRenewDate();
+      if (now > renewDate) {
+        i.remove();
       }
     }
   }
@@ -320,7 +332,9 @@ extends AbstractDelegationTokenIdentifier>
     if (LOG.isDebugEnabled())
       LOG.debug("Stopping expired delegation token remover thread");
     running = false;
-    tokenRemoverThread.interrupt();
+    if (tokenRemoverThread != null) {
+      tokenRemoverThread.interrupt();
+    }
   }
   
   private class ExpiredTokenRemover extends Thread {

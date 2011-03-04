@@ -22,8 +22,6 @@ package org.apache.hadoop.hdfs.security;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
-import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 
 import junit.framework.Assert;
 
@@ -34,7 +32,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -56,6 +53,8 @@ public class TestDelegationToken {
     FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
     cluster = new MiniDFSCluster(0, config, 1, true, true, true,  null, null, null, null);
     cluster.waitActive();
+    cluster.getNameNode().getNamesystem().getDelegationTokenSecretManager()
+				.startThreads();
   }
 
   @After

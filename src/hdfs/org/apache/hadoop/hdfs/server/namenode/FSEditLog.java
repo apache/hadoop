@@ -36,6 +36,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.security.token.delegation.DelegationKey;
 
 /**
  * FSEditLog maintains a log of the namespace modifications.
@@ -68,6 +70,11 @@ public class FSEditLog {
   private static final byte OP_CLEAR_NS_QUOTA = 12; // clear namespace quota
   private static final byte OP_TIMES = 13; // sets mod & access time on a file
   private static final byte OP_SET_QUOTA = 14; // sets name and disk quotas.
+  private static final byte OP_GET_DELEGATION_TOKEN = 15; //new delegation token
+  private static final byte OP_RENEW_DELEGATION_TOKEN = 16; //renew delegation token
+  private static final byte OP_CANCEL_DELEGATION_TOKEN = 17; //cancel delegation token
+  private static final byte OP_UPDATE_MASTER_KEY = 18; //update master key
+
   private static int sizeFlushBuffer = 512*1024;
 
   private ArrayList<EditLogOutputStream> editStreams = null;
@@ -488,7 +495,13 @@ public class FSEditLog {
     int numOpAdd = 0, numOpClose = 0, numOpDelete = 0,
         numOpRename = 0, numOpSetRepl = 0, numOpMkDir = 0,
         numOpSetPerm = 0, numOpSetOwner = 0, numOpSetGenStamp = 0,
-        numOpTimes = 0, numOpOther = 0;
+        numOpTimes = 0, numOpGetDelegationToken = 0,
+        numOpRenewDelegationToken = 0, numOpCancelDelegationToken = 0,
+        numOpUpdateMasterKey = 0, numOpOther = 0;
+
+    DelegationTokenIdentifier delegationTokenId = new DelegationTokenIdentifier();
+    DelegationKey delegationKey = new DelegationKey();
+
     long startTime = FSNamesystem.now();
 
     DataInputStream in = new DataInputStream(new BufferedInputStream(edits));
@@ -776,6 +789,52 @@ public class FSEditLog {
           fsDir.unprotectedSetTimes(path, mtime, atime, true);
           break;
         }
+        case OP_GET_DELEGATION_TOKEN: {
+          if (logVersion > -19) {
+            throw new IOException("Unexpected opcode " + opcode
+                + " for version " + logVersion);
+          }
+          numOpGetDelegationToken++;
+          delegationTokenId.readFields(in);
+          long expiryTime = readLong(in);
+          fsNamesys.getDelegationTokenSecretManager()
+              .addPersistedDelegationToken(delegationTokenId, expiryTime);
+          break;
+        }
+        case OP_RENEW_DELEGATION_TOKEN: {
+          if (logVersion > -19) {
+            throw new IOException("Unexpected opcode " + opcode
+                + " for version " + logVersion);
+          }
+          numOpRenewDelegationToken++;
+          delegationTokenId.readFields(in);
+          long expiryTime = readLong(in);
+          fsNamesys.getDelegationTokenSecretManager()
+              .updatePersistedTokenRenewal(delegationTokenId, expiryTime);
+          break;
+        }
+        case OP_CANCEL_DELEGATION_TOKEN: {
+          if (logVersion > -19) {
+            throw new IOException("Unexpected opcode " + opcode
+                + " for version " + logVersion);
+          }
+          numOpCancelDelegationToken++;
+          delegationTokenId.readFields(in);
+          fsNamesys.getDelegationTokenSecretManager()
+              .updatePersistedTokenCancellation(delegationTokenId);
+          break;
+        }
+        case OP_UPDATE_MASTER_KEY: {
+          if (logVersion > -19) {
+            throw new IOException("Unexpected opcode " + opcode
+                + " for version " + logVersion);
+          }
+          numOpUpdateMasterKey++;
+          delegationKey.readFields(in);
+          fsNamesys.getDelegationTokenSecretManager().updatePersistedMasterKey(
+              delegationKey);
+          break;
+        }
         default: {
           throw new IOException("Never seen opcode " + opcode);
         }
@@ -796,6 +855,10 @@ public class FSEditLog {
           + " numOpSetOwner = " + numOpSetOwner
           + " numOpSetGenStamp = " + numOpSetGenStamp 
           + " numOpTimes = " + numOpTimes
+          + " numOpGetDelegationToken = " + numOpGetDelegationToken
+          + " numOpRenewDelegationToken = " + numOpRenewDelegationToken
+          + " numOpCancelDelegationToken = " + numOpCancelDelegationToken
+          + " numOpUpdateMasterKey = " + numOpUpdateMasterKey
           + " numOpOther = " + numOpOther);
     }
 
@@ -1090,7 +1153,31 @@ public class FSEditLog {
       FSEditLog.toLogLong(atime)};
     logEdit(OP_TIMES, new ArrayWritable(UTF8.class, info));
   }
-  
+
+  /**
+   * log delegation token to edit log
+   * @param id DelegationTokenIdentifier
+   * @param expiryTime of the token
+   * @return
+   */
+  void logGetDelegationToken(DelegationTokenIdentifier id,
+      long expiryTime) {
+    logEdit(OP_GET_DELEGATION_TOKEN, id, FSEditLog.toLogLong(expiryTime));
+  }
+
+  void logRenewDelegationToken(DelegationTokenIdentifier id,
+      long expiryTime) {
+    logEdit(OP_RENEW_DELEGATION_TOKEN, id, FSEditLog.toLogLong(expiryTime));
+  }
+
+  void logCancelDelegationToken(DelegationTokenIdentifier id) {
+    logEdit(OP_CANCEL_DELEGATION_TOKEN, id);
+  }
+
+  void logUpdateMasterKey(DelegationKey key) {
+    logEdit(OP_UPDATE_MASTER_KEY, key);
+  }
+
   static private UTF8 toLogReplication(short replication) {
     return new UTF8(Short.toString(replication));
   }
