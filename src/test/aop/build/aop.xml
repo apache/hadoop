@@ -60,7 +60,7 @@
       source="${javac.version}"
       deprecation="${javac.deprecation}"
       fork="true"
-      maxmem="256m"
+      maxmem="1024m"
       >
 
       <classpath>
