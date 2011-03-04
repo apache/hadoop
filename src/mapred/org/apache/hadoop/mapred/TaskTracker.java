@@ -558,7 +558,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       for(FileStatus status: localFs.listStatus(new Path(root, SUBDIR))) {
         String owner = status.getOwner();
         String path = status.getPath().getName();
-        if (path.endsWith("/" + owner)) {
+        if (path.equals(owner)) {
           taskController.deleteAsUser(owner, "");
         }
       }
