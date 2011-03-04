@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.nio.channels.FileChannel;
@@ -770,6 +772,18 @@ public class MiniDFSCluster {
    */
   public FileSystem getFileSystem() throws IOException {
     return FileSystem.get(conf);
+  }
+
+  /**
+   * @return a {@link HftpFileSystem} object.
+   */
+  public HftpFileSystem getHftpFileSystem() throws IOException {
+    final String str = "hftp://" + conf.get("dfs.http.address");
+    try {
+      return (HftpFileSystem)FileSystem.get(new URI(str), conf); 
+    } catch (URISyntaxException e) {
+      throw new IOException(e);
+    }
   }
 
   /**

@@ -18,21 +18,29 @@
 package org.apache.hadoop.hdfs;
 
 import junit.framework.TestCase;
-import java.io.*;
+import java.io.IOException;
 import java.util.Random;
 
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.log4j.Level;
 
 /**
  * This class tests the FileStatus API.
  */
 public class TestFileStatus extends TestCase {
+  {
+    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.ALL);
+  }
+
   static final long seed = 0xDEADBEEFL;
   static final int blockSize = 8192;
   static final int fileSize = 16384;
@@ -68,6 +76,7 @@ public class TestFileStatus extends TestCase {
     Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fs = cluster.getFileSystem();
+    final HftpFileSystem hftpfs = cluster.getHftpFileSystem();
     final DFSClient dfsClient = new DFSClient(NameNode.getAddress(conf), conf);
     try {
 
@@ -101,7 +110,7 @@ public class TestFileStatus extends TestCase {
       assertTrue(status.getBlockSize() == blockSize);
       assertTrue(status.getReplication() == 1);
       assertTrue(status.getLen() == fileSize);
-      assertEquals(fs.makeQualified(file1), 
+      assertEquals(fs.makeQualified(file1).toString(), 
           status.getPath().toString());
 
       // test listStatus on a file
@@ -134,8 +143,10 @@ public class TestFileStatus extends TestCase {
       // test listStatus on an empty directory
       stats = fs.listStatus(dir);
       assertEquals(dir + " should be empty", 0, stats.length);
-      assertTrue(dir + " should be zero size ",
-                 fs.getContentSummary(dir).getLength() == 0);
+      assertEquals(dir + " should be zero size ",
+          0, fs.getContentSummary(dir).getLength());
+      assertEquals(dir + " should be zero size using hftp",
+          0, hftpfs.getContentSummary(dir).getLength());
       assertTrue(dir + " should be zero size ",
                  fs.getFileStatus(dir).getLen() == 0);
       System.out.println("Dir : \"" + dir + "\"");
@@ -165,8 +176,11 @@ public class TestFileStatus extends TestCase {
 
       // verify that the size of the directory increased by the size 
       // of the two files
-      assertTrue(dir + " size should be " + (blockSize/2), 
-                 blockSize/2 == fs.getContentSummary(dir).getLength());
+      final int expected = blockSize/2;  
+      assertEquals(dir + " size should be " + expected, 
+          expected, fs.getContentSummary(dir).getLength());
+      assertEquals(dir + " size should be " + expected + " using hftp", 
+          expected, hftpfs.getContentSummary(dir).getLength());
        
        // test listStatus on a non-empty directory
        stats = fs.listStatus(dir);

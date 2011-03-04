@@ -45,6 +45,7 @@ import org.xml.sax.helpers.XMLReaderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -345,4 +346,101 @@ public class HftpFileSystem extends FileSystem {
     throw new IOException("Not supported");
   }
 
+  /**
+   * A parser for parsing {@link ContentSummary} xml.
+   */
+  private class ContentSummaryParser extends DefaultHandler {
+    private ContentSummary contentsummary;
+
+    /** {@inheritDoc} */
+    public void startElement(String ns, String localname, String qname,
+                Attributes attrs) throws SAXException {
+      if (!ContentSummary.class.getName().equals(qname)) {
+        if (RemoteException.class.getSimpleName().equals(qname)) {
+          throw new SAXException(RemoteException.valueOf(attrs));
+        }
+        throw new SAXException("Unrecognized entry: " + qname);
+      }
+
+      contentsummary = toContentSummary(attrs);
+    }
+
+    /**
+     * Connect to the name node and get content summary.  
+     * @param path The path
+     * @return The content summary for the path.
+     * @throws IOException
+     */
+    private ContentSummary getContentSummary(String path) throws IOException {
+      final HttpURLConnection connection = openConnection(
+          "/contentSummary" + path, "ugi=" + ugi);
+      InputStream in = null;
+      try {
+        in = connection.getInputStream();        
+
+        final XMLReader xr = XMLReaderFactory.createXMLReader();
+        xr.setContentHandler(this);
+        xr.parse(new InputSource(in));
+      } catch(FileNotFoundException fnfe) {
+        //the server may not support getContentSummary
+        return null;
+      } catch(SAXException saxe) {
+        final Exception embedded = saxe.getException();
+        if (embedded != null && embedded instanceof IOException) {
+          throw (IOException)embedded;
+        }
+        throw new IOException("Invalid xml format", saxe);
+      } finally {
+        if (in != null) {
+          in.close();
+        }
+        connection.disconnect();
+      }
+      return contentsummary;
+    }
+  }
+
+  /** Return the object represented in the attributes. */
+  private static ContentSummary toContentSummary(Attributes attrs
+      ) throws SAXException {
+    final String length = attrs.getValue("length");
+    final String fileCount = attrs.getValue("fileCount");
+    final String directoryCount = attrs.getValue("directoryCount");
+    final String quota = attrs.getValue("quota");
+    final String spaceConsumed = attrs.getValue("spaceConsumed");
+    final String spaceQuota = attrs.getValue("spaceQuota");
+
+    if (length == null
+        || fileCount == null
+        || directoryCount == null
+        || quota == null
+        || spaceConsumed == null
+        || spaceQuota == null) {
+      return null;
+    }
+
+    try {
+      return new ContentSummary(
+          Long.parseLong(length),
+          Long.parseLong(fileCount),
+          Long.parseLong(directoryCount),
+          Long.parseLong(quota),
+          Long.parseLong(spaceConsumed),
+          Long.parseLong(spaceQuota));
+    } catch(Exception e) {
+      throw new SAXException("Invalid attributes: length=" + length
+          + ", fileCount=" + fileCount
+          + ", directoryCount=" + directoryCount
+          + ", quota=" + quota
+          + ", spaceConsumed=" + spaceConsumed
+          + ", spaceQuota=" + spaceQuota, e);
+    }
+  }
+
+  /** {@inheritDoc} */
+  public ContentSummary getContentSummary(Path f) throws IOException {
+    final String s = makeQualified(f).toUri().getPath();
+    final ContentSummary cs = new ContentSummaryParser().getContentSummary(s);
+    return cs != null? cs: super.getContentSummary(f);
+  }
 }

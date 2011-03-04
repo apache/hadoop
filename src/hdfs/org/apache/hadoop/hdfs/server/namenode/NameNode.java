@@ -250,6 +250,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     this.httpServer.addInternalServlet("data", "/data/*", FileDataServlet.class);
     this.httpServer.addInternalServlet("checksum", "/fileChecksum/*",
         FileChecksumServlets.RedirectServlet.class);
+    this.httpServer.addInternalServlet("contentSummary", "/contentSummary/*",
+        ContentSummaryServlet.class);
     this.httpServer.start();
 
     // The web-server port can be ephemeral... ensure we have the correct info
