@@ -206,7 +206,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   
   private Clock clock;
 
-  private Credentials tokenStorage;
   private final JobTokenSecretManager jobTokenSecretManager
     = new JobTokenSecretManager();
 
@@ -1673,7 +1672,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
            * BACKPORTED (MAPREDUCE-873)
            */
           job = new JobInProgress(JobTracker.this, conf, null, 
-                                  restartCount, tokenStorage);
+                                  restartCount, new Credentials() /*HACK*/);
 
           // 2. Check if the user has appropriate access
           // Get the user group info for the job's owner
@@ -3647,9 +3646,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // Create the JobInProgress, do not lock the JobTracker since
     // we are about to copy job.xml from HDFS
     JobInProgress job = null;
-    tokenStorage = ts;
     try {
-      job = new JobInProgress(this, this.conf, jobInfo, 0, tokenStorage);
+      job = new JobInProgress(this, this.conf, jobInfo, 0, ts);
     } catch (Exception e) {
       throw new IOException(e);
     }
