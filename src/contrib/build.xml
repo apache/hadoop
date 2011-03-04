@@ -45,13 +45,19 @@
   <!-- Test all the contribs.                               -->
   <!-- ====================================================== -->
   <target name="test">
+     <property name="hadoop.root" location="${root}/../../../"/>
+     <property name="build.contrib.dir" location="${hadoop.root}/build/contrib"/>
+     <delete file="${build.contrib.dir}/testsfailed"/>
     <subant target="test">
+      <property name="continueOnFailure" value="true"/>
       <fileset dir="." includes="hdfsproxy/build.xml"/>
       <fileset dir="." includes="streaming/build.xml"/>
       <fileset dir="." includes="fairscheduler/build.xml"/>
       <fileset dir="." includes="capacity-scheduler/build.xml"/>
       <fileset dir="." includes="gridmix/build.xml"/>
     </subant>
+     <available file="${build.contrib.dir}/testsfailed" property="testsfailed"/>
+     <fail if="testsfailed">Tests failed!</fail>
   </target>
   
   

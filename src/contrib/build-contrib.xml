@@ -41,6 +41,7 @@
   <property name="test.junit.output.format" value="plain"/>
   <property name="test.output" value="no"/>
   <property name="test.timeout" value="900000"/>
+  <property name="build.contrib.dir" location="${hadoop.root}/build/contrib"/>
   <property name="build.dir" location="${hadoop.root}/build/contrib/${name}"/>
   <property name="build.classes" location="${build.dir}/classes"/>
   <property name="build.test" location="${build.dir}/test"/>
@@ -245,7 +246,12 @@
         <fileset dir="${src.test}" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
-    <fail if="tests.failed">Tests failed!</fail>
+    <antcall target="checkfailure"/>
+  </target>
+
+  <target name="checkfailure" if="tests.failed">
+    <touch file="${build.contrib.dir}/testsfailed"/>
+    <fail unless="continueOnFailure">Contrib Tests failed!</fail>
   </target>
 
   <!-- ================================================================== -->
