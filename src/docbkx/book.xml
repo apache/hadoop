@@ -1236,8 +1236,8 @@ of all regions.
         include the <filename>conf/</filename> directory on your classpath.
       </para>
       <para>
-      Minimally, a client of HBase needs the hbase, hadoop, guava, and zookeeper jars
-      in its <varname>CLASSPATH</varname> connecting to HBase.
+      Minimally, a client of HBase needs the hbase, hadoop, log4j, commons-logging, and zookeeper jars
+      in its <varname>CLASSPATH</varname> connecting to a cluster.
       </para>
         <para>
           An example basic <filename>hbase-site.xml</filename> for client only
