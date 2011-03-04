@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,17 @@ public class LoadBalancer {
   private static final Log LOG = LogFactory.getLog(LoadBalancer.class);
   private static final Random rand = new Random();
 
+  static class RegionPlanComparator implements Comparator<RegionPlan> {
+    @Override
+    public int compare(RegionPlan l, RegionPlan r) {
+      long diff = r.getRegionInfo().getRegionId() - l.getRegionInfo().getRegionId();
+      if (diff < 0) return -1;
+      if (diff > 0) return 1;
+      return 0;
+    }
+  }
+  static RegionPlanComparator rpComparator = new RegionPlanComparator();
+
   /**
    * Generate a global load balancing plan according to the specified map of
    * server information to the most loaded regions of each server.
@@ -77,6 +89,8 @@ public class LoadBalancer {
    * <li>Iterate down the most loaded servers, shedding regions from each so
    *     each server hosts exactly <b>MAX</b> regions.  Stop once you reach a
    *     server that already has &lt;= <b>MAX</b> regions.
+   *     <p>
+   *     Order the regions to move from most recent to least.
    *
    * <li>Iterate down the least loaded servers, assigning regions so each server
    *     has exactly </b>MIN</b> regions.  Stop once you reach a server that
@@ -184,7 +198,8 @@ public class LoadBalancer {
       List<HRegionInfo> regions = server.getValue();
       int numToOffload = Math.min(regionCount - max, regions.size());
       int numTaken = 0;
-      for (HRegionInfo hri: regions) {
+      for (int i = regions.size() - 1; i >= 0; i--) {
+        HRegionInfo hri = regions.get(i);
         // Don't rebalance meta regions.
         if (hri.isMetaRegion()) continue;
         regionsToMove.add(new RegionPlan(hri, serverInfo, null));
@@ -194,6 +209,8 @@ public class LoadBalancer {
       serverBalanceInfo.put(serverInfo,
           new BalanceInfo(numToOffload, (-1)*numTaken));
     }
+    // put young regions at the beginning of regionsToMove
+    Collections.sort(regionsToMove, rpComparator);
 
     // Walk down least loaded, filling each to the min
     int serversUnderloaded = 0; // number of servers that get new regions
