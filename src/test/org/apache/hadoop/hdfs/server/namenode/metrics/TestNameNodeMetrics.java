@@ -35,11 +35,17 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
  */
 public class TestNameNodeMetrics extends TestCase {
   private static final Configuration CONF = new Configuration();
+  private static final int DFS_REPLICATION_INTERVAL = 1;
+  private static final Path TEST_ROOT_DIR_PATH = 
+    new Path(System.getProperty("test.build.data", "build/test/data"));
+  
+  // Number of datanodes in the cluster
+  private static final int DATANODE_COUNT = 3; 
   static {
     CONF.setLong("dfs.block.size", 100);
     CONF.setInt("io.bytes.per.checksum", 1);
-    CONF.setLong("dfs.heartbeat.interval", 1L);
-    CONF.setInt("dfs.replication.interval", 1);
+    CONF.setLong("dfs.heartbeat.interval", DFS_REPLICATION_INTERVAL);
+    CONF.setInt("dfs.replication.interval", DFS_REPLICATION_INTERVAL);
   }
   
   private MiniDFSCluster cluster;
@@ -48,9 +54,13 @@ public class TestNameNodeMetrics extends TestCase {
   private Random rand = new Random();
   private FSNamesystem namesystem;
 
+  private static Path getTestPath(String fileName) {
+    return new Path(TEST_ROOT_DIR_PATH, fileName);
+  }
+  
   @Override
   protected void setUp() throws Exception {
-    cluster = new MiniDFSCluster(CONF, 3, true, null);
+    cluster = new MiniDFSCluster(CONF, DATANODE_COUNT, true, null);
     cluster.waitActive();
     namesystem = cluster.getNameNode().getNamesystem();
     fs = (DistributedFileSystem) cluster.getFileSystem();
@@ -63,9 +73,8 @@ public class TestNameNodeMetrics extends TestCase {
   }
   
   /** create a file with a length of <code>fileLen</code> */
-  private void createFile(String fileName, long fileLen, short replicas) throws IOException {
-    Path filePath = new Path(fileName);
-    DFSTestUtil.createFile(fs, filePath, fileLen, replicas, rand.nextLong());
+  private void createFile(Path file, long fileLen, short replicas) throws IOException {
+    DFSTestUtil.createFile(fs, file, fileLen, replicas, rand.nextLong());
   }
 
   private void updateMetrics() throws Exception {
@@ -78,7 +87,7 @@ public class TestNameNodeMetrics extends TestCase {
   /** Test metrics associated with addition of a file */
   public void testFileAdd() throws Exception {
     // Add files with 100 blocks
-    final String file = "/tmp/t";
+    final Path file = getTestPath("testFileAdd");
     createFile(file, 3200, (short)3);
     final int blockCount = 32;
     int blockCapacity = namesystem.getBlockCapacity();
@@ -92,26 +101,35 @@ public class TestNameNodeMetrics extends TestCase {
       blockCapacity <<= 1;
     }
     updateMetrics();
-    assertEquals(3, metrics.filesTotal.get());
+    int filesTotal = file.depth() + 1; // Add 1 for root
+    assertEquals(filesTotal, metrics.filesTotal.get());
     assertEquals(blockCount, metrics.blocksTotal.get());
     assertEquals(blockCapacity, metrics.blockCapacity.get());
-    fs.delete(new Path(file), true);
+    fs.delete(file, true);
+    filesTotal--; // reduce the filecount for deleted file
+    
+    // Wait for more than DATANODE_COUNT replication intervals to ensure all 
+    // the blocks pending deletion are sent for deletion to the datanodes.
+    Thread.sleep(DFS_REPLICATION_INTERVAL * (DATANODE_COUNT + 1) * 1000);
+    updateMetrics();
+    assertEquals(filesTotal, metrics.filesTotal.get());
+    assertEquals(0, metrics.pendingDeletionBlocks.get());
   }
   
   /** Corrupt a block and ensure metrics reflects it */
   public void testCorruptBlock() throws Exception {
     // Create a file with single block with two replicas
-    String file = "/tmp/t";
+    final Path file = getTestPath("testCorruptBlock");
     createFile(file, 100, (short)2);
     
     // Corrupt first replica of the block
-    LocatedBlock block = namesystem.getBlockLocations(file, 0, 1).get(0);
+    LocatedBlock block = namesystem.getBlockLocations(file.toString(), 0, 1).get(0);
     namesystem.markBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
     updateMetrics();
     assertEquals(1, metrics.corruptBlocks.get());
     assertEquals(1, metrics.pendingReplicationBlocks.get());
     assertEquals(1, metrics.scheduledReplicationBlocks.get());
-    fs.delete(new Path(file), true);
+    fs.delete(file, true);
     updateMetrics();
     assertEquals(0, metrics.corruptBlocks.get());
     assertEquals(0, metrics.pendingReplicationBlocks.get());
@@ -122,29 +140,28 @@ public class TestNameNodeMetrics extends TestCase {
    * for a file and ensure metrics reflects it
    */
   public void testExcessBlocks() throws Exception {
-    String file = "/tmp/t";
+    Path file = getTestPath("testExcessBlocks");
     createFile(file, 100, (short)2);
     int totalBlocks = 1;
-    namesystem.setReplication(file, (short)1);
+    namesystem.setReplication(file.toString(), (short)1);
     updateMetrics();
     assertEquals(totalBlocks, metrics.excessBlocks.get());
-    assertEquals(totalBlocks, metrics.pendingDeletionBlocks.get());
-    fs.delete(new Path(file), true);
+    fs.delete(file, true);
   }
   
   /** Test to ensure metrics reflects missing blocks */
   public void testMissingBlock() throws Exception {
     // Create a file with single block with two replicas
-    String file = "/tmp/t";
+    Path file = getTestPath("testMissingBlocks");
     createFile(file, 100, (short)1);
     
     // Corrupt the only replica of the block to result in a missing block
-    LocatedBlock block = namesystem.getBlockLocations(file, 0, 1).get(0);
+    LocatedBlock block = namesystem.getBlockLocations(file.toString(), 0, 1).get(0);
     namesystem.markBlockAsCorrupt(block.getBlock(), block.getLocations()[0]);
     updateMetrics();
     assertEquals(1, metrics.underReplicatedBlocks.get());
     assertEquals(1, metrics.missingBlocks.get());
-    fs.delete(new Path(file), true);
+    fs.delete(file, true);
     updateMetrics();
     assertEquals(0, metrics.underReplicatedBlocks.get());
   }
