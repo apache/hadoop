@@ -1433,17 +1433,17 @@ public abstract class FileSystem extends Configured implements Closeable {
     static class Key {
       final String scheme;
       final String authority;
-      final String username;
+      final UserGroupInformation ugi;
 
       Key(URI uri, Configuration conf) throws IOException {
         scheme = uri.getScheme()==null?"":uri.getScheme().toLowerCase();
         authority = uri.getAuthority()==null?"":uri.getAuthority().toLowerCase();
-        username = UserGroupInformation.getCurrentUser().getUserName();
+        this.ugi = UserGroupInformation.getCurrentUser();
       }
 
       /** {@inheritDoc} */
       public int hashCode() {
-        return (scheme + authority + username).hashCode();
+        return (scheme + authority).hashCode() + ugi.hashCode();
       }
 
       static boolean isEqual(Object a, Object b) {
@@ -1459,14 +1459,14 @@ public abstract class FileSystem extends Configured implements Closeable {
           Key that = (Key)obj;
           return isEqual(this.scheme, that.scheme)
                  && isEqual(this.authority, that.authority)
-                 && isEqual(this.username, that.username);
+                 && isEqual(this.ugi, that.ugi);
         }
         return false;        
       }
 
       /** {@inheritDoc} */
       public String toString() {
-        return username + "@" + scheme + "://" + authority;        
+        return "("+ugi.toString() + ")@" + scheme + "://" + authority;        
       }
     }
   }
