@@ -52,14 +52,13 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.security.Groups;
-import org.apache.hadoop.security.RefreshUserMappingsProtocol;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 
 import java.io.*;
@@ -105,7 +104,7 @@ import java.util.Iterator;
 public class NameNode implements ClientProtocol, DatanodeProtocol,
                                  NamenodeProtocol, FSConstants,
                                  RefreshAuthorizationPolicyProtocol,
-                                 RefreshUserMappingsProtocol {
+                                 RefreshUserToGroupMappingsProtocol {
   static{
     Configuration.addDefaultResource("hdfs-default.xml");
     Configuration.addDefaultResource("hdfs-site.xml");
@@ -121,8 +120,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       return NamenodeProtocol.versionID;
     } else if (protocol.equals(RefreshAuthorizationPolicyProtocol.class.getName())){
       return RefreshAuthorizationPolicyProtocol.versionID;
-    } else if (protocol.equals(RefreshUserMappingsProtocol.class.getName())){
-      return RefreshUserMappingsProtocol.versionID;
+    } else if (protocol.equals(RefreshUserToGroupMappingsProtocol.class.getName())){
+      return RefreshUserToGroupMappingsProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to name node: " + protocol);
     }
@@ -1000,13 +999,6 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
              UserGroupInformation.getCurrentUser().getShortUserName());
     Groups.getUserToGroupsMappingService(conf).refresh();
-  }
-  
-  @Override
-  public void refreshSuperUserGroupsConfiguration(Configuration conf) {
-    LOG.info("Refreshing SuperUser proxy group mapping list ");
-    
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
   }
 
   private static void printUsage() {

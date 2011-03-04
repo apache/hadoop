@@ -29,7 +29,6 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
@@ -225,16 +224,14 @@ public class TestDoAsEffectiveUser {
    */
   @Test
   public void testRealUserIPAuthorizationFailure() throws IOException {
-    final Configuration conf = new Configuration(masterConf);
+    final Configuration conf = new Configuration();
     conf.setStrings(ProxyUsers.getProxySuperuserIpConfKey(REAL_USER_SHORT_NAME),
         "20.20.20.20"); //Authorized IP address
     conf.setStrings(ProxyUsers.getProxySuperuserGroupConfKey(REAL_USER_SHORT_NAME),
         "group1");
     Server server = RPC.getServer(new TestImpl(), ADDRESS,
         0, 2, false, conf, null);
-    
-    refreshConf(conf);
-    
+
     try {
       server.start();
 
@@ -413,9 +410,6 @@ public class TestDoAsEffectiveUser {
     UserGroupInformation proxyUserUgi = UserGroupInformation
         .createProxyUserForTesting(PROXY_USER_NAME, current, GROUP_NAMES);
     proxyUserUgi.addToken(token);
-    
-    refreshConf(conf);
-    
     String retVal = proxyUserUgi.doAs(new PrivilegedExceptionAction<String>() {
       @Override
       public String run() throws Exception {
@@ -457,8 +451,6 @@ public class TestDoAsEffectiveUser {
 
     final UserGroupInformation current = UserGroupInformation
         .createUserForTesting(REAL_USER_NAME, GROUP_NAMES);
-    refreshConf(newConf);
-    
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
     TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
         .getUserName()), new Text("SomeSuperUser"));
@@ -487,12 +479,6 @@ public class TestDoAsEffectiveUser {
         }
       }
     });
-    String expected = REAL_USER_NAME + " via SomeSuperUser";
-    Assert.assertEquals(retVal + "!=" + expected, expected, retVal);
-  }
-  
-  //
-  private void refreshConf(Configuration conf) throws IOException {
-    ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    Assert.assertEquals(REAL_USER_NAME + " via SomeSuperUser", retVal);
   }
 }
