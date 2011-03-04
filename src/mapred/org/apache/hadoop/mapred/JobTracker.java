@@ -739,7 +739,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         
         TaskID id = TaskID.forName(taskId);
         TaskInProgress tip = getTip(id);
-        
+
         updateTip(tip, task);
       }
 
@@ -752,7 +752,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         
         // Check if the transaction for this attempt can be committed
         String taskStatus = attempt.get(Keys.TASK_STATUS);
-        
+        TaskAttemptID taskID = TaskAttemptID.forName(taskAttemptId);
+        JobInProgress jip = getJob(taskID.getJobID());
+        JobStatus prevStatus = (JobStatus)jip.getStatus().clone();
+
         if (taskStatus.length() > 0) {
           // This means this is an update event
           if (taskStatus.equals(Values.SUCCESS.name())) {
@@ -765,6 +768,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           }
         } else {
           createTaskAttempt(jip, id, attempt);
+        }
+        
+        JobStatus newStatus = (JobStatus)jip.getStatus().clone();
+        if (prevStatus.getRunState() != newStatus.getRunState()) {
+          if(LOG.isDebugEnabled())
+            LOG.debug("Status changed hence informing prevStatus" +  prevStatus + " currentStatus "+ newStatus);
+          JobStatusChangeEvent event =
+            new JobStatusChangeEvent(jip, EventType.RUN_STATE_CHANGED,
+                                     prevStatus, newStatus);
+          updateJobInProgressListeners(event);
         }
       }
 

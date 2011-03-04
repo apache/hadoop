@@ -197,6 +197,13 @@ public class ClusterWithCapacityScheduler extends TestCase {
     }
   }
 
+  /**
+   * @return the mrCluster
+   */
+  public MiniMRCluster getMrCluster() {
+    return mrCluster;
+  }
+
   static class MyClassLoader extends ClassLoader {
     @Override
     public URL getResource(String name) {
