@@ -130,7 +130,7 @@ def runcondense():
       # file name format: <prefix>/<user>/hod-logs/<jobid>/[0-9]*-[jobtracker|tasktracker|datanode|namenode|]-hostname-YYYYMMDDtime-random.tar.gz
       # first strip prefix:
       if filename.startswith(options.log):
-        filename = filename.lstrip(options.log)
+        filename = filename[len(options.log):]
         if not filename.startswith('/'):
           filename = '/' + filename
       else:
