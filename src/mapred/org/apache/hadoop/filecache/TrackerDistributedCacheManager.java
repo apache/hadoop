@@ -61,10 +61,19 @@ public class TrackerDistributedCacheManager {
   private TreeMap<String, CacheStatus> cachedArchives = 
     new TreeMap<String, CacheStatus>();
 
-  private TreeMap<Path, Long> baseDirSize = new TreeMap<Path, Long>();
+  // For holding the properties of each cache directory
+  static class CacheDir {
+    long size;
+    long subdirs;
+  }
+  private TreeMap<Path, CacheDir> baseDirProperties =
+    new TreeMap<Path, CacheDir>();
 
   // default total cache size (10GB)
   private static final long DEFAULT_CACHE_SIZE = 10737418240L;
+  private static final long DEFAULT_CACHE_SUBDIR_LIMIT = 10000;
+  private long allowedCacheSize;
+  private long allowedCacheSubdirs;
 
   private static final Log LOG =
     LogFactory.getLog(TrackerDistributedCacheManager.class);
@@ -85,6 +94,14 @@ public class TrackerDistributedCacheManager {
     this.trackerConf = conf;
     this.lDirAllocator = new LocalDirAllocator("mapred.local.dir");
     this.taskController = taskController;
+
+    // setting the cache size to a default of 10GB
+    this.allowedCacheSize = conf.getLong
+      ("local.cache.size", DEFAULT_CACHE_SIZE);
+    // setting the cache number of subdirectories limit to a default of 10000
+    this.allowedCacheSubdirs = conf.getLong
+      ("mapreduce.tasktracker.local.cache.numberdirectories",
+       DEFAULT_CACHE_SUBDIR_LIMIT);
   }
 
   /**
@@ -161,20 +178,21 @@ public class TrackerDistributedCacheManager {
 
       // try deleting stuff if you can
       long size = 0;
+      long numberSubdirs = 0;
       synchronized (lcacheStatus) {
-        synchronized (baseDirSize) {
-          Long get = baseDirSize.get(lcacheStatus.getBaseDir());
-          if (get != null) {
-            size = get.longValue();
+        synchronized (baseDirProperties) {
+          CacheDir cacheDir = baseDirProperties.get(lcacheStatus.getBaseDir());
+          if (cacheDir != null) {
+            size = cacheDir.size;
+            numberSubdirs = cacheDir.subdirs;
           } else {
-            LOG.warn("Cannot find size of baseDir: "
-                + lcacheStatus.getBaseDir());
+            LOG.warn("Cannot find size and number of subdirectories of" +
+                     " baseDir: " + lcacheStatus.getBaseDir());
           }
         }
       }
-      // setting the cache size to a default of 10GB
-      long allowedSize = conf.getLong("local.cache.size", DEFAULT_CACHE_SIZE);
-      if (allowedSize < size) {
+
+      if (allowedCacheSize < size || allowedCacheSubdirs < numberSubdirs) {
         // try some cache deletions
         deleteCache(conf);
       }
@@ -254,18 +272,11 @@ public class TrackerDistributedCacheManager {
     for (CacheStatus lcacheStatus : deleteSet) {
       synchronized (lcacheStatus) {
         FileSystem.getLocal(conf).delete(lcacheStatus.localizedLoadPath, true);
+
+        // Update the maps baseDirSize and baseDirNumberSubDir
         LOG.info("Deleted path " + lcacheStatus.localizedLoadPath);
-        // decrement the size of the cache from baseDirSize
-        synchronized (baseDirSize) {
-          Long dirSize = baseDirSize.get(lcacheStatus.localizedBaseDir);
-          if ( dirSize != null ) {
-            dirSize -= lcacheStatus.size;
-            baseDirSize.put(lcacheStatus.localizedBaseDir, dirSize);
-          } else {
-            LOG.warn("Cannot find record of the baseDir: " + 
-                     lcacheStatus.localizedBaseDir + " during delete!");
-          }
-        }
+
+        deleteCacheInfoUpdate(lcacheStatus);
       }
     }
   }
@@ -425,15 +436,10 @@ public class TrackerDistributedCacheManager {
     long cacheSize =
       FileUtil.getDU(new File(parchive.getParent().toString()));
     cacheStatus.size = cacheSize;
-    synchronized (baseDirSize) {
-      Long dirSize = baseDirSize.get(cacheStatus.localizedBaseDir);
-      if( dirSize == null ) {
-        dirSize = Long.valueOf(cacheSize);
-      } else {
-        dirSize += cacheSize;
-      }
-      baseDirSize.put(cacheStatus.localizedBaseDir, dirSize);
-    }
+    
+    // Increase the size and sub directory count of the cache
+    // from baseDirSize and baseDirNumberSubDir.
+    addCacheInfoUpdate(cacheStatus);
 
     // set proper permissions for the localized directory
     setPermissions(conf, cacheStatus, isPublic);
@@ -844,5 +850,51 @@ public class TrackerDistributedCacheManager {
     }
 
     return path;
+  }
+  
+  /**
+   * Decrement the size and sub directory count of the cache from baseDirSize
+   * and baseDirNumberSubDir. Have to lock lcacheStatus before calling this.
+   * @param cacheStatus cache status of the cache is deleted
+   */
+  private void deleteCacheInfoUpdate(CacheStatus cacheStatus) {
+    if (!cacheStatus.inited) {
+      // if it is not created yet, do nothing.
+      return;
+    }
+    // decrement the size of the cache from baseDirSize
+    synchronized (baseDirProperties) {
+      CacheDir cacheDir = baseDirProperties.get(cacheStatus.getBaseDir());
+      if (cacheDir != null) {
+        cacheDir.size -= cacheStatus.size;
+        cacheDir.subdirs--;
+      } else {
+        LOG.warn("Cannot find size and number of subdirectories of" +
+                 " baseDir: " + cacheStatus.getBaseDir());
+      }
+    }
+  }
+  
+  /**
+   * Update the maps baseDirSize and baseDirNumberSubDir when adding cache.
+   * Increase the size and sub directory count of the cache from baseDirSize
+   * and baseDirNumberSubDir. Have to lock lcacheStatus before calling this.
+   * @param cacheStatus cache status of the cache is added
+   */
+  private void addCacheInfoUpdate(CacheStatus cacheStatus) {
+    long cacheSize = cacheStatus.size;
+    // decrement the size of the cache from baseDirSize
+    synchronized (baseDirProperties) {
+      CacheDir cacheDir = baseDirProperties.get(cacheStatus.getBaseDir());
+      if (cacheDir != null) {
+        cacheDir.size += cacheSize;
+        cacheDir.subdirs++;
+      } else {
+        cacheDir = new CacheDir();
+        cacheDir.size = cacheSize;
+        cacheDir.subdirs = 1;
+        baseDirProperties.put(cacheStatus.getBaseDir(), cacheDir);
+      }
+    }
   }
 }

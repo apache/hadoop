@@ -65,6 +65,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
 
   private static final int TEST_FILE_SIZE = 4 * 1024; // 4K
   private static final int LOCAL_CACHE_LIMIT = 5 * 1024; //5K
+  private static final int LOCAL_CACHE_SUBDIR = 2;
   protected Configuration conf;
   protected Path firstCacheFile;
   protected Path secondCacheFile;
@@ -479,6 +480,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     Configuration conf2 = new Configuration(conf);
     conf2.set("mapred.local.dir", ROOT_MAPRED_LOCAL_DIR.toString());
     conf2.setLong("local.cache.size", LOCAL_CACHE_LIMIT);
+    conf2.setLong("mapreduce.tasktracker.local.cache.numberdirectories",
+                   LOCAL_CACHE_SUBDIR);
     refreshConf(conf2);
     TrackerDistributedCacheManager manager = 
         new TrackerDistributedCacheManager(conf2, taskController);
@@ -487,6 +490,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     String userName = getJobOwnerName();
     conf2.set("user.name", userName);
 
+    // We first test the size limit
     Path localCache = manager.getLocalCache(firstCacheFile.toUri(), conf2, 
         TaskTracker.getPrivateDistributedCacheDir(userName),
         fs.getFileStatus(firstCacheFile), false,
@@ -503,6 +507,33 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     assertFalse("DistributedCache failed deleting old" + 
         " cache when the cache store is full.",
         localfs.exists(localCache));
+    
+    // Now we test the number of sub directories limit
+    // Create the temporary cache files to be used in the tests.
+    Path thirdCacheFile = new Path(TEST_ROOT_DIR, "thirdcachefile");
+    Path fourthCacheFile = new Path(TEST_ROOT_DIR, "fourthcachefile");
+    // Adding two more small files, so it triggers the number of sub directory
+    // limit but does not trigger the file size limit.
+    createTempFile(thirdCacheFile, 1);
+    createTempFile(fourthCacheFile, 1);
+    Path thirdLocalCache = manager.getLocalCache(thirdCacheFile.toUri(), conf2,
+        TaskTracker.getPrivateDistributedCacheDir(userName),
+        fs.getFileStatus(thirdCacheFile), false,
+        now, new Path(TEST_ROOT_DIR), false, false);
+    // Release the third cache so that it can be deleted while sweeping
+    manager.releaseCache(thirdCacheFile.toUri(), conf2, now);
+    // Getting the fourth cache will make the number of sub directories becomes
+    // 3 which is greater than 2. So the released cache will be deleted.
+    manager.getLocalCache(fourthCacheFile.toUri(), conf2, 
+        TaskTracker.getPrivateDistributedCacheDir(userName),
+        fs.getFileStatus(fourthCacheFile), false, 
+        System.currentTimeMillis(), new Path(TEST_ROOT_DIR), false, false);
+    assertFalse("DistributedCache failed deleting old" + 
+        " cache when the cache exceeds the number of sub directories limit.",
+        localfs.exists(thirdLocalCache));
+    // Clean up the files created in this test
+    new File(thirdCacheFile.toString()).delete();
+    new File(fourthCacheFile.toString()).delete();
   }
   
   public void testFileSystemOtherThanDefault() throws Exception {
@@ -526,13 +557,17 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   }
 
   static void createTempFile(Path p) throws IOException {
+    createTempFile(p, TEST_FILE_SIZE);
+  }
+  
+  static void createTempFile(Path p, int size) throws IOException {
     File f = new File(p.toString());
     FileOutputStream os = new FileOutputStream(f);
-    byte[] toWrite = new byte[TEST_FILE_SIZE];
+    byte[] toWrite = new byte[size];
     new Random().nextBytes(toWrite);
     os.write(toWrite);
     os.close();
-    FileSystem.LOG.info("created: " + p + ", size=" + TEST_FILE_SIZE);
+    FileSystem.LOG.info("created: " + p + ", size=" + size);
   }
   
   static void createPublicTempFile(Path p) 
