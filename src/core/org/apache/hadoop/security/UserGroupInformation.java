@@ -234,6 +234,9 @@ public class UserGroupInformation {
   private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
   private static final boolean windows = 
                            System.getProperty("os.name").startsWith("Windows");
+  private static Thread renewerThread = null;
+  private static volatile boolean shouldRunRenewerThread = true;
+  
   static {
     if (windows) {
       OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.NTLoginModule";
@@ -473,7 +476,7 @@ public class UserGroupInformation {
       //spawn thread only if we have kerb credentials
       if (user.getAuthenticationMethod() == AuthenticationMethod.KERBEROS &&
           !isKeytab) {
-        Thread t = new Thread(new Runnable() {
+        renewerThread = new Thread(new Runnable() {
 
           public void run() {
             String cmd = conf.get("hadoop.kerberos.kinit.command",
@@ -483,7 +486,7 @@ public class UserGroupInformation {
               return;
             }
             long nextRefresh = getRefreshTime(tgt);
-            while (true) {
+            while (shouldRunRenewerThread) {
               try {
                 long now = System.currentTimeMillis();
                 LOG.debug("Current time is " + now);
@@ -498,6 +501,7 @@ public class UserGroupInformation {
                 if (tgt == null) {
                   LOG.warn("No TGT after renewal. Aborting renew thread for " +
                            getUserName());
+                  return;
                 }
                 nextRefresh = Math.max(getRefreshTime(tgt),
                                        now + MIN_TIME_BEFORE_RELOGIN);
@@ -506,14 +510,17 @@ public class UserGroupInformation {
                 return;
               } catch (IOException ie) {
                 LOG.warn("Exception encountered while running the" +
-                    " renewal command (but continuing)" + ie);
+                    " renewal command." + ie + 
+                    ". Aborting renew thread for " + user);
+                return;
               }
             }
+            LOG.info("TGT renewer thread exiting.");
           }
         });
-        t.setDaemon(true);
-        t.setName("TGT Renewer for " + getUserName());
-        t.start();
+        renewerThread.setDaemon(true);
+        renewerThread.setName("TGT Renewer for " + getUserName());
+        renewerThread.start();
       }
     }
   }
@@ -537,6 +544,16 @@ public class UserGroupInformation {
     Subject subject = new Subject();
     LoginContext login;   
     long start = 0;
+    // The renewer thread might have been spawned earlier if getLoginUser
+    // was called with the loginUser as null. 
+    // Just kill the thread. BTW loginUser is not null anymore and any 
+    // future call to getLoginUser will not spawn the thread.
+    if (renewerThread != null) {
+      renewerThread.interrupt();
+      shouldRunRenewerThread = false;
+      renewerThread = null;
+      LOG.info("Asked the TGT renewer thread to terminate");
+    }
     try {
       login = 
         new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
