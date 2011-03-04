@@ -17,29 +17,25 @@
  */
 package org.apache.hadoop.hdfsproxy;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
-
-import javax.servlet.ServletContext;
+import org.apache.hadoop.security.UserGroupInformation;
 import javax.servlet.http.HttpServletRequest;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.server.namenode.StreamFile;
-import org.apache.hadoop.security.UserGroupInformation;
-
-/** {@inheritDoc} */
-public class ProxyStreamFile extends StreamFile {
+public class ProxyFileForward extends ProxyForwardServlet {
   /** For java.io.Serializable */
   private static final long serialVersionUID = 1L;
 
   /** {@inheritDoc} */
   @Override
-  protected UserGroupInformation getUGI(HttpServletRequest request,
-                                        Configuration conf) {
-    String userID = (String) request
-        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    return ProxyUtil.getProxyUGIFor(userID);
+  protected String buildForwardPath(HttpServletRequest request, String pathInfo) {
+    String path = "/streamFile";
+    path += "?filename=" + request.getPathInfo();
+    String userID = (String) request.
+        getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    UserGroupInformation ugi = ProxyUtil.getProxyUGIFor(userID);
+    if (ugi != null) {
+      path += "&ugi=" + ugi.getShortUserName();
+    }
+    return path;
   }
+  
 }

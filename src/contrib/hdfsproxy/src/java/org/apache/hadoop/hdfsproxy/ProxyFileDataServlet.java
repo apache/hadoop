@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +58,8 @@ public class ProxyFileDataServlet extends FileDataServlet {
   @Override
   protected UserGroupInformation getUGI(HttpServletRequest request,
                                         Configuration conf) {
-    return (UserGroupInformation) request.getAttribute("authorized.ugi");
+    String userID = (String) request
+        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
+    return ProxyUtil.getProxyUGIFor(userID);
   }
 }

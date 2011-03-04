@@ -15,31 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hdfsproxy;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.security.PrivilegedExceptionAction;
-
-import javax.servlet.ServletContext;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.server.namenode.StreamFile;
-import org.apache.hadoop.security.UserGroupInformation;
+import java.io.PrintWriter;
+import java.io.IOException;
 
-/** {@inheritDoc} */
-public class ProxyStreamFile extends StreamFile {
-  /** For java.io.Serializable */
+
+/**
+ * simple servlet for forward testing purpose
+ */
+
+public class SimpleServlet extends HttpServlet {
+ 
+  /**
+   * 
+   */
   private static final long serialVersionUID = 1L;
 
-  /** {@inheritDoc} */
-  @Override
-  protected UserGroupInformation getUGI(HttpServletRequest request,
-                                        Configuration conf) {
-    String userID = (String) request
-        .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
-    return ProxyUtil.getProxyUGIFor(userID);
+  public void doGet(HttpServletRequest request, HttpServletResponse response)
+    throws IOException {
+	  response.setContentType("text/html");
+	  PrintWriter out = response.getWriter();	  
+	  out.print("<html><head/><body>");
+    out.print("A GET request");
+    out.print("</body></html>");
+	  out.close();
+	  return;
   }
+
 }
