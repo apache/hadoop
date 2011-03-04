@@ -511,8 +511,9 @@ public class UserGroupInformation {
   static void loginUserFromKeytab(String user,
                                   String path
                                   ) throws IOException {
-    if (!isSecurityEnabled())
+    if (!isSecurityEnabled()) {
       return;
+    }
 
     keytabFile = path;
     keytabPrincipal = user;
@@ -672,8 +673,8 @@ public class UserGroupInformation {
    * Did the login happen via keytab
    * @return true or false
    */
-  public synchronized static boolean isLoginKeytabBased() {
-    return loginUser.isKeytab;
+  public synchronized static boolean isLoginKeytabBased() throws IOException {
+    return getLoginUser().isKeytab;
   }
 
   /**
