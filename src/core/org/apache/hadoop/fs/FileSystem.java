@@ -752,6 +752,7 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @param f
    *          given path
    * @return the statuses of the files/directories in the given patch
+   *         returns null, if Path f does not exist in the FileSystem
    * @throws IOException
    */
   public abstract FileStatus[] listStatus(Path f) throws IOException;

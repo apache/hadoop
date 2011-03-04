@@ -918,65 +918,75 @@ public class JobHistory {
     return localGlobber(fs, root, tail, filter, null);
   }
   
+  private static FileStatus[] nullToEmpty(FileStatus[] result) {
+    return result == null ? new FileStatus[0] : result;
+  }
+      
+  private static FileStatus[] listFilteredStatus
+        (FileSystem fs, Path root, PathFilter filter)
+     throws IOException {
+    return filter == null ? fs.listStatus(root) : fs.listStatus(root, filter);
+  }
 
   // hasMismatches is just used to return a second value if you want
   // one.  I would have used MutableBoxedBoolean if such had been provided.
   static FileStatus[] localGlobber
-    (FileSystem fs, Path root, String tail, PathFilter filter, AtomicBoolean hasFlatFiles)
+    (FileSystem fs, Path root, String tail, PathFilter filter,
+     AtomicBoolean hasFlatFiles)
       throws IOException {
     if (tail.equals("")) {
-      return filter == null ? fs.listStatus(root) : fs.listStatus(root, filter);
+      return nullToEmpty(listFilteredStatus(fs, root, filter));
     }
 
-      if (tail.startsWith("/*")) {
-        Path[] subdirs = filteredStat2Paths(fs.listStatus(root), true, hasFlatFiles);
+    if (tail.startsWith("/*")) {
+      Path[] subdirs = filteredStat2Paths(nullToEmpty(fs.listStatus(root)),
+                                          true, hasFlatFiles);
 
-        FileStatus[][] subsubdirs = new FileStatus[subdirs.length][];
+      FileStatus[][] subsubdirs = new FileStatus[subdirs.length][];
 
-        int subsubdirCount = 0;
+      int subsubdirCount = 0;
 
-        if (subsubdirs.length == 0) {
-          return new FileStatus[0];
-        }
-
-        String newTail = tail.substring(2);
-
-        for (int i = 0; i < subdirs.length; ++i) {
-          subsubdirs[i] = localGlobber(fs, subdirs[i], newTail, filter, null);
-          subsubdirCount += subsubdirs[i].length;
-        }
-
-        FileStatus[] result = new FileStatus[subsubdirCount];
-
-        int segmentStart = 0;
-
-        for (int i = 0; i < subsubdirs.length; ++i) {
-          System.arraycopy(subsubdirs[i], 0, result, segmentStart, subsubdirs[i].length);
-          segmentStart += subsubdirs[i].length;
-        }
-
-        return result;
+      if (subsubdirs.length == 0) {
+        return new FileStatus[0];
       }
 
-      if (tail.startsWith("/")) {
-        int split = tail.indexOf('/', 1);
+      String newTail = tail.substring(2);
 
-        if (split < 0) {
-          return (filter == null
-                  ? fs.listStatus(new Path(root, tail.substring(1)))
-                  : fs.listStatus(new Path(root, tail.substring(1)), filter));
-        } else {
-          String thisSegment = tail.substring(1, split);
-          String newTail = tail.substring(split);
-          return localGlobber
-            (fs, new Path(root, thisSegment), newTail, filter, hasFlatFiles);
-        }
+      for (int i = 0; i < subdirs.length; ++i) {
+        subsubdirs[i] = localGlobber(fs, subdirs[i], newTail, filter, null);
+        subsubdirCount += subsubdirs[i].length;
       }
 
-      IOException e = new IOException("localGlobber: bad tail");
+      FileStatus[] result = new FileStatus[subsubdirCount];
 
-      throw e;
+      int segmentStart = 0;
+
+      for (int i = 0; i < subsubdirs.length; ++i) {
+        System.arraycopy(subsubdirs[i], 0, result, segmentStart, subsubdirs[i].length);
+        segmentStart += subsubdirs[i].length;
+      }
+
+      return result;
     }
+
+    if (tail.startsWith("/")) {
+      int split = tail.indexOf('/', 1);
+
+      if (split < 0) {
+        return nullToEmpty
+          (listFilteredStatus(fs, new Path(root, tail.substring(1)), filter));
+      } else {
+        String thisSegment = tail.substring(1, split);
+        String newTail = tail.substring(split);
+        return localGlobber
+          (fs, new Path(root, thisSegment), newTail, filter, hasFlatFiles);
+      }
+    }
+
+    IOException e = new IOException("localGlobber: bad tail");
+
+    throw e;
+  }
 
   static Path confPathFromLogFilePath(Path logFile) {
     String jobId = jobIdNameFromLogFileName(logFile.getName());
