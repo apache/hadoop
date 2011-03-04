@@ -27,7 +27,7 @@
  
   <property name="Name" value="Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="0.20.1.3041192001"/>
+  <property name="version" value="0.20.1.3092118000"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="year" value="2009"/>
 
