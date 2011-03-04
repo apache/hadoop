@@ -8,6 +8,14 @@
 <configuration>
 
   <property>
+    <name>mapred.capacity-scheduler.maximum-system-jobs</name>
+    <value>3000</value>
+    <description>Maximum number of jobs in the system which can be initialized,
+     concurrently, by the CapacityScheduler.
+    </description>    
+  </property>
+  
+  <property>
     <name>mapred.capacity-scheduler.queue.default.capacity</name>
     <value>100</value>
     <description>Percentage of the number of slots in the cluster that are
@@ -57,11 +65,38 @@
     value of 100 implies no user limits are imposed. 
     </description>
   </property>
+  
   <property>
-    <name>mapred.capacity-scheduler.queue.default.maximum-initialized-jobs-per-user</name>
-    <value>2</value>
-    <description>The maximum number of jobs to be pre-initialized for a user
-    of the job queue.
+    <name>mapred.capacity-scheduler.queue.default.user-limit-factor</name>
+    <value>1</value>
+    <description>The multiple of the queue capacity which can be configured to 
+    allow a single user to acquire more slots. 
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.capacity-scheduler.queue.default.maximum-initialized-active-tasks</name>
+    <value>200000</value>
+    <description>The maximum number of tasks, across all jobs in the queue, 
+    which can be initialized concurrently. Once the queue's jobs exceed this 
+    limit they will be queued on disk.  
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.capacity-scheduler.queue.default.maximum-initialized-active-tasks-per-user</name>
+    <value>100000</value>
+    <description>The maximum number of tasks per-user, across all the of the 
+    user's jobs in the queue, which can be initialized concurrently. Once the 
+    user's jobs exceed this limit they will be queued on disk.  
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.capacity-scheduler.queue.default.init-accept-jobs-factor</name>
+    <value>10</value>
+    <description>The multipe of (maximum-system-jobs * queue-capacity) used to 
+    determine the number of jobs which are accepted by the scheduler.  
     </description>
   </property>
 
@@ -84,14 +119,40 @@
     </description>
   </property>
 
+
   <property>
-    <name>mapred.capacity-scheduler.default-maximum-initialized-jobs-per-user</name>
-    <value>2</value>
-    <description>The maximum number of jobs to be pre-initialized for a user
-    of the job queue.
+    <name>mapred.capacity-scheduler.default-user-limit-factor</name>
+    <value>1</value>
+    <description>The default multiple of queue-capacity which is used to 
+    determine the amount of slots a single user can consume concurrently.
     </description>
   </property>
 
+  <property>
+    <name>mapred.capacity-scheduler.default-maximum-active-tasks-per-queue</name>
+    <value>200000</value>
+    <description>The default maximum number of tasks, across all jobs in the 
+    queue, which can be initialized concurrently. Once the queue's jobs exceed 
+    this limit they will be queued on disk.  
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.capacity-scheduler.default-maximum-active-tasks-per-user</name>
+    <value>100000</value>
+    <description>The default maximum number of tasks per-user, across all the of 
+    the user's jobs in the queue, which can be initialized concurrently. Once 
+    the user's jobs exceed this limit they will be queued on disk.  
+    </description>
+  </property>
+
+  <property>
+    <name>mapred.capacity-scheduler.default-init-accept-jobs-factor</name>
+    <value>10</value>
+    <description>The default multipe of (maximum-system-jobs * queue-capacity) 
+    used to determine the number of jobs which are accepted by the scheduler.  
+    </description>
+  </property>
 
   <!-- Capacity scheduler Job Initialization configuration parameters -->
   <property>

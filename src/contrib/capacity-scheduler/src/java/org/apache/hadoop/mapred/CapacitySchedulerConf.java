@@ -90,7 +90,7 @@ class CapacitySchedulerConf {
    * The constant which defines the default initialization thread
    * polling interval, denoted in milliseconds.
    */
-  private static final int INITIALIZATION_THREAD_POLLING_INTERVAL = 5000;
+  private static final int INITIALIZATION_THREAD_POLLING_INTERVAL = 3000;
 
   /**
    * The constant which defines the maximum number of worker threads to be
@@ -386,7 +386,7 @@ class CapacitySchedulerConf {
   }
   
   /**
-   * Get the maximum active tasks per user to be initialized.
+   * Get the maximum active tasks per queue to be initialized.
    * 
    * @param queue queue name
    */
@@ -397,7 +397,7 @@ class CapacitySchedulerConf {
   }
   
   /**
-   * Set the maximum active tasks per user to be initialized.
+   * Set the maximum active tasks per queue to be initialized.
    * 
    * @param queue queue name
    * @param value maximum active tasks
@@ -408,7 +408,7 @@ class CapacitySchedulerConf {
   }
   
   /**
-   * Get the maximum active tasks per user to be initialized.
+   * Get the maximum active tasks per-user, per-queue to be initialized.
    * 
    * @param queue queue name
    */
@@ -419,7 +419,7 @@ class CapacitySchedulerConf {
   }
   
   /**
-   * Set the maximum active tasks per user to be initialized.
+   * Set the maximum active tasks per-user, per-queue to be initialized.
    * 
    * @param queue queue name
    * @param value maximum active tasks
