@@ -171,7 +171,12 @@ public class JobInProgress {
     new Comparator<TaskInProgress>() {
       @Override
       public int compare(TaskInProgress t1, TaskInProgress t2) {
-        return t2.numTaskFailures() - t1.numTaskFailures();
+        if (t1 == null) return -1;
+        if (t2 == null) return 1;
+        
+        int failures = t2.numTaskFailures() - t1.numTaskFailures();
+        return (failures == 0) ? (t1.getTIPId().getId() - t2.getTIPId().getId())
+            : failures;
       }
     };
 
@@ -1389,7 +1394,7 @@ public class JobInProgress {
   
   /**
    * Check if we can schedule an off-switch task for this job.
-   * @param numTaskTrackers TaskTrackers in the cluster.
+   * 
    * @param numTaskTrackers number of tasktrackers
    * @return <code>true</code> if we can schedule off-switch, 
    *         <code>false</code> otherwise
