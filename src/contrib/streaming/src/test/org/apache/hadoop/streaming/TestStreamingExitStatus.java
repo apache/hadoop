@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.Path;
  * reducers have non-zero exit status and the
  * stream.non.zero.exit.status.is.failure jobconf is set.
  */
-@Ignore("DISABLING TEMPORARILY UNTIL WE FIGURE WHY IT FAILS ON HUDSON")
 public class TestStreamingExitStatus
 {
   protected File TEST_DIR =
@@ -59,7 +58,8 @@ public class TestStreamingExitStatus
       "-reducer", (failMap ? echoTask : failingTask),
       "-jobconf", "keep.failed.task.files=true",
       "-jobconf", "stream.non.zero.exit.is.failure=" + exitStatusIsFailure,
-      "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp")
+      "-jobconf", "stream.tmpdir="+System.getProperty("test.build.data","/tmp"),
+      "-jobconf", "io.sort.mb=10"
     };
   }
 
