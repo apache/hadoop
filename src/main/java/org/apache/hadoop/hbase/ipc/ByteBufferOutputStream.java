@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 The Apache Software Foundation
+ * Copyright 2010 The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,13 +18,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.ipc;
+
+import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.channels.WritableByteChannel;
 
 /**
  * Not thread safe!
@@ -79,18 +79,6 @@ public class ByteBufferOutputStream extends OutputStream {
     checkSizeAndGrow(Bytes.SIZEOF_BYTE);
 
     buf.put((byte)b);
-  }
-
- /**
-  * Writes the complete contents of this byte buffer output stream to
-  * the specified output stream argument.
-  *
-  * @param      out   the output stream to which to write the data.
-  * @exception  IOException  if an I/O error occurs.
-  */
-  public synchronized void writeTo(OutputStream out) throws IOException {
-    WritableByteChannel channel = Channels.newChannel(out);
-    channel.write(getByteBuffer());
   }
 
   @Override
