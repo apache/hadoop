@@ -125,7 +125,8 @@
       build.dir="${system-test-build-dir}"
       basedir="${system-test-build-dir}/examples">
     </macro-jar-examples>
-    <macro-test-runner classpath="test.system.classpath"
+    <macro-test-runner test.file="${test.all.tests.file}"
+                       classpath="test.system.classpath"
                        test.dir="${system-test-build-dir}/test"
                        fileset.dir="${test.src.dir}/system/java"
                        hadoop.home="${hadoop.home}"
