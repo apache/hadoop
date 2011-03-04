@@ -24,6 +24,9 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.*;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.mapred.DefaultTaskController;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobContext;
 
 import java.net.URI;
 
@@ -196,9 +199,9 @@ public class DistributedCache {
       boolean isArchive, long confFileStamp,
       Path currentWorkDir, boolean honorSymLinkConf) throws IOException {
 
-    return new TrackerDistributedCacheManager(conf).getLocalCache(cache, conf,
-        baseDir.toString(), fileStatus, isArchive, confFileStamp, currentWorkDir,
-        honorSymLinkConf);
+    return new TrackerDistributedCacheManager(conf, new DefaultTaskController())
+        .getLocalCache(cache, conf, baseDir.toString(), fileStatus, isArchive,
+            confFileStamp, currentWorkDir, honorSymLinkConf, false);
   }
 
   /**
@@ -275,8 +278,8 @@ public class DistributedCache {
     if (timestamp == null) {
       throw new IOException("TimeStamp of the uri couldnot be found");
     }
-    new TrackerDistributedCacheManager(conf).releaseCache(cache, conf,
-          Long.parseLong(timestamp));
+    new TrackerDistributedCacheManager(conf, new DefaultTaskController())
+        .releaseCache(cache, conf, Long.parseLong(timestamp));
   }
   
   /**
@@ -289,10 +292,11 @@ public class DistributedCache {
    * @deprecated Internal to MapReduce framework.  Use DistributedCacheManager
    * instead.
    */
+  @Deprecated
   public static String makeRelative(URI cache, Configuration conf)
       throws IOException {
-    return new TrackerDistributedCacheManager(conf).makeRelative(cache, conf);
-
+    return new TrackerDistributedCacheManager(conf, new DefaultTaskController())
+        .makeRelative(cache, conf);
   }
 
   /**
@@ -656,6 +660,7 @@ public class DistributedCache {
    * instead.
    */
   public static void purgeCache(Configuration conf) throws IOException {
-    new TrackerDistributedCacheManager(conf).purgeCache();
+    new TrackerDistributedCacheManager(conf, new DefaultTaskController())
+        .purgeCache();
   }
 }

@@ -172,9 +172,10 @@ char *get_user_directory(const char *tt_root, const char *user) {
 /**
  * Get the distributed cache directory for a particular user
  */
-char *get_distributed_cache_directory(const char *tt_root, const char *user) {
-  return concatenate(USER_DISTRIBUTED_CACHE_DIR_PATTERN, "dist_cache_path", 2,
-      tt_root, user);
+char *get_distributed_cache_directory(const char *tt_root, const char *user,
+    const char* unique_string) {
+  return concatenate(USER_DISTRIBUTED_CACHE_DIR_PATTERN, 
+      "dist_cache_unique_path", 3, tt_root, user, unique_string);
 }
 
 char *get_job_work_directory(const char *job_dir) {
@@ -795,22 +796,25 @@ int initialize_job(const char *jobid, const char *user) {
 }
 
 /**
- * Function to initialize the distributed cache files of a user.
+ * Function to initialize the distributed cache file for a user.
  * It does the following:
- *     *  sudo chown user:mapred -R taskTracker/$user/distcache
- *     *  sudo chmod 2570 -R taskTracker/$user/distcache
- * This is done once per every JVM launch. Tasks reusing JVMs just create
+ *     *  sudo chown user:mapred -R taskTracker/$user/distcache/<randomdir>
+ *     *  sudo chmod 2570 -R taskTracker/$user/distcache/<randomdir>
+ * This is done once per localization. Tasks reusing JVMs just create
  * symbolic links themselves and so there isn't anything specific to do in
  * that case.
- * Sometimes, it happens that a task uses the whole or part of a directory
- * structure in taskTracker/$user/distcache. In this case, some paths are
- * already set proper private permissions by this same function called during
- * a previous JVM launch. In the current invocation, we only do the
- * chown/chmod operation of files/directories that are newly created by the
- * TaskTracker (i.e. those that still are not owned by user:mapred)
  */
-int initialize_distributed_cache(const char *user) {
-
+int initialize_distributed_cache_file(const char *tt_root, 
+    const char *unique_string, const char *user) {
+  if (tt_root == NULL) {
+    fprintf(LOGFILE, "tt_root passed is null.\n");
+    return INVALID_ARGUMENT_NUMBER;
+  }
+  if (unique_string == NULL) {
+    fprintf(LOGFILE, "unique_string passed is null.\n");
+    return INVALID_ARGUMENT_NUMBER;
+  }
+ 
   if (user == NULL) {
     fprintf(LOGFILE, "user passed is null.\n");
     return INVALID_ARGUMENT_NUMBER;
@@ -820,69 +824,41 @@ int initialize_distributed_cache(const char *user) {
     fprintf(LOGFILE, "Couldn't get the user details of %s", user);
     return INVALID_USER_NAME;
   }
-
-  gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
-
-  char **local_dir = (char **) get_values(TT_SYS_DIR_KEY);
-  if (local_dir == NULL) {
-    fprintf(LOGFILE, "%s is not configured.\n", TT_SYS_DIR_KEY);
+  //Check tt_root
+  if (check_tt_root(tt_root) < 0) {
+    fprintf(LOGFILE, "invalid tt root passed %s\n", tt_root);
     cleanup();
     return INVALID_TT_ROOT;
   }
 
-  char *full_local_dir_str = (char *) get_value(TT_SYS_DIR_KEY);
-#ifdef DEBUG
-  fprintf(LOGFILE, "Value from config for %s is %s.\n", TT_SYS_DIR_KEY,
-      full_local_dir_str);
-#endif
+  // set permission on the unique directory
+  char *localized_unique_dir = get_distributed_cache_directory(tt_root, user,
+      unique_string);
+  if (localized_unique_dir == NULL) {
+    fprintf(LOGFILE, "Couldn't get unique distcache directory for %s.\n", user);
+    cleanup();
+    return INITIALIZE_DISTCACHEFILE_FAILED;
+  }
 
-  char *distcache_dir;
-  char **local_dir_ptr = local_dir;
+  gid_t binary_gid = getegid(); // the group permissions of the binary.
   int failed = 0;
-  while (*local_dir_ptr != NULL) {
-    distcache_dir = get_distributed_cache_directory(*local_dir_ptr, user);
-    if (distcache_dir == NULL) {
-      fprintf(LOGFILE, "Couldn't get distcache directory for %s.\n", user);
-      failed = 1;
-      break;
-    }
-
-    struct stat filestat;
-    if (stat(distcache_dir, &filestat) != 0) {
-      if (errno == ENOENT) {
-#ifdef DEBUG
-        fprintf(LOGFILE, "distcache_dir %s doesn't exist. Not doing anything.\n",
-            distcache_dir);
-#endif
-      } else {
-        // stat failed because of something else!
-        fprintf(LOGFILE, "Failed to stat the distcache_dir %s\n",
-            distcache_dir);
-        failed = 1;
-        free(distcache_dir);
-        break;
-      }
-    } else if (secure_path(distcache_dir, user_detail->pw_uid,
-        tasktracker_gid, S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR
+  struct stat filestat;
+  if (stat(localized_unique_dir, &filestat) != 0) {
+    // stat on distcache failed because of something
+    fprintf(LOGFILE, "Failed to stat the localized_unique_dir %s\n",
+        localized_unique_dir);
+    failed = INITIALIZE_DISTCACHEFILE_FAILED;
+  } else if (secure_path(localized_unique_dir, user_detail->pw_uid,
+        binary_gid, S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR
             | S_IXUSR | S_IRWXG, 1) != 0) {
-      // No setgid on files and setgid on dirs, 570
-      fprintf(LOGFILE, "Failed to secure the distcache_dir %s\n",
-          distcache_dir);
-      failed = 1;
-      free(distcache_dir);
-      break;
-    }
-
-    local_dir_ptr++;
-    free(distcache_dir);
+    // No setgid on files and setgid on dirs, 570
+    fprintf(LOGFILE, "Failed to secure the localized_unique_dir %s\n",
+        localized_unique_dir);
+    failed = INITIALIZE_DISTCACHEFILE_FAILED;
   }
-  free(local_dir);
-  free(full_local_dir_str);
+  free(localized_unique_dir);
   cleanup();
-  if (failed) {
-    return INITIALIZE_DISTCACHE_FAILED;
-  }
-  return 0;
+  return failed;
 }
 
 /**

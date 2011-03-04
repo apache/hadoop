@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
   const char * task_id = NULL;
   const char * tt_root = NULL;
   const char *log_dir = NULL;
+  const char * unique_string = NULL;
   int exit_code = 0;
   const char * task_pid = NULL;
   const char* const short_options = "l:";
@@ -113,8 +114,11 @@ int main(int argc, char **argv) {
     job_id = argv[optind++];
     exit_code = initialize_job(job_id, user_detail->pw_name);
     break;
-  case INITIALIZE_DISTRIBUTEDCACHE:
-    exit_code = initialize_distributed_cache(user_detail->pw_name);
+  case INITIALIZE_DISTRIBUTEDCACHE_FILE:
+    tt_root = argv[optind++];
+    unique_string = argv[optind++];
+    exit_code = initialize_distributed_cache_file(tt_root, unique_string,
+        user_detail->pw_name);
     break;
   case LAUNCH_TASK_JVM:
     tt_root = argv[optind++];

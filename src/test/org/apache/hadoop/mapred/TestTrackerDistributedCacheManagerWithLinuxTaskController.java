@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterWithLinuxTaskController.MyLinuxTaskController;
 import org.apache.hadoop.filecache.TestTrackerDistributedCacheManager;
@@ -36,7 +37,6 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     TestTrackerDistributedCacheManager {
 
   private File configFile;
-  private MyLinuxTaskController taskController;
   private String taskTrackerSpecialGroup;
 
   private static final Log LOG =
@@ -65,12 +65,23 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
         ClusterWithLinuxTaskController.createTaskControllerConf(path, conf
             .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
     String execPath = path + "/task-controller";
-    taskController.setTaskControllerExe(execPath);
+    ((MyLinuxTaskController)taskController).setTaskControllerExe(execPath);
     taskController.setConf(conf);
     taskController.setup();
 
     taskTrackerSpecialGroup =
         TestTaskTrackerLocalization.getFilePermissionAttrs(execPath)[2];
+  }
+
+  @Override
+  protected void refreshConf(Configuration conf) throws IOException {
+    super.refreshConf(conf);
+    String path =
+      System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_PATH);
+    configFile =
+      ClusterWithLinuxTaskController.createTaskControllerConf(path, conf
+          .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
+   
   }
 
   @Override
@@ -99,27 +110,19 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
   }
 
   @Override
-  protected TaskController getTaskController() {
-    return taskController;
-  }
-
-  @Override
   protected void checkFilePermissions(Path[] localCacheFiles)
       throws IOException {
-    String cachedFirstFile = localCacheFiles[0].toUri().getPath();
-    String cachedSecondFile = localCacheFiles[1].toUri().getPath();
     String userName = getJobOwnerName();
 
-    // First make sure that the cache files have proper permissions.
-    TestTaskTrackerLocalization.checkFilePermissions(cachedFirstFile,
-        "-r-xrwx---", userName, taskTrackerSpecialGroup);
-    TestTaskTrackerLocalization.checkFilePermissions(cachedSecondFile,
-        "-r-xrwx---", userName, taskTrackerSpecialGroup);
+    for (Path p : localCacheFiles) {
+      // First make sure that the cache file has proper permissions.
+      TestTaskTrackerLocalization.checkFilePermissions(p.toUri().getPath(),
+          "-r-xrwx---", userName, taskTrackerSpecialGroup);
+      // Now. make sure that all the path components also have proper
+      // permissions.
+      checkPermissionOnPathComponents(p.toUri().getPath(), userName);
+    }
 
-    // Now. make sure that all the path components also have proper
-    // permissions.
-    checkPermissionOnPathComponents(cachedFirstFile, userName);
-    checkPermissionOnPathComponents(cachedSecondFile, userName);
   }
 
   /**
@@ -136,7 +139,7 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
             + Path.SEPARATOR + "0_[0-" + (numLocalDirs - 1) + "]"
             + Path.SEPARATOR + TaskTracker.getPrivateDistributedCacheDir(userName),
             "");
-    LOG.info("Leading path for cacheFirstFile is : "
+    LOG.info("Trailing path for cacheFirstFile is : "
         + trailingStringForFirstFile);
     // The leading mapred.local.dir/0_[0-n]/taskTracker/$user string.
     String leadingStringForFirstFile =

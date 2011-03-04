@@ -172,7 +172,7 @@ public class TaskDistributedCacheManager {
       Path p = distributedCacheManager.getLocalCache(uri, taskConf,
           cacheSubdir, fileStatus, 
           cacheFile.type == CacheFile.FileType.ARCHIVE,
-          cacheFile.timestamp, workdirPath, false);
+          cacheFile.timestamp, workdirPath, false, cacheFile.isPublic);
       cacheFile.setLocalized(true);
 
       if (cacheFile.type == CacheFile.FileType.ARCHIVE) {

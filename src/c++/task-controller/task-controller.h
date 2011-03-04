@@ -39,7 +39,7 @@
 enum command {
   INITIALIZE_USER,
   INITIALIZE_JOB,
-  INITIALIZE_DISTRIBUTEDCACHE,
+  INITIALIZE_DISTRIBUTEDCACHE_FILE,
   LAUNCH_TASK_JVM,
   INITIALIZE_TASK,
   TERMINATE_TASK_JVM,
@@ -66,7 +66,7 @@ enum errorcodes {
   PREPARE_TASK_LOGS_FAILED, //16
   INVALID_TT_LOG_DIR, //17
   OUT_OF_MEMORY, //18
-  INITIALIZE_DISTCACHE_FAILED, //19
+  INITIALIZE_DISTCACHEFILE_FAILED, //19
   INITIALIZE_USER_FAILED, //20
   UNABLE_TO_BUILD_PATH //21
 };
@@ -75,7 +75,7 @@ enum errorcodes {
 
 #define TT_JOB_DIR_PATTERN USER_DIR_PATTERN"/jobcache/%s"
 
-#define USER_DISTRIBUTED_CACHE_DIR_PATTERN USER_DIR_PATTERN"/distcache"
+#define USER_DISTRIBUTED_CACHE_DIR_PATTERN USER_DIR_PATTERN"/distcache/%s"
 
 #define JOB_DIR_TO_JOB_WORK_PATTERN "%s/work"
 
@@ -109,7 +109,8 @@ int initialize_task(const char *jobid, const char *taskid, const char *user);
 
 int initialize_job(const char *jobid, const char *user);
 
-int initialize_distributed_cache(const char *user);
+int initialize_distributed_cache_file(const char *tt_root, 
+    const char* unique_string, const char *user);
 
 int kill_user_task(const char *user, const char *task_pid, int sig);
 

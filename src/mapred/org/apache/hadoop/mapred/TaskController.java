@@ -70,12 +70,10 @@ public abstract class TaskController implements Configurable {
    * disks:
    * <ul>
    * <li>mapred-local directories</li>
-   * <li>Job cache directories</li>
-   * <li>Archive directories</li>
    * <li>Hadoop log directories</li>
    * </ul>
    */
-  void setup() {
+  public void setup() {
     for (String localDir : this.mapredLocalDirs) {
       // Set up the mapred-local directories.
       File mapredlocalDir = new File(localDir);
@@ -109,13 +107,13 @@ public abstract class TaskController implements Configurable {
 
   /**
    * Take task-controller specific actions to initialize the distributed cache
-   * files. This involves setting appropriate permissions for these files so as
+   * file. This involves setting appropriate permissions for these files so as
    * to secure them to be accessible only their owners.
    * 
    * @param context
    * @throws IOException
    */
-  public abstract void initializeDistributedCache(InitializationContext context)
+  public abstract void initializeDistributedCacheFile(DistributedCacheFileContext context)
       throws IOException;
 
   /**
@@ -257,6 +255,37 @@ public abstract class TaskController implements Configurable {
   public static class InitializationContext {
     public File workDir;
     public String user;
+    
+    public InitializationContext() {
+    }
+    
+    public InitializationContext(String user, File workDir) {
+      this.user = user;
+      this.workDir = workDir;
+    }
+  }
+  
+  /**
+   * This is used for initializing the private localized files in distributed
+   * cache. Initialization would involve changing permission, ownership and etc.
+   */
+  public static class DistributedCacheFileContext extends InitializationContext {
+    // base directory under which file has been localized
+    Path localizedBaseDir;
+    // the unique string used to construct the localized path
+    String uniqueString;
+
+    public DistributedCacheFileContext(String user, File workDir,
+        Path localizedBaseDir, String uniqueString) {
+      super(user, workDir);
+      this.localizedBaseDir = localizedBaseDir;
+      this.uniqueString = uniqueString;
+    }
+
+    public Path getLocalizedUniqueDir() {
+      return new Path(localizedBaseDir, new Path(TaskTracker
+          .getPrivateDistributedCacheDir(user), uniqueString));
+    }
   }
 
   static class JobInitializationContext extends InitializationContext {

@@ -85,7 +85,7 @@ class LinuxTaskController extends TaskController {
   enum TaskCommands {
     INITIALIZE_USER,
     INITIALIZE_JOB,
-    INITIALIZE_DISTRIBUTEDCACHE,
+    INITIALIZE_DISTRIBUTEDCACHE_FILE,
     LAUNCH_TASK_JVM,
     INITIALIZE_TASK,
     TERMINATE_TASK_JVM,
@@ -342,12 +342,21 @@ class LinuxTaskController extends TaskController {
   }
 
   @Override
-  public void initializeDistributedCache(InitializationContext context)
+  public void initializeDistributedCacheFile(DistributedCacheFileContext context)
       throws IOException {
-    LOG.debug("Going to initialize distributed cache for " + context.user
-        + " on the TT");
-    runCommand(TaskCommands.INITIALIZE_DISTRIBUTEDCACHE, context.user,
-        new ArrayList<String>(), context.workDir, null);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Going to initialize distributed cache for " + context.user
+          + " with localizedBaseDir " + context.localizedBaseDir + 
+          " and uniqueString " + context.uniqueString);
+    }
+    List<String> args = new ArrayList<String>();
+    // Here, uniqueString might start with '-'. Adding -- in front of the 
+    // arguments indicates that they are non-option parameters.
+    args.add("--");
+    args.add(context.localizedBaseDir.toString());
+    args.add(context.uniqueString);
+    runCommand(TaskCommands.INITIALIZE_DISTRIBUTEDCACHE_FILE, context.user,
+        args, context.workDir, null);
   }
 
   @Override
