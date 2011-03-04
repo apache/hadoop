@@ -121,6 +121,7 @@
   <property name="test.tools.input.dir" value="${basedir}/src/test/tools/data"/>
   
   <property name="test.commit.tests.file" value="${test.src.dir}/commit-tests" />
+  <property name="test.smoke.tests.file" value="${test.src.dir}/smoke-tests" />
   <property name="test.all.tests.file" value="${test.src.dir}/all-tests" />
 
   <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
@@ -980,7 +981,20 @@
                        >
     </macro-test-runner>
   </target>
-  
+
+  <target name="test-smoke" depends="jar-test"
+    description="Run approx 30-minute set of functional tests prior to
+      guarantee that the build is not DOA">
+    <macro-test-runner test.file="${test.smoke.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf="java.security.krb5.conf"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       >
+    </macro-test-runner>
+  </target>
+
   <target name="checkfailure" if="tests.failed">
     <touch file="${test.build.dir}/testsfailed"/>
     <fail unless="continueOnFailure">Tests failed!</fail>
