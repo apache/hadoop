@@ -446,7 +446,12 @@ public class Client {
           if (ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
             @Override
             public Boolean run() throws IOException {
-              return setupSaslConnection(in2, out2);
+              try {
+                return setupSaslConnection(in2, out2);
+              } catch (IOException ie) {
+                handleConnectionFailure(1, 1, ie);
+                throw ie;
+              }
             }
           })) {
             // Sasl connect is successful. Let's set up Sasl i/o streams.
