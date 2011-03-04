@@ -393,9 +393,10 @@ public class Client {
             LOG.warn(msg);
             throw (IOException) new IOException(msg).initCause(ex);
           }
-        } 
-        throw (IOException)new IOException("Failed to connect to the server"
-        ).initCause(e);
+        }
+        if (e instanceof RemoteException) 
+          throw (RemoteException)e;
+        throw new IOException(e);
       }
     }
     /** Connect to the server and set up the I/O streams. It then sends
