@@ -264,10 +264,4 @@ public interface FSDatasetInterface extends FSDatasetMBean {
    * @throws IOException
    */
   public void validateBlockMetadata(Block b) throws IOException;
-
-  /**
-   * checks how many valid storage volumes are there in the DataNode
-   * @return true if more then minimum valid volumes left in the FSDataSet
-   */
-  public boolean hasEnoughResource();
 }

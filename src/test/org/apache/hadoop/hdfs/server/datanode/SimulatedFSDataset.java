@@ -655,8 +655,4 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   public String getStorageInfo() {
     return "Simulated FSDataset-" + storageId;
   }
-  
-  public boolean hasEnoughResource() {
-    return true;
-  }
 }
