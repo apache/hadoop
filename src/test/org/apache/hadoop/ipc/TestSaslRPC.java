@@ -167,7 +167,7 @@ public class TestSaslRPC {
   
   @Test
   public void testSecureToInsecureRpc() throws Exception {
-    Server server = RPC.getServer(TestSaslProtocol.class,
+    Server server = RPC.getServer(
         new TestSaslImpl(), ADDRESS, 0, 5, true, conf, null);
     server.disableSecurity();
     TestTokenSecretManager sm = new TestTokenSecretManager();
