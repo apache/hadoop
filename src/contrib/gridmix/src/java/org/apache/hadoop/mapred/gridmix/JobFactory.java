@@ -22,7 +22,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.gridmix.Statistics.ClusterStats;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -63,6 +62,7 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T>{
   protected volatile IOException error = null;
   protected final JobStoryProducer jobProducer;
   protected final ReentrantLock lock = new ReentrantLock(true);
+  protected final JobCreator jobCreator;
 
   /**
    * Creating a new instance does not start the thread.
@@ -104,6 +104,7 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T>{
       LOG.debug(" The submission thread name is " + rThread.getName());
     }
     this.userResolver = userResolver;
+    this.jobCreator = JobCreator.getPolicy(conf,JobCreator.LOADJOB);
   }
 
 

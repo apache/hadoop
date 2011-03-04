@@ -39,13 +39,13 @@ class DebugJobFactory {
     CountDownLatch startFlag,UserResolver resolver) throws IOException {
     GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.getPolicy(
       conf, GridmixJobSubmissionPolicy.STRESS);
-    if (policy.name().equalsIgnoreCase("REPLAY")) {
+    if (policy==GridmixJobSubmissionPolicy.REPLAY) {
       return new DebugReplayJobFactory(
         submitter, scratch, numJobs, conf, startFlag,resolver);
-    } else if (policy.name().equalsIgnoreCase("STRESS")) {
+    } else if (policy==GridmixJobSubmissionPolicy.STRESS) {
       return new DebugStressJobFactory(
         submitter, scratch, numJobs, conf, startFlag,resolver);
-    } else if (policy.name().equalsIgnoreCase("SERIAL")) {
+    } else if (policy==GridmixJobSubmissionPolicy.SERIAL) {
       return new DebugSerialJobFactory(
         submitter, scratch, numJobs, conf, startFlag,resolver);
 

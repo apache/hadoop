@@ -17,19 +17,13 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.Counters;
@@ -43,19 +37,26 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.util.ToolRunner;
-import static org.apache.hadoop.mapred.Task.Counter.*;
-
-import org.junit.Test;
-import org.junit.BeforeClass;
-import org.junit.AfterClass;
-import static org.junit.Assert.*;
-
-import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.log4j.Level;
-import org.apache.hadoop.security.UserGroupInformation;
-import java.security.PrivilegedExceptionAction;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import static org.apache.hadoop.mapred.Task.Counter.MAP_INPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_BYTES;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.REDUCE_INPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.REDUCE_OUTPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.REDUCE_SHUFFLE_BYTES;
+import static org.junit.Assert.*;
 
 public class TestGridmixSubmission {
   static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
@@ -105,7 +106,8 @@ public class TestGridmixSubmission {
       for (JobStory spec : submitted) {
         sub.put(spec.getName(), spec);
       }
-      final JobClient client = new JobClient(GridmixTestUtils.mrCluster.createJobConf());
+      final JobClient client = new JobClient(
+        GridmixTestUtils.mrCluster.createJobConf());
       for (Job job : succeeded) {
         final String jobname = job.getJobName();
         if ("GRIDMIX_GENDATA".equals(jobname)) {
@@ -293,8 +295,6 @@ public class TestGridmixSubmission {
 
     @Override
     protected JobMonitor createJobMonitor(Statistics stats) {
-      Configuration conf = new Configuration();
-      conf.set(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy.name());
       monitor = new TestMonitor(NJOBS + 1, stats);
       return monitor;
     }
@@ -350,7 +350,7 @@ public class TestGridmixSubmission {
     };
     DebugGridmix client = new DebugGridmix();
     conf = new Configuration();
-      conf.set(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy.name());
+      conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy);
     conf = GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
 //    GridmixTestUtils.createHomeAndStagingDirectory((JobConf)conf);
     // allow synthetic users to create home directories

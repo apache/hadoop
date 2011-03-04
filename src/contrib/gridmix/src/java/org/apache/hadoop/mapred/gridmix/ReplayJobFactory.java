@@ -98,11 +98,12 @@ import java.util.concurrent.TimeUnit;
             }
             last = current;
             submitter.add(
-              new GridmixJob(
-                conf, initTime + Math.round(rateFactor * (current - first)),
-                job, scratch, userResolver.getTargetUgi(
-                  UserGroupInformation.createRemoteUser(job.getUser())),
-                sequence.getAndIncrement()));
+              jobCreator.createGridmixJob(
+                conf, initTime + Math.round(
+                  rateFactor * (current - first)), job, scratch,
+                userResolver.getTargetUgi(
+                  UserGroupInformation.createRemoteUser(
+                    job.getUser())), sequence.getAndIncrement()));
           } catch (IOException e) {
             error = e;
             return;

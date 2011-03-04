@@ -17,8 +17,11 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
+import org.apache.hadoop.mapred.TaskStatus.State;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.JobStory;
+import org.apache.hadoop.tools.rumen.MapTaskAttemptInfo;
+import org.apache.hadoop.tools.rumen.ReduceTaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
@@ -257,6 +260,19 @@ public class DebugJobProducer implements JobStoryProducer {
     @Override
     public TaskAttemptInfo getTaskAttemptInfo(
       TaskType taskType, int taskNumber, int taskAttemptNumber) {
+      switch (taskType) {
+        case MAP:
+          return new MapTaskAttemptInfo(
+            State.SUCCEEDED, new TaskInfo(
+              m_bytesIn[taskNumber], m_recsIn[taskNumber],
+              m_bytesOut[taskNumber], m_recsOut[taskNumber], -1),100);
+
+        case REDUCE:
+          return new ReduceTaskAttemptInfo(
+            State.SUCCEEDED, new TaskInfo(
+              r_bytesIn[taskNumber], r_recsIn[taskNumber],
+              r_bytesOut[taskNumber], r_recsOut[taskNumber], -1),100,100,100);
+      }
       throw new UnsupportedOperationException();
     }
 

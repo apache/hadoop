@@ -227,7 +227,8 @@ public class Statistics implements Component<Job> {
 
     private void getJobReports(List<JobStatus> jobs) throws IOException {
       for (final JobStatus job : jobs) {
-        UserGroupInformation user = userResolver.getTargetUgi(
+
+        final UserGroupInformation user = userResolver.getTargetUgi(
           UserGroupInformation.createRemoteUser(job.getUsername()));
         try {
           user.doAs(
@@ -241,7 +242,8 @@ public class Statistics implements Component<Job> {
                         org.apache.hadoop.mapred.JobID.downgrade(id)));
                   } catch (IOException e) {
                     LOG.error(
-                      " Couldnt get the MapTaskResports for "+ job.getJobId());
+                      " Couldnt get the MapTaskResports for " + job.getJobId() +
+                        " job username "+ job.getUsername() +" cause " + user);
                   }
                 }
                 return null;

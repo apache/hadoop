@@ -128,7 +128,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
                 i += job.getNumberMaps();
 
                 submitter.add(
-                  new GridmixJob(
+                  jobCreator.createGridmixJob(
                     conf, 0L, job, scratch, userResolver.getTargetUgi(
                       UserGroupInformation.createRemoteUser(
                         job.getUser())), sequence.getAndIncrement()));

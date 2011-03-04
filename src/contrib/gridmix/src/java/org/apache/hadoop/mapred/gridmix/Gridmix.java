@@ -161,9 +161,8 @@ public class Gridmix extends Configured implements Tool {
       LOG.info(" Submission policy is " + policy.name());
       statistics = new Statistics(conf, policy.getPollingInterval(), startFlag,userResolver);
       monitor = createJobMonitor(statistics);
-      int noOfSubmitterThreads = policy.name().equals(
-        GridmixJobSubmissionPolicy.SERIAL.name()) ? 1 :
-        Runtime.getRuntime().availableProcessors() + 1;
+      int noOfSubmitterThreads = (policy == GridmixJobSubmissionPolicy.SERIAL) ? 1
+          : Runtime.getRuntime().availableProcessors() + 1;
 
       submitter = createJobSubmitter(
         monitor, conf.getInt(
@@ -173,7 +172,7 @@ public class Gridmix extends Configured implements Tool {
       
       factory = createJobFactory(
         submitter, traceIn, scratchDir, conf, startFlag, userResolver);
-      if (policy.name().equals(GridmixJobSubmissionPolicy.SERIAL.name())) {
+      if (policy==GridmixJobSubmissionPolicy.SERIAL) {
         statistics.addJobStatsListeners(factory);
       } else {
         statistics.addClusterStatsObservers(factory);

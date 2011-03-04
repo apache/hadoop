@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.WritableUtils;
 
-class GridmixSplit extends CombineFileSplit {
+class LoadSplit extends CombineFileSplit {
   private int id;
   private int nSpec;
   private int maps;
@@ -39,11 +39,11 @@ class GridmixSplit extends CombineFileSplit {
   private long[] reduceOutputBytes = new long[0];
   private long[] reduceOutputRecords = new long[0];
 
-  GridmixSplit() {
+  LoadSplit() {
     super();
   }
 
-  public GridmixSplit(CombineFileSplit cfsplit, int maps, int id,
+  public LoadSplit(CombineFileSplit cfsplit, int maps, int id,
       long inputBytes, long inputRecords, long outputBytes,
       long outputRecords, double[] reduceBytes, double[] reduceRecords,
       long[] reduceOutputBytes, long[] reduceOutputRecords)
@@ -61,6 +61,7 @@ class GridmixSplit extends CombineFileSplit {
     this.reduceOutputBytes = reduceOutputBytes;
     this.reduceOutputRecords = reduceOutputRecords;
   }
+
   public int getId() {
     return id;
   }

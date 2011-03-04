@@ -98,7 +98,7 @@ class GenerateData extends GridmixJob {
   public Job call() throws IOException, InterruptedException,
                            ClassNotFoundException {
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    job = ugi.doAs( new PrivilegedExceptionAction <Job>() {
+    ugi.doAs( new PrivilegedExceptionAction <Job>() {
        public Job run() throws IOException, ClassNotFoundException,
                                InterruptedException {
         job.setMapperClass(GenDataMapper.class);
@@ -108,13 +108,13 @@ class GenerateData extends GridmixJob {
         job.setInputFormatClass(GenDataFormat.class);
         job.setOutputFormatClass(RawBytesOutputFormat.class);
         job.setJarByClass(GenerateData.class);
-         try {
-           FileInputFormat.addInputPath(job, new Path("ignored"));
-         } catch (IOException e) {
-           LOG.error("Error  while adding input path ",e);
-         }
-         job.submit();
-         return job;
+        try {
+          FileInputFormat.addInputPath(job, new Path("ignored"));
+        } catch (IOException e) {
+          LOG.error("Error  while adding input path ", e);
+        }
+        job.submit();
+        return job;
       }
     });
     return job;

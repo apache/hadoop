@@ -97,7 +97,7 @@ public class SerialJobFactory extends JobFactory<JobStats> {
               LOG.debug(
                 "Serial mode submitting job " + job.getName());
             }
-            prevJob = new GridmixJob(
+            prevJob = jobCreator.createGridmixJob(
               conf, 0L, job, scratch, userResolver.getTargetUgi(
                 UserGroupInformation.createRemoteUser(job.getUser())),
               sequence.getAndIncrement());
