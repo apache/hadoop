@@ -58,9 +58,6 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.Reducer;
 
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-
 /**
  * This program executes a specified operation that applies load to 
  * the NameNode.
@@ -80,7 +77,7 @@ import org.apache.hadoop.util.ToolRunner;
  *       must be run before running the other operations.
  */
 
-public class NNBench extends Configured implements Tool {
+public class NNBench {
   private static final Log LOG = LogFactory.getLog(
           "org.apache.hadoop.hdfs.NNBench");
   
@@ -114,17 +111,14 @@ public class NNBench extends Configured implements Tool {
   static SimpleDateFormat sdf = 
           new SimpleDateFormat("yyyy-MM-dd' 'HH:mm:ss','S");
 
-  // private static Configuration config = new Configuration();
+  private static Configuration config = new Configuration();
   
   /**
    * Clean up the files before a test run
    * 
    * @throws IOException on error
    */
-  private static void cleanupBeforeTestrun(
-    Configuration config
-  ) throws IOException {
-
+  private static void cleanupBeforeTestrun() throws IOException {
     FileSystem tempFS = FileSystem.get(config);
     
     // Delete the data directory only if it is the create/write operation
@@ -142,10 +136,7 @@ public class NNBench extends Configured implements Tool {
    * 
    * @throws IOException on error
    */
-  private static void createControlFiles(
-    Configuration config
-  ) throws IOException {
-
+  private static void createControlFiles() throws IOException {
     FileSystem tempFS = FileSystem.get(config);
     LOG.info("Creating " + numberOfMaps + " control files");
 
@@ -159,10 +150,13 @@ public class NNBench extends Configured implements Tool {
         writer = SequenceFile.createWriter(tempFS, config, filePath, Text.class, 
                 LongWritable.class, CompressionType.NONE);
         writer.append(new Text(strFileName), new LongWritable(0l));
+      } catch(Exception e) {
+        throw new IOException(e.getLocalizedMessage());
       } finally {
         if (writer != null) {
           writer.close();
         }
+        writer = null;
       }
     }
   }
@@ -216,9 +210,6 @@ public class NNBench extends Configured implements Tool {
 
   /**
    * check for arguments and fail if the values are not specified
-   * @param index  positional number of an argument in the list of command
-   *   line's arguments
-   * @param length total number of arguments
    */
   public static void checkArgs(final int index, final int length) {
     if (index == length) {
@@ -229,10 +220,10 @@ public class NNBench extends Configured implements Tool {
   
   /**
    * Parse input arguments
-   *
-   * @param args array of command line's parameters to be parsed
+   * 
+   * @params args Command line inputs
    */
-  public static void parseInputs(final String[] args, Configuration config) {
+  public static void parseInputs(final String[] args) {
     // If there are no command line arguments, exit
     if (args.length == 0) {
       displayUsage();
@@ -316,10 +307,7 @@ public class NNBench extends Configured implements Tool {
    * 
    * @throws IOException on error
    */
-  private static void analyzeResults(
-    Configuration config
-  ) throws IOException {
-
+  private static void analyzeResults() throws IOException {
     final FileSystem fs = FileSystem.get(config);
     Path reduceFile = new Path(new Path(baseDir, OUTPUT_DIR_NAME),
             "part-00000");
@@ -370,8 +358,8 @@ public class NNBench extends Configured implements Tool {
     
     // Average latency is the average time to perform 'n' number of
     // operations, n being the number of files
-    double avgLatency1 = (double) totalTimeAL1 / successfulFileOps;
-    double avgLatency2 = (double) totalTimeAL2 / successfulFileOps;
+    double avgLatency1 = (double) totalTimeAL1 / (double) successfulFileOps;
+    double avgLatency2 = (double) totalTimeAL2 / (double) successfulFileOps;
     
     // The time it takes for the longest running map is measured. Using that,
     // cluster transactions per second is calculated. It includes time to 
@@ -379,7 +367,7 @@ public class NNBench extends Configured implements Tool {
     double longestMapTimeTPmS = (double) (mapEndTimeTPmS - mapStartTimeTPmS);
     double totalTimeTPS = (longestMapTimeTPmS == 0) ?
             (1000 * successfulFileOps) :
-            (double) (1000 * successfulFileOps) / longestMapTimeTPmS;
+            (double) (1000 * successfulFileOps) / (double) longestMapTimeTPmS;
             
     // The time it takes to perform 'n' operations is calculated (in ms),
     // n being the number of files. Using that time, the average execution 
@@ -387,22 +375,22 @@ public class NNBench extends Configured implements Tool {
     // failed operations
     double AverageExecutionTime = (totalTimeTPmS == 0) ?
         (double) successfulFileOps : 
-        (double) totalTimeTPmS / successfulFileOps;
+        (double) (totalTimeTPmS / successfulFileOps);
             
     if (operation.equals(OP_CREATE_WRITE)) {
       // For create/write/close, it is treated as two transactions,
       // since a file create from a client perspective involves create and close
       resultTPSLine1 = "               TPS: Create/Write/Close: " + 
         (int) (totalTimeTPS * 2);
-      resultTPSLine2 = "Avg exec time (ms): Create/Write/Close: " +
-        AverageExecutionTime;
+      resultTPSLine2 = "Avg exec time (ms): Create/Write/Close: " + 
+        (double) AverageExecutionTime;
       resultALLine1 = "            Avg Lat (ms): Create/Write: " + avgLatency1;
       resultALLine2 = "                   Avg Lat (ms): Close: " + avgLatency2;
     } else if (operation.equals(OP_OPEN_READ)) {
       resultTPSLine1 = "                        TPS: Open/Read: " + 
         (int) totalTimeTPS;
       resultTPSLine2 = "         Avg Exec time (ms): Open/Read: " + 
-        AverageExecutionTime;
+        (double) AverageExecutionTime;
       resultALLine1 = "                    Avg Lat (ms): Open: " + avgLatency1;
       if (readFileAfterOpen) {
         resultALLine2 = "                  Avg Lat (ms): Read: " + avgLatency2;
@@ -411,13 +399,13 @@ public class NNBench extends Configured implements Tool {
       resultTPSLine1 = "                           TPS: Rename: " + 
         (int) totalTimeTPS;
       resultTPSLine2 = "            Avg Exec time (ms): Rename: " + 
-        AverageExecutionTime;
+        (double) AverageExecutionTime;
       resultALLine1 = "                  Avg Lat (ms): Rename: " + avgLatency1;
     } else if (operation.equals(OP_DELETE)) {
       resultTPSLine1 = "                           TPS: Delete: " + 
         (int) totalTimeTPS;
       resultTPSLine2 = "            Avg Exec time (ms): Delete: " + 
-        AverageExecutionTime;
+        (double) AverageExecutionTime;
       resultALLine1 = "                  Avg Lat (ms): Delete: " + avgLatency1;
     }
     
@@ -470,7 +458,7 @@ public class NNBench extends Configured implements Tool {
    * 
    * @throws IOException on error
    */
-  public static void runTests(Configuration config) throws IOException {
+  public static void runTests() throws IOException {
     config.setLong("io.bytes.per.checksum", bytesPerChecksum);
     
     JobConf job = new JobConf(config, NNBench.class);
@@ -570,46 +558,36 @@ public class NNBench extends Configured implements Tool {
   /**
   * Main method for running the NNBench benchmarks
   *
-  * @param args array of command line arguments
   * @throws IOException indicates a problem with test startup
   */
-  public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new NNBench(), args);
-    System.exit(res);
-  }
-
-  @Override
-  public int run(String[] args) throws Exception {
-    final Configuration config = getConf();
+  public static void main(String[] args) throws IOException {
     // Display the application version string
     displayVersion();
 
     // Parse the inputs
-    parseInputs(args, config);
+    parseInputs(args);
     
     // Validate inputs
     validateInputs();
     
     // Clean up files before the test run
-    cleanupBeforeTestrun(config);
+    cleanupBeforeTestrun();
     
     // Create control files before test run
-    createControlFiles(config);
+    createControlFiles();
 
     // Run the tests as a map reduce job
-    runTests(config);
+    runTests();
     
     // Analyze results
-    analyzeResults(config);
-
-    return 0;
+    analyzeResults();
   }
 
   
   /**
    * Mapper class
    */
-  static class NNBenchMapper extends Configured
+  static class NNBenchMapper extends Configured 
           implements Mapper<Text, LongWritable, Text, Text> {
     FileSystem filesystem = null;
     private String hostName = null;
@@ -661,15 +639,13 @@ public class NNBench extends Configured implements Tool {
      */
     public void close() throws IOException {
     }
-
+    
     /**
-     * Returns when the current number of seconds from the epoch equals
-     * the command line argument given by <code>-startTime</code>.
-     * This allows multiple instances of this program, running on clock
-     * synchronized nodes, to start at roughly the same time.
-     * @return true if the method was able to sleep for <code>-startTime</code>
-     * without interruption; false otherwise
-     */
+    * Returns when the current number of seconds from the epoch equals
+    * the command line argument given by <code>-startTime</code>.
+    * This allows multiple instances of this program, running on clock
+    * synchronized nodes, to start at roughly the same time.
+    */
     private boolean barrier() {
       long startTime = getConf().getLong("test.nnbench.starttime", 0l);
       long currentTime = System.currentTimeMillis();
@@ -722,16 +698,16 @@ public class NNBench extends Configured implements Tool {
       if (barrier()) {
         if (op.equals(OP_CREATE_WRITE)) {
           startTimeTPmS = System.currentTimeMillis();
-          doCreateWriteOp("file_" + hostName + "_", reporter);
+          doCreateWriteOp("file_" + hostName + "_", output, reporter);
         } else if (op.equals(OP_OPEN_READ)) {
           startTimeTPmS = System.currentTimeMillis();
-          doOpenReadOp("file_" + hostName + "_", reporter);
+          doOpenReadOp("file_" + hostName + "_", output, reporter);
         } else if (op.equals(OP_RENAME)) {
           startTimeTPmS = System.currentTimeMillis();
-          doRenameOp("file_" + hostName + "_", reporter);
+          doRenameOp("file_" + hostName + "_", output, reporter);
         } else if (op.equals(OP_DELETE)) {
           startTimeTPmS = System.currentTimeMillis();
-          doDeleteOp("file_" + hostName + "_", reporter);
+          doDeleteOp("file_" + hostName + "_", output, reporter);
         }
         
         endTimeTPms = System.currentTimeMillis();
@@ -759,13 +735,11 @@ public class NNBench extends Configured implements Tool {
     
     /**
      * Create and Write operation.
-     * @param name of the prefix of the putput file to be created
-     * @param reporter an instanse of (@link Reporter) to be used for
-     *   status' updates
      */
     private void doCreateWriteOp(String name,
-                                 Reporter reporter) {
-      FSDataOutputStream out;
+            OutputCollector<Text, Text> output,
+            Reporter reporter) {
+      FSDataOutputStream out = null;
       byte[] buffer = new byte[bytesToWrite];
       
       for (long l = 0l; l < numberOfFiles; l++) {
@@ -809,13 +783,11 @@ public class NNBench extends Configured implements Tool {
     
     /**
      * Open operation
-     * @param name of the prefix of the putput file to be read
-     * @param reporter an instanse of (@link Reporter) to be used for
-     *   status' updates
      */
     private void doOpenReadOp(String name,
-                              Reporter reporter) {
-      FSDataInputStream input;
+            OutputCollector<Text, Text> output,
+            Reporter reporter) {
+      FSDataInputStream input = null;
       byte[] buffer = new byte[bytesToWrite];
       
       for (long l = 0l; l < numberOfFiles; l++) {
@@ -852,12 +824,10 @@ public class NNBench extends Configured implements Tool {
     
     /**
      * Rename operation
-     * @param name of prefix of the file to be renamed
-     * @param reporter an instanse of (@link Reporter) to be used for
-     *   status' updates
      */
     private void doRenameOp(String name,
-                            Reporter reporter) {
+            OutputCollector<Text, Text> output,
+            Reporter reporter) {
       for (long l = 0l; l < numberOfFiles; l++) {
         Path filePath = new Path(new Path(baseDir, dataDirName), 
                 name + "_" + l);
@@ -887,12 +857,10 @@ public class NNBench extends Configured implements Tool {
     
     /**
      * Delete operation
-     * @param name of prefix of the file to be deleted
-     * @param reporter an instanse of (@link Reporter) to be used for
-     *   status' updates
      */
     private void doDeleteOp(String name,
-                            Reporter reporter) {
+            OutputCollector<Text, Text> output,
+            Reporter reporter) {
       for (long l = 0l; l < numberOfFiles; l++) {
         Path filePath = new Path(new Path(baseDir, dataDirName), 
                 name + "_" + l);
