@@ -382,6 +382,10 @@ public class JobLocalizer {
     //setup the distributed cache
     final long[] sizes = downloadPrivateCache(jConf);
     if (sizes != null) {
+      //the following doAs is required because the DefaultTaskController
+      //calls the localizeJobFiles method in the context of the TaskTracker
+      //process. The JVM authorization check would fail without this
+      //doAs. In the LinuxTC case, this doesn't harm.
       UserGroupInformation ugi = 
         UserGroupInformation.createRemoteUser(jobid.toString());
       ugi.doAs(new PrivilegedExceptionAction<Object>() { 
