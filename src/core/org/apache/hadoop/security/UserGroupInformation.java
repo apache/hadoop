@@ -215,8 +215,6 @@ public class UserGroupInformation {
 
   private final Subject subject;
   
-  private LoginContext login;
-  
   private static final String OS_LOGIN_MODULE_NAME;
   private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
   private static final boolean windows = 
@@ -339,6 +337,19 @@ public class UserGroupInformation {
       return null;
     }
   }
+  
+  private LoginContext getLogin() {
+    for (User p: subject.getPrincipals(User.class)) {
+      return p.getLogin();
+    }
+    return null;
+  }
+  
+  private void setLogin(LoginContext login) {
+    for (User p: subject.getPrincipals(User.class)) {
+      p.setLogin(login);
+    }
+  }
 
   /**
    * Create a UserGroupInformation for the given subject.
@@ -378,7 +389,7 @@ public class UserGroupInformation {
           login = new LoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, subject);
         }
         login.login();
-        loginUser.login = login;
+        loginUser.setLogin(login);
         loginUser = new UserGroupInformation(login.getSubject());
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null && isSecurityEnabled()) {
@@ -420,7 +431,7 @@ public class UserGroupInformation {
         new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
       login.login();
       loginUser = new UserGroupInformation(subject);
-      loginUser.login = login;
+      loginUser.setLogin(login);
     } catch (LoginException le) {
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
@@ -456,7 +467,7 @@ public class UserGroupInformation {
        
       login.login();
       UserGroupInformation newLoginUser = new UserGroupInformation(subject);
-      newLoginUser.login = login;
+      newLoginUser.setLogin(login);
       
       return newLoginUser;
     } catch (LoginException le) {
@@ -481,6 +492,7 @@ public class UserGroupInformation {
   throws IOException {
     if (!isSecurityEnabled())
       return;
+    LoginContext login = getLogin();
     if (login == null || keytabFile == null) {
       throw new IOException("loginUserFromKeyTab must be done first");
     }
