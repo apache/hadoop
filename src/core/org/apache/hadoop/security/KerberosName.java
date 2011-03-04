@@ -73,14 +73,17 @@ public class KerberosName {
   private static List<Rule> rules;
 
   private static String defaultRealm;
-  private static final Config kerbConf;
+  private static Config kerbConf;
   
   static {
     try {
       kerbConf = Config.getInstance();
       defaultRealm = kerbConf.getDefaultRealm();
     } catch (KrbException ke) {
-      throw new IllegalArgumentException("Can't get Kerberos configuration",ke);
+      if(UserGroupInformation.isSecurityEnabled())
+        throw new IllegalArgumentException("Can't get Kerberos configuration",ke);
+      else 
+        defaultRealm="";
     }
   }
 
