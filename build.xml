@@ -874,23 +874,27 @@
       <copy file="${test.src.dir}/fi-site.xml"
         todir="${test.build.extraconf}" />
       <junit showoutput="${test.output}"
-        printsummary="${test.junit.printsummary}"
-        haltonfailure="${test.junit.haltonfailure}"
-        fork="yes"
-        forkmode="${test.junit.fork.mode}"
-        maxmemory="${test.junit.maxmemory}"
-        dir="${basedir}" timeout="${test.timeout}"
-        errorProperty="tests.failed" failureProperty="tests.failed">
-        <sysproperty key="test.build.data" value="${test.build.data}"/>
-        <sysproperty key="test.tools.input.dir" value="${test.tools.input.dir}"/>
-        <sysproperty key="test.cache.data" value="${test.cache.data}"/>     
-        <sysproperty key="test.debug.data" value="${test.debug.data}"/>
-        <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
-        <sysproperty key="test.src.dir" value="${test.src.dir}"/>
-        <sysproperty key="taskcontroller-path" value="${taskcontroller-path}"/>
-        <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}"/>
-        <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
-        <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
+             printsummary="${test.junit.printsummary}"
+             haltonfailure="${test.junit.haltonfailure}"
+             fork="yes"
+             forkmode="${test.junit.fork.mode}"
+             maxmemory="${test.junit.maxmemory}"
+             dir="${basedir}"
+             timeout="${test.timeout}"
+             errorProperty="tests.failed"
+             failureProperty="tests.failed">
+        <sysproperty key="test.build.data" value="${test.build.data}" />
+        <sysproperty key="test.tools.input.dir"
+                     value="${test.tools.input.dir}" />
+        <sysproperty key="test.cache.data" value="${test.cache.data}" />
+        <sysproperty key="test.debug.data" value="${test.debug.data}" />
+        <sysproperty key="hadoop.log.dir" value="${test.log.dir}" />
+        <sysproperty key="test.src.dir" value="${test.src.dir}" />
+        <sysproperty key="taskcontroller-path" value="${taskcontroller-path}" />
+        <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}" />
+        <sysproperty key="test.build.extraconf"
+                     value="@{test.dir}/extraconf" />
+        <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
         <sysproperty key="java.library.path"
           value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
         <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
