@@ -191,7 +191,8 @@ class JvmManager {
       		" exceeded the allowed " +
       		"log limits " + logdir);
       String user = firstTask.getUser();
-      String jobLogDir = firstTask.getJobID().toString() + logdir.getName();
+      String jobLogDir = firstTask.getJobID().toString() + 
+                         Path.SEPARATOR + logdir.getName();
       PathDeletionContext item = 
         new TaskController.DeletionContext(tracker.getTaskController(),
             true, user, jobLogDir);
