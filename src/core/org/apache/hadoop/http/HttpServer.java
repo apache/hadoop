@@ -127,7 +127,7 @@ public class HttpServer implements FilterContainer {
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
     if (initializers != null) {
       for(FilterInitializer c : initializers) {
-        c.initFilter(this);
+        c.initFilter(this, conf);
       }
     }
     addDefaultServlets();
