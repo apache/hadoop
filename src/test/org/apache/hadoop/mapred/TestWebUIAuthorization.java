@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.http.TestHttpServer.DummyFilterInitializer;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.TaskAttempt;
-import org.apache.hadoop.mapred.QueueManager.QueueOperation;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.SleepJob;
@@ -121,11 +121,13 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
    * (1) jobSubmitter can view the job
    * (2) mrAdmin can view any job
    * (3) mrOwner can view any job
-   * (4) user mentioned in job-view-acls should be able to view the
-   *     job irrespective of job-modify-acls.
-   * (5) user mentioned in job-modify-acls but not in job-view-acls
+   * (4) qAdmins of the queue to which job is submitted to can view any job in
+   *     that queue.
+   * (5) user mentioned in job-view-acl should be able to view the
+   *     job irrespective of job-modify-acl.
+   * (6) user mentioned in job-modify-acl but not in job-view-acl
    *     cannot view the job
-   * (6) other unauthorized users cannot view the job
+   * (7) other unauthorized users cannot view the job
    */
   private void validateViewJob(String url, String method)
       throws IOException {
@@ -140,6 +142,8 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
         getHttpStatusCode(url, mrAdminGroupMember, method));
     assertEquals("Incorrect return code for MR-owner " + mrOwner,
         HttpURLConnection.HTTP_OK, getHttpStatusCode(url, mrOwner, method));
+    assertEquals("Incorrect return code for queue admin " + qAdmin,
+        HttpURLConnection.HTTP_OK, getHttpStatusCode(url, qAdmin, method));
     assertEquals("Incorrect return code for user in job-view-acl " +
         viewColleague, HttpURLConnection.HTTP_OK,
         getHttpStatusCode(url, viewColleague, method));
@@ -160,9 +164,9 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
    * (1) jobSubmitter, mrOwner, qAdmin and mrAdmin can modify the job.
    *     But we are not validating this in this method. Let the caller
    *     explicitly validate this, if needed.
-   * (2) user mentioned in job-view-acls but not in job-modify-acls cannot
+   * (2) user mentioned in job-view-acl but not in job-modify-acl cannot
    *     modify the job
-   * (3) user mentioned in job-modify-acls (irrespective of job-view-acls)
+   * (3) user mentioned in job-modify-acl (irrespective of job-view-acl)
    *     can modify the job
    * (4) other unauthorized users cannot modify the job
    */
@@ -297,9 +301,9 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
     props.setProperty(JobConf.MR_ACLS_ENABLED, String.valueOf(true));
     props.setProperty(QueueManager.toFullPropertyName(
-        "default", QueueOperation.ADMINISTER_JOBS.getAclName()), qAdmin);
+        "default", QueueACL.ADMINISTER_JOBS.getAclName()), qAdmin);
     props.setProperty(QueueManager.toFullPropertyName(
-        "default", QueueOperation.SUBMIT_JOB.getAclName()), jobSubmitter);
+        "default", QueueACL.SUBMIT_JOB.getAclName()), jobSubmitter);
 
     props.setProperty("dfs.permissions", "false");
 
@@ -383,7 +387,9 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     JobHistory.parseHistoryFromFS(historyFilePath.toString().substring(5),
         l, historyFilePath.getFileSystem(conf));
 
-    Map<String, org.apache.hadoop.mapred.JobHistory.Task> tipsMap = jobInfo.getAllTasks();
+    Map<String, org.apache.hadoop.mapred.JobHistory.Task> tipsMap =
+    	jobInfo.getAllTasks();
+
     for (String tip : tipsMap.keySet()) {
       // validate access of taskdetailshistory.jsp
       validateViewJob(jtURL + "/taskdetailshistory.jsp?logFile="
@@ -401,20 +407,37 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
         String taskLogURL = TaskLogServlet.getTaskLogUrl("localhost",
             attemptsMap.get(attempt).get(Keys.HTTP_PORT), attempt.toString());
         validateViewJob(taskLogURL, "GET");
+      }
+    }
 
-        // delete job-acls.xml file from the task log dir of attempt and verify
-        // if unauthorized users can view task logs of attempt.
-        File attemptLogDir = TaskLog.getAttemptDir(TaskAttemptID
-            .forName(attempt), false);
-        Path jobACLsFilePath = new Path(attemptLogDir.toString(),
-            TaskRunner.jobACLsFile);
-        new File(jobACLsFilePath.toUri().getPath()).delete();
+    // For each tip, let us test the effect of deletion of job-acls.xml file and
+    // deletion of task log dir for each of the attempts of the tip.
+    
+    // delete job-acls.xml file from the job userlog dir and verify
+    // if unauthorized users can view task logs of each attempt.
+    Path jobACLsFilePath = new Path(TaskLog.getJobDir(jobid).toString(),
+        TaskTracker.jobACLsFile);
+    new File(jobACLsFilePath.toUri().getPath()).delete();
+
+    for (String tip : tipsMap.keySet()) {
+
+      Map<String, TaskAttempt> attemptsMap =
+        tipsMap.get(tip).getTaskAttempts();
+      for (String attempt : attemptsMap.keySet()) {
+
+        String taskLogURL = TaskLogServlet.getTaskLogUrl("localhost",
+            attemptsMap.get(attempt).get(Keys.HTTP_PORT), attempt.toString());
+
+        // unauthorized users can view task logs of each attempt because
+        // job-acls.xml file is deleted.
         assertEquals("Incorrect return code for " + unauthorizedUser,
             HttpURLConnection.HTTP_OK, getHttpStatusCode(taskLogURL,
                 unauthorizedUser, "GET"));
 
         // delete the whole task log dir of attempt and verify that we get
         // correct response code (i.e. HTTP_GONE) when task logs are accessed.
+        File attemptLogDir = TaskLog.getAttemptDir(TaskAttemptID
+            .forName(attempt), false);
         FileUtil.fullyDelete(attemptLogDir);
         assertEquals("Incorrect return code for " + jobSubmitter,
             HttpURLConnection.HTTP_GONE, getHttpStatusCode(taskLogURL,
@@ -477,10 +500,6 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
           getHttpStatusCode(url, unauthorizedUser, "POST"));
       assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
           getHttpStatusCode(url, modifyColleague, "POST"));
-      // As qAdmin doesn't have view access to job, he cannot kill the job
-      // from jobdetails web page. But qAdmin can kill job from jobtracker page.
-      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
-          getHttpStatusCode(url, qAdmin, "POST"));
 
       assertEquals(HttpURLConnection.HTTP_OK,
           getHttpStatusCode(url, viewAndModifyColleague, "POST"));
@@ -499,13 +518,15 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     // check if jobSubmitter, mrOwner and mrAdmin can do
     // killJob using jobdetails.jsp url
     confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
-                                       jobSubmitter);
+                                      jobSubmitter);
     confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
-                                       mrOwner);
+                                      mrOwner);
     confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
-                                       mrAdminGroupMember);
+                                      mrAdminUser);
     confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
-        mrAdminUser);
+                                      mrAdminGroupMember);
+    confirmJobDetailsJSPKillJobAsUser(cluster, conf, jtURL, jobTrackerJSP,
+                                      qAdmin);
   }
 
   /**
@@ -647,9 +668,9 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
     props.setProperty(JobConf.MR_ACLS_ENABLED, String.valueOf(true));
     props.setProperty(QueueManager.toFullPropertyName(
-        "default", QueueOperation.ADMINISTER_JOBS.getAclName()), qAdmin);
+        "default", QueueACL.ADMINISTER_JOBS.getAclName()), qAdmin);
     props.setProperty(QueueManager.toFullPropertyName(
-        "default", QueueOperation.SUBMIT_JOB.getAclName()),
+        "default", QueueACL.SUBMIT_JOB.getAclName()),
         jobSubmitter + "," + jobSubmitter1 + "," + jobSubmitter2 + "," +
         jobSubmitter3);
 
@@ -732,7 +753,6 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
     startCluster(true, props);
     validateCommonServlets(getMRCluster());
-    stopCluster();
   }
 
   private void validateCommonServlets(MiniMRCluster cluster) throws IOException {

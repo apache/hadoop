@@ -60,8 +60,9 @@ public class TestUserLogCleanup {
 
   private File localizeJob(JobID jobid) throws IOException {
     File jobUserlog = TaskLog.getJobDir(jobid);
+    JobConf conf = new JobConf();
     // localize job log directory
-    tt.initializeJobLogDir(jobid);
+    tt.initializeJobLogDir(jobid, conf);
     assertTrue(jobUserlog + " directory is not created.", jobUserlog.exists());
     return jobUserlog;
   }
@@ -75,6 +76,7 @@ public class TestUserLogCleanup {
   private void startTT(Configuration conf) throws IOException {
     myClock = new FakeClock(); // clock is reset.
     tt = new TaskTracker();
+    tt.setConf(new JobConf(conf));
     localizer = new Localizer(FileSystem.get(conf), conf
         .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY),
         new DefaultTaskController());

@@ -38,15 +38,15 @@ import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.QueueManager.QueueOperation;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestQueueManager extends TestCase {
 
   private static final Log LOG = LogFactory.getLog(TestQueueManager.class);
 
-  String submitAcl = QueueOperation.SUBMIT_JOB.getAclName();
-  String adminAcl  = QueueOperation.ADMINISTER_JOBS.getAclName();
+  String submitAcl = QueueACL.SUBMIT_JOB.getAclName();
+  String adminAcl  = QueueACL.ADMINISTER_JOBS.getAclName();
 
   private MiniDFSCluster miniDFSCluster;
   private MiniMRCluster miniMRCluster;
@@ -389,62 +389,49 @@ public class TestQueueManager extends TestCase {
 
       //Job Submission should fail because ugi to be used is set to blank.
       assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("default", QueueACL.SUBMIT_JOB, ugi));
       assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q1", QueueACL.SUBMIT_JOB, ugi));
       assertFalse("User Job Submission Succeeded before refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q2", QueueACL.SUBMIT_JOB, ugi));
       
       //Test job submission as alternate user.
       UserGroupInformation alternateUgi = 
         UserGroupInformation.createUserForTesting("u1", new String[]{"user"});
       assertTrue("Alternate User Job Submission failed before refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
-              SUBMIT_JOB, alternateUgi));
+          queueManager.hasAccess("q2", QueueACL.SUBMIT_JOB, alternateUgi));
       
       //Set acl for user1.
       queueConfProps.put(QueueManager.toFullPropertyName(
-          "default", submitAcl),
-    		  ugi.getShortUserName());
+          "default", submitAcl), ugi.getShortUserName());
       queueConfProps.put(QueueManager.toFullPropertyName(
-          "q1", submitAcl),
-    		  ugi.getShortUserName());
+          "q1", submitAcl), ugi.getShortUserName());
       queueConfProps.put(QueueManager.toFullPropertyName(
-          "q2", submitAcl),
-    		  ugi.getShortUserName());
+          "q2", submitAcl), ugi.getShortUserName());
       //write out queue-acls.xml.
       UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
       //refresh configuration
       queueManager.refreshAcls(conf);
       //Submission should succeed
       assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("default", QueueACL.SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q1", QueueACL.SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed after refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q2", QueueACL.SUBMIT_JOB, ugi));
       assertFalse("Alternate User Job Submission succeeded after refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
-              SUBMIT_JOB, alternateUgi));
+          queueManager.hasAccess("q2", QueueACL.SUBMIT_JOB, alternateUgi));
       //delete the ACL file.
       queueConfigFile.delete();
       
       //rewrite the mapred-site.xml
       hadoopConfProps.put(JobConf.MR_ACLS_ENABLED, "true");
       hadoopConfProps.put(QueueManager.toFullPropertyName(
-          "q1", submitAcl),
-          ugi.getShortUserName());
+          "q1", submitAcl), ugi.getShortUserName());
       UtilsForTests.setUpConfigFile(hadoopConfProps, hadoopConfigFile);
       queueManager.refreshAcls(conf);
       assertTrue("User Job Submission allowed after refresh and no queue acls file.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q1", QueueACL.SUBMIT_JOB, ugi));
     } finally{
       if(queueConfigFile.exists()) {
         queueConfigFile.delete();
@@ -472,28 +459,22 @@ public class TestQueueManager extends TestCase {
       Properties queueConfProps = new Properties();
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       queueConfProps.put(QueueManager.toFullPropertyName(
-          "default", submitAcl),
-          ugi.getShortUserName());
+          "default", submitAcl), ugi.getShortUserName());
       queueConfProps.put(QueueManager.toFullPropertyName(
-          "q1", submitAcl),
-          ugi.getShortUserName());
+          "q1", submitAcl), ugi.getShortUserName());
       queueConfProps.put(QueueManager.toFullPropertyName(
-          "q2", submitAcl),
-          ugi.getShortUserName());
+          "q2", submitAcl), ugi.getShortUserName());
       UtilsForTests.setUpConfigFile(queueConfProps, queueConfigFile);
       
       Configuration conf = new JobConf();
       QueueManager queueManager = new QueueManager(conf);
       //Testing access to queue.
       assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("default", QueueACL.SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q1", QueueACL.SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q2", QueueACL.SUBMIT_JOB, ugi));
       
       //Write out a new incomplete invalid configuration file.
       PrintWriter writer = new PrintWriter(new FileOutputStream(queueConfigFile));
@@ -509,14 +490,11 @@ public class TestQueueManager extends TestCase {
       } catch (Exception e) {
       }
       assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("default", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("default", QueueACL.SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("q1", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q1", QueueACL.SUBMIT_JOB, ugi));
       assertTrue("User Job Submission failed after invalid conf file refresh.",
-          queueManager.hasAccess("q2", QueueManager.QueueOperation.
-              SUBMIT_JOB, ugi));
+          queueManager.hasAccess("q2", QueueACL.SUBMIT_JOB, ugi));
     } finally {
       //Cleanup the configuration files in all cases
       if(hadoopConfigFile.exists()) {

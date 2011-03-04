@@ -19,6 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
@@ -70,6 +71,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapred.TaskController.JobInitializationContext;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.TaskController.TaskControllerPathDeletionContext;
@@ -80,6 +82,7 @@ import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.mapred.pipes.Submitter;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
@@ -152,6 +155,11 @@ public class TaskTracker
         ", duration: %s"; // duration
   public static final Log ClientTraceLog =
     LogFactory.getLog(TaskTracker.class.getName() + ".clienttrace");
+
+  // Job ACLs file is created by TaskTracker under userlogs/$jobid directory for
+  // each job at job localization time. This will be used by TaskLogServlet for
+  // authorizing viewing of task logs of that job
+  static String jobACLsFile = "job-acls.xml";
 
   volatile boolean running = true;
 
@@ -944,7 +952,8 @@ public class TaskTracker
       if (!rjob.localized) {
         JobConf localJobConf = localizeJobFiles(t, rjob);
         // initialize job log directory
-        initializeJobLogDir(jobId);
+        initializeJobLogDir(jobId, localJobConf);
+
         // Now initialize the job via task-controller so as to set
         // ownership/permissions of jars, job-work-dir. Note that initializeJob
         // should be the last call after every other directory/file to be
@@ -1038,13 +1047,64 @@ public class TaskTracker
     return localJobConf;
   }
 
-  // create job userlog dir
-  void initializeJobLogDir(JobID jobId) {
+  // Create job userlog dir.
+  // Create job acls file in job log dir, if needed.
+  void initializeJobLogDir(JobID jobId, JobConf localJobConf)
+      throws IOException {
     // remove it from tasklog cleanup thread first,
     // it might be added there because of tasktracker reinit or restart
     JobStartedEvent jse = new JobStartedEvent(jobId);
     getUserLogManager().addLogEvent(jse);
     localizer.initializeJobLogDir(jobId);
+
+    if (areACLsEnabled()) {
+      // Create job-acls.xml file in job userlog dir and write the needed
+      // info for authorization of users for viewing task logs of this job.
+      writeJobACLs(localJobConf, TaskLog.getJobDir(jobId));
+    }
+  }
+
+  /**
+   *  Creates job-acls.xml under the given directory logDir and writes
+   *  job-view-acl, queue-admins-acl, jobOwner name and queue name into this
+   *  file.
+   *  queue name is the queue to which the job was submitted to.
+   *  queue-admins-acl is the queue admins ACL of the queue to which this
+   *  job was submitted to.
+   * @param conf   job configuration
+   * @param logDir job userlog dir
+   * @throws IOException
+   */
+  private static void writeJobACLs(JobConf conf, File logDir) throws IOException {
+    File aclFile = new File(logDir, jobACLsFile);
+    JobConf aclConf = new JobConf(false);
+
+    // set the job view acl in aclConf
+    String jobViewACL = conf.get(JobContext.JOB_ACL_VIEW_JOB, " ");
+    aclConf.set(JobContext.JOB_ACL_VIEW_JOB, jobViewACL);
+
+    // set the job queue name in aclConf
+    String queue = conf.getQueueName();
+    aclConf.setQueueName(queue);
+
+    // set the queue admins acl in aclConf
+    String qACLName = QueueManager.toFullPropertyName(queue,
+        QueueACL.ADMINISTER_JOBS.getAclName());
+    String queueAdminsACL = conf.get(qACLName, " ");
+    aclConf.set(qACLName, queueAdminsACL);
+
+    // set jobOwner as user.name in aclConf
+    String jobOwner = conf.getUser();
+    aclConf.set("user.name", jobOwner);
+
+    FileOutputStream out = new FileOutputStream(aclFile);
+    try {
+      aclConf.writeXml(out);
+    } finally {
+      out.close();
+    }
+    Localizer.PermissionsHandler.setPermissions(aclFile,
+        Localizer.PermissionsHandler.sevenZeroZero);
   }
 
   /**

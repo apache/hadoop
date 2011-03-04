@@ -183,6 +183,19 @@ void test_get_job_log_dir() {
   assert(ret == 0);
 }
 
+void test_get_job_acls_file() {
+  char *job_acls_file = (char *) get_job_acls_file(
+    "/tmp/testing/userlogs/job_200906101234_0001");
+  printf("job acls file obtained is %s\n", job_acls_file);
+  int ret = 0;
+  if (strcmp(job_acls_file,
+    "/tmp/testing/userlogs/job_200906101234_0001/job-acls.xml") != 0) {
+    ret = -1;
+  }
+  free(job_acls_file);
+  assert(ret == 0);
+}
+
 void test_get_task_log_dir() {
   char *logdir = (char *) get_task_log_dir("/tmp/testing",
     "job_200906101234_0001", "attempt_200906112028_0001_m_000000_0");
@@ -218,6 +231,9 @@ int main(int argc, char **argv) {
 
   printf("\nTesting get_job_log_dir()\n");
   test_get_job_log_dir();
+
+  printf("\nTesting get_job_acls_file()\n");
+  test_get_job_acls_file();
 
   printf("\nTesting get_task_log_dir()\n");
   test_get_task_log_dir();

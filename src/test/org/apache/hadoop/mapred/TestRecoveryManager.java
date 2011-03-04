@@ -31,7 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.MiniMRCluster.JobTrackerRunner;
-import org.apache.hadoop.mapred.QueueManager.QueueOperation;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapred.TestJobInProgressListener.MyScheduler;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.*;
@@ -237,8 +237,7 @@ public class TestRecoveryManager extends TestCase {
     mr.getJobTrackerConf().setBoolean(JobConf.MR_ACLS_ENABLED, true);
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     mr.getJobTrackerConf().set(QueueManager.toFullPropertyName(
-        "default", QueueOperation.SUBMIT_JOB.getAclName()), 
-        ugi.getUserName());
+        "default", QueueACL.SUBMIT_JOB.getAclName()), ugi.getUserName());
 
     // start the jobtracker
     LOG.info("Starting jobtracker");

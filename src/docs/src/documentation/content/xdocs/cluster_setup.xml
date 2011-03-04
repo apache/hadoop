@@ -333,15 +333,15 @@
         </tr>
         <tr>
           <td>mapred.queue.<em>queue-name</em>.acl-administer-jobs</td>
-          <td>List of users and groups that can change the priority
-              or kill jobs that have been submitted to the
+          <td>List of users and groups that can view job details, change the
+              priority or kill jobs that have been submitted to the
               specified <em>queue-name</em>.</td>
           <td>
             The list of users and groups are both comma separated
             list of names. The two lists are separated by a blank.
             Example: <em>user1,user2 group1,group2</em>.
             If you wish to define only a list of groups, provide
-            a blank at the beginning of the value. Note that an
+            a blank at the beginning of the value. Note that the
             owner of a job can always change the priority or kill
             his/her own job, irrespective of the ACLs.
           </td>

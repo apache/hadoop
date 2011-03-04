@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.AccessControlException;
 
@@ -300,11 +299,13 @@ class CompletedJobStatusStore implements Runnable {
         FSDataInputStream dataIn = getJobInfoFile(jobId);
         if (dataIn != null) {
           JobStatus jobStatus = readJobStatus(dataIn);
+          JobProfile profile = readJobProfile(dataIn);
+          String queue = profile.getQueueName();
           // authorize the user for job view access
           aclsManager.checkAccess(jobStatus,
-              UserGroupInformation.getCurrentUser(), JobACL.VIEW_JOB,
-              JobACL.VIEW_JOB.name());
-          readJobProfile(dataIn);
+              UserGroupInformation.getCurrentUser(), queue,
+              Operation.VIEW_JOB_COUNTERS);
+
           counters = readCounters(dataIn);
           dataIn.close();
         }

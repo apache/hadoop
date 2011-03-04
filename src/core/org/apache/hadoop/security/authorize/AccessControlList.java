@@ -25,13 +25,23 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Class representing a configured access control list.
  */
 public class AccessControlList implements Writable {
-  
+
+  static {                                      // register a ctor
+    WritableFactories.setFactory
+      (AccessControlList.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new AccessControlList(); }
+       });
+  }
+
   // Indicates an ACL string that represents access to all users
   public static final String WILDCARD_ACL_VALUE = "*";
   private static final int INITIAL_CAPACITY = 256;
@@ -42,7 +52,13 @@ public class AccessControlList implements Writable {
   private Set<String> groups;
   // Whether all users are granted access.
   private boolean allAllowed;
-  
+
+  /**
+   * This constructor exists primarily for AccessControlList to be Writable.
+   */
+  public AccessControlList() {
+  }
+
   /**
    * Construct a new ACL from a String representation of the same.
    * 
@@ -167,6 +183,21 @@ public class AccessControlList implements Writable {
 
   // Serializes the AccessControlList object
   public void write(DataOutput out) throws IOException {
+    Text.writeString(out, getACLString());
+  }
+
+  // Deserialize
+  public void readFields(DataInput in) throws IOException {
+    String aclString = Text.readString(in);
+    buildACL(aclString);
+  }
+
+  /** Returns the String representation of this ACL. Unlike toString() method's
+   *  return value, this String can be directly given to the constructor of
+   *  AccessControlList to build AccessControlList object.
+   *  This is the method used by the serialization method write().
+   */
+  public String getACLString() {
     StringBuilder sb = new StringBuilder(INITIAL_CAPACITY);
     if (allAllowed) {
       sb.append('*');
@@ -176,13 +207,7 @@ public class AccessControlList implements Writable {
       sb.append(" ");
       sb.append(getGroupsString());
     }
-    Text.writeString(out, sb.toString());
-  }
-
-  // Deserialize
-  public void readFields(DataInput in) throws IOException {
-    String aclString = Text.readString(in);
-    buildACL(aclString);
+    return sb.toString();
   }
 
   // Returns comma-separated concatenated single String of the set 'users'

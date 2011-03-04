@@ -943,10 +943,11 @@
     job-level ACL.
 
     Irrespective of this ACL configuration, job-owner, the user who started the
-    cluster, cluster administrators configured on JobTracker via 
-    mapreduce.cluster.administrators
-    and administrators of the queue to which this job is submitted to 
-    can do all the modification operations.
+    cluster, cluster administrators configured via
+    mapreduce.cluster.administrators and queue administrators of the queue to
+    which this job is submitted to configured via
+    mapred.queue.queue-name.acl-administer-jobs  in mapred-queue-acls.xml can
+    do all the modification operations on a job.
 
     By default, nobody else besides job-owner, the user who started the cluster,
     cluster administrators and queue administrators can perform modification
@@ -976,11 +977,15 @@
     user, for e.g., JobStatus, JobProfile, list of jobs in the queue, etc.
     
     Irrespective of this ACL configuration, job-owner, the user who started the
-    cluster, cluster administrators configured on JobTracker via
-    mapreduce.cluster.administrators can do all the view operations.
+    cluster, cluster administrators configured via
+    mapreduce.cluster.administrators and queue administrators of the queue to
+    which this job is submitted to configured via
+    mapred.queue.queue-name.acl-administer-jobs in mapred-queue-acls.xml can do
+    all the view operations on a job.
     
     By default, nobody else besides job-owner, the user who started the
-    cluster and cluster administrators can perform view operations on a job.
+    cluster, cluster administrators and queue administrators can perform
+    view operations on a job.
   </description>
 </property>
 

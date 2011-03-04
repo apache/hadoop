@@ -27,8 +27,6 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.AuditLogger;
-import org.apache.hadoop.mapred.AuditLogger.Constants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
@@ -69,11 +67,15 @@ class QueueManager {
   static final String QUEUE_ACLS_FILE_NAME = "mapred-queue-acls.xml";
   
   /**
-   * Enum representing an operation that can be performed on a queue.
+   * Enum representing an AccessControlList that drives set of operations that
+   * can be performed on a queue.
    */
-  static enum QueueOperation {
+  static enum QueueACL {
     SUBMIT_JOB ("acl-submit-job"),
     ADMINISTER_JOBS ("acl-administer-jobs");
+    // Currently this ACL acl-administer-jobs is checked for the operations
+    // FAIL_TASK, KILL_TASK, KILL_JOB, SET_JOB_PRIORITY and VIEW_JOB.
+
     // TODO: Add ACL for LIST_JOBS when we have ability to authenticate 
     //       users in UI
     // TODO: Add ACL for CHANGE_ACL when we have an admin tool for 
@@ -81,7 +83,7 @@ class QueueManager {
     
     private final String aclName;
     
-    QueueOperation(String aclName) {
+    QueueACL(String aclName) {
       this.aclName = aclName;
     }
 
@@ -118,47 +120,38 @@ class QueueManager {
   }
   
   /**
-   * Return true if the given {@link QueueOperation} can be 
-   * performed by the specified user on the given queue.
+   * Return true if the given user is part of the ACL for the given
+   * {@link QueueACL} name for the given queue.
    * 
    * An operation is allowed if all users are provided access for this
    * operation, or if either the user or any of the groups specified is
    * provided access.
    * 
    * @param queueName Queue on which the operation needs to be performed. 
-   * @param oper The operation to perform
+   * @param qACL The queue ACL name to be checked
    * @param ugi The user and groups who wish to perform the operation.
    * 
    * @return true if the operation is allowed, false otherwise.
    */
   public synchronized boolean hasAccess(String queueName,
-                                QueueOperation oper, 
-                                UserGroupInformation ugi) {
+      QueueACL qACL, UserGroupInformation ugi) {
     if (!aclsEnabled) {
       return true;
     }
     
     if (LOG.isDebugEnabled()) {
       LOG.debug("checking access for : " + toFullPropertyName(queueName, 
-                                            oper.getAclName()));      
+                                            qACL.getAclName()));      
     }
     
     AccessControlList acl = aclsMap.get(toFullPropertyName(
-        queueName, oper.getAclName()));
+        queueName, qACL.getAclName()));
     if (acl == null) {
       return false;
     }
     
-    // Check the ACL list
-    boolean allowed = acl.isAllAllowed();
-    if (!allowed) {
-      // Check the allowed users list
-      if (acl.isUserAllowed(ugi)) {
-        allowed = true;
-      }
-    }
-    
-    return allowed;    
+    // Check if user is part of the ACL
+    return acl.isUserAllowed(ugi);
   }
   
   /**
@@ -215,8 +208,8 @@ class QueueManager {
   
   private void checkDeprecation(Configuration conf) {
     for(String queue: queueNames) {
-      for (QueueOperation oper : QueueOperation.values()) {
-        String key = toFullPropertyName(queue, oper.getAclName());
+      for (QueueACL qACL : QueueACL.values()) {
+        String key = toFullPropertyName(queue, qACL.getAclName());
         String aclString = conf.get(key);
         if(aclString != null) {
           LOG.warn("Configuring queue ACLs in mapred-site.xml or " +
@@ -234,8 +227,8 @@ class QueueManager {
     HashMap<String, AccessControlList> aclsMap = 
       new HashMap<String, AccessControlList>();
     for (String queue : queueNames) {
-      for (QueueOperation oper : QueueOperation.values()) {
-        String key = toFullPropertyName(queue, oper.getAclName());
+      for (QueueACL qACL : QueueACL.values()) {
+        String key = toFullPropertyName(queue, qACL.getAclName());
         String aclString = conf.get(key, " ");// default is empty list of users
         aclsMap.put(key, new AccessControlList(aclString));
       }
@@ -297,16 +290,16 @@ class QueueManager {
     //List of all QueueAclsInfo objects , this list is returned
     ArrayList<QueueAclsInfo> queueAclsInfolist =
             new ArrayList<QueueAclsInfo>();
-    QueueOperation[] operations = QueueOperation.values();
+    QueueACL[] acls = QueueACL.values();
     for (String queueName : queueNames) {
       QueueAclsInfo queueAclsInfo = null;
       ArrayList<String> operationsAllowed = null;
-      for (QueueOperation operation : operations) {
-        if (hasAccess(queueName, operation, ugi)) {
+      for (QueueACL qACL : acls) {
+        if (hasAccess(queueName, qACL, ugi)) {
           if (operationsAllowed == null) {
             operationsAllowed = new ArrayList<String>();
           }
-          operationsAllowed.add(operation.getAclName());
+          operationsAllowed.add(qACL.getAclName());
         }
       }
       if (operationsAllowed != null) {
@@ -319,6 +312,22 @@ class QueueManager {
     }
     return queueAclsInfolist.toArray(new QueueAclsInfo[
             queueAclsInfolist.size()]);
+  }
+
+  /**
+   * Returns the specific queue ACL for the given queue.
+   * Returns null if the given queue does not exist or the acl is not
+   * configured for that queue.
+   * If acls are disabled(mapred.acls.enabled set to false), returns ACL with
+   * all users.
+   */
+  synchronized AccessControlList getQueueACL(String queueName,
+      QueueACL qACL) {
+    if (aclsEnabled) {
+      return aclsMap.get(toFullPropertyName(
+          queueName, qACL.getAclName()));
+    }
+    return new AccessControlList("*");
   }
 
   /**

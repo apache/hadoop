@@ -200,6 +200,13 @@ public class TestLocalizationWithLinuxTaskController extends
     File jobLogDir = TaskLog.getJobDir(jobId);
     checkFilePermissions(jobLogDir.toString(), expectedDirPerms, task.getUser(),
         ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
+    // check job-acls.xml file permissions
+    checkFilePermissions(jobLogDir.toString() + Path.SEPARATOR
+        + TaskTracker.jobACLsFile, expectedFilePerms, task.getUser(),
+        ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
+    
+    // validate the content of job ACLs file
+    validateJobACLsFileContent();
   }
 
   @Override

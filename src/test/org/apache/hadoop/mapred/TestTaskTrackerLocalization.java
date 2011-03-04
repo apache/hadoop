@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapred.TaskController.JobInitializationContext;
 import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.RunningJob;
@@ -126,6 +127,14 @@ public class TestTaskTrackerLocalization extends TestCase {
     jobConf.set(JobContext.JOB_ACL_VIEW_JOB, jobViewACLs);
     jobConf.setInt("mapred.userlog.retain.hours", 0);
     jobConf.setUser(getJobOwner().getShortUserName());
+
+    // set job queue name in job conf
+    String queue = "default";
+    jobConf.setQueueName(queue);
+    // Set queue admins acl in job conf similar to what JobClient does
+    jobConf.set(QueueManager.toFullPropertyName(queue,
+        QueueACL.ADMINISTER_JOBS.getAclName()),
+        "qAdmin1,qAdmin2 qAdminsGroup1,qAdminsGroup2");
 
     String jtIdentifier = "200907202331";
     jobId = new JobID(jtIdentifier, 1);
@@ -468,6 +477,34 @@ public class TestTaskTrackerLocalization extends TestCase {
         .exists());
     checkFilePermissions(jobLogDir.toString(), "drwx------", task.getUser(),
         taskTrackerUGI.getGroupNames()[0]);
+
+    // Make sure that the job ACLs file job-acls.xml exists in job userlog dir
+    File jobACLsFile = new File(jobLogDir, TaskTracker.jobACLsFile);
+    assertTrue("JobACLsFile is missing in the job userlog dir " + jobLogDir,
+        jobACLsFile.exists());
+
+    // With default task controller, the job-acls.xml file is owned by TT and
+    // permissions are 700
+    checkFilePermissions(jobACLsFile.getAbsolutePath(), "-rwx------",
+        taskTrackerUGI.getShortUserName(), taskTrackerUGI.getGroupNames()[0]);
+
+    validateJobACLsFileContent();
+  }
+
+  // Validate the contents of jobACLsFile ( i.e. user name, job-view-acl, queue
+  // name and queue-admins-acl ).
+  protected void validateJobACLsFileContent() {
+    JobConf jobACLsConf = TaskLogServlet.getConfFromJobACLsFile(jobId);
+    assertTrue(jobACLsConf.get("user.name").equals(
+        localizedJobConf.getUser()));
+    assertTrue(jobACLsConf.get(JobContext.JOB_ACL_VIEW_JOB).
+        equals(localizedJobConf.get(JobContext.JOB_ACL_VIEW_JOB)));
+    String queue = localizedJobConf.getQueueName();
+    assertTrue(queue.equalsIgnoreCase(jobACLsConf.getQueueName()));
+    String qACLName = QueueManager.toFullPropertyName(queue,
+        QueueACL.ADMINISTER_JOBS.getAclName());
+    assertTrue(jobACLsConf.get(qACLName).equals(
+        localizedJobConf.get(qACLName)));
   }
 
   /**
@@ -525,24 +562,6 @@ public class TestTaskTrackerLocalization extends TestCase {
         + expectedStderr.toString() + " Observed : "
         + attemptLogFiles[1].toString(), expectedStderr.toString().equals(
         attemptLogFiles[1].toString()));
-
-    // Make sure that the job ACLs file exists in the task log dir
-    File jobACLsFile = new File(logDir, TaskRunner.jobACLsFile);
-    assertTrue("JobACLsFile is missing in the task log dir " + logDir,
-        jobACLsFile.exists());
-
-    // With default task controller, the job-acls file is owned by TT and
-    // permissions are 700
-    checkFilePermissions(jobACLsFile.getAbsolutePath(), "-rwx------",
-        taskTrackerUGI.getShortUserName(), taskTrackerUGI.getGroupNames()[0]);
-
-    // Validate the contents of jobACLsFile(both user name and job-view-acls)
-    Configuration jobACLsConf = TaskLogServlet.getConfFromJobACLsFile(
-        task.getTaskID(), task.isTaskCleanupTask());
-    assertTrue(jobACLsConf.get("user.name").equals(
-        localizedJobConf.getUser()));
-    assertTrue(jobACLsConf.get(JobContext.JOB_ACL_VIEW_JOB).
-        equals(localizedJobConf.get(JobContext.JOB_ACL_VIEW_JOB)));
   }
 
   /**

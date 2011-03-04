@@ -300,7 +300,7 @@ public class JobHistory {
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
     SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
     TRACKER_NAME, STATE_STRING, VERSION, MAP_COUNTERS, REDUCE_COUNTERS,
-    VIEW_JOB, MODIFY_JOB
+    VIEW_JOB, MODIFY_JOB, JOB_QUEUE
   }
 
   /**
@@ -697,6 +697,7 @@ public class JobHistory {
     private Map<String, Task> allTasks = new TreeMap<String, Task>();
     private Map<JobACL, AccessControlList> jobACLs =
         new HashMap<JobACL, AccessControlList>();
+    private String queueName = null;// queue to which this job was submitted to
     
     /** Create new JobInfo */
     public JobInfo(String jobId){ 
@@ -719,17 +720,24 @@ public class JobHistory {
 
     @Override
     public synchronized void handle(Map<Keys, String> values) {
-      // construct the ACLs
-      String viewJobACL = values.get(Keys.VIEW_JOB);
-      String modifyJobACL = values.get(Keys.MODIFY_JOB);
-      if (viewJobACL != null) {
-        jobACLs.put(JobACL.VIEW_JOB, new AccessControlList(viewJobACL));
-      }
-      if (modifyJobACL != null) {
-        jobACLs.put(JobACL.MODIFY_JOB, new AccessControlList(modifyJobACL));
-
+      if (values.containsKey(Keys.SUBMIT_TIME)) {// job submission
+        // construct the job ACLs
+        String viewJobACL = values.get(Keys.VIEW_JOB);
+        String modifyJobACL = values.get(Keys.MODIFY_JOB);
+        if (viewJobACL != null) {
+          jobACLs.put(JobACL.VIEW_JOB, new AccessControlList(viewJobACL));
+        }
+        if (modifyJobACL != null) {
+          jobACLs.put(JobACL.MODIFY_JOB, new AccessControlList(modifyJobACL));
+        }
+        // get the job queue name
+        queueName = values.get(Keys.JOB_QUEUE);
       }
       super.handle(values);
+    }
+
+    String getJobQueue() {
+      return queueName;
     }
 
     /**
@@ -1262,11 +1270,14 @@ public class JobHistory {
           }
           //add to writer as well 
           JobHistory.log(writers, RecordTypes.Job, 
-                         new Keys[]{Keys.JOBID, Keys.JOBNAME, Keys.USER, Keys.SUBMIT_TIME, Keys.JOBCONF, 
-                                      Keys.VIEW_JOB, Keys.MODIFY_JOB }, 
+                         new Keys[]{Keys.JOBID, Keys.JOBNAME, Keys.USER,
+                                    Keys.SUBMIT_TIME, Keys.JOBCONF,
+                                    Keys.VIEW_JOB, Keys.MODIFY_JOB,
+                                    Keys.JOB_QUEUE}, 
                          new String[]{jobId.toString(), jobName, user, 
                                       String.valueOf(submitTime) , jobConfPath,
-                                      viewJobACL, modifyJobACL}
+                                      viewJobACL, modifyJobACL,
+                                      jobConf.getQueueName()}
                         ); 
              
         }catch(IOException e){

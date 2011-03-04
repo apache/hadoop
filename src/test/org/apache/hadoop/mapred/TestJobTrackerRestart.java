@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.UtilsForTests;
-import org.apache.hadoop.mapred.QueueManager.QueueOperation;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
@@ -536,7 +536,7 @@ public class TestJobTrackerRestart extends TestCase {
       // get the user group info
       UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       jtConf.set(QueueManager.toFullPropertyName("default",
-          QueueOperation.SUBMIT_JOB.getAclName()), ugi.getUserName());
+          QueueACL.SUBMIT_JOB.getAclName()), ugi.getUserName());
       
       mr = new MiniMRCluster(1, namenode, 1, null, null, jtConf);
       

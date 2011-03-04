@@ -28,8 +28,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -124,35 +124,47 @@ public class TaskLogServlet extends HttpServlet {
       return;
     }
 
-    // buiild job view acl by reading from conf
+    // build job view ACL by reading from conf
     AccessControlList jobViewACL = tracker.getJobACLsManager().
         constructJobACLs(conf).get(JobACL.VIEW_JOB);
+
+    // read job queue name from conf
+    String queue = conf.getQueueName();
+
+    // build queue admins ACL by reading from conf
+    AccessControlList queueAdminsACL = new AccessControlList(
+        conf.get(QueueManager.toFullPropertyName(queue,
+            QueueACL.ADMINISTER_JOBS.getAclName()), " "));
 
     String jobOwner = conf.get("user.name");
     UserGroupInformation callerUGI =
         UserGroupInformation.createRemoteUser(user);
 
-    tracker.getACLsManager().checkAccess(jobId, callerUGI, JobACL.VIEW_JOB,
-        jobOwner, jobViewACL, JobACL.VIEW_JOB.name());
+    // check if user is queue admin or cluster admin or jobOwner or member of
+    // job-view-acl
+    if (!queueAdminsACL.isUserAllowed(callerUGI)) {
+      tracker.getACLsManager().checkAccess(jobId, callerUGI, queue,
+          Operation.VIEW_TASK_LOGS, jobOwner, jobViewACL);
+    }
   }
 
   /**
-   * Builds a Configuration object by reading the xml file.
+   * Builds a JobConf object by reading the job-acls.xml file.
    * This doesn't load the default resources.
    *
-   * Returns null if job-acls.xml is not there in userlogs/$jobid/attempt-dir on
+   * Returns null if job-acls.xml is not there in userlogs/$jobid on
    * local file system. This can happen when we restart the cluster with job
    * level authorization enabled(but was disabled on earlier cluster) and
    * viewing task logs of old jobs(i.e. jobs finished on earlier unsecure
    * cluster).
    */
-  static Configuration getConfFromJobACLsFile(TaskAttemptID attemptId,
-      boolean isCleanup) {
+  static JobConf getConfFromJobACLsFile(JobID jobId) {
     Path jobAclsFilePath = new Path(
-        TaskLog.getAttemptDir(attemptId, isCleanup).toString(), TaskRunner.jobACLsFile);
-    Configuration conf = null;
+        TaskLog.getJobDir(jobId).toString(),
+        TaskTracker.jobACLsFile);
+    JobConf conf = null;
     if (new File(jobAclsFilePath.toUri().getPath()).exists()) {
-      conf = new Configuration(false);
+      conf = new JobConf(false);
       conf.addResource(jobAclsFilePath);
     }
     return conf;
@@ -224,15 +236,15 @@ public class TaskLogServlet extends HttpServlet {
       ServletContext context = getServletContext();
       TaskTracker taskTracker = (TaskTracker) context.getAttribute(
           "task.tracker");
+      JobID jobId = attemptId.getJobID();
+
       // get jobACLConf from ACLs file
-      Configuration jobACLConf = getConfFromJobACLsFile(attemptId, isCleanup);
+      JobConf jobACLConf = getConfFromJobACLsFile(jobId);
       // Ignore authorization if job-acls.xml is not found
       if (jobACLConf != null) {
-        String jobId = attemptId.getJobID().toString();
-
         try {
-          checkAccessForTaskLogs(new JobConf(jobACLConf), user, jobId,
-              taskTracker);
+          checkAccessForTaskLogs(jobACLConf, user,
+              jobId.toString(), taskTracker);
         } catch (AccessControlException e) {
           String errMsg = "User " + user + " failed to view tasklogs of job " +
               jobId + "!\n\n" + e.getMessage();

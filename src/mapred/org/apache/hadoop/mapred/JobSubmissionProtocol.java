@@ -26,6 +26,7 @@ import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIden
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSelector;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenInfo;
 
@@ -76,8 +77,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 23: Provide TokenStorage object while submitting a job
    * Version 24: Added delegation tokens (add, renew, cancel)
    * Version 25: Added JobACLs to JobStatus as part of MAPREDUCE-1307
+   * Version 26: Added the method getQueueAdmins(queueName) as part of
+   *             MAPREDUCE-1664.
    */
-  public static final long versionID = 25L;
+  public static final long versionID = 26L;
 
   /**
    * Allocate a name for the job.
@@ -100,8 +103,17 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * @return summary of the state of the cluster
    */
   public ClusterStatus getClusterStatus(boolean detailed) throws IOException;
-  
-    
+
+  /**
+   * Get the administrators of the given job-queue.
+   * This method is for hadoop internal use only.
+   * @param queueName
+   * @return Queue administrators ACL for the queue to which job is
+   *         submitted to
+   * @throws IOException
+   */
+  public AccessControlList getQueueAdmins(String queueName) throws IOException;
+
   /**
    * Kill the indicated job
    */

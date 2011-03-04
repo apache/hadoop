@@ -61,6 +61,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -71,6 +72,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -795,6 +797,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           LOG.debug("Creating splits at " + fs.makeQualified(submitJobDir));
           int maps = writeSplits(context, submitJobDir);
           jobCopy.setNumMapTasks(maps);
+
+          // write "queue admins of the queue to which job is being submitted"
+          // to job file.
+          String queue = jobCopy.getQueueName();
+          AccessControlList acl = jobSubmitClient.getQueueAdmins(queue);
+          jobCopy.set(QueueManager.toFullPropertyName(queue,
+              QueueACL.ADMINISTER_JOBS.getAclName()), acl.getACLString());
 
           // Write job file to JobTracker's fs        
           FSDataOutputStream out = 

@@ -31,7 +31,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobPriority;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.mapred.QueueManager.QueueOperation;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,7 +55,10 @@ public class TestJobACLs {
           TestJobACLs.class.getCanonicalName() + Path.SEPARATOR
               + "completed-job-store");
 
-  private String jobSubmitter = "user1";
+  private String jobSubmitter = "jobSubmitter";
+  private String viewColleague = "viewColleague";
+  private String modifyColleague = "modifyColleague";
+  private String qAdmin = "qAdmin";
 
   /**
    * Start the cluster before running the actual test.
@@ -74,11 +77,11 @@ public class TestJobACLs {
 
     // Enable queue and job level authorization
     conf.setBoolean(JobConf.MR_ACLS_ENABLED, true);
-    // no queue admins for default queue
+    // qAdmin is a queue administrator for default queue
     conf.set(QueueManager.toFullPropertyName(
-        "default", QueueOperation.ADMINISTER_JOBS.getAclName()), " ");
+        "default", QueueACL.ADMINISTER_JOBS.getAclName()), qAdmin);
     conf.set(QueueManager.toFullPropertyName(
-        "default", QueueOperation.SUBMIT_JOB.getAclName()), jobSubmitter);
+        "default", QueueACL.SUBMIT_JOB.getAclName()), jobSubmitter);
 
     // Enable CompletedJobStore
     FileSystem fs = FileSystem.getLocal(conf);
@@ -119,7 +122,8 @@ public class TestJobACLs {
   public void testACLS() throws IOException, InterruptedException,
       ClassNotFoundException {
     verifyACLViewJob();
-    verifyACLModifyJob();
+    verifyACLModifyJob(modifyColleague);
+    verifyACLModifyJob(qAdmin);
     verifyACLPersistence();
   }
 
@@ -133,7 +137,7 @@ public class TestJobACLs {
 
     // Set the job up.
     final JobConf myConf = mr.createJobConf();
-    myConf.set(JobContext.JOB_ACL_VIEW_JOB, "user3");
+    myConf.set(JobContext.JOB_ACL_VIEW_JOB, viewColleague);
 
     // Submit the job as user1
     RunningJob job = submitJobAsUser(myConf, jobSubmitter);
@@ -141,10 +145,13 @@ public class TestJobACLs {
     final JobID jobId = job.getID();
 
     // Try operations as an unauthorized user.
-    verifyViewJobAsUnauthorizedUser(myConf, jobId, "user2");
+    verifyViewJobAsUnauthorizedUser(myConf, jobId, modifyColleague);
 
-    // Try operations as an authorized user.
-    verifyViewJobAsAuthorizedUser(myConf, jobId, "user3");
+    // Try operations as an authorized user, who is part of view-job-acl.
+    verifyViewJobAsAuthorizedUser(myConf, jobId, viewColleague);
+
+    // Try operations as an authorized user, who is a queue administrator.
+    verifyViewJobAsAuthorizedUser(myConf, jobId, qAdmin);
 
     // Clean up the job
     job.killJob();
@@ -267,12 +274,12 @@ public class TestJobACLs {
    * @throws InterruptedException
    * @throws ClassNotFoundException
    */
-  private void verifyACLModifyJob() throws IOException,
+  private void verifyACLModifyJob(String authorizedUser) throws IOException,
       InterruptedException, ClassNotFoundException {
 
     // Set the job up.
     final JobConf myConf = mr.createJobConf();
-    myConf.set(JobContext.JOB_ACL_MODIFY_JOB, "user3");
+    myConf.set(JobContext.JOB_ACL_MODIFY_JOB, modifyColleague);
 
     // Submit the job as user1
     RunningJob job = submitJobAsUser(myConf, jobSubmitter);
@@ -280,10 +287,10 @@ public class TestJobACLs {
     final JobID jobId = job.getID();
 
     // Try operations as an unauthorized user.
-    verifyModifyJobAsUnauthorizedUser(myConf, jobId, "user2");
+    verifyModifyJobAsUnauthorizedUser(myConf, jobId, viewColleague);
 
     // Try operations as an authorized user.
-    verifyModifyJobAsAuthorizedUser(myConf, jobId, "user3");
+    verifyModifyJobAsAuthorizedUser(myConf, jobId, authorizedUser);
   }
 
   private void verifyModifyJobAsAuthorizedUser(
@@ -374,7 +381,7 @@ public class TestJobACLs {
 
     // Set the job up.
     final JobConf myConf = mr.createJobConf();
-    myConf.set(JobContext.JOB_ACL_VIEW_JOB, "user2 group2");
+    myConf.set(JobContext.JOB_ACL_VIEW_JOB, viewColleague + " group2");
 
     // Submit the job as user1
     RunningJob job = submitJobAsUser(myConf, jobSubmitter);
@@ -397,11 +404,14 @@ public class TestJobACLs {
 
     final JobConf myNewJobConf = mr.createJobConf();
     // Now verify view-job works off CompletedJobStore
-    verifyViewJobAsAuthorizedUser(myNewJobConf, jobId, "user2");
+    verifyViewJobAsAuthorizedUser(myNewJobConf, jobId, viewColleague);
+    verifyViewJobAsAuthorizedUser(myNewJobConf, jobId, qAdmin);
 
     // Only JobCounters is persisted on the JobStore. So test counters only.
     UserGroupInformation unauthorizedUGI =
-        UserGroupInformation.createUserForTesting("user3", new String[] {});
+        UserGroupInformation.createUserForTesting(
+            modifyColleague, new String[] {});
+
     unauthorizedUGI.doAs(new PrivilegedExceptionAction<Object>() {
       @SuppressWarnings("null")
       @Override

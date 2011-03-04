@@ -19,7 +19,7 @@
     configuration property mapred.acls.enabled to true.
 
     Irrespective of this ACL configuration, the user who started the cluster and
-    cluster administrators configured on JobTracker via
+    cluster administrators configured via
     mapreduce.cluster.administrators can submit jobs.
   </description>
 </property>
@@ -28,7 +28,7 @@
   <name>mapred.queue.default.acl-administer-jobs</name>
   <value> </value>
   <description> Comma separated list of user and group names that are allowed
-    to delete jobs or modify job's priority for all the jobs
+    to view job details, kill jobs or modify job's priority for all the jobs
     in the 'default' queue. The user list and the group list
     are separated by a blank. For e.g. user1,user2 group1,group2. 
     If set to the special value '*', it means all users are allowed to do 
@@ -39,8 +39,10 @@
     configuration property mapred.acls.enabled to true.
 
     Irrespective of this ACL configuration, the user who started the cluster and
-    cluster administrators configured on JobTracker via
-    mapreduce.cluster.administrators can do this operation.
+    cluster administrators configured via
+    mapreduce.cluster.administrators can do the above operations on all the jobs
+    in all the queues. The job owner can do all the above operations on his/her
+    job irrespective of this ACL configuration.
   </description>
 </property>
 

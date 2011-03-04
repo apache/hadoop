@@ -86,6 +86,8 @@ enum errorcodes {
 
 #define JOB_LOG_DIR_PATTERN "%s/userlogs/%s"
 
+#define JOB_LOG_DIR_TO_JOB_ACLS_FILE_PATTERN "%s/job-acls.xml"
+
 #define ATTEMPT_LOG_DIR_PATTERN JOB_LOG_DIR_PATTERN"/%s"
 
 #define TASK_SCRIPT_PATTERN "%s/%s/taskjvm.sh"

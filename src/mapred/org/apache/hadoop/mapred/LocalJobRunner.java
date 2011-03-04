@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
@@ -503,7 +504,14 @@ class LocalJobRunner implements JobSubmissionProtocol {
     Path sysDir = new Path(conf.get("mapred.system.dir", "/tmp/hadoop/mapred/system"));  
     return fs.makeQualified(sysDir).toString();
   }
-  
+
+  /**
+   * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getQueueAdmins()
+   */
+  public AccessControlList getQueueAdmins(String queueName) throws IOException {
+    return new AccessControlList(" ");// no queue admins for local job runner
+  }  
+
   /**
    * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getStagingAreaDir()
    */
@@ -557,6 +565,6 @@ class LocalJobRunner implements JobSubmissionProtocol {
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token
                                       ) throws IOException,InterruptedException{
     return 0;
-  }  
+  }
 
 }

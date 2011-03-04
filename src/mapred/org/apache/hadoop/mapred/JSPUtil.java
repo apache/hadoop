@@ -110,8 +110,8 @@ class JSPUtil {
           public Void run() throws IOException, ServletException {
 
             // checks job view permission
-            jt.getACLsManager().checkAccess(job, ugi, null, JobACL.VIEW_JOB,
-                JobACL.VIEW_JOB.name());
+            jt.getACLsManager().checkAccess(job, ugi,
+                Operation.VIEW_JOB_DETAILS);
             return null;
           }
         });
@@ -489,9 +489,9 @@ class JSPUtil {
     }
 
     // Authorize the user for view access of this job
-    jobTracker.getACLsManager().checkAccess(jobid, currentUser, JobACL.VIEW_JOB,
-        jobInfo.get(Keys.USER), jobInfo.getJobACLs().get(JobACL.VIEW_JOB),
-        JobACL.VIEW_JOB.name());
+    jobTracker.getACLsManager().checkAccess(jobid, currentUser,
+        jobInfo.getJobQueue(), Operation.VIEW_JOB_DETAILS,
+        jobInfo.get(Keys.USER), jobInfo.getJobACLs().get(JobACL.VIEW_JOB));
 
     return jobInfo;
   }

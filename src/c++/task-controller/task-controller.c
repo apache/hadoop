@@ -226,6 +226,14 @@ char *get_job_log_dir(const char *log_dir, const char *job_id) {
 }
 
 /**
+ * Get the job ACLs file for the given job log dir.
+ */
+char *get_job_acls_file(const char *log_dir) {
+  return concatenate(JOB_LOG_DIR_TO_JOB_ACLS_FILE_PATTERN, "job_acls_file",
+                     1, log_dir);
+}
+
+/**
  * Function to check if the passed tt_root is present in mapred.local.dir
  * the task-controller is configured with.
  */
@@ -516,12 +524,20 @@ int prepare_attempt_directories(const char *job_id, const char *attempt_id,
 }
 
 /**
- * Function to prepare the job log dir for the child. It gives the user
- * ownership of the job's log-dir to the user and group ownership to the
- * user running tasktracker.
- *     *  sudo chown user:mapred log-dir/userlogs/$jobid
- *     *  sudo chmod -R 2770 log-dir/userlogs/$jobid // user is same as tt_user
- *     *  sudo chmod -R 2570 log-dir/userlogs/$jobid // user is not tt_user
+ * Function to prepare the job log dir(and job acls file in it) for the child.
+ * It gives the user ownership of the job's log-dir to the user and
+ * group ownership to the user running tasktracker(i.e. tt_user).
+ *
+ *   *  sudo chown user:mapred log-dir/userlogs/$jobid
+ *   *    if user is not $tt_user,
+ *   *      sudo chmod 2570 log-dir/userlogs/$jobid
+ *   *    else
+ *   *      sudo chmod 2770 log-dir/userlogs/$jobid
+ *   *  sudo chown user:mapred log-dir/userlogs/$jobid/job-acls.xml
+ *   *    if user is not $tt_user,
+ *   *      sudo chmod 2570 log-dir/userlogs/$jobid/job-acls.xml
+ *   *    else
+ *   *      sudo chmod 2770 log-dir/userlogs/$jobid/job-acls.xml 
  */
 int prepare_job_logs(const char *log_dir, const char *job_id,
     mode_t permissions) {
@@ -558,6 +574,42 @@ int prepare_job_logs(const char *log_dir, const char *job_id,
     free(job_log_dir);
     return -1;
   }
+
+  //set ownership and permissions for job_log_dir/job-acls.xml, if exists.
+  char *job_acls_file = get_job_acls_file(job_log_dir);
+  if (job_acls_file == NULL) {
+    fprintf(LOGFILE, "Couldn't get job acls file %s.\n", job_acls_file);
+    free(job_log_dir);
+    return -1; 
+  }
+
+  struct stat filestat1;
+  if (stat(job_acls_file, &filestat1) != 0) {
+    if (errno == ENOENT) {
+#ifdef DEBUG
+      fprintf(LOGFILE, "job_acls_file %s doesn't exist. Not doing anything.\n",
+          job_acls_file);
+#endif
+      free(job_acls_file);
+      free(job_log_dir);
+      return 0;
+    } else {
+      // stat failed because of something else!
+      fprintf(LOGFILE, "Failed to stat the job_acls_file %s\n", job_acls_file);
+      free(job_acls_file);
+      free(job_log_dir);
+      return -1;
+    }
+  }
+
+  if (secure_single_path(job_acls_file, user_detail->pw_uid, tasktracker_gid,
+      permissions, 1) != 0) {
+    fprintf(LOGFILE, "Failed to secure the job acls file %s\n", job_acls_file);
+    free(job_acls_file);
+    free(job_log_dir);
+    return -1;
+  }
+  free(job_acls_file);
   free(job_log_dir);
   return 0;
 }

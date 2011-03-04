@@ -1523,10 +1523,12 @@
           <code>mapreduce.job.acl-modify-job</code> respectively. By default, 
           nobody is given access in these properties.</p> 
           
-          <p>However, irrespective of the ACLs configured, a job's owner,
+          <p>However, irrespective of the job ACLs configured, a job's owner,
           the superuser and cluster administrators
-          (<code>mapreduce.cluster.administrators</code>) always have access to
-          view and modify a job.</p>
+          (<code>mapreduce.cluster.administrators</code>) and queue
+          administrators of the queue to which the job was submitted to
+          (<code>mapred.queue.queue-name.acl-administer-jobs</code>) always
+          have access to view and modify a job.</p>
           
           <p> A job view ACL authorizes users against the configured 
           <code>mapreduce.job.acl-view-job</code> before returning possibly 

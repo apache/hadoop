@@ -37,7 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobHistory.*;
-import org.apache.hadoop.mapred.QueueManager.QueueOperation;
+import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.commons.logging.Log;
@@ -813,6 +813,9 @@ public class TestJobHistory extends TestCase {
       assertTrue(acl.toString().equals(
           jobInfo.getJobACLs().get(JobACL.MODIFY_JOB).toString()));
     }
+    
+    // Validate the job queue name
+    assertTrue(jobInfo.getJobQueue().equals(conf.getQueueName()));
   }
 
   public void testDoneFolderOnHDFS() throws IOException {
@@ -920,7 +923,7 @@ public class TestJobHistory extends TestCase {
       conf.setBoolean(JobConf.MR_ACLS_ENABLED, true);
       // no queue admins for default queue
       conf.set(QueueManager.toFullPropertyName(
-          "default", QueueOperation.ADMINISTER_JOBS.getAclName()), " ");
+          "default", QueueACL.ADMINISTER_JOBS.getAclName()), " ");
       
       mr = new MiniMRCluster(2, "file:///", 3, null, null, conf);
 

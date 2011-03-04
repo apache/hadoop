@@ -21,8 +21,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.mapreduce.JobACL;
-import org.apache.hadoop.mapred.AuditLogger;
-import org.apache.hadoop.mapred.AuditLogger.Constants;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
