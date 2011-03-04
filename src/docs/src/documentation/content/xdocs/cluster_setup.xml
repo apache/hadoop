@@ -294,13 +294,24 @@
         </tr>
         <tr>
           <td>mapred.acls.enabled</td>
-          <td>Specifies whether ACLs are supported for controlling job
-              submission and administration</td>
+          <td>Boolean, specifying whether queue ACLs are supported for 
+              authorizing job submission and job administration in a 
+              queue</td>
           <td>
-            If <em>true</em>, ACLs would be checked while submitting
+            If <em>true</em>, queue ACLs would be checked while submitting
             and administering jobs. ACLs can be specified using the
             configuration parameters of the form
             <em>mapred.queue.queue-name.acl-name</em>, defined below.
+          </td>
+        </tr>
+        <tr>
+          <td>mapreduce.cluster.job-authorization-enabled</td>
+          <td>Boolean, specifying whether job ACLs are supported for 
+              authorizing view and modification of a job</td>
+          <td>
+            If <em>true</em>, job ACLs would be checked while viewing or
+            modifying a job. More details are available at 
+            <a href ="mapred_tutorial.html#Job+Authorization">Job Authorization</a>. 
           </td>
         </tr>
 		  </table>
@@ -599,7 +610,7 @@
             <p>
             The LinuxTaskController requires that paths including and leading up
             to the directories specified in
-            <em>mapreduce.cluster.local.dir</em> and <em>hadoop.log.dir</em> to
+            <em>mapred.local.dir</em> and <em>hadoop.log.dir</em> to
             be set 755 permissions.
             </p>
             
