@@ -18,4 +18,8 @@
   <name>mapreduce.fileoutputcommitter.marksuccessfuljobs</name>
   <value>false</value>
 </property>
+<property>
+  <name>mapred.child.java.opts</name>
+  <value>-Xmx200m -Djava.net.preferIPv4Stack=true</value>
+</property>
 </configuration>
