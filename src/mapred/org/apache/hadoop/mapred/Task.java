@@ -80,7 +80,8 @@ abstract public class Task implements Writable, Configurable {
     REDUCE_OUTPUT_RECORDS,
     REDUCE_SKIPPED_GROUPS,
     REDUCE_SKIPPED_RECORDS,
-    SPILLED_RECORDS
+    SPILLED_RECORDS,
+    SPLIT_RAW_BYTES
   }
   
   /**
@@ -119,6 +120,7 @@ abstract public class Task implements Writable, Configurable {
   ////////////////////////////////////////////
 
   private String jobFile;                         // job configuration file
+  private String user;
   private TaskAttemptID taskId;                   // unique, includes job id
   private int partition;                          // id within job
   TaskStatus taskStatus;                          // current status of the task
@@ -145,7 +147,6 @@ abstract public class Task implements Writable, Configurable {
   protected TaskAttemptContext taskContext;
   protected org.apache.hadoop.mapreduce.OutputFormat<?,?> outputFormat;
   protected org.apache.hadoop.mapreduce.OutputCommitter committer;
-  protected String username;
   protected final Counters.Counter spilledRecordsCounter;
   private String pidFile = "";
   protected TaskUmbilicalProtocol umbilical;
@@ -164,8 +165,7 @@ abstract public class Task implements Writable, Configurable {
   }
 
   public Task(String jobFile, TaskAttemptID taskId, int partition, 
-              int numSlotsRequired, String username) {
-    this.username = username;
+              int numSlotsRequired) {
     this.jobFile = jobFile;
     this.taskId = taskId;
      
@@ -366,9 +366,17 @@ abstract public class Task implements Writable, Configurable {
     return !jobSetup && !jobCleanup && !taskCleanup;
   }
   
+  /**
+   * Get the name of the user running the job/task. TaskTracker needs task's
+   * user name even before it's JobConf is localized. So we explicitly serialize
+   * the user name.
+   * 
+   * @return user
+   */
   String getUser() {
-    return username;
+    return user;
   }
+  
   ////////////////////////////////////////////
   // Writable methods
   ////////////////////////////////////////////
@@ -386,9 +394,9 @@ abstract public class Task implements Writable, Configurable {
       WritableUtils.writeEnum(out, jobRunStateForCleanup);
     }
     out.writeBoolean(jobSetup);
-    Text.writeString(out, username);
     out.writeBoolean(writeSkipRecs);
-    out.writeBoolean(taskCleanup);  
+    out.writeBoolean(taskCleanup); 
+    Text.writeString(out, user);
   }
   
   public void readFields(DataInput in) throws IOException {
@@ -408,12 +416,12 @@ abstract public class Task implements Writable, Configurable {
         WritableUtils.readEnum(in, JobStatus.State.class);
     }
     jobSetup = in.readBoolean();
-    username = Text.readString(in);
     writeSkipRecs = in.readBoolean();
     taskCleanup = in.readBoolean();
     if (taskCleanup) {
       setPhase(TaskStatus.Phase.CLEANUP);
     }
+    user = Text.readString(in);
   }
 
   @Override
@@ -895,9 +903,22 @@ abstract public class Task implements Writable, Configurable {
                             + JobStatus.State.FAILED + " or "
                             + JobStatus.State.KILLED);
     }
+    // delete the staging area for the job
+    JobConf conf = new JobConf(jobContext.getConfiguration());
+    if (!supportIsolationRunner(conf)) {
+      String jobTempDir = conf.get("mapreduce.job.dir");
+      Path jobTempDirPath = new Path(jobTempDir);
+      FileSystem fs = jobTempDirPath.getFileSystem(conf);
+      fs.delete(jobTempDirPath, true);
+    }
     done(umbilical, reporter);
   }
 
+  protected boolean supportIsolationRunner(JobConf conf) {
+    return (conf.getKeepTaskFilesPattern() != null || conf
+         .getKeepFailedTaskFiles());
+  }
+  
   protected void runJobSetupTask(TaskUmbilicalProtocol umbilical,
                              TaskReporter reporter
                              ) throws IOException, InterruptedException {
@@ -926,6 +947,7 @@ abstract public class Task implements Writable, Configurable {
         NetUtils.addStaticResolution(name, resolvedName);
       }
     }
+    this.user = this.conf.getUser();
   }
 
   public Configuration getConf() {

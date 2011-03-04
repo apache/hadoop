@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -113,10 +114,10 @@ public class ClusterWithLinuxTaskController extends TestCase {
     String[] splits = ugi.split(",");
     taskControllerUser = new UnixUserGroupInformation(splits);
     clusterConf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
-    createHomeDirectory(clusterConf);
+    createHomeAndStagingDirectory(clusterConf);
   }
 
-  private void createHomeDirectory(JobConf conf)
+  private void createHomeAndStagingDirectory(JobConf conf)
       throws IOException {
     FileSystem fs = dfsCluster.getFileSystem();
     String path = "/user/" + taskControllerUser.getUserName();
@@ -124,6 +125,12 @@ public class ClusterWithLinuxTaskController extends TestCase {
     LOG.info("Creating Home directory : " + homeDirectory);
     fs.mkdirs(homeDirectory);
     changePermission(conf, homeDirectory);
+    Path stagingArea = 
+      new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
+          "/tmp/hadoop/mapred/staging"));
+    LOG.info("Creating Staging root directory : " + stagingArea);
+    fs.mkdirs(stagingArea);
+    fs.setPermission(stagingArea, new FsPermission((short)0777));
   }
 
   private void changePermission(JobConf conf, Path p)

@@ -19,8 +19,11 @@ package org.apache.hadoop.mapred;
 
 import java.util.Properties;
 import org.apache.hadoop.mapred.ControlledMapReduceJob.ControlledMapReduceJobRunner;
+import org.junit.*;
 
-
+/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
+ */
+@Ignore
 public class TestJobTrackerRestartWithCS extends ClusterWithCapacityScheduler {
 
   /**

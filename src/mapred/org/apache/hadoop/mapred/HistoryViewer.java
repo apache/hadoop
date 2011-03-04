@@ -84,7 +84,8 @@ class HistoryViewer {
       }
       jobLogFile = jobFiles[0].toString();
       String[] jobDetails = 
-          JobInfo.decodeJobHistoryFileName(jobFiles[0].getName()).split("_");
+          JobHistory.JobInfo.decodeJobHistoryFileName(jobFiles[0].getName()).
+                             split("_");
       trackerHostName = jobDetails[0];
       trackerStartTime = jobDetails[1];
       jobId = jobDetails[2] + "_" + jobDetails[3] + "_" + jobDetails[4];
@@ -155,7 +156,7 @@ class HistoryViewer {
     System.out.println(jobDetails.toString());
   }
   
-  private void printCounters(StringBuffer buff, JobInfo job) 
+  private void printCounters(StringBuffer buff, JobHistory.JobInfo job) 
       throws ParseException {
     Counters mapCounters = 
       Counters.fromEscapedCompactString(job.get(Keys.MAP_COUNTERS));

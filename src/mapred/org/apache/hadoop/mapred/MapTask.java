@@ -40,6 +40,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -58,6 +59,10 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
+import org.apache.hadoop.mapreduce.split.JobSplit;
+import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.IndexedSorter;
@@ -74,7 +79,7 @@ class MapTask extends Task {
   public static final int MAP_OUTPUT_INDEX_RECORD_LENGTH = 24;
   
 
-  private BytesWritable split = new BytesWritable();
+  private TaskSplitIndex splitMetaInfo = new TaskSplitIndex();
   private String splitClass;
   private final static int APPROX_HEADER_LENGTH = 150;
 
@@ -89,11 +94,10 @@ class MapTask extends Task {
   }
 
   public MapTask(String jobFile, TaskAttemptID taskId, 
-                 int partition, String splitClass, BytesWritable split,
-                 int numSlotsRequired, String username) {
-    super(jobFile, taskId, partition, numSlotsRequired, username);
-    this.splitClass = splitClass;
-    this.split = split;
+                 int partition, TaskSplitIndex splitIndex,
+                 int numSlotsRequired) {
+    super(jobFile, taskId, partition, numSlotsRequired);
+    this.splitMetaInfo = splitIndex;
   }
 
   @Override
@@ -104,13 +108,13 @@ class MapTask extends Task {
   @Override
   public void localizeConfiguration(JobConf conf) throws IOException {
     super.localizeConfiguration(conf);
-    if (isMapOrReduce()) {
-      Path localSplit = new Path(new Path(getJobFile()).getParent(), 
-                                 "split.dta");
-      LOG.debug("Writing local split to " + localSplit);
-      DataOutputStream out = FileSystem.getLocal(conf).create(localSplit);
-      Text.writeString(out, splitClass);
-      split.write(out);
+    if (supportIsolationRunner(conf) && isMapOrReduce()) {
+      // localize the split meta-information
+      Path localSplitMeta = new Path(new Path(getJobFile()).getParent(), 
+                                 "split.info");
+      LOG.debug("Writing local split to " + localSplitMeta);
+      DataOutputStream out = FileSystem.getLocal(conf).create(localSplitMeta);
+      splitMetaInfo.write(out);
       out.close();
     }
   }
@@ -125,9 +129,8 @@ class MapTask extends Task {
   public void write(DataOutput out) throws IOException {
     super.write(out);
     if (isMapOrReduce()) {
-      Text.writeString(out, splitClass);
-      split.write(out);
-      split = null;
+      splitMetaInfo.write(out);
+      splitMetaInfo = null;
     }
   }
   
@@ -135,8 +138,7 @@ class MapTask extends Task {
   public void readFields(DataInput in) throws IOException {
     super.readFields(in);
     if (isMapOrReduce()) {
-      splitClass = Text.readString(in);
-      split.readFields(in);
+      splitMetaInfo.readFields(in);
     }
   }
 
@@ -302,36 +304,51 @@ class MapTask extends Task {
     }
 
     if (useNewApi) {
-      runNewMapper(job, split, umbilical, reporter);
+      runNewMapper(job, splitMetaInfo, umbilical, reporter);
     } else {
-      runOldMapper(job, split, umbilical, reporter);
+      runOldMapper(job, splitMetaInfo, umbilical, reporter);
     }
     done(umbilical, reporter);
   }
-
+  @SuppressWarnings("unchecked")
+  private <T> T getSplitDetails(Path file, long offset)
+   throws IOException {
+    FileSystem fs = file.getFileSystem(conf);
+    FSDataInputStream inFile = fs.open(file);
+    inFile.seek(offset);
+    String className = Text.readString(inFile);
+    Class<T> cls;
+    try {
+      cls = (Class<T>) conf.getClassByName(className);
+    } catch (ClassNotFoundException ce) {
+      IOException wrap = new IOException("Split class " + className +
+                                          " not found");
+      wrap.initCause(ce);
+      throw wrap;
+    }
+    SerializationFactory factory = new SerializationFactory(conf);
+    Deserializer<T> deserializer =
+      (Deserializer<T>) factory.getDeserializer(cls);
+    deserializer.open(inFile);
+    T split = deserializer.deserialize(null);
+    long pos = inFile.getPos();
+    getCounters().findCounter(
+         Task.Counter.SPLIT_RAW_BYTES).increment(pos - offset);
+    inFile.close();
+    return split;
+  }
+  
   @SuppressWarnings("unchecked")
   private <INKEY,INVALUE,OUTKEY,OUTVALUE>
   void runOldMapper(final JobConf job,
-                    final BytesWritable rawSplit,
+                    final TaskSplitIndex splitIndex,
                     final TaskUmbilicalProtocol umbilical,
                     TaskReporter reporter
                     ) throws IOException, InterruptedException,
                              ClassNotFoundException {
-    InputSplit inputSplit = null;
-    // reinstantiate the split
-    try {
-      inputSplit = (InputSplit) 
-        ReflectionUtils.newInstance(job.getClassByName(splitClass), job);
-    } catch (ClassNotFoundException exp) {
-      IOException wrap = new IOException("Split class " + splitClass + 
-                                         " not found");
-      wrap.initCause(exp);
-      throw wrap;
-    }
-    DataInputBuffer splitBuffer = new DataInputBuffer();
-    splitBuffer.reset(split.getBytes(), 0, split.getLength());
-    inputSplit.readFields(splitBuffer);
-    
+    InputSplit inputSplit = getSplitDetails(new Path(splitIndex.getSplitLocation()),
+           splitIndex.getStartOffset());
+
     updateJobWithSplit(job, inputSplit);
     reporter.setInputSplit(inputSplit);
 
@@ -557,7 +574,7 @@ class MapTask extends Task {
   @SuppressWarnings("unchecked")
   private <INKEY,INVALUE,OUTKEY,OUTVALUE>
   void runNewMapper(final JobConf job,
-                    final BytesWritable rawSplit,
+                    final TaskSplitIndex splitIndex,
                     final TaskUmbilicalProtocol umbilical,
                     TaskReporter reporter
                     ) throws IOException, ClassNotFoundException,
@@ -575,15 +592,8 @@ class MapTask extends Task {
         ReflectionUtils.newInstance(taskContext.getInputFormatClass(), job);
     // rebuild the input split
     org.apache.hadoop.mapreduce.InputSplit split = null;
-    DataInputBuffer splitBuffer = new DataInputBuffer();
-    splitBuffer.reset(rawSplit.getBytes(), 0, rawSplit.getLength());
-    SerializationFactory factory = new SerializationFactory(job);
-    Deserializer<? extends org.apache.hadoop.mapreduce.InputSplit>
-      deserializer = 
-        (Deserializer<? extends org.apache.hadoop.mapreduce.InputSplit>) 
-        factory.getDeserializer(job.getClassByName(splitClass));
-    deserializer.open(splitBuffer);
-    split = deserializer.deserialize(null);
+    split = getSplitDetails(new Path(splitIndex.getSplitLocation()),
+        splitIndex.getStartOffset());
 
     org.apache.hadoop.mapreduce.RecordReader<INKEY,INVALUE> input =
       new NewTrackingRecordReader<INKEY,INVALUE>

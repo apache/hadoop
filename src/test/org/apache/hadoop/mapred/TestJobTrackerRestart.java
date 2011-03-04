@@ -27,12 +27,15 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
-
+import org.junit.*;
 /** 
  * TestJobTrackerRestart checks if the jobtracker can restart. JobTracker 
  * should be able to continue running the previously running jobs and also 
  * recover previosuly submitted jobs.
  */
+/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
+ */
+@Ignore
 public class TestJobTrackerRestart extends TestCase {
   static final Path testDir = 
     new Path(System.getProperty("test.build.data","/tmp"), 

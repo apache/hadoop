@@ -36,6 +36,7 @@ import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskReport;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -165,7 +166,8 @@ public class TestGridmixSubmission {
         switch (type) {
           case MAP:
              runInputBytes[i] = counters.findCounter("FileSystemCounters",
-                 "HDFS_BYTES_READ").getValue();
+                 "HDFS_BYTES_READ").getValue() - 
+                 counters.findCounter(Task.Counter.SPLIT_RAW_BYTES).getValue();
              runInputRecords[i] =
                (int)counters.findCounter(MAP_INPUT_RECORDS).getValue();
              runOutputBytes[i] =

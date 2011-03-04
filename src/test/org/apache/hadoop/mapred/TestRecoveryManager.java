@@ -29,16 +29,19 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.mapred.JobTracker.RecoveryManager;
 import org.apache.hadoop.mapred.MiniMRCluster.JobTrackerRunner;
 import org.apache.hadoop.mapred.TestJobInProgressListener.MyScheduler;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.*;
 
 /**
  * Test whether the {@link RecoveryManager} is able to tolerate job-recovery 
  * failures and the jobtracker is able to tolerate {@link RecoveryManager}
  * failure.
  */
+/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
+ */
+@Ignore
 public class TestRecoveryManager extends TestCase {
   private static final Log LOG = 
     LogFactory.getLog(TestRecoveryManager.class);
@@ -51,8 +54,7 @@ public class TestRecoveryManager extends TestCase {
    * {@link JobTracker.RecoveryManager}. It does the following :
    *  - submits 2 jobs
    *  - kills the jobtracker
-   *  - Garble job.xml for one job causing it to fail in constructor 
-   *    and job.split for another causing it to fail in init.
+   *  - deletes the info file for one job
    *  - restarts the jobtracker
    *  - checks if the jobtraker starts normally
    */
@@ -106,23 +108,12 @@ public class TestRecoveryManager extends TestCase {
     
     // delete the job.xml of job #1 causing the job to fail in constructor
     Path jobFile = 
-      new Path(sysDir, rJob1.getID().toString() + Path.SEPARATOR + "job.xml");
-    LOG.info("Deleting job.xml file : " + jobFile.toString());
+      new Path(sysDir, rJob1.getID().toString() + "/" + JobTracker.JOB_INFO_FILE);
+    LOG.info("Deleting job token file : " + jobFile.toString());
     fs.delete(jobFile, false); // delete the job.xml file
     
-    // create the job.xml file with 0 bytes
+    // create the job.xml file with 1 bytes
     FSDataOutputStream out = fs.create(jobFile);
-    out.write(1);
-    out.close();
-
-    // delete the job.split of job #2 causing the job to fail in initTasks
-    Path jobSplitFile = 
-      new Path(sysDir, rJob2.getID().toString() + Path.SEPARATOR + "job.split");
-    LOG.info("Deleting job.split file : " + jobSplitFile.toString());
-    fs.delete(jobSplitFile, false); // delete the job.split file
-    
-    // create the job.split file with 0 bytes
-    out = fs.create(jobSplitFile);
     out.write(1);
     out.close();
 

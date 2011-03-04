@@ -28,6 +28,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.split.JobSplit;
 
 public class TestJobQueueTaskScheduler extends TestCase {
   
@@ -77,8 +78,8 @@ public class TestJobQueueTaskScheduler extends TestCase {
     public Task obtainNewMapTask(final TaskTrackerStatus tts, int clusterSize,
         int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(true);
-      Task task = new MapTask("", attemptId, 0, "", new BytesWritable(), 1, 
-                              getJobConf().getUser()) {
+      Task task = new MapTask("", attemptId, 0, new JobSplit.TaskSplitIndex(),
+          1) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -93,8 +94,7 @@ public class TestJobQueueTaskScheduler extends TestCase {
     public Task obtainNewReduceTask(final TaskTrackerStatus tts,
         int clusterSize, int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(false);
-      Task task = new ReduceTask("", attemptId, 0, 10, 1, 
-                                 getJobConf().getUser()) {
+      Task task = new ReduceTask("", attemptId, 0, 10, 1) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());

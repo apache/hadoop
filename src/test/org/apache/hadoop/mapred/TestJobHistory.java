@@ -107,7 +107,7 @@ public class TestJobHistory extends TestCase {
     boolean isJobLaunched;
     boolean isJTRestarted;
 
-    TestListener(JobInfo job) {
+    TestListener(JobHistory.JobInfo job) {
       super(job);
       lineNum = 0;
       isJobLaunched = false;
@@ -293,7 +293,7 @@ public class TestJobHistory extends TestCase {
   }
 
   // Validate Format of Task Level Keys, Values read from history file
-  private static void validateTaskLevelKeyValuesFormat(JobInfo job,
+  private static void validateTaskLevelKeyValuesFormat(JobHistory.JobInfo job,
                                   boolean splitsCanBeEmpty) {
     Map<String, JobHistory.Task> tasks = job.getAllTasks();
 
@@ -340,7 +340,7 @@ public class TestJobHistory extends TestCase {
   }
 
   // Validate foramt of Task Attempt Level Keys, Values read from history file
-  private static void validateTaskAttemptLevelKeyValuesFormat(JobInfo job) {
+  private static void validateTaskAttemptLevelKeyValuesFormat(JobHistory.JobInfo job) {
     Map<String, JobHistory.Task> tasks = job.getAllTasks();
 
     // For each task
@@ -515,7 +515,7 @@ public class TestJobHistory extends TestCase {
   // Validate Job Level Keys, Values read from history file by
   // comparing them with the actual values from JT.
   private static void validateJobLevelKeyValues(MiniMRCluster mr,
-          RunningJob job, JobInfo jobInfo, JobConf conf) throws IOException  {
+          RunningJob job, JobHistory.JobInfo jobInfo, JobConf conf) throws IOException  {
 
     JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
     JobInProgress jip = jt.getJob(job.getID());
@@ -543,11 +543,11 @@ public class TestJobHistory extends TestCase {
                values.get(Keys.JOB_PRIORITY)));
 
     assertTrue("Job Name of job obtained from history file did not " +
-               "match the expected value", JobInfo.getJobName(conf).equals(
+               "match the expected value", JobHistory.JobInfo.getJobName(conf).equals(
                values.get(Keys.JOBNAME)));
 
     assertTrue("User Name of job obtained from history file did not " +
-               "match the expected value", JobInfo.getUserName(conf).equals(
+               "match the expected value", JobHistory.JobInfo.getUserName(conf).equals(
                values.get(Keys.USER)));
 
     // Validate job counters
@@ -594,7 +594,7 @@ public class TestJobHistory extends TestCase {
   // Validate Task Level Keys, Values read from history file by
   // comparing them with the actual values from JT.
   private static void validateTaskLevelKeyValues(MiniMRCluster mr,
-                      RunningJob job, JobInfo jobInfo) throws IOException  {
+                      RunningJob job, JobHistory.JobInfo jobInfo) throws IOException  {
 
     JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
     JobInProgress jip = jt.getJob(job.getID());
@@ -676,7 +676,7 @@ public class TestJobHistory extends TestCase {
   // Validate Task Attempt Level Keys, Values read from history file by
   // comparing them with the actual values from JT.
   private static void validateTaskAttemptLevelKeyValues(MiniMRCluster mr,
-                      RunningJob job, JobInfo jobInfo) throws IOException  {
+                      RunningJob job, JobHistory.JobInfo jobInfo) throws IOException  {
 
     JobTracker jt = mr.getJobTrackerRunner().getJobTracker();
     JobInProgress jip = jt.getJob(job.getID());

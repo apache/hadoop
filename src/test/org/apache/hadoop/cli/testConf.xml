@@ -91,11 +91,11 @@
     <test> <!-- TESTED -->
       <description>ls: directory using absolute path</description>
       <test-commands>
-        <command>-fs NAMENODE -mkdir /dir1</command>
-        <command>-fs NAMENODE -ls /</command>
+        <command>-fs NAMENODE -mkdir /dir1/dir2</command>
+        <command>-fs NAMENODE -ls /dir1</command>
       </test-commands>
       <cleanup-commands>
-        <command>-fs NAMENODE -rmr /dir1</command>
+        <command>-fs NAMENODE -rmr /dir1/dir2</command>
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -104,7 +104,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^drwxr-xr-x( )*-( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir1</expected-output>
+          <expected-output>^drwxr-xr-x( )*-( )*[a-z]*( )*supergroup( )*0( )*[0-9]{4,}-[0-9]{2,}-[0-9]{2,} [0-9]{2,}:[0-9]{2,}( )*/dir1/dir2</expected-output>
         </comparator>
       </comparators>
     </test>

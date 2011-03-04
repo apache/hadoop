@@ -30,9 +30,8 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.mapred.JobClient.RawSplit;
 import org.apache.hadoop.mapred.SortedRanges.Range;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.net.Node;
 
 
@@ -61,7 +60,7 @@ class TaskInProgress {
 
   // Defines the TIP
   private String jobFile = null;
-  private RawSplit rawSplit;
+  private final TaskSplitMetaInfo splitInfo;
   private int numMaps;
   private int partition;
   private JobTracker jobtracker;
@@ -131,12 +130,12 @@ class TaskInProgress {
    * Constructor for MapTask
    */
   public TaskInProgress(JobID jobid, String jobFile, 
-                        RawSplit rawSplit, 
+                        TaskSplitMetaInfo split, 
                         JobTracker jobtracker, JobConf conf, 
                         JobInProgress job, int partition,
                         int numSlotsRequired) {
     this.jobFile = jobFile;
-    this.rawSplit = rawSplit;
+    this.splitInfo = split;
     this.jobtracker = jobtracker;
     this.job = job;
     this.conf = conf;
@@ -155,6 +154,7 @@ class TaskInProgress {
                         int partition, JobTracker jobtracker, JobConf conf,
                         JobInProgress job, int numSlotsRequired) {
     this.jobFile = jobFile;
+    this.splitInfo = null;
     this.numMaps = numMaps;
     this.partition = partition;
     this.jobtracker = jobtracker;
@@ -284,7 +284,7 @@ class TaskInProgress {
    * Whether this is a map task
    */
   public boolean isMapTask() {
-    return rawSplit != null;
+    return splitInfo != null;
   }
     
   /**
@@ -746,7 +746,7 @@ class TaskInProgress {
    */
   public String[] getSplitLocations() {
     if (isMapTask() && !jobSetup && !jobCleanup) {
-      return rawSplit.getLocations();
+      return splitInfo.getLocations();
     }
     return new String[0];
   }
@@ -937,19 +937,11 @@ class TaskInProgress {
     if (isMapTask()) {
       LOG.debug("attempt " + numTaskFailures + " sending skippedRecords "
           + failedRanges.getIndicesCount());
-      String splitClass = null;
-      BytesWritable split;
-      if (!jobSetup && !jobCleanup) {
-        splitClass = rawSplit.getClassName();
-        split = rawSplit.getBytes();
-      } else {
-        split = new BytesWritable();
-      }
-      t = new MapTask(jobFile, taskid, partition, splitClass, split, 
-                      numSlotsNeeded, job.getUser());
+      t = new MapTask(jobFile, taskid, partition, splitInfo.getSplitIndex(),
+                      numSlotsNeeded);
     } else {
       t = new ReduceTask(jobFile, taskid, partition, numMaps, 
-                         numSlotsNeeded, job.getUser());
+                         numSlotsNeeded);
     }
     if (jobCleanup) {
       t.setJobCleanupTask();
@@ -1060,7 +1052,7 @@ class TaskInProgress {
     if (!isMapTask() || jobSetup || jobCleanup) {
       return "";
     }
-    String[] splits = rawSplit.getLocations();
+    String[] splits = splitInfo.getLocations();
     Node[] nodes = new Node[splits.length];
     for (int i = 0; i < splits.length; i++) {
       nodes[i] = jobtracker.getNode(splits[i]);
@@ -1090,14 +1082,10 @@ class TaskInProgress {
 
   public long getMapInputSize() {
     if(isMapTask() && !jobSetup && !jobCleanup) {
-      return rawSplit.getDataLength();
+      return splitInfo.getInputDataLength();
     } else {
       return 0;
     }
-  }
-  
-  public void clearSplit() {
-    rawSplit.clearBytes();
   }
   
   /**

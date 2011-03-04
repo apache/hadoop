@@ -37,9 +37,9 @@ public class TestJobHistoryParsing  extends TestCase {
    * object with data from log file. 
    */
   static class TestListener implements Listener {
-    JobInfo job;
+    JobHistory.JobInfo job;
 
-    TestListener(JobInfo job) {
+    TestListener(JobHistory.JobInfo job) {
       this.job = job;
     }
     // JobHistory.Listener implementation 

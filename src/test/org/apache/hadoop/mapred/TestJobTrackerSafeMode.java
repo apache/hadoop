@@ -27,12 +27,16 @@ import junit.framework.TestCase;
 import java.io.*;
 import java.util.HashSet;
 import java.util.Set;
+import org.junit.*;
 
 /** 
  * This test checks jobtracker in safe mode. In safe mode the jobtracker upon 
  * restart doesnt schedule any new tasks and waits for the (old) trackers to 
  * join back.
  */
+/**UNTIL MAPREDUCE-873 is backported, we will not run recovery manager tests
+ */
+@Ignore
 public class TestJobTrackerSafeMode extends TestCase {
   final Path testDir = 
     new Path(System.getProperty("test.build.data", "/tmp"), "jt-safemode");

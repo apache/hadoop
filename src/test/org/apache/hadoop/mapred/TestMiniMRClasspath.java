@@ -19,6 +19,8 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
+import java.net.URI;
+
 import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -35,15 +37,13 @@ import org.apache.hadoop.io.Text;
 public class TestMiniMRClasspath extends TestCase {
   
   
-  static String launchWordCount(String fileSys,
+  static void configureWordCount(FileSystem fs,
                                 String jobTracker,
                                 JobConf conf,
                                 String input,
                                 int numMaps,
-                                int numReduces) throws IOException {
-    final Path inDir = new Path("/testing/wc/input");
-    final Path outDir = new Path("/testing/wc/output");
-    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+                                int numReduces,
+                                Path inDir, Path outDir) throws IOException {
     fs.delete(outDir, true);
     if (!fs.mkdirs(inDir)) {
       throw new IOException("Mkdirs failed to create " + inDir.toString());
@@ -53,7 +53,7 @@ public class TestMiniMRClasspath extends TestCase {
       file.writeBytes(input);
       file.close();
     }
-    FileSystem.setDefaultUri(conf, fileSys);
+    FileSystem.setDefaultUri(conf, fs.getUri());
     conf.set("mapred.job.tracker", jobTracker);
     conf.setJobName("wordcount");
     conf.setInputFormat(TextInputFormat.class);
@@ -72,6 +72,16 @@ public class TestMiniMRClasspath extends TestCase {
     conf.setNumReduceTasks(numReduces);
     //pass a job.jar already included in the hadoop build
     conf.setJar("build/test/testjar/testjob.jar");
+  }
+
+  static String launchWordCount(String fileSys, String jobTracker, JobConf conf,
+                                String input, int numMaps, int numReduces)
+  throws IOException {
+    final Path inDir = new Path("/testing/wc/input");
+    final Path outDir = new Path("/testing/wc/output");
+    FileSystem fs = FileSystem.getNamed(fileSys, conf);
+    configureWordCount(fs, jobTracker, conf, input, numMaps, numReduces, inDir,
+                       outDir);
     JobClient.runJob(conf);
     StringBuffer result = new StringBuffer();
     {

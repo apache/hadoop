@@ -21,20 +21,17 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.DataOutputBuffer;
-import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.JobTrackerMetricsInst;
 import org.apache.hadoop.mapred.JvmTask;
-import org.apache.hadoop.mapred.JobClient.RawSplit;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
 class LocalJobRunner implements JobSubmissionProtocol {
@@ -46,6 +43,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   private JobConf conf;
   private int map_tasks = 0;
   private int reduce_tasks = 0;
+  final Random rand = new Random();
 
   private JobTrackerInstrumentation myMetrics = null;
 
@@ -60,6 +58,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     private Path file;
     private JobID id;
     private JobConf job;
+    private Path systemJobDir;
 
     private JobStatus status;
     private ArrayList<TaskAttemptID> mapIds = new ArrayList<TaskAttemptID>();
@@ -80,8 +79,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
       return TaskUmbilicalProtocol.versionID;
     }
     
-    public Job(JobID jobid, JobConf conf) throws IOException {
-      this.file = new Path(getSystemDir(), jobid + "/job.xml");
+    public Job(JobID jobid, String jobSubmitDir) throws IOException {
+      this.systemJobDir = new Path(jobSubmitDir);
+      this.file = new Path(systemJobDir, "job.xml");
       this.id = jobid;
       this.mapoutputFile = new MapOutputFile(jobid);
       this.mapoutputFile.setConf(conf);
@@ -110,46 +110,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
       JobContext jContext = new JobContext(conf, jobId);
       OutputCommitter outputCommitter = job.getOutputCommitter();
       try {
-        // split input into minimum number of splits
-        RawSplit[] rawSplits;
-        if (job.getUseNewMapper()) {
-          org.apache.hadoop.mapreduce.InputFormat<?,?> input =
-              ReflectionUtils.newInstance(jContext.getInputFormatClass(), jContext.getJobConf());
-                    
-          List<org.apache.hadoop.mapreduce.InputSplit> splits = input.getSplits(jContext);
-          rawSplits = new RawSplit[splits.size()];
-          DataOutputBuffer buffer = new DataOutputBuffer();
-          SerializationFactory factory = new SerializationFactory(conf);
-          Serializer serializer = 
-            factory.getSerializer(splits.get(0).getClass());
-          serializer.open(buffer);
-          for (int i = 0; i < splits.size(); i++) {
-            buffer.reset();
-            serializer.serialize(splits.get(i));
-            RawSplit rawSplit = new RawSplit();
-            rawSplit.setClassName(splits.get(i).getClass().getName());
-            rawSplit.setDataLength(splits.get(i).getLength());
-            rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-            rawSplit.setLocations(splits.get(i).getLocations());
-            rawSplits[i] = rawSplit;
-          }
-
-        } else {
-          InputSplit[] splits = job.getInputFormat().getSplits(job, 1);
-          rawSplits = new RawSplit[splits.length];
-          DataOutputBuffer buffer = new DataOutputBuffer();
-          for (int i = 0; i < splits.length; i++) {
-            buffer.reset();
-            splits[i].write(buffer);
-            RawSplit rawSplit = new RawSplit();
-            rawSplit.setClassName(splits[i].getClass().getName());
-            rawSplit.setDataLength(splits[i].getLength());
-            rawSplit.setBytes(buffer.getData(), 0, buffer.getLength());
-            rawSplit.setLocations(splits[i].getLocations());
-            rawSplits[i] = rawSplit;
-          }
-        }
-        
+        TaskSplitMetaInfo[] taskSplitMetaInfos =
+          SplitMetaInfoReader.readSplitMetaInfo(jobId, localFs, conf, systemJobDir);        
         int numReduceTasks = job.getNumReduceTasks();
         if (numReduceTasks > 1 || numReduceTasks < 0) {
           // we only allow 0 or 1 reducer in local mode
@@ -159,15 +121,13 @@ class LocalJobRunner implements JobSubmissionProtocol {
         outputCommitter.setupJob(jContext);
         status.setSetupProgress(1.0f);
         
-        for (int i = 0; i < rawSplits.length; i++) {
+        for (int i = 0; i < taskSplitMetaInfos.length; i++) {
           if (!this.isInterrupted()) {
             TaskAttemptID mapId = new TaskAttemptID(new TaskID(jobId, true, i),0);  
             mapIds.add(mapId);
             MapTask map = new MapTask(file.toString(),  
                                       mapId, i,
-                                      rawSplits[i].getClassName(),
-                                      rawSplits[i].getBytes(), 1, 
-                                      job.getUser());
+                                      taskSplitMetaInfos[i].getSplitIndex(), 1);
             JobConf localConf = new JobConf(job);
             map.setJobFile(localFile.toString());
             map.localizeConfiguration(localConf);
@@ -207,7 +167,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
             if (!this.isInterrupted()) {
               ReduceTask reduce = new ReduceTask(file.toString(), 
                                                  reduceId, 0, mapIds.size(), 
-                                                 1, job.getUser());
+                                                 1);
               JobConf localConf = new JobConf(job);
               reduce.setJobFile(localFile.toString());
               reduce.localizeConfiguration(localConf);
@@ -358,7 +318,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
   }
 
   public LocalJobRunner(JobConf conf) throws IOException {
-    this.fs = FileSystem.get(conf);
+    this.fs = FileSystem.getLocal(conf);
     this.conf = conf;
     myMetrics = new JobTrackerMetricsInst(null, new JobConf(conf));
   }
@@ -370,8 +330,9 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return new JobID("local", ++jobid);
   }
 
-  public JobStatus submitJob(JobID jobid) throws IOException {
-    return new Job(jobid, this.conf).status;
+  public JobStatus submitJob(JobID jobid, String jobSubmitDir) 
+  throws IOException {
+    return new Job(jobid, jobSubmitDir).status;
   }
 
   public void killJob(JobID id) {
@@ -459,6 +420,24 @@ class LocalJobRunner implements JobSubmissionProtocol {
     Path sysDir = new Path(conf.get("mapred.system.dir", "/tmp/hadoop/mapred/system"));  
     return fs.makeQualified(sysDir).toString();
   }
+  
+  /**
+   * @see org.apache.hadoop.mapred.JobSubmissionProtocol#getStagingAreaDir()
+   */
+  public String getStagingAreaDir() throws IOException {
+    Path stagingRootDir = 
+      new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
+        "/tmp/hadoop/mapred/staging"));
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+    String user;
+    if (ugi != null) {
+      user = ugi.getUserName() + rand.nextInt();
+    } else {
+      user = "dummy" + rand.nextInt();
+    }
+    return fs.makeQualified(new Path(stagingRootDir, user+"/.staging")).toString();
+  }
+
 
   @Override
   public JobStatus[] getJobsFromQueue(String queue) throws IOException {

@@ -60,8 +60,11 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             interval for HADOOP-4939                     
    * Version 21: Added method getQueueAclsForCurrentUser to get queue acls info
    *             for a user
+   * Version 22: Job submission files are uploaded to a staging area under
+   *             user home dir. JobTracker reads the required files from the
+   *             staging area using user credentials passed via the rpc. 
    */
-  public static final long versionID = 21L;
+  public static final long versionID = 22L;
 
   /**
    * Allocate a name for the job.
@@ -73,9 +76,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
   /**
    * Submit a Job for execution.  Returns the latest profile for
    * that job.
-   * The job files should be submitted in <b>system-dir</b>/<b>jobName</b>.
+   * The job files should be submitted in <b>jobSubmitDir</b>.
    */
-  public JobStatus submitJob(JobID jobName) throws IOException;
+  public JobStatus submitJob(JobID jobName, String jobSubmitDir) 
+  throws IOException;
 
   /**
    * Get the current status of the cluster
@@ -189,6 +193,14 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * @return the system directory where job-specific files are to be placed.
    */
   public String getSystemDir();  
+  
+  /**
+   * Get a hint from the JobTracker 
+   * where job-specific files are to be placed.
+   * 
+   * @return the directory where job-specific files are to be placed.
+   */
+  public String getStagingAreaDir() throws IOException;
   
   /**
    * Gets set of Job Queues associated with the Job Tracker

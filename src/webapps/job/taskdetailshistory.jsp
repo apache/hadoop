@@ -18,7 +18,7 @@
   String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
   String taskid = request.getParameter("taskid"); 
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobInfo job = JSPUtil.getJobInfo(request, fs);
+  JobHistory.JobInfo job = JSPUtil.getJobInfo(request, fs);
   JobHistory.Task task = job.getAllTasks().get(taskid); 
   String type = task.get(Keys.TASK_TYPE);
 %>

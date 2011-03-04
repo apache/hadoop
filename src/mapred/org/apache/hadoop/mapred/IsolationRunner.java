@@ -36,6 +36,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JvmTask;
+import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
 
 public class IsolationRunner {
   private static final Log LOG = 
@@ -199,20 +200,19 @@ public class IsolationRunner {
     
     Task task;
     if (isMap) {
-      Path localSplit = new Path(new Path(jobFilename.toString()).getParent(), 
-                                 "split.dta");
-      DataInputStream splitFile = FileSystem.getLocal(conf).open(localSplit);
-      String splitClass = Text.readString(splitFile);
-      BytesWritable split = new BytesWritable();
-      split.readFields(splitFile);
+      Path localMetaSplit = 
+        new Path(new Path(jobFilename.toString()).getParent(), "split.info");
+      DataInputStream splitFile = FileSystem.getLocal(conf).open(localMetaSplit);
+      TaskSplitIndex splitIndex = new TaskSplitIndex();
+      splitIndex.readFields(splitFile);
       splitFile.close();
-      task = new MapTask(jobFilename.toString(), taskId, partition, 
-                         splitClass, split, 1, conf.getUser());
+      task =
+        new MapTask(jobFilename.toString(), taskId, partition, splitIndex, 1);
     } else {
       int numMaps = conf.getNumMapTasks();
       fillInMissingMapOutputs(local, taskId, numMaps, conf);
       task = new ReduceTask(jobFilename.toString(), taskId, partition, numMaps, 
-                            1, conf.getUser());
+                            1);
     }
     task.setConf(conf);
     task.run(conf, new FakeUmbilical());

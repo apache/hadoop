@@ -21,7 +21,7 @@
     String jobUniqueString = jobDetails[0] + "_" +jobDetails[1] + "_" + jobid ;
 	
     FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-    JobInfo job = JSPUtil.getJobInfo(request, fs);
+    JobHistory.JobInfo job = JSPUtil.getJobInfo(request, fs);
 %>
 
 <html>

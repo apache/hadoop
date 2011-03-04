@@ -84,6 +84,8 @@ import org.apache.hadoop.metrics.Updater;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ConfiguredPolicy;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -474,6 +476,13 @@ public class TaskTracker
 	return taskDir;
   }
 
+  private void setUgi(String user, Configuration conf) {
+    //The dummy-group used here will not be required once we have UGI
+    //object creation with just the user name.
+    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME,
+        user+","+UnixUserGroupInformation.DEFAULT_GROUP);
+  }
+  
   String getPid(TaskAttemptID tid) {
     TaskInProgress tip = tasks.get(tid);
     if (tip != null) {
@@ -833,12 +842,16 @@ public class TaskTracker
     Task t = tip.getTask();
     JobID jobId = t.getJobID();
     Path jobFile = new Path(t.getJobFile());
+    String userName = t.getUser();
+    JobConf userConf = new JobConf(getJobConf());
+    setUgi(userName, userConf);
+    FileSystem userFs = jobFile.getFileSystem(userConf);
     // Get sizes of JobFile and JarFile
     // sizes are -1 if they are not present.
     FileStatus status = null;
     long jobFileSize = -1;
     try {
-      status = systemFS.getFileStatus(jobFile);
+      status = userFs.getFileStatus(jobFile);
       jobFileSize = status.getLen();
     } catch(FileNotFoundException fe) {
       jobFileSize = -1;
@@ -864,7 +877,7 @@ public class TaskTracker
             throw new IOException("Not able to create job directory "
                                   + jobDir.toString());
         }
-        systemFS.copyToLocalFile(jobFile, localJobFile);
+        userFs.copyToLocalFile(jobFile, localJobFile);
         JobConf localJobConf = new JobConf(localJobFile);
         
         // create the 'work' directory
@@ -885,7 +898,7 @@ public class TaskTracker
         if (jarFile != null) {
           Path jarFilePath = new Path(jarFile);
           try {
-            status = systemFS.getFileStatus(jarFilePath);
+            status = userFs.getFileStatus(jarFilePath);
             jarFileSize = status.getLen();
           } catch(FileNotFoundException fe) {
             jarFileSize = -1;
@@ -899,7 +912,7 @@ public class TaskTracker
           if (!localFs.mkdirs(localJarFile.getParent())) {
             throw new IOException("Mkdirs failed to create jars directory "); 
           }
-          systemFS.copyToLocalFile(jarFilePath, localJarFile);
+          userFs.copyToLocalFile(jarFilePath, localJarFile);
           localJobConf.setJar(localJarFile.toString());
           OutputStream out = localFs.create(localJobFile);
           try {

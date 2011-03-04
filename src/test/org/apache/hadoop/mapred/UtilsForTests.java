@@ -254,7 +254,9 @@ public class UtilsForTests {
     while (true) {
       boolean shouldWait = false;
       for (JobStatus jobStatuses : jobClient.getAllJobs()) {
-        if (jobStatuses.getRunState() == JobStatus.RUNNING) {
+        if (jobStatuses.getRunState() != JobStatus.SUCCEEDED
+            && jobStatuses.getRunState() != JobStatus.FAILED
+            && jobStatuses.getRunState() != JobStatus.KILLED) {
           shouldWait = true;
           break;
         }

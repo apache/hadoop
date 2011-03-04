@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.split.JobSplit;
 
 public class TestCapacityScheduler extends TestCase {
 
@@ -202,8 +203,8 @@ public class TestCapacityScheduler extends TestCase {
         }
       }
       TaskAttemptID attemptId = getTaskAttemptID(true, areAllMapsRunning);
-      Task task = new MapTask("", attemptId, 0, "", new BytesWritable(), 
-                              super.numSlotsPerMap, getJobConf().getUser()) {
+      Task task = new MapTask("", attemptId, 0, new JobSplit.TaskSplitIndex(), 
+                              super.numSlotsPerMap) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -245,7 +246,7 @@ public class TestCapacityScheduler extends TestCase {
         }
       }
       TaskAttemptID attemptId = getTaskAttemptID(false, areAllReducesRunning);
-      Task task = new ReduceTask("", attemptId, 0, 10, super.numSlotsPerReduce, getJobConf().getUser()) {
+      Task task = new ReduceTask("", attemptId, 0, 10, super.numSlotsPerReduce) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -337,7 +338,7 @@ public class TestCapacityScheduler extends TestCase {
     
     FakeTaskInProgress(JobID jId, JobConf jobConf, Task t, 
         boolean isMap, FakeJobInProgress job) {
-      super(jId, "", new JobClient.RawSplit(), null, jobConf, job, 0, 1);
+      super(jId, "", JobSplit.EMPTY_TASK_SPLIT, null, jobConf, job, 0, 1);
       this.isMap = isMap;
       this.fakeJob = job;
       activeTasks = new TreeMap<TaskAttemptID, String>();

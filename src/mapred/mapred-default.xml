@@ -125,9 +125,18 @@
 </property>
 
 <property>
-  <name>mapred.system.dir</name>
+  <name>mapreduce.jobtracker.system.dir</name>
   <value>${hadoop.tmp.dir}/mapred/system</value>
-  <description>The shared directory where MapReduce stores control files.
+  <description>The directory where MapReduce stores control files.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.jobtracker.staging.root.dir</name>
+  <value>${hadoop.tmp.dir}/mapred/staging</value>
+  <description>The root of the staging area for users' job files
+  In practice, this should be the directory where users' home 
+  directories are located (usually /user)
   </description>
 </property>
 
@@ -245,6 +254,16 @@
                uses job history, its important to dump job history to disk as 
                soon as possible. Note that this is an expert level parameter.
                The default value is set to 3 MB.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.split.metainfo.maxsize</name>
+  <value>10000000</value>
+  <description>The maximum permissible size of the split metainfo file.
+  The JobTracker won't attempt to read split metainfo files bigger than
+  the configured value.
+  No limits if set to -1.
   </description>
 </property>
 

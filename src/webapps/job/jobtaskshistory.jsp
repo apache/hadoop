@@ -23,7 +23,7 @@
   String taskType = request.getParameter("taskType"); 
   
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobInfo job = JSPUtil.getJobInfo(request, fs);
+  JobHistory.JobInfo job = JSPUtil.getJobInfo(request, fs);
   Map<String, JobHistory.Task> tasks = job.getAllTasks(); 
 %>
 <html>

@@ -40,6 +40,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.TaskLog.LogFileDetail;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
+import org.apache.hadoop.mapreduce.split.JobSplit;
 
 import org.junit.After;
 import org.junit.Test;
@@ -140,7 +141,8 @@ public class TestTaskLogsMonitor {
     int taskcount = 0;
 
     TaskAttemptID attemptID = new TaskAttemptID(baseId, taskcount++);
-    Task task = new MapTask(null, attemptID, 0, null, null, 0, null);
+    Task task = new MapTask(null, attemptID, 0, new JobSplit.TaskSplitIndex(),
+                            0);
 
     // Let the tasks write logs within retain-size
     writeRealBytes(attemptID, attemptID, LogName.SYSLOG, 500, 'H');
@@ -181,7 +183,8 @@ public class TestTaskLogsMonitor {
     int taskcount = 0;
 
     TaskAttemptID attemptID = new TaskAttemptID(baseId, taskcount++);
-    Task task = new MapTask(null, attemptID, 0, null, null, 0, null);
+    Task task = new MapTask(null, attemptID, 0, new JobSplit.TaskSplitIndex(),
+                            0);
 
     // Let the tasks write some logs
     writeRealBytes(attemptID, attemptID, LogName.SYSLOG, 1500, 'H');
@@ -218,7 +221,8 @@ public class TestTaskLogsMonitor {
     int taskcount = 0;
 
     TaskAttemptID attemptID = new TaskAttemptID(baseId, taskcount++);
-    Task task = new MapTask(null, attemptID, 0, null, null, 0, null);
+    Task task = new MapTask(null, attemptID, 0, new JobSplit.TaskSplitIndex(), 
+                            0);
 
     // Let the tasks write logs more than retain-size
     writeRealBytes(attemptID, attemptID, LogName.SYSLOG, 1500, 'H');
@@ -259,7 +263,8 @@ public class TestTaskLogsMonitor {
 
     // Assuming the job's retain size is 150
     TaskAttemptID attempt1 = new TaskAttemptID(baseTaskID, attemptsCount++);
-    Task task1 = new MapTask(null, attempt1, 0, null, null, 0, null);
+    Task task1 = new MapTask(null, attempt1, 0, new JobSplit.TaskSplitIndex(),
+                             0);
 
     // Let the tasks write logs more than retain-size
     writeRealBytes(attempt1, attempt1, LogName.SYSLOG, 200, 'A');
@@ -271,7 +276,8 @@ public class TestTaskLogsMonitor {
 
     // Start another attempt in the same JVM
     TaskAttemptID attempt2 = new TaskAttemptID(baseTaskID, attemptsCount++);
-    Task task2 = new MapTask(null, attempt2, 0, null, null, 0, null);
+    Task task2 = new MapTask(null, attempt2, 0, new JobSplit.TaskSplitIndex(),
+                             0);
     logsMonitor.monitorTaskLogs();
 
     // Let attempt2 also write some logs
@@ -280,7 +286,8 @@ public class TestTaskLogsMonitor {
 
     // Start yet another attempt in the same JVM
     TaskAttemptID attempt3 = new TaskAttemptID(baseTaskID, attemptsCount++);
-    Task task3 = new MapTask(null, attempt3, 0, null, null, 0, null);
+    Task task3 = new MapTask(null, attempt3, 0, new JobSplit.TaskSplitIndex(),
+                             0);
     logsMonitor.monitorTaskLogs();
 
     // Let attempt3 also write some logs

@@ -24,7 +24,7 @@
     showTasks = Integer.parseInt(numTasks);  
   }
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobInfo job = JSPUtil.getJobInfo(request, fs);
+  JobHistory.JobInfo job = JSPUtil.getJobInfo(request, fs);
 %>
 <h2>Hadoop Job <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=encodedLogFileName%>"><%=jobid %> </a></h2>
 <b>User : </b> <%=job.get(Keys.USER) %><br/> 

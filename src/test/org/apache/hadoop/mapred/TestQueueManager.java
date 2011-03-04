@@ -480,7 +480,10 @@ public class TestQueueManager extends TestCase {
 
       //try to kill as self
       try {
-        rjob.killJob();
+        conf.set("mapred.job.tracker", "localhost:"
+            + miniMRCluster.getJobTrackerPort());
+        JobClient jc = new JobClient(conf);
+        jc.getJob(rjob.getJobID()).killJob();
         if (!shouldSucceed) {
           fail("should fail kill operation");  
         }
@@ -519,7 +522,10 @@ public class TestQueueManager extends TestCase {
       
       // try to change priority as self
       try {
-        rjob.setJobPriority("VERY_LOW");
+        conf.set("mapred.job.tracker", "localhost:"
+            + miniMRCluster.getJobTrackerPort());
+        JobClient jc = new JobClient(conf);
+        jc.getJob(rjob.getJobID()).setJobPriority("VERY_LOW");
         if (!shouldSucceed) {
           fail("changing priority should fail.");
         }
@@ -546,6 +552,9 @@ public class TestQueueManager extends TestCase {
   private void setUpCluster(JobConf conf) throws IOException {
     miniDFSCluster = new MiniDFSCluster(conf, 1, true, null);
     FileSystem fileSys = miniDFSCluster.getFileSystem();
+    TestMiniMRWithDFSWithDistinctUsers.mkdir(fileSys,
+        conf.get("mapreduce.jobtracker.staging.root.dir",
+            "/tmp/hadoop/mapred/staging"));
     String namenode = fileSys.getUri().toString();
     miniMRCluster = new MiniMRCluster(1, namenode, 3, 
                       null, null, conf);
@@ -596,7 +605,7 @@ public class TestQueueManager extends TestCase {
     if (shouldComplete) {
       rJob = JobClient.runJob(jc);  
     } else {
-      rJob = new JobClient(clientConf).submitJob(jc);
+      rJob = new JobClient(jc).submitJob(jc);
     }
     return rJob;
   }
