@@ -55,10 +55,12 @@ public class FileChecksumServlets {
       final ServletContext context = getServletContext();
       Configuration conf = (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
       final UserGroupInformation ugi = getUGI(request, conf);
+      String tokenString = request.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final DatanodeID datanode = namenode.namesystem.getRandomDatanode();
       try {
-        final URI uri = createRedirectUri("/getFileChecksum", ugi, datanode, request); 
+        final URI uri = 
+          createRedirectUri("/getFileChecksum", ugi, datanode, request, tokenString);
         response.sendRedirect(uri.toURL().toString());
       } catch(URISyntaxException e) {
         throw new ServletException(e); 

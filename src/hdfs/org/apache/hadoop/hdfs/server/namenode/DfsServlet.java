@@ -35,6 +35,8 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 
 /**
  * A base class for the servlets in DFS.
@@ -65,8 +67,10 @@ abstract class DfsServlet extends HttpServlet {
   }
 
   /** Create a URI for redirecting request */
-  protected URI createRedirectUri(String servletpath, UserGroupInformation ugi,
-      DatanodeID host, HttpServletRequest request) throws URISyntaxException {
+  protected URI createRedirectUri(
+      String servletpath, UserGroupInformation ugi,
+      DatanodeID host, HttpServletRequest request, 
+      String tokenString)  throws URISyntaxException {
     final String hostname = host instanceof DatanodeInfo?
         ((DatanodeInfo)host).getHostName(): host.getHost();
     final String scheme = request.getScheme();
@@ -74,8 +78,12 @@ abstract class DfsServlet extends HttpServlet {
         (Integer)getServletContext().getAttribute("datanode.https.port")
         : host.getInfoPort();
     final String filename = request.getPathInfo();
+    String dt="";
+    if(tokenString!=null) {
+      dt = JspHelper.SET_DELEGATION + tokenString;
+    }
     return new URI(scheme, null, hostname, port, servletpath,
-        "filename=" + filename + "&ugi=" + ugi.getShortUserName(), null);
+        "filename=" + filename + "&ugi=" + ugi.getShortUserName() + dt, null);
   }
 
   /** Get filename from the request */
