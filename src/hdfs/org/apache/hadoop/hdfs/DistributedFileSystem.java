@@ -300,7 +300,7 @@ public class DistributedFileSystem extends FileSystem {
       thisListing = dfs.listPaths(src, thisListing.getLastName());
       
       if (thisListing == null) {
-        break; // the directory is deleted
+        return null; // the directory is deleted
       }
       
       partialListing = thisListing.getPartialListing();

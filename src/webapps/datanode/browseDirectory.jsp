@@ -103,16 +103,8 @@
                   JspHelper.SET_DELEGATION + tokenString +
                   "\">Go to parent directory</a><br>");
 
-      DirectoryListing thisListing;
-      byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;
-      do {	
-	  thisListing = dfs.listPaths(target, lastReturnedName);
-	  if (thisListing == null && lastReturnedName.length == 0) {
-		out.print("Empty directory");
-		break;
-	  }
-      HdfsFileStatus[] files = thisListing.getPartialListing();
-      if (files.length == 0 && lastReturnedName.length == 0) {
+      DirectoryListing thisListing = dfs.listPaths(target, HdfsFileStatus.EMPTY_NAME);
+      if (thisListing == null || thisListing.getPartialListing().length == 0) { 
         out.print("Empty directory");
       }
       else {
@@ -120,37 +112,42 @@
         int row=0;
         jspHelper.addTableRow(out, headings, row++);
         String cols [] = new String[headings.length];
-        for (int i = 0; i < files.length; i++) {
-          //Get the location of the first block of the file
-          String localname = files[i].getLocalName();
-          if (localname.endsWith(".crc")) continue;
-          if (!files[i].isDir()) {
-            cols[1] = "file";
-            cols[2] = StringUtils.byteDesc(files[i].getLen());
-            cols[3] = Short.toString(files[i].getReplication());
-            cols[4] = StringUtils.byteDesc(files[i].getBlockSize());
-          }
-          else {
-            cols[1] = "dir";
-            cols[2] = "";
-            cols[3] = "";
-            cols[4] = "";
-          }
-          String datanodeUrl = req.getRequestURL()+"?dir="+
+        do {
+          HdfsFileStatus[] files = thisListing.getPartialListing();
+          for (int i = 0; i < files.length; i++) {
+            //Get the location of the first block of the file
+            String localname = files[i].getLocalName();
+            if (localname.endsWith(".crc")) continue;
+            if (!files[i].isDir()) {
+              cols[1] = "file";
+              cols[2] = StringUtils.byteDesc(files[i].getLen());
+              cols[3] = Short.toString(files[i].getReplication());
+              cols[4] = StringUtils.byteDesc(files[i].getBlockSize());
+            }
+            else {
+              cols[1] = "dir";
+              cols[2] = "";
+              cols[3] = "";
+              cols[4] = "";
+            }
+            String datanodeUrl = req.getRequestURL()+"?dir="+
               URLEncoder.encode(files[i].getFullName(target).toString(), "UTF-8") + 
               "&namenodeInfoPort=" + namenodeInfoPort + JspHelper.SET_DELEGATION + 
               tokenString;
-          cols[0] = "<a href=\""+datanodeUrl+"\">"+localname+"</a>";
-          cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
-          cols[6] = files[i].getPermission().toString();
-          cols[7] = files[i].getOwner();
-          cols[8] = files[i].getGroup();
-          jspHelper.addTableRow(out, cols, row++);
-        }
+            cols[0] = "<a href=\""+datanodeUrl+"\">"+localname+"</a>";
+            cols[5] = FsShell.dateForm.format(new Date((files[i].getModificationTime())));
+            cols[6] = files[i].getPermission().toString();
+            cols[7] = files[i].getOwner();
+            cols[8] = files[i].getGroup();
+            jspHelper.addTableRow(out, cols, row++);
+          }
+          if (!thisListing.hasMore()) {
+            break;
+          }
+          thisListing = dfs.listPaths(target, thisListing.getLastName());
+        } while (thisListing != null);
         jspHelper.addTableFooter(out);
       }
-      lastReturnedName = thisListing.getLastName();
-      } while (thisListing.hasMore());
     } 
     String namenodeHost = jspHelper.nameNodeAddr.getHostName();
     out.print("<br><a href=\"http://" + 
