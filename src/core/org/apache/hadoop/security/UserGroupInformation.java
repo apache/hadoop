@@ -691,20 +691,22 @@ public class UserGroupInformation {
     long start = 0;
     try {
       LOG.info("Initiating logout for " + getUserName());
-      //clear up the kerberos state. But the tokens are not cleared! As per 
-      //the Java kerberos login module code, only the kerberos credentials
-      //are cleared
-      login.logout();
-      //login and also update the subject field of this instance to 
-      //have the new credentials (pass it to the LoginContext constructor)
-      login = 
-        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, 
-            getSubject());
-      LOG.info("Initiating re-login for " + keytabPrincipal);
-      start = System.currentTimeMillis();
-      login.login();
-      metrics.addLoginSuccess(System.currentTimeMillis() - start);
-      setLogin(login);
+      synchronized (UserGroupInformation.class) {
+        //clear up the kerberos state. But the tokens are not cleared! As per 
+        //the Java kerberos login module code, only the kerberos credentials
+        //are cleared
+        login.logout();
+        //login and also update the subject field of this instance to 
+        //have the new credentials (pass it to the LoginContext constructor)
+        login = 
+          new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, 
+                           getSubject());
+        LOG.info("Initiating re-login for " + keytabPrincipal);
+        start = System.currentTimeMillis();
+        login.login();
+        metrics.addLoginSuccess(System.currentTimeMillis() - start);
+        setLogin(login);
+      }
     } catch (LoginException le) {
       if (start > 0) {
         metrics.addLoginFailure(System.currentTimeMillis() - start);
