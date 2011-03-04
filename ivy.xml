@@ -260,17 +260,7 @@
       name="jackson-mapper-asl"
       rev="1.0.1"
       conf="common->default"/>
-    <dependency org="org.aspectj"
-      name="aspectjrt"
-      rev="${aspectj.version}"
-      conf="common->default">
-    </dependency>
-    <dependency org="org.aspectj"
-      name="aspectjtools"
-      rev="${aspectj.version}"
-      conf="common->default">
-    </dependency>
-    <dependency org="org.mockito" 
+   <dependency org="org.mockito" 
        name="mockito-all" 
        rev="${mockito-all.version}" 
        conf="common->default">

@@ -301,15 +301,13 @@
     </copy>
 
     <exec executable="sh">
-       <arg line="src/saveVersion.sh ${version} ${build.dir}"/>
+       <arg line="src/saveVersion.sh ${version}"/>
     </exec>
 	
    <exec executable="sh">
        <arg line="src/fixFontsPath.sh ${src.docs.cn}"/>
    </exec>
   </target>
-
-  <import file="${test.src.dir}/aop/build/aop.xml"/>
 
   <!-- ====================================================== -->
   <!-- Compile the Java files                                 -->
@@ -550,8 +548,6 @@
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
-    <property name="jar.properties.list"
-      value="commons-logging.properties, log4j.properties, hadoop-metrics.properties"/>
     <jar jarfile="${build.dir}/${final.name}-core.jar"
          basedir="${build.classes}">
       <manifest>
@@ -561,8 +557,9 @@
           <attribute name="Implementation-Vendor" value="Apache"/>
         </section>
       </manifest>
-      <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
-      <fileset file="${jar.extra.properties.list}" />
+      <fileset file="${conf.dir}/commons-logging.properties"/>
+      <fileset file="${conf.dir}/log4j.properties"/>
+      <fileset file="${conf.dir}/hadoop-metrics.properties"/>
       <zipfileset dir="${build.webapps}" prefix="webapps"/>
     </jar>
   </target>
@@ -719,76 +716,6 @@
   </target>
 
   <!-- ================================================================== -->
-  <!-- Fault injection customization section.
-       These targets ought to be copied over to other projects and modified
-       as needed -->
-  <!-- ================================================================== -->
-  <target name="-classes-compilation" depends="compile-core-classes,
-      compile-hdfs-classes, compile-mapred-classes, compile-core-test"/>
-  <target name="run-test-core-fault-inject" depends="injectfaults"
-	  description="Run full set of the unit tests with fault injection">
-    <macro-run-tests-fault-inject target.name="test-core"
-      testcasesonly="false"/>
-  </target>
-
-  <target name="jar-test-fault-inject" depends="injectfaults"
-    description="Make hadoop-test-fi.jar">
-    <macro-jar-test-fault-inject
-      target.name="jar-test"
-      jar.final.name="test.final.name"
-      jar.final.value="${test.final.name}-fi" />
-  </target>
-
-  <target name="jar-fault-inject" depends="injectfaults"
-    description="Make hadoop-fi.jar">
-    <macro-jar-fault-inject
-      target.name="jar"
-      jar.final.name="final.name"
-      jar.final.value="${final.name}-fi" />
-  </target>
-
-  <!--This target is not included into the the top level list of target
-  for it serves a special "regression" testing purpose of non-FI tests in
-  FI environment -->
-  <target name="run-fault-inject-with-testcaseonly" depends="injectfaults">
-    <fail unless="testcase">Can't run this target without -Dtestcase setting!
-    </fail>
-    <macro-run-tests-fault-inject target.name="run-test-core"
-      testcasesonly="true"/>
-  </target>
-  <!-- ================================================================== -->
-  <!-- End of Fault injection customization section                       -->
-  <!-- ================================================================== -->
-
-  <condition property="tests.notestcase">
-    <and>
-      <isfalse value="${test.fault.inject}"/>
-      <not>
-        <isset property="testcase"/>
-      </not>
-    </and>
-  </condition>
-  <condition property="tests.notestcase.fi">
-    <and>
-      <not>
-        <isset property="testcase" />
-      </not>
-      <istrue value="${test.fault.inject}" />
-    </and>
-  </condition>
-  <condition property="tests.testcase">
-    <and>
-      <isfalse value="${test.fault.inject}" />
-      <isset property="testcase" />
-    </and>
-  </condition>
-  <condition property="tests.testcase.fi">
-    <and>
-      <istrue value="${test.fault.inject}" />
-      <isset property="testcase" />
-    </and>
-  </condition>
-  <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
   <target name="test-core" depends="jar-test" description="Run core unit tests">
@@ -800,8 +727,6 @@
     <mkdir dir="${test.log.dir}"/>
   	<copy file="${test.src.dir}/hadoop-policy.xml" 
   	  todir="${test.build.extraconf}" />
-    <copy file="${test.src.dir}/fi-site.xml"
-      todir="${test.build.extraconf}" />
     <junit showoutput="${test.output}"
       printsummary="${test.junit.printsummary}"
       haltonfailure="${test.junit.haltonfailure}"
@@ -832,29 +757,13 @@
          <propertyref name="compile.c++"/>
       </syspropertyset>
       <classpath refid="${test.classpath.id}"/>
-      <syspropertyset id="FaultProbabilityProperties">
-        <propertyref regex="fi.*"/>
-      </syspropertyset>
       <formatter type="${test.junit.output.format}" />
-      <batchtest todir="${test.build.dir}" if="tests.notestcase">
+      <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${test.src.dir}"
-           includes="**/${test.include}.java"
-           excludes="**/${test.exclude}.java" />
+	         includes="**/${test.include}.java"
+		 excludes="**/${test.exclude}.java" />
       </batchtest>
-      <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
-        <fileset dir="${test.src.dir}/aop"
-          includes="**/${test.include}.java"
-          excludes="**/${test.exclude}.java" />
-      </batchtest>
-      <batchtest todir="${test.build.dir}" if="tests.testcase">
-        <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
-      </batchtest>
-      <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
-        <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
-      </batchtest>
-      <!--The following batch is for very special occasions only when
-      a non-FI tests are needed to be executed against FI-environment -->
-      <batchtest todir="${test.build.dir}" if="tests.testcaseonly">
+      <batchtest todir="${test.build.dir}" if="testcase">
         <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
       </batchtest>
     </junit>
@@ -874,14 +783,7 @@
     </subant> 
   </target>
 	  
-  <target name="test" description="Run core, contrib, fault injection tests">
-    <delete file="${test.build.dir}/testsfailed"/>
-    <property name="continueOnFailure" value="true"/>
-    <antcall target="test-core"/>
-    <antcall target="test-contrib"/>
-    <antcall target="run-test-core-fault-inject"/>
-    <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
-    <fail if="testsfailed">Tests failed!</fail>
+  <target name="test" depends="test-core, test-contrib" description="Run core, contrib unit tests">
   </target>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
@@ -1381,7 +1283,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-fi" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
