@@ -370,6 +370,16 @@ public abstract class AbstractDaemonCluster {
   }
   
   /**
+   * It uses to delete the new configuration folder.
+   * @param path - configuration directory path.
+   * @throws IOException if an I/O error occurs.
+   */
+  public void cleanupNewConf(String path) throws IOException {
+    File file = new File(path);
+    file.delete();
+  }
+  
+  /**
    * The method is used to only restart one daemon with new config
    * and this gives a great flexibility in choosing which daemon the
    * test wants to restarting instead of changing the config in all the 
@@ -415,6 +425,7 @@ public abstract class AbstractDaemonCluster {
     waitForClusterToStop();
     start();
     waitForClusterToStart();
+    cleanupNewConf(newConfDir);
   }
   
   /**
