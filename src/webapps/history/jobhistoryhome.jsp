@@ -1,13 +1,14 @@
 <%@ page
   contentType="text/html; charset=UTF-8"
   import="java.io.*"
-  import="java.net.URLEncoder"
+  import="java.net.*"
   import="java.util.*"
   import="java.util.regex.Pattern"
   import="java.util.regex.Matcher"
   import="java.util.concurrent.atomic.AtomicBoolean"
-  import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.net.*"
   import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.fs.*"
   import="javax.servlet.jsp.*"
   import="java.text.SimpleDateFormat"
@@ -15,9 +16,19 @@
 %>
 <%	
   JobConf jobConf = (JobConf) application.getAttribute("jobConf");
+  String trackerUrl;
+  String trackerName;
+  
   String trackerAddress = jobConf.get("mapred.job.tracker.http.address");
-  String trackerName =
-           StringUtils.simpleHostname(trackerAddress);
+  InetSocketAddress infoSocAddr = NetUtils.createSocketAddr(trackerAddress);
+  if (JobHistoryServer.isEmbedded(jobConf)) {
+    trackerName = StringUtils.simpleHostname(InetAddress.
+      getLocalHost().getCanonicalHostName());
+    trackerUrl = "";
+  } else {
+    trackerUrl = "http://" + trackerAddress;
+    trackerName = StringUtils.simpleHostname(infoSocAddr.getHostName());
+  }
 %>
 <%!	
   private static SimpleDateFormat dateFormat = 
@@ -46,7 +57,7 @@ window.location.href = url;
 <link rel="stylesheet" type="text/css" href="/static/hadoop.css">
 </head>
 <body>
-<h1> <a href="http://<%=trackerAddress%>/jobtracker.jsp"><%= trackerName %></a> Hadoop Map/Reduce
+<h1> <a href="<%=trackerUrl%>/jobtracker.jsp"><%= trackerName %></a> Hadoop Map/Reduce
      <a href="jobhistoryhome.jsp">History Viewer</a></h1>
 <hr>
 <%

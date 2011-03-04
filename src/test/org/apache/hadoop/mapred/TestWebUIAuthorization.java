@@ -335,12 +335,20 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     JobConf conf = new JobConf(cluster.createJobConf());
     conf.set(JobContext.JOB_ACL_VIEW_JOB, viewColleague + " group3");
 
+    JobTracker jobTracker = getMRCluster().getJobTrackerRunner().getJobTracker();
+    
     //Initialize history server, if need to be started in standalone mode
+    String jhUrlPrefix = JobHistoryServer.getHistoryUrlPrefix(jobTracker.conf);
+    String jobHistoryUrl;
     if ("false".equals(props.getProperty(
         JobHistoryServer.MAPRED_HISTORY_SERVER_EMBEDDED, "true"))) {
       JobHistoryServer historyServer = new JobHistoryServer(cluster.
           getJobTrackerRunner().getJobTracker().conf);
       historyServer.start();
+      jobHistoryUrl = jhUrlPrefix;
+    } else {
+      jobHistoryUrl = "http://" + JobHistoryServer.getAddress(jobTracker.conf) +
+        jhUrlPrefix;
     }
 
     // Let us add group1 and group3 to modify-job-acl. So modifyColleague and
@@ -367,7 +375,6 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
 
     JobID jobid = job.getID();
 
-    JobTracker jobTracker = getMRCluster().getJobTrackerRunner().getJobTracker();
     JobInProgress jip = jobTracker.getJob(jobid);
     JobConf finalJobConf = jip.getJobConf();
     Path doneDir = JobHistory.getCompletedJobHistoryLocation();
@@ -381,7 +388,6 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
         JobHistory.JobInfo.getDoneJobHistoryFileName(finalJobConf, jobid));
 
     String urlEncodedHistoryFileName = URLEncoder.encode(historyFilePath.toString());
-    String jobHistoryUrl = JobHistoryServer.getHistoryUrlPrefix(jobTracker.conf);
 
     // validate access of jobdetails_history.jsp
     String jobDetailsJSP = jobHistoryUrl +

@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -164,17 +165,18 @@ public class JobHistoryServer {
     }
     final String historyLogDir =
       JobHistory.getCompletedJobHistoryLocation().toString();
+    FileSystem historyFS = new Path(historyLogDir).getFileSystem(conf);    
 
     context = historyServer.addContext("history", true);
 
     historyServer.setAttribute(context, "historyLogDir", historyLogDir);
-    historyServer.setAttribute(context, "fileSys", fs);
+    historyServer.setAttribute(context, "fileSys", historyFS);
     historyServer.setAttribute(context, "jobConf", conf);
     historyServer.setAttribute(context, "aclManager", aclsManager);
 
     if (!isEmbedded(conf)) {
       historyServer.setAttribute("historyLogDir", historyLogDir);
-      historyServer.setAttribute("fileSys", fs);
+      historyServer.setAttribute("fileSys", historyFS);
       historyServer.setAttribute("jobConf", conf);
       historyServer.setAttribute("aclManager", aclsManager);
     }
@@ -250,7 +252,8 @@ public class JobHistoryServer {
   }
 
   static String getHistoryUrlPrefix(JobConf conf) {
-    return "http://" + getAddress(conf) + "/history";
+    return (isEmbedded(conf) ? "" : "http://" + getAddress(conf))
+      + "/history";
   }
 
   private static String getBindAddress(JobConf conf) {
