@@ -3233,12 +3233,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
   
   // returns cleanup tasks first, then setup tasks.
-  private synchronized List<Task> getSetupAndCleanupTasks(
+  synchronized List<Task> getSetupAndCleanupTasks(
     TaskTrackerStatus taskTracker) throws IOException {
     int maxMapTasks = taskTracker.getMaxMapSlots();
     int maxReduceTasks = taskTracker.getMaxReduceSlots();
-    int numMaps = taskTracker.countMapTasks();
-    int numReduces = taskTracker.countReduceTasks();
+    int numMaps = taskTracker.countOccupiedMapSlots();
+    int numReduces = taskTracker.countOccupiedReduceSlots();
     int numTaskTrackers = getClusterStatus().getTaskTrackers();
     int numUniqueHosts = getNumberOfUniqueHosts();
 
