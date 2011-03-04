@@ -41,6 +41,7 @@ import org.apache.hadoop.mapred.UtilsForTests.InlineCleanupQueue;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Shell;
@@ -209,13 +210,9 @@ public class TestTaskTrackerLocalization extends TestCase {
     File dir = new File(TEST_ROOT_DIR, jobId.toString());
     if(!dir.exists())
       assertTrue("faild to create dir="+dir.getAbsolutePath(), dir.mkdirs());
-
-    File jobTokenFile = new File(dir, TokenCache.JOB_TOKEN_HDFS_FILE);
-    FileOutputStream fos = new FileOutputStream(jobTokenFile);
-    java.io.DataOutputStream out = new java.io.DataOutputStream(fos);
-    Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>();
-    jt.write(out); // writing empty file, we don't need the keys for this test
-    out.close();
+    // writing empty file, we don't need the keys for this test
+    new Credentials().writeTokenStorageFile(new Path("file:///" + dir, 
+        TokenCache.JOB_TOKEN_HDFS_FILE), new Configuration());
   }
 
   @Override

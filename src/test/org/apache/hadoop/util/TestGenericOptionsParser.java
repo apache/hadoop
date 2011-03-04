@@ -80,7 +80,7 @@ public class TestGenericOptionsParser extends TestCase {
     Path tmpPath = new Path(tmpFile.toString());
     localFs.create(tmpPath);
     new GenericOptionsParser(conf, args);
-    String fileName = conf.get("tokenCacheFile");
+    String fileName = conf.get("mapreduce.job.credentials.json");
     assertNotNull("files is null", fileName);
     assertEquals("files option does not match",
       localFs.makeQualified(tmpPath).toString(), fileName);
