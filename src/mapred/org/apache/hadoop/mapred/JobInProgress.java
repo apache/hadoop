@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -391,6 +392,13 @@ public class JobInProgress {
         public FileSystem run() throws IOException {
           return jobSubmitDir.getFileSystem(default_conf);
         }});
+      /** check for the size of jobconf **/
+      Path submitJobFile = JobSubmissionFiles.getJobConfPath(jobSubmitDir);
+      FileStatus fstatus = fs.getFileStatus(submitJobFile);
+      if (fstatus.getLen() > jobtracker.MAX_JOBCONF_SIZE) {
+        throw new IOException("Exceeded max jobconf size: " 
+            + fstatus.getLen() + " limit: " + jobtracker.MAX_JOBCONF_SIZE);
+      }
       this.localJobFile = default_conf.getLocalPath(JobTracker.SUBDIR
           +"/"+jobId + ".xml");
       Path jobFilePath = JobSubmissionFiles.getJobConfPath(jobSubmitDir);

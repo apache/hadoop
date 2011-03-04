@@ -644,6 +644,13 @@
 </property>
 
 <property>
+  <name>mapred.user.jobconf.limit</name>
+  <value>5242880</value>
+  <description>The maximum allowed size of the user jobconf. The 
+  default is set to 5 MB</description>
+</property>
+
+<property>
   <name>mapred.hosts</name>
   <value></value>
   <description>Names a file that contains the list of nodes that may

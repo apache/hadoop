@@ -34,6 +34,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 
 import junit.framework.TestCase;
@@ -71,6 +72,7 @@ public class TestSubmitJob extends TestCase {
     jt = null;
     fs = null;
   }
+  
   /**
    * Test to verify that jobs with invalid memory requirements are killed at the
    * JT.
@@ -118,11 +120,36 @@ public class TestSubmitJob extends TestCase {
     jobConf.setMemoryForReduceTask(5 * 1024L);
     runJobAndVerifyFailure(jobConf, 1 * 1024L, 5 * 1024L,
         "Exceeds the cluster's max-memory-limit.");
-    
     mrCluster.shutdown();
     mrCluster = null;
   }
+  
+  /** check for large jobconfs **/
+  public void testJobWithInvalidDiskReqs()
+      throws Exception {
+    JobConf jtConf = new JobConf();
+    jtConf
+        .setLong(JobTracker.MAX_USER_JOBCONF_SIZE_KEY, 1 * 1024L);
+ 
+    mrCluster = new MiniMRCluster(0, "file:///", 0, null, null, jtConf);
 
+    JobConf clusterConf = mrCluster.createJobConf();
+
+    // No map-memory configuration
+    JobConf jobConf = new JobConf(clusterConf);
+    String[] args = { "-m", "0", "-r", "0", "-mt", "0", "-rt", "0" };
+    String msg = null;
+    try {
+      ToolRunner.run(jobConf, new SleepJob(), args);
+      assertTrue(false);
+    } catch (RemoteException re) {
+      System.out.println("Exception " + StringUtils.stringifyException(re));
+    }
+
+    mrCluster.shutdown();
+    mrCluster = null;
+  }
+  
   private void runJobAndVerifyFailure(JobConf jobConf, long memForMapTasks,
       long memForReduceTasks, String expectedMsg)
       throws Exception,
@@ -165,7 +192,6 @@ public class TestSubmitJob extends TestCase {
            NetUtils.getSocketFactory(conf,
                org.apache.hadoop.hdfs.protocol.ClientProtocol.class));
   }
- 
    /**
     * Submit a job and check if the files are accessible to other users.
     */

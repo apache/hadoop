@@ -104,6 +104,7 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.apache.hadoop.mapreduce.ClusterMetrics;
+import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
@@ -145,6 +146,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // The maximum number of blacklists for a tracker after which the 
   // tracker could be blacklisted across all jobs
   private int MAX_BLACKLISTS_PER_TRACKER = 4;
+  /** the maximum allowed size of the jobconf **/
+  long MAX_JOBCONF_SIZE = 5*1024*1024L;
+  /** the config key for max user jobconf size **/
+  public static final String MAX_USER_JOBCONF_SIZE_KEY = 
+      "mapred.user.jobconf.limit";
   
   //Delegation token related keys
   public static final String  DELEGATION_KEY_UPDATE_INTERVAL_KEY =  
@@ -2037,7 +2043,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                        DELEGATION_TOKEN_GC_INTERVAL);
     secretManager.startThreads();
        
-
+    MAX_JOBCONF_SIZE = conf.getLong(MAX_USER_JOBCONF_SIZE_KEY, MAX_JOBCONF_SIZE);
     //
     // Grab some static constants
     //
@@ -3686,6 +3692,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       jobInfo = new JobInfo(jobId, new Text(ugi.getShortUserName()),
           new Path(jobSubmitDir));
     }
+    
     // Create the JobInProgress, do not lock the JobTracker since
     // we are about to copy job.xml from HDFS
     JobInProgress job = null;

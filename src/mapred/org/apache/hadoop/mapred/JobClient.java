@@ -855,7 +855,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           } finally {
             out.close();
           }
-
           //
           // Now, actually submit the job (using the submit name)
           //

@@ -157,7 +157,7 @@ public class JobConf extends Configuration {
    * name is mentioned.
    */
   public static final String DEFAULT_QUEUE_NAME = "default";
-
+  
   static final String MAPRED_JOB_MAP_MEMORY_MB_PROPERTY =
       "mapred.job.map.memory.mb";
 
