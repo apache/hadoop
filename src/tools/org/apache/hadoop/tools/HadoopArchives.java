@@ -742,8 +742,10 @@ public class HadoopArchives implements Tool {
       for (Path p: srcPaths) {
         FileSystem fs = p.getFileSystem(getConf());
         FileStatus[] statuses = fs.globStatus(p);
-        for (FileStatus status: statuses) {
-          globPaths.add(fs.makeQualified(status.getPath()));
+        if (statuses != null) {
+          for (FileStatus status: statuses) {
+            globPaths.add(fs.makeQualified(status.getPath()));
+          }
         }
       }
       archive(parentPath, globPaths, archiveName, destPath);
@@ -764,8 +766,13 @@ public class HadoopArchives implements Tool {
       ret = ToolRunner.run(harchives, args);
     } catch(Exception e) {
       LOG.debug("Exception in archives  ", e);
-      System.err.println("Exception in archives");
-      System.err.println(e.getLocalizedMessage());
+      System.err.println(e.getClass().getSimpleName() + " in archives");
+      final String s = e.getLocalizedMessage();
+      if (s != null) {
+        System.err.println(s);
+      } else {
+        e.printStackTrace(System.err);
+      }
       System.exit(1);
     }
     System.exit(ret);
