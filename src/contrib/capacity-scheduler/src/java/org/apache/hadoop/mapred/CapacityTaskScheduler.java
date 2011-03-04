@@ -1145,6 +1145,7 @@ class CapacityTaskScheduler extends TaskScheduler {
     Collection<JobInProgress> jobCollection = new ArrayList<JobInProgress>();
     CapacitySchedulerQueue queue = queueInfoMap.get(queueName);
     Collection<JobInProgress> runningJobs = queue.getRunningJobs();
+    jobCollection.addAll(queue.getInitializingJobs());
     if (runningJobs != null) {
       jobCollection.addAll(runningJobs);
     }

@@ -119,14 +119,14 @@ public class CapacitySchedulerServlet extends HttpServlet {
       		      "<th>Reduce Task Capacity</th>" + 
                 "<th>Reduce Task Used Capacity</th>" +
                 "<th>Running Reduces </tr>\n");
-      JobQueuesManager queuesManager = scheduler.getJobQueuesManager();
       for (CapacitySchedulerQueue queue : scheduler.getQueueInfoMap().values()) {
         String queueName = queue.getQueueName();
         out.print("<tr>\n");
         out.printf(
             "<td><a href=\"jobqueue_details.jsp?queueName=%s\">%s</a></td>\n",
             queueName, queueName);
-        out.printf("<td>%s</td>\n", queue.getNumRunningJobs());
+        out.printf("<td>%s</td>\n", 
+            (queue.getNumRunningJobs() + queue.getNumInitializingJobs()));
         out.printf("<td>%s</td>\n", queue.getNumWaitingJobs());
         out.printf("<td>%.1f%%</td>\n", queue.getCapacityPercent());
         int mapCapacity = queue.getCapacity(TaskType.MAP);

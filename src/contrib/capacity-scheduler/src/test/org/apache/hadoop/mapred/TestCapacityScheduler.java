@@ -1781,7 +1781,7 @@ public class TestCapacityScheduler extends TestCase {
     String schedulingInfo2 =
         queueManager.getJobQueueInfo("q2").getSchedulingInfo();
     String[] infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 18);
+    assertEquals(infoStrings.length, 19);
     assertEquals(infoStrings[0], "Queue configuration");
     assertEquals(infoStrings[1], "Capacity Percentage: 50.0%");
     assertEquals(infoStrings[2], "User Limit: 25%");
@@ -1801,7 +1801,8 @@ public class TestCapacityScheduler extends TestCase {
     assertEquals(infoStrings[14], "-------------");
     assertEquals(infoStrings[15], "Job info");
     assertEquals(infoStrings[16], "Number of Waiting Jobs: 0");
-    assertEquals(infoStrings[17], "Number of users who have submitted jobs: 0");
+    assertEquals(infoStrings[17], "Number of Initializing Jobs: 0");
+    assertEquals(infoStrings[18], "Number of users who have submitted jobs: 0");
     assertEquals(schedulingInfo, schedulingInfo2);
 
     //Testing with actual job submission.
@@ -1812,13 +1813,14 @@ public class TestCapacityScheduler extends TestCase {
     infoStrings = schedulingInfo.split("\n");
 
     //waiting job should be equal to number of jobs submitted.
-    assertEquals(infoStrings.length, 18);
+    assertEquals(infoStrings.length, 19);
     assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[8], "Running tasks: 0");
     assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[13], "Running tasks: 0");
     assertEquals(infoStrings[16], "Number of Waiting Jobs: 5");
-    assertEquals(infoStrings[17], "Number of users who have submitted jobs: 1");
+    assertEquals(infoStrings[17], "Number of Initializing Jobs: 0");
+    assertEquals(infoStrings[18], "Number of users who have submitted jobs: 1");
 
     //Initalize the jobs but don't raise events
     controlledInitializationPoller.selectJobsToInitialize();
@@ -1826,14 +1828,14 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 18);
-    //should be previous value as nothing is scheduled because no events
-    //has been raised after initialization.
+    assertEquals(infoStrings.length, 19);
+    //2 jobs are now 'ready to init'
+    //3 are waiting due to init task limits
     assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[8], "Running tasks: 0");
     assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[13], "Running tasks: 0");
-    assertEquals(infoStrings[16], "Number of Waiting Jobs: 5");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 3");
 
     //Raise status change event so that jobs can move to running queue.
     raiseStatusChangeEvents(scheduler.jobQueuesManager);
@@ -1848,20 +1850,21 @@ public class TestCapacityScheduler extends TestCase {
     controlledInitializationPoller.selectJobsToInitialize();
 
     //Get scheduling information, now the number of waiting job should have
-    //changed to 4 as one is scheduled and has become running.
+    //be 3 and initializing is 0 as 2 have been scheduled.
     // make sure we update our stats
     scheduler.updateQueueUsageForTests();
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(schedulingInfo, 22, infoStrings.length);
+    assertEquals(schedulingInfo, 23, infoStrings.length);
     assertEquals(infoStrings[7], infoStrings[7], "Used capacity: 1 (100.0% of Capacity)");
     assertEquals(infoStrings[8], infoStrings[8], "Running tasks: 1");
     assertEquals(infoStrings[9], infoStrings[9], "Active users:");
     assertEquals(infoStrings[10], infoStrings[10], "User 'u1': 1 (100.0% of used capacity)");
     assertEquals(infoStrings[14], infoStrings[14], "Used capacity: 1 (100.0% of Capacity)");
     assertEquals(infoStrings[15], infoStrings[15], "Running tasks: 1");
-    assertEquals(infoStrings[18], infoStrings[20], "Number of Waiting Jobs: 4");
+    assertEquals(infoStrings[18], infoStrings[20], "Number of Waiting Jobs: 3");
+    assertEquals(infoStrings[18], infoStrings[21], "Number of Initializing Jobs: 0");
     
     //Complete the job and check the running tasks count
     FakeJobInProgress u1j1 = userJobs.get(0);
@@ -1874,12 +1877,12 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 18);
+    assertEquals(infoStrings.length, 19);
     assertEquals(infoStrings[7], infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[8], infoStrings[8], "Running tasks: 0");
     assertEquals(infoStrings[12], infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[13], infoStrings[13], "Running tasks: 0");
-    assertEquals(infoStrings[16], infoStrings[16], "Number of Waiting Jobs: 4");
+    assertEquals(infoStrings[16], infoStrings[16], "Number of Waiting Jobs: 3");
 
     //Fail a job which is initialized but not scheduled and check the count.
     FakeJobInProgress u1j2 = userJobs.get(1);
@@ -1893,14 +1896,14 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 18);
-    //should be previous value as nothing is scheduled because no events
-    //has been raised after initialization.
+    assertEquals(infoStrings.length, 19);
+    //2 more jobs are now in 'initializing state', none 'initialized'
     assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[8], "Running tasks: 0");
     assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[13], "Running tasks: 0");
-    assertEquals(infoStrings[16], "Number of Waiting Jobs: 3");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 1");
+    assertEquals(infoStrings[17], "Number of Initializing Jobs: 2");
 
     //Fail a job which is not initialized but is in the waiting queue.
     FakeJobInProgress u1j5 = userJobs.get(4);
@@ -1915,14 +1918,15 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 18);
-    //should be previous value as nothing is scheduled because no events
-    //has been raised after initialization.
+    assertEquals(infoStrings.length, 19);
+    //no more waiting jobs
+    //all jobs are initing
     assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[8], "Running tasks: 0");
     assertEquals(infoStrings[12], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[13], "Running tasks: 0");
-    assertEquals(infoStrings[16], "Number of Waiting Jobs: 2");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 0");
+    assertEquals(infoStrings[17], "Number of Initializing Jobs: 2");
 
     //Raise status change events as none of the intialized jobs would be
     //in running queue as we just failed the second job which was initialized
@@ -1940,7 +1944,7 @@ public class TestCapacityScheduler extends TestCase {
     assertTrue("User Job 3 not running ",
         u1j3.getStatus().getRunState() == JobStatus.RUNNING);
 
-    //now the running count of map should be one and waiting jobs should be
+    //now the running count of map should be one and initing jobs should be
     //one. run the poller as it is responsible for waiting count
     controlledInitializationPoller.selectJobsToInitialize();
     // make sure we update our stats
@@ -1948,14 +1952,15 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 22);
+    assertEquals(infoStrings.length, 23);
     assertEquals(infoStrings[7], infoStrings[7], "Used capacity: 1 (100.0% of Capacity)");
     assertEquals(infoStrings[8], infoStrings[8], "Running tasks: 1");
     assertEquals(infoStrings[9], infoStrings[9], "Active users:");
     assertEquals(infoStrings[10], infoStrings[10], "User 'u1': 1 (100.0% of used capacity)");
     assertEquals(infoStrings[14], infoStrings[14], "Used capacity: 1 (100.0% of Capacity)");
     assertEquals(infoStrings[15], infoStrings[15], "Running tasks: 1");
-    assertEquals(infoStrings[18], infoStrings[20], "Number of Waiting Jobs: 1");
+    assertEquals(infoStrings[18], infoStrings[20], "Number of Waiting Jobs: 0");
+    assertEquals(infoStrings[18], infoStrings[21], "Number of Initializing Jobs: 0");
 
     //Fail the executing job
     taskTrackerManager.finalizeJob(u1j3, JobStatus.FAILED);
@@ -1965,10 +1970,11 @@ public class TestCapacityScheduler extends TestCase {
     schedulingInfo =
       queueManager.getJobQueueInfo("default").getSchedulingInfo();
     infoStrings = schedulingInfo.split("\n");
-    assertEquals(infoStrings.length, 18);
+    assertEquals(infoStrings.length, 19);
     assertEquals(infoStrings[7], "Used capacity: 0 (0.0% of Capacity)");
     assertEquals(infoStrings[8], "Running tasks: 0");
-    assertEquals(infoStrings[16], "Number of Waiting Jobs: 1");
+    assertEquals(infoStrings[16], "Number of Waiting Jobs: 0");
+    assertEquals(infoStrings[17], "Number of Initializing Jobs: 0");
   }
 
   /**
@@ -2572,9 +2578,9 @@ public class TestCapacityScheduler extends TestCase {
     // run the poller again.
     controlledInitializationPoller.selectJobsToInitialize();
 
-    // the poller should initialize 5 jobs
-    // 3 from u1 and one each from u2 and u3
-    assertEquals(initializedJobs.size(), 5);
+    // the poller should initialize 4 jobs
+    // 2 from u1 and one each from u2 and u3
+    assertEquals(initializedJobs.size(), 4);
 
     // Should fail since u1 is already at limit of 3 jobs
     jobSubmissionFailed = false;
@@ -2750,8 +2756,10 @@ public class TestCapacityScheduler extends TestCase {
     
     // it should be there in both the queues.
     CapacitySchedulerQueue queue = mgr.getQueue("default");
-    assertTrue("Job not present in Job Queue",
-        queue.getWaitingJobs().contains(job));
+    assertTrue("Job present in waiting Job Queue",
+        !queue.getWaitingJobs().contains(job));
+    assertTrue("Job present in initializing Job Queue",
+        !queue.getInitializingJobs().contains(job));
     assertTrue("Job not present in Running Queue",
         queue.getRunningJobs().contains(job));
     
@@ -3188,8 +3196,10 @@ public class TestCapacityScheduler extends TestCase {
     CapacitySchedulerQueue queue = mgr.getQueue("default");
     
     //check in waiting and initialized jobs list.
-    assertTrue("Waiting jobs list does not contain the job",
-        queue.getWaitingJobs().contains(job));
+    assertTrue("Waiting jobs list does contain the job",
+        !queue.getWaitingJobs().contains(job));
+    assertTrue("Initialzing jobs does not contain the job",
+        !queue.getInitializingJobs().contains(job));
     
     assertTrue("Initialized job does not contain the job",
         p.getInitializedJobList().contains(job.getJobID()));
@@ -3232,7 +3242,7 @@ public class TestCapacityScheduler extends TestCase {
   }
   
   private void raiseStatusChangeEvents(JobQueuesManager mgr, String queueName) {
-    Collection<JobInProgress> jips = mgr.getQueue(queueName).getWaitingJobs();
+    Collection<JobInProgress> jips = mgr.getQueue(queueName).getInitializingJobs();
     for(JobInProgress jip : jips) {
       if(jip.getStatus().getRunState() == JobStatus.RUNNING) {
         JobStatusChangeEvent evt = new JobStatusChangeEvent(jip,

@@ -244,6 +244,7 @@ class CapacitySchedulerQueue {
    */
   
   Map<JobSchedulingInfo, JobInProgress> waitingJobs; // for waiting jobs
+  Map<JobSchedulingInfo, JobInProgress> initializingJobs; // for init'ing jobs
   Map<JobSchedulingInfo, JobInProgress> runningJobs; // for running jobs
   
   /**
@@ -299,6 +300,8 @@ class CapacitySchedulerQueue {
       comparator = STARTTIME_JOB_COMPARATOR;
     }
     this.waitingJobs = 
+      new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
+    this.initializingJobs =
       new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
     this.runningJobs = 
       new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
@@ -665,6 +668,7 @@ class CapacitySchedulerQueue {
     
     sb.append("Job info\n");
     sb.append("Number of Waiting Jobs: " + getNumWaitingJobs() + "\n");
+    sb.append("Number of Initializing Jobs: " + getNumInitializingJobs() + "\n");
     sb.append("Number of users who have submitted jobs: " + 
         numJobsByUser.size() + "\n");
     return sb.toString();
@@ -677,51 +681,81 @@ class CapacitySchedulerQueue {
   
   // per-user information
   static class UserInfo {
-    int runningJobs;
-    int waitingJobs;
+    
+    Map<JobSchedulingInfo, JobInProgress> waitingJobs; // for waiting jobs
+    Map<JobSchedulingInfo, JobInProgress> initializingJobs; // for init'ing jobs
+    Map<JobSchedulingInfo, JobInProgress> runningJobs; // for running jobs
     
     int activeTasks;
     
+    public UserInfo(Comparator<JobSchedulingInfo> comparator) {
+      waitingJobs = new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
+      initializingJobs = new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
+      runningJobs = new TreeMap<JobSchedulingInfo, JobInProgress>(comparator);
+    }
+    
+    int getNumInitializingJobs() {
+      return initializingJobs.size();
+    }
+    
     int getNumRunningJobs() {
-      return runningJobs;
+      return runningJobs.size();
     }
     
     int getNumWaitingJobs() {
-      return waitingJobs;
+      return waitingJobs.size();
     }
     
     int getNumActiveTasks() {
       return activeTasks;
     }
     
-    public void jobAdded(JobInProgress job) {
-      ++waitingJobs;
+    public void jobAdded(JobSchedulingInfo jobSchedInfo, JobInProgress job) {
+      waitingJobs.put(jobSchedInfo, job); 
     }
     
-    public void removeWaitingJob(JobInProgress job) {
-      --waitingJobs;
+    public void removeWaitingJob(JobSchedulingInfo jobSchedInfo) {
+      waitingJobs.remove(jobSchedInfo);
     }
     
-    public void jobInitialized(JobInProgress job) {
-      removeWaitingJob(job);
-
-      ++runningJobs;
-      activeTasks += job.desiredTasks();
+    public void jobInitializing(JobSchedulingInfo jobSchedInfo, 
+        JobInProgress job) {
+      if (!initializingJobs.containsKey(jobSchedInfo)) {
+        initializingJobs.put(jobSchedInfo, job);
+        activeTasks += job.desiredTasks();
+      }
     }
     
-    public void jobCompleted(JobInProgress job) {
-      --runningJobs;
+    public void removeInitializingJob(JobSchedulingInfo jobSchedInfo) {
+      initializingJobs.remove(jobSchedInfo);
+    }
+    
+    public void jobInitialized(JobSchedulingInfo jobSchedInfo, 
+        JobInProgress job) {
+      runningJobs.put(jobSchedInfo, job);
+    }
+    
+    public void jobCompleted(JobSchedulingInfo jobSchedInfo, 
+        JobInProgress job) {
+      // It is *ok* to remove from runningJobs even if the job was never RUNNING
+      runningJobs.remove(jobSchedInfo);
       activeTasks -= job.desiredTasks();
     }
     
     boolean isInactive() {
-      return activeTasks == 0 && runningJobs == 0  && waitingJobs == 0;
+      return activeTasks == 0 && runningJobs.size() == 0  && 
+      waitingJobs.size() == 0 && initializingJobs.size() == 0;
     }
   }
 
   synchronized Collection<JobInProgress> getWaitingJobs() {
     return Collections.unmodifiableCollection(
         new LinkedList<JobInProgress>(waitingJobs.values()));
+  }
+  
+  synchronized Collection<JobInProgress> getInitializingJobs() {
+    return Collections.unmodifiableCollection(
+        new LinkedList<JobInProgress>(initializingJobs.values()));
   }
   
   synchronized Collection<JobInProgress> getRunningJobs() {
@@ -735,6 +769,15 @@ class CapacitySchedulerQueue {
   
   synchronized int getNumRunningJobs() {
     return runningJobs.size();
+  }
+  
+  synchronized int getNumInitializingJobs() {
+    return initializingJobs.size();
+  }
+  
+  synchronized int getNumInitializingJobsByUser(String user) {
+    UserInfo userInfo = users.get(user);
+    return (userInfo == null) ? 0 : userInfo.getNumInitializingJobs();
   }
   
   synchronized int getNumRunningJobsByUser(String user) {
@@ -752,6 +795,86 @@ class CapacitySchedulerQueue {
     return (userInfo == null) ? 0 : userInfo.getNumWaitingJobs();
   }
 
+  synchronized void addInitializingJob(JobInProgress job) {
+    JobSchedulingInfo jobSchedInfo = new JobSchedulingInfo(job);
+
+    if (!waitingJobs.containsKey(jobSchedInfo)) {
+      // Ideally this should have been an *assert*, but it can't be done
+      // since we make copies in getWaitingJobs which is used in 
+      // JobInitPoller.getJobsToInitialize
+      LOG.warn("Cannot find job " + job.getJobID() + 
+          " in list of waiting jobs!");
+      return;
+    }
+    
+    if (initializingJobs.containsKey(jobSchedInfo)) {
+      LOG.warn("job " + job.getJobID() + " already being init'ed in queue'" +
+          queueName + "'!");
+      return;
+    }
+
+    // Mark the job as running
+    initializingJobs.put(jobSchedInfo, job);
+
+    addJob(jobSchedInfo, job);
+    
+    if (LOG.isDebugEnabled()) {
+      String user = job.getProfile().getUser();
+      LOG.debug("addInitializingJob:" +
+          " job=" + job.getJobID() +
+          " user=" + user + 
+          " queue=" + queueName +
+          " qWaitJobs=" +  getNumWaitingJobs() +
+          " qInitJobs=" +  getNumInitializingJobs()+
+          " qRunJobs=" +  getNumRunningJobs() +
+          " qActiveTasks=" +  getNumActiveTasks() +
+          " uWaitJobs=" +  getNumWaitingJobsByUser(user) +
+          " uInitJobs=" +  getNumInitializingJobsByUser(user) +
+          " uRunJobs=" +  getNumRunningJobsByUser(user) +
+          " uActiveTasks=" +  getNumActiveTasksByUser(user)
+      );
+    }
+
+    // Remove the job from 'waiting' jobs list
+    removeWaitingJob(jobSchedInfo, JobStatus.PREP);
+  }
+  
+  synchronized JobInProgress removeInitializingJob(
+      JobSchedulingInfo jobSchedInfo, int runState) {
+    JobInProgress job = initializingJobs.remove(jobSchedInfo);
+    
+    if (job != null) {
+      String user = job.getProfile().getUser();
+      UserInfo userInfo = users.get(user);
+      userInfo.removeInitializingJob(jobSchedInfo);
+      
+      // Decrement counts if the job is killed _while_ it was selected for
+      // initialization, but aborted
+      // NOTE: addRunningJob calls removeInitializingJob with runState==RUNNING
+      if (runState != JobStatus.RUNNING) {
+        finishJob(jobSchedInfo, job);
+      }
+      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("removeInitializingJob:" +
+            " job=" + job.getJobID() +
+            " user=" + user + 
+            " queue=" + queueName +
+            " qWaitJobs=" +  getNumWaitingJobs() +
+            " qInitJobs=" +  getNumInitializingJobs()+
+            " qRunJobs=" +  getNumRunningJobs() +
+            " qActiveTasks=" +  getNumActiveTasks() +
+            " uWaitJobs=" +  getNumWaitingJobsByUser(user) +
+            " uInitJobs=" +  getNumInitializingJobsByUser(user) +
+            " uRunJobs=" +  getNumRunningJobsByUser(user) +
+            " uActiveTasks=" +  getNumActiveTasksByUser(user)
+        );
+      }
+    }
+    
+    return job;
+  }
+  
   synchronized void addRunningJob(JobInProgress job) {
     JobSchedulingInfo jobSchedInfo = new JobSchedulingInfo(job);
 
@@ -761,39 +884,89 @@ class CapacitySchedulerQueue {
       return;
     }
 
+    // Mark the job as running
     runningJobs.put(jobSchedInfo,job);
 
+    // Update user stats
+    String user = job.getProfile().getUser();
+    UserInfo userInfo = users.get(user);
+    userInfo.jobInitialized(jobSchedInfo, job);
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("addRunningJob:" +
+          " job=" + job.getJobID() +
+          " user=" + user + 
+          " queue=" + queueName +
+          " qWaitJobs=" +  getNumWaitingJobs() +
+          " qInitJobs=" +  getNumInitializingJobs()+
+          " qRunJobs=" +  getNumRunningJobs() +
+          " qActiveTasks=" +  getNumActiveTasks() +
+          " uWaitJobs=" +  getNumWaitingJobsByUser(user) +
+          " uInitJobs=" +  getNumInitializingJobsByUser(user) +
+          " uRunJobs=" +  getNumRunningJobsByUser(user) +
+          " uActiveTasks=" +  getNumActiveTasksByUser(user)
+      );
+    }
+
+    // Remove from 'initializing' list
+    // Note that at this point job.status.state != RUNNING, 
+    // however, logically it is a reasonable state to pass in to ensure
+    // that removeInitializingJob doesn't double-decrement  
+    // the relevant queue/user counters
+    removeInitializingJob(jobSchedInfo, JobStatus.RUNNING);
+  }
+
+  synchronized private void addJob(JobSchedulingInfo jobSchedInfo,
+      JobInProgress job) {
     // Update queue stats
     activeTasks += job.desiredTasks();
     
     // Update user stats
     String user = job.getProfile().getUser();
     UserInfo userInfo = users.get(user);
-    userInfo.jobInitialized(job);
+    userInfo.jobInitializing(jobSchedInfo, job);
   }
   
-  synchronized JobInProgress removeRunningJob(JobSchedulingInfo jobInfo) {
-    JobInProgress job = runningJobs.remove(jobInfo); 
+  synchronized private void finishJob(JobSchedulingInfo jobSchedInfo,
+      JobInProgress job) {
+    // Update user stats
+    String user = job.getProfile().getUser();
+    UserInfo userInfo = users.get(user);
+    userInfo.jobCompleted(jobSchedInfo, job);
+    
+    if (userInfo.isInactive()) {
+      users.remove(userInfo);
+    }
+
+    // Update queue stats
+    activeTasks -= job.desiredTasks();
+  }
+  
+  synchronized JobInProgress removeRunningJob(JobSchedulingInfo jobSchedInfo, 
+      int runState) {
+    JobInProgress job = runningJobs.remove(jobSchedInfo); 
 
     // We have to be careful, we might be trying to remove a job  
     // which might not have been initialized
     if (job != null) {
-      // Update user stats
       String user = job.getProfile().getUser();
-      synchronized (users) {
-        UserInfo userInfo = users.get(user);
-
-        synchronized (userInfo) {
-          userInfo.jobCompleted(job);
-
-          if (userInfo.isInactive()) {
-            users.remove(userInfo);
-          }
-        }
+      finishJob(jobSchedInfo, job);
+      
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("removeRunningJob:" +
+            " job=" + job.getJobID() +
+            " user=" + user + 
+            " queue=" + queueName +
+            " qWaitJobs=" +  getNumWaitingJobs() +
+            " qInitJobs=" +  getNumInitializingJobs()+
+            " qRunJobs=" +  getNumRunningJobs() +
+            " qActiveTasks=" +  getNumActiveTasks() +
+            " uWaitJobs=" +  getNumWaitingJobsByUser(user) +
+            " uInitJobs=" +  getNumInitializingJobsByUser(user) +
+            " uRunJobs=" +  getNumRunningJobsByUser(user) +
+            " uActiveTasks=" +  getNumActiveTasksByUser(user)
+        );
       }
-
-      // Update queue stats
-      activeTasks -= job.desiredTasks();
     }
 
     return job;
@@ -812,24 +985,58 @@ class CapacitySchedulerQueue {
     // Check acceptance limits
     checkJobSubmissionLimits(job, user);
     
-    waitingJobs.put(new JobSchedulingInfo(job), job);
+    waitingJobs.put(jobSchedInfo, job);
     
     // Update user stats
     UserInfo userInfo = users.get(user);
     if (userInfo == null) {
-      userInfo = new UserInfo();
+      userInfo = new UserInfo(comparator);
       users.put(user, userInfo);
     }
-    userInfo.jobAdded(job);
+    userInfo.jobAdded(jobSchedInfo, job);
+    
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("addWaitingJob:" +
+          " job=" + job.getJobID() +
+          " user=" + user + 
+          " queue=" + queueName +
+          " qWaitJobs=" +  getNumWaitingJobs() +
+          " qInitJobs=" +  getNumInitializingJobs()+
+          " qRunJobs=" +  getNumRunningJobs() +
+          " qActiveTasks=" +  getNumActiveTasks() +
+          " uWaitJobs=" +  getNumWaitingJobsByUser(user) +
+          " uInitJobs=" +  getNumInitializingJobsByUser(user) +
+          " uRunJobs=" +  getNumRunningJobsByUser(user) +
+          " uActiveTasks=" +  getNumActiveTasksByUser(user)
+      );
+    }
   }
   
-  synchronized JobInProgress removeWaitingJob(JobSchedulingInfo schedInfo) {
-    JobInProgress job = waitingJobs.remove(schedInfo);
+  synchronized JobInProgress removeWaitingJob(JobSchedulingInfo jobSchedInfo, 
+      int unused) {
+    JobInProgress job = waitingJobs.remove(jobSchedInfo);
     if (job != null) {
       String user = job.getProfile().getUser();
       UserInfo userInfo = users.get(user);
-      userInfo.removeWaitingJob(job);
+      userInfo.removeWaitingJob(jobSchedInfo);
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("removeWaitingJob:" +
+            " job=" + job.getJobID() +
+            " user=" + user + 
+            " queue=" + queueName +
+            " qWaitJobs=" +  getNumWaitingJobs() +
+            " qInitJobs=" +  getNumInitializingJobs()+
+            " qRunJobs=" +  getNumRunningJobs() +
+            " qActiveTasks=" +  getNumActiveTasks() +
+            " uWaitJobs=" +  getNumWaitingJobsByUser(user) +
+            " uInitJobs=" +  getNumInitializingJobsByUser(user) +
+            " uRunJobs=" +  getNumRunningJobsByUser(user) +
+            " uActiveTasks=" +  getNumActiveTasksByUser(user)
+        );
+      }
     }
+    
     return job;
   }
 
@@ -972,6 +1179,7 @@ class CapacitySchedulerQueue {
     if (LOG.isDebugEnabled()) {
       LOG.debug("checkJobSubmissionLimits - " +
           "qWaitJobs=" + getNumWaitingJobs() + " " +
+          "qInitJobs=" + getNumInitializingJobs() + " " +
           "qRunJobs=" + getNumRunningJobs() + " " +
           "maxJobsToAccept=" + maxJobsToAccept +
           "user=" + user + " " +
@@ -993,24 +1201,33 @@ class CapacitySchedulerQueue {
     }
     
     // Across all jobs in queue
-    if ((getNumWaitingJobs() + getNumRunningJobs()) >= maxJobsToAccept) {
+    int queueWaitingJobs = getNumWaitingJobs();
+    int queueInitializingJobs = getNumInitializingJobs();
+    int queueRunningJobs = getNumRunningJobs();
+    if ((queueWaitingJobs + queueInitializingJobs + queueRunningJobs) >= 
+      maxJobsToAccept) {
       throw new IOException(
           "Job '" + job.getJobID() + "' from user '" + user  + 
           "' rejected since queue '" + queueName + 
-          "' already has " + getNumWaitingJobs() + " waiting jobs and " + 
-          getNumRunningJobs() + " running jobs and exceeds limit of " +
+          "' already has " + queueWaitingJobs + " waiting jobs, " + 
+          queueInitializingJobs + " initializing jobs and " + 
+          queueRunningJobs + " running jobs - Exceeds limit of " +
           maxJobsToAccept + " jobs to accept");
     }
     
     // Across all jobs of the user
-    if ((getNumWaitingJobsByUser(user) + getNumRunningJobsByUser(user)) >= 
+    int userWaitingJobs = getNumWaitingJobsByUser(user);
+    int userInitializingJobs = getNumInitializingJobsByUser(user);
+    int userRunningJobs = getNumRunningJobsByUser(user);
+    if ((userWaitingJobs + userInitializingJobs + userRunningJobs) >= 
         maxJobsPerUserToAccept) {
       throw new IOException(
           "Job '" + job.getJobID() + "' rejected since user '" + user +  
-          "' already has " + getNumWaitingJobsByUser(user) + " waiting jobs" +
-          " and " + getNumRunningJobsByUser(user) + " running jobs," +
-          " it exceeds limit of " + maxJobsToAccept + " jobs to accept" +
-          " in queue '" + queueName + "'");
+          "' already has " + userWaitingJobs + " waiting jobs, " +
+          userInitializingJobs + " initializing jobs and " +
+          userRunningJobs + " running jobs - " +
+          " Exceeds limit of " + maxJobsPerUserToAccept + " jobs to accept" +
+          " in queue '" + queueName + "' per user");
     }
   }
   
@@ -1018,31 +1235,27 @@ class CapacitySchedulerQueue {
    * Check if the <code>job</code> can be initialized in the queue.
    * 
    * @param job
-   * @param currentlyInitializedJobs
-   * @param currentlyInitializedTasks
    * @return <code>true</code> if the job can be initialized, 
    *         <code>false</code> otherwise
    */
-  synchronized boolean initializeJobForQueue(JobInProgress job,
-      int currentlyInitializedJobs, int currentlyInitializedTasks) {
+  synchronized boolean initializeJobForQueue(JobInProgress job) {
     
     // Check if queue has sufficient number of jobs
     int runningJobs = getNumRunningJobs();
-    if ((runningJobs + currentlyInitializedJobs) >= maxJobsToInit) {
+    int initializingJobs = getNumInitializingJobs();
+    if ((runningJobs + initializingJobs) >= maxJobsToInit) {
       LOG.info(getQueueName() + " already has " + runningJobs + 
-          " running jobs and " + currentlyInitializedJobs + " jobs about to be" +
-          " initialized, cannot initialize " + job.getJobID() + 
-          " since it will exceeed limit of " + 
-          maxJobsToInit + " initialized jobs for this queue");
+          " running jobs and " + initializingJobs + " initializing jobs;" +
+          " cannot initialize " + job.getJobID() + 
+          " since it will exceeed limit of " + maxJobsToInit + 
+          " initialized jobs for this queue");
       return false;
     }
     
     // Check if queue has too many active tasks
-    if ((activeTasks + currentlyInitializedTasks + job.desiredTasks()) > 
-         maxActiveTasks) {
+    if ((activeTasks + job.desiredTasks()) > maxActiveTasks) {
       LOG.info("Queue '" + getQueueName() + "' has " + activeTasks + 
-          " active tasks and " + currentlyInitializedTasks + " tasks about to" +
-          " be initialized, cannot initialize job '" + job.getJobID() + 
+          " active tasks, cannot initialize job '" + job.getJobID() + 
           "' for user '" + job.getProfile().getUser() + "' with " +
           job.desiredTasks() + " tasks since it will exceed limit of " + 
           maxActiveTasks + " active tasks for this queue");
@@ -1057,41 +1270,33 @@ class CapacitySchedulerQueue {
    * on behalf of the <code>user</code>.
    * 
    * @param job
-   * @param user
-   * @param currentlyInitializedJobs
-   * @param currentlyInitializedTasks
    * @return <code>true</code> if the job can be initialized, 
    *         <code>false</code> otherwise
    */
-  synchronized boolean initializeJobForUser(JobInProgress job, 
-      String user, int currentlyInitializedJobs, 
-      int currentlyInitializedTasks) {
+  synchronized boolean initializeJobForUser(JobInProgress job) {
+    
+    String user = job.getProfile().getUser();
     
     // Check if the user has too many jobs
     int userRunningJobs = getNumRunningJobsByUser(user);
-    if ((userRunningJobs + currentlyInitializedJobs) >=
-        maxJobsPerUserToInit) {
+    int userInitializingJobs = getNumInitializingJobsByUser(user);
+    if ((userRunningJobs + userInitializingJobs) >= maxJobsPerUserToInit) {
       LOG.info(getQueueName() + " already has " + userRunningJobs + 
-          " running jobs and " + currentlyInitializedJobs + " jobs about to be" +
-          " initialized, for user " + user + 
-          "; cannot initialize " + job.getJobID() + 
+          " running jobs and " + userInitializingJobs + " initializing jobs" +
+          " for user " + user + "; cannot initialize " + job.getJobID() + 
           " since it will exceeed limit of " + 
-          maxJobsPerUserToInit + 
-          " initialized jobs per user for this queue");
+          maxJobsPerUserToInit + " initialized jobs per user for this queue");
       return false;
     }
     
     // Check if the user has too many active tasks
     int userActiveTasks = getNumActiveTasksByUser(user);
-    if ((userActiveTasks + currentlyInitializedTasks + job.desiredTasks()) > 
-        maxActiveTasksPerUser) {
+    if ((userActiveTasks + job.desiredTasks()) > maxActiveTasksPerUser) {
       LOG.info(getQueueName() + " has " + userActiveTasks + 
-          " active tasks and " + currentlyInitializedTasks + " tasks about to" +
-          " be initialized for user " + user + 
+          " active tasks for user " + user + 
           ", cannot initialize " + job.getJobID() + " with " +
           job.desiredTasks() + " tasks since it will exceed limit of " + 
-          maxActiveTasksPerUser + 
-          " active tasks per user for this queue");
+          maxActiveTasksPerUser + " active tasks per user for this queue");
       return false;
     }
     

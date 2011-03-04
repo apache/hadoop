@@ -82,16 +82,19 @@ class JobQueuesManager extends JobInProgressListener {
    * job queue manager.
    */
   private void jobCompleted(JobInProgress job, JobSchedulingInfo oldInfo, 
-      CapacitySchedulerQueue queue) {
+      CapacitySchedulerQueue queue, int runState) {
     LOG.info("Job " + job.getJobID().toString() + " submitted to queue " 
         + job.getProfile().getQueueName() + " has completed");
     //remove jobs from both queue's a job can be in
     //running and waiting queue at the same time.
-    JobInProgress runningJob = queue.removeRunningJob(oldInfo);
-    JobInProgress waitingJob = queue.removeWaitingJob(oldInfo);
+    JobInProgress waitingJob = queue.removeWaitingJob(oldInfo, runState);
+    JobInProgress initializingJob = 
+      queue.removeInitializingJob(oldInfo, runState);
+    JobInProgress runningJob = queue.removeRunningJob(oldInfo, runState);
+    
     // let scheduler know if necessary
     // sometimes this isn't necessary if the job was rejected during submission
-    if (runningJob != null || waitingJob != null) {
+    if (runningJob != null || initializingJob != null || waitingJob != null) {
       scheduler.jobCompleted(job);
     }
   }
@@ -103,9 +106,8 @@ class JobQueuesManager extends JobInProgressListener {
   // This is used to reposition a job in the queue. A job can get repositioned 
   // because of the change in the job priority or job start-time.
   private void reorderJobs(JobInProgress job, JobSchedulingInfo oldInfo, 
-      CapacitySchedulerQueue queue) {
-    
-    if(queue.removeWaitingJob(oldInfo) != null) {
+      CapacitySchedulerQueue queue, int runState) {
+    if(queue.removeWaitingJob(oldInfo, runState) != null) {
       try {
         queue.addWaitingJob(job);
       } catch (IOException ioe) {
@@ -114,7 +116,10 @@ class JobQueuesManager extends JobInProgressListener {
         return;
       }
     }
-    if(queue.removeRunningJob(oldInfo) != null) {
+    if (queue.removeInitializingJob(oldInfo, runState) != null) {
+      queue.addInitializingJob(job);
+    }
+    if(queue.removeRunningJob(oldInfo, runState) != null) {
       queue.addRunningJob(job);
     }
   }
@@ -139,14 +144,15 @@ class JobQueuesManager extends JobInProgressListener {
     if (event.getEventType() == EventType.PRIORITY_CHANGED 
         || event.getEventType() == EventType.START_TIME_CHANGED) {
       // Make a priority change
-      reorderJobs(job, oldJobStateInfo, queue);
+      int runState = job.getStatus().getRunState();
+      reorderJobs(job, oldJobStateInfo, queue, runState);
     } else if (event.getEventType() == EventType.RUN_STATE_CHANGED) {
       // Check if the job is complete
       int runState = job.getStatus().getRunState();
       if (runState == JobStatus.SUCCEEDED
           || runState == JobStatus.FAILED
           || runState == JobStatus.KILLED) {
-        jobCompleted(job, oldJobStateInfo, queue);
+        jobCompleted(job, oldJobStateInfo, queue, runState);
       } else if (runState == JobStatus.RUNNING) {
         makeJobRunning(job, oldJobStateInfo, queue);
       }

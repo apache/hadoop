@@ -411,10 +411,6 @@ public class JobInitializationPoller extends Thread {
     CapacitySchedulerQueue queue = jobQueueManager.getQueue(queueName);
     ArrayList<JobInProgress> jobsToInitialize = new ArrayList<JobInProgress>();
 
-    int countOfJobsInitialized = 0;
-    int countOfTasksInitialized = 0;
-    Map<String, Integer> userJobsInitialized = new HashMap<String, Integer>();
-    Map<String, Integer> userTasksInitialized = new HashMap<String, Integer>();
     Set<String> usersOverLimit = new HashSet<String>();
     Collection<JobInProgress> jobs = queue.getWaitingJobs();
     
@@ -441,8 +437,7 @@ public class JobInitializationPoller extends Thread {
       /** 
        * Ensure we will not exceed queue limits
        */
-      if (!queue.initializeJobForQueue(job, 
-          countOfJobsInitialized, countOfTasksInitialized)) {
+      if (!queue.initializeJobForQueue(job)) {
         break;
       }
       
@@ -456,29 +451,21 @@ public class JobInitializationPoller extends Thread {
         continue;
       }
       
-      Integer userJobs = userJobsInitialized.get(user);
-      if (userJobs == null) {
-        userJobs = 0;
-      }
-      Integer userTasks = userTasksInitialized.get(user);
-      if (userTasks == null) {
-        userTasks = 0;
-      }
-      if (!queue.initializeJobForUser(job, user, userJobs, userTasks)) {
+      // Check if the user is within limits 
+      if (!queue.initializeJobForUser(job)) {
         usersOverLimit.add(user);   // Note down the user
         continue;
       }
       
-      // Ready to initialize!
-      initializedJobs.put(job.getJobID(), job);
-      jobsToInitialize.add(job);
-      
-      // Update queue & user counts
-      countOfJobsInitialized++;
-      countOfTasksInitialized += job.desiredTasks();
-      
-      userJobsInitialized.put(user, userJobs+1);
-      userTasksInitialized.put(user, (userTasks + job.desiredTasks()));
+      // Ready to initialize! 
+      // Double check to ensure that the job has not been killed!
+      if (job.getStatus().getRunState() == JobStatus.PREP) {
+        initializedJobs.put(job.getJobID(), job);
+        jobsToInitialize.add(job);
+
+        // Inform the queue
+        queue.addInitializingJob(job);
+      }
     }
     
     return jobsToInitialize;
@@ -527,9 +514,6 @@ public class JobInitializationPoller extends Thread {
           LOG.info("Removing scheduled jobs from waiting queue"
               + job.getJobID());
           jobsIterator.remove();
-          CapacitySchedulerQueue queue = 
-            jobQueueManager.getQueue(job.getProfile().getQueueName());
-          queue.removeWaitingJob(new JobSchedulingInfo(job));
           continue;
         }
       }
