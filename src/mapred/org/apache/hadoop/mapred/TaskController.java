@@ -169,6 +169,13 @@ public abstract class TaskController implements Configurable {
       }
     }
   }
+  
+   /**
+    * Returns the local unix user that a given job will run as.
+    */
+   public String getRunAsUser(JobConf conf) {
+     return System.getProperty("user.name");
+   }
 
   //Write the JVM command line to a file under the specified directory
   // Note that the JVM will be launched using a setuid executable, and

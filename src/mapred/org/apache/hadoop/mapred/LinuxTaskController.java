@@ -317,5 +317,10 @@ class LinuxTaskController extends TaskController {
       }
     }
   }
+
+  @Override
+  public String getRunAsUser(JobConf conf) {
+    return conf.getUser();
+  }
 }
 
