@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.server.namenode.JspHelper;
 import org.apache.hadoop.net.NetUtils;
 
 import javax.naming.NamingEnumeration;
@@ -95,6 +96,7 @@ public class LdapIpDirFilter implements Filter {
     InetSocketAddress nAddr = NetUtils.createSocketAddr(nn);
     context.setAttribute("name.node.address", nAddr);
     context.setAttribute("name.conf", conf);
+    context.setAttribute(JspHelper.CURRENT_CONF, conf);
 
     // for storing hostname <--> cluster mapping to decide which source cluster
     // to forward

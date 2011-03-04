@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.server.namenode.JspHelper;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -41,5 +42,15 @@ public class ProxyStreamFile extends StreamFile {
     String userID = (String) request
         .getAttribute("org.apache.hadoop.hdfsproxy.authorized.userID");
     return ProxyUtil.getProxyUGIFor(userID);
+  }
+
+  @Override
+  protected DFSClient getDFSClient(HttpServletRequest request) throws IOException, InterruptedException {
+    ServletContext context = getServletContext();
+    Configuration conf = (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
+    UserGroupInformation ugi = getUGI(request, conf);
+    final InetSocketAddress nameNodeAddr = (InetSocketAddress) context.getAttribute("name.node.address");
+
+    return JspHelper.getDFSClient(ugi, nameNodeAddr, conf);
   }
 }

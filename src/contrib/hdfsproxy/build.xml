@@ -127,6 +127,8 @@
         <include name="slf4j-api-${slf4j-api.version}.jar"/>
         <include name="slf4j-log4j12-${slf4j-log4j12.version}.jar"/>
         <include name="xmlenc-${xmlenc.version}.jar"/>
+	<include name="jetty-${jetty.version}.jar"/>
+	<include name="jetty-util-${jetty-util.version}.jar"/>
       </lib>
       <lib dir="${hadoop.root}/lib">
         <include name="hadoop-core-*.jar"/>
@@ -181,6 +183,8 @@
         <include name="slf4j-log4j12-${slf4j-log4j12.version}.jar"/>
         <include name="xmlenc-${xmlenc.version}.jar"/>
         <include name="core-${core.vesion}.jar"/>
+	<include name="jetty-${jetty.version}.jar"/>
+        <include name="jetty-util-${jetty-util.version}.jar"/>
       </lib>
       <lib dir="${hadoop.root}/lib">
         <include name="hadoop-core-*.jar"/>

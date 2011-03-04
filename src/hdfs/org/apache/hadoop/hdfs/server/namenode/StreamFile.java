@@ -45,10 +45,19 @@ public class StreamFile extends DfsServlet {
     }
   }
   
+  /** getting a client for connecting to dfs */
+  protected DFSClient getDFSClient(HttpServletRequest request)
+      throws IOException, InterruptedException {
+
+    Configuration conf =
+      (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
+    UserGroupInformation ugi = getUGI(request, conf);
+
+    return JspHelper.getDFSClient(ugi, nameNodeAddr, conf);
+  }
+  
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
-    Configuration conf = 
-      (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
     final String filename = request.getPathInfo() != null ?
         request.getPathInfo() : "/";
     if (filename == null || filename.length() == 0) {
@@ -59,9 +68,8 @@ public class StreamFile extends DfsServlet {
     }
     
     DFSClient dfs;
-    UserGroupInformation ugi = getUGI(request, conf);
     try {
-      dfs = JspHelper.getDFSClient(ugi, nameNodeAddr, conf);
+      dfs = getDFSClient(request);
     } catch (InterruptedException e) {
       response.sendError(400, e.getMessage());
       return;
