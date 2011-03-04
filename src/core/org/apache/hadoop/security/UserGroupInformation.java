@@ -440,6 +440,32 @@ public class UserGroupInformation {
   public boolean isFromKeytab() {
     return isKeytab;
   }
+  
+  /**
+   * Get the Kerberos TGT
+   * @return the user's TGT or null if none was found
+   */
+  private KerberosTicket getTGT() {
+    Set<KerberosTicket> tickets = 
+      subject.getPrivateCredentials(KerberosTicket.class);
+    for(KerberosTicket ticket: tickets) {
+      KerberosPrincipal server = ticket.getServer();
+      if (server.getName().equals("krbtgt/" + server.getRealm() + 
+                                  "@" + server.getRealm())) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Found tgt " + ticket);
+        }
+        return ticket;
+      }
+    }
+    return null;
+  }
+  
+  private long getRefreshTime(KerberosTicket tgt) {
+    long start = tgt.getStartTime().getTime();
+    long end = tgt.getEndTime().getTime();
+    return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
+  }
 
   /**Spawn a thread to do periodic renewals of kerberos credentials*/
   private void spawnAutoRenewalThreadForUserCreds() {
@@ -448,32 +474,6 @@ public class UserGroupInformation {
       if (user.getAuthenticationMethod() == AuthenticationMethod.KERBEROS &&
           !isKeytab) {
         Thread t = new Thread(new Runnable() {
-          
-          /**
-           * Get the Kerberos TGT
-           * @return the user's TGT or null if none was found
-           */
-          private KerberosTicket getTGT() {
-            Set<KerberosTicket> tickets = 
-              subject.getPrivateCredentials(KerberosTicket.class);
-            for(KerberosTicket ticket: tickets) {
-              KerberosPrincipal server = ticket.getServer();
-              if (server.getName().equals("krbtgt/" + server.getRealm() + 
-                                          "@" + server.getRealm())) {
-                if (LOG.isDebugEnabled()) {
-                  LOG.debug("Found tgt " + ticket);
-                }
-                return ticket;
-              }
-            }
-            return null;
-          }
-
-          private long getRefreshTime(KerberosTicket tgt) {
-            long start = tgt.getStartTime().getTime();
-            long end = tgt.getEndTime().getTime();
-            return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
-          }
 
           public void run() {
             String cmd = conf.get("hadoop.kerberos.kinit.command",
@@ -641,6 +641,28 @@ public class UserGroupInformation {
     } finally {
       if(oldKeytabFile != null) keytabFile = oldKeytabFile;
       if(oldKeytabPrincipal != null) keytabPrincipal = oldKeytabPrincipal;
+    }
+  }
+
+  /**
+   * Re-login a user from keytab if TGT is expired or is close to expiry.
+   * 
+   * @throws IOException
+   */
+  public synchronized void checkTGTAndReloginFromKeytab() throws IOException {
+    //TODO: The method reloginFromKeytab should be refactored to use this
+    //      implementation.
+    if (!isSecurityEnabled()
+        || user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS
+        || !isKeytab)
+      return;
+    KerberosTicket tgt = getTGT();
+    if (tgt == null) {
+      return;
+    }
+
+    if (System.currentTimeMillis() > getRefreshTime(tgt)) {
+      reloginFromKeytab();
     }
   }
   
