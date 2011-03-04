@@ -308,7 +308,8 @@ public class GenericOptionsParser {
         }
 
         LOG.debug("setting conf tokensFile: " + fileName);
-        conf.set("tokenCacheFile", localFs.makeQualified(p).toString());
+        conf.set("mapreduce.job.credentials.json", 
+                 localFs.makeQualified(p).toString());
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

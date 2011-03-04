@@ -759,6 +759,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         jobCopy.set("mapreduce.job.dir", submitJobDir.toString());
         JobStatus status = null;
         try {
+          // load the binary file, if the user has one
+          String binaryTokenFilename = 
+            jobCopy.get("mapreduce.job.credentials.binary");
+          if (binaryTokenFilename != null) {
+            jobCopy.getCredentials().readTokenStorageFile
+               (new Path("file:///" +  binaryTokenFilename), jobCopy);
+          }
 
           copyAndConfigureFiles(jobCopy, submitJobDir);
 
@@ -815,7 +822,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         } finally {
           if (status == null) {
             LOG.info("Cleaning up the staging area " + submitJobDir);
-            fs.delete(submitJobDir, true);
+            if (fs != null && submitJobDir != null)
+              fs.delete(submitJobDir, true);
           }
         }
       }
@@ -1883,7 +1891,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private void populateTokenCache(Configuration conf, Credentials credentials) 
   throws IOException{
     // create TokenStorage object with user secretKeys
-    String tokensFileName = conf.get("tokenCacheFile");
+    String tokensFileName = conf.get("mapreduce.job.credentials.json");
     if(tokensFileName != null) {
       LOG.info("loading user's secret keys from " + tokensFileName);
       String localFileName = new Path(tokensFileName).toUri().getPath();
@@ -1907,7 +1915,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       if(json_error)
         LOG.warn("couldn't parse Token Cache JSON file with user secret keys");
     }
-
+    
+ 
     // add the delegation tokens from configuration
     String [] nameNodes = conf.getStrings(JobContext.JOB_NAMENODES);
     LOG.info("adding the following namenodes' delegation tokens:" + Arrays.toString(nameNodes));

@@ -3207,8 +3207,9 @@ public class JobInProgress {
   private void generateAndStoreTokens() throws IOException {
     Path jobDir = jobtracker.getSystemDirectoryForJob(jobId);
     Path keysFile = new Path(jobDir, TokenCache.JOB_TOKEN_HDFS_FILE);
-    // we need to create this file using the jobtracker's filesystem
-    FSDataOutputStream os = jobtracker.getFileSystem().create(keysFile);
+    if (tokenStorage == null) {
+      tokenStorage = new Credentials();
+    }
     //create JobToken file and write token to it
     JobTokenIdentifier identifier = new JobTokenIdentifier(new Text(jobId
         .toString()));
@@ -3216,15 +3217,10 @@ public class JobInProgress {
         jobtracker.getJobTokenSecretManager());
     token.setService(identifier.getJobId());
     
-    // add this token to the tokenStorage
-    if(tokenStorage == null)
-      tokenStorage = new Credentials();
-
     TokenCache.setJobToken(token, tokenStorage);
         
     // write TokenStorage out
-    tokenStorage.write(os);
-    os.close();
+    tokenStorage.writeTokenStorageFile(keysFile, conf);
     LOG.info("jobToken generated and stored with users keys in "
         + keysFile.toUri().getPath());
   }

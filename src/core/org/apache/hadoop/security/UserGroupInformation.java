@@ -48,6 +48,7 @@ import javax.security.auth.spi.LoginModule;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -129,6 +130,8 @@ public class UserGroupInformation {
   private static Groups groups;
   /** The last authentication time */
   private static long lastUnsuccessfulAuthenticationAttemptTime;
+  /** The configuration to use */
+  private static Configuration conf;
   
   public static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
   
@@ -171,6 +174,7 @@ public class UserGroupInformation {
     javax.security.auth.login.Configuration.setConfiguration
         (new HadoopConfiguration());
     isInitialized = true;
+    UserGroupInformation.conf = conf;
   }
 
   /**
@@ -364,9 +368,15 @@ public class UserGroupInformation {
         }
         login.login();
         loginUser = new UserGroupInformation(login.getSubject());
-        String tokenFile = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
-        if (tokenFile != null && isSecurityEnabled()) {
-          Credentials.readTokensAndLoadInUGI(tokenFile, new Configuration(), loginUser);
+        String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
+        if (fileLocation != null && isSecurityEnabled()) {
+          // load the token storage file and put all of the tokens into the
+          // user.
+          Credentials cred = new Credentials();
+          cred.readTokenStorageFile(new Path("file:///" + fileLocation), conf);
+          for (Token<?> token: cred.getAllTokens()) {
+            loginUser.addToken(token);
+          }
         }
       } catch (LoginException le) {
         throw new IOException("failure to login", le);

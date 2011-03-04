@@ -160,18 +160,16 @@ public class TokenCache {
   //@InterfaceAudience.Private
   public static Credentials loadTokens(String jobTokenFile, JobConf conf) 
   throws IOException {
-    Path localJobTokenFile = new Path (jobTokenFile);
-    FileSystem localFS = FileSystem.getLocal(conf);
-    FSDataInputStream in = localFS.open(localJobTokenFile);
+    Path localJobTokenFile = new Path ("file:///" + jobTokenFile);
     
     Credentials ts = new Credentials();
-    ts.readFields(in);
+    ts.readTokenStorageFile(localJobTokenFile, conf);
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("Task: Loaded jobTokenFile from: "+localJobTokenFile.toUri().getPath() 
-        +"; num of sec keys  = " + ts.numberOfSecretKeys());
+        +"; num of sec keys  = " + ts.numberOfSecretKeys() + " Number of tokens " + 
+        ts.numberOfTokens());
     }
-    in.close();
     return ts;
   }
 

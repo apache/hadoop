@@ -21,11 +21,13 @@ package org.apache.hadoop.security;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
@@ -103,24 +105,41 @@ public class Credentials implements Writable {
   }
  
   /**
-   * Convenience method for reading a file, and loading the Tokens
+   * Convenience method for reading a token storage file, and loading the Tokens
    * therein in the passed UGI
    * @param filename
    * @param conf
-   * @param ugi
    * @throws IOException
    */
-  public static void readTokensAndLoadInUGI(String filename, Configuration conf, 
-      UserGroupInformation ugi) throws IOException {
-    Path localTokensFile = new Path (filename);
-    FileSystem localFS = FileSystem.getLocal(conf);
-    FSDataInputStream in = localFS.open(localTokensFile);
-    Credentials ts = new Credentials();
-    ts.readFields(in);
-    for (Token<? extends TokenIdentifier> token : ts.getAllTokens()) {
-      ugi.addToken(token);
+  public void readTokenStorageFile(Path filename, 
+                                   Configuration conf) throws IOException {
+    FSDataInputStream in = filename.getFileSystem(conf).open(filename);
+    byte[] magic = new byte[TOKEN_STORAGE_MAGIC.length];
+    in.readFully(magic);
+    if (!Arrays.equals(magic, TOKEN_STORAGE_MAGIC)) {
+      throw new IOException("Bad header found in token storage " + filename);
     }
+    byte version = in.readByte();
+    if (version != TOKEN_STORAGE_VERSION) {
+      throw new IOException("Unknown version " + version + 
+                            " in token storage " + filename);
+    }
+    readFields(in);
+    in.close();
   }
+  
+  private static final byte[] TOKEN_STORAGE_MAGIC = "HDTS".getBytes();
+  private static final byte TOKEN_STORAGE_VERSION = 0;
+  
+  public void writeTokenStorageFile(Path filename, 
+                                    Configuration conf) throws IOException {
+    FSDataOutputStream os = filename.getFileSystem(conf).create(filename);
+    os.write(TOKEN_STORAGE_MAGIC);
+    os.write(TOKEN_STORAGE_VERSION);
+    write(os);
+    os.close();
+  }
+
   /**
    * Stores all the keys to DataOutput
    * @param out
@@ -140,7 +159,8 @@ public class Credentials implements Writable {
     WritableUtils.writeVInt(out, secretKeysMap.size());
     for(Map.Entry<Text, byte[]> e : secretKeysMap.entrySet()) {
       e.getKey().write(out);
-      WritableUtils.writeCompressedByteArray(out, e.getValue());  
+      WritableUtils.writeVInt(out, e.getValue().length);
+      out.write(e.getValue());
     }
   }
   
@@ -167,8 +187,23 @@ public class Credentials implements Writable {
     for(int i=0; i<size; i++) {
       Text alias = new Text();
       alias.readFields(in);
-      byte[] key = WritableUtils.readCompressedByteArray(in);
-      secretKeysMap.put(alias, key);
+      int len = WritableUtils.readVInt(in);
+      byte[] value = new byte[len];
+      in.readFully(value);
+      secretKeysMap.put(alias, value);
+    }
+  }
+ 
+  /**
+   * Copy all of the credentials from one credential object into another.
+   * @param other the credentials to copy
+   */
+  public void addAll(Credentials other) {
+    for(Map.Entry<Text, byte[]> secret: other.secretKeysMap.entrySet()) {
+      secretKeysMap.put(secret.getKey(), secret.getValue());
+    }
+    for(Map.Entry<Text, Token<?>> token: other.tokenMap.entrySet()){
+      tokenMap.put(token.getKey(), token.getValue());
     }
   }
 }

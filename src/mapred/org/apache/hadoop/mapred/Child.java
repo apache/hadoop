@@ -71,6 +71,7 @@ class Child {
     // file name is passed thru env
     String jobTokenFile = 
       System.getenv().get(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+    System.err.println("JOB TOKEN FILE " + jobTokenFile);
     Credentials credentials = 
       TokenCache.loadTokens(jobTokenFile, defaultConf);
     LOG.debug("loading token. # keys =" +credentials.numberOfSecretKeys() + 
