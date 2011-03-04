@@ -17,27 +17,31 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.common.HdfsConstants;
-import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
-import org.apache.hadoop.ipc.*;
-import org.apache.hadoop.conf.*;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Daemon;
-import org.apache.hadoop.http.HttpServer;
-import org.apache.hadoop.net.NetUtils;
-
-import java.io.*;
-import java.net.*;
+import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.server.common.HdfsConstants;
+import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
+import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
+import org.apache.hadoop.http.HttpServer;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.StringUtils;
 
 /**********************************************************
  * The Secondary NameNode is a helper to the primary NameNode.
@@ -111,6 +115,9 @@ public class SecondaryNameNode implements Runnable {
    * Create a connection to the primary namenode.
    */
   public SecondaryNameNode(Configuration conf)  throws IOException {
+    DFSUtil.login(conf, 
+        DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);
     try {
       initialize(conf);
     } catch(IOException e) {
