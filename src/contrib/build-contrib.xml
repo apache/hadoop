@@ -301,10 +301,10 @@
       <formatter type="${test.junit.output.format}" />
       <batchtest todir="${build.test}" unless="testcase">
         <fileset dir="${src.test}"
-                 includes="**/Test*.java" excludes="**/${test.exclude}.java" />
+                 includes="**/Test*.java" excludes="**/${test.exclude}.java, system/**/*.java" />
       </batchtest>
       <batchtest todir="${build.test}" if="testcase">
-        <fileset dir="${src.test}" includes="**/${testcase}.java"/>
+        <fileset dir="${src.test}" includes="**/${testcase}.java" excludes="system/**/*.java" />
       </batchtest>
     </junit>
     <antcall target="checkfailure"/>
