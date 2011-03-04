@@ -113,6 +113,10 @@ class QueueManager {
     String[] queueNameValues = conf.getStrings("mapred.queue.names",
         new String[]{JobConf.DEFAULT_QUEUE_NAME});
     for (String name : queueNameValues) {
+      Map queueACLs = getQueueAcls(name, conf);
+      if (queueACLs == null) {
+        LOG.error("The queue, " + name + " does not have a configured ACL list");
+      }
       queues.put(name, new Queue(name, getQueueAcls(name, conf),
           getQueueState(name, conf)));
     }
@@ -376,8 +380,15 @@ class QueueManager {
   synchronized AccessControlList getQueueACL(String queueName, QueueACL qACL) {
     if (aclsEnabled) {
       Queue q = queues.get(queueName);
-      assert q != null;
-      return q.getAcls().get(toFullPropertyName(queueName, qACL.getAclName()));
+      assert q != null : "There is no queue named " + queueName;
+      Map<String, AccessControlList> acls = q.getAcls();
+      assert acls != null
+        : ( "The queue named "
+            + queueName
+            + " does not have any access control lists.  "
+            + "An error log message should have shown up "
+            + "in the cluster initialization logs.");
+      return acls.get(toFullPropertyName(queueName, qACL.getAclName()));
     }
     return new AccessControlList("*");
   }
