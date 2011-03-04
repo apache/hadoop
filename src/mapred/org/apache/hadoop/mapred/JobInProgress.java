@@ -283,7 +283,6 @@ public class JobInProgress {
    * Create an almost empty JobInProgress, which can be used only for tests
    */
   protected JobInProgress(JobID jobid, JobConf conf, JobTracker tracker) {
-    System.out.println("DEBUG3");
     this.conf = conf;
     this.jobId = jobid;
     this.numMapTasks = conf.getNumMapTasks();
