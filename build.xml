@@ -601,6 +601,7 @@
     <tar compression="gzip" destfile="${build.classes}/bin.tgz">
       <tarfileset dir="bin" mode="755"/>
     </tar>
+
     <property name="jar.properties.list"
       value="commons-logging.properties, log4j.properties, hadoop-metrics.properties"/>
     <jar jarfile="${build.dir}/${core.final.name}.jar"
@@ -624,10 +625,13 @@
   <!--                                                                    -->
   <!-- ================================================================== -->
   <target name="examples" depends="jar, compile-examples" description="Make the Hadoop examples jar.">
-    <macro-jar-examples
-      build.dir="${build.dir}"
-      basedir="${build.examples}">
-    </macro-jar-examples>
+    <jar jarfile="${build.dir}/${examples.final.name}.jar"
+         basedir="${build.examples}">
+      <manifest>
+        <attribute name="Main-Class" 
+                   value="org/apache/hadoop/examples/ExampleDriver"/>
+      </manifest>
+    </jar>
   </target>
 
   <macrodef name="macro-jar-examples">
@@ -1486,7 +1490,7 @@
   <!-- ================================================================== -->
   <!-- Clean.  Delete the build files, and their directories              -->
   <!-- ================================================================== -->
-  <target name="clean" depends="clean-contrib, clean-sign, clean-fi" description="Clean.  Delete the build files, and their directories">
+  <target name="clean" depends="clean-contrib, clean-sign" description="Clean.  Delete the build files, and their directories">
     <delete dir="${build.dir}"/>
     <delete dir="${docs.src}/build"/>
     <delete dir="${src.docs.cn}/build"/>
