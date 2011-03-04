@@ -7,6 +7,9 @@ Release 0.20.2 - Unreleased
     MAPREDUCE-112. Add counters for reduce input, output records to the new API.
     (Jothi Padmanabhan via cdouglas)
 
+    HADOOP-6498. IPC client bug may cause rpc call hang. (Ruyue Ma and hairong
+    via hairong)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
