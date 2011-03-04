@@ -673,7 +673,7 @@ public class TestTFileByteArrays extends TestCase {
     Reader reader =
         new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner =
-        reader.createScanner(composeSortedKey(KEY, count, recordIndex)
+        reader.createScannerByKey(composeSortedKey(KEY, count, recordIndex)
             .getBytes(), null);
 
     try {
@@ -698,7 +698,7 @@ public class TestTFileByteArrays extends TestCase {
       throws IOException {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
     Scanner scanner =
-        reader.createScanner(composeSortedKey(KEY, count, recordIndex)
+        reader.createScannerByKey(composeSortedKey(KEY, count, recordIndex)
             .getBytes(), null);
 
     try {
@@ -729,7 +729,7 @@ public class TestTFileByteArrays extends TestCase {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
 
     Scanner scanner =
-        reader.createScanner(composeSortedKey(KEY, count, recordIndex)
+        reader.createScannerByKey(composeSortedKey(KEY, count, recordIndex)
             .getBytes(), null);
 
     byte[] vbuf1 = new byte[BUF_SIZE];
@@ -753,7 +753,7 @@ public class TestTFileByteArrays extends TestCase {
     Reader reader = new Reader(fs.open(path), fs.getFileStatus(path).getLen(), conf);
 
     Scanner scanner =
-        reader.createScanner(composeSortedKey(KEY, count, recordIndex)
+        reader.createScannerByKey(composeSortedKey(KEY, count, recordIndex)
             .getBytes(), null);
 
     // read the indexed key

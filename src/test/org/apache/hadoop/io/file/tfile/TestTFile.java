@@ -319,7 +319,7 @@ public class TestTFile extends TestCase {
 
     scanner.close();
     // test for a range of scanner
-    scanner = reader.createScanner(getSomeKey(10), getSomeKey(60));
+    scanner = reader.createScannerByKey(getSomeKey(10), getSomeKey(60));
     readAndCheckbytes(scanner, 10, 50);
     assertFalse(scanner.advance());
     scanner.close();
