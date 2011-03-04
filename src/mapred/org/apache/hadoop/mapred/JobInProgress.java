@@ -1213,9 +1213,6 @@ class JobInProgress {
       
       // Now launch the cleanupTask
       Task result = tip.getTaskToRun(tts.getTrackerName());
-      if (result != null) {
-        addRunningTaskToTIP(tip, result.getTaskID(), tts, true);
-      }
 
       if (result != null) {
         addRunningTaskToTIP(tip, result.getTaskID(), tts, true);
