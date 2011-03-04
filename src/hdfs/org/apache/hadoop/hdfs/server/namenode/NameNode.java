@@ -242,6 +242,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     this.httpServer.setAttribute("name.node.address", getNameNodeAddress());
     this.httpServer.setAttribute("name.system.image", getFSImage());
     this.httpServer.setAttribute("name.conf", conf);
+    this.httpServer.addInternalServlet("getDelegationToken", 
+        DelegationTokenServlet.PATH_SPEC, DelegationTokenServlet.class);
     this.httpServer.addInternalServlet("fsck", "/fsck", FsckServlet.class);
     this.httpServer.addInternalServlet("getimage", "/getimage", GetImageServlet.class);
     this.httpServer.addInternalServlet("listPaths", "/listPaths/*", ListPathsServlet.class);

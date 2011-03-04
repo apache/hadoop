@@ -64,6 +64,7 @@ if [ $# = 0 ]; then
   echo "  fsck                 run a DFS filesystem checking utility"
   echo "  fs                   run a generic filesystem user client"
   echo "  balancer             run a cluster balancing utility"
+  echo "  fetchdt              fetch a delegation token from the NameNode"
   echo "  jobtracker           run the MapReduce job Tracker node" 
   echo "  pipes                run a Pipes job"
   echo "  tasktracker          run a MapReduce task Tracker node" 
@@ -217,6 +218,8 @@ elif [ "$COMMAND" = "fsck" ] ; then
 elif [ "$COMMAND" = "balancer" ] ; then
   CLASS=org.apache.hadoop.hdfs.server.balancer.Balancer
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_BALANCER_OPTS"
+elif [ "$COMMAND" = "fetchdt" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
 elif [ "$COMMAND" = "jobtracker" ] ; then
   CLASS=org.apache.hadoop.mapred.JobTracker
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_JOBTRACKER_OPTS"
