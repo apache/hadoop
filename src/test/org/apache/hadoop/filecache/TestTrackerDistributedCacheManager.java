@@ -492,7 +492,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     conf2.set("user.name", userName);
 
     // We first test the size limit
-    Path localCache = manager.getLocalCache(firstCacheFile.toUri(), conf2, 
+    Path firstLocalCache = manager.getLocalCache(firstCacheFile.toUri(), conf2, 
         TaskTracker.getPrivateDistributedCacheDir(userName),
         fs.getFileStatus(firstCacheFile), false,
         now, new Path(TEST_ROOT_DIR), false, false);
