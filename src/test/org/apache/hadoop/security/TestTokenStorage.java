@@ -29,19 +29,23 @@ import java.io.IOException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
+import java.util.Collection;
+
+import static org.mockito.Mockito.mock;
 
 import javax.crypto.KeyGenerator;
 
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
-import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-import org.apache.hadoop.record.Utils;
+import org.apache.hadoop.io.WritableComparator;
+import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import org.apache.hadoop.mapreduce.security.TokenStorage;
 
 public class TestTokenStorage {
   private static final String DEFAULT_HMAC_ALGORITHM = "HmacSHA1";
@@ -52,19 +56,27 @@ public class TestTokenStorage {
   public void setUp() {
     tmpDir.mkdir();
   }
-
+  
+  @SuppressWarnings("unchecked")
   @Test 
-  public void testReadWriteStorage() throws IOException, NoSuchAlgorithmException{
+  public <T extends TokenIdentifier> void testReadWriteStorage() 
+  throws IOException, NoSuchAlgorithmException{
     // create tokenStorage Object
     TokenStorage ts = new TokenStorage();
     
-    // create a token
-    JobTokenSecretManager jtSecretManager = new JobTokenSecretManager();
-    JobTokenIdentifier identifier = new JobTokenIdentifier(new Text("fakeJobId"));
-    Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>(identifier,
-        jtSecretManager);
-    // store it
-    ts.setJobToken(jt);
+    Token<T> token1 = new Token();
+    Token<T> token2 = new Token();
+    Text service1 = new Text("service1");
+    Text service2 = new Text("service2");
+    Collection<Text> services = new ArrayList<Text>();
+    
+    services.add(service1);
+    services.add(service2);
+    
+    token1.setService(service1);
+    token2.setService(service2);
+    ts.addToken(new Text("sometoken1"), token1);
+    ts.addToken(new Text("sometoken2"), token2);
     
     // create keys and put it in
     final KeyGenerator kg = KeyGenerator.getInstance(DEFAULT_HMAC_ALGORITHM);
@@ -78,33 +90,44 @@ public class TestTokenStorage {
    
     // create file to store
     File tmpFileName = new File(tmpDir, "tokenStorageTest");
-    DataOutputStream dos = new DataOutputStream(new FileOutputStream(tmpFileName));
+    DataOutputStream dos = 
+      new DataOutputStream(new FileOutputStream(tmpFileName));
     ts.write(dos);
     dos.close();
     
     // open and read it back
-    DataInputStream dis = new DataInputStream(new FileInputStream(tmpFileName));    
+    DataInputStream dis = 
+      new DataInputStream(new FileInputStream(tmpFileName));    
     ts = new TokenStorage();
     ts.readFields(dis);
     dis.close();
     
-    // get the token and compare the passwords
-    byte[] tp1 = ts.getJobToken().getPassword();
-    byte[] tp2 = jt.getPassword();
-    int comp = Utils.compareBytes(tp1, 0, tp1.length, tp2, 0, tp2.length);
-    assertTrue("shuffleToken doesn't match", comp==0);
-    
+    // get the tokens and compare the services
+    Collection<Token<? extends TokenIdentifier>> list = ts.getAllTokens();
+    assertEquals("getAllTokens should return collection of size 2", 
+        list.size(), 2);
+    boolean foundFirst = false;
+    boolean foundSecond = false;
+    for (Token<? extends TokenIdentifier> token : list) {
+      if (token.getService().equals(service1)) {
+        foundFirst = true;
+      }
+      if (token.getService().equals(service2)) {
+        foundSecond = true;
+      }
+    }
+    assertTrue("Tokens for services service1 and service2 must be present", 
+        foundFirst && foundSecond);
     // compare secret keys
     int mapLen = m.size();
-    assertEquals("wrong number of keys in the Storage", mapLen, ts.numberOfSecretKeys());
+    assertEquals("wrong number of keys in the Storage", 
+        mapLen, ts.numberOfSecretKeys());
     for(Text a : m.keySet()) {
       byte [] kTS = ts.getSecretKey(a);
       byte [] kLocal = m.get(a);
       assertTrue("keys don't match for " + a, 
-          Utils.compareBytes(kTS, 0, kTS.length, kLocal, 0, kLocal.length)==0);
-    }  
-    
-    assertEquals("All tokens should return collection of size 1", 
-        ts.getAllTokens().size(), 1);
+          WritableComparator.compareBytes(kTS, 0, kTS.length, kLocal,
+              0, kLocal.length)==0);
+    }
   }
  }

@@ -30,7 +30,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -126,6 +125,10 @@ public class UserGroupInformation {
   private static boolean useKerberos;
   /** Server-side groups fetching service */
   private static Groups groups;
+  
+  /**Environment variable pointing to the token cache file*/
+  public static final String HADOOP_TOKEN_FILE_LOCATION = 
+    "HADOOP_TOKEN_FILE_LOCATION";
   
   /** 
    * A method to initialize the fields that depend on a configuration.
@@ -316,6 +319,10 @@ public class UserGroupInformation {
         }
         login.login();
         loginUser = new UserGroupInformation(login.getSubject());
+        String tokenFile = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
+        if (tokenFile != null && isSecurityEnabled()) {
+          TokenStorage.readTokensAndLoadInUGI(tokenFile, new Configuration(), loginUser);
+        }
       } catch (LoginException le) {
         throw new IOException("failure to login", le);
       }
