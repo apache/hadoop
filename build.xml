@@ -133,6 +133,7 @@
   <property name="javadoc.link.java"
 	    value="http://java.sun.com/javase/6/docs/api/"/>
   <property name="javadoc.packages" value="org.apache.hadoop.*"/>
+  <property name="javadoc.maxmemory" value="512m" />
 
   <property name="dist.dir" value="${build.dir}/${final.name}"/>
 
@@ -1114,6 +1115,7 @@
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} Developer API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
         <packageset dir="${mapred.src.dir}"/>
@@ -1156,6 +1158,7 @@
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} API"
       bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
+      maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
         <packageset dir="${mapred.src.dir}"/>
@@ -1189,7 +1192,7 @@
   </target>	
 
   <target name="api-xml" depends="ivy-retrieve-jdiff,javadoc,write-null">
-    <javadoc>
+    <javadoc maxmemory="${javadoc.maxmemory}">
        <doclet name="jdiff.JDiff"
                path="${jdiff.jar}:${xerces.jar}">
          <param name="-apidir" value="${jdiff.xml.dir}"/>
@@ -1216,7 +1219,8 @@
     <mkdir dir="${jdiff.build.dir}"/>
     <javadoc sourcepath="src/core,src/hdfs,src,mapred,src/tools"
              destdir="${jdiff.build.dir}"
-             sourceFiles="${jdiff.home}/Null.java">
+	     sourceFiles="${jdiff.home}/Null.java"
+	     maxmemory="${javadoc.maxmemory}">
        <doclet name="jdiff.JDiff"
                path="${jdiff.jar}:${xerces.jar}">
          <param name="-oldapi" value="hadoop ${jdiff.stable}"/>
