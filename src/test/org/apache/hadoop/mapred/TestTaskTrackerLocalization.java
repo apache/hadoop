@@ -569,11 +569,36 @@ public class TestTaskTrackerLocalization extends TestCase {
   }
 
   /**
+   * Create a file in the given dir and set permissions r_xr_xr_x sothat no one
+   * can delete it directly(without doing chmod).
+   * Creates dir/subDir and dir/subDir/file
+   */
+  static void createFileAndSetPermissions(JobConf jobConf, Path dir)
+       throws IOException {
+    Path subDir = new Path(dir, "subDir");
+    FileSystem fs = FileSystem.getLocal(jobConf);
+    fs.mkdirs(subDir);
+    Path p = new Path(subDir, "file");
+    java.io.DataOutputStream out = fs.create(p);
+    out.writeBytes("dummy input");
+    out.close();
+    // no write permission for subDir and subDir/file
+    try {
+      int ret = 0;
+      if((ret = FileUtil.chmod(subDir.toUri().getPath(), "a=rx", true)) != 0) {
+        LOG.warn("chmod failed for " + subDir + ";retVal=" + ret);
+      }
+    } catch(InterruptedException e) {
+      LOG.warn("Interrupted while doing chmod for " + subDir);
+    }
+  }
+
+  /**
    * Validates the removal of $taskid and $tasid/work under mapred-local-dir
    * in cases where those directories cannot be deleted without adding
    * write permission to the newly created directories under $taskid and
    * $taskid/work
-   * Also see TestSetupWorkDir.createFileAndSetPermissions for details
+   * Also see createFileAndSetPermissions for details
    */
   void validateRemoveFiles(boolean needCleanup, boolean jvmReuse,
                            TaskInProgress tip) throws IOException {
@@ -588,7 +613,7 @@ public class TestTaskTrackerLocalization extends TestCase {
     Path[] paths = tracker.getLocalFiles(localizedJobConf, dir);
     for (Path p : paths) {
       if (tracker.getLocalFileSystem().exists(p)) {
-        TestSetupWorkDir.createFileAndSetPermissions(localizedJobConf, p);
+        createFileAndSetPermissions(localizedJobConf, p);
       }
     }
 

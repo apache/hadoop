@@ -343,11 +343,13 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
       break;
     case FTS_SL:
       // A symbolic link
-      process_path = 1;
+      // We don't want to change-ownership(and set-permissions) for the file/dir
+      // pointed to by any symlink.
+      process_path = 0;
       break;
     case FTS_SLNONE:
       // A symbolic link with a nonexistent target
-      process_path = 1;
+      process_path = 0;
       break;
     case FTS_NS:
       // A  file for which no stat(2) information was available
