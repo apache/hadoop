@@ -262,6 +262,10 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
         String.valueOf(true));
     props.setProperty("dfs.permissions", "false");
 
+    // Let us have history files on HDFS
+    props.setProperty("mapred.job.tracker.history.completed.location",
+        "historyDoneFolderOnHDFS");
+
     props.setProperty(JobConf.MR_SUPERGROUP, "superGroup");
 
     MyGroupsProvider.mapping.put(jobSubmitter, Arrays.asList("group1"));

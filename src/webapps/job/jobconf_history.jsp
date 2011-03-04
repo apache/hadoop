@@ -44,22 +44,11 @@
     jobFile = fs.open(jobFilePath);
     JobConf jobConf = new JobConf(jobFilePath);
     JobTracker jobTracker = (JobTracker) application.getAttribute("job.tracker");
-    String user = request.getRemoteUser();
-    if (user != null) {
-      try {
-        jobTracker.getJobACLsManager().checkAccess(JobID.forName(jobId),
-            UserGroupInformation.createRemoteUser(user), JobACL.VIEW_JOB,
-            jobConf.getUser(),
-            new AccessControlList(jobConf.get(JobACL.VIEW_JOB.getAclName())));
-        } catch (AccessControlException e) {
-          String errMsg =
-            user
-                + " is not authorized to view details of job "
-                + jobId
-                + "<hr><a href=\"jobhistory.jsp\">Go back to JobHistory</a><br>";
-        JSPUtil.setErrorAndForward(errMsg, request, response);
-        return;
-        }
+
+    JobHistory.JobInfo job = JSPUtil.checkAccessAndGetJobInfo(request,
+        response, jobTracker, fs, logFile);
+    if (job == null) {
+      return;
     }
 
     XMLUtils.transform(
