@@ -23,6 +23,7 @@ int main(int argc, char **argv) {
   int next_option = 0;
   const char * job_id = NULL;
   const char * task_id = NULL;
+  const char * dir_to_be_deleted = NULL;
   const char * tt_root = NULL;
   int exit_code = 0;
   const char * task_pid = NULL;
@@ -31,6 +32,7 @@ int main(int argc, char **argv) {
       NULL, 0 } };
 
   const char* log_file = NULL;
+  char * base_path = NULL;
 
   //Minimum number of arguments required to run the task-controller
   //command-name user command tt-root
@@ -107,6 +109,13 @@ int main(int argc, char **argv) {
   case KILL_TASK_JVM:
     task_pid = argv[optind++];
     exit_code = kill_user_task(user_detail->pw_name, task_pid, SIGKILL);
+    break;
+  case ENABLE_TASK_FOR_CLEANUP:
+    base_path = argv[optind++];
+    job_id = argv[optind++];
+    dir_to_be_deleted = argv[optind++];
+    exit_code = enable_task_for_cleanup(base_path, user_detail->pw_name, job_id,
+                                        dir_to_be_deleted);
     break;
   default:
     exit_code = INVALID_COMMAND_PROVIDED;
