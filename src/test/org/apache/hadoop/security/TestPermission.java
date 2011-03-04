@@ -66,7 +66,7 @@ public class TestPermission extends TestCase {
   public void testCreate() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean("dfs.permissions", true);
-    conf.setInt(FsPermission.UMASK_LABEL, 0);
+    conf.set(FsPermission.UMASK_LABEL, "000");
     MiniDFSCluster cluster = null;
     FileSystem fs = null;
 
@@ -94,7 +94,7 @@ public class TestPermission extends TestCase {
       checkPermission(fs, "/b1/b2", inheritPerm);
       checkPermission(fs, "/b1/b2/b3.txt", filePerm);
       
-      conf.setInt(FsPermission.UMASK_LABEL, 0022);
+      conf.set(FsPermission.UMASK_LABEL, "022");
       FsPermission permission = 
         FsPermission.createImmutable((short)0666);
       FileSystem.mkdirs(fs, new Path("/c1"), new FsPermission(permission));

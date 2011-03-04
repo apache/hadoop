@@ -153,8 +153,8 @@ public class TestDFSPermission extends TestCase {
   /* create a file/directory with the given umask and permission */
   private void create(OpType op, Path name, short umask, 
       FsPermission permission) throws IOException {
-    // set umask in configuration
-    conf.setInt(FsPermission.UMASK_LABEL, umask);
+    // set umask in configuration, converting to padded octal
+    conf.set(FsPermission.UMASK_LABEL, String.format("%1$03o", umask));
 
     // create the file/directory
     switch (op) {
