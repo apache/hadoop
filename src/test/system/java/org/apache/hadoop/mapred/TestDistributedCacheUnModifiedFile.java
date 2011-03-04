@@ -154,7 +154,7 @@ public class TestDistributedCacheUnModifiedFile {
       SleepJob job = new SleepJob();
       job.setConf(conf);
       conf = job.setupJobConf(5, 1, 1000, 1000, 100, 100);
-
+      conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
       DistributedCache.createSymlink(conf);
       URI uri = URI.create(uriPath);
       DistributedCache.addCacheFile(uri, conf);
