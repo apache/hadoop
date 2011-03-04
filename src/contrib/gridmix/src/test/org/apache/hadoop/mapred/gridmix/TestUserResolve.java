@@ -72,17 +72,13 @@ public class TestUserResolve {
     assertTrue("User list required for RoundRobinUserResolver", fail);
 
     rslv.setTargetUsers(new URI(userlist.toString()), conf);
-    assertEquals("user0", rslv.getTargetUgi("hfre0").getUserName());
-    assertEquals("user1", rslv.getTargetUgi("hfre1").getUserName());
-    assertEquals("user2", rslv.getTargetUgi("hfre2").getUserName());
-    assertEquals("user0", rslv.getTargetUgi("hfre0").getUserName());
-    assertEquals("user3", rslv.getTargetUgi("hfre3").getUserName());
-    assertEquals("user0", rslv.getTargetUgi("hfre0").getUserName());
-    assertEquals("user0", rslv.getTargetUgi("hfre4").getUserName());
-    assertArrayEquals(new String[] { "groupA", "groupB", "groupC" },
-        rslv.getTargetUgi("hfre0").getGroupNames());
-    assertArrayEquals(new String[] { "groupB" },
-        rslv.getTargetUgi("hfre2").getGroupNames());
+    assertEquals("user0", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre0")).getUserName());
+    assertEquals("user1", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre1")).getUserName());
+    assertEquals("user2", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre2")).getUserName());
+    assertEquals("user0", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre0")).getUserName());
+    assertEquals("user3", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre3")).getUserName());
+    assertEquals("user0", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre0")).getUserName());
+    assertEquals("user0", rslv.getTargetUgi(UserGroupInformation.createRemoteUser("hfre4")).getUserName());
   }
 
   @Test
@@ -90,8 +86,12 @@ public class TestUserResolve {
     final Configuration conf = new Configuration();
     final UserResolver rslv = new SubmitterUserResolver();
     rslv.setTargetUsers(null, conf);
-    assertEquals(UnixUserGroupInformation.login(),
-        rslv.getTargetUgi((UserGroupInformation)null));
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    assertEquals(ugi, rslv.getTargetUgi((UserGroupInformation)null));
+    System.out.println(" Submitter current user " + ugi);
+    System.out.println(
+      " Target ugi " + rslv.getTargetUgi(
+        (UserGroupInformation) null));
   }
 
 }

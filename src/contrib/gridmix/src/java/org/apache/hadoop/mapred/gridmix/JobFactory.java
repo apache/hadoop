@@ -17,29 +17,28 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.gridmix.Statistics.ClusterStats;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
-import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants;
 import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.tools.rumen.ZombieJobProducer;
+import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 /**
@@ -49,20 +48,21 @@ import org.apache.commons.logging.LogFactory;
  * construction.
  * @see org.apache.hadoop.tools.rumen.HadoopLogsAnalyzer
  */
-class JobFactory implements Gridmix.Component<Void> {
+abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T>{
 
   public static final Log LOG = LogFactory.getLog(JobFactory.class);
 
-  private final Path scratch;
-  private final float rateFactor;
-  private final Configuration conf;
-  private final ReaderThread rThread;
-  private final AtomicInteger sequence;
-  private final JobSubmitter submitter;
-  private final CountDownLatch startFlag;
-  private final UserResolver userResolver;
-  private volatile IOException error = null;
+  protected final Path scratch;
+  protected final float rateFactor;
+  protected final Configuration conf;
+  protected final Thread rThread;
+  protected final AtomicInteger sequence;
+  protected final JobSubmitter submitter;
+  protected final CountDownLatch startFlag;
+  protected final UserResolver userResolver;
+  protected volatile IOException error = null;
   protected final JobStoryProducer jobProducer;
+  protected final ReentrantLock lock = new ReentrantLock(true);
 
   /**
    * Creating a new instance does not start the thread.
@@ -72,6 +72,7 @@ class JobFactory implements Gridmix.Component<Void> {
    * @param scratch Directory into which to write output from simulated jobs
    * @param conf Config passed to all jobs to be submitted
    * @param startFlag Latch released from main to start pipeline
+   * @throws java.io.IOException
    */
   public JobFactory(JobSubmitter submitter, InputStream jobTrace,
       Path scratch, Configuration conf, CountDownLatch startFlag,
@@ -98,9 +99,13 @@ class JobFactory implements Gridmix.Component<Void> {
     this.conf = new Configuration(conf);
     this.submitter = submitter;
     this.startFlag = startFlag;
-    this.rThread = new ReaderThread();
+    this.rThread = createReaderThread();
+    if(LOG.isDebugEnabled()) {
+      LOG.debug(" The submission thread name is " + rThread.getName());
+    }
     this.userResolver = userResolver;
   }
+
 
   static class MinTaskInfo extends TaskInfo {
     public MinTaskInfo(TaskInfo info) {
@@ -125,7 +130,7 @@ class JobFactory implements Gridmix.Component<Void> {
     }
   }
 
-  static class FilterJobStory implements JobStory {
+  protected static class FilterJobStory implements JobStory {
 
     protected final JobStory job;
 
@@ -157,76 +162,23 @@ class JobFactory implements Gridmix.Component<Void> {
     }
   }
 
-  /**
-   * Worker thread responsible for reading descriptions, assigning sequence
-   * numbers, and normalizing time.
-   */
-  private class ReaderThread extends Thread {
+  protected abstract Thread createReaderThread() ;
 
-    public ReaderThread() {
-      super("GridmixJobFactory");
-    }
-
-    private JobStory getNextJobFiltered() throws IOException {
-      JobStory job;
-      do {
-        job = jobProducer.getNextJob();
-      } while (job != null
-          && (job.getOutcome() != Pre21JobHistoryConstants.Values.SUCCESS ||
-              job.getSubmissionTime() < 0));
-      return null == job ? null : new FilterJobStory(job) {
-          @Override
-          public TaskInfo getTaskInfo(TaskType taskType, int taskNumber) {
-            return new MinTaskInfo(this.job.getTaskInfo(taskType, taskNumber));
-          }
-        };
-    }
-
-    @Override
-    public void run() {
-      try {
-        startFlag.await();
-        if (Thread.currentThread().isInterrupted()) {
-          return;
-        }
-        final long initTime = TimeUnit.MILLISECONDS.convert(
-            System.nanoTime(), TimeUnit.NANOSECONDS);
-        LOG.debug("START @ " + initTime);
-        long first = -1;
-        long last = -1;
-        while (!Thread.currentThread().isInterrupted()) {
-          try {
-            final JobStory job = getNextJobFiltered();
-            if (null == job) {
-              return;
-            }
-            if (first < 0) {
-              first = job.getSubmissionTime();
-            }
-            final long current = job.getSubmissionTime();
-            if (current < last) {
-              LOG.warn("Job " + job.getJobID() + " out of order");
-              continue;
-            }
-            last = current;
-            submitter.add(new GridmixJob(new Configuration(conf), initTime +
-                  Math.round(rateFactor * (current - first)), job, scratch,
-                  userResolver.getTargetUgi(job.getUser()),
-                sequence.getAndIncrement()));
-          } catch (IOException e) {
-            JobFactory.this.error = e;
-            return;
-          }
-        }
-      } catch (InterruptedException e) {
-        // exit thread; ignore any jobs remaining in the trace
-        return;
-      } finally {
-        IOUtils.cleanup(null, jobProducer);
-      }
-    }
-  }
-
+  protected JobStory getNextJobFiltered() throws IOException {
+    JobStory job;
+    do {
+      job = jobProducer.getNextJob();
+    } while (job != null
+        && (job.getOutcome() != Pre21JobHistoryConstants.Values.SUCCESS ||
+            job.getSubmissionTime() < 0));
+    return null == job ? null : new FilterJobStory(job) {
+        @Override
+        public TaskInfo getTaskInfo(TaskType taskType, int taskNumber) {
+          return new MinTaskInfo(this.job.getTaskInfo(taskType, taskNumber));
+         }
+      };
+   }
+     
   /**
    * Obtain the error that caused the thread to exit unexpectedly.
    */

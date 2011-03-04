@@ -28,15 +28,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobID;
-import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.Task;
 import org.apache.hadoop.mapred.TaskReport;
 import org.apache.hadoop.mapreduce.Job;
@@ -46,16 +45,22 @@ import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.util.ToolRunner;
 import static org.apache.hadoop.mapred.Task.Counter.*;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.BeforeClass;
+import org.junit.AfterClass;
 import static org.junit.Assert.*;
 
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.log4j.Level;
+import org.apache.hadoop.security.UserGroupInformation;
+import java.security.PrivilegedExceptionAction;
 
 public class TestGridmixSubmission {
+  static GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.REPLAY;
+  public static final Log LOG = LogFactory.getLog(Gridmix.class);
+
   {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.mapred.gridmix")
         ).getLogger().setLevel(Level.DEBUG);
@@ -72,22 +77,13 @@ public class TestGridmixSubmission {
   private static final int GENSLOP = 100 * 1024; // +/- 100k for logs
 
   @BeforeClass
-  public static void initCluster() throws IOException {
-    Configuration conf = new Configuration();
-    dfsCluster = new MiniDFSCluster(conf, 3, true, null);
-    dfs = dfsCluster.getFileSystem();
-    mrCluster = new MiniMRCluster(3, dfs.getUri().toString(), 1, null, null,
-        new JobConf(conf));
+  public static void init() throws IOException {
+    GridmixTestUtils.initCluster();
   }
 
   @AfterClass
-  public static void shutdownCluster() throws IOException {
-    if (mrCluster != null) {
-      mrCluster.shutdown();
-    }
-    if (dfsCluster != null) {
-      dfsCluster.shutdown();
-    }
+  public static void shutDown() throws IOException {
+    GridmixTestUtils.shutdownCluster();
   }
 
   static class TestMonitor extends JobMonitor {
@@ -96,8 +92,8 @@ public class TestGridmixSubmission {
     private final int expected;
     private final BlockingQueue<Job> retiredJobs;
 
-    public TestMonitor(int expected) {
-      super();
+    public TestMonitor(int expected, Statistics stats) {
+      super(stats);
       this.expected = expected;
       retiredJobs = new LinkedBlockingQueue<Job>();
     }
@@ -109,17 +105,17 @@ public class TestGridmixSubmission {
       for (JobStory spec : submitted) {
         sub.put(spec.getName(), spec);
       }
-      final JobClient client = new JobClient(mrCluster.createJobConf());
+      final JobClient client = new JobClient(GridmixTestUtils.mrCluster.createJobConf());
       for (Job job : succeeded) {
         final String jobname = job.getJobName();
         if ("GRIDMIX_GENDATA".equals(jobname)) {
-          final Path in = new Path("foo").makeQualified(dfs);
-          final Path out = new Path("/gridmix").makeQualified(dfs);
-          final ContentSummary generated = dfs.getContentSummary(in);
+          final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs);
+          final Path out = new Path("/gridmix").makeQualified(GridmixTestUtils.dfs);
+          final ContentSummary generated = GridmixTestUtils.dfs.getContentSummary(in);
           assertTrue("Mismatched data gen", // +/- 100k for logs
               (GENDATA << 20) < generated.getLength() + GENSLOP ||
               (GENDATA << 20) > generated.getLength() - GENSLOP);
-          FileStatus[] outstat = dfs.listStatus(out);
+          FileStatus[] outstat = GridmixTestUtils.dfs.listStatus(out);
           assertEquals("Mismatched job count", NJOBS, outstat.length);
           continue;
         }
@@ -128,7 +124,8 @@ public class TestGridmixSubmission {
         assertNotNull("No spec for " + job.getJobName(), spec);
         assertNotNull("No counters for " + job.getJobName(), job.getCounters());
         final String specname = spec.getName();
-        final FileStatus stat = dfs.getFileStatus(new Path(DEST, "" +
+        final FileStatus stat = GridmixTestUtils.dfs.getFileStatus(new Path(
+          GridmixTestUtils.DEST, "" +
               Integer.valueOf(specname.substring(specname.length() - 5))));
         assertEquals("Wrong owner for " + job.getJobName(), spec.getUser(),
             stat.getOwner());
@@ -287,35 +284,62 @@ public class TestGridmixSubmission {
 
   static class DebugGridmix extends Gridmix {
 
-    private DebugJobFactory factory;
+    private JobFactory factory;
     private TestMonitor monitor;
 
     public void checkMonitor() throws Exception {
-      monitor.verify(factory.getSubmitted());
+       monitor.verify(((DebugJobFactory.Debuggable)factory).getSubmitted());
     }
 
     @Override
-    protected JobMonitor createJobMonitor() {
-      monitor = new TestMonitor(NJOBS + 1); // include data generation job
+    protected JobMonitor createJobMonitor(Statistics stats) {
+      Configuration conf = new Configuration();
+      conf.set(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY, policy.name());
+      monitor = new TestMonitor(NJOBS + 1, stats);
       return monitor;
     }
-
+    
     @Override
-    protected JobFactory createJobFactory(JobSubmitter submitter,
-        String traceIn, Path scratchDir, Configuration conf,
-        CountDownLatch startFlag, UserResolver userResolver)
+    protected JobFactory createJobFactory(
+      JobSubmitter submitter, String traceIn, Path scratchDir, Configuration conf,
+      CountDownLatch startFlag, UserResolver userResolver)
         throws IOException {
-      factory =
-        new DebugJobFactory(submitter, scratchDir, NJOBS, conf, startFlag,
-            userResolver);
+      factory = DebugJobFactory.getFactory(
+        submitter, scratchDir, NJOBS, conf, startFlag, userResolver);
       return factory;
     }
   }
 
   @Test
-  public void testSubmit() throws Exception {
-    final Path in = new Path("foo").makeQualified(dfs);
-    final Path out = DEST.makeQualified(dfs);
+  public void testReplaySubmit() throws Exception {
+    policy = GridmixJobSubmissionPolicy.REPLAY;
+    System.out.println(" Replay started at " + System.currentTimeMillis());
+    doSubmission();
+    System.out.println(" Replay ended at " + System.currentTimeMillis());
+  }
+
+  @Test
+  public void testStressSubmit() throws Exception {
+    policy = GridmixJobSubmissionPolicy.STRESS;
+    System.out.println(" Stress started at " + System.currentTimeMillis());
+    doSubmission();
+    System.out.println(" Stress ended at " + System.currentTimeMillis());
+  }
+
+  @Test
+  public void testSerialSubmit() throws Exception {
+    policy = GridmixJobSubmissionPolicy.SERIAL;
+    System.out.println("Serial started at " + System.currentTimeMillis());
+    doSubmission();
+    System.out.println("Serial ended at " + System.currentTimeMillis());
+  }
+
+  private void doSubmission() throws Exception {
+    final Path in = new Path("foo").makeQualified(GridmixTestUtils.dfs);
+    final Path out = GridmixTestUtils.DEST.makeQualified(GridmixTestUtils.dfs);
+    final Path root = new Path("/user");
+    Configuration conf = null;
+    try{
     final String[] argv = {
       "-D" + FilePool.GRIDMIX_MIN_FILE + "=0",
       "-D" + Gridmix.GRIDMIX_OUT_DIR + "=" + out,
@@ -325,14 +349,24 @@ public class TestGridmixSubmission {
       "-" // ignored by DebugGridmix
     };
     DebugGridmix client = new DebugGridmix();
-    final Configuration conf = mrCluster.createJobConf();
+    conf = new Configuration();
+      conf.set(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy.name());
+    conf = GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
+//    GridmixTestUtils.createHomeAndStagingDirectory((JobConf)conf);
     // allow synthetic users to create home directories
-    final Path root = new Path("/user");
-    dfs.mkdirs(root, new FsPermission((short)0777));
-    dfs.setPermission(root, new FsPermission((short)0777));
+    GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short)0777));
+    GridmixTestUtils.dfs.setPermission(root, new FsPermission((short)0777));
     int res = ToolRunner.run(conf, client, argv);
     assertEquals("Client exited with nonzero status", 0, res);
     client.checkMonitor();
-  }
+     } catch (Exception e) {
+       e.printStackTrace();
+     } finally {
+       in.getFileSystem(conf).delete(in, true);
+       out.getFileSystem(conf).delete(out, true);
+       root.getFileSystem(conf).delete(root,true);
+     }
+   }
+
 
 }

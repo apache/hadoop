@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
@@ -50,9 +51,11 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.security.UserGroupInformation;
 
 // TODO can replace with form of GridmixJob
 class GenerateData extends GridmixJob {
+
 
   /**
    * Total bytes to write.
@@ -94,15 +97,26 @@ class GenerateData extends GridmixJob {
   @Override
   public Job call() throws IOException, InterruptedException,
                            ClassNotFoundException {
-    job.setMapperClass(GenDataMapper.class);
-    job.setNumReduceTasks(0);
-    job.setMapOutputKeyClass(NullWritable.class);
-    job.setMapOutputValueClass(BytesWritable.class);
-    job.setInputFormatClass(GenDataFormat.class);
-    job.setOutputFormatClass(RawBytesOutputFormat.class);
-    job.setJarByClass(GenerateData.class);
-    FileInputFormat.addInputPath(job, new Path("ignored"));
-    job.submit();
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    job = ugi.doAs( new PrivilegedExceptionAction <Job>() {
+       public Job run() throws IOException, ClassNotFoundException,
+                               InterruptedException {
+        job.setMapperClass(GenDataMapper.class);
+        job.setNumReduceTasks(0);
+        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputValueClass(BytesWritable.class);
+        job.setInputFormatClass(GenDataFormat.class);
+        job.setOutputFormatClass(RawBytesOutputFormat.class);
+        job.setJarByClass(GenerateData.class);
+         try {
+           FileInputFormat.addInputPath(job, new Path("ignored"));
+         } catch (IOException e) {
+           LOG.error("Error  while adding input path ",e);
+         }
+         job.submit();
+         return job;
+      }
+    });
     return job;
   }
 
@@ -262,7 +276,7 @@ class GenerateData extends GridmixJob {
       private final int blocksize;
       private final short replicas;
       private final long maxFileBytes;
-      private final FsPermission genPerms = new FsPermission((short) 0755);
+      private final FsPermission genPerms = new FsPermission((short) 0777);
 
       private long accFileBytes = 0L;
       private long fileIdx = -1L;

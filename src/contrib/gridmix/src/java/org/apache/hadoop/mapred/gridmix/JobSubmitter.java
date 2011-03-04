@@ -25,6 +25,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,6 +48,7 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
   private final JobMonitor monitor;
   private final ExecutorService sched;
   private volatile boolean shutdown = false;
+  private final UserResolver resolver;
 
   /**
    * Initialize the submission component with downstream monitor and pool of
@@ -60,12 +62,13 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
    *   synthetic jobs.
    */
   public JobSubmitter(JobMonitor monitor, int threads, int queueDepth,
-      FilePool inputDir) {
+      FilePool inputDir, UserResolver resolver) {
     sem = new Semaphore(queueDepth);
     sched = new ThreadPoolExecutor(threads, threads, 0L,
         TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
     this.inputDir = inputDir;
     this.monitor = monitor;
+    this.resolver = resolver;
   }
 
   /**
@@ -86,6 +89,12 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
         } catch (IOException e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName() + " as " +
               job.getUgi(), e);
+          monitor.submissionFailed(job.getJob());
+          return;
+        }catch (Exception e) {
+          LOG.warn("Failed to submit " + job.getJob().getJobName() + " as " +
+              job.getUgi(), e);
+          monitor.submissionFailed(job.getJob());
           return;
         }
         // Sleep until deadline
@@ -106,18 +115,24 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
             throw new InterruptedException("Failed to submit " +
                 job.getJob().getJobName());
           }
+          monitor.submissionFailed(job.getJob());
         } catch (ClassNotFoundException e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName(), e);
+          monitor.submissionFailed(job.getJob());
         }
       } catch (InterruptedException e) {
         // abort execution, remove splits if nesc
         // TODO release ThdLoc
         GridmixJob.pullDescription(job.id());
         Thread.currentThread().interrupt();
-        return;
+        monitor.submissionFailed(job.getJob());
+      } catch(Exception e) {
+        //Due to some exception job wasnt submitted.
+        LOG.info(" Job " + job.getJob() + " submission failed " , e);
+        monitor.submissionFailed(job.getJob());
       } finally {
         sem.release();
-      }
+      }                               
     }
   }
 

@@ -19,16 +19,27 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collections;
+import java.util.List;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
+import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Echos the UGI offered.
  */
-public class EchoUserResolver extends UserResolver {
+public class EchoUserResolver implements UserResolver {
+  public static final Log LOG = LogFactory.getLog(Gridmix.class);
 
-  public EchoUserResolver() { }
+  public EchoUserResolver() {
+    LOG.info(" Current user resolver is EchoUserResolver ");
+  }
 
   public synchronized boolean setTargetUsers(URI userdesc, Configuration conf)
       throws IOException {

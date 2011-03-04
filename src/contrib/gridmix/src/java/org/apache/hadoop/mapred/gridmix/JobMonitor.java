@@ -47,14 +47,12 @@ class JobMonitor implements Gridmix.Component<Job> {
   private final MonitorThread mThread;
   private final BlockingQueue<Job> runningJobs;
   private final long pollDelayMillis;
+  private Statistics statistics;
   private boolean graceful = false;
   private boolean shutdown = false;
 
-  /**
-   * Create a JobMonitor with a default polling interval of 5s.
-   */
-  public JobMonitor() {
-    this(5, TimeUnit.SECONDS);
+  public JobMonitor(Statistics statistics) {
+    this(5,TimeUnit.SECONDS, statistics);
   }
 
   /**
@@ -62,12 +60,14 @@ class JobMonitor implements Gridmix.Component<Job> {
    * polling a still-running job.
    * @param pollDelay Delay after polling a running job
    * @param unit Time unit for pollDelaySec (rounded to milliseconds)
+   * @param statistics StatCollector , listener to job completion.
    */
-  public JobMonitor(int pollDelay, TimeUnit unit) {
+  public JobMonitor(int pollDelay, TimeUnit unit, Statistics statistics) {
     mThread = new MonitorThread();
     runningJobs = new LinkedBlockingQueue<Job>();
     mJobs = new LinkedList<Job>();
     this.pollDelayMillis = TimeUnit.MILLISECONDS.convert(pollDelay, unit);
+    this.statistics = statistics;
   }
 
   /**
@@ -75,6 +75,17 @@ class JobMonitor implements Gridmix.Component<Job> {
    */
   public void add(Job job) throws InterruptedException {
     runningJobs.put(job);
+  }
+
+  /**
+   * Add a submission failed job , such tht it can be communicated
+   * back to serial.
+   * TODO: Cleaner solution for this problem
+   * @param job
+   */
+  public void submissionFailed(Job job) {
+    LOG.info(" Job submission failed notify if anyone is waiting " + job);
+    this.statistics.add(job);
   }
 
   /**
@@ -162,6 +173,7 @@ class JobMonitor implements Gridmix.Component<Job> {
             try {
               if (job.isComplete()) {
                 process(job);
+                statistics.add(job);
                 continue;
               }
             } catch (IOException e) {

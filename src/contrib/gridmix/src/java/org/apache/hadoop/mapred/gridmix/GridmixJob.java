@@ -26,6 +26,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
+import java.security.PrivilegedExceptionAction;
 import javax.security.auth.login.LoginException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -80,19 +81,40 @@ class GridmixJob implements Callable<Job>, Delayed {
 
   private final int seq;
   private final Path outdir;
-  protected final Job job;
+  protected Job job;
   private final JobStory jobdesc;
   private final UserGroupInformation ugi;
   private final long submissionTimeNanos;
 
-  public GridmixJob(Configuration conf, long submissionMillis,
-      JobStory jobdesc, Path outRoot, UserGroupInformation ugi, int seq)
-      throws IOException {
+  public GridmixJob(
+    final Configuration conf, long submissionMillis, final JobStory jobdesc,
+    Path outRoot, UserGroupInformation ugi, final int seq) throws IOException {
     this.ugi = ugi;
-    UserGroupInformation.setCurrentUser(ugi);
-    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi.toString());
     ((StringBuilder)nameFormat.get().out()).setLength(JOBNAME.length());
-    job = new Job(conf, nameFormat.get().format("%05d", seq).toString());
+    try {
+      job = this.ugi.doAs(new PrivilegedExceptionAction<Job>() {
+        public Job run(){
+          try {
+            return new Job(
+              conf, nameFormat.get().format(
+                "%05d", seq).toString());
+          } catch (IOException e) {
+            LOG.error(" Could not run job submitted " + jobdesc.getName());
+            return null;
+          }
+        }
+      });
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    } catch (IOException e) {
+      throw e;
+    }
+
+    if(job == null) {
+      throw new IOException(
+        " Could not create Job instance for job " + jobdesc.getName());
+    }
+    
     submissionTimeNanos = TimeUnit.NANOSECONDS.convert(
         submissionMillis, TimeUnit.MILLISECONDS);
     this.jobdesc = jobdesc;
@@ -100,18 +122,29 @@ class GridmixJob implements Callable<Job>, Delayed {
     outdir = new Path(outRoot, "" + seq);
   }
 
-  protected GridmixJob(Configuration conf, long submissionMillis, String name)
-      throws IOException {
-    job = new Job(conf, name);
+  protected GridmixJob(
+    final Configuration conf, long submissionMillis, final String name)
+  throws IOException {
     submissionTimeNanos = TimeUnit.NANOSECONDS.convert(
         submissionMillis, TimeUnit.MILLISECONDS);
     jobdesc = null;
     outdir = null;
     seq = -1;
+    ugi = UserGroupInformation.getCurrentUser();
+
     try {
-      ugi = UnixUserGroupInformation.login(conf);
-    } catch (LoginException e) {
-      throw new IOException("Could not identify submitter", e);
+      job = this.ugi.doAs(new PrivilegedExceptionAction<Job>() {
+          public Job run(){
+            try {
+              return new Job(conf,name);
+            } catch (IOException e) {
+              LOG.error(" Could not run job submitted " + name);
+              return null;
+            }
+          }
+        });
+    } catch (InterruptedException e) {
+      LOG.error(" Error while creating new job " , e);
     }
   }
 
@@ -176,24 +209,49 @@ class GridmixJob implements Callable<Job>, Delayed {
 
   public Job call() throws IOException, InterruptedException,
                            ClassNotFoundException {
-    job.setMapperClass(GridmixMapper.class);
-    job.setReducerClass(GridmixReducer.class);
-    job.setNumReduceTasks(jobdesc.getNumberReduces());
-    job.setMapOutputKeyClass(GridmixKey.class);
-    job.setMapOutputValueClass(GridmixRecord.class);
-    job.setSortComparatorClass(GridmixKey.Comparator.class);
-    job.setGroupingComparatorClass(SpecGroupingComparator.class);
-    job.setInputFormatClass(GridmixInputFormat.class);
-    job.setOutputFormatClass(RawBytesOutputFormat.class);
-    job.setPartitionerClass(DraftPartitioner.class);
-    job.setJarByClass(GridmixJob.class);
-    job.getConfiguration().setInt("gridmix.job.seq", seq);
-    job.getConfiguration().set(ORIGNAME, null == jobdesc.getJobID()
-        ? "<unknown>" : jobdesc.getJobID().toString());
-    job.getConfiguration().setBoolean("mapred.used.genericoptionsparser", true);
-    FileInputFormat.addInputPath(job, new Path("ignored"));
-    FileOutputFormat.setOutputPath(job, outdir);
-    job.submit();
+    job = ugi.doAs(
+      new PrivilegedExceptionAction<Job>() {
+        public Job run() {
+          job.setMapperClass(GridmixMapper.class);
+          job.setReducerClass(GridmixReducer.class);
+          job.setNumReduceTasks(jobdesc.getNumberReduces());
+          job.setMapOutputKeyClass(GridmixKey.class);
+          job.setMapOutputValueClass(GridmixRecord.class);
+          job.setSortComparatorClass(GridmixKey.Comparator.class);
+          job.setGroupingComparatorClass(SpecGroupingComparator.class);
+          job.setInputFormatClass(GridmixInputFormat.class);
+          job.setOutputFormatClass(RawBytesOutputFormat.class);
+          job.setPartitionerClass(DraftPartitioner.class);
+          job.setJarByClass(GridmixJob.class);
+          job.getConfiguration().setInt("gridmix.job.seq", seq);
+          job.getConfiguration().set(
+            ORIGNAME, null == jobdesc.getJobID() ? "<unknown>" :
+              jobdesc.getJobID().toString());
+          job.getConfiguration().setBoolean(
+            "mapred.used.genericoptionsparser", true);
+          try {
+            FileInputFormat.addInputPath(job, new Path("ignored"));
+          } catch (IOException e) {
+            LOG.error(" Exception while addingInpuPath job " , e);
+            return null;
+          }
+          FileOutputFormat.setOutputPath(job, outdir);
+          try {
+            job.submit();
+          } catch (IOException e) {
+            LOG.error(" Exception while submitting job " , e);
+            return null;
+          } catch (InterruptedException e) {
+            LOG.error(" Exception while submitting job " , e);
+            return null;
+          } catch (ClassNotFoundException e) {
+            LOG.error(" Exception while submitting job " , e);
+            return null;
+          }
+          return job;
+        }
+      });
+
     return job;
   }
 

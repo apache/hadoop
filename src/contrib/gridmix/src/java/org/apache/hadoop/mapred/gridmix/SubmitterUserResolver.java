@@ -19,28 +19,26 @@ package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
 import java.net.URI;
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 /**
  * Resolves all UGIs to the submitting user.
  */
-public class SubmitterUserResolver extends UserResolver {
-
+public class SubmitterUserResolver implements UserResolver {
+  public static final Log LOG = LogFactory.getLog(SubmitterUserResolver.class);
+  
   private UserGroupInformation ugi = null;
 
-  public SubmitterUserResolver() { }
+  public SubmitterUserResolver() {
+    LOG.info(" Current user resolver is SubmitterUserResolver ");
+  }
 
   public synchronized boolean setTargetUsers(URI userdesc, Configuration conf)
       throws IOException {
-    try {
-      ugi = UnixUserGroupInformation.login(conf, false);
-    } catch (LoginException e) {
-      throw new IOException("Failed to get submitter UGI", e);
-    }
+    ugi = UserGroupInformation.getLoginUser();
     return false;
   }
 
