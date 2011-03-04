@@ -265,8 +265,8 @@
         out.println("<h2>Job " + jobId + " not known!</h2>");
         return;
       }
-      String historyUrl = "/jobdetailshistory.jsp?jobid=" + jobId +
-      "&logFile=" + JobHistory.JobInfo.encodeJobHistoryFilePath(historyFile);
+      String historyUrl = "/jobdetailshistory.jsp?logFile=" + 
+          JobHistory.JobInfo.encodeJobHistoryFilePath(historyFile);
       response.sendRedirect(response.encodeRedirectURL(historyUrl));
       return;
     }
@@ -281,21 +281,8 @@
     out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" +
         profile.getJobFile() + "</a><br>\n");
 
-    if (tracker.isJobLevelAuthorizationEnabled()) {
-      // Display job-view-acls and job-modify-acls configured for this job
-      Map<JobACL, AccessControlList> jobAcls = status.getJobACLs();
-      out.print("<b>Job-ACLs:</b><br>");
-      for (JobACL aclName : JobACL.values()) {
-        String aclConfigName = aclName.getAclName();
-        AccessControlList aclConfigured = jobAcls.get(aclName);
-        String aclStr = "";
-        if (aclConfigured != null) {
-          aclStr = aclConfigured.toString();
-        }
-        out.print("&nbsp;&nbsp;&nbsp;&nbsp;" + aclConfigName + ": "
-                  + aclStr + "<br>");
-      }
-    }
+    Map<JobACL, AccessControlList> jobAcls = status.getJobACLs();
+    JSPUtil.printJobACLs(tracker, jobAcls, out);
     out.print("<b>Job Setup:</b>");
     printJobLevelTaskSummary(out, jobId, "setup", 
                              job.getTasks(TaskType.JOB_SETUP));

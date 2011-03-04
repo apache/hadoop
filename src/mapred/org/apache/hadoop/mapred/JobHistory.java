@@ -54,7 +54,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -298,7 +300,8 @@ public class JobHistory {
     FINISHED_MAPS, FINISHED_REDUCES, JOB_STATUS, TASKID, HOSTNAME, TASK_TYPE, 
     ERROR, TASK_ATTEMPT_ID, TASK_STATUS, COPY_PHASE, SORT_PHASE, REDUCE_PHASE, 
     SHUFFLE_FINISHED, SORT_FINISHED, COUNTERS, SPLITS, JOB_PRIORITY, HTTP_PORT, 
-    TRACKER_NAME, STATE_STRING, VERSION, MAP_COUNTERS, REDUCE_COUNTERS
+    TRACKER_NAME, STATE_STRING, VERSION, MAP_COUNTERS, REDUCE_COUNTERS,
+    VIEW_JOB, MODIFY_JOB
   }
 
   /**
@@ -680,6 +683,8 @@ public class JobHistory {
   public static class JobInfo extends KeyValuePair{
     
     private Map<String, Task> allTasks = new TreeMap<String, Task>();
+    private Map<JobACL, AccessControlList> jobACLs =
+        new HashMap<JobACL, AccessControlList>();
     
     /** Create new JobInfo */
     public JobInfo(String jobId){ 
@@ -690,7 +695,26 @@ public class JobHistory {
      * Returns all map and reduce tasks <taskid-Task>. 
      */
     public Map<String, Task> getAllTasks() { return allTasks; }
-    
+
+    public Map<JobACL, AccessControlList> getJobACLs() {
+      return jobACLs;
+    }
+
+    @Override
+    public synchronized void handle(Map<Keys, String> values) {
+      // construct the ACLs
+      String viewJobACL = values.get(Keys.VIEW_JOB);
+      String modifyJobACL = values.get(Keys.MODIFY_JOB);
+      if (viewJobACL != null) {
+        jobACLs.put(JobACL.VIEW_JOB, new AccessControlList(viewJobACL));
+      }
+      if (modifyJobACL != null) {
+        jobACLs.put(JobACL.MODIFY_JOB, new AccessControlList(modifyJobACL));
+
+      }
+      super.handle(values);
+    }
+
     /**
      * Get the path of the locally stored job file
      * @param jobId id of the job
@@ -1210,9 +1234,12 @@ public class JobHistory {
 
           //add to writer as well 
           JobHistory.log(writers, RecordTypes.Job, 
-                         new Keys[]{Keys.JOBID, Keys.JOBNAME, Keys.USER, Keys.SUBMIT_TIME, Keys.JOBCONF }, 
+                         new Keys[]{Keys.JOBID, Keys.JOBNAME, Keys.USER, Keys.SUBMIT_TIME, Keys.JOBCONF, 
+                                      Keys.VIEW_JOB, Keys.MODIFY_JOB }, 
                          new String[]{jobId.toString(), jobName, user, 
-                                      String.valueOf(submitTime) , jobConfPath}
+                                      String.valueOf(submitTime) , jobConfPath,
+                                      jobConf.get(JobACL.VIEW_JOB.getAclName(), ""),
+                                      jobConf.get(JobACL.MODIFY_JOB.getAclName(), "")}
                         ); 
              
         }catch(IOException e){

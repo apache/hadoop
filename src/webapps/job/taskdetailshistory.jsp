@@ -14,18 +14,27 @@
 <%!	private static SimpleDateFormat dateFormat = new SimpleDateFormat("d/MM HH:mm:ss") ; %>
 
 <%	
-  String jobid = JobID.forName(request.getParameter("jobid")).toString();
   String logFile = request.getParameter("logFile");
+  String tipid = request.getParameter("tipid");
+  if (logFile == null || tipid == null) {
+    out.println("Missing job!!");
+    return;
+  }
   String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
-  String taskid = request.getParameter("taskid"); 
+  String jobid = JSPUtil.getJobID(new Path(encodedLogFileName).getName());
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-  JobHistory.JobInfo job = JSPUtil.getJobInfo(request, fs);
-  JobHistory.Task task = job.getAllTasks().get(taskid); 
+  JobTracker jobTracker = (JobTracker) application.getAttribute("job.tracker");
+  JobHistory.JobInfo job = JSPUtil.checkAccessAndGetJobInfo(request,
+      response, jobTracker, fs, new Path(logFile));
+  if (job == null) {
+    return;
+  }
+  JobHistory.Task task = job.getAllTasks().get(tipid); 
   String type = task.get(Keys.TASK_TYPE);
 %>
 <html>
 <body>
-<h2><%=taskid %> attempts for <a href="jobdetailshistory.jsp?jobid=<%=jobid%>&&logFile=<%=encodedLogFileName%>"> <%=jobid %> </a></h2>
+<h2><%=tipid %> attempts for <a href="jobdetailshistory.jsp?logFile=<%=encodedLogFileName%>"> <%=jobid %> </a></h2>
 <center>
 <table border="2" cellpadding="5" cellspacing="2">
 <tr><td>Task Id</td><td>Start Time</td>
@@ -106,12 +115,10 @@
     if (counters != null) {
       TaskAttemptID attemptId = 
         TaskAttemptID.forName(taskAttempt.get(Keys.TASK_ATTEMPT_ID));
-      TaskID taskId = attemptId.getTaskID();
-      org.apache.hadoop.mapreduce.JobID jobId = taskId.getJobID();
+      TaskID tipid = attemptId.getTaskID();
+      org.apache.hadoop.mapreduce.JobID jobId = tipid.getJobID();
       out.print("<td>" 
-       + "<a href=\"/taskstatshistory.jsp?jobid=" + jobId
-           + "&taskid=" + taskId
-           + "&attemptid=" + attemptId
+       + "<a href=\"/taskstatshistory.jsp?attemptid=" + attemptId
            + "&logFile=" + logFile + "\">"
            + counters.size() + "</a></td>");
     } else {

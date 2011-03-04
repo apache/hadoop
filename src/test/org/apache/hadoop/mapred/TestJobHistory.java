@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobHistory.*;
+import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -798,6 +799,14 @@ public class TestJobHistory extends TestCase {
     validateJobLevelKeyValues(mr, job, jobInfo, conf);
     validateTaskLevelKeyValues(mr, job, jobInfo);
     validateTaskAttemptLevelKeyValues(mr, job, jobInfo);
+
+    // Also JobACLs should be correct
+    if (mr.getJobTrackerRunner().getJobTracker().isJobLevelAuthorizationEnabled()) {
+      assertEquals(conf.get(JobACL.VIEW_JOB.getAclName()),
+          jobInfo.getJobACLs().get(JobACL.VIEW_JOB).toString());
+      assertEquals(conf.get(JobACL.MODIFY_JOB.getAclName()),
+          jobInfo.getJobACLs().get(JobACL.MODIFY_JOB).toString());
+    }
   }
 
   public void testDoneFolderOnHDFS() throws IOException {
@@ -900,6 +909,9 @@ public class TestJobHistory extends TestCase {
       //set the done folder location
       String doneFolder = TEST_ROOT_DIR + "history_done";
       conf.set("mapred.job.tracker.history.completed.location", doneFolder);
+
+      // Enable ACLs so that they are logged to history
+      conf.setBoolean(JobConf.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, true);
       
       mr = new MiniMRCluster(2, "file:///", 3, null, null, conf);
 
@@ -915,6 +927,8 @@ public class TestJobHistory extends TestCase {
 
       //Disable speculative execution
       conf.setSpeculativeExecution(false);
+      conf.set(JobACL.VIEW_JOB.getAclName(), "user1,user2 group1,group2");
+      conf.set(JobACL.MODIFY_JOB.getAclName(), "user3,user4 group3,group4");
 
       // Make sure that the job is not removed from memory until we do finish
       // the validation of history file content
@@ -983,7 +997,7 @@ public class TestJobHistory extends TestCase {
 
   //Returns the file in the done folder
   //Waits for sometime to get the file moved to done
-  private static String getDoneFile(JobConf conf, JobID id, 
+  static String getDoneFile(JobConf conf, JobID id, 
       Path doneDir) throws IOException {
     String name = null;
     for (int i = 0; name == null && i < 20; i++) {
