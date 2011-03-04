@@ -54,7 +54,7 @@ neutral at the forward-port stage -->
 </property>
 <property>
    <name>test.system.hdrc.deployed.scripts.dir</name>
-   <value>./src/test/system/scripts</value>
+   <value>$(YINST_ROOT)/share/hadoop-current/src/test/system/scripts</value>
    <description>
      This directory hosts the scripts in the deployed location where
      the system test client runs.
