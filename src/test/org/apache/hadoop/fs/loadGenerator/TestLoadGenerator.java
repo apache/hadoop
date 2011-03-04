@@ -23,13 +23,19 @@ import java.io.FileReader;
 import java.io.FileWriter;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Test;
+
 /**
  * This class tests if a balancer schedules tasks correctly.
  */
-public class TestLoadGenerator extends TestCase {
+public class TestLoadGenerator extends Configured implements Tool {
   private static final Configuration CONF = new Configuration();
   private static final int DEFAULT_BLOCK_SIZE = 10;
   private static final String OUT_DIR = 
@@ -53,6 +59,7 @@ public class TestLoadGenerator extends TestCase {
   }
 
   /** Test if the structure generator works fine */ 
+  @Test
   public void testStructureGenerator() throws Exception {
     StructureGenerator sg = new StructureGenerator();
     String[] args = new String[]{"-maxDepth", "2", "-minWidth", "1",
@@ -121,9 +128,17 @@ public class TestLoadGenerator extends TestCase {
   }
 
   /** Test if the load generator works fine */
+  @Test
   public void testLoadGenerator() throws Exception {
     final String TEST_SPACE_ROOT = "/test";
 
+    final String SCRIPT_TEST_DIR = new File(System.getProperty("test.build.data",
+    "/tmp")).getAbsolutePath();
+    String script = SCRIPT_TEST_DIR + "/" + "loadgenscript";
+    String script2 = SCRIPT_TEST_DIR + "/" + "loadgenscript2";
+    File scriptFile1 = new File(script);
+    File scriptFile2 = new File(script2);
+    
     FileWriter writer = new FileWriter(DIR_STRUCTURE_FILE);
     writer.write(DIR_STRUCTURE_FIRST_LINE+"\n");
     writer.write(DIR_STRUCTURE_SECOND_LINE+"\n");
@@ -199,19 +214,54 @@ public class TestLoadGenerator extends TestCase {
       args[ELAPSED_TIME] = "-1";
       assertEquals(-1, lg.run(args));
       args[ELAPSED_TIME] = oldArg;
+      
+      // test scripted operation
+      // Test with good script
+      FileWriter fw = new FileWriter(scriptFile1);
+      fw.write("2 .22 .33\n");
+      fw.write("3 .10 .6\n");
+      fw.write("6 0 .7\n");
+      fw.close();
+      
+      String[] scriptArgs = new String[] {
+          "-root", TEST_SPACE_ROOT, "-maxDelayBetweenOps", "0",
+          "-numOfThreads", "10", "-startTime", 
+          Long.toString(System.currentTimeMillis()), "-scriptFile", script};
+      
+      assertEquals(0, lg.run(scriptArgs));
+      
+      // Test with bad script
+      fw = new FileWriter(scriptFile2);
+      fw.write("2 .22 .33\n");
+      fw.write("3 blah blah blah .6\n");
+      fw.write("6 0 .7\n");
+      fw.close();
+      
+      scriptArgs[scriptArgs.length - 1] = script2;
+      assertEquals(-1, lg.run(scriptArgs));
+      
     } finally {
       cluster.shutdown();
       DIR_STRUCTURE_FILE.delete();
       FILE_STRUCTURE_FILE.delete();
+      scriptFile1.delete();
+      scriptFile2.delete();
     }
   }
   
   /**
    * @param args
    */
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) throws Exception{
+    int res = ToolRunner.run(new TestLoadGenerator(), args);
+    System.exit(res);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception {
     TestLoadGenerator loadGeneratorTest = new TestLoadGenerator();
     loadGeneratorTest.testStructureGenerator();
     loadGeneratorTest.testLoadGenerator();
+    return 0;
   }
 }

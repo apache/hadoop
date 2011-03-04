@@ -22,12 +22,8 @@ import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.io.UTF8;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.MapReduceBase;
-import org.apache.hadoop.mapred.OutputCollector;
-import org.apache.hadoop.mapred.Reducer;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.*;
 
 /**
  * Reducer that accumulates values based on their type.
@@ -45,8 +41,12 @@ import org.apache.hadoop.mapred.Reporter;
  * </ul>
  * 
  */
+@SuppressWarnings("deprecation")
 public class AccumulatingReducer extends MapReduceBase
-    implements Reducer<UTF8, UTF8, UTF8, UTF8> {
+    implements Reducer<Text, Text, Text, Text> {
+  static final String VALUE_TYPE_LONG = "l:";
+  static final String VALUE_TYPE_FLOAT = "f:";
+  static final String VALUE_TYPE_STRING = "s:";
   private static final Log LOG = LogFactory.getLog(AccumulatingReducer.class);
   
   protected String hostName;
@@ -61,9 +61,9 @@ public class AccumulatingReducer extends MapReduceBase
     LOG.info("Starting AccumulatingReducer on " + hostName);
   }
   
-  public void reduce(UTF8 key, 
-                     Iterator<UTF8> values,
-                     OutputCollector<UTF8, UTF8> output, 
+  public void reduce(Text key, 
+                     Iterator<Text> values,
+                     OutputCollector<Text, Text> output, 
                      Reporter reporter
                      ) throws IOException {
     String field = key.toString();
@@ -71,30 +71,30 @@ public class AccumulatingReducer extends MapReduceBase
     reporter.setStatus("starting " + field + " ::host = " + hostName);
 
     // concatenate strings
-    if (field.startsWith("s:")) {
-      String sSum = "";
+    if (field.startsWith(VALUE_TYPE_STRING)) {
+      StringBuffer sSum = new StringBuffer();
       while (values.hasNext())
-        sSum += values.next().toString() + ";";
-      output.collect(key, new UTF8(sSum));
+        sSum.append(values.next().toString()).append(";");
+      output.collect(key, new Text(sSum.toString()));
       reporter.setStatus("finished " + field + " ::host = " + hostName);
       return;
     }
     // sum long values
-    if (field.startsWith("f:")) {
+    if (field.startsWith(VALUE_TYPE_FLOAT)) {
       float fSum = 0;
       while (values.hasNext())
         fSum += Float.parseFloat(values.next().toString());
-      output.collect(key, new UTF8(String.valueOf(fSum)));
+      output.collect(key, new Text(String.valueOf(fSum)));
       reporter.setStatus("finished " + field + " ::host = " + hostName);
       return;
     }
     // sum long values
-    if (field.startsWith("l:")) {
+    if (field.startsWith(VALUE_TYPE_LONG)) {
       long lSum = 0;
       while (values.hasNext()) {
         lSum += Long.parseLong(values.next().toString());
       }
-      output.collect(key, new UTF8(String.valueOf(lSum)));
+      output.collect(key, new Text(String.valueOf(lSum)));
     }
     reporter.setStatus("finished " + field + " ::host = " + hostName);
   }
