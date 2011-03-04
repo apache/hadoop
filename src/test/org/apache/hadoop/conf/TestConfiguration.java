@@ -351,6 +351,23 @@ public class TestConfiguration extends TestCase {
     assertEquals(-20, conf.getLong("test.int3", 0));
   }
 	
+  enum Dingo { FOO, BAR };
+  enum Yak { RAB, FOO };
+  public void testEnum() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setEnum("test.enum", Dingo.FOO);
+    assertSame(Dingo.FOO, conf.getEnum("test.enum", Dingo.BAR));
+    assertSame(Yak.FOO, conf.getEnum("test.enum", Yak.RAB));
+    boolean fail = false;
+    try {
+      conf.setEnum("test.enum", Dingo.BAR);
+      Yak y = conf.getEnum("test.enum", Yak.FOO);
+    } catch (IllegalArgumentException e) {
+      fail = true;
+    }
+    assertTrue(fail);
+  }
+
   public void testReload() throws IOException {
     out=new BufferedWriter(new FileWriter(CONFIG));
     startConfig();

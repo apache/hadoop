@@ -627,6 +627,30 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
+   * Set the value of the <code>name</code> property to the given type. This
+   * is equivalent to <code>set(&lt;name&gt;, value.toString())</code>.
+   * @param name property name
+   * @param value new value
+   */
+  public <T extends Enum<T>> void setEnum(String name, T value) {
+    set(name, value.toString());
+  }
+
+  /**
+   * Return value matching this enumerated type.
+   * @param name Property name
+   * @param defaultValue Value returned if no mapping exists
+   * @throws IllegalArgumentException If mapping is illegal for the type
+   * provided
+   */
+  public <T extends Enum<T>> T getEnum(String name, T defaultValue) {
+    final String val = get(name);
+    return null == val
+      ? defaultValue
+      : Enum.valueOf(defaultValue.getDeclaringClass(), val);
+  }
+
+  /**
    * A class that represents a set of positive integer ranges. It parses 
    * strings of the form: "2-3,5,7-" where ranges are separated by comma and 
    * the lower/upper bounds are separated by dash. Either the lower or upper 
