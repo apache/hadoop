@@ -183,6 +183,13 @@ public interface RunningJob {
   public Counters getCounters() throws IOException;
   
   /**
+   * Get failure info for the job.
+   * @return the failure info for the job.
+   * @throws IOException
+   */
+  public String getFailureInfo() throws IOException;
+  
+  /**
    * Gets the diagnostic messages for a given task attempt.
    * @param taskid
    * @return the list of diagnostic messages for the task

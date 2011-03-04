@@ -63,6 +63,44 @@ public class TestTaskLimits extends TestCase {
   }
 
   /**
+   * check with a reduce limit of 10 bytes for input to reduce.
+   * This should fail since input to reduce estimate is greater
+   * than that!
+   * @return true on failing the job, false
+   * @throws IOException
+   */
+  private boolean runReduceLimitCheck() throws IOException {
+    MiniDFSCluster dfs = null;
+    MiniMRCluster mr = null;
+    FileSystem fileSys = null;
+    boolean success = false;
+    try {
+      final int taskTrackers = 2;
+   
+      Configuration conf = new Configuration();
+      conf.setInt("mapred.jobtracker.maxtasks.per.job", -1);
+      dfs = new MiniDFSCluster(conf, 4, true, null);
+      fileSys = dfs.getFileSystem();
+      JobConf jconf = new JobConf(conf);
+      mr = new MiniMRCluster(0, 0, taskTrackers, fileSys.getUri().toString(), 1,
+                             null, null, null, jconf);
+      
+      JobConf jc = mr.createJobConf();
+      jc.setLong("mapreduce.reduce.input.limit", 10L);
+      try {
+        runPI(mr, jc);
+        success = false;
+      } catch (IOException e) {
+        success = true;
+      }
+    } finally {
+      if (dfs != null) { dfs.shutdown(); }
+      if (mr != null) { mr.shutdown(); }
+    }
+    return success;
+  }
+  
+  /**
    * Run the pi test with a specifix value of 
    * mapred.jobtracker.maxtasks.per.job. Returns true if the job succeeded.
    */
@@ -73,7 +111,7 @@ public class TestTaskLimits extends TestCase {
     boolean success = false;
     try {
       final int taskTrackers = 2;
-
+   
       Configuration conf = new Configuration();
       conf.setInt("mapred.jobtracker.maxtasks.per.job", maxTasks);
       dfs = new MiniDFSCluster(conf, 4, true, null);
@@ -114,5 +152,8 @@ public class TestTaskLimits extends TestCase {
     status = runOneTest(-1);
     assertTrue(status == true);
     System.out.println("Job 3 succeeded as expected.");
+    status = runReduceLimitCheck();
+    assertTrue(status == true);
+    System.out.println("Success: Reduce limit as expected");
   }
 }

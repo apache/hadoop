@@ -365,6 +365,14 @@
 </property>
 
 <property>
+  <name>mapreduce.reduce.input.limit</name>
+  <value>-1</value>
+  <description>The limit on the input size of the reduce. If the estimated
+  input size of the reduce is greater than this value, job is failed. A
+  value of -1 means that there is no limit set. </description>
+</property>
+
+<property>
   <name>mapred.job.tracker.retiredjobs.cache.size</name>
   <value>1000</value>
   <description>The number of retired job status to keep in the cache.

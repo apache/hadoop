@@ -397,6 +397,15 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     public String[] getTaskDiagnostics(TaskAttemptID id) throws IOException {
       return jobSubmitClient.getTaskDiagnostics(id);
     }
+
+    @Override
+    public String getFailureInfo() throws IOException {
+      //assuming that this is just being called after 
+      //we realized the job failed. SO we try avoiding 
+      //a rpc by not calling updateStatus
+      ensureFreshStatus();
+      return status.getFailureInfo();
+    }
   }
 
   private JobSubmissionProtocol jobSubmitClient;
@@ -1192,6 +1201,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     RunningJob rj = jc.submitJob(job);
     try {
       if (!jc.monitorAndPrintJob(job, rj)) {
+        LOG.info("Job Failed: " + rj.getFailureInfo());
         throw new IOException("Job failed!");
       }
     } catch (InterruptedException ie) {

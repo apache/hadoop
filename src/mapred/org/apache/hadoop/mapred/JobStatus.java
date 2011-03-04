@@ -84,7 +84,8 @@ public class JobStatus implements Writable, Cloneable {
   private String user;
   private JobPriority priority;
   private String schedulingInfo="NA";
-    
+  private String failureInfo = "NA";
+  
   /**
    */
   public JobStatus() {
@@ -278,7 +279,23 @@ public class JobStatus implements Writable, Cloneable {
   public synchronized String getSchedulingInfo() {
    return schedulingInfo;
   }
+  
+  /**
+   * gets any available info on the reason of failure of the job.
+   * @return diagnostic information on why a job might have failed.
+   */
+  public synchronized String getFailureInfo() {
+    return this.failureInfo;
+  }
 
+  /**
+   * set the reason for failuire of this job
+   * @param failureInfo the reason for failure of this job.
+   */
+  public synchronized void setFailureInfo(String failureInfo) {
+    this.failureInfo = failureInfo;
+  }
+  
   /**
    * Used to set the scheduling information associated to a particular Job.
    * 
@@ -343,6 +360,7 @@ public class JobStatus implements Writable, Cloneable {
       WritableUtils.writeEnum(out, entry.getKey());
       entry.getValue().write(out);
     }
+    Text.writeString(out, failureInfo);
   }
 
   public synchronized void readFields(DataInput in) throws IOException {
@@ -365,6 +383,7 @@ public class JobStatus implements Writable, Cloneable {
       acl.readFields(in);
       this.jobACLs.put(aclType, acl);
     }
+    this.failureInfo = Text.readString(in);
   }
 
   // A utility to convert new job runstates to the old ones.

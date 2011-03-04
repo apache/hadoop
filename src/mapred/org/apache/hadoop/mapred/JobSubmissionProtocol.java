@@ -80,8 +80,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 26: Added the method getQueueAdmins(queueName) as part of
    *             MAPREDUCE-1664.
    * Version 27: Added queue state to JobQueueInfo as part of HADOOP-5913.
+   * Version 28: Added a new field to JobStatus to provide user readable 
+   *             information on job failure. MAPREDUCE-1521.
    */
-  public static final long versionID = 27L;
+  public static final long versionID = 28L;
 
   /**
    * Allocate a name for the job.

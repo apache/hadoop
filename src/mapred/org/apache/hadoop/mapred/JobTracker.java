@@ -2049,7 +2049,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     MAX_COMPLETE_USER_JOBS_IN_MEMORY = conf.getInt("mapred.jobtracker.completeuserjobs.maximum", 100);
     MAX_BLACKLISTS_PER_TRACKER = 
         conf.getInt("mapred.max.tracker.blacklists", 4);
-    
     NUM_HEARTBEATS_IN_SECOND = 
       conf.getInt(JT_HEARTBEATS_IN_SECOND, DEFAULT_NUM_HEARTBEATS_IN_SECOND);
     if (NUM_HEARTBEATS_IN_SECOND < MIN_NUM_HEARTBEATS_IN_SECOND) {
@@ -3947,9 +3946,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           StringUtils.stringifyException(kie));
       killJob(job);
     } catch (Throwable t) {
+      String failureInfo = "Job initialization failed:\n" +
+      StringUtils.stringifyException(t);
       // If the job initialization is failed, job state will be FAILED
-      LOG.error("Job initialization failed:\n" +
-          StringUtils.stringifyException(t));
+      LOG.error(failureInfo);
+      job.getStatus().setFailureInfo(failureInfo);
       failJob(job);
     }
 	 }
