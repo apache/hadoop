@@ -624,7 +624,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     //
 
     // Create a number of filenames in the JobTracker's fs namespace
-    FileSystem fs = getFs();
+    FileSystem fs = submitJobDir.getFileSystem(job);
     LOG.debug("default FileSystem: " + fs.getUri());
     if (fs.exists(submitJobDir)) {
       throw new IOException("Not submitting job. Job directory " + submitJobDir
@@ -834,6 +834,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           }
 
           // Create the splits for the job
+          FileSystem fs = submitJobDir.getFileSystem(jobCopy);
           LOG.debug("Creating splits at " + fs.makeQualified(submitJobDir));
           int maps = writeSplits(context, submitJobDir);
           jobCopy.setNumMapTasks(maps);
