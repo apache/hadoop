@@ -289,6 +289,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-1164. TestHdfsProxy is failing. (Todd Lipcon via cos)
 
+    HDFS-811. Add metrics, failure reporting and additional tests for HDFS-457.
+    (eli)
+
   IMPROVEMENTS
 
     HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)

@@ -120,7 +120,6 @@ public class DatanodeDescriptor extends DatanodeInfo {
   private long lastBlocksScheduledRollTime = 0;
   private static final int BLOCKS_SCHEDULED_ROLL_INTERVAL = 600*1000; //10min
   private int volumeFailures = 0;
-  
   /** 
    * When set to true, the node is not in include list and is not allowed
    * to communicate with the namenode
@@ -658,7 +657,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
       return startTime;
     }
   }  // End of class DecommissioningStatus
-  
+
+  /**
+   * Increment the volume failure count.
+   */
+  public void incVolumeFailure() {
+    volumeFailures++;
+  }
   
   /**
    * Set the flag to indicate if this datanode is disallowed from communicating
@@ -670,5 +675,21 @@ public class DatanodeDescriptor extends DatanodeInfo {
   
   boolean isDisallowed() {
     return disallowed;
+  }
+
+  /**
+   * @return number of failed volumes in the datanode.
+   */
+  public int getVolumeFailures() {
+    return volumeFailures;
+  }
+
+  /**
+   * Reset the volume failure count when a DN re-registers.
+   * @param nodeReg DatanodeID to update registration for.
+   */
+  public void updateRegInfo(DatanodeID nodeReg) {
+    super.updateRegInfo(nodeReg);
+    volumeFailures = 0;
   }
 }
