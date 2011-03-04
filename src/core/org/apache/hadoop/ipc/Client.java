@@ -366,7 +366,7 @@ public class Client {
             UserGroupInformation.isLoginKeytabBased() &&
             // relogin only in case it is the login user (e.g. JT)
             // or superuser (like oozie).
-            (currentUser.equals(loginUser) || realUser.equals(loginUser))) {
+            (currentUser.equals(loginUser) || loginUser.equals(realUser))) {
           //try setting up the connection again
           try {
             //try re-login
