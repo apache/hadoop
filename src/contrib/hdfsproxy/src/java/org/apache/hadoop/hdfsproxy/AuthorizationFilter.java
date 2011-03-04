@@ -36,6 +36,9 @@ import java.util.regex.Pattern;
 public class AuthorizationFilter implements Filter {
   public static final Log LOG = LogFactory.getLog(AuthorizationFilter.class);
 
+  private static final Pattern HDFS_PATH_PATTERN = Pattern
+      .compile("(^hdfs://([\\w\\-]+(\\.)?)+:\\d+|^hdfs://([\\w\\-]+(\\.)?)+)");
+
   /** Pattern for a filter to find out if a request is HFTP/HSFTP request */
   protected static final Pattern HFTP_PATTERN = Pattern
       .compile("^(/listPaths|/data|/streamFile|/file)$");
@@ -50,9 +53,15 @@ public class AuthorizationFilter implements Filter {
 
   protected String contextPath;
 
+  protected String namenode;
+
   /** {@inheritDoc} **/
   public void init(FilterConfig filterConfig) throws ServletException {
     contextPath = filterConfig.getServletContext().getContextPath();
+    Configuration conf = new Configuration(false);
+    conf.addResource("hdfsproxy-default.xml");
+    conf.addResource("hdfsproxy-site.xml");
+    namenode = conf.get("fs.default.name");
   }
 
   /** {@inheritDoc} **/
@@ -69,6 +78,9 @@ public class AuthorizationFilter implements Filter {
     String groups = getGroups(request);
     List<Path> allowedPaths = getAllowedPaths(request);
 
+    UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser(userId);
+
     String filePath = getPathFromRequest(rqst);
 
     if (filePath == null || !checkHdfsPath(filePath, allowedPaths)) {
@@ -78,7 +90,7 @@ public class AuthorizationFilter implements Filter {
       rsp.sendError(HttpServletResponse.SC_FORBIDDEN, msg);
       return;
     }
-    request.setAttribute("authorized.ugi", userId);
+    request.setAttribute("authorized.ugi", ugi);
 
     chain.doFilter(request, response);
   }
@@ -89,8 +101,9 @@ public class AuthorizationFilter implements Filter {
   }
 
    protected String getGroups(ServletRequest request) {
-      return (String)request.
-          getAttribute("org.apache.hadoop.hdfsproxy.authorized.role");
+     UserGroupInformation ugi = UserGroupInformation.
+         createRemoteUser(getUserId(request));
+     return Arrays.toString(ugi.getGroupNames());
    }
 
   protected List<Path> getAllowedPaths(ServletRequest request) {
@@ -115,22 +128,46 @@ public class AuthorizationFilter implements Filter {
     return filePath;
   }
 
-  /** check that the requested path is listed in the ldap entry */
-  public boolean checkHdfsPath(String pathInfo, List<Path> allowedPaths) {
+  /** check that the requested path is listed in the ldap entry
+   * @param pathInfo - Path to check access
+   * @param ldapPaths - List of paths allowed access
+   * @return true if access allowed, false otherwise */
+  public boolean checkHdfsPath(String pathInfo,
+                               List<Path> ldapPaths) {
     if (pathInfo == null || pathInfo.length() == 0) {
       LOG.info("Can't get file path from the request");
       return false;
     }
-    Path userPath = new Path(pathInfo);
-    while (userPath != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("\n Checking file path " + userPath);
+    for (Path ldapPathVar : ldapPaths) {
+      String ldapPath = ldapPathVar.toString();
+      if (isPathQualified(ldapPath) &&
+          isPathAuthroized(ldapPath)) {
+        String allowedPath = extractPath(ldapPath);
+        if (pathInfo.startsWith(allowedPath))
+          return true;
+      } else {
+        if (pathInfo.startsWith(ldapPath))
+          return true;
       }
-      if (allowedPaths.contains(userPath))
-        return true;
-      userPath = userPath.getParent();
     }
     return false;
+  }
+
+  private String extractPath(String ldapPath) {
+    return HDFS_PATH_PATTERN.split(ldapPath)[1];
+  }
+
+  private boolean isPathAuthroized(String pathStr) {
+    Matcher namenodeMatcher = HDFS_PATH_PATTERN.matcher(pathStr);
+    return namenodeMatcher.find() && namenodeMatcher.group().contains(namenode);
+  }
+
+  private boolean isPathQualified(String pathStr) {
+    if (pathStr == null || pathStr.trim().isEmpty()) {
+      return false;
+    } else {
+      return HDFS_PATH_PATTERN.matcher(pathStr).find();
+    }
   }
 
   /** {@inheritDoc} **/
