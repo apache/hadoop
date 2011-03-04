@@ -141,7 +141,7 @@ public class TaskLogServlet extends HttpServlet {
    */
   static Configuration getConfFromJobACLsFile(String attemptIdStr) {
     Configuration conf = new Configuration(false);
-    conf.addResource(new Path(TaskLog.getBaseDir(attemptIdStr).toString(),
+    conf.addResource(new Path(TaskLog.getAttemptDir(attemptIdStr).toString(),
         TaskRunner.jobACLsFile));
     return conf;
   }

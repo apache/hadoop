@@ -64,6 +64,8 @@ public class JobContext {
   
   public static final String JOB_CANCEL_DELEGATION_TOKEN = 
     "mapreduce.job.complete.cancel.delegation.tokens";
+  public static final String USER_LOG_RETAIN_HOURS = 
+    "mapred.userlog.retain.hours";
   
   protected UserGroupInformation ugi;
   

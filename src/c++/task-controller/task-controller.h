@@ -70,7 +70,8 @@ enum errorcodes {
   INITIALIZE_DISTCACHEFILE_FAILED, //19
   INITIALIZE_USER_FAILED, //20
   UNABLE_TO_BUILD_PATH, //21
-  INVALID_TASKCONTROLLER_PERMISSIONS //22
+  INVALID_TASKCONTROLLER_PERMISSIONS, //22
+  PREPARE_JOB_LOGS_FAILED, //23
 };
 
 #define USER_DIR_PATTERN "%s/taskTracker/%s"
@@ -83,7 +84,9 @@ enum errorcodes {
 
 #define JOB_DIR_TO_ATTEMPT_DIR_PATTERN "%s/%s"
 
-#define ATTEMPT_LOG_DIR_PATTERN "%s/userlogs/%s"
+#define JOB_LOG_DIR_PATTERN "%s/userlogs/%s"
+
+#define ATTEMPT_LOG_DIR_PATTERN JOB_LOG_DIR_PATTERN"/%s"
 
 #define TASK_SCRIPT_PATTERN "%s/%s/taskjvm.sh"
 

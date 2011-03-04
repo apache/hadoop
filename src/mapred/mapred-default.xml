@@ -631,7 +631,7 @@
   <name>mapred.userlog.retain.hours</name>
   <value>24</value>
   <description>The maximum time, in hours, for which the user-logs are to be 
-          retained.
+               retained after the job completion.
   </description>
 </property>
 

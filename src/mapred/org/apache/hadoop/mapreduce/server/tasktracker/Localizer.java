@@ -28,10 +28,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.TaskController;
+import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskController.InitializationContext;
+import org.apache.hadoop.mapreduce.JobID;
 
 /**
  * 
@@ -357,5 +358,23 @@ public class Localizer {
           + "in any of the configured local directories for the attempt "
           + attemptId.toString());
     }
+  }
+
+  /**
+   * Create job log directory and set appropriate permissions for the directory.
+   * 
+   * @param jobId
+   */
+  public void initializeJobLogDir(JobID jobId) {
+    File jobUserLogDir = TaskLog.getJobDir(jobId);
+    if (!jobUserLogDir.exists()) {
+      boolean ret = jobUserLogDir.mkdirs();
+      if (!ret) {
+        LOG.warn("Could not create job user log directory: " + jobUserLogDir);
+        return;
+      }
+    }
+    Localizer.PermissionsHandler.setPermissions(jobUserLogDir,
+        Localizer.PermissionsHandler.sevenZeroZero);
   }
 }

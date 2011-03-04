@@ -193,7 +193,6 @@ class Child {
 
         numTasksToExecute = job.getNumTasksToExecutePerJvm();
         assert(numTasksToExecute != 0);
-        TaskLog.cleanup(job.getInt("mapred.userlog.retain.hours", 24));
 
         task.setConf(job);
 

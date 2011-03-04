@@ -31,74 +31,54 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapred.TaskLog.LogFileDetail;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.mapreduce.server.tasktracker.JVMInfo;
+import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
 
-class TaskLogsMonitor extends Thread {
-  static final Log LOG = LogFactory.getLog(TaskLogsMonitor.class);
+/**
+ * The class for truncating the user logs. 
+ * Should be used only by {@link UserLogManager}. 
+ *
+ */
+public class TaskLogsTruncater {
+  static final Log LOG = LogFactory.getLog(TaskLogsTruncater.class);
 
+  static final String MAP_USERLOG_RETAIN_SIZE =
+    "mapreduce.cluster.map.userlog.retain-size";
+  static final String REDUCE_USERLOG_RETAIN_SIZE =
+    "mapreduce.cluster.reduce.userlog.retain-size";
+  static final int DEFAULT_RETAIN_SIZE = -1;
+  
   long mapRetainSize, reduceRetainSize;
 
-  public TaskLogsMonitor(long mapRetSize, long reduceRetSize) {
-    mapRetainSize = mapRetSize;
-    reduceRetainSize = reduceRetSize;
-    LOG.info("Starting logs' monitor with mapRetainSize=" + mapRetainSize
-        + " and reduceRetainSize=" + reduceRetSize);
-  }
+  public TaskLogsTruncater(Configuration conf) {
+    mapRetainSize = conf.getLong(MAP_USERLOG_RETAIN_SIZE, DEFAULT_RETAIN_SIZE);
+    reduceRetainSize = conf.getLong(REDUCE_USERLOG_RETAIN_SIZE,
+        DEFAULT_RETAIN_SIZE);
+    LOG.info("Initializing logs' truncater with mapRetainSize=" + mapRetainSize
+        + " and reduceRetainSize=" + reduceRetainSize);
 
-  /**
-   * The list of tasks that have finished and so need their logs to be
-   * truncated.
-   */
-  private Map<TaskAttemptID, PerJVMInfo> finishedJVMs =
-      new HashMap<TaskAttemptID, PerJVMInfo>();
+  }
 
   private static final int DEFAULT_BUFFER_SIZE = 4 * 1024;
 
   static final int MINIMUM_RETAIN_SIZE_FOR_TRUNCATION = 0;
 
-  private static class PerJVMInfo {
-
-    List<Task> allAttempts;
-
-    public PerJVMInfo(List<Task> allAtmpts) {
-      this.allAttempts = allAtmpts;
-    }
-  }
-
-  /**
-   * Process(JVM/debug script) has finished. Asynchronously truncate the logs of
-   * all the corresponding tasks to the configured limit. In case of JVM, both
-   * the firstAttempt as well as the list of all attempts that ran in the same
-   * JVM have to be passed. For debug script, the (only) attempt itself should
-   * be passed as both the firstAttempt as well as the list of attempts.
-   * 
-   * @param firstAttempt
-   * @param isTaskCleanup
-   */
-  void addProcessForLogTruncation(TaskAttemptID firstAttempt,
-      List<Task> allAttempts) {
-    LOG.info("Adding the jvm with first-attempt " + firstAttempt
-        + " for logs' truncation");
-    PerJVMInfo lInfo = new PerJVMInfo(allAttempts);
-    synchronized (finishedJVMs) {
-      finishedJVMs.put(firstAttempt, lInfo);
-      finishedJVMs.notify();
-    }
-  }
-
   /**
    * Process the removed task's logs. This involves truncating them to
    * retainSize.
    */
-  void truncateLogs(TaskAttemptID firstAttempt, PerJVMInfo lInfo) {
+  public void truncateLogs(JVMInfo lInfo) {
+    TaskAttemptID firstAttempt = TaskAttemptID.downgrade(lInfo
+        .getFirstAttemptID());
 
     // Read the log-file details for all the attempts that ran in this JVM
     Map<Task, Map<LogName, LogFileDetail>> taskLogFileDetails;
     try {
-      taskLogFileDetails = getAllLogsFileDetails(lInfo.allAttempts);
+      taskLogFileDetails = getAllLogsFileDetails(lInfo.getAllAttempts());
     } catch (IOException e) {
       LOG.warn(
           "Exception in truncateLogs while getting allLogsFileDetails()."
@@ -107,7 +87,7 @@ class TaskLogsMonitor extends Thread {
     }
 
     // set this boolean to true if any of the log files is truncated
-    boolean truncated = false;
+    boolean indexModified = false;
 
     Map<Task, Map<LogName, LogFileDetail>> updatedTaskLogFileDetails =
         new HashMap<Task, Map<LogName, LogFileDetail>>();
@@ -117,7 +97,7 @@ class TaskLogsMonitor extends Thread {
           updatedTaskLogFileDetails, logName);
     }
 
-    File attemptLogDir = TaskLog.getBaseDir(firstAttempt.toString());
+    File attemptLogDir = TaskLog.getAttemptDir(firstAttempt.toString());
 
     FileWriter tmpFileWriter;
     FileReader logFileReader;
@@ -162,19 +142,19 @@ class TaskLogsMonitor extends Thread {
 
       long newCurrentOffset = 0;
       // Process each attempt from the ordered list passed.
-      for (Task task : lInfo.allAttempts) {
+      for (Task task : lInfo.getAllAttempts()) {
 
         // Truncate the log files of this task-attempt so that only the last
         // retainSize many bytes of this log file is retained and the log
         // file is reduced in size saving disk space.
         long retainSize =
             (task.isMapTask() ? mapRetainSize : reduceRetainSize);
-        LogFileDetail newLogFileDetail = new LogFileDetail();
+        LogFileDetail newLogFileDetail = null;
         try {
           newLogFileDetail =
               truncateALogFileOfAnAttempt(task.getTaskID(),
                   taskLogFileDetails.get(task).get(logName), retainSize,
-                  tmpFileWriter, logFileReader);
+                  tmpFileWriter, logFileReader, logName);
         } catch (IOException ioe) {
           LOG.warn("Cannot truncate the log file "
               + logFile.getAbsolutePath()
@@ -201,7 +181,7 @@ class TaskLogsMonitor extends Thread {
           newLogFileDetail.start = newCurrentOffset;
           updatedTaskLogFileDetails.get(task).put(logName, newLogFileDetail);
           newCurrentOffset += newLogFileDetail.length;
-          truncated = true; // set the flag truncated
+          indexModified = true; // set the flag
         }
       }
 
@@ -230,7 +210,7 @@ class TaskLogsMonitor extends Thread {
       }
     }
 
-    if (truncated) {
+    if (indexModified) {
       // Update the index files
       updateIndicesAfterLogTruncation(firstAttempt, updatedTaskLogFileDetails);
     }
@@ -242,12 +222,12 @@ class TaskLogsMonitor extends Thread {
    * @param updatedTaskLogFileDetails
    * @param logName
    */
-  private void copyOriginalIndexFileInfo(PerJVMInfo lInfo,
+  private void copyOriginalIndexFileInfo(JVMInfo lInfo,
       Map<Task, Map<LogName, LogFileDetail>> taskLogFileDetails,
       Map<Task, Map<LogName, LogFileDetail>> updatedTaskLogFileDetails,
       LogName logName) {
     if (TaskLog.LOGS_TRACKED_BY_INDEX_FILES.contains(logName)) {
-      for (Task task : lInfo.allAttempts) {
+      for (Task task : lInfo.getAllAttempts()) {
         if (!updatedTaskLogFileDetails.containsKey(task)) {
           updatedTaskLogFileDetails.put(task,
               new HashMap<LogName, LogFileDetail>());
@@ -289,12 +269,12 @@ class TaskLogsMonitor extends Thread {
    * @param logName
    * @return true if truncation is needed, false otherwise
    */
-  private boolean isTruncationNeeded(PerJVMInfo lInfo,
+  private boolean isTruncationNeeded(JVMInfo lInfo,
       Map<Task, Map<LogName, LogFileDetail>> taskLogFileDetails,
       LogName logName) {
     boolean truncationNeeded = false;
     LogFileDetail logFileDetail = null;
-    for (Task task : lInfo.allAttempts) {
+    for (Task task : lInfo.getAllAttempts()) {
       long taskRetainSize =
           (task.isMapTask() ? mapRetainSize : reduceRetainSize);
       Map<LogName, LogFileDetail> allLogsFileDetails =
@@ -326,7 +306,8 @@ class TaskLogsMonitor extends Thread {
   private LogFileDetail truncateALogFileOfAnAttempt(
       final TaskAttemptID taskID, final LogFileDetail oldLogFileDetail,
       final long taskRetainSize, final FileWriter tmpFileWriter,
-      final FileReader logFileReader) throws IOException {
+      final FileReader logFileReader,
+      final LogName logName) throws IOException {
     LogFileDetail newLogFileDetail = new LogFileDetail();
 
     // ///////////// Truncate log file ///////////////////////
@@ -335,14 +316,14 @@ class TaskLogsMonitor extends Thread {
     newLogFileDetail.location = oldLogFileDetail.location;
     if (taskRetainSize > MINIMUM_RETAIN_SIZE_FOR_TRUNCATION
         && oldLogFileDetail.length > taskRetainSize) {
-      LOG.info("Truncating logs for " + taskID + " from "
+      LOG.info("Truncating " + logName + " logs for " + taskID + " from "
           + oldLogFileDetail.length + "bytes to " + taskRetainSize
           + "bytes.");
       newLogFileDetail.length = taskRetainSize;
     } else {
-      LOG.info("No truncation needed for " + taskID + " length is "
-          + oldLogFileDetail.length + " retain size " + taskRetainSize
-          + "bytes.");
+      LOG.debug("No truncation needed for " + logName + " logs for " + taskID
+          + " length is " + oldLogFileDetail.length + " retain size "
+          + taskRetainSize + "bytes.");
       newLogFileDetail.length = oldLogFileDetail.length;
     }
     long charsSkipped =
@@ -351,7 +332,8 @@ class TaskLogsMonitor extends Thread {
     if (charsSkipped != oldLogFileDetail.length - newLogFileDetail.length) {
       throw new IOException("Erroneously skipped " + charsSkipped
           + " instead of the expected "
-          + (oldLogFileDetail.length - newLogFileDetail.length));
+          + (oldLogFileDetail.length - newLogFileDetail.length)
+          + " while truncating " + logName + " logs for " + taskID );
     }
     long alreadyRead = 0;
     while (alreadyRead < newLogFileDetail.length) {
@@ -404,59 +386,11 @@ class TaskLogsMonitor extends Thread {
         TaskLog.writeToIndexFile(firstAttempt, task.getTaskID(),
             task.isTaskCleanupTask(), logLengths);
       } catch (IOException ioe) {
-        LOG.warn("Exception in updateIndicesAfterLogTruncation : "
-            + StringUtils.stringifyException(ioe));
         LOG.warn("Exception encountered while updating index file of task "
             + task.getTaskID()
-            + ". Ignoring and continuing with other tasks.");
+            + ". Ignoring and continuing with other tasks.", ioe);
       }
     }
   }
 
-  /**
-   * 
-   * @throws IOException
-   */
-  void monitorTaskLogs() throws IOException {
-
-    Map<TaskAttemptID, PerJVMInfo> tasksBeingTruncated =
-      new HashMap<TaskAttemptID, PerJVMInfo>();
-
-    // Start monitoring newly added finishedJVMs
-    synchronized (finishedJVMs) {
-      tasksBeingTruncated.clear();
-      tasksBeingTruncated.putAll(finishedJVMs);
-      finishedJVMs.clear();
-    }
-
-    for (Entry<TaskAttemptID, PerJVMInfo> entry : 
-                tasksBeingTruncated.entrySet()) {
-      truncateLogs(entry.getKey(), entry.getValue());
-    }
-  }
-
-  @Override
-  public void run() {
-
-    while (true) {
-      try {
-        monitorTaskLogs();
-        try {
-          synchronized (finishedJVMs) {
-            while (finishedJVMs.isEmpty()) {
-              finishedJVMs.wait();
-            }
-          }
-        } catch (InterruptedException e) {
-          LOG.warn(getName() + " is interrupted. Returning");
-          return;
-        }
-      } catch (Throwable e) {
-        LOG.warn(getName()
-            + " encountered an exception while monitoring : "
-            + StringUtils.stringifyException(e));
-        LOG.info("Ingoring the exception and continuing monitoring.");
-      }
-    }
-  }
 }

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.mapred;
 
+import static org.junit.Assert.fail;
+
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.io.*;
@@ -47,6 +49,8 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogEvent;
+import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
 import org.apache.hadoop.util.StringUtils;
 
 /** 
@@ -715,6 +719,26 @@ public class UtilsForTests {
         Thread.sleep(1000000);
       } catch (InterruptedException e) {
         // Do nothing
+      }
+    }
+  }
+
+  /**
+   * This is an in-line {@link UserLogManager} to do all the actions in-line. 
+   */
+  static class InLineUserLogManager extends UserLogManager {
+    public InLineUserLogManager(Configuration conf) throws IOException {
+      super(conf);
+      getUserLogCleaner().setCleanupQueue(new InlineCleanupQueue());
+    }
+
+    // do the action in-line
+    public void addLogEvent(UserLogEvent event) {
+      try {
+        super.addLogEvent(event);
+        super.monitor();
+      } catch (Exception e) {
+        fail("failed to process action " + event.getEventType());
       }
     }
   }

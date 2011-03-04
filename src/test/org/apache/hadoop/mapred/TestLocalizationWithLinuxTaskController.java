@@ -77,9 +77,6 @@ public class TestLocalizationWithLinuxTaskController extends
     String user = ugi.split(",")[0];
     jobConf.setUser(user);
     File jobConfFile = uploadJobConf(jobConf);
-    // Create the task again to change the job-user
-    task =
-      new MapTask(jobConfFile.toURI().toString(), taskId, 1, null, 1);
     task.setConf(jobConf);
     task.setUser(user);
     taskTrackerUserName = UserGroupInformation.getLoginUser()
@@ -208,6 +205,11 @@ public class TestLocalizationWithLinuxTaskController extends
       checkFilePermissions(file.toUri().getPath(), expectedFilePerms, task
           .getUser(), ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
     }
+
+    // check job user-log directory permissions
+    File jobLogDir = TaskLog.getJobDir(jobId);
+    checkFilePermissions(jobLogDir.toString(), expectedDirPerms, task.getUser(),
+        ClusterWithLinuxTaskController.taskTrackerSpecialGroup);
   }
 
   @Override

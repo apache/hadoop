@@ -32,6 +32,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.mapreduce.server.tasktracker.JVMInfo;
+import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.JvmFinishedEvent;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
@@ -419,9 +421,7 @@ class JvmManager {
       }
       public void run() {
         runChild(env);
-
-        // Post-JVM-exit logs processing. Truncate the logs.
-        truncateJVMLogs();
+        jvmFinished();
       }
 
       public void runChild(JvmEnv env) {
@@ -481,11 +481,12 @@ class JvmManager {
         }
       }
 
-      // Post-JVM-exit logs processing. Truncate the logs.
-      private void truncateJVMLogs() {
+      // Post-JVM-exit logs processing. inform user log manager
+      private void jvmFinished() {
         Task firstTask = initalContext.task;
-        tracker.getTaskLogsMonitor().addProcessForLogTruncation(
-            firstTask.getTaskID(), tasksGiven);
+        JvmFinishedEvent jfe = new JvmFinishedEvent(new JVMInfo(firstTask
+            .getTaskID(), tasksGiven));
+        tracker.getUserLogManager().addLogEvent(jfe);
       }
 
       public void taskRan() {

@@ -212,9 +212,17 @@ char *get_task_dir_path(const char *tt_root, const char *user,
 /**
  * Get the log directory for the given attempt.
  */
-char *get_task_log_dir(const char *log_dir, const char *attempt_id) {
-  return concatenate(ATTEMPT_LOG_DIR_PATTERN, "task_log_dir", 2, log_dir,
-      attempt_id);
+char *get_task_log_dir(const char *log_dir, const char *job_id, 
+    const char *attempt_id) {
+  return concatenate(ATTEMPT_LOG_DIR_PATTERN, "task_log_dir", 3, log_dir,
+      job_id, attempt_id);
+}
+
+/**
+ * Get the log directory for the given job.
+ */
+char *get_job_log_dir(const char *log_dir, const char *job_id) {
+  return concatenate(JOB_LOG_DIR_PATTERN, "job_log_dir", 2, log_dir, job_id);
 }
 
 /**
@@ -379,7 +387,8 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
       continue;
     }
 
-    if (should_check_ownership && (check_ownership(entry->fts_path) != 0)) {
+    if (should_check_ownership && 
+        (check_ownership(entry->fts_path, uid, gid) != 0)) {
       fprintf(LOGFILE,
           "Invalid file path. %s not user/group owned by the tasktracker.\n",
           entry->fts_path);
@@ -498,15 +507,61 @@ int prepare_attempt_directories(const char *job_id, const char *attempt_id,
 }
 
 /**
+ * Function to prepare the job log dir for the child. It gives the user
+ * ownership of the job's log-dir to the user and group ownership to the
+ * user running tasktracker.
+ *     *  sudo chown user:mapred log-dir/userlogs/$jobid
+ *     *  sudo chmod -R 2770 log-dir/userlogs/$jobid // user is same as tt_user
+ *     *  sudo chmod -R 2570 log-dir/userlogs/$jobid // user is not tt_user
+ */
+int prepare_job_logs(const char *log_dir, const char *job_id,
+    mode_t permissions) {
+
+  char *job_log_dir = get_job_log_dir(log_dir, job_id);
+  if (job_log_dir == NULL) {
+    fprintf(LOGFILE, "Couldn't get job log directory %s.\n", job_log_dir);
+    return -1;
+  }
+
+  struct stat filestat;
+  if (stat(job_log_dir, &filestat) != 0) {
+    if (errno == ENOENT) {
+#ifdef DEBUG
+      fprintf(LOGFILE, "job_log_dir %s doesn't exist. Not doing anything.\n",
+          job_log_dir);
+#endif
+      free(job_log_dir);
+      return 0;
+    } else {
+      // stat failed because of something else!
+      fprintf(LOGFILE, "Failed to stat the job log dir %s\n", job_log_dir);
+      free(job_log_dir);
+      return -1;
+    }
+  }
+
+  gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
+  if (secure_path(job_log_dir, user_detail->pw_uid, tasktracker_gid,
+      permissions, S_ISGID | permissions, 1) != 0) {
+    fprintf(LOGFILE, "Failed to secure the log_dir %s\n", job_log_dir);
+    free(job_log_dir);
+    return -1;
+  }
+  free(job_log_dir);
+  return 0;
+}
+
+/**
  * Function to prepare the task logs for the child. It gives the user
  * ownership of the attempt's log-dir to the user and group ownership to the
  * user running tasktracker.
- *     *  sudo chown user:mapred log-dir/userlogs/$attemptid
- *     *  sudo chmod -R 2770 log-dir/userlogs/$attemptid
+ *     *  sudo chown user:mapred log-dir/userlogs/$jobid/$attemptid
+ *     *  sudo chmod -R 2770 log-dir/userlogs/$jobid/$attemptid
  */
-int prepare_task_logs(const char *log_dir, const char *task_id) {
+int prepare_task_logs(const char *log_dir, const char *job_id, 
+    const char *task_id) {
 
-  char *task_log_dir = get_task_log_dir(log_dir, task_id);
+  char *task_log_dir = get_task_log_dir(log_dir, job_id, task_id);
   if (task_log_dir == NULL) {
     fprintf(LOGFILE, "Couldn't get task_log directory %s.\n", task_log_dir);
     return -1;
@@ -524,10 +579,12 @@ int prepare_task_logs(const char *log_dir, const char *task_id) {
       fprintf(LOGFILE, "task_log_dir %s doesn't exist. Not doing anything.\n",
           task_log_dir);
 #endif
+      free(task_log_dir);
       return 0;
     } else {
       // stat failed because of something else!
       fprintf(LOGFILE, "Failed to stat the task_log_dir %s\n", task_log_dir);
+      free(task_log_dir);
       return -1;
     }
   }
@@ -537,8 +594,10 @@ int prepare_task_logs(const char *log_dir, const char *task_id) {
       S_IRWXU | S_IRWXG, S_ISGID | S_IRWXU | S_IRWXG, 1) != 0) {
     // setgid on dirs but not files, 770. As of now, there are no files though
     fprintf(LOGFILE, "Failed to secure the log_dir %s\n", task_log_dir);
+    free(task_log_dir);
     return -1;
   }
+  free(task_log_dir);
   return 0;
 }
 
@@ -557,8 +616,9 @@ int get_user_details(const char *user) {
 
 /*
  * Function to check if the TaskTracker actually owns the file.
+ * Or it has right ownership already. 
   */
-int check_ownership(char *path) {
+int check_ownership(char *path, uid_t uid, gid_t gid) {
   struct stat filestat;
   if (stat(path, &filestat) != 0) {
     return UNABLE_TO_STAT_FILE;
@@ -566,8 +626,10 @@ int check_ownership(char *path) {
   // check user/group. User should be TaskTracker user, group can either be
   // TaskTracker's primary group or the special group to which binary's
   // permissions are set.
-  if (getuid() != filestat.st_uid || (getgid() != filestat.st_gid && getegid()
-      != filestat.st_gid)) {
+  // Or it can be the user/group owned by uid and gid passed. 
+  if ((getuid() != filestat.st_uid || (getgid() != filestat.st_gid && getegid()
+      != filestat.st_gid)) &&
+      ((uid != filestat.st_uid) || (gid != filestat.st_gid))) {
     return FILE_NOT_OWNED_BY_TASKTRACKER;
   }
   return 0;
@@ -668,10 +730,13 @@ int initialize_user(const char *user) {
  * Function to prepare the job directories for the task JVM.
  * We do the following:
  *     *  sudo chown user:mapred -R taskTracker/$user/jobcache/$jobid
+ *     *  sudo chown user:mapred -R logs/userlogs/$jobid 
  *     *  if user is not $tt_user,
  *     *    sudo chmod 2570 -R taskTracker/$user/jobcache/$jobid
+ *     *    sudo chmod 2570 -R logs/userlogs/$jobid
  *     *  else // user is tt_user
  *     *    sudo chmod 2770 -R taskTracker/$user/jobcache/$jobid
+ *     *    sudo chmod 2770 -R logs/userlogs/$jobid
  *     *
  *     *  For any user, sudo chmod 2770 taskTracker/$user/jobcache/$jobid/work
  */
@@ -783,11 +848,32 @@ int initialize_job(const char *jobid, const char *user) {
   }
   free(local_dir);
   free(full_local_dir_str);
-  cleanup();
+  int exit_code = 0;
   if (failed) {
-    return INITIALIZE_JOB_FAILED;
+    exit_code = INITIALIZE_JOB_FAILED;
+    goto cleanup;
   }
-  return 0;
+
+  char *log_dir = (char *) get_value(TT_LOG_DIR_KEY);
+  if (log_dir == NULL) {
+    fprintf(LOGFILE, "Log directory is not configured.\n");
+    exit_code = INVALID_TT_LOG_DIR;
+    goto cleanup;
+  }
+
+  if (prepare_job_logs(log_dir, jobid, permissions) != 0) {
+    fprintf(LOGFILE, "Couldn't prepare job logs directory %s for %s.\n",
+        log_dir, jobid);
+    exit_code = PREPARE_JOB_LOGS_FAILED;
+  }
+
+  cleanup:
+  // free configurations
+  cleanup();
+  if (log_dir != NULL) {
+    free(log_dir);
+  }
+  return exit_code;
 }
 
 /**
@@ -891,7 +977,7 @@ int initialize_task(const char *jobid, const char *taskid, const char *user) {
     goto cleanup;
   }
 
-  if (prepare_task_logs(log_dir, taskid) != 0) {
+  if (prepare_task_logs(log_dir, jobid, taskid) != 0) {
     fprintf(LOGFILE, "Couldn't prepare task logs directory %s for %s.\n",
         log_dir, taskid);
     exit_code = PREPARE_TASK_LOGS_FAILED;
