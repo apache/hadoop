@@ -26,17 +26,19 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell;
 
-/** Filesystem disk space usage statistics.  Uses the unix 'df' program.
- * Tested on Linux, FreeBSD, Cygwin. */
+/**
+ * Filesystem disk space usage statistics. Uses the unix 'df' program to get
+ * mount points, and java.io.File for space utilization. Tested on Linux,
+ * FreeBSD, Cygwin.
+ */
 public class DF extends Shell {
-  public static final long DF_INTERVAL_DEFAULT = 3 * 1000; // default DF refresh interval 
+
+  /** Default DF refresh interval. */
+  public static final long DF_INTERVAL_DEFAULT = 3 * 1000;
   
-  private String  dirPath;
+  private final String dirPath;
+  private final File dirFile;
   private String filesystem;
-  private long capacity;
-  private long used;
-  private long available;
-  private int percentUsed;
   private String mount;
   
   public DF(File path, Configuration conf) throws IOException {
@@ -46,39 +48,45 @@ public class DF extends Shell {
   public DF(File path, long dfInterval) throws IOException {
     super(dfInterval);
     this.dirPath = path.getCanonicalPath();
+    this.dirFile = path.getCanonicalFile();
   }
   
   /// ACCESSORS
 
+  /** @return the canonical path to the volume we're checking. */
   public String getDirPath() {
     return dirPath;
   }
-  
-  public String getFilesystem() throws IOException { 
-    run(); 
-    return filesystem; 
-  }
-  
-  public long getCapacity() throws IOException { 
-    run(); 
-    return capacity; 
-  }
-  
-  public long getUsed() throws IOException { 
-    run(); 
-    return used;
-  }
-  
-  public long getAvailable() throws IOException { 
-    run(); 
-    return available;
-  }
-  
-  public int getPercentUsed() throws IOException {
+
+  /** @return a string indicating which filesystem volume we're checking. */
+  public String getFilesystem() throws IOException {
     run();
-    return percentUsed;
+    return filesystem;
   }
 
+  /** @return the capacity of the measured filesystem in bytes. */
+  public long getCapacity() {
+    return dirFile.getTotalSpace();
+  }
+
+  /** @return the total used space on the filesystem in bytes. */
+  public long getUsed() {
+    return dirFile.getTotalSpace() - dirFile.getFreeSpace();
+  }
+
+  /** @return the usable space remaining on the filesystem in bytes. */
+  public long getAvailable() {
+    return dirFile.getUsableSpace();
+  }
+
+  /** @return the amount of the volume full, as a percent. */
+  public int getPercentUsed() {
+    final double cap = (double) getCapacity();
+    final double used = (cap - (double) getAvailable());
+    return (int) (used * 100.0 / cap);
+  }
+
+  /** @return the filesystem mount point for the indicated volume */
   public String getMount() throws IOException {
     run();
     return mount;
@@ -88,10 +96,10 @@ public class DF extends Shell {
     return
       "df -k " + mount +"\n" +
       filesystem + "\t" +
-      capacity / 1024 + "\t" +
-      used / 1024 + "\t" +
-      available / 1024 + "\t" +
-      percentUsed + "%\t" +
+      getCapacity() / 1024 + "\t" +
+      getUsed() / 1024 + "\t" +
+      getAvailable() / 1024 + "\t" +
+      getPercentUsed() + "%\t" +
       mount;
   }
 
@@ -119,10 +127,10 @@ public class DF extends Shell {
       }
       tokens = new StringTokenizer(line, " \t\n\r\f%");
     }
-    this.capacity = Long.parseLong(tokens.nextToken()) * 1024;
-    this.used = Long.parseLong(tokens.nextToken()) * 1024;
-    this.available = Long.parseLong(tokens.nextToken()) * 1024;
-    this.percentUsed = Integer.parseInt(tokens.nextToken());
+    Long.parseLong(tokens.nextToken()); // skip capacity
+    Long.parseLong(tokens.nextToken()); // skip used
+    Long.parseLong(tokens.nextToken()); // skip available
+    Integer.parseInt(tokens.nextToken()); // skip percentUsed
     this.mount = tokens.nextToken();
   }
 
