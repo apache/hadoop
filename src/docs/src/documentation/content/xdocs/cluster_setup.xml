@@ -576,21 +576,35 @@
             <p>
             The executable must have specific permissions as follows. The
             executable should have <em>6050 or --Sr-s---</em> permissions
-            user-owned by root(super-user) and group-owned by a group 
-            of which only the TaskTracker's user is the sole group member. 
+            user-owned by root(super-user) and group-owned by a special group
+            of which the TaskTracker's user is the group member and no job
+            submitter is. If any job submitter belongs to this special group,
+            security will be compromised. This special group name should be
+            specified for the configuration property
+            <em>"mapreduce.tasktracker.group"</em> in both mapred-site.xml and
+            <a href="#task-controller.cfg">task-controller.cfg</a>.
             For example, let's say that the TaskTracker is run as user
             <em>mapred</em> who is part of the groups <em>users</em> and
-            <em>mapredGroup</em> any of them being the primary group.
+            <em>specialGroup</em> any of them being the primary group.
             Let also be that <em>users</em> has both <em>mapred</em> and
-            another user <em>X</em> as its members, while <em>mapredGroup</em>
-            has only <em>mapred</em> as its member. Going by the above
+            another user (job submitter) <em>X</em> as its members, and X does
+            not belong to <em>specialGroup</em>. Going by the above
             description, the setuid/setgid executable should be set
             <em>6050 or --Sr-s---</em> with user-owner as <em>mapred</em> and
-            group-owner as <em>mapredGroup</em> which has
-            only <em>mapred</em> as its member(and not <em>users</em> which has
+            group-owner as <em>specialGroup</em> which has
+            <em>mapred</em> as its member(and not <em>users</em> which has
             <em>X</em> also as its member besides <em>mapred</em>).
             </p>
+
+            <p>
+            The LinuxTaskController requires that paths including and leading up
+            to the directories specified in
+            <em>mapreduce.cluster.local.dir</em> and <em>hadoop.log.dir</em> to
+            be set 755 permissions.
+            </p>
             
+            <section>
+            <title>task-controller.cfg</title>
             <p>The executable requires a configuration file called 
             <em>taskcontroller.cfg</em> to be
             present in the configuration directory passed to the ant target 
@@ -621,14 +635,17 @@
             permissions on the log files so that they can be written to by the user's
             tasks and read by the TaskTracker for serving on the web UI.</td>
             </tr>
+            <tr>
+            <td>mapreduce.tasktracker.group</td>
+            <td>Group to which the TaskTracker belongs. The group owner of the
+            taskcontroller binary should be this group. Should be same as
+            the value with which the TaskTracker is configured. This
+            configuration is required for validating the secure access of the
+            task-controller binary.</td>
+            </tr>
             </table>
 
-            <p>
-            The LinuxTaskController requires that paths including and leading up to
-            the directories specified in
-            <em>mapred.local.dir</em> and <em>hadoop.log.dir</em> to be set 755
-            permissions.
-            </p>
+            </section>
             </section>
             
           </section>

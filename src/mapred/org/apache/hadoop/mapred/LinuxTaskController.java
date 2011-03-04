@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
@@ -91,6 +92,29 @@ class LinuxTaskController extends TaskController {
     TERMINATE_TASK_JVM,
     KILL_TASK_JVM,
     ENABLE_TASK_FOR_CLEANUP
+  }
+
+  @Override
+  public void setup() throws IOException {
+    super.setup();
+
+    // Check the permissions of the task-controller binary by running it plainly.
+    // If permissions are correct, it returns an error code 1, else it returns
+    // 24 or something else if some other bugs are also present.
+    String[] taskControllerCmd =
+        new String[] { getTaskControllerExecutablePath() };
+    ShellCommandExecutor shExec = new ShellCommandExecutor(taskControllerCmd);
+    try {
+      shExec.execute();
+    } catch (ExitCodeException e) {
+      int exitCode = shExec.getExitCode();
+      if (exitCode != 1) {
+        LOG.warn("Exit code from checking binary permissions is : " + exitCode);
+        logOutput(shExec.getOutput());
+        throw new IOException("Task controller setup failed because of invalid"
+          + "permissions/ownership with exit code " + exitCode, e);
+      }
+    }
   }
 
   /**

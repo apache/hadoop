@@ -61,9 +61,6 @@ public class TestLocalizationWithLinuxTaskController extends
     taskController = new MyLinuxTaskController();
     String path =
         System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_PATH);
-    configFile =
-        ClusterWithLinuxTaskController.createTaskControllerConf(path,
-            localDirs);
     String execPath = path + "/task-controller";
     ((MyLinuxTaskController) taskController).setTaskControllerExe(execPath);
     taskTrackerSpecialGroup = getFilePermissionAttrs(execPath)[2];

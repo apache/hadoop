@@ -61,9 +61,6 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     taskController = new MyLinuxTaskController();
     String path =
         System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_PATH);
-    configFile =
-        ClusterWithLinuxTaskController.createTaskControllerConf(path, conf
-            .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
     String execPath = path + "/task-controller";
     ((MyLinuxTaskController)taskController).setTaskControllerExe(execPath);
     taskController.setConf(conf);
@@ -79,8 +76,7 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     String path =
       System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_PATH);
     configFile =
-      ClusterWithLinuxTaskController.createTaskControllerConf(path, conf
-          .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
+      ClusterWithLinuxTaskController.createTaskControllerConf(path, conf);
    
   }
 

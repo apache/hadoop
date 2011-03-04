@@ -68,7 +68,8 @@ enum errorcodes {
   OUT_OF_MEMORY, //18
   INITIALIZE_DISTCACHEFILE_FAILED, //19
   INITIALIZE_USER_FAILED, //20
-  UNABLE_TO_BUILD_PATH //21
+  UNABLE_TO_BUILD_PATH, //21
+  INVALID_TASKCONTROLLER_PERMISSIONS //22
 };
 
 #define USER_DIR_PATTERN "%s/taskTracker/%s"
@@ -90,6 +91,8 @@ enum errorcodes {
 #define TT_SYS_DIR_KEY "mapred.local.dir"
 
 #define TT_LOG_DIR_KEY "hadoop.log.dir"
+
+#define TT_GROUP_KEY "mapreduce.tasktracker.group"
 
 #ifndef HADOOP_CONF_DIR
   #define EXEC_PATTERN "/bin/task-controller"

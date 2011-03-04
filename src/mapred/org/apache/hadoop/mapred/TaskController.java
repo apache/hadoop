@@ -73,7 +73,7 @@ public abstract class TaskController implements Configurable {
    * <li>Hadoop log directories</li>
    * </ul>
    */
-  public void setup() {
+  public void setup() throws IOException {
     for (String localDir : this.mapredLocalDirs) {
       // Set up the mapred-local directories.
       File mapredlocalDir = new File(localDir);

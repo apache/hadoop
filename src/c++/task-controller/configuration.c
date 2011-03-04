@@ -232,7 +232,9 @@ const char ** get_values(const char * key) {
       tempTok = strtok_r(NULL, ",", &tempstr);
     }
   }
-  toPass[size] = NULL;
+  if (size > 0) {
+    toPass[size] = NULL;
+  }
   return toPass;
 }
 
