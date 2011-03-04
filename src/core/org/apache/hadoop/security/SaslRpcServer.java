@@ -55,6 +55,7 @@ public class SaslRpcServer {
     // Request mutual authentication
     SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
   }
+  public static final int SWITCH_TO_SIMPLE_AUTH = -88;
 
   static String encodeIdentifier(byte[] identifier) {
     return new String(Base64.encodeBase64(identifier));

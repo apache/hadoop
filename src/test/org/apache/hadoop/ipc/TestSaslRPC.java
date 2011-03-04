@@ -75,20 +75,14 @@ public class TestSaslRPC {
     final static Text KIND_NAME = new Text("test.token");
     
     public TestTokenIdentifier() {
-      this.tokenid = new Text();
-      this.realUser = new Text();
+      this(new Text(), new Text());
     }
     public TestTokenIdentifier(Text tokenid) {
-      this.tokenid = tokenid;
-      this.realUser = new Text();
+      this(tokenid, new Text());
     }
     public TestTokenIdentifier(Text tokenid, Text realUser) {
-      this.tokenid = tokenid;
-      if (realUser == null) {
-        this.realUser = new Text();
-      } else {
-        this.realUser = realUser;
-      }
+      this.tokenid = tokenid == null ? new Text() : tokenid;
+      this.realUser = realUser == null ? new Text() : realUser;
     }
     @Override
     public Text getKind() {
@@ -96,7 +90,7 @@ public class TestSaslRPC {
     }
     @Override
     public UserGroupInformation getUser() {
-      if ((realUser == null) || ("".equals(realUser.toString()))) {
+      if ("".equals(realUser.toString())) {
         return UserGroupInformation.createRemoteUser(tokenid.toString());
       } else {
         UserGroupInformation realUgi = UserGroupInformation
@@ -114,9 +108,7 @@ public class TestSaslRPC {
     @Override
     public void write(DataOutput out) throws IOException {
       tokenid.write(out);
-      if (realUser != null) {
-        realUser.write(out);
-      }
+      realUser.write(out);
     }
   }
   
@@ -170,6 +162,20 @@ public class TestSaslRPC {
     final Server server = RPC.getServer(
         new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
 
+    doDigestRpc(server, sm);
+  }
+  
+  @Test
+  public void testSecureToInsecureRpc() throws Exception {
+    Server server = RPC.getServer(TestSaslProtocol.class,
+        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, null);
+    server.disableSecurity();
+    TestTokenSecretManager sm = new TestTokenSecretManager();
+    doDigestRpc(server, sm);
+  }
+  
+  private void doDigestRpc(Server server, TestTokenSecretManager sm)
+      throws Exception {
     server.start();
 
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();

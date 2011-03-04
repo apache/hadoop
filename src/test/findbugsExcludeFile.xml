@@ -89,6 +89,14 @@
        <Class name="org.apache.hadoop.mapred.FileOutputCommitter" />
        <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
      </Match>
+     <!--
+       Further SaslException should be ignored during cleanup and
+       original exception should be re-thrown.
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.security.SaslRpcClient" />
+       <Bug pattern="DE_MIGHT_IGNORE" />
+     </Match>
     <!--
        JobTracker's static variables should be ignored
      -->

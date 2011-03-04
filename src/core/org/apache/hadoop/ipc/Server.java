@@ -84,6 +84,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 public abstract class Server {
   private final boolean authorize;
+  private boolean isSecurityEnabled;
   
   /**
    * The first four bytes of Hadoop RPC connections
@@ -745,6 +746,7 @@ public abstract class Server {
     SaslServer saslServer;
     private AuthMethod authMethod;
     private boolean saslContextEstablished;
+    private boolean skipInitialSaslHandshake;
     private ByteBuffer rpcHeaderBuffer;
     private ByteBuffer unwrappedData;
     private ByteBuffer unwrappedDataLengthBuffer;
@@ -928,6 +930,15 @@ public abstract class Server {
       }
     }
     
+    private void askClientToUseSimpleAuth() throws IOException {
+      saslCall.connection = this;
+      saslResponse.reset();
+      DataOutputStream out = new DataOutputStream(saslResponse);
+      out.writeInt(SaslRpcServer.SWITCH_TO_SIMPLE_AUTH);
+      saslCall.setResponse(ByteBuffer.wrap(saslResponse.toByteArray()));
+      responder.doRespond(saslCall);
+    }
+    
     public int readAndProcess() throws IOException, InterruptedException {
       while (true) {
         /* Read at most one RPC. If the header is not read completely yet
@@ -956,13 +967,16 @@ public abstract class Server {
           if (authMethod == null) {
             throw new IOException("Unable to read authentication method");
           }
-          if (UserGroupInformation.isSecurityEnabled()
-              && authMethod == AuthMethod.SIMPLE) {
+          if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
             throw new IOException("Authentication is required");
-          } 
-          if (!UserGroupInformation.isSecurityEnabled()
-              && authMethod != AuthMethod.SIMPLE) {
-            throw new IOException("Authentication is not supported");
+          }
+          if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
+            askClientToUseSimpleAuth();
+            authMethod = AuthMethod.SIMPLE;
+            // client has already sent the initial Sasl message and we
+            // should ignore it. Both client and server should fall back
+            // to simple auth from now on.
+            skipInitialSaslHandshake = true;
           }
           if (authMethod != AuthMethod.SIMPLE) {
             useSasl = true;
@@ -999,6 +1013,11 @@ public abstract class Server {
         if (data.remaining() == 0) {
           dataLengthBuffer.clear();
           data.flip();
+          if (skipInitialSaslHandshake) {
+            data = null;
+            skipInitialSaslHandshake = false;
+            continue;
+          }
           boolean isHeaderRead = headerRead;
           if (useSasl) {
             saslReadAndProcess(data.array());
@@ -1276,6 +1295,7 @@ public abstract class Server {
     this.authorize = 
       conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
                       false);
+    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
     
     // Start the listener here and let it bind to the port
     listener = new Listener();
@@ -1351,6 +1371,11 @@ public abstract class Server {
   
   Configuration getConf() {
     return conf;
+  }
+  
+  /** for unit testing only, should be called before server is started */ 
+  void disableSecurity() {
+    this.isSecurityEnabled = false;
   }
   
   /** Sets the socket buffer size used for responding to RPCs */
