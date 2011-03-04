@@ -103,9 +103,9 @@ public class JobHistory {
   private static String jobtrackerHostname;
   private static JobHistoryFilesManager fileManager = null;
   final static FsPermission HISTORY_DIR_PERMISSION =
-    FsPermission.createImmutable((short) 0750); // rwxr-x---
+    FsPermission.createImmutable((short) 0755); // rwxr-xr-x
   final static FsPermission HISTORY_FILE_PERMISSION =
-    FsPermission.createImmutable((short) 0740); // rwxr-----
+    FsPermission.createImmutable((short) 0744); // rwxr--r--
   private static FileSystem LOGDIR_FS; // log dir filesystem
   private static FileSystem DONEDIR_FS; // Done dir filesystem
   private static JobConf jtConf;
