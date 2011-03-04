@@ -72,6 +72,7 @@ public class DataStorage extends Storage {
   private static final Pattern PRE_GENSTAMP_META_FILE_PATTERN = 
     Pattern.compile("(.*blk_[-]*\\d+)\\.meta$");
   
+  /** Access to this variable is guarded by "this" */
   private String storageID;
 
   // flag to ensure initialzing storage occurs only once
@@ -96,12 +97,19 @@ public class DataStorage extends Storage {
     this.storageID = strgID;
   }
 
-  public String getStorageID() {
+  synchronized String getStorageID() {
     return storageID;
   }
   
-  void setStorageID(String newStorageID) {
+  synchronized void setStorageID(String newStorageID) {
     this.storageID = newStorageID;
+  }
+  
+  synchronized void createStorageID() {
+    if (storageID != null && !storageID.isEmpty()) {
+      return;
+    }
+    storageID = DataNode.createNewStorageId();
   }
   
   /**
@@ -132,7 +140,6 @@ public class DataStorage extends Storage {
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
     // Format and recover.
-    this.storageID = "";
     this.storageDirs = new ArrayList<StorageDirectory>(dataDirs.size());
     ArrayList<StorageState> dataDirStates = new ArrayList<StorageState>(dataDirs.size());
     for(Iterator<File> it = dataDirs.iterator(); it.hasNext();) {
@@ -184,10 +191,7 @@ public class DataStorage extends Storage {
     }
     
     // make sure we have storage id set - if not - generate new one
-    if(storageID.isEmpty()) {
-      DataNode.setNewStorageID(DataNode.datanodeObject.getDatanodeId());
-      storageID = DataNode.datanodeObject.getStorageId();
-    }
+    createStorageID();
     
     // 3. Update all storages. Some of them might have just been formatted.
     this.writeAll();
@@ -277,7 +281,7 @@ public class DataStorage extends Storage {
     props.setProperty("clusterID", clusterID);
     props.setProperty("cTime", String.valueOf(cTime));
     props.setProperty("layoutVersion", String.valueOf(layoutVersion));
-    props.setProperty("storageID", storageID);
+    props.setProperty("storageID", getStorageID());
     // Set NamespaceID in version LAST_PRE_FEDERATION_LAYOUT_VERSION or before
     if (layoutVersion >= LAST_PRE_FEDERATION_LAYOUT_VERSION) {
       props.setProperty("namespaceID", String.valueOf(namespaceID));
@@ -307,13 +311,14 @@ public class DataStorage extends Storage {
       throw new InconsistentFSStateException(sd.getRoot(), "file "
           + STORAGE_FILE_VERSION + " is invalid.");
     }
-    if (!(storageID.equals("") || ssid.equals("") || storageID.equals(ssid))) {
+    String sid = getStorageID();
+    if (!(sid.equals("") || ssid.equals("") || sid.equals(ssid))) {
       throw new InconsistentFSStateException(sd.getRoot(),
           "has incompatible storage Id.");
     }
     
-    if (storageID.equals("")) { // update id only if it was empty
-      storageID = ssid;
+    if (sid.equals("")) { // update id only if it was empty
+      setStorageID(ssid);
     }
   }
 

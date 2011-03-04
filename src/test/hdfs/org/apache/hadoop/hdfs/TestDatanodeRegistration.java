@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs;
 
 import java.net.InetSocketAddress;
 
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -39,11 +38,8 @@ public class TestDatanodeRegistration extends TestCase {
   public void testChangeIpcPort() throws Exception {
     HdfsConfiguration conf = new HdfsConfiguration();
     MiniDFSCluster cluster = null;
-    FileSystem fs = null;
     try {
       cluster = new MiniDFSCluster.Builder(conf).build();
-      fs = cluster.getFileSystem();
-
       InetSocketAddress addr = new InetSocketAddress(
         "localhost",
         cluster.getNameNodePort());
