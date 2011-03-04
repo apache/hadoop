@@ -13,6 +13,8 @@ import org.junit.AfterClass;
 import org.junit.Test;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
+import java.util.Hashtable;
+import java.lang.Integer;
 
 public class TestCMExceptionDuringRunJob {
   
@@ -41,13 +43,18 @@ public class TestCMExceptionDuringRunJob {
     remoteJTClient = cluster.getJTClient().getProxy();
     
     conf = remoteJTClient.getDaemonConf();
+    conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
     //set interval to 30 secs, check to 10 secs, check determines the frequency
     //of the jobtracker thread that will check for retired jobs, and interval
     //will determine how long it will take before a job retires.
-    conf.setInt("mapred.jobtracker.retirejob.interval",30*1000);
-    conf.setInt("mapred.jobtracker.retirejob.check",10*1000);
-    cluster.restartDaemonWithNewConfig(cluster.getJTClient(), "mapred-site.xml",
-        conf, Role.JT);
+    //conf.setInt("mapred.jobtracker.retirejob.interval",30*1000);
+    //conf.setInt("mapred.jobtracker.retirejob.check",10*1000);
+    //cluster.restartDaemonWithNewConfig(cluster.getJTClient(), "mapred-site.xml",
+    //    conf, Role.JT);
+    Hashtable<String,Long> props = new Hashtable<String,Long>();
+    props.put("mapred.jobtracker.retirejob.interval",30000L);
+    props.put("mapred.jobtracker.retirejob.check",10000L);
+    cluster.restartClusterWithNewConfig(props,"mapred-site.xml");
     JobID jobid1 = runSleepJob(true);
     JobID jobid2 = runSleepJob(true);
     JobID jobid3 = runSleepJob(false);
@@ -60,7 +67,8 @@ public class TestCMExceptionDuringRunJob {
     remoteJTClient.getJobSummaryInfo(jobid3);
     cluster.signalAllTasks(jobid3);
     cluster.getJTClient().isJobStopped(jobid3);
-    cluster.restart(cluster.getJTClient(), Role.JT);
+    //cluster.restart(cluster.getJTClient(), Role.JT);
+    cluster.restart();
   }
   
   
