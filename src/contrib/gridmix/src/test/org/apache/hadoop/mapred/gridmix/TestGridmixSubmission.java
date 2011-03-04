@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapred.JobConf;
@@ -66,12 +65,6 @@ public class TestGridmixSubmission {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.mapred.gridmix")
         ).getLogger().setLevel(Level.DEBUG);
   }
-
-  private static final Path DEST = new Path("/gridmix");
-
-  private static FileSystem dfs = null;
-  private static MiniDFSCluster dfsCluster = null;
-  private static MiniMRCluster mrCluster = null;
 
   private static final int NJOBS = 3;
   private static final long GENDATA = 30; // in megabytes

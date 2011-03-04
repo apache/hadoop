@@ -73,8 +73,6 @@ import org.apache.hadoop.util.StringUtils;
  * and its latest JobStatus, plus a set of tables for 
  * doing bookkeeping of its Tasks.
  * ***********************************************************
- * 
- * This is NOT a public interface!
  */
 public class JobInProgress {
   /**

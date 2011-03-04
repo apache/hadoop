@@ -26,7 +26,7 @@
   <property file="${user.home}/build.properties" />
   <property file="${basedir}/build.properties" />
  
-  <property name="Name" value="Yahoo! Distribution of Hadoop"/>
+  <property name="Name" value="Hadoop"/>
   <property name="name" value="hadoop"/>
   <property name="version" value="0.20.202.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
@@ -183,10 +183,6 @@
 
   <!-- end of task-controller properties -->
 
-  <!-- jsvc properties set here -->
-  <property name="c++.jsvc.src" 
-    value="${basedir}/src/c++/jsvc" />
-	
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
@@ -661,7 +657,7 @@
         <section name="org/apache/hadoop">
           <attribute name="Implementation-Title" value="Hadoop"/>
           <attribute name="Implementation-Version" value="${version}"/>
-          <attribute name="Implementation-Vendor" value="Yahoo!"/>
+          <attribute name="Implementation-Vendor" value="Apache"/>
         </section>
       </manifest>
       <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
@@ -826,7 +822,7 @@
           <section name="org/apache/hadoop">
             <attribute name="Implementation-Title" value="Hadoop"/>
             <attribute name="Implementation-Version" value="${version}"/>
-            <attribute name="Implementation-Vendor" value="Yahoo!"/>
+            <attribute name="Implementation-Vendor" value="Apache"/>
           </section>
          </manifest>
     </jar>
@@ -1235,7 +1231,7 @@
       use="true"
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} Developer API"
-      bottom="This release is based on the Yahoo! Distribution of Hadoop, powering the largest Hadoop clusters in the Universe!&lt;br>Copyright &amp;copy; ${year} The Apache Software Foundation."
+      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
@@ -1278,7 +1274,7 @@
       use="true"
       windowtitle="${Name} ${version} API"
       doctitle="${Name} ${version} API"
-      bottom="This release is based on the Yahoo! Distribution of Hadoop, powering the largest Hadoop clusters in the Universe!&lt;br>Copyright &amp;copy; ${year} The Apache Software Foundation."
+      bottom="Copyright &amp;copy; ${year} The Apache Software Foundation"
       maxmemory="${javadoc.maxmemory}"
       >
         <packageset dir="${core.src.dir}"/>
@@ -2315,14 +2311,16 @@
 
   <!-- end of task-controller targets -->
 
-  <!-- jsvc targets -->
-  <target name="jsvc" if="compile.c++">
-    <subant target="jsvc">
-      <property name="c++.jsvc.src" value="${c++.jsvc.src}" />
-      <property name="build.c++.jsvc" value="${build.c++}/jsvc" />
-      <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
-      <fileset file="${c++.jsvc.src}/build.xml"/>
-    </subant>
-  </target>
+  <target name="jsvc" >
+    <mkdir dir="${jsvc.build.dir}" />
+    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}" />
+
+    <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
+
+    <copy file="${jsvc.build.dir}/jsvc" todir="${jsvc.install.dir}" verbose="true" />
+    <chmod perm="ugo+x" type="file">
+      <fileset file="${jsvc.install.dir}/jsvc"/>
+    </chmod>
+ </target>
 
 </project>

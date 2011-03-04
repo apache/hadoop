@@ -83,7 +83,6 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
       try {
         // pre-compute split information
         try {
-          UserGroupInformation.setCurrentUser(job.getUgi());
           job.buildSplits(inputDir);
         } catch (IOException e) {
           LOG.warn("Failed to submit " + job.getJob().getJobName() + " as " +

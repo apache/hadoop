@@ -176,33 +176,6 @@ class LinuxTaskController extends TaskController {
       LOG.debug("initializeJob: " + Arrays.toString(commandArray));
     }
     try {
-      FileSystem rawFs = FileSystem.getLocal(getConf()).getRaw();
-      long logSize = 0; //TODO, Ref BUG:2854624
-      // get the JVM command line.
-      String cmdLine = 
-        TaskLog.buildCommandLine(setup, jvmArguments,
-            new File(stdout), new File(stderr), logSize, true);
-
-      // write the command to a file in the
-      // task specific cache directory
-      Path p = new Path(allocator.getLocalPathForWrite(
-          TaskTracker.getPrivateDirTaskScriptLocation(user, jobId, attemptId),
-          getConf()), COMMAND_FILE);
-      String commandFile = writeCommand(cmdLine, rawFs, p); 
-
-      String[] command = 
-        new String[]{taskControllerExe, 
-          user,
-          Integer.toString(Commands.LAUNCH_TASK_JVM.getValue()),
-          jobId,
-          attemptId,
-          currentWorkDirectory.toString(),
-          commandFile};
-      shExec = new ShellCommandExecutor(command);
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("launchTask: " + Arrays.toString(command));
-      }
       shExec.execute();
       if (LOG.isDebugEnabled()) {
         logOutput(shExec.getOutput());

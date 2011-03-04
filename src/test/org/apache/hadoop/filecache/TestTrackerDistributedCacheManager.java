@@ -69,7 +69,6 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   private static final int TEST_FILE_SIZE = 4 * 1024; // 4K
   private static final int LOCAL_CACHE_LIMIT = 5 * 1024; //5K
   private static final int LOCAL_CACHE_SUBDIR_LIMIT = 1;
-  private static final int LOCAL_CACHE_SUBDIR = 2;
   protected Configuration conf;
   protected Path firstCacheFile;
   protected Path firstCacheFilePublic;

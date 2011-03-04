@@ -50,5 +50,4 @@ public class EchoUserResolver implements UserResolver {
       UserGroupInformation ugi) {
     return ugi;
   }
-
 }

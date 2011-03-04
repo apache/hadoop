@@ -706,7 +706,7 @@ public class MiniMRCluster {
   /**
    * Add a tasktracker to the Mini-MR cluster.
    */
-  void addTaskTracker(TaskTrackerRunner taskTracker) throws IOException {
+  void addTaskTracker(TaskTrackerRunner taskTracker) {
     Thread taskTrackerThread = new Thread(taskTracker);
     taskTrackerList.add(taskTracker);
     taskTrackerThreadList.add(taskTrackerThread);

@@ -33,11 +33,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.UnixUserGroupInformation;
-
 public class RoundRobinUserResolver implements UserResolver {
   public static final Log LOG = LogFactory.getLog(RoundRobinUserResolver.class);
 

@@ -56,12 +56,12 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * Version 13 changed the getTask method signature for HADOOP-249
    * Version 14 changed the getTask method signature for HADOOP-4232
    * Version 15 Adds FAILED_UNCLEAN and KILLED_UNCLEAN states for HADOOP-4759
-   * Version 16 Added fatalError for child to communicate fatal errors to TT
    * Version 16 Added numRequiredSlots to TaskStatus for MAPREDUCE-516
    * Version 17 Change in signature of getTask() for HADOOP-5488
+   * Version 18 Added fatalError for child to communicate fatal errors to TT
    * */
 
-  public static final long versionID = 17L;
+  public static final long versionID = 18L;
   
   /**
    * Called when a child task process starts, to get its task.

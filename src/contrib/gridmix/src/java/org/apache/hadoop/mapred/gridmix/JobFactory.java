@@ -183,6 +183,7 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T>{
       };
    }
      
+
   /**
    * Obtain the error that caused the thread to exit unexpectedly.
    */

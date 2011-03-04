@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;

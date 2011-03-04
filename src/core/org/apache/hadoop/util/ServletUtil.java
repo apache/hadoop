@@ -52,8 +52,8 @@ public class ServletUtil {
   }
 
   public static final String HTML_TAIL = "<hr />\n"
-    + "<a href='http://hadoop.apache.org/core'>Hadoop</a>, " 
-    + Calendar.getInstance().get(Calendar.YEAR) + ".\n"
+    + "This release is based on the <a href='http://developer.yahoo.com/hadoop/'>Yahoo! Distribution of Hadoop</a>, " 
+    + "powering the largest Hadoop clusters in the Universe!\n"
     + "</body></html>";
   
   /**
