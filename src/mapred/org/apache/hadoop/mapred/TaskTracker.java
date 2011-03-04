@@ -259,6 +259,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   private int maxMapSlots;
   private int maxReduceSlots;
   private int failures;
+  final long mapRetainSize;
+  final long reduceRetainSize;
 
   private ACLsManager aclsManager;
   
@@ -1204,6 +1206,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   TaskTracker() {
     server = null;
     workerThreads = 0;
+    mapRetainSize = TaskLogsTruncater.DEFAULT_RETAIN_SIZE;
+    reduceRetainSize = TaskLogsTruncater.DEFAULT_RETAIN_SIZE;
   }
 
   void setConf(JobConf conf) {
@@ -1262,6 +1266,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     server.start();
     this.httpPort = server.getPort();
     checkJettyPort(httpPort);
+    mapRetainSize = conf.getLong(TaskLogsTruncater.MAP_USERLOG_RETAIN_SIZE, 
+        TaskLogsTruncater.DEFAULT_RETAIN_SIZE);
+    reduceRetainSize = conf.getLong(TaskLogsTruncater.REDUCE_USERLOG_RETAIN_SIZE,
+        TaskLogsTruncater.DEFAULT_RETAIN_SIZE);
   }
 
   private void checkJettyPort(int port) throws IOException { 
@@ -1633,6 +1641,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     return totalMemoryAllottedForTasks;
   }
 
+  long getRetainSize(org.apache.hadoop.mapreduce.TaskAttemptID tid) {
+    return tid.isMap() ? mapRetainSize : reduceRetainSize;
+  }
+  
   /**
    * Check if the jobtracker directed a 'reset' of the tasktracker.
    * 
