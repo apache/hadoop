@@ -58,7 +58,11 @@ public class TestCluster {
 
   @BeforeClass
   public static void before() throws Exception {
+    String [] expExcludeList = new String[2];
+    expExcludeList[0] = "java.net.ConnectException";
+    expExcludeList[1] = "java.io.IOException";
     cluster = MRCluster.createCluster(new Configuration());
+    cluster.setExcludeExpList(expExcludeList);
     cluster.setUp();
   }
 
