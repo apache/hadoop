@@ -248,10 +248,8 @@ public class TestDataNodeVolumeFailure extends TestCase{
 
     blockReader = 
       DFSClient.BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
-          block.getBlockId(), 
-          block.getBlockId(), 
-          block.getGenerationStamp(), 
-          0, -1, 4096);
+          block.getBlockId(), block.getBlockId(), lblock.getBlockToken(),
+          block.getGenerationStamp(), 0, -1, 4096);
 
     // nothing - if it fails - it will throw and exception
   }
