@@ -553,32 +553,6 @@ public class HttpServer implements FilterContainer {
           } //Workaround end
           LOG.info("Jetty bound to port " + port);
           webServer.start();
-          // Workaround for HADOOP-6386
-          port = listener.getLocalPort();
-          if (port < 0) {
-            LOG.warn("Bounds port is " + port + " after webserver start");
-            for (int i = 0; i < MAX_RETRIES/2; i++) {
-              try {
-                webServer.stop();
-              } catch (Exception e) {
-                LOG.warn("Can't stop  web-server", e);
-              }
-              Thread.sleep(1000);
-              
-              listener.setPort(oriPort == 0 ? 0 : (oriPort += 1));
-              listener.open();
-              Thread.sleep(100);
-              webServer.start();
-              LOG.info(i + "attempts to restart webserver");
-              port = listener.getLocalPort();
-              if (port > 0)
-                break;
-            }
-            if (port < 0)
-              throw new Exception("listener.getLocalPort() is returning " +
-                                "less than 0 even after " +MAX_RETRIES+" resets");
-          }
-          // End of HADOOP-6386 workaround
           break;
         } catch (IOException ex) {
           // if this is a bind exception,
