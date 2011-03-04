@@ -3,6 +3,7 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.util.*"
@@ -16,10 +17,10 @@
 %>
 
 <%	
-  String jobid = request.getParameter("jobid");
+  String jobid = JobID.forName(request.getParameter("jobid")).toString();
   String logFile = request.getParameter("logFile");
   String encodedLogFileName = JobHistory.JobInfo.encodeJobHistoryFilePath(logFile);
-  String taskStatus = request.getParameter("status"); 
+  String taskStatus = request.getParameter("status");
   String taskType = request.getParameter("taskType"); 
   
   FileSystem fs = (FileSystem) application.getAttribute("fileSys");
@@ -58,7 +59,8 @@
     out.print("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
           attempt.getLong(Keys.FINISH_TIME),
           attempt.getLong(Keys.START_TIME) ) + "</td>");
-    out.print("<td>" + attempt.get(Keys.ERROR) + "</td>");
+    out.print("<td>" + HtmlQuoting.quoteHtmlChars(attempt.get(Keys.ERROR)) +
+        "</td>");
     out.print("</tr>"); 
   }
 %>

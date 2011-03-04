@@ -5,6 +5,7 @@
   import="java.io.*"
   import="java.util.*"
   import="java.text.DecimalFormat"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
 %>
@@ -39,7 +40,9 @@
        out.print("</td><td>" + status.getRunState()); 
        out.print("</td><td>" + 
                  StringUtils.formatPercent(status.getProgress(), 2));
-       out.print("</td><td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
+       out.print("</td><td><pre>" +
+           HtmlQuoting.quoteHtmlChars(status.getDiagnosticInfo()) +
+           "</pre></td>");
        out.print("</tr>\n");
      }
   %>
@@ -72,7 +75,9 @@
        out.print("</td><td>" + status.getRunState()); 
        out.print("</td><td>" + 
                  StringUtils.formatPercent(status.getProgress(), 2));
-       out.print("</td><td><pre>" + status.getDiagnosticInfo() + "</pre></td>");
+       out.print("</td><td><pre>" +
+           HtmlQuoting.quoteHtmlChars(status.getDiagnosticInfo()) +
+           "</pre></td>");
        out.print("</tr>\n");
      }
   %>

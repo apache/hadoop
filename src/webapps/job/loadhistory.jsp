@@ -17,7 +17,7 @@
     };
     
     FileSystem fs = (FileSystem) application.getAttribute("fileSys");
-    String jobId =  (String)request.getParameter("jobid");
+    String jobId = request.getParameter("jobid");
     JobHistory.JobInfo job = (JobHistory.JobInfo)
                                request.getSession().getAttribute("job");
     // if session attribute of JobInfo exists and is of different job's,

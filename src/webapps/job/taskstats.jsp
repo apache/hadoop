@@ -6,6 +6,7 @@
   import="java.lang.String"
   import="java.text.*"
   import="java.util.*"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"  
@@ -58,7 +59,8 @@
         String displayGroupName = group.getDisplayName();
 %>
         <tr>
-          <td colspan="3"><br/><b><%=displayGroupName%></b></td>
+          <td colspan="3"><br/><b>
+          <%=HtmlQuoting.quoteHtmlChars(displayGroupName)%></b></td>
         </tr>
 <%
         for (Counters.Counter counter : group) {
@@ -67,7 +69,7 @@
 %>
           <tr>
             <td width="50"></td>
-            <td><%=displayCounterName%></td>
+            <td><%=HtmlQuoting.quoteHtmlChars(displayCounterName)%></td>
             <td align="right"><%=decimal.format(value)%></td>
           </tr>
 <%

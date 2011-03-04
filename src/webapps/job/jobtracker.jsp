@@ -5,6 +5,7 @@
   import="java.io.*"
   import="java.util.*"
   import="java.text.DecimalFormat"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.mapreduce.*"
   import="org.apache.hadoop.util.*"
@@ -126,7 +127,7 @@ for(JobQueueInfo queue: queues) {
 %>
 <tr>
 <td><a href="jobqueue_details.jsp?queueName=<%=queueName%>"><%=queueName%></a></td>
-<td><%=schedulingInformation.replaceAll("\n","<br/>") %>
+<td><%=HtmlQuoting.quoteHtmlChars(schedulingInformation.replaceAll("\n","<br/>")) %>
 </td>
 </tr>
 <%

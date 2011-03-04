@@ -4,6 +4,7 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="java.lang.Integer"
@@ -96,14 +97,14 @@
                     report.getTaskID() + "</a></td>");
          out.print("<td>" + StringUtils.formatPercent(report.getProgress(),2) +
         		   ServletUtil.percentageGraph(report.getProgress() * 100f, 80) + "</td>");
-         out.print("<td>"  + report.getState() + "<br/></td>");
+         out.print("<td>"  + HtmlQuoting.quoteHtmlChars(report.getState()) + "<br/></td>");
          out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, report.getStartTime(),0) + "<br/></td>");
          out.println("<td>" + StringUtils.getFormattedTimeWithDiff(dateFormat, 
              report.getFinishTime(), report.getStartTime()) + "<br/></td>");
          String[] diagnostics = report.getDiagnostics();
          out.print("<td><pre>");
          for (int j = 0; j < diagnostics.length ; j++) {
-             out.println(diagnostics[j]);
+             out.println(HtmlQuoting.quoteHtmlChars(diagnostics[j]));
          }
          out.println("</pre><br/></td>");
          out.println("<td>" + 

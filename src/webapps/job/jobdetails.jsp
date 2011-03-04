@@ -6,6 +6,7 @@
   import="java.text.*"
   import="java.util.*"
   import="java.text.DecimalFormat"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.mapreduce.TaskType"
   import="org.apache.hadoop.util.*"
@@ -212,10 +213,12 @@
     JobStatus status = job.getStatus();
     int runState = status.getRunState();
     int flakyTaskTrackers = job.getNoOfBlackListedTrackers();
-    out.print("<b>User:</b> " + profile.getUser() + "<br>\n");
-    out.print("<b>Job Name:</b> " + profile.getJobName() + "<br>\n");
-    out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" 
-              + profile.getJobFile() + "</a><br>\n");
+    out.print("<b>User:</b> " +
+        HtmlQuoting.quoteHtmlChars(profile.getUser()) + "<br>\n");
+    out.print("<b>Job Name:</b> " +
+        HtmlQuoting.quoteHtmlChars(profile.getJobName()) + "<br>\n");
+    out.print("<b>Job File:</b> <a href=\"jobconf.jsp?jobid=" + jobId + "\">" +
+        profile.getJobFile() + "</a><br>\n");
     out.print("<b>Job Setup:</b>");
     printJobLevelTaskSummary(out, jobId, "setup", 
                              job.getTasks(TaskType.JOB_SETUP));
@@ -309,11 +312,12 @@
           if (isFirst) {
             isFirst = false;
             %>
-            <td rowspan="<%=totalGroup.size()%>"><%=totalGroup.getDisplayName()%></td>
+            <td rowspan="<%=totalGroup.size()%>">
+            <%=HtmlQuoting.quoteHtmlChars(totalGroup.getDisplayName())%></td>
             <%
           }
           %>
-          <td><%=name%></td>
+          <td><%=HtmlQuoting.quoteHtmlChars(name)%></td>
           <td align="right"><%=mapValue%></td>
           <td align="right"><%=reduceValue%></td>
           <td align="right"><%=totalValue%></td>

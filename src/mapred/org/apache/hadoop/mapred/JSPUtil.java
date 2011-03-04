@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.mapred.JobHistory.JobInfo;
 import org.apache.hadoop.mapred.JobTracker.RetireJobInfo;
 import org.apache.hadoop.util.ServletUtil;
@@ -158,9 +159,10 @@ class JSPUtil {
         int desiredReduces = job.desiredReduces();
         int completedMaps = job.finishedMaps();
         int completedReduces = job.finishedReduces();
-        String name = profile.getJobName();
+        String name = HtmlQuoting.quoteHtmlChars(profile.getJobName());
         String jobpri = job.getPriority().toString();
-        String schedulingInfo = job.getStatus().getSchedulingInfo();
+        String schedulingInfo =
+          HtmlQuoting.quoteHtmlChars(job.getStatus().getSchedulingInfo());
 
         if (isModifiable) {
           sb.append("<tr><td><input TYPE=\"checkbox\" " +
@@ -175,7 +177,8 @@ class JSPUtil {
             + "\"><a href=\"jobdetails.jsp?jobid=" + jobid + "&refresh="
             + refresh + "\">" + jobid + "</a></td>" + "<td id=\"priority_"
             + rowId + "\">" + jobpri + "</td>" + "<td id=\"user_" + rowId
-            + "\">" + profile.getUser() + "</td>" + "<td id=\"name_" + rowId
+            + "\">" + HtmlQuoting.quoteHtmlChars(profile.getUser()) +
+              "</td>" + "<td id=\"name_" + rowId
             + "\">" + ("".equals(name) ? "&nbsp;" : name) + "</td>" + "<td>"
             + StringUtils.formatPercent(status.mapProgress(), 2)
             + ServletUtil.percentageGraph(status.mapProgress() * 100, 80)
@@ -248,10 +251,10 @@ class JSPUtil {
             
             "<td id=\"priority_" + rowId + "\">" + 
               info.status.getJobPriority().toString() + "</td>" +
-            "<td id=\"user_" + rowId + "\">" + info.profile.getUser() 
-              + "</td>" +
-            "<td id=\"name_" + rowId + "\">" + info.profile.getJobName() 
-              + "</td>" +
+            "<td id=\"user_" + rowId + "\">" +
+              HtmlQuoting.quoteHtmlChars(info.profile.getUser()) + "</td>" +
+            "<td id=\"name_" + rowId + "\">" +
+              HtmlQuoting.quoteHtmlChars(info.profile.getJobName()) + "</td>" +
             "<td>" + JobStatus.getJobRunState(info.status.getRunState()) 
               + "</td>" +
             "<td>" + new Date(info.status.getStartTime()) + "</td>" +
@@ -266,9 +269,9 @@ class JSPUtil {
                info.status.reduceProgress() * 100, 80) + 
               "</td>" +
             
-            "<td>" + info.status.getSchedulingInfo() + "</td>" +
-            
-            "</tr>\n");
+            "<td>" +
+            HtmlQuoting.quoteHtmlChars(info.status.getSchedulingInfo()) +
+            "</td>" + "</tr>\n");
         rowId++;
       }
     }

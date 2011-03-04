@@ -22,6 +22,7 @@
   import="javax.servlet.http.*"
   import="java.io.*"
   import="java.util.*"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.util.*"
@@ -75,7 +76,8 @@
         String displayGroupName = group.getDisplayName();
 %>
         <tr>
-          <td colspan="3"><br/><b><%=displayGroupName%></b></td>
+          <td colspan="3"><br/><b>
+          <%=HtmlQuoting.quoteHtmlChars(displayGroupName)%></b></td>
         </tr>
 <%
         Iterator<Counters.Counter> ctrItr = group.iterator();
@@ -86,7 +88,7 @@
 %>
           <tr>
             <td width="50"></td>
-            <td><%=displayCounterName%></td>
+            <td><%=HtmlQuoting.quoteHtmlChars(displayCounterName)%></td>
             <td align="right"><%=decimal.format(value)%></td>
           </tr>
 <%

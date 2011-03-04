@@ -1,12 +1,14 @@
 <%@ page
   contentType="text/html; charset=UTF-8"
   import="java.io.*"
+  import="java.net.URLEncoder"
   import="java.util.*"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
   import="org.apache.hadoop.fs.*"
   import="javax.servlet.jsp.*"
   import="java.text.SimpleDateFormat"
+  import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.mapred.JobHistory.*"
 %>
@@ -57,18 +59,23 @@ window.location.href = url;
                            ? parts[1].toLowerCase()
                            : "";
     PathFilter jobLogFileFilter = new PathFilter() {
+      // unquote params before encoding for search
+      final String uqUser = JobHistory.JobInfo.encodeJobHistoryFileName(
+            HtmlQuoting.unquoteHtmlChars(user));
+      final String uqJobname = JobHistory.JobInfo.encodeJobHistoryFileName(
+            HtmlQuoting.unquoteHtmlChars(jobname));
       private boolean matchUser(String fileName) {
         // return true if 
         //  - user is not specified
         //  - user matches
-        return "".equals(user) || user.equals(fileName.split("_")[5]);
+        return "".equals(uqUser) || uqUser.equals(fileName.split("_")[5]);
       }
 
       private boolean matchJobName(String fileName) {
         // return true if 
         //  - jobname is not specified
         //  - jobname contains the keyword
-        return "".equals(jobname) || fileName.split("_")[6].toLowerCase().contains(jobname);
+        return "".equals(uqJobname) || fileName.split("_")[6].toLowerCase().contains(uqJobname);
       }
 
       public boolean accept(Path path) {
@@ -84,7 +91,8 @@ window.location.href = url;
     }
     Path[] jobFiles = FileUtil.stat2Paths(fs.listStatus(new Path(historyLogDir),
                                           jobLogFileFilter));
-    out.println("<!--  user : " + user + ", jobname : " + jobname + "-->");
+    out.println("<!--  user : " + user +
+        ", jobname : " + jobname + "-->");
     if (null == jobFiles || jobFiles.length == 0)  {
       out.println("No files found!"); 
       return ; 
@@ -139,10 +147,12 @@ window.location.href = url;
     // display the number of jobs, start index, end index
     out.println("(<i> <span class=\"small\">Displaying <b>" + length + "</b> jobs from <b>" + start + "</b> to <b>" + (start + length - 1) + "</b> out of <b>" + jobFiles.length + "</b> jobs");
     if (!"".equals(user)) {
-      out.println(" for user <b>" + user + "</b>"); // show the user if present
+      // show the user if present
+      out.println(" for user <b>" + user + "</b>");
     }
     if (!"".equals(jobname)) {
-      out.println(" with jobname having the keyword <b>" + jobname + "</b> in it."); // show the jobname keyword if present
+      out.println(" with jobname having the keyword <b>" +
+          jobname + "</b> in it."); // show the jobname keyword if present
     }
     out.print("</span></i>)");
 
@@ -256,8 +266,8 @@ window.location.href = url;
       out.print("<td>" + new Date(Long.parseLong(trackerid)) + "</td>"); 
       out.print("<td>" + "<a href=\"jobdetailshistory.jsp?jobid=" + jobId + 
                 "&logFile=" + logFile.toString() + "\">" + jobId + "</a></td>"); 
-      out.print("<td>" + jobName + "</td>"); 
-      out.print("<td>" + user + "</td>"); 
+      out.print("<td>" + HtmlQuoting.quoteHtmlChars(jobName) + "</td>"); 
+      out.print("<td>" + HtmlQuoting.quoteHtmlChars(user) + "</td>"); 
       out.print("</tr>");
     }
 
@@ -270,7 +280,8 @@ window.location.href = url;
 
       // show previous link
       if (pageno > 1) {
-        out.println("<a href=\"jobhistory.jsp?pageno=" + (pageno - 1) + "&search=" + search + "\">Previous</a>");
+        out.println("<a href=\"jobhistory.jsp?pageno=" + (pageno - 1) +
+            "&search=" + search + "\">Previous</a>");
       }
 
       // display the numbered index 1 2 3 4
@@ -289,7 +300,8 @@ window.location.href = url;
 
       for (int i = firstPage; i <= lastPage; ++i) {
         if (i != pageno) {// needs hyperlink
-          out.println(" <a href=\"jobhistory.jsp?pageno=" + i + "&search=" + search + "\">" + i + "</a> ");
+          out.println(" <a href=\"jobhistory.jsp?pageno=" + i + "&search=" +
+              search + "\">" + i + "</a> ");
         } else { // current page
           out.println(i);
         }

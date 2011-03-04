@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -53,54 +54,6 @@ public class TaskLogServlet extends HttpServlet {
         + "/tasklog?taskid=" + taskAttemptID);
   }
 
-  /**
-   * Find the next quotable character in the given array.
-   * @param data the bytes to look in
-   * @param offset the first index to look in
-   * @param end the index after the last one to look in
-   * @return the index of the quotable character or end if none was found
-   */
-  private static int findFirstQuotable(byte[] data, int offset, int end) {
-    while (offset < end) {
-      switch (data[offset]) {
-      case '<':
-      case '>':
-      case '&':
-        return offset;
-      default:
-        offset += 1;
-      }
-    }
-    return offset;
-  }
-
-  private static void quotedWrite(OutputStream out, byte[] data, int offset,
-                                  int length) throws IOException {
-    int end = offset + length;
-    while (offset < end) {
-      int next = findFirstQuotable(data, offset, end);
-      out.write(data, offset, next - offset);
-      offset = next;
-      if (offset < end) {
-        switch (data[offset]) {
-        case '<':
-          out.write("&lt;".getBytes());
-          break;
-        case '>':
-          out.write("&gt;".getBytes());
-          break;
-        case '&':
-          out.write("&amp;".getBytes());
-          break;
-        default:
-          out.write(data[offset]);
-          break;
-        }
-        offset += 1;
-      }
-    }
-  }
-
   private void printTaskLog(HttpServletResponse response,
                             OutputStream out, TaskAttemptID taskId, 
                             long start, long end, boolean plainText, 
@@ -122,7 +75,7 @@ public class TaskLogServlet extends HttpServlet {
           if (plainText) {
             out.write(b, 0, result); 
           } else {
-            quotedWrite(out, b, 0, result);
+            HtmlQuoting.quoteHtmlChars(out, b, 0, result);
           }
         } else {
           break;

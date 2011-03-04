@@ -3,7 +3,6 @@
   import="javax.servlet.*"
   import="javax.servlet.http.*"
   import="java.io.*"
-  import="java.net.URL"
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.util.*"
@@ -12,7 +11,7 @@
 
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
-  String jobId = request.getParameter("jobid");
+  String jobId = JobID.forName(request.getParameter("jobid")).toString();
   if (jobId == null) {
     out.println("<h2>Missing 'jobid' for fetching job configuration!</h2>");
  	return;
