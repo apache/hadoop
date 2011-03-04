@@ -358,9 +358,13 @@ public class Client {
         UserGroupInformation.getCurrentUser();
       UserGroupInformation realUser = currentUser.getRealUser();
       if (authMethod == AuthMethod.KERBEROS && 
+          loginUser != null &&
+          //Make sure user logged in using Kerberos either keytab or TGT
+          loginUser.hasKerberosCredentials() && 
           // relogin only in case it is the login user (e.g. JT)
-          // or superuser (like oozie).
-          (currentUser.equals(loginUser) || loginUser.equals(realUser))) {
+          // or superuser (like oozie). 
+          (loginUser.equals(currentUser) || loginUser.equals(realUser))
+          ) {
           return true;
       }
       return false;
