@@ -1430,6 +1430,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       Iterator<JobID> idIter = jobsToRecover.iterator();
       JobInProgress job = null;
       File jobIdFile = null;
+
+      // 0. Cleanup
+      try {
+        JobHistory.JobInfo.deleteConfFiles();
+      } catch (IOException ioe) {
+        LOG.info("Error in cleaning up job history folder", ioe);
+      }
+
       while (idIter.hasNext()) {
         JobID id = idIter.next();
         LOG.info("Trying to recover details of job " + id);

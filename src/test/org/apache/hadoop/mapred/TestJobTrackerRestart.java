@@ -487,6 +487,11 @@ public class TestJobTrackerRestart extends TestCase {
     String history = 
       JobHistory.JobInfo.getJobHistoryFileName(jip.getJobConf(), id);
     Path historyPath = JobHistory.JobInfo.getJobHistoryLogLocation(history);
+    // get the conf file name
+    String parts[] = history.split("_");
+    // jobtracker-hostname_jobtracker-identifier_conf.xml
+    String jobUniqueString = parts[0] + "_" + parts[1] + "_" +  id;
+    Path confPath = new Path(historyPath.getParent(), jobUniqueString + "_conf.xml");
     
     //  make sure that setup is launched
     while (jip.runningMaps() == 0) {
@@ -521,6 +526,10 @@ public class TestJobTrackerRestart extends TestCase {
     
     job1.waitForCompletion();
     job2.waitForCompletion();
+
+    // check if the old files are deleted
+    assertFalse("Old jobhistory file is not deleted", historyFS.exists(historyPath));
+    assertFalse("Old jobconf file is not deleted", historyFS.exists(confPath));
   }
   
   public void testJobTrackerRestart() throws IOException {

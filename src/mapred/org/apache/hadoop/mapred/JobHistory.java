@@ -104,6 +104,15 @@ public class JobHistory {
   private static JobConf jtConf;
   private static Path DONE = null; // folder for completed jobs
   /**
+   * A filter for conf files
+   */  
+  private static final PathFilter CONF_FILTER = new PathFilter() {
+    public boolean accept(Path path) {
+      return path.getName().endsWith("_conf.xml");
+    }
+  };
+
+  /**
    * A class that manages all the files related to a job. For now 
    *   - writers : list of open files
    *   - job history filename
@@ -934,6 +943,19 @@ public class JobHistory {
       LOG.info("Deleting localized job conf at " + f);
       if (!f.delete()) {
         LOG.debug("Failed to delete file " + f);
+      }
+    }
+
+    /**
+     * Delete job conf from the history folder.
+     */
+    static void deleteConfFiles() throws IOException {
+      LOG.info("Cleaning up config files from the job history folder");
+      FileSystem fs = new Path(LOG_DIR).getFileSystem(jtConf);
+      FileStatus[] status = fs.listStatus(new Path(LOG_DIR), CONF_FILTER);
+      for (FileStatus s : status) {
+        LOG.info("Deleting conf file " + s.getPath());
+        fs.delete(s.getPath(), false);
       }
     }
 
