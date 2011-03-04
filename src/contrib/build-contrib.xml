@@ -208,6 +208,7 @@
      encoding="${build.encoding}"
      srcdir="${src.test}"
      includes="**/*.java"
+     excludes="system/**/*.java"
      destdir="${build.test}"
      debug="${javac.debug}">
     <classpath refid="test.classpath"/>
