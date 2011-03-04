@@ -53,7 +53,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  *
  * testJobHistoryUserLogLocation
  * Run jobs with the given values of hadoop.job.history.user.location as
- *   (1)null(default case), (2)"none", and (3)some dir like "/tmp".
+ *   (1)null(default case), (2)"none", and (3)some user specified dir.
  *   Validate user history file location in each case.
  *
  * testJobHistoryJobStatus
@@ -1073,7 +1073,7 @@ public class TestJobHistory extends TestCase {
 
   // Validate user history file location for the given values of
   // hadoop.job.history.user.location as
-  // (1)null(default case), (2)"none", and (3)some dir "/tmp"
+  // (1)null(default case), (2)"none", and (3)some user specified dir.
   public void testJobHistoryUserLogLocation() throws IOException {
     MiniMRCluster mr = null;
     try {
@@ -1103,7 +1103,7 @@ public class TestJobHistory extends TestCase {
       inDir = new Path(TEST_ROOT_DIR + "/succeed/input3");
       outDir = new Path(TEST_ROOT_DIR + "/succeed/output3");
       // validate for the case of any dir
-      conf.set("hadoop.job.history.user.location", "/tmp");
+      conf.set("hadoop.job.history.user.location", TEST_ROOT_DIR + "/succeed");
       job = UtilsForTests.runJobSucceed(conf, inDir, outDir);
       validateJobHistoryUserLogLocation(job.getID(), conf);
 
