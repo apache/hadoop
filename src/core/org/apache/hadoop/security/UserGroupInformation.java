@@ -38,7 +38,9 @@ import java.util.Set;
 
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.kerberos.KerberosKey;
 import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.kerberos.KerberosTicket;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
@@ -49,9 +51,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.Shell;
 
 import com.sun.security.auth.NTUserPrincipal;
 import com.sun.security.auth.UnixPrincipal;
@@ -65,6 +67,10 @@ import com.sun.security.auth.module.Krb5LoginModule;
  */
 public class UserGroupInformation {
   private static final Log LOG =  LogFactory.getLog(UserGroupInformation.class);
+  /**
+   * Percentage of the ticket window to use before we renew ticket.
+   */
+  private static final float TICKET_RENEW_WINDOW = 0.80f;
   
   /**
    * A login module that looks at the Kerberos, Unix, or Windows principal and
@@ -131,14 +137,12 @@ public class UserGroupInformation {
   /** The configuration to use */
   private static Configuration conf;
   
-  public static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
+  /** Leave 10 minutes between relogin attempts. */
+  private static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
   
   /**Environment variable pointing to the token cache file*/
   public static final String HADOOP_TOKEN_FILE_LOCATION = 
     "HADOOP_TOKEN_FILE_LOCATION";
-  
-  /** The last relogin attempt */
-  private long lastReloginTime = 0;
   
   /** 
    * A method to initialize the fields that depend on a configuration.
@@ -214,6 +218,9 @@ public class UserGroupInformation {
   private static String keytabFile = null;
 
   private final Subject subject;
+  // All non-static fields must be read-only caches that come from the subject.
+  private final User user;
+  private final boolean isKeytab;
   
   private static final String OS_LOGIN_MODULE_NAME;
   private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
@@ -339,16 +346,11 @@ public class UserGroupInformation {
   }
   
   private LoginContext getLogin() {
-    for (User p: subject.getPrincipals(User.class)) {
-      return p.getLogin();
-    }
-    return null;
+    return user.getLogin();
   }
   
   private void setLogin(LoginContext login) {
-    for (User p: subject.getPrincipals(User.class)) {
-      p.setLogin(login);
-    }
+    user.setLogin(login);
   }
 
   /**
@@ -358,6 +360,8 @@ public class UserGroupInformation {
    */
   UserGroupInformation(Subject subject) {
     this.subject = subject;
+    this.user = subject.getPrincipals(User.class).iterator().next();
+    this.isKeytab = !subject.getPrivateCredentials(KerberosKey.class).isEmpty();
   }
 
   /**
@@ -381,7 +385,6 @@ public class UserGroupInformation {
     if (loginUser == null) {
       try {
         Subject subject = new Subject();
-        loginUser = new UserGroupInformation(subject);
         LoginContext login;
         if (isSecurityEnabled()) {
           login = new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, subject);
@@ -389,7 +392,11 @@ public class UserGroupInformation {
           login = new LoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME, subject);
         }
         login.login();
+        loginUser = new UserGroupInformation(subject);
         loginUser.setLogin(login);
+        loginUser.setAuthenticationMethod(isSecurityEnabled() ?
+                                          AuthenticationMethod.KERBEROS :
+                                          AuthenticationMethod.SIMPLE);
         loginUser = new UserGroupInformation(login.getSubject());
         String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
         if (fileLocation != null && isSecurityEnabled()) {
@@ -401,6 +408,7 @@ public class UserGroupInformation {
             loginUser.addToken(token);
           }
         }
+        loginUser.spawnAutoRenewalThreadForUserCreds();
       } catch (LoginException le) {
         throw new IOException("failure to login", le);
       }
@@ -408,6 +416,90 @@ public class UserGroupInformation {
     return loginUser;
   }
 
+  /**
+   * Is this user logged in from a keytab file?
+   * @return true if the credentials are from a keytab file.
+   */
+  public boolean isFromKeytab() {
+    return isKeytab;
+  }
+
+  /**Spawn a thread to do periodic renewals of kerberos credentials*/
+  private void spawnAutoRenewalThreadForUserCreds() {
+    if (isSecurityEnabled()) {
+      //spawn thread only if we have kerb credentials
+      if (user.getAuthenticationMethod() == AuthenticationMethod.KERBEROS &&
+          !isKeytab) {
+        Thread t = new Thread(new Runnable() {
+          
+          /**
+           * Get the Kerberos TGT
+           * @return the user's TGT or null if none was found
+           */
+          private KerberosTicket getTGT() {
+            Set<KerberosTicket> tickets = 
+              subject.getPrivateCredentials(KerberosTicket.class);
+            for(KerberosTicket ticket: tickets) {
+              KerberosPrincipal server = ticket.getServer();
+              if (server.getName().equals("krbtgt/" + server.getRealm() + 
+                                          "@" + server.getRealm())) {
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("Found tgt " + ticket);
+                }
+                return ticket;
+              }
+            }
+            return null;
+          }
+
+          private long getRefreshTime(KerberosTicket tgt) {
+            long start = tgt.getStartTime().getTime();
+            long end = tgt.getEndTime().getTime();
+            return start + (long) ((end - start) * TICKET_RENEW_WINDOW);
+          }
+
+          public void run() {
+            String cmd = conf.get("hadoop.kerberos.kinit.command",
+                                  "/usr/kerberos/bin/kinit");
+            KerberosTicket tgt = getTGT();
+            if (tgt == null) {
+              return;
+            }
+            long nextRefresh = getRefreshTime(tgt);
+            while (true) {
+              try {
+                long now = System.currentTimeMillis();
+                LOG.debug("Current time is " + now);
+                LOG.debug("Next refresh is " + nextRefresh);
+                if (now < nextRefresh) {
+                  Thread.sleep(nextRefresh - now);
+                }
+                Shell.execCommand(cmd, "-R");
+                LOG.debug("renewed ticket");
+                reloginFromTicketCache();
+                tgt = getTGT();
+                if (tgt == null) {
+                  LOG.warn("No TGT after renewal. Aborting renew thread for " +
+                           getUserName());
+                }
+                nextRefresh = Math.max(getRefreshTime(tgt),
+                                       now + MIN_TIME_BEFORE_RELOGIN);
+              } catch (InterruptedException ie) {
+                LOG.warn("Terminating renewal thread");
+                return;
+              } catch (IOException ie) {
+                LOG.warn("Exception encountered while running the" +
+                    " renewal command (but continuing)" + ie);
+              }
+            }
+          }
+        });
+        t.setDaemon(true);
+        t.setName("TGT Renewer for " + getUserName());
+        t.start();
+      }
+    }
+  }
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab
    * file and login them in. They become the currently logged-in user.
@@ -432,6 +524,7 @@ public class UserGroupInformation {
       login.login();
       loginUser = new UserGroupInformation(subject);
       loginUser.setLogin(login);
+      loginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (LoginException le) {
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
@@ -439,6 +532,46 @@ public class UserGroupInformation {
     LOG.info("Login successful for user " + keytabPrincipal
         + " using keytab file " + keytabFile);
   }
+  /**
+   * Re-Login a user in from the ticket cache.  This
+   * method assumes that login had happened already.
+   * The Subject field of this UserGroupInformation object is updated to have
+   * the new credentials.
+   * @throws IOException on a failure
+   */
+  public synchronized void reloginFromTicketCache()
+  throws IOException {
+    if (!isSecurityEnabled() || 
+        user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS ||
+        isKeytab)
+      return;
+    LoginContext login = getLogin();
+    if (login == null) {
+      throw new IOException("login must be done first");
+    }
+    if (!hasSufficientTimeElapsed()) {
+      return;
+    }
+    try {
+      LOG.info("Initiating logout for " + getUserName());
+      //clear up the kerberos state. But the tokens are not cleared! As per 
+      //the Java kerberos login module code, only the kerberos credentials
+      //are cleared
+      login.logout();
+      //login and also update the subject field of this instance to 
+      //have the new credentials (pass it to the LoginContext constructor)
+      login = 
+        new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME, 
+            getSubject());
+      LOG.info("Initiating re-login for " + getUserName());
+      login.login();
+      setLogin(login);
+    } catch (LoginException le) {
+      throw new IOException("Login failure for " + getUserName(), le);
+    } 
+  }
+
+
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab
    * file and login them in. This new user does not affect the currently
@@ -468,6 +601,7 @@ public class UserGroupInformation {
       login.login();
       UserGroupInformation newLoginUser = new UserGroupInformation(subject);
       newLoginUser.setLogin(login);
+      newLoginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
       
       return newLoginUser;
     } catch (LoginException le) {
@@ -490,21 +624,17 @@ public class UserGroupInformation {
    */
   public synchronized void reloginFromKeytab()
   throws IOException {
-    if (!isSecurityEnabled())
+    if (!isSecurityEnabled() || 
+        user.getAuthenticationMethod() != AuthenticationMethod.KERBEROS ||
+        !isKeytab)
       return;
     LoginContext login = getLogin();
     if (login == null || keytabFile == null) {
       throw new IOException("loginUserFromKeyTab must be done first");
     }
-    long now = System.currentTimeMillis();
-    if (now - lastReloginTime < MIN_TIME_BEFORE_RELOGIN ) {
-      LOG.warn("Not attempting to re-login since the last re-login was " +
-          "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
-          " before.");
+    if (!hasSufficientTimeElapsed()) {
       return;
     }
-    // register most recent relogin
-    lastReloginTime = System.currentTimeMillis();
     try {
       LOG.info("Initiating logout for " + getUserName());
       //clear up the kerberos state. But the tokens are not cleared! As per 
@@ -525,9 +655,27 @@ public class UserGroupInformation {
     } 
   }
 
-  public synchronized static boolean isLoginKeytabBased() {
-    return keytabFile != null;
+  private boolean hasSufficientTimeElapsed() {
+    long now = System.currentTimeMillis();
+    if (now - user.getLastLogin() < MIN_TIME_BEFORE_RELOGIN ) {
+      LOG.warn("Not attempting to re-login since the last re-login was " +
+          "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
+          " before.");
+      return false;
+    }
+    // register most recent relogin attempt
+    user.setLastLogin(now);
+    return true;
   }
+  
+  /**
+   * Did the login happen via keytab
+   * @return true or false
+   */
+  public synchronized static boolean isLoginKeytabBased() {
+    return loginUser.isKeytab;
+  }
+
   /**
    * Create a user from a login name. It is intended to be used for remote
    * users in RPC, since it won't have any credentials.
@@ -540,7 +688,9 @@ public class UserGroupInformation {
     }
     Subject subject = new Subject();
     subject.getPrincipals().add(new User(user));
-    return new UserGroupInformation(subject);
+    UserGroupInformation result = new UserGroupInformation(subject);
+    result.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
+    return result;
   }
 
   public static enum AuthenticationMethod {
@@ -568,9 +718,12 @@ public class UserGroupInformation {
       throw new IllegalArgumentException("Null real user");
     }
     Subject subject = new Subject();
-    subject.getPrincipals().add(new User(user));
-    subject.getPrincipals().add(new RealUser(realUser));
-    return new UserGroupInformation(subject);
+    Set<Principal> principals = subject.getPrincipals();
+    principals.add(new User(user));
+    principals.add(new RealUser(realUser));
+    UserGroupInformation result =new UserGroupInformation(subject);
+    result.setAuthenticationMethod(AuthenticationMethod.PROXY);
+    return result;
   }
 
   public UserGroupInformation getRealUser() {
@@ -668,10 +821,7 @@ public class UserGroupInformation {
    * @return the user's full principal name.
    */
   public String getUserName() {
-    for (User p: subject.getPrincipals(User.class)) {
-      return p.getName();
-    }
-    return null;
+    return user.getName();
   }
 
   /**
@@ -758,9 +908,7 @@ public class UserGroupInformation {
    */
   public synchronized 
   void setAuthenticationMethod(AuthenticationMethod authMethod) {
-    for (User p : subject.getPrincipals(User.class)) {
-      p.setAuthenticationMethod(authMethod);
-    }
+    user.setAuthenticationMethod(authMethod);
   }
 
   /**
@@ -769,10 +917,7 @@ public class UserGroupInformation {
    * @return AuthenticationMethod in the subject, null if not present.
    */
   public synchronized AuthenticationMethod getAuthenticationMethod() {
-    for (User p: subject.getPrincipals(User.class)) {
-      return p.getAuthenticationMethod();
-    }
-    return null;
+    return user.getAuthenticationMethod();
   }
 
   /**
@@ -869,6 +1014,8 @@ public class UserGroupInformation {
     UserGroupInformation ugi = getCurrentUser();
     ugi.print();
     System.out.println("UGI: " + ugi);
+    System.out.println("Auth method " + ugi.user.getAuthenticationMethod());
+    System.out.println("Keytab " + ugi.isKeytab);
     System.out.println("============================================================");
     
     if (args.length == 2) {
@@ -876,6 +1023,8 @@ public class UserGroupInformation {
       loginUserFromKeytab(args[0], args[1]);
       getCurrentUser().print();
       System.out.println("Keytab: " + ugi);
+      System.out.println("Auth method " + loginUser.user.getAuthenticationMethod());
+      System.out.println("Keytab " + loginUser.isKeytab);
     }
   }
 

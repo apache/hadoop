@@ -273,8 +273,8 @@ public class TestUserGroupInformation {
     final AuthenticationMethod am = AuthenticationMethod.KERBEROS;
     ugi.setAuthenticationMethod(am);
     Assert.assertEquals(am, ugi.getAuthenticationMethod());
-    Assert.assertEquals(null, proxyUgi.getAuthenticationMethod());
-    proxyUgi.setAuthenticationMethod(AuthenticationMethod.PROXY);
+    Assert.assertEquals(AuthenticationMethod.PROXY, 
+                        proxyUgi.getAuthenticationMethod());
     proxyUgi.doAs(new PrivilegedExceptionAction<Object>() {
       public Object run() throws IOException {
         Assert.assertEquals(AuthenticationMethod.PROXY, UserGroupInformation

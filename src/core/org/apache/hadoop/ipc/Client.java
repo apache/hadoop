@@ -360,17 +360,21 @@ public class Client {
         return saslRpcClient.saslConnect(in2, out2);
       } catch (javax.security.sasl.SaslException je) {
         UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
-        UserGroupInformation currentUser = UserGroupInformation.getCurrentUser();
+        UserGroupInformation currentUser = 
+          UserGroupInformation.getCurrentUser();
         UserGroupInformation realUser = currentUser.getRealUser();
         if (authMethod == AuthMethod.KERBEROS && 
-            UserGroupInformation.isLoginKeytabBased() &&
             // relogin only in case it is the login user (e.g. JT)
             // or superuser (like oozie).
             (currentUser.equals(loginUser) || loginUser.equals(realUser))) {
           //try setting up the connection again
           try {
             //try re-login
-            loginUser.reloginFromKeytab();
+            if (UserGroupInformation.isLoginKeytabBased()) {
+              loginUser.reloginFromKeytab();
+            } else {
+              loginUser.reloginFromTicketCache();
+            }
             disposeSasl();
             saslRpcClient = new SaslRpcClient(authMethod, token,
                 serverPrincipal);
