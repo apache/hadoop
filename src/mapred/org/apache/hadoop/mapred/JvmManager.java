@@ -195,6 +195,8 @@ class JvmManager {
             equals(task.getTaskID().toString())) {
           tracker.getTaskController().initializeTask(context);
         }
+
+        jvmRunner.taskGiven(task);
         return taskRunner.getTaskInProgress();
 
       }
@@ -376,6 +378,13 @@ class JvmManager {
       private ShellCommandExecutor shexec; // shell terminal for running the task
       //context used for starting JVM
       private TaskControllerContext initalContext;
+
+      private List<Task> tasksGiven = new ArrayList<Task>();
+
+      void taskGiven(Task task) {
+        tasksGiven.add(task);
+      }
+
       public JvmRunner(JvmEnv env, JobID jobId) {
         this.env = env;
         this.jvmId = new JVMId(jobId, isMap, rand.nextInt());
@@ -384,6 +393,9 @@ class JvmManager {
       }
       public void run() {
         runChild(env);
+
+        // Post-JVM-exit logs processing. Truncate the logs.
+        truncateJVMLogs();
       }
 
       public void runChild(JvmEnv env) {
@@ -446,7 +458,14 @@ class JvmManager {
           removeJvm(jvmId);
         }
       }
-      
+
+      // Post-JVM-exit logs processing. Truncate the logs.
+      private void truncateJVMLogs() {
+        Task firstTask = initalContext.task;
+        tracker.getTaskLogsMonitor().addProcessForLogTruncation(
+            firstTask.getTaskID(), tasksGiven);
+      }
+
       public void taskRan() {
         busy = false;
         numTasksRan++;
