@@ -232,8 +232,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       } else {
         // Kerberized SSL servers must be run from the host principal...
         LOG.info("Logging in as " + httpsUser + " to start http server.");
-        DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, httpsUser);
-      }
+        DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, 
+            DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);      }
     }
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     try {
