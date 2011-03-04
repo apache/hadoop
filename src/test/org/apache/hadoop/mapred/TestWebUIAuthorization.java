@@ -161,8 +161,8 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
   }
 
   // starts a sleep job with 1 map task that runs for a long time
-  private RunningJob startSleepJobAsUser(String user, final JobConf conf)
-      throws Exception {
+  private RunningJob startSleepJobAsUser(String user, final JobConf conf,
+      MiniMRCluster cluster) throws Exception {
 	final SleepJob sleepJob = new SleepJob();
     sleepJob.setConf(conf);
     UserGroupInformation jobSubmitterUGI = 
@@ -179,6 +179,9 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
           return runningJob;
         }
       });
+    JobID jobId = job.getID();
+    getTIPId(cluster, jobId);//wait till the map task starts running
+
     return job;
   }
 
@@ -200,6 +203,17 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
       tipId = r.getTaskID();
       break;// because we have only one map
     }
+
+    JobTracker jt = cluster.getJobTrackerRunner().getJobTracker();
+    // wait till we see an attempt actually running
+    while (jt.getTaskStatuses(tipId).length == 0) {
+      try {
+        Thread.sleep(100);
+      } catch(InterruptedException e) {
+        LOG.warn("Interrupted while waiting for map attempt to be started");
+      }
+    }
+
     return tipId;
   }
 
@@ -215,15 +229,17 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
   private void confirmJobDetailsJSPKillJobAsUser(MiniMRCluster cluster,
       JobConf conf, String jtURL, String jobTrackerJSP, String user)
       throws Exception {
-    RunningJob job = startSleepJobAsUser(jobSubmitter, conf);
+    RunningJob job = startSleepJobAsUser(jobSubmitter, conf, cluster);
     org.apache.hadoop.mapreduce.JobID jobid = job.getID();
-    getTIPId(cluster, jobid);// wait till the map task is started
     // jobDetailsJSP killJob url
     String url = jtURL + "/jobdetails.jsp?" +
         "action=kill&jobid="+ jobid.toString();
     try {
       assertEquals(HttpURLConnection.HTTP_OK,
           getHttpStatusCode(url, user, "POST"));
+      waitForKillJobToFinish(job);
+      assertTrue("killJob failed for a job for which user has "
+          + "job-modify permission", job.isComplete());
     } finally {
       if (!job.isComplete()) {
         LOG.info("Killing job " + jobid + " from finally block");
@@ -246,8 +262,6 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
         String.valueOf(true));
     props.setProperty("dfs.permissions", "false");
 
-    props.setProperty("mapreduce.job.committer.setup.cleanup.needed",
-        "false");
     props.setProperty(JobConf.MR_SUPERGROUP, "superGroup");
 
     MyGroupsProvider.mapping.put(jobSubmitter, Arrays.asList("group1"));
@@ -395,9 +409,8 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     conf.set(JobContext.JOB_ACL_MODIFY_JOB, " group1,group3");
 
     String jobTrackerJSP =  jtURL + "/jobtracker.jsp?a=b";
-    RunningJob job = startSleepJobAsUser(jobSubmitter, conf);
+    RunningJob job = startSleepJobAsUser(jobSubmitter, conf, cluster);
     org.apache.hadoop.mapreduce.JobID jobid = job.getID();
-    getTIPId(cluster, jobid);// wait till the map task is started
     // jobDetailsJSPKillJobAction url
     String url = jtURL + "/jobdetails.jsp?" +
         "action=kill&jobid="+ jobid.toString();
@@ -410,6 +423,9 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
           getHttpStatusCode(url, modifyColleague, "POST"));
       assertEquals(HttpURLConnection.HTTP_OK,
           getHttpStatusCode(url, viewAndModifyColleague, "POST"));
+      waitForKillJobToFinish(job);
+      assertTrue("killJob failed for a job for which user has "
+          + "job-modify permission", job.isComplete());
     } finally {
       if (!job.isComplete()) {
         LOG.info("Killing job " + jobid + " from finally block");
@@ -441,15 +457,17 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
       JobConf conf, String jtURL, String user)
       throws Exception {
     String jobTrackerJSP =  jtURL + "/jobtracker.jsp?a=b";
-    RunningJob job = startSleepJobAsUser(jobSubmitter, conf);
+    RunningJob job = startSleepJobAsUser(jobSubmitter, conf, cluster);
     org.apache.hadoop.mapreduce.JobID jobid = job.getID();
-    getTIPId(cluster, jobid);// wait till the map task is started
     // jobTrackerJSP killJob url
     String url = jobTrackerJSP +
         "&killJobs=true&jobCheckBox=" + jobid.toString();
     try {
       assertEquals(HttpURLConnection.HTTP_OK,
           getHttpStatusCode(url, user, "POST"));
+      waitForKillJobToFinish(job);
+      assertTrue("killJob failed for a job for which user has "
+          + "job-modify permission", job.isComplete());
     } finally {
       if (!job.isComplete()) {
         LOG.info("Killing job " + jobid + " from finally block");
@@ -461,14 +479,14 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
   }
 
   /**
-   * Waits for a while for the job to become completed
+   * Waits for the job to become completed as we know that killJob is called
    * @param job
    * @throws IOException
    */
   void waitForKillJobToFinish(RunningJob job) throws IOException {
-    for (int i = 0;!job.isComplete() && i < 20;i++) {
+    while (!job.isComplete()) {
       try {
-        Thread.sleep(1000);
+        Thread.sleep(200);
       } catch (InterruptedException e){
         LOG.warn("Interrupted while waiting for killJob() to finish for "
                  + job.getID());
@@ -493,7 +511,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     // view-job-acl doesn't matter for killJob from jobtracker jsp page
     conf.set(JobContext.JOB_ACL_VIEW_JOB, "");
     
-    // Let us start jobs as 4 different users(none of these 4 users is
+    // Let us start 4 jobs as 4 different users(none of these 4 users is
     // mrOwner and none of these users is a member of superGroup). So only
     // based on the config JobContext.JOB_ACL_MODIFY_JOB being set here,
     // killJob on each of the jobs will be succeeded.
@@ -501,29 +519,29 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     // start 1st job.
     // Out of these 4 users, only jobSubmitter can do killJob on 1st job
     conf.set(JobContext.JOB_ACL_MODIFY_JOB, "");
-    RunningJob job1 = startSleepJobAsUser(jobSubmitter, conf);
+    RunningJob job1 = startSleepJobAsUser(jobSubmitter, conf, cluster);
     org.apache.hadoop.mapreduce.JobID jobid = job1.getID();
-    getTIPId(cluster, jobid);// wait till the map task is started
     url = url.concat("&jobCheckBox=" + jobid.toString());
+
     // start 2nd job.
     // Out of these 4 users, only viewColleague can do killJob on 2nd job
-    RunningJob job2 = startSleepJobAsUser(viewColleague, conf);
+    RunningJob job2 = startSleepJobAsUser(viewColleague, conf, cluster);
     jobid = job2.getID();
-    getTIPId(cluster, jobid);// wait till the map task is started
     url = url.concat("&jobCheckBox=" + jobid.toString());
+
     // start 3rd job.
     // Out of these 4 users, only modifyColleague can do killJob on 3rd job
-    RunningJob job3 = startSleepJobAsUser(modifyColleague, conf);
+    RunningJob job3 = startSleepJobAsUser(modifyColleague, conf, cluster);
     jobid = job3.getID();
-    getTIPId(cluster, jobid);// wait till the map task is started
     url = url.concat("&jobCheckBox=" + jobid.toString());
+
     // start 4rd job.
     // Out of these 4 users, viewColleague and viewAndModifyColleague
     // can do killJob on 4th job
     conf.set(JobContext.JOB_ACL_MODIFY_JOB, viewColleague);
-    RunningJob job4 = startSleepJobAsUser(viewAndModifyColleague, conf);
+    RunningJob job4 = startSleepJobAsUser(viewAndModifyColleague,
+                                          conf, cluster);
     jobid = job4.getID();
-    getTIPId(cluster, jobid);// wait till the map task is started
     url = url.concat("&jobCheckBox=" + jobid.toString());
 
     try {
@@ -568,9 +586,10 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     props.setProperty(
        JobConf.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, String.valueOf(true));
     props.setProperty("dfs.permissions", "false");
-    
+    // let us have enough map slots so that there won't be waiting for slots
+    props.setProperty("mapred.tasktracker.map.tasks.maximum", "6");
+
     props.setProperty(JSPUtil.PRIVATE_ACTIONS_KEY, "true");
-    props.setProperty("mapreduce.job.committer.setup.cleanup.needed", "false");
     props.setProperty(JobConf.MR_SUPERGROUP, "superGroup");
 
     MyGroupsProvider.mapping.put(jobSubmitter, Arrays.asList("group1"));
@@ -596,8 +615,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
     // viewAndModifyColleague will be able to modify the job
     conf.set(JobContext.JOB_ACL_MODIFY_JOB, " group1,group3");
 
-    RunningJob job = startSleepJobAsUser(jobSubmitter, conf);
-
+    RunningJob job = startSleepJobAsUser(jobSubmitter, conf, cluster);
     org.apache.hadoop.mapreduce.JobID jobid = job.getID();
 
     String jtURL = "http://localhost:" + infoPort;
@@ -619,7 +637,7 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
       TaskID tipId = getTIPId(cluster, jobid);
       validateTaskStatsJSPAccess(jobid, jtURL, tipId);
       validateTaskDetailsJSPAccess(jobid, jtURL, tipId);
-      validateJobTrackerJSPKillJobAction(jobid, jtURL);
+      validateJobTrackerJSPKillJobAction(job, jtURL);
     } finally {
       if (!job.isComplete()) { // kill the job(as jobSubmitter) if needed
         LOG.info("Killing job " + jobid + " from finally block");
@@ -648,13 +666,16 @@ public class TestWebUIAuthorization extends ClusterMapReduceTestCase {
   }
 
   // validate killJob of jobtracker.jsp
-  private void validateJobTrackerJSPKillJobAction(
-      org.apache.hadoop.mapreduce.JobID jobid, String jtURL)
+  private void validateJobTrackerJSPKillJobAction(RunningJob job, String jtURL)
       throws IOException {
+    org.apache.hadoop.mapreduce.JobID jobid = job.getID();
     String jobTrackerJSP =  jtURL + "/jobtracker.jsp?a=b";
     String jobTrackerJSPKillJobAction = jobTrackerJSP +
         "&killJobs=true&jobCheckBox="+ jobid.toString();
     validateModifyJob(jobTrackerJSPKillJobAction, "GET");
+    waitForKillJobToFinish(job);
+    assertTrue("killJob failed for a job for which user has "
+        + "job-modify permission", job.isComplete());
   }
 
   // validate viewing of job of taskdetails.jsp
