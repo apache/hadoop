@@ -96,7 +96,7 @@ public class ProxyUsers {
    * @param newConf configuration
    * @throws AuthorizationException
    */
-  public static void authorize(UserGroupInformation user, String remoteAddress,
+  public static synchronized void authorize(UserGroupInformation user, String remoteAddress,
       Configuration newConf) throws AuthorizationException {
     
     if(conf == null) {
