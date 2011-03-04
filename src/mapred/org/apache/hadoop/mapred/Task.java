@@ -781,29 +781,26 @@ abstract public class Task implements Writable, Configurable {
           }
           reporter.setProgressFlag();
         }
-        break;
+        // task can Commit now  
+        try {
+          LOG.info("Task " + taskId + " is allowed to commit now");
+          committer.commitTask(taskContext);
+          return;
+        } catch (IOException iee) {
+          LOG.warn("Failure committing: " + 
+                    StringUtils.stringifyException(iee));
+          discardOutput(taskContext);
+          throw iee;
+        }
       } catch (IOException ie) {
         LOG.warn("Failure asking whether task can commit: " + 
             StringUtils.stringifyException(ie));
         if (--retries == 0) {
-          //if it couldn't query successfully then delete the output
+          //if it couldn't commit a successfully then delete the output
           discardOutput(taskContext);
           System.exit(68);
         }
       }
-    }
-    
-    // task can Commit now  
-    try {
-      LOG.info("Task " + taskId + " is allowed to commit now");
-      committer.commitTask(taskContext);
-      return;
-    } catch (IOException iee) {
-      LOG.warn("Failure committing: " + 
-        StringUtils.stringifyException(iee));
-      //if it couldn't commit a successfully then delete the output
-      discardOutput(taskContext);
-      throw iee;
     }
   }
 
