@@ -58,10 +58,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
  * Provides methods for writing to and reading from job history. 
@@ -505,6 +507,8 @@ public class JobHistory {
       if (!LOGDIR_FS.mkdirs(logDir, new FsPermission(HISTORY_DIR_PERMISSION))) {
         throw new IOException("Mkdirs failed to create " + logDir.toString());
       }
+    } else { // directory exists
+      checkDirectoryPermissions(LOGDIR_FS, logDir, "hadoop.job.history.location");
     }
     conf.set("hadoop.job.history.location", LOG_DIR);
     // set the job history block size (default is 3MB)
@@ -549,11 +553,7 @@ public class JobHistory {
       DONE = new Path(LOG_DIR, "done");
       DONEDIR_FS = LOGDIR_FS;
     }
-
-    if (!setup) {
-        return;
-    }
-
+    Path versionSubdir = new Path(DONE, DONE_DIRECTORY_FORMAT_DIRNAME);
     //If not already present create the done folder with appropriate 
     //permission
     if (!DONEDIR_FS.exists(DONE)) {
@@ -563,18 +563,50 @@ public class JobHistory {
         throw new IOException("Mkdirs failed to create " + DONE.toString());
       }
 
-      Path versionSubdir = new Path(DONE, DONE_DIRECTORY_FORMAT_DIRNAME);
-
       if (!DONEDIR_FS.exists(versionSubdir)) {
         if (!DONEDIR_FS.mkdirs(versionSubdir,
                                new FsPermission(HISTORY_DIR_PERMISSION))) {
           throw new IOException("Mkdirs failed to create " + versionSubdir);
         }
       }
+    } else { // directory exists. Checks version subdirectory permissions as
+      // well.
+      checkDirectoryPermissions(DONEDIR_FS, DONE,
+          "mapred.job.tracker.history.completed.location");
+      if (DONEDIR_FS.exists(versionSubdir))
+        checkDirectoryPermissions(DONEDIR_FS, versionSubdir,
+            "mapred.job.tracker.history.completed.location-versionsubdir");
     }
+
+    if (!setup) {
+      return;
+    }
+
     fileManager.start();
   }
 
+  /**
+   * @param FileSystem
+   * @param Path
+   * @param configKey 
+   * @throws IOException
+   * @throws DiskErrorException
+   */
+  static void checkDirectoryPermissions(FileSystem fs, Path path,
+      String configKey) throws IOException, DiskErrorException {
+    FileStatus stat = fs.getFileStatus(path);
+    FsPermission actual = stat.getPermission();
+    if (!stat.isDir())
+      throw new DiskErrorException(configKey + " - not a directory: "
+          + path.toString());
+    FsAction user = actual.getUserAction();
+    if (!user.implies(FsAction.READ))
+      throw new DiskErrorException("bad " + configKey
+          + "- directory is not readable: " + path.toString());
+    if (!user.implies(FsAction.WRITE))
+      throw new DiskErrorException("bad " + configKey
+          + "- directory is not writable " + path.toString());
+  }
 
   /**
    * Manages job-history's meta information such as version etc.
