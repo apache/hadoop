@@ -106,8 +106,16 @@ class TaskLogsMonitor extends Thread {
       return;
     }
 
+    // set this boolean to true if any of the log files is truncated
+    boolean truncated = false;
+
     Map<Task, Map<LogName, LogFileDetail>> updatedTaskLogFileDetails =
         new HashMap<Task, Map<LogName, LogFileDetail>>();
+    // Make a copy of original indices into updated indices 
+    for (LogName logName : LogName.values()) {
+      copyOriginalIndexFileInfo(lInfo, taskLogFileDetails,
+          updatedTaskLogFileDetails, logName);
+    }
 
     File attemptLogDir = TaskLog.getBaseDir(firstAttempt.toString());
 
@@ -142,8 +150,10 @@ class TaskLogsMonitor extends Thread {
       try {
         logFileReader = new FileReader(logFile);
       } catch (FileNotFoundException fe) {
-        LOG.warn("Cannot open " + logFile.getAbsolutePath()
-            + " for reading. Continuing with other log files");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Cannot open " + logFile.getAbsolutePath()
+              + " for reading. Continuing with other log files");
+        }
         if (!tmpFile.delete()) {
           LOG.warn("Cannot delete tmpFile " + tmpFile.getAbsolutePath());
         }
@@ -171,7 +181,7 @@ class TaskLogsMonitor extends Thread {
               + ". Caught exception while handling " + task.getTaskID(),
               ioe);
           // revert back updatedTaskLogFileDetails
-          revertIndexFileInfo(lInfo, taskLogFileDetails,
+          copyOriginalIndexFileInfo(lInfo, taskLogFileDetails,
               updatedTaskLogFileDetails, logName);
           if (!tmpFile.delete()) {
             LOG.warn("Cannot delete tmpFile " + tmpFile.getAbsolutePath());
@@ -191,6 +201,7 @@ class TaskLogsMonitor extends Thread {
           newLogFileDetail.start = newCurrentOffset;
           updatedTaskLogFileDetails.get(task).put(logName, newLogFileDetail);
           newCurrentOffset += newLogFileDetail.length;
+          truncated = true; // set the flag truncated
         }
       }
 
@@ -199,7 +210,7 @@ class TaskLogsMonitor extends Thread {
       } catch (IOException ioe) {
         LOG.warn("Couldn't close the tmp file " + tmpFile.getAbsolutePath()
             + ". Deleting it.", ioe);
-        revertIndexFileInfo(lInfo, taskLogFileDetails,
+        copyOriginalIndexFileInfo(lInfo, taskLogFileDetails,
             updatedTaskLogFileDetails, logName);
         if (!tmpFile.delete()) {
           LOG.warn("Cannot delete tmpFile " + tmpFile.getAbsolutePath());
@@ -211,7 +222,7 @@ class TaskLogsMonitor extends Thread {
         // If the tmpFile cannot be renamed revert back
         // updatedTaskLogFileDetails to maintain the consistency of the
         // original log file
-        revertIndexFileInfo(lInfo, taskLogFileDetails,
+        copyOriginalIndexFileInfo(lInfo, taskLogFileDetails,
             updatedTaskLogFileDetails, logName);
         if (!tmpFile.delete()) {
           LOG.warn("Cannot delete tmpFile " + tmpFile.getAbsolutePath());
@@ -219,8 +230,10 @@ class TaskLogsMonitor extends Thread {
       }
     }
 
-    // Update the index files
-    updateIndicesAfterLogTruncation(firstAttempt, updatedTaskLogFileDetails);
+    if (truncated) {
+      // Update the index files
+      updateIndicesAfterLogTruncation(firstAttempt, updatedTaskLogFileDetails);
+    }
   }
 
   /**
@@ -229,7 +242,7 @@ class TaskLogsMonitor extends Thread {
    * @param updatedTaskLogFileDetails
    * @param logName
    */
-  private void revertIndexFileInfo(PerJVMInfo lInfo,
+  private void copyOriginalIndexFileInfo(PerJVMInfo lInfo,
       Map<Task, Map<LogName, LogFileDetail>> taskLogFileDetails,
       Map<Task, Map<LogName, LogFileDetail>> updatedTaskLogFileDetails,
       LogName logName) {

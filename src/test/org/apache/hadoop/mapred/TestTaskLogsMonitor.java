@@ -145,11 +145,17 @@ public class TestTaskLogsMonitor {
                             0);
 
     // Let the tasks write logs within retain-size
-    writeRealBytes(attemptID, attemptID, LogName.SYSLOG, 500, 'H');
+    for (LogName log : LogName.values()) {
+      writeRealBytes(attemptID, attemptID, log, 500, 'H');
+    }
+    File logIndex = TaskLog.getIndexFile(attemptID.toString(), false);
+    long indexModificationTimeStamp = logIndex.lastModified();
 
     logsMonitor.monitorTaskLogs();
     File attemptDir = TaskLog.getBaseDir(attemptID.toString());
     assertTrue(attemptDir + " doesn't exist!", attemptDir.exists());
+    assertEquals("index file got modified", indexModificationTimeStamp,
+        logIndex.lastModified());
 
     // Finish the task and the JVM too.
     logsMonitor.addProcessForLogTruncation(attemptID, Arrays.asList(task));
@@ -157,14 +163,29 @@ public class TestTaskLogsMonitor {
     // There should be no truncation of the log-file.
     logsMonitor.monitorTaskLogs();
     assertTrue(attemptDir.exists());
-    File logFile = TaskLog.getTaskLogFile(attemptID, LogName.SYSLOG);
-    assertEquals(500, logFile.length());
-    // The index file should also be proper.
-    assertEquals(500, getAllLogsFileLengths(attemptID, false).get(
-        LogName.SYSLOG).longValue());
+    assertEquals("index file got modified", indexModificationTimeStamp,
+        logIndex.lastModified());
 
+    Map<LogName, Long> logLengths = getAllLogsFileLengths(attemptID, false);
+    for (LogName log : LogName.values()) {
+      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      assertEquals(500, logFile.length());
+      // The index file should also be proper.
+      assertEquals(500, logLengths.get(log).longValue());
+    }
+
+    // truncate it once again
     logsMonitor.monitorTaskLogs();
-    assertEquals(500, logFile.length());
+    assertEquals("index file got modified", indexModificationTimeStamp,
+        logIndex.lastModified());
+    
+    logLengths = getAllLogsFileLengths(attemptID, false);
+    for (LogName log : LogName.values()) {
+      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      assertEquals(500, logFile.length());
+      // The index file should also be proper.
+      assertEquals(500, logLengths.get(log).longValue());
+    }
   }
 
   /**
@@ -187,7 +208,9 @@ public class TestTaskLogsMonitor {
                             0);
 
     // Let the tasks write some logs
-    writeRealBytes(attemptID, attemptID, LogName.SYSLOG, 1500, 'H');
+    for (LogName log : LogName.values()) {
+      writeRealBytes(attemptID, attemptID, log, 1500, 'H');
+    }
 
     logsMonitor.monitorTaskLogs();
     File attemptDir = TaskLog.getBaseDir(attemptID.toString());
@@ -199,11 +222,13 @@ public class TestTaskLogsMonitor {
     // The log-file should not be truncated.
     logsMonitor.monitorTaskLogs();
     assertTrue(attemptDir.exists());
-    File logFile = TaskLog.getTaskLogFile(attemptID, LogName.SYSLOG);
-    assertEquals(1500, logFile.length());
-    // The index file should also be proper.
-    assertEquals(1500, getAllLogsFileLengths(attemptID, false).get(
-        LogName.SYSLOG).longValue());
+    Map<LogName, Long> logLengths = getAllLogsFileLengths(attemptID, false);
+    for (LogName log : LogName.values()) {
+      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      assertEquals(1500, logFile.length());
+      // The index file should also be proper.
+      assertEquals(1500, logLengths.get(log).longValue());
+    }
   }
 
   /**
@@ -225,7 +250,9 @@ public class TestTaskLogsMonitor {
                             0);
 
     // Let the tasks write logs more than retain-size
-    writeRealBytes(attemptID, attemptID, LogName.SYSLOG, 1500, 'H');
+    for (LogName log : LogName.values()) {
+      writeRealBytes(attemptID, attemptID, log, 1500, 'H');
+    }
 
     logsMonitor.monitorTaskLogs();
     File attemptDir = TaskLog.getBaseDir(attemptID.toString());
@@ -237,14 +264,82 @@ public class TestTaskLogsMonitor {
     // The log-file should now be truncated.
     logsMonitor.monitorTaskLogs();
     assertTrue(attemptDir.exists());
+
+    Map<LogName, Long> logLengths = getAllLogsFileLengths(attemptID, false);
+    for (LogName log : LogName.values()) {
+      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      assertEquals(1000, logFile.length());
+      // The index file should also be proper.
+      assertEquals(1000, logLengths.get(log).longValue());
+    }
+
+    // truncate once again
+    logsMonitor.monitorTaskLogs();
+    logLengths = getAllLogsFileLengths(attemptID, false);
+    for (LogName log : LogName.values()) {
+      File logFile = TaskLog.getTaskLogFile(attemptID, log);
+      assertEquals(1000, logFile.length());
+      // The index file should also be proper.
+      assertEquals(1000, logLengths.get(log).longValue());
+    }
+  }
+
+  /**
+   * Test the truncation of log-file.
+   * 
+   * It writes two log files and truncates one, does not truncate other. 
+   * 
+   * @throws IOException
+   */
+  @Test
+  public void testLogTruncation() throws IOException {
+    TaskTracker taskTracker = new TaskTracker();
+    TaskLogsMonitor logsMonitor = new TaskLogsMonitor(1000L, 1000L);
+    taskTracker.setTaskLogsMonitor(logsMonitor);
+
+    TaskID baseId = new TaskID();
+    int taskcount = 0;
+
+    TaskAttemptID attemptID = new TaskAttemptID(baseId, taskcount++);
+    Task task = new MapTask(null, attemptID, 0, new JobSplit.TaskSplitIndex(), 
+                            0);
+
+    // Let the tasks write logs more than retain-size
+    writeRealBytes(attemptID, attemptID, LogName.SYSLOG, 1500, 'H');
+    writeRealBytes(attemptID, attemptID, LogName.STDERR, 500, 'H');
+
+    logsMonitor.monitorTaskLogs();
+    File attemptDir = TaskLog.getBaseDir(attemptID.toString());
+    assertTrue(attemptDir + " doesn't exist!", attemptDir.exists());
+
+    // Finish the task and the JVM too.
+    logsMonitor.addProcessForLogTruncation(attemptID, Arrays.asList(task));
+
+    // The log-file should now be truncated.
+    logsMonitor.monitorTaskLogs();
+    assertTrue(attemptDir.exists());
+
+    Map<LogName, Long> logLengths = getAllLogsFileLengths(attemptID, false);
     File logFile = TaskLog.getTaskLogFile(attemptID, LogName.SYSLOG);
     assertEquals(1000, logFile.length());
     // The index file should also be proper.
-    assertEquals(1000, getAllLogsFileLengths(attemptID, false).get(
-        LogName.SYSLOG).longValue());
+    assertEquals(1000, logLengths.get(LogName.SYSLOG).longValue());
+    logFile = TaskLog.getTaskLogFile(attemptID, LogName.STDERR);
+    assertEquals(500, logFile.length());
+    // The index file should also be proper.
+    assertEquals(500, logLengths.get(LogName.STDERR).longValue());
 
+    // truncate once again
     logsMonitor.monitorTaskLogs();
+    logLengths = getAllLogsFileLengths(attemptID, false);
+    logFile = TaskLog.getTaskLogFile(attemptID, LogName.SYSLOG);
     assertEquals(1000, logFile.length());
+    // The index file should also be proper.
+    assertEquals(1000, logLengths.get(LogName.SYSLOG).longValue());
+    logFile = TaskLog.getTaskLogFile(attemptID, LogName.STDERR);
+    assertEquals(500, logFile.length());
+    // The index file should also be proper.
+    assertEquals(500, logLengths.get(LogName.STDERR).longValue());
   }
 
   /**
@@ -348,6 +443,7 @@ public class TestTaskLogsMonitor {
       new File(System.getProperty("test.build.data", "/tmp")).toURI().toString().replace(
           ' ', '+');
 
+  private static String STDERR_LOG = "stderr log";
   public static class LoggingMapper<K, V> extends IdentityMapper<K, V> {
 
     public void map(K key, V val, OutputCollector<K, V> output,
@@ -357,6 +453,8 @@ public class TestTaskLogsMonitor {
         System.out.println("Lots of logs! Lots of logs! "
             + "Waiting to be truncated! Lots of logs!");
       }
+      // write some log into stderr
+      System.err.println(STDERR_LOG);
       super.map(key, val, output, reporter);
     }
   }
@@ -410,6 +508,14 @@ public class TestTaskLogsMonitor {
                 TaskLog.LogName.STDOUT).length();
         assertTrue("STDOUT log file length for " + tce.getTaskAttemptId()
             + " is " + length + " and not <=10000", length <= 10000);
+        if (tce.isMap) {
+          String stderr = TestMiniMRMapRedDebugScript.readTaskLog(
+              LogName.STDERR, tce.getTaskAttemptId(), false);
+          System.out.println("STDERR log:" + stderr);
+          assertTrue(stderr.length() > 0);
+          assertTrue(stderr.length() < 10000);
+          assertTrue(stderr.equals(STDERR_LOG));
+        }
       }
     } finally {
       if (mr != null) {
