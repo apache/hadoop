@@ -422,7 +422,11 @@ public class TestBalancer {
     private static final String ATTRNAME_USED_SPACE="usedSpace";
     private long getDatanodeUsedSpace(DNClient datanode) throws IOException {
         Object volInfo = datanode.getDaemonAttribute(DATANODE_VOLUME_INFO);
-        Assert.assertNotNull("Attribute %s should be non-null", volInfo);
+        Assert
+        .assertNotNull( String
+                        .format( "Attribute \"%s\" should be non-null",
+                                 DATANODE_VOLUME_INFO ),
+                        volInfo );
         String strVolInfo = volInfo.toString();
         LOG.debug( String.format("Value of %s: %s",
                    DATANODE_VOLUME_INFO,
