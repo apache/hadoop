@@ -596,7 +596,6 @@ namespace HadoopPipes {
         combiner->reduce(context);
       }
       data.clear();
-      numBytes = 0;
     }
   };
 
