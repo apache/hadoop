@@ -135,7 +135,7 @@ public class LoggedTaskAttempt implements DeepCompare {
   }
 
   void setHostName(String hostName) {
-    this.hostName = hostName.intern();
+    this.hostName = (hostName == null) ? null : hostName.intern();
   }
 
   public long getHdfsBytesRead() {
