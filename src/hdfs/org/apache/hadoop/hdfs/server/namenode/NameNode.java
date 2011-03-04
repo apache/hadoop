@@ -227,13 +227,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       if(httpsUser == null) {
         LOG.warn(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY + 
             " not defined in config. Starting http server as " 
-            + DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY
+            + conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
         	  +	": Kerberized SSL may be not function correctly.");
       } else {
         // Kerberized SSL servers must be run from the host principal...
         LOG.info("Logging in as " + httpsUser + " to start http server.");
         DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY, 
-            DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);      }
+            DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY);
+        }
     }
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     try {
@@ -300,7 +301,7 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
       if(UserGroupInformation.isSecurityEnabled() && 
           conf.get(DFSConfigKeys.DFS_NAMENODE_KRB_HTTPS_USER_NAME_KEY) != null) {
         // Go back to being the correct Namenode principal
-        LOG.info("Logging back in as " + DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY 
+        LOG.info("Logging back in as " + conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
             + " following http server start.");
         DFSUtil.login(conf, DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY,
             DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY);
