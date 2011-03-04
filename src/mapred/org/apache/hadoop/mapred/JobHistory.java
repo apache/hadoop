@@ -95,7 +95,7 @@ public class JobHistory {
 
   static final String KEY = "(\\w+)";
   // value is any character other than quote, but escaped quotes can be there
-  static final String VALUE = "[^\"\\\\]*(?:\\\\.[^\"\\\\]*)*"; 
+  static final String VALUE = "[^\"\\\\]*+(?:\\\\.[^\"\\\\]*+)*+";
   
   static final Pattern pattern = Pattern.compile(KEY + "=" + "\"" + VALUE + "\"");
   

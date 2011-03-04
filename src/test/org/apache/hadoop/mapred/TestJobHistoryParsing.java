@@ -73,7 +73,15 @@ public class TestJobHistoryParsing  extends TestCase {
                     "\t\b\n\f\"\n in it";
     String value4 = "Value ends with escape\\";
     String value5 = "Value ends with \\\" \\.\n";
-    
+    StringBuilder sb = new StringBuilder("Longer value with many escaped "+
+        "chars, which tends to overflow the stack of brittle regex parsers");
+    for (int i = 0; i < 1000; ++i) {
+      sb.append(",");
+      sb.append("\\split.");
+      sb.append(i);
+    }
+    String value6 = sb.toString();
+
     // Log the history version
     JobHistory.MetaInfoManager.logMetaInfo(historyWriter);
     
@@ -82,8 +90,10 @@ public class TestJobHistoryParsing  extends TestCase {
                                           Keys.TRACKER_NAME, 
                                           Keys.JOBNAME, 
                                           Keys.JOBCONF,
-                                          Keys.USER},
-                   new String[] {value1, value2, value3, value4, value5});
+                                          Keys.USER,
+                                          Keys.SPLITS},
+                   new String[] {value1, value2, value3, value4, value5,
+                                 value6});
     // close history file
     out.close();
     historyWriter.remove(out);
@@ -99,5 +109,6 @@ public class TestJobHistoryParsing  extends TestCase {
     assertEquals(value3, job.get(Keys.JOBNAME));
     assertEquals(value4, job.get(Keys.JOBCONF));
     assertEquals(value5, job.get(Keys.USER));
+    assertEquals(value6, job.get(Keys.SPLITS));
   }
 }
