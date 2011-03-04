@@ -23,6 +23,7 @@ import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -137,7 +138,9 @@ public class NamenodeFsck {
    * Check files on DFS, starting from the indicated path.
    */
   public void fsck() {
+    final long startTime = System.currentTimeMillis();
     try {
+      out.println("Namenode FSCK started at " + new Date());
       Result res = new Result(conf);
       final HdfsFileStatus file = namenode.getFileInfo(path);
       if (file != null) {
@@ -147,9 +150,13 @@ public class NamenodeFsck {
         out.println(" Number of data-nodes:\t\t" + totalDatanodes);
         out.println(" Number of racks:\t\t" + networktopology.getNumOfRacks());
 
+        out.println("FSCK ended at " + new Date() + " in "
+            + (System.currentTimeMillis() - startTime + " milliseconds"));
+
         // DFSck client scans for the string HEALTHY/CORRUPT to check the status
         // of file system and return appropriate code. Changing the output string
-        // might break testcases. 
+        // might break testcases. Also note this must be the last line 
+        // of the report.
         if (res.isHealthy()) {
           out.print("\n\nThe filesystem under path '" + path + "' " + HEALTHY_STATUS);
         }  else {
@@ -161,6 +168,8 @@ public class NamenodeFsck {
     } catch (Exception e) {
       String errMsg = "Fsck on path '" + path + "' " + FAILURE_STATUS;
       LOG.warn(errMsg, e);
+      out.println("FSCK ended at " + new Date() + " in "
+          + (System.currentTimeMillis() - startTime + " milliseconds"));
       out.println(e.getMessage());
       out.print("\n\n"+errMsg);
     } finally {
