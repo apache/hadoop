@@ -2314,7 +2314,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: File does not exist: file</expected-output>
+          <expected-output>^cat: File does not exist: /user/[a-z]*/file</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2331,7 +2331,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: Source must be a file.</expected-output>
+          <expected-output>^cat: File does not exist: /dir1</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -2348,7 +2348,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^cat: File does not exist: dir</expected-output>
+          <expected-output>^cat: File does not exist: /user/[a-z]*/dir</expected-output>
         </comparator>
       </comparators>
     </test>

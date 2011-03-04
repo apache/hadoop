@@ -333,7 +333,7 @@ public class FsShell extends Configured implements Tool {
    * @exception: IOException
    * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
-  void cat(String src, boolean verifyChecksum) throws IOException {
+  void cat(final String src, boolean verifyChecksum) throws IOException {
     //cat behavior in Linux
     //  [~/1207]$ ls ?.txt
     //  x.txt  z.txt
@@ -346,9 +346,6 @@ public class FsShell extends Configured implements Tool {
     new DelayedExceptionThrowing() {
       @Override
       void process(Path p, FileSystem srcFs) throws IOException {
-        if (srcFs.getFileStatus(p).isDir()) {
-          throw new IOException("Source must be a file.");
-        }
         printToStdout(srcFs.open(p));
       }
     }.globAndProcess(srcPattern, getSrcFileSystem(srcPattern, verifyChecksum));
