@@ -177,7 +177,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   private DNSToSwitchMapping dnsToSwitchMapping;
   private NetworkTopology clusterMap = new NetworkTopology();
   private int numTaskCacheLevels; // the max level to which we cache tasks
-  private Set<Node> nodesAtMaxLevel = new HashSet<Node>();
+  /**
+   * {@link #nodesAtMaxLevel} is using the keySet from {@link ConcurrentHashMap}
+   * so that it can be safely written to and iterated on via 2 separate threads.
+   * Note: It can only be iterated from a single thread which is feasible since
+   *       the only iteration is done in {@link JobInProgress} under the 
+   *       {@link JobTracker} lock.
+   */
+  private Set<Node> nodesAtMaxLevel = 
+    Collections.newSetFromMap(new ConcurrentHashMap<Node, Boolean>());
   private final TaskScheduler taskScheduler;
   private final List<JobInProgressListener> jobInProgressListeners =
     new CopyOnWriteArrayList<JobInProgressListener>();
@@ -2909,25 +2917,27 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   }
   
   private Node addHostToNodeMapping(String host, String networkLoc) {
-    Node node;
-    if ((node = clusterMap.getNode(networkLoc+"/"+host)) == null) {
-      node = new NodeBase(host, networkLoc);
-      clusterMap.add(node);
-      if (node.getLevel() < getNumTaskCacheLevels()) {
-        LOG.fatal("Got a host whose level is: " + node.getLevel() + "." 
-                  + " Should get at least a level of value: " 
-                  + getNumTaskCacheLevels());
-        try {
-          stopTracker();
-        } catch (IOException ie) {
-          LOG.warn("Exception encountered during shutdown: " 
-                   + StringUtils.stringifyException(ie));
-          System.exit(-1);
+    Node node = null;
+    synchronized (nodesAtMaxLevel) {
+      if ((node = clusterMap.getNode(networkLoc+"/"+host)) == null) {
+        node = new NodeBase(host, networkLoc);
+        clusterMap.add(node);
+        if (node.getLevel() < getNumTaskCacheLevels()) {
+          LOG.fatal("Got a host whose level is: " + node.getLevel() + "." 
+              + " Should get at least a level of value: " 
+              + getNumTaskCacheLevels());
+          try {
+            stopTracker();
+          } catch (IOException ie) {
+            LOG.warn("Exception encountered during shutdown: " 
+                + StringUtils.stringifyException(ie));
+            System.exit(-1);
+          }
         }
+        hostnameToNodeMap.put(host, node);
+        // Make an entry for the node at the max level in the cache
+        nodesAtMaxLevel.add(getParentNode(node, getNumTaskCacheLevels() - 1));
       }
-      hostnameToNodeMap.put(host, node);
-      // Make an entry for the node at the max level in the cache
-      nodesAtMaxLevel.add(getParentNode(node, getNumTaskCacheLevels() - 1));
     }
     return node;
   }
