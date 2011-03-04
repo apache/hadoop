@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -46,10 +45,6 @@ import org.mortbay.log.Log;
 public class TestDelegationToken {
   private MiniDFSCluster cluster;
   Configuration config;
-  final private static String GROUP1_NAME = "group1";
-  final private static String GROUP2_NAME = "group2";
-  final private static String[] GROUP_NAMES = new String[] { GROUP1_NAME,
-      GROUP2_NAME };
   
   @Before
   public void setUp() throws Exception {
@@ -132,33 +127,5 @@ public class TestDelegationToken {
     Log.info("A valid token should have non-null password, and should be renewed successfully");
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
     Assert.assertTrue(dtSecretManager.renewToken(token, "JobTracker"));
-  }
- 
-  @Test
-  public void testDelegationTokenWithRealUser() throws IOException {
-    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
-        "RealUser", GROUP_NAMES);
-    final UserGroupInformation proxyUgi = UserGroupInformation.createProxyUser(
-        "proxyUser", ugi);
-    try {
-      Token<DelegationTokenIdentifier> token = proxyUgi
-          .doAs(new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>() {
-            public Token<DelegationTokenIdentifier> run() throws IOException {
-              DistributedFileSystem dfs = (DistributedFileSystem) cluster
-                  .getFileSystem();
-              return dfs.getDelegationToken(new Text("RenewerUser"));
-            }
-          });
-      DelegationTokenIdentifier identifier = new DelegationTokenIdentifier();
-      byte[] tokenId = token.getIdentifier();
-      identifier.readFields(new DataInputStream(new ByteArrayInputStream(
-          tokenId)));
-      Assert.assertEquals(identifier.getUser().getUserName(), "proxyUser");
-      Assert.assertEquals(identifier.getUser().getRealUser().getUserName(),
-          "RealUser");
-    } catch (InterruptedException e) {
-      //Do Nothing
-    }
-  }
-  
+  } 
 }
