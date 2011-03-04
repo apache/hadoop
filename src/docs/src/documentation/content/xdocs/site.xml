@@ -49,6 +49,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
 		<vaidya    					label="Vaidya" 								href="vaidya.html"/>
 		<archives  				label="Archives"     						href="hadoop_archives.html"/>
  		<gridmix  				label="Gridmix"     href="gridmix.html"/>
+		<sec_impersonation			label="Secure Impersonation" 			href="Secure_Impersonation.html"/>
    </docs>
    
    <docs label="HDFS">
