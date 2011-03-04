@@ -1617,14 +1617,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           UserGroupInformation ugi =
             UserGroupInformation.createRemoteUser(job.getJobConf().getUser());
           LOG.info("Submitting job " + id + " on behalf of user "
-                   + ugi.getUserName() + " in groups : "
+                   + ugi.getShortUserName() + " in groups : "
                    + StringUtils.arrayToString(ugi.getGroupNames()));
 
           // check the access
           try {
             checkAccess(job, QueueManager.QueueOperation.SUBMIT_JOB, ugi);
           } catch (Throwable t) {
-            LOG.warn("Access denied for user " + ugi.getUserName() 
+            LOG.warn("Access denied for user " + ugi.getShortUserName() 
                      + " in groups : [" 
                      + StringUtils.arrayToString(ugi.getGroupNames()) + "]");
             throw t;
@@ -1942,7 +1942,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   
     supergroup = conf.get("mapred.permissions.supergroup", "supergroup");
-    LOG.info("Starting jobtracker with owner as " + mrOwner.getUserName() 
+    LOG.info("Starting jobtracker with owner as " + mrOwner.getShortUserName() 
              + " and supergroup as " + supergroup);
 
     //
@@ -2084,9 +2084,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
         try {
           FileStatus systemDirStatus = fs.getFileStatus(systemDir);
-          if (!systemDirStatus.getOwner().equals(mrOwner.getUserName())) {
+          if (!systemDirStatus.getOwner().equals(mrOwner.getShortUserName())) {
             throw new AccessControlException("The systemdir " + systemDir +
-                " is not owned by " + mrOwner.getUserName());
+                " is not owned by " + mrOwner.getShortUserName());
           }
           if (!systemDirStatus.getPermission().equals(SYSTEM_DIR_PERMISSION)) {
             LOG.warn("Incorrect permissions on " + systemDir +
@@ -3517,7 +3517,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return jobs.get(jobId).getStatus();
     }
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    JobInfo jobInfo = new JobInfo(jobId, new Text(ugi.getUserName()),
+    JobInfo jobInfo = new JobInfo(jobId, new Text(ugi.getShortUserName()),
         new Path(jobSubmitDir));
     JobInProgress job = null;
     tokenStorage = ts;
@@ -3574,7 +3574,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
           "/tmp/hadoop/mapred/staging"));
     FileSystem fs = stagingRootDir.getFileSystem(conf);
-    String user = UserGroupInformation.getCurrentUser().getUserName();
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
     return fs.makeQualified(new Path(stagingRootDir,
                                 user+"/.staging")).toString();
   }
@@ -3621,7 +3621,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     String queue = job.getProfile().getQueueName();
     if (!queueManager.hasAccess(queue, job, oper, ugi)) {
       throw new AccessControlException("User " 
-                            + ugi.getUserName() 
+                            + ugi.getShortUserName() 
                             + " cannot perform "
                             + "operation " + oper + " on queue " + queue +
                             ".\n Please run \"hadoop queue -showacls\" " +
@@ -4277,7 +4277,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   private synchronized boolean isSuperUser() throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    if (mrOwner.getUserName().equals(ugi.getUserName()) ) {
+    if (mrOwner.getShortUserName().equals(ugi.getShortUserName()) ) {
       return true;
     }
     String[] groups = ugi.getGroupNames();
@@ -4296,7 +4296,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public synchronized void refreshNodes() throws IOException {
     // check access
     if (!isSuperUser()) {
-      String user = UserGroupInformation.getCurrentUser().getUserName();
+      String user = UserGroupInformation.getCurrentUser().getShortUserName();
       throw new AccessControlException(user + 
                                        " is not authorized to refresh nodes.");
     }
@@ -4542,7 +4542,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   @Override
   public void refreshUserToGroupsMappings(Configuration conf) throws IOException {
     LOG.info("Refreshing all user-to-groups mappings. Requested by user: " + 
-             UserGroupInformation.getCurrentUser().getUserName());
+             UserGroupInformation.getCurrentUser().getShortUserName());
     
     Groups.getUserToGroupsMappingService(conf).refresh();
   }
@@ -4602,7 +4602,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   @Override
   public void refreshQueueAcls() throws IOException{
     LOG.info("Refreshing queue acls. requested by : " + 
-        UserGroupInformation.getCurrentUser().getUserName());
+        UserGroupInformation.getCurrentUser().getShortUserName());
     this.queueManager.refreshAcls(new Configuration(this.conf));
   }
   

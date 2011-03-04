@@ -454,7 +454,7 @@ public class TaskTracker
   }
 
   public static String getUserDir(String user) {
-    return TaskTracker.SUBDIR + Path.SEPARATOR + getShortUserName(user);
+    return TaskTracker.SUBDIR + Path.SEPARATOR + user;
   } 
 
   Localizer getLocalizer() {
@@ -465,17 +465,6 @@ public class TaskTracker
     localizer = l;
   }
 
-  /**
-   * This method must be called in all places where the short user name is
-   * desired (e.g. TaskTracker.getUserDir and in the LinuxTaskController).
-   * The short name is required in the path creation
-   * (like TaskTracker.getUserDir) and while launching task processes as the
-   * user.
-   */
-  static String getShortUserName(String name) {
-    return UserGroupInformation.createRemoteUser(name).getShortUserName();
-  }
-  
   public static String getPrivateDistributedCacheDir(String user) {
     return getUserDir(user) + Path.SEPARATOR + TaskTracker.DISTCACHEDIR;
   }

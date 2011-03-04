@@ -175,7 +175,7 @@ class QueueManager {
     }
     
     if (oper.isJobOwnerAllowed()) {
-      if (job != null && job.getJobConf().getUser().equals(ugi.getUserName())) {
+      if (job != null && job.getJobConf().getUser().equals(ugi.getShortUserName())) {
         return true;
       }
     }
@@ -323,7 +323,7 @@ class QueueManager {
 
   /**
    * Generates the array of QueueAclsInfo object. The array consists of only those queues
-   * for which user <ugi.getUserName()> has acls
+   * for which user <ugi.getShortUserName()> has acls
    *
    * @return QueueAclsInfo[]
    * @throws java.io.IOException

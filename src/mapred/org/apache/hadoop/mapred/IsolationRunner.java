@@ -157,7 +157,7 @@ public class IsolationRunner {
     if (args.length > 1) {
       user = args[1];
     } else {
-      user = UserGroupInformation.getCurrentUser().getUserName();
+      user = UserGroupInformation.getCurrentUser().getShortUserName();
     }
     JobConf conf = new JobConf(new Path(jobFilename.toString()));
     conf.setUser(user);

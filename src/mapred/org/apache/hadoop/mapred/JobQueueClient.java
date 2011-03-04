@@ -151,7 +151,7 @@ class JobQueueClient extends Configured implements  Tool {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     if (queueAclsInfoList.length > 0) {
       System.out.println("Queue acls for user :  "
-              + ugi.getUserName());
+              + ugi.getShortUserName());
       System.out.println("\nQueue  Operations");
       System.out.println("=====================");
       for (QueueAclsInfo queueInfo : queueAclsInfoList) {
@@ -168,7 +168,7 @@ class JobQueueClient extends Configured implements  Tool {
       }
     } else {
       System.out.println("User " +
-              ugi.getUserName() +
+              ugi.getShortUserName() +
               " does not have access to any queue. \n");
     }
   }

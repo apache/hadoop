@@ -508,7 +508,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String user;
     if (ugi != null) {
-      user = ugi.getUserName() + rand.nextInt();
+      user = ugi.getShortUserName() + rand.nextInt();
     } else {
       user = "dummy" + rand.nextInt();
     }

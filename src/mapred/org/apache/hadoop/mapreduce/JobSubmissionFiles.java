@@ -96,8 +96,8 @@ public class JobSubmissionFiles {
     String realUser;
     String currentUser;
     UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    realUser = ugi.getUserName();
-    currentUser = UserGroupInformation.getCurrentUser().getUserName();
+    realUser = ugi.getShortUserName();
+    currentUser = UserGroupInformation.getCurrentUser().getShortUserName();
     if (fs.exists(stagingArea)) {
       FileStatus fsStatus = fs.getFileStatus(stagingArea);
       String owner = fsStatus.getOwner();
