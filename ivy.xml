@@ -296,10 +296,5 @@
       rev="${aspectj.version}"
       conf="common->default">
     </dependency>
-    <dependency org="com.hadoop.compression"
-      name="hadoop-gpl-compression"
-      rev="${hadoop-gpl-compression.version}"
-      conf="common->master">
-    </dependency>
  </dependencies>
 </ivy-module>
