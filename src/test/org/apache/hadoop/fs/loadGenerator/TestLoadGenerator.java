@@ -23,13 +23,19 @@ import java.io.FileReader;
 import java.io.FileWriter;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.*;
+
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Test;
+
 /**
  * This class tests if a balancer schedules tasks correctly.
  */
-public class TestLoadGenerator extends TestCase {
+public class TestLoadGenerator extends Configured implements Tool {
   private static final Configuration CONF = new Configuration();
   private static final int DEFAULT_BLOCK_SIZE = 10;
   private static final String OUT_DIR = 
@@ -53,6 +59,7 @@ public class TestLoadGenerator extends TestCase {
   }
 
   /** Test if the structure generator works fine */ 
+  @Test
   public void testStructureGenerator() throws Exception {
     StructureGenerator sg = new StructureGenerator();
     String[] args = new String[]{"-maxDepth", "2", "-minWidth", "1",
@@ -121,6 +128,7 @@ public class TestLoadGenerator extends TestCase {
   }
 
   /** Test if the load generator works fine */
+  @Test
   public void testLoadGenerator() throws Exception {
     final String TEST_SPACE_ROOT = "/test";
 
@@ -209,9 +217,16 @@ public class TestLoadGenerator extends TestCase {
   /**
    * @param args
    */
-  public static void main(String[] args) throws Exception {
+  public static void main(String[] args) throws Exception{
+    int res = ToolRunner.run(new TestLoadGenerator(), args);
+    System.exit(res);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception {
     TestLoadGenerator loadGeneratorTest = new TestLoadGenerator();
     loadGeneratorTest.testStructureGenerator();
     loadGeneratorTest.testLoadGenerator();
+    return 0;
   }
 }
