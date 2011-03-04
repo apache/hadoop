@@ -93,7 +93,7 @@ public class AccessControlList {
   }
 
   public boolean isUserAllowed(UserGroupInformation ugi) {
-    if (allAllowed || users.contains(ugi.getUserName())) {
+    if (allAllowed || users.contains(ugi.getShortUserName())) {
       return true;
     } else {
       for(String group: ugi.getGroupNames()) {
