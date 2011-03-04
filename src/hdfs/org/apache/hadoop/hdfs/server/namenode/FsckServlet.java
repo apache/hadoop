@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
@@ -43,6 +44,8 @@ public class FsckServlet extends DfsServlet {
     @SuppressWarnings("unchecked")
     final Map<String,String[]> pmap = request.getParameterMap();
     final PrintWriter out = response.getWriter();
+    final InetAddress remoteAddress = 
+      InetAddress.getByName(request.getRemoteAddr());
     final ServletContext context = getServletContext();
     final Configuration conf = 
       (Configuration) context.getAttribute(JspHelper.CURRENT_CONF);
@@ -56,7 +59,7 @@ public class FsckServlet extends DfsServlet {
           final short minReplication = nn.namesystem.getMinReplication();
 
           new NamenodeFsck(conf, nn, nn.getNetworkTopology(), pmap, out,
-              totalDatanodes, minReplication).fsck();
+              totalDatanodes, minReplication, remoteAddress).fsck();
                     return null;
           }
       });

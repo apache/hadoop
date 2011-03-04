@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * This class provides rudimentary checking of DFS volumes for errors and
@@ -87,6 +89,7 @@ public class NamenodeFsck {
   private final NetworkTopology networktopology;
   private final int totalDatanodes;
   private final short minReplication;
+  private final InetAddress remoteAddress;
 
   private String lostFound = null;
   private boolean lfInited = false;
@@ -106,20 +109,24 @@ public class NamenodeFsck {
    * Filesystem checker.
    * @param conf configuration (namenode config)
    * @param nn namenode that this fsck is going to use
-   * @param pmap key=value[] map that is passed to the http servlet as url parameters
-   * @param response the object into which  this servelet writes the url contents
+   * @param pmap key=value[] map passed to the http servlet as url parameters
+   * @param out output stream to write the fsck output
+   * @param totalDatanodes number of live datanodes
+   * @param minReplication minimum replication
+   * @param remoteAddress source address of the fsck request
    * @throws IOException
    */
   NamenodeFsck(Configuration conf, NameNode namenode,
       NetworkTopology networktopology, 
       Map<String,String[]> pmap, PrintWriter out,
-      int totalDatanodes, short minReplication) {
+      int totalDatanodes, short minReplication, InetAddress remoteAddress) {
     this.conf = conf;
     this.namenode = namenode;
     this.networktopology = networktopology;
     this.out = out;
     this.totalDatanodes = totalDatanodes;
     this.minReplication = minReplication;
+    this.remoteAddress = remoteAddress;
 
     for (Iterator<String> it = pmap.keySet().iterator(); it.hasNext();) {
       String key = it.next();
@@ -140,7 +147,11 @@ public class NamenodeFsck {
   public void fsck() {
     final long startTime = System.currentTimeMillis();
     try {
-      out.println("Namenode FSCK started at " + new Date());
+      String msg = "FSCK started by " + UserGroupInformation.getCurrentUser()
+          + " from " + remoteAddress + " for path " + path + " at " + new Date();
+      LOG.info(msg);
+      out.println(msg);
+      namenode.getNamesystem().logFsckEvent(path, remoteAddress);
       Result res = new Result(conf);
       final HdfsFileStatus file = namenode.getFileInfo(path);
       if (file != null) {
@@ -203,7 +214,10 @@ public class NamenodeFsck {
       return;
     }
     long fileLen = file.getLen();
-    LocatedBlocks blocks = namenode.getBlockLocationsNoATime(path, 0, fileLen);
+    // Get block locations without updating the file access time 
+    // and without block access tokens
+    LocatedBlocks blocks = namenode.getNamesystem().getBlockLocations(path, 0,
+        fileLen, false, false);
     if (blocks == null) { // the file is deleted
       return;
     }

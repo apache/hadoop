@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.RandomAccessFile;
@@ -27,6 +29,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import junit.framework.TestCase;
 
@@ -38,7 +41,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -47,11 +49,25 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.apache.log4j.PatternLayout;
+import org.apache.log4j.RollingFileAppender;
 
 /**
  * A JUnit test for doing fsck
  */
 public class TestFsck extends TestCase {
+  static final String auditLogFile = System.getProperty("test.build.dir",
+      "build/test") + "/audit.log";
+  
+  // Pattern for: 
+  // ugi=name ip=/address cmd=FSCK src=/ dst=null perm=null
+  static final Pattern fsckPattern = Pattern.compile(
+      "ugi=.*?\\s" + 
+      "ip=/\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\s" + 
+      "cmd=fsck\\ssrc=\\/\\sdst=null\\s" + 
+      "perm=null");
+  
   static String runFsck(Configuration conf, int expectedErrCode, 
                         boolean checkErrorCode,String... path) 
                         throws Exception {
@@ -88,7 +104,9 @@ public class TestFsck extends TestCase {
       final Path file = stats[0].getPath();
       long aTime = fs.getFileStatus(file).getAccessTime();
       Thread.sleep(2*precision);
+      setupAuditLogs();
       String outStr = runFsck(conf, 0, true, "/");
+      verifyAuditLogs();
       assertEquals(aTime, fs.getFileStatus(file).getAccessTime());
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       System.out.println(outStr);
@@ -114,6 +132,33 @@ public class TestFsck extends TestCase {
     }
   }
 
+  /** Sets up log4j logger for auditlogs */
+  private void setupAuditLogs() throws IOException {
+    File file = new File(auditLogFile);
+    if (file.exists()) {
+      file.delete();
+    }
+    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    logger.setLevel(Level.INFO);
+    PatternLayout layout = new PatternLayout("%m%n");
+    RollingFileAppender appender = new RollingFileAppender(layout, auditLogFile);
+    logger.addAppender(appender);
+  }
+  
+  private void verifyAuditLogs() throws IOException {
+    // Turn off the logs
+    Logger logger = ((Log4JLogger) FSNamesystem.auditLog).getLogger();
+    logger.setLevel(Level.OFF);
+    
+    // Ensure audit log has only one for FSCK
+    BufferedReader reader = new BufferedReader(new FileReader(auditLogFile));
+    String line = reader.readLine();
+    assertNotNull(line);
+    assertTrue("Expected fsck event not found in audit log",
+        fsckPattern.matcher(line).matches());
+    assertNull("Unexpected event in audit log", reader.readLine());
+  }
+  
   public void testFsckNonExistent() throws Exception {
     DFSTestUtil util = new DFSTestUtil("TestFsck", 20, 3, 8*1024);
     MiniDFSCluster cluster = null;
