@@ -324,25 +324,12 @@ public class HarFileSystem extends FilterFileSystem {
   @Override
   public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
       long len) throws IOException {
-    // need to look up the file in the underlying fs
-    // look up the index 
-    
-    // make sure this is a prt of this har filesystem
-    Path p = makeQualified(file.getPath());
-    Path harPath = getPathInHar(p);
-    String line = fileStatusInIndex(harPath);
-    if (line == null)  {
-      throw new FileNotFoundException("File " + file.getPath() + " not found");
-    }
-    HarStatus harStatus = new HarStatus(line);
-    if (harStatus.isDir()) {
-      return new BlockLocation[0];
-    }
-    FileStatus fsFile = fs.getFileStatus(new Path(archivePath,
-        harStatus.getPartName()));
-    BlockLocation[] rawBlocks = fs.getFileBlockLocations(fsFile, 
-        harStatus.getStartIndex() + start, len);
-    return fakeBlockLocations(rawBlocks, harStatus.getStartIndex());
+    // just fake block locations
+    // its fast and simpler
+    // doing various block location manipulation
+    // with part files adds a lot of overhead because 
+    // of the look ups of filestatus in index files
+    return new BlockLocation[]{ new BlockLocation() };
   }
   
   /**
@@ -384,6 +371,63 @@ public class HarFileSystem extends FilterFileSystem {
     public long end;
     public int startHash;
     public int endHash;
+  }
+  
+  /**
+   * Get filestatuses of all the children of a given directory. This just reads
+   * through index file and reads line by line to get all statuses for children
+   * of a directory. Its a brute force way of getting all such filestatuses
+   * 
+   * @param parent
+   *          the parent path directory
+   * @param statuses
+   *          the list to add the children filestatuses to
+   * @param children
+   *          the string list of children for this parent
+   * @param archiveIndexStat
+   *          the archive index filestatus
+   */
+  private void fileStatusesInIndex(HarStatus parent, List<FileStatus> statuses,
+      List<String> children, FileStatus archiveIndexStat) throws IOException {
+    // read the index file
+    FSDataInputStream aIn = null;
+    try {
+      aIn = fs.open(archiveIndex);
+      LineReader aLin;
+      long read = 0;
+      aLin = new LineReader(aIn, getConf());
+      String parentString = parent.getName();
+      Path harPath = new Path(parentString);
+      int harlen = harPath.depth();
+      Text line = new Text();
+      while (read < archiveIndexStat.getLen()) {
+        int tmp = aLin.readLine(line);
+        read += tmp;
+        String lineFeed = line.toString();
+        String child = lineFeed.substring(0, lineFeed.indexOf(" "));
+        if ((child.startsWith(parentString))) {
+          Path thisPath = new Path(child);
+          if (thisPath.depth() == harlen + 1) {
+            // bingo!
+            HarStatus hstatus = new HarStatus(lineFeed);
+            FileStatus childStatus = new FileStatus(hstatus.isDir() ? 0
+                : hstatus.getLength(), hstatus.isDir(), (int) archiveIndexStat
+                .getReplication(), archiveIndexStat.getBlockSize(),
+                archiveIndexStat.getModificationTime(), archiveIndexStat
+                    .getAccessTime(), new FsPermission(archiveIndexStat
+                    .getPermission()), archiveIndexStat.getOwner(),
+                archiveIndexStat.getGroup(), makeRelative(this.uri.toString(),
+                    new Path(hstatus.name)));
+            statuses.add(childStatus);
+          }
+          line.clear();
+        }
+      }
+    } finally {
+      if (aIn != null) {
+        aIn.close();
+      }
+    }
   }
   
   // make sure that this harPath is relative to the har filesystem
@@ -649,10 +693,8 @@ public class HarFileSystem extends FilterFileSystem {
             archiveStatus.getOwner(), archiveStatus.getGroup(), 
             makeRelative(this.uri.toString(), new Path(hstatus.name))));
     else 
-      for (String child: hstatus.children) {
-        FileStatus tmp = getFileStatus(new Path(tmpPath, child));
-        statuses.add(tmp);
-      }
+      fileStatusesInIndex(hstatus, statuses, hstatus.children, archiveStatus);
+    
     return statuses.toArray(new FileStatus[statuses.size()]);
   }
   
