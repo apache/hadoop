@@ -218,7 +218,7 @@ class JvmManager {
     private final long sleeptimeBeforeSigkill;
     
     Random rand = new Random(System.currentTimeMillis());
-    private static final String DELAY_BEFORE_KILL_KEY =
+    static final String DELAY_BEFORE_KILL_KEY =
       "mapred.tasktracker.tasks.sleeptime-before-sigkill";
     // number of milliseconds to wait between TERM and KILL.
     private static final long DEFAULT_SLEEPTIME_BEFORE_SIGKILL = 250;
@@ -540,9 +540,13 @@ class JvmManager {
             String user = env.conf.getUser();
             int pid = Integer.parseInt(pidStr);
             // start a thread that will kill the process dead
-            //new DelayedProcessKiller(user, pid, sleeptimeBeforeSigkill, 
-            //                         Signal.KILL).start();
-            controller.signalTask(user, pid, Signal.KILL);
+            if (sleeptimeBeforeSigkill > 0) {
+              new DelayedProcessKiller(user, pid, sleeptimeBeforeSigkill, 
+                                       Signal.KILL).start();
+              controller.signalTask(user, pid, Signal.TERM);
+            } else {
+              controller.signalTask(user, pid, Signal.KILL);
+            }
           } else {
             LOG.info(String.format("JVM Not killed %s but just removed", jvmId
                 .toString()));

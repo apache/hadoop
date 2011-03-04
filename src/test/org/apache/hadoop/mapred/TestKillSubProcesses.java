@@ -309,9 +309,10 @@ public class TestKillSubProcesses extends TestCase {
       return;
     }
     
-    JobConf conf=null;
     try {
-      mr = new MiniMRCluster(1, "file:///", 1);
+      JobConf conf = new JobConf();
+      conf.setLong(JvmManager.JvmManagerForType.DELAY_BEFORE_KILL_KEY, 0L);
+      mr = new MiniMRCluster(1, "file:///", 1, null, null, conf);
 
       // run the TCs
       conf = mr.createJobConf();
