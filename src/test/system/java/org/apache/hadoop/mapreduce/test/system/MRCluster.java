@@ -60,7 +60,7 @@ public class MRCluster extends AbstractDaemonCluster {
   private static String TT_hostFileName;
   private static String jtHostName;
 
-  protected enum Role {JT, TT};
+  public enum Role {JT, TT};
 
   static{
     Configuration.addDefaultResource("mapred-default.xml");
@@ -129,6 +129,19 @@ public class MRCluster extends AbstractDaemonCluster {
   public TTClient getTTClient(String hostname) {
     for (TTClient c : getTTClients()) {
       if (c.getHostName().equals(hostname)) {
+        return c;
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * This function will give access to one of many TTClient present
+   * @return an Instance of TTclient 
+   */
+  public TTClient getTTClient() {
+    for (TTClient c: getTTClients()) {
+      if (c != null){
         return c;
       }
     }

@@ -118,4 +118,12 @@ public interface JTProtocol extends DaemonProtocol {
    * @throws IOException
    */
   String getJobHistoryLocationForRetiredJob(JobID jobID) throws IOException;
+  
+  /**
+   * This directly calls the JobTracker public with no modifications
+   * @param trackerID uniquely indentifies the task tracker
+   * @return
+   * @throws IOException is thrown in case of RPC error
+   */
+  public boolean isBlackListed(String trackerID) throws IOException;
 }

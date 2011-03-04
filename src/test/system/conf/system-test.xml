@@ -90,7 +90,15 @@ neutral at the forward-port stage -->
   Command for resuming the given suspended process.
   </description>
 </property>
-
+<property>
+  <name>test.system.hdrc.healthscript.path</name>
+  <value>/tmp</value>
+  <description>
+  This location is used by health script test cases to configure the
+  health script in remote cluster where the error inducing health script
+  will be copied.
+  </description>
+</property>
 
 <!-- Mandatory keys to be set for the multi user support to be enabled.  -->
 

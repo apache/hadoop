@@ -19,7 +19,6 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskID;
@@ -78,5 +77,9 @@ public aspect JTProtocolAspect {
   
   public String JTProtocol.getJobHistoryLocationForRetiredJob(JobID jobID) throws IOException {
     return "";
+  }
+  
+  public boolean JTProtocol.isBlackListed(String trackerID) throws IOException {
+    return false;
   }
 }

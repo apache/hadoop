@@ -155,6 +155,10 @@ public privileged aspect JobTrackerAspect {
     return retireJobs.get(
         org.apache.hadoop.mapred.JobID.downgrade(id))!=null?true:false;
   }
+  
+  public boolean JobTracker.isBlackListed(String trackerName) throws IOException {
+    return isBlacklisted(trackerName);
+  }
 
   public String JobTracker.getJobHistoryLocationForRetiredJob(
       JobID id) throws IOException {
