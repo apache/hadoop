@@ -32,6 +32,9 @@
   <property name="repo.maven.org"
     value="http://repo1.maven.org/maven2/"
     override="false"/>
+  <property name="oss.sonatype.org"
+    value="https://oss.sonatype.org/content/groups/public/"
+    override="false"/>
   <property name="snapshot.apache.org"
     value="http://people.apache.org/repo/m2-snapshot-repository/"
     override="false"/>
@@ -53,9 +56,15 @@
       pattern="${maven2.pattern.ext}"
       m2compatible="true"
       />
+    <ibiblio name="oss-sonatype"
+      root="${oss.sonatype.org}"
+      pattern="${maven2.pattern.ext}"
+      m2compatible="true"
+      />
     <chain name="default" dual="true">
       <resolver ref="local"/>
       <resolver ref="maven2"/>
+      <resolver ref="oss-sonatype"/>
     </chain>
     <chain name="internal">
       <resolver ref="local"/>
