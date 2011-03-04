@@ -16,26 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
-
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
+package org.apache.hadoop.mapreduce;
 
 /**
- * This class filters log files from directory given
- * It doesnt accept paths having _logs.
- * This can be used to list paths of output directory as follows:
- *   Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
- *                                   new OutputLogFilter()));
- * @deprecated Use 
- *   {@link org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputLogFilter} 
- *   instead.
+ * Describes the current status of a job.
  */
-public class OutputLogFilter implements PathFilter {
-  private static final PathFilter LOG_FILTER = 
-    new Utils.OutputFileUtils.OutputLogFilter();
-     
-  public boolean accept(Path path) {
-    return LOG_FILTER.accept(path);
+public class JobStatus {
+  /**
+   * Current state of the job 
+   */
+  public static enum State {
+    RUNNING(1),
+    SUCCEEDED(2),
+    FAILED(3),
+    PREP(4),
+    KILLED(5);
+
+    int value;
+
+    State(int value) {
+      this.value = value;
+    }
+
+    public int getValue() {
+      return value;
+    }
   }
 }

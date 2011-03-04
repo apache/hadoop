@@ -101,7 +101,8 @@ public class TestMiniMRWithDFS extends TestCase {
     {
       
       Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
-                                   new OutputLogFilter()));
+          new Utils.OutputFileUtils.OutputFilesFilter()));
+
       for(int i=0; i < fileList.length; ++i) {
         LOG.info("File list[" + i + "]" + ": "+ fileList[i]);
         BufferedReader file = 

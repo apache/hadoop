@@ -37,9 +37,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.ClusterMapReduceTestCase;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.OutputLogFilter;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapred.SkipBadRecords;
+import org.apache.hadoop.mapred.Utils;
 
 public class TestStreamingBadRecords extends ClusterMapReduceTestCase
 {
@@ -118,7 +118,7 @@ public class TestStreamingBadRecords extends ClusterMapReduceTestCase
     badRecs.addAll(REDUCER_BAD_RECORDS);
     Path[] outputFiles = FileUtil.stat2Paths(
         getFileSystem().listStatus(getOutputDir(),
-        new OutputLogFilter()));
+            new Utils.OutputFileUtils.OutputFilesFilter()));
     
     if (outputFiles.length > 0) {
       InputStream is = getFileSystem().open(outputFiles[0]);

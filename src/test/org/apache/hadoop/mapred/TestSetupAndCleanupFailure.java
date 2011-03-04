@@ -49,10 +49,10 @@ public class TestSetupAndCleanupFailure extends TestCase {
     }
   }
 
-  // Commiter with cleanupJob throwing exception
+  // Commiter with commitJob throwing exception
   static class CommitterWithFailCleanup extends FileOutputCommitter {
     @Override
-    public void cleanupJob(JobContext context) throws IOException {
+    public void commitJob(JobContext context) throws IOException {
       throw new IOException();
     }
   }
@@ -78,9 +78,9 @@ public class TestSetupAndCleanupFailure extends TestCase {
     }
     
     @Override
-    public void cleanupJob(JobContext context) throws IOException {
+    public void commitJob(JobContext context) throws IOException {
       waitForSignalFile(FileSystem.get(context.getJobConf()), cleanupSignalFile);
-      super.cleanupJob(context);
+      super.commitJob(context);
     }
   }
   

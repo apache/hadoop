@@ -46,6 +46,7 @@ public class NullOutputFormat<K, V> extends OutputFormat<K, V> {
     return new OutputCommitter() {
       public void abortTask(TaskAttemptContext taskContext) { }
       public void cleanupJob(JobContext jobContext) { }
+      public void commitJob(JobContext jobContext) { }
       public void commitTask(TaskAttemptContext taskContext) { }
       public boolean needsTaskCommit(TaskAttemptContext taskContext) {
         return false;

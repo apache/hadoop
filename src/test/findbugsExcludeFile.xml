@@ -28,6 +28,16 @@
        <Field name="out" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.OutputCommitter" />
+       <Or>
+       <Method name="abortJob" />
+       <Method name="commitJob" />
+       <Method name="cleanupJob" />
+       </Or>
+       <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+     </Match>
+
      <!--
        TFile
      -->
@@ -55,5 +65,15 @@
        <Method name="reportFatalError" />
        <Bug pattern="DM_EXIT" />
      </Match>
-    
+    <!--
+       We need to cast objects between old and new api objects
+     -->
+     <Match>
+       <Class name="org.apache.hadoop.mapred.OutputCommitter" />
+       <Bug pattern="BC_UNCONFIRMED_CAST" />
+     </Match>
+     <Match>
+       <Class name="org.apache.hadoop.mapred.FileOutputCommitter" />
+       <Bug pattern="NM_WRONG_PACKAGE_INTENTIONAL" />
+     </Match>
 </FindBugsFilter>

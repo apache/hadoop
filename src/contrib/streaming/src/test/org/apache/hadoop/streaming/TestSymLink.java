@@ -18,15 +18,23 @@
 
 package org.apache.hadoop.streaming;
 
+import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import junit.framework.TestCase;
-import java.io.*;
-import java.util.*;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.*;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.mapred.Utils;
 /**
  * This test case tests the symlink creation
  * utility provided by distributed caching 
@@ -88,7 +96,8 @@ public class TestSymLink extends TestCase
           "-cacheFile", "hdfs://"+fileSys.getName()+CACHE_FILE + "#testlink"
         };
 
-        fileSys.delete(new Path(OUTPUT_DIR));
+        fileSys.delete(new Path(OUTPUT_DIR), true);
+      
         
         DataOutputStream file = fileSys.create(new Path(INPUT_FILE));
         file.writeBytes(mapString);
@@ -104,7 +113,8 @@ public class TestSymLink extends TestCase
         String line = null;
         Path[] fileList = FileUtil.stat2Paths(fileSys.listStatus(
                                                 new Path(OUTPUT_DIR),
-                                                new OutputLogFilter()));
+                                                new Utils.OutputFileUtils
+                                                .OutputFilesFilter()));
         for (int i = 0; i < fileList.length; i++){
           System.out.println(fileList[i].toString());
           BufferedReader bread =

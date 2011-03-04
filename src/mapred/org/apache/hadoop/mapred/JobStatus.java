@@ -322,4 +322,10 @@ public class JobStatus implements Writable, Cloneable {
     this.priority = WritableUtils.readEnum(in, JobPriority.class);
     this.schedulingInfo = Text.readString(in);
   }
+
+  // A utility to convert new job runstates to the old ones.
+  static int getOldNewJobRunState(
+    org.apache.hadoop.mapreduce.JobStatus.State state) {
+    return state.getValue();
+  }
 }
