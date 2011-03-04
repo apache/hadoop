@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.ExportedAccessKeys;
 
 /*****************************************************************************
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
@@ -30,9 +31,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  *****************************************************************************/
 public interface NamenodeProtocol extends VersionedProtocol {
   /**
-   * 2: Added getEditLogSize(), rollEditLog(), rollFSImage().
+   * 3: new method added: getAccessKeys()
    */
-  public static final long versionID = 2L;
+  public static final long versionID = 3L;
 
   /** Get a list of blocks belonged to <code>datanode</code>
     * whose total size is equal to <code>size</code>
@@ -44,6 +45,14 @@ public interface NamenodeProtocol extends VersionedProtocol {
    */
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size)
   throws IOException;
+
+  /**
+   * Get the current access keys
+   * 
+   * @return ExportedAccessKeys containing current access keys
+   * @throws IOException 
+   */
+  public ExportedAccessKeys getAccessKeys() throws IOException;
 
   /**
    * Get the size of the current edit log (in bytes).

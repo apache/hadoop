@@ -12,6 +12,7 @@
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
+  import="org.apache.hadoop.security.AccessToken"
   import="org.apache.hadoop.util.*"
   import="org.apache.hadoop.net.NetUtils"
   import="java.text.DateFormat"
@@ -82,6 +83,7 @@
     LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
     long blockSize = lastBlk.getBlock().getNumBytes();
     long blockId = lastBlk.getBlock().getBlockId();
+    AccessToken accessToken = lastBlk.getAccessToken();
     long genStamp = lastBlk.getBlock().getGenerationStamp();
     DatanodeInfo chosenNode;
     try {
@@ -98,7 +100,7 @@
     else startOffset = 0;
 
     out.print("<textarea cols=\"100\" rows=\"25\" wrap=\"virtual\" style=\"width:100%\" READONLY>");
-    jspHelper.streamBlockInAscii(addr, blockId, genStamp, blockSize, startOffset, chunkSizeToView, out);
+    jspHelper.streamBlockInAscii(addr, blockId, accessToken, genStamp, blockSize, startOffset, chunkSizeToView, out);
     out.print("</textarea>");
     dfs.close();
   }

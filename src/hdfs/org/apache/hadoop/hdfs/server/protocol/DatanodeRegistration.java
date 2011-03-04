@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
+import org.apache.hadoop.security.ExportedAccessKeys;
 
 /** 
  * DatanodeRegistration class conatins all information the Namenode needs
@@ -46,6 +47,7 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
   }
 
   public StorageInfo storageInfo;
+  public ExportedAccessKeys exportedKeys;
 
   /**
    * Default constructor.
@@ -60,6 +62,7 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
   public DatanodeRegistration(String nodeName) {
     super(nodeName);
     this.storageInfo = new StorageInfo();
+    this.exportedKeys = new ExportedAccessKeys();
   }
   
   public void setInfoPort(int infoPort) {
@@ -112,6 +115,7 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
     out.writeInt(storageInfo.getLayoutVersion());
     out.writeInt(storageInfo.getNamespaceID());
     out.writeLong(storageInfo.getCTime());
+    exportedKeys.write(out);
   }
 
   /** {@inheritDoc} */
@@ -124,5 +128,6 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
     storageInfo.layoutVersion = in.readInt();
     storageInfo.namespaceID = in.readInt();
     storageInfo.cTime = in.readLong();
+    exportedKeys.readFields(in);
   }
 }

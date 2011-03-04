@@ -35,10 +35,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  **********************************************************************/
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 19: SendHeartbeat returns an array of DatanodeCommand objects
-   *     in stead of a DatanodeCommand object.
+   * 20: SendHeartbeat may return KeyUpdateCommand
+   *     Register returns access keys inside DatanodeRegistration object
    */
-  public static final long versionID = 19L;
+  public static final long versionID = 20L;
   
   // error code
   final static int NOTIFY = 0;
@@ -57,6 +57,7 @@ public interface DatanodeProtocol extends VersionedProtocol {
   final static int DNA_REGISTER = 4;   // re-register
   final static int DNA_FINALIZE = 5;   // finalize previous upgrade
   final static int DNA_RECOVERBLOCK = 6;  // request a block recovery
+  final static int DNA_ACCESSKEYUPDATE = 7;  // update access key
 
   /** 
    * Register Datanode.

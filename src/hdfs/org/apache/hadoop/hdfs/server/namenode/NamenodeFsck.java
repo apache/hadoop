@@ -425,6 +425,7 @@ public class NamenodeFsck {
           DFSClient.BlockReader.newBlockReader(s, targetAddr.toString() + ":" + 
                                                block.getBlockId(), 
                                                block.getBlockId(), 
+                                               lblock.getAccessToken(),
                                                block.getGenerationStamp(), 
                                                0, -1,
                                                conf.getInt("io.file.buffer.size", 4096));

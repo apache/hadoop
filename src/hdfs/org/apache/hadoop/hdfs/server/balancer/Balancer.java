@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -71,8 +72,12 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
+import org.apache.hadoop.security.AccessToken;
+import org.apache.hadoop.security.AccessTokenHandler;
+import org.apache.hadoop.security.ExportedAccessKeys;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -190,6 +195,11 @@ public class Balancer implements Tool {
   private NamenodeProtocol namenode;
   private ClientProtocol client;
   private FileSystem fs;
+  private boolean isAccessTokenEnabled;
+  private boolean shouldRun;
+  private long keyUpdaterInterval;
+  private AccessTokenHandler accessTokenHandler;
+  private Daemon keyupdaterthread = null; // AccessKeyUpdater thread
   private final static Random rnd = new Random();
   
   // all data node lists
@@ -359,6 +369,13 @@ public class Balancer implements Tool {
       out.writeLong(block.getBlock().getGenerationStamp());
       Text.writeString(out, source.getStorageID());
       proxySource.write(out);
+      AccessToken accessToken = AccessToken.DUMMY_TOKEN;
+      if (isAccessTokenEnabled) {
+        accessToken = accessTokenHandler.generateToken(null, block.getBlock()
+            .getBlockId(), EnumSet.of(AccessTokenHandler.AccessMode.REPLACE,
+            AccessTokenHandler.AccessMode.COPY));
+      }
+      accessToken.write(out);
       out.flush();
     }
     
@@ -366,6 +383,8 @@ public class Balancer implements Tool {
     private void receiveResponse(DataInputStream in) throws IOException {
       short status = in.readShort();
       if (status != DataTransferProtocol.OP_STATUS_SUCCESS) {
+        if (status == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN)
+          throw new IOException("block move failed due to access token error");
         throw new IOException("block move is failed");
       }
     }
@@ -841,6 +860,48 @@ public class Balancer implements Tool {
     this.namenode = createNamenode(conf);
     this.client = DFSClient.createNamenode(conf);
     this.fs = FileSystem.get(conf);
+    ExportedAccessKeys keys = namenode.getAccessKeys();
+    this.isAccessTokenEnabled = keys.isAccessTokenEnabled();
+    if (isAccessTokenEnabled) {
+      long accessKeyUpdateInterval = keys.getKeyUpdateInterval();
+      long accessTokenLifetime = keys.getTokenLifetime();
+      LOG.info("Access token params received from NN: keyUpdateInterval="
+          + accessKeyUpdateInterval / (60 * 1000) + " min(s), tokenLifetime="
+          + accessTokenLifetime / (60 * 1000) + " min(s)");
+      this.accessTokenHandler = new AccessTokenHandler(false,
+          accessKeyUpdateInterval, accessTokenLifetime);
+      this.accessTokenHandler.setKeys(keys);
+      /*
+       * Balancer should sync its access keys with NN more frequently than NN
+       * updates its access keys
+       */
+      this.keyUpdaterInterval = accessKeyUpdateInterval / 4;
+      LOG.info("Balancer will update its access keys every "
+          + keyUpdaterInterval / (60 * 1000) + " minute(s)");
+      this.keyupdaterthread = new Daemon(new AccessKeyUpdater());
+      this.shouldRun = true;
+      this.keyupdaterthread.start();
+    }
+  }
+  
+  /**
+   * Periodically updates access keys.
+   */
+  class AccessKeyUpdater implements Runnable {
+
+    public void run() {
+      while (shouldRun) {
+        try {
+          accessTokenHandler.setKeys(namenode.getAccessKeys());
+        } catch (Exception e) {
+          LOG.error(StringUtils.stringifyException(e));
+        }
+        try {
+          Thread.sleep(keyUpdaterInterval);
+        } catch (InterruptedException ie) {
+        }
+      }
+    }
   }
   
   /* Build a NamenodeProtocol connection to the namenode and
@@ -857,6 +918,7 @@ public class Balancer implements Tool {
     Map<String,RetryPolicy> methodNameToPolicyMap =
         new HashMap<String, RetryPolicy>();
     methodNameToPolicyMap.put("getBlocks", methodPolicy);
+    methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
 
     UserGroupInformation ugi;
     try {
@@ -1502,6 +1564,12 @@ public class Balancer implements Tool {
       dispatcherExecutor.shutdownNow();
       moverExecutor.shutdownNow();
 
+      shouldRun = false;
+      try {
+        if (keyupdaterthread != null) keyupdaterthread.interrupt();
+      } catch (Exception e) {
+        LOG.warn("Exception shutting down access key updater thread", e);
+      }
       // close the output file
       IOUtils.closeStream(out); 
       if (fs != null) {

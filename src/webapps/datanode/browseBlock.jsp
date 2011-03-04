@@ -12,6 +12,8 @@
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
+  import="org.apache.hadoop.security.AccessToken"
+  import="org.apache.hadoop.security.AccessTokenHandler"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
 %>
@@ -190,6 +192,26 @@
     }
     blockId = Long.parseLong(blockIdStr);
 
+    final DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
+    
+    AccessToken accessToken = AccessToken.DUMMY_TOKEN;
+    if (JspHelper.conf
+        .getBoolean(AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, false)) {
+      List<LocatedBlock> blks = dfs.namenode.getBlockLocations(filename, 0,
+          Long.MAX_VALUE).getLocatedBlocks();
+      if (blks == null || blks.size() == 0) {
+        out.print("Can't locate file blocks");
+        dfs.close();
+        return;
+      }
+      for (int i = 0; i < blks.size(); i++) {
+        if (blks.get(i).getBlock().getBlockId() == blockId) {
+          accessToken = blks.get(i).getAccessToken();
+          break;
+        }
+      }
+    }
+    
     String blockGenStamp = null;
     long genStamp = 0;
     blockGenStamp = req.getParameter("genstamp");
@@ -240,7 +262,6 @@
     out.print("<hr>");
 
     //Determine the prev & next blocks
-    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
     long nextStartOffset = 0;
     long nextBlockSize = 0;
     String nextBlockIdStr = null;
@@ -355,7 +376,7 @@
     try {
     jspHelper.streamBlockInAscii(
             new InetSocketAddress(req.getServerName(), datanodePort), blockId, 
-            genStamp, blockSize, startOffset, chunkSizeToView, out);
+            accessToken, genStamp, blockSize, startOffset, chunkSizeToView, out);
     } catch (Exception e){
         out.print(e);
     }

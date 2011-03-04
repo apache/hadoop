@@ -34,6 +34,7 @@ import java.security.SecureRandom;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DisallowedDatanodeException;
+import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.InterDatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
@@ -82,6 +84,9 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessToken;
+import org.apache.hadoop.security.AccessTokenHandler;
+import org.apache.hadoop.security.ExportedAccessKeys;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authorize.ConfiguredPolicy;
 import org.apache.hadoop.security.authorize.PolicyProvider;
@@ -189,6 +194,9 @@ public class DataNode extends Configured
   int socketWriteTimeout = 0;  
   boolean transferToAllowed = true;
   int writePacketSize = 0;
+  boolean isAccessTokenEnabled;
+  AccessTokenHandler accessTokenHandler;
+  boolean isAccessTokenInitialized = false;
   
   public DataBlockScanner blockScanner = null;
   public Daemon blockScannerThread = null;
@@ -556,6 +564,27 @@ public class DataNode extends Configured
           + ". Expecting " + storage.getStorageID());
     }
     
+    if (!isAccessTokenInitialized) {
+      /* first time registering with NN */
+      ExportedAccessKeys keys = dnRegistration.exportedKeys;
+      this.isAccessTokenEnabled = keys.isAccessTokenEnabled();
+      if (isAccessTokenEnabled) {
+        long accessKeyUpdateInterval = keys.getKeyUpdateInterval();
+        long accessTokenLifetime = keys.getTokenLifetime();
+        LOG.info("Access token params received from NN: keyUpdateInterval="
+            + accessKeyUpdateInterval / (60 * 1000) + " min(s), tokenLifetime="
+            + accessTokenLifetime / (60 * 1000) + " min(s)");
+        this.accessTokenHandler = new AccessTokenHandler(false,
+            accessKeyUpdateInterval, accessTokenLifetime);
+      }
+      isAccessTokenInitialized = true;
+    }
+
+    if (isAccessTokenEnabled) {
+      accessTokenHandler.setKeys(dnRegistration.exportedKeys);
+      dnRegistration.exportedKeys = ExportedAccessKeys.DUMMY_KEYS;
+    }
+
     // random short delay - helps scatter the BR from all DNs
     scheduleBlockReport(initialBlockReportDelay);
   }
@@ -920,6 +949,12 @@ public class DataNode extends Configured
     case DatanodeProtocol.DNA_RECOVERBLOCK:
       recoverBlocks(bcmd.getBlocks(), bcmd.getTargets());
       break;
+    case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
+      LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
+      if (isAccessTokenEnabled) {
+        accessTokenHandler.setKeys(((KeyUpdateCommand) cmd).getExportedKeys());
+      }
+      break;
     default:
       LOG.warn("Unknown DatanodeCommand action: " + cmd.getAction());
     }
@@ -1176,6 +1211,12 @@ public class DataNode extends Configured
         for (int i = 1; i < targets.length; i++) {
           targets[i].write(out);
         }
+        AccessToken accessToken = AccessToken.DUMMY_TOKEN;
+        if (isAccessTokenEnabled) {
+          accessToken = accessTokenHandler.generateToken(null, b.getBlockId(),
+              EnumSet.of(AccessTokenHandler.AccessMode.WRITE));
+        }
+        accessToken.write(out);
         // send data & checksum
         blockSender.sendBlock(out, baseStream, null);
 

@@ -90,6 +90,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   // isAlive == heartbeats.contains(this)
   // This is an optimization, because contains takes O(n) time on Arraylist
   protected boolean isAlive = false;
+  protected boolean needKeyUpdate = false;
 
   /** A queue of blocks to be replicated by this datanode */
   private BlockQueue replicateBlocks = new BlockQueue();

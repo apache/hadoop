@@ -38,6 +38,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessToken;
+import org.apache.hadoop.security.AccessTokenHandler;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
@@ -153,12 +155,26 @@ class DataXceiver implements Runnable, FSConstants {
     long startOffset = in.readLong();
     long length = in.readLong();
     String clientName = Text.readString(in);
-    // send the block
+    AccessToken accessToken = new AccessToken();
+    accessToken.readFields(in);
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         datanode.socketWriteTimeout);
     DataOutputStream out = new DataOutputStream(
                  new BufferedOutputStream(baseStream, SMALL_BUFFER_SIZE));
     
+    if (datanode.isAccessTokenEnabled
+        && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
+            AccessTokenHandler.AccessMode.READ)) {
+      try {
+        out.writeShort(DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
+        out.flush();
+        throw new IOException("Access token verification failed, on client "
+            + "request for reading block " + block);
+      } finally {
+        IOUtils.closeStream(out);
+      }
+    }
+    // send the block
     BlockSender blockSender = null;
     final String clientTraceFmt =
       clientName.length() > 0 && ClientTraceLog.isInfoEnabled()
@@ -246,10 +262,28 @@ class DataXceiver implements Runnable, FSConstants {
       tmp.readFields(in);
       targets[i] = tmp;
     }
+    AccessToken accessToken = new AccessToken();
+    accessToken.readFields(in);
+    DataOutputStream replyOut = null;   // stream to prev target
+    replyOut = new DataOutputStream(
+                   NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+    if (datanode.isAccessTokenEnabled
+        && !datanode.accessTokenHandler.checkAccess(accessToken, null, block
+            .getBlockId(), AccessTokenHandler.AccessMode.WRITE)) {
+      try {
+        if (client.length() != 0) {
+          Text.writeString(replyOut, datanode.dnRegistration.getName());
+          replyOut.flush();
+        }
+        throw new IOException("Access token verification failed, on client "
+            + "request for writing block " + block);
+      } finally {
+        IOUtils.closeStream(replyOut);
+      }
+    }
 
     DataOutputStream mirrorOut = null;  // stream to next target
     DataInputStream mirrorIn = null;    // reply from next target
-    DataOutputStream replyOut = null;   // stream to prev target
     Socket mirrorSock = null;           // socket to next target
     BlockReceiver blockReceiver = null; // responsible for data handling
     String mirrorNode = null;           // the name:port of next target
@@ -260,10 +294,6 @@ class DataXceiver implements Runnable, FSConstants {
           s.getRemoteSocketAddress().toString(),
           s.getLocalSocketAddress().toString(),
           isRecovery, client, srcDataNode, datanode);
-
-      // get a connection back to the previous target
-      replyOut = new DataOutputStream(
-                     NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
 
       //
       // Open network conn to backup machine, if 
@@ -304,6 +334,7 @@ class DataXceiver implements Runnable, FSConstants {
           for ( int i = 1; i < targets.length; i++ ) {
             targets[i].write( mirrorOut );
           }
+          accessToken.write(mirrorOut);
 
           blockReceiver.writeChecksumHeader(mirrorOut);
           mirrorOut.flush();
@@ -429,8 +460,24 @@ class DataXceiver implements Runnable, FSConstants {
    */
   void getBlockChecksum(DataInputStream in) throws IOException {
     final Block block = new Block(in.readLong(), 0 , in.readLong());
+    AccessToken accessToken = new AccessToken();
+    accessToken.readFields(in);
+    DataOutputStream out = new DataOutputStream(NetUtils.getOutputStream(s,
+        datanode.socketWriteTimeout));
+    if (datanode.isAccessTokenEnabled
+        && !datanode.accessTokenHandler.checkAccess(accessToken, null, block
+            .getBlockId(), AccessTokenHandler.AccessMode.READ)) {
+      try {
+        out.writeShort(DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
+        out.flush();
+        throw new IOException(
+            "Access token verification failed, on getBlockChecksum() "
+                + "for block " + block);
+      } finally {
+        IOUtils.closeStream(out);
+      }
+    }
 
-    DataOutputStream out = null;
     final MetaDataInputStream metadataIn = datanode.data.getMetaDataInputStream(block);
     final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
         metadataIn, BUFFER_SIZE));
@@ -452,8 +499,6 @@ class DataXceiver implements Runnable, FSConstants {
       }
 
       //write reply
-      out = new DataOutputStream(
-          NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
       out.writeShort(DataTransferProtocol.OP_STATUS_SUCCESS);
       out.writeInt(bytesPerCRC);
       out.writeLong(crcPerBlock);
@@ -476,10 +521,24 @@ class DataXceiver implements Runnable, FSConstants {
     // Read in the header
     long blockId = in.readLong(); // read block id
     Block block = new Block(blockId, 0, in.readLong());
+    AccessToken accessToken = new AccessToken();
+    accessToken.readFields(in);
+    if (datanode.isAccessTokenEnabled
+        && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
+            AccessTokenHandler.AccessMode.COPY)) {
+      LOG.warn("Invalid access token in request from "
+          + s.getRemoteSocketAddress() + " for copying block " + block);
+      sendResponse(s,
+          (short) DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN,
+          datanode.socketWriteTimeout);
+      return;
+    }
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
       LOG.info("Not able to copy block " + blockId + " to " 
           + s.getRemoteSocketAddress() + " because threads quota is exceeded.");
+      sendResponse(s, (short)DataTransferProtocol.OP_STATUS_ERROR, 
+          datanode.socketWriteTimeout);
       return;
     }
 
@@ -498,6 +557,8 @@ class DataXceiver implements Runnable, FSConstants {
       reply = new DataOutputStream(new BufferedOutputStream(
           baseStream, SMALL_BUFFER_SIZE));
 
+      // send status first
+      reply.writeShort((short)DataTransferProtocol.OP_STATUS_SUCCESS);
       // send block content to the target
       long read = blockSender.sendBlock(reply, baseStream, 
                                         dataXceiverServer.balanceThrottler);
@@ -538,6 +599,17 @@ class DataXceiver implements Runnable, FSConstants {
     String sourceID = Text.readString(in); // read del hint
     DatanodeInfo proxySource = new DatanodeInfo(); // read proxy source
     proxySource.readFields(in);
+    AccessToken accessToken = new AccessToken();
+    accessToken.readFields(in);
+    if (datanode.isAccessTokenEnabled
+        && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
+            AccessTokenHandler.AccessMode.REPLACE)) {
+      LOG.warn("Invalid access token in request from "
+          + s.getRemoteSocketAddress() + " for replacing block " + block);
+      sendResponse(s, (short)DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN,
+          datanode.socketWriteTimeout);
+      return;
+    }
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
       LOG.warn("Not able to receive block " + blockId + " from " 
@@ -571,11 +643,22 @@ class DataXceiver implements Runnable, FSConstants {
       proxyOut.writeByte(DataTransferProtocol.OP_COPY_BLOCK); // op code
       proxyOut.writeLong(block.getBlockId()); // block id
       proxyOut.writeLong(block.getGenerationStamp()); // block id
+      accessToken.write(proxyOut);
       proxyOut.flush();
 
       // receive the response from the proxy
       proxyReply = new DataInputStream(new BufferedInputStream(
           NetUtils.getInputStream(proxySock), BUFFER_SIZE));
+      short status = proxyReply.readShort();
+      if (status != DataTransferProtocol.OP_STATUS_SUCCESS) {
+        if (status == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN) {
+          throw new IOException("Copy block " + block + " from "
+              + proxySock.getRemoteSocketAddress()
+              + " failed due to access token error");
+        }
+        throw new IOException("Copy block " + block + " from "
+            + proxySock.getRemoteSocketAddress() + " failed");
+      }
       // open a block receiver and check if the block does not exist
       blockReceiver = new BlockReceiver(
           block, proxyReply, proxySock.getRemoteSocketAddress().toString(),
