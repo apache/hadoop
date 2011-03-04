@@ -41,17 +41,8 @@ public class IOUtils {
   public static void copyBytes(InputStream in, OutputStream out, int buffSize, boolean close) 
     throws IOException {
 
-    PrintStream ps = out instanceof PrintStream ? (PrintStream)out : null;
-    byte buf[] = new byte[buffSize];
     try {
-      int bytesRead = in.read(buf);
-      while (bytesRead >= 0) {
-        out.write(buf, 0, bytesRead);
-        if ((ps != null) && ps.checkError()) {
-          throw new IOException("Unable to write to output stream.");
-        }
-        bytesRead = in.read(buf);
-      }
+      copyBytes(in, out, buffSize);
     } finally {
       if(close) {
         out.close();
@@ -60,6 +51,28 @@ public class IOUtils {
     }
   }
   
+  /**
+   * Copies from one stream to another.
+   * 
+   * @param in InputStrem to read from
+   * @param out OutputStream to write to
+   * @param buffSize the size of the buffer 
+   */
+  public static void copyBytes(InputStream in, OutputStream out, int buffSize) 
+    throws IOException {
+
+    PrintStream ps = out instanceof PrintStream ? (PrintStream)out : null;
+    byte buf[] = new byte[buffSize];
+    int bytesRead = in.read(buf);
+    while (bytesRead >= 0) {
+      out.write(buf, 0, bytesRead);
+      if ((ps != null) && ps.checkError()) {
+        throw new IOException("Unable to write to output stream.");
+      }
+      bytesRead = in.read(buf);
+    }
+  }
+
   /**
    * Copies from one stream to another. <strong>closes the input and output streams 
    * at the end</strong>.

@@ -291,6 +291,13 @@ Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_getBytesWritten(
     return (ZSTREAM(stream))->total_out;
 }
 
+JNIEXPORT jint JNICALL
+Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_getRemaining(
+	JNIEnv *env, jclass cls, jlong stream
+	) {
+    return (ZSTREAM(stream))->avail_in;
+}
+
 JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_compress_zlib_ZlibDecompressor_reset(
 	JNIEnv *env, jclass cls, jlong stream

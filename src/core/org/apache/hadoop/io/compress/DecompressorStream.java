@@ -29,8 +29,10 @@ public class DecompressorStream extends CompressionInputStream {
   protected byte[] buffer;
   protected boolean eof = false;
   protected boolean closed = false;
-  
-  public DecompressorStream(InputStream in, Decompressor decompressor, int bufferSize) {
+  private int lastBytesSent = 0;
+
+  public DecompressorStream(InputStream in, Decompressor decompressor,
+                            int bufferSize) {
     super(in);
 
     if (in == null || decompressor == null) {
@@ -76,31 +78,78 @@ public class DecompressorStream extends CompressionInputStream {
 
   protected int decompress(byte[] b, int off, int len) throws IOException {
     int n = 0;
-    
+
     while ((n = decompressor.decompress(b, off, len)) == 0) {
-      if (decompressor.finished() || decompressor.needsDictionary()) {
+      if (decompressor.needsDictionary()) {
         eof = true;
         return -1;
       }
-      if (decompressor.needsInput()) {
-        getCompressedData();
+
+      if (decompressor.finished()) {
+        // First see if there was any leftover buffered input from previous
+        // stream; if not, attempt to refill buffer.  If refill -> EOF, we're
+        // all done; else reset, fix up input buffer, and get ready for next
+        // concatenated substream/"member".
+        int nRemaining = decompressor.getRemaining();
+        if (nRemaining == 0) {
+          int m = getCompressedData();
+          if (m == -1) {
+            // apparently the previous end-of-stream was also end-of-file:
+            // return success, as if we had never called getCompressedData()
+            eof = true;
+            return -1;
+          }
+          decompressor.reset();
+          decompressor.setInput(buffer, 0, m);
+          lastBytesSent = m;
+        } else {
+          // looks like it's a concatenated stream:  reset low-level zlib (or
+          // other engine) and buffers, then "resend" remaining input data
+          decompressor.reset();
+          int leftoverOffset = lastBytesSent - nRemaining;
+          assert (leftoverOffset >= 0);
+          // this recopies userBuf -> direct buffer if using native libraries:
+          decompressor.setInput(buffer, leftoverOffset, nRemaining);
+          // NOTE:  this is the one place we do NOT want to save the number
+          // of bytes sent (nRemaining here) into lastBytesSent:  since we
+          // are resending what we've already sent before, offset is nonzero
+          // in general (only way it could be zero is if it already equals
+          // nRemaining), which would then screw up the offset calculation
+          // _next_ time around.  IOW, getRemaining() is in terms of the
+          // original, zero-offset bufferload, so lastBytesSent must be as
+          // well.  Cheesy ASCII art:
+          //
+          //          <------------ m, lastBytesSent ----------->
+          //          +===============================================+
+          // buffer:  |1111111111|22222222222222222|333333333333|     |
+          //          +===============================================+
+          //     #1:  <-- off -->|<-------- nRemaining --------->
+          //     #2:  <----------- off ----------->|<-- nRem. -->
+          //     #3:  (final substream:  nRemaining == 0; eof = true)
+          //
+          // If lastBytesSent is anything other than m, as shown, then "off"
+          // will be calculated incorrectly.
+        }
+      } else if (decompressor.needsInput()) {
+        int m = getCompressedData();
+        if (m == -1) {
+          throw new EOFException("Unexpected end of input stream");
+        }
+        decompressor.setInput(buffer, 0, m);
+        lastBytesSent = m;
       }
     }
-    
+
     return n;
   }
-  
-  protected void getCompressedData() throws IOException {
+
+  protected int getCompressedData() throws IOException {
     checkStream();
   
-    int n = in.read(buffer, 0, buffer.length);
-    if (n == -1) {
-      throw new EOFException("Unexpected end of input stream");
-    }
-
-    decompressor.setInput(buffer, 0, n);
+    // note that the _caller_ is now required to call setInput() or throw
+    return in.read(buffer, 0, buffer.length);
   }
-  
+
   protected void checkStream() throws IOException {
     if (closed) {
       throw new IOException("Stream closed");
