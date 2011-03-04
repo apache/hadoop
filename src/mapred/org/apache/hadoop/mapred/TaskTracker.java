@@ -2372,12 +2372,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           ((this.taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING ||
            this.taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN ||
            this.taskStatus.getRunState() == TaskStatus.State.KILLED_UNCLEAN) &&
-           taskStatus.getRunState() == TaskStatus.State.RUNNING)) {
+           (taskStatus.getRunState() == TaskStatus.State.RUNNING ||
+            taskStatus.getRunState() == TaskStatus.State.UNASSIGNED))) {
         //make sure we ignore progress messages after a task has 
         //invoked TaskUmbilicalProtocol.done() or if the task has been
         //KILLED/FAILED/FAILED_UNCLEAN/KILLED_UNCLEAN
         //Also ignore progress update if the state change is from 
-        //COMMIT_PENDING/FAILED_UNCLEAN/KILLED_UNCLEA to RUNNING
+        //COMMIT_PENDING/FAILED_UNCLEAN/KILLED_UNCLEA to RUNNING or UNASSIGNED
         LOG.info(task.getTaskID() + " Ignoring status-update since " +
                  ((this.done) ? "task is 'done'" : 
                                 ("runState: " + this.taskStatus.getRunState()))
