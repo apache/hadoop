@@ -502,6 +502,7 @@ public class TrackerDistributedCacheManager {
         // else will not do anyhting
         // and copy the file into the dir as it is
       }
+      FileUtil.chmod(destDir.toString(), "ugo+rx", true);
     }
     // promote the output to the final location
     if (!localFs.rename(workDir, finalDir)) {

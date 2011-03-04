@@ -579,13 +579,9 @@ public class TestTaskTrackerLocalization extends TestCase {
     out.writeBytes("dummy input");
     out.close();
     // no write permission for subDir and subDir/file
-    try {
-      int ret = 0;
-      if((ret = FileUtil.chmod(subDir.toUri().getPath(), "a=rx", true)) != 0) {
-        LOG.warn("chmod failed for " + subDir + ";retVal=" + ret);
-      }
-    } catch(InterruptedException e) {
-      LOG.warn("Interrupted while doing chmod for " + subDir);
+    int ret = 0;
+    if((ret = FileUtil.chmod(subDir.toUri().getPath(), "a=rx", true)) != 0) {
+      LOG.warn("chmod failed for " + subDir + ";retVal=" + ret);
     }
   }
 
