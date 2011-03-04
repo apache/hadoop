@@ -779,6 +779,8 @@ public abstract class Server {
     private final Call saslCall = new Call(SASL_CALLID, null, this);
     private final ByteArrayOutputStream saslResponse = new ByteArrayOutputStream();
     
+    private boolean useWrap = false;
+    
     public Connection(SelectionKey key, SocketChannel channel, 
                       long lastContact) {
       this.channel = channel;
@@ -943,10 +945,10 @@ public abstract class Server {
               null);
         }
         if (saslServer.isComplete()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("SASL server context established. Negotiated QoP is "
-                + saslServer.getNegotiatedProperty(Sasl.QOP));
-          }
+          LOG.info("SASL server context established. Negotiated QoP is "
+              + saslServer.getNegotiatedProperty(Sasl.QOP));
+          String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
+          useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
           user = getAuthorizedUgi(saslServer.getAuthorizationID());
           LOG.info("SASL server successfully authenticated client: " + user);
           rpcMetrics.authenticationSuccesses.inc();
@@ -957,9 +959,14 @@ public abstract class Server {
         if (LOG.isDebugEnabled())
           LOG.debug("Have read input token of size " + saslToken.length
               + " for processing by saslServer.unwrap()");
-        byte[] plaintextData = saslServer
-            .unwrap(saslToken, 0, saslToken.length);
-        processUnwrappedData(plaintextData);
+        
+        if (!useWrap) {
+          processOneRpc(saslToken);
+        } else {
+          byte[] plaintextData = saslServer.unwrap(saslToken, 0,
+              saslToken.length);
+          processUnwrappedData(plaintextData);
+        }
       }
     }
     
@@ -1382,9 +1389,12 @@ public abstract class Server {
                             Integer.toString(this.port));
     this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", false);
 
-
     // Create the responder here
     responder = new Responder();
+    
+    if (isSecurityEnabled) {
+      SaslRpcServer.init(conf);
+    }
   }
 
   private void closeConnection(Connection connection) {
@@ -1424,7 +1434,9 @@ public abstract class Server {
       WritableUtils.writeString(out, errorClass);
       WritableUtils.writeString(out, error);
     }
-    wrapWithSasl(response, call);
+    if (call.connection.useWrap) {
+      wrapWithSasl(response, call);
+    }
     call.setResponse(ByteBuffer.wrap(response.toByteArray()));
   }
   
