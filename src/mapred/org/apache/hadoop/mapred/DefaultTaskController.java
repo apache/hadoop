@@ -163,13 +163,14 @@ public class DefaultTaskController extends TaskController {
    * downloaded
    * @param taskTracker the connection to the task tracker
    * @throws IOException
+   * @throws InterruptedException
    */
   @Override
   public void initializeJob(String user, String jobid, 
                             Path credentials, Path jobConf, 
                             TaskUmbilicalProtocol taskTracker,
                             InetSocketAddress ttAddr
-                            ) throws IOException {
+                            ) throws IOException, InterruptedException {
     final LocalDirAllocator lDirAlloc = allocator;
     FileSystem localFs = FileSystem.getLocal(getConf());
     JobLocalizer localizer = new JobLocalizer((JobConf)getConf(), user, jobid);

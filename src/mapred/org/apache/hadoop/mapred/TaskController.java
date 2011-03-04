@@ -92,12 +92,13 @@ public abstract class TaskController implements Configurable {
    * @param taskTracker the connection the task tracker
    * @param ttAddr the tasktracker's RPC address
    * @throws IOException
+   * @throws InterruptedException
    */
   public abstract void initializeJob(String user, String jobid, 
                                      Path credentials, Path jobConf,
                                      TaskUmbilicalProtocol taskTracker,
                                      InetSocketAddress ttAddr) 
-  throws IOException;
+  throws IOException, InterruptedException;
   
   /**
    * Create all of the directories for the task and launches the child jvm.

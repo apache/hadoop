@@ -1027,7 +1027,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       * To support potential authenticated HDFS accesses, we need the tokens
       */
     rjob.ugi.doAs(new PrivilegedExceptionAction<Object>() {
-      public Object run() throws IOException {
+      public Object run() throws IOException, InterruptedException {
         try {
           final JobConf localJobConf = new JobConf(localJobFile);
           // Setup the public distributed cache
@@ -1057,6 +1057,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           LOG.warn("Exception while localization " + 
               StringUtils.stringifyException(e));
           throw e;
+        } catch (InterruptedException ie) {
+          LOG.warn("Exception while localization " + 
+              StringUtils.stringifyException(ie));
+          throw ie;
         }
         return null;
       }
