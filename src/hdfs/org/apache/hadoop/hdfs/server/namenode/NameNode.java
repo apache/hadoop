@@ -445,6 +445,19 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
                                         src, offset, length);
   }
   
+  /**
+   * The specification of this method matches that of
+   * {@link getBlockLocations(Path)}
+   * except that it does not update the file's access time.
+   */
+  LocatedBlocks getBlockLocationsNoATime(String src, 
+                                         long offset, 
+                                         long length)
+      throws IOException {
+    myMetrics.numGetBlockLocations.inc();
+    return namesystem.getBlockLocations(src, offset, length, false);
+  }
+  
   private static String getClientMachine() {
     String clientMachine = Server.getRemoteAddress();
     if (clientMachine == null) {

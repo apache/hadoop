@@ -34,7 +34,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
@@ -83,7 +82,7 @@ public class NamenodeFsck {
   /** Delete corrupted files. */
   public static final int FIXING_DELETE = 2;
   
-  private final ClientProtocol namenode;
+  private final NameNode namenode;
   private final NetworkTopology networktopology;
   private final int totalDatanodes;
   private final short minReplication;
@@ -110,7 +109,7 @@ public class NamenodeFsck {
    * @param response the object into which  this servelet writes the url contents
    * @throws IOException
    */
-  NamenodeFsck(Configuration conf, ClientProtocol namenode,
+  NamenodeFsck(Configuration conf, NameNode namenode,
       NetworkTopology networktopology, 
       Map<String,String[]> pmap, PrintWriter out,
       int totalDatanodes, short minReplication) {
@@ -195,7 +194,7 @@ public class NamenodeFsck {
       return;
     }
     long fileLen = file.getLen();
-    LocatedBlocks blocks = namenode.getBlockLocations(path, 0, fileLen);
+    LocatedBlocks blocks = namenode.getBlockLocationsNoATime(path, 0, fileLen);
     if (blocks == null) { // the file is deleted
       return;
     }

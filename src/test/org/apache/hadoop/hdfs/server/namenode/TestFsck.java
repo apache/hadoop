@@ -33,10 +33,12 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -73,12 +75,21 @@ public class TestFsck extends TestCase {
     FileSystem fs = null;
     try {
       Configuration conf = new Configuration();
+      final long precision = 1L;
+      conf.setLong("dfs.access.time.precision", precision);
       conf.setLong("dfs.blockreport.intervalMsec", 10000L);
       cluster = new MiniDFSCluster(conf, 4, true, null);
       fs = cluster.getFileSystem();
-      util.createFiles(fs, "/srcdat");
-      util.waitReplication(fs, "/srcdat", (short)3);
+      final String fileName = "/srcdat";
+      util.createFiles(fs, fileName);
+      util.waitReplication(fs, fileName, (short)3);
+      FileStatus[] stats = fs.listStatus(new Path(fileName));
+      assertFalse(0==stats.length);
+      final Path file = stats[0].getPath();
+      long aTime = fs.getFileStatus(file).getAccessTime();
+      Thread.sleep(2*precision);
       String outStr = runFsck(conf, 0, true, "/");
+      assertEquals(aTime, fs.getFileStatus(file).getAccessTime());
       assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
       System.out.println(outStr);
       if (fs != null) {try{fs.close();} catch(Exception e){}}

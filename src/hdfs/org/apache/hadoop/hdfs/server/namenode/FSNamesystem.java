@@ -807,10 +807,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   LocatedBlocks getBlockLocations(String clientMachine, String src,
       long offset, long length) throws IOException {
-    if (isPermissionEnabled) {
-      checkPathAccess(src, FsAction.READ);
-    }
-
     LocatedBlocks blocks = getBlockLocations(src, offset, length, true);
     if (blocks != null) {
       //sort the blocks
@@ -838,6 +834,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public LocatedBlocks getBlockLocations(String src, long offset, long length,
       boolean doAccessTime) throws IOException {
+    if (isPermissionEnabled) {
+      checkPathAccess(src, FsAction.READ);
+    }
+
     if (offset < 0) {
       throw new IOException("Negative offset is not supported. File: " + src );
     }
