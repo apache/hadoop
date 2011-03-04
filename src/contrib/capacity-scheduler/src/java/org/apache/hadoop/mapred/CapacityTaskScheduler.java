@@ -57,7 +57,8 @@ import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
  *  
  */
 class CapacityTaskScheduler extends TaskScheduler {
-  
+
+
   /***********************************************************************
    * Keeping track of scheduling information for queues
    * 
@@ -914,6 +915,7 @@ class CapacityTaskScheduler extends TaskScheduler {
   private long memSizeForReduceSlotOnJT;
   private long limitMaxMemForMapTasks;
   private long limitMaxMemForReduceTasks;
+  private boolean assignMultipleTasks = true;
 
   public CapacityTaskScheduler() {
     this(new Clock());
@@ -1240,12 +1242,29 @@ class CapacityTaskScheduler extends TaskScheduler {
     prevReduceClusterCapacity = reduceClusterCapacity;
   }
 
+  /**
+   * Sets whether the scheduler can assign multiple tasks in a heartbeat
+   * or not.
+   * 
+   * This method is used only for testing purposes.
+   * 
+   * @param assignMultipleTasks true, to assign multiple tasks per heartbeat
+   */
+  void setAssignMultipleTasks(boolean assignMultipleTasks) {
+    this.assignMultipleTasks = assignMultipleTasks;
+  }
+
   /*
-   * The grand plan for assigning a task. 
-   * First, decide whether a Map or Reduce task should be given to a TT 
+   * The grand plan for assigning a task.
+   * 
+   * If multiple task assignment is enabled, it tries to get one map and
+   * one reduce slot depending on free slots on the TT.
+   * 
+   * Otherwise, we decide whether a Map or Reduce task should be given to a TT 
    * (if the TT can accept either). 
-   * Next, pick a queue. We only look at queues that need a slot. Among these,
-   * we first look at queues whose (# of running tasks)/capacity is the least.
+   * Either way, we first pick a queue. We only look at queues that need 
+   * a slot. Among these, we first look at queues whose 
+   * (# of running tasks)/capacity is the least.
    * Next, pick a job in a queue. we pick the job at the front of the queue
    * unless its user is over the user limit. 
    * Finally, given a job, pick a task from the job. 
@@ -1253,17 +1272,8 @@ class CapacityTaskScheduler extends TaskScheduler {
    */
   @Override
   public synchronized List<Task> assignTasks(TaskTracker taskTracker)
-  throws IOException {
-    
-    TaskLookupResult tlr;
+  throws IOException {    
     TaskTrackerStatus taskTrackerStatus = taskTracker.getStatus();
-    
-    /* 
-     * If TT has Map and Reduce slot free, we need to figure out whether to
-     * give it a Map or Reduce task.
-     * Number of ways to do this. For now, base decision on how much is needed
-     * versus how much is used (default to Map, if equal).
-     */
     ClusterStatus c = taskTrackerManager.getClusterStatus();
     int mapClusterCapacity = c.getMaxMapTasks();
     int reduceClusterCapacity = c.getMaxReduceTasks();
@@ -1285,60 +1295,64 @@ class CapacityTaskScheduler extends TaskScheduler {
      * becomes expensive, do it once every few heartbeats only.
      */ 
     updateQSIObjects(mapClusterCapacity, reduceClusterCapacity);
-    // make sure we get our map or reduce scheduling object to update its 
-    // collection of QSI objects too. 
-
-    if ((maxReduceSlots - currentReduceSlots) > 
-    (maxMapSlots - currentMapSlots)) {
-      // get a reduce task first
-      reduceScheduler.updateCollectionOfQSIs();
-      tlr = reduceScheduler.assignTasks(taskTracker);
-      if (TaskLookupResult.LookUpStatus.TASK_FOUND == 
-        tlr.getLookUpStatus()) {
-        // found a task; return
-        return Collections.singletonList(tlr.getTask());
-      }
-      // if we didn't get any, look at map tasks, if TT has space
-      else if ((TaskLookupResult.LookUpStatus.TASK_FAILING_MEMORY_REQUIREMENT
-                                  == tlr.getLookUpStatus() ||
-                TaskLookupResult.LookUpStatus.NO_TASK_FOUND
-                                  == tlr.getLookUpStatus())
-          && (maxMapSlots > currentMapSlots)) {
-        mapScheduler.updateCollectionOfQSIs();
-        tlr = mapScheduler.assignTasks(taskTracker);
-        if (TaskLookupResult.LookUpStatus.TASK_FOUND == 
-          tlr.getLookUpStatus()) {
-          return Collections.singletonList(tlr.getTask());
+    List<Task> result = new ArrayList<Task>();
+    if (assignMultipleTasks) {
+      addReduceTask(taskTracker, result, maxReduceSlots, currentReduceSlots);
+      addMapTask(taskTracker, result, maxMapSlots, currentMapSlots);
+    } else {
+      /* 
+       * If TT has Map and Reduce slot free, we need to figure out whether to
+       * give it a Map or Reduce task.
+       * Number of ways to do this. For now, base decision on how much is needed
+       * versus how much is used (default to Map, if equal).
+       */
+      if ((maxReduceSlots - currentReduceSlots) 
+          > (maxMapSlots - currentMapSlots)) {
+        addReduceTask(taskTracker, result, maxReduceSlots, currentReduceSlots);
+        if (result.size() == 0) {
+          addMapTask(taskTracker, result, maxMapSlots, currentMapSlots);
+        }
+      } else {
+        addMapTask(taskTracker, result, maxMapSlots, currentMapSlots);
+        if (result.size() == 0) {
+          addReduceTask(taskTracker, result, maxReduceSlots, currentReduceSlots);
         }
       }
-    }
-    else {
-      // get a map task first
-      mapScheduler.updateCollectionOfQSIs();
-      tlr = mapScheduler.assignTasks(taskTracker);
-      if (TaskLookupResult.LookUpStatus.TASK_FOUND == 
-        tlr.getLookUpStatus()) {
-        // found a task; return
-        return Collections.singletonList(tlr.getTask());
-      }
-      // if we didn't get any, look at reduce tasks, if TT has space
-      else if ((TaskLookupResult.LookUpStatus.TASK_FAILING_MEMORY_REQUIREMENT
-                                    == tlr.getLookUpStatus()
-                || TaskLookupResult.LookUpStatus.NO_TASK_FOUND
-                                    == tlr.getLookUpStatus())
-          && (maxReduceSlots > currentReduceSlots)) {
-        reduceScheduler.updateCollectionOfQSIs();
-        tlr = reduceScheduler.assignTasks(taskTracker);
-        if (TaskLookupResult.LookUpStatus.TASK_FOUND == 
-          tlr.getLookUpStatus()) {
-          return Collections.singletonList(tlr.getTask());
-        }
+      if (result.size() == 0) {
+        return null;
       }
     }
-
-    return null;
+    return result;
   }
 
+  // Pick a reduce task and add to the list of tasks, if there's space
+  // on the TT to run one.
+  private void addReduceTask(TaskTracker taskTracker, List<Task> tasks,
+                                  int maxReduceSlots, int currentReduceSlots) 
+                    throws IOException {
+    if (maxReduceSlots > currentReduceSlots) {
+      reduceScheduler.updateCollectionOfQSIs();
+      TaskLookupResult tlr = reduceScheduler.assignTasks(taskTracker);
+      if (TaskLookupResult.LookUpStatus.TASK_FOUND == tlr.getLookUpStatus()) {
+        tasks.add(tlr.getTask());
+      }
+    }
+  }
+  
+  // Pick a map task and add to the list of tasks, if there's space
+  // on the TT to run one.
+  private void addMapTask(TaskTracker taskTracker, List<Task> tasks, 
+                              int maxMapSlots, int currentMapSlots)
+                    throws IOException {
+    if (maxMapSlots > currentMapSlots) {
+      mapScheduler.updateCollectionOfQSIs();
+      TaskLookupResult tlr = mapScheduler.assignTasks(taskTracker);
+      if (TaskLookupResult.LookUpStatus.TASK_FOUND == tlr.getLookUpStatus()) {
+        tasks.add(tlr.getTask());
+      }
+    }
+  }
+  
   // called when a job is added
   synchronized void jobAdded(JobInProgress job) throws IOException {
     QueueSchedulingInfo qsi = 
