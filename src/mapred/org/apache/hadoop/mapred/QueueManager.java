@@ -28,6 +28,7 @@ import java.util.TreeSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.Queue.QueueState;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
@@ -61,7 +62,8 @@ class QueueManager {
   /** Whether ACLs are enabled in the system or not. */
   private boolean aclsEnabled;
   /** Map of a queue name and Queue object */
-  final HashMap<String,Queue> queues;
+  final HashMap<String,Queue> queues = new HashMap<String,Queue>();
+  
   /**
    * Enum representing an AccessControlList that drives set of operations that
    * can be performed on a queue.
@@ -98,20 +100,24 @@ class QueueManager {
   public QueueManager(Configuration conf) {
     checkDeprecation(conf);
     conf.addResource(QUEUE_ACLS_FILE_NAME);
-    queues = new HashMap<String,Queue>();
+    
+    // Get configured ACLs and state for each queue
+    aclsEnabled = conf.getBoolean("mapred.acls.enabled", false);
+
+    queues.putAll(parseQueues(conf)); 
+  }
+  
+  synchronized private Map<String, Queue> parseQueues(Configuration conf) {
+    Map<String, Queue> queues = new HashMap<String, Queue>();
     // First get the queue names
     String[] queueNameValues = conf.getStrings("mapred.queue.names",
         new String[]{JobConf.DEFAULT_QUEUE_NAME});
-    // Get configured ACLs and state for each queue
-    aclsEnabled = conf.getBoolean("mapred.acls.enabled", false);
     for (String name : queueNameValues) {
-      try {
-        queues.put(name, new Queue(name, getQueueAcls(name, conf),
-              getQueueState(name, conf)));
-      } catch (Throwable t) {
-        LOG.warn("Not able to initialize queue " + name, t);
-      }
+      queues.put(name, new Queue(name, getQueueAcls(name, conf),
+          getQueueState(name, conf)));
     }
+    
+    return queues;
   }
   
   /**
@@ -218,6 +224,7 @@ class QueueManager {
    * @throws IOException when queue ACL configuration file is invalid.
    */
   synchronized void refreshQueues(Configuration conf) throws IOException {
+    
     // First check if things are configured in mapred-site.xml,
     // so we can print out a deprecation warning.
     // This check is needed only until we support the configuration
@@ -228,23 +235,36 @@ class QueueManager {
     // will be overridden.
     conf.addResource(QUEUE_ACLS_FILE_NAME);
 
+    // Now parse the queues and check to ensure no queue has been deleted
+    Map<String, Queue> newQueues = parseQueues(conf);
+    checkQueuesForDeletion(queues, newQueues);
+
     // Now we refresh the properties of the queues. Note that we
     // do *not* refresh the queue names or the acls flag. Instead
     // we use the older values configured for them.
-    LOG.info("Refreshing acls and state for configured queues.");
-    try {
-      for (String qName : getQueues()) {
-        Queue q = queues.get(qName);
-        q.setAcls(getQueueAcls(qName, conf));
-        q.setState(getQueueState(qName, conf));
-      }
-    } catch (Throwable t) {
-      LOG.warn("Invalid queue configuration", t);
-      throw new IOException("Invalid queue configuration", t);
-    }
-
+    queues.clear();
+    queues.putAll(newQueues);
+    LOG.info("Queues acls, state and configs refreshed: " + 
+        queues.size() + " queues present now.");
   }
 
+  private void checkQueuesForDeletion(Map<String, Queue> currentQueues,
+      Map<String, Queue> newQueues) {
+    for (String queue : currentQueues.keySet()) {
+      if (!newQueues.containsKey(queue)) {
+        throw new IllegalArgumentException("Couldn't find queue '" + queue + 
+            "' during refresh!");
+      }
+    }
+    
+    // Mark new queues as STOPPED
+    for (String queue : newQueues.keySet()) {
+      if (!currentQueues.containsKey(queue)) {
+        newQueues.get(queue).setState(QueueState.STOPPED);
+      }
+    }
+  }
+  
   private void checkDeprecation(Configuration conf) {
     // check if queues are defined.
     String[] queues = conf.getStrings("mapred.queue.names");

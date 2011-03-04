@@ -91,5 +91,10 @@ abstract class TaskScheduler implements Configurable {
    * @return
    */
   public abstract Collection<JobInProgress> getJobs(String queueName);
-    
+
+  /**
+   * Refresh the configuration of the scheduler.
+   */
+  public void refresh() throws IOException {}
+  
 }

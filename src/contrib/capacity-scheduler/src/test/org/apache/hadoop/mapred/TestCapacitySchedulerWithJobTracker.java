@@ -60,7 +60,7 @@ public class TestCapacitySchedulerWithJobTracker extends
           .getTaskScheduler();
       JobQueuesManager mgr = scheduler.jobQueuesManager;
       assertEquals("Failed job present in Waiting queue", 0, mgr
-          .getWaitingJobCount("default"));
+          .getQueue("default").getNumWaitingJobs());
     }
   }
 

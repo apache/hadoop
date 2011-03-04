@@ -36,6 +36,8 @@ class CapacitySchedulerConf {
   
   private int defaultUlimitMinimum;
   
+  private float defaultUserLimitFactor;
+  
   private boolean defaultSupportPriority;
   
   private static final String QUEUE_CONF_PROPERTY_NAME_PREFIX = 
@@ -98,7 +100,14 @@ class CapacitySchedulerConf {
 
   private Configuration rmConf;
 
-  private int defaultMaxJobsPerUsersToInitialize;
+  private int defaultInitToAcceptJobsFactor;
+  private int defaultMaxActiveTasksPerUserToInitialize;
+  private int defaultMaxActiveTasksPerQueueToInitialize;
+  
+  static final String MAX_SYSTEM_JOBS_KEY = 
+    "mapred.capacity-scheduler.maximum-system-jobs";
+  
+  static final int DEFAULT_MAX_SYSTEM_JOBS = 5000;
   
   /**
    * Create a new Capacity scheduler conf.
@@ -130,13 +139,25 @@ class CapacitySchedulerConf {
    * which is used by the Capacity Scheduler.
    */
   private void initializeDefaults() {
-    defaultUlimitMinimum = rmConf.getInt(
-        "mapred.capacity-scheduler.default-minimum-user-limit-percent", 100);
+    defaultUlimitMinimum = 
+      rmConf.getInt(
+          "mapred.capacity-scheduler.default-minimum-user-limit-percent", 100);
+    defaultUserLimitFactor = 
+      rmConf.getFloat("mapred.capacity-scheduler.default-user-limit-factor", 
+          1.0f);
     defaultSupportPriority = rmConf.getBoolean(
         "mapred.capacity-scheduler.default-supports-priority", false);
-    defaultMaxJobsPerUsersToInitialize = rmConf.getInt(
-        "mapred.capacity-scheduler.default-maximum-initialized-jobs-per-user",
-        2);
+    defaultMaxActiveTasksPerQueueToInitialize = 
+      rmConf.getInt(
+          "mapred.capacity-scheduler.default-maximum-active-tasks-per-queue", 
+          200000);
+    defaultMaxActiveTasksPerUserToInitialize = 
+      rmConf.getInt(
+          "mapred.capacity-scheduler.default-maximum-active-tasks-per-user", 
+          100000);
+    defaultInitToAcceptJobsFactor =
+      rmConf.getInt("mapred.capacity-scheduler.default-init-accept-jobs-factor", 
+          10);
   }
   
   /**
@@ -294,6 +315,32 @@ class CapacitySchedulerConf {
   }
   
   /**
+   * Get the factor of queue capacity above which a single user in a queue
+   * can consume resources.
+   * 
+   * @param queue queue name
+   * @return factor of queue capacity above which a single user in a queue
+   *         can consume resources
+   */
+  public float getUserLimitFactor(String queue) {
+    return rmConf.getFloat(toFullPropertyName(queue, "user-limit-factor"), 
+        defaultUserLimitFactor);
+  }
+  
+  /**
+   * Set the factor of queue capacity above which a single user in a queue
+   * can consume resources.
+   * 
+   * @param queue queue name
+   * @param userLimitFactor factor of queue capacity above which a single user 
+   *                        in a queue can consume resources
+   */
+  public void setUserLimitFactor(String queue, float userLimitFactor) {
+    rmConf.setFloat(toFullPropertyName(queue, "user-limit-factor"), 
+        userLimitFactor);
+  }
+  
+  /**
    * Reload configuration by clearing the information read from the 
    * underlying configuration file.
    */
@@ -307,38 +354,81 @@ class CapacitySchedulerConf {
       return QUEUE_CONF_PROPERTY_NAME_PREFIX + queue + "." + property;
   }
 
-  /**
-   * Gets the maximum number of jobs which are allowed to initialize in the
-   * job queue.
-   * 
-   * @param queue queue name.
-   * @return maximum number of jobs allowed to be initialized per user.
-   * @throws IllegalArgumentException if maximum number of users is negative
-   * or zero.
-   */
-  public int getMaxJobsPerUserToInitialize(String queue) {
-    int maxJobsPerUser = rmConf.getInt(toFullPropertyName(queue,
-        "maximum-initialized-jobs-per-user"), 
-        defaultMaxJobsPerUsersToInitialize);
-    if(maxJobsPerUser <= 0) {
-      throw new IllegalArgumentException(
-          "Invalid maximum jobs per user configuration " + maxJobsPerUser);
+  public int getMaxSystemJobs() {
+    int maxSystemJobs = 
+      rmConf.getInt(MAX_SYSTEM_JOBS_KEY, DEFAULT_MAX_SYSTEM_JOBS);
+    if (maxSystemJobs <= 0) {
+      throw new IllegalArgumentException("Invalid maximum system jobs: " + 
+          maxSystemJobs);
     }
-    return maxJobsPerUser;
+    
+    return maxSystemJobs;
+  }
+
+  public void setMaxSystemJobs(int maxSystemJobs) {
+    rmConf.setInt(MAX_SYSTEM_JOBS_KEY, maxSystemJobs);
+  }
+  
+  public int getInitToAcceptJobsFactor(String queue) {
+    int initToAccepFactor = 
+      rmConf.getInt(toFullPropertyName(queue, "init-accept-jobs-factor"), 
+          defaultInitToAcceptJobsFactor);
+    if(initToAccepFactor <= 0) {
+      throw new IllegalArgumentException(
+          "Invalid maximum jobs per user configuration " + initToAccepFactor);
+    }
+    return initToAccepFactor;
+  }
+  
+  public void setInitToAcceptJobsFactor(String queue, int initToAcceptFactor) {
+    rmConf.setInt(toFullPropertyName(queue, "init-accept-jobs-factor"), 
+        initToAcceptFactor);
   }
   
   /**
-   * Sets the maximum number of jobs which are allowed to be initialized 
-   * for a user in the queue.
+   * Get the maximum active tasks per user to be initialized.
    * 
-   * @param queue queue name.
-   * @param value maximum number of jobs allowed to be initialized per user.
+   * @param queue queue name
    */
-  public void setMaxJobsPerUserToInitialize(String queue, int value) {
-    rmConf.setInt(toFullPropertyName(queue, 
-        "maximum-initialized-jobs-per-user"), value);
+  public int getMaxInitializedActiveTasks(String queue) {
+    return rmConf.getInt(toFullPropertyName(queue, 
+                                            "maximum-initialized-active-tasks"), 
+                         defaultMaxActiveTasksPerQueueToInitialize);
   }
-
+  
+  /**
+   * Set the maximum active tasks per user to be initialized.
+   * 
+   * @param queue queue name
+   * @param value maximum active tasks
+   */
+  public void setMaxInitializedActiveTasks(String queue, int value) {
+    rmConf.setInt(toFullPropertyName(queue, "maximum-initialized-active-tasks"), 
+                  value);
+  }
+  
+  /**
+   * Get the maximum active tasks per user to be initialized.
+   * 
+   * @param queue queue name
+   */
+  public int getMaxInitializedActiveTasksPerUser(String queue) {
+    return rmConf.getInt(toFullPropertyName(queue, 
+                                            "maximum-initialized-active-tasks-per-user"), 
+                         defaultMaxActiveTasksPerUserToInitialize);
+  }
+  
+  /**
+   * Set the maximum active tasks per user to be initialized.
+   * 
+   * @param queue queue name
+   * @param value maximum active tasks
+   */
+  public void setMaxInitializedActiveTasksPerUser(String queue, int value) {
+    rmConf.setInt(toFullPropertyName(queue, "maximum-initialized-active-tasks-per-user"), 
+                  value);
+  }
+  
   /**
    * Amount of time in milliseconds which poller thread and initialization
    * thread would sleep before looking at the queued jobs.

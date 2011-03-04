@@ -803,6 +803,15 @@ public class JobInProgress {
     return numReduceTasks - runningReduceTasks - failedReduceTIPs - 
     finishedReduceTasks + speculativeReduceTasks;
   }
+  
+  /**
+   * Return total number of map and reduce tasks desired by the job.
+   * @return total number of map and reduce tasks desired by the job
+   */
+  public int desiredTasks() {
+    return desiredMaps() + desiredReduces();
+  }
+  
   public int getNumSlotsPerTask(TaskType taskType) {
     if (taskType == TaskType.MAP) {
       return numSlotsPerMap;
@@ -1361,7 +1370,7 @@ public class JobInProgress {
   
   /**
    * Check if we can schedule an off-switch task for this job.
-   * @param numTaskTrackers.
+   * @param numTaskTrackers number of tasktrackers
    * 
    * We check the number of missed opportunities for the job. 
    * If it has 'waited' long enough we go ahead and schedule.
@@ -1559,7 +1568,7 @@ public class JobInProgress {
       LOG.info("Exceeded limit for reduce input size: Estimated:" + 
           estimatedReduceInputSize + " Limit: " + 
           reduce_input_limit + " Failing Job " + jobId);
-      status.setFailureInfo("Job Exceeded Reduce Input limit " 
+      status.setFailureInfo("Job exceeded Reduce Input limit " 
           + " Limit:  " + reduce_input_limit + 
           " Estimated: " + estimatedReduceInputSize);
       jobtracker.failJob(this);

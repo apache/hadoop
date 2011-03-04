@@ -3717,7 +3717,20 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         jobInfo.write(out);
         out.close();
       }
-      return addJob(jobId, job);
+      
+      // Submit the job
+      JobStatus status;
+      try {
+        status = addJob(jobId, job);
+      } catch (IOException ioe) {
+        LOG.info("Job " + jobId + " submission failed!", ioe);
+        status = job.getStatus();
+        status.setFailureInfo(StringUtils.stringifyException(ioe));
+        failJob(job);
+        throw ioe;
+      }
+      
+      return status;
     }
   }
 
@@ -3753,19 +3766,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * adding a job. This is the core job submission logic
    * @param jobId The id for the job submitted which needs to be added
    */
-  private synchronized JobStatus addJob(JobID jobId, JobInProgress job) {
+  private synchronized JobStatus addJob(JobID jobId, JobInProgress job) 
+  throws IOException {
     totalSubmissions++;
 
     synchronized (jobs) {
       synchronized (taskScheduler) {
         jobs.put(job.getProfile().getJobID(), job);
         for (JobInProgressListener listener : jobInProgressListeners) {
-          try {
-            listener.jobAdded(job);
-          } catch (IOException ioe) {
-            LOG.warn("Failed to add and so skipping the job : "
-                + job.getJobID() + ". Exception : " + ioe);
-          }
+          listener.jobAdded(job);
         }
       }
     }
@@ -3946,8 +3955,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
           StringUtils.stringifyException(kie));
       killJob(job);
     } catch (Throwable t) {
-      String failureInfo = "Job initialization failed:\n" +
-      StringUtils.stringifyException(t);
+      String failureInfo = 
+        "Job initialization failed:\n" + StringUtils.stringifyException(t);
       // If the job initialization is failed, job state will be FAILED
       LOG.error(failureInfo);
       job.getStatus().setFailureInfo(failureInfo);
@@ -4889,7 +4898,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public void refreshQueues() throws IOException {
     LOG.info("Refreshing queue information. requested by : " +
         UserGroupInformation.getCurrentUser().getShortUserName());
-    this.queueManager.refreshQueues(new Configuration(this.conf));
+    this.queueManager.refreshQueues(new Configuration());
+    
+    synchronized (taskScheduler) {
+      taskScheduler.refresh();
+    }
+
   }
   
   synchronized String getReasonsForBlacklisting(String host) {

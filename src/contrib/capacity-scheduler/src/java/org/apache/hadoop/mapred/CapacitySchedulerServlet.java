@@ -30,8 +30,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.mapred.CapacityTaskScheduler.QueueSchedulingInfo;
-import org.apache.hadoop.mapred.CapacityTaskScheduler.TaskSchedulingInfo;
+import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapred.JobHistory.JobInfo;
 import org.apache.hadoop.util.StringUtils;
 
@@ -121,34 +120,33 @@ public class CapacitySchedulerServlet extends HttpServlet {
                 "<th>Reduce Task Used Capacity</th>" +
                 "<th>Running Reduces </tr>\n");
       JobQueuesManager queuesManager = scheduler.getJobQueuesManager();
-      for (QueueSchedulingInfo qsi : scheduler.getQueueInfoMap().values()) {
-        String queueName = qsi.getQueueName();
-        TaskSchedulingInfo maptsi = scheduler.getMapScheduler().getTSI(qsi);
-        TaskSchedulingInfo redtsi = scheduler.getReduceScheduler().getTSI(qsi);
+      for (CapacitySchedulerQueue queue : scheduler.getQueueInfoMap().values()) {
+        String queueName = queue.getQueueName();
         out.print("<tr>\n");
         out.printf(
             "<td><a href=\"jobqueue_details.jsp?queueName=%s\">%s</a></td>\n",
             queueName, queueName);
-        out.printf("<td>%s</td>\n", queuesManager.getNumRunningJobs(queueName));
-        out.printf("<td>%s</td>\n", queuesManager.getNumWaitingJobs(queueName));
-        out.printf("<td>%.1f%%</td>\n", qsi.getCapacityPercent());
-        int mapCapacity = maptsi.getCapacity();
-        int mapSlotsOccupied = maptsi.getNumSlotsOccupied();
-        int reduceSlotsOccupied = redtsi.getNumSlotsOccupied();
+        out.printf("<td>%s</td>\n", queue.getNumRunningJobs());
+        out.printf("<td>%s</td>\n", queue.getNumWaitingJobs());
+        out.printf("<td>%.1f%%</td>\n", queue.getCapacityPercent());
+        int mapCapacity = queue.getCapacity(TaskType.MAP);
+        int mapSlotsOccupied = queue.getNumSlotsOccupied(TaskType.MAP);
+        int reduceSlotsOccupied = queue.getNumSlotsOccupied(TaskType.REDUCE);
         float occupiedSlotsAsPercent = 
             mapCapacity != 0 ? ((float) mapSlotsOccupied * 100 / mapCapacity)
             : 0;
         out.printf("<td>%s</td>\n", mapCapacity);
         out.printf("<td>%s (%.1f%% of Capacity)</td>\n", mapSlotsOccupied,
             occupiedSlotsAsPercent);
-        out.printf("<td>%s</td>\n", maptsi.getNumRunningTasks());
-        int reduceCapacity = redtsi.getCapacity();
-        float redOccupiedSlotsAsPercent = reduceCapacity != 0 ? ((float) reduceSlotsOccupied * 100 / mapCapacity)
-            : 0;
+        out.printf("<td>%s</td>\n", queue.getNumRunningTasks(TaskType.MAP));
+        int reduceCapacity = queue.getCapacity(TaskType.REDUCE);
+        float redOccupiedSlotsAsPercent = 
+          (reduceCapacity != 0 ? ((float)reduceSlotsOccupied*100 / mapCapacity)
+            : 0);
         out.printf("<td>%s</td>\n", reduceCapacity);
         out.printf("<td>%s (%.1f%% of Capacity)</td>\n", reduceSlotsOccupied,
             redOccupiedSlotsAsPercent);
-        out.printf("<td>%s</td>\n", redtsi.getNumRunningTasks());
+        out.printf("<td>%s</td>\n", queue.getNumRunningTasks(TaskType.REDUCE));
       }
       out.print("</table>\n");
     }
