@@ -129,7 +129,6 @@ public class MetricsSystemImpl implements MetricsSystem {
       LOG.warn(this.prefix +" metrics system already initialized!");
       return;
     }
-    Contracts.checkState(this.prefix == null, "prefix should be null so far.");
     this.prefix = Contracts.checkNotNull(prefix, "prefix");
     try { start(); }
     catch (MetricsConfigException e) {
