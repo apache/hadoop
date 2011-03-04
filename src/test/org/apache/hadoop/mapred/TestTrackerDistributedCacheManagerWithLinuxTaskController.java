@@ -21,8 +21,6 @@ package org.apache.hadoop.mapred;
 import java.io.File;
 import java.io.IOException;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -87,19 +85,9 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     super.tearDown();
   }
 
-  /**
-   * Test the control flow of distributed cache manager when LinuxTaskController
-   * is used.
-   */
   @Override
-  public void testManagerFlow()
-      throws IOException,
-      LoginException {
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
-      return;
-    }
-
-    super.testManagerFlow();
+  protected boolean canRun() {
+    return ClusterWithLinuxTaskController.shouldRun();
   }
 
   @Override
@@ -164,31 +152,5 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
           "dr-xrws---", userName, taskTrackerSpecialGroup);
       path = path.getParentFile();
     }
-  }
-
-  @Override
-  public void testDeleteCache()
-      throws Exception {
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
-      return;
-    }
-    super.testDeleteCache();
-  }
-
-  @Override
-  public void testFileSystemOtherThanDefault()
-      throws Exception {
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
-      return;
-    }
-    super.testFileSystemOtherThanDefault();
-  }
-  
-  @Override
-  public void testFreshness()  throws Exception { 
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
-      return;
-    }
-    super.testFreshness();
   }
 }

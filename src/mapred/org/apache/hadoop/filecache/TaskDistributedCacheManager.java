@@ -33,7 +33,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -73,6 +72,7 @@ public class TaskDistributedCacheManager {
     final long timestamp;
     /** Whether this is to be added to the classpath */
     final boolean shouldBeAddedToClassPath;
+    boolean localized = false;
 
     private CacheFile(URI uri, FileType type, long timestamp, 
         boolean classPath) {
@@ -108,6 +108,14 @@ public class TaskDistributedCacheManager {
         }
       }
       return ret;
+    }
+    
+    boolean getLocalized() {
+      return localized;
+    }
+    
+    void setLocalized(boolean val) {
+      localized = val;
     }
   }
 
@@ -157,6 +165,7 @@ public class TaskDistributedCacheManager {
           cacheSubdir, fileStatus, 
           cacheFile.type == CacheFile.FileType.ARCHIVE,
           cacheFile.timestamp, workdirPath, false);
+      cacheFile.setLocalized(true);
 
       if (cacheFile.type == CacheFile.FileType.ARCHIVE) {
         localArchives.add(p);
@@ -179,6 +188,13 @@ public class TaskDistributedCacheManager {
 
   }
 
+  /*
+   * This method is called from unit tests.
+   */
+  List<CacheFile> getCacheFiles() {
+    return cacheFiles;
+  }
+  
   private static String stringifyPathList(List<Path> p){
     if (p == null || p.isEmpty()) {
       return null;
@@ -210,7 +226,9 @@ public class TaskDistributedCacheManager {
    */
   public void release() throws IOException {
     for (CacheFile c : cacheFiles) {
-      distributedCacheManager.releaseCache(c.uri, taskConf, c.timestamp);
+      if (c.getLocalized()) {
+        distributedCacheManager.releaseCache(c.uri, taskConf, c.timestamp);
+      }
     }
   }
 
