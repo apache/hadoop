@@ -2923,7 +2923,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     }
   }
   
-  private void authorizeJVM(JobID jobId) throws IOException {
+  private void authorizeJVM(org.apache.hadoop.mapreduce.JobID jobId) 
+  throws IOException {
     String currentJobId = 
       UserGroupInformation.getCurrentUser().getUserName();
     if (!currentJobId.equals(jobId.toString())) {
@@ -3907,6 +3908,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   updatePrivateDistributedCacheSizes(org.apache.hadoop.mapreduce.JobID jobId,
                                      long[] sizes
                                      ) throws IOException {
+    authorizeJVM(jobId);
     distributedCacheManager.setArchiveSizes(jobId, sizes);
   }
 

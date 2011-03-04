@@ -38,6 +38,7 @@ AC_INIT(src/org_apache_hadoop.h)
 AC_CONFIG_SRCDIR([src/org_apache_hadoop.h])
 AC_CONFIG_AUX_DIR(config)
 AC_CONFIG_HEADER([config.h])
+AC_SYS_LARGEFILE
 
 AM_INIT_AUTOMAKE(hadoop,1.0.0)
 
