@@ -97,10 +97,12 @@ public class TestDistributedCacheUnModifiedFile {
     //Stopping all TTs
     for (TTClient tt : tts) {
       tt.kill();
+      tt.waitForTTStop();
     }
     //Starting all TTs
     for (TTClient tt : tts) {
       tt.start();
+      tt.waitForTTStart();
     }
    
     //Waiting for 5 seconds to make sure tasktrackers are ready
@@ -121,10 +123,12 @@ public class TestDistributedCacheUnModifiedFile {
     //Stopping all TTs
     for (TTClient tt : tts) {
       tt.kill();
+      tt.waitForTTStop();
     }
     //Starting all TTs
     for (TTClient tt : tts) {
       tt.start();
+      tt.waitForTTStart();
     }
   }
 

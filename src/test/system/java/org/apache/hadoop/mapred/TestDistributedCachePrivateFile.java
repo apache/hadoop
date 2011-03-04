@@ -85,10 +85,12 @@ public class TestDistributedCachePrivateFile {
     //Stopping all TTs
     for (TTClient tt : tts) {
       tt.kill();
+      tt.waitForTTStop();
     }
     //Starting all TTs
     for (TTClient tt : tts) {
       tt.start();
+      tt.waitForTTStart();
     }
 
     String input = "This will be the content of\n" + "distributed cache\n";
@@ -106,10 +108,12 @@ public class TestDistributedCachePrivateFile {
     //Stopping all TTs
     for (TTClient tt : tts) {
       tt.kill();
+      tt.waitForTTStop();
     }
     //Starting all TTs
     for (TTClient tt : tts) {
       tt.start();
+      tt.waitForTTStart();
     }
   }
 
