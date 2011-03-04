@@ -365,10 +365,17 @@
       <th>Total</th>
     </tr>
     <%
-    Counters mapCounters = job.getMapCounters();
-    Counters reduceCounters = job.getReduceCounters();
-    Counters totalCounters = job.getCounters();
-    
+    boolean isFine = true;
+    Counters mapCounters = new Counters();
+    isFine = job.getMapCounters(mapCounters);
+    mapCounters = (isFine? mapCounters: new Counters());
+    Counters reduceCounters = new Counters();
+    isFine = job.getReduceCounters(reduceCounters);
+    reduceCounters = (isFine? reduceCounters: new Counters());
+    Counters totalCounters = new Counters();
+    isFine = job.getCounters(totalCounters);
+    totalCounters = (isFine? totalCounters: new Counters());
+        
     for (String groupName : totalCounters.getGroupNames()) {
       Counters.Group totalGroup = totalCounters.getGroup(groupName);
       Counters.Group mapGroup = mapCounters.getGroup(groupName);

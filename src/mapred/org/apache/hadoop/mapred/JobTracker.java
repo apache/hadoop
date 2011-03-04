@@ -74,6 +74,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
 import org.apache.hadoop.mapred.AuditLogger.Constants;
+import org.apache.hadoop.mapred.Counters.CountersExceededException;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
@@ -133,7 +134,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   static long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
   static long RETIRE_JOB_INTERVAL;
   static long RETIRE_JOB_CHECK_INTERVAL;
-
+  
   private final long DELEGATION_TOKEN_GC_INTERVAL = 3600000; // 1 hour
   private final DelegationTokenSecretManager secretManager;
 
@@ -561,7 +562,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     synchronized void addToCache(JobInProgress job) {
-      RetireJobInfo info = new RetireJobInfo(job.getCounters(), job.getStatus(),
+      Counters counters = new Counters();
+      boolean isFine = job.getCounters(counters);
+      counters = (isFine? counters: new Counters());
+      RetireJobInfo info = new RetireJobInfo(counters, job.getStatus(),
           job.getProfile(), job.getFinishTime(), job.getHistoryFile());
       jobRetireInfoQ.add(info);
       jobIDStatusMap.put(info.status.getJobID(), info);
@@ -4311,8 +4315,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
         // check the job-access
         aclsManager.checkAccess(job, callerUGI, Operation.VIEW_JOB_COUNTERS);
-
-        return isJobInited(job) ? job.getCounters() : EMPTY_COUNTERS;
+        Counters counters = new Counters();
+        if (isJobInited(job)) {
+          boolean isFine = job.getCounters(counters);
+          if (!isFine) {
+            throw new IOException("Counters Exceeded limit: " + 
+                Counters.MAX_COUNTER_LIMIT);
+          }
+          return counters;
+        }
+        else {
+          return EMPTY_COUNTERS;
+        }
       } else {
         RetireJobInfo info = retireJobs.get(jobid);
         if (info != null) {

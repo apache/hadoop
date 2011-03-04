@@ -65,14 +65,18 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   private static final int GROUP_NAME_LIMIT = 128;
   /** limit on the size of the counter name **/
   private static final int COUNTER_NAME_LIMIT = 64;
-  /** the max number of counters **/
-  static final int MAX_COUNTER_LIMIT = 80;
+  
+  private static final JobConf conf = new JobConf();
+  /** limit on counters **/
+  public static int MAX_COUNTER_LIMIT = 
+    conf.getInt("mapreduce.job.counters.limit", 120);
+
   /** the max groups allowed **/
   static final int MAX_GROUP_LIMIT = 50;
   
   /** the number of current counters**/
   private int numCounters = 0;
-  
+
   //private static Log log = LogFactory.getLog("Counters.class");
   
   /**
@@ -308,7 +312,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
         }
         numCounters = (numCounters == 0) ? Counters.this.size(): numCounters; 
         if (numCounters >= MAX_COUNTER_LIMIT) {
-          throw new RuntimeException("Error: Exceeded limits on number of counters - " 
+          throw new CountersExceededException("Error: Exceeded limits on number of counters - " 
               + "Counters=" + numCounters + " Limit=" + MAX_COUNTER_LIMIT);
         }
         result = new Counter(shortName, localize(shortName + ".name", shortName), 0L);
@@ -798,5 +802,18 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       }
     }
     return isEqual;
+  }
+  
+  /**
+   * Counter exception thrown when the number of counters exceed 
+   * the limit
+   */
+  public static class CountersExceededException extends RuntimeException {
+  
+    private static final long serialVersionUID = 1L;
+
+    public CountersExceededException(String msg) {
+      super(msg);
+    }
   }
 }

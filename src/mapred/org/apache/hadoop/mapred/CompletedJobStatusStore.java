@@ -178,8 +178,11 @@ class CompletedJobStatusStore implements Runnable {
         job.getStatus().write(dataOut);
 
         job.getProfile().write(dataOut);
-
-        job.getCounters().write(dataOut);
+        
+        Counters counters = new Counters();
+        boolean isFine = job.getCounters(counters);
+        counters = (isFine? counters: new Counters());
+        counters.write(dataOut);
 
         TaskCompletionEvent[] events = 
                 job.getTaskCompletionEvents(0, Integer.MAX_VALUE);

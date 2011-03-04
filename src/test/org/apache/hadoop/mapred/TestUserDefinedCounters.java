@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
+import java.util.Properties;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
@@ -37,11 +38,27 @@ import org.apache.hadoop.util.StringUtils;
 import org.hsqldb.lib.StringUtil;
 
 public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
+  protected void setUp() throws Exception {
+    super.setUp();
+    Properties prop = new Properties();
+    prop.put("mapred.job.tracker.persist.jobstatus.active", "true");
+    prop.put("mapred.job.tracker.persist.jobstatus.hours", "1");
+    startCluster(true, prop);
+  }
   
   enum EnumCounter { MAP_RECORDS }
   
   static class CountingMapper<K, V> extends IdentityMapper<K, V> {
-
+    private JobConf jconf;
+    boolean generateUniqueCounters = false;
+    
+    @Override
+    public void configure(JobConf jconf) {
+      this.jconf = jconf;
+      this.generateUniqueCounters = 
+        jconf.getBoolean("task.generate.unique.counters", false);
+    }
+    
     public void map(K key, V value,
         OutputCollector<K, V> output, Reporter reporter)
         throws IOException {
@@ -49,8 +66,14 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
       reporter.incrCounter(EnumCounter.MAP_RECORDS, 1);
       reporter.incrCounter("StringCounter", "MapRecords", 1);
       for (int i =0; i < 50; i++) {
-        reporter.incrCounter("StringCounter", "countername" + i, 1);
-      }      
+        if (generateUniqueCounters) {
+          reporter.incrCounter("StringCounter", "countername_" + 
+              jconf.get("mapred.task.id") + "_"+ i, 1);
+        } else {
+          reporter.incrCounter("StringCounter", "countername_" + 
+              i, 1);
+        }
+      }    
     }
   }
   
@@ -120,6 +143,12 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
       System.out.println("Exceeded counter " + 
           StringUtils.stringifyException(re));
     }
+    conf.setBoolean("task.generate.unique.counters", true);
+    FileOutputFormat.setOutputPath(conf, new Path("output-fail"));
+    try {
+      runningJob = JobClient.runJob(conf);
+    } catch(Exception ie) {
+      System.out.println(StringUtils.stringifyException(ie));
+    }
   }
-
 }

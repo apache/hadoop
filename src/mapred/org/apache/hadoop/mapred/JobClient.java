@@ -1293,7 +1293,13 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       }
     }
     LOG.info("Job complete: " + jobId);
-    Counters counters = job.getCounters();
+    Counters counters = null;
+    try{
+       counters = job.getCounters();
+    } catch(IOException ie) {
+      counters = null;
+      LOG.info(ie.getMessage());
+    }
     if (counters != null) {
       counters.log(LOG);
     }
