@@ -51,6 +51,8 @@ import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
@@ -173,6 +175,7 @@ public abstract class Server {
   private String bindAddress; 
   private int port;                               // port we listen on
   private int handlerCount;                       // number of handler threads
+  private int readThreads;                        // number of read threads
   private Class<? extends Writable> paramClass;   // class of call parameters
   private int maxIdleTime;                        // the maximum idle time after 
                                                   // which a client may be disconnected
@@ -278,6 +281,8 @@ public abstract class Server {
     
     private ServerSocketChannel acceptChannel = null; //the accept channel
     private Selector selector = null; //the selector that we use for the server
+    private Reader[] readers = null;
+    private int currentReader = 0;
     private InetSocketAddress address; //the address we bind at
     private Random rand = new Random();
     private long lastCleanupRunTime = 0; //the last time when a cleanup connec-
@@ -285,7 +290,8 @@ public abstract class Server {
     private long cleanupInterval = 10000; //the minimum interval between 
                                           //two cleanup runs
     private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
-    
+    private ExecutorService readPool; 
+   
     public Listener() throws IOException {
       address = new InetSocketAddress(bindAddress, port);
       // Create a new server socket and set to non blocking mode
@@ -297,12 +303,85 @@ public abstract class Server {
       port = acceptChannel.socket().getLocalPort(); //Could be an ephemeral port
       // create a selector;
       selector= Selector.open();
+      readers = new Reader[readThreads];
+      readPool = Executors.newFixedThreadPool(readThreads);
+      for (int i = 0; i < readThreads; i++) {
+        Selector readSelector = Selector.open();
+        Reader reader = new Reader(readSelector);
+        readers[i] = reader;
+        readPool.execute(reader);
+      }
 
       // Register accepts on the server socket with the selector.
       acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
       this.setName("IPC Server listener on " + port);
       this.setDaemon(true);
     }
+    
+    private class Reader implements Runnable {
+      private volatile boolean adding = false;
+      private Selector readSelector = null;
+
+      Reader(Selector readSelector) {
+        this.readSelector = readSelector;
+      }
+      public void run() {
+        LOG.info("Starting SocketReader");
+        synchronized (this) {
+          while (running) {
+            SelectionKey key = null;
+            try {
+              readSelector.select();
+              while (adding) {
+                this.wait(1000);
+              }              
+
+              Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
+              while (iter.hasNext()) {
+                key = iter.next();
+                iter.remove();
+                if (key.isValid()) {
+                  if (key.isReadable()) {
+                    doRead(key);
+                  }
+                }
+                key = null;
+              }
+            } catch (InterruptedException e) {
+              if (running) {                      // unexpected -- log it
+                LOG.info(getName() + " caught: " +
+                         StringUtils.stringifyException(e));
+              }
+            } catch (IOException ex) {
+              LOG.error("Error in Reader", ex);
+            }
+          }
+        }
+      }
+
+      /**
+       * This gets reader into the state that waits for the new channel
+       * to be registered with readSelector. If it was waiting in select()
+       * the thread will be woken up, otherwise whenever select() is called
+       * it will return even if there is nothing to read and wait
+       * in while(adding) for finishAdd call
+       */
+      public void startAdd() {
+        adding = true;
+        readSelector.wakeup();
+      }
+      
+      public synchronized SelectionKey registerChannel(SocketChannel channel)
+                                                          throws IOException {
+          return channel.register(readSelector, SelectionKey.OP_READ);
+      }
+
+      public synchronized void finishAdd() {
+        adding = false;
+        this.notify();        
+      }
+    }
+
     /** cleanup connections from connectionList. Choose a random range
      * to scan and also have a limit on the number of the connections
      * that will be cleanedup per run. The criteria for cleanup is the time
@@ -367,8 +446,6 @@ public abstract class Server {
               if (key.isValid()) {
                 if (key.isAcceptable())
                   doAccept(key);
-                else if (key.isReadable())
-                  doRead(key);
               }
             } catch (IOException e) {
             }
@@ -382,11 +459,6 @@ public abstract class Server {
           closeCurrentConnection(key, e);
           cleanupConnections(true);
           try { Thread.sleep(60000); } catch (Exception ie) {}
-        } catch (InterruptedException e) {
-          if (running) {                          // unexpected -- log it
-            LOG.info(getName() + " caught: " +
-                     StringUtils.stringifyException(e));
-          }
         } catch (Exception e) {
           closeCurrentConnection(key, e);
         }
@@ -429,24 +501,28 @@ public abstract class Server {
     void doAccept(SelectionKey key) throws IOException,  OutOfMemoryError {
       Connection c = null;
       ServerSocketChannel server = (ServerSocketChannel) key.channel();
-      // accept up to 10 connections
-      for (int i=0; i<10; i++) {
-        SocketChannel channel = server.accept();
-        if (channel==null) return;
-
+      SocketChannel channel;
+      while ((channel = server.accept()) != null) {
         channel.configureBlocking(false);
         channel.socket().setTcpNoDelay(tcpNoDelay);
-        SelectionKey readKey = channel.register(selector, SelectionKey.OP_READ);
-        c = new Connection(readKey, channel, System.currentTimeMillis());
-        readKey.attach(c);
-        synchronized (connectionList) {
-          connectionList.add(numConnections, c);
-          numConnections++;
+        Reader reader = getReader();
+        try {
+          reader.startAdd();
+          SelectionKey readKey = reader.registerChannel(channel);
+          c = new Connection(readKey, channel, System.currentTimeMillis());
+          readKey.attach(c);
+          synchronized (connectionList) {
+            connectionList.add(numConnections, c);
+            numConnections++;
+          }
+          if (LOG.isDebugEnabled())
+            LOG.debug("Server connection from " + c.toString() +
+                "; # active connections: " + numConnections +
+                "; # queued calls: " + callQueue.size());          
+        } finally {
+          reader.finishAdd(); 
         }
-        if (LOG.isDebugEnabled())
-          LOG.debug("Server connection from " + c.toString() +
-              "; # active connections: " + numConnections +
-              "; # queued calls: " + callQueue.size());
+
       }
     }
 
@@ -492,7 +568,16 @@ public abstract class Server {
           LOG.info(getName() + ":Exception in closing listener socket. " + e);
         }
       }
+      readPool.shutdown();
     }
+
+    // The method that will return the next reader to work with
+    // Simplistic implementation of round robin for now
+    Reader getReader() {
+      currentReader = (currentReader + 1) % readers.length;
+      return readers[currentReader];
+    }
+
   }
 
   // Sends responses of RPC back to clients.
@@ -1380,6 +1465,9 @@ public abstract class Server {
                                 IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
     this.maxRespSize = conf.getInt(IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
                                    IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);
+    this.readThreads = conf.getInt(
+        IPC_SERVER_RPC_READ_THREADS_KEY,
+        IPC_SERVER_RPC_READ_THREADS_DEFAULT);
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
     this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
