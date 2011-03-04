@@ -233,7 +233,7 @@ public class DelegationTokenRenewal {
   }
   
   /**
-   * find the soonest expiring token and set it for renew
+   * set task to renew the token
    */
   private static void setTimerForTokenRenewal(
       DelegationTokenToRenew token, boolean firstTime) {
@@ -245,11 +245,11 @@ public class DelegationTokenRenewal {
       renewIn = now;
     } else {
       long expiresIn = (token.expirationDate - now); 
-      renewIn = now + expiresIn - expiresIn/10; // little before expiration
+      renewIn = now + expiresIn - expiresIn/10; // little bit before the expiration
     }
     
     try {
-      // need to create new timer every time
+      // need to create new task every time
       TimerTask tTask = new RenewalTimerTask(token);
       token.setTimerTask(tTask); // keep reference to the timer
 

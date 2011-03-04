@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 
@@ -62,8 +63,10 @@ public class TestDelegationTokenRenewal {
     
     // create a fake FileSystem (MyFS) and assosiate it
     // with "hdfs" schema.
-    URI uri = new URI(DelegationTokenRenewal.SCHEME+"://localhost:0");
-    System.out.println("scheme is : " + uri.getScheme());
+    InetAddress iaddr = InetAddress.getByName("localhost");
+    String dnsName = iaddr.getCanonicalHostName();
+    final URI uri = new URI (DelegationTokenRenewal.SCHEME + "://" + dnsName+":"+"0");
+    
     conf.setClass("fs." + uri.getScheme() + ".impl", MyFS.class, DistributedFileSystem.class);
     FileSystem.setDefaultUri(conf, uri);
     System.out.println("filesystem uri = " + FileSystem.getDefaultUri(conf).toString());
@@ -145,7 +148,8 @@ public class TestDelegationTokenRenewal {
       }
       counter ++;
       this.token = (MyToken)token;
-      System.out.println("Called MYDFS.renewdelegationtoken " + token);
+      System.out.println("Called MYDFS.renewdelegationtoken " + token + 
+          ";this dfs=" + this.hashCode() + ";c=" + counter);
       if(tokenToRenewIn2Sec == token) { 
         // this token first renewal in 2 seconds
         System.out.println("RENEW in 2 seconds");
@@ -174,7 +178,7 @@ public class TestDelegationTokenRenewal {
   }
   
   /**
-   * auxilary - create token
+   * Auxiliary - create token
    * @param renewer
    * @return
    * @throws IOException
@@ -220,7 +224,7 @@ public class TestDelegationTokenRenewal {
   @Test
   public void testDTRenewal () throws IOException, URISyntaxException {
     MyFS dfs = (MyFS)FileSystem.get(conf);
-    System.out.println("dfs="+(Object)dfs);
+    System.out.println("dfs="+(Object)dfs.hashCode() + ";conf="+conf.hashCode());
     // Test 1. - add three tokens - make sure exactly one get's renewed
     
     // get the delegation tokens
@@ -233,7 +237,7 @@ public class TestDelegationTokenRenewal {
     dfs.setTokenToRenewIn2Sec(token1); 
     System.out.println("token="+token1+" should be renewed for 2 secs");
     
-    // two distinct Namenodes
+    // three distinct Namenodes
     String nn1 = DelegationTokenRenewal.SCHEME + "://host1:0";
     String nn2 = DelegationTokenRenewal.SCHEME + "://host2:0";
     String nn3 = DelegationTokenRenewal.SCHEME + "://host3:0";
@@ -262,8 +266,8 @@ public class TestDelegationTokenRenewal {
         break;
     }
     
-    System.out.println("Counter = " + dfs.getCounter() + ";t="+
-        dfs.getToken());
+    System.out.println("dfs=" + dfs.hashCode() + 
+        ";Counter = " + dfs.getCounter() + ";t="+  dfs.getToken());
     assertEquals("renew wasn't called as many times as expected(4):",
         numberOfExpectedRenewals, dfs.getCounter());
     assertEquals("most recently renewed token mismatch", dfs.getToken(), 
