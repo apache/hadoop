@@ -423,6 +423,8 @@ Release 0.22.0 - Unreleased
 
     HDFS-1160. Improve some FSDataset warnings and comments. (eli)
 
+    HDFS-556. Provide info on failed volumes in the web ui. (eli)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)

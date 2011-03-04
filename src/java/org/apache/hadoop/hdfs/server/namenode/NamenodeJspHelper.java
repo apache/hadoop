@@ -520,7 +520,8 @@ class NamenodeJspHelper {
           + StringUtils.limitDecimalTo2(bpUsed * 1.0 / diskBytes)
           + "<td align=\"right\" class=\"pcbpused\">"
           + percentBpUsed
-          + "\n");
+          + "<td align=\"right\" class=\"volfails\">"
+          + d.getVolumeFailures() + "\n");
     }
 
     void generateNodesList(ServletContext context, JspWriter out,
@@ -605,7 +606,9 @@ class NamenodeJspHelper {
                 + nodeHeaderStr("bpused") + "> Block Pool<br>Used (" 
                 + diskByteStr + ") <th "
                 + nodeHeaderStr("pcbpused")
-                + "> Block Pool<br>Used (%)\n");
+                + "> Block Pool<br>Used (%)"
+                + "> Blocks <th " + nodeHeaderStr("volfails")
+                +"> Failed Volumes\n");
 
             JspHelper.sortNodeList(live, sorterField, sorterOrder);
             for (int i = 0; i < live.size(); i++) {
