@@ -216,38 +216,49 @@ public class DistributedCache {
       lcacheStatus.refcount++;
     }
     
-    synchronized (lcacheStatus) {
-      if (!lcacheStatus.isInited()) {
-        localizedPath = localizeCache(conf, cache, confFileStamp, lcacheStatus,
-          fileStatus, isArchive);
-        lcacheStatus.initComplete();
-      } else {
-        localizedPath = checkCacheStatusValidity(conf, cache, confFileStamp,
-          lcacheStatus, fileStatus, isArchive);
-      }
-      createSymlink(conf, cache, lcacheStatus, isArchive,
-        currentWorkDir, honorSymLinkConf);
-    }
- 
-    // try deleting stuff if you can
-    long size = 0;
-    synchronized (lcacheStatus) {
-      synchronized (baseDirSize) {
-        Long get = baseDirSize.get(lcacheStatus.getBaseDir());
-        if ( get != null ) {
-    	    size = get.longValue();
+    boolean initSuccessful = false;
+    try {
+      synchronized (lcacheStatus) {
+        if (!lcacheStatus.isInited()) {
+          localizedPath = localizeCache(conf, cache, confFileStamp,
+              lcacheStatus, fileStatus, isArchive);
+          lcacheStatus.initComplete();
         } else {
-          LOG.warn("Cannot find size of baseDir: " + lcacheStatus.getBaseDir());
+          localizedPath = checkCacheStatusValidity(conf, cache, confFileStamp,
+              lcacheStatus, fileStatus, isArchive);
+        }
+        createSymlink(conf, cache, lcacheStatus, isArchive, currentWorkDir,
+            honorSymLinkConf);
+      }
+
+      // try deleting stuff if you can
+      long size = 0;
+      synchronized (lcacheStatus) {
+        synchronized (baseDirSize) {
+          Long get = baseDirSize.get(lcacheStatus.getBaseDir());
+          if (get != null) {
+            size = get.longValue();
+          } else {
+            LOG.warn("Cannot find size of baseDir: "
+                + lcacheStatus.getBaseDir());
+          }
+        }
+      }
+      // setting the cache size to a default of 10GB
+      long allowedSize = conf.getLong("local.cache.size", DEFAULT_CACHE_SIZE);
+      if (allowedSize < size) {
+        // try some cache deletions
+        deleteCache(conf);
+      }
+      initSuccessful = true;
+      return localizedPath;
+    } finally {
+      if (!initSuccessful) {
+        synchronized (cachedArchives) {
+          lcacheStatus.refcount--;
         }
       }
     }
-    // setting the cache size to a default of 10GB
-    long allowedSize = conf.getLong("local.cache.size", DEFAULT_CACHE_SIZE);
-    if (allowedSize < size) {
-      // try some cache deletions
-      deleteCache(conf);
-    }
-    return localizedPath;
   }
 
   

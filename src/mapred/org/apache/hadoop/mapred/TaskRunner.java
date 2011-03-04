@@ -140,9 +140,19 @@ abstract class TaskRunner extends Thread {
     return jobConf.get(JobConf.MAPRED_TASK_ENV);
   }
   
+  private static class CacheFile {
+    URI uri;
+    long timeStamp;
+    CacheFile (URI uri, long timeStamp) {
+      this.uri = uri;
+      this.timeStamp = timeStamp;
+    }
+  }
+  
   @Override
   public final void run() {
     String errorInfo = "Child Error";
+    List<CacheFile> localizedCacheFiles = new ArrayList<CacheFile>();
     try {
       
       //before preparing the job localize 
@@ -187,6 +197,8 @@ abstract class TaskRunner extends Thread {
                                                         getAbsolutePath()), 
                                                   false,
                                                   lDirAlloc);
+            localizedCacheFiles.add(new CacheFile(archives[i], Long
+                .parseLong(archivesTimestamps[i])));
             
           }
           DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
@@ -207,6 +219,8 @@ abstract class TaskRunner extends Thread {
                                                         getAbsolutePath()), 
                                                   false,
                                                   lDirAlloc);
+            localizedCacheFiles.add(new CacheFile(files[i], Long
+                .parseLong(fileTimestamps[i])));
           }
           DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
         }
@@ -523,22 +537,8 @@ abstract class TaskRunner extends Thread {
       }
     } finally {
       try{
-        URI[] archives = DistributedCache.getCacheArchives(conf);
-        URI[] files = DistributedCache.getCacheFiles(conf);
-        String[] archivesTimestamps = 
-          DistributedCache.getArchiveTimestamps(conf);
-        String[] fileTimestamps = DistributedCache.getFileTimestamps(conf);
-        if (archives != null){
-          for (int i = 0; i < archives.length; i++){
-            DistributedCache.releaseCache(archives[i], conf,
-              Long.parseLong(archivesTimestamps[i]));
-          }
-        }
-        if (files != null){
-          for(int i = 0; i < files.length; i++){
-            DistributedCache.releaseCache(files[i], conf,
-              Long.parseLong(fileTimestamps[i]));
-          }
+        for (CacheFile cf : localizedCacheFiles){
+          DistributedCache.releaseCache(cf.uri, conf, cf.timeStamp);
         }
       }catch(IOException ie){
         LOG.warn("Error releasing caches : Cache files might not have been cleaned up");
