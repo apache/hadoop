@@ -161,6 +161,9 @@ abstract class JobFactory<T> implements Gridmix.Component<Void>,StatListener<T>{
     public Values getOutcome() {
       return job.getOutcome();
     }
+    public String getQueueName() {
+      return job.getQueueName();
+    }
   }
 
   protected abstract Thread createReaderThread() ;

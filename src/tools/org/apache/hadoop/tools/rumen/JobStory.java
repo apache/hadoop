@@ -115,4 +115,10 @@ public interface JobStory {
    * @return The outcome of the job execution.
    */
   public Values getOutcome();
+  
+  /**
+   * Get the queue where the job is submitted.
+   * @return the queue where the job is submitted.
+   */
+  public String getQueueName();
 }

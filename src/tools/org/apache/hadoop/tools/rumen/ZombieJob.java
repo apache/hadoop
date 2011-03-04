@@ -125,6 +125,7 @@ public class ZombieJob implements JobStory {
       jobConf.setUser(getUser());
       jobConf.setNumMapTasks(getNumberMaps());
       jobConf.setNumReduceTasks(getNumberReduces());
+      jobConf.setQueueName(getQueueName());
     }
     return jobConf;
   }
@@ -252,6 +253,12 @@ public class ZombieJob implements JobStory {
     return job.getSubmitTime() - job.getRelativeTime();
   }
 
+  @Override
+  public String getQueueName() {
+    String queue = job.getQueue();
+    return (queue == null)? JobConf.DEFAULT_QUEUE_NAME : queue;
+  }
+  
   /**
    * Getting the number of map tasks that are actually logged in the trace.
    * @return The number of map tasks that are actually logged in the trace.

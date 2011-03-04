@@ -26,6 +26,7 @@ import org.apache.hadoop.tools.rumen.TaskInfo;
 import org.apache.hadoop.tools.rumen.TaskAttemptInfo;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants.Values;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -287,6 +288,11 @@ public class DebugJobProducer implements JobStoryProducer {
       throw new UnsupportedOperationException();
     }
 
+    @Override
+    public String getQueueName() {
+      return JobConf.DEFAULT_QUEUE_NAME;
+    }
+    
     public static void reset() {
       seq.set(0);
       timestamp.set(System.currentTimeMillis() - TimeUnit.MILLISECONDS.convert(
