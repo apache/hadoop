@@ -48,6 +48,7 @@ import javax.security.auth.spi.LoginModule;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -466,6 +467,15 @@ public class UserGroupInformation {
     return new UserGroupInformation(subject);
   }
 
+  public static enum AuthenticationMethod {
+    SIMPLE,
+    KERBEROS,
+    TOKEN,
+    CERTIFICATE,
+    KERBEROS_SSL,
+    PROXY;
+  }
+
   /* Create a proxy user using username of the effective user and the ugi of the
    * real user.
    *
@@ -641,6 +651,30 @@ public class UserGroupInformation {
     } else {
       return getUserName();
     }
+  }
+
+  /**
+   * Sets the authentication method in the subject
+   * 
+   * @param authMethod
+   */
+  public synchronized 
+  void setAuthenticationMethod(AuthenticationMethod authMethod) {
+    for (User p : subject.getPrincipals(User.class)) {
+      p.setAuthenticationMethod(authMethod);
+    }
+  }
+
+  /**
+   * Get the authentication method from the subject
+   * 
+   * @return AuthenticationMethod in the subject, null if not present.
+   */
+  public synchronized AuthenticationMethod getAuthenticationMethod() {
+    for (User p: subject.getPrincipals(User.class)) {
+      return p.getAuthenticationMethod();
+    }
+    return null;
   }
 
   /**

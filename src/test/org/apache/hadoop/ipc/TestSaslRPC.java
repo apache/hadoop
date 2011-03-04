@@ -24,7 +24,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+
+import junit.framework.Assert;
 
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -42,6 +45,7 @@ import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -150,10 +154,14 @@ public class TestSaslRPC {
   @KerberosInfo(SERVER_PRINCIPAL_KEY)
   @TokenInfo(TestTokenSelector.class)
   public interface TestSaslProtocol extends TestRPC.TestProtocol {
+    public AuthenticationMethod getAuthMethod() throws IOException;
   }
   
   public static class TestSaslImpl extends TestRPC.TestImpl implements
       TestSaslProtocol {
+    public AuthenticationMethod getAuthMethod() throws IOException {
+      return UserGroupInformation.getCurrentUser().getAuthenticationMethod();
+    }
   }
 
   @Test
@@ -227,6 +235,43 @@ public class TestSaslRPC {
         RPC.stopProxy(proxy);
       }
     }
+  }
+  
+  @Test
+  public void testDigestAuthMethod() throws Exception {
+    TestTokenSecretManager sm = new TestTokenSecretManager();
+    Server server = RPC.getServer(
+        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
+    server.start();
+
+    final UserGroupInformation current = UserGroupInformation.getCurrentUser();
+    final InetSocketAddress addr = NetUtils.getConnectAddress(server);
+    TestTokenIdentifier tokenId = new TestTokenIdentifier(new Text(current
+        .getUserName()));
+    Token<TestTokenIdentifier> token = new Token<TestTokenIdentifier>(tokenId,
+        sm);
+    Text host = new Text(addr.getAddress().getHostAddress() + ":"
+        + addr.getPort());
+    token.setService(host);
+    LOG.info("Service IP address for token is " + host);
+    current.addToken(token);
+
+    current.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        TestSaslProtocol proxy = null;
+        try {
+          proxy = (TestSaslProtocol) RPC.getProxy(TestSaslProtocol.class,
+              TestSaslProtocol.versionID, addr, conf);
+          Assert.assertEquals(AuthenticationMethod.TOKEN, proxy.getAuthMethod());
+        } finally {
+          if (proxy != null) {
+            RPC.stopProxy(proxy);
+          }
+        }
+        return null;
+      }
+    });
+    server.stop();
   }
   
   public static void main(String[] args) throws Exception {

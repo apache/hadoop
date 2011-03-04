@@ -50,6 +50,7 @@ import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -435,12 +436,14 @@ public class JspHelper {
         token.decodeFromUrlString(tokenString);
         ugi = UserGroupInformation.createRemoteUser(user);
         ugi.addToken(token);        
+        ugi.setAuthenticationMethod(AuthenticationMethod.TOKEN);
       } else {
         if(user == null) {
           throw new IOException("Security enabled but user not " +
                                 "authenticated by filter");
         }
         ugi = UserGroupInformation.createRemoteUser(user);
+        ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS_SSL);
       }
     } else { // Security's not on, pull from url
       String user = request.getParameter("ugi");
@@ -450,6 +453,7 @@ public class JspHelper {
       } else {
         ugi = UserGroupInformation.createRemoteUser(user);
       }
+      ugi.setAuthenticationMethod(AuthenticationMethod.SIMPLE);
     }
     
     if(LOG.isDebugEnabled())

@@ -33,6 +33,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.security.AccessTokenHandler;
 import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
@@ -4941,6 +4942,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot issue delegation token", safeMode);
     }
+    if (!isAllowedDelegationTokenOp()) {
+      throw new IOException(
+          "Delegation Token can be issued only with kerberos or web authentication");
+    }
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String user = ugi.getUserName();
     Text owner = new Text(user);
@@ -4968,6 +4973,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throws InvalidToken, IOException {
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot renew delegation token", safeMode);
+    }
+    if (!isAllowedDelegationTokenOp()) {
+      throw new IOException(
+          "Delegation Token can be renewed only with kerberos or web authentication");
     }
     String renewer = UserGroupInformation.getCurrentUser().getShortUserName();
     long expiryTime = dtSecretManager.renewToken(token, renewer);
@@ -5061,5 +5070,35 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       getEditLog().logUpdateMasterKey(key);
     }
     getEditLog().logSync();
+  }
+  
+  /**
+   * 
+   * @return true if delegation token operation is allowed
+   */
+  private boolean isAllowedDelegationTokenOp() throws IOException {
+    AuthenticationMethod authMethod = getConnectionAuthenticationMethod();
+    if (UserGroupInformation.isSecurityEnabled()
+        && (authMethod != AuthenticationMethod.KERBEROS)
+        && (authMethod != AuthenticationMethod.KERBEROS_SSL)
+        && (authMethod != AuthenticationMethod.CERTIFICATE)) {
+      return false;
+    }
+    return true;
+  }
+  
+  /**
+   * Returns authentication method used to establish the connection
+   * @return AuthenticationMethod used to establish connection
+   * @throws IOException
+   */
+  private AuthenticationMethod getConnectionAuthenticationMethod()
+      throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    AuthenticationMethod authMethod = ugi.getAuthenticationMethod();
+    if (authMethod == AuthenticationMethod.PROXY) {
+      authMethod = ugi.getRealUser().getAuthenticationMethod();
+    }
+    return authMethod;
   }
 }

@@ -69,6 +69,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SaslRpcServer.SaslDigestCallbackHandler;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -1064,18 +1065,32 @@ public abstract class Server {
       UserGroupInformation protocolUser = header.getUgi();
       if (!useSasl) {
         user = protocolUser;
-      } else if ((protocolUser != null)
-          && (!protocolUser.getUserName().equals(user.getUserName()))) {
-        if (authMethod == AuthMethod.DIGEST) {
-          // Not allowed to doAs if token authentication is used
-          throw new AccessControlException("Authenticated user (" + user
-              + ") doesn't match what the client claims to be (" + protocolUser
-              + ")");
-        } else {
-          //Effective user can be different from authenticated user
-          //for simple auth or kerberos auth
-          user = UserGroupInformation.createProxyUser(protocolUser
-              .getUserName(), user);
+        if (user != null) {
+          user.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
+        }
+      } else {
+        // user is authenticated
+        user.setAuthenticationMethod(authMethod.authenticationMethod);
+        //Now we check if this is a proxy user case. If the protocol user is
+        //different from the 'user', it is a proxy user scenario. However, 
+        //this is not allowed if user authenticated with DIGEST.
+        if ((protocolUser != null)
+            && (!protocolUser.getUserName().equals(user.getUserName()))) {
+          if (authMethod == AuthMethod.DIGEST) {
+            // Not allowed to doAs if token authentication is used
+            throw new AccessControlException("Authenticated user (" + user
+                + ") doesn't match what the client claims to be ("
+                + protocolUser + ")");
+          } else {
+            // Effective user can be different from authenticated user
+            // for simple auth or kerberos auth
+            // The user is the real user. Now we create a proxy user
+            UserGroupInformation realUser = user;
+            user = UserGroupInformation.createProxyUser(protocolUser
+                .getUserName(), realUser);
+            // Now the user is a proxy user, set Authentication method Proxy.
+            user.setAuthenticationMethod(AuthenticationMethod.PROXY);
+          }
         }
       }
     }

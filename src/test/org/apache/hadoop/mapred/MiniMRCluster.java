@@ -63,7 +63,7 @@ public class MiniMRCluster {
   /**
    * An inner class that runs a job tracker.
    */
-  class JobTrackerRunner implements Runnable {
+  public class JobTrackerRunner implements Runnable {
     private JobTracker tracker = null;
     private volatile boolean isActive = true;
     

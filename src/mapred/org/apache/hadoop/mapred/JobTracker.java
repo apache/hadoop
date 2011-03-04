@@ -91,6 +91,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -307,6 +308,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     } else {
       throw new IOException("Unknown protocol to job tracker: " + protocol);
     }
+  }
+  
+  public DelegationTokenSecretManager getDelegationTokenSecretManager() {
+    return secretManager;
   }
   
   /**
@@ -3848,6 +3853,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public Token<DelegationTokenIdentifier> 
      getDelegationToken(Text renewer
                         )throws IOException, InterruptedException {
+    if (!isAllowedDelegationTokenOp()) {
+      throw new IOException(
+          "Delegation Token can be issued only with kerberos authentication");
+    }
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     Text owner = new Text(ugi.getUserName());
     Text realUser = null;
@@ -3865,6 +3874,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token
                                       ) throws IOException,
                                                InterruptedException {
+    if (!isAllowedDelegationTokenOp()) {
+      throw new IOException(
+          "Delegation Token can be issued only with kerberos authentication");
+    }
     String user = UserGroupInformation.getCurrentUser().getUserName();
     return secretManager.renewToken(token, user);
   }  
@@ -4809,5 +4822,35 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   synchronized void incrementFaults(String hostName) {
     faultyTrackers.incrementFaults(hostName);
+  }
+  
+  /**
+   * 
+   * @return true if delegation token operation is allowed
+   */
+  private boolean isAllowedDelegationTokenOp() throws IOException {
+    AuthenticationMethod authMethod = getConnectionAuthenticationMethod();
+    if (UserGroupInformation.isSecurityEnabled()
+        && (authMethod != AuthenticationMethod.KERBEROS)
+        && (authMethod != AuthenticationMethod.KERBEROS_SSL)
+        && (authMethod != AuthenticationMethod.CERTIFICATE)) {
+      return false;
+    }
+    return true;
+  }
+  
+  /**
+   * Returns authentication method used to establish the connection
+   * @return AuthenticationMethod used to establish connection
+   * @throws IOException
+   */
+  private AuthenticationMethod getConnectionAuthenticationMethod()
+      throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    AuthenticationMethod authMethod = ugi.getAuthenticationMethod();
+    if (authMethod == AuthenticationMethod.PROXY) {
+      authMethod = ugi.getRealUser().getAuthenticationMethod();
+    }
+    return authMethod;
   }
 }

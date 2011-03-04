@@ -41,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
 /**
  * A utility class for dealing with SASL on RPC server
@@ -86,17 +87,20 @@ public class SaslRpcServer {
 
   /** Authentication method */
   public static enum AuthMethod {
-    SIMPLE((byte) 80, ""), // no authentication
-    KERBEROS((byte) 81, "GSSAPI"), // SASL Kerberos authentication
-    DIGEST((byte) 82, "DIGEST-MD5"); // SASL DIGEST-MD5 authentication
+    SIMPLE((byte) 80, "", AuthenticationMethod.SIMPLE),
+    KERBEROS((byte) 81, "GSSAPI", AuthenticationMethod.KERBEROS),
+    DIGEST((byte) 82, "DIGEST-MD5", AuthenticationMethod.TOKEN);
 
     /** The code for this method. */
     public final byte code;
     public final String mechanismName;
+    public final AuthenticationMethod authenticationMethod;
 
-    private AuthMethod(byte code, String mechanismName) {
+    private AuthMethod(byte code, String mechanismName, 
+                       AuthenticationMethod authMethod) {
       this.code = code;
       this.mechanismName = mechanismName;
+      this.authenticationMethod = authMethod;
     }
 
     private static final int FIRST_CODE = values()[0].code;
