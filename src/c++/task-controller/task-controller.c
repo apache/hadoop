@@ -1053,25 +1053,24 @@ int kill_user_task(const char *user, const char *task_pid, int sig) {
  * Before changing permissions, makes sure that the given path doesn't contain
  * any relative components.
  * tt_root : is the base path(i.e. mapred-local-dir) sent to task-controller
- * dir_to_be_deleted : is either taskDir OR taskWorkDir that is to be deleted
+ * full_path : is either jobLocalDir, taskDir OR taskWorkDir that is to be 
+ *             deleted
  */
-int enable_task_for_cleanup(const char *tt_root, const char *user,
-           const char *jobid, const char *dir_to_be_deleted) {
+static int enable_path_for_cleanup(const char *tt_root, const char *user,
+                                   char *full_path) {
   int exit_code = 0;
   gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
 
-  char * full_path = NULL;
   if (check_tt_root(tt_root) < 0) {
     fprintf(LOGFILE, "invalid tt root passed %s\n", tt_root);
     cleanup();
     return INVALID_TT_ROOT;
   }
  
-  full_path = get_task_dir_path(tt_root, user, jobid, dir_to_be_deleted);
   if (full_path == NULL) {
     fprintf(LOGFILE,
             "Could not build the full path. Not deleting the dir %s\n",
-            dir_to_be_deleted);
+            full_path);
     exit_code = UNABLE_TO_BUILD_PATH; // may be malloc failed
   }
      // Make sure that the path given is not having any relative components
@@ -1100,4 +1099,27 @@ int enable_task_for_cleanup(const char *tt_root, const char *user,
   // free configurations
   cleanup();
   return exit_code;
+}
+
+/**
+ * Enables the task work-dir/local-dir path for deletion.
+ * tt_root : is the base path(i.e. mapred-local-dir) sent to task-controller
+ * dir_to_be_deleted : is either taskDir OR taskWorkDir that is to be deleted
+ */
+int enable_task_for_cleanup(const char *tt_root, const char *user,
+           const char *jobid, const char *dir_to_be_deleted) {
+  char *full_path = get_task_dir_path(tt_root, user, jobid, dir_to_be_deleted);
+  return enable_path_for_cleanup(tt_root, user, full_path);
+}
+
+/**
+ * Enables the jobLocalDir for deletion.
+ * tt_root : is the base path(i.e. mapred-local-dir) sent to task-controller
+ * user    : owner of the job
+ * jobid   : id of the job for which the cleanup is needed.
+ */
+int enable_job_for_cleanup(const char *tt_root, const char *user, 
+                           const char *jobid) {
+  char *full_path = get_job_directory(tt_root, user, jobid);
+  return enable_path_for_cleanup(tt_root, user, full_path);
 }

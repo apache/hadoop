@@ -634,6 +634,7 @@ public class TestTaskTrackerLocalization extends TestCase {
           taskId.toString(), task.isTaskCleanupTask());
 
     Path[] paths = tracker.getLocalFiles(localizedJobConf, dir);
+    assertTrue("No paths found", paths.length > 0);
     for (Path p : paths) {
       if (tracker.getLocalFileSystem().exists(p)) {
         createFileAndSetPermissions(localizedJobConf, p);
@@ -660,7 +661,7 @@ public class TestTaskTrackerLocalization extends TestCase {
       // now try to delete the work dir and verify that there are no stale paths
       JvmManager.deleteWorkDir(tracker, task);
     }
-    tracker.removeJobFiles(task.getUser(), jobId.toString());
+    tracker.removeJobFiles(task.getUser(), jobId);
 
     assertTrue("Some task files are not deleted!! Number of stale paths is "
         + cleanupQueue.stalePaths.size(), cleanupQueue.stalePaths.size() == 0);
@@ -792,5 +793,91 @@ public class TestTaskTrackerLocalization extends TestCase {
     // Logs should be gone after cleanup.
     assertFalse("Userlogs dir " + logDir + " is not deleted as expected!!",
         tracker.getLocalFileSystem().exists(logDir));
+  }
+  
+  /**
+   * Test job cleanup by doing the following
+   *   - create files with no write permissions to TT under job-work-dir
+   *   - create files with no write permissions to TT under task-work-dir
+   */
+  public void testJobCleanup() throws IOException, InterruptedException {
+    if (!canRun()) {
+      return;
+    }
+    
+    LOG.info("Running testJobCleanup()");
+    // Localize job and localize task.
+    tracker.getLocalizer().initializeUserDirs(task.getUser());
+    localizedJobConf = 
+      tracker.localizeJobFiles(task, 
+                               new TaskTracker.RunningJob(task.getJobID()));
+    
+    // Now initialize the job via task-controller so as to set
+    // ownership/permissions of job-work-dir
+    JobInitializationContext jobContext = new JobInitializationContext();
+    jobContext.jobid = jobId;
+    jobContext.user = localizedJobConf.getUser();
+    jobContext.workDir =
+        new File(localizedJobConf.get(TaskTracker.JOB_LOCAL_DIR));
+    taskController.initializeJob(jobContext);
+    
+    // Set an inline cleanup queue
+    InlineCleanupQueue cleanupQueue = new InlineCleanupQueue();
+    tracker.setCleanupThread(cleanupQueue);
+    
+    // Create a file in job's work-dir with 555
+    String jobWorkDir = 
+      TaskTracker.getJobWorkDir(task.getUser(), task.getJobID().toString());
+    Path[] jPaths = tracker.getLocalFiles(localizedJobConf, jobWorkDir);
+    assertTrue("No paths found for job", jPaths.length > 0);
+    for (Path p : jPaths) {
+      if (tracker.getLocalFileSystem().exists(p)) {
+        createFileAndSetPermissions(localizedJobConf, p);
+      }
+    }
+    
+    // Initialize task dirs
+    TaskInProgress tip = tracker.new TaskInProgress(task, trackerFConf);
+    tip.setJobConf(localizedJobConf);
+    tip.localizeTask(task);
+    
+    // Create a file in task local dir with 555
+    // this is to simply test the case where the jvm reuse is enabled and some
+    // files in task-attempt-local-dir are left behind to be cleaned up when the
+    // job finishes.
+    String taskLocalDir = 
+      TaskTracker.getLocalTaskDir(task.getUser(), task.getJobID().toString(), 
+                                  task.getTaskID().toString(), false);
+    Path[] tPaths = tracker.getLocalFiles(localizedJobConf, taskLocalDir);
+    assertTrue("No paths found for task", tPaths.length > 0);
+    for (Path p : tPaths) {
+      if (tracker.getLocalFileSystem().exists(p)) {
+        createFileAndSetPermissions(localizedJobConf, p);
+      }
+    }
+    
+    // remove the job work dir
+    tracker.removeJobFiles(task.getUser(), task.getJobID());
+
+    // check the task-local-dir
+    boolean tLocalDirExists = false;
+    for (Path p : tPaths) {
+      if (tracker.getLocalFileSystem().exists(p)) {
+        tLocalDirExists = true;
+      }
+    }
+    assertFalse("Task " + task.getTaskID() + " local dir exists after cleanup", 
+                tLocalDirExists);
+    
+    // Verify that the TaskTracker (via the task-controller) cleans up the dirs.
+    // check the job-work-dir
+    boolean jWorkDirExists = false;
+    for (Path p : jPaths) {
+      if (tracker.getLocalFileSystem().exists(p)) {
+        jWorkDirExists = true;
+      }
+    }
+    assertFalse("Job " + task.getJobID() + " work dir exists after cleanup", 
+                jWorkDirExists);
   }
 }

@@ -228,6 +228,11 @@ int main(int argc, char **argv) {
     exit_code = enable_task_for_cleanup(tt_root, user_detail->pw_name, job_id,
                                         dir_to_be_deleted);
     break;
+  case ENABLE_JOB_FOR_CLEANUP:
+    tt_root = argv[optind++];
+    job_id = argv[optind++];
+    exit_code = enable_job_for_cleanup(tt_root, user_detail->pw_name, job_id);
+    break;
   default:
     exit_code = INVALID_COMMAND_PROVIDED;
   }

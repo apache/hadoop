@@ -191,25 +191,26 @@ public abstract class TaskController implements Configurable {
    * Contains info related to the path of the file/dir to be deleted. This info
    * is needed by task-controller to build the full path of the file/dir
    */
-  static class TaskControllerPathDeletionContext extends PathDeletionContext {
-    Task task;
-    boolean isWorkDir;
+  static abstract class TaskControllerPathDeletionContext 
+  extends PathDeletionContext {
     TaskController taskController;
+    String user;
 
     /**
-     * mapredLocalDir is the base dir under which to-be-deleted taskWorkDir or
-     * taskAttemptDir exists. fullPath of taskAttemptDir or taskWorkDir
-     * is built using mapredLocalDir, jobId, taskId, etc.
+     * mapredLocalDir is the base dir under which to-be-deleted jobLocalDir, 
+     * taskWorkDir or taskAttemptDir exists. fullPath of jobLocalDir, 
+     * taskAttemptDir or taskWorkDir is built using mapredLocalDir, jobId, 
+     * taskId, etc.
      */
     Path mapredLocalDir;
 
     public TaskControllerPathDeletionContext(FileSystem fs, Path mapredLocalDir,
-        Task task, boolean isWorkDir, TaskController taskController) {
+                                             TaskController taskController,
+                                             String user) {
       super(fs, null);
-      this.task = task;
-      this.isWorkDir = isWorkDir;
       this.taskController = taskController;
       this.mapredLocalDir = mapredLocalDir;
+      this.user = user;
     }
 
     @Override
@@ -221,18 +222,56 @@ public abstract class TaskController implements Configurable {
     }
 
     /**
+     * Return the component of the path under the {@link #mapredLocalDir} to be 
+     * cleaned up. Its the responsibility of the class that extends 
+     * {@link TaskControllerPathDeletionContext} to provide the correct 
+     * component. For example 
+     *  - For task related cleanups, either the task-work-dir or task-local-dir
+     *    might be returned depending on jvm reuse.
+     *  - For job related cleanup, simply the job-local-dir might be returned.
+     */
+    abstract protected String getPath();
+    
+    /**
      * Builds the path of taskAttemptDir OR taskWorkDir based on
      * mapredLocalDir, jobId, taskId, etc
      */
     String buildPathForDeletion() {
+      return mapredLocalDir.toUri().getPath() + Path.SEPARATOR + getPath();
+    }
+  }
+
+  /** Contains info related to the path of the file/dir to be deleted. This info
+   * is needed by task-controller to build the full path of the task-work-dir or
+   * task-local-dir depending on whether the jvm is reused or not.
+   */
+  static class TaskControllerTaskPathDeletionContext 
+  extends TaskControllerPathDeletionContext {
+    final Task task;
+    final boolean isWorkDir;
+    
+    public TaskControllerTaskPathDeletionContext(FileSystem fs, 
+        Path mapredLocalDir, Task task, boolean isWorkDir, 
+        TaskController taskController) {
+      super(fs, mapredLocalDir, taskController, task.getUser());
+      this.task = task;
+      this.isWorkDir = isWorkDir;
+    }
+    
+    /**
+     * Returns the taskWorkDir or taskLocalDir based on whether 
+     * {@link TaskControllerTaskPathDeletionContext} is configured to delete
+     * the workDir.
+     */
+    @Override
+    protected String getPath() {
       String subDir = (isWorkDir) ? TaskTracker.getTaskWorkDir(task.getUser(),
           task.getJobID().toString(), task.getTaskID().toString(),
           task.isTaskCleanupTask())
         : TaskTracker.getLocalTaskDir(task.getUser(),
           task.getJobID().toString(), task.getTaskID().toString(),
           task.isTaskCleanupTask());
-
-      return mapredLocalDir.toUri().getPath() + Path.SEPARATOR + subDir;
+      return subDir;
     }
 
     /**
@@ -248,6 +287,41 @@ public abstract class TaskController implements Configurable {
     }
   }
 
+  /** Contains info related to the path of the file/dir to be deleted. This info
+   * is needed by task-controller to build the full path of the job-local-dir.
+   */
+  static class TaskControllerJobPathDeletionContext 
+  extends TaskControllerPathDeletionContext {
+    final JobID jobId;
+    
+    public TaskControllerJobPathDeletionContext(FileSystem fs, 
+        Path mapredLocalDir, JobID id, String user, 
+        TaskController taskController) {
+      super(fs, mapredLocalDir, taskController, user);
+      this.jobId = id;
+    }
+    
+    /**
+     * Returns the jobLocalDir of the job to be cleaned up.
+     */
+    @Override
+    protected String getPath() {
+      return TaskTracker.getLocalJobDir(user, jobId.toString());
+    }
+    
+    /**
+     * Makes the path(and its sub-directories recursively) fully deletable by
+     * setting proper permissions(770) by task-controller
+     */
+    @Override
+    protected void enablePathForCleanup() throws IOException {
+      getPathForCleanup();// allow init of fullPath, if not inited already
+      if (fs.exists(new Path(fullPath))) {
+        taskController.enableJobForCleanup(this);
+      }
+    }
+  }
+  
   /**
    * NOTE: This class is internal only class and not intended for users!!
    * 
@@ -322,4 +396,12 @@ public abstract class TaskController implements Configurable {
    */
   public abstract void initializeUser(InitializationContext context)
       throws IOException;
+  
+  /**
+   * Enable the job for cleanup by changing permissions of the path
+   * @param context   path deletion context
+   * @throws IOException
+   */
+  abstract void enableJobForCleanup(PathDeletionContext context)
+    throws IOException;
 }

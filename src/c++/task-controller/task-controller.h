@@ -44,7 +44,8 @@ enum command {
   INITIALIZE_TASK,
   TERMINATE_TASK_JVM,
   KILL_TASK_JVM,
-  ENABLE_TASK_FOR_CLEANUP
+  ENABLE_TASK_FOR_CLEANUP,
+  ENABLE_JOB_FOR_CLEANUP
 };
 
 enum errorcodes {
@@ -119,6 +120,9 @@ int kill_user_task(const char *user, const char *task_pid, int sig);
 
 int enable_task_for_cleanup(const char *tt_root, const char *user,
                             const char *jobid, const char *dir_to_be_deleted);
+
+int enable_job_for_cleanup(const char *tt_root, const char *user,
+                           const char *jobid);
 
 int prepare_attempt_directory(const char *attempt_dir, const char *user);
 
