@@ -58,6 +58,39 @@ public class TestPermission extends TestCase {
     return s.getPermission();
   }
 
+  /**
+   * Tests backward compatibility. Configuration can be
+   * either set with old param dfs.umask that takes decimal umasks
+   * or dfs.umaskmode that takes symbolic or octal umask.
+   */
+  public void testBackwardCompatibility() {
+    // Test 1 - old configuration key with decimal 
+    // umask value should be handled when set using 
+    // FSPermission.setUMask() API
+    FsPermission perm = new FsPermission((short)18);
+    Configuration conf = new Configuration();
+    FsPermission.setUMask(conf, perm);
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+    
+    // Test 2 - old configuration key set with decimal 
+    // umask value should be handled
+    perm = new FsPermission((short)18);
+    conf = new Configuration();
+    conf.set(FsPermission.DEPRECATED_UMASK_LABEL, "18");
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+    
+    // Test 3 - old configuration key overrides the new one
+    conf = new Configuration();
+    conf.set(FsPermission.DEPRECATED_UMASK_LABEL, "18");
+    conf.set(FsPermission.UMASK_LABEL, "000");
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+    
+    // Test 4 - new configuration key is handled
+    conf = new Configuration();
+    conf.set(FsPermission.UMASK_LABEL, "022");
+    assertEquals(18, FsPermission.getUMask(conf).toShort());
+  }
+  
   public void testCreate() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean("dfs.permissions", true);

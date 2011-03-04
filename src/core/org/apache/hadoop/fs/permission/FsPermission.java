@@ -168,19 +168,19 @@ public class FsPermission implements Writable {
   public static FsPermission getUMask(Configuration conf) {
     int umask = DEFAULT_UMASK;
     
-    // Attempt to pull value from configuration, trying new key first and then
-    // deprecated key, along with a warning, if not present
+    // To ensure backward compatibility first use the deprecated key.
+    // If the deprecated key is not present then check for the new key
     if(conf != null) {
-      String confUmask = conf.get(UMASK_LABEL);
-      if(confUmask != null) { // UMASK_LABEL is set
-        umask = new UmaskParser(confUmask).getUMask();
-      } else { // check for deprecated key label
-        int oldStyleValue = conf.getInt(DEPRECATED_UMASK_LABEL, Integer.MIN_VALUE);
-        if(oldStyleValue != Integer.MIN_VALUE) { // Property was set with old key
-          LOG.warn(DEPRECATED_UMASK_LABEL + " configuration key is deprecated. " +
-              "Convert to " + UMASK_LABEL + ", using octal or symbolic umask " +
-              "specifications.");
-          umask = oldStyleValue;
+      int oldStyleValue = conf.getInt(DEPRECATED_UMASK_LABEL, Integer.MIN_VALUE);
+      if(oldStyleValue != Integer.MIN_VALUE) { // Property was set with old key
+        LOG.warn(DEPRECATED_UMASK_LABEL + " configuration key is deprecated. " +
+            "Convert to " + UMASK_LABEL + ", using octal or symbolic umask " +
+            "specifications.");
+        umask = oldStyleValue;
+      } else {
+        String confUmask = conf.get(UMASK_LABEL);
+        if(confUmask != null) { // UMASK_LABEL is set
+          umask = new UmaskParser(confUmask).getUMask();
         }
       }
     }
@@ -189,7 +189,7 @@ public class FsPermission implements Writable {
   }
   /** Set the user file creation mask (umask) */
   public static void setUMask(Configuration conf, FsPermission umask) {
-    conf.setInt(UMASK_LABEL, umask.toShort());
+    conf.set(UMASK_LABEL, String.format("%1$03o", umask.toShort()));
   }
 
   /** Get the default permission. */
