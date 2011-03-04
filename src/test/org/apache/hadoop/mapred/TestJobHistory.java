@@ -32,8 +32,10 @@ import java.util.regex.Pattern;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobHistory.*;
@@ -885,7 +887,32 @@ public class TestJobHistory extends TestCase {
 
       assertTrue("Completed job and config file aren't in the same directory",
                  confFile.getParent().toString().equals(logFile.getParent().toString()));
+
+      // Test that all of the ancestors of the log file have the same
+      //   permissions as the done directory
       
+      Path cursor = logFile.getParent();
+
+      Path doneParent = doneDir.getParent();
+
+      FsPermission donePermission = getStatus(fileSys, doneDir).getPermission();
+
+      System.err.println("testDoneFolderOnHDFS: done dir permission = "
+                         + donePermission);
+
+      while (!cursor.equals(doneParent)) {
+        FileStatus cursorStatus = getStatus(fileSys, cursor);
+        FsPermission cursorPermission = cursorStatus.getPermission();
+
+        assertEquals("testDoneFolderOnHDFS: A done directory descendant, "
+                     + cursor
+                     + " does not have the same permisison as the done directory, "
+                     + doneDir,
+                     donePermission,
+                     cursorPermission);
+
+        cursor = cursor.getParent();
+      }      
 
       // check if the job file is removed from the history location 
       Path runningJobsHistoryFolder = logFile.getParent().getParent();
@@ -907,6 +934,26 @@ public class TestJobHistory extends TestCase {
         cleanupLocalFiles(mr);
         mr.shutdown();
       }
+    }
+  }
+
+  private static FileStatus getStatus(FileSystem fs, final Path path) {
+    Path pathParent = path.getParent();
+
+    try {
+      FileStatus[] statuses
+        = fs.listStatus(pathParent,
+                        new PathFilter() {
+                          @Override
+                            public boolean accept(Path filterPath) {
+                            return filterPath.getName().equals(path.getName());
+                          }
+                        }
+                        );
+
+      return statuses[0];
+    } catch (IOException e) {
+      return null;
     }
   }
 

@@ -402,7 +402,7 @@ public class JobHistory {
       if (!DONEDIR_FS.exists(dir)) {
         LOG.info("Creating DONE subfolder at "+ dir);
 
-        if (!DONEDIR_FS.mkdirs(dir,
+        if (!FileSystem.mkdirs(DONEDIR_FS, dir,
                                new FsPermission(HISTORY_DIR_PERMISSION))) {
           throw new IOException("Mkdirs failed to create " + dir.toString());
         }
