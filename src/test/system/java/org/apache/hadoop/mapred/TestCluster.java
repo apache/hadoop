@@ -19,7 +19,6 @@ import org.apache.hadoop.mapreduce.test.system.TTClient;
 import org.apache.hadoop.mapreduce.test.system.TTInfo;
 import org.apache.hadoop.mapreduce.test.system.TTTaskInfo;
 import org.apache.hadoop.mapreduce.test.system.TaskInfo;
-import org.apache.hadoop.net.NetUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -47,35 +46,33 @@ public class TestCluster {
 
   @Test
   public void testProcessInfo() throws Exception {
-    LOG.info("Process info of master is : "
-        + cluster.getMaster().getProcessInfo());
-    Assert.assertNotNull(cluster.getMaster().getProcessInfo());
-    Collection<TTClient> slaves = cluster.getSlaves().values();
-    for (TTClient slave : slaves) {
-      LOG.info("Process info of slave is : " + slave.getProcessInfo());
-      Assert.assertNotNull(slave.getProcessInfo());
+    LOG.info("Process info of JobTracker is : "
+        + cluster.getJTClient().getProcessInfo());
+    Assert.assertNotNull(cluster.getJTClient().getProcessInfo());
+    Collection<TTClient> tts = cluster.getTTClients();
+    for (TTClient tt : tts) {
+      LOG.info("Process info of TaskTracker is : " + tt.getProcessInfo());
+      Assert.assertNotNull(tt.getProcessInfo());
     }
   }
   
   @Test
   public void testJobSubmission() throws Exception {
     Configuration conf = new Configuration(cluster.getConf());
-    JTProtocol wovenClient = cluster.getMaster().getProxy();
-    JobInfo[] jobs = wovenClient.getAllJobInfo();
     SleepJob job = new SleepJob();
     job.setConf(conf);
     conf = job.setupJobConf(1, 1, 100, 100, 100, 100);
-    RunningJob rJob = cluster.getMaster().submitAndVerifyJob(conf);
-    cluster.getMaster().verifyJobHistory(rJob.getID());
+    RunningJob rJob = cluster.getJTClient().submitAndVerifyJob(conf);
+    cluster.getJTClient().verifyJobHistory(rJob.getID());
   }
 
   @Test
   public void testFileStatus() throws Exception {
-    JTClient jt = cluster.getMaster();
+    JTClient jt = cluster.getJTClient();
     String dir = ".";
     checkFileStatus(jt.getFileStatus(dir, true));
     checkFileStatus(jt.listStatus(dir, false, true), dir);
-    for (TTClient tt : cluster.getSlaves().values()) {
+    for (TTClient tt : cluster.getTTClients()) {
       String[] localDirs = tt.getMapredLocalDirs();
       for (String localDir : localDirs) {
         checkFileStatus(tt.listStatus(localDir, true, false), localDir);
@@ -118,13 +115,13 @@ public class TestCluster {
   @Test
   public void testTaskStatus() throws Exception {
     Configuration conf = new Configuration(cluster.getConf());
-    JTProtocol wovenClient = cluster.getMaster().getProxy();
+    JTProtocol wovenClient = cluster.getJTClient().getProxy();
     FinishTaskControlAction.configureControlActionForJob(conf);
     SleepJob job = new SleepJob();
     job.setConf(conf);
 
     conf = job.setupJobConf(1, 0, 100, 100, 100, 100);
-    JobClient client = cluster.getMaster().getClient();
+    JobClient client = cluster.getJTClient().getClient();
 
     RunningJob rJob = client.submitJob(new JobConf(conf));
     JobID id = rJob.getID();
@@ -144,8 +141,7 @@ public class TestCluster {
         String[] taskTrackers = info.getTaskTrackers();
         for(String taskTracker : taskTrackers) {
           TTInfo ttInfo = wovenClient.getTTInfo(taskTracker);
-          TTClient ttCli =  cluster.getSlaves().get(
-              ttInfo.getStatus().getHost());
+          TTClient ttCli =  cluster.getTTClient(ttInfo.getStatus().getHost());
           TTTaskInfo ttTaskInfo = ttCli.getProxy().getTask(info.getTaskID());
           Assert.assertNotNull(ttTaskInfo);
           FinishTaskControlAction action = new FinishTaskControlAction(

@@ -26,4 +26,11 @@ public interface RemoteProcess {
    * @throws IOException if shutdown fails.
    */
   void kill() throws IOException;
+
+  /**
+   * Get the role of the Daemon in the cluster.
+   * 
+   * @return Enum
+   */
+  Enum<?> getRole();
 }

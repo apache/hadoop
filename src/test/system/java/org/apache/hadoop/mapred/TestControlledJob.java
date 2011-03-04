@@ -40,13 +40,13 @@ public class TestControlledJob {
   @Test
   public void testControlledJob() throws Exception {
     Configuration conf = new Configuration(cluster.getConf());
-    JTProtocol wovenClient = cluster.getMaster().getProxy();
+    JTProtocol wovenClient = cluster.getJTClient().getProxy();
     FinishTaskControlAction.configureControlActionForJob(conf);
     SleepJob job = new SleepJob();
     job.setConf(conf);
     
     conf = job.setupJobConf(1, 0, 100, 100, 100, 100);
-    JobClient client = cluster.getMaster().getClient();
+    JobClient client = cluster.getJTClient().getClient();
     
     RunningJob rJob = client.submitJob(new JobConf(conf));
     JobID id = rJob.getID();
@@ -74,7 +74,7 @@ public class TestControlledJob {
       LOG.info("constructing control action to signal task to finish");
       FinishTaskControlAction action = new FinishTaskControlAction(
           TaskID.downgrade(info.getTaskID()));
-      for(TTClient cli : cluster.getSlaves().values()) {
+      for(TTClient cli : cluster.getTTClients()) {
         cli.getProxy().sendAction(action);
       }
     }

@@ -1,78 +1,118 @@
 package org.apache.hadoop.mapreduce.test.system;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.test.system.AbstractMasterSlaveCluster;
+import org.apache.hadoop.test.system.AbstractDaemonClient;
+import org.apache.hadoop.test.system.AbstractDaemonCluster;
 import org.apache.hadoop.test.system.process.ClusterProcessManager;
-import org.apache.hadoop.test.system.process.ClusterProcessManagerFactory;
+import org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster;
 import org.apache.hadoop.test.system.process.RemoteProcess;
-import org.apache.hadoop.test.system.process.ClusterProcessManager.ClusterType;
 
 /**
- * Concrete MasterSlaveCluster representing a Map-Reduce cluster.
+ * Concrete AbstractDaemonCluster representing a Map-Reduce cluster.
  * 
  */
-public class MRCluster extends AbstractMasterSlaveCluster<JTClient, 
-      TTClient> {
+@SuppressWarnings("unchecked")
+public class MRCluster extends AbstractDaemonCluster {
 
   private static final Log LOG = LogFactory.getLog(MRCluster.class);
+  public static final String CLUSTER_PROCESS_MGR_IMPL = 
+    "test.system.mr.clusterprocess.impl.class";
 
+  protected enum Role {JT, TT};
+  
   private MRCluster(Configuration conf, ClusterProcessManager rCluster)
       throws IOException {
     super(conf, rCluster);
   }
 
   /**
-   * Creates an instance of the Map-Reduce cluster.<br/>
-   * Example usage: <br/>
-   * <code>
-   * Configuration conf = new Configuration();<br/>
-   * conf.set(ClusterProcessManager.IMPL_CLASS,
-   * org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster.
-   * class.getName())<br/>
-   * conf.set(HadoopDaemonRemoteCluster.CONF_HADOOPHOME,
-   * "/path");<br/>
-   * conf.set(HadoopDaemonRemoteCluster.CONF_HADOOPCONFDIR,
-   * "/path");<br/>
-   * MRCluster cluster = MRCluster.createCluster(conf);
-   * </code>
+   * Factory method to create an instance of the Map-Reduce cluster.<br/>
    * 
    * @param conf
    *          contains all required parameter to create cluster.
    * @return a cluster instance to be managed.
-   * @throws IOException
    * @throws Exception
    */
   public static MRCluster createCluster(Configuration conf) 
-      throws IOException, Exception {
-    return new MRCluster(conf, ClusterProcessManagerFactory.createInstance(
-        ClusterType.MAPRED, conf));
+      throws Exception {
+    String implKlass = conf.get(CLUSTER_PROCESS_MGR_IMPL, System
+        .getProperty(CLUSTER_PROCESS_MGR_IMPL));
+    if (implKlass == null || implKlass.isEmpty()) {
+      implKlass = MRProcessManager.class.getName();
+    }
+    Class<ClusterProcessManager> klass = (Class<ClusterProcessManager>) Class
+      .forName(implKlass);
+    ClusterProcessManager clusterProcessMgr = klass.newInstance();
+    LOG.info("Created ClusterProcessManager as " + implKlass);
+    clusterProcessMgr.init(conf);
+    return new MRCluster(conf, clusterProcessMgr);
   }
 
-  @Override
-  protected JTClient createMaster(RemoteProcess masterDaemon)
+  protected JTClient createJTClient(RemoteProcess jtDaemon)
       throws IOException {
-    return new JTClient(getConf(), masterDaemon);
+    return new JTClient(getConf(), jtDaemon);
   }
 
-  @Override
-  protected TTClient createSlave(RemoteProcess slaveDaemon) 
+  protected TTClient createTTClient(RemoteProcess ttDaemon) 
       throws IOException {
-    return new TTClient(getConf(), slaveDaemon);
+    return new TTClient(getConf(), ttDaemon);
+  }
+
+  public JTClient getJTClient() {
+    Iterator<AbstractDaemonClient> it = getDaemons().get(Role.JT).iterator();
+    return (JTClient) it.next();
+  }
+
+  public List<TTClient> getTTClients() {
+    return (List) getDaemons().get(Role.TT);
+  }
+
+  public TTClient getTTClient(String hostname) {
+    for (TTClient c : getTTClients()) {
+      if (c.getHostName().equals(hostname)) {
+        return c;
+      }
+    }
+    return null;
   }
 
   @Override
   public void ensureClean() throws IOException {
     //TODO: ensure that no jobs/tasks are running
     //restart the cluster if cleanup fails
-    JTClient jtClient = getMaster();
+    JTClient jtClient = getJTClient();
     JobInfo[] jobs = jtClient.getProxy().getAllJobInfo();
     for(JobInfo job : jobs) {
       jtClient.getClient().killJob(
           org.apache.hadoop.mapred.JobID.downgrade(job.getID()));
+    }
+  }
+
+  @Override
+  protected AbstractDaemonClient createClient(
+      RemoteProcess process) throws IOException {
+    if (Role.JT.equals(process.getRole())) {
+      return createJTClient(process);
+    } else if (Role.TT.equals(process.getRole())) {
+      return createTTClient(process);
+    } else throw new IOException("Role: "+ process.getRole() + "  is not " +
+      "applicable to MRCluster");
+  }
+
+  public static class MRProcessManager extends HadoopDaemonRemoteCluster{
+    private static final List<HadoopDaemonInfo> mrDaemonInfos = 
+      Arrays.asList(new HadoopDaemonInfo[]{
+          new HadoopDaemonInfo("jobtracker", Role.JT, "masters"),
+          new HadoopDaemonInfo("tasktracker", Role.TT, "slaves")});
+    public MRProcessManager() {
+      super(mrDaemonInfos);
     }
   }
 }

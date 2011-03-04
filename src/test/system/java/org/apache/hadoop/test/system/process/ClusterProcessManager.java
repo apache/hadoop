@@ -1,68 +1,48 @@
 package org.apache.hadoop.test.system.process;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
 
 /**
- * Interface to manage the remote processes in the master-slave cluster.
+ * Interface to manage the remote processes in the cluster.
  */
 public interface ClusterProcessManager {
 
   /**
-   * The configuration key to specify the concrete implementation of the
-   * {@link ClusterProcessManager} to be used by
-   * {@link ClusterProcessManagerFactory}.
-   */
-  String IMPL_CLASS = "test.system.clusterprocessmanager.impl.class";
-
-  /**
-   * Enumeration used to specify the types of the clusters which are supported
-   * by the concrete implementations of {@link ClusterProcessManager}.
-   */
-  public enum ClusterType {
-    MAPRED, HDFS
-  }
-  
-  /**
-   * Initialization method to set cluster type and also pass the configuration
-   * object which is required by the ClusterProcessManager to manage the 
-   * cluster.<br/>
+   * Initialization method to pass the configuration object which is required 
+   * by the ClusterProcessManager to manage the cluster.<br/>
    * Configuration object should typically contain all the parameters which are 
    * required by the implementations.<br/>
    *  
-   * @param t type of the cluster to be managed.
    * @param conf configuration containing values of the specific keys which 
    * are required by the implementation of the cluster process manger.
    * 
-   * @throws Exception when initialization fails.
+   * @throws IOException when initialization fails.
    */
-  void init(ClusterType t, Configuration conf) throws Exception;
+  void init(Configuration conf) throws IOException;
 
   /**
-   * Getter for master daemon process for managing the master daemon.<br/>
-   * 
-   * @return master daemon process.
+   * Get the list of RemoteProcess handles of all the remote processes.
    */
-  RemoteProcess getMaster();
+  List<RemoteProcess> getAllProcesses();
 
   /**
-   * Getter for slave daemon process for managing the slaves.<br/>
-   * 
-   * @return map of slave hosts to slave daemon process.
+   * Get all the roles this cluster's daemon processes have.
    */
-  Map<String, RemoteProcess> getSlaves();
+  Set<Enum<?>> getRoles();
 
   /**
-   * Method to start the cluster including all master and slaves.<br/>
+   * Method to start all the remote daemons.<br/>
    * 
    * @throws IOException if startup procedure fails.
    */
   void start() throws IOException;
 
   /**
-   * Method to shutdown all the master and slaves.<br/>
+   * Method to shutdown all the remote daemons.<br/>
    * 
    * @throws IOException if shutdown procedure fails.
    */

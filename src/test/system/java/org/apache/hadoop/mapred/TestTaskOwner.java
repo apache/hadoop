@@ -54,7 +54,7 @@ public class TestTaskOwner {
 
     cluster = MRCluster.createCluster(new Configuration());
     cluster.setUp();
-    FileSystem fs = inDir.getFileSystem(cluster.getMaster().getConf());
+    FileSystem fs = inDir.getFileSystem(cluster.getJTClient().getConf());
     fs.create(inDir);
   }
 
@@ -65,7 +65,7 @@ public class TestTaskOwner {
   // in the cluster and we will authenticate whether matches
   // with the job that is submitted by the same user.
 
-    Configuration conf = cluster.getMaster().getConf();
+    Configuration conf = cluster.getJTClient().getConf();
     Job job = new Job(conf, "user name check");
 
     job.setJarByClass(UserNamePermission.class);
@@ -119,7 +119,7 @@ public class TestTaskOwner {
 
   @AfterClass
   public static void tearDown() throws java.lang.Exception {
-    FileSystem fs = outDir.getFileSystem(cluster.getMaster().getConf());
+    FileSystem fs = outDir.getFileSystem(cluster.getJTClient().getConf());
     fs.delete(outDir, true);
     cluster.tearDown();
    }

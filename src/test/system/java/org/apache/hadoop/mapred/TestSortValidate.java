@@ -64,7 +64,7 @@ public class TestSortValidate {
   @Before
   public void setUp() throws java.lang.Exception {
     cluster.setUp();
-    client = cluster.getMaster().getClient();
+    client = cluster.getJTClient().getClient();
 
     dfs = client.getFs();
     dfs.delete(SORT_INPUT_PATH, true);
@@ -97,7 +97,7 @@ public class TestSortValidate {
     int prevJobsNum = 0;
 
     // JTProtocol wovenClient
-    JTProtocol wovenClient = cluster.getMaster().getProxy();
+    JTProtocol wovenClient = cluster.getJTClient().getProxy();
 
     // JobStatus
     JobStatus[] jobStatus = null;
@@ -141,7 +141,7 @@ public class TestSortValidate {
       jInfo = wovenClient.getJobInfo(id);
     }
 
-    cluster.getMaster().verifyCompletedJob(id);
+    cluster.getJTClient().verifyCompletedJob(id);
   }
   
   private void runSort(Configuration job, Path sortInput, Path sortOutput) 
