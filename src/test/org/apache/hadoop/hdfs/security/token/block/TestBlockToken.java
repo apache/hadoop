@@ -18,21 +18,11 @@
 
 package org.apache.hadoop.hdfs.security.token.block;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -40,8 +30,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.io.TestWritable;
@@ -56,7 +46,18 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.log4j.Level;
+
 import org.junit.Test;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -111,7 +112,7 @@ public class TestBlockToken {
         LOG.info("Got: " + id.toString());
         assertTrue("Received BlockTokenIdentifier is wrong", ident.equals(id));
         sm.checkAccess(id, null, block, BlockTokenSecretManager.AccessMode.WRITE);
-        result = new LocatedBlock(new Block(id.getBlockId()), null);
+        result = new LocatedBlock(new Block(id.getBlockIds()[0]), null);
       }
       return result;
     }
@@ -222,6 +223,31 @@ public class TestBlockToken {
       if (proxy != null) {
         RPC.stopProxy(proxy);
       }
+    }
+  }
+
+  @Test
+  public void collectionOfBlocksActsSanely() {
+    final long[][] testBlockIds = new long [][] {{99l, 7l, -32l, 0l},
+                                                 {},
+                                                 {42l},
+                                                 {-5235l, 2352}};
+    final long [] notBlockIds = new long [] { 32l, 1l, -23423423l};
+    
+    for(long [] bids : testBlockIds) {
+      BlockTokenIdentifier bti = new BlockTokenIdentifier("Madame Butterfly", 
+          bids, EnumSet.noneOf(BlockTokenSecretManager.AccessMode.class));
+      
+      for(long bid : bids) assertTrue(bti.isBlockIncluded(bid));
+      
+      for(long nbid : notBlockIds) assertFalse(bti.isBlockIncluded(nbid));
+      
+      // BlockTokenIdentifiers maintain a sorted array of the block Ids.
+      long[] sorted = Arrays.copyOf(bids, bids.length);
+      Arrays.sort(sorted);
+      
+      assertTrue(Arrays.toString(bids)+" doesn't equal "+Arrays.toString(sorted), 
+          Arrays.equals(bti.getBlockIds(), sorted));
     }
   }
 }

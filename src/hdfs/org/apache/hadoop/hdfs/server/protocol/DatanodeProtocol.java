@@ -41,9 +41,12 @@ import org.apache.hadoop.security.KerberosInfo;
     clientPrincipal = DFSConfigKeys.DFS_DATANODE_USER_NAME_KEY)
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
-   * 26: Remove getBlockLocations optimization
+   * 25: Serialized format of BlockTokenIdentifier changed to contain
+   *     multiple blocks within a single BlockTokenIdentifier
+   *     
+   *     (bumped to 25 to bring in line with trunk)
    */
-  public static final long versionID = 26L;
+  public static final long versionID = 25L;
   
   // error code
   final static int NOTIFY = 0;

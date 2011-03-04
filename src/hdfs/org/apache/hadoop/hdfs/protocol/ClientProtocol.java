@@ -50,9 +50,12 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 62: Remove getBlockLocations optimization
+   * 61: Serialized format of BlockTokenIdentifier changed to contain
+   *     multiple blocks within a single BlockTokenIdentifier 
+   *     
+   *     (bumped to 61 to bring in line with trunk)
    */
-  public static final long versionID = 62L;
+  public static final long versionID = 61L;
   
   ///////////////////////////////////////
   // File contents
