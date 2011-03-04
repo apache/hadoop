@@ -161,6 +161,11 @@
   <property name="patch.cmd" value="patch"/>
   <property name="make.cmd" value="make"/>
 
+  <property name="jsvc.build.dir" value="${build.dir}/jsvc" />
+  <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
+  <property name="jsvc.location" value="http://apache.org/dist/commons/daemon/binaries/1.0.2/linux/commons-daemon-1.0.2-bin-linux-i386.tar.gz" />
+  <property name="jsvc.dest.name" value="jsvc.tar.gz" />
+
   <!-- task-controller properties set here -->
   <!-- Source directory from where configure is run and files are copied
   -->
@@ -176,10 +181,6 @@
   <property name="task-controller.install.dir" value="${dist.dir}/bin" />
   <!-- end of task-controller properties -->
 
-  <!-- jsvc properties set here -->
-  <property name="c++.jsvc.src" 
-    value="${basedir}/src/c++/jsvc" />
-	
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
@@ -1288,7 +1289,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
+  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1401,7 +1402,7 @@
     </macro_tar>
   </target>
 
-  <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio" 
+  <target name="bin-package" depends="compile, jar, examples, tools-jar, jar-test, ant-tasks, package-librecordio, jsvc" 
 		description="assembles artifacts for binary target">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1718,7 +1719,7 @@
   </target>
 
   <target name="compile-c++" 
-          depends="compile-c++-pipes, jsvc"/>
+          depends="compile-c++-pipes"/>
 
   <target name="create-c++-examples-pipes-makefile" 
           depends="check-c++-makefiles" 
@@ -2256,14 +2257,16 @@
 
   <!-- end of task-controller targets -->
 
-  <!-- jsvc targets -->
-  <target name="jsvc" if="compile.c++">
-    <subant target="jsvc">
-      <property name="c++.jsvc.src" value="${c++.jsvc.src}" />
-      <property name="build.c++.jsvc" value="${build.c++}/jsvc" />
-      <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
-      <fileset file="${c++.jsvc.src}/build.xml"/>
-    </subant>
-  </target>
+  <target name="jsvc" >
+    <mkdir dir="${jsvc.build.dir}" />
+    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}" />
+
+    <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
+
+    <copy file="${jsvc.build.dir}/jsvc" todir="${jsvc.install.dir}" verbose="true" />
+    <chmod perm="ugo+x" type="file">
+      <fileset file="${jsvc.install.dir}/jsvc"/>
+    </chmod>
+ </target>
 
 </project>
