@@ -160,9 +160,10 @@ abstract class TaskRunner extends Thread {
       // We don't create any symlinks yet, so presence/absence of workDir
       // actually on the file system doesn't matter.
       taskDistributedCacheManager = tracker.getTrackerDistributedCacheManager()
-                                    .newTaskDistributedCacheManager(conf);
-      taskDistributedCacheManager.setup(lDirAlloc, workDir,
-                          TaskTracker.getDistributedCacheDir(conf.getUser()));
+          .newTaskDistributedCacheManager(conf);
+      taskDistributedCacheManager.setup(lDirAlloc, workDir, TaskTracker
+          .getPrivateDistributedCacheDir(conf.getUser()), 
+          TaskTracker.getPublicDistributedCacheDir());
       
       // Set up the child task's configuration. After this call, no localization
       // of files should happen in the TaskTracker's process space. Any changes to

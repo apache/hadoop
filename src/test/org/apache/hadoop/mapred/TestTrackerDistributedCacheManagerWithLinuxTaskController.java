@@ -45,7 +45,7 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
 
   @Override
   protected void setUp()
-      throws IOException {
+      throws IOException, InterruptedException {
 
     if (!ClusterWithLinuxTaskController.shouldRun()) {
       return;
@@ -134,7 +134,7 @@ public class TestTrackerDistributedCacheManagerWithLinuxTaskController extends
     String trailingStringForFirstFile =
         cachedFilePath.replaceFirst(ROOT_MAPRED_LOCAL_DIR.getAbsolutePath()
             + Path.SEPARATOR + "0_[0-" + (numLocalDirs - 1) + "]"
-            + Path.SEPARATOR + TaskTracker.getDistributedCacheDir(userName),
+            + Path.SEPARATOR + TaskTracker.getPrivateDistributedCacheDir(userName),
             "");
     LOG.info("Leading path for cacheFirstFile is : "
         + trailingStringForFirstFile);

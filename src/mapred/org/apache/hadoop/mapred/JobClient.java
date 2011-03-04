@@ -641,7 +641,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
     //  set the timestamps of the archives and files
     TrackerDistributedCacheManager.determineTimestamps(job);
-       
+    //  set the public/private visibility of the archives and files
+    TrackerDistributedCacheManager.determineCacheVisibilities(job);
+
     String originalJarPath = job.getJar();
 
     if (originalJarPath != null) {           // copy jar to JobTracker's fs

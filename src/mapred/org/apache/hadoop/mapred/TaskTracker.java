@@ -454,8 +454,12 @@ public class TaskTracker
     localizer = l;
   }
 
-  public static String getDistributedCacheDir(String user) {
+  public static String getPrivateDistributedCacheDir(String user) {
     return getUserDir(user) + Path.SEPARATOR + TaskTracker.DISTCACHEDIR;
+  }
+  
+  public static String getPublicDistributedCacheDir() {
+    return TaskTracker.SUBDIR + Path.SEPARATOR + TaskTracker.DISTCACHEDIR;
   }
 
   public static String getJobCacheSubdir(String user) {

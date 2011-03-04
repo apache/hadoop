@@ -142,7 +142,7 @@ public class TestLocalizationWithLinuxTaskController extends
       // Verify the distributed cache dir.
       File distributedCacheDir =
           new File(localDir, TaskTracker
-              .getDistributedCacheDir(task.getUser()));
+              .getPrivateDistributedCacheDir(task.getUser()));
       assertTrue("distributed cache dir " + distributedCacheDir
           + " doesn't exists!", distributedCacheDir.exists());
       checkFilePermissions(distributedCacheDir.getAbsolutePath(),

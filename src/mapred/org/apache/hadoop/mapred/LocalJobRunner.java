@@ -118,8 +118,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
       taskDistributedCacheManager.setup(
           new LocalDirAllocator("mapred.local.dir"),
           new File(systemJobDir.toString()),
-      "archive");
-
+          "archive", "archive");
+      
       if (DistributedCache.getSymlink(conf)) {
         // This is not supported largely because,
         // for a Child subprocess, the cwd in LocalJobRunner

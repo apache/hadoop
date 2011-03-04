@@ -49,6 +49,11 @@ public class JobContext {
   private final JobID jobId;
 
   public static final String JOB_TOKEN_FILE = "mapreduce.job.jobTokenFile";
+
+  public static final String CACHE_FILE_VISIBILITIES = 
+    "mapreduce.job.cache.files.visibilities";
+  public static final String CACHE_ARCHIVES_VISIBILITIES = 
+    "mapreduce.job.cache.archives.visibilities";
   
   public JobContext(Configuration conf, JobID jobId) {
     this.conf = new org.apache.hadoop.mapred.JobConf(conf);

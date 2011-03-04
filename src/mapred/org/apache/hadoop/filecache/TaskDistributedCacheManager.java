@@ -67,6 +67,7 @@ public class TaskDistributedCacheManager {
       REGULAR,
       ARCHIVE
     }
+    boolean isPublic = true;
     /** Whether to decompress */
     final FileType type;
     final long timestamp;
@@ -74,10 +75,11 @@ public class TaskDistributedCacheManager {
     final boolean shouldBeAddedToClassPath;
     boolean localized = false;
 
-    private CacheFile(URI uri, FileType type, long timestamp, 
+    private CacheFile(URI uri, FileType type, boolean isPublic, long timestamp, 
         boolean classPath) {
       this.uri = uri;
       this.type = type;
+      this.isPublic = isPublic;
       this.timestamp = timestamp;
       this.shouldBeAddedToClassPath = classPath;
     }
@@ -88,7 +90,7 @@ public class TaskDistributedCacheManager {
      * files.
      */
     private static List<CacheFile> makeCacheFiles(URI[] uris, 
-        String[] timestamps, Path[] paths, FileType type) {
+        String[] timestamps, String cacheVisibilities[], Path[] paths, FileType type) {
       List<CacheFile> ret = new ArrayList<CacheFile>();
       if (uris != null) {
         if (uris.length != timestamps.length) {
@@ -104,7 +106,8 @@ public class TaskDistributedCacheManager {
           URI u = uris[i];
           boolean isClassPath = (null != classPaths.get(u.getPath()));
           long t = Long.parseLong(timestamps[i]);
-          ret.add(new CacheFile(u, type, t, isClassPath));
+          ret.add(new CacheFile(u, type, Boolean.valueOf(cacheVisibilities[i]),
+              t, isClassPath));
         }
       }
       return ret;
@@ -128,11 +131,13 @@ public class TaskDistributedCacheManager {
     this.cacheFiles.addAll(
         CacheFile.makeCacheFiles(DistributedCache.getCacheFiles(taskConf),
             DistributedCache.getFileTimestamps(taskConf),
+            TrackerDistributedCacheManager.getFileVisibilities(taskConf),
             DistributedCache.getFileClassPaths(taskConf),
             CacheFile.FileType.REGULAR));
     this.cacheFiles.addAll(
         CacheFile.makeCacheFiles(DistributedCache.getCacheArchives(taskConf),
           DistributedCache.getArchiveTimestamps(taskConf),
+          TrackerDistributedCacheManager.getArchiveVisibilities(taskConf),
           DistributedCache.getArchiveClassPaths(taskConf), 
           CacheFile.FileType.ARCHIVE));
   }
@@ -145,7 +150,7 @@ public class TaskDistributedCacheManager {
    * file, if necessary.
    */
   public void setup(LocalDirAllocator lDirAlloc, File workDir, 
-      String cacheSubdir) throws IOException {
+      String privateCacheSubdir, String publicCacheSubDir) throws IOException {
     setupCalled = true;
     
     if (cacheFiles.isEmpty()) {
@@ -160,7 +165,10 @@ public class TaskDistributedCacheManager {
       URI uri = cacheFile.uri;
       FileSystem fileSystem = FileSystem.get(uri, taskConf);
       FileStatus fileStatus = fileSystem.getFileStatus(new Path(uri.getPath()));
-
+      String cacheSubdir = publicCacheSubDir;
+      if (!cacheFile.isPublic) {
+        cacheSubdir = privateCacheSubdir;
+      }
       Path p = distributedCacheManager.getLocalCache(uri, taskConf,
           cacheSubdir, fileStatus, 
           cacheFile.type == CacheFile.FileType.ARCHIVE,
