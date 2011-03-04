@@ -469,7 +469,6 @@ class MapTask extends Task {
         TaskReporter reporter, JobConf job,
         org.apache.hadoop.mapreduce.TaskAttemptContext taskContext)
         throws IOException, InterruptedException {
-      this.real = inputFormat.createRecordReader(split, taskContext);
       this.reporter = reporter;
       this.inputSplit = split;
       this.job = job;
@@ -483,11 +482,19 @@ class MapTask extends Task {
             .getPath());
       } 
       fsStats = matchedStats;
+	  
+      long bytesInPrev = getInputBytes(fsStats);
+      this.real = inputFormat.createRecordReader(split, taskContext);
+      long bytesInCurr = getInputBytes(fsStats);
+      fileInputByteCounter.increment(bytesInCurr - bytesInPrev);
     }
 
     @Override
     public void close() throws IOException {
+      long bytesInPrev = getInputBytes(fsStats);
       real.close();
+      long bytesInCurr = getInputBytes(fsStats);
+      fileInputByteCounter.increment(bytesInCurr - bytesInPrev);
     }
 
     @Override
