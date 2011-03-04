@@ -55,9 +55,15 @@ class JobTrackerInstrumentation {
   public void finalizeJob(JobConf conf, JobID id) 
   { }
   
-  public void addWaiting(JobID id, int tasks)
+  public void addWaitingMaps(JobID id, int task)
   { }
-
-  public void decWaiting(JobID id, int tasks)
+  
+  public void decWaitingMaps(JobID id, int task) 
+  { }
+  
+  public void addWaitingReduces(JobID id, int task)
+  { }
+  
+  public void decWaitingReduces(JobID id, int task)
   { }
 }

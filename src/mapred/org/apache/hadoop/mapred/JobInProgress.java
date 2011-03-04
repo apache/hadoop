@@ -441,8 +441,8 @@ class JobInProgress {
                 (numMapTasks + numReduceTasks) +
                 " exceeds the configured limit " + maxTasks);
     }
-    jobtracker.getInstrumentation().addWaiting(
-        getJobID(), numMapTasks + numReduceTasks);
+    jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
+    jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
 
     maps = new TaskInProgress[numMapTasks];
     for(int i=0; i < numMapTasks; ++i) {
@@ -2490,8 +2490,8 @@ class JobInProgress {
    */
   synchronized void garbageCollect() {
     // Let the JobTracker know that a job is complete
-    jobtracker.getInstrumentation(
-        ).decWaiting(getJobID(), pendingMaps() + pendingReduces());
+    jobtracker.getInstrumentation().decWaitingMaps(getJobID(), pendingMaps());
+    jobtracker.getInstrumentation().decWaitingReduces(getJobID(), pendingReduces());
     jobtracker.storeCompletedJob(this);
     jobtracker.finalizeJob(this);
       
