@@ -206,6 +206,9 @@ Trunk (unreleased changes)
     HDFS-1720. Federation: FSVolumeSet volumes is not synchronized correctly.
     (suresh)
 
+    HDFS-1700. Federation: fsck needs to work with federation changes.
+    (Matt Foley via suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

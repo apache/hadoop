@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.InetSocketAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
@@ -30,12 +31,17 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.security.Krb5AndCertsSslSocketConnector;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -192,7 +198,72 @@ public class DFSck extends Configured implements Tool {
       errCode = 0;
     return errCode;
   }
-            
+  
+  /*
+   * Derive the namenode http address from the current file system,
+   * either default or as set by "-fs" in the generic options.
+   * Returns null if failure.
+   */
+  private String getCurrentNamenodeAddress() {
+    String nnAddress = null;
+    Configuration conf = getConf();
+
+    //get the filesystem object
+    FileSystem fs;
+    try {
+      fs = FileSystem.get(conf);
+    } catch (IOException ioe) {
+      System.err.println("FileSystem is inaccessible due to:\n"
+          + StringUtils.stringifyException(ioe));
+      return null;
+    }
+    if (!(fs instanceof DistributedFileSystem)) {
+      System.err.println("FileSystem is " + fs.getUri());
+      return null;
+    }
+    DistributedFileSystem dfs = (DistributedFileSystem) fs;
+
+    // Derive the nameservice ID from the filesystem URI.
+    // The URI may have been provided by a human, and the server name may be
+    // aliased, so compare InetSocketAddresses instead of URI strings, and
+    // test against both possible variants of RPC address.
+    InetSocketAddress namenode = NameNode.getAddress(dfs.getUri().getAuthority());
+    String nameServiceId = DFSUtil.getNameServiceIdFromAddress(
+        conf, namenode,
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    
+    //Look up nameservice-specific http address
+    String httpAddressKey = UserGroupInformation.isSecurityEnabled() ?
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY
+        : DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+    if (nameServiceId != null) {
+      nnAddress = conf.get(DFSUtil.getNameServiceIdKey(
+          httpAddressKey, nameServiceId));
+      if (nnAddress != null) 
+        return nnAddress;
+      else {
+        System.err.println("Nameservice value for "
+            + DFSUtil.getNameServiceIdKey(httpAddressKey, nameServiceId)
+            + " expected but not available.  Trying generic value.");
+        //and fall through to next block
+      }
+    }
+    // If that didn't work, check to see whether the filesystem URI addresses 
+    // the default namenode.  If so, look up generic http address.
+    boolean isDefaultNamenode = DFSUtil.isDefaultNamenodeAddress(
+        conf, namenode,
+        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    if (isDefaultNamenode) {
+      return NameNode.getInfoServer(conf);
+    } else {
+      System.err.println("Cannot derive an unambiguous value for "
+          + httpAddressKey + " from FileSystem " + fs.getUri());
+      return null;
+    }
+  }
+
   private int doWork(final String[] args) throws IOException {
     String proto = "http://";
     if (UserGroupInformation.isSecurityEnabled()) {
@@ -201,9 +272,17 @@ public class DFSck extends Configured implements Tool {
       proto = "https://";
     }
     final StringBuilder url = new StringBuilder(proto);
-    url.append(NameNode.getInfoServer(getConf()));
+    
+    String namenodeAddress = getCurrentNamenodeAddress();
+    if (namenodeAddress == null) {
+      //Error message already output in {@link #getCurrentNamenodeAddress()}
+      System.err.println("DFSck exiting.");
+      return 0;
+    }
+    url.append(namenodeAddress);
+    System.err.println("Connecting to namenode via " + url.toString());
+    
     url.append("/fsck?ugi=").append(ugi.getShortUserName()).append("&path=");
-
     String dir = "/";
     // find top-level dir first
     for (int idx = 0; idx < args.length; idx++) {

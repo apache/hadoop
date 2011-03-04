@@ -392,6 +392,85 @@ public class DFSUtil {
   }
   
   /**
+   * Given the InetSocketAddress for any configured communication with a 
+   * namenode, this method returns the corresponding nameservice ID,
+   * by doing a reverse lookup on the list of nameservices until it
+   * finds a match.
+   * If null is returned, client should try {@link #isDefaultNamenodeAddress}
+   * to check pre-Federated configurations.
+   * Since the process of resolving URIs to Addresses is slightly expensive,
+   * this utility method should not be used in performance-critical routines.
+   * 
+   * @param conf - configuration
+   * @param address - InetSocketAddress for configured communication with NN.
+   *     Configured addresses are typically given as URIs, but we may have to
+   *     compare against a URI typed in by a human, or the server name may be
+   *     aliased, so we compare unambiguous InetSocketAddresses instead of just
+   *     comparing URI substrings.
+   * @param keys - list of configured communication parameters that should
+   *     be checked for matches.  For example, to compare against RPC addresses,
+   *     provide the list DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+   *     DFS_NAMENODE_RPC_ADDRESS_KEY.  Use the generic parameter keys,
+   *     not the NameServiceId-suffixed keys.
+   * @return nameserviceId, or null if no match found
+   */
+  public static String getNameServiceIdFromAddress(Configuration conf, 
+      InetSocketAddress address, String... keys) {
+    Collection<String> nameserviceIds = getNameServiceIds(conf);
+
+    // Configuration with a single namenode and no nameserviceId
+    if (nameserviceIds == null || nameserviceIds.isEmpty()) {
+      // client should try {@link isDefaultNamenodeAddress} instead
+      return null;
+    }
+    // Get the candidateAddresses for all the configured nameServiceIds
+    for (String nameserviceId : nameserviceIds) {
+      for (String key : keys) {
+        String candidateAddress = conf.get(
+            getNameServiceIdKey(key, nameserviceId));
+        if (candidateAddress != null
+            && address.equals(NetUtils.createSocketAddr(candidateAddress)))
+          return nameserviceId;
+      }
+    }
+    // didn't find a match
+    // client should try {@link isDefaultNamenodeAddress} instead
+    return null;
+  }
+  
+  /**
+   * Given the InetSocketAddress for any configured communication with a 
+   * namenode, this method determines whether it is the configured
+   * communication channel for the "default" namenode.
+   * It does a reverse lookup on the list of default communication parameters
+   * to see if the given address matches any of them.
+   * Since the process of resolving URIs to Addresses is slightly expensive,
+   * this utility method should not be used in performance-critical routines.
+   * 
+   * @param conf - configuration
+   * @param address - InetSocketAddress for configured communication with NN.
+   *     Configured addresses are typically given as URIs, but we may have to
+   *     compare against a URI typed in by a human, or the server name may be
+   *     aliased, so we compare unambiguous InetSocketAddresses instead of just
+   *     comparing URI substrings.
+   * @param keys - list of configured communication parameters that should
+   *     be checked for matches.  For example, to compare against RPC addresses,
+   *     provide the list DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+   *     DFS_NAMENODE_RPC_ADDRESS_KEY
+   * @return - boolean confirmation if matched generic parameter
+   */
+  public static boolean isDefaultNamenodeAddress(Configuration conf,
+      InetSocketAddress address, String... keys) {
+    for (String key : keys) {
+      String candidateAddress = conf.get(key);
+      if (candidateAddress != null
+          && address.equals(NetUtils.createSocketAddr(candidateAddress)))
+        return true;
+    }
+    return false;
+  }
+  
+  /**
    * @return key specific to a nameserviceId from a generic key
    */
   public static String getNameServiceIdKey(String key, String nameserviceId) {
