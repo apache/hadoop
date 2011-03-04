@@ -113,4 +113,8 @@ public aspect JTProtocolAspect {
       throws Exception {
     return -1;
   }
+  
+  public void JTProtocol.accessHistoryData(JobID jobId) throws Exception{
+    
+  }
 }

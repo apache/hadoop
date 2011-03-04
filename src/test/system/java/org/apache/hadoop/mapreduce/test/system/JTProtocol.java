@@ -185,5 +185,16 @@ public interface JTProtocol extends DaemonProtocol {
     * This gets the value of all task trackers windows in the tasktracker page.
     */
    public int getTaskTrackerHeartbeatInterval() throws Exception;
+   
+
+   
+   /**
+    * The method with access the history data in JobTracker, it will only do a 
+    * read on the data structure none is returned, this is used to verify a
+    * bug with simultaneously accessing history data
+    * @param jobId
+    * @throws Exception
+    */
+   public void accessHistoryData(JobID jobId) throws Exception;
 
 }

@@ -25,8 +25,11 @@ import java.util.LinkedList;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobStatus;
+import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobTracker.RetireJobInfo;
 import org.apache.hadoop.mapred.Counters;
 import org.apache.hadoop.mapreduce.JobID;
@@ -517,4 +520,23 @@ public privileged aspect JobTrackerAspect {
       throws Exception {
     return (getNextHeartbeatInterval());
   }
+  
+  //access the job data the method only does a get on read-only data
+  //it does not return anything purposely, since the test case
+  //does not require this but this can be extended in future
+  public void JobTracker.accessHistoryData(JobID id) throws Exception {
+    String location = getJobHistoryLocationForRetiredJob(id);
+    Path logFile = new Path(location);
+    FileSystem fs = logFile.getFileSystem(getConf());
+    JobHistory.JobInfo jobInfo  = new JobHistory.JobInfo(id.toString());
+    DefaultJobHistoryParser.parseJobTasks(location,
+        jobInfo, fs);
+    //Now read the info so two threads can access the info at the
+    //same time from client side
+    LOG.info("user " +jobInfo.get(Keys.USER));
+    LOG.info("jobname "+jobInfo.get(Keys.JOBNAME));
+    jobInfo.get(Keys.JOBCONF);
+    jobInfo.getJobACLs();
+  }
+  
 }
