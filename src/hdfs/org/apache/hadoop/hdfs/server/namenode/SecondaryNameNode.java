@@ -180,20 +180,19 @@ public class SecondaryNameNode implements Runnable {
 
     // initialize the webserver for uploading files.
     // Kerberized SSL servers must be run from the host principal...
-    if (UserGroupInformation.isSecurityEnabled()) {
-      SecurityUtil.login(conf,
-          DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
-          DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY,
-          infoBindAddress);
-    }
-    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    UserGroupInformation httpUGI = 
+      UserGroupInformation.loginUserFromKeytabAndReturnUGI(
+          SecurityUtil.getServerPrincipal(conf
+        .get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KRB_HTTPS_USER_NAME_KEY), 
+        infoBindAddress), 
+        conf.get(DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY));
     try {
-      infoServer = ugi.doAs(new PrivilegedExceptionAction<HttpServer>() {
+      infoServer = httpUGI.doAs(new PrivilegedExceptionAction<HttpServer>() {
 
         @Override
         public HttpServer run() throws IOException, InterruptedException {
           LOG.info("Starting web server as: " +
-              UserGroupInformation.getLoginUser().getUserName());
+              UserGroupInformation.getCurrentUser().getUserName());
 
           int tmpInfoPort = infoSocAddr.getPort();
           infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
@@ -219,17 +218,8 @@ public class SecondaryNameNode implements Runnable {
       });
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
-    } finally {
-      if (UserGroupInformation.isSecurityEnabled()) {
-        // Go back to being the correct Namenode principal
-        SecurityUtil.login(conf, 
-            DFSConfigKeys.DFS_SECONDARY_NAMENODE_KEYTAB_FILE_KEY,
-            DFSConfigKeys.DFS_SECONDARY_NAMENODE_USER_NAME_KEY,
-            infoBindAddress);
-        LOG.info("Web server init done, returning to: " + 
-            UserGroupInformation.getLoginUser().getUserName());
-      }
     }
+    LOG.info("Web server init done");
     // The web-server port can be ephemeral... ensure we have the correct info
     
     infoPort = infoServer.getPort();
