@@ -18,12 +18,18 @@
 
 package org.apache.hadoop.ipc;
 
-import java.io.IOException;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.BindException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
@@ -33,41 +39,30 @@ import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
-
-import java.net.BindException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import javax.security.auth.Subject;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.ipc.metrics.RpcMetrics;
-import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.security.UserGroupInformation;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -76,6 +71,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * @see Client
  */
 public abstract class Server {
+  private final boolean authorize;
   
   /**
    * The first four bytes of Hadoop RPC connections
@@ -719,7 +715,7 @@ public abstract class Server {
     ConnectionHeader header = new ConnectionHeader();
     Class<?> protocol;
     
-    Subject user = null;
+    UserGroupInformation user = null;
 
     // Fake 'call' for failed authorization response
     private final int AUTHROIZATION_FAILED_CALLID = -1;
@@ -890,14 +886,7 @@ public abstract class Server {
         throw new IOException("Unknown protocol: " + header.getProtocol());
       }
       
-      // TODO: Get the user name from the GSS API for Kerberbos-based security
-      // Create the user subject; however use the groups as defined on the
-      // server-side, don't trust the user groups provided by the client
-      UserGroupInformation ugi = header.getUgi();
-      user = null;
-      if(ugi != null) {
-        user = SecurityUtil.getSubject(conf, header.getUgi().getUserName());
-      }
+      user = header.getUgi();
     }
     
     private void processData() throws  IOException, InterruptedException {
@@ -956,24 +945,23 @@ public abstract class Server {
           try {
             // Make the call as the user via Subject.doAs, thus associating
             // the call with the Subject
-            value = 
-              Subject.doAs(call.connection.user, 
-                           new PrivilegedExceptionAction<Writable>() {
-                              @Override
-                              public Writable run() throws Exception {
-                                // make the call
-                                return call(call.connection.protocol, 
-                                            call.param, call.timestamp);
+            if (call.connection.user == null) {
+              value = call(call.connection.protocol, call.param, 
+                           call.timestamp);
+            } else {
+              value = 
+                call.connection.user.doAs
+                  (new PrivilegedExceptionAction<Writable>() {
+                     @Override
+                     public Writable run() throws Exception {
+                       // make the call
+                       return call(call.connection.protocol, 
+                                   call.param, call.timestamp);
 
-                              }
-                           }
-                          );
-              
-          } catch (PrivilegedActionException pae) {
-            Exception e = pae.getException();
-            LOG.info(getName()+", call "+call+": error: " + e, e);
-            errorClass = e.getClass().getName();
-            error = StringUtils.stringifyException(e);
+                     }
+                   }
+                  );
+            }
           } catch (Throwable e) {
             LOG.info(getName()+", call "+call+": error: " + e, e);
             errorClass = e.getClass().getName();
@@ -1027,6 +1015,9 @@ public abstract class Server {
     this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
+    this.authorize = 
+      conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
+                      false);
     
     // Start the listener here and let it bind to the port
     listener = new Listener();
@@ -1158,8 +1149,20 @@ public abstract class Server {
    * @param connection incoming connection
    * @throws AuthorizationException when the client isn't authorized to talk the protocol
    */
-  public void authorize(Subject user, ConnectionHeader connection) 
-  throws AuthorizationException {}
+  public void authorize(UserGroupInformation user, 
+                        ConnectionHeader connection
+                        ) throws AuthorizationException {
+    if (authorize) {
+      Class<?> protocol = null;
+      try {
+        protocol = getProtocolClass(connection.getProtocol(), getConf());
+      } catch (ClassNotFoundException cfne) {
+        throw new AuthorizationException("Unknown protocol: " + 
+                                         connection.getProtocol());
+      }
+      ServiceAuthorizationManager.authorize(user, protocol);
+    }
+  }
   
   /**
    * The number of open RPC conections

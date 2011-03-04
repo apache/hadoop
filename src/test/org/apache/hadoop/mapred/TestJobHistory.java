@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobHistory.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.apache.hadoop.security.UserGroupInformation;
 /**
  * Tests the JobHistory files - to catch any changes to JobHistory that can
  * cause issues for the execution of JobTracker.RecoveryManager, HistoryViewer.
@@ -831,7 +831,7 @@ public class TestJobHistory extends TestCase {
       // Make sure that the job is not removed from memory until we do finish
       // the validation of history file content
       conf.setInt("mapred.jobtracker.completeuserjobs.maximum", 10);
-
+      conf.set("user.name", UserGroupInformation.getCurrentUser().getUserName());
       // Run a job that will be succeeded and validate its history file
       RunningJob job = UtilsForTests.runJobSucceed(conf, inDir, outDir);
       
@@ -840,7 +840,7 @@ public class TestJobHistory extends TestCase {
           doneFolder, doneDir.getName());
       JobID id = job.getID();
       String logFileName = getDoneFile(conf, id, doneDir);
-
+      assertNotNull(logFileName);
       // Framework history log file location
       Path logFile = new Path(doneDir, logFileName);
       FileSystem fileSys = logFile.getFileSystem(conf);
@@ -918,7 +918,7 @@ public class TestJobHistory extends TestCase {
       // Make sure that the job is not removed from memory until we do finish
       // the validation of history file content
       conf.setInt("mapred.jobtracker.completeuserjobs.maximum", 10);
-
+      conf.set("user.name", UserGroupInformation.getCurrentUser().getUserName());
       // Run a job that will be succeeded and validate its history file
       RunningJob job = UtilsForTests.runJobSucceed(conf, inDir, outDir);
       
@@ -1073,7 +1073,7 @@ public class TestJobHistory extends TestCase {
 
       Path inDir = new Path(TEST_ROOT_DIR + "/succeed/input1");
       Path outDir = new Path(TEST_ROOT_DIR + "/succeed/output1");
-
+      conf.set("user.name", UserGroupInformation.getCurrentUser().getUserName());
       // validate for the case of null(default)
       RunningJob job = UtilsForTests.runJobSucceed(conf, inDir, outDir);
       validateJobHistoryUserLogLocation(job.getID(), conf);
@@ -1167,7 +1167,7 @@ public class TestJobHistory extends TestCase {
 
       Path inDir = new Path(TEST_ROOT_DIR + "/succeedfailkilljob/input");
       Path outDir = new Path(TEST_ROOT_DIR + "/succeedfailkilljob/output");
-
+      conf.set("user.name", UserGroupInformation.getCurrentUser().getUserName());
       // Run a job that will be succeeded and validate its job status
       // existing in history file
       RunningJob job = UtilsForTests.runJobSucceed(conf, inDir, outDir);

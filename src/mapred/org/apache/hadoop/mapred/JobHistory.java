@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -827,7 +828,10 @@ public class JobHistory {
      */
     private static String getNewJobHistoryFileName(JobConf jobConf, JobID id) {
       return JOBTRACKER_UNIQUE_STRING
-             + id.toString() + "_" + getUserName(jobConf) + "_" 
+             + id.toString() + "_" +  
+             UserGroupInformation.createRemoteUser(getUserName(jobConf)).
+             getShortUserName()
+             + "_" 
              + trimJobName(getJobName(jobConf));
     }
     
@@ -872,9 +876,9 @@ public class JobHistory {
     private static synchronized String getJobHistoryFileName(JobConf jobConf, 
                                           JobID id, Path dir, FileSystem fs) 
     throws IOException {
-      String user = getUserName(jobConf);
+      String user =  UserGroupInformation.createRemoteUser(getUserName(jobConf)).
+                     getShortUserName();
       String jobName = trimJobName(getJobName(jobConf));
-      
       if (LOG_DIR == null) {
         return null;
       }

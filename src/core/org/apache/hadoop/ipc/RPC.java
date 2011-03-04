@@ -32,18 +32,15 @@ import java.util.Map;
 import java.util.HashMap;
 
 import javax.net.SocketFactory;
-import javax.security.auth.Subject;
-import javax.security.auth.login.LoginException;
 
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+
+import org.apache.hadoop.net.NetUtils;
 
 /** A simple RPC mechanism.
  *
@@ -343,12 +340,7 @@ public class RPC {
       Class<? extends VersionedProtocol> protocol,
       long clientVersion, InetSocketAddress addr, Configuration conf,
       SocketFactory factory) throws IOException {
-    UserGroupInformation ugi = null;
-    try {
-      ugi = UserGroupInformation.login(conf);
-    } catch (LoginException le) {
-      throw new RuntimeException("Couldn't login!");
-    }
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     return getProxy(protocol, clientVersion, addr, ugi, conf, factory);
   }
   
@@ -388,8 +380,8 @@ public class RPC {
       long clientVersion, InetSocketAddress addr, Configuration conf)
       throws IOException {
 
-    return getProxy(protocol, clientVersion, addr, conf, NetUtils
-        .getDefaultSocketFactory(conf));
+    return getProxy(protocol, clientVersion, addr, conf, 
+        NetUtils.getDefaultSocketFactory(conf));
   }
 
   /**
@@ -462,7 +454,6 @@ public class RPC {
   public static class Server extends org.apache.hadoop.ipc.Server {
     private Object instance;
     private boolean verbose;
-    private boolean authorize = false;
 
     /** Construct an RPC server.
      * @param instance the instance whose methods will be called
@@ -496,9 +487,6 @@ public class RPC {
       super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
       this.instance = instance;
       this.verbose = verbose;
-      this.authorize = 
-        conf.getBoolean(ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG, 
-                        false);
     }
 
     public Writable call(Class<?> protocol, Writable param, long receivedTime) 
@@ -559,21 +547,6 @@ public class RPC {
         IOException ioe = new IOException(e.toString());
         ioe.setStackTrace(e.getStackTrace());
         throw ioe;
-      }
-    }
-
-    @Override
-    public void authorize(Subject user, ConnectionHeader connection) 
-    throws AuthorizationException {
-      if (authorize) {
-        Class<?> protocol = null;
-        try {
-          protocol = getProtocolClass(connection.getProtocol(), getConf());
-        } catch (ClassNotFoundException cfne) {
-          throw new AuthorizationException("Unknown protocol: " + 
-                                           connection.getProtocol());
-        }
-        ServiceAuthorizationManager.authorize(user, protocol);
       }
     }
   }

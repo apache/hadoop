@@ -21,6 +21,7 @@ package org.apache.hadoop.fs;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.List;
@@ -54,7 +55,7 @@ import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.LongSumReducer;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 public class TestFileSystem extends TestCase {
   private static final Log LOG = FileSystem.LOG;
@@ -487,24 +488,19 @@ public class TestFileSystem extends TestCase {
     }
   }
 
-  static Configuration createConf4Testing(String username) throws Exception {
-    Configuration conf = new Configuration();
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        new UnixUserGroupInformation(username, new String[]{"group"}));
-    return conf;    
-  }
-
   public void testFsCache() throws Exception {
     {
       long now = System.currentTimeMillis();
-      Configuration[] conf = {new Configuration(),
-          createConf4Testing("foo" + now), createConf4Testing("bar" + now)};
-      FileSystem[] fs = new FileSystem[conf.length];
+      String[] users = new String[]{"foo","bar"};
+      final Configuration conf = new Configuration();
+      FileSystem[] fs = new FileSystem[users.length];
   
-      for(int i = 0; i < conf.length; i++) {
-        fs[i] = FileSystem.get(conf[i]);
-        assertEquals(fs[i], FileSystem.get(conf[i]));
+      for(int i = 0; i < users.length; i++) {
+        UserGroupInformation ugi = UserGroupInformation.createRemoteUser(users[i]);
+        fs[i] = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+          public FileSystem run() throws IOException {
+            return FileSystem.get(conf);
+        }});
         for(int j = 0; j < i; j++) {
           assertFalse(fs[j] == fs[i]);
         }
@@ -567,21 +563,18 @@ public class TestFileSystem extends TestCase {
     {
       Configuration conf = new Configuration();
       new Path("file:///").getFileSystem(conf);
-      UnixUserGroupInformation.login(conf, true);
       FileSystem.closeAll();
     }
 
     {
       Configuration conf = new Configuration();
       new Path("hftp://localhost:12345/").getFileSystem(conf);
-      UnixUserGroupInformation.login(conf, true);
       FileSystem.closeAll();
     }
 
     {
       Configuration conf = new Configuration();
       FileSystem fs = new Path("hftp://localhost:12345/").getFileSystem(conf);
-      UnixUserGroupInformation.login(fs.getConf(), true);
       FileSystem.closeAll();
     }
   }

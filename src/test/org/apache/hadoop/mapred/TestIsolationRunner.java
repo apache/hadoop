@@ -106,7 +106,7 @@ public class TestIsolationRunner extends TestCase {
     String taskid =
         new TaskAttemptID(new TaskID(jobId, isMap, 0), 0).toString();
     return new LocalDirAllocator("mapred.local.dir").getLocalPathToRead(
-        TaskTracker.getTaskConfFile(UserGroupInformation.login(conf)
+        TaskTracker.getTaskConfFile(UserGroupInformation.getCurrentUser()
             .getUserName(), jobId.toString(), taskid, false), conf);
   }
 

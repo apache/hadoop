@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.security.PrivilegedExceptionAction;
 import java.util.Map;
 
 import javax.servlet.ServletContext;
@@ -27,7 +28,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -44,19 +44,25 @@ public class FsckServlet extends DfsServlet {
     final Map<String,String[]> pmap = request.getParameterMap();
     final PrintWriter out = response.getWriter();
 
-    final UnixUserGroupInformation ugi = getUGI(request);
-    UserGroupInformation.setCurrentUser(ugi);
+    final UserGroupInformation ugi = getUGI(request);
+    try {
+      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final ServletContext context = getServletContext();
+          final Configuration conf = new Configuration((Configuration) context.getAttribute("name.conf"));
 
-    final ServletContext context = getServletContext();
-    final Configuration conf = new Configuration((Configuration) context.getAttribute("name.conf"));
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
+          final NameNode nn = (NameNode) context.getAttribute("name.node");
+          final int totalDatanodes = nn.namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
+          final short minReplication = nn.namesystem.getMinReplication();
 
-    final NameNode nn = (NameNode) context.getAttribute("name.node");
-    final int totalDatanodes = nn.namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
-    final short minReplication = nn.namesystem.getMinReplication();
-
-    new NamenodeFsck(conf, nn, nn.getNetworkTopology(), pmap, out,
-        totalDatanodes, minReplication).fsck();
+          new NamenodeFsck(conf, nn, nn.getNetworkTopology(), pmap, out,
+              totalDatanodes, minReplication).fsck();
+                    return null;
+          }
+      });
+    } catch (InterruptedException e) {
+        response.sendError(400, e.getMessage());
+    }
   }
 }

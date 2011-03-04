@@ -25,6 +25,7 @@ import java.io.PrintStream;
 import java.io.RandomAccessFile;
 import java.net.InetSocketAddress;
 import java.nio.channels.FileChannel;
+import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 
@@ -130,25 +132,40 @@ public class TestFsck extends TestCase {
 
     MiniDFSCluster cluster = null;
     try {
+      // Create a cluster with the current user, write some files
       cluster = new MiniDFSCluster(conf, 4, true, null);
-
-      final FileSystem fs = cluster.getFileSystem();
+      final MiniDFSCluster c2 = cluster;
       final String dir = "/dfsck";
       final Path dirpath = new Path(dir);
+      final FileSystem fs = c2.getFileSystem();
+      
       util.createFiles(fs, dir);
       util.waitReplication(fs, dir, (short)3);
       fs.setPermission(dirpath, new FsPermission((short)0700));
-
-      //run DFSck as another user
-      final Configuration c2 = DFSTestUtil.getConfigurationWithDifferentUsername(conf);
-      System.out.println(runFsck(c2, -1, true, dir));
-
-      //set permission and try DFSck again
+      
+      // run DFSck as another user, should fail with permission issue
+      UserGroupInformation fakeUGI = UserGroupInformation.createUserForTesting(
+          "ProbablyNotARealUserName", new String[] { "ShangriLa" });
+      fakeUGI.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          System.out.println(runFsck(conf, -1, true, dir));
+          return null;
+        }
+      });
+      
+      //set permission and try DFSck again as the fake user, should succeed
       fs.setPermission(dirpath, new FsPermission((short)0777));
-      final String outStr = runFsck(c2, 0, true, dir);
-      System.out.println(outStr);
-      assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
-
+      fakeUGI.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          final String outStr = runFsck(conf, 0, true, dir);
+          System.out.println(outStr);
+          assertTrue(outStr.contains(NamenodeFsck.HEALTHY_STATUS));
+          return null;
+        }
+      });
+      
       util.cleanup(fs, dir);
     } finally {
       if (cluster != null) { cluster.shutdown(); }

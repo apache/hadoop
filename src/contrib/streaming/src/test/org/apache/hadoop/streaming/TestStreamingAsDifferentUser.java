@@ -20,6 +20,7 @@ package org.apache.hadoop.streaming;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -47,25 +48,33 @@ public class TestStreamingAsDifferentUser extends
       return;
     }
     startCluster();
-    JobConf myConf = getClusterConf();
-    FileSystem inFs = inputPath.getFileSystem(myConf);
-    FileSystem outFs = outputPath.getFileSystem(myConf);
-    outFs.delete(outputPath, true);
-    if (!inFs.mkdirs(inputPath)) {
-      throw new IOException("Mkdirs failed to create " + inFs.toString());
-    }
-    DataOutputStream file = inFs.create(new Path(inputPath, "part-0"));
-    file.writeBytes(input);
-    file.close();
-    String[] args =
-        new String[] { "-input", inputPath.makeQualified(inFs).toString(),
+    final JobConf myConf = getClusterConf();
+    myConf.set("hadoop.job.history.user.location","none");
+    taskControllerUser.doAs(new PrivilegedExceptionAction<Void>() {
+      public Void run() throws IOException{
+
+        FileSystem inFs = inputPath.getFileSystem(myConf);
+        FileSystem outFs = outputPath.getFileSystem(myConf);
+        outFs.delete(outputPath, true);
+        if (!inFs.mkdirs(inputPath)) {
+          throw new IOException("Mkdirs failed to create " + inFs.toString());
+        }
+        DataOutputStream file = inFs.create(new Path(inputPath, "part-0"));
+        file.writeBytes(input);
+        file.close();
+        final String[] args =
+          new String[] { "-input", inputPath.makeQualified(inFs).toString(),
             "-output", outputPath.makeQualified(outFs).toString(), "-mapper",
             map, "-reducer", reduce, "-jobconf",
             "keep.failed.task.files=true", "-jobconf",
             "stream.tmpdir=" + System.getProperty("test.build.data", "/tmp") };
-    StreamJob streamJob = new StreamJob(args, true);
-    streamJob.setConf(myConf);
-    assertTrue("Job has not succeeded", streamJob.go() == 0);
-    assertOwnerShip(outputPath);
+
+        StreamJob streamJob = new StreamJob(args, true);
+        streamJob.setConf(myConf);
+        assertTrue("Job has not succeeded", streamJob.go() == 0);
+        assertOwnerShip(outputPath);
+        return null;
+      }
+    });
   }
 }

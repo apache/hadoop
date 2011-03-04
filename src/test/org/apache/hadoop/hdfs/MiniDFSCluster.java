@@ -26,8 +26,6 @@ import java.nio.channels.FileChannel;
 import java.util.Random;
 import java.io.RandomAccessFile;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.*;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -234,13 +232,6 @@ public class MiniDFSCluster {
                         String[] racks, String hosts[],
                         long[] simulatedCapacities) throws IOException {
     this.conf = conf;
-    try {
-      UserGroupInformation.setCurrentUser(UnixUserGroupInformation.login(conf));
-    } catch (LoginException e) {
-      IOException ioe = new IOException();
-      ioe.initCause(e);
-      throw ioe;
-    }
     base_dir = new File(System.getProperty("test.build.data", "build/test/data"), "dfs/");
     data_dir = new File(base_dir, "data");
     

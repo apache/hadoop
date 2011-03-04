@@ -116,8 +116,6 @@ public class TestTaskTrackerLocalization extends TestCase {
     // Create the job configuration file. Same as trackerConf in this test.
     JobConf jobConf = trackerFConf;
 
-    // JobClient sets the job credentials.
-    new JobClient().setUGIAndUserGroupNames(jobConf);
 
     // JobClient uploads the job jar to the file system and sets it in the
     // jobConf.
@@ -131,11 +129,12 @@ public class TestTaskTrackerLocalization extends TestCase {
     tracker.setConf(trackerFConf);
 
     // for test case system FS is the local FS
+
     tracker.systemFS = FileSystem.getLocal(trackerFConf);
     tracker.systemDirectory = new Path(TEST_ROOT_DIR.getAbsolutePath());
     tracker.setLocalFileSystem(tracker.systemFS);
     
-    taskTrackerUGI = UserGroupInformation.login(trackerFConf);
+    taskTrackerUGI = UserGroupInformation.getCurrentUser();
 
     // Set up the task to be localized
     String jtIdentifier = "200907202331";
@@ -145,6 +144,7 @@ public class TestTaskTrackerLocalization extends TestCase {
     task =
         new MapTask(jobConfFile.toURI().toString(), taskId, 1, null, 1);
     task.setConf(jobConf); // Set conf. Set user name in particular.
+    task.setUser(UserGroupInformation.getCurrentUser().getUserName());
 
     // create jobTokens file
     uploadJobTokensFile();
@@ -350,7 +350,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    */
   public void testJobLocalization()
-      throws IOException {
+      throws Exception {
     if (!canRun()) {
       return;
     }
@@ -446,7 +446,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    */
   public void testTaskLocalization()
-      throws IOException {
+      throws Exception {
     if (!canRun()) {
       return;
     }
@@ -619,7 +619,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    */
   public void testTaskCleanup()
-      throws IOException {
+      throws Exception {
     if (!canRun()) {
       return;
     }
@@ -631,7 +631,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    */
   public void testFailedTaskCleanup()
-  throws IOException {
+  throws Exception {
     if (!canRun()) {
       return;
     }
@@ -643,7 +643,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * @throws IOException
    */
   public void testTaskCleanupWithJvmUse()
-      throws IOException {
+      throws Exception {
     if (!canRun()) {
       return;
     }
@@ -654,7 +654,7 @@ public class TestTaskTrackerLocalization extends TestCase {
    * Validates if task cleanup is done properly
    */
   private void testTaskCleanup(boolean needCleanup, boolean jvmReuse)
-      throws IOException {
+      throws Exception {
     // Localize job and localize task.
     tracker.getLocalizer().initializeUserDirs(task.getUser());
     localizedJobConf = tracker.localizeJobFiles(task);

@@ -20,51 +20,62 @@ package org.apache.hadoop.security;
 import java.security.Principal;
 
 /**
- * The username of a user.
+ * Save the full and short name of the user as a principal. This allows us to
+ * have a single type that we always look for when picking up user names.
  */
-public class User implements Principal {
-  final String user;
+class User implements Principal {
+  private final String fullName;
+  private final String shortName;
+
+  public User(String name) {
+    fullName = name;
+    int atIdx = name.indexOf('@');
+    if (atIdx == -1) {
+      shortName = name;
+    } else {
+      int slashIdx = name.indexOf('/');
+      if (slashIdx == -1 || atIdx < slashIdx) {
+        shortName = name.substring(0, atIdx);
+      } else {
+        shortName = name.substring(0, slashIdx);
+      }
+    }
+  }
 
   /**
-   * Create a new <code>User</code> with the given username.
-   * @param user user name
+   * Get the full name of the user.
    */
-  public User(String user) {
-    this.user = user;
+  @Override
+  public String getName() {
+    return fullName;
+  }
+  
+  /**
+   * Get the user name up to the first '/' or '@'
+   * @return the leading part of the user name
+   */
+  public String getShortName() {
+    return shortName;
   }
   
   @Override
-  public String getName() {
-    return user;
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    } else if (o == null || getClass() != o.getClass()) {
+      return false;
+    } else {
+      return fullName.equals(((User) o).fullName);
+    }
   }
-
-  @Override
-  public String toString() {
-    return user;
-  }
-
+  
   @Override
   public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((user == null) ? 0 : user.hashCode());
-    return result;
+    return fullName.hashCode();
   }
-
+  
   @Override
-  public boolean equals(Object obj) {
-    if (this == obj)
-      return true;
-    if (obj == null)
-      return false;
-    if (getClass() != obj.getClass())
-      return false;
-    User other = (User) obj;
-    if (user == null) {
-      if (other.user != null)
-        return false;
-    } else if (!user.equals(other.user))
-      return false;
-    return true;
+  public String toString() {
+    return fullName;
   }
 }

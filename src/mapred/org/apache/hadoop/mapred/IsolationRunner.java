@@ -27,6 +27,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
@@ -142,8 +143,9 @@ public class IsolationRunner {
    */
   boolean run(String[] args) 
       throws ClassNotFoundException, IOException, InterruptedException {
-    if (args.length != 1) {
-      System.out.println("Usage: IsolationRunner <path>/job.xml");
+    if (args.length < 1) {
+      System.out.println("Usage: IsolationRunner <path>/job.xml " +
+               "<optional-user-name>");
       return false;
     }
     File jobFilename = new File(args[0]);
@@ -151,7 +153,14 @@ public class IsolationRunner {
       System.out.println(jobFilename + " is not a valid job file.");
       return false;
     }
+    String user;
+    if (args.length > 1) {
+      user = args[1];
+    } else {
+      user = UserGroupInformation.getCurrentUser().getUserName();
+    }
     JobConf conf = new JobConf(new Path(jobFilename.toString()));
+    conf.setUser(user);
     TaskAttemptID taskId = TaskAttemptID.forName(conf.get("mapred.task.id"));
     if (taskId == null) {
       System.out.println("mapred.task.id not found in configuration;" + 

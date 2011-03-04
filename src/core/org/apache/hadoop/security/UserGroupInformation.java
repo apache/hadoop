@@ -18,112 +18,562 @@
 package org.apache.hadoop.security;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.Principal;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.security.auth.Subject;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
+import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
+import javax.security.auth.spi.LoginModule;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 
-/** A {@link Writable} abstract class for storing user and groups information.
+import com.sun.security.auth.NTUserPrincipal;
+import com.sun.security.auth.UnixPrincipal;
+import com.sun.security.auth.module.Krb5LoginModule;
+
+/**
+ * User and group information for Hadoop.
+ * This class wraps around a JAAS Subject and provides methods to determine the
+ * user's username and groups. It supports both the Windows, Unix and Kerberos 
+ * login modules.
  */
-public abstract class UserGroupInformation implements Writable, Principal {
-  public static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
-  private static UserGroupInformation LOGIN_UGI = null;
+public class UserGroupInformation {
+  private static final Log LOG =  LogFactory.getLog(UserGroupInformation.class);
+  private static final String  HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
   
-  private static final ThreadLocal<Subject> currentUser =
-    new ThreadLocal<Subject>();
-  
-  /** @return the {@link UserGroupInformation} for the current thread */ 
-  public static UserGroupInformation getCurrentUGI() {
-    Subject user = getCurrentUser();
-    
-    if (user == null) {
-      user = currentUser.get();
+  /**
+   * A login module that looks at the Kerberos, Unix, or Windows principal and
+   * adds the corresponding UserName.
+   */
+  public static class HadoopLoginModule implements LoginModule {
+    private Subject subject;
+
+    @Override
+    public boolean abort() throws LoginException {
+      return true;
+    }
+
+    private <T extends Principal> T getCanonicalUser(Class<T> cls) {
+      for(T user: subject.getPrincipals(cls)) {
+        return user;
+      }
+      return null;
+    }
+
+    @Override
+    public boolean commit() throws LoginException {
+      Principal user = null;
+      // if we are using kerberos, try it out
+      if (useKerberos) {
+        user = getCanonicalUser(KerberosPrincipal.class);
+      }
+      // if we don't have a kerberos user, use the OS user
       if (user == null) {
-        return null;
+        user = getCanonicalUser(OS_PRINCIPAL_CLASS);
       }
+      // if we found the user, add our principal
+      if (user != null) {
+        subject.getPrincipals().add(new User(user.getName()));
+        return true;
+      }
+      LOG.error("Can't find user in " + subject);
+      throw new LoginException("Can't find user name");
     }
-    
-    Set<UserGroupInformation> ugiPrincipals = 
-      user.getPrincipals(UserGroupInformation.class);
-    
-    UserGroupInformation ugi = null;
-    if (ugiPrincipals != null && ugiPrincipals.size() == 1) {
-      ugi = ugiPrincipals.iterator().next();
-      if (ugi == null) {
-        throw new RuntimeException("Cannot find _current user_ UGI in the Subject!");
-      }
+
+    @Override
+    public void initialize(Subject subject, CallbackHandler callbackHandler,
+                           Map<String, ?> sharedState, Map<String, ?> options) {
+      this.subject = subject;
+    }
+
+    @Override
+    public boolean login() throws LoginException {
+      return true;
+    }
+
+    @Override
+    public boolean logout() throws LoginException {
+      return true;
+    }
+  }
+
+  /** Are the static variables that depend on configuration initialized? */
+  private static boolean isInitialized = false;
+  /** Should we use Kerberos configuration? */
+  private static boolean useKerberos;
+  /** Server-side groups fetching service */
+  private static Groups groups;
+  
+  /** 
+   * A method to initialize the fields that depend on a configuration.
+   * Must be called before useKerberos or groups is used.
+   */
+  private static synchronized void ensureInitialized() {
+    if (!isInitialized) {
+      initialize(new Configuration());
+    }
+  }
+
+  /**
+   * Set the configuration values for UGI.
+   * @param conf the configuration to use
+   */
+  private static synchronized void initialize(Configuration conf) {
+    String value = conf.get(HADOOP_SECURITY_AUTHENTICATION);
+    if ("simple".equals(value)) {
+      useKerberos = false;
+    } else if (value == null || "kerberos".equals(value)) {
+      useKerberos = true;
     } else {
-      throw new RuntimeException("Cannot resolve current user from subject, " +
-      		                       "which had " + ugiPrincipals.size() + 
-      		                       " UGI principals!");
+      throw new IllegalArgumentException("Invalid attribute value for " +
+                                         HADOOP_SECURITY_AUTHENTICATION + 
+                                         " of " + value);
     }
+    // If we haven't set up testing groups, use the configuration to find it
+    if (!(groups instanceof TestingGroups)) {
+      groups = Groups.getUserToGroupsMappingService(conf);
+    }
+    // Set the configuration for JAAS to be the Hadoop configuration. 
+    // This is done here rather than a static initializer to avoid a
+    // circular dependence.
+    javax.security.auth.login.Configuration.setConfiguration
+        (new HadoopConfiguration());
+    isInitialized = true;
+  }
+
+  /**
+   * Set the static configuration for UGI.
+   * In particular, set the security authentication mechanism and the
+   * group look up service.
+   * @param conf the configuration to use
+   */
+  public static void setConfiguration(Configuration conf) {
+    initialize(conf);
+  }
+  
+  /**
+   * Determine if UserGroupInformation is using Kerberos to determine
+   * user identities or is relying on simple authentication
+   * 
+   * @return true if UGI is working in a secure environment
+   */
+  public static boolean isSecurityEnabled() {
+    ensureInitialized();
+    return useKerberos;
+  }
+  
+  /**
+   * Information about the logged in user.
+   */
+  private static UserGroupInformation loginUser = null;
+  private static String keytabPrincipal = null;
+  private static String keytabFile = null;
+
+  private final Subject subject;
+  private final Set<Token<? extends TokenIdentifier>> tokens =
+                  new LinkedHashSet<Token<? extends TokenIdentifier>>();
+  
+  private static final String OS_LOGIN_MODULE_NAME;
+  private static final Class<? extends Principal> OS_PRINCIPAL_CLASS;
+  private static final boolean windows = 
+                           System.getProperty("os.name").startsWith("Windows");
+  static {
+    if (windows) {
+      OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.NTLoginModule";
+      OS_PRINCIPAL_CLASS = NTUserPrincipal.class;
+    } else {
+      OS_LOGIN_MODULE_NAME = "com.sun.security.auth.module.UnixLoginModule";
+      OS_PRINCIPAL_CLASS = UnixPrincipal.class;
+    }
+  }
+  
+  /**
+   * A JAAS configuration that defines the login modules that we want
+   * to use for login.
+   */
+  private static class HadoopConfiguration 
+      extends javax.security.auth.login.Configuration {
+    private static final String SIMPLE_CONFIG_NAME = "hadoop-simple";
+    private static final String USER_KERBEROS_CONFIG_NAME = 
+      "hadoop-user-kerberos";
+    private static final String KEYTAB_KERBEROS_CONFIG_NAME = 
+      "hadoop-keytab-kerberos";
+    
+    private static final AppConfigurationEntry OS_SPECIFIC_LOGIN =
+      new AppConfigurationEntry(OS_LOGIN_MODULE_NAME,
+                                LoginModuleControlFlag.REQUIRED,
+                                new HashMap<String,String>());
+    private static final AppConfigurationEntry HADOOP_LOGIN =
+      new AppConfigurationEntry(HadoopLoginModule.class.getName(),
+                                LoginModuleControlFlag.REQUIRED,
+                                new HashMap<String,String>());
+    private static final Map<String,String> USER_KERBEROS_OPTIONS = 
+      new HashMap<String,String>();
+    static {
+      USER_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+      USER_KERBEROS_OPTIONS.put("useTicketCache", "true");
+    }
+    private static final AppConfigurationEntry USER_KERBEROS_LOGIN =
+      new AppConfigurationEntry(Krb5LoginModule.class.getName(),
+                                LoginModuleControlFlag.OPTIONAL,
+                                USER_KERBEROS_OPTIONS);
+    private static final Map<String,String> KEYTAB_KERBEROS_OPTIONS = 
+      new HashMap<String,String>();
+    static {
+      KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
+      KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
+      KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
+    }
+    private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
+      new AppConfigurationEntry(Krb5LoginModule.class.getName(),
+                                LoginModuleControlFlag.REQUIRED,
+                                KEYTAB_KERBEROS_OPTIONS);
+    
+    private static final AppConfigurationEntry[] SIMPLE_CONF = 
+      new AppConfigurationEntry[]{OS_SPECIFIC_LOGIN, HADOOP_LOGIN};
+
+    private static final AppConfigurationEntry[] USER_KERBEROS_CONF =
+      new AppConfigurationEntry[]{OS_SPECIFIC_LOGIN, USER_KERBEROS_LOGIN,
+                                  HADOOP_LOGIN};
+
+    private static final AppConfigurationEntry[] KEYTAB_KERBEROS_CONF =
+      new AppConfigurationEntry[]{KEYTAB_KERBEROS_LOGIN, HADOOP_LOGIN};
+
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String appName) {
+      if (SIMPLE_CONFIG_NAME.equals(appName)) {
+        return SIMPLE_CONF;
+      } else if (USER_KERBEROS_CONFIG_NAME.equals(appName)) {
+        return USER_KERBEROS_CONF;
+      } else if (KEYTAB_KERBEROS_CONFIG_NAME.equals(appName)) {
+        KEYTAB_KERBEROS_OPTIONS.put("keyTab", keytabFile);
+        KEYTAB_KERBEROS_OPTIONS.put("principal", keytabPrincipal);
+        return KEYTAB_KERBEROS_CONF;
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Create a UserGroupInformation for the given subject.
+   * This does not change the subject or acquire new credentials.
+   * @param subject the user's subject
+   */
+  UserGroupInformation(Subject subject) {
+    this.subject = subject;
+  }
+
+  /**
+   * Return the current user, including any doAs in the current stack.
+   * @return the current user
+   * @throws IOException if login fails
+   */
+  public static UserGroupInformation getCurrentUser() throws IOException {
+    AccessControlContext context = AccessController.getContext();
+    Subject subject = Subject.getSubject(context);
+    return subject == null ? getLoginUser() : new UserGroupInformation(subject);
+  }
+
+  /**
+   * Get the currently logged in user.
+   * @return the logged in user
+   * @throws IOException if login fails
+   */
+  public synchronized 
+  static UserGroupInformation getLoginUser() throws IOException {
+    if (loginUser == null) {
+      try {
+        LoginContext login;
+        if (isSecurityEnabled()) {
+          login = new LoginContext(HadoopConfiguration.USER_KERBEROS_CONFIG_NAME);
+        } else {
+          login = new LoginContext(HadoopConfiguration.SIMPLE_CONFIG_NAME);
+        }
+        login.login();
+        loginUser = new UserGroupInformation(login.getSubject());
+      } catch (LoginException le) {
+        throw new IOException("failure to login", le);
+      }
+    }
+    return loginUser;
+  }
+
+  /**
+   * Log a user in from a keytab file. Loads a user identity from a keytab
+   * file and login them in. They become the currently logged-in user.
+   * @param user the principal name to load from the keytab
+   * @param path the path to the keytab file
+   * @throws IOException if the keytab file can't be read
+   */
+  public synchronized
+  static void loginUserFromKeytab(String user,
+                                  String path
+                                  ) throws IOException {
+    if (!isSecurityEnabled())
+      return;
+
+    keytabFile = path;
+    keytabPrincipal = user;
+    try {
+      LoginContext login = 
+        new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME);
+      login.login();
+      loginUser = new UserGroupInformation(login.getSubject());
+    } catch (LoginException le) {
+      throw new IOException("Login failure for " + user + " from keytab " + 
+                            path, le);
+    }
+  }
+
+  /**
+   * Create a user from a login name. It is intended to be used for remote
+   * users in RPC, since it won't have any credentials.
+   * @param user the full user principal name, must not be empty or null
+   * @return the UserGroupInformation for the remote user.
+   */
+  public static UserGroupInformation createRemoteUser(String user) {
+    if (user == null || "".equals(user)) {
+      throw new IllegalArgumentException("Null user");
+    }
+    Subject subject = new Subject();
+    subject.getPrincipals().add(new User(user));
+    return new UserGroupInformation(subject);
+  }
+  
+  /**
+   * This class is used for storing the groups for testing. It stores a local
+   * map that has the translation of usernames to groups.
+   */
+  private static class TestingGroups extends Groups {
+    private final Map<String, List<String>> userToGroupsMapping = 
+      new HashMap<String,List<String>>();
+    
+    private TestingGroups() {
+      super(new org.apache.hadoop.conf.Configuration());
+    }
+    
+    @Override
+    public List<String> getGroups(String user) {
+      List<String> result = userToGroupsMapping.get(user);
+      if (result == null) {
+        result = new ArrayList<String>();
+      }
+      return result;
+    }
+
+    private void setUserGroups(String user, String[] groups) {
+      userToGroupsMapping.put(user, Arrays.asList(groups));
+    }
+  }
+
+  /**
+   * Create a UGI for testing HDFS and MapReduce
+   * @param user the full user principal name
+   * @param userGroups the names of the groups that the user belongs to
+   * @return a fake user for running unit tests
+   */
+  public static UserGroupInformation createUserForTesting(String user, 
+                                                          String[] userGroups) {
+    ensureInitialized();
+    UserGroupInformation ugi = createRemoteUser(user);
+    // make sure that the testing object is setup
+    if (!(groups instanceof TestingGroups)) {
+      groups = new TestingGroups();
+    }
+    // add the user groups
+    ((TestingGroups) groups).setUserGroups(ugi.getShortUserName(), userGroups);
     return ugi;
   }
 
-  /** 
-   * Set the {@link UserGroupInformation} for the current thread
-   * @deprecated Use {@link #setCurrentUser(UserGroupInformation)} 
-   */ 
-  @Deprecated
-  public static void setCurrentUGI(UserGroupInformation ugi) {
-    setCurrentUser(ugi);
-  }
-
   /**
-   * Return the current user <code>Subject</code>.
-   * @return the current user <code>Subject</code>
+   * Get the user's login name.
+   * @return the user's name up to the first '/' or '@'.
    */
-  static Subject getCurrentUser() {
-    return Subject.getSubject(AccessController.getContext());
-  }
-  
-  /**
-   * Set the {@link UserGroupInformation} for the current thread
-   * WARNING - This method should be used only in test cases and other exceptional
-   * cases!
-   * @param ugi {@link UserGroupInformation} for the current thread
-   */
-  public static void setCurrentUser(UserGroupInformation ugi) {
-    Subject user = SecurityUtil.getSubject(ugi);
-    currentUser.set(user);
-  }
-  
-  /** Get username
-   * 
-   * @return the user's name
-   */
-  public abstract String getUserName();
-  
-  /** Get the name of the groups that the user belong to
-   * 
-   * @return an array of group names
-   */
-  public abstract String[] getGroupNames();
-
-  /** Login and return a UserGroupInformation object. */
-  public static UserGroupInformation login(Configuration conf
-      ) throws LoginException {
-    if (LOGIN_UGI == null) {
-      LOGIN_UGI = UnixUserGroupInformation.login(conf);
+  public String getShortUserName() {
+    for (User p: subject.getPrincipals(User.class)) {
+      return p.getShortName();
     }
-    return LOGIN_UGI;
+    return null;
   }
 
-  /** Read a {@link UserGroupInformation} from conf */
-  public static UserGroupInformation readFrom(Configuration conf
-      ) throws IOException {
+  /**
+   * Get the user's full principal name.
+   * @return the user's full principal name.
+   */
+  public String getUserName() {
+    for (User p: subject.getPrincipals(User.class)) {
+      return p.getName();
+    }
+    return null;
+  }
+
+  /**
+   * Add a token to this UGI
+   * 
+   * @param token Token to be added
+   * @return true on successful add of new token
+   */
+  public synchronized boolean addToken(Token<? extends TokenIdentifier> token) {
+    return tokens.add(token);
+  }
+  
+  /**
+   * Obtain the collection of tokens associated with this user.
+   * 
+   * @return an unmodifiable collection of tokens associated with user
+   */
+  public synchronized Collection<Token<? extends TokenIdentifier>> getTokens() {
+    return Collections.unmodifiableSet(tokens);
+  }
+
+  /**
+   * Get the group names for this user.
+   * @return the list of users with the primary group first. If the command
+   *    fails, it returns an empty list.
+   */
+  public synchronized String[] getGroupNames() {
+    ensureInitialized();
     try {
-      return UnixUserGroupInformation.readFromConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME);
-    } catch (LoginException e) {
-      throw (IOException)new IOException().initCause(e);
+      List<String> result = groups.getGroups(getShortUserName());
+      return result.toArray(new String[result.size()]);
+    } catch (IOException ie) {
+      LOG.warn("No groups available for user " + getShortUserName());
+      return new String[0];
+    }
+  }
+  
+  /**
+   * Return the username.
+   */
+  @Override
+  public String toString() {
+    return getUserName();
+  }
+
+  /**
+   * Compare the subjects to see if they are equal to each other.
+   */
+  @Override
+  public boolean equals(Object o) {
+    if (o == this) {
+      return true;
+    } else if (o == null || getClass() != o.getClass()) {
+      return false;
+    } else {
+      return subject.equals(((UserGroupInformation) o).subject);
+    }
+  }
+
+  /**
+   * Return the hash of the subject.
+   */
+  @Override
+  public int hashCode() {
+    return subject.hashCode();
+  }
+
+  /**
+   * Get the underlying subject from this ugi.
+   * @return the subject that represents this user.
+   */
+  protected Subject getSubject() {
+    return subject;
+  }
+
+  /**
+   * Run the given action as the user.
+   * @param <T> the return type of the run method
+   * @param action the method to execute
+   * @return the value from the run method
+   */
+  public <T> T doAs(PrivilegedAction<T> action) {
+    return Subject.doAs(subject, action);
+  }
+  
+  /**
+   * Run the given action as the user, potentially throwing an exception.
+   * @param <T> the return type of the run method
+   * @param action the method to execute
+   * @return the value from the run method
+   * @throws IOException if the action throws an IOException
+   * @throws Error if the action throws an Error
+   * @throws RuntimeException if the action throws a RuntimeException
+   * @throws InterruptedException if the action throws an InterruptedException
+   * @throws UndeclaredThrowableException if the action throws something else
+   */
+  public <T> T doAs(PrivilegedExceptionAction<T> action
+                    ) throws IOException, InterruptedException {
+    try {
+      return Subject.doAs(subject, action);
+    } catch (PrivilegedActionException pae) {
+      Throwable cause = pae.getCause();
+      if (cause instanceof IOException) {
+        throw (IOException) cause;
+      } else if (cause instanceof Error) {
+        throw (Error) cause;
+      } else if (cause instanceof RuntimeException) {
+        throw (RuntimeException) cause;
+      } else if (cause instanceof InterruptedException) {
+        throw (InterruptedException) cause;
+      } else {
+        throw new UndeclaredThrowableException(pae,"Unknown exception in doAs");
+      }
+    }
+  }
+
+  private void print() throws IOException {
+    System.out.println("User: " + getUserName());
+    System.out.print("Group Ids: ");
+    System.out.println();
+    String[] groups = getGroupNames();
+    System.out.print("Groups: ");
+    for(int i=0; i < groups.length; i++) {
+      System.out.print(groups[i] + " ");
+    }
+    System.out.println();    
+  }
+
+  /**
+   * A test method to print out the current user's UGI.
+   * @param args if there are two arguments, read the user from the keytab
+   * and print it out.
+   * @throws Exception
+   */
+  public static void main(String [] args) throws Exception {
+  System.out.println("Getting UGI for current user");
+    UserGroupInformation ugi = getCurrentUser();
+    ugi.print();
+    System.out.println("UGI: " + ugi);
+    System.out.println("============================================================");
+    
+    if (args.length == 2) {
+      System.out.println("Getting UGI from keytab....");
+      loginUserFromKeytab(args[0], args[1]);
+      getCurrentUser().print();
+      System.out.println("Keytab: " + ugi);
     }
   }
 }

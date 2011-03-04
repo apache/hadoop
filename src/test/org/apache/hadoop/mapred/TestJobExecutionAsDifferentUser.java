@@ -70,7 +70,7 @@ public class TestJobExecutionAsDifferentUser extends
     assertEquals(0, ToolRunner.run(myConf, new SleepJob(), args));
   }
   
-  public void testEnvironment() throws IOException {
+  public void testEnvironment() throws Exception {
     if (!shouldRun()) {
       return;
     }

@@ -75,7 +75,6 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
@@ -920,12 +919,7 @@ public class Balancer implements Tool {
     methodNameToPolicyMap.put("getBlocks", methodPolicy);
     methodNameToPolicyMap.put("getAccessKeys", methodPolicy);
 
-    UserGroupInformation ugi;
-    try {
-      ugi = UnixUserGroupInformation.login(conf);
-    } catch (javax.security.auth.login.LoginException e) {
-      throw new IOException(StringUtils.stringifyException(e));
-    }
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
     return (NamenodeProtocol) RetryProxy.create(
         NamenodeProtocol.class,

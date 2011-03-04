@@ -189,6 +189,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
             MapTask map = new MapTask(systemJobFile.toString(),  
                                       mapId, i,
                                       taskSplitMetaInfos[i].getSplitIndex(), 1);
+            map.setUser(UserGroupInformation.getCurrentUser().
+                getShortUserName());
             JobConf localConf = new JobConf(job);
             TaskRunner.setupChildMapredLocalDirs(map, localConf);
 
@@ -197,6 +199,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
             mapOutputFiles.put(mapId, mapOutput);
 
             map.setJobFile(localJobFile.toString());
+            localConf.setUser(map.getUser());
             map.localizeConfiguration(localConf);
             map.setConf(localConf);
             map_tasks += 1;
@@ -216,6 +219,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
             ReduceTask reduce =
                 new ReduceTask(systemJobFile.toString(), reduceId, 0, mapIds.size(),
                     1);
+            reduce.setUser(UserGroupInformation.getCurrentUser().
+                 getShortUserName());
             JobConf localConf = new JobConf(job);
             TaskRunner.setupChildMapredLocalDirs(reduce, localConf);
             // move map output to reduce input  
@@ -240,6 +245,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
             }
             if (!this.isInterrupted()) {
               reduce.setJobFile(localJobFile.toString());
+              localConf.setUser(reduce.getUser());
               reduce.localizeConfiguration(localConf);
               reduce.setConf(localConf);
               reduce_tasks += 1;
@@ -499,7 +505,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
     Path stagingRootDir = 
       new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
         "/tmp/hadoop/mapred/staging"));
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     String user;
     if (ugi != null) {
       user = ugi.getUserName() + rand.nextInt();

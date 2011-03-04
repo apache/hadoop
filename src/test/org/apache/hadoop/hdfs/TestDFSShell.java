@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.security.Permission;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -1141,33 +1141,37 @@ public class TestDFSShell extends TestCase {
   }
 
   public void testRemoteException() throws Exception {
-    UnixUserGroupInformation tmpUGI = new UnixUserGroupInformation("tmpname",
-        new String[] {
-        "mygroup"});
+    UserGroupInformation tmpUGI = 
+      UserGroupInformation.createUserForTesting("tmpname", new String[] {"mygroup"});
     MiniDFSCluster dfs = null;
     PrintStream bak = null;
     try {
-      Configuration conf = new Configuration();
+      final Configuration conf = new Configuration();
       dfs = new MiniDFSCluster(conf, 2, true, null);
       FileSystem fs = dfs.getFileSystem();
       Path p = new Path("/foo");
       fs.mkdirs(p);
       fs.setPermission(p, new FsPermission((short)0700));
-      UnixUserGroupInformation.saveToConf(conf,
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, tmpUGI);
-      FsShell fshell = new FsShell(conf);
       bak = System.err;
-      ByteArrayOutputStream out = new ByteArrayOutputStream();
-      PrintStream tmp = new PrintStream(out);
-      System.setErr(tmp);
-      String[] args = new String[2];
-      args[0] = "-ls";
-      args[1] = "/foo";
-      int ret = ToolRunner.run(fshell, args);
-      assertTrue("returned should be -1", (ret == -1));
-      String str = out.toString();
-      assertTrue("permission denied printed", str.indexOf("Permission denied") != -1);
-      out.reset();
+      
+      tmpUGI.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          FsShell fshell = new FsShell(conf);
+          ByteArrayOutputStream out = new ByteArrayOutputStream();
+          PrintStream tmp = new PrintStream(out);
+          System.setErr(tmp);
+          String[] args = new String[2];
+          args[0] = "-ls";
+          args[1] = "/foo";
+          int ret = ToolRunner.run(fshell, args);
+          assertTrue("returned should be -1", (ret == -1));
+          String str = out.toString();
+          assertTrue("permission denied printed", str.indexOf("Permission denied") != -1);
+          out.reset();
+          return null;
+        }
+      });
     } finally {
       if (bak != null) {
         System.setErr(bak);
@@ -1238,7 +1242,7 @@ public class TestDFSShell extends TestCase {
   }
 
   public void testLsr() throws Exception {
-    Configuration conf = new Configuration();
+    final Configuration conf = new Configuration();
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
     DistributedFileSystem dfs = (DistributedFileSystem)cluster.getFileSystem();
 
@@ -1251,13 +1255,16 @@ public class TestDFSShell extends TestCase {
       final Path sub = new Path(root, "sub");
       dfs.setPermission(sub, new FsPermission((short)0));
 
-      final UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+      final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       final String tmpusername = ugi.getUserName() + "1";
-      UnixUserGroupInformation tmpUGI = new UnixUserGroupInformation(
+      UserGroupInformation tmpUGI = UserGroupInformation.createUserForTesting(
           tmpusername, new String[] {tmpusername});
-      UnixUserGroupInformation.saveToConf(conf,
-            UnixUserGroupInformation.UGI_PROPERTY_NAME, tmpUGI);
-      String results = runLsr(new FsShell(conf), root, -1);
+      String results = tmpUGI.doAs(new PrivilegedExceptionAction<String>() {
+        @Override
+        public String run() throws Exception {
+          return runLsr(new FsShell(conf), root, -1);
+        }
+      });
       assertTrue(results.contains("zzz"));
     } finally {
       cluster.shutdown();

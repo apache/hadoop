@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -51,7 +52,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapreduce.TaskType;
@@ -289,18 +290,20 @@ class JobInProgress {
    * to the tracker.
    */
   public JobInProgress(JobID jobid, JobTracker jobtracker, 
-                       JobConf default_conf) throws IOException {
+                       JobConf default_conf) 
+  throws IOException, InterruptedException {
     this(jobid, jobtracker, default_conf, 0);
   }
   
   public JobInProgress(JobID jobid, JobTracker jobtracker, 
-                       JobConf default_conf, int rCount) throws IOException {
+                       JobConf default_conf, int rCount) 
+  throws IOException, InterruptedException {
     this(jobtracker, default_conf, null, rCount, null);
   }
 
-  JobInProgress(JobTracker jobtracker, JobConf default_conf, 
+  JobInProgress(JobTracker jobtracker, final JobConf default_conf, 
       JobInfo jobInfo, int rCount, TokenStorage ts) 
-  throws IOException {
+  throws IOException, InterruptedException {
     this.restartCount = rCount;
     this.jobId = JobID.downgrade(jobInfo.getJobID());
     String url = "http://" + jobtracker.getJobTrackerMachine() + ":" 
@@ -314,12 +317,12 @@ class JobInProgress {
 
     // use the user supplied token to add user credentials to the conf
     jobSubmitDir = jobInfo.getJobSubmitDir();
-    String user = jobInfo.getUser().toString();
-    conf = new JobConf();
-    conf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        new UnixUserGroupInformation(user,
-            new String[]{UnixUserGroupInformation.DEFAULT_GROUP}).toString());
-    fs = jobSubmitDir.getFileSystem(conf);
+    user = jobInfo.getUser().toString();
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+      fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+        public FileSystem run() throws IOException {
+          return jobSubmitDir.getFileSystem(default_conf);
+      }});
     this.localJobFile = default_conf.getLocalPath(JobTracker.SUBDIR
         +"/"+jobId + ".xml");
     Path jobFilePath = JobSubmissionFiles.getJobConfPath(jobSubmitDir);
@@ -450,6 +453,13 @@ class JobInProgress {
    */
   public boolean inited() {
     return tasksInited.get();
+  }
+ 
+  /**
+   * Get the user for the job
+   */
+  public String getUser() {
+    return user;
   }
   
   boolean hasRestarted() {
@@ -2852,7 +2862,7 @@ class JobInProgress {
 
       Path tempDir = jobtracker.getSystemDirectoryForJob(getJobID());
       new CleanupQueue().addToQueue(new PathDeletionContext(
-          jobtracker.getFileSystem(tempDir), tempDir.toUri().getPath())); 
+          jobtracker.getFileSystem(), tempDir.toUri().getPath())); 
     } catch (IOException e) {
       LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);
     }

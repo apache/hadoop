@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -233,15 +233,7 @@ public class TestMiniMRWithDFS extends TestCase {
         NUM_MAPS, NUM_SAMPLES, jobconf).doubleValue();
     double error = Math.abs(Math.PI - estimate);
     assertTrue("Error in PI estimation "+error+" exceeds 0.01", (error < 0.01));
-    String userName = jobconf.getUser();
-    if (userName == null) {
-      try {
-        userName = UnixUserGroupInformation.login(jobconf).getUserName();
-      } catch (LoginException le) {
-        throw new IOException("Cannot get the login username : "
-            + StringUtils.stringifyException(le));
-      }
-    }
+    String userName = UserGroupInformation.getLoginUser().getUserName();
     checkTaskDirectories(mr, userName, new String[] {}, new String[] {});
   }
 
@@ -263,15 +255,7 @@ public class TestMiniMRWithDFS extends TestCase {
     JobID jobid = result.job.getID();
     TaskAttemptID taskid = new TaskAttemptID(
         new TaskID(jobid, true, 1),0);
-    String userName = jobConf.getUser();
-    if (userName == null) {
-      try {
-        userName = UnixUserGroupInformation.login(jobConf).getUserName();
-      } catch (LoginException le) {
-        throw new IOException("Cannot get the login username : "
-            + StringUtils.stringifyException(le));
-      }
-    }
+    String userName = UserGroupInformation.getLoginUser().getUserName();
     checkTaskDirectories(mr, userName, new String[] { jobid.toString() },
         new String[] { taskid.toString() });
     // test with maps=0

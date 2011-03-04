@@ -1005,7 +1005,11 @@ public class DistCp implements Tool {
     final String randomId = getRandomId();
     JobClient jClient = new JobClient(jobConf);
     Path stagingArea;
-    stagingArea = JobSubmissionFiles.getStagingDir(jClient, conf);
+    try {
+      stagingArea = JobSubmissionFiles.getStagingDir(jClient, conf);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
     
     Path jobDirectory = new Path(stagingArea + NAME + "_" + randomId);
     FsPermission mapredSysPerms =

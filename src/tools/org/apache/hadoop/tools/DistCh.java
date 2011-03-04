@@ -425,8 +425,12 @@ public class DistCh extends DistTool {
     final String randomId = getRandomId();
     JobClient jClient = new JobClient(jobconf);
     Path stagingArea;
-    stagingArea = JobSubmissionFiles.getStagingDir(
-                     jClient, jobconf);
+    try {
+      stagingArea = JobSubmissionFiles.getStagingDir(
+                       jClient, jobconf);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
     Path jobdir = new Path(stagingArea + NAME + "_" + randomId);
     FsPermission mapredSysPerms =
       new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);

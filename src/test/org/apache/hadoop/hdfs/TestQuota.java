@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.OutputStream;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
@@ -27,7 +28,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 
@@ -241,18 +242,31 @@ public class TestQuota extends TestCase {
                  (Long.MAX_VALUE/1024/1024 + 1024) + "m", args[2]);
       
       // 17:  setQuota by a non-administrator
-      UnixUserGroupInformation.saveToConf(conf, 
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, 
-          new UnixUserGroupInformation(new String[]{"userxx\n", "groupyy\n"}));
-      DFSAdmin userAdmin = new DFSAdmin(conf);
-      args[1] = "100";
-      runCommand(userAdmin, args, true);
-      runCommand(userAdmin, true, "-setSpaceQuota", "1g", args[2]);
+      final String username = "userxx";
+      UserGroupInformation ugi = 
+        UserGroupInformation.createUserForTesting(username, 
+                                                  new String[]{"groupyy"});
       
-      // 18: clrQuota by a non-administrator
-      args = new String[] {"-clrQuota", parent.toString()};
-      runCommand(userAdmin, args, true);
-      runCommand(userAdmin, true, "-clrSpaceQuota",  args[1]);      
+      final String[] args2 = args.clone(); // need final ref for doAs block
+      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
+        public Object run() throws Exception {
+          assertEquals("Not running as new user", username, 
+              UserGroupInformation.getCurrentUser().getUserName());
+          DFSAdmin userAdmin = new DFSAdmin(conf);
+          
+          args2[1] = "100";
+          runCommand(userAdmin, args2, true);
+          runCommand(userAdmin, true, "-setSpaceQuota", "1g", args2[2]);
+          
+          // 18: clrQuota by a non-administrator
+          String[] args3 = new String[] {"-clrQuota", parent.toString()};
+          runCommand(userAdmin, args3, true);
+          runCommand(userAdmin, true, "-clrSpaceQuota",  args3[1]); 
+          
+          return null;
+        }
+      });
     } finally {
       cluster.shutdown();
     }

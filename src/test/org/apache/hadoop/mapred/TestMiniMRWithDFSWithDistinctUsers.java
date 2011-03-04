@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
+import java.security.PrivilegedExceptionAction;
 
 import junit.framework.TestCase;
 
@@ -34,25 +35,15 @@ import org.apache.hadoop.security.*;
  * A JUnit test to test Mini Map-Reduce Cluster with Mini-DFS.
  */
 public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
-  static final UnixUserGroupInformation DFS_UGI = createUGI("dfs", true); 
-  static final UnixUserGroupInformation PI_UGI = createUGI("pi", false); 
-  static final UnixUserGroupInformation WC_UGI = createUGI("wc", false); 
+  static final UserGroupInformation DFS_UGI = createUGI("dfs", true);
+  static final UserGroupInformation PI_UGI = createUGI("pi", false);
+  static final UserGroupInformation WC_UGI = createUGI("wc", false);
 
-  static UnixUserGroupInformation createUGI(String name, boolean issuper) {
+  static UserGroupInformation createUGI(String name, boolean issuper) {
     String group = issuper? "supergroup": name;
-    return UnixUserGroupInformation.createImmutable(
-        new String[]{name, group});
+    return UserGroupInformation.createUserForTesting(name,new String[]{group});
   }
   
-  static JobConf createJobConf(MiniMRCluster mr, UnixUserGroupInformation ugi) {
-    return createJobConf(mr.createJobConf(), ugi);
-  }
-  static JobConf createJobConf(JobConf conf, UnixUserGroupInformation ugi) {
-    JobConf jobconf = new JobConf(conf);    UnixUserGroupInformation.saveToConf(jobconf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
-    return jobconf;
-  }
-
   static void mkdir(FileSystem fs, String dir) throws IOException {
     Path p = new Path(dir);
     fs.mkdirs(p);
@@ -60,19 +51,23 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
   }
 
   // runs a sample job as a user (ugi)
-  RunningJob runJobAsUser(JobConf job, UserGroupInformation ugi)
+  RunningJob runJobAsUser(final JobConf job, UserGroupInformation ugi)
   throws Exception {
     JobSubmissionProtocol jobSubmitClient =
       TestSubmitJob.getJobSubmitClient(job, ugi);
     JobID id = jobSubmitClient.getNewJobId();
    
     InputSplit[] splits = computeJobSplit(JobID.downgrade(id), job);
-    Path jobSubmitDir = new Path(id.toString());
-    FileSystem fs = jobSubmitDir.getFileSystem(job);
-    jobSubmitDir = jobSubmitDir.makeQualified(fs);
-    uploadJobFiles(JobID.downgrade(id), splits, jobSubmitDir, job);
+    final Path jobSubmitDir = new Path(id.toString());
+    FileSystem fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        return jobSubmitDir.getFileSystem(job);
+      }
+    });
+    Path qJobSubmitDir = jobSubmitDir.makeQualified(fs);
+    uploadJobFiles(JobID.downgrade(id), splits, qJobSubmitDir, ugi, job);
    
-    jobSubmitClient.submitJob(id, jobSubmitDir.toString(), null);
+    jobSubmitClient.submitJob(id, qJobSubmitDir.toString(), null);
    
     JobClient jc = new JobClient(job);
     return jc.getJob(JobID.downgrade(id));
@@ -90,11 +85,16 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
 
   // a helper api for split submission
   private void uploadJobFiles(JobID id, InputSplit[] splits,
-                             Path jobSubmitDir, JobConf conf)
-  throws IOException {
-    Path confLocation = JobSubmissionFiles.getJobConfPath(jobSubmitDir);
-    JobSplitWriter.createSplitFiles(jobSubmitDir, conf, splits);
-    FileSystem fs = confLocation.getFileSystem(conf);
+                             Path jobSubmitDir, UserGroupInformation ugi,
+                             final JobConf conf)
+  throws Exception {
+    final Path confLocation = JobSubmissionFiles.getJobConfPath(jobSubmitDir);
+    FileSystem fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        return confLocation.getFileSystem(conf);
+      }
+    });
+    JobSplitWriter.createSplitFiles(jobSubmitDir, conf, fs, splits);
     FsPermission perm = new FsPermission((short)0700);
    
     // localize conf
@@ -104,19 +104,19 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
   }
  
   public void testDistinctUsers() throws Exception {
-    MiniDFSCluster dfs = null;
     MiniMRCluster mr = null;
+    Configuration conf = new Configuration();
+    final MiniDFSCluster dfs = new MiniDFSCluster(conf, 4, true, null);
     try {
-      Configuration conf = new Configuration();
-      UnixUserGroupInformation.saveToConf(conf,
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, DFS_UGI);
-      dfs = new MiniDFSCluster(conf, 4, true, null);
-      FileSystem fs = dfs.getFileSystem();
+      FileSystem fs = DFS_UGI.doAs(new PrivilegedExceptionAction<FileSystem>() {
+        public FileSystem run() throws IOException {
+          return dfs.getFileSystem();
+        }
+      });
       mkdir(fs, "/user");
       mkdir(fs, "/mapred");
 
-      UnixUserGroupInformation MR_UGI = createUGI(
-          UnixUserGroupInformation.login().getUserName(), false); 
+      UserGroupInformation MR_UGI = UserGroupInformation.getLoginUser();
       mr = new MiniMRCluster(0, 0, 4, dfs.getFileSystem().getUri().toString(),
            1, null, null, MR_UGI);
 
@@ -129,7 +129,6 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
       TestMiniMRClasspath.configureWordCount(fs, jobTrackerName, job1,
                                              input, 2, 1, inDir, outDir);
 
-      job1 = createJobConf(job1, PI_UGI);
       runJobAsUser(job1, PI_UGI);
 
       JobConf job2 = mr.createJobConf();
@@ -137,7 +136,6 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
       Path outDir2 = new Path("/testing/distinct/output2");
       TestMiniMRClasspath.configureWordCount(fs, jobTrackerName, job2,
                                              input, 2, 1, inDir2, outDir2);
-      job2 = createJobConf(job2, WC_UGI);
       runJobAsUser(job2, WC_UGI);
     } finally {
       if (dfs != null) { dfs.shutdown(); }

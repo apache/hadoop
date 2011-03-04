@@ -19,13 +19,14 @@ package org.apache.hadoop.hdfsproxy;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.PrivilegedExceptionAction;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.Configuration;
 
 /** {@inheritDoc} */
@@ -36,20 +37,26 @@ public class ProxyStreamFile extends StreamFile {
   /** {@inheritDoc} */
   @Override
   protected DFSClient getDFSClient(HttpServletRequest request)
-      throws IOException {
+      throws IOException, InterruptedException {
     ServletContext context = getServletContext();
-    Configuration conf = new Configuration((Configuration) context
+    final Configuration conf = new Configuration((Configuration) context
         .getAttribute("name.conf"));
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, getUGI(request));
-    InetSocketAddress nameNodeAddr = (InetSocketAddress) context
+    final InetSocketAddress nameNodeAddr = (InetSocketAddress) context
         .getAttribute("name.node.address");
-    return new DFSClient(nameNodeAddr, conf);
+    DFSClient client = 
+              getUGI(request).doAs(new PrivilegedExceptionAction<DFSClient>() {
+      @Override
+      public DFSClient run() throws IOException {
+        return new DFSClient(nameNodeAddr, conf);
+      }
+    });
+
+    return client;
   }
 
   /** {@inheritDoc} */
   @Override
-  protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    return (UnixUserGroupInformation) request.getAttribute("authorized.ugi");
+  protected UserGroupInformation getUGI(HttpServletRequest request) {
+    return (UserGroupInformation) request.getAttribute("authorized.ugi");
   }
 }

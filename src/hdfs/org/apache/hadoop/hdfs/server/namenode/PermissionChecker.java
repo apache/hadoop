@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.IOException;
 import java.util.*;
 
 import org.apache.commons.logging.Log;
@@ -30,28 +31,46 @@ import org.apache.hadoop.security.UserGroupInformation;
 class PermissionChecker {
   static final Log LOG = LogFactory.getLog(UserGroupInformation.class);
 
+  private final UserGroupInformation ugi;
   final String user;
   private final Set<String> groups = new HashSet<String>();
   final boolean isSuper;
 
   PermissionChecker(String fsOwner, String supergroup
       ) throws AccessControlException{
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+    try {
+      ugi = UserGroupInformation.getCurrentUser();
+    } catch (IOException e) {
+      throw new AccessControlException(e);
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("ugi=" + ugi);
     }
 
-    if (ugi != null) {
-      user = ugi.getUserName();
-      groups.addAll(Arrays.asList(ugi.getGroupNames()));
-      isSuper = user.equals(fsOwner) || groups.contains(supergroup);
-    }
-    else {
-      throw new AccessControlException("ugi = null");
-    }
+    user = ugi.getUserName();
+    groups.addAll(Arrays.asList(ugi.getGroupNames()));
+    isSuper = user.equals(fsOwner) || groups.contains(supergroup);
   }
 
   boolean containsGroup(String group) {return groups.contains(group);}
+
+  /**
+   * Verify if the caller has the required permission. This will result into 
+   * an exception if the caller is not allowed to access the resource.
+   * @param owner owner of the system
+   * @param supergroup supergroup of the system
+   */
+  public static void checkSuperuserPrivilege(UserGroupInformation owner, 
+                                             String supergroup)
+  throws AccessControlException {
+    PermissionChecker checker = 
+      new PermissionChecker(owner.getUserName(), supergroup);
+    if (!checker.isSuper) {
+      throw new AccessControlException("Access denied for user " 
+          + checker.user + ". Superuser privilege is required");
+    }
+  }
+
 
   /**
    * Check whether current user have permissions to access the path.

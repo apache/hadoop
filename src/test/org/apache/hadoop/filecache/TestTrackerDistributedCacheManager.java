@@ -383,9 +383,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     }
   }
 
-  protected String getJobOwnerName() throws LoginException {
-    UserGroupInformation ugi = UserGroupInformation.login(conf);
-    return ugi.getUserName();
+  protected String getJobOwnerName() throws IOException {
+    return UserGroupInformation.getLoginUser().getUserName();
   }
 
   /** test delete cache */

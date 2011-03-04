@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
 /**
@@ -99,7 +99,7 @@ public class TestGetBlocks extends TestCase {
           cluster.getNameNodePort());
       NamenodeProtocol namenode = (NamenodeProtocol) RPC.getProxy(
           NamenodeProtocol.class, NamenodeProtocol.versionID, addr,
-          UnixUserGroupInformation.login(CONF), CONF,
+          UserGroupInformation.getCurrentUser(), CONF,
           NetUtils.getDefaultSocketFactory(CONF));
 
       // get blocks of size fileLen from dataNodes[0]

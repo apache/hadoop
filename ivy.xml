@@ -270,6 +270,11 @@
       rev="${aspectj.version}"
       conf="common->default">
     </dependency>
+    <dependency org="org.mockito" 
+       name="mockito-all" 
+       rev="${mockito-all.version}" 
+       conf="common->default">
+    </dependency>
     </dependencies>
   
 </ivy-module>

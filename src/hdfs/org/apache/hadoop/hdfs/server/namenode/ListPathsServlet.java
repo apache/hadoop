@@ -21,13 +21,13 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.znerd.xmlenc.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.security.PrivilegedExceptionAction;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -125,7 +125,6 @@ public class ListPathsServlet extends DfsServlet {
    */
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
-    final UnixUserGroupInformation ugi = getUGI(request);
     final PrintWriter out = response.getWriter();
     final XMLOutputter doc = new XMLOutputter(out, "UTF-8");
     try {
@@ -134,8 +133,15 @@ public class ListPathsServlet extends DfsServlet {
       final boolean recur = "yes".equals(root.get("recursive"));
       final Pattern filter = Pattern.compile(root.get("filter"));
       final Pattern exclude = Pattern.compile(root.get("exclude"));
-      ClientProtocol nnproxy = createNameNodeProxy(ugi);
-
+      
+      ClientProtocol nnproxy = 
+        getUGI(request).doAs(new PrivilegedExceptionAction<ClientProtocol>() {
+        @Override
+        public ClientProtocol run() throws IOException {
+          return createNameNodeProxy();
+        }
+      });
+      
       doc.declaration();
       doc.startTag("listing");
       for (Map.Entry<String,String> m : root.entrySet()) {
@@ -173,6 +179,9 @@ public class ListPathsServlet extends DfsServlet {
       if (doc != null) {
         doc.endDocument();
       }
+    } catch (InterruptedException e) {
+      LOG.warn("ListPathServlet encountered InterruptedException", e);
+      response.sendError(400, e.getMessage());
     } finally {
       if (out != null) {
         out.close();

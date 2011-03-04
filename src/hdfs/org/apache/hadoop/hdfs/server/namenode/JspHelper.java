@@ -43,7 +43,6 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.hdfs.security.BlockAccessToken;
 
 public class JspHelper {
@@ -52,10 +51,7 @@ public class JspHelper {
   static FSNamesystem fsn = null;
   public static InetSocketAddress nameNodeAddr;
   public static final Configuration conf = new Configuration();
-  public static final UnixUserGroupInformation webUGI
-  = UnixUserGroupInformation.createImmutable(
-      conf.getStrings(WEB_UGI_PROPERTY_NAME));
-
+  
   public static final int defaultChunkSizeToView = 
     conf.getInt("dfs.default.chunk.view.size", 32 * 1024);
   static Random rand = new Random();
@@ -68,9 +64,6 @@ public class JspHelper {
     else {
       nameNodeAddr = fsn.getDFSNameNodeAddress(); 
     }      
-
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, webUGI);
   }
 
   public DatanodeID randomNode() throws IOException {

@@ -533,7 +533,7 @@ public class TestJobTrackerRestart extends TestCase {
       jtConf.setLong("mapred.tasktracker.expiry.interval", 25 * 1000);
       jtConf.setBoolean("mapred.acls.enabled", true);
       // get the user group info
-      UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
       jtConf.set("mapred.queue.default.acl-submit-job", ugi.getUserName());
       
       mr = new MiniMRCluster(1, namenode, 1, null, null, jtConf);

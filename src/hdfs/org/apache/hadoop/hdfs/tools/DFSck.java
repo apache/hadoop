@@ -25,13 +25,10 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -71,11 +68,10 @@ public class DFSck extends Configured implements Tool {
   /**
    * Filesystem checker.
    * @param conf current Configuration
-   * @throws LoginException if login failed 
    */
-  public DFSck(Configuration conf) throws LoginException {
+  public DFSck(Configuration conf) throws IOException {
     super(conf);
-    this.ugi = UnixUserGroupInformation.login(conf, true);
+    this.ugi = UserGroupInformation.getCurrentUser();
   }
   
   private String getInfoServer() throws IOException {
@@ -112,7 +108,7 @@ public class DFSck extends Configured implements Tool {
     }
 
     final StringBuffer url = new StringBuffer("http://");
-    url.append(getInfoServer()).append("/fsck?ugi=").append(ugi).append("&path=");
+    url.append(getInfoServer()).append("/fsck?ugi=").append(ugi.getUserName()).append("&path=");
 
     String dir = "/";
     // find top-level dir first

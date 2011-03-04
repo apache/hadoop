@@ -19,8 +19,6 @@ package org.apache.hadoop.mapred.tools;
 
 import java.io.IOException;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.ipc.RPC;
@@ -29,7 +27,7 @@ import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.AdminOperationsProtocol;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -122,16 +120,9 @@ public class MRAdmin extends Configured implements Tool {
     }
   }
   
-  private static UnixUserGroupInformation getUGI(Configuration conf) 
-  throws IOException {
-    UnixUserGroupInformation ugi = null;
-    try {
-      ugi = UnixUserGroupInformation.login(conf, true);
-    } catch (LoginException e) {
-      throw (IOException)(new IOException(
-          "Failed to get the current user's information.").initCause(e));
-    }
-    return ugi;
+  private static UserGroupInformation getUGI(Configuration conf
+                                             ) throws IOException {
+    return UserGroupInformation.getCurrentUser();
   }
 
   private int refreshAuthorizationPolicy() throws IOException {

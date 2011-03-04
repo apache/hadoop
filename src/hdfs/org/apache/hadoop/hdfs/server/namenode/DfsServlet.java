@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -46,29 +45,43 @@ abstract class DfsServlet extends HttpServlet {
 
   static final Log LOG = LogFactory.getLog(DfsServlet.class.getCanonicalName());
 
-  /** Get {@link UserGroupInformation} from request */
-  protected UnixUserGroupInformation getUGI(HttpServletRequest request) {
-    String ugi = request.getParameter("ugi");
-    try {
-      return new UnixUserGroupInformation(ugi.split(","));
+  /** Get {@link UserGroupInformation} from request 
+   *    * @throws IOException */
+  protected UserGroupInformation getUGI(HttpServletRequest request) 
+    throws IOException {
+    UserGroupInformation u = null;
+    if(UserGroupInformation.isSecurityEnabled()) {
+      String user = request.getRemoteUser();
+      if(user != null)
+        throw new IOException("Security enabled but user not " +
+            "authenticated by filter");
+
+      u = UserGroupInformation.createRemoteUser(user);
+    } else { // Security's not on, pull from url
+      String ugi = request.getParameter("ugi");
+
+      if(ugi == null) // not specified in request
+        ugi = new Configuration().get(JspHelper.WEB_UGI_PROPERTY_NAME);
+
+      if(ugi == null) // not specified in conf either
+        throw new IOException("Cannot determine UGI from request or conf");
+
+      u = UserGroupInformation.createRemoteUser(ugi);
     }
-    catch(Exception e) {
-      LOG.warn("Invalid ugi (= " + ugi + ")");
-    }
-    return JspHelper.webUGI;
+
+    if(LOG.isDebugEnabled())
+      LOG.debug("getUGI is returning: " + u.getUserName());
+    return u;
   }
 
   /**
    * Create a {@link NameNode} proxy from the current {@link ServletContext}. 
    */
-  protected ClientProtocol createNameNodeProxy(UnixUserGroupInformation ugi
-      ) throws IOException {
+  protected ClientProtocol createNameNodeProxy() throws IOException {
     ServletContext context = getServletContext();
     InetSocketAddress nnAddr = (InetSocketAddress)context.getAttribute("name.node.address");
     Configuration conf = new Configuration(
         (Configuration)context.getAttribute("name.conf"));
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
     return DFSClient.createNamenode(nnAddr, conf);
   }
 
@@ -83,7 +96,7 @@ abstract class DfsServlet extends HttpServlet {
         : host.getInfoPort();
     final String filename = request.getPathInfo();
     return new URI(scheme, null, hostname, port, servletpath,
-        "filename=" + filename + "&ugi=" + ugi, null);
+        "filename=" + filename + "&ugi=" + ugi.getUserName(), null);
   }
 
   /** Get filename from the request */

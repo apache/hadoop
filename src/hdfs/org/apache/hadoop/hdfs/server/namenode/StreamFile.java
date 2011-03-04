@@ -21,10 +21,11 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
 import java.net.*;
+import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.conf.*;
 
 public class StreamFile extends DfsServlet {
@@ -39,11 +40,18 @@ public class StreamFile extends DfsServlet {
   
   /** getting a client for connecting to dfs */
   protected DFSClient getDFSClient(HttpServletRequest request)
-      throws IOException {
-    Configuration conf = new Configuration(masterConf);
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME, getUGI(request));
-    return new DFSClient(nameNodeAddr, conf);
+      throws IOException, InterruptedException {
+    final Configuration conf = new Configuration(masterConf);
+
+    DFSClient client = 
+      getUGI(request).doAs(new PrivilegedExceptionAction<DFSClient>() {
+      @Override
+      public DFSClient run() throws IOException {
+        return new DFSClient(nameNodeAddr, conf);
+      }
+    });
+
+    return client;
   }
   
   public void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -55,7 +63,15 @@ public class StreamFile extends DfsServlet {
       out.print("Invalid input");
       return;
     }
-    DFSClient dfs = getDFSClient(request);
+    
+    DFSClient dfs;
+    try {
+      dfs = getDFSClient(request);
+    } catch (InterruptedException e) {
+      response.sendError(400, e.getMessage());
+      return;
+    }
+    
     FSInputStream in = dfs.open(filename);
     OutputStream os = response.getOutputStream();
     response.setHeader("Content-Disposition", "attachment; filename=\"" + 

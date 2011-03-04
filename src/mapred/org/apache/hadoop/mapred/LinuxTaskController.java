@@ -393,7 +393,7 @@ class LinuxTaskController extends TaskController {
       throws IOException {
     String[] taskControllerCmd = new String[3 + cmdArgs.size()];
     taskControllerCmd[0] = getTaskControllerExecutablePath();
-    taskControllerCmd[1] = userName;
+    taskControllerCmd[1] = TaskTracker.getShortUserName(userName);
     taskControllerCmd[2] = String.valueOf(command.ordinal());
     int i = 3;
     for (String cmdArg : cmdArgs) {

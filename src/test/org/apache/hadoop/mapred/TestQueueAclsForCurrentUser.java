@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import javax.security.auth.login.LoginException;
 import junit.framework.TestCase;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -36,7 +35,7 @@ public class TestQueueAclsForCurrentUser extends TestCase {
   String adminAcl  = QueueManager.QueueOperation.ADMINISTER_JOBS.getAclName();
 
   private void setupConfForNoAccess() throws IOException,LoginException {
-    currentUGI = UnixUserGroupInformation.login();
+    currentUGI = UserGroupInformation.getLoginUser();
     String userName = currentUGI.getUserName();
     conf = new JobConf();
 
@@ -58,7 +57,7 @@ public class TestQueueAclsForCurrentUser extends TestCase {
    * @return
    */
   private void setupConf(boolean aclSwitch) throws IOException,LoginException{
-    currentUGI = UnixUserGroupInformation.login();
+    currentUGI = UserGroupInformation.getLoginUser();
     String userName = currentUGI.getUserName();
     conf = new JobConf();
 

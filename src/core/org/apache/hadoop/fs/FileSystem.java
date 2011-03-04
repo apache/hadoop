@@ -34,8 +34,6 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
-import javax.security.auth.login.LoginException;
-
 import org.apache.commons.logging.*;
 
 import org.apache.hadoop.conf.*;
@@ -979,9 +977,6 @@ public abstract class FileSystem extends Configured implements Closeable {
     /** Default pattern character: Character set close. */
     private static final char  PAT_SET_CLOSE = ']';
       
-    GlobFilter() {
-    }
-      
     GlobFilter(String filePattern) throws IOException {
       setRegex(filePattern);
     }
@@ -1443,15 +1438,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       Key(URI uri, Configuration conf) throws IOException {
         scheme = uri.getScheme()==null?"":uri.getScheme().toLowerCase();
         authority = uri.getAuthority()==null?"":uri.getAuthority().toLowerCase();
-        UserGroupInformation ugi = UserGroupInformation.readFrom(conf);
-        if (ugi == null) {
-          try {
-            ugi = UserGroupInformation.login(conf);
-          } catch(LoginException e) {
-            LOG.warn("uri=" + uri, e);
-          }
-        }
-        username = ugi == null? null: ugi.getUserName();
+        username = UserGroupInformation.getCurrentUser().getUserName();
       }
 
       /** {@inheritDoc} */

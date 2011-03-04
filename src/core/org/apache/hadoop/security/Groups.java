@@ -31,14 +31,13 @@ import org.apache.commons.logging.LogFactory;
 /**
  * A user-to-groups mapping service.
  * 
- * {@link Groups} allows for server to get the various {@link Group} memberships
- * of a given {@link User} via the {@link #getGroups(String)} call, thus ensuring 
- * a consistent user-to-groups mapping and protects against vagaries of different 
- * mappings on servers and clients in a Hadoop cluster. 
+ * {@link Groups} allows for server to get the various group memberships
+ * of a given user via the {@link #getGroups(String)} call, thus ensuring 
+ * a consistent user-to-groups mapping and protects against vagaries of 
+ * different mappings on servers and clients in a Hadoop cluster. 
  */
 public class Groups {
   private static final Log LOG = LogFactory.getLog(Groups.class);
-  
   private final GroupMappingServiceProvider impl;
   
   private final Map<String, CachedGroups> userToGroupsMap = 
@@ -61,9 +60,9 @@ public class Groups {
   }
   
   /**
-   * Get the {@link Group} memberships of a given {@link User}.
-   * @param user <code>User</code> name
-   * @return the <code>Group</code> memberships of <code>user</code>
+   * Get the group memberships of a given user.
+   * @param user User's name
+   * @return the group memberships of the user
    * @throws IOException
    */
   public List<String> getGroups(String user) throws IOException {
@@ -75,7 +74,6 @@ public class Groups {
       LOG.info("Returning cached groups for '" + user + "'");
       return groups.getGroups();
     }
-    
     // Create and cache user's groups
     groups = new CachedGroups(impl.getGroups(user));
     userToGroupsMap.put(user, groups);
@@ -107,5 +105,19 @@ public class Groups {
     public List<String> getGroups() {
       return groups;
     }
+  }
+
+  private static Groups GROUPS = null;
+  
+  /**
+   * Get the groups being used to map user-to-groups.
+   * @return the groups being used to map user-to-groups.
+   */
+  public static Groups getUserToGroupsMappingService(Configuration conf) {
+    if(GROUPS == null) {
+      LOG.debug(" Creating new Groups object");
+      GROUPS = new Groups(conf);
+    }
+    return GROUPS;
   }
 }

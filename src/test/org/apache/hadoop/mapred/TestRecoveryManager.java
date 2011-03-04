@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 
 import junit.framework.TestCase;
 
@@ -199,15 +200,21 @@ public class TestRecoveryManager extends TestCase {
     }
     
     // now submit job3 with inappropriate acls
-    JobConf job3 = mr.createJobConf();
-    job3.set("hadoop.job.ugi","abc,users");
-
+    final JobConf job3 = mr.createJobConf();
+    UserGroupInformation ugi3 = 
+      UserGroupInformation.createUserForTesting("abc", new String[]{"users"});
+    
     UtilsForTests.configureWaitingJobConf(job3, 
         new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output5"), 1, 0, 
         "test-recovery-manager", signalFile, signalFile);
     
     // submit the job
-    RunningJob rJob3 = (new JobClient(job3)).submitJob(job3);
+    RunningJob rJob3 = ugi3.doAs(new PrivilegedExceptionAction<RunningJob>() {
+      public RunningJob run() throws IOException {
+        return (new JobClient(job3)).submitJob(job3); 
+      }
+    });
+      
     LOG.info("Submitted job " + rJob3.getID() + " with different user");
     
     jip = jobtracker.getJob(rJob3.getID());
@@ -227,7 +234,7 @@ public class TestRecoveryManager extends TestCase {
     mr.getJobTrackerConf().setInt("mapred.jobtracker.maxtasks.per.job", 25);
     
     mr.getJobTrackerConf().setBoolean("mapred.acls.enabled" , true);
-    UserGroupInformation ugi = UserGroupInformation.readFrom(job1);
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
     mr.getJobTrackerConf().set("mapred.queue.default.acl-submit-job", 
                                ugi.getUserName());
 

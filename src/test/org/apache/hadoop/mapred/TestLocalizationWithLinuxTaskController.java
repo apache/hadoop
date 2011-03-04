@@ -78,12 +78,14 @@ public class TestLocalizationWithLinuxTaskController extends
     String ugi =
         System.getProperty(ClusterWithLinuxTaskController.TASKCONTROLLER_UGI);
     JobConf jobConf = new JobConf(task.getConf());
-    jobConf.setUser(ugi.split(",")[0]);
+    String user = ugi.split(",")[0];
+    jobConf.setUser(user);
     File jobConfFile = uploadJobConf(jobConf);
     // Create the task again to change the job-user
     task =
       new MapTask(jobConfFile.toURI().toString(), taskId, 1, null, 1);
     task.setConf(jobConf);
+    task.setUser(user);
   }
 
   @Override

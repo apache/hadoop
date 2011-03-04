@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
 import java.io.*;
@@ -48,7 +49,7 @@ public class TestLostTracker extends TestCase {
     int numReds = 1;
     String mapSignalFile = UtilsForTests.getMapSignalFile(shareDir);
     String redSignalFile = UtilsForTests.getReduceSignalFile(shareDir);
-    
+    jobConf.set("user.name", UserGroupInformation.getCurrentUser().getUserName());
     // Configure the job
     JobConf job = configureJob(jobConf, numMaps, numReds, 
                                mapSignalFile, redSignalFile);

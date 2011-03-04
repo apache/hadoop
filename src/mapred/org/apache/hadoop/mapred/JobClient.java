@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.security.auth.login.LoginException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -66,7 +67,7 @@ import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.security.TokenStorage;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -430,7 +431,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private JobSubmissionProtocol createRPCProxy(InetSocketAddress addr,
       Configuration conf) throws IOException {
     return (JobSubmissionProtocol) RPC.getProxy(JobSubmissionProtocol.class,
-        JobSubmissionProtocol.versionID, addr, getUGI(conf), conf,
+        JobSubmissionProtocol.versionID, addr, 
+        UserGroupInformation.getCurrentUser(), conf,
         NetUtils.getSocketFactory(conf, JobSubmissionProtocol.class));
   }
 
@@ -561,12 +563,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     String libjars = job.get("tmpjars");
     String archives = job.get("tmparchives");
 
-    /*
-     * set this user's id in job configuration, so later job files can be
-     * accessed using this user's id
-     */
-    setUGIAndUserGroupNames(job);
-
     //
     // Figure out what fs the JobTracker is using.  Copy the
     // job to it, under a temporary name.  This allows DFS to work,
@@ -661,32 +657,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       LOG.warn("No job jar file set.  User classes may not be found. "+
                "See JobConf(Class) or JobConf#setJar(String).");
     }
-  }
-
-  /**
-   * Set the UGI, user name and the group name for the job.
-   * 
-   * @param job
-   * @throws IOException
-   */
-  void setUGIAndUserGroupNames(JobConf job)
-      throws IOException {
-    UnixUserGroupInformation ugi = getUGI(job);
-    job.setUser(ugi.getUserName());
-    if (ugi.getGroupNames().length > 0) {
-      job.set("group.name", ugi.getGroupNames()[0]);
-    }
-  }
-
-  private UnixUserGroupInformation getUGI(Configuration job) throws IOException {
-    UnixUserGroupInformation ugi = null;
-    try {
-      ugi = UnixUserGroupInformation.login(job, true);
-    } catch (LoginException e) {
-      throw (IOException)(new IOException(
-          "Failed to get the current user's information.").initCause(e));
-    }
-    return ugi;
   }
   
   /**
@@ -836,7 +806,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     // sort the splits into order based on size, so that the biggest
     // go first
     Arrays.sort(array, new SplitComparator());
-    JobSplitWriter.createSplitFiles(jobSubmitDir, conf, array);
+    JobSplitWriter.createSplitFiles(jobSubmitDir, conf,
+        jobSubmitDir.getFileSystem(conf), array);
     return array.length;
   }
   
@@ -878,7 +849,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
         }
       }
     });
-    JobSplitWriter.createSplitFiles(jobSubmitDir, job, splits);
+    JobSplitWriter.createSplitFiles(jobSubmitDir, job,
+        jobSubmitDir.getFileSystem(job), splits);
     return splits.length;
   }
   

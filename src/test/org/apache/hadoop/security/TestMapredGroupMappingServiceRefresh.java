@@ -76,6 +76,7 @@ public class TestMapredGroupMappingServiceRefresh {
         ShellBasedUnixGroupsMapping.class,GroupMappingServiceProvider.class).
         getName());
     
+    Groups.getUserToGroupsMappingService(config);
     String namenodeUrl = "hdfs://localhost:" + "0";
     FileSystem.setDefaultUri(config, namenodeUrl);
     
@@ -102,8 +103,8 @@ public class TestMapredGroupMappingServiceRefresh {
     MRAdmin admin = new MRAdmin(config);
     String [] args = new String[] { "-refreshUserToGroupsMappings" };
     
-    Groups groups = SecurityUtil.getUserToGroupsMappingService(config);
-    String user = UnixUserGroupInformation.getUnixUserName();
+    Groups groups = Groups.getUserToGroupsMappingService(config);
+    String user = UserGroupInformation.getLoginUser().getShortUserName();
     System.out.println("first attempt:");
     List<String> g1 = groups.getGroups(user);
     String [] str_groups = new String [g1.size()];

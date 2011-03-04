@@ -28,11 +28,11 @@ import java.security.Permission;
  */
 public class Service {
   private String key;
-  private Permission permission;
+  private Class<?> protocol;
   
   public Service(String key, Class<?> protocol) {
     this.key = key;
-    this.permission = new ConnectionPermission(protocol);
+    this.protocol = protocol;
   }
   
   /**
@@ -44,10 +44,10 @@ public class Service {
   }
   
   /**
-   * Get the {@link Permission} required to access the service.
-   * @return the {@link Permission} required to access the service
+   * Get the protocol for the service
+   * @return the {@link Class} for the protocol
    */
-  public Permission getPermission() {
-    return permission;
+  public Class<?> getProtocol() {
+    return protocol;
   }
 }

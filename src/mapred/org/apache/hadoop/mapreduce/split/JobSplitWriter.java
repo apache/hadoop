@@ -54,16 +54,15 @@ public class JobSplitWriter {
   
   @SuppressWarnings("unchecked")
   public static <T extends InputSplit> void createSplitFiles(Path jobSubmitDir, 
-      Configuration conf, List<InputSplit> splits) 
+      Configuration conf, FileSystem fs, List<InputSplit> splits) 
   throws IOException, InterruptedException {
     T[] array = (T[]) splits.toArray(new InputSplit[splits.size()]);
-    createSplitFiles(jobSubmitDir, conf, array);
+    createSplitFiles(jobSubmitDir, conf, fs, array);
   }
   
   public static <T extends InputSplit> void createSplitFiles(Path jobSubmitDir, 
-      Configuration conf,T[] splits) 
+      Configuration conf, FileSystem fs, T[] splits) 
   throws IOException, InterruptedException {
-    FileSystem fs = jobSubmitDir.getFileSystem(conf);
     FSDataOutputStream out = createFile(fs, 
         JobSubmissionFiles.getJobSplitFile(jobSubmitDir), conf);
     SplitMetaInfo[] info = writeNewSplits(conf, splits, out);
@@ -74,9 +73,9 @@ public class JobSplitWriter {
   }
   
   public static void createSplitFiles(Path jobSubmitDir, 
-      Configuration conf, org.apache.hadoop.mapred.InputSplit[] splits) 
+      Configuration conf, FileSystem fs, 
+      org.apache.hadoop.mapred.InputSplit[] splits) 
   throws IOException {
-    FileSystem fs = jobSubmitDir.getFileSystem(conf);
     FSDataOutputStream out = createFile(fs, 
         JobSubmissionFiles.getJobSplitFile(jobSubmitDir), conf);
     SplitMetaInfo[] info = writeOldSplits(splits, out);

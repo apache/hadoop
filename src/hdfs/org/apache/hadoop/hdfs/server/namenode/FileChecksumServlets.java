@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 
 import javax.net.SocketFactory;
 import javax.servlet.ServletContext;
@@ -38,7 +39,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.znerd.xmlenc.XMLOutputter;
 
@@ -76,7 +76,6 @@ public class FileChecksumServlets {
     /** {@inheritDoc} */
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
-      final UnixUserGroupInformation ugi = getUGI(request);
       final PrintWriter out = response.getWriter();
       final String filename = getFilename(request, response);
       final XMLOutputter xml = new XMLOutputter(out, "UTF-8");
@@ -85,17 +84,25 @@ public class FileChecksumServlets {
       final Configuration conf = new Configuration(DataNode.getDataNode().getConf());
       final int socketTimeout = conf.getInt("dfs.socket.timeout", HdfsConstants.READ_TIMEOUT);
       final SocketFactory socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
-      UnixUserGroupInformation.saveToConf(conf,
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
-      final ClientProtocol nnproxy = DFSClient.createNamenode(conf);
 
       try {
+        ClientProtocol nnproxy = getUGI(request).doAs(new PrivilegedExceptionAction<ClientProtocol>() {
+          @Override
+          public ClientProtocol run() throws IOException {
+            return DFSClient.createNamenode(conf);
+          }
+        });
+        
         final MD5MD5CRC32FileChecksum checksum = DFSClient.getFileChecksum(
             filename, nnproxy, socketFactory, socketTimeout);
         MD5MD5CRC32FileChecksum.write(xml, checksum);
       } catch(IOException ioe) {
         new RemoteException(ioe.getClass().getName(), ioe.getMessage()
             ).writeXml(filename, xml);
+      } catch (InterruptedException e) {
+        new RemoteException(e.getClass().getName(), e.getMessage()
+            ).writeXml(filename, xml);
+
       }
       xml.endDocument();
     }

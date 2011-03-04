@@ -22,23 +22,18 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.log4j.Level;
 
 import junit.framework.TestCase;
 
 /** Unit tests for permission */
 public class TestPermission extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestPermission.class);
-
-  {
-    ((Log4JLogger)UserGroupInformation.LOG).getLogger().setLevel(Level.ALL);
-  }
 
   final private static Path ROOT_PATH = new Path("/data");
   final private static Path CHILD_DIR1 = new Path(ROOT_PATH, "child1");
@@ -117,7 +112,7 @@ public class TestPermission extends TestCase {
   }
 
   public void testFilePermision() throws Exception {
-    Configuration conf = new Configuration();
+    final Configuration conf = new Configuration();
     conf.setBoolean("dfs.permissions", true);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 3, true, null);
     cluster.waitActive();
@@ -160,11 +155,10 @@ public class TestPermission extends TestCase {
 
       ////////////////////////////////////////////////////////////////
       // test illegal file/dir creation
-      UnixUserGroupInformation userGroupInfo = new UnixUserGroupInformation(
-          USER_NAME, GROUP_NAMES );
-      UnixUserGroupInformation.saveToConf(conf,
-          UnixUserGroupInformation.UGI_PROPERTY_NAME, userGroupInfo);
-      FileSystem userfs = FileSystem.get(conf);
+      UserGroupInformation userGroupInfo = 
+        UserGroupInformation.createUserForTesting(USER_NAME, GROUP_NAMES );
+      
+      FileSystem userfs = DFSTestUtil.getFileSystemAs(userGroupInfo, conf);
 
       // make sure mkdir of a existing directory that is not owned by 
       // this user does not throw an exception.

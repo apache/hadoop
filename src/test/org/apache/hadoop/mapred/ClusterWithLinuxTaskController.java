@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
@@ -87,14 +86,14 @@ public class ClusterWithLinuxTaskController extends TestCase {
 
   private File configurationFile = null;
 
-  private UserGroupInformation taskControllerUser;
+  protected UserGroupInformation taskControllerUser;
 
   /*
    * Utility method which subclasses use to start and configure the MR Cluster
    * so they can directly submit a job.
    */
   protected void startCluster()
-      throws IOException {
+      throws IOException, InterruptedException {
     JobConf conf = new JobConf();
     dfsCluster = new MiniDFSCluster(conf, NUMBER_OF_NODES, true, null);
     conf.set("mapred.task.tracker.task-controller",
@@ -117,8 +116,8 @@ public class ClusterWithLinuxTaskController extends TestCase {
     String ugi = System.getProperty(TASKCONTROLLER_UGI);
     clusterConf = mrCluster.createJobConf();
     String[] splits = ugi.split(",");
-    taskControllerUser = new UnixUserGroupInformation(splits);
-    clusterConf.set(UnixUserGroupInformation.UGI_PROPERTY_NAME, ugi);
+    taskControllerUser = UserGroupInformation.createUserForTesting(splits[0],
+        new String[]{splits[1]});
     createHomeAndStagingDirectory(clusterConf);
   }
 
@@ -129,7 +128,7 @@ public class ClusterWithLinuxTaskController extends TestCase {
     homeDirectory = new Path(path);
     LOG.info("Creating Home directory : " + homeDirectory);
     fs.mkdirs(homeDirectory);
-    changePermission(conf, homeDirectory);
+    changePermission(fs);
     Path stagingArea = 
       new Path(conf.get("mapreduce.jobtracker.staging.root.dir",
           "/tmp/hadoop/mapred/staging"));
@@ -138,9 +137,8 @@ public class ClusterWithLinuxTaskController extends TestCase {
     fs.setPermission(stagingArea, new FsPermission((short)0777));
   }
 
-  private void changePermission(JobConf conf, Path p)
+  private void changePermission(FileSystem fs)
       throws IOException {
-    FileSystem fs = dfsCluster.getFileSystem();
     fs.setOwner(homeDirectory, taskControllerUser.getUserName(),
         taskControllerUser.getGroupNames()[0]);
   }

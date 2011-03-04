@@ -46,6 +46,7 @@ public class TestGroupMappingServiceRefresh {
     
     @Override
     public List<String> getGroups(String user) throws IOException {
+      System.err.println("Getting groups in MockUnixGroupsMapping");
       String g1 = user + (10 * i + 1);
       String g2 = user + (10 * i + 2);
       List<String> l = new ArrayList<String>(2);
@@ -63,6 +64,7 @@ public class TestGroupMappingServiceRefresh {
         TestGroupMappingServiceRefresh.MockUnixGroupsMapping.class,
         GroupMappingServiceProvider.class);
     config.setLong("hadoop.security.groups.cache.secs", groupRefreshTimeoutSec);
+    Groups.getUserToGroupsMappingService(config);
     
     FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
     cluster = new MiniDFSCluster(0, config, 1, true, true, true,  null, null, null, null);
@@ -80,8 +82,8 @@ public class TestGroupMappingServiceRefresh {
   public void testGroupMappingRefresh() throws Exception {
     DFSAdmin admin = new DFSAdmin(config);
     String [] args =  new String[]{"-refreshUserToGroupsMappings"};
-    Groups groups = SecurityUtil.getUserToGroupsMappingService(config);
-    String user = UnixUserGroupInformation.getUnixUserName();
+    Groups groups = Groups.getUserToGroupsMappingService(config);
+    String user = UserGroupInformation.getCurrentUser().getUserName();
     System.out.println("first attempt:");
     List<String> g1 = groups.getGroups(user);
     String [] str_groups = new String [g1.size()];
@@ -101,7 +103,8 @@ public class TestGroupMappingServiceRefresh {
     g3.toArray(str_groups);
     System.out.println(Arrays.toString(str_groups));
     for(int i=0; i<g3.size(); i++) {
-      assertFalse("Should be different group ", g1.get(i).equals(g3.get(i)));
+      assertFalse("Should be different group: " + g1.get(i) + " and " + g3.get(i), 
+          g1.get(i).equals(g3.get(i)));
     }
     
     // test time out

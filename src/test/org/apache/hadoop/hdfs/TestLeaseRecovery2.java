@@ -31,7 +31,6 @@ import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 
@@ -102,11 +101,11 @@ public class TestLeaseRecovery2 extends junit.framework.TestCase {
       // try to re-open the file before closing the previous handle. This
       // should fail but will trigger lease recovery.
       {
-        Configuration conf2 = new Configuration(conf);
-        UnixUserGroupInformation.saveToConf(conf2,
-            UnixUserGroupInformation.UGI_PROPERTY_NAME,
-            new UnixUserGroupInformation(fakeUsername, new String[]{fakeGroup}));
-        FileSystem dfs2 = FileSystem.get(conf2);
+        UserGroupInformation ugi = 
+          UserGroupInformation.createUserForTesting(fakeUsername, 
+                                                    new String [] { fakeGroup});
+        
+        FileSystem dfs2 = DFSTestUtil.getFileSystemAs(ugi, conf);
   
         boolean done = false;
         for(int i = 0; i < 10 && !done; i++) {

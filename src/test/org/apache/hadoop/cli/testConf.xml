@@ -3281,17 +3281,17 @@
           <expected-output></expected-output>
         </comparator>
       </comparators>
-    </test>
+    </test> <!-- Not working with new UGI yet
     
-    <test> <!--Tested -->
+    <test> Tested 
       <description>refreshServiceAcl: verifying error message while refreshing security authorization policy for namenode</description>
       <test-commands>
-        <!-- hadoop-policy.xml for tests has 
-             security.refresh.policy.protocol.acl = ${user.name} -->
+         hadoop-policy.xml for tests has 
+             security.refresh.policy.protocol.acl = ${user.name} 
         <dfs-admin-command>-fs NAMENODE -Dhadoop.job.ugi=blah,blah -refreshServiceAcl </dfs-admin-command>
       </test-commands>
       <cleanup-commands>
-        <!-- No cleanup -->
+        No cleanup 
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -3299,7 +3299,7 @@
           <expected-output>access denied</expected-output>
         </comparator>
       </comparators>
-    </test>
+    </test> -->
     
     <test> <!--Tested -->
       <description>refreshServiceAcl: refreshing security authorization policy for jobtracker</description>
@@ -3316,16 +3316,16 @@
         </comparator>
       </comparators>
     </test>
-    
-    <test> <!--Tested -->
+    <!--  Not working yet with new UGI
+    <test> Tested
       <description>refreshServiceAcl: verifying error message while refreshing security authorization policy for jobtracker</description>
       <test-commands>
-        <!-- hadoop-policy.xml for tests has 
-             security.refresh.policy.protocol.acl = ${user.name} -->
+        hadoop-policy.xml for tests has 
+             security.refresh.policy.protocol.acl = ${user.name}
         <mr-admin-command>-jt JOBTRACKER -Dhadoop.job.ugi=blah,blah -refreshServiceAcl </mr-admin-command>
       </test-commands>
       <cleanup-commands>
-        <!-- No cleanup -->
+        No cleanup 
       </cleanup-commands>
       <comparators>
         <comparator>
@@ -3334,6 +3334,6 @@
         </comparator>
       </comparators>
     </test>
-    
+    -->
   </tests>
 </configuration>

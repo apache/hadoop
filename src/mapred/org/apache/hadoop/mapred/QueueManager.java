@@ -31,7 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.SecurityUtil.AccessControlList;
+import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -186,20 +186,11 @@ class QueueManager {
     }
     
     // Check the ACL list
-    boolean allowed = acl.allAllowed();
+    boolean allowed = acl.isAllAllowed();
     if (!allowed) {
       // Check the allowed users list
-      if (acl.getUsers().contains(ugi.getUserName())) {
+      if (acl.isUserAllowed(ugi)) {
         allowed = true;
-      } else {
-        // Check the allowed groups list
-        Set<String> allowedGroups = acl.getGroups();
-        for (String group : ugi.getGroupNames()) {
-          if (allowedGroups.contains(group)) {
-            allowed = true;
-            break;
-          }
-        }
       }
     }
     

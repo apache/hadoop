@@ -25,6 +25,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,7 +43,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /** Utilities for HDFS tests */
@@ -285,38 +285,6 @@ public class DFSTestUtil {
     return out.toString();
   }
 
-  static public Configuration getConfigurationWithDifferentUsername(Configuration conf
-      ) throws IOException {
-    final Configuration c = new Configuration(conf);
-    final UserGroupInformation ugi = UserGroupInformation.getCurrentUGI();
-    final String username = ugi.getUserName()+"_XXX";
-    final String[] groups = {ugi.getGroupNames()[0] + "_XXX"};
-    UnixUserGroupInformation.saveToConf(c,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        new UnixUserGroupInformation(username, groups));
-    return c;
-  }
-  
-  
-  /**
-   * modify conf to contain fake users with fake group
-   * @param conf to modify
-   * @throws IOException
-   */
-  static public void updateConfigurationWithFakeUsername(Configuration conf) {
-    // fake users
-    String username="fakeUser1";
-    String[] groups = {"fakeGroup1"};
-    // mapping to groups
-    Map<String, String[]> u2g_map = new HashMap<String, String[]>(1);
-    u2g_map.put(username, groups);
-    updateConfWithFakeGroupMapping(conf, u2g_map);
-    
-    UnixUserGroupInformation.saveToConf(conf,
-        UnixUserGroupInformation.UGI_PROPERTY_NAME,
-        new UnixUserGroupInformation(username, groups));
-  }
-  
   /**
    * mock class to get group mapping for fake users
    * 
@@ -375,5 +343,17 @@ public class DFSTestUtil {
         ShellBasedUnixGroupsMapping.class);
     
   }
-  
+  /** // TODO: JGH Reformat this damn code
+   *    * Get a FileSystem instance as specified user in a doAs block.
+   */
+  static public FileSystem getFileSystemAs(UserGroupInformation ugi, 
+      final Configuration conf) throws IOException, 
+                InterruptedException {
+                  return ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+                    @Override
+                    public FileSystem run() throws Exception {
+                      return FileSystem.get(conf);
+                    }
+                  });
+  }  
 }

@@ -362,8 +362,12 @@ public class HadoopArchives implements Tool {
     conf.set(DST_DIR_LABEL, outputPath.toString());
     final String randomId = DistCp.getRandomId();
     Path stagingArea;
-    stagingArea = JobSubmissionFiles.getStagingDir(new JobClient(conf),
-          conf);
+    try {
+      stagingArea = JobSubmissionFiles.getStagingDir(new JobClient(conf),
+            conf);
+    } catch (InterruptedException e) {
+      throw new IOException(e);
+    }
     Path jobDirectory = new Path(stagingArea,
                                NAME + "_" + randomId);
     FsPermission mapredSysPerms =

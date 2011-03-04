@@ -148,7 +148,7 @@ class JobQueueClient extends Configured implements  Tool {
 
   private void displayQueueAclsInfoForCurrentUser() throws IOException {
     QueueAclsInfo[] queueAclsInfoList = jc.getQueueAclsForCurrentUser();
-    UserGroupInformation ugi = UserGroupInformation.readFrom(getConf());
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     if (queueAclsInfoList.length > 0) {
       System.out.println("Queue acls for user :  "
               + ugi.getUserName());

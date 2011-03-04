@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
@@ -28,7 +29,7 @@ import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.security.UnixUserGroupInformation;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** Redirect queries about the hosted filesystem to an appropriate datanode.
  * @see org.apache.hadoop.hdfs.HftpFileSystem
@@ -36,7 +37,7 @@ import org.apache.hadoop.security.UnixUserGroupInformation;
 public class FileDataServlet extends DfsServlet {
 
   /** Create a redirection URI */
-  protected URI createUri(FileStatus i, UnixUserGroupInformation ugi,
+  protected URI createUri(FileStatus i, UserGroupInformation ugi,
       ClientProtocol nnproxy, HttpServletRequest request)
       throws IOException, URISyntaxException {
     String scheme = request.getScheme();
@@ -51,7 +52,8 @@ public class FileDataServlet extends DfsServlet {
         "https".equals(scheme)
           ? (Integer)getServletContext().getAttribute("datanode.https.port")
           : host.getInfoPort(),
-        "/streamFile", "filename=" + i.getPath() + "&ugi=" + ugi, null);
+        "/streamFile", "filename=" + i.getPath() + 
+        "&ugi=" + ugi.getUserName(), null);
   }
 
   private static JspHelper jspHelper = null;
@@ -85,12 +87,20 @@ public class FileDataServlet extends DfsServlet {
    */
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws IOException {
-    final UnixUserGroupInformation ugi = getUGI(request);
-    final ClientProtocol nnproxy = createNameNodeProxy(ugi);
+    final UserGroupInformation ugi = getUGI(request);
 
     try {
-      final String path = request.getPathInfo() != null
-        ? request.getPathInfo() : "/";
+      final ClientProtocol nnproxy = ugi
+          .doAs(new PrivilegedExceptionAction<ClientProtocol>() {
+            @Override
+            public ClientProtocol run() throws IOException {
+              return createNameNodeProxy();
+            }
+          });
+
+      final String path = request.getPathInfo() != null ? 
+                                                    request.getPathInfo() : "/";
+      
       FileStatus info = nnproxy.getFileInfo(path);
       if ((info != null) && !info.isDir()) {
         response.sendRedirect(createUri(info, ugi, nnproxy,
@@ -103,6 +113,8 @@ public class FileDataServlet extends DfsServlet {
     } catch (URISyntaxException e) {
       response.getWriter().println(e.toString());
     } catch (IOException e) {
+      response.sendError(400, e.getMessage());
+    } catch (InterruptedException e) {
       response.sendError(400, e.getMessage());
     }
   }

@@ -32,8 +32,6 @@ import org.apache.hadoop.hdfs.server.namenode.metrics.FSNamesystemMetrics;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.security.AccessTokenHandler;
 import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
-import org.apache.hadoop.security.PermissionChecker;
-import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
@@ -408,11 +406,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private void setConfigurationParameters(Configuration conf) 
                                           throws IOException {
     fsNamesystemObject = this;
-    try {
-      fsOwner = UnixUserGroupInformation.login(conf);
-    } catch (LoginException e) {
-      throw new IOException(StringUtils.stringifyException(e));
-    }
+    fsOwner = UserGroupInformation.getCurrentUser();
     LOG.info("fsOwner=" + fsOwner);
 
     this.supergroup = conf.get("dfs.permissions.supergroup", "supergroup");
@@ -738,7 +732,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "setPermission", src, null, stat);
     }
@@ -764,7 +758,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "setOwner", src, null, stat);
     }
@@ -817,7 +811,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     final LocatedBlocks ret = getBlockLocationsInternal(src, 
         offset, length, Integer.MAX_VALUE, doAccessTime);  
     if (auditLog.isInfoEnabled()) {
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "open", src, null, null);
     }
@@ -924,7 +918,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       dir.setTimes(src, inode, mtime, atime, true);
       if (auditLog.isInfoEnabled()) {
         final FileStatus stat = dir.getFileInfo(src);
-        logAuditEvent(UserGroupInformation.getCurrentUGI(),
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
                       Server.getRemoteIp(),
                       "setTimes", src, null, stat);
       }
@@ -951,7 +945,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     boolean status = setReplicationInternal(src, replication);
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled()) {
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "setReplication", src, null, null);
     }
@@ -1039,7 +1033,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getEditLog().logSync();
     if (auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "create", src, null, stat);
     }
@@ -1271,7 +1265,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     }
 
     if (auditLog.isInfoEnabled()) {
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "append", src, null, null);
     }
@@ -1701,7 +1695,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(dst);
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "rename", src, dst, stat);
     }
@@ -1745,7 +1739,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       boolean status = deleteInternal(src, true);
       getEditLog().logSync();
       if (status && auditLog.isInfoEnabled()) {
-        logAuditEvent(UserGroupInformation.getCurrentUGI(),
+        logAuditEvent(UserGroupInformation.getCurrentUser(),
                       Server.getRemoteIp(),
                       "delete", src, null, null);
       }
@@ -1801,7 +1795,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     getEditLog().logSync();
     if (status && auditLog.isInfoEnabled()) {
       final FileStatus stat = dir.getFileInfo(src);
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "mkdirs", src, null, stat);
     }
@@ -2056,7 +2050,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       }
     }
     if (auditLog.isInfoEnabled()) {
-      logAuditEvent(UserGroupInformation.getCurrentUGI(),
+      logAuditEvent(UserGroupInformation.getCurrentUser(),
                     Server.getRemoteIp(),
                     "listStatus", src, null, null);
     }
@@ -4908,7 +4902,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
       throws IOException {
-    String user = UserGroupInformation.getCurrentUGI().getUserName();
+    String user = UserGroupInformation.getCurrentUser().getUserName();
     Text owner = new Text(user);
     DelegationTokenIdentifier dtId = new DelegationTokenIdentifier(owner, renewer);
     return new Token<DelegationTokenIdentifier>(dtId, dtSecretManager);
@@ -4916,13 +4910,13 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
   public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
       throws InvalidToken, IOException {
-    String renewer = UserGroupInformation.getCurrentUGI().getUserName();
+    String renewer = UserGroupInformation.getCurrentUser().getUserName();
     return dtSecretManager.renewToken(token, renewer);
   }
 
   public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
       throws IOException {
-    String canceller = UserGroupInformation.getCurrentUGI().getUserName();
+    String canceller = UserGroupInformation.getCurrentUser().getUserName();
     return dtSecretManager.cancelToken(token, canceller);
   }
 }
