@@ -33,6 +33,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog.EditLogFileInputStream;
+import org.mortbay.log.Log;
 
 /**
  * This class tests the creation and validation of a checkpoint.
@@ -95,7 +96,6 @@ public class TestSecurityTokenEditLog extends TestCase {
       cluster.waitActive();
       fileSys = cluster.getFileSystem();
       final FSNamesystem namesystem = cluster.getNameNode().getNamesystem();
-      namesystem.getDelegationTokenSecretManager().startThreads();
   
       for (Iterator<File> it = cluster.getNameDirs().iterator(); it.hasNext(); ) {
         File dir = new File(it.next().getPath());
@@ -109,6 +109,7 @@ public class TestSecurityTokenEditLog extends TestCase {
       editLog.setBufferCapacity(2048);
       editLog.close();
       editLog.open();
+      namesystem.getDelegationTokenSecretManager().startThreads();
     
       // Create threads and make them run transactions concurrently.
       Thread threadId[] = new Thread[NUM_THREADS];
@@ -128,13 +129,13 @@ public class TestSecurityTokenEditLog extends TestCase {
       } 
       
       editLog.close();
-      editLog.open();
   
       // Verify that we can read in all the transactions that we have written.
       // If there were any corruptions, it is likely that the reading in
       // of these transactions will throw an exception.
       //
       namesystem.getDelegationTokenSecretManager().stopThreads();
+      int numKeys = namesystem.getDelegationTokenSecretManager().getNumberOfKeys();
       for (Iterator<StorageDirectory> it = 
               fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
         File editFile = FSImage.getImageFile(it.next(), NameNodeFile.EDITS);
@@ -142,9 +143,9 @@ public class TestSecurityTokenEditLog extends TestCase {
         int numEdits = FSEditLog.loadFSEdits(
                                   new EditLogFileInputStream(editFile));
         assertTrue("Verification for " + editFile + " failed. " +
-                   "Expected " + (NUM_THREADS * opsPerTrans * NUM_TRANSACTIONS + 2) + " transactions. "+
+                   "Expected " + (NUM_THREADS * opsPerTrans * NUM_TRANSACTIONS + numKeys) + " transactions. "+
                    "Found " + numEdits + " transactions.",
-                   numEdits == NUM_THREADS * opsPerTrans * NUM_TRANSACTIONS +2);
+                   numEdits == NUM_THREADS * opsPerTrans * NUM_TRANSACTIONS +numKeys);
   
       }
     } finally {

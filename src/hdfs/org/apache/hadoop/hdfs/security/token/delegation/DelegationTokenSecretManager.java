@@ -204,6 +204,14 @@ public class DelegationTokenSecretManager
     }
     currentTokens.remove(identifier);
   }
+  
+  /**
+   * Returns the number of delegation keys currently stored.
+   * @return number of delegation keys
+   */
+  public synchronized int getNumberOfKeys() {
+    return allKeys.size();
+  }
 
   /**
    * Private helper methods to save delegation keys and tokens in fsimage
