@@ -100,7 +100,9 @@ public abstract class Server {
   /**
    * How many calls/handler are allowed in the queue.
    */
-  private static final int MAX_QUEUE_SIZE_PER_HANDLER = 100;
+  private static final int IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT = 100;
+  private static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY = 
+                                            "ipc.server.handler.queue.size";
   
   /**
    * Initial and max size of response buffer
@@ -1286,7 +1288,9 @@ public abstract class Server {
     this.paramClass = paramClass;
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
-    this.maxQueueSize = handlerCount * MAX_QUEUE_SIZE_PER_HANDLER;
+    this.maxQueueSize = handlerCount * conf.getInt(
+                                IPC_SERVER_HANDLER_QUEUE_SIZE_KEY,
+                                IPC_SERVER_HANDLER_QUEUE_SIZE_DEFAULT);
     this.maxRespSize = conf.getInt(IPC_SERVER_RPC_MAX_RESPONSE_SIZE_KEY,
                                    IPC_SERVER_RPC_MAX_RESPONSE_SIZE_DEFAULT);
     this.callQueue  = new LinkedBlockingQueue<Call>(maxQueueSize); 
