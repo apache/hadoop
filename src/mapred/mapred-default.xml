@@ -297,6 +297,23 @@
 </property>
 
 <property>
+  <name>mapreduce.reduce.shuffle.connect.timeout</name>
+  <value>180000</value>
+  <description>Expert: The maximum amount of time (in milli seconds) a reduce
+  task spends in trying to connect to a tasktracker for getting map output.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.reduce.shuffle.read.timeout</name>
+  <value>180000</value>
+  <description>Expert: The maximum amount of time (in milli seconds) a reduce
+  task waits for map output data to be available for reading after obtaining
+  connection.
+  </description>
+</property>
+
+<property>
   <name>mapred.task.timeout</name>
   <value>600000</value>
   <description>The number of milliseconds before a task will be
