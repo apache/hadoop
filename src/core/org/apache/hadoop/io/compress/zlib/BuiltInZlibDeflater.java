@@ -36,6 +36,22 @@ public class BuiltInZlibDeflater extends Deflater implements Compressor {
     super(level, nowrap);
   }
 
+  BuiltInZlibDeflater(Configuration conf) {
+    this(null == conf
+        ? DEFAULT_COMPRESSION
+        : ZlibFactory.getCompressionLevel(conf).compressionLevel());
+    if (conf != null) {
+      final ZlibCompressor.CompressionStrategy strategy =
+        ZlibFactory.getCompressionStrategy(conf);
+      try {
+        setStrategy(strategy.compressionStrategy());
+      } catch (IllegalArgumentException ill) {
+        Log.warn(strategy + " not supported by BuiltInZlibDeflater.");
+        setStrategy(DEFAULT_STRATEGY);
+      }
+    }
+  }
+
   public BuiltInZlibDeflater(int level) {
     super(level);
   }

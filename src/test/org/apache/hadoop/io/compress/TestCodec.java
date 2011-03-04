@@ -144,6 +144,8 @@ public class TestCodec extends TestCase {
       RandomDatum v2 = new RandomDatum();
       k2.readFields(inflateIn);
       v2.readFields(inflateIn);
+      assertTrue("original and compressed-then-decompressed-output not equal",
+                 k1.equals(k2) && v1.equals(v2));
     }
     LOG.info("SUCCESS! Completed checking " + count + " records");
   }
@@ -195,6 +197,60 @@ public class TestCodec extends TestCase {
     // verify data were not compressed
     assertTrue("Compressed bytes contrary to configuration",
                outbytes.length >= b.length);
+  }
+
+  private static void codecTestWithNOCompression (Configuration conf,
+                      String codecClass) throws IOException {
+    // Create a compressor with NO_COMPRESSION and make sure that
+    // output is not compressed by comparing the size with the
+    // original input
+
+    CompressionCodec codec = null;
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.NO_COMPRESSION);
+    try {
+      codec = (CompressionCodec)
+        ReflectionUtils.newInstance(conf.getClassByName(codecClass), conf);
+    } catch (ClassNotFoundException cnfe) {
+      throw new IOException("Illegal codec!");
+    }
+    Compressor c = codec.createCompressor();
+    // ensure same compressor placed earlier
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    CompressionOutputStream cos = null;
+    // write trivially compressable data
+    byte[] b = new byte[1 << 15];
+    Arrays.fill(b, (byte) 43);
+    try {
+      cos = codec.createOutputStream(bos, c);
+      cos.write(b);
+    } finally {
+      if (cos != null) {
+        cos.close();
+      }
+    }
+    byte[] outbytes = bos.toByteArray();
+    // verify data were not compressed
+    assertTrue("Compressed bytes contrary to configuration(NO_COMPRESSION)",
+               outbytes.length >= b.length);
+  }
+
+  public void testCodecInitWithCompressionLevel() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean("io.native.lib.available", true);
+    if (ZlibFactory.isNativeZlibLoaded(conf)) {
+      LOG.info("testCodecInitWithCompressionLevel with native");
+      codecTestWithNOCompression(conf,
+                            "org.apache.hadoop.io.compress.GzipCodec");
+      codecTestWithNOCompression(conf,
+                         "org.apache.hadoop.io.compress.DefaultCodec");
+    } else {
+      LOG.warn("testCodecInitWithCompressionLevel for native skipped"
+               + ": native libs not loaded");
+    }
+    conf = new Configuration();
+    conf.setBoolean("io.native.lib.available", false);
+    codecTestWithNOCompression( conf,
+                         "org.apache.hadoop.io.compress.DefaultCodec");
   }
 
   public void testCodecPoolCompressorReinit() throws Exception {
