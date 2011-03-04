@@ -13,7 +13,8 @@
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
-  import="org.apache.hadoop.hdfs.security.BlockAccessToken"
+  import="org.apache.hadoop.security.token.Token"
+  import="org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier"
   import="org.apache.hadoop.util.*"
   import="org.apache.hadoop.net.NetUtils"
   import="org.apache.hadoop.security.UserGroupInformation"
@@ -88,7 +89,7 @@
     LocatedBlock lastBlk = blocks.get(blocks.size() - 1);
     long blockSize = lastBlk.getBlock().getNumBytes();
     long blockId = lastBlk.getBlock().getBlockId();
-    BlockAccessToken accessToken = lastBlk.getAccessToken();
+    Token<BlockTokenIdentifier> accessToken = lastBlk.getBlockToken();
     long genStamp = lastBlk.getBlock().getGenerationStamp();
     DatanodeInfo chosenNode;
     try {

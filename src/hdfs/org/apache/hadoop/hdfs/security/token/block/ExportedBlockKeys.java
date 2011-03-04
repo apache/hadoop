@@ -16,43 +16,42 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs.security;
+package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
 import org.apache.hadoop.io.WritableFactory;
 
 /**
- * Object for passing access keys
+ * Object for passing block keys
  */
-public class ExportedAccessKeys implements Writable {
-  public static final ExportedAccessKeys DUMMY_KEYS = new ExportedAccessKeys();
-  private boolean isAccessTokenEnabled;
+public class ExportedBlockKeys implements Writable {
+  public static final ExportedBlockKeys DUMMY_KEYS = new ExportedBlockKeys();
+  private boolean isBlockTokenEnabled;
   private long keyUpdateInterval;
   private long tokenLifetime;
-  private BlockAccessKey currentKey;
-  private BlockAccessKey[] allKeys;
+  private BlockKey currentKey;
+  private BlockKey[] allKeys;
 
-  public ExportedAccessKeys() {
-    this(false, 0, 0, new BlockAccessKey(), new BlockAccessKey[0]);
+  public ExportedBlockKeys() {
+    this(false, 0, 0, new BlockKey(), new BlockKey[0]);
   }
 
-  ExportedAccessKeys(boolean isAccessTokenEnabled, long keyUpdateInterval,
-      long tokenLifetime, BlockAccessKey currentKey, BlockAccessKey[] allKeys) {
-    this.isAccessTokenEnabled = isAccessTokenEnabled;
+  ExportedBlockKeys(boolean isBlockTokenEnabled, long keyUpdateInterval,
+      long tokenLifetime, BlockKey currentKey, BlockKey[] allKeys) {
+    this.isBlockTokenEnabled = isBlockTokenEnabled;
     this.keyUpdateInterval = keyUpdateInterval;
     this.tokenLifetime = tokenLifetime;
-    this.currentKey = currentKey;
-    this.allKeys = allKeys;
+    this.currentKey = currentKey == null ? new BlockKey() : currentKey;
+    this.allKeys = allKeys == null ? new BlockKey[0] : allKeys;
   }
 
-  public boolean isAccessTokenEnabled() {
-    return isAccessTokenEnabled;
+  public boolean isBlockTokenEnabled() {
+    return isBlockTokenEnabled;
   }
 
   public long getKeyUpdateInterval() {
@@ -63,47 +62,22 @@ public class ExportedAccessKeys implements Writable {
     return tokenLifetime;
   }
 
-  public BlockAccessKey getCurrentKey() {
+  public BlockKey getCurrentKey() {
     return currentKey;
   }
 
-  public BlockAccessKey[] getAllKeys() {
+  public BlockKey[] getAllKeys() {
     return allKeys;
   }
-
-  static boolean isEqual(Object a, Object b) {
-    return a == null ? b == null : a.equals(b);
-  }
-
-  /** {@inheritDoc} */
-  public boolean equals(Object obj) {
-    if (obj == this) {
-      return true;
-    }
-    if (obj instanceof ExportedAccessKeys) {
-      ExportedAccessKeys that = (ExportedAccessKeys) obj;
-      return this.isAccessTokenEnabled == that.isAccessTokenEnabled
-          && this.keyUpdateInterval == that.keyUpdateInterval
-          && this.tokenLifetime == that.tokenLifetime
-          && isEqual(this.currentKey, that.currentKey)
-          && Arrays.equals(this.allKeys, that.allKeys);
-    }
-    return false;
-  }
-
-  /** {@inheritDoc} */
-  public int hashCode() {
-    return currentKey == null ? 0 : currentKey.hashCode();
-  }
-
+  
   // ///////////////////////////////////////////////
   // Writable
   // ///////////////////////////////////////////////
   static { // register a ctor
-    WritableFactories.setFactory(ExportedAccessKeys.class,
+    WritableFactories.setFactory(ExportedBlockKeys.class,
         new WritableFactory() {
           public Writable newInstance() {
-            return new ExportedAccessKeys();
+            return new ExportedBlockKeys();
           }
         });
   }
@@ -111,7 +85,7 @@ public class ExportedAccessKeys implements Writable {
   /**
    */
   public void write(DataOutput out) throws IOException {
-    out.writeBoolean(isAccessTokenEnabled);
+    out.writeBoolean(isBlockTokenEnabled);
     out.writeLong(keyUpdateInterval);
     out.writeLong(tokenLifetime);
     currentKey.write(out);
@@ -124,13 +98,13 @@ public class ExportedAccessKeys implements Writable {
   /**
    */
   public void readFields(DataInput in) throws IOException {
-    isAccessTokenEnabled = in.readBoolean();
+    isBlockTokenEnabled = in.readBoolean();
     keyUpdateInterval = in.readLong();
     tokenLifetime = in.readLong();
     currentKey.readFields(in);
-    this.allKeys = new BlockAccessKey[in.readInt()];
+    this.allKeys = new BlockKey[in.readInt()];
     for (int i = 0; i < allKeys.length; i++) {
-      allKeys[i] = new BlockAccessKey();
+      allKeys[i] = new BlockKey();
       allKeys[i].readFields(in);
     }
   }

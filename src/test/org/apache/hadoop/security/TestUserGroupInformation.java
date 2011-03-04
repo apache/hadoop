@@ -33,7 +33,6 @@ import java.util.Collection;
 import java.util.List;
 import junit.framework.Assert;
 
-import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -214,6 +213,33 @@ public class TestUserGroupInformation {
     assertTrue(otherSet.contains(t2));
   }
   
+  @Test
+  public void testTokenIdentifiers() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        "TheDoctor", new String[] { "TheTARDIS" });
+    TokenIdentifier t1 = mock(TokenIdentifier.class);
+    TokenIdentifier t2 = mock(TokenIdentifier.class);
+
+    ugi.addTokenIdentifier(t1);
+    ugi.addTokenIdentifier(t2);
+
+    Collection<TokenIdentifier> z = ugi.getTokenIdentifiers();
+    assertTrue(z.contains(t1));
+    assertTrue(z.contains(t2));
+    assertEquals(2, z.size());
+
+    // ensure that the token identifiers are passed through doAs
+    Collection<TokenIdentifier> otherSet = ugi
+        .doAs(new PrivilegedExceptionAction<Collection<TokenIdentifier>>() {
+          public Collection<TokenIdentifier> run() throws IOException {
+            return UserGroupInformation.getCurrentUser().getTokenIdentifiers();
+          }
+        });
+    assertTrue(otherSet.contains(t1));
+    assertTrue(otherSet.contains(t2));
+    assertEquals(2, otherSet.size());
+  }
+
   @Test
   public void testUGIAuthMethod() throws Exception {
     final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();

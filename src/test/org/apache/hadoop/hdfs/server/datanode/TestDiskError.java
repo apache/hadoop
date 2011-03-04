@@ -33,7 +33,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.DiskChecker;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 
 import junit.framework.TestCase;
 
@@ -122,7 +122,7 @@ public class TestDiskError extends TestCase {
       Text.writeString( out, "" );
       out.writeBoolean(false); // Not sending src node information
       out.writeInt(0);
-      BlockAccessToken.DUMMY_TOKEN.write(out);
+      BlockTokenSecretManager.DUMMY_TOKEN.write(out);
       
       // write check header
       out.writeByte( 1 );

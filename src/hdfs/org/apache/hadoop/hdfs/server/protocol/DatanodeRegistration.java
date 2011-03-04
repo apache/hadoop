@@ -23,7 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
@@ -47,7 +47,7 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
   }
 
   public StorageInfo storageInfo;
-  public ExportedAccessKeys exportedKeys;
+  public ExportedBlockKeys exportedKeys;
 
   /**
    * Default constructor.
@@ -62,7 +62,7 @@ public class DatanodeRegistration extends DatanodeID implements Writable {
   public DatanodeRegistration(String nodeName) {
     super(nodeName);
     this.storageInfo = new StorageInfo();
-    this.exportedKeys = new ExportedAccessKeys();
+    this.exportedKeys = new ExportedBlockKeys();
   }
   
   public void setInfoPort(int infoPort) {

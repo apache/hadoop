@@ -848,7 +848,13 @@ public abstract class Server {
       if (authMethod == SaslRpcServer.AuthMethod.DIGEST) {
         TokenIdentifier tokenId = SaslRpcServer.getIdentifier(authorizedId,
             secretManager);
-        return tokenId.getUser();
+        UserGroupInformation ugi = tokenId.getUser();
+        if (ugi == null) {
+          throw new AccessControlException(
+              "Can't retrieve username from tokenIdentifier.");
+        }
+        ugi.addTokenIdentifier(tokenId);
+        return ugi;
       } else {
         return UserGroupInformation.createRemoteUser(authorizedId);
       }
@@ -1444,7 +1450,7 @@ public abstract class Server {
   public void setSocketSendBufSize(int size) { this.socketSendBufferSize = size; }
 
   /** Starts the service.  Must be called before any calls will be handled. */
-  public synchronized void start() throws IOException {
+  public synchronized void start() {
     responder.start();
     listener.start();
     handlers = new Handler[handlerCount];

@@ -49,7 +49,7 @@ import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
-import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
+import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
@@ -793,8 +793,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
   }
 
   /** {@inheritDoc} */
-  public ExportedAccessKeys getAccessKeys() throws IOException {
-    return namesystem.getAccessKeys();
+  public ExportedBlockKeys getBlockKeys() throws IOException {
+    return namesystem.getBlockKeys();
   }
 
   /**

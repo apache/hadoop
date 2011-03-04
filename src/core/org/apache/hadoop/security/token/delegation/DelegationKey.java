@@ -70,9 +70,13 @@ public class DelegationKey implements Writable {
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeVInt(out, keyId);
     WritableUtils.writeVLong(out, expiryDate);
-    byte[] keyBytes = key.getEncoded();
-    WritableUtils.writeVInt(out, keyBytes.length);
-    out.write(keyBytes);
+    if (key == null) {
+      WritableUtils.writeVInt(out, -1);
+    } else {
+      byte[] keyBytes = key.getEncoded();
+      WritableUtils.writeVInt(out, keyBytes.length);
+      out.write(keyBytes);
+    }
   }
 
   /**
@@ -81,8 +85,12 @@ public class DelegationKey implements Writable {
     keyId = WritableUtils.readVInt(in);
     expiryDate = WritableUtils.readVLong(in);
     int len = WritableUtils.readVInt(in);
-    byte[] keyBytes = new byte[len];
-    in.readFully(keyBytes);
-    key = AbstractDelegationTokenSecretManager.createSecretKey(keyBytes);
+    if (len == -1) {
+      key = null;
+    } else {
+      byte[] keyBytes = new byte[len];
+      in.readFully(keyBytes);
+      key = AbstractDelegationTokenSecretManager.createSecretKey(keyBytes);
+    }
   }
 }

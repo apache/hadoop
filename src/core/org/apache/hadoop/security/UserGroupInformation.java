@@ -599,6 +599,28 @@ public class UserGroupInformation {
   }
 
   /**
+   * Add a TokenIdentifier to this UGI. The TokenIdentifier has typically been
+   * authenticated by the RPC layer as belonging to the user represented by this
+   * UGI.
+   * 
+   * @param tokenId
+   *          tokenIdentifier to be added
+   * @return true on successful add of new tokenIdentifier
+   */
+  public synchronized boolean addTokenIdentifier(TokenIdentifier tokenId) {
+    return subject.getPublicCredentials().add(tokenId);
+  }
+
+  /**
+   * Get the set of TokenIdentifiers belonging to this UGI
+   * 
+   * @return the set of TokenIdentifiers belonging to this UGI
+   */
+  public synchronized Set<TokenIdentifier> getTokenIdentifiers() {
+    return subject.getPublicCredentials(TokenIdentifier.class);
+  }
+  
+  /**
    * Add a token to this UGI
    * 
    * @param token Token to be added

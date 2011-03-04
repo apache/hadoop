@@ -32,14 +32,16 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
-import org.apache.hadoop.hdfs.security.AccessTokenHandler;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.MetaDataInputStream;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
@@ -151,23 +153,26 @@ class DataXceiver implements Runnable, FSConstants {
     long startOffset = in.readLong();
     long length = in.readLong();
     String clientName = Text.readString(in);
-    BlockAccessToken accessToken = new BlockAccessToken();
+    Token<BlockTokenIdentifier> accessToken = new Token<BlockTokenIdentifier>();
     accessToken.readFields(in);
     OutputStream baseStream = NetUtils.getOutputStream(s, 
         datanode.socketWriteTimeout);
     DataOutputStream out = new DataOutputStream(
                  new BufferedOutputStream(baseStream, SMALL_BUFFER_SIZE));
     
-    if (datanode.isAccessTokenEnabled
-        && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
-            AccessTokenHandler.AccessMode.READ)) {
+    if (datanode.isBlockTokenEnabled) {
       try {
-        out.writeShort(DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
-        out.flush();
-        throw new IOException("Access token verification failed, for client "
-            + remoteAddress + " for OP_READ_BLOCK for block " + block);
-      } finally {
-        IOUtils.closeStream(out);
+        datanode.blockTokenSecretManager.checkAccess(accessToken, null, block,
+            BlockTokenSecretManager.AccessMode.READ);
+      } catch (InvalidToken e) {
+        try {
+          out.writeShort(DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
+          out.flush();
+          throw new IOException("Access token verification failed, for client "
+              + remoteAddress + " for OP_READ_BLOCK for block " + block);
+        } finally {
+          IOUtils.closeStream(out);
+        }
       }
     }
     // send the block
@@ -258,24 +263,27 @@ class DataXceiver implements Runnable, FSConstants {
       tmp.readFields(in);
       targets[i] = tmp;
     }
-    BlockAccessToken accessToken = new BlockAccessToken();
+    Token<BlockTokenIdentifier> accessToken = new Token<BlockTokenIdentifier>();
     accessToken.readFields(in);
     DataOutputStream replyOut = null;   // stream to prev target
     replyOut = new DataOutputStream(
                    NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
-    if (datanode.isAccessTokenEnabled
-        && !datanode.accessTokenHandler.checkAccess(accessToken, null, block
-            .getBlockId(), AccessTokenHandler.AccessMode.WRITE)) {
+    if (datanode.isBlockTokenEnabled) {
       try {
-        if (client.length() != 0) {
-          replyOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
-          Text.writeString(replyOut, datanode.dnRegistration.getName());
-          replyOut.flush();
+        datanode.blockTokenSecretManager.checkAccess(accessToken, null, block, 
+            BlockTokenSecretManager.AccessMode.WRITE);
+      } catch (InvalidToken e) {
+        try {
+          if (client.length() != 0) {
+            replyOut.writeShort((short)DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
+            Text.writeString(replyOut, datanode.dnRegistration.getName());
+            replyOut.flush();
+          }
+          throw new IOException("Access token verification failed, for client "
+              + remoteAddress + " for OP_WRITE_BLOCK for block " + block);
+        } finally {
+          IOUtils.closeStream(replyOut);
         }
-        throw new IOException("Access token verification failed, for client "
-            + remoteAddress + " for OP_WRITE_BLOCK for block " + block);
-      } finally {
-        IOUtils.closeStream(replyOut);
       }
     }
 
@@ -423,21 +431,24 @@ class DataXceiver implements Runnable, FSConstants {
    */
   void getBlockChecksum(DataInputStream in) throws IOException {
     final Block block = new Block(in.readLong(), 0 , in.readLong());
-    BlockAccessToken accessToken = new BlockAccessToken();
+    Token<BlockTokenIdentifier> accessToken = new Token<BlockTokenIdentifier>();
     accessToken.readFields(in);
     DataOutputStream out = new DataOutputStream(NetUtils.getOutputStream(s,
         datanode.socketWriteTimeout));
-    if (datanode.isAccessTokenEnabled
-        && !datanode.accessTokenHandler.checkAccess(accessToken, null, block
-            .getBlockId(), AccessTokenHandler.AccessMode.READ)) {
+    if (datanode.isBlockTokenEnabled) {
       try {
-        out.writeShort(DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
-        out.flush();
-        throw new IOException(
-            "Access token verification failed, for client " + remoteAddress
-                + " for OP_BLOCK_CHECKSUM for block " + block);
-      } finally {
-        IOUtils.closeStream(out);
+        datanode.blockTokenSecretManager.checkAccess(accessToken, null, block, 
+            BlockTokenSecretManager.AccessMode.READ);
+      } catch (InvalidToken e) {
+        try {
+          out.writeShort(DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN);
+          out.flush();
+          throw new IOException(
+              "Access token verification failed, for client " + remoteAddress
+                  + " for OP_BLOCK_CHECKSUM for block " + block);
+        } finally {
+          IOUtils.closeStream(out);
+        }
       }
     }
 
@@ -484,17 +495,20 @@ class DataXceiver implements Runnable, FSConstants {
     // Read in the header
     long blockId = in.readLong(); // read block id
     Block block = new Block(blockId, 0, in.readLong());
-    BlockAccessToken accessToken = new BlockAccessToken();
+    Token<BlockTokenIdentifier> accessToken = new Token<BlockTokenIdentifier>();
     accessToken.readFields(in);
-    if (datanode.isAccessTokenEnabled
-        && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
-            AccessTokenHandler.AccessMode.COPY)) {
-      LOG.warn("Invalid access token in request from "
-          + remoteAddress + " for OP_COPY_BLOCK for block " + block);
-      sendResponse(s,
-          (short) DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN,
-          datanode.socketWriteTimeout);
-      return;
+    if (datanode.isBlockTokenEnabled) {
+      try {
+        datanode.blockTokenSecretManager.checkAccess(accessToken, null, block,
+            BlockTokenSecretManager.AccessMode.COPY);
+      } catch (InvalidToken e) {
+        LOG.warn("Invalid access token in request from "
+            + remoteAddress + " for OP_COPY_BLOCK for block " + block);
+        sendResponse(s,
+            (short) DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN,
+            datanode.socketWriteTimeout);
+        return;
+      }
     }
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start
@@ -562,16 +576,19 @@ class DataXceiver implements Runnable, FSConstants {
     String sourceID = Text.readString(in); // read del hint
     DatanodeInfo proxySource = new DatanodeInfo(); // read proxy source
     proxySource.readFields(in);
-    BlockAccessToken accessToken = new BlockAccessToken();
+    Token<BlockTokenIdentifier> accessToken = new Token<BlockTokenIdentifier>();
     accessToken.readFields(in);
-    if (datanode.isAccessTokenEnabled
-        && !datanode.accessTokenHandler.checkAccess(accessToken, null, blockId,
-            AccessTokenHandler.AccessMode.REPLACE)) {
-      LOG.warn("Invalid access token in request from "
-          + remoteAddress + " for OP_REPLACE_BLOCK for block " + block);
-      sendResponse(s, (short)DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN,
-          datanode.socketWriteTimeout);
-      return;
+    if (datanode.isBlockTokenEnabled) {
+      try {
+        datanode.blockTokenSecretManager.checkAccess(accessToken, null, block,
+            BlockTokenSecretManager.AccessMode.REPLACE);
+      } catch (InvalidToken e) {
+        LOG.warn("Invalid access token in request from "
+            + remoteAddress + " for OP_REPLACE_BLOCK for block " + block);
+        sendResponse(s, (short)DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN,
+            datanode.socketWriteTimeout);
+        return;
+      }
     }
 
     if (!dataXceiverServer.balanceThrottler.acquire()) { // not able to start

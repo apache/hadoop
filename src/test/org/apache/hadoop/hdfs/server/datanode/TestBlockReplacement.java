@@ -42,12 +42,12 @@ import org.apache.hadoop.hdfs.protocol.DataTransferProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.datanode.BlockTransferThrottler;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
 /**
  * This class tests if block replacement request to data nodes work correctly.
  */
@@ -232,7 +232,7 @@ public class TestBlockReplacement extends TestCase {
     out.writeLong(block.getGenerationStamp());
     Text.writeString(out, source.getStorageID());
     sourceProxy.write(out);
-    BlockAccessToken.DUMMY_TOKEN.write(out);
+    BlockTokenSecretManager.DUMMY_TOKEN.write(out);
     out.flush();
     // receiveResponse
     DataInputStream reply = new DataInputStream(sock.getInputStream());

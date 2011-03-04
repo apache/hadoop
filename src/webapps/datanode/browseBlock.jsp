@@ -13,8 +13,9 @@
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
-  import="org.apache.hadoop.hdfs.security.BlockAccessToken"
-  import="org.apache.hadoop.hdfs.security.AccessTokenHandler"
+  import="org.apache.hadoop.security.token.Token"
+  import="org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier"
+  import="org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager"
   import="org.apache.hadoop.security.UserGroupInformation"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
@@ -208,8 +209,9 @@
     final DFSClient dfs = JspHelper.getDFSClient(ugi, jspHelper.nameNodeAddr,
                                                  conf);
     
-    BlockAccessToken accessToken = BlockAccessToken.DUMMY_TOKEN;
-    if (conf.getBoolean(AccessTokenHandler.STRING_ENABLE_ACCESS_TOKEN, false)){
+    Token<BlockTokenIdentifier> accessToken = BlockTokenSecretManager.DUMMY_TOKEN;
+    if (conf
+        .getBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, false)) {
       List<LocatedBlock> blks = dfs.namenode.getBlockLocations(filename, 0,
           Long.MAX_VALUE).getLocatedBlocks();
       if (blks == null || blks.size() == 0) {
@@ -219,7 +221,7 @@
       }
       for (int i = 0; i < blks.size(); i++) {
         if (blks.get(i).getBlock().getBlockId() == blockId) {
-          accessToken = blks.get(i).getAccessToken();
+          accessToken = blks.get(i).getBlockToken();
           break;
         }
       }

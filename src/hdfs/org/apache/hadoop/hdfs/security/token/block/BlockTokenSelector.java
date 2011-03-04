@@ -15,22 +15,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.security.token.block;
 
-package org.apache.hadoop.hdfs.security;
+import java.util.Collection;
 
-import java.io.IOException;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.security.token.TokenSelector;
 
 /**
- * Access token verification failed.
+ * A block token selector for HDFS
  */
-public class InvalidAccessTokenException extends IOException {
-  private static final long serialVersionUID = 168L;
+public class BlockTokenSelector implements TokenSelector<BlockTokenIdentifier> {
 
-  public InvalidAccessTokenException() {
-    super();
-  }
-
-  public InvalidAccessTokenException(String msg) {
-    super(msg);
+  @SuppressWarnings("unchecked")
+  public Token<BlockTokenIdentifier> selectToken(Text service,
+      Collection<Token<? extends TokenIdentifier>> tokens) {
+    if (service == null) {
+      return null;
+    }
+    for (Token<? extends TokenIdentifier> token : tokens) {
+      if (BlockTokenIdentifier.KIND_NAME.equals(token.getKind())) {
+        return (Token<BlockTokenIdentifier>) token;
+      }
+    }
+    return null;
   }
 }

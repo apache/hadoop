@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -54,7 +55,6 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
 
 public class JspHelper {
   final static public String WEB_UGI_PROPERTY_NAME = "dfs.web.ugi";
@@ -122,7 +122,7 @@ public class JspHelper {
     return chosenNode;
   }
   public void streamBlockInAscii(InetSocketAddress addr, long blockId, 
-                                 BlockAccessToken accessToken, long genStamp, 
+               Token<BlockTokenIdentifier> accessToken, long genStamp, 
                                  long blockSize, 
                                  long offsetIntoBlock, long chunkSizeToView, 
                                  JspWriter out,

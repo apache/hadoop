@@ -68,10 +68,10 @@ public class SaslRpcServer {
     return Base64.decodeBase64(identifier.getBytes());
   }
 
-  public static TokenIdentifier getIdentifier(String id,
-      SecretManager<TokenIdentifier> secretManager) throws InvalidToken {
+  public static <T extends TokenIdentifier> T getIdentifier(String id,
+      SecretManager<T> secretManager) throws InvalidToken {
     byte[] tokenId = decodeIdentifier(id);
-    TokenIdentifier tokenIdentifier = secretManager.createIdentifier();
+    T tokenIdentifier = secretManager.createIdentifier();
     try {
       tokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(
           tokenId)));
@@ -201,11 +201,12 @@ public class SaslRpcServer {
           ac.setAuthorized(false);
         }
         if (ac.isAuthorized()) {
-          String username = getIdentifier(authzid, secretManager).getUser()
-              .getUserName().toString();
-          if (LOG.isDebugEnabled())
+          if (LOG.isDebugEnabled()) {
+            String username = getIdentifier(authzid, secretManager).getUser()
+            .getUserName().toString();
             LOG.debug("SASL server DIGEST-MD5 callback: setting "
                 + "canonicalized client ID: " + username);
+          }
           ac.setAuthorizedID(authzid);
         }
       }

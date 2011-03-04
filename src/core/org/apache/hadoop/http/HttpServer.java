@@ -132,17 +132,12 @@ public class HttpServer implements FilterContainer {
     webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     webServer.addHandler(webAppContext);
 
-<<<<<<< HEAD:src/core/org/apache/hadoop/http/HttpServer.java
-    addDefaultApps(contexts, appDir);
+    addDefaultApps(contexts, appDir, conf);
     
     defineFilter(webAppContext, "krb5Filter", 
         Krb5AndCertsSslSocketConnector.Krb5SslFilter.class.getName(), 
         null, null);
     
-=======
-    addDefaultApps(contexts, appDir, conf);
-
->>>>>>> yahoo-hadoop-0.20.1xx:src/core/org/apache/hadoop/http/HttpServer.java
     addGlobalFilter("safety", QuotingInputFilter.class.getName(), null);
     final FilterInitializer[] initializers = getFilterInitializers(conf); 
     if (initializers != null) {

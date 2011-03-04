@@ -29,8 +29,8 @@ import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.*;
-import org.apache.hadoop.hdfs.security.BlockAccessToken;
-import org.apache.hadoop.hdfs.security.InvalidAccessTokenException;
+import org.apache.hadoop.hdfs.security.token.block.InvalidBlockTokenException;
+import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
@@ -132,14 +132,19 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   static ClientDatanodeProtocol createClientDatanodeProtocolProxy (
-      DatanodeID datanodeid, Configuration conf) throws IOException {
+      DatanodeID datanodeid, Configuration conf, 
+      Block block, Token<BlockTokenIdentifier> token) throws IOException {
     InetSocketAddress addr = NetUtils.createSocketAddr(
       datanodeid.getHost() + ":" + datanodeid.getIpcPort());
     if (ClientDatanodeProtocol.LOG.isDebugEnabled()) {
       ClientDatanodeProtocol.LOG.info("ClientDatanodeProtocol addr=" + addr);
     }
+    UserGroupInformation ticket = UserGroupInformation
+        .createRemoteUser(block.toString());
+    ticket.addToken(token);
     return (ClientDatanodeProtocol)RPC.getProxy(ClientDatanodeProtocol.class,
-        ClientDatanodeProtocol.versionID, addr, conf);
+        ClientDatanodeProtocol.versionID, addr, ticket, conf, NetUtils
+        .getDefaultSocketFactory(conf));
   }
         
   /**
@@ -718,7 +723,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           out.write(DataTransferProtocol.OP_BLOCK_CHECKSUM);
           out.writeLong(block.getBlockId());
           out.writeLong(block.getGenerationStamp());
-          lb.getAccessToken().write(out);
+          lb.getBlockToken().write(out);
           out.flush();
          
           final short reply = in.readShort();
@@ -1382,7 +1387,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       checksumSize = this.checksum.getChecksumSize();
     }
 
-    public static BlockReader newBlockReader(Socket sock, String file, long blockId, BlockAccessToken accessToken, 
+    public static BlockReader newBlockReader(Socket sock, String file, long blockId, Token<BlockTokenIdentifier> accessToken, 
         long genStamp, long startOffset, long len, int bufferSize) throws IOException {
       return newBlockReader(sock, file, blockId, accessToken, genStamp, startOffset, len, bufferSize,
           true);
@@ -1390,7 +1395,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     /** Java Doc required */
     public static BlockReader newBlockReader( Socket sock, String file, long blockId, 
-                                       BlockAccessToken accessToken,
+                                       Token<BlockTokenIdentifier> accessToken,
                                        long genStamp,
                                        long startOffset, long len,
                                        int bufferSize, boolean verifyChecksum)
@@ -1401,7 +1406,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     public static BlockReader newBlockReader( Socket sock, String file,
                                        long blockId, 
-                                       BlockAccessToken accessToken,
+                                       Token<BlockTokenIdentifier> accessToken,
                                        long genStamp,
                                        long startOffset, long len,
                                        int bufferSize, boolean verifyChecksum,
@@ -1433,7 +1438,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       short status = in.readShort();
       if (status != DataTransferProtocol.OP_STATUS_SUCCESS) {
         if (status == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN) {
-          throw new InvalidAccessTokenException(
+          throw new InvalidBlockTokenException(
               "Got access token error for OP_READ_BLOCK, self="
                   + sock.getLocalSocketAddress() + ", remote="
                   + sock.getRemoteSocketAddress() + ", for file " + file
@@ -1723,7 +1728,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           NetUtils.connect(s, targetAddr, socketTimeout);
           s.setSoTimeout(socketTimeout);
           Block blk = targetBlock.getBlock();
-          BlockAccessToken accessToken = targetBlock.getAccessToken();
+          Token<BlockTokenIdentifier> accessToken = targetBlock.getBlockToken();
           
           blockReader = BlockReader.newBlockReader(s, src, blk.getBlockId(), 
               accessToken, 
@@ -1732,7 +1737,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               buffersize, verifyChecksum, clientName);
           return chosenNode;
         } catch (IOException ex) {
-          if (ex instanceof InvalidAccessTokenException && refetchToken > 0) {
+          if (ex instanceof InvalidBlockTokenException && refetchToken > 0) {
             LOG.info("Will fetch a new access token and retry, " 
                 + "access token was invalid when connecting to " + targetAddr
                 + " : " + ex);
@@ -1951,7 +1956,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           dn = socketFactory.createSocket();
           NetUtils.connect(dn, targetAddr, socketTimeout);
           dn.setSoTimeout(socketTimeout);
-          BlockAccessToken accessToken = block.getAccessToken();
+          Token<BlockTokenIdentifier> accessToken = block.getBlockToken();
               
           int len = (int) (end - start + 1);
               
@@ -1973,7 +1978,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
                    e.getPos() + " from " + chosenNode.getName());
           reportChecksumFailure(src, block.getBlock(), chosenNode);
         } catch (IOException e) {
-          if (e instanceof InvalidAccessTokenException && refetchToken > 0) {
+          if (e instanceof InvalidBlockTokenException && refetchToken > 0) {
             LOG.info("Will get a new access token and retry, "
                 + "access token was invalid when connecting to " + targetAddr
                 + " : " + e);
@@ -2217,7 +2222,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private DataOutputStream blockStream;
     private DataInputStream blockReplyStream;
     private Block block;
-    private BlockAccessToken accessToken;
+    private Token<BlockTokenIdentifier> accessToken;
     final private long blockSize;
     private DataChecksum checksum;
     private LinkedList<Packet> dataQueue = new LinkedList<Packet>();
@@ -2243,7 +2248,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
     private volatile boolean appendChunk = false;   // appending to existing partial block
     private long initialFileSize = 0; // at time of file open
 
-    BlockAccessToken getAccessToken() {
+    Token<BlockTokenIdentifier> getAccessToken() {
       return accessToken;
     }
 
@@ -2685,7 +2690,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         try {
           // Pick the "least" datanode as the primary datanode to avoid deadlock.
           primaryNode = Collections.min(Arrays.asList(newnodes));
-          primary = createClientDatanodeProtocolProxy(primaryNode, conf);
+          primary = createClientDatanodeProtocolProxy(primaryNode, conf, block, accessToken);
           newBlock = primary.recoverBlock(block, isAppend, newnodes);
         } catch (IOException e) {
           recoveryErrorCount++;
@@ -2741,7 +2746,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         // newBlock should never be null and it should contain a newly
         // generated access token.
         block = newBlock.getBlock();
-        accessToken = newBlock.getAccessToken();
+        accessToken = newBlock.getBlockToken();
         nodes = newBlock.getLocations();
 
         this.hasError = false;
@@ -2837,7 +2842,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       //
       if (lastBlock != null) {
         block = lastBlock.getBlock();
-        accessToken = lastBlock.getAccessToken();
+        accessToken = lastBlock.getBlockToken();
         long usedInLastBlock = stat.getLen() % blockSize;
         int freeInLastBlock = (int)(blockSize - usedInLastBlock);
 
@@ -2927,7 +2932,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         long startTime = System.currentTimeMillis();
         lb = locateFollowingBlock(startTime);
         block = lb.getBlock();
-        accessToken = lb.getAccessToken();
+        accessToken = lb.getBlockToken();
         nodes = lb.getLocations();
   
         //
@@ -3014,7 +3019,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         firstBadLink = Text.readString(blockReplyStream);
         if (pipelineStatus != DataTransferProtocol.OP_STATUS_SUCCESS) {
           if (pipelineStatus == DataTransferProtocol.OP_STATUS_ERROR_ACCESS_TOKEN) {
-            throw new InvalidAccessTokenException(
+            throw new InvalidBlockTokenException(
                 "Got access token error for connect ack with firstBadLink as "
                     + firstBadLink);
           } else {
