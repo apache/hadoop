@@ -278,9 +278,6 @@ public class JobHistory {
     SUCCESS, FAILED, KILLED, MAP, REDUCE, CLEANUP, RUNNING, PREP, SETUP
   }
 
-  // temp buffer for parsed dataa
-  private static Map<Keys,String> parseBuffer = new HashMap<Keys, String>(); 
-
   /**
    * Initialize JobHistory files. 
    * @param conf Jobconf of the job tracker.
@@ -482,6 +479,7 @@ public class JobHistory {
     String data = line.substring(idx+1, line.length());
     
     Matcher matcher = pattern.matcher(data); 
+    Map<Keys,String> parseBuffer = new HashMap<Keys, String>();
 
     while(matcher.find()){
       String tuple = matcher.group(0);
