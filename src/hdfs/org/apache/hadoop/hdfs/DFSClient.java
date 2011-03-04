@@ -1551,10 +1551,12 @@ public class DFSClient implements FSConstants, java.io.Closeable {
      * Fetch it from the namenode if not cached.
      * 
      * @param offset
+     * @param updatePosition whether to update current position
      * @return located block
      * @throws IOException
      */
-    private synchronized LocatedBlock getBlockAt(long offset) throws IOException {
+    private synchronized LocatedBlock getBlockAt(long offset,
+        boolean updatePosition) throws IOException {
       assert (locatedBlocks != null) : "locatedBlocks is null";
       // search cached blocks first
       int targetBlockIdx = locatedBlocks.findBlock(offset);
@@ -1568,14 +1570,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       }
       LocatedBlock blk = locatedBlocks.get(targetBlockIdx);
       // update current position
-      this.pos = offset;
-      this.blockEnd = blk.getStartOffset() + blk.getBlockSize() - 1;
-      this.currentBlock = blk.getBlock();
+      if (updatePosition) {
+        this.pos = offset;
+        this.blockEnd = blk.getStartOffset() + blk.getBlockSize() - 1;
+        this.currentBlock = blk.getBlock();
+      }
       return blk;
     }
 
     /** Fetch a block from namenode and cache it */
-    private synchronized void fetchAndCacheBlockAt(long offset) throws IOException {
+    private synchronized void fetchBlockAt(long offset) throws IOException {
       int targetBlockIdx = locatedBlocks.findBlock(offset);
       if (targetBlockIdx < 0) { // block is not cached
         targetBlockIdx = LocatedBlocks.getInsertIndex(targetBlockIdx);
@@ -1589,17 +1593,6 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       locatedBlocks.insertRange(targetBlockIdx, newBlocks.getLocatedBlocks());
     }
 
-    /** Fetch a block without caching */
-    private LocatedBlock fetchBlockAt(long offset) throws IOException {
-      LocatedBlocks newBlocks;
-      newBlocks = callGetBlockLocations(namenode, src, offset, prefetchSize);
-      if (newBlocks == null) {
-        throw new IOException("Could not find target position " + offset);
-      }
-      int index = newBlocks.findBlock(offset);
-      return newBlocks.get(index);
-    }
-    
     /**
      * Get blocks in the specified range.
      * Fetch them from the namenode if not cached.
@@ -1669,7 +1662,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         //
         // Compute desired block
         //
-        LocatedBlock targetBlock = getBlockAt(target);
+        LocatedBlock targetBlock = getBlockAt(target, true);
         assert (target==this.pos) : "Wrong postion " + pos + " expect " + target;
         long offsetIntoBlock = target - targetBlock.getStartOffset();
 
@@ -1704,7 +1697,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
              * access key from its memory since it's considered expired based on
              * the estimated expiration date.
              */
-            fetchAndCacheBlockAt(target);
+            fetchBlockAt(target);
           } else {
             // Put chosen node into dead list, continue
             addToDeadNodes(chosenNode);
@@ -1866,13 +1859,16 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           if (nodes == null || nodes.length == 0) {
             LOG.info("No node available for block: " + blockInfo);
           }
-          LOG.info("Could not obtain block " + block.getBlock() + " from any node:  " + ie);
+          LOG.info("Could not obtain block " + block.getBlock()
+              + " from any node: " + ie
+              + ". Will get new block locations from namenode and retry...");
           try {
             Thread.sleep(3000);
           } catch (InterruptedException iex) {
           }
           deadNodes.clear(); //2nd option is to remove only nodes[blockId]
           openInfo();
+          block = getBlockAt(block.getStartOffset(), false);
           failures++;
           continue;
         }
@@ -1885,11 +1881,13 @@ public class DFSClient implements FSConstants, java.io.Closeable {
       // Connect to best DataNode for desired Block, with potential offset
       //
       Socket dn = null;
-      int numAttempts = block.getLocations().length;
-      IOException ioe = null;
       int refetchToken = 1; // only need to get a new access token once
       
-      while (dn == null && numAttempts-- > 0 ) {
+      while (true) {
+        // cached block locations may have been updated by chooseDataNode()
+        // or fetchBlockAt(). Always get the latest list of locations at the 
+        // start of the loop.
+        block = getBlockAt(block.getStartOffset(), false);
         DNAddrPair retval = chooseDataNode(block);
         DatanodeInfo chosenNode = retval.info;
         InetSocketAddress targetAddr = retval.addr;
@@ -1916,21 +1914,18 @@ public class DFSClient implements FSConstants, java.io.Closeable {
           }
           return;
         } catch (ChecksumException e) {
-          ioe = e;
           LOG.warn("fetchBlockByteRange(). Got a checksum exception for " +
                    src + " at " + block.getBlock() + ":" + 
                    e.getPos() + " from " + chosenNode.getName());
           reportChecksumFailure(src, block.getBlock(), chosenNode);
         } catch (IOException e) {
-          ioe = e;
           if (e instanceof InvalidAccessTokenException && refetchToken-- > 0) {
             LOG.info("Invalid access token when connecting to " + targetAddr
                 + " for file " + src + " for block "
                 + block.getBlock() + ":"
                 + StringUtils.stringifyException(e)
                 + ", get a new access token and retry...");
-            block = fetchBlockAt(block.getStartOffset());
-            numAttempts = block.getLocations().length;
+            fetchBlockAt(block.getStartOffset());
             continue;
           } else {
             LOG.warn("Failed to connect to " + targetAddr + " for file " + src
@@ -1940,12 +1935,10 @@ public class DFSClient implements FSConstants, java.io.Closeable {
         } finally {
           IOUtils.closeStream(reader);
           IOUtils.closeSocket(dn);
-          dn = null;
         }
         // Put chosen node into dead list, continue
         addToDeadNodes(chosenNode);
       }
-      throw (ioe == null) ? new IOException("Could not read data") : ioe;
     }
 
     /**

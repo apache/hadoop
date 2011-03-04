@@ -648,6 +648,18 @@ public class MiniDFSCluster {
   }
 
   /*
+   * Restart all datanodes
+   */
+  public synchronized boolean restartDataNodes() throws IOException {
+    for (int i = dataNodes.size()-1; i >= 0; i--) {
+      System.out.println("Restarting DataNode " + i);
+      if (!restartDataNode(i)) 
+        return false;
+    }
+    return true;
+  }
+
+  /*
    * Shutdown a datanode by name.
    */
   public synchronized DataNodeProperties stopDataNode(String name) {
@@ -726,7 +738,7 @@ public class MiniDFSCluster {
     while(client.datanodeReport(DatanodeReportType.LIVE).length
         != numDataNodes) {
       try {
-        Thread.sleep(500);
+        Thread.sleep(100);
       } catch (Exception e) {
       }
     }

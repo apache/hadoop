@@ -151,6 +151,37 @@ public class TestPread extends TestCase {
     
     stm.close();
   }
+    
+  // test pread can survive datanode restarts
+  private void datanodeRestartTest(MiniDFSCluster cluster, FileSystem fileSys,
+      Path name) throws IOException {
+    // skip this test if using simulated storage since simulated blocks
+    // don't survive datanode restarts.
+    if (simulatedStorage) {
+      return;
+    }
+    int numBlocks = 1;
+    assertTrue(numBlocks <= DFSClient.MAX_BLOCK_ACQUIRE_FAILURES);
+    byte[] expected = new byte[numBlocks * blockSize];
+    Random rand = new Random(seed);
+    rand.nextBytes(expected);
+    byte[] actual = new byte[numBlocks * blockSize];
+    FSDataInputStream stm = fileSys.open(name);
+    // read a block and get block locations cached as a result
+    stm.readFully(0, actual);
+    checkAndEraseData(actual, 0, expected, "Pread Datanode Restart Setup");
+    // restart all datanodes. it is expected that they will
+    // restart on different ports, hence, cached block locations
+    // will no longer work.
+    assertTrue(cluster.restartDataNodes());
+    cluster.waitActive();
+    // verify the block can be read again using the same InputStream 
+    // (via re-fetching of block locations from namenode). there is a 
+    // 3 sec sleep in chooseDataNode(), which can be shortened for 
+    // this test if configurable.
+    stm.readFully(0, actual);
+    checkAndEraseData(actual, 0, expected, "Pread Datanode Restart Test");
+  }
   
   private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
     assertTrue(fileSys.exists(name));
@@ -182,6 +213,7 @@ public class TestPread extends TestCase {
       Path file1 = new Path("preadtest.dat");
       writeFile(fileSys, file1);
       pReadFile(fileSys, file1);
+      datanodeRestartTest(cluster, fileSys, file1);
       cleanupFile(fileSys, file1);
     } finally {
       fileSys.close();
@@ -192,7 +224,7 @@ public class TestPread extends TestCase {
   public void testPreadDFSSimulated() throws IOException {
     simulatedStorage = true;
     testPreadDFS();
-    simulatedStorage = true;
+    simulatedStorage = false;
   }
   
   /**
