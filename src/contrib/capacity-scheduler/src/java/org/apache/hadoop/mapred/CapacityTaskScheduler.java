@@ -652,6 +652,8 @@ class CapacityTaskScheduler extends TaskScheduler {
   private long memSizeForReduceSlotOnJT;
   private long limitMaxMemForMapTasks;
   private long limitMaxMemForReduceTasks;
+  
+  private volatile int maxTasksPerHeartbeat;
 
   public CapacityTaskScheduler() {
     this(new Clock());
@@ -877,6 +879,8 @@ class CapacityTaskScheduler extends TaskScheduler {
     // let our mgr objects know about the queues
     mapScheduler.initialize(queueInfoMap);
     reduceScheduler.initialize(queueInfoMap);
+    
+    maxTasksPerHeartbeat = schedConf.getMaxTasksPerHeartbeat();
   }
   
   Map<String, CapacitySchedulerQueue> 
@@ -1077,6 +1081,10 @@ class CapacityTaskScheduler extends TaskScheduler {
 
       tasks.add(t);
 
+      if (tasks.size() >= maxTasksPerHeartbeat) {
+        return;
+      }
+      
       if (TaskLookupResult.LookUpStatus.OFF_SWITCH_TASK_FOUND == 
         tlr.getLookUpStatus()) {
         // Atmost 1 off-switch task per-heartbeat
@@ -1089,7 +1097,7 @@ class CapacityTaskScheduler extends TaskScheduler {
       // Update the queue
       CapacitySchedulerQueue queue = 
         queueInfoMap.get(job.getProfile().getQueueName());
-      queue.update(TaskType.MAP, 
+      queue.update(TaskType.MAP, job,
           job.getProfile().getUser(), 1, t.getNumSlotsRequired());
     }
   }

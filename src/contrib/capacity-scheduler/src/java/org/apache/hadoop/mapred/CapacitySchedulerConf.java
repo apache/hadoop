@@ -501,4 +501,24 @@ class CapacitySchedulerConf {
     rmConf.setInt(
         "mapred.capacity-scheduler.init-worker-threads", poolSize);
   }
+  
+  /**
+   * Get the maximum number of tasks which can be scheduled in a heartbeat.
+   * @return the maximum number of tasks which can be scheduled in a heartbeat
+   */
+  public int getMaxTasksPerHeartbeat() {
+    return rmConf.getInt(
+        "mapred.capacity-scheduler.maximum-tasks-per-heartbeat", 
+        Integer.MAX_VALUE);
+  }
+
+  /**
+   * Set the maximum number of tasks which can be scheduled in a heartbeat
+   * @param maxTasksPerHeartbeat the maximum number of tasks which can be 
+   *                             scheduled in a heartbeat
+   */
+  public void setMaxTasksPerHeartbeat(int maxTasksPerHeartbeat) {
+    rmConf.setInt("mapred.capacity-scheduler.maximum-tasks-per-heartbeat", 
+        maxTasksPerHeartbeat);
+  }
 }
