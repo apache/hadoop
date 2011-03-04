@@ -88,6 +88,7 @@ public abstract class HadoopDaemonRemoteCluster
       this.cmd = cmd;
       this.role = role;
       this.hostFile = hostFile;
+      LOG.info("Created HadoopDaemonInfo for " + cmd + " " + role + " from " + hostFile);
     }
   }
 

@@ -43,6 +43,20 @@ public class MRCluster extends AbstractDaemonCluster {
   public static final String CLUSTER_PROCESS_MGR_IMPL = 
     "test.system.mr.clusterprocess.impl.class";
 
+  /**
+   * Key is used to to point to the file containing hostname of the jobtracker
+   */
+  public static final String CONF_HADOOP_JT_HOSTFILE_NAME =
+    "test.system.hdrc.jt.hostfile";
+  /**
+   * Key is used to to point to the file containing hostnames of tasktrackers
+   */
+  public static final String CONF_HADOOP_TT_HOSTFILE_NAME =
+    "test.system.hdrc.tt.hostfile";
+
+  private static String JT_hostFileName;
+  private static String TT_hostFileName;
+
   protected enum Role {JT, TT};
   
   private MRCluster(Configuration conf, ClusterProcessManager rCluster)
@@ -60,6 +74,12 @@ public class MRCluster extends AbstractDaemonCluster {
    */
   public static MRCluster createCluster(Configuration conf) 
       throws Exception {
+    JT_hostFileName = conf.get(CONF_HADOOP_JT_HOSTFILE_NAME,
+      System.getProperty(CONF_HADOOP_JT_HOSTFILE_NAME,
+        "clusterControl.masters.jt"));
+    TT_hostFileName = conf.get(CONF_HADOOP_TT_HOSTFILE_NAME,
+      System.getProperty(CONF_HADOOP_TT_HOSTFILE_NAME, "slaves"));
+
     String implKlass = conf.get(CLUSTER_PROCESS_MGR_IMPL, System
         .getProperty(CLUSTER_PROCESS_MGR_IMPL));
     if (implKlass == null || implKlass.isEmpty()) {
@@ -127,8 +147,8 @@ public class MRCluster extends AbstractDaemonCluster {
   public static class MRProcessManager extends HadoopDaemonRemoteCluster{
     private static final List<HadoopDaemonInfo> mrDaemonInfos = 
       Arrays.asList(new HadoopDaemonInfo[]{
-          new HadoopDaemonInfo("jobtracker", Role.JT, "masters"),
-          new HadoopDaemonInfo("tasktracker", Role.TT, "slaves")});
+          new HadoopDaemonInfo("jobtracker", Role.JT, JT_hostFileName),
+          new HadoopDaemonInfo("tasktracker", Role.TT, TT_hostFileName)});
     public MRProcessManager() {
       super(mrDaemonInfos);
     }
