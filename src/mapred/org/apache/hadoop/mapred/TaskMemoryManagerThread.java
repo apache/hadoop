@@ -216,12 +216,13 @@ class TaskMemoryManagerThread extends Thread {
           if (isProcessTreeOverLimit(tid.toString(), currentMemUsage, 
                                       curMemUsageOfAgedProcesses, limit)) {
             // Task (the root process) is still alive and overflowing memory.
-            // Clean up.
+            // Dump the process-tree and then clean it up.
             String msg =
                 "TaskTree [pid=" + pId + ",tipID=" + tid
                     + "] is running beyond memory-limits. Current usage : "
                     + currentMemUsage + "bytes. Limit : " + limit
-                    + "bytes. Killing task.";
+                    + "bytes. Killing task. \nDump of the process-tree for "
+                    + tid + " : \n" + pTree.getProcessTreeDump();
             LOG.warn(msg);
             taskTracker.cleanUpOverMemoryTask(tid, true, msg);
 

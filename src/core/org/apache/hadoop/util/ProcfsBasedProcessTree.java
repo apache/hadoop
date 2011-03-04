@@ -43,7 +43,7 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  */
 public class ProcfsBasedProcessTree extends ProcessTree {
 
-  private static final Log LOG = LogFactory
+  static final Log LOG = LogFactory
       .getLog(ProcfsBasedProcessTree.class);
 
   private static final String PROCFS = "/proc/";
@@ -51,6 +51,9 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   private long sleepTimeBeforeSigKill = DEFAULT_SLEEPTIME_BEFORE_SIGKILL;
   private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern
       .compile("^([0-9-]+)\\s([^\\s]+)\\s[^\\s]\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+\\s){16}([0-9]+)(\\s[0-9-]+){16}");
+
+  static final String PROCFS_STAT_FILE = "stat";
+  static final String PROCFS_CMDLINE_FILE = "cmdline";
 
   // to enable testing, using this variable which can be configured
   // to a test directory.
@@ -271,7 +274,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     if (pid == -1) {
       return;
     }
-
     if (isAlive(pid.toString())) {
       if (isSetsidAvailable && setsidUsed) {
         // In this case, we know that pid got created using setsid. So kill the
@@ -289,6 +291,30 @@ public class ProcfsBasedProcessTree extends ProcessTree {
         destroyProcess(pid.toString(), sleeptimeBeforeSigkill, inBackground);
       }
     }
+  }
+
+  private static final String PROCESSTREE_DUMP_FORMAT =
+      "\t|- %d %d %d %d %s %d %s\n";
+
+  /**
+   * Get a dump of the process-tree.
+   * 
+   * @return a string concatenating the dump of information of all the processes
+   *         in the process-tree
+   */
+  public String getProcessTreeDump() {
+    StringBuilder ret = new StringBuilder();
+    // The header.
+    ret.append(String.format("\t|- PID PPID PGRPID SESSID CMD_NAME "
+        + "VMEM_USAGE(BYTES) FULL_CMD_LINE\n"));
+    for (ProcessInfo p : processTree.values()) {
+      if (p != null) {
+        ret.append(String.format(PROCESSTREE_DUMP_FORMAT, p.getPid(), p
+            .getPpid(), p.getPgrpId(), p.getSessionId(), p.getName(), p
+            .getVmem(), p.getCmdLine(procfsDir)));
+      }
+    }
+    return ret.toString();
   }
 
   /**
@@ -384,7 +410,7 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     FileReader fReader = null;
     try {
       File pidDir = new File(procfsDir, String.valueOf(pinfo.getPid()));
-      fReader = new FileReader(new File(pidDir, "/stat"));
+      fReader = new FileReader(new File(pidDir, PROCFS_STAT_FILE));
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // The process vanished in the interim!
@@ -408,13 +434,9 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     } finally {
       // Close the streams
       try {
-        if (fReader != null) {
-          fReader.close();
-        }
+        fReader.close();
         try {
-          if (in != null) {
-            in.close();
-          }
+          in.close();
         } catch (IOException i) {
           LOG.warn("Error closing the stream " + in);
         }
@@ -567,6 +589,52 @@ public class ProcfsBasedProcessTree extends ProcessTree {
 
     public List<ProcessInfo> getChildren() {
       return children;
+    }
+
+    public String getCmdLine(String procfsDir) {
+      String ret = "N/A";
+      if (pid == null) {
+        return ret;
+      }
+      BufferedReader in = null;
+      FileReader fReader = null;
+      try {
+        fReader =
+            new FileReader(new File(new File(procfsDir, pid.toString()),
+                PROCFS_CMDLINE_FILE));
+      } catch (FileNotFoundException f) {
+        // The process vanished in the interim!
+        return ret;
+      }
+
+      in = new BufferedReader(fReader);
+
+      try {
+        ret = in.readLine(); // only one line
+        ret = ret.replace('\0', ' '); // Replace each null char with a space
+        if (ret.equals("")) {
+          // The cmdline might be empty because the process is swapped out or is
+          // a zombie.
+          ret = "N/A";
+        }
+      } catch (IOException io) {
+        LOG.warn("Error reading the stream " + io);
+        ret = "N/A";
+      } finally {
+        // Close the streams
+        try {
+          fReader.close();
+          try {
+            in.close();
+          } catch (IOException i) {
+            LOG.warn("Error closing the stream " + in);
+          }
+        } catch (IOException i) {
+          LOG.warn("Error closing the stream " + fReader);
+        }
+      }
+
+      return ret;
     }
   }
 }
