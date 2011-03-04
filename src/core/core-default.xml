@@ -37,6 +37,13 @@
   <description>Is service-level authorization enabled?</description>
 </property>
 
+<property>
+  <name>hadoop.security.authentication</name>
+  <value>simple</value>
+  <description>Possible values are simple (no authentication), and kerberos
+  </description>
+</property>
+
 <!--- logging properties -->
 
 <property>

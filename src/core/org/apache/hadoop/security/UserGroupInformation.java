@@ -146,9 +146,9 @@ public class UserGroupInformation {
    */
   private static synchronized void initialize(Configuration conf) {
     String value = conf.get(HADOOP_SECURITY_AUTHENTICATION);
-    if ("simple".equals(value)) {
+    if (value == null || "simple".equals(value)) {
       useKerberos = false;
-    } else if (value == null || "kerberos".equals(value)) {
+    } else if ("kerberos".equals(value)) {
       useKerberos = true;
     } else {
       throw new IllegalArgumentException("Invalid attribute value for " +
