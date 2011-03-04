@@ -33,8 +33,15 @@ import org.apache.commons.logging.*;
  */
 public class UTF8 implements WritableComparable {
   private static final Log LOG= LogFactory.getLog(UTF8.class);
-  private static final DataOutputBuffer OBUF = new DataOutputBuffer();
   private static final DataInputBuffer IBUF = new DataInputBuffer();
+
+  private static final ThreadLocal<DataOutputBuffer> OBUF_FACTORY =
+    new ThreadLocal<DataOutputBuffer>(){
+    @Override
+    protected DataOutputBuffer initialValue() {
+      return new DataOutputBuffer();
+    }
+  };
 
   private static final byte[] EMPTY_BYTES = new byte[0];
 
@@ -81,11 +88,10 @@ public class UTF8 implements WritableComparable {
       bytes = new byte[length];
 
     try {                                         // avoid sync'd allocations
-      synchronized (OBUF) {
-        OBUF.reset();
-        writeChars(OBUF, string, 0, string.length());
-        System.arraycopy(OBUF.getData(), 0, bytes, 0, length);
-      }
+      DataOutputBuffer obuf = OBUF_FACTORY.get();
+      obuf.reset();
+      writeChars(obuf, string, 0, string.length());
+      System.arraycopy(obuf.getData(), 0, bytes, 0, length);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -182,11 +188,10 @@ public class UTF8 implements WritableComparable {
   public static byte[] getBytes(String string) {
     byte[] result = new byte[utf8Length(string)];
     try {                                         // avoid sync'd allocations
-      synchronized (OBUF) {
-        OBUF.reset();
-        writeChars(OBUF, string, 0, string.length());
-        System.arraycopy(OBUF.getData(), 0, result, 0, OBUF.getLength());
-      }
+      DataOutputBuffer obuf = OBUF_FACTORY.get();
+      obuf.reset();
+      writeChars(obuf, string, 0, string.length());
+      System.arraycopy(obuf.getData(), 0, result, 0, obuf.getLength());
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -206,23 +211,22 @@ public class UTF8 implements WritableComparable {
 
   private static void readChars(DataInput in, StringBuffer buffer, int nBytes)
     throws IOException {
-    synchronized (OBUF) {
-      OBUF.reset();
-      OBUF.write(in, nBytes);
-      byte[] bytes = OBUF.getData();
-      int i = 0;
-      while (i < nBytes) {
-        byte b = bytes[i++];
-        if ((b & 0x80) == 0) {
-          buffer.append((char)(b & 0x7F));
-        } else if ((b & 0xE0) != 0xE0) {
-          buffer.append((char)(((b & 0x1F) << 6)
-                               | (bytes[i++] & 0x3F)));
-        } else {
-          buffer.append((char)(((b & 0x0F) << 12)
-                               | ((bytes[i++] & 0x3F) << 6)
-                               |  (bytes[i++] & 0x3F)));
-        }
+    DataOutputBuffer obuf = OBUF_FACTORY.get();
+    obuf.reset();
+    obuf.write(in, nBytes);
+    byte[] bytes = obuf.getData();
+    int i = 0;
+    while (i < nBytes) {
+      byte b = bytes[i++];
+      if ((b & 0x80) == 0) {
+        buffer.append((char)(b & 0x7F));
+      } else if ((b & 0xE0) != 0xE0) {
+        buffer.append((char)(((b & 0x1F) << 6)
+            | (bytes[i++] & 0x3F)));
+      } else {
+        buffer.append((char)(((b & 0x0F) << 12)
+            | ((bytes[i++] & 0x3F) << 6)
+            |  (bytes[i++] & 0x3F)));
       }
     }
   }
