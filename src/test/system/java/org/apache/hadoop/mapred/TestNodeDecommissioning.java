@@ -22,16 +22,17 @@ import java.util.Hashtable;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapreduce.test.system.JTProtocol;
 import org.apache.hadoop.mapreduce.test.system.JTClient;
 import org.apache.hadoop.mapreduce.test.system.TTClient;
 import org.apache.hadoop.mapreduce.test.system.MRCluster;
 import org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster;
 import java.util.List;
-import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.common.RemoteExecution;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.util.RemoteExecution;
+import org.apache.hadoop.util.SSHRemoteExecution;
 import org.apache.hadoop.examples.SleepJob;
 import org.apache.hadoop.fs.Path;
 import java.net.InetAddress;
@@ -88,8 +89,6 @@ public class TestNodeDecommissioning {
    * First a node is decommissioned and verified.
    * Then it is removed from decommissoned and verified again.
    * At last the node is started.
-   * @param none
-   * @return void
    */
   @Test
   public void TestNodeDecommissioning() throws Exception {
@@ -150,7 +149,8 @@ public class TestNodeDecommissioning {
     String command = "echo " + ttClientHostName + " > " + excludeHostPath;
  
     LOG.info("command is : " + command);
-    RemoteExecution.executeCommand(jtClientHostName, userName, command);
+    RemoteExecution rExec = new SSHRemoteExecution();
+    rExec.executeCommand(jtClientHostName, userName, command);
 
     //The refreshNode command is created and execute in Job Tracker Client.
     String refreshNodeCommand = "export HADOOP_CONF_DIR=" + hadoopConfDir + 
@@ -159,7 +159,7 @@ public class TestNodeDecommissioning {
         ";bin/hadoop mradmin -refreshNodes;"; 
     LOG.info("refreshNodeCommand is : " + refreshNodeCommand);
     try {
-      RemoteExecution.executeCommand(testRunningHostName, userName, 
+      rExec.executeCommand(testRunningHostName, userName,
           refreshNodeCommand);
     } catch (Exception e) { e.printStackTrace();}
 
@@ -172,12 +172,12 @@ public class TestNodeDecommissioning {
     command = "rm " + excludeHostPath;
 
     LOG.info("command is : " + command);
-    RemoteExecution.executeCommand(jtClientHostName, userName, command);
+    rExec.executeCommand(jtClientHostName, userName, command);
 
     Assert.assertTrue("Node should be decommissioned", nodeDecommissionedOrNot);
 
     //The refreshNode command is created and execute in Job Tracker Client.
-    RemoteExecution.executeCommand(jtClientHostName, userName, 
+    rExec.executeCommand(jtClientHostName, userName,
         refreshNodeCommand);
 
     //Checked whether the node is out of decommission.
@@ -192,7 +192,7 @@ public class TestNodeDecommissioning {
         ";kinit -k -t " + keytabForHadoopqaUser + 
         ";bin/hadoop-daemons.sh start tasktracker;";
     LOG.info("ttClientStart is : " + ttClientStart);
-    RemoteExecution.executeCommand(jtClientHostName, userName,
+    rExec.executeCommand(jtClientHostName, userName,
         ttClientStart);
   }
 }

@@ -175,12 +175,6 @@
       rev="${commons-daemon.version}"
       conf="server->default" /> 
 
-    <dependency org="com.jcraft"
-      name="jsch"
-      rev="${jsch.version}"
-      conf="common->master">
-    </dependency>
-    
     <!--Configuration: commons-logging -->
 
     <!--it is essential that only the master JAR of commons logging
@@ -281,6 +275,11 @@
        name="mockito-all" 
        rev="${mockito-all.version}" 
        conf="common->default">
+    </dependency>
+    <dependency org="com.jcraft"
+      name="jsch"
+      rev="${jsch.version}"
+      conf="common->default">
     </dependency>
     <dependency org="org.aspectj"
       name="aspectjrt"
