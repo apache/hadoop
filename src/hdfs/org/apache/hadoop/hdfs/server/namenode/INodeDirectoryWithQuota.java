@@ -116,18 +116,10 @@ class INodeDirectoryWithQuota extends INodeDirectory {
    * 
    * @param nsDelta the change of the tree size
    * @param dsDelta change to disk space occupied
-   * @throws QuotaExceededException if the changed size is greater 
-   *                                than the quota
    */
-  void updateNumItemsInTree(long nsDelta, long dsDelta) throws 
-                            QuotaExceededException {
-    long newCount = nsCount + nsDelta;
-    long newDiskspace = diskspace + dsDelta;
-    if (nsDelta>0 || dsDelta>0) {
-      verifyQuota(nsQuota, newCount, dsQuota, newDiskspace);
-    }
-    nsCount = newCount;
-    diskspace = newDiskspace;
+  void updateNumItemsInTree(long nsDelta, long dsDelta) {
+    nsCount += nsDelta;
+    diskspace += dsDelta;
   }
   
   /** 
@@ -146,14 +138,16 @@ class INodeDirectoryWithQuota extends INodeDirectory {
   /** Verify if the namespace count disk space satisfies the quota restriction 
    * @throws QuotaExceededException if the given quota is less than the count
    */
-  private static void verifyQuota(long nsQuota, long nsCount, 
-                                  long dsQuota, long diskspace)
-                                  throws QuotaExceededException {
-    if (nsQuota >= 0 && nsQuota < nsCount) {
-      throw new NSQuotaExceededException(nsQuota, nsCount);
-    }
-    if (dsQuota >= 0 && dsQuota < diskspace) {
-      throw new DSQuotaExceededException(dsQuota, diskspace);
+  void verifyQuota(long nsDelta, long dsDelta) throws QuotaExceededException {
+    long newCount = nsCount + nsDelta;
+    long newDiskspace = diskspace + dsDelta;
+    if (nsDelta>0 || dsDelta>0) {
+      if (nsQuota >= 0 && nsQuota < newCount) {
+        throw new NSQuotaExceededException(nsQuota, newCount);
+      }
+      if (dsQuota >= 0 && dsQuota < newDiskspace) {
+        throw new DSQuotaExceededException(dsQuota, newDiskspace);
+      }
     }
   }
 }
