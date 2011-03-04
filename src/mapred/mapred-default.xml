@@ -125,7 +125,7 @@
 </property>
 
 <property>
-  <name>mapreduce.jobtracker.system.dir</name>
+  <name>mapred.system.dir</name>
   <value>${hadoop.tmp.dir}/mapred/system</value>
   <description>The directory where MapReduce stores control files.
   </description>
