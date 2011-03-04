@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapred.UtilsForTests;
 
 /**
  * A System test for verifying the status after killing the 
@@ -274,6 +275,12 @@ public class TestTaskKilling {
     Assert.assertEquals("Task status has not been changed to KILLED.", 
             TaskStatus.State.KILLED, 
                     taskInfo.getTaskStatus()[0].getRunState());
+    //Kill the job before testcase finishes.
+    runJob.killJob();
+
+    Assert.assertTrue("Job has not been stopped for 1 min.",
+         ((cluster.getJTClient()).isJobStopped(id)));
+
   }
 
   private void cleanup(Path dir, Configuration conf) throws 
@@ -430,6 +437,7 @@ public class TestTaskKilling {
     filesStatus = ttClient.listStatus(localTaskDir, true);
     Assert.assertTrue("Temporary folder has not been cleanup.", 
             filesStatus.length == 0);
+
   }
 
   public static class FailedMapperClass implements 
@@ -466,7 +474,7 @@ public class TestTaskKilling {
 
     SleepJob job = new SleepJob();
     job.setConf(conf);
-    conf = job.setupJobConf(3, 1, 40000, 1000, 100, 100);
+    conf = job.setupJobConf(2, 1, 40000, 1000, 100, 100);
     JobConf jconf = new JobConf(conf);
 
     //Submitting the job
@@ -561,6 +569,8 @@ public class TestTaskKilling {
           } else {
             if (taskIdKilled.equals(taskid.toString())) {
               taskAttemptID = new TaskAttemptID(taskid, i);
+              //Make sure that task is midway and then kill
+              UtilsForTests.waitFor(20000);
               LOG.info("taskAttemptid going to be killed is : " +
                   taskAttemptID);
               (jobClient.new NetworkedJob(jInfo.getStatus())).
@@ -607,6 +617,10 @@ public class TestTaskKilling {
       TaskCompletionEvent[] taskCompletionEvents =  jobClient.new
         NetworkedJob(jInfo.getStatus()).getTaskCompletionEvents(0);
       for (TaskCompletionEvent taskCompletionEvent : taskCompletionEvents) {
+        LOG.info("taskCompletionEvent.getTaskAttemptId().toString() is : " + 
+          taskCompletionEvent.getTaskAttemptId().toString());
+        LOG.info("compared to taskAttemptID.toString() :" + 
+          taskAttemptID.toString());
         if ((taskCompletionEvent.getTaskAttemptId().toString()).
             equals(taskAttemptID.toString())){
           match = true;
