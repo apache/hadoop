@@ -60,6 +60,7 @@ public class TestJobSummary {
   private static Path inputDir = new Path("input");
   private static Path outputDir = new Path("output");
   private static String queueName = null;
+  
   @BeforeClass
   public static void before() throws Exception {
     String [] expExcludeList = {"java.net.ConnectException",
@@ -176,26 +177,10 @@ public class TestJobSummary {
   @Test
   public void testJobSummaryInfoOfHighMemoryJob() throws IOException,
       Exception {
-    SleepJob job = new SleepJob();
-    String jobArgs []= {"-D","mapred.cluster.max.map.memory.mb=2048", 
-                        "-D","mapred.cluster.max.reduce.memory.mb=2048", 
-                        "-D","mapred.cluster.map.memory.mb=1024", 
-                        "-D","mapred.cluster.reduce.memory.mb=1024",
-                        "-m", "6", 
-                        "-r", "2", 
-                        "-mt", "2000", 
-                        "-rt", "2000",
-                        "-recordt","100"};
-    JobConf jobConf = new JobConf(conf);
-    jobConf.setMemoryForMapTask(2048);
-    jobConf.setMemoryForReduceTask(2048);
-    int exitCode = runTool(jobConf,job,jobArgs);
-    Assert.assertEquals("Exit Code:", 0, exitCode);
-    UtilsForTests.waitFor(1000); 
-    JobID jobId = jobClient.getAllJobs()[0].getJobID();
+    final HighRamJobHelper helper = new HighRamJobHelper();
+    JobID jobId = helper.runHighRamJob(conf, jobClient, remoteJTClient,
+        "Job did not succeed");
     JobInfo jInfo = remoteJTClient.getJobInfo(jobId);
-    Assert.assertEquals("Job has not been succeeded", 
-          jInfo.getStatus().getRunState(), JobStatus.SUCCEEDED);
     verifyJobSummaryInfo(jInfo,jobId);
   }
 
@@ -239,11 +224,7 @@ public class TestJobSummary {
      verifyJobSummaryInfo(jInfo,jobId);  
   }
   
-  private int runTool(Configuration job, Tool tool, 
-    String[] jobArgs) throws Exception {
-    int returnStatus = ToolRunner.run(job, tool, jobArgs);
-    return returnStatus;
-  }
+
   private void verifyJobSummaryInfo(JobInfo jInfo, JobID id) 
       throws IOException {
     java.util.HashMap<String,String> map = jtClient.getJobSummary(id);

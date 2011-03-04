@@ -17,7 +17,7 @@ public class TestHealthScriptError {
   public static MRCluster cluster;
   public static HealthScriptHelper helper;
   public static String remotePath;
-  public String healthScriptError="healthScriptError";
+  public static String healthScriptError="healthScriptError";
   public static String remoteHSPath = "test.system.hdrc.healthscript.path";
   static final Log LOG = LogFactory.getLog(TestHealthScriptError.class);
   
