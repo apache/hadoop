@@ -91,6 +91,9 @@ Trunk (unreleased changes)
     HADOOP-6754. DefaultCodec.createOutputStream() leaks memory.
     (Aaron Kimball via tomwhite)
 
+    HADOOP-7098. Tasktracker property not set in conf/hadoop-env.sh.
+    (Bernd Fondermann via tomwhite)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES
