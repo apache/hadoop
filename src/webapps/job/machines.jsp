@@ -20,10 +20,13 @@
                                        JobTracker tracker) throws IOException {
     Collection c;
     if (("blacklisted").equals(type)) {
+      out.println("<h2>Blacklisted Task Trackers</h2>");
       c = tracker.blacklistedTaskTrackers();
     } else if (("active").equals(type)) {
+      out.println("<h2>Active Task Trackers</h2>");
       c = tracker.activeTaskTrackers();
     } else {
+      out.println("<h2>Task Trackers</h2>");
       c = tracker.taskTrackers();
     }
     if (c.size() == 0) {
@@ -74,6 +77,26 @@
     }
   }
 
+  public void generateTableForExcludedNodes(JspWriter out, JobTracker tracker) 
+  throws IOException {
+    // excluded nodes
+    out.println("<h2>Excluded Nodes</h2>");
+    Collection<String> d = tracker.getExcludedNodes();
+    if (d.size() == 0) {
+      out.print("There are currently no excluded hosts.");
+    } else { 
+      out.print("<center>\n");
+      out.print("<table border=\"2\" cellpadding=\"5\" cellspacing=\"2\">\n");
+      out.print("<tr>");
+      out.print("<td><b>Host Name</b></td></tr>\n");
+      for (Iterator it = d.iterator(); it.hasNext(); ) {
+        String dt = (String)it.next();
+        out.print("<td>" + dt + "</td></tr>\n");
+      }
+      out.print("</table>\n");
+      out.print("</center>\n");
+    }
+  }
 %>
 
 <html>
@@ -83,9 +106,12 @@
 <body>
 <h1><a href="jobtracker.jsp"><%=trackerName%></a> Hadoop Machine List</h1>
 
-<h2>Task Trackers</h2>
 <%
-  generateTaskTrackerTable(out, type, tracker);
+  if (("excluded").equals(type)) {
+    generateTableForExcludedNodes(out, tracker);
+  } else {
+    generateTaskTrackerTable(out, type, tracker);
+  }
 %>
 
 <%
