@@ -88,6 +88,10 @@ public class TestDistributedCacheModifiedFile {
   @BeforeClass
   public static void setUp() throws Exception {
     cluster = MRCluster.createCluster(new Configuration());
+    String [] expExcludeList = {"java.net.ConnectException",
+        "java.io.IOException","org.apache.hadoop.metrics2.MetricsException"};
+    cluster.setExcludeExpList(expExcludeList);
+
     cluster.setUp();
     client = cluster.getJTClient().getClient();
     dfs = client.getFs();
@@ -111,7 +115,6 @@ public class TestDistributedCacheModifiedFile {
 
   @AfterClass
   public static void tearDown() throws Exception {
-    cluster.tearDown();
     dfs.delete(URIPATH, true);
     
     Collection<TTClient> tts = cluster.getTTClients();
@@ -125,6 +128,7 @@ public class TestDistributedCacheModifiedFile {
       tt.start();
       tt.waitForTTStart();
     }
+    cluster.tearDown();
   }
 
   @Test
