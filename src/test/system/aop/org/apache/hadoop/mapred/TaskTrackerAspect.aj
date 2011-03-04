@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.test.system.JTProtocol;
 import org.apache.hadoop.mapreduce.test.system.TTProtocol;
 import org.apache.hadoop.mapreduce.test.system.TTTaskInfo;
 import org.apache.hadoop.mapred.TTTaskInfoImpl.MapTTTaskInfo;
 import org.apache.hadoop.mapred.TTTaskInfoImpl.ReduceTTTaskInfo;
+import org.apache.hadoop.test.system.ControlAction;
 import org.apache.hadoop.test.system.DaemonProtocol;
-import org.apache.hadoop.test.system.DaemonProtocolAspect;
+import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 
 public privileged aspect TaskTrackerAspect {
 
@@ -75,4 +75,5 @@ public privileged aspect TaskTrackerAspect {
       return proceed(protocol, clientVersion);
     }
   }
+
 }

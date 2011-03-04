@@ -68,5 +68,11 @@ public class MRCluster extends AbstractMasterSlaveCluster<JTClient,
   public void ensureClean() throws IOException {
     //TODO: ensure that no jobs/tasks are running
     //restart the cluster if cleanup fails
+    JTClient jtClient = getMaster();
+    JobInfo[] jobs = jtClient.getProxy().getAllJobInfo();
+    for(JobInfo job : jobs) {
+      jtClient.getClient().killJob(
+          org.apache.hadoop.mapred.JobID.downgrade(job.getID()));
+    }
   }
 }

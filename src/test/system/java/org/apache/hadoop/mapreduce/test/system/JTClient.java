@@ -82,6 +82,15 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
   public Configuration getJobTrackerConfig() throws IOException {
     return getProxy().getDaemonConf();
   }
+  
+  /**
+   * Kills the job. <br/>
+   * @param id of the job to be killed.
+   * @throws IOException
+   */
+  public void killJob(JobID id) throws IOException {
+    getClient().killJob(id);
+  }
 
   /**
    * Verification API to check running jobs and running job states.

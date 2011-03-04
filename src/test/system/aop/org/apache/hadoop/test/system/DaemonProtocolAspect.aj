@@ -3,10 +3,11 @@ package org.apache.hadoop.test.system;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Properties;
 
-
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -22,7 +23,11 @@ import org.apache.hadoop.conf.Configuration;
 public aspect DaemonProtocolAspect {
 
   private boolean DaemonProtocol.ready;
-
+  
+  @SuppressWarnings("unchecked")
+  private HashMap<Object, List<ControlAction>> DaemonProtocol.actions = 
+    new HashMap<Object, List<ControlAction>>();
+  
   /**
    * Set if the daemon process is ready or not, concrete daemon protocol should
    * implement pointcuts to determine when the daemon is ready and use the
@@ -139,5 +144,67 @@ public aspect DaemonProtocolAspect {
       fs = path.getFileSystem(getDaemonConf());
     }
     return fs;
+  }
+  
+  
+  @SuppressWarnings("unchecked")
+  public ControlAction[] DaemonProtocol.getActions(Writable key) 
+    throws IOException {
+    synchronized (actions) {
+      List<ControlAction> actionList = actions.get(key);
+      if(actionList == null) {
+        return new ControlAction[0];
+      } else {
+        return (ControlAction[]) actionList.toArray(new ControlAction[actionList
+                                                                      .size()]);
+      }
+    }
+  }
+
+
+  @SuppressWarnings("unchecked")
+  public void DaemonProtocol.sendAction(ControlAction action) 
+      throws IOException {
+    synchronized (actions) {
+      List<ControlAction> actionList = actions.get(action.getTarget());
+      if(actionList == null) {
+        actionList = new ArrayList<ControlAction>();
+        actions.put(action.getTarget(), actionList);
+      }
+      actionList.add(action);
+    } 
+  }
+ 
+  @SuppressWarnings("unchecked")
+  public boolean DaemonProtocol.isActionPending(ControlAction action) 
+    throws IOException{
+    synchronized (actions) {
+      List<ControlAction> actionList = actions.get(action.getTarget());
+      if(actionList == null) {
+        return false;
+      } else {
+        return actionList.contains(action);
+      }
+    }
+  }
+  
+  
+  @SuppressWarnings("unchecked")
+  public void DaemonProtocol.removeAction(ControlAction action) 
+    throws IOException {
+    synchronized (actions) {
+      List<ControlAction> actionList = actions.get(action.getTarget());
+      if(actionList == null) {
+        return;
+      } else {
+        actionList.remove(action);
+      }
+    }
+  }
+  
+  public void DaemonProtocol.clearActions() throws IOException {
+    synchronized (actions) {
+      actions.clear();
+    }
   }
 }

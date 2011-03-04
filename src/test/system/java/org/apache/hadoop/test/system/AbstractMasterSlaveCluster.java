@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -236,48 +235,6 @@ public abstract class AbstractMasterSlaveCluster
   }
 
   /**
-   * Enable/Inject the faults. In case fault can't be enabled on ALL nodes
-   * cluster is restarted.
-   */
-  public void enable(List<Enum<?>> faults) throws IOException {
-    try {
-      enableFaults(faults);
-    } catch (IOException e) {
-      stop();
-      start();
-      enableFaults(faults);
-    }
-  }
-
-  /**
-   * Disable/Remove the all the faults. In case fault can't be disabled on ALL
-   * nodes cluster is restarted.
-   */
-  public void disableAllFaults() throws IOException {
-    try {
-      disableFaults();
-    } catch (IOException e) {
-      stop();
-      start();
-      disableFaults();
-    }
-  }
-
-  private void enableFaults(List<Enum<?>> faults) throws IOException {
-    master.enable(faults);
-    for (SLAVE slave : slaves.values()) {
-      slave.enable(faults);
-    }
-  }
-
-  private void disableFaults() throws IOException {
-    master.disableAll();
-    for (SLAVE slave : slaves.values()) {
-      slave.disableAll();
-    }
-  }
-
-  /**
    * Ping all the daemons of the cluster.
    * @throws IOException
    */
@@ -302,6 +259,7 @@ public abstract class AbstractMasterSlaveCluster
     }
     connect();
     ping();
+    clearAllControlActions();
     ensureClean();
   }
 
@@ -313,11 +271,22 @@ public abstract class AbstractMasterSlaveCluster
   }
 
   /**
+   * Clears all the pending control actions in the cluster.<br/>
+   * @throws IOException
+   */
+  public void clearAllControlActions() throws IOException {
+    master.getProxy().clearActions();
+    for (SLAVE slave : getSlaves().values()) {
+      slave.getProxy().clearActions();
+    }
+  }
+  /**
    * Ensure that cluster is clean. Disconnect from the RPC ports of the daemons.
    * @throws IOException
    */
   public void tearDown() throws IOException {
     ensureClean();
+    clearAllControlActions();
     disconnect();
   }
 }
