@@ -364,6 +364,31 @@ public class TestRPC extends TestCase {
       if (proxy != null) {
         RPC.stopProxy(proxy);
       }
+      if (expectFailure) {
+        assertTrue("Expected 1 but got " + 
+            server.getRpcMetrics().authorizationFailures
+            .getCurrentIntervalValue(), 
+            server.getRpcMetrics().authorizationFailures
+            .getCurrentIntervalValue() == 1);
+      } else {
+        assertTrue("Expected 1 but got " + 
+            server.getRpcMetrics().authorizationSuccesses
+            .getCurrentIntervalValue(),
+            server.getRpcMetrics().authorizationSuccesses
+            .getCurrentIntervalValue() == 1);
+      }
+      //since we don't have authentication turned ON, we should see 
+      // >0 for the authentication successes and 0 for failure
+      assertTrue("Expected 0 but got " + 
+          server.getRpcMetrics().authenticationFailures
+          .getCurrentIntervalValue(),
+          server.getRpcMetrics().authenticationFailures
+          .getCurrentIntervalValue() == 0);
+      assertTrue("Expected greater than 0 but got " + 
+          server.getRpcMetrics().authenticationSuccesses
+          .getCurrentIntervalValue(),
+          server.getRpcMetrics().authenticationSuccesses
+          .getCurrentIntervalValue() > 0);
     }
   }
   

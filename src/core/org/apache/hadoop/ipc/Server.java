@@ -222,6 +222,11 @@ public abstract class Server {
       }
     }
   }
+  
+  /*Returns a handle to the rpcMetrics (required in tests)*/
+  public RpcMetrics getRpcMetrics() {
+    return rpcMetrics;
+  }
 
   /** A call queued for handling. */
   private static class Call {
@@ -876,7 +881,13 @@ public abstract class Server {
         if (LOG.isDebugEnabled())
           LOG.debug("Have read input token of size " + saslToken.length
               + " for processing by saslServer.evaluateResponse()");
-        byte[] replyToken = saslServer.evaluateResponse(saslToken);
+        byte[] replyToken;
+        try {
+          replyToken = saslServer.evaluateResponse(saslToken);
+        } catch (SaslException se) {
+          rpcMetrics.authenticationFailures.inc();
+          throw se;
+        }
         if (replyToken != null) {
           if (LOG.isDebugEnabled())
             LOG.debug("Will send token of size " + replyToken.length
@@ -1077,6 +1088,7 @@ public abstract class Server {
     
     private void processOneRpc(byte[] buf) throws IOException,
         InterruptedException {
+      rpcMetrics.authenticationSuccesses.inc();
       if (headerRead) {
         processData(buf);
       } else {
@@ -1120,7 +1132,9 @@ public abstract class Server {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Successfully authorized " + header);
         }
+        rpcMetrics.authorizationSuccesses.inc();
       } catch (AuthorizationException ae) {
+        rpcMetrics.authorizationFailures.inc();
         authFailedCall.connection = this;
         setupResponse(authFailedResponse, authFailedCall, Status.FATAL, null,
             ae.getClass().getName(), ae.getMessage());
