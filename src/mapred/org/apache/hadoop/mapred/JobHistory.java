@@ -496,15 +496,11 @@ public class JobHistory {
    */
   public static void init(JobTracker jobTracker, JobConf conf,
              String hostname, long jobTrackerStartTime) throws IOException {
-    LOG_DIR = conf.get("hadoop.job.history.location" ,
-      "file:///" + new File(
-      System.getProperty("hadoop.log.dir")).getAbsolutePath()
-      + File.separator + "history");
+    initLogDir(conf);
     JOBTRACKER_UNIQUE_STRING = hostname + "_" + 
                                   String.valueOf(jobTrackerStartTime) + "_";
     jobtrackerHostname = hostname;
     Path logDir = new Path(LOG_DIR);
-    LOGDIR_FS = logDir.getFileSystem(conf);
     if (!LOGDIR_FS.exists(logDir)){
       if (!LOGDIR_FS.mkdirs(logDir, new FsPermission(HISTORY_DIR_PERMISSION))) {
         throw new IOException("Mkdirs failed to create " + logDir.toString());
@@ -524,6 +520,15 @@ public class JobHistory {
     fileManager = new JobHistoryFilesManager(conf, jobTracker);
   }
 
+  private static void initLogDir(JobConf conf) throws IOException {
+    LOG_DIR = conf.get("hadoop.job.history.location" ,
+      "file:///" + new File(
+      System.getProperty("hadoop.log.dir")).getAbsolutePath()
+      + File.separator + "history");
+    Path logDir = new Path(LOG_DIR);
+    LOGDIR_FS = logDir.getFileSystem(conf);
+  }
+
   static void initDone(JobConf conf, FileSystem fs) throws IOException {
     initDone(conf, fs, true);
   }
@@ -538,6 +543,9 @@ public class JobHistory {
       DONE = fs.makeQualified(new Path(doneLocation));
       DONEDIR_FS = fs;
     } else {
+      if (!setup) {
+        initLogDir(conf);
+      }
       DONE = new Path(LOG_DIR, "done");
       DONEDIR_FS = LOGDIR_FS;
     }
