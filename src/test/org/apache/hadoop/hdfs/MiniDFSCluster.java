@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.nio.channels.FileChannel;
@@ -784,6 +785,22 @@ public class MiniDFSCluster {
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
+  }
+
+  /**
+   *  @return a {@link HftpFileSystem} object as specified user. 
+   */
+  public HftpFileSystem getHftpFileSystemAs(final String username,
+      final Configuration conf, final String... groups
+      ) throws IOException, InterruptedException {
+    final UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        username, groups);
+    return ugi.doAs(new PrivilegedExceptionAction<HftpFileSystem>() {
+      @Override
+      public HftpFileSystem run() throws Exception {
+        return getHftpFileSystem();
+      }
+    });
   }
 
   /**

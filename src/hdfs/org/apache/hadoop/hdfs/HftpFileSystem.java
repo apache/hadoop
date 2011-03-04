@@ -262,17 +262,26 @@ public class HftpFileSystem extends FileSystem {
 
   @Override
   public FSDataInputStream open(Path f, int buffersize) throws IOException {
-    HttpURLConnection connection = null;
-    connection = openConnection("/data" + f.toUri().getPath(),
-        "ugi=" + getUgiParameter());
-    connection.setRequestMethod("GET");
-    connection.connect();
+    final HttpURLConnection connection = openConnection(
+        "/data" + f.toUri().getPath(), "ugi=" + getUgiParameter());
+    final InputStream in;
+    try {
+      connection.setRequestMethod("GET");
+      connection.connect();
+      in = connection.getInputStream();
+    } catch(IOException ioe) {
+      final int code = connection.getResponseCode();
+      final String s = connection.getResponseMessage();
+      throw s == null? ioe:
+          new IOException(s + " (error code=" + code + ")", ioe);
+    }
+
     final String cl = connection.getHeaderField(StreamFile.CONTENT_LENGTH);
     final long filelength = cl == null? -1: Long.parseLong(cl);
     if (LOG.isDebugEnabled()) {
       LOG.debug("filelength = " + filelength);
     }
-    final InputStream in = connection.getInputStream();
+
     return new FSDataInputStream(new FSInputStream() {
         long currentPos = 0;
 

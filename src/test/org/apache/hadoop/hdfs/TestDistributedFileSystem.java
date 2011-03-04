@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hdfs;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Random;
@@ -34,7 +39,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
 public class TestDistributedFileSystem {
   private static final Random RAN = new Random();
@@ -138,90 +142,6 @@ public class TestDistributedFileSystem {
   }
   
   @Test
-  public void testFileChecksum() throws IOException {
-    ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
-
-    final long seed = RAN.nextLong();
-    System.out.println("seed=" + seed);
-    RAN.setSeed(seed);
-
-    final Configuration conf = getTestConfiguration();
-    conf.set("slave.host.name", "localhost");
-
-    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
-    final FileSystem hdfs = cluster.getFileSystem();
-    final String hftpuri = "hftp://" + conf.get("dfs.http.address");
-    System.out.println("hftpuri=" + hftpuri);
-    final FileSystem hftp = new Path(hftpuri).getFileSystem(conf);
-
-    final String dir = "/filechecksum";
-    final int block_size = 1024;
-    final int buffer_size = conf.getInt("io.file.buffer.size", 4096);
-    conf.setInt("io.bytes.per.checksum", 512);
-
-    //try different number of blocks
-    for(int n = 0; n < 5; n++) {
-      //generate random data
-      final byte[] data = new byte[RAN.nextInt(block_size/2-1)+n*block_size+1];
-      RAN.nextBytes(data);
-      System.out.println("data.length=" + data.length);
-  
-      //write data to a file
-      final Path foo = new Path(dir, "foo" + n);
-      {
-        final FSDataOutputStream out = hdfs.create(foo, false, buffer_size,
-            (short)2, block_size);
-        out.write(data);
-        out.close();
-      }
-      
-      //compute checksum
-      final FileChecksum hdfsfoocs = hdfs.getFileChecksum(foo);
-      System.out.println("hdfsfoocs=" + hdfsfoocs);
-      
-      final FileChecksum hftpfoocs = hftp.getFileChecksum(foo);
-      System.out.println("hftpfoocs=" + hftpfoocs);
-
-      final Path qualified = new Path(hftpuri + dir, "foo" + n);
-      final FileChecksum qfoocs = hftp.getFileChecksum(qualified);
-      System.out.println("qfoocs=" + qfoocs);
-
-      //write another file
-      final Path bar = new Path(dir, "bar" + n);
-      {
-        final FSDataOutputStream out = hdfs.create(bar, false, buffer_size,
-            (short)2, block_size);
-        out.write(data);
-        out.close();
-      }
-  
-      { //verify checksum
-        final FileChecksum barcs = hdfs.getFileChecksum(bar);
-        final int barhashcode = barcs.hashCode();
-        assertEquals(hdfsfoocs.hashCode(), barhashcode);
-        assertEquals(hdfsfoocs, barcs);
-
-        assertEquals(hftpfoocs.hashCode(), barhashcode);
-        assertEquals(hftpfoocs, barcs);
-
-        assertEquals(qfoocs.hashCode(), barhashcode);
-        assertEquals(qfoocs, barcs);
-      }
-    }
-    cluster.shutdown();
-  }
-  
-  @Test
-  public void testAllWithDualPort() throws Exception {
-    dualPortTesting = true;
-
-    testFileSystemCloseAll();
-    testDFSClose();
-    testDFSClient();
-    testFileChecksum();
-  }
-  
-  @Test
   public void testStatistics() throws Exception {
     int lsLimit = 2;
     final Configuration conf = getTestConfiguration();
@@ -311,5 +231,101 @@ public class TestDistributedFileSystem {
     assertEquals(readOps, DFSTestUtil.getStatistics(fs).getReadOps());
     assertEquals(writeOps, DFSTestUtil.getStatistics(fs).getWriteOps());
     assertEquals(largeReadOps, DFSTestUtil.getStatistics(fs).getLargeReadOps());
+  }
+
+  @Test
+  public void testFileChecksum() throws Exception {
+    ((Log4JLogger)HftpFileSystem.LOG).getLogger().setLevel(Level.ALL);
+
+    final long seed = RAN.nextLong();
+    System.out.println("seed=" + seed);
+    RAN.setSeed(seed);
+
+    final Configuration conf = getTestConfiguration();
+    conf.set("slave.host.name", "localhost");
+
+    final MiniDFSCluster cluster = new MiniDFSCluster(conf, 2, true, null);
+    final FileSystem hdfs = cluster.getFileSystem();
+    final String hftpuri = "hftp://" + conf.get("dfs.http.address");
+    System.out.println("hftpuri=" + hftpuri);
+    final FileSystem hftp = new Path(hftpuri).getFileSystem(conf);
+
+    final String dir = "/filechecksum";
+    final int block_size = 1024;
+    final int buffer_size = conf.getInt("io.file.buffer.size", 4096);
+    conf.setInt("io.bytes.per.checksum", 512);
+
+    //try different number of blocks
+    for(int n = 0; n < 5; n++) {
+      //generate random data
+      final byte[] data = new byte[RAN.nextInt(block_size/2-1)+n*block_size+1];
+      RAN.nextBytes(data);
+      System.out.println("data.length=" + data.length);
+  
+      //write data to a file
+      final Path foo = new Path(dir, "foo" + n);
+      {
+        final FSDataOutputStream out = hdfs.create(foo, false, buffer_size,
+            (short)2, block_size);
+        out.write(data);
+        out.close();
+      }
+      
+      //compute checksum
+      final FileChecksum hdfsfoocs = hdfs.getFileChecksum(foo);
+      System.out.println("hdfsfoocs=" + hdfsfoocs);
+      
+      final FileChecksum hftpfoocs = hftp.getFileChecksum(foo);
+      System.out.println("hftpfoocs=" + hftpfoocs);
+
+      final Path qualified = new Path(hftpuri + dir, "foo" + n);
+      final FileChecksum qfoocs = hftp.getFileChecksum(qualified);
+      System.out.println("qfoocs=" + qfoocs);
+
+      //write another file
+      final Path bar = new Path(dir, "bar" + n);
+      {
+        final FSDataOutputStream out = hdfs.create(bar, false, buffer_size,
+            (short)2, block_size);
+        out.write(data);
+        out.close();
+      }
+  
+      { //verify checksum
+        final FileChecksum barcs = hdfs.getFileChecksum(bar);
+        final int barhashcode = barcs.hashCode();
+        assertEquals(hdfsfoocs.hashCode(), barhashcode);
+        assertEquals(hdfsfoocs, barcs);
+
+        assertEquals(hftpfoocs.hashCode(), barhashcode);
+        assertEquals(hftpfoocs, barcs);
+
+        assertEquals(qfoocs.hashCode(), barhashcode);
+        assertEquals(qfoocs, barcs);
+      }
+
+      { //test permission error on hftp 
+        hdfs.setPermission(new Path(dir), new FsPermission((short)0));
+        try {
+          final String username = UserGroupInformation.getCurrentUser().getShortUserName() + "1";
+          final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, conf, "somegroup");
+          hftp2.getFileChecksum(qualified);
+          fail();
+        } catch(IOException ioe) {
+          FileSystem.LOG.info("GOOD: getting an exception", ioe);
+        }
+      }
+    }
+    cluster.shutdown();
+  }
+  
+  @Test
+  public void testAllWithDualPort() throws Exception {
+    dualPortTesting = true;
+
+    testFileSystemCloseAll();
+    testDFSClose();
+    testDFSClient();
+    testFileChecksum();
   }
 }

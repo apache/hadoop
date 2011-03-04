@@ -27,7 +27,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -100,6 +102,29 @@ public class TestListPathServlet {
     // Non existent path
     checkStatus("/nonexistent");
     checkStatus("/nonexistent/a");
+
+    final String username = UserGroupInformation.getCurrentUser().getShortUserName() + "1";
+    final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, CONF, "somegroup");
+    { //test file not found on hftp 
+      final Path nonexistent = new Path("/nonexistent");
+      try {
+        hftp2.getFileStatus(nonexistent);
+        Assert.fail();
+      } catch(IOException ioe) {
+        FileSystem.LOG.info("GOOD: getting an exception", ioe);
+      }
+    }
+
+    { //test permission error on hftp
+      final Path dir = new Path("/dir");
+      fs.setPermission(dir, new FsPermission((short)0));
+      try {
+        hftp2.getFileStatus(new Path(dir, "a"));
+        Assert.fail();
+      } catch(IOException ioe) {
+        FileSystem.LOG.info("GOOD: getting an exception", ioe);
+      }
+    }
   }
 
   private void checkStatus(String listdir) throws IOException {

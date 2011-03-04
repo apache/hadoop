@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hdfs;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -25,20 +27,23 @@ import java.util.Random;
 
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.log4j.Level;
+import org.junit.Test;
 
 /**
  * This class tests the FileStatus API.
  */
-public class TestFileStatus extends TestCase {
+public class TestFileStatus {
   {
     ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)FileSystem.LOG).getLogger().setLevel(Level.ALL);
@@ -71,7 +76,8 @@ public class TestFileStatus extends TestCase {
   /**
    * Tests various options of DFSShell.
    */
-  public void testFileStatus() throws IOException {
+  @Test
+  public void testFileStatus() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 2);
     MiniDFSCluster cluster = new MiniDFSCluster(conf, 1, true, null);
@@ -132,7 +138,7 @@ public class TestFileStatus extends TestCase {
 
       // test listStatus on a non-existent file/directory
       stats = fs.listStatus(dir);
-      assertEquals(null, stats);
+      assertTrue(null == stats);
       try {
         status = fs.getFileStatus(dir);
         fail("getFileStatus of non-existent path should fail");
@@ -226,6 +232,18 @@ public class TestFileStatus extends TestCase {
       assertEquals(dir5.toString(), stats[2].getPath().toString());
       assertEquals(file2.toString(), stats[3].getPath().toString());
       assertEquals(file3.toString(), stats[4].getPath().toString());
+
+      { //test permission error on hftp 
+        fs.setPermission(dir, new FsPermission((short)0));
+        try {
+          final String username = UserGroupInformation.getCurrentUser().getShortUserName() + "1";
+          final HftpFileSystem hftp2 = cluster.getHftpFileSystemAs(username, conf, "somegroup");
+          hftp2.getContentSummary(dir);
+          fail();
+        } catch(IOException ioe) {
+          FileSystem.LOG.info("GOOD: getting an exception", ioe);
+        }
+      }
     } finally {
       fs.close();
       cluster.shutdown();

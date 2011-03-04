@@ -121,9 +121,9 @@ public class FileDataServlet extends DfsServlet {
                   response.getWriter().println(e.toString());
                 }
               } else if (info == null){
-                response.sendError(400, "cat: File not found " + path);
+                response.sendError(400, "File not found " + path);
               } else {
-                response.sendError(400, "cat: " + path + ": is a directory");
+                response.sendError(400, path + " is a directory");
               }
               return null;
             }

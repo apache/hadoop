@@ -23,7 +23,6 @@ import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
-import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.VersionInfo;
 
 import org.znerd.xmlenc.*;
@@ -129,9 +128,11 @@ public class ListPathsServlet extends DfsServlet {
     throws ServletException, IOException {
     final PrintWriter out = response.getWriter();
     final XMLOutputter doc = new XMLOutputter(out, "UTF-8");
+
+    final Map<String, String> root = buildRoot(request, doc);
+    final String path = root.get("path");
+
     try {
-      final Map<String, String> root = buildRoot(request, doc);
-      final String path = root.get("path");
       final boolean recur = "yes".equals(root.get("recursive"));
       final Pattern filter = Pattern.compile(root.get("filter"));
       final Pattern exclude = Pattern.compile(root.get("exclude"));
@@ -188,17 +189,18 @@ public class ListPathsServlet extends DfsServlet {
               writeXml(re, p, doc);
             }
           }
-          if (doc != null) {
-            doc.endDocument();
-          }
           return null;
         }
       });
-      
+    } catch(IOException ioe) {
+      writeXml(ioe, path, doc);
     } catch (InterruptedException e) {
       LOG.warn("ListPathServlet encountered InterruptedException", e);
       response.sendError(400, e.getMessage());
     } finally {
+      if (doc != null) {
+        doc.endDocument();
+      }
       if (out != null) {
         out.close();
       }
