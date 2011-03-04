@@ -35,6 +35,12 @@ public abstract class TokenIdentifier implements Writable {
    * @return the kind of the token
    */
   public abstract Text getKind();
+  
+  /**
+   * Get the username encoded in the token identifier
+   * @return the username
+   */
+  public abstract Text getUsername();
 
   /**
    * Get the bytes for the token identifier

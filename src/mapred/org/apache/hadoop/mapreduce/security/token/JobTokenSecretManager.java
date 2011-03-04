@@ -121,5 +121,13 @@ public class JobTokenSecretManager extends SecretManager<JobTokenIdentifier> {
       throws InvalidToken {
     return retrieveTokenSecret(identifier.getJobId().toString()).getEncoded();
   }
-
+  
+  /**
+   * Create an empty job token identifier
+   * @return a newly created empty job token identifier
+   */
+  @Override
+  public JobTokenIdentifier createIdentifier() {
+    return new JobTokenIdentifier();
+  }
 }

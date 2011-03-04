@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.security;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+
 import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
@@ -61,7 +63,6 @@ import com.sun.security.auth.module.Krb5LoginModule;
  */
 public class UserGroupInformation {
   private static final Log LOG =  LogFactory.getLog(UserGroupInformation.class);
-  private static final String  HADOOP_SECURITY_AUTHENTICATION = "hadoop.security.authentication";
   
   /**
    * A login module that looks at the Kerberos, Unix, or Windows principal and
@@ -454,14 +455,13 @@ public class UserGroupInformation {
    * 
    * @return an unmodifiable collection of tokens associated with user
    */
-  @SuppressWarnings("unchecked")
-  public synchronized <Ident extends TokenIdentifier>
-  Collection<Token<Ident>> getTokens() {
+  public synchronized 
+  Collection<Token<? extends TokenIdentifier>> getTokens() {
     Set<Object> creds = subject.getPrivateCredentials();
-    List<Token<Ident>> result = new ArrayList<Token<Ident>>(creds.size());
+    List<Token<?>> result = new ArrayList<Token<?>>(creds.size());
     for(Object o: creds) {
-      if (o instanceof Token) {
-        result.add((Token<Ident>) o);
+      if (o instanceof Token<?>) {
+        result.add((Token<?>) o);
       }
     }
     return Collections.unmodifiableList(result);

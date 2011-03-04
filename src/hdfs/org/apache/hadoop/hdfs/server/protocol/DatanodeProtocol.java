@@ -20,10 +20,13 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.*;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.ipc.VersionedProtocol;
+
+import org.apache.hadoop.security.KerberosInfo;
 
 /**********************************************************************
  * Protocol that a DFS datanode uses to communicate with the NameNode.
@@ -33,6 +36,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  * returning values from these functions.
  *
  **********************************************************************/
+@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 public interface DatanodeProtocol extends VersionedProtocol {
   /**
    * 20: SendHeartbeat may return KeyUpdateCommand

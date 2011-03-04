@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.TokenStorage;
 import org.apache.hadoop.security.token.Token;
@@ -230,8 +231,9 @@ public class TokenCache {
    * @return job token
    */
   //@InterfaceAudience.Private
-  public static Token<? extends TokenIdentifier> getJobToken(TokenStorage ts) {
-    return ts.getToken(JOB_TOKEN);
+  @SuppressWarnings("unchecked")
+  public static Token<JobTokenIdentifier> getJobToken(TokenStorage ts) {
+    return (Token<JobTokenIdentifier>) ts.getToken(JOB_TOKEN);
   }
 
   /**

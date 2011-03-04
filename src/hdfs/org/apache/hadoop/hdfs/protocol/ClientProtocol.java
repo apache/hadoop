@@ -23,12 +23,16 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.security.token.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.DelegationTokenSelector;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.fs.permission.*;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenInfo;
 
 /**********************************************************************
  * ClientProtocol is used by user code via 
@@ -37,6 +41,8 @@ import org.apache.hadoop.security.token.Token;
  * as well as open/close file streams, etc.
  *
  **********************************************************************/
+@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
+@TokenInfo(DelegationTokenSelector.class)
 public interface ClientProtocol extends VersionedProtocol {
 
   /**

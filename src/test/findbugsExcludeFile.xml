@@ -32,6 +32,15 @@
        <Field name="out" />
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
+     <!-- 
+       Accesses to Client.Connection.saslRpcClient are in fact
+       synchronized (inside synchronized methods).
+     --> 
+     <Match>
+       <Class name="org.apache.hadoop.ipc.Client$Connection" />
+       <Field name="saslRpcClient" />
+       <Bug pattern="IS2_INCONSISTENT_SYNC" />
+     </Match>
      <Match>
        <Class name="org.apache.hadoop.mapred.OutputCommitter" />
        <Or>

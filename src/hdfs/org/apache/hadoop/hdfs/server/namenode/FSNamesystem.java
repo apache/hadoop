@@ -310,7 +310,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       close();
       throw e;
     }
-    dtSecretManager.startThreads();
   }
 
   /**
@@ -320,6 +319,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     this.systemStart = now();
     setConfigurationParameters(conf);
     dtSecretManager = createDelegationTokenSecretManager(conf);
+    dtSecretManager.startThreads();
 
     this.nameNodeAddress = nn.getNameNodeAddress();
     this.registerMBean(conf); // register the MBean for the FSNamesystemStutus

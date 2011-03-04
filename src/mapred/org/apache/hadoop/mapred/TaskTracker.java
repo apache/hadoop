@@ -668,8 +668,8 @@ public class TaskTracker
                        maxMapSlots : maxReduceSlots;
     //set the num handlers to max*2 since canCommit may wait for the duration
     //of a heartbeat RPC
-    this.taskReportServer =
-      RPC.getServer(this, bindAddress, tmpPort, 2 * max, false, this.fConf);
+    this.taskReportServer = RPC.getServer(this, bindAddress,
+        tmpPort, 2 * max, false, this.fConf, this.jobTokenSecretManager);
     this.taskReportServer.start();
 
     // get the assigned address
@@ -984,7 +984,6 @@ public class TaskTracker
    *         job as a starting point.
    * @throws IOException
    */
-  @SuppressWarnings("unchecked")
   JobConf localizeJobFiles(Task t, RunningJob rjob)
       throws IOException, InterruptedException {
     JobID jobId = t.getJobID();
@@ -1003,8 +1002,7 @@ public class TaskTracker
     
     
     TokenStorage ts = TokenCache.loadTokens(localJobTokenFile, fConf);
-    Token<JobTokenIdentifier> jt = 
-      (Token<JobTokenIdentifier>)TokenCache.getJobToken(ts);
+    Token<JobTokenIdentifier> jt = TokenCache.getJobToken(ts);
     if (jt != null) { //could be null in the case of some unit tests
       getJobTokenSecretManager().addTokenForJob(jobId.toString(), jt);
     }

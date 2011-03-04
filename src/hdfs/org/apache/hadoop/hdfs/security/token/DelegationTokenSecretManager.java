@@ -267,6 +267,15 @@ public class DelegationTokenSecretManager
   public static SecretKey createSecretKey(byte[] key) {
     return SecretManager.createSecretKey(key);
   }
+  
+  /**
+   * Create an empty delegation token identifier
+   * @return a newly created empty delegation token identifier
+   */
+  @Override
+  public DelegationTokenIdentifier createIdentifier() {
+    return new DelegationTokenIdentifier();
+  }
 
 
   /** Utility class to encapsulate a token's renew date and password. */

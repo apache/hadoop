@@ -28,16 +28,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.security.TokenStorage;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
+import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.log4j.LogManager;
@@ -73,6 +74,12 @@ class Child {
       TokenCache.loadTaskTokenStorage(jobTokenFile, defaultConf);
     LOG.debug("loading token. # keys =" +ts.numberOfSecretKeys() + 
         "; from file=" + jobTokenFile);
+    
+    Token<JobTokenIdentifier> jt = TokenCache.getJobToken(ts);
+    jt.setService(new Text(address.getAddress().getHostAddress() + ":"
+        + address.getPort()));
+    UserGroupInformation current = UserGroupInformation.getCurrentUser();
+    current.addToken(jt);
 
     TaskUmbilicalProtocol umbilical =
       (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
@@ -151,8 +158,6 @@ class Child {
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
 
-        // set job shuffle token
-        Token<? extends TokenIdentifier> jt = TokenCache.getJobToken(ts);
         // set the jobTokenFile into task
         task.setJobTokenSecret(JobTokenSecretManager.
             createSecretKey(jt.getPassword()));

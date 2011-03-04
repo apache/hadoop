@@ -27,13 +27,11 @@ import static org.mockito.Mockito.mock;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.junit.Test;
@@ -175,7 +173,7 @@ public class TestUserGroupInformation {
     ugi.addToken(t1);
     ugi.addToken(t2);
     
-    Collection<Token<T>> z = ugi.getTokens();
+    Collection<Token<? extends TokenIdentifier>> z = ugi.getTokens();
     assertTrue(z.contains(t1));
     assertTrue(z.contains(t2));
     assertEquals(2, z.size());
@@ -188,9 +186,9 @@ public class TestUserGroupInformation {
     }
     
     // ensure that the tokens are passed through doAs
-    Collection<Token<T>> otherSet = 
-      ugi.doAs(new PrivilegedExceptionAction<Collection<Token<T>>>(){
-        public Collection<Token<T>> run() throws IOException {
+    Collection<Token<? extends TokenIdentifier>> otherSet = 
+      ugi.doAs(new PrivilegedExceptionAction<Collection<Token<?>>>(){
+        public Collection<Token<?>> run() throws IOException {
           return UserGroupInformation.getCurrentUser().getTokens();
         }
       });

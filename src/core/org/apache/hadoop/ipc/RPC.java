@@ -37,6 +37,8 @@ import org.apache.commons.logging.*;
 
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
@@ -400,7 +402,7 @@ public class RPC {
    */
   public static Object[] call(Method method, Object[][] params,
                               InetSocketAddress[] addrs, Configuration conf)
-    throws IOException {
+    throws IOException, InterruptedException {
     return call(method, params, addrs, null, conf);
   }
   
@@ -408,7 +410,7 @@ public class RPC {
   public static Object[] call(Method method, Object[][] params,
                               InetSocketAddress[] addrs, 
                               UserGroupInformation ticket, Configuration conf)
-    throws IOException {
+    throws IOException, InterruptedException {
 
     Invocation[] invocations = new Invocation[params.length];
     for (int i = 0; i < params.length; i++)
@@ -447,9 +449,19 @@ public class RPC {
                                  final int numHandlers,
                                  final boolean verbose, Configuration conf) 
     throws IOException {
-    return new Server(instance, conf, bindAddress, port, numHandlers, verbose);
+    return getServer(instance, bindAddress, port, numHandlers, verbose, conf, null);
   }
 
+  /** Construct a server for a protocol implementation instance listening on a
+   * port and address, with a secret manager. */
+  public static Server getServer(final Object instance, final String bindAddress, final int port,
+                                 final int numHandlers,
+                                 final boolean verbose, Configuration conf,
+                                 SecretManager<? extends TokenIdentifier> secretManager) 
+    throws IOException {
+    return new Server(instance, conf, bindAddress, port, numHandlers, verbose, secretManager);
+  }
+  
   /** An RPC Server. */
   public static class Server extends org.apache.hadoop.ipc.Server {
     private Object instance;
@@ -463,7 +475,7 @@ public class RPC {
      */
     public Server(Object instance, Configuration conf, String bindAddress, int port) 
       throws IOException {
-      this(instance, conf,  bindAddress, port, 1, false);
+      this(instance, conf,  bindAddress, port, 1, false, null);
     }
     
     private static String classNameBase(String className) {
@@ -483,8 +495,11 @@ public class RPC {
      * @param verbose whether each call should be logged
      */
     public Server(Object instance, Configuration conf, String bindAddress,  int port,
-                  int numHandlers, boolean verbose) throws IOException {
-      super(bindAddress, port, Invocation.class, numHandlers, conf, classNameBase(instance.getClass().getName()));
+                  int numHandlers, boolean verbose, 
+                  SecretManager<? extends TokenIdentifier> secretManager) 
+        throws IOException {
+      super(bindAddress, port, Invocation.class, numHandlers, conf,
+          classNameBase(instance.getClass().getName()), secretManager);
       this.instance = instance;
       this.verbose = verbose;
     }

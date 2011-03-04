@@ -16,34 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.mapred;
+package org.apache.hadoop.security.token;
 
-import java.io.IOException;
-
-import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.security.KerberosInfo;
+import java.lang.annotation.*;
 
 /**
- * Protocol for admin operations. This is a framework-public interface and is
- * NOT_TO_BE_USED_BY_USERS_DIRECTLY.
+ * Indicates Token related information to be used
  */
-@KerberosInfo(JobContext.JOB_JOBTRACKER_ID)
-public interface AdminOperationsProtocol extends VersionedProtocol {
-  
-  /**
-   * Version 1: Initial version. Added refreshQueueAcls.
-   * Version 2: Added node refresh facility
-   */
-  public static final long versionID = 2L;
-
-  /**
-   * Refresh the queue acls in use currently.
-   */
-  void refreshQueueAcls() throws IOException;
-  
-  /**
-   * Refresh the node list at the {@link JobTracker} 
-   */
-  void refreshNodes() throws IOException;
+@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.TYPE)
+public @interface TokenInfo {
+  /** The type of TokenSelector to be used */
+  Class<? extends TokenSelector<? extends TokenIdentifier>> value();
 }

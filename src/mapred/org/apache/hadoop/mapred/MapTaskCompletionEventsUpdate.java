@@ -28,7 +28,7 @@ import org.apache.hadoop.io.Writable;
  * tasks w.r.t the map task completion events. It also indicates whether the 
  * child task should reset its events index.
  */
-class MapTaskCompletionEventsUpdate implements Writable {
+public class MapTaskCompletionEventsUpdate implements Writable {
   TaskCompletionEvent[] events;
   boolean reset;
 

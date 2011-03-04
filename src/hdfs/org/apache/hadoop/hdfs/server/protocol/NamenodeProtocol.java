@@ -20,15 +20,18 @@ package org.apache.hadoop.hdfs.server.protocol;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.KerberosInfo;
 
 /*****************************************************************************
  * Protocol that a secondary NameNode uses to communicate with the NameNode.
  * It's used to get part of the name node state
  *****************************************************************************/
+@KerberosInfo(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY)
 public interface NamenodeProtocol extends VersionedProtocol {
   /**
    * 3: new method added: getAccessKeys()
