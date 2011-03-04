@@ -41,12 +41,10 @@
 		or delete files or directories, and the <em>x</em> permission is required to access a child of the directory. 
 		</p>
 	 <p>	
-		In contrast to the POSIX model, there are no <em>setuid</em> or <em>setgid</em> bits for files as there is no notion of executable files. 
-		For directories, there are no <em>setuid</em> or <em>setgid</em> bits directory as a simplification. The <em>Sticky bit</em> can be set 
-		on directories, preventing anyone except the superuser, directory owner or file owner from deleting or moving the files within the directory. 
-		Setting the sticky bit for a file has no effect. Collectively, the permissions of a file or directory are its <em>mode</em>. In general, Unix 
-		customs for representing and displaying modes will be used, including the use of octal numbers in this description. When a file or directory 
-		is created, its owner is the user identity of the client process, and its group is the group of the parent directory (the BSD rule).
+		In contrast to the POSIX model, there are no <em>sticky</em>, <em>setuid</em> or <em>setgid</em> bits for files as there is no notion of executable files. 
+		For directories, there are no <em>setuid</em> or <em>setgid</em> bits directory as a simplification. Collectively, the permissions of a file or directory are 
+		its <em>mode</em>. In general, Unix customs for representing and displaying modes will be used, including the use of octal numbers in this description. When a 
+		file or directory is created, its owner is the user identity of the client process, and its group is the group of the parent directory (the BSD rule).
 	</p>
 	<p>
 		Each client process that accesses HDFS has a two-part identity composed of the <em>user name</em>, and <em>groups list</em>. 
