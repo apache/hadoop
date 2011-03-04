@@ -78,6 +78,10 @@ public class MetricsTag {
     if (!this.description.equals(other.description())) {
       return false;
     }
+    if (this.value == null || other.value() == null) {
+      if (this.value == null && other.value() == null) return true;
+      return false;
+    }
     if (!this.value.equals(other.value())) {
       return false;
     }
@@ -86,7 +90,7 @@ public class MetricsTag {
 
   @Override
   public int hashCode() {
-    return name.hashCode() ^ value.hashCode();
+    return name.hashCode() ^ (value == null ? 0 : value.hashCode());
   }
 
   @Override
