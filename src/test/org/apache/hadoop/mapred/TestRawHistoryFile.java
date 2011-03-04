@@ -51,7 +51,7 @@ public class TestRawHistoryFile extends TestCase {
       conf.setLong("mapred.job.tracker.retiredjobs.cache.size", 1);
       conf.setLong("mapred.jobtracker.retirejob.interval", 0);
       conf.setLong("mapred.jobtracker.retirejob.check", 0);
-      conf.setLong("mapred.jobtracker.completeuserjobs.maximum", 0);
+      conf.setLong("mapred.jobtracker.completeuserjobs.maximum", 1);
       conf.set("mapreduce.history.server.http.address", "localhost:0");
 
       mrCluster = new MiniMRCluster(1, conf.get("fs.default.name"), 1,

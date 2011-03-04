@@ -1195,14 +1195,6 @@ public class JobInProgress {
     this.historyFile = file;
   }
 
-  boolean isHistoryFileCopied() {
-    return historyFileCopied;
-  }
-
-  synchronized void setHistoryFileCopied() {
-    this.historyFileCopied = true;
-  }
-  
   /**
    * Returns the job-level counters.
    * 

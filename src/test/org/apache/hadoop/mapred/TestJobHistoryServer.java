@@ -50,7 +50,7 @@ public class TestJobHistoryServer extends TestCase {
       conf.setLong("mapred.job.tracker.retiredjobs.cache.size", 1);
       conf.setLong("mapred.jobtracker.retirejob.interval", 0);
       conf.setLong("mapred.jobtracker.retirejob.check", 0);
-      conf.setLong("mapred.jobtracker.completeuserjobs.maximum", 0);
+      conf.setLong("mapred.jobtracker.completeuserjobs.maximum", 2);
       conf.set(JobHistoryServer.MAPRED_HISTORY_SERVER_HTTP_ADDRESS,
           "localhost:0");
 
@@ -86,7 +86,7 @@ public class TestJobHistoryServer extends TestCase {
       conf.setLong("mapred.job.tracker.retiredjobs.cache.size", 1);
       conf.setLong("mapred.jobtracker.retirejob.interval", 0);
       conf.setLong("mapred.jobtracker.retirejob.check", 0);
-      conf.setLong("mapred.jobtracker.completeuserjobs.maximum", 0);
+      conf.setLong("mapred.jobtracker.completeuserjobs.maximum", 2);
       conf.set(JobHistoryServer.MAPRED_HISTORY_SERVER_HTTP_ADDRESS,
           "localhost:8090");
       conf.setBoolean(JobHistoryServer.MAPRED_HISTORY_SERVER_EMBEDDED, false);

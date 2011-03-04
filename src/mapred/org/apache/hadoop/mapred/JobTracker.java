@@ -263,7 +263,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     */
   static final int MIN_TIME_BEFORE_RETIRE = 0;
 
-
   private int nextJobId = 1;
 
   public static final Log LOG = LogFactory.getLog(JobTracker.class);
@@ -516,7 +515,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   synchronized void historyFileCopied(JobID jobid, String historyFile) {
     JobInProgress job = getJob(jobid);
     if (job != null) { //found in main cache
-      job.setHistoryFileCopied();
       if (historyFile != null) {
         job.setHistoryFile(historyFile);
       }
@@ -534,9 +532,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     final JobStatus status;
     final JobProfile profile;
     final long finishTime;
+    final Counters counters;
     private String historyFile;
-    RetireJobInfo(JobStatus status, JobProfile profile, long finishTime, 
-        String historyFile) {
+    RetireJobInfo(Counters counters, JobStatus status, JobProfile profile, 
+        long finishTime, String historyFile) {
+      this.counters = counters;
       this.status = status;
       this.profile = profile;
       this.finishTime = finishTime;
@@ -561,7 +561,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     synchronized void addToCache(JobInProgress job) {
-      RetireJobInfo info = new RetireJobInfo(job.getStatus(), 
+      RetireJobInfo info = new RetireJobInfo(job.getCounters(), job.getStatus(),
           job.getProfile(), job.getFinishTime(), job.getHistoryFile());
       jobRetireInfoQ.add(info);
       jobIDStatusMap.put(info.status.getJobID(), info);
@@ -590,10 +590,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     private boolean minConditionToRetire(JobInProgress job, long now) {
-      return job.getStatus().getRunState() != JobStatus.RUNNING &&
-          job.getStatus().getRunState() != JobStatus.PREP &&
-          (job.getFinishTime() + MIN_TIME_BEFORE_RETIRE < now) &&
-          job.isHistoryFileCopied();
+      return job.getStatus().getRunState() != JobStatus.RUNNING
+          && job.getStatus().getRunState() != JobStatus.PREP
+          && (job.getFinishTime() + MIN_TIME_BEFORE_RETIRE < now);
     }
     /**
      * The run method lives for the life of the JobTracker,
@@ -4294,7 +4293,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         // on the JobTracker since it isn't a synchronized method
         return job.getStatus();
       } else {
-        
         RetireJobInfo info = retireJobs.get(jobid);
         if (info != null) {
           return info.status;
@@ -4315,7 +4313,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         aclsManager.checkAccess(job, callerUGI, Operation.VIEW_JOB_COUNTERS);
 
         return isJobInited(job) ? job.getCounters() : EMPTY_COUNTERS;
-      } 
+      } else {
+        RetireJobInfo info = retireJobs.get(jobid);
+        if (info != null) {
+          return info.counters;
+        }
+      }
     }
 
     return completedJobStatusStore.readCounters(jobid);
