@@ -21,12 +21,17 @@ class TaskInfoImpl implements TaskInfo {
   private int failedAttempts;
   private int runningAttempts;
   private TaskStatus[] taskStatus;
+  private boolean setupOrCleanup;
+  private String[] taskTrackers;
 
   public TaskInfoImpl() {
     taskID = new TaskID();
   }
-  public TaskInfoImpl(TaskID taskID, double progress, int runningAttempts,
-      int killedAttempts, int failedAttempts, TaskStatus[] taskStatus) {
+
+  public TaskInfoImpl(
+      TaskID taskID, double progress, int runningAttempts, int killedAttempts,
+      int failedAttempts, TaskStatus[] taskStatus,
+      boolean setupOrCleanup, String[] taskTrackers) {
     this.progress = progress;
     this.taskID = taskID;
     this.killedAttempts = killedAttempts;
@@ -34,16 +39,15 @@ class TaskInfoImpl implements TaskInfo {
     this.runningAttempts = runningAttempts;
     if (taskStatus != null) {
       this.taskStatus = taskStatus;
-    }
-    else { 
+    } else {
       if (taskID.isMap()) {
-        this.taskStatus = new MapTaskStatus[]{};
-      }
-      else {
-        this.taskStatus = new ReduceTaskStatus[]{};
+        this.taskStatus = new MapTaskStatus[] {};
+      } else {
+        this.taskStatus = new ReduceTaskStatus[] {};
       }
     }
-    
+    this.setupOrCleanup = setupOrCleanup;
+    this.taskTrackers = taskTrackers;
   }
 
   @Override
@@ -93,6 +97,13 @@ class TaskInfoImpl implements TaskInfo {
         taskStatus[i] = new ReduceTaskStatus();
       }
       taskStatus[i].readFields(in);
+      taskStatus[i].setTaskTracker(in.readUTF());
+    }
+    setupOrCleanup = in.readBoolean();
+    size = in.readInt();
+    taskTrackers = new String[size];
+    for(int i=0; i < size ; i++) {
+      taskTrackers[i] = in.readUTF();
     }
   }
 
@@ -106,11 +117,27 @@ class TaskInfoImpl implements TaskInfo {
     out.writeInt(taskStatus.length);
     for (TaskStatus t : taskStatus) {
       t.write(out);
+      out.writeUTF(t.getTaskTracker());
+    }
+    out.writeBoolean(setupOrCleanup);
+    out.writeInt(taskTrackers.length);
+    for(String tt : taskTrackers) {
+      out.writeUTF(tt);
     }
   }
-  
+
   @Override
   public TaskStatus[] getTaskStatus() {
     return taskStatus;
+  }
+
+  @Override
+  public boolean isSetupOrCleanup() {
+    return setupOrCleanup;
+  }
+
+  @Override
+  public String[] getTaskTrackers() {
+    return taskTrackers;
   }
 }

@@ -5,6 +5,7 @@ import java.io.IOException;
 import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskTrackerStatus;
+import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.test.system.DaemonProtocol;
 
 /**
@@ -29,4 +30,14 @@ public interface TTProtocol extends DaemonProtocol {
    * @throws IOException
    */
   TTTaskInfo[] getTasks() throws IOException;
+
+  /**
+   * Gets the task associated with the id.<br/>
+   * 
+   * @param id of the task.
+   * 
+   * @return
+   * @throws IOException
+   */
+  TTTaskInfo getTask(TaskID taskID) throws IOException;
 }

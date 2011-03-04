@@ -30,18 +30,41 @@ public privileged aspect TaskTrackerAspect {
 
   public TTTaskInfo[] TaskTracker.getTasks() throws IOException {
     List<TTTaskInfo> infoList = new ArrayList<TTTaskInfo>();
-    for (TaskInProgress tip : tasks.values()) {
-      TTTaskInfo info = null;
-      if (tip.task.isMapTask()) {
-        info = new MapTTTaskInfo(((MapTask) tip.task), tip.slotTaken,
-            tip.wasKilled, tip.diagnosticInfo.toString());
-      } else {
-        info = new ReduceTTTaskInfo(((ReduceTask) tip.task), tip.slotTaken,
-            tip.wasKilled, tip.diagnosticInfo.toString());
+    synchronized (tasks) {
+      for (TaskInProgress tip : tasks.values()) {
+        TTTaskInfo info = getTTTaskInfo(tip);
+        infoList.add(info);
       }
-      infoList.add(info);
     }
     return (TTTaskInfo[]) infoList.toArray(new TTTaskInfo[infoList.size()]);
+  }
+
+  public TTTaskInfo TaskTracker.getTask(org.apache.hadoop.mapreduce.TaskID id) 
+      throws IOException {
+    TaskID old = org.apache.hadoop.mapred.TaskID.downgrade(id);
+    synchronized (tasks) {
+      for(TaskAttemptID ta : tasks.keySet()) {
+        if(old.equals(ta.getTaskID())) {
+          return getTTTaskInfo(tasks.get(ta));
+        }
+      }
+    }
+    return null;
+  }
+
+  private TTTaskInfo TaskTracker.getTTTaskInfo(TaskInProgress tip) {
+    TTTaskInfo info;
+    if (tip.task.isMapTask()) {
+      info =
+          new MapTTTaskInfo(tip.slotTaken, tip.wasKilled, tip.diagnosticInfo
+              .toString(), (MapTaskStatus) tip.getStatus());
+    } else {
+      info =
+          new ReduceTTTaskInfo(
+              tip.slotTaken, tip.wasKilled, tip.diagnosticInfo.toString(),
+              (ReduceTaskStatus) tip.getStatus());
+    }
+    return info;
   }
 
   before(TaskTrackerStatus newStatus, TaskTracker tracker) : 

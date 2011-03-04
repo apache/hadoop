@@ -16,30 +16,25 @@ import org.apache.hadoop.mapreduce.test.system.TTTaskInfo;
 abstract class TTTaskInfoImpl implements TTTaskInfo {
 
   private String diagonsticInfo;
-  private Task task;
   private boolean slotTaken;
   private boolean wasKilled;
+  TaskStatus status;
 
   public TTTaskInfoImpl() {
   }
 
-  public TTTaskInfoImpl(Task task, boolean slotTaken, boolean wasKilled,
-      String diagonsticInfo) {
+  public TTTaskInfoImpl(boolean slotTaken, boolean wasKilled,
+      String diagonsticInfo, TaskStatus status) {
     super();
     this.diagonsticInfo = diagonsticInfo;
-    this.task = task;
     this.slotTaken = slotTaken;
     this.wasKilled = wasKilled;
+    this.status = status;
   }
 
   @Override
   public String getDiagnosticInfo() {
     return diagonsticInfo;
-  }
-
-  @Override
-  public Task getTask() {
-    return task;
   }
 
   @Override
@@ -53,44 +48,48 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
   }
 
   @Override
+  public TaskStatus getTaskStatus() {
+    return status;
+  }
+
+  @Override
   public void readFields(DataInput in) throws IOException {
-    task.readFields(in);
     slotTaken = in.readBoolean();
     wasKilled = in.readBoolean();
     diagonsticInfo = in.readUTF();
+    status.readFields(in);
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    task.write(out);
     out.writeBoolean(slotTaken);
     out.writeBoolean(wasKilled);
     out.writeUTF(diagonsticInfo);
+    status.write(out);
   }
 
   static class MapTTTaskInfo extends TTTaskInfoImpl {
 
     public MapTTTaskInfo() {
-      super(new MapTask(), false, false, "");
+      super(false, false, "", new MapTaskStatus());
     }
 
-    public MapTTTaskInfo(MapTask task, boolean slotTaken, boolean wasKilled,
-        String diagonsticInfo) {
-      super(task, slotTaken, wasKilled, diagonsticInfo);
+    public MapTTTaskInfo(boolean slotTaken, boolean wasKilled,
+        String diagonsticInfo, MapTaskStatus status) {
+      super(slotTaken, wasKilled, diagonsticInfo, status);
     }
   }
 
   static class ReduceTTTaskInfo extends TTTaskInfoImpl {
 
     public ReduceTTTaskInfo() {
-      super(new ReduceTask(), false, false, "");
+      super(false, false, "", new ReduceTaskStatus());
     }
 
-    public ReduceTTTaskInfo(ReduceTask task, boolean slotTaken,
-        boolean wasKilled, String diagonsticInfo) {
-      super(task, slotTaken, wasKilled, diagonsticInfo);
+    public ReduceTTTaskInfo(boolean slotTaken,
+        boolean wasKilled, String diagonsticInfo,ReduceTaskStatus status) {
+      super(slotTaken, wasKilled, diagonsticInfo, status);
     }
-
   }
 
 }

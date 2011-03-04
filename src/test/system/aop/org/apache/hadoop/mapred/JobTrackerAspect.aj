@@ -3,6 +3,8 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Set;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobTracker.RetireJobInfo;
@@ -63,22 +65,7 @@ public privileged aspect JobTrackerAspect {
       LOG.warn("No task present for : " + taskID);
       return null;
     }
-    TaskInfo info;
-    TaskStatus[] status = tip.getTaskStatuses();
-    synchronized (tip) {
-      if (status == null) {
-        if (tip.isMapTask()) {
-          status = new MapTaskStatus[]{};
-        }
-        else {
-          status = new ReduceTaskStatus[]{};
-        }
-      }
-      info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
-          .getActiveTasks().size(), tip.numKilledTasks(), 
-          tip.numTaskFailures(), status);
-    }
-    return info;
+    return getTaskInfo(tip);
   }
 
   public TTInfo JobTracker.getTTInfo(String trackerName) throws IOException {
@@ -116,57 +103,18 @@ public privileged aspect JobTrackerAspect {
       return null;
     }
     List<TaskInfo> infoList = new ArrayList<TaskInfo>();
-    TaskStatus[] status;
     synchronized (jip) {
       for (TaskInProgress tip : jip.setup) {
-        status = tip.getTaskStatuses();
-        if (status == null) {
-          if (tip.isMapTask()) {
-            status = new MapTaskStatus[]{};
-          }
-          else {
-            status = new ReduceTaskStatus[]{};
-          }
-        }
-        TaskInfo info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
-            .getActiveTasks().size(), tip.numKilledTasks(), tip
-            .numTaskFailures(), status);
-        infoList.add(info);
+        infoList.add(getTaskInfo(tip));
       }
       for (TaskInProgress tip : jip.maps) {
-        status = tip.getTaskStatuses();
-        if (status == null) {
-          status = new MapTaskStatus[]{};
-        }
-        TaskInfo info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
-            .getActiveTasks().size(), tip.numKilledTasks(), tip
-            .numTaskFailures(), status);
-        infoList.add(info);
+        infoList.add(getTaskInfo(tip));
       }
       for (TaskInProgress tip : jip.reduces) {
-        status = tip.getTaskStatuses();
-        if (status == null) {
-          status = new ReduceTaskStatus[]{};
-        }
-        TaskInfo info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
-            .getActiveTasks().size(), tip.numKilledTasks(), tip
-            .numTaskFailures(), status);
-        infoList.add(info);
+        infoList.add(getTaskInfo(tip));
       }
       for (TaskInProgress tip : jip.cleanup) {
-        status = tip.getTaskStatuses();
-        if (status == null) {
-          if (tip.isMapTask()) {
-            status = new MapTaskStatus[]{};
-          }
-          else {
-            status = new ReduceTaskStatus[]{};
-          }
-        }
-        TaskInfo info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
-            .getActiveTasks().size(), tip.numKilledTasks(), tip
-            .numTaskFailures(), status);
-        infoList.add(info);
+        infoList.add(getTaskInfo(tip));
       }
     }
     return (TaskInfo[]) infoList.toArray(new TaskInfo[infoList.size()]);
@@ -230,5 +178,26 @@ public privileged aspect JobTrackerAspect {
     returning (JobTracker tracker): jtConstructorPointCut(conf, 
         jobtrackerIndentifier) {
     tracker.setReady(true);
+  }
+  
+  private TaskInfo JobTracker.getTaskInfo(TaskInProgress tip) {
+    TaskStatus[] status = tip.getTaskStatuses();
+    if (status == null) {
+      if (tip.isMapTask()) {
+        status = new MapTaskStatus[]{};
+      }
+      else {
+        status = new ReduceTaskStatus[]{};
+      }
+    }
+    String[] trackers =
+        (String[]) (tip.getActiveTasks().values()).toArray(new String[tip
+            .getActiveTasks().values().size()]);
+    TaskInfo info =
+        new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
+            .getActiveTasks().size(), tip.numKilledTasks(), tip
+            .numTaskFailures(), status, (tip.isJobSetupTask() || tip
+            .isJobCleanupTask()), trackers);
+    return info;
   }
 }

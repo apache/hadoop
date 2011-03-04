@@ -49,9 +49,25 @@ public interface TaskInfo extends Writable {
 
   /**
    * Array of TaskStatus objects that are related to the corresponding
-   * TaskInProgress object.
+   * TaskInProgress object.The task status of the tip is only populated
+   * once a tracker reports back the task status.<br/>
    * 
-   * @return
+   * @return list of task statuses.
    */
   TaskStatus[] getTaskStatus();
+
+  /**
+   * Gets a list of tracker on which the task attempts are scheduled/running.
+   * Can be empty if the task attempt has succeeded <br/>
+   * 
+   * @return list of trackers
+   */
+  String[] getTaskTrackers();
+
+  /**
+   * Gets if the current TaskInProgress is a setup or cleanup tip. <br/>
+   * 
+   * @return true if setup/cleanup
+   */
+  boolean isSetupOrCleanup();
 }
