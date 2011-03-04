@@ -22,7 +22,11 @@ import java.text.DecimalFormat;
 import java.io.*;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Enumeration;
+import java.util.Properties;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.RandomWriter;
 import org.apache.hadoop.fs.Path;
@@ -49,6 +53,7 @@ import org.apache.hadoop.mapred.lib.IdentityReducer;
  */
 public class UtilsForTests {
 
+  static final Log LOG = LogFactory.getLog(UtilsForTests.class);
   final static long KB = 1024L * 1;
   final static long MB = 1024L * KB;
   final static long GB = 1024L * MB;
@@ -664,4 +669,19 @@ public class UtilsForTests {
       }
     }
   }
+
+  static void setUpConfigFile(Properties confProps, File configFile)
+    throws IOException {
+    Configuration config = new Configuration(false);
+    FileOutputStream fos = new FileOutputStream(configFile);
+
+    for (Enumeration<?> e = confProps.propertyNames(); e.hasMoreElements();) {
+      String key = (String) e.nextElement();
+      config.set(key, confProps.getProperty(key));
+    }
+
+    config.writeXml(fos);
+    fos.close();
+  }
 }
+

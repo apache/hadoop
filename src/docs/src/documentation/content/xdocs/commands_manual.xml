@@ -553,7 +553,24 @@
 			           </tr>
 			     </table>
 			</section>
-			
+			<section>
+        <title>mradmin</title>
+        <p>Runs MR admin client</p>
+        <p><code>Usage: hadoop mradmin  [</code>
+        <a href="commands_manual.html#Generic+Options">GENERIC_OPTIONS</a>
+        <code>] [-refreshQueueAcls] </code></p>
+        <table>
+        <tr>
+        <th> COMMAND_OPTION </th><th> Description </th>
+        </tr>
+        <tr>
+        <td><code>-refreshQueueAcls</code></td>
+        <td> Refresh the queue acls used by hadoop, to check access during submissions
+        and administration of the job by the user. The properties present in
+        <code>mapred-queue-acls.xml</code> is reloaded by the queue manager.</td>
+        </tr>
+        </table>
+      </section>
 			<section>
 				<title> jobtracker </title>
 				<p>

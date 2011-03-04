@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
@@ -25,10 +26,10 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SecurityUtil.AccessControlList;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Class that exposes information about queues maintained by the Hadoop
@@ -61,6 +62,9 @@ class QueueManager {
   private HashMap<String, Object> schedulerInfoObjects;
   // Whether ACLs are enabled in the system or not.
   private boolean aclsEnabled;
+  
+  //Resource in which queue acls are configured.
+  static final String QUEUE_ACLS_FILE_NAME = "mapred-queue-acls.xml";
   
   /**
    * Enum representing an operation that can be performed on a queue.
@@ -228,36 +232,65 @@ class QueueManager {
   }
   
   /**
-   * Refresh information configured for queues in the system by reading
-   * it from the passed in {@link org.apache.hadoop.conf.Configuration}.
-   *
-   * Previously stored information about queues is removed and new
-   * information populated from the configuration.
+   * Refresh the acls for the configured queues in the system by reading
+   * it from mapred-queue-acls.xml.
    * 
-   * @param conf New configuration for the queues. 
+   * The previous acls are removed. Previously configured queues and
+   * if or not acl is disabled is retained.
+   * 
+   * @throws IOException when queue ACL configuration file is invalid.
    */
-  public synchronized void refresh(Configuration conf) {
-    queueNames.clear();
-    aclsMap.clear();
-    schedulerInfoObjects.clear();
-    initialize(conf);
+  synchronized void refreshAcls(Configuration conf) throws IOException {
+    try {
+      HashMap<String, AccessControlList> newAclsMap = 
+        getQueueAcls(conf);
+      aclsMap = newAclsMap;
+    } catch (Throwable t) {
+      String exceptionString = StringUtils.stringifyException(t);
+      LOG.warn("Queue ACLs could not be refreshed because there was an " +
+      		"exception in parsing the configuration: "+ exceptionString +
+      		". Existing ACLs are retained.");
+      throw new IOException(exceptionString);
+    }
+
   }
   
-  private void initialize(Configuration conf) {
-    aclsEnabled = conf.getBoolean("mapred.acls.enabled", false);
-    String[] queues = conf.getStrings("mapred.queue.names", 
-                                  new String[] {JobConf.DEFAULT_QUEUE_NAME});
-    addToSet(queueNames, queues);
-    
-    // for every queue, and every operation, get the ACL
-    // if any is specified and store in aclsMap.
-    for (String queue : queues) {
+  private void checkDeprecation(Configuration conf) {
+    for(String queue: queueNames) {
+      for (QueueOperation oper : QueueOperation.values()) {
+        String key = toFullPropertyName(queue, oper.getAclName());
+        String aclString = conf.get(key);
+        if(aclString != null) {
+          LOG.warn("Configuring queue ACLs in mapred-site.xml or " +
+          		"hadoop-site.xml is deprecated. Configure queue ACLs in " + 
+          		QUEUE_ACLS_FILE_NAME);
+          return;
+        }
+      }
+    }
+  }
+  
+  private HashMap<String, AccessControlList> getQueueAcls(Configuration conf)  {
+    checkDeprecation(conf);
+    conf.addResource(QUEUE_ACLS_FILE_NAME);
+    HashMap<String, AccessControlList> aclsMap = 
+      new HashMap<String, AccessControlList>();
+    for (String queue : queueNames) {
       for (QueueOperation oper : QueueOperation.values()) {
         String key = toFullPropertyName(queue, oper.getAclName());
         String aclString = conf.get(key, "*");
         aclsMap.put(key, new AccessControlList(aclString));
       }
-    }
+    } 
+    return aclsMap;
+  }
+  
+  private void initialize(Configuration conf) {
+    aclsEnabled = conf.getBoolean("mapred.acls.enabled", false);
+    String[] queues = conf.getStrings("mapred.queue.names", 
+        new String[] {JobConf.DEFAULT_QUEUE_NAME});
+    addToSet(queueNames, queues);
+    aclsMap = getQueueAcls(conf);
   }
   
   private static final String toFullPropertyName(String queue, 

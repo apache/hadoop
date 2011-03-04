@@ -87,7 +87,8 @@ import org.apache.hadoop.util.VersionInfo;
  *
  *******************************************************/
 public class JobTracker implements MRConstants, InterTrackerProtocol,
-    JobSubmissionProtocol, TaskTrackerManager, RefreshAuthorizationPolicyProtocol {
+    JobSubmissionProtocol, TaskTrackerManager,
+    RefreshAuthorizationPolicyProtocol, AdminOperationsProtocol {
 
   static{
     Configuration.addDefaultResource("mapred-default.xml");
@@ -97,6 +98,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   static long TASKTRACKER_EXPIRY_INTERVAL = 10 * 60 * 1000;
   static long RETIRE_JOB_INTERVAL;
   static long RETIRE_JOB_CHECK_INTERVAL;
+
+  
   // The interval after which one fault of a tracker will be discarded,
   // if there are no faults during this. 
   private static long UPDATE_FAULTY_TRACKER_INTERVAL = 24 * 60 * 60 * 1000;
@@ -215,6 +218,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       return JobSubmissionProtocol.versionID;
     } else if (protocol.equals(RefreshAuthorizationPolicyProtocol.class.getName())){
       return RefreshAuthorizationPolicyProtocol.versionID;
+    } else if (protocol.equals(AdminOperationsProtocol.class.getName())){
+      return AdminOperationsProtocol.versionID;
     } else {
       throw new IOException("Unknown protocol to job tracker: " + protocol);
     }
@@ -1563,8 +1568,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // Read the hosts/exclude files to restrict access to the jobtracker.
     this.hostsReader = new HostsFileReader(conf.get("mapred.hosts", ""),
                                            conf.get("mapred.hosts.exclude", ""));
-    
-    queueManager = new QueueManager(this.conf);
+
+    Configuration queuesConf = new Configuration(this.conf);
+    queueManager = new QueueManager(queuesConf);
     
     // Create the scheduler
     Class<? extends TaskScheduler> schedulerClass
@@ -3860,5 +3866,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
       throw new IOException(jobStr.toString() + msg);
     }
+  }
+
+  @Override
+  public void refreshQueueAcls() throws IOException{
+    LOG.info("Refreshing queue acls. requested by : " + 
+        UserGroupInformation.getCurrentUGI().getUserName());
+    this.queueManager.refreshAcls(new Configuration(this.conf));
   }
 }
