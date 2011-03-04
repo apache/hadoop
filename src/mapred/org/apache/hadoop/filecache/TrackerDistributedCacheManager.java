@@ -687,14 +687,6 @@ public class TrackerDistributedCacheManager {
     return result;
   }
 
-  public void releaseJob(JobID jobId) throws IOException {
-    TaskDistributedCacheManager mgr = jobArchives.get(jobId);
-    if (mgr != null) {
-      mgr.release();
-      jobArchives.remove(jobId);
-    }
-  }
-
   public void setArchiveSizes(JobID jobId, long[] sizes) throws IOException {
     TaskDistributedCacheManager mgr = jobArchives.get(jobId);
     if (mgr != null) {

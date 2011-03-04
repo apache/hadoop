@@ -1702,7 +1702,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     if (rjob == null) {
       LOG.warn("Unknown job " + jobId + " being deleted.");
     } else {
-      synchronized (rjob) {            
+      synchronized (rjob) {
+        // decrement the reference counts for the items this job references
+        rjob.distCacheMgr.release();
         // Add this tips of this job to queue of tasks to be purged 
         for (TaskInProgress tip : rjob.tasks) {
           tip.jobHasFinished(false);
