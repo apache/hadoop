@@ -64,13 +64,11 @@ window.location.href = url;
 
     final int FILENAME_JOBNAME_PART = FILENAME_JOBID_END + 2;
 
-    // XXXXXXXX debug code -- should start with 20
-    final int[] SCAN_SIZES = { 3, 5, 20, 50, 200 };
+    final int[] SCAN_SIZES = { 20, 50, 200 };
 
     final int FILES_PER_SCAN = 1000;
 
-    // XXXXX debug -- this should be 100.
-    final int DEFAULT_PAGE_SIZE = 10;
+    final int DEFAULT_PAGE_SIZE = 100;
 
     final String DEFAULT_DATE_GLOB_COMPONENT = "*/*/*";
 
@@ -86,47 +84,54 @@ window.location.href = url;
 
     final String parts[] = dateSplit[0].split(":");
 
-    final String user = (parts.length >= 1)
-                        ? parts[0].toLowerCase()
-                        : "";
+    final String rawUser = (parts.length >= 1)
+                            ? parts[0].toLowerCase()
+                            : "";
+
+    final String userInFname
+      = escapeUnderscores(JobHistory.JobInfo.encodeJobHistoryFileName(
+            HtmlQuoting.unquoteHtmlChars(rawUser))).toLowerCase();
 
     final int currentScanSizeIndex
       = (request.getParameter("scansize") == null)
            ? 0 : Integer.parseInt(request.getParameter("scansize"));
 
-    // DEBUG we temporarily allow a "date" with a leading digit of 4 or 5,
-    //  and a "month" with a leading digit of 2, because for testing we will 
-    //  use hours resp. minutes for months resp. days.
     final String SEARCH_PARSE_REGEX
-      = "([0-2]?[0-9])/([0-5]?[0-9])/((?:2[0-9])[0-9][0-9])";
+      = "([0-1]?[0-9])/([0-3]?[0-9])/((?:2[0-9])[0-9][0-9])";
 
     final Pattern dateSearchParse = Pattern.compile(SEARCH_PARSE_REGEX);
 
-    final String jobname = (parts.length >= 2)
-                           ? parts[1].toLowerCase()
-                           : "";
+    final String rawJobname = (parts.length >= 2)
+                               ? parts[1].toLowerCase()
+                               : "";
+
+    final String jobnameKeywordInFname
+      = escapeUnderscores(JobHistory.JobInfo.encodeJobHistoryFileName(
+            HtmlQuoting.unquoteHtmlChars(rawJobname))).toLowerCase();
+
     PathFilter jobLogFileFilter = new PathFilter() {
-      // unquote params before encoding for search
-      final String uqUser = JobHistory.JobInfo.encodeJobHistoryFileName(
-            HtmlQuoting.unquoteHtmlChars(user));
-      final String uqJobname = JobHistory.JobInfo.encodeJobHistoryFileName(
-            HtmlQuoting.unquoteHtmlChars(jobname));
       private boolean matchUser(String fileName) {
         // return true if 
         //  - user is not specified
         //  - user matches
-        return "".equals(uqUser) || uqUser.equals(fileName.split("_")[FILENAME_USER_PART]);
+        return "".equals(userInFname)
+           || userInFname.equals(fileName.split("_")[FILENAME_USER_PART]
+                .toLowerCase());
       }
 
       private boolean matchJobName(String fileName) {
         // return true if 
         //  - jobname is not specified
         //  - jobname contains the keyword
-        return "".equals(uqJobname) || fileName.split("_")[FILENAME_JOBNAME_PART].toLowerCase().contains(uqJobname);
+        return "".equals(jobnameKeywordInFname) 
+                 || fileName.split("_")[FILENAME_JOBNAME_PART].toLowerCase()
+                       .contains(jobnameKeywordInFname);
       }
 
       public boolean accept(Path path) {
-        return !(path.getName().endsWith(".xml")) && matchUser(path.getName()) && matchJobName(path.getName());
+        String name = path.getName();
+
+        return !(name.endsWith(".xml")) && matchUser(name) && matchJobName(name);
       }
     };
     
@@ -290,8 +295,8 @@ window.location.href = url;
                   + "</h2>");
     }
 
-    out.println("<!--  user : " + user +
-        ", jobname : " + jobname + "-->");
+    out.println("<!--  user : " + rawUser +
+        ", jobname : " + rawJobname + "-->");
     if (null == jobFiles || jobFiles.length == 0)  {
       out.println("No files found!"); 
       return ; 
@@ -364,13 +369,13 @@ window.location.href = url;
                 + (sizeIsExact
                    ? ""
                    : ", <b>" + numHistoryFiles + "</b> gotten"));
-    if (!"".equals(user)) {
+    if (!"".equals(rawUser)) {
       // show the user if present
-      out.println(" for user <b>" + user + "</b>");
+      out.println(" for user <b>" + rawUser + "</b>");
     }
-    if (!"".equals(jobname)) {
+    if (!"".equals(rawJobname)) {
       out.println(" with jobname having the keyword <b>" +
-          jobname + "</b> in it.");
+          rawJobname + "</b> in it.");
       // show the jobname keyword if present
     }
     if (!DEFAULT_DATE_GLOB_COMPONENT.equals(dateComponent)) {
@@ -430,9 +435,14 @@ window.location.href = url;
     Set<String> displayedJobs = new HashSet<String>();
     for (int i = start - 1; i < start + length - 1; ++i) {
       Path jobFile = jobFiles[i];
+
+      String fname = jobFile.getName();
+      String marker = JobHistory.nonOccursString(fname);
+      String reescapedFname = JobHistory.replaceStringInstances(fname,
+                  JobHistory.UNDERSCORE_ESCAPE, marker);
       
       String decodedJobFileName = 
-          JobHistory.JobInfo.decodeJobHistoryFileName(jobFile.getName());
+          JobHistory.JobInfo.decodeJobHistoryFileName(reescapedFname);
 
       String[] jobDetails = decodedJobFileName.split("_");
       String trackerStartTime = jobDetails[1];
@@ -440,8 +450,10 @@ window.location.href = url;
                       + "_" + jobDetails[JOB_ID_START + 1]
                       + "_" + jobDetails[JOB_ID_START + 2]);
       String submitTimestamp = jobDetails[FILENAME_SUBMIT_TIMESTAMP_PART];
-      String userName = jobDetails[FILENAME_USER_PART];
-      String jobName = jobDetails[FILENAME_JOBNAME_PART];
+      String userName = JobHistory.replaceStringInstances(jobDetails[FILENAME_USER_PART],
+                  marker, JobHistory.UNDERSCORE_ESCAPE);
+      String jobName = JobHistory.replaceStringInstances(jobDetails[FILENAME_JOBNAME_PART],
+                  marker, JobHistory.UNDERSCORE_ESCAPE);
       
       // Check if the job is already displayed. There can be multiple job 
       // history files for jobs that have restarted
@@ -452,8 +464,11 @@ window.location.href = url;
       }
       
       // Encode the logfile name again to cancel the decoding done by the browser
-      String encodedJobFileName = 
+      String preEncodedJobFileName = 
           JobHistory.JobInfo.encodeJobHistoryFileName(jobFile.getName());
+
+      String encodedJobFileName = 
+          JobHistory.replaceStringInstances(preEncodedJobFileName, "%5F", "%255F");
 %>
 <center>
 <%	
@@ -478,9 +493,35 @@ window.location.href = url;
       out.print("<td>" + new Date(Long.parseLong(timestamp)) + "</td>"); 
       out.print("<td>" + "<a href=\"jobdetailshistory.jsp?logFile=" 
           + logFile.toString() + "\">" + jobId + "</a></td>");
-      out.print("<td>" + HtmlQuoting.quoteHtmlChars(jobName) + "</td>"); 
-      out.print("<td>" + HtmlQuoting.quoteHtmlChars(user) + "</td>"); 
+      out.print("<td>"
+                + HtmlQuoting.quoteHtmlChars(unescapeUnderscores(jobName))
+                + "</td>"); 
+      out.print("<td>"
+                + HtmlQuoting.quoteHtmlChars(unescapeUnderscores(user))
+                + "</td>"); 
       out.print("</tr>");
+    }
+
+    private String escapeUnderscores(String rawString) {
+      return convertStrings(rawString, "_", "%5F");
+    }
+
+    private String unescapeUnderscores(String rawString) {
+      return convertStrings(rawString, "%5F", "_");
+    }
+
+    // inefficient if there are a lot of underscores
+    private String convertStrings(String escapedString, String from, String to) {
+      int firstEscape = escapedString.indexOf(from);
+
+      if (firstEscape < 0) {
+        return escapedString;
+      }
+
+      return escapedString.substring(0, firstEscape)
+            + to
+            + unescapeUnderscores(escapedString.substring
+                                    (firstEscape + from.length()));
     }
 
     private void printNavigationTool(int pageno, int size, int max,

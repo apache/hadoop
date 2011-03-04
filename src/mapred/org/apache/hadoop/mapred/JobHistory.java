@@ -98,6 +98,8 @@ public class JobHistory {
   static final String DONE_DIRECTORY_FORMAT_DIRNAME
     = "version-" + DONE_DIRECTORY_FORMAT_VERSION;
 
+  static final String UNDERSCORE_ESCAPE = "%5F";
+
   public static final Log LOG = LogFactory.getLog(JobHistory.class);
   private static final char DELIMITER = ' ';
   static final char LINE_DELIMITER_CHAR = '.';
@@ -135,7 +137,7 @@ public class JobHistory {
   static final String CONF_FILE_NAME_SUFFIX = "_conf.xml";
 
   // XXXXX debug mode -- set this to false for production
-  private static final boolean DEBUG_MODE = true;
+  private static final boolean DEBUG_MODE = false;
 
   private static final int SERIAL_NUMBER_DIRECTORY_DIGITS = 6;
   private static final int SERIAL_NUMBER_LOW_DIGITS = DEBUG_MODE ? 1 : 3;
@@ -334,7 +336,7 @@ public class JobHistory {
 
   private static String serialNumberDirectoryComponent(JobID id) {
     return String.format(SERIAL_NUMBER_FORMAT,
-                         new Integer(jobSerialNumber(id)))
+                         Integer.valueOf(jobSerialNumber(id)))
               .substring(0, SERIAL_NUMBER_DIRECTORY_DIGITS);
   }
 
@@ -533,9 +535,18 @@ public class JobHistory {
     //permission
     if (!DONEDIR_FS.exists(DONE)) {
       LOG.info("Creating DONE folder at "+ DONE);
-      if (! DONEDIR_FS.mkdirs(DONE, 
+      if (!DONEDIR_FS.mkdirs(DONE, 
           new FsPermission(HISTORY_DIR_PERMISSION))) {
         throw new IOException("Mkdirs failed to create " + DONE.toString());
+      }
+
+      Path versionSubdir = new Path(DONE, DONE_DIRECTORY_FORMAT_DIRNAME);
+
+      if (!DONEDIR_FS.exists(versionSubdir)) {
+        if (!DONEDIR_FS.mkdirs(versionSubdir,
+                               new FsPermission(HISTORY_DIR_PERMISSION))) {
+          throw new IOException("Mkdirs failed to create " + versionSubdir);
+        }
       }
     }
     fileManager.start();
@@ -981,6 +992,44 @@ public class JobHistory {
     String[] jobDetails = logFileName.split("_");
     return jobDetails[4];
   }
+
+
+  // This code will be inefficient if the subject contains dozens of underscores
+  static String escapeUnderscores(String escapee) {
+    return replaceStringInstances(escapee, "_", UNDERSCORE_ESCAPE);
+  }
+
+  static String nonOccursString(String logFileName) {
+    int adHocIndex = 0;
+
+    String unfoundString = "q" + adHocIndex;
+
+    while (logFileName.contains(unfoundString)) {
+      unfoundString = "q" + ++adHocIndex;
+    }
+
+    return unfoundString + "q";
+  }
+
+  // I tolerate this code because I expect a low number of
+  // occurrences in a relatively short string
+  static String replaceStringInstances
+      (String logFileName, String old, String replacement) {
+    int index = logFileName.indexOf(old);
+
+    while (index > 0) {
+      logFileName = (logFileName.substring(0, index)
+                     + replacement
+                     + replaceStringInstances
+                         (logFileName.substring(index + old.length()),
+                          old, replacement));
+
+      index = logFileName.indexOf(old);
+    }
+
+    return logFileName;
+  }      
+
   
   /**
    * Helper class for logging or reading back events related to job start, finish or failure. 
@@ -1079,6 +1128,15 @@ public class JobHistory {
      */
     public static String encodeJobHistoryFileName(String logFileName)
     throws IOException {
+      String replacementUnderscoreEscape = null;
+
+      if (logFileName.contains(UNDERSCORE_ESCAPE)) {
+        replacementUnderscoreEscape = nonOccursString(logFileName);
+
+        logFileName = replaceStringInstances
+          (logFileName, UNDERSCORE_ESCAPE, replacementUnderscoreEscape);
+      }
+
       String encodedFileName = null;
       try {
         encodedFileName = URLEncoder.encode(logFileName, "UTF-8");
@@ -1088,6 +1146,12 @@ public class JobHistory {
         ioe.setStackTrace(uee.getStackTrace());
         throw ioe;
       }
+      
+      if (replacementUnderscoreEscape != null) {
+        encodedFileName = replaceStringInstances
+          (encodedFileName, replacementUnderscoreEscape, UNDERSCORE_ESCAPE);
+      }
+
       return encodedFileName;
     }
     
@@ -1173,8 +1237,8 @@ public class JobHistory {
       return
         id.toString() + "_"
         + submitTime + "_"
-        + getUserName(jobConf) + "_" 
-        + trimJobName(getJobName(jobConf));
+        + escapeUnderscores(getUserName(jobConf)) + "_" 
+        + escapeUnderscores(trimJobName(getJobName(jobConf)));
     }
     
     /**
@@ -1226,9 +1290,13 @@ public class JobHistory {
       }
 
       // Make the pattern matching the job's history file
-      final Pattern historyFilePattern = 
-        Pattern.compile(id.toString() + "_" + DIGITS + "_" + user + "_" 
-                        + escapeRegexChars(jobName) + "+");
+
+      final String regexp
+        = id.toString() + "_" + DIGITS + "_" + user + "_"
+             + escapeRegexChars(jobName) + "+";
+      
+      final Pattern historyFilePattern = Pattern.compile(regexp);
+
       // a path filter that matches 4 parts of the filenames namely
       //  - jt-hostname
       //  - job-id
@@ -1236,14 +1304,16 @@ public class JobHistory {
       //  - jobname
       PathFilter filter = new PathFilter() {
         public boolean accept(Path path) {
-          String fileName = path.getName();
+          String unescapedFileName = path.getName();
+          String fileName = null;
           try {
-            fileName = decodeJobHistoryFileName(fileName);
+            fileName = decodeJobHistoryFileName(unescapedFileName);
           } catch (IOException ioe) {
             LOG.info("Error while decoding history file " + fileName + "."
                      + " Ignoring file.", ioe);
             return false;
           }
+
           return historyFilePattern.matcher(fileName).find();
         }
       };

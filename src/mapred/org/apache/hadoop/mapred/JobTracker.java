@@ -2257,11 +2257,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
 
         infoServer.setAttribute
           ("serialNumberDirectoryDigits",
-           new Integer(JobHistory.serialNumberDirectoryDigits()));
+           Integer.valueOf(JobHistory.serialNumberDirectoryDigits()));
 
         infoServer.setAttribute
           ("serialNumberTotalDigits",
-           new Integer(JobHistory.serialNumberTotalDigits()));
+           Integer.valueOf(JobHistory.serialNumberTotalDigits()));
         
         return new Path(historyLogDir).getFileSystem(conf);
       }
