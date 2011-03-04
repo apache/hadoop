@@ -1915,13 +1915,13 @@ class JobInProgress {
   /**
    * Find a speculative task
    * @param list a list of tips
-   * @param taskTracker the tracker that has requested a tip
+   * @param ttStatus status of the tracker that has requested a tip
    * @param avgProgress the average progress for speculation
    * @param currentTime current time in milliseconds
    * @param shouldRemove whether to remove the tips
    * @return a tip that can be speculated on the tracker
    */
-  private synchronized TaskInProgress findSpeculativeTask(
+  protected synchronized TaskInProgress findSpeculativeTask(
       Collection<TaskInProgress> list, TaskTrackerStatus ttStatus,
       double avgProgress, long currentTime, boolean shouldRemove) {
     

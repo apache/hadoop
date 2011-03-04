@@ -1960,6 +1960,11 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     this(conf, generateNewIdentifier());
   }
 
+  JobTracker(JobConf conf, Clock clock) 
+  throws IOException, InterruptedException {
+    this(conf, generateNewIdentifier(), clock);
+  }
+  
   public static final String JT_USER_NAME = "mapreduce.jobtracker.user.name";
   public static final String JT_KEYTAB_FILE =
     "mapreduce.jobtracker.keytab.file";
