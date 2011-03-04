@@ -26,10 +26,19 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 
 /** Interface that represents the over the wire information for a file.
  */
 public class HdfsFileStatus implements Writable {
+  static {                                      // register a ctor
+    WritableFactories.setFactory
+      (HdfsFileStatus.class,
+       new WritableFactory() {
+         public Writable newInstance() { return new HdfsFileStatus(); }
+       });
+  }
 
   private byte[] path;  // local name of the inode that's encoded in java UTF8
   private long length;
@@ -165,6 +174,14 @@ public class HdfsFileStatus implements Writable {
    */
   final public String getLocalName() {
     return DFSUtil.bytes2String(path);
+  }
+  
+  /**
+   * Get the Java UTF8 representation of the local name
+   * @return the local name in java UTF8
+   */
+  final public byte[] getLocalNameInBytes() {
+    return path;
   }
   
   /**

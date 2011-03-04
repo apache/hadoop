@@ -191,6 +191,8 @@ public class TestDFSClientRetries extends TestCase {
 
     public HdfsFileStatus[] getListing(String src) throws IOException { return null; }
 
+    public DirectoryListing getListing(String src, byte[] startName) throws IOException { return null; }
+
     public void renewLease(String clientName) throws IOException {}
 
     public long[] getStats() throws IOException { return null; }

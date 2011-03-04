@@ -76,7 +76,6 @@
         return;
       }
       // directory
-      HdfsFileStatus[] files = dfs.listPaths(target);
       //generate a table and dump the info
       String [] headings = { "Name", "Type", "Size", "Replication", 
                               "Block Size", "Modification Time",
@@ -93,8 +92,17 @@
         out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent +
                   "&namenodeInfoPort=" + namenodeInfoPort +
                   "\">Go to parent directory</a><br>");
-	
-      if (files == null || files.length == 0) {
+
+      DirectoryListing thisListing;
+      byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;
+      do {	
+	  thisListing = dfs.listPaths(target, lastReturnedName);
+	  if (thisListing == null && lastReturnedName.length == 0) {
+		out.print("Empty directory");
+		break;
+	  }
+      HdfsFileStatus[] files = thisListing.getPartialListing();
+      if (files.length == 0 && lastReturnedName.length == 0) {
         out.print("Empty directory");
       }
       else {
@@ -130,6 +138,8 @@
         }
         jspHelper.addTableFooter(out);
       }
+      lastReturnedName = thisListing.getLastName();
+      } while (thisListing.hasMore());
     } 
     String namenodeHost = jspHelper.nameNodeAddr.getHostName();
     out.print("<br><a href=\"http://" + 

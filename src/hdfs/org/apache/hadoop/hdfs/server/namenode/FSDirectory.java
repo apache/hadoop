@@ -27,9 +27,11 @@ import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.QuotaExceededException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
@@ -51,6 +53,7 @@ class FSDirectory implements FSConstants, Closeable {
   private boolean ready = false;
   // Metrics record
   private MetricsRecord directoryMetrics = null;
+  private final int lsLimit;  // max list limit
 
   /** Access an existing dfs name directory. */
   FSDirectory(FSNamesystem ns, Configuration conf) {
@@ -65,6 +68,10 @@ class FSDirectory implements FSConstants, Closeable {
         Integer.MAX_VALUE, -1);
     this.fsImage = fsImage;
     namesystem = ns;
+    int configuredLimit = conf.getInt(
+        DFSConfigKeys.DFS_LIST_LIMIT, DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT);
+    this.lsLimit = configuredLimit>0 ? 
+        configuredLimit : DFSConfigKeys.DFS_LIST_LIMIT_DEFAULT;
     initialize(conf);
   }
     
@@ -701,30 +708,36 @@ class FSDirectory implements FSConstants, Closeable {
   }
 
   /**
-   * Get a listing of files given path 'src'
-   *
-   * This function is admittedly very inefficient right now.  We'll
-   * make it better later.
+   * Get a partial listing of the indicated directory
+   * 
+   * @param src the directory name
+   * @param startAfter the name to start listing after
+   * @return a partial listing starting after startAfter 
    */
-  HdfsFileStatus[] getListing(String src) {
+  DirectoryListing getListing(String src, byte[] startAfter) {
     String srcs = normalizePath(src);
 
     synchronized (rootDir) {
       INode targetNode = rootDir.getNode(srcs);
       if (targetNode == null)
         return null;
+      
       if (!targetNode.isDirectory()) {
-        return new HdfsFileStatus[]{createFileStatus(
-            HdfsFileStatus.EMPTY_NAME, targetNode)};
+        return new DirectoryListing(new HdfsFileStatus[]{createFileStatus(
+            HdfsFileStatus.EMPTY_NAME, targetNode)}, 0);
       }
-      List<INode> contents = ((INodeDirectory)targetNode).getChildren();
-      HdfsFileStatus listing[] = new HdfsFileStatus[contents.size()];
-      int i = 0;
-      for (INode cur : contents) {
+      INodeDirectory dirInode = (INodeDirectory)targetNode; 
+      List<INode> contents = dirInode.getChildren();
+      int startChild = dirInode.nextChild(startAfter);
+      int totalNumChildren = contents.size();
+      int numOfListing = Math.min(totalNumChildren-startChild, this.lsLimit);
+      HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
+      for (int i=0; i<numOfListing; i++) {
+        INode cur = contents.get(startChild+i);
         listing[i] = createFileStatus(cur.name, cur);
-        i++;
       }
-      return listing;
+      return new DirectoryListing(
+          listing, totalNumChildren-startChild-numOfListing);
     }
   }
 

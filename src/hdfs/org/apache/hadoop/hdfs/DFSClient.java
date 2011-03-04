@@ -55,7 +55,6 @@ import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 import javax.net.SocketFactory;
-import javax.security.auth.login.LoginException;
 
 /********************************************************
  * DFSClient can connect to a Hadoop Filesystem and 
@@ -624,11 +623,21 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   }
 
   /**
+   * Get a partial listing of the indicated directory
+   * 
+   * Recommend to use HdfsFileStatus.EMPTY_NAME as startAfter 
+   * if the application wants to fetch a listing starting from 
+   * the first entry in the directory
+   * 
+   * @param src the directory name
+   * @param startAfter the name to start listing after
+   * @return a partial listing starting after startAfter 
    */
-  public HdfsFileStatus[] listPaths(String src) throws IOException {
+  public DirectoryListing listPaths(String src, byte[] startAfter)
+  throws IOException {
     checkOpen();
     try {
-      return namenode.getListing(src);
+      return namenode.getListing(src, startAfter);
     } catch(RemoteException re) {
       throw re.unwrapRemoteException(AccessControlException.class);
     }

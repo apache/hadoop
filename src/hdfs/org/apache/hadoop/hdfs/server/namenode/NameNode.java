@@ -37,22 +37,20 @@ import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.KeyUpdateCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.*;
+import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.hdfs.security.ExportedAccessKeys;
-import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
@@ -583,16 +581,14 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
     namesystem.renewLease(clientName);        
   }
 
-  /**
-   */
-  public HdfsFileStatus[] getListing(String src) throws IOException {
-    HdfsFileStatus[] files = namesystem.getListing(src);
-    if (files != null) {
-      myMetrics.numGetListingOps.inc();
-    }
+  @Override
+  public DirectoryListing getListing(String src, byte[] startAfter)
+  throws IOException {
+    DirectoryListing files = namesystem.getListing(src, startAfter);
+    myMetrics.numGetListingOps.inc();
     return files;
   }
-
+  
   /**
    * Get the file info for a specific file.
    * @param src The string representation of the path to the file

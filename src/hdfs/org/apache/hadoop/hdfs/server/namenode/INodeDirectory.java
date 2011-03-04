@@ -239,6 +239,23 @@ class INodeDirectory extends INode {
   }
 
   /**
+   * Given a child's name, return the index of the next child
+   * 
+   * @param name a child's name
+   * @return the index of the next child
+   */
+  int nextChild(byte[] name) {
+    if (name.length == 0) { // empty name
+      return 0;
+    }
+    int nextPos = Collections.binarySearch(children, name) + 1;
+    if (nextPos >= 0) {
+      return nextPos;
+    }
+    return -nextPos;
+  }
+  
+  /**
    * Equivalent to addNode(path, newNode, false).
    * @see #addNode(String, INode, boolean)
    */

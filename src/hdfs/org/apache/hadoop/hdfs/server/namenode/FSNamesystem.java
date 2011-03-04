@@ -56,9 +56,9 @@ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.*;
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.Server;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -75,7 +75,6 @@ import java.util.Map.Entry;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 import javax.management.StandardMBean;
-import javax.security.auth.login.LoginException;
 
 /***************************************************
  * FSNamesystem does the actual bookkeeping work for the
@@ -2056,10 +2055,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   }
 
   /**
-   * Get a listing of all files at 'src'.  The Object[] array
-   * exists so we can return file attributes (soon to be implemented)
+   * Get a partial listing of the indicated directory
+   * 
+   * @param src the directory name
+   * @param startAfter the name to start after
+   * @return a partial listing starting after startAfter 
    */
-  public HdfsFileStatus[] getListing(String src) throws IOException {
+  public DirectoryListing getListing(String src, byte[] startAfter)
+  throws IOException {
     if (isPermissionEnabled) {
       if (dir.isDir(src)) {
         checkPathAccess(src, FsAction.READ_EXECUTE);
@@ -2073,7 +2076,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
                     Server.getRemoteIp(),
                     "listStatus", src, null, null);
     }
-    return dir.getListing(src);
+    return dir.getListing(src, startAfter);
   }
 
   /////////////////////////////////////////////////////////

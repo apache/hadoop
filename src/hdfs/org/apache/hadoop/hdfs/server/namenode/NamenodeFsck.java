@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
@@ -139,12 +140,10 @@ public class NamenodeFsck {
   public void fsck() {
     try {
       Result res = new Result(conf);
+      final HdfsFileStatus file = namenode.getFileInfo(path);
+      if (file != null) {
+        check(path, file, res);
 
-      final HdfsFileStatus[] files = namenode.getListing(path);
-      if (files != null) {
-        for (int i = 0; i < files.length; i++) {
-          check(path, files[i], res);
-        }
         out.println(res);
         out.println(" Number of data-nodes:\t\t" + totalDatanodes);
         out.println(" Number of racks:\t\t" + networktopology.getNumOfRacks());
@@ -175,17 +174,24 @@ public class NamenodeFsck {
     boolean isOpen = false;
 
     if (file.isDir()) {
-      final HdfsFileStatus[] files = namenode.getListing(path);
-      if (files == null) {
-        return;
-      }
+      byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;
+      DirectoryListing thisListing;
       if (showFiles) {
         out.println(path + " <dir>");
       }
       res.totalDirs++;
-      for (int i = 0; i < files.length; i++) {
-        check(path, files[i], res);
-      }
+      do {
+        assert lastReturnedName != null;
+        thisListing = namenode.getListing(path, lastReturnedName);
+        if (thisListing == null) {
+          return;
+        }
+        HdfsFileStatus[] files = thisListing.getPartialListing();
+        for (int i = 0; i < files.length; i++) {
+          check(path, files[i], res);
+        }
+        lastReturnedName = thisListing.getLastName();
+      } while (thisListing.hasMore());
       return;
     }
     long fileLen = file.getLen();

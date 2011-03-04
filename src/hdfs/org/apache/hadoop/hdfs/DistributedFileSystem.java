@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.*;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.DirectoryListing;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -253,14 +255,61 @@ public class DistributedFileSystem extends FileSystem {
         f.getFullPath(parent).makeQualified(this)); // fully-qualify path
   }
 
+  /**
+   * List all the entries of a directory
+   * 
+   * Note that this operation is not atomic for a large directory.
+   * The entries of a directory may be fetched from NameNode multiple times.
+   * It only guarantees that  each name occurs once if a directory 
+   * undergoes changes between the calls.
+   */
+  @Override
   public FileStatus[] listStatus(Path p) throws IOException {
-    HdfsFileStatus[] infos = dfs.listPaths(getPathName(p));
-    if (infos == null) return null;
-    FileStatus[] stats = new FileStatus[infos.length];
-    for (int i = 0; i < infos.length; i++) {
-      stats[i] = makeQualified(infos[i], p);
+    String src = getPathName(p);
+    
+    // fetch the first batch of entries in the directory
+    DirectoryListing thisListing = dfs.listPaths(
+        src, HdfsFileStatus.EMPTY_NAME);
+    
+    if (thisListing == null) { // the directory does not exist
+      return null;
     }
-    return stats;
+    
+    HdfsFileStatus[] partialListing = thisListing.getPartialListing();
+    if (!thisListing.hasMore()) { // got all entries of the directory
+      FileStatus[] stats = new FileStatus[partialListing.length];
+      for (int i = 0; i < partialListing.length; i++) {
+        stats[i] = makeQualified(partialListing[i], p);
+      }
+      return stats;
+    }
+    
+    // The directory size is too big that it needs to fetch more
+    // estimate the total number of entries in the directory
+    int totalNumEntries = 
+      partialListing.length + thisListing.getRemainingEntries();
+    ArrayList<FileStatus> listing = 
+      new ArrayList<FileStatus>(totalNumEntries);
+    // add the first batch of entries to the array list
+    for (HdfsFileStatus fileStatus : partialListing) {
+      listing.add(makeQualified(fileStatus, p));
+    }
+
+    // now fetch more entries
+    do {
+      thisListing = dfs.listPaths(src, thisListing.getLastName());
+      
+      if (thisListing == null) {
+        break; // the directory is deleted
+      }
+      
+      partialListing = thisListing.getPartialListing();
+      for (HdfsFileStatus fileStatus : partialListing) {
+        listing.add(makeQualified(fileStatus, p));
+      }
+    } while (thisListing.hasMore());
+
+    return listing.toArray(new FileStatus[listing.size()]);
   }
 
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
