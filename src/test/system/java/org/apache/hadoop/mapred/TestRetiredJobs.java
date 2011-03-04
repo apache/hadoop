@@ -46,7 +46,7 @@ public class TestRetiredJobs {
 
   private static MRCluster cluster = null;
   private static JobClient jobClient = null;
-
+  private static int retiredJobInterval = 0;
   static final Log LOG = LogFactory.getLog(TestRetiredJobs.class);
 
   public TestRetiredJobs() throws Exception {
@@ -90,6 +90,15 @@ public class TestRetiredJobs {
       SleepJob job = new SleepJob();
       job.setConf(conf);
       conf = job.setupJobConf(5, 1, 100, 100, 100, 100);
+      //Get the value of mapred.jobtracker.retirejob.check. If not
+      //found then use 60000 milliseconds, which is the application default.
+      retiredJobInterval =
+        conf.getInt("mapred.jobtracker.retirejob.check", 60000);
+      //Assert if retiredJobInterval is 0
+      if ( retiredJobInterval == 0 ) {
+        Assert.fail("mapred.jobtracker.retirejob.check is 0");
+      }
+
       JobConf jconf = new JobConf(conf);
       //Controls the job till all verification is done 
       FinishTaskControlAction.configureControlActionForJob(conf);
@@ -138,7 +147,7 @@ public class TestRetiredJobs {
       //Making sure that the job is complete.
       int count = 0;
       while (jInfo != null && !jInfo.getStatus().isJobComplete()) {
-        Thread.sleep(10000);
+        UtilsForTests.waitFor(10000);
         count++;
         jInfo = remoteJTClient.getJobInfo(rJob.getID());
         //If the count goes more than 100 seconds, then fail; This is to
@@ -149,7 +158,13 @@ public class TestRetiredJobs {
         }
       }
 
-      Thread.sleep(50000);
+      //Waiting for a specific period of time for retire thread
+      //to be called taking into consideration the network issues
+      if (retiredJobInterval > 40000) {
+        UtilsForTests.waitFor(retiredJobInterval * 2);
+      } else {
+        UtilsForTests.waitFor(retiredJobInterval * 4);
+      }
 
       jobInfo = null; 
       // getJobInfo method should return null
