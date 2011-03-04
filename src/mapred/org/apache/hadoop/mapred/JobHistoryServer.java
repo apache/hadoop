@@ -178,6 +178,8 @@ public class JobHistoryServer {
       historyServer.setAttribute("jobConf", conf);
       historyServer.setAttribute("aclManager", aclsManager);
     }
+    historyServer.addServlet("historyfile", "/historyfile",
+        RawHistoryFileServlet.class);
   }
 
   private HttpServer initializeWebContainer(JobConf conf,
