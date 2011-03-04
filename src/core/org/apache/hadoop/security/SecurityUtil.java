@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.authorize.AccessControlList;
 
 import sun.security.jgss.krb5.Krb5Util;
 import sun.security.krb5.Credentials;
@@ -213,5 +214,25 @@ public class SecurityUtil {
     StringBuffer sb = new StringBuffer();
     sb.append(NetUtils.normalizeHostName(uri.getHost())).append(":").append(port);
     return sb.toString();
+  }
+  
+  /**
+   * Get the ACL object representing the cluster administrators
+   * The user who starts the daemon is automatically added as an admin
+   * @param conf
+   * @param configKey the key that holds the ACL string in its value
+   * @return AccessControlList instance
+   */
+  public static AccessControlList getAdminAcls(Configuration conf, 
+      String configKey) {
+    try {
+      AccessControlList adminAcl = 
+        new AccessControlList(conf.get(configKey, " "));
+      adminAcl.addUser(UserGroupInformation.getCurrentUser().
+                       getShortUserName());
+      return adminAcl;
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
   }
 }

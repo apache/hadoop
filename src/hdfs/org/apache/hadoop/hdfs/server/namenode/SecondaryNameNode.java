@@ -196,7 +196,8 @@ public class SecondaryNameNode implements Runnable {
 
           int tmpInfoPort = infoSocAddr.getPort();
           infoServer = new HttpServer("secondary", infoBindAddress, tmpInfoPort,
-              tmpInfoPort == 0, conf);
+              tmpInfoPort == 0, conf, 
+              SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN));
           
           if(UserGroupInformation.isSecurityEnabled()) {
             System.setProperty("https.cipherSuites", 

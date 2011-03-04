@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HDFSPolicyProvider;
 import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
@@ -266,7 +265,8 @@ public class NameNode implements ClientProtocol, DatanodeProtocol,
           String infoHost = infoSocAddr.getHostName();
           int infoPort = infoSocAddr.getPort();
           httpServer = new HttpServer("hdfs", infoHost, infoPort, 
-              infoPort == 0, conf);
+              infoPort == 0, conf, 
+              SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN));
           
           boolean certSSL = conf.getBoolean("dfs.https.enable", false);
           boolean useKrb = UserGroupInformation.isSecurityEnabled();

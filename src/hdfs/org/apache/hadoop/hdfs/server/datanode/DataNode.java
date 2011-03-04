@@ -399,8 +399,10 @@ public class DataNode extends Configured
     String infoHost = infoSocAddr.getHostName();
     int tmpInfoPort = infoSocAddr.getPort();
     this.infoServer = (secureResources == null) 
-       ? new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0, conf)
-       : new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0, conf, 
+       ? new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0, 
+           conf, SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN))
+       : new HttpServer("datanode", infoHost, tmpInfoPort, tmpInfoPort == 0,
+           conf, SecurityUtil.getAdminAcls(conf, DFSConfigKeys.DFS_ADMIN),
            secureResources.getListener());
     if (conf.getBoolean("dfs.https.enable", false)) {
       boolean needClientAuth = conf.getBoolean("dfs.https.need.client.auth", false);
