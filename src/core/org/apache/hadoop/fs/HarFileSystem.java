@@ -539,6 +539,13 @@ public class HarFileSystem extends FilterFileSystem {
   }
 
   /**
+   * @return null since no checksum algorithm is implemented.
+   */
+  public FileChecksum getFileChecksum(Path f) {
+    return null;
+  }
+
+  /**
    * Returns a har input stream which fakes end of 
    * file. It reads the index files to get the part 
    * file name and the size and start of the file.
