@@ -48,6 +48,7 @@ public abstract class AbstractDaemonCluster {
   private Map<Enum<?>, List<AbstractDaemonClient>> daemons = 
     new LinkedHashMap<Enum<?>, List<AbstractDaemonClient>>();
   private String newConfDir = null;  
+  File localFolderObj = null;
   private static final  String CONF_HADOOP_LOCAL_DIR =
       "test.system.hdrc.hadoop.local.confdir"; 
   private static final  String CONF_HADOOP_MULTI_USER_LIST =
@@ -349,12 +350,8 @@ public abstract class AbstractDaemonCluster {
    */
   public void restartClusterWithNewConfig(Hashtable<String,?> props, 
       String configFile) throws IOException {
-
     String mapredConf = null;
-    String localDirPath = null;
-    File localFolderObj = null;
-    File xmlFileObj = null;
-    String confXMLFile = null;
+    String localDirPath = null; 
     Configuration initConf = new Configuration(getConf());
     Enumeration<String> e = props.keys();
     while (e.hasMoreElements()) {
@@ -362,21 +359,50 @@ public abstract class AbstractDaemonCluster {
       Object propValue = props.get(propKey);
       initConf.set(propKey,propValue.toString());
     }
-
-    localDirPath = getHadoopLocalConfDir();
-    localFolderObj = new File(localDirPath);
-    if (!localFolderObj.exists()) {
-      localFolderObj.mkdir();
-    }
-    confXMLFile = localDirPath + File.separator + configFile;
-    xmlFileObj = new File(confXMLFile);
-    initConf.writeXml(new FileOutputStream(xmlFileObj));
+    localDirPath = getHadoopLocalConfDir(); 
+    writeConfToFile(configFile,localDirPath,initConf);
     newConfDir = clusterManager.pushConfig(localDirPath);
     stop();
     waitForClusterToStop();
     clusterManager.start(newConfDir);
     waitForClusterToStart();
     localFolderObj.delete();
+  }
+  
+  /**
+   * The method is used to only restart one daemon with new config
+   * and this gives a great flexibility in choosing which daemon the
+   * test wants to restarting instead of changing the config in all the 
+   * daemons. 
+   * @param client points to the daemon that will restarted.
+   * @param configFile the name of the config file
+   * @param conf the Configuration object
+   * @param role of remote process such as JT,TT,NN,DN
+   * @throws IOException thrown in case of any error 
+   */
+  public void restartDaemonWithNewConfig(AbstractDaemonClient client, 
+      String configFile, Configuration conf, Enum<?> role) throws IOException {    
+    String localDirPath = getHadoopLocalConfDir();
+    writeConfToFile(configFile,localDirPath,conf);
+    RemoteProcess daemon=clusterManager.getDaemonProcess(client.getHostName(), 
+        role);    
+    newConfDir = daemon.pushConfig(localDirPath);
+    daemon.kill();
+    waitForDaemonToStop(client);
+    daemon.start(newConfDir);
+    waitForDaemonToStart(client);    
+    localFolderObj.delete();
+  }
+  
+  private void writeConfToFile(String configFile, String localDirPath,
+      Configuration conf) throws IOException{      
+    localFolderObj = new File(localDirPath);
+    if (!localFolderObj.exists()) {
+      localFolderObj.mkdir();
+    }
+    String confXMLFile = localDirPath + File.separator + configFile;
+    File xmlFileObj = new File(confXMLFile);
+    conf.writeXml(new FileOutputStream(xmlFileObj));
   }
   
   /**
@@ -389,6 +415,21 @@ public abstract class AbstractDaemonCluster {
     waitForClusterToStop();
     start();
     waitForClusterToStart();
+  }
+  
+  /**
+   * Restart only one daemon as opposed to all the daemons
+   * @param client points to the daemon that will restarted. 
+   * @param role  of remote process such as JT,TT,NN,DN 
+   * @throws IOException is thrown when restart fails
+   */
+  public void restart(AbstractDaemonClient client,Enum<?> role) throws IOException {
+    RemoteProcess daemon=clusterManager.getDaemonProcess(client.getHostName(), 
+        role);
+    daemon.kill();
+    waitForDaemonToStop(client);
+    daemon.start();
+    waitForDaemonToStart(client);
   }
   
   /**
@@ -405,7 +446,7 @@ public abstract class AbstractDaemonCluster {
         dmStop.start();
       }
     }
-
+    
     for (Thread daemonThread : chkDaemonStop){
       try {
         daemonThread.join();
@@ -437,6 +478,44 @@ public abstract class AbstractDaemonCluster {
         LOG.warn("Interrupted while thread is joining" + intExp.getMessage());
       }
     }
+  }
+  /**
+   * This will provide synchronization for the daemon to stop
+   * @param client identifies the daemon
+   * @throws IOException thrown if daemon does not stop 
+   */
+  public void waitForDaemonToStop(AbstractDaemonClient client) 
+      throws IOException {
+    while (true) {
+      try {
+        client.ping();
+        LOG.debug(client.getHostName() +" is waiting state to stop.");
+        waitFor(5000);
+      } catch (Exception exp) {
+        LOG.info("Daemon is : " + client.getHostName() + " stopped...");
+        break;
+      } 
+    }   
+  }
+  
+  /**
+   * This will provide synchronization for the daemon to start
+   * @param client identifies the daemon
+   * @throws IOException thrown if the daemon does not start
+   */
+  public void waitForDaemonToStart(AbstractDaemonClient client) 
+      throws IOException {
+    
+    while (true) {
+      try {
+        client.ping();
+        LOG.info("Daemon is : " + client.getHostName() + " pinging...");
+        break;
+      } catch (Exception exp) {
+        LOG.debug(client.getHostName() + " is waiting to come up.");
+        waitFor(5000);
+      }
+    }    
   }
 
   /**

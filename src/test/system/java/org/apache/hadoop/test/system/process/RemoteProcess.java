@@ -70,6 +70,7 @@ public interface RemoteProcess {
    * @param localDir The local directory which has config files that will be 
    * pushed to the remote location
    * @throws IOException is thrown if the pushConfig results in a error. 
+   * @return The newconfdir location will be returned
    */
-  void pushConfig(String localDir) throws IOException;
+  String pushConfig(String localDir) throws IOException;
 }

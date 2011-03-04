@@ -141,6 +141,18 @@ public abstract class HadoopDaemonRemoteCluster
     }
     return hadoopNewConfDir;
   }
+  
+  @Override
+  public RemoteProcess getDaemonProcess(String hostname,Enum<?> role) {
+    RemoteProcess daemon=null;
+    for (RemoteProcess p : processes) {      
+      if(p.getHostName().equals(hostname) && p.getRole() == role){
+        daemon =p;
+        break;
+      }     
+    }
+    return daemon;
+  }
 
   public HadoopDaemonRemoteCluster(List<HadoopDaemonInfo> daemonInfos) {
     this.daemonInfos = daemonInfos;
@@ -324,9 +336,10 @@ public abstract class HadoopDaemonRemoteCluster
     }
 
     @Override
-    public void pushConfig(String localDir) throws IOException {
+    public String pushConfig(String localDir) throws IOException {
       createNewConfDir().execute();
       buildPushConfig(localDir, hadoopNewConfDir).execute();
+      return hadoopNewConfDir;
     }
 
     private ShellCommandExecutor buildCommandExecutor(String command,

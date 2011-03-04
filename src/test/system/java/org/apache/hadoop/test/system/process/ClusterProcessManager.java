@@ -46,6 +46,13 @@ public interface ClusterProcessManager {
    * Get the list of RemoteProcess handles of all the remote processes.
    */
   List<RemoteProcess> getAllProcesses();
+  
+  /**
+   * Get a RemoteProcess given the hostname
+   * @param The hostname for which the object instance needs to be obtained.
+   * @param The role of process example are JT,TT,DN,NN
+   */
+  RemoteProcess getDaemonProcess(String hostname, Enum<?> role);
 
   /**
    * Get all the roles this cluster's daemon processes have.
