@@ -28,5 +28,5 @@ public abstract class FilterInitializer {
    * @param container The filter container
    * @param conf Configuration for run-time parameters
    */
-  abstract void initFilter(FilterContainer container, Configuration conf);
+  public abstract void initFilter(FilterContainer container, Configuration conf);
 }
