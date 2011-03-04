@@ -240,7 +240,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
           TaskTracker.getPublicDistributedCacheDir());
     handle.release();
     for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
-      assertEquals(0, manager.getReferenceCount(c.uri, conf1, c.timestamp));
+      assertEquals(0, manager.getReferenceCount(c.uri, conf1, c.timestamp, 
+          c.owner));
     }
     
     Path thirdCacheFile = new Path(TEST_ROOT_DIR, "thirdcachefile");
@@ -278,7 +279,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     th = null;
     for (TaskDistributedCacheManager.CacheFile c : handle.getCacheFiles()) {
       try {
-        assertEquals(0, manager.getReferenceCount(c.uri, conf2, c.timestamp));
+        assertEquals(0, manager.getReferenceCount(c.uri, conf2, c.timestamp, 
+            c.owner));
       } catch (IOException ie) {
         th = ie;
         LOG.info("Exception getting reference count for " + c.uri, ie);
@@ -496,7 +498,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
         TaskTracker.getPrivateDistributedCacheDir(userName),
         fs.getFileStatus(firstCacheFile), false,
         now, new Path(TEST_ROOT_DIR), false, false);
-    manager.releaseCache(firstCacheFile.toUri(), conf2, now);
+    manager.releaseCache(firstCacheFile.toUri(), conf2, now, 
+        TrackerDistributedCacheManager.getLocalizedCacheOwner(false));
     //in above code,localized a file of size 4K and then release the cache 
     // which will cause the cache be deleted when the limit goes out. 
     // The below code localize another cache which's designed to
@@ -549,7 +552,8 @@ public class TestTrackerDistributedCacheManager extends TestCase {
         fs.getFileStatus(thirdCacheFile), false,
         now, new Path(TEST_ROOT_DIR), false, false);
     // Release the third cache so that it can be deleted while sweeping
-    manager.releaseCache(thirdCacheFile.toUri(), conf2, now);
+    manager.releaseCache(thirdCacheFile.toUri(), conf2, now, 
+        TrackerDistributedCacheManager.getLocalizedCacheOwner(false));
     // Getting the fourth cache will make the number of sub directories becomes
     // 3 which is greater than 2. So the released cache will be deleted.
     Path fourthLocalCache = manager.getLocalCache(fourthCacheFile.toUri(), conf2, 

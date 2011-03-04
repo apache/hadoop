@@ -74,14 +74,18 @@ public class TaskDistributedCacheManager {
     /** Whether this is to be added to the classpath */
     final boolean shouldBeAddedToClassPath;
     boolean localized = false;
+    /** The owner of the localized file. Relevant only on the tasktrackers */
+    final String owner;
 
     private CacheFile(URI uri, FileType type, boolean isPublic, long timestamp, 
-        boolean classPath) {
+        boolean classPath) throws IOException {
       this.uri = uri;
       this.type = type;
       this.isPublic = isPublic;
       this.timestamp = timestamp;
       this.shouldBeAddedToClassPath = classPath;
+      this.owner = 
+          TrackerDistributedCacheManager.getLocalizedCacheOwner(isPublic);
     }
 
     /**
@@ -90,7 +94,8 @@ public class TaskDistributedCacheManager {
      * files.
      */
     private static List<CacheFile> makeCacheFiles(URI[] uris, 
-        String[] timestamps, String cacheVisibilities[], Path[] paths, FileType type) {
+        String[] timestamps, String cacheVisibilities[], Path[] paths, 
+        FileType type) throws IOException {
       List<CacheFile> ret = new ArrayList<CacheFile>();
       if (uris != null) {
         if (uris.length != timestamps.length) {
@@ -235,7 +240,8 @@ public class TaskDistributedCacheManager {
   public void release() throws IOException {
     for (CacheFile c : cacheFiles) {
       if (c.getLocalized()) {
-        distributedCacheManager.releaseCache(c.uri, taskConf, c.timestamp);
+        distributedCacheManager.releaseCache(c.uri, taskConf, c.timestamp, 
+            c.owner);
       }
     }
   }

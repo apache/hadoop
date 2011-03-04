@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 
@@ -141,7 +142,8 @@ public class TrackerDistributedCacheManager {
       boolean isArchive, long confFileStamp,
       Path currentWorkDir, boolean honorSymLinkConf, boolean isPublic)
       throws IOException {
-    String key = getKey(cache, conf, confFileStamp);
+    String key;
+    key = getKey(cache, conf, confFileStamp, getLocalizedCacheOwner(isPublic));
     CacheStatus lcacheStatus;
     Path localizedPath = null;
     synchronized (cachedArchives) {
@@ -218,11 +220,13 @@ public class TrackerDistributedCacheManager {
    * @param cache The cache URI to be released
    * @param conf configuration which contains the filesystem the cache
    * is contained in.
+   * @param timeStamp the timestamp on the file represented by the cache URI
+   * @param owner the owner of the localized file
    * @throws IOException
    */
-  void releaseCache(URI cache, Configuration conf, long timeStamp)
-    throws IOException {
-    String key = getKey(cache, conf, timeStamp);
+  void releaseCache(URI cache, Configuration conf, long timeStamp,
+      String owner) throws IOException {
+    String key = getKey(cache, conf, timeStamp, owner);
     synchronized (cachedArchives) {
       CacheStatus lcacheStatus = cachedArchives.get(key);
       if (lcacheStatus == null) {
@@ -239,9 +243,9 @@ public class TrackerDistributedCacheManager {
   /*
    * This method is called from unit tests. 
    */
-  int getReferenceCount(URI cache, Configuration conf, long timeStamp) 
-    throws IOException {
-    String key = getKey(cache, conf, timeStamp);
+  int getReferenceCount(URI cache, Configuration conf, long timeStamp,
+      String owner) throws IOException {
+    String key = getKey(cache, conf, timeStamp, owner);
     synchronized (cachedArchives) {
       CacheStatus lcacheStatus = cachedArchives.get(key);
       if (lcacheStatus == null) {
@@ -250,6 +254,25 @@ public class TrackerDistributedCacheManager {
       return lcacheStatus.refcount;
     }
   }
+
+  /**
+   * Get the user who should "own" the localized distributed cache file.
+   * If the cache is public, the tasktracker user is the owner. If private,
+   * the user that the task is running as, is the owner.
+   * @param isPublic
+   * @return the owner as a shortname string
+   * @throws IOException
+   */
+  static String getLocalizedCacheOwner(boolean isPublic) throws IOException {  
+    String user;
+    if (isPublic) {
+      user = UserGroupInformation.getLoginUser().getShortUserName();
+    } else {
+      user = UserGroupInformation.getCurrentUser().getShortUserName();
+    }
+    return user;
+  }
+
 
   // To delete the caches which have a refcount of zero
 
@@ -520,9 +543,9 @@ public class TrackerDistributedCacheManager {
     return true;
   }
 
-  String getKey(URI cache, Configuration conf, long timeStamp) 
+  String getKey(URI cache, Configuration conf, long timeStamp, String user) 
       throws IOException {
-    return makeRelative(cache, conf) + String.valueOf(timeStamp);
+    return makeRelative(cache, conf) + String.valueOf(timeStamp) + user;
   }
   
   /**
