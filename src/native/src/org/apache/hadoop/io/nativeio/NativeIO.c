@@ -55,7 +55,7 @@ static void stat_init(JNIEnv *env) {
   PASS_EXCEPTIONS(env);
   stat_clazz = (*env)->NewGlobalRef(env, clazz);
   stat_ctor = (*env)->GetMethodID(env, stat_clazz, "<init>",
-    "(Ljava/lang/String;Ljava/lang/String;I)V");
+    "(Ljava/lang/String;I)V");
 }
 
 static void stat_deinit(JNIEnv *env) {
@@ -153,33 +153,17 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_fstat(
       goto cleanup;
     }
   }
-  assert(pwdp == &pwd);
+  if (rc == 0 && pwdp == NULL) {
+    throw_ioe(env, ENOENT);
+    goto cleanup;
+  }
 
   jstring jstr_username = (*env)->NewStringUTF(env, pwd.pw_name);
   if (jstr_username == NULL) goto cleanup;
 
-  // Grab group
-  struct group grp, *grpp;
-  while ((rc = getgrgid_r(s.st_gid, &grp, pw_buf, pw_buflen, &grpp)) != 0) {
-    if (rc != ERANGE) {
-      throw_ioe(env, rc);
-      goto cleanup;
-    }
-    free(pw_buf);
-    pw_buflen *= 2;
-    if ((pw_buf = malloc(pw_buflen)) == NULL) {
-      THROW(env, "java/lang/OutOfMemoryError", "Couldn't allocate memory for pw buffer");
-      goto cleanup;
-    }
-  }
-  assert(grpp == &grp);
-
-  jstring jstr_groupname = (*env)->NewStringUTF(env, grp.gr_name);
-  PASS_EXCEPTIONS_GOTO(env, cleanup);
-
   // Construct result
   ret = (*env)->NewObject(env, stat_clazz, stat_ctor,
-    jstr_username, jstr_groupname, s.st_mode);
+    jstr_username, s.st_mode);
 
 cleanup:
   if (pw_buf != NULL) free(pw_buf);
@@ -219,6 +203,67 @@ cleanup:
     (*env)->ReleaseStringUTFChars(env, j_path, path);
   }
   return ret;
+}
+
+/*
+ * private static native long getUIDforFDOwnerforOwner(FileDescriptor fd);
+ */
+JNIEXPORT jlong JNICALL 
+Java_org_apache_hadoop_io_nativeio_NativeIO_getUIDforFDOwnerforOwner(JNIEnv *env, jclass clazz,
+ jobject fd_object) {
+  int fd = fd_get(env, fd_object);
+  PASS_EXCEPTIONS_GOTO(env, cleanup);
+
+  struct stat s;
+  int rc = fstat(fd, &s);
+  if (rc != 0) {
+    throw_ioe(env, errno);
+    goto cleanup;
+  }
+  return (jlong)(s.st_uid);
+cleanup:
+  return (jlong)(-1);
+}
+
+/*
+ * private static native String getUserName(long uid);
+ */
+JNIEXPORT jstring JNICALL 
+Java_org_apache_hadoop_io_nativeio_NativeIO_getUserName(JNIEnv *env, 
+jclass clazz, jlong uid) {
+   
+  char *pw_buf = NULL;
+  int rc;
+  size_t pw_buflen = get_pw_buflen();
+  if ((pw_buf = malloc(pw_buflen)) == NULL) {
+    THROW(env, "java/lang/OutOfMemoryError", "Couldn't allocate memory for pw buffer");
+    goto cleanup;
+  }
+
+  // Grab username
+  struct passwd pwd, *pwdp;
+  while ((rc = getpwuid_r((uid_t)uid, &pwd, pw_buf, pw_buflen, &pwdp)) != 0) {
+    if (rc != ERANGE) {
+      throw_ioe(env, rc);
+      goto cleanup;
+    }
+    free(pw_buf);
+    pw_buflen *= 2;
+    if ((pw_buf = malloc(pw_buflen)) == NULL) {
+      THROW(env, "java/lang/OutOfMemoryError", "Couldn't allocate memory for pw buffer");
+      goto cleanup;
+    }
+  }
+  if (rc == 0 && pwdp == NULL) {
+    throw_ioe(env, ENOENT);
+    goto cleanup;
+  }
+
+  jstring jstr_username = (*env)->NewStringUTF(env, pwd.pw_name);
+
+cleanup:
+  if (pw_buf != NULL) free(pw_buf);
+  return jstr_username;
 }
 
 /*

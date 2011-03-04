@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.nativeio.Errno;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIOException;
-import org.apache.hadoop.io.nativeio.NativeIO.Stat;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
@@ -91,31 +90,31 @@ public class SecureIOUtils {
   private final static FileSystem rawFilesystem;
 
   /**
-   * Open the given File for read access, verifying the expected user/group
+   * Open the given File for read access, verifying the expected user
    * constraints.
    * @param f the file that we are trying to open
    * @param expectedOwner the expected user owner for the file
-   * @param expectedGroup the expected group owner for the file
-   * @throws IOException if an IO Error occurred, or the user/group does not 
+   * @throws IOException if an IO Error occurred, or the user does not 
    * match
    */
-  public static FileInputStream openForRead(File f, String expectedOwner, 
-      String expectedGroup) throws IOException {
+  public static FileInputStream openForRead(File f, String expectedOwner) 
+  throws IOException {
+    FileInputStream fis = new FileInputStream(f);
+    if (expectedOwner == null) { //no security checks
+      return fis;
+    }
     if (skipSecurity) {
       // Subject to race conditions but this is the best we can do
       FileStatus status =
         rawFilesystem.getFileStatus(new Path(f.getAbsolutePath()));
-      checkStat(f, status.getOwner(), status.getGroup(),
-          expectedOwner, expectedGroup);
-      return new FileInputStream(f);
+      checkStat(f, status.getOwner(), expectedOwner);
+      return fis;
     }
 
-    FileInputStream fis = new FileInputStream(f);
     boolean success = false;
     try {
-      Stat stat = NativeIO.fstat(fis.getFD());
-      checkStat(f, stat.getOwner(), stat.getGroup(), expectedOwner,
-          expectedGroup);
+      String owner = NativeIO.getOwner(fis.getFD());
+      checkStat(f, owner, expectedOwner);
       success = true;
       return fis;
     } finally {
@@ -172,20 +171,12 @@ public class SecureIOUtils {
     }
   }
 
-  private static void checkStat(File f, String owner, String group, 
-      String expectedOwner, 
-      String expectedGroup) throws IOException {
+  private static void checkStat(File f, String owner, String expectedOwner) throws IOException {
     if (expectedOwner != null &&
         !expectedOwner.equals(owner)) {
       throw new IOException(
         "Owner '" + owner + "' for path " + f + " did not match " +
         "expected owner '" + expectedOwner + "'");
-    }
-    if (expectedGroup != null &&
-        !expectedGroup.equals(group)) {
-      throw new IOException(
-        "Group '" + group + "' for path " + f + " did not match " +
-        "expected group '" + expectedGroup + "'");
     }
   }
 

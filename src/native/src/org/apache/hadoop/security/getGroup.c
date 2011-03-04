@@ -23,6 +23,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define MAX(a, b) (a > b ? a : b)
 /*Helper functions for the JNI implementation of unix group mapping service*/
 
 
@@ -75,7 +76,7 @@ int getGroupIDList(const char *user, int *ngroups, gid_t **groups) {
  */
 int getGroupDetails(gid_t group, char **grpBuf) {
   struct group * grp = NULL;
-  size_t currBufferSize = sysconf(_SC_GETGR_R_SIZE_MAX);
+  size_t currBufferSize = MAX(sysconf(_SC_GETGR_R_SIZE_MAX), 2048);
   *grpBuf = NULL; 
   char *buf = (char*)malloc(sizeof(char) * currBufferSize);
 
@@ -117,7 +118,7 @@ int getGroupDetails(gid_t group, char **grpBuf) {
  */
 int getPW(const char *user, char **pwbuf) {
   struct passwd *pwbufp = NULL;
-  size_t currBufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
+  size_t currBufferSize = MAX(sysconf(_SC_GETPW_R_SIZE_MAX), 2048);
   *pwbuf = NULL;
   char *buf = (char*)malloc(sizeof(char) * currBufferSize);
   

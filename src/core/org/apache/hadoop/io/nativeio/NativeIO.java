@@ -19,7 +19,10 @@ package org.apache.hadoop.io.nativeio;
 
 import java.io.FileDescriptor;
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.NativeCodeLoader;
 
 import org.apache.commons.logging.Log;
@@ -73,16 +76,60 @@ public class NativeIO {
   /** Wrapper around open(2) */
   public static native FileDescriptor open(String path, int flags, int mode) throws IOException;
   /** Wrapper around fstat(2) */
+  //TODO: fstat is an old implementation. Doesn't use the cache. This should be 
+  //changed to use the cache.
   public static native Stat fstat(FileDescriptor fd) throws IOException;
+  private static native long getUIDforFDOwnerforOwner(FileDescriptor fd) throws IOException;
+  private static native String getUserName(long uid) throws IOException;
   /** Initialize the JNI method ID and class ID cache */
   private static native void initNative();
+  
+  private static class CachedUid {
+    final long timestamp;
+    final String username;
+    public CachedUid(String username, long timestamp) {
+      this.timestamp = timestamp;
+      this.username = username;
+    }
+  }
+  private static final Map<Long, CachedUid> uidCache = 
+    new ConcurrentHashMap<Long, CachedUid>();
+  private static long cacheTimeout;
+  private static boolean initialized = false;
+  
+  public static String getOwner(FileDescriptor fd) throws IOException {
+    ensureInitialized();
+    long uid = getUIDforFDOwnerforOwner(fd);
+    CachedUid cUid = uidCache.get(uid);
+    long now = System.currentTimeMillis();
+    if (cUid != null && (cUid.timestamp + cacheTimeout) > now) {
+      return cUid.username;
+    }
+    String user = getUserName(uid);
+    LOG.info("Got UserName " + user + " for UID " + uid + 
+        " from the native implementation");
+    cUid = new CachedUid(user, now);
+    uidCache.put(uid, cUid);
+    return user;
+  }
+    
+  private synchronized static void ensureInitialized() {
+    if (!initialized) {
+      cacheTimeout = 
+        new Configuration().getLong("hadoop.security.uid.cache.secs", 
+                                     4*60*60) * 1000;
+      LOG.info("Initialized cache for UID to User mapping with a cache" +
+      		" timeout of " + cacheTimeout/1000 + " seconds.");
+      initialized = true;
+    }
+  }
 
 
   /**
    * Result type of the fstat call
    */
   public static class Stat {
-    private String owner, group;
+    private String owner;
     private int mode;
 
     // Mode constants
@@ -102,22 +149,18 @@ public class NativeIO {
     public static final int S_IWUSR = 0000200;  /* write permission, owner */
     public static final int S_IXUSR = 0000100;  /* execute/search permission, owner */
 
-    Stat(String owner, String group, int mode) {
+    Stat(String owner, int mode) {
       this.owner = owner;
-      this.group = group;
       this.mode = mode;
     }
 
     public String toString() {
-      return "Stat(owner='" + owner + "', group='" + group + "'" +
+      return "Stat(owner='" + owner + "'" +
         ", mode=" + mode + ")";
     }
 
     public String getOwner() {
       return owner;
-    }
-    public String getGroup() {
-      return group;
     }
     public int getMode() {
       return mode;

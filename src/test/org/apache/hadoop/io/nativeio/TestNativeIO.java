@@ -57,9 +57,18 @@ public class TestNativeIO {
     LOG.info("Stat: " + String.valueOf(stat));
 
     assertEquals(System.getProperty("user.name"), stat.getOwner());
-    assertNotNull(stat.getGroup());
-    assertTrue(!"".equals(stat.getGroup()));
     assertEquals(NativeIO.Stat.S_IFREG, stat.getMode() & NativeIO.Stat.S_IFMT);
+  }
+  
+  @Test
+  public void testGetOwner() throws Exception {
+    FileOutputStream fos = new FileOutputStream(
+      new File(TEST_DIR, "testfstat"));
+    String owner = NativeIO.getOwner(fos.getFD());
+    fos.close();
+    LOG.info("Owner: " + owner);
+
+    assertEquals(System.getProperty("user.name"), owner);
   }
 
   @Test

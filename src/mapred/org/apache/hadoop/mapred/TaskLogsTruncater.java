@@ -185,7 +185,7 @@ public class TaskLogsTruncater {
 
       // ////// Open logFile for reading //////
       try {
-        logFileInputStream = SecureIOUtils.openForRead(logFile, owner, null);
+        logFileInputStream = SecureIOUtils.openForRead(logFile, owner);
       } catch (IOException ioe) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Cannot open " + logFile.getAbsolutePath()

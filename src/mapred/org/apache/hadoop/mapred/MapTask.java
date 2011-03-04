@@ -1512,8 +1512,7 @@ class MapTask extends Task {
       // read in paged indices
       for (int i = indexCacheList.size(); i < numSpills; ++i) {
         Path indexFileName = mapOutputFile.getSpillIndexFile(i);
-        indexCacheList.add(new SpillRecord(indexFileName, job, 
-            UserGroupInformation.getCurrentUser().getShortUserName()));
+        indexCacheList.add(new SpillRecord(indexFileName, job, null));
       }
 
       //make correction in the length to include the sequence file header

@@ -459,6 +459,12 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.security.uid.cache.secs</name>
+  <value>14400</value>
+  <description> NativeIO maintains a cache from UID to UserName. This is
+  the timeout for an entry in that cache. </description>
+</property>
 
 
 </configuration>

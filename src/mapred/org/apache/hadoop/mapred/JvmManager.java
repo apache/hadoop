@@ -359,10 +359,11 @@ class JvmManager {
         return;
       }
       //*MUST* never reach this
-      throw new RuntimeException("Inconsistent state!!! " +
+      LOG.fatal("Inconsistent state!!! " +
       		"JVM Manager reached an unstable state " +
             "while reaping a JVM for task: " + t.getTask().getTaskID()+
-            " " + getDetails());
+            " " + getDetails() + ". Aborting. ");
+      System.exit(-1);
     }
     
     private String getDetails() {

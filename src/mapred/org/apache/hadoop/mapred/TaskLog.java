@@ -110,7 +110,7 @@ public class TaskLog {
 
     File indexFile = getIndexFile(taskid, isCleanup);
     BufferedReader fis = new BufferedReader(new InputStreamReader(
-      SecureIOUtils.openForRead(indexFile, obtainLogDirOwner(taskid), null)));
+      SecureIOUtils.openForRead(indexFile, obtainLogDirOwner(taskid))));
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
     //stdout:<start-offset in the stdout file> <length>
@@ -351,7 +351,7 @@ public class TaskLog {
       bytesRemaining = end - start;
       String owner = obtainLogDirOwner(taskid);
       file = SecureIOUtils.openForRead(new File(fileDetail.location, kind.toString()), 
-          owner, null);
+          owner);
       // skip upto start
       long pos = 0;
       while (pos < start) {

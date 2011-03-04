@@ -35,7 +35,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 
 public class TestSecureIOUtils {
-  private static String realOwner, realGroup; 
+  private static String realOwner; 
   private static final File testFilePath =
       new File(System.getProperty("test.build.data"), "TestSecureIOContext");
 
@@ -50,25 +50,24 @@ public class TestSecureIOUtils {
     FileStatus stat = rawFS.getFileStatus(
       new Path(testFilePath.toString()));
     realOwner = stat.getOwner();
-    realGroup = stat.getGroup();
   }
 
   @Test
   public void testReadUnrestricted() throws IOException {
-    SecureIOUtils.openForRead(testFilePath, null, null).close();
+    SecureIOUtils.openForRead(testFilePath, null).close();
   }
 
   @Test
   public void testReadCorrectlyRestrictedWithSecurity() throws IOException {
     SecureIOUtils
-      .openForRead(testFilePath, realOwner, realGroup).close();
+      .openForRead(testFilePath, realOwner).close();
   }
 
   @Test
   public void testReadIncorrectlyRestrictedWithSecurity() throws IOException {
     try {
       SecureIOUtils
-        .openForRead(testFilePath, "invalidUser", null).close();
+        .openForRead(testFilePath, "invalidUser").close();
       fail("Didn't throw expection for wrong ownership!");
     } catch (IOException ioe) {
       // expected
