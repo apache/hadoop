@@ -16,6 +16,10 @@
        <Bug pattern="DLS_DEAD_LOCAL_STORE" />
      </Match>
      <Match>
+       <Class name="org.apache.hadoop.mapred.jobdetails_jsp"/>
+       <Bug pattern="HRS_REQUEST_PARAMETER_TO_HTTP_HEADER"/>
+     </Match>
+     <Match>
        <Field name="_jspx_dependants" />
        <Bug pattern="UWF_UNWRITTEN_FIELD" />
      </Match>

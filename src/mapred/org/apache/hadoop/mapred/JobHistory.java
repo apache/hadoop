@@ -29,10 +29,14 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -118,6 +122,30 @@ public class JobHistory {
       return path.getName().endsWith("_conf.xml");
     }
   };
+
+  private static Map<JobID, MovedFileInfo> jobHistoryFileMap =
+    Collections.<JobID,MovedFileInfo>synchronizedMap(
+        new LinkedHashMap<JobID, MovedFileInfo>());
+
+  private static class MovedFileInfo {
+    private final String historyFile;
+    private final long timestamp;
+    public MovedFileInfo(String historyFile, long timestamp) {
+      this.historyFile = historyFile;
+      this.timestamp = timestamp;
+    }
+  }
+
+  /**
+   * Given the job id, return the history file path from the cache
+   */
+  public static String getHistoryFilePath(JobID jobId) {
+    MovedFileInfo info = jobHistoryFileMap.get(jobId);
+    if (info == null) {
+      return null;
+    }
+    return info.historyFile;
+  }
 
   /**
    * A class that manages all the files related to a job. For now 
@@ -238,6 +266,9 @@ public class JobHistory {
             historyFileDonePath = new Path(DONE, 
                 historyFile.getName()).toString();
           }
+
+          jobHistoryFileMap.put(id, new MovedFileInfo(historyFileDonePath,
+              System.currentTimeMillis()));
           jobTracker.historyFileCopied(id, historyFileDonePath);
           
           //purge the job from the cache
@@ -2033,6 +2064,22 @@ public class JobHistory {
             if (now - f.getModificationTime() > THIRTY_DAYS_IN_MS) {
               DONEDIR_FS.delete(f.getPath(), true); 
               LOG.info("Deleting old history file : " + f.getPath());
+            }
+          }
+        }
+
+        //walking over the map to purge entries from jobHistoryFileMap
+        synchronized (jobHistoryFileMap) {
+          Iterator<Entry<JobID, MovedFileInfo>> it =
+            jobHistoryFileMap.entrySet().iterator();
+          while (it.hasNext()) {
+            MovedFileInfo info = it.next().getValue();
+            if (now - info.timestamp > THIRTY_DAYS_IN_MS) {
+              it.remove();
+            } else {
+              //since entries are in sorted timestamp order, no more entries
+              //are required to be checked
+              break;
             }
           }
         }

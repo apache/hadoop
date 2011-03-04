@@ -197,7 +197,14 @@
 
 <% 
     if (job == null) {
-      out.print("<b>Job " + jobId + " not found.</b><br>\n");
+      String historyFile = JobHistory.getHistoryFilePath(jobIdObj);
+      if (historyFile == null) {
+        out.println("<h2>Job " + jobId + " not known!</h2>");
+        return;
+      }
+      String historyUrl = "/jobdetailshistory.jsp?jobid=" + jobId +
+      "&logFile=" + JobHistory.JobInfo.encodeJobHistoryFilePath(historyFile);
+      response.sendRedirect(response.encodeRedirectURL(historyUrl));
       return;
     }
     JobProfile profile = job.getProfile();
