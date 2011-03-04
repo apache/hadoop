@@ -146,7 +146,7 @@ public class ClusterWithCapacityScheduler extends TestCase {
   }
 
   protected JobConf getJobConf() {
-    return this.jobConf;
+    return new JobConf(this.jobConf);
   }
 
   protected JobTracker getJobTracker() {

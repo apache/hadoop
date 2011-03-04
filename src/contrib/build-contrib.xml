@@ -96,6 +96,7 @@
     <pathelement location="${conf.dir}"/>
     <pathelement location="${hadoop.root}/build"/>
     <pathelement location="${build.examples}"/>
+    <pathelement location="${hadoop.root}/build/examples"/>
     <path refid="contrib-classpath"/>
   </path>
 
