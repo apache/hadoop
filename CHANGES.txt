@@ -57,6 +57,7 @@ Release 0.91.0 - Unreleased
                mapreduce jobs correctly (Dan Harvey via Stack)
    HBASE-3593  DemoClient.cpp is outdated
    HBASE-3601  TestMasterFailover broken in TRUNK
+   HBASE-3605  Fix balancer log message
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
