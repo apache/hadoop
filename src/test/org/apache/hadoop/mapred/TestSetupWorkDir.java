@@ -23,36 +23,45 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
-/**
- * Validates if TaskRunner.deleteDirContents() is properly cleaning up the
- * contents of workDir.
- */
 public class TestSetupWorkDir extends TestCase {
-  private static int NUM_SUB_DIRS = 3;
+  private static final Log LOG =
+    LogFactory.getLog(TestSetupWorkDir.class);
 
   /**
-   * Creates subdirectories under given dir and files under those subdirs.
-   * Creates dir/subDir1, dir/subDir1/file, dir/subDir2, dir/subDir2/file, etc.
+   * Create a file in the given dir and set permissions r_xr_xr_x sothat no one
+   * can delete it directly(without doing chmod).
+   * Creates dir/subDir and dir/subDir/file
    */
-  static void createSubDirs(JobConf jobConf, Path dir)
+  static void createFileAndSetPermissions(JobConf jobConf, Path dir)
        throws IOException {
-    for (int i = 1; i <= NUM_SUB_DIRS; i++) {
-      Path subDir = new Path(dir, "subDir" + i);
-      FileSystem fs = FileSystem.getLocal(jobConf);
-      fs.mkdirs(subDir);
-      Path p = new Path(subDir, "file");
-      DataOutputStream out = fs.create(p);
-      out.writeBytes("dummy input");
-      out.close();
+    Path subDir = new Path(dir, "subDir");
+    FileSystem fs = FileSystem.getLocal(jobConf);
+    fs.mkdirs(subDir);
+    Path p = new Path(subDir, "file");
+    DataOutputStream out = fs.create(p);
+    out.writeBytes("dummy input");
+    out.close();
+    // no write permission for subDir and subDir/file
+    try {
+      int ret = 0;
+      if((ret = FileUtil.chmod(subDir.toUri().getPath(), "a=rx", true)) != 0) {
+        LOG.warn("chmod failed for " + subDir + ";retVal=" + ret);
+      }
+    } catch(InterruptedException e) {
+      LOG.warn("Interrupted while doing chmod for " + subDir);
     }
   }
 
   /**
-   * Validates if TaskRunner.deleteDirContents() is properly cleaning up the
-   * contents of workDir.
+   * Validates if setupWorkDir is properly cleaning up contents of workDir.
+   * TODO: other things of TaskRunner.setupWorkDir() related to distributed
+   * cache need to be validated.
    */
   public void testSetupWorkDir() throws IOException {
     Path rootDir = new Path(System.getProperty("test.build.data",  "/tmp"),
@@ -67,12 +76,9 @@ public class TestSetupWorkDir extends TestCase {
       throw new IOException("Unable to create workDir " + myWorkDir);
     }
 
-    // create subDirs under work dir
-    createSubDirs(jConf, myWorkDir);
+    // create {myWorkDir}/subDir/file and set 555 perms for subDir and file
+    createFileAndSetPermissions(jConf, myWorkDir);
 
-    assertTrue("createDirAndSubDirs() did not create subdirs under "
-        + myWorkDir, fs.listStatus(myWorkDir).length == NUM_SUB_DIRS);
-    
     TaskRunner.deleteDirContents(jConf, new File(myWorkDir.toUri().getPath()));
     
     assertTrue("Contents of " + myWorkDir + " are not cleaned up properly.",

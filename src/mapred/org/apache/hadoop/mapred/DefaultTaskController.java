@@ -147,8 +147,6 @@ class DefaultTaskController extends TaskController {
     } catch(InterruptedException e) {
       LOG.warn("Interrupted while setting permissions for " + context.fullPath +
           " for deletion.");
-    } catch(IOException ioe) {
-      LOG.warn("Unable to change permissions of " + context.fullPath);
     }
   }
 }

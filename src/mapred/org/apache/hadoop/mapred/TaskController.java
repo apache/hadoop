@@ -179,9 +179,7 @@ abstract class TaskController implements Configurable {
     @Override
     protected void enablePathForCleanup() throws IOException {
       getPathForCleanup();// allow init of fullPath
-      if (fs.exists(new Path(fullPath))) {
-        taskController.enableTaskForCleanup(this); 
-      }
+      taskController.enableTaskForCleanup(this);
     }
   }
 

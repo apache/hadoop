@@ -557,6 +557,7 @@ abstract class TaskRunner extends Thread {
   }
   
   /**
+   * Sets permissions recursively and then deletes the contents of dir.
    * Makes dir empty directory(does not delete dir itself).
    */
   static void deleteDirContents(JobConf conf, File dir) throws IOException {
@@ -565,6 +566,18 @@ abstract class TaskRunner extends Thread {
       File contents[] = dir.listFiles();
       if (contents != null) {
         for (int i = 0; i < contents.length; i++) {
+          try {
+            int ret = 0;
+            if ((ret = FileUtil.chmod(contents[i].getAbsolutePath(),
+                                      "a+rwx", true)) != 0) {
+              LOG.warn("Unable to chmod for " + contents[i] + 
+                  "; chmod exit status = " + ret);
+            }
+          } catch(InterruptedException e) {
+            LOG.warn("Interrupted while setting permissions for contents of " +
+                "workDir. Not deleting the remaining contents of workDir.");
+            return;
+          }
           if (!fs.delete(new Path(contents[i].getAbsolutePath()), true)) {
             LOG.warn("Unable to delete "+ contents[i]);
           }

@@ -88,10 +88,7 @@ class CleanupQueue {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Trying to delete " + context.fullPath);
     }
-    if (context.fs.exists(new Path(context.fullPath))) {
-      return context.fs.delete(new Path(context.fullPath), true);
-    }
-    return true;
+    return context.fs.delete(new Path(context.fullPath), true);
   }
 
   private static class PathCleanupThread extends Thread {

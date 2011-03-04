@@ -265,15 +265,10 @@ class LinuxTaskController extends TaskController {
       TaskControllerPathDeletionContext tContext =
         (TaskControllerPathDeletionContext) context;
     
-      if (tContext.task.getUser() != null &&
-          tContext.fs instanceof LocalFileSystem) {
-        try {
-          runCommand(TaskCommands.ENABLE_TASK_FOR_CLEANUP,
+      if (tContext.task.getUser() != null && tContext.fs instanceof LocalFileSystem) {
+        runCommand(TaskCommands.ENABLE_TASK_FOR_CLEANUP,
                    tContext.task.getUser(),
                    buildTaskCleanupArgs(tContext), null, null);
-        } catch(IOException e) {
-          LOG.warn("Uanble to change permissions for " + tContext.fullPath);
-        }
       }
       else {
         throw new IllegalArgumentException("Either user is null or the "  +
