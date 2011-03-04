@@ -937,7 +937,7 @@ public abstract class Server {
           rpcMetrics.authenticationFailures.inc();
           String clientIP = this.toString();
           // attempting user could be null
-          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser, e);
+          AUDITLOG.warn(AUTH_FAILED_FOR + clientIP + ":" + attemptingUser);
           throw e;
         }
         if (replyToken != null) {
