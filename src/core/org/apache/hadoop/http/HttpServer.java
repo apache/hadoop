@@ -463,14 +463,13 @@ public class HttpServer implements FilterContainer {
           port = listener.getLocalPort();
           if (port < 0) {
             LOG.warn("Bounds port is " + port + " after webserver start");
-            Random r = new Random(1000);
             for (int i = 0; i < MAX_RETRIES/2; i++) {
               try {
                 webServer.stop();
               } catch (Exception e) {
                 LOG.warn("Can't stop  web-server", e);
               }
-              Thread.sleep(r.nextInt());
+              Thread.sleep(1000);
               
               listener.setPort(oriPort == 0 ? 0 : (oriPort += 1));
               listener.open();
