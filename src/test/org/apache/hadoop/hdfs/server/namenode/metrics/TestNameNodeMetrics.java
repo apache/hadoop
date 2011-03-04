@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode.metrics;
 
 import java.io.IOException;
 import java.util.Random;
+import java.io.DataInputStream;
 
 import junit.framework.TestCase;
 
@@ -29,6 +30,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.mortbay.log.Log;
 
 /**
  * Test for metrics published by the Namenode
@@ -53,6 +57,8 @@ public class TestNameNodeMetrics extends TestCase {
   private DistributedFileSystem fs;
   private Random rand = new Random();
   private FSNamesystem namesystem;
+  private NameNodeMetrics nnMetrics;
+  private NameNode nn;
 
   private static Path getTestPath(String fileName) {
     return new Path(TEST_ROOT_DIR_PATH, fileName);
@@ -65,6 +71,8 @@ public class TestNameNodeMetrics extends TestCase {
     namesystem = cluster.getNameNode().getNamesystem();
     fs = (DistributedFileSystem) cluster.getFileSystem();
     metrics = namesystem.getFSNamesystemMetrics();
+    nn = cluster.getNameNode();
+    nnMetrics = nn.getNameNodeMetrics();
   }
   
   @Override
@@ -82,6 +90,20 @@ public class TestNameNodeMetrics extends TestCase {
     // for some block related metrics to get updated)
     Thread.sleep(1000);
     metrics.doUpdates(null);
+  }
+
+  private void updateNNMetrics() throws Exception {
+    //Wait for nnmetrics update
+    Thread.sleep(1000);
+    nnMetrics.doUpdates(null);
+  }
+  
+  private void readFile(FileSystem fileSys,Path name) throws IOException {
+    //Just read file so that getNumBlockLocations are incremented
+    DataInputStream stm = fileSys.open(name);
+    byte [] buffer = new byte[4];
+    int bytesRead =  stm.read(buffer,0,4);
+    stm.close();
   }
 
   /** Test metrics associated with addition of a file */
@@ -164,5 +186,73 @@ public class TestNameNodeMetrics extends TestCase {
     fs.delete(file, true);
     updateMetrics();
     assertEquals(0, metrics.underReplicatedBlocks.get());
+  }
+  
+  /**
+   * Test numGetBlockLocations metric   
+   * 
+   * Test initiates and performs file operations (create,read,close,open file )
+   * which results in metrics changes. These metrics changes are updated and 
+   * tested for correctness.
+   * 
+   *  create file operation does not increment numGetBlockLocation
+   *  one read file operation increments numGetBlockLocation by 1
+   *    
+   * @throws IOException in case of an error
+   */
+  public void testGetBlockLocationMetric() throws Exception{
+    final String METHOD_NAME = "TestGetBlockLocationMetric";
+    Log.info("Running test "+METHOD_NAME);
+  
+    Path file1_Path = new Path(TEST_ROOT_DIR_PATH, "file1.dat");
+
+    // When cluster starts first time there are no file  (read,create,open)
+    // operations so metric numGetBlockLocations should be 0.
+    // Verify that numGetBlockLocations for current interval 
+    // and previous interval are 0
+    assertEquals("numGetBlockLocations for previous interval is incorrect",
+    0,nnMetrics.numGetBlockLocations.getPreviousIntervalValue());
+    assertEquals("numGetBlockLocations for current interval is incorrect",
+    0,nnMetrics.numGetBlockLocations.getCurrentIntervalValue());
+
+    //Perform create file operation
+    createFile(file1_Path,100,(short)2);
+    // Update NameNode metrics
+    updateNNMetrics();
+  
+    //Create file does not change numGetBlockLocations metric
+    //expect numGetBlockLocations = 0 for previous and current interval 
+    assertEquals("numGetBlockLocations for previous interval is incorrect",
+    0,nnMetrics.numGetBlockLocations.getPreviousIntervalValue());
+    // Verify numGetBlockLocations for current interval is 0
+    assertEquals("numGetBlockLocations for current interval is incorrect",
+    0,nnMetrics.numGetBlockLocations.getCurrentIntervalValue());
+  
+    // Open and read file operation increments numGetBlockLocations
+    // Perform read file operation on earlier created file
+    readFile(fs, file1_Path);
+    // Update NameNode metrics
+    updateNNMetrics();
+    // Verify read file operation has incremented numGetBlockLocations by 1
+    assertEquals("numGetBlockLocations for previous interval is incorrect",
+    1,nnMetrics.numGetBlockLocations.getPreviousIntervalValue());
+    // Verify numGetBlockLocations for current interval is 0
+    assertEquals("numGetBlockLocations for current interval is incorrect",
+    0,nnMetrics.numGetBlockLocations.getCurrentIntervalValue());
+
+    // opening and reading file  twice will increment numGetBlockLocations by 2
+    readFile(fs, file1_Path);
+    readFile(fs, file1_Path);
+    updateNNMetrics();
+    assertEquals("numGetBlockLocations for previous interval is incorrect",
+    2,nnMetrics.numGetBlockLocations.getPreviousIntervalValue());
+    // Verify numGetBlockLocations for current interval is 0
+    assertEquals("numGetBlockLocations for current interval is incorrect",
+    0,nnMetrics.numGetBlockLocations.getCurrentIntervalValue());
+  
+    // Verify total load metrics, total load = Data Node started.
+    updateMetrics();
+    assertEquals("Metrics TotalLoad is incorrect"
+    ,DATANODE_COUNT,metrics.totalLoad.get());
   }
 }
