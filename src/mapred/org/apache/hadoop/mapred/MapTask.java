@@ -189,7 +189,7 @@ class MapTask extends Task {
 
       Statistics matchedStats = null;
       if (split instanceof FileSplit) {
-        matchedStats = getFsStatistics(((FileSplit) split).getPath());
+        matchedStats = getFsStatistics(((FileSplit) split).getPath(), job);
       } 
       fsStats = matchedStats;
       
@@ -480,7 +480,7 @@ class MapTask extends Task {
       Statistics matchedStats = null;
       if (split instanceof org.apache.hadoop.mapreduce.lib.input.FileSplit) {
         matchedStats = getFsStatistics(((org.apache.hadoop.mapreduce.lib.input.FileSplit) split)
-            .getPath());
+            .getPath(), job);
       } 
       fsStats = matchedStats;
 	  
@@ -615,7 +615,7 @@ class MapTask extends Task {
       Statistics matchedStats = null;
       if (outputFormat instanceof org.apache.hadoop.mapreduce.lib.output.FileOutputFormat) {
         matchedStats = getFsStatistics(org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
-            .getOutputPath(jobContext));
+            .getOutputPath(jobContext), job);
       }
       fsStats = matchedStats;
       mapOutputRecordCounter = 
@@ -808,7 +808,7 @@ class MapTask extends Task {
       
       Statistics matchedStats = null;
       if (outputFormat instanceof FileOutputFormat) {
-        matchedStats = getFsStatistics(FileOutputFormat.getOutputPath(job));
+        matchedStats = getFsStatistics(FileOutputFormat.getOutputPath(job), job);
       } 
       fsStats = matchedStats;
       mapOutputRecordCounter = reporter.getCounter(MAP_OUTPUT_RECORDS);

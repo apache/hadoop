@@ -438,7 +438,7 @@ class ReduceTask extends Task {
           .getCounter(FileOutputFormat.Counter.BYTES_WRITTEN);
       Statistics matchedStats = null;
       if (job.getOutputFormat() instanceof FileOutputFormat) {
-        matchedStats = getFsStatistics(FileOutputFormat.getOutputPath(job));
+        matchedStats = getFsStatistics(FileOutputFormat.getOutputPath(job), job);
       }
       fsStats = matchedStats;
 
@@ -560,7 +560,7 @@ class ReduceTask extends Task {
       // getTaskID());
       if (outputFormat instanceof org.apache.hadoop.mapreduce.lib.output.FileOutputFormat) {
         matchedStats = getFsStatistics(org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
-            .getOutputPath(taskContext));
+            .getOutputPath(taskContext), taskContext.getConfiguration());
       }
       fsStats = matchedStats;
 
