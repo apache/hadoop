@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -166,6 +167,19 @@ public class JobInProgress {
    * schedule any available map tasks for this job, including speculative tasks.
    */
   private final int anyCacheLevel;
+  
+  /**
+   * Number of scheduling opportunities (heartbeats) given to this Job
+   */
+  private volatile long numSchedulingOpportunities;
+  
+  static String LOCALITY_WAIT_FACTOR = "mapreduce.job.locality.wait.factor";
+  static final float DEFAULT_LOCALITY_WAIT_FACTOR = 1.0f;
+  
+  /**
+   * Percentage of the cluster the job is willing to wait to get better locality
+   */
+  private float localityWaitFactor = 1.0f;
   
   /**
    * A special value indicating that 
@@ -469,6 +483,7 @@ public class JobInProgress {
     Map<Node, List<TaskInProgress>> cache = 
       new IdentityHashMap<Node, List<TaskInProgress>>(maxLevel);
     
+    Set<String> uniqueHosts = new TreeSet<String>();
     for (int i = 0; i < splits.length; i++) {
       String[] splitLocations = splits[i].getLocations();
       if (splitLocations == null || splitLocations.length == 0) {
@@ -478,6 +493,7 @@ public class JobInProgress {
 
       for(String host: splitLocations) {
         Node node = jobtracker.resolveAndAddToTopology(host);
+        uniqueHosts.add(host);
         LOG.info("tip:" + maps[i].getTIPId() + " has split on node:" + node);
         for (int j = 0; j < maxLevel; j++) {
           List<TaskInProgress> hostMaps = cache.get(node);
@@ -498,6 +514,16 @@ public class JobInProgress {
         }
       }
     }
+    
+    // Calibrate the localityWaitFactor - Do not override user intent!
+    if (localityWaitFactor == DEFAULT_LOCALITY_WAIT_FACTOR) {
+      float jobNodes = uniqueHosts.size();
+      float clusterNodes = jobtracker.getNumberOfUniqueHosts();
+      
+      localityWaitFactor = Math.min(jobNodes/clusterNodes, localityWaitFactor);
+      LOG.info(jobId + " LOCALITY_WAIT_FACTOR=" + localityWaitFactor);
+    }
+    
     return cache;
   }
   
@@ -640,6 +666,10 @@ public class JobInProgress {
     }
     LOG.info("Input size for job " + jobId + " = " + inputLength
         + ". Number of splits = " + splits.length);
+
+    // Set localityWaitFactor before creating cache
+    localityWaitFactor = 
+      conf.getFloat(LOCALITY_WAIT_FACTOR, DEFAULT_LOCALITY_WAIT_FACTOR);
     if (numMapTasks > 0) { 
       nonRunningMapCache = createCache(splits, maxLevel);
     }
@@ -1194,6 +1224,8 @@ public class JobInProgress {
                                            ) throws IOException {
     if (status.getRunState() != JobStatus.RUNNING) {
       LOG.info("Cannot create task split for " + profile.getJobID());
+      try { throw new IOException("state = " + status.getRunState()); }
+      catch (IOException ioe) {ioe.printStackTrace();}
       return null;
     }
         
@@ -1206,6 +1238,7 @@ public class JobInProgress {
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       addRunningTaskToTIP(maps[target], result.getTaskID(), tts, true);
+      resetSchedulingOpportunities();
     }
 
     return result;
@@ -1255,6 +1288,8 @@ public class JobInProgress {
   throws IOException {
     if (!tasksInited.get()) {
       LOG.info("Cannot create task split for " + profile.getJobID());
+      try { throw new IOException("state = " + status.getRunState()); }
+      catch (IOException ioe) {ioe.printStackTrace();}
       return null;
     }
 
@@ -1267,6 +1302,7 @@ public class JobInProgress {
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       addRunningTaskToTIP(maps[target], result.getTaskID(), tts, true);
+      resetSchedulingOpportunities();
     }
 
     return result;
@@ -1278,6 +1314,8 @@ public class JobInProgress {
   throws IOException {
     if (!tasksInited.get()) {
       LOG.info("Cannot create task split for " + profile.getJobID());
+      try { throw new IOException("state = " + status.getRunState()); }
+      catch (IOException ioe) {ioe.printStackTrace();}
       return null;
     }
 
@@ -1290,9 +1328,45 @@ public class JobInProgress {
     Task result = maps[target].getTaskToRun(tts.getTrackerName());
     if (result != null) {
       addRunningTaskToTIP(maps[target], result.getTaskID(), tts, true);
+      // DO NOT reset for off-switch!
     }
 
     return result;
+  }
+  
+  public void schedulingOpportunity() {
+    ++numSchedulingOpportunities;
+  }
+  
+  public void resetSchedulingOpportunities() {
+    numSchedulingOpportunities = 0;
+  }
+  
+  public long getNumSchedulingOpportunities() {
+    return numSchedulingOpportunities;
+  }
+
+  private static final long OVERRIDE = 1000000;
+  public void overrideSchedulingOpportunities() {
+    numSchedulingOpportunities = OVERRIDE;
+  }
+  
+  /**
+   * Check if we can schedule an off-switch task for this job.
+   * @param numTaskTrackers.
+   * 
+   * We check the number of missed opportunities for the job. 
+   * If it has 'waited' long enough we go ahead and schedule.
+   * 
+   * @return <code>true</code> if we can schedule off-switch, 
+   *         <code>false</code> otherwise
+   */
+  public boolean scheduleOffSwitch(int numTaskTrackers) {
+    long missedTaskTrackers = getNumSchedulingOpportunities();
+    long requiredSlots = 
+      Math.min((desiredMaps() - finishedMaps()), numTaskTrackers);
+    
+    return (requiredSlots  * localityWaitFactor) < missedTaskTrackers;
   }
   
   /**

@@ -45,17 +45,21 @@ class MemoryMatcher {
     return true;
   }
 
+  
   /**
    * Find the memory that is already used by all the running tasks
    * residing on the given TaskTracker.
    * 
    * @param taskTracker
    * @param taskType 
+   * @param availableSlots
    * @return amount of memory that is used by the residing tasks,
    *          null if memory cannot be computed for some reason.
    */
-  synchronized Long getMemReservedForTasks(
-      TaskTrackerStatus taskTracker, TaskType taskType) {
+  synchronized long getMemReservedForTasks(
+      TaskTrackerStatus taskTracker, TaskType taskType, int availableSlots) {
+    int currentlyScheduled = 
+      currentlyScheduled(taskTracker, taskType, availableSlots);
     long vmem = 0;
 
     for (TaskStatus task : taskTracker.getTaskReports()) {
@@ -80,18 +84,38 @@ class MemoryMatcher {
       }
     }
 
-    return Long.valueOf(vmem);
+    long currentlyScheduledVMem = 
+      currentlyScheduled * ((taskType == TaskType.MAP) ? 
+          scheduler.getMemSizeForMapSlot() : 
+            scheduler.getMemSizeForReduceSlot());
+    return vmem + currentlyScheduledVMem; 
   }
 
+  private int currentlyScheduled(TaskTrackerStatus taskTracker, 
+                                 TaskType taskType, int availableSlots) {
+    int scheduled = 0;
+    if (taskType == TaskType.MAP) {
+      scheduled = 
+        (taskTracker.getMaxMapSlots() - taskTracker.countOccupiedMapSlots()) - 
+            availableSlots;
+    } else {
+      scheduled = 
+        (taskTracker.getMaxReduceSlots() - 
+            taskTracker.countOccupiedReduceSlots()) - availableSlots;
+    }
+    return scheduled;
+  }
   /**
    * Check if a TT has enough memory to run of task specified from this job.
    * @param job
    * @param taskType 
    * @param taskTracker
+   * @param availableSlots
    * @return true if this TT has enough memory for this job. False otherwise.
    */
   boolean matchesMemoryRequirements(JobInProgress job,TaskType taskType, 
-                                    TaskTrackerStatus taskTracker) {
+                                    TaskTrackerStatus taskTracker, 
+                                    int availableSlots) {
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Matching memory requirements of " + job.getJobID().toString()
@@ -106,7 +130,8 @@ class MemoryMatcher {
       return true;
     }
 
-    Long memUsedOnTT = getMemReservedForTasks(taskTracker, taskType);
+    long memUsedOnTT = 
+      getMemReservedForTasks(taskTracker, taskType, availableSlots);
     long totalMemUsableOnTT = 0;
     long memForThisTask = 0;
     if (taskType == TaskType.MAP) {
@@ -120,7 +145,7 @@ class MemoryMatcher {
               * taskTracker.getMaxReduceSlots();
     }
 
-    long freeMemOnTT = totalMemUsableOnTT - memUsedOnTT.longValue();
+    long freeMemOnTT = totalMemUsableOnTT - memUsedOnTT;
     if (memForThisTask > freeMemOnTT) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("memForThisTask (" + memForThisTask + ") > freeMemOnTT ("
