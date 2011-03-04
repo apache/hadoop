@@ -82,6 +82,11 @@ public class LoggedTaskAttempt implements DeepCompare {
     }
   }
 
+  void adjustTimes(long adjustment) {
+    startTime += adjustment;
+    finishTime += adjustment;
+  }
+
   public long getShuffleFinished() {
     return shuffleFinished;
   }
@@ -135,7 +140,7 @@ public class LoggedTaskAttempt implements DeepCompare {
   }
 
   void setHostName(String hostName) {
-    this.hostName = (hostName == null) ? null : hostName.intern();
+    this.hostName = hostName == null ? null : hostName.intern();
   }
 
   public long getHdfsBytesRead() {
@@ -256,6 +261,130 @@ public class LoggedTaskAttempt implements DeepCompare {
 
   void setMapInputBytes(long mapInputBytes) {
     this.mapInputBytes = mapInputBytes;
+  }
+
+  // incorporate event counters
+  public void incorporateCounters(JhCounters counters) {
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.hdfsBytesRead = val;
+      }
+    }, counters, "HDFS_BYTES_READ");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.hdfsBytesWritten = val;
+      }
+    }, counters, "HDFS_BYTES_WRITTEN");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.fileBytesRead = val;
+      }
+    }, counters, "FILE_BYTES_READ");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.fileBytesWritten = val;
+      }
+    }, counters, "FILE_BYTES_WRITTEN");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.mapInputBytes = val;
+      }
+    }, counters, "MAP_INPUT_BYTES");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.mapInputRecords = val;
+      }
+    }, counters, "MAP_INPUT_RECORDS");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.mapOutputBytes = val;
+      }
+    }, counters, "MAP_OUTPUT_BYTES");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.mapOutputRecords = val;
+      }
+    }, counters, "MAP_OUTPUT_RECORDS");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.combineInputRecords = val;
+      }
+    }, counters, "COMBINE_INPUT_RECORDS");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.reduceInputGroups = val;
+      }
+    }, counters, "REDUCE_INPUT_GROUPS");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.reduceInputRecords = val;
+      }
+    }, counters, "REDUCE_INPUT_RECORDS");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.reduceShuffleBytes = val;
+      }
+    }, counters, "REDUCE_SHUFFLE_BYTES");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.reduceOutputRecords = val;
+      }
+    }, counters, "REDUCE_OUTPUT_RECORDS");
+    incorporateCounter(new SetField(this) {
+      @Override
+      void set(long val) {
+        attempt.spilledRecords = val;
+      }
+    }, counters, "SPILLED_RECORDS");
+  }
+
+  private static String canonicalizeCounterName(String nonCanonicalName) {
+    String result = nonCanonicalName.toLowerCase();
+
+    result = result.replace(' ', '|');
+    result = result.replace('-', '|');
+    result = result.replace('_', '|');
+    result = result.replace('.', '|');
+
+    return result;
+  }
+
+  private abstract class SetField {
+    LoggedTaskAttempt attempt;
+
+    SetField(LoggedTaskAttempt attempt) {
+      this.attempt = attempt;
+    }
+
+    abstract void set(long value);
+  }
+
+  private static void incorporateCounter(SetField thunk, JhCounters counters,
+      String counterName) {
+    counterName = canonicalizeCounterName(counterName);
+
+    for (JhCounterGroup group : counters.groups) {
+      for (JhCounter counter : group.counts) {
+        if (counterName
+            .equals(canonicalizeCounterName(counter.name.toString()))) {
+          thunk.set(counter.value);
+          return;
+        }
+      }
+    }
   }
 
   private void compare1(String c1, String c2, TreePath loc, String eltname)

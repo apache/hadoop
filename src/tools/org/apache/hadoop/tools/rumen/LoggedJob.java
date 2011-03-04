@@ -102,6 +102,24 @@ public class LoggedJob implements DeepCompare {
     setJobID(jobID);
   }
 
+  void adjustTimes(long adjustment) {
+    submitTime += adjustment;
+    launchTime += adjustment;
+    finishTime += adjustment;
+
+    for (LoggedTask task : mapTasks) {
+      task.adjustTimes(adjustment);
+    }
+
+    for (LoggedTask task : reduceTasks) {
+      task.adjustTimes(adjustment);
+    }
+
+    for (LoggedTask task : otherTasks) {
+      task.adjustTimes(adjustment);
+    }
+  }
+
   @SuppressWarnings("unused")
   // for input parameter ignored.
   @JsonAnySetter

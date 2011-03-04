@@ -25,7 +25,7 @@ public class Counters implements Writable,Iterable<CounterGroup> {
   public Counters() {
   }
   
-  Counters(org.apache.hadoop.mapred.Counters counters) {
+  public Counters(org.apache.hadoop.mapred.Counters counters) {
     for(org.apache.hadoop.mapred.Counters.Group group: counters) {
       String name = group.getName();
       CounterGroup newGroup = new CounterGroup(name, group.getDisplayName());

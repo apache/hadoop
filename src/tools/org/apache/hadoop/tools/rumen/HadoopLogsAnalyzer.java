@@ -70,6 +70,7 @@ import org.codehaus.jackson.map.SerializationConfig;
  * about it. See {@code usage()}, below.
  * 
  */
+@Deprecated
 public class HadoopLogsAnalyzer extends Configured implements Tool {
 
   // output streams
@@ -103,14 +104,15 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
   /**
    * The regular expression used to parse task attempt IDs in job tracker logs
    */
-  private final static Pattern taskAttemptIDPattern = Pattern
-      .compile(".*_([0-9]+)");
+  private final static Pattern taskAttemptIDPattern =
+      Pattern.compile(".*_([0-9]+)");
 
   private final static Pattern xmlFilePrefix = Pattern.compile("[ \t]*<");
 
   private final static Pattern confFileHeader = Pattern.compile("_conf.xml!!");
 
-  private final Map<String, Pattern> counterPatterns = new HashMap<String, Pattern>();
+  private final Map<String, Pattern> counterPatterns =
+      new HashMap<String, Pattern>();
 
   /**
    * The unpaired job config file. Currently only used to glean the {@code -Xmx}
@@ -188,14 +190,14 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
   private boolean collectTaskTimes = false;
 
   private LogRecordType canonicalJob = LogRecordType.intern("Job");
-  private LogRecordType canonicalMapAttempt = LogRecordType
-      .intern("MapAttempt");
-  private LogRecordType canonicalReduceAttempt = LogRecordType
-      .intern("ReduceAttempt");
+  private LogRecordType canonicalMapAttempt =
+      LogRecordType.intern("MapAttempt");
+  private LogRecordType canonicalReduceAttempt =
+      LogRecordType.intern("ReduceAttempt");
   private LogRecordType canonicalTask = LogRecordType.intern("Task");
 
-  private static Pattern streamingJobnamePattern = Pattern
-      .compile("streamjob\\d+.jar");
+  private static Pattern streamingJobnamePattern =
+      Pattern.compile("streamjob\\d+.jar");
 
   private HashSet<String> hostNames = new HashSet<String>();
 
@@ -250,8 +252,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       result[i] = new Histogram[LoggedJob.JobType.values().length];
 
       for (int j = 0; j < LoggedJob.JobType.values().length; ++j) {
-        result[i][j] = blockname == null ? new Histogram() : new Histogram(
-            blockname);
+        result[i][j] =
+            blockname == null ? new Histogram() : new Histogram(blockname);
       }
     }
 
@@ -505,8 +507,9 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
           SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
       JsonFactory jfactory = jmapper.getJsonFactory();
       FileSystem jobFS = jobTraceFilename.getFileSystem(getConf());
-      jobTraceGen = jfactory.createJsonGenerator(
-          jobFS.create(jobTraceFilename), JsonEncoding.UTF8);
+      jobTraceGen =
+          jfactory.createJsonGenerator(jobFS.create(jobTraceFilename),
+              JsonEncoding.UTF8);
       if (prettyprintTrace) {
         jobTraceGen.useDefaultPrettyPrinter();
       }
@@ -517,8 +520,9 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
             SerializationConfig.Feature.CAN_OVERRIDE_ACCESS_MODIFIERS, true);
         JsonFactory tfactory = tmapper.getJsonFactory();
         FileSystem topoFS = topologyFilename.getFileSystem(getConf());
-        topologyGen = tfactory.createJsonGenerator(
-            topoFS.create(topologyFilename), JsonEncoding.UTF8);
+        topologyGen =
+            tfactory.createJsonGenerator(topoFS.create(topologyFilename),
+                JsonEncoding.UTF8);
         topologyGen.useDefaultPrettyPrinter();
       }
     }
@@ -546,7 +550,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       IOException {
     if (input != null) {
       input.close();
-      LOG.info("File closed: "+currentFileName);
+      LOG.info("File closed: " + currentFileName);
       input = null;
     }
 
@@ -573,7 +577,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
             + inputDirectoryFiles.length + ", starts with line " + lineNumber
             + ".");
 
-    input = maybeUncompressedPath(new Path(inputDirectoryPath, currentFileName));
+    input =
+        maybeUncompressedPath(new Path(inputDirectoryPath, currentFileName));
 
     return input != null;
   }
@@ -734,8 +739,9 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
 
     long[] endpointKeys = taskTimes.getCDF(1000, endpoints);
 
-    int smallResultOffset = (taskTimes.getTotalCount() < SMALL_SPREAD_COMPENSATION_THRESHOLD ? 1
-        : 0);
+    int smallResultOffset =
+        (taskTimes.getTotalCount() < SMALL_SPREAD_COMPENSATION_THRESHOLD ? 1
+            : 0);
 
     Histogram myTotal = spreadTo[outcome.ordinal()][jtype.ordinal()];
 
@@ -803,14 +809,15 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
           attemptsInCurrentJob = new HashMap<String, LoggedTaskAttempt>();
 
           // initialize all the per-job statistics gathering places
-          successfulMapAttemptTimes = new Histogram[ParsedHost
-              .numberOfDistances() + 1];
+          successfulMapAttemptTimes =
+              new Histogram[ParsedHost.numberOfDistances() + 1];
           for (int i = 0; i < successfulMapAttemptTimes.length; ++i) {
             successfulMapAttemptTimes[i] = new Histogram();
           }
 
           successfulReduceAttemptTimes = new Histogram();
-          failedMapAttemptTimes = new Histogram[ParsedHost.numberOfDistances() + 1];
+          failedMapAttemptTimes =
+              new Histogram[ParsedHost.numberOfDistances() + 1];
           for (int i = 0; i < failedMapAttemptTimes.length; ++i) {
             failedMapAttemptTimes[i] = new Histogram();
           }
@@ -851,7 +858,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
           if (finishTime != null) {
             jobBeingTraced.setFinishTime(Long.parseLong(finishTime));
             if (status != null) {
-              jobBeingTraced.setOutcome(Pre21JobHistoryConstants.Values.valueOf(status));
+              jobBeingTraced.setOutcome(Pre21JobHistoryConstants.Values
+                  .valueOf(status));
             }
 
             maybeMateJobAndConf();
@@ -890,9 +898,9 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
           if (launchTimeCurrentJob != 0) {
             String jobResultText = line.get("JOB_STATUS");
 
-            JobOutcome thisOutcome = ((jobResultText != null && "SUCCESS"
-                .equals(jobResultText)) ? JobOutcome.SUCCESS
-                : JobOutcome.FAILURE);
+            JobOutcome thisOutcome =
+                ((jobResultText != null && "SUCCESS".equals(jobResultText))
+                    ? JobOutcome.SUCCESS : JobOutcome.FAILURE);
 
             if (submitTimeCurrentJob != 0L) {
               canonicalDistributionsEnter(delayTimeDists, thisOutcome,
@@ -911,8 +919,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
             Histogram currentJobSortTimes = new Histogram();
             Histogram currentJobReduceTimes = new Histogram();
 
-            Iterator<Map.Entry<String, Long>> taskIter = taskAttemptStartTimes
-                .entrySet().iterator();
+            Iterator<Map.Entry<String, Long>> taskIter =
+                taskAttemptStartTimes.entrySet().iterator();
 
             while (taskIter.hasNext()) {
               Map.Entry<String, Long> entry = taskIter.next();
@@ -930,8 +938,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
               }
 
               // Reduce processing
-              Long shuffleEnd = taskReduceAttemptShuffleEndTimes.get(entry
-                  .getKey());
+              Long shuffleEnd =
+                  taskReduceAttemptShuffleEndTimes.get(entry.getKey());
               Long sortEnd = taskReduceAttemptSortEndTimes.get(entry.getKey());
               Long reduceEnd = taskReduceAttemptFinishTimes.get(entry.getKey());
 
@@ -1027,7 +1035,9 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       Pre21JobHistoryConstants.Values stat;
 
       try {
-        stat = status == null ? null : Pre21JobHistoryConstants.Values.valueOf(status);
+        stat =
+            status == null ? null : Pre21JobHistoryConstants.Values
+                .valueOf(status);
       } catch (IllegalArgumentException e) {
         LOG.error("A task status you don't know about is \"" + status + "\".",
             e);
@@ -1037,22 +1047,26 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       task.setTaskStatus(stat);
 
       try {
-        typ = taskType == null ? null : Pre21JobHistoryConstants.Values.valueOf(taskType);
+        typ =
+            taskType == null ? null : Pre21JobHistoryConstants.Values
+                .valueOf(taskType);
       } catch (IllegalArgumentException e) {
         LOG.error("A task type you don't know about is \"" + taskType + "\".",
             e);
         typ = null;
       }
-      
+
       if (typ == null) {
         return;
       }
 
       task.setTaskType(typ);
 
-      List<LoggedTask> vec = typ == Pre21JobHistoryConstants.Values.MAP ? jobBeingTraced
-          .getMapTasks() : typ == Pre21JobHistoryConstants.Values.REDUCE ? jobBeingTraced
-          .getReduceTasks() : jobBeingTraced.getOtherTasks();
+      List<LoggedTask> vec =
+          typ == Pre21JobHistoryConstants.Values.MAP ? jobBeingTraced
+              .getMapTasks() : typ == Pre21JobHistoryConstants.Values.REDUCE
+              ? jobBeingTraced.getReduceTasks() : jobBeingTraced
+                  .getOtherTasks();
 
       if (!taskAlreadyLogged) {
         vec.add(task);
@@ -1066,8 +1080,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
     Pattern result = counterPatterns.get(counterName);
 
     if (result == null) {
-      String namePatternRegex = "\\[\\(" + counterName
-          + "\\)\\([^)]+\\)\\(([0-9]+)\\)\\]";
+      String namePatternRegex =
+          "\\[\\(" + counterName + "\\)\\([^)]+\\)\\(([0-9]+)\\)\\]";
       result = Pattern.compile(namePatternRegex);
       counterPatterns.put(counterName, result);
     }
@@ -1253,7 +1267,9 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       Pre21JobHistoryConstants.Values stat = null;
 
       try {
-        stat = status == null ? null : Pre21JobHistoryConstants.Values.valueOf(status);
+        stat =
+            status == null ? null : Pre21JobHistoryConstants.Values
+                .valueOf(status);
       } catch (IllegalArgumentException e) {
         LOG.error("A map attempt status you don't know about is \"" + status
             + "\".", e);
@@ -1404,7 +1420,9 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       Pre21JobHistoryConstants.Values stat = null;
 
       try {
-        stat = status == null ? null : Pre21JobHistoryConstants.Values.valueOf(status);
+        stat =
+            status == null ? null : Pre21JobHistoryConstants.Values
+                .valueOf(status);
       } catch (IllegalArgumentException e) {
         LOG.warn("A map attempt status you don't know about is \"" + status
             + "\".", e);
@@ -1632,8 +1650,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
         }
 
         for (Map.Entry<Long, Long> ent : successfulNthMapperAttempts) {
-          successAfterI[ent.getKey().intValue()] = ((double) ent.getValue())
-              / totalSuccessfulAttempts;
+          successAfterI[ent.getKey().intValue()] =
+              ((double) ent.getValue()) / totalSuccessfulAttempts;
         }
         jobBeingTraced.setMapperTriesToSucceed(successAfterI);
       } else {
@@ -1712,8 +1730,9 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
       }
 
       if (spreading) {
-        String ratioDescription = "(" + spreadMax + "/1000 %ile) to ("
-            + spreadMin + "/1000 %ile) scaled by 1000000";
+        String ratioDescription =
+            "(" + spreadMax + "/1000 %ile) to (" + spreadMin
+                + "/1000 %ile) scaled by 1000000";
 
         printDistributionSet(
             "Map task success times " + ratioDescription + ":",
@@ -1737,8 +1756,8 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
     }
 
     if (topologyGen != null) {
-      LoggedNetworkTopology topo = new LoggedNetworkTopology(allHosts,
-          "<root>", 0);
+      LoggedNetworkTopology topo =
+          new LoggedNetworkTopology(allHosts, "<root>", 0);
       topologyGen.writeObject(topo);
       topologyGen.close();
     }

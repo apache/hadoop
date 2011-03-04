@@ -24,10 +24,10 @@ class ParsedLine {
   Properties content;
   LogRecordType type;
 
-  static final Pattern keyValPair = Pattern
-      .compile(" *([a-zA-Z0-9_]+)=\"((?:[^\"\\\\]|\\\\[ .\"\\\\])*)\"");
+  static final Pattern keyValPair =
+      Pattern.compile(" *([a-zA-Z0-9_]+)=\"((?:[^\"\\\\]|\\\\[ .\"\\\\])*)\"");
 
-  @SuppressWarnings("unused") 
+  @SuppressWarnings("unused")
   ParsedLine(String fullLine, int version) {
     super();
 
@@ -47,8 +47,16 @@ class ParsedLine {
 
     String propValPairs = fullLine.substring(firstSpace + 1);
 
-    while (propValPairs.length() > 0 && propValPairs.charAt(0) == ' ') {
-      propValPairs = propValPairs.substring(1);
+    int pvPairsFirstNonBlank = 0;
+    int pvPairsLength = propValPairs.length();
+
+    while (pvPairsLength > pvPairsFirstNonBlank
+        && propValPairs.charAt(pvPairsFirstNonBlank) == ' ') {
+      ++pvPairsFirstNonBlank;
+    }
+
+    if (pvPairsFirstNonBlank != 0) {
+      propValPairs = propValPairs.substring(pvPairsFirstNonBlank);
     }
 
     int cursor = 0;

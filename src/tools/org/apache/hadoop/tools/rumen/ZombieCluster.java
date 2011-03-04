@@ -45,7 +45,7 @@ public class ZombieCluster extends AbstractClusterStory {
    * @param defaultNode
    *          The default node setting.
    */
-  ZombieCluster(LoggedNetworkTopology topology, MachineNode defaultNode) {
+  public ZombieCluster(LoggedNetworkTopology topology, MachineNode defaultNode) {
     buildCluster(topology, defaultNode);
   }
 

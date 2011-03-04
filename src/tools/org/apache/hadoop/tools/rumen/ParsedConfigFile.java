@@ -37,8 +37,10 @@ import org.w3c.dom.Text;
 import org.xml.sax.SAXException;
 
 class ParsedConfigFile {
-  private static final Pattern jobIDPattern = Pattern.compile("_(job_[0-9]+_[0-9]+)_");
-  private static final Pattern heapPattern = Pattern.compile("-Xmx([0-9]+)([mMgG])");
+  private static final Pattern jobIDPattern =
+      Pattern.compile("_(job_[0-9]+_[0-9]+)_");
+  private static final Pattern heapPattern =
+      Pattern.compile("-Xmx([0-9]+)([mMgG])");
 
   final int heapMegabytes;
 
@@ -68,6 +70,7 @@ class ParsedConfigFile {
   }
 
   @SuppressWarnings("hiding")
+  @Deprecated
   ParsedConfigFile(String filenameLine, String xmlString) {
     super();
 
@@ -136,10 +139,11 @@ class ParsedConfigFile {
             value = ((Text) field.getFirstChild()).getData();
           }
           if ("final".equals(field.getTagName()) && field.hasChildNodes()) {
-            finalParameter = "true".equals(((Text) field.getFirstChild())
-                .getData());
+            finalParameter =
+                "true".equals(((Text) field.getFirstChild()).getData());
           }
         }
+
         if ("mapred.child.java.opts".equals(attr) && value != null) {
           Matcher matcher = heapPattern.matcher(value);
           if (matcher.find()) {
@@ -153,7 +157,7 @@ class ParsedConfigFile {
           }
         }
 
-        if ("mapred.job.queue.name".equals(attr) && value != null) {
+        if ("mapred.queue.name".equals(attr) && value != null) {
           queue = value;
         }
 
@@ -161,14 +165,15 @@ class ParsedConfigFile {
           jobName = value;
         }
 
-        clusterMapMB = maybeGetIntValue("mapred.cluster.map.memory.mb", attr,
-            value, clusterMapMB);
-        clusterReduceMB = maybeGetIntValue("mapred.cluster.reduce.memory.mb",
-            attr, value, clusterReduceMB);
-        jobMapMB = maybeGetIntValue("mapred.job.map.memory.mb", attr, value,
-            jobMapMB);
-        jobReduceMB = maybeGetIntValue("mapred.job.reduce.memory.mb", attr,
-            value, jobReduceMB);
+        clusterMapMB =
+            maybeGetIntValue("mapreduce.cluster.mapmemory.mb", attr, value, clusterMapMB);
+        clusterReduceMB =
+            maybeGetIntValue("mapred.cluster.reduce.memory.mb", attr, value,
+                clusterReduceMB);
+        jobMapMB =
+            maybeGetIntValue("mapred.job.map.memory.mb", attr, value, jobMapMB);
+        jobReduceMB =
+            maybeGetIntValue("mapred.job.reduce.memory.mb", attr, value, jobReduceMB);
       }
 
       valid = true;
