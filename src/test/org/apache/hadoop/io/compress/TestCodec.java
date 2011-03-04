@@ -19,9 +19,11 @@ package org.apache.hadoop.io.compress;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Random;
 
 import junit.framework.TestCase;
@@ -41,6 +43,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionStrategy;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 
 public class TestCodec extends TestCase {
@@ -65,6 +69,14 @@ public class TestCodec extends TestCase {
   public void testBZip2Codec() throws IOException {
     codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.BZip2Codec");
     codecTest(conf, seed, count, "org.apache.hadoop.io.compress.BZip2Codec");
+  }
+
+  public void testGzipCodecWithParam() throws IOException {
+    Configuration conf = new Configuration(this.conf);
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.BEST_COMPRESSION);
+    ZlibFactory.setCompressionStrategy(conf, CompressionStrategy.HUFFMAN_ONLY);
+    codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.GzipCodec");
+    codecTest(conf, seed, count, "org.apache.hadoop.io.compress.GzipCodec");
   }
 
   private static void codecTest(Configuration conf, int seed, int count, 
@@ -149,6 +161,53 @@ public class TestCodec extends TestCase {
     assertTrue("Got mismatched ZlibCompressor", c2 != CodecPool.getCompressor(gzc));
   }
 
+  private static void gzipReinitTest(Configuration conf, CompressionCodec codec)
+      throws IOException {
+    // Add codec to cache
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.BEST_COMPRESSION);
+    ZlibFactory.setCompressionStrategy(conf,
+        CompressionStrategy.DEFAULT_STRATEGY);
+    Compressor c1 = CodecPool.getCompressor(codec);
+    CodecPool.returnCompressor(c1);
+    // reset compressor's compression level to perform no compression
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.NO_COMPRESSION);
+    Compressor c2 = CodecPool.getCompressor(codec, conf);
+    // ensure same compressor placed earlier
+    assertTrue("Got mismatched ZlibCompressor", c1 == c2);
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    CompressionOutputStream cos = null;
+    // write trivially compressable data
+    byte[] b = new byte[1 << 15];
+    Arrays.fill(b, (byte) 43);
+    try {
+      cos = codec.createOutputStream(bos, c2);
+      cos.write(b);
+    } finally {
+      if (cos != null) {
+        cos.close();
+      }
+      CodecPool.returnCompressor(c2);
+    }
+    byte[] outbytes = bos.toByteArray();
+    // verify data were not compressed
+    assertTrue("Compressed bytes contrary to configuration",
+               outbytes.length >= b.length);
+  }
+
+  public void testCodecPoolCompressorReinit() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean("hadoop.native.lib", true);
+    if (ZlibFactory.isNativeZlibLoaded(conf)) {
+      GzipCodec gzc = ReflectionUtils.newInstance(GzipCodec.class, conf);
+      gzipReinitTest(conf, gzc);
+    } else {
+      LOG.warn("testCodecPoolCompressorReinit skipped: native libs not loaded");
+    }
+    conf.setBoolean("hadoop.native.lib", false);
+    DefaultCodec dfc = ReflectionUtils.newInstance(DefaultCodec.class, conf);
+    gzipReinitTest(conf, dfc);
+  }
+  
   public void testSequenceFileDefaultCodec() throws IOException, ClassNotFoundException, 
       InstantiationException, IllegalAccessException {
     sequenceFileCodecTest(conf, 100, "org.apache.hadoop.io.compress.DefaultCodec", 100);

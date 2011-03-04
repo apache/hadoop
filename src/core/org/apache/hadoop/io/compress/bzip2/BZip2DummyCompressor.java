@@ -2,6 +2,7 @@ package org.apache.hadoop.io.compress.bzip2;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.Compressor;
 
 /**
@@ -57,6 +58,11 @@ public class BZip2DummyCompressor implements Compressor {
   @Override
   public void setInput(byte[] b, int off, int len) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void reinit(Configuration conf) {
+    // do nothing
   }
 
 }
