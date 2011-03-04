@@ -1001,10 +1001,10 @@
       <sourcePath path="${examples.dir}" />
       <sourcePath path="${tools.src}" />
       <sourcePath path="${basedir}/src/contrib/streaming/src/java" />
-      <class location="${basedir}/build/${final.name}-core.jar" />
-      <class location="${basedir}/build/${final.name}-examples.jar" />
-      <class location="${basedir}/build/${final.name}-tools.jar" />
-      <class location="${basedir}/build/contrib/streaming/${final.name}-streaming.jar" />
+      <class location="${build.dir}/${core.final.name}.jar" />
+      <class location="${build.dir}/${examples.final.name}.jar" />
+      <class location="${build.dir}/${tools.final.name}.jar" />
+      <class location="${build.dir}/contrib/streaming/${streaming.final.name}.jar" />
     </findbugs>
 
         <xslt style="${findbugs.home}/src/xsl/default.xsl"
@@ -1256,7 +1256,7 @@
     </copy>
 
     <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}-*.jar"/>
+      <fileset file="${build.dir}/${name}-*-${version}.jar"/>
     </copy>
     
     <copy todir="${dist.dir}/bin">
@@ -1366,7 +1366,7 @@
     </copy>
 
     <copy todir="${dist.dir}"> 
-      <fileset file="${build.dir}/${final.name}-*.jar"/>
+      <fileset file="${build.dir}/${name}-*-${version}.jar"/>
     </copy>
     
     <copy todir="${dist.dir}/bin">
