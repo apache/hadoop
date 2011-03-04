@@ -474,4 +474,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
     return null;
   }
 
+  @Override
+  public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException{
+    return null;
+}
 }

@@ -1908,6 +1908,14 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     return jobSubmitClient.getQueueInfo(queueName);
   }
   
+  /**
+   * Gets the Queue ACLs for current user
+   * @return array of QueueAclsInfo object for current user.
+   * @throws IOException
+   */
+  public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException {
+    return jobSubmitClient.getQueueAclsForCurrentUser();
+  }
 
   /**
    */

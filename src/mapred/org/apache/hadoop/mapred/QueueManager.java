@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.TreeSet;
+import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -172,7 +173,7 @@ class QueueManager {
     }
     
     if (oper.isJobOwnerAllowed()) {
-      if (job.getJobConf().getUser().equals(ugi.getUserName())) {
+      if (job != null && job.getJobConf().getUser().equals(ugi.getUserName())) {
         return true;
       }
     }
@@ -326,4 +327,41 @@ class QueueManager {
       return new JobQueueInfo(queue,null);
     }
   }
+
+  /**
+   * Generates the array of QueueAclsInfo object. The array consists of only those queues
+   * for which user <ugi.getUserName()> has acls
+   *
+   * @return QueueAclsInfo[]
+   * @throws java.io.IOException
+   */
+  synchronized QueueAclsInfo[] getQueueAcls(UserGroupInformation
+          ugi) throws IOException {
+    //List of all QueueAclsInfo objects , this list is returned
+    ArrayList<QueueAclsInfo> queueAclsInfolist =
+            new ArrayList<QueueAclsInfo>();
+    QueueOperation[] operations = QueueOperation.values();
+    for (String queueName : queueNames) {
+      QueueAclsInfo queueAclsInfo = null;
+      ArrayList<String> operationsAllowed = null;
+      for (QueueOperation operation : operations) {
+        if (hasAccess(queueName, operation, ugi)) {
+          if (operationsAllowed == null) {
+            operationsAllowed = new ArrayList<String>();
+          }
+          operationsAllowed.add(operation.getAclName());
+        }
+      }
+      if (operationsAllowed != null) {
+        //There is atleast 1 operation supported for queue <queueName>
+        //, hence initialize queueAclsInfo
+        queueAclsInfo = new QueueAclsInfo(queueName, operationsAllowed.toArray
+                (new String[operationsAllowed.size()]));
+        queueAclsInfolist.add(queueAclsInfo);
+      }
+    }
+    return queueAclsInfolist.toArray(new QueueAclsInfo[
+            queueAclsInfolist.size()]);
+  }
+
 }

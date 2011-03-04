@@ -20,6 +20,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 /**
@@ -34,7 +35,6 @@ import org.apache.hadoop.util.ToolRunner;
 class JobQueueClient extends Configured implements  Tool {
   
   JobClient jc;
-
   
   public JobQueueClient() {
   }
@@ -60,9 +60,12 @@ class JobQueueClient extends Configured implements  Tool {
     boolean displayQueueList = false;
     boolean displayQueueInfoWithJobs = false;
     boolean displayQueueInfoWithoutJobs = false;
+    boolean displayQueueAclsInfoForCurrentUser = false;
     
     if("-list".equals(cmd)){
       displayQueueList = true;
+    }else if("-showacls".equals(cmd)) {
+      displayQueueAclsInfoForCurrentUser = true;
     }else if("-info".equals(cmd)){
       if(argv.length == 2 && !(argv[1].equals("-showJobs"))) {
         displayQueueInfoWithoutJobs = true;
@@ -91,6 +94,9 @@ class JobQueueClient extends Configured implements  Tool {
       exitcode = 0;
     } else if (displayQueueInfoWithJobs) {
       displayQueueInfo(argv[1],true);
+      exitcode = 0;
+    }else if (displayQueueAclsInfoForCurrentUser) {
+      this.displayQueueAclsInfoForCurrentUser();
       exitcode = 0;
     }
     
@@ -140,6 +146,33 @@ class JobQueueClient extends Configured implements  Tool {
     }
   }
 
+  private void displayQueueAclsInfoForCurrentUser() throws IOException {
+    QueueAclsInfo[] queueAclsInfoList = jc.getQueueAclsForCurrentUser();
+    UserGroupInformation ugi = UserGroupInformation.readFrom(getConf());
+    if (queueAclsInfoList.length > 0) {
+      System.out.println("Queue acls for user :  "
+              + ugi.getUserName());
+      System.out.println("\nQueue  Operations");
+      System.out.println("=====================");
+      for (QueueAclsInfo queueInfo : queueAclsInfoList) {
+        System.out.print(queueInfo.getQueueName() + "  ");
+        String[] ops = queueInfo.getOperations();
+        int max = ops.length - 1;
+        for (int j = 0; j < ops.length; j++) {
+          System.out.print(ops[j].replaceFirst("acl-", ""));
+          if (j < max) {
+            System.out.print(",");
+          }
+        }
+        System.out.println();
+      }
+    } else {
+      System.out.println("User " +
+              ugi.getUserName() +
+              " does not have access to any queue. \n");
+    }
+  }
+  
   private void displayUsage(String cmd) {
     String prefix = "Usage: JobQueueClient ";
     if ("-queueinfo".equals(cmd)){
@@ -147,7 +180,8 @@ class JobQueueClient extends Configured implements  Tool {
     }else {
       System.err.printf(prefix + "<command> <args>\n");
       System.err.printf("\t[-list]\n");
-      System.err.printf("\t[-info <job-queue-name> [-showJobs]]\n\n");
+      System.err.printf("\t[-info <job-queue-name> [-showJobs]]\n");
+      System.err.printf("\t[-showacls] \n\n");
       ToolRunner.printGenericCommandUsage(System.out);
     }
   }

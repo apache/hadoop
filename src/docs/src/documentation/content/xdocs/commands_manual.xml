@@ -360,7 +360,7 @@
           command to interact and view Job Queue information
         </p>
         <p>
-          <code>Usage : hadoop queue [-list] | [-info &lt;job-queue-name&gt; [-showJobs]]</code>
+          <code>Usage : hadoop queue [-list] | [-info &lt;job-queue-name&gt; [-showJobs]] | [-showacls]</code>
         </p>
         <table>
         <tr>
@@ -380,6 +380,12 @@
            queue is displayed. 
           </td>
         </tr>
+        <tr>
+          <td><code>-showacls</code></td>
+          <td>Displays the queue name and associated queue operations allowed for the current user.
+          The list consists of only those queues to which the user has access.
+          </td>
+          </tr>
         </table>
       </section>  	
 			<section>

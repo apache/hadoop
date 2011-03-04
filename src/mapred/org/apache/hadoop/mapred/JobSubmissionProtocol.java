@@ -58,8 +58,10 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    *             for HADOOP-4807
    * Version 20: Modified ClusterStatus to have the tasktracker expiry
    *             interval for HADOOP-4939                     
+   * Version 21: Added method getQueueAclsForCurrentUser to get queue acls info
+   *             for a user
    */
-  public static final long versionID = 20L;
+  public static final long versionID = 21L;
 
   /**
    * Allocate a name for the job.
@@ -212,4 +214,11 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * @throws IOException
    */
   public JobStatus[] getJobsFromQueue(String queue) throws IOException;
+  
+  /**
+   * Gets the Queue ACLs for current user
+   * @return array of QueueAclsInfo object for current user.
+   * @throws IOException
+   */
+  public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException;
 }
