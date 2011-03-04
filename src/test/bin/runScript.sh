@@ -2,6 +2,7 @@
 
 TZ=PDT8PST  date
 TZ=EDT5EST  date
+env|grep -i branch
 
 if [ $# -eq 0 ]
 then
@@ -24,7 +25,12 @@ fi
 		then
 	    		(cd hudson && git pull)
 		else
-	    	git clone $GIT_REPO
+			[ -d internal ] && rm -rf internal
+	    		git clone $GIT_REPO internal
+			if [ -n "$GIT_SCRIPTS_BRANCH" ]
+			then
+				(cd internal && git checkout $GIT_SCRIPTS_BRANCH)
+			fi
 		fi
 	fi
 	if [ -n "$SVN_REPO" ]
