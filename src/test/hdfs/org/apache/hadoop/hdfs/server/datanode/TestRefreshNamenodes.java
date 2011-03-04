@@ -45,8 +45,8 @@ public class TestRefreshNamenodes {
     MiniDFSCluster cluster = null;
     try {
       conf.set(DFSConfigKeys.DFS_FEDERATION_NAMESERVICES, "namesServerId1");
-      cluster = new MiniDFSCluster.Builder(conf).numNameNodes(1)
-          .nameNodePort(nnPort1).build();
+      cluster = new MiniDFSCluster.Builder(conf).federation(true).
+          numNameNodes(1).nameNodePort(nnPort1).build();
 
       DataNode dn = cluster.getDataNodes().get(0);
       assertEquals(1, dn.getAllBpOs().length);
@@ -75,7 +75,9 @@ public class TestRefreshNamenodes {
         assertTrue("NameNode address " + addr + " is not found.", found);
       }
     } finally {
-      cluster.shutdown();
+      if (cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 }

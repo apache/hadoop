@@ -830,10 +830,10 @@ public class TestFileCreation extends junit.framework.TestCase {
       dfs = (DistributedFileSystem)cluster.getFileSystem();
 
       // create a new file.
-      final String f = DIR + "dhrubashutdown";
+      final String f = DIR + "testFsCloseAfterClusterShutdown";
       final Path fpath = new Path(f);
       FSDataOutputStream out = TestFileCreation.createFile(dfs, fpath, DATANODE_NUM);
-      out.write("something_dhruba".getBytes());
+      out.write("something_test".getBytes());
       out.hflush();    // ensure that block is allocated
 
       // shutdown last datanode in pipeline.

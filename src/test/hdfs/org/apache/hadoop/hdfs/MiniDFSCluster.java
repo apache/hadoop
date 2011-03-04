@@ -1362,14 +1362,13 @@ public class MiniDFSCluster {
     if (nameNodes.length == 0 || nameNodes[nnIndex] == null) {
       return;
     }
-    String bpid = nameNodes[nnIndex].nameNode.getFSImage().getBlockPoolID();
-    InetSocketAddress addr = new InetSocketAddress("localhost",
-        getNameNodePort(nnIndex));
+    InetSocketAddress addr = nameNodes[nnIndex].nameNode.getServiceRpcAddress();
     DFSClient client = new DFSClient(addr, conf);
 
     // ensure all datanodes have registered and sent heartbeat to the namenode
-    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), bpid)) {
+    while (shouldWait(client.datanodeReport(DatanodeReportType.LIVE), addr)) {
       try {
+        LOG.info("Waiting for cluster to become active");
         Thread.sleep(100);
       } catch (InterruptedException e) {
       }
@@ -1387,29 +1386,26 @@ public class MiniDFSCluster {
     }
   }
   
-  private synchronized boolean shouldWait(DatanodeInfo[] dnInfo, String bpid) {
+  private synchronized boolean shouldWait(DatanodeInfo[] dnInfo,
+      InetSocketAddress addr) {
+    // If a datanode failed to start, then do not wait
     for (DataNodeProperties dn : dataNodes) {
-      // If any one of the datanode is down, then do not continue to wait
-      // since the subsequent checks to stop waiting in this method are never
-      // going to be be met resulting in waiting forever.
-      if (!dn.datanode.isDatanodeUp()) {
-        return false;
-      }
-
-      // if registration of this datanode with the namenode failed -  don't wait
-      if(!dn.datanode.isBPServiceAlive(bpid)) {
+      // the datanode thread communicating with the namenode should be alive
+      if (!dn.datanode.isBPServiceAlive(addr)) {
+        LOG.warn("One or more BPOfferService failed to start in datanode " + dn
+            + " for namenode" + addr);
         return false;
       }
     }
     
+    // Wait for expected number of datanodes to start
     if (dnInfo.length != numDataNodes) {
       return true;
     }
     
-    // check if all data nodes are fully started
+    // if one of the data nodes is not fully started, continue to wait
     for (DataNodeProperties dn : dataNodes) {
       if (!dn.datanode.isDatanodeFullyStarted()) {
-        // if one of the data nodes is not fully started, continue to wait
         return true;
       }
     }

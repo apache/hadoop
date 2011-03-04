@@ -244,6 +244,10 @@ public class DataNode extends Configured
       return nameNodeThreads.values().toArray(bposArray);
     }
     
+    synchronized BPOfferService get(InetSocketAddress addr) {
+      return nameNodeThreads.get(addr);
+    }
+    
     synchronized BPOfferService get(String bpid) {
       return bpMapping.get(bpid);
     }
@@ -666,6 +670,10 @@ public class DataNode extends Configured
      */
     public boolean initialized() {
       return initialized;
+    }
+    
+    public boolean isAlive() {
+      return shouldServiceRun && bpThread.isAlive();
     }
     
     public String getBlockPoolId() {
@@ -1968,7 +1976,7 @@ public class DataNode extends Configured
    */
   public boolean isDatanodeUp() {
     for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
-      if (bp.bpThread.isAlive()) {
+      if (bp.isAlive()) {
         return true;
       }
     }
@@ -2568,15 +2576,21 @@ public class DataNode extends Configured
   }
 
   /**
+   * @param addr rpc address of the namenode
+   * @return true - if BPOfferService corresponding to the namenode is alive
+   */
+  public boolean isBPServiceAlive(InetSocketAddress addr) {
+    BPOfferService bp = blockPoolManager.get(addr);
+    return bp != null ? bp.isAlive() : false;
+  }
+  
+  /**
    * @param bpid block pool Id
    * @return true - if BPOfferService thread is alive
    */
   public boolean isBPServiceAlive(String bpid) {
     BPOfferService bp = blockPoolManager.get(bpid);
-    if (bp != null) {
-      return bp.shouldServiceRun && bp.bpThread.isAlive();
-    }
-    return false;
+    return bp != null ? bp.isAlive() : false;
   }
 
   /**
@@ -2587,7 +2601,7 @@ public class DataNode extends Configured
    */
   public boolean isDatanodeFullyStarted() {
     for (BPOfferService bp : blockPoolManager.getAllNamenodeThreads()) {
-      if (!bp.initialized() || !bp.shouldServiceRun || !bp.bpThread.isAlive()) {
+      if (!bp.initialized() || !bp.isAlive()) {
         return false;
       }
     }

@@ -161,9 +161,7 @@ public class TestDataNodeMultipleRegistrations {
       // try block report
       BPOfferService bpos1 = dn.getAllBpOs()[0];
       bpos1.lastBlockReport = 0;
-      DatanodeCommand cmd = bpos1.blockReport();
-
-      assertNotNull("cmd is null", cmd);
+      bpos1.blockReport();
 
       assertEquals("wrong nn address", bpos1.nnAddr,
           nn1.getNameNodeAddress());

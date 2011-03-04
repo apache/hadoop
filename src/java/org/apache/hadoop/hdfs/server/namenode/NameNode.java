@@ -1360,10 +1360,19 @@ public class NameNode implements NamenodeProtocols, FSConstants {
 
   /**
    * Returns the address on which the NameNodes is listening to.
-   * @return the address on which the NameNodes is listening to.
+   * @return namenode rpc address
    */
   public InetSocketAddress getNameNodeAddress() {
     return rpcAddress;
+  }
+  
+  /**
+   * Returns namenode service rpc address, if set. Otherwise returns
+   * namenode rpc address.
+   * @return namenode service rpc address used by datanodes
+   */
+  public InetSocketAddress getServiceRpcAddress() {
+    return serviceRPCAddress != null ? serviceRPCAddress : rpcAddress;
   }
 
   /**
