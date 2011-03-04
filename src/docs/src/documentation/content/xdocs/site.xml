@@ -48,6 +48,7 @@ See http://forrest.apache.org/docs/linking.html for more info.
 		<SLA					 	label="Service Level Authorization" 	href="service_level_auth.html"/>
 		<vaidya    					label="Vaidya" 								href="vaidya.html"/>
 		<archives  				label="Archives"     						href="hadoop_archives.html"/>
+ 		<gridmix  				label="Gridmix"     href="gridmix.html"/>
    </docs>
    
    <docs label="HDFS">
