@@ -30,10 +30,15 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.security.token.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.DFSClient.DFSOutputStream;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.Progressable;
 
 
@@ -484,5 +489,44 @@ public class DistributedFileSystem extends FileSystem {
     dfs.setTimes(getPathName(p), mtime, atime);
   }
   
+  /** 
+   * Delegation Token Operations
+   * These are DFS only operations.
+   */
   
+  /**
+   * Get a valid Delegation Token.
+   * 
+   * @param renewer Name of the designated renewer for the token
+   * @return Token<DelegationTokenIdentifier>
+   * @throws IOException
+   */
+  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
+      throws IOException {
+    return dfs.getDelegationToken(renewer);
+  }
+
+  /**
+   * Renew an existing delegation token.
+   * 
+   * @param token delegation token obtained earlier
+   * @return True if renewed successfully else false
+   * @throws IOException
+   */
+  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws InvalidToken, IOException {
+    return dfs.renewDelegationToken(token);
+  }
+
+  /**
+   * Cancel an existing delegation token.
+   * 
+   * @param token delegation token
+   * @return True if canceled successfully else false
+   * @throws IOException
+   */
+  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws IOException {
+    return dfs.cancelDelegationToken(token);
+  }
 }

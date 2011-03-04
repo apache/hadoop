@@ -22,10 +22,13 @@ import java.io.*;
 import org.apache.hadoop.ipc.VersionedProtocol;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
+import org.apache.hadoop.hdfs.security.token.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.token.Token;
 
 /**********************************************************************
  * ClientProtocol is used by user code via 
@@ -40,9 +43,9 @@ public interface ClientProtocol extends VersionedProtocol {
    * Compared to the previous version the following changes have been introduced:
    * (Only the latest change is reflected.
    * The log of historical changes can be retrieved from the svn).
-   * 42: All LocatedBlock objects contain access tokens
+   * 43: Adding Delegation Token related APIs
    */
-  public static final long versionID = 42L;
+  public static final long versionID = 43L;
   
   ///////////////////////////////////////
   // File contents
@@ -474,4 +477,33 @@ public interface ClientProtocol extends VersionedProtocol {
    *              by this call.
    */
   public void setTimes(String src, long mtime, long atime) throws IOException;
+
+  /**
+   * Get a valid Delegation Token.
+   *
+   * @param renewer the designated renewer for the token
+   * @return Token<DelegationTokenIdentifier>
+   * @throws IOException
+   */
+  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer) throws IOException;
+
+  /**
+   * Renew an existing delegation token.
+   *
+   * @param token delegation token obtained earlier
+   * @return True if renewed successfully else false
+   * @throws IOException
+   */
+  public Boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws IOException;
+
+  /**
+   * Cancel an existing delegation token.
+   *
+   * @param token delegation token
+   * @return True if canceled successfully else false
+   * @throws IOException
+   */
+  public Boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token)
+      throws IOException;
 }

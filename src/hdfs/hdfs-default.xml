@@ -386,4 +386,26 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.delegation.key.update-interval</name>
+  <value>86400</value>
+  <description>The update frequency of master key for delegation tokens 
+       in the namenode.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.delegation.token.max-lifetime</name>
+  <value>604800</value>
+  <description>The maximum lifetime for which a delegation token is valid.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.delegation.token.renew-interval</name>
+  <value>86400</value>
+  <description>The frequency of renewal of delegation token.
+  </description>
+</property>
+
 </configuration>
