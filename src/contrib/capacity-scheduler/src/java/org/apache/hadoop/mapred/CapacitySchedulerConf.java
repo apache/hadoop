@@ -549,7 +549,6 @@ class CapacitySchedulerConf {
       int maxTasksToAssignAfterOffSwitch) {
     rmConf.setInt(
         "mapred.capacity-scheduler.maximum-tasks-after-offswitch", 
-        Integer.MAX_VALUE);
-
+        maxTasksToAssignAfterOffSwitch);
   }
 }
