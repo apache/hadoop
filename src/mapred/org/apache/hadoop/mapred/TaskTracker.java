@@ -884,7 +884,7 @@ public class TaskTracker
         // job-specific shared directory for use as scratch space 
         Path workDir = lDirAlloc.getLocalPathForWrite(
                          (getLocalJobDir(jobId.toString())
-                         + Path.SEPARATOR + "work"), fConf);
+                         + Path.SEPARATOR + MRConstants.WORKDIR), fConf);
         if (!localFs.mkdirs(workDir)) {
           throw new IOException("Mkdirs failed to create " 
                       + workDir.toString());

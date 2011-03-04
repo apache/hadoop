@@ -17,21 +17,30 @@
  */
 package org.apache.hadoop.mapred;
 
-import org.apache.commons.logging.*;
-
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.filecache.*;
-import org.apache.hadoop.util.*;
-
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
-import java.net.URI;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.FSError;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.mapreduce.JobContext;
 
 /** Base class that runs a task in a separate process.  Tasks are run in a
@@ -49,6 +58,9 @@ abstract class TaskRunner extends Thread {
   private volatile boolean done = false;
   private int exitCode = -1;
   private boolean exitCodeSet = false;
+  
+  private static String SYSTEM_PATH_SEPARATOR = System.getProperty("path.separator");
+
   
   private TaskTracker tracker;
 
@@ -109,163 +121,40 @@ abstract class TaskRunner extends Thread {
       //all the archives
       TaskAttemptID taskid = t.getTaskID();
       LocalDirAllocator lDirAlloc = new LocalDirAllocator("mapred.local.dir");
-      File jobCacheDir = null;
-      if (conf.getJar() != null) {
-        jobCacheDir = new File(
-                          new Path(conf.getJar()).getParent().toString());
-      }
-      File workDir = new File(lDirAlloc.getLocalPathToRead(
-                                TaskTracker.getLocalTaskDir( 
-                                  t.getJobID().toString(), 
-                                  t.getTaskID().toString(),
-                                  t.isTaskCleanupTask())
-                                + Path.SEPARATOR + MRConstants.WORKDIR,
-                                conf). toString());
-
+      File workDir = formWorkDir(lDirAlloc, taskid, t.isTaskCleanupTask(), conf);
+      
       URI[] archives = DistributedCache.getCacheArchives(conf);
       URI[] files = DistributedCache.getCacheFiles(conf);
-      FileStatus fileStatus;
-      FileSystem fileSystem;
-      Path localPath;
-      String baseDir;
-
-      if ((archives != null) || (files != null)) {
-        if (archives != null) {
-          String[] archivesTimestamps = 
-                               DistributedCache.getArchiveTimestamps(conf);
-          Path[] p = new Path[archives.length];
-          for (int i = 0; i < archives.length;i++){
-            fileSystem = FileSystem.get(archives[i], conf);
-            fileStatus = fileSystem.getFileStatus(
-                                      new Path(archives[i].getPath()));
-            String cacheId = DistributedCache.makeRelative(archives[i],conf);
-            String cachePath = TaskTracker.getCacheSubdir() + 
-                                 Path.SEPARATOR + cacheId;
-            
-            localPath = lDirAlloc.getLocalPathForWrite(cachePath,
-                                      fileStatus.getLen(), conf);
-            baseDir = localPath.toString().replace(cacheId, "");
-            p[i] = DistributedCache.getLocalCache(archives[i], conf, 
-                                                  new Path(baseDir),
-                                                  fileStatus,
-                                                  true, Long.parseLong(
-                                                        archivesTimestamps[i]),
-                                                  new Path(workDir.
-                                                        getAbsolutePath()), 
-                                                  false);
-            
-          }
-          DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
-        }
-        if ((files != null)) {
-          String[] fileTimestamps = DistributedCache.getFileTimestamps(conf);
-          Path[] p = new Path[files.length];
-          for (int i = 0; i < files.length;i++){
-            fileSystem = FileSystem.get(files[i], conf);
-            fileStatus = fileSystem.getFileStatus(
-                                      new Path(files[i].getPath()));
-            String cacheId = DistributedCache.makeRelative(files[i], conf);
-            String cachePath = TaskTracker.getCacheSubdir() +
-                                 Path.SEPARATOR + cacheId;
-            
-            localPath = lDirAlloc.getLocalPathForWrite(cachePath,
-                                      fileStatus.getLen(), conf);
-            baseDir = localPath.toString().replace(cacheId, "");
-            p[i] = DistributedCache.getLocalCache(files[i], conf, 
-                                                  new Path(baseDir),
-                                                  fileStatus,
-                                                  false, Long.parseLong(
-                                                           fileTimestamps[i]),
-                                                  new Path(workDir.
-                                                        getAbsolutePath()), 
-                                                  false);
-          }
-          DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
-        }
-        Path localTaskFile = new Path(t.getJobFile());
-        FileSystem localFs = FileSystem.getLocal(conf);
-        localFs.delete(localTaskFile, true);
-        OutputStream out = localFs.create(localTaskFile);
-        try {
-          conf.writeXml(out);
-        } finally {
-          out.close();
-        }
-      }
+      setupDistributedCache(lDirAlloc, workDir, archives, files);
           
       if (!prepare()) {
         return;
       }
 
-      String sep = System.getProperty("path.separator");
-      StringBuffer classPath = new StringBuffer();
+      // Accumulates class paths for child.
+      List<String> classPaths = new ArrayList<String>();
       // start with same classpath as parent process
-      classPath.append(System.getProperty("java.class.path"));
-      classPath.append(sep);
+      appendSystemClasspaths(classPaths);
+
       if (!workDir.mkdirs()) {
         if (!workDir.isDirectory()) {
           LOG.fatal("Mkdirs failed to create " + workDir.toString());
         }
       }
-	  
-      String jar = conf.getJar();
-      if (jar != null) {       
-        // if jar exists, it into workDir
-        File[] libs = new File(jobCacheDir, "lib").listFiles();
-        if (libs != null) {
-          for (int i = 0; i < libs.length; i++) {
-            classPath.append(sep);            // add libs from jar to classpath
-            classPath.append(libs[i]);
-          }
-        }
-        classPath.append(sep);
-        classPath.append(new File(jobCacheDir, "classes"));
-        classPath.append(sep);
-        classPath.append(jobCacheDir);
-       
-      }
 
       // include the user specified classpath
+      appendJobJarClasspaths(conf.getJar(), classPaths);
   		
-      //archive paths
-      Path[] archiveClasspaths = DistributedCache.getArchiveClassPaths(conf);
-      if (archiveClasspaths != null && archives != null) {
-        Path[] localArchives = DistributedCache
-          .getLocalCacheArchives(conf);
-        if (localArchives != null){
-          for (int i=0;i<archives.length;i++){
-            for(int j=0;j<archiveClasspaths.length;j++){
-              if (archives[i].getPath().equals(
-                                               archiveClasspaths[j].toString())){
-                classPath.append(sep);
-                classPath.append(localArchives[i]
-                                 .toString());
-              }
-            }
-          }
-        }
-      }
-      //file paths
-      Path[] fileClasspaths = DistributedCache.getFileClassPaths(conf);
-      if (fileClasspaths!=null && files != null) {
-        Path[] localFiles = DistributedCache
-          .getLocalCacheFiles(conf);
-        if (localFiles != null) {
-          for (int i = 0; i < files.length; i++) {
-            for (int j = 0; j < fileClasspaths.length; j++) {
-              if (files[i].getPath().equals(
-                                            fileClasspaths[j].toString())) {
-                classPath.append(sep);
-                classPath.append(localFiles[i].toString());
-              }
-            }
-          }
-        }
-      }
-
-      classPath.append(sep);
-      classPath.append(workDir);
-      //  Build exec child jmv args.
+      // Distributed cache paths
+      appendDistributedCacheClasspaths(conf, archives, files, classPaths);
+      
+      // Include the working dir too
+      classPaths.add(workDir.toString());
+      
+      // Build classpath
+      
+      
+      //  Build exec child JVM args.
       Vector<String> vargs = new Vector<String>(8);
       File jvm =                                  // use same jvm as parent
         new File(new File(System.getProperty("java.home"), "bin"), "java");
@@ -309,12 +198,12 @@ abstract class TaskRunner extends Thread {
       if (libraryPath == null) {
         libraryPath = workDir.getAbsolutePath();
       } else {
-        libraryPath += sep + workDir;
+        libraryPath += SYSTEM_PATH_SEPARATOR + workDir;
       }
       boolean hasUserLDPath = false;
       for(int i=0; i<javaOptsSplit.length ;i++) { 
         if(javaOptsSplit[i].startsWith("-Djava.library.path=")) {
-          javaOptsSplit[i] += sep + libraryPath;
+          javaOptsSplit[i] += SYSTEM_PATH_SEPARATOR + libraryPath;
           hasUserLDPath = true;
           break;
         }
@@ -343,7 +232,8 @@ abstract class TaskRunner extends Thread {
 
       // Add classpath.
       vargs.add("-classpath");
-      vargs.add(classPath.toString());
+      String classPath = StringUtils.join(SYSTEM_PATH_SEPARATOR, classPaths);
+      vargs.add(classPath);
 
       // Setup the log4j prop
       long logSize = TaskLog.getTaskLogLength(conf);
@@ -394,7 +284,7 @@ abstract class TaskRunner extends Thread {
       String oldLdLibraryPath = null;
       oldLdLibraryPath = System.getenv("LD_LIBRARY_PATH");
       if (oldLdLibraryPath != null) {
-        ldLibraryPath.append(sep);
+        ldLibraryPath.append(SYSTEM_PATH_SEPARATOR);
         ldLibraryPath.append(oldLdLibraryPath);
       }
       env.put("LD_LIBRARY_PATH", ldLibraryPath.toString());
@@ -512,6 +402,156 @@ abstract class TaskRunner extends Thread {
       // b) FAILED - which means we do not need to commit
       tip.reportTaskFinished(false);
     }
+  }
+
+  /** Creates the working directory pathname for a task attempt. */ 
+  static File formWorkDir(LocalDirAllocator lDirAlloc, 
+      TaskAttemptID task, boolean isCleanup, JobConf conf) 
+      throws IOException {
+    File workDir = new File(lDirAlloc.getLocalPathToRead(
+        TaskTracker.getLocalTaskDir(task.getJobID().toString(), 
+          task.toString(), isCleanup) 
+        + Path.SEPARATOR + MRConstants.WORKDIR, conf).toString());
+    return workDir;
+  }
+
+  private void setupDistributedCache(LocalDirAllocator lDirAlloc, File workDir,
+      URI[] archives, URI[] files) throws IOException {
+    FileStatus fileStatus;
+    FileSystem fileSystem;
+    Path localPath;
+    String baseDir;
+    if ((archives != null) || (files != null)) {
+      if (archives != null) {
+        String[] archivesTimestamps = 
+                             DistributedCache.getArchiveTimestamps(conf);
+        Path[] p = new Path[archives.length];
+        for (int i = 0; i < archives.length;i++){
+          fileSystem = FileSystem.get(archives[i], conf);
+          fileStatus = fileSystem.getFileStatus(
+                                    new Path(archives[i].getPath()));
+          String cacheId = DistributedCache.makeRelative(archives[i],conf);
+          String cachePath = TaskTracker.getCacheSubdir() + 
+                               Path.SEPARATOR + cacheId;
+          
+          localPath = lDirAlloc.getLocalPathForWrite(cachePath,
+                                    fileStatus.getLen(), conf);
+          baseDir = localPath.toString().replace(cacheId, "");
+          p[i] = DistributedCache.getLocalCache(archives[i], conf, 
+                                                new Path(baseDir),
+                                                fileStatus,
+                                                true, Long.parseLong(
+                                                      archivesTimestamps[i]),
+                                                new Path(workDir.
+                                                      getAbsolutePath()), 
+                                                false);
+          
+        }
+        DistributedCache.setLocalArchives(conf, stringifyPathArray(p));
+      }
+      if ((files != null)) {
+        String[] fileTimestamps = DistributedCache.getFileTimestamps(conf);
+        Path[] p = new Path[files.length];
+        for (int i = 0; i < files.length;i++){
+          fileSystem = FileSystem.get(files[i], conf);
+          fileStatus = fileSystem.getFileStatus(
+                                    new Path(files[i].getPath()));
+          String cacheId = DistributedCache.makeRelative(files[i], conf);
+          String cachePath = TaskTracker.getCacheSubdir() +
+                               Path.SEPARATOR + cacheId;
+          
+          localPath = lDirAlloc.getLocalPathForWrite(cachePath,
+                                    fileStatus.getLen(), conf);
+          baseDir = localPath.toString().replace(cacheId, "");
+          p[i] = DistributedCache.getLocalCache(files[i], conf, 
+                                                new Path(baseDir),
+                                                fileStatus,
+                                                false, Long.parseLong(
+                                                         fileTimestamps[i]),
+                                                new Path(workDir.
+                                                      getAbsolutePath()), 
+                                                false);
+        }
+        DistributedCache.setLocalFiles(conf, stringifyPathArray(p));
+      }
+      Path localTaskFile = new Path(t.getJobFile());
+      FileSystem localFs = FileSystem.getLocal(conf);
+      localFs.delete(localTaskFile, true);
+      OutputStream out = localFs.create(localTaskFile);
+      try {
+        conf.writeXml(out);
+      } finally {
+        out.close();
+      }
+    }
+  }
+
+  private void appendDistributedCacheClasspaths(JobConf conf, URI[] archives, 
+      URI[] files, List<String> classPaths) throws IOException {
+    // Archive paths
+    Path[] archiveClasspaths = DistributedCache.getArchiveClassPaths(conf);
+    if (archiveClasspaths != null && archives != null) {
+      Path[] localArchives = DistributedCache.getLocalCacheArchives(conf);
+      if (localArchives != null){
+        for (int i=0;i<archives.length;i++){
+          for(int j=0;j<archiveClasspaths.length;j++){
+            if (archives[i].getPath().equals(
+                                             archiveClasspaths[j].toString())){
+              classPaths.add(localArchives[i].toString());
+            }
+          }
+        }
+      }
+    }
+    
+    //file paths
+    Path[] fileClasspaths = DistributedCache.getFileClassPaths(conf);
+    if (fileClasspaths!=null && files != null) {
+      Path[] localFiles = DistributedCache
+        .getLocalCacheFiles(conf);
+      if (localFiles != null) {
+        for (int i = 0; i < files.length; i++) {
+          for (int j = 0; j < fileClasspaths.length; j++) {
+            if (files[i].getPath().equals(
+                                          fileClasspaths[j].toString())) {
+              classPaths.add(localFiles[i].toString());
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private void appendSystemClasspaths(List<String> classPaths) {
+    for (String c : System.getProperty("java.class.path").split(SYSTEM_PATH_SEPARATOR)) {
+      classPaths.add(c);
+    }
+  }
+  
+  /**
+   * Given a "jobJar" (typically retrieved via {@link Configuration.getJar()}),
+   * appends classpath entries for it, as well as its lib/ and classes/
+   * subdirectories.
+   * 
+   * @param jobJar Job jar from configuration
+   * @param classPaths Accumulator for class paths
+   */
+  static void appendJobJarClasspaths(String jobJar, List<String> classPaths) {
+    if (jobJar == null) {
+      return;
+      
+    }
+    File jobCacheDir = new File(new Path(jobJar).getParent().toString());
+    
+    // if jar exists, it into workDir
+    File[] libs = new File(jobCacheDir, "lib").listFiles();
+    if (libs != null) {
+      for (File l : libs) {
+        classPaths.add(l.toString());
+      }
+    }
+    classPaths.add(new File(jobCacheDir, "classes").toString());
+    classPaths.add(jobCacheDir.toString());
   }
   
   //Mostly for setting up the symlinks. Note that when we setup the distributed

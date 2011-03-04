@@ -685,4 +685,24 @@ public class StringUtils {
   public static synchronized String limitDecimalTo2(double d) {
     return decimalFormat.format(d);
   }
+  
+  /**
+   * Concatenates strings, using a separator.
+   *
+   * @param separator Separator to join with.
+   * @param strings Strings to join.
+   */
+  public static String join(CharSequence separator, Iterable<String> strings) {
+    StringBuffer sb = new StringBuffer();
+    boolean first = true;
+    for (String s : strings) {
+      if (first) {
+        first = false;
+      } else {
+        sb.append(separator);
+      }
+      sb.append(s);
+    }
+    return sb.toString();
+  }
 }

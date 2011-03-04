@@ -33,7 +33,7 @@ import org.apache.hadoop.conf.Configuration;
  * files. The way it works is that it is kept track what disk was last
  * allocated for a file write. For the current request, the next disk from
  * the set of disks would be allocated if the free space on the disk is 
- * sufficient enough to accomodate the file that is being considered for
+ * sufficient enough to accommodate the file that is being considered for
  * creation. If the space requirements cannot be met, the next disk in order
  * would be tried and so on till a disk is found with sufficient capacity.
  * Once a disk with sufficient space is identified, a check is done to make
@@ -68,6 +68,9 @@ public class LocalDirAllocator {
   private static Map <String, AllocatorPerContext> contexts = 
                  new TreeMap<String, AllocatorPerContext>();
   private String contextCfgItemName;
+
+  /** Used when size of file to be allocated is unknown. */
+  public static final int SIZE_UNKNOWN = -1;
 
   /**Create an allocator object
    * @param contextCfgItemName
@@ -105,10 +108,11 @@ public class LocalDirAllocator {
    */
   public Path getLocalPathForWrite(String pathStr, 
       Configuration conf) throws IOException {
-    return getLocalPathForWrite(pathStr, -1, conf);
+    return getLocalPathForWrite(pathStr, SIZE_UNKNOWN, conf);
   }
   
-  /** Get a path from the local FS. Pass size as -1 if not known apriori. We
+  /** Get a path from the local FS. Pass size as 
+   *  SIZE_UNKNOWN if not known apriori. We
    *  round-robin over the set of disks (via the configured dirs) and return
    *  the first complete path which has enough space 
    *  @param pathStr the requested path (this will be created on the first 
@@ -274,7 +278,7 @@ public class LocalDirAllocator {
      */
     public synchronized Path getLocalPathForWrite(String path, 
         Configuration conf) throws IOException {
-      return getLocalPathForWrite(path, -1, conf);
+      return getLocalPathForWrite(path, SIZE_UNKNOWN, conf);
     }
 
     /** Get a path from the local FS. If size is known, we go
@@ -296,7 +300,7 @@ public class LocalDirAllocator {
       }
       Path returnPath = null;
       
-      if(size == -1) {  //do roulette selection: pick dir with probability 
+      if(size == SIZE_UNKNOWN) {  //do roulette selection: pick dir with probability 
                     //proportional to available size
         long[] availableOnDisk = new long[dirDF.length];
         long totalAvailable = 0;
@@ -344,7 +348,8 @@ public class LocalDirAllocator {
           "directory for " + pathStr);
     }
 
-    /** Creates a file on the local FS. Pass size as -1 if not known apriori. We
+    /** Creates a file on the local FS. Pass size as 
+     * {@link LocalDirAllocator.SIZE_UNKNOWN} if not known apriori. We
      *  round-robin over the set of disks (via the configured dirs) and return
      *  a file on the first path which has enough space. The file is guaranteed
      *  to go away when the JVM exits.

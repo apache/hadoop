@@ -1874,8 +1874,8 @@
           IsolationRunner</a> is a utility to help debug Map/Reduce programs.</p>
           
           <p>To use the <code>IsolationRunner</code>, first set 
-          <code>keep.failed.tasks.files</code> to <code>true</code> 
-          (also see <code>keep.tasks.files.pattern</code>).</p>
+          <code>keep.failed.task.files</code> to <code>true</code> 
+          (also see <code>keep.task.files.pattern</code>).</p>
           
           <p>
             Next, go to the node on which the failed task ran and go to the 
@@ -1889,6 +1889,8 @@
           
           <p><code>IsolationRunner</code> will run the failed task in a single 
           jvm, which can be in the debugger, over precisely the same input.</p>
+
+          <p>Note that currently IsolationRunner will only re-run map tasks.</p>
         </section>
 
         <section>
