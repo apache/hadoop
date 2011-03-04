@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -80,12 +81,46 @@ public class TestCommandLineJobSubmission extends TestCase {
       assertTrue("not failed ", ret != -1);
       f.delete();
       thisbuildDir.delete();
+      
+      // test duplicate uris for options -files and -archives
+      testDuplicateURI(mr, dfs);
     } finally {
       if (dfs != null) {dfs.shutdown();};
       if (mr != null) {mr.shutdown();};
     }
   }
   
+  
+  private void testDuplicateURI(MiniMRCluster mr, MiniDFSCluster dfs)
+      throws Exception {
+    Configuration jobConf = mr.createJobConf();
+    FileSystem fs = dfs.getFileSystem();
+    Path dfsPath = new Path("/test/testjob.jar");
+    fs.copyFromLocalFile(new Path("build/test/testjar/testjob.jar"), dfsPath);
+    String url = fs.getDefaultUri(jobConf).toString() + dfsPath.toString();
+    String[] args = new String[6];
+    args[0] = "-files";
+    args[1] = url;
+    args[2] = "-archives";
+    args[3] = url;
+    args[4] = input.toString();
+    args[5] = output.toString();
+
+    Exception ex = null;
+    try {
+      int ret = ToolRunner
+          .run(jobConf, new testshell.ExternalMapReduce(), args);
+    } catch (Exception e) {
+      ex = e;
+    }
+    assertNotNull("No exception thrown", ex);
+    assertTrue("Exception is not InvalidJobConfException.",
+        ex instanceof InvalidJobConfException);
+    assertEquals("Wrong message for the exception", "The core URI, \"" + url
+        + "\" is listed both in " + DistributedCache.CACHE_FILES + " and in "
+        + DistributedCache.CACHE_ARCHIVES + " .", ex.getMessage());
+  }
+
   @SuppressWarnings("unchecked")
   private Class loadLibJar(JobConf jobConf) {
     try {
