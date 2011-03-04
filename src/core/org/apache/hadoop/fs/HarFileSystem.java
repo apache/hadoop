@@ -181,12 +181,20 @@ public class HarFileSystem extends FilterFileSystem {
       return FileSystem.getDefaultUri(conf);
     }
     String host = rawURI.getHost();
-    String[] str = host.split("-", 2);
-    if (str[0] == null) {
-      throw new IOException("URI: " + rawURI + " is an invalid Har URI.");
+    if (host == null) {
+      throw new IOException("URI: " + rawURI
+          + " is an invalid Har URI since host==null."
+          + "  Expecting har://<scheme>-<host>/<path>.");
     }
-    String underLyingScheme = str[0];
-    String underLyingHost = (str.length > 1)? str[1]:null;
+    int i = host.indexOf('-');
+    if (i < 0) {
+      throw new IOException("URI: " + rawURI
+          + " is an invalid Har URI since '-' not found."
+          + "  Expecting har://<scheme>-<host>/<path>.");
+    }
+    final String underLyingScheme = host.substring(0, i);
+    i++;
+    final String underLyingHost = i == host.length()? null: host.substring(i);
     int underLyingPort = rawURI.getPort();
     String auth = (underLyingHost == null && underLyingPort == -1)?
                   null:(underLyingHost+":"+underLyingPort);

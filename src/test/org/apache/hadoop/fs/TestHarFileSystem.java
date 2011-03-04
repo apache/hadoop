@@ -294,4 +294,24 @@ public class TestHarFileSystem extends TestCase {
     assertTrue("number of bytes left should be -1", reduceIn.read(b) == -1);
     reduceIn.close();
   }
+
+  public void testHarUri() {
+    final Configuration conf = new Configuration();
+    checkInvalidPath("har://hdfs-/foo.har", conf);
+    checkInvalidPath("har://hdfs/foo.har", conf);
+    checkInvalidPath("har://-hdfs/foo.har", conf);
+    checkInvalidPath("har://-/foo.har", conf);
+  }
+
+  static void checkInvalidPath(String s, Configuration conf) {
+    System.out.println("\ncheckInvalidPath: " + s);
+    final Path p = new Path(s);
+    try {
+      p.getFileSystem(conf);
+      fail(p + " is an invalid path.");
+    } catch (IOException e) {
+      System.out.println("GOOD: Got an exception.");
+      e.printStackTrace(System.out);
+    }
+  }
 }
