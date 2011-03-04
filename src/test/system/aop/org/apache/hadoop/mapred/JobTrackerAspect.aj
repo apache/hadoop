@@ -1,0 +1,234 @@
+package org.apache.hadoop.mapred;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobTracker.RetireJobInfo;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.mapreduce.test.system.JTProtocol;
+import org.apache.hadoop.mapreduce.test.system.JobInfo;
+import org.apache.hadoop.mapreduce.test.system.TTInfo;
+import org.apache.hadoop.mapreduce.test.system.TaskInfo;
+import org.apache.hadoop.test.system.DaemonProtocol;
+
+/**
+ * Aspect class which injects the code for {@link JobTracker} class.
+ * 
+ */
+public privileged aspect JobTrackerAspect {
+
+
+  public Configuration JobTracker.getDaemonConf() throws IOException {
+    return conf;
+  }
+  /**
+   * Method to get the read only view of the job and its associated information.
+   * 
+   * @param jobID
+   *          id of the job for which information is required.
+   * @return JobInfo of the job requested
+   * @throws IOException
+   */
+  public JobInfo JobTracker.getJobInfo(JobID jobID) throws IOException {
+    JobInProgress jip = jobs.get(org.apache.hadoop.mapred.JobID
+        .downgrade(jobID));
+    if (jip == null) {
+      LOG.warn("No job present for : " + jobID);
+      return null;
+    }
+    JobInfo info;
+    synchronized (jip) {
+      info = jip.getJobInfo();
+    }
+    return info;
+  }
+
+  /**
+   * Method to get the read only view of the task and its associated
+   * information.
+   * 
+   * @param taskID
+   * @return
+   * @throws IOException
+   */
+  public TaskInfo JobTracker.getTaskInfo(TaskID taskID) throws IOException {
+    TaskInProgress tip = getTip(org.apache.hadoop.mapred.TaskID
+        .downgrade(taskID));
+
+    if (tip == null) {
+      LOG.warn("No task present for : " + taskID);
+      return null;
+    }
+    TaskInfo info;
+    TaskStatus[] status = tip.getTaskStatuses();
+    synchronized (tip) {
+      if (status == null) {
+        if (tip.isMapTask()) {
+          status = new MapTaskStatus[]{};
+        }
+        else {
+          status = new ReduceTaskStatus[]{};
+        }
+      }
+      info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
+          .getActiveTasks().size(), tip.numKilledTasks(), 
+          tip.numTaskFailures(), status);
+    }
+    return info;
+  }
+
+  public TTInfo JobTracker.getTTInfo(String trackerName) throws IOException {
+    org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker tt = taskTrackers
+        .get(trackerName);
+    if (tt == null) {
+      LOG.warn("No task tracker with name : " + trackerName + " found");
+      return null;
+    }
+    TaskTrackerStatus status = tt.getStatus();
+    TTInfo info = new TTInfoImpl(status.trackerName, status);
+    return info;
+  }
+
+  // XXX Below two method don't reuse getJobInfo and getTaskInfo as there is a
+  // possibility that retire job can run and remove the job from JT memory
+  // during
+  // processing of the RPC call.
+  public JobInfo[] JobTracker.getAllJobInfo() throws IOException {
+    List<JobInfo> infoList = new ArrayList<JobInfo>();
+    synchronized (jobs) {
+      for (JobInProgress jip : jobs.values()) {
+        JobInfo info = jip.getJobInfo();
+        infoList.add(info);
+      }
+    }
+    return (JobInfo[]) infoList.toArray(new JobInfo[infoList.size()]);
+  }
+
+  public TaskInfo[] JobTracker.getTaskInfo(JobID jobID) throws IOException {
+    JobInProgress jip = jobs.get(org.apache.hadoop.mapred.JobID
+        .downgrade(jobID));
+    if (jip == null) {
+      LOG.warn("Unable to find job : " + jobID);
+      return null;
+    }
+    List<TaskInfo> infoList = new ArrayList<TaskInfo>();
+    TaskStatus[] status;
+    synchronized (jip) {
+      for (TaskInProgress tip : jip.setup) {
+        status = tip.getTaskStatuses();
+        if (status == null) {
+          if (tip.isMapTask()) {
+            status = new MapTaskStatus[]{};
+          }
+          else {
+            status = new ReduceTaskStatus[]{};
+          }
+        }
+        TaskInfo info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
+            .getActiveTasks().size(), tip.numKilledTasks(), tip
+            .numTaskFailures(), status);
+        infoList.add(info);
+      }
+      for (TaskInProgress tip : jip.maps) {
+        status = tip.getTaskStatuses();
+        if (status == null) {
+          status = new MapTaskStatus[]{};
+        }
+        TaskInfo info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
+            .getActiveTasks().size(), tip.numKilledTasks(), tip
+            .numTaskFailures(), status);
+        infoList.add(info);
+      }
+      for (TaskInProgress tip : jip.reduces) {
+        status = tip.getTaskStatuses();
+        if (status == null) {
+          status = new ReduceTaskStatus[]{};
+        }
+        TaskInfo info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
+            .getActiveTasks().size(), tip.numKilledTasks(), tip
+            .numTaskFailures(), status);
+        infoList.add(info);
+      }
+      for (TaskInProgress tip : jip.cleanup) {
+        status = tip.getTaskStatuses();
+        if (status == null) {
+          if (tip.isMapTask()) {
+            status = new MapTaskStatus[]{};
+          }
+          else {
+            status = new ReduceTaskStatus[]{};
+          }
+        }
+        TaskInfo info = new TaskInfoImpl(tip.getTIPId(), tip.getProgress(), tip
+            .getActiveTasks().size(), tip.numKilledTasks(), tip
+            .numTaskFailures(), status);
+        infoList.add(info);
+      }
+    }
+    return (TaskInfo[]) infoList.toArray(new TaskInfo[infoList.size()]);
+  }
+
+  public TTInfo[] JobTracker.getAllTTInfo() throws IOException {
+    List<TTInfo> infoList = new ArrayList<TTInfo>();
+    synchronized (taskTrackers) {
+      for (TaskTracker tt : taskTrackers.values()) {
+        TaskTrackerStatus status = tt.getStatus();
+        TTInfo info = new TTInfoImpl(status.trackerName, status);
+        infoList.add(info);
+      }
+    }
+    return (TTInfo[]) infoList.toArray(new TTInfo[infoList.size()]);
+  }
+  
+  public boolean JobTracker.isJobRetired(JobID id) throws IOException {
+    return retireJobs.get(
+        org.apache.hadoop.mapred.JobID.downgrade(id))!=null?true:false;
+  }
+
+  public String JobTracker.getJobHistoryLocationForRetiredJob(
+      JobID id) throws IOException {
+    RetireJobInfo retInfo = retireJobs.get(
+        org.apache.hadoop.mapred.JobID.downgrade(id));
+    if(retInfo == null) {
+      throw new IOException("The retired job information for the job : " 
+          + id +" is not found");
+    } else {
+      return retInfo.getHistoryFile();
+    }
+  }
+  pointcut getVersionAspect(String protocol, long clientVersion) : 
+    execution(public long JobTracker.getProtocolVersion(String , 
+      long) throws IOException) && args(protocol, clientVersion);
+
+  long around(String protocol, long clientVersion) :  
+    getVersionAspect(protocol, clientVersion) {
+    if (protocol.equals(DaemonProtocol.class.getName())) {
+      return DaemonProtocol.versionID;
+    } else if (protocol.equals(JTProtocol.class.getName())) {
+      return JTProtocol.versionID;
+    } else {
+      return proceed(protocol, clientVersion);
+    }
+  }
+
+  /**
+   * Point cut which monitors for the start of the jobtracker and sets the right
+   * value if the jobtracker is started.
+   * 
+   * @param conf
+   * @param jobtrackerIndentifier
+   */
+  pointcut jtConstructorPointCut(JobConf conf, String jobtrackerIndentifier) : 
+        call(JobTracker.new(JobConf,String)) 
+        && args(conf, jobtrackerIndentifier) ;
+
+  after(JobConf conf, String jobtrackerIndentifier) 
+    returning (JobTracker tracker): jtConstructorPointCut(conf, 
+        jobtrackerIndentifier) {
+    tracker.setReady(true);
+  }
+}

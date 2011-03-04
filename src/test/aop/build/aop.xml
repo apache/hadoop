@@ -15,12 +15,18 @@
    limitations under the License.
 -->
 <project name="aspects">
+  <!-- Properties common for all fault injections -->
   <property name="build-fi.dir" value="${basedir}/build-fi"/>
   <property name="hadoop-fi.jar" location="${build.dir}/${final.name}-fi.jar" />
   <property name="compile-inject.output" value="${build-fi.dir}/compile-fi.log"/>
   <property name="aspectversion" value="1.6.5"/>
   <property file="${basedir}/build.properties"/>
 
+  <!-- Properties related to system fault injection and tests -->
+  <property name="system-test-build-dir" value="${build-fi.dir}/system"/>
+
+  <!-- Properties specifically for system fault-injections and system tests -->
+ 
   <!--All Fault Injection (FI) related targets are located in this session -->
     
   <target name="clean-fi">
@@ -44,10 +50,11 @@
     <echo message="Start weaving aspects in place"/>
     <iajc
       encoding="${build.encoding}" 
-      srcdir="${core.src.dir};${mapred.src.dir};${hdfs.src.dir};${build.src};${test.src.dir}/aop" 
-      includes="org/apache/hadoop/**/*.java, org/apache/hadoop/**/*.aj"
+      srcdir="${core.src.dir};${mapred.src.dir};${hdfs.src.dir};${build.src};
+              ${src.dir.path}"
+      includes="**/org/apache/hadoop/**/*.java, **/org/apache/hadoop/**/*.aj"
       excludes="org/apache/hadoop/record/**/*"
-      destDir="${build.classes}"
+      destDir="${dest.dir}"
       debug="${javac.debug}"
       target="${javac.version}"
       source="${javac.version}"
@@ -55,7 +62,15 @@
       fork="true"
       maxmem="256m"
       >
-      <classpath refid="test.classpath"/>
+
+      <classpath>
+       <path refid="test.classpath"/>
+       <fileset dir="${build-fi.dir}/test/testjar">
+          <include name="**/*.jar" />
+          <exclude name="**/excluded/" />
+       </fileset>
+     </classpath>
+
     </iajc>
     <loadfile property="injection.failure" srcfile="${compile-inject.output}">
      <filterchain>
@@ -70,15 +85,128 @@
     <echo message="Weaving of aspects is finished"/>
   </target>
 
-  <target name="injectfaults" 
-  	description="Instrument classes with faults and other AOP advices">
-    <mkdir dir="${build-fi.dir}"/>
-    <delete file="${compile-inject.output}"/>
-    <subant buildpath="${basedir}" target="compile-fault-inject"
-      output="${compile-inject.output}">
-      <property name="build.dir" value="${build-fi.dir}"/>
+  <!-- Classpath for running system tests -->
+  <path id="test.system.classpath">
+        <pathelement location="${hadoop.conf.dir.deployed}" />
+        <pathelement location="${hadoop.conf.dir}" />
+        <pathelement location="${system-test-build-dir}/test/extraconf" />
+        <pathelement location="${system-test-build-dir}/test/classes" />
+        <pathelement location="${system-test-build-dir}/classes" />
+        <pathelement location="${test.src.dir}" />
+        <pathelement location="${build-fi.dir}" />
+        <pathelement location="${build-fi.dir}/tools" />
+        <pathelement path="${clover.jar}" />
+        <fileset dir="${test.lib.dir}">
+          <include name="**/*.jar" />
+          <exclude name="**/excluded/" />
+        </fileset>
+        <fileset dir="${system-test-build-dir}">
+           <include name="**/*.jar" />
+           <exclude name="**/excluded/" />
+         </fileset>
+         <fileset dir="${build-fi.dir}/test/testjar">
+           <include name="**/*.jar" />
+           <exclude name="**/excluded/" />
+         </fileset>
+        <path refid="classpath" />
+  </path>
+
+  <!-- ================ -->
+  <!-- run system tests -->
+  <!-- ================ -->
+  <target name="test-system" depends="-test-system-deployed, -test-system-local"
+    description="Run system tests">
+  </target>
+
+  <target name="-test-system-local"
+    depends="ivy-retrieve-common, prepare-test-system" 
+    unless="hadoop.conf.dir.deployed">
+    <macro-jar-examples
+      build.dir="${system-test-build-dir}"
+      basedir="${system-test-build-dir}/examples">
+    </macro-jar-examples>
+    <macro-test-runner classpath="test.system.classpath"
+                       test.dir="${system-test-build-dir}/test"
+                       fileset.dir="${test.src.dir}/system/java"
+                       hadoop.home="${hadoop.home}"
+                       hadoop.conf.dir="${hadoop.conf.dir}">
+    </macro-test-runner>
+  </target>
+  <target name="-test-system-deployed"
+    depends="ivy-retrieve-common, prepare-test-system" 
+    if="hadoop.conf.dir.deployed">
+    <macro-jar-examples
+      build.dir="${system-test-build-dir}"
+      basedir="${system-test-build-dir}/examples">
+    </macro-jar-examples>
+    <macro-test-runner classpath="test.system.classpath"
+                       test.dir="${system-test-build-dir}/test"
+                       fileset.dir="${test.src.dir}/system/java"
+                       hadoop.home="${hadoop.home}"
+                       hadoop.conf.dir="${hadoop.conf.dir}"
+                       hadoop.conf.dir.deployed="${hadoop.conf.dir.deployed}">
+    </macro-test-runner>
+  </target>
+
+  <target name="prepare-test-system" depends="jar-test-system">
+    <subant buildpath="build.xml" target="inject-system-faults">
+      <property name="build.dir" value="${system-test-build-dir}" />
     </subant>
   </target>
+
+  <target name="injectfaults"
+          description="Instrument classes with faults and other AOP advices">
+    <mkdir dir="${build-fi.dir}"/>
+    <delete file="${compile-inject.output}"/>
+    <weave-injectfault-aspects dest.dir="${build-fi.dir}/classes}"
+                               src.dir="${test.src.dir}/aop">
+    </weave-injectfault-aspects>
+  </target>
+
+  <!-- =============================================================== -->
+  <!-- Create hadoop-{version}-dev-core.jar required to be deployed on -->
+  <!-- cluster for system tests                                        -->
+  <!-- =============================================================== -->
+  <target name="jar-system"
+          depends="inject-system-faults"
+          description="make hadoop.jar">
+    <macro-jar-fault-inject target.name="jar"
+      build.dir="${system-test-build-dir}"
+      jar.final.name="final.name"
+      jar.final.value="${final.name}">
+    </macro-jar-fault-inject>
+  </target>
+
+  <target name="jar-test-system" depends="inject-system-faults"
+    description="Make hadoop-test.jar with system fault-injection">
+    <subant buildpath="build.xml" target="jar-test">
+      <property name="build.dir" value="${system-test-build-dir}"/>
+      <property name="test.build.classes"
+        value="${system-test-build-dir}/test/classes"/>
+    </subant>
+  </target>
+
+  <macrodef name="weave-injectfault-aspects">
+    <attribute name="dest.dir" />
+    <attribute name="src.dir" />
+    <sequential>
+      <subant buildpath="build.xml" target="compile-fault-inject"
+        output="${compile-inject.output}">
+        <property name="build.dir" value="${build-fi.dir}" />
+        <property name="src.dir.path" value="@{src.dir}" />
+        <property name="dest.dir" value="@{dest.dir}" />
+      </subant>
+    </sequential>
+  </macrodef>
+
+  <target name="inject-system-faults" description="Inject system faults">
+    <property name="build-fi.dir" value="${system-test-build-dir}" />
+    <mkdir dir="${build-fi.dir}"/>
+    <delete file="${compile-inject.output}"/>
+    <weave-injectfault-aspects dest.dir="${system-test-build-dir}/classes"
+                               src.dir="${test.src.dir}/system">
+    </weave-injectfault-aspects>
+    </target>
 
   <macrodef name="macro-run-tests-fault-inject">
     <attribute name="target.name" />
@@ -99,11 +227,12 @@
   <!-- ================================================================== -->
   <macrodef name="macro-jar-fault-inject">
     <attribute name="target.name" />
+    <attribute name="build.dir" />
     <attribute name="jar.final.name" />
     <attribute name="jar.final.value" />
     <sequential>
       <subant buildpath="build.xml" target="@{target.name}">
-        <property name="build.dir" value="${build-fi.dir}"/>
+        <property name="build.dir" value="@{build.dir}"/>
         <property name="@{jar.final.name}" value="@{jar.final.value}"/>
         <property name="jar.extra.properties.list" 
         	  value="${test.src.dir}/fi-site.xml" />
