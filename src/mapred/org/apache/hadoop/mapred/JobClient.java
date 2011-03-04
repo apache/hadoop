@@ -743,6 +743,8 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
       int reduces = job.getNumReduceTasks();
       JobContext context = new JobContext(job, jobId);
+      
+      job = (JobConf)context.getConfiguration();
 
       // Check the output specification
       if (reduces == 0 ? job.getUseNewMapper() : job.getUseNewReducer()) {
