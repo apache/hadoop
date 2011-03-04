@@ -197,6 +197,9 @@ public class JobHistory {
     }
 
     void moveToDone(final JobID id) {
+      if (disableHistory) {
+        return;
+      }
       final List<Path> paths = new ArrayList<Path>();
       final Path historyFile = fileManager.getHistoryFile(id);
       if (historyFile == null) {
