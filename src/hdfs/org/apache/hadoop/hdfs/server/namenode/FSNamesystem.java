@@ -336,6 +336,10 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     pendingReplications = new PendingReplicationBlocks(
                             conf.getInt("dfs.replication.pending.timeout.sec", 
                                         -1) * 1000L);
+    if (isAccessTokenEnabled) {
+      accessTokenHandler = new AccessTokenHandler(true,
+          accessKeyUpdateInterval, accessTokenLifetime);
+    }
     this.hbthread = new Daemon(new HeartbeatMonitor());
     this.lmthread = new Daemon(leaseManager.new Monitor());
     this.replthread = new Daemon(new ReplicationMonitor());
@@ -345,10 +349,6 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
 
     this.hostsReader = new HostsFileReader(conf.get("dfs.hosts",""),
                                            conf.get("dfs.hosts.exclude",""));
-    if (isAccessTokenEnabled) {
-      accessTokenHandler = new AccessTokenHandler(true,
-          accessKeyUpdateInterval, accessTokenLifetime);
-    }
     this.dnthread = new Daemon(new DecommissionManager(this).new Monitor(
         conf.getInt("dfs.namenode.decommission.interval", 30),
         conf.getInt("dfs.namenode.decommission.nodes.per.interval", 5)));
