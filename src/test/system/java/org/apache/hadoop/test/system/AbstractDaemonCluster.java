@@ -327,6 +327,14 @@ public abstract class AbstractDaemonCluster {
   }
   
   /**
+   * Get the proxy userlist path.
+   * @return String - userlist path
+   */
+  public String getProxyUsersFilePath() {
+    return null;
+  }
+
+  /**
    * It's a local folder where the config file stores temporarily
    * while serializing the object.
    * @return String temporary local folder path for configuration.
