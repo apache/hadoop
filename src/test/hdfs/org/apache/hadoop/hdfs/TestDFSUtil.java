@@ -20,21 +20,24 @@ package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Arrays;
 
 import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
-import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetUtils;
 
 import static org.junit.Assert.*;
 import org.junit.Test;
 
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.fs.BlockLocation;
 
 public class TestDFSUtil {
   
@@ -193,4 +196,43 @@ public class TestDFSUtil {
     }
   }
 
+  /**
+   * Test conversion of LocatedBlock to BlockLocation
+   */
+  @Test
+  public void testLocatedBlocks2Locations() {
+    DatanodeInfo d = new DatanodeInfo();
+    DatanodeInfo[] ds = new DatanodeInfo[1];
+    ds[0] = d;
+
+    // ok
+    ExtendedBlock b1 = new ExtendedBlock("bpid", 1, 1, 1);
+    LocatedBlock l1 = new LocatedBlock(b1, ds, 0, false);
+
+    // corrupt
+    ExtendedBlock b2 = new ExtendedBlock("bpid", 2, 1, 1);
+    LocatedBlock l2 = new LocatedBlock(b2, ds, 0, true);
+
+    List<LocatedBlock> ls = Arrays.asList(l1, l2);
+    LocatedBlocks lbs = new LocatedBlocks(10, false, ls, l2, true);
+
+    BlockLocation[] bs = DFSUtil.locatedBlocks2Locations(lbs);
+
+    assertTrue("expected 2 blocks but got " + bs.length,
+               bs.length == 2);
+
+    int corruptCount = 0;
+    for (BlockLocation b: bs) {
+      if (b.isCorrupt()) {
+        corruptCount++;
+      }
+    }
+
+    assertTrue("expected 1 corrupt files but got " + corruptCount, 
+               corruptCount == 1);
+    
+    // test an empty location
+    bs = DFSUtil.locatedBlocks2Locations(new LocatedBlocks());
+    assertEquals(0, bs.length);
+  }
 }

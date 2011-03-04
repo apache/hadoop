@@ -295,12 +295,6 @@ Release 0.22.0 - Unreleased
     HDFS-895. Allow hflush/sync to occur in parallel with new writes
     to the file. (Todd Lipcon via hairong)
 
-    HDFS-1500. TestOfflineImageViewer failing on trunk. (Todd Lipcon
-    via hairong)
-
-    HDFS-1467. Append pipeline construction not succeeds with more than
-    one replica. (Todd Lipcon via hairong)
-
   IMPROVEMENTS
 
     HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)
@@ -453,6 +447,15 @@ Release 0.22.0 - Unreleased
 
     HDFS-718. Configuration parameter to prevent accidental formatting of 
     HDFS filesystem. (Andrew Ryan via jghoman)
+
+    HDFS-1500. TestOfflineImageViewer failing on trunk. (Todd Lipcon
+    via hairong)
+
+    HDFS-1467. Append pipeline construction not succeeds with more than
+    one replica. (Todd Lipcon via hairong)
+
+    HDFS-1483. DFSClient.getBlockLocations should indicate if corresponding
+    blocks are corrupt. (Patrick Kling via hairong)
 
   OPTIMIZATIONS
 

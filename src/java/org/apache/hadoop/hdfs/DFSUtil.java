@@ -245,7 +245,8 @@ public class DFSUtil {
       }
       blkLocations[idx] = new BlockLocation(names, hosts, racks,
                                             blk.getStartOffset(),
-                                            blk.getBlockSize());
+                                            blk.getBlockSize(),
+                                            blk.isCorrupt());
       idx++;
     }
     return blkLocations;
