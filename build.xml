@@ -182,6 +182,10 @@
   <property name="task-controller.install.dir" value="${dist.dir}/bin" />
   <!-- end of task-controller properties -->
 
+  <!-- jsvc properties set here -->
+  <property name="c++.jsvc.src" 
+    value="${basedir}/src/c++/jsvc" />
+	
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
@@ -2292,16 +2296,14 @@
 
   <!-- end of task-controller targets -->
 
-  <target name="jsvc" >
-    <mkdir dir="${jsvc.build.dir}" />
-    <get src="${jsvc.location}" dest="${jsvc.build.dir}/${jsvc.dest.name}" />
-
-    <untar compression="gzip" src="${jsvc.build.dir}/${jsvc.dest.name}" dest="${jsvc.build.dir}" />
-
-    <copy file="${jsvc.build.dir}/jsvc" todir="${jsvc.install.dir}" verbose="true" />
-    <chmod perm="ugo+x" type="file">
-      <fileset file="${jsvc.install.dir}/jsvc"/>
-    </chmod>
- </target>
+  <!-- jsvc targets -->
+  <target name="jsvc" if="compile.c++">
+    <subant target="jsvc">
+      <property name="c++.jsvc.src" value="${c++.jsvc.src}" />
+      <property name="build.c++.jsvc" value="${build.c++}/jsvc" />
+      <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
+      <fileset file="${c++.jsvc.src}/build.xml"/>
+    </subant>
+  </target>
 
 </project>
