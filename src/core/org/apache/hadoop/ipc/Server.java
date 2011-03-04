@@ -238,7 +238,10 @@ public abstract class Server {
     }
   }
   
-  /*Returns a handle to the rpcMetrics (required in tests)*/
+  /**
+   * Returns a handle to the rpcMetrics (required in tests)
+   * @return rpc metrics
+   */
   public RpcMetrics getRpcMetrics() {
     return rpcMetrics;
   }

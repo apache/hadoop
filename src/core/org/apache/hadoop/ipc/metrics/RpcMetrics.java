@@ -74,26 +74,57 @@ public class RpcMetrics implements Updater {
    *  -they can also be read directly - e.g. JMX does this.
    */
 
+  /**
+   * metrics - number of bytes received
+   */
   public final MetricsTimeVaryingLong receivedBytes = 
          new MetricsTimeVaryingLong("ReceivedBytes", registry);
+  /**
+   * metrics - number of bytes sent
+   */
   public final MetricsTimeVaryingLong sentBytes = 
          new MetricsTimeVaryingLong("SentBytes", registry);
+  /**
+   * metrics - rpc queue time
+   */
   public final MetricsTimeVaryingRate rpcQueueTime =
           new MetricsTimeVaryingRate("RpcQueueTime", registry);
-  public MetricsTimeVaryingRate rpcProcessingTime =
+  /**
+   * metrics - rpc processing time
+   */
+  public final MetricsTimeVaryingRate rpcProcessingTime =
           new MetricsTimeVaryingRate("RpcProcessingTime", registry);
+  /**
+   * metrics - number of open connections
+   */
   public final MetricsIntValue numOpenConnections = 
           new MetricsIntValue("NumOpenConnections", registry);
+  /**
+   * metrics - length of the queue
+   */
   public final MetricsIntValue callQueueLen = 
           new MetricsIntValue("callQueueLen", registry);
+  /**
+   * metrics - number of failed authentications
+   */
   public final MetricsTimeVaryingInt authenticationFailures = 
           new MetricsTimeVaryingInt("rpcAuthenticationFailures", registry);
+  /**
+   * metrics - number of successful authentications
+   */
   public final MetricsTimeVaryingInt authenticationSuccesses = 
           new MetricsTimeVaryingInt("rpcAuthenticationSuccesses", registry);
+  /**
+   * metrics - number of failed authorizations
+   */
   public final MetricsTimeVaryingInt authorizationFailures = 
           new MetricsTimeVaryingInt("rpcAuthorizationFailures", registry);
+  /**
+   * metrics - number of successful authorizations
+   */
   public final MetricsTimeVaryingInt authorizationSuccesses = 
          new MetricsTimeVaryingInt("rpcAuthorizationSuccesses", registry);
+  
   /**
    * Push the metrics to the monitoring subsystem on doUpdate() call.
    */
@@ -111,6 +142,9 @@ public class RpcMetrics implements Updater {
     metricsRecord.update();
   }
 
+  /**
+   * shutdown the metrics
+   */
   public void shutdown() {
     if (rpcMBean != null) 
       rpcMBean.shutdown();
