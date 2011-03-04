@@ -52,8 +52,9 @@ public class FileChecksumServlets {
     /** {@inheritDoc} */
     public void doGet(HttpServletRequest request, HttpServletResponse response
         ) throws ServletException, IOException {
-      final UserGroupInformation ugi = getUGI(request);
       final ServletContext context = getServletContext();
+      Configuration conf = (Configuration) context.getAttribute("name.conf");
+      final UserGroupInformation ugi = getUGI(request, conf);
       final NameNode namenode = (NameNode)context.getAttribute("name.node");
       final DatanodeID datanode = namenode.namesystem.getRandomDatanode();
       try {
@@ -86,7 +87,8 @@ public class FileChecksumServlets {
       final SocketFactory socketFactory = NetUtils.getSocketFactory(conf, ClientProtocol.class);
 
       try {
-        ClientProtocol nnproxy = getUGI(request).doAs(new PrivilegedExceptionAction<ClientProtocol>() {
+        ClientProtocol nnproxy = getUGI(request, conf).doAs
+        (new PrivilegedExceptionAction<ClientProtocol>() {
           @Override
           public ClientProtocol run() throws IOException {
             return DFSClient.createNamenode(conf);

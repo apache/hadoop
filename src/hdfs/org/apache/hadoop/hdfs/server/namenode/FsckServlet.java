@@ -43,15 +43,14 @@ public class FsckServlet extends DfsServlet {
     @SuppressWarnings("unchecked")
     final Map<String,String[]> pmap = request.getParameterMap();
     final PrintWriter out = response.getWriter();
-
-    final UserGroupInformation ugi = getUGI(request);
+    final ServletContext context = getServletContext();
+    final Configuration conf = 
+      (Configuration) context.getAttribute("name.conf");
+    final UserGroupInformation ugi = getUGI(request, conf);
     try {
       ugi.doAs(new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
-          final ServletContext context = getServletContext();
-          final Configuration conf = new Configuration((Configuration) context.getAttribute("name.conf"));
-
           final NameNode nn = (NameNode) context.getAttribute("name.node");
           final int totalDatanodes = nn.namesystem.getNumberOfDatanodes(DatanodeReportType.LIVE); 
           final short minReplication = nn.namesystem.getMinReplication();

@@ -24,6 +24,8 @@ import java.security.PrivilegedExceptionAction;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -88,7 +90,9 @@ public class FileDataServlet extends DfsServlet {
    */
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws IOException {
-    final UserGroupInformation ugi = getUGI(request);
+    Configuration conf =
+	(Configuration) getServletContext().getAttribute("name.conf");
+    final UserGroupInformation ugi = getUGI(request, conf);
 
     try {
       final ClientProtocol nnproxy = ugi

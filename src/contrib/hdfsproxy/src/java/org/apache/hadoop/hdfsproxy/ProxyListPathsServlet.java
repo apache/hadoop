@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfsproxy;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.namenode.ListPathsServlet;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -29,7 +30,8 @@ public class ProxyListPathsServlet extends ListPathsServlet {
 
   /** {@inheritDoc} */
   @Override
-  protected UserGroupInformation getUGI(HttpServletRequest request) {
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) {
     return (UserGroupInformation) request.getAttribute("authorized.ugi");
   }
 }

@@ -24,10 +24,10 @@ import java.security.PrivilegedExceptionAction;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.server.namenode.StreamFile;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.conf.Configuration;
 
 /** {@inheritDoc} */
 public class ProxyStreamFile extends StreamFile {
@@ -36,27 +36,8 @@ public class ProxyStreamFile extends StreamFile {
 
   /** {@inheritDoc} */
   @Override
-  protected DFSClient getDFSClient(HttpServletRequest request)
-      throws IOException, InterruptedException {
-    ServletContext context = getServletContext();
-    final Configuration conf = new Configuration((Configuration) context
-        .getAttribute("name.conf"));
-    final InetSocketAddress nameNodeAddr = (InetSocketAddress) context
-        .getAttribute("name.node.address");
-    DFSClient client = 
-              getUGI(request).doAs(new PrivilegedExceptionAction<DFSClient>() {
-      @Override
-      public DFSClient run() throws IOException {
-        return new DFSClient(nameNodeAddr, conf);
-      }
-    });
-
-    return client;
-  }
-
-  /** {@inheritDoc} */
-  @Override
-  protected UserGroupInformation getUGI(HttpServletRequest request) {
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) {
     return (UserGroupInformation) request.getAttribute("authorized.ugi");
   }
 }

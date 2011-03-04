@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HftpFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -134,9 +135,11 @@ public class ListPathsServlet extends DfsServlet {
       final boolean recur = "yes".equals(root.get("recursive"));
       final Pattern filter = Pattern.compile(root.get("filter"));
       final Pattern exclude = Pattern.compile(root.get("exclude"));
+      final Configuration conf = 
+        (Configuration) request.getAttribute("name.conf");
       
-      ClientProtocol nnproxy = 
-        getUGI(request).doAs(new PrivilegedExceptionAction<ClientProtocol>() {
+      ClientProtocol nnproxy = getUGI(request, conf).doAs
+        (new PrivilegedExceptionAction<ClientProtocol>() {
         @Override
         public ClientProtocol run() throws IOException {
           return createNameNodeProxy();

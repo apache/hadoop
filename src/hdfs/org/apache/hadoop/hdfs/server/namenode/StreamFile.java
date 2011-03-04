@@ -31,31 +31,16 @@ import org.apache.hadoop.conf.*;
 public class StreamFile extends DfsServlet {
   static InetSocketAddress nameNodeAddr;
   static DataNode datanode = null;
-  private static final Configuration masterConf = new Configuration();
   static {
     if ((datanode = DataNode.getDataNode()) != null) {
       nameNodeAddr = datanode.getNameNodeAddr();
     }
   }
   
-  /** getting a client for connecting to dfs */
-  protected DFSClient getDFSClient(HttpServletRequest request)
-      throws IOException, InterruptedException {
-    final Configuration conf = new Configuration(masterConf);
-
-    DFSClient client = 
-      getUGI(request).doAs(new PrivilegedExceptionAction<DFSClient>() {
-      @Override
-      public DFSClient run() throws IOException {
-        return new DFSClient(nameNodeAddr, conf);
-      }
-    });
-
-    return client;
-  }
-  
   public void doGet(HttpServletRequest request, HttpServletResponse response)
     throws ServletException, IOException {
+    Configuration conf = 
+      (Configuration) getServletContext().getAttribute("name.conf");
     String filename = request.getParameter("filename");
     if (filename == null || filename.length() == 0) {
       response.setContentType("text/plain");
@@ -65,8 +50,9 @@ public class StreamFile extends DfsServlet {
     }
     
     DFSClient dfs;
+    UserGroupInformation ugi = getUGI(request, conf);
     try {
-      dfs = getDFSClient(request);
+	dfs = JspHelper.getDFSClient(ugi, nameNodeAddr, conf);
     } catch (InterruptedException e) {
       response.sendError(400, e.getMessage());
       return;

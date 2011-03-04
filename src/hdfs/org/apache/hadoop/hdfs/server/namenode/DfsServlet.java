@@ -47,31 +47,10 @@ abstract class DfsServlet extends HttpServlet {
 
   /** Get {@link UserGroupInformation} from request 
    *    * @throws IOException */
-  protected UserGroupInformation getUGI(HttpServletRequest request) 
-    throws IOException {
-    UserGroupInformation u = null;
-    if(UserGroupInformation.isSecurityEnabled()) {
-      String user = request.getRemoteUser();
-      if(user != null)
-        throw new IOException("Security enabled but user not " +
-            "authenticated by filter");
-
-      u = UserGroupInformation.createRemoteUser(user);
-    } else { // Security's not on, pull from url
-      String ugi = request.getParameter("ugi");
-
-      if(ugi == null) // not specified in request
-        ugi = new Configuration().get(JspHelper.WEB_UGI_PROPERTY_NAME);
-
-      if(ugi == null) // not specified in conf either
-        throw new IOException("Cannot determine UGI from request or conf");
-
-      u = UserGroupInformation.createRemoteUser(ugi);
-    }
-
-    if(LOG.isDebugEnabled())
-      LOG.debug("getUGI is returning: " + u.getShortUserName());
-    return u;
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf
+					) throws IOException {
+    return JspHelper.getUGI(request, conf);
   }
 
   /**

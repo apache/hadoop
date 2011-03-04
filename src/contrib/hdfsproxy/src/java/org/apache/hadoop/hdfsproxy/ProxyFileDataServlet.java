@@ -23,6 +23,7 @@ import java.net.URISyntaxException;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.namenode.FileDataServlet;
@@ -45,7 +46,8 @@ public class ProxyFileDataServlet extends FileDataServlet {
 
   /** {@inheritDoc} */
   @Override
-  protected UserGroupInformation getUGI(HttpServletRequest request) {
+  protected UserGroupInformation getUGI(HttpServletRequest request,
+                                        Configuration conf) {
     return (UserGroupInformation) request.getAttribute("authorized.ugi");
   }
 }

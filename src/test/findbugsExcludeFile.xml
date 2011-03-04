@@ -33,6 +33,16 @@
        <Bug pattern="IS2_INCONSISTENT_SYNC" />
      </Match>
      <!-- 
+       Ignore Cross Scripting Vulnerabilities
+       We have an input quoting filter that protects us.
+     -->
+     <Match>
+       <Bug code="XSS" />
+     </Match>
+     <Match>
+       <Bug code="HRS" />
+     </Match>
+     <!-- 
        Accesses to Client.Connection.saslRpcClient are in fact
        synchronized (inside synchronized methods).
      --> 

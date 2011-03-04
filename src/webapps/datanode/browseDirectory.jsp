@@ -5,14 +5,17 @@
   import="java.io.*"
   import="java.util.*"
   import="java.net.*"
+  import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.fs.*"
   import="org.apache.hadoop.hdfs.*"
   import="org.apache.hadoop.hdfs.server.namenode.*"
   import="org.apache.hadoop.hdfs.server.datanode.*"
+  import="org.apache.hadoop.hdfs.server.common.*"
   import="org.apache.hadoop.hdfs.protocol.*"
   import="org.apache.hadoop.io.*"
   import="org.apache.hadoop.conf.*"
   import="org.apache.hadoop.net.DNS"
+  import="org.apache.hadoop.security.UserGroupInformation"
   import="org.apache.hadoop.util.*"
   import="java.text.DateFormat"
 %>
@@ -21,24 +24,29 @@
   
   public void generateDirectoryStructure( JspWriter out, 
                                           HttpServletRequest req,
-                                          HttpServletResponse resp) 
-    throws IOException {
+                                          HttpServletResponse resp,
+                                          Configuration conf
+                                         ) throws IOException, 
+                                                  InterruptedException {
     String dir = req.getParameter("dir");
     if (dir == null || dir.length() == 0) {
       out.print("Invalid input");
       return;
     }
     
+    String tokenString = req.getParameter(JspHelper.DELEGATION_PARAMETER_NAME);
+    UserGroupInformation ugi = JspHelper.getUGI(req, conf);
     String namenodeInfoPortStr = req.getParameter("namenodeInfoPort");
     int namenodeInfoPort = -1;
     if (namenodeInfoPortStr != null)
       namenodeInfoPort = Integer.parseInt(namenodeInfoPortStr);
     
-    DFSClient dfs = new DFSClient(jspHelper.nameNodeAddr, jspHelper.conf);
+    DFSClient dfs = JspHelper.getDFSClient(ugi, jspHelper.nameNodeAddr, 
+                                           conf);
     String target = dir;
     if (!dfs.exists(target)) {
       out.print("<h3>File or directory : " + target + " does not exist</h3>");
-      JspHelper.printGotoForm(out, namenodeInfoPort, target);
+      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, target);
     }
     else {
       if( !dfs.isDirectory(target) ) { // a file
@@ -69,8 +77,9 @@
             "&blockSize=" + firstBlock.getBlock().getNumBytes() +
             "&genstamp=" + firstBlock.getBlock().getGenerationStamp() +
             "&filename=" + URLEncoder.encode(dir, "UTF-8") + 
-            "&datanodePort=" + datanodePort + 
-            "&namenodeInfoPort=" + namenodeInfoPort;
+            "&datanodePort="
+            + datanodePort + "&namenodeInfoPort=" + namenodeInfoPort
+            + JspHelper.SET_DELEGATION + tokenString;
           resp.sendRedirect(redirectLocation);
         }
         return;
@@ -81,9 +90,9 @@
                               "Block Size", "Modification Time",
                               "Permission", "Owner", "Group" };
       out.print("<h3>Contents of directory ");
-      JspHelper.printPathWithLinks(dir, out, namenodeInfoPort);
+      JspHelper.printPathWithLinks(dir, out, namenodeInfoPort, tokenString);
       out.print("</h3><hr>");
-      JspHelper.printGotoForm(out, namenodeInfoPort, dir);
+      JspHelper.printGotoForm(out, namenodeInfoPort, tokenString, dir);
       out.print("<hr>");
 	
       File f = new File(dir);
@@ -91,6 +100,7 @@
       if ((parent = f.getParent()) != null)
         out.print("<a href=\"" + req.getRequestURL() + "?dir=" + parent +
                   "&namenodeInfoPort=" + namenodeInfoPort +
+                  JspHelper.SET_DELEGATION + tokenString +
                   "\">Go to parent directory</a><br>");
 
       DirectoryListing thisListing;
@@ -165,8 +175,10 @@ body
 
 <body onload="document.goto.dir.focus()">
 <% 
+  Configuration conf = 
+    (Configuration) getServletContext().getAttribute("datanode.conf");
   try {
-    generateDirectoryStructure(out,request,response);
+    generateDirectoryStructure(out,request,response,conf);
   }
   catch(IOException ioe) {
     String msg = ioe.getLocalizedMessage();
