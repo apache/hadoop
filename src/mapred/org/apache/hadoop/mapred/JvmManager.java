@@ -478,18 +478,20 @@ class JvmManager {
         int exitCode = 0;
         try {
           env.vargs.add(Integer.toString(jvmId.getId()));
-          //Launch the task controller to run task JVM
-          String user = jvmToRunningTask.get(jvmId).getTask().getUser();
-          TaskAttemptID taskAttemptId = 
-            jvmToRunningTask.get(jvmId).getTask().getTaskID();
-          String taskAttemptIdStr = 
-            jvmToRunningTask.get(jvmId).getTask().isTaskCleanupTask() ? 
+          TaskRunner runner = jvmToRunningTask.get(jvmId);
+          if (runner != null) {
+            Task task = runner.getTask();
+            //Launch the task controller to run task JVM
+            String user = task.getUser();
+            TaskAttemptID taskAttemptId = task.getTaskID();
+            String taskAttemptIdStr = task.isTaskCleanupTask() ? 
                 (taskAttemptId.toString() + TaskTracker.TASK_CLEANUP_SUFFIX) :
                   taskAttemptId.toString(); 
-          exitCode = tracker.getTaskController().launchTask(user,
-              jvmId.jobId.toString(), taskAttemptIdStr, env.setup,
-              env.vargs, env.workDir, env.stdout.toString(),
-              env.stderr.toString());
+                exitCode = tracker.getTaskController().launchTask(user,
+                    jvmId.jobId.toString(), taskAttemptIdStr, env.setup,
+                    env.vargs, env.workDir, env.stdout.toString(),
+                    env.stderr.toString());
+          }
         } catch (IOException ioe) {
           // do nothing
           // error and output are appropriately redirected
