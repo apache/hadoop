@@ -303,24 +303,20 @@ public class TrackerDistributedCacheManager {
         Path potentialDeletee = lcacheStatus.localizedLoadPath;
         Path localizedDir = lcacheStatus.getLocalizedUniqueDir();
         if (lcacheStatus.user == null) {
-
-          localFs.delete(potentialDeletee, true);
-
-          // Update the maps baseDirSize and baseDirNumberSubDir
-          LOG.info("Deleted path " + potentialDeletee);
-
+          LOG.info("Deleted path " + localizedDir);
           try {
             localFs.delete(localizedDir, true);
           } catch (IOException e) {
             LOG.warn("Could not delete distributed cache empty directory "
-                     + localizedDir);
+                     + localizedDir, e);
           }
-        } else {
-          int userDir = TaskTracker.getUserDir(lcacheStatus.user).length();
-          taskController.deleteAsUser(lcacheStatus.user,
-                                      potentialDeletee.toString().substring(userDir));
-          taskController.deleteAsUser(lcacheStatus.user,
-                                      localizedDir.toString().substring(userDir));          
+        } else {         
+          LOG.info("Deleted path " + localizedDir + " as " + lcacheStatus.user);
+          String base = lcacheStatus.getBaseDir().toString();
+          String userDir = TaskTracker.getUserDir(lcacheStatus.user);
+          int skip = base.length() + 1 + userDir.length() + 1;
+          String relative = localizedDir.toString().substring(skip);
+          taskController.deleteAsUser(lcacheStatus.user, relative);
         }
         deleteCacheInfoUpdate(lcacheStatus);
       }
