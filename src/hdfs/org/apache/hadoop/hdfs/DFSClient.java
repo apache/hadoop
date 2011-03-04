@@ -2553,7 +2553,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
             // read an ack from the pipeline
             ack.readFields(blockReplyStream);
             if (LOG.isDebugEnabled()) {
-              LOG.debug("DFSClient " + ack);
+              LOG.debug("DFSClient for block " + block + " " + ack);
             }
             long seqno = ack.getSeqno();
             if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
@@ -2567,7 +2567,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
               }
               if (one.seqno != seqno) {
                 throw new IOException("Responseprocessor: Expecting seqno " + 
-                                      " for block " + block +
+                                      " for block " + block + " " +
                                       one.seqno + " but received " + seqno);
               }
               lastPacketInBlock = one.lastPacketInBlock;

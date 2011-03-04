@@ -873,18 +873,16 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
             PipelineAck ack = new PipelineAck();
             long seqno = -2;
             try { 
-               if (!mirrorError) {
+              if (!mirrorError) {
                 // read an ack from downstream datanode
-                 ack.readFields(mirrorIn);
-                 if (LOG.isDebugEnabled()) {
-                   LOG.debug("PacketResponder " + numTargets + " got " + ack);
-                 }
-                 seqno = ack.getSeqno();
-               }
-              if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
-                ack.write(replyOut); // send keepalive
-                replyOut.flush();
-              } else if (seqno >= 0 || mirrorError) {
+                ack.readFields(mirrorIn);
+                if (LOG.isDebugEnabled()) {
+                  LOG.debug("PacketResponder " + numTargets + 
+                      " for block " + block + " got " + ack);
+                }
+                seqno = ack.getSeqno();
+              }
+              if (seqno >= 0 || mirrorError) {
                 Packet pkt = null;
                 synchronized (this) {
                   while (running && datanode.shouldRun && ackQueue.size() == 0) {
@@ -963,20 +961,25 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
               }
             }
 
-            // construct my ack message
-            short[] replies = null;
-            if (mirrorError) { // no ack is read
-              replies = new short[2];
-              replies[0] = DataTransferProtocol.OP_STATUS_SUCCESS;
-              replies[1] = DataTransferProtocol.OP_STATUS_ERROR;
+            PipelineAck replyAck;
+            if (seqno == PipelineAck.HEART_BEAT.getSeqno()) {
+              replyAck = ack;  // continue to send keep alive
             } else {
-              replies = new short[1+ack.getNumOfReplies()];
-              replies[0] = DataTransferProtocol.OP_STATUS_SUCCESS;
-              for (int i=0; i<ack.getNumOfReplies(); i++) {
-                replies[i+1] = ack.getReply(i);
+              // construct my ack message
+              short[] replies = null;
+              if (mirrorError) { // no ack is read
+                replies = new short[2];
+                replies[0] = DataTransferProtocol.OP_STATUS_SUCCESS;
+                replies[1] = DataTransferProtocol.OP_STATUS_ERROR;
+              } else {
+                replies = new short[1+ack.getNumOfReplies()];
+                replies[0] = DataTransferProtocol.OP_STATUS_SUCCESS;
+                for (int i=0; i<ack.getNumOfReplies(); i++) {
+                  replies[i+1] = ack.getReply(i);
+                }
               }
+              replyAck = new PipelineAck(expected, replies);
             }
-            PipelineAck replyAck = new PipelineAck(expected, replies);
  
             // send my ack back to upstream datanode
             replyAck.write(replyOut);
