@@ -38,10 +38,6 @@ import org.apache.hadoop.record.Utils;
 public class SecureShuffleUtils {
   public static final String HTTP_HEADER_URL_HASH = "UrlHash";
   public static final String HTTP_HEADER_REPLY_URL_HASH = "ReplyHash";
-  /**
-   * file name used on HDFS for generated job token
-   */
-  public static final String JOB_TOKEN_FILENAME = "jobToken";
   
   /**
    * Base64 encoded hash of msg

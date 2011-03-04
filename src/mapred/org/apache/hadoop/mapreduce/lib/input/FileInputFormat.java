@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -185,6 +186,9 @@ public abstract class FileInputFormat<K, V> extends InputFormat<K, V> {
     if (dirs.length == 0) {
       throw new IOException("No input paths specified in job");
     }
+    
+    // get tokens for all the required FileSystems..
+    TokenCache.obtainTokensForNamenodes(dirs, job.getConfiguration());
 
     List<IOException> errors = new ArrayList<IOException>();
     

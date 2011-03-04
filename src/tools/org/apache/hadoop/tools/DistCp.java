@@ -63,6 +63,7 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.SequenceFileRecordReader;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -623,6 +624,12 @@ public class DistCp implements Tool {
   private static void checkSrcPath(Configuration conf, List<Path> srcPaths
       ) throws IOException {
     List<IOException> rslt = new ArrayList<IOException>();
+    
+    // get tokens for all the required FileSystems..
+    Path[] ps = new Path[srcPaths.size()];
+    ps = srcPaths.toArray(ps);
+    TokenCache.obtainTokensForNamenodes(ps, conf);
+
     for (Path p : srcPaths) {
       FileSystem fs = p.getFileSystem(conf);
       if (!fs.exists(p)) {
@@ -1018,6 +1025,10 @@ public class DistCp implements Tool {
     jobConf.set(JOB_DIR_LABEL, jobDirectory.toString());
 
     FileSystem dstfs = args.dst.getFileSystem(conf);
+    
+    // get tokens for all the required FileSystems..
+    TokenCache.obtainTokensForNamenodes(new Path[] {args.dst}, conf);
+    
     boolean dstExists = dstfs.exists(args.dst);
     boolean dstIsDir = false;
     if (dstExists) {

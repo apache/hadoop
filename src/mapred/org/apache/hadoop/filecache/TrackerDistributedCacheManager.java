@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.RunJar;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 
 /**
  * Manages a single machine's instance of a cross-job
@@ -724,5 +725,33 @@ public class TrackerDistributedCacheManager {
    */
   static void setFileVisibilities(Configuration conf, String booleans) {
     conf.set(JobContext.CACHE_FILE_VISIBILITIES, booleans);
+  }
+  
+  /**
+   * For each archive or cache file - get the corresponding delegation token
+   * @param job
+   * @throws IOException
+   */
+  public static void getDelegationTokens(Configuration job) throws IOException {
+    URI[] tarchives = DistributedCache.getCacheArchives(job);
+    URI[] tfiles = DistributedCache.getCacheFiles(job);
+
+    int size = (tarchives!=null? tarchives.length : 0) + (tfiles!=null ? tfiles.length :0);
+    Path[] ps = new Path[size];
+
+    int i = 0;
+    if (tarchives != null) {
+      for (i=0; i < tarchives.length; i++) {
+        ps[i] = new Path(tarchives[i].toString());
+      }
+    }
+
+    if (tfiles != null) {
+      for(int j=0; j< tfiles.length; j++) {
+        ps[i+j] = new Path(tfiles[j].toString());
+      }
+    }
+
+    TokenCache.obtainTokensForNamenodes(ps, job);
   }
 }

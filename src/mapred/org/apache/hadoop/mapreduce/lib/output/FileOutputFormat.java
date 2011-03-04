@@ -35,6 +35,7 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 
 /** A base class for {@link OutputFormat}s that read from {@link FileSystem}s.*/
 public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
@@ -119,6 +120,10 @@ public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
     if (outDir == null) {
       throw new InvalidJobConfException("Output directory not set.");
     }
+    
+    // get delegation token for outDir's file system
+    TokenCache.obtainTokensForNamenodes(new Path[] {outDir}, job.getConfiguration());
+
     if (outDir.getFileSystem(job.getConfiguration()).exists(outDir)) {
       throw new FileAlreadyExistsException("Output directory " + outDir + 
                                            " already exists");

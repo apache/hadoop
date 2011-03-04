@@ -40,7 +40,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 //@InterfaceAudience.Private
 public class TokenStorage implements Writable {
 
-  private static final Text SHUFFLE_JOB_TOKEN = new Text("ShuffleJobToken");
+  private static final Text JOB_TOKEN = new Text("ShuffleJobToken");
 
   private  Map<Text, byte[]> secretKeysMap = new HashMap<Text, byte[]>();
   private  Map<Text, Token<? extends TokenIdentifier>> tokenMap = 
@@ -74,7 +74,7 @@ public class TokenStorage implements Writable {
    */
   //@InterfaceAudience.Private
   public void setJobToken(Token<? extends TokenIdentifier> t) {
-    setToken(SHUFFLE_JOB_TOKEN, t);
+    setToken(JOB_TOKEN, t);
   }
   
   /**
@@ -83,7 +83,7 @@ public class TokenStorage implements Writable {
    */
   //@InterfaceAudience.Private
   public Token<? extends TokenIdentifier> getJobToken() {
-    return getToken(SHUFFLE_JOB_TOKEN);
+    return getToken(JOB_TOKEN);
   }
   
   /**

@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
@@ -152,6 +153,9 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
       throw new IOException("No input paths specified in job");
     }
 
+    // get tokens for all the required FileSystems..
+    TokenCache.obtainTokensForNamenodes(dirs, job);
+    
     List<FileStatus> result = new ArrayList<FileStatus>();
     List<IOException> errors = new ArrayList<IOException>();
     

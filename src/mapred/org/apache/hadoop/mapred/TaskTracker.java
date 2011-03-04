@@ -927,6 +927,7 @@ public class TaskTracker
                               new LocalDirAllocator("mapred.local.dir");
 
   // intialize the job directory
+  @SuppressWarnings("unchecked")
   private void localizeJob(TaskInProgress tip) 
   throws IOException, InterruptedException {
     Path localJarFile = null;
@@ -955,7 +956,8 @@ public class TaskTracker
         rjob.keepJobFiles = ((localJobConf.getKeepTaskFilesPattern() != null) ||
                              localJobConf.getKeepFailedTaskFiles());
 
-        TokenStorage ts = TokenCache.loadTokens(rjob.jobConf);
+        TokenStorage ts = TokenCache.loadTokens(rjob.jobConf.get(TokenCache.JOB_TOKEN_FILENAME), rjob.jobConf);
+
         Token<JobTokenIdentifier> jt = (Token<JobTokenIdentifier>)ts.getJobToken(); 
         getJobTokenSecretManager().addTokenForJob(jobId.toString(), jt);
  
@@ -3707,7 +3709,7 @@ public class TaskTracker
         throws IOException {
       // check if the tokenJob file is there..
       Path skPath = new Path(systemDirectory, 
-          jobId.toString()+"/"+SecureShuffleUtils.JOB_TOKEN_FILENAME);
+          jobId.toString()+"/"+TokenCache.JOB_TOKEN_HDFS_FILE);
       
       FileStatus status = null;
       long jobTokenSize = -1;
@@ -3724,7 +3726,7 @@ public class TaskTracker
       // Download job_token
       systemFS.copyToLocalFile(skPath, localJobTokenFile);      
       // set it into jobConf to transfer the name to TaskRunner
-      jobConf.set(JobContext.JOB_TOKEN_FILE,localJobTokenFile.toString());
+      jobConf.set(TokenCache.JOB_TOKEN_FILENAME, localJobTokenFile.toString());
     }
 
 }

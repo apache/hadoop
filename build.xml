@@ -367,7 +367,7 @@
      
   </target>
 
-  <target name="compile-mapred-classes" depends="compile-core-classes">
+  <target name="compile-mapred-classes" depends="compile-core-classes,compile-hdfs-classes">
     <jsp-compile
      uriroot="${src.webapps}/task"
      outputdir="${build.src}"
