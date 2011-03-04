@@ -66,12 +66,21 @@ public class ExternalMapReduce extends Configured implements Tool {
       if (classpath.indexOf("testjob.jar") == -1) {
         throw new IOException("failed to find in the library " + classpath);
       }
+      if (classpath.indexOf("test.jar") == -1) {
+        throw new IOException("failed to find the library test.jar in" 
+            + classpath);
+      }
       //fork off ls to see if the file exists.
       // java file.exists() will not work on 
       // cygwin since it is a symlink
-      String[] argv = new String[2];
+      String[] argv = new String[7];
       argv[0] = "ls";
       argv[1] = "files_tmp";
+      argv[2] = "localfilelink";
+      argv[3] = "dfsfilelink";
+      argv[4] = "tarlink";
+      argv[5] = "ziplink";
+      argv[6] = "test.tgz";
       Process p = Runtime.getRuntime().exec(argv);
       int ret = -1;
       try {

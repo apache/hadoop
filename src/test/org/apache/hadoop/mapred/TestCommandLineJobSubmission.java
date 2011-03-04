@@ -18,12 +18,14 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.*;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
@@ -60,15 +62,57 @@ public class TestCommandLineJobSubmission extends TestCase {
       FileOutputStream fstream = new FileOutputStream(f);
       fstream.write("somestrings".getBytes());
       fstream.close();
-      String[] args = new String[6];
+      File f1 = new File(thisbuildDir, "files_tmp1");
+      fstream = new FileOutputStream(f1);
+      fstream.write("somestrings".getBytes());
+      fstream.close();
+      
+      // copy files to dfs
+      Path cachePath = new Path("/cacheDir");
+      if (!fs.mkdirs(cachePath)) {
+        throw new IOException(
+            "Mkdirs failed to create " + cachePath.toString());
+      }
+      Path localCachePath = new Path(System.getProperty("test.cache.data"));
+      Path txtPath = new Path(localCachePath, new Path("test.txt"));
+      Path jarPath = new Path(localCachePath, new Path("test.jar"));
+      Path zipPath = new Path(localCachePath, new Path("test.zip"));
+      Path tarPath = new Path(localCachePath, new Path("test.tar"));
+      Path tgzPath = new Path(localCachePath, new Path("test.tgz"));
+      fs.copyFromLocalFile(txtPath, cachePath);
+      fs.copyFromLocalFile(jarPath, cachePath);
+      fs.copyFromLocalFile(zipPath, cachePath);
+
+      // construct options for -files
+      String[] files = new String[3];
+      files[0] = f.toString();
+      files[1] = f1.toString() + "#localfilelink";
+      files[2] = 
+        fs.getUri().resolve(cachePath + "/test.txt#dfsfilelink").toString();
+
+      // construct options for -libjars
+      String[] libjars = new String[2];
+      libjars[0] = "build/test/testjar/testjob.jar";
+      libjars[1] = fs.getUri().resolve(cachePath + "/test.jar").toString();
+      
+      // construct options for -archives
+      String[] archives = new String[3];
+      archives[0] = tgzPath.toString();
+      archives[1] = tarPath + "#tarlink";
+      archives[2] = 
+        fs.getUri().resolve(cachePath + "/test.zip#ziplink").toString();
+      
+      String[] args = new String[8];
       args[0] = "-files";
-      args[1] = f.toString();
+      args[1] = StringUtils.arrayToString(files);
       args[2] = "-libjars";
       // the testjob.jar as a temporary jar file 
       // rather than creating its own
-      args[3] = "build/test/testjar/testjob.jar";
-      args[4] = input.toString();
-      args[5] = output.toString();
+      args[3] = StringUtils.arrayToString(libjars);
+      args[4] = "-archives";
+      args[5] = StringUtils.arrayToString(archives);
+      args[6] = input.toString();
+      args[7] = output.toString();
       
       JobConf jobConf = mr.createJobConf();
       //before running the job, verify that libjar is not in client classpath

@@ -317,6 +317,10 @@ This symlink points to the local copy of testfile.txt.
  <source>
 -files hdfs://host:fs_port/user/testfile.txt
  </source>
+ <p> User can specify a different symlink name for -files using #. </p>
+<source>
+-files hdfs://host:fs_port/user/testfile.txt#testfile
+</source>
  <p>
 Multiple entries can be specified like this:
  </p>
@@ -336,6 +340,10 @@ The -archives option allows you to copy jars locally to the current working dire
  </p>
 <source>
 -archives hdfs://host:fs_port/user/testfile.jar
+</source>
+<p> User can specify a different symlink name for -archives using #. </p>
+<source>
+-archives hdfs://host:fs_port/user/testfile.tgz#tgzdir
 </source>
  
 <p>

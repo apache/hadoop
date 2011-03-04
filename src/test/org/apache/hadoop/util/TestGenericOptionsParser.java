@@ -87,4 +87,48 @@ public class TestGenericOptionsParser extends TestCase {
     
     localFs.delete(new Path(testDir.getAbsolutePath()), true);
   }
+  
+  public void testFilesOption() throws Exception {
+    File tmpFile = new File(testDir, "tmpfile");
+    Path tmpPath = new Path(tmpFile.toString());
+    localFs.create(tmpPath);
+    String[] args = new String[2];
+    // pass a files option 
+    args[0] = "-files";
+    args[1] = tmpFile.toString();
+    new GenericOptionsParser(conf, args);
+    String files = conf.get("tmpfiles");
+    assertNotNull("files is null", files);
+    assertEquals("files option does not match",
+      localFs.makeQualified(tmpPath).toString(), files);
+    
+    // pass file as uri
+    Configuration conf1 = new Configuration();
+    URI tmpURI = new URI(tmpFile.toString() + "#link");
+    args[0] = "-files";
+    args[1] = tmpURI.toString();
+    new GenericOptionsParser(conf1, args);
+    files = conf1.get("tmpfiles");
+    assertNotNull("files is null", files);
+    assertEquals("files option does not match", 
+      localFs.makeQualified(new Path(tmpURI)).toString(), files);
+   
+    // pass a file that does not exist.
+    // GenericOptionParser should throw exception
+    Configuration conf2 = new Configuration();
+    args[0] = "-files";
+    args[1] = "file:///xyz.txt";
+    Throwable th = null;
+    try {
+      new GenericOptionsParser(conf2, args);
+    } catch (Exception e) {
+      th = e;
+    }
+    assertNotNull("throwable is null", th);
+    assertTrue("FileNotFoundException is not thrown",
+      th instanceof FileNotFoundException);
+    files = conf2.get("tmpfiles");
+    assertNull("files is not null", files);
+  }
+
 }

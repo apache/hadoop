@@ -604,17 +604,36 @@
         would be present in the current working directory of the task 
         using the option <code>-files</code>. The <code>-libjars</code>
         option allows applications to add jars to the classpaths of the maps
-        and reduces. The <code>-archives</code> allows them to pass archives
-        as arguments that are unzipped/unjarred and a link with name of the
-        jar/zip are created in the current working directory of tasks. More
+        and reduces. The option <code>-archives</code> allows them to pass 
+        comma separated list of archives as arguments. These archives are 
+        unarchived and a link with name of the archive is created in 
+        the current working directory of tasks. More
         details about the command line options are available at 
         <a href="commands_manual.html">Commands Guide.</a></p>
         
         <p>Running <code>wordcount</code> example with 
-        <code>-libjars</code> and <code>-files</code>:<br/>
+        <code>-libjars</code>, <code>-files</code> and <code>-archives</code>:
+        <br/>
         <code> hadoop jar hadoop-examples.jar wordcount -files cachefile.txt 
-        -libjars mylib.jar input output </code> 
+        -libjars mylib.jar -archives myarchive.zip input output </code> 
+         Here, myarchive.zip will be placed and unzipped into a directory 
+         by the name "myarchive.zip".
         </p>
+        
+        <p> Users can specify a different symbolic name for 
+        files and archives passed through -files and -archives option, using #.
+        </p>
+        
+        <p> For example,
+        <code> hadoop jar hadoop-examples.jar wordcount 
+        -files dir1/dict.txt#dict1,dir2/dict.txt#dict2 
+        -archives mytar.tgz#tgzdir input output </code>
+        Here, the files dir1/dict.txt and dir2/dict.txt can be accessed by 
+        tasks using the symbolic names dict1 and dict2 respectively.
+        The archive mytar.tgz will be placed and unarchived into a 
+        directory by the name "tgzdir".
+        </p> 
+ 
       </section>
       
       <section>

@@ -63,13 +63,13 @@ public class Path implements Comparable {
     if (!(parentPath.equals("/") || parentPath.equals("")))
       try {
         parentUri = new URI(parentUri.getScheme(), parentUri.getAuthority(),
-                            parentUri.getPath()+"/", null, null);
+                      parentUri.getPath()+"/", null, parentUri.getFragment());
       } catch (URISyntaxException e) {
         throw new IllegalArgumentException(e);
       }
     URI resolved = parentUri.resolve(child.uri);
     initialize(resolved.getScheme(), resolved.getAuthority(),
-               normalizePath(resolved.getPath()));
+               normalizePath(resolved.getPath()), resolved.getFragment());
   }
 
   private void checkPathArg( String path ) {
@@ -123,18 +123,26 @@ public class Path implements Comparable {
     // uri path is the rest of the string -- query & fragment not supported
     String path = pathString.substring(start, pathString.length());
 
-    initialize(scheme, authority, path);
+    initialize(scheme, authority, path, null);
   }
 
   /** Construct a Path from components. */
   public Path(String scheme, String authority, String path) {
     checkPathArg( path );
-    initialize(scheme, authority, path);
+    initialize(scheme, authority, path, null);
   }
 
-  private void initialize(String scheme, String authority, String path) {
+  /**
+   * Construct a path from a URI
+   */
+  public Path(URI aUri) {
+    uri = aUri;
+  }
+  
+  private void initialize(String scheme, String authority, String path,
+      String fragment) {
     try {
-      this.uri = new URI(scheme, authority, normalizePath(path), null, null)
+      this.uri = new URI(scheme, authority, normalizePath(path), null, fragment)
         .normalize();
     } catch (URISyntaxException e) {
       throw new IllegalArgumentException(e);
@@ -233,6 +241,10 @@ public class Path implements Comparable {
         path = path.substring(1);                 // remove slash before drive
       buffer.append(path);
     }
+    if (uri.getFragment() != null) {
+      buffer.append("#");
+      buffer.append(uri.getFragment());
+    }
     return buffer.toString();
   }
 
@@ -277,7 +289,7 @@ public class Path implements Comparable {
       
     String scheme = pathUri.getScheme();
     String authority = pathUri.getAuthority();
-
+    String fragment = pathUri.getFragment();
     if (scheme != null &&
         (authority != null || fsUri.getAuthority() == null))
       return path;
@@ -292,7 +304,14 @@ public class Path implements Comparable {
         authority = "";
       }
     }
-
-    return new Path(scheme+":"+"//"+authority + pathUri.getPath());
+    
+    URI newUri = null;
+    try {
+      newUri = new URI(scheme, authority , 
+        normalizePath(pathUri.getPath()), null, fragment);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
+    return new Path(newUri);
   }
 }
