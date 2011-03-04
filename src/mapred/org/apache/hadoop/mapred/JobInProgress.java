@@ -74,7 +74,7 @@ import org.apache.hadoop.util.StringUtils;
  * 
  * This is NOT a public interface!
  */
-class JobInProgress {
+public class JobInProgress {
   /**
    * Used when the a kill is issued to a job which is initializing.
    */

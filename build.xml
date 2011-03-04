@@ -119,6 +119,9 @@
   <property name="test.junit.haltonfailure" value="no" />
   <property name="test.junit.maxmemory" value="512m" />
   <property name="test.tools.input.dir" value="${basedir}/src/test/tools/data"/>
+  
+  <property name="test.commit.tests.file" value="${test.src.dir}/commit-tests" />
+  <property name="test.all.tests.file" value="${test.src.dir}/all-tests" />
 
   <property name="test.libhdfs.conf.dir" value="${c++.libhdfs.src}/tests/conf"/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
@@ -851,104 +854,93 @@
   <!-- ================================================================== -->
   <!-- Run unit tests                                                     --> 
   <!-- ================================================================== -->
-  <target name="test-core" depends="jar-test" description="Run core unit tests">
-    <macro-test-runner classpath="${test.classpath.id}"
-                       test.dir="${test.build.dir}"
-                       fileset.dir="${test.src.dir}"
-                       >
-    </macro-test-runner>
-  </target>   
-
+  
+  <!-- Define a macro that will be used for fast and all test runs -->
   <macrodef name="macro-test-runner">
-    <attribute name="classpath" />
-    <attribute name="test.dir" />
-    <attribute name="fileset.dir" />
-    <attribute name="hadoop.home" default="" />
-    <attribute name="hadoop.conf.dir" default="" />
-    <attribute name="hadoop.conf.dir.deployed" default="" />
+    <attribute name="test.file" />
     <sequential>
-      <delete dir="@{test.dir}/data" />
-      <mkdir dir="@{test.dir}/data" />
-      <delete dir="@{test.dir}/logs" />
-      <mkdir dir="@{test.dir}/logs" />
-      <copy file="${test.src.dir}/hadoop-policy.xml"
-            todir="@{test.dir}/extraconf" />
+      <delete file="${test.build.dir}/testsfailed"/>
+      <delete dir="${test.build.data}"/>
+      <mkdir dir="${test.build.data}"/>
+      <delete dir="${test.log.dir}"/>
+      <mkdir dir="${test.log.dir}"/>
+      <copy file="${test.src.dir}/hadoop-policy.xml" 
+        todir="${test.build.extraconf}" />
       <copy file="${test.src.dir}/fi-site.xml"
-            todir="@{test.dir}/extraconf" />
+        todir="${test.build.extraconf}" />
       <junit showoutput="${test.output}"
-             printsummary="${test.junit.printsummary}"
-             haltonfailure="${test.junit.haltonfailure}"
-             fork="yes"
-             forkmode="${test.junit.fork.mode}"
-             maxmemory="${test.junit.maxmemory}"
-             dir="${basedir}"
-             timeout="${test.timeout}"
-             errorProperty="tests.failed"
-             failureProperty="tests.failed">
-        <sysproperty key="test.build.data" value="${test.build.data}" />
-        <sysproperty key="test.tools.input.dir"
-                     value="${test.tools.input.dir}" />
-        <sysproperty key="test.cache.data" value="${test.cache.data}" />
-        <sysproperty key="test.debug.data" value="${test.debug.data}" />
-        <sysproperty key="hadoop.log.dir" value="${test.log.dir}" />
-        <sysproperty key="test.src.dir" value="${test.src.dir}" />
-        <sysproperty key="taskcontroller-path" value="${taskcontroller-path}" />
-        <sysproperty key="taskcontroller-user" value="${taskcontroller-user}" />
-        <sysproperty key="test.build.extraconf"
-                     value="@{test.dir}/extraconf" />
-        <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
+        printsummary="${test.junit.printsummary}"
+        haltonfailure="${test.junit.haltonfailure}"
+        fork="yes"
+        forkmode="${test.junit.fork.mode}"
+        maxmemory="${test.junit.maxmemory}"
+        dir="${basedir}" timeout="${test.timeout}"
+        errorProperty="tests.failed" failureProperty="tests.failed">
+        <sysproperty key="test.build.data" value="${test.build.data}"/>
+        <sysproperty key="test.tools.input.dir" value="${test.tools.input.dir}"/>
+        <sysproperty key="test.cache.data" value="${test.cache.data}"/>     
+        <sysproperty key="test.debug.data" value="${test.debug.data}"/>
+        <sysproperty key="hadoop.log.dir" value="${test.log.dir}"/>
+        <sysproperty key="test.src.dir" value="${test.src.dir}"/>
+        <sysproperty key="taskcontroller-path" value="${taskcontroller-path}"/>
+        <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}"/>
+        <sysproperty key="test.build.extraconf" value="${test.build.extraconf}" />
+        <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml"/>
         <sysproperty key="java.library.path"
-                     value="${build.native}/lib:${lib.dir}/native/${build.platform}" />
-        <sysproperty key="install.c++.examples"
-                     value="${install.c++.examples}" />
-        <sysproperty key="testjar"
-                     value="@{test.dir}/testjar" />
-        <!-- System properties that are specifically set for system tests -->
-        <sysproperty key="test.system.hdrc.hadoophome" value="@{hadoop.home}" />
-        <sysproperty key="test.system.hdrc.hadoopconfdir"
-                     value="@{hadoop.conf.dir}" />
-        <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
-                     value="@{hadoop.conf.dir.deployed}" />
+          value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
+        <sysproperty key="install.c++.examples" value="${install.c++.examples}"/>
         <!-- set io.compression.codec.lzo.class in the child jvm only if it is set -->
         <syspropertyset dynamic="no">
-          <propertyref name="io.compression.codec.lzo.class" />
+          <propertyref name="io.compression.codec.lzo.class"/>
         </syspropertyset>
         <!-- set compile.c++ in the child jvm only if it is set -->
         <syspropertyset dynamic="no">
-          <propertyref name="compile.c++" />
+          <propertyref name="compile.c++"/>
         </syspropertyset>
-        <classpath refid="@{classpath}" />
+        <classpath refid="${test.classpath.id}"/>
         <syspropertyset id="FaultProbabilityProperties">
-          <propertyref regex="fi.*" />
+          <propertyref regex="fi.*"/>
         </syspropertyset>
         <formatter type="${test.junit.output.format}" />
-        <batchtest todir="@{test.dir}" if="tests.notestcase">
-          <fileset dir="@{fileset.dir}"
-                   includes="**/${test.include}.java"
-                   excludes="**/${test.exclude}.java aop/** system/**" />
+        <batchtest todir="${test.build.dir}" if="tests.notestcase">
+          <fileset dir="${test.src.dir}" 
+            excludes="**/${test.exclude}.java aop/**">
+            <patternset>
+              <includesfile name="@{test.file}"/>
+            </patternset>
+          </fileset>
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
           <fileset dir="${test.src.dir}/aop"
-                   includes="**/${test.include}.java"
-                   excludes="**/${test.exclude}.java" />
+            includes="**/${test.include}.java"
+            excludes="**/${test.exclude}.java" />
         </batchtest>
-        <batchtest todir="@{test.dir}" if="tests.testcase">
-          <fileset dir="@{fileset.dir}"
-            includes="**/${testcase}.java" excludes="aop/** system/**"/>
+        <batchtest todir="${test.build.dir}" if="tests.testcase">
+          <fileset dir="${test.src.dir}"
+            includes="**/${testcase}.java" excludes="aop/**"/>
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.testcase.fi">
-          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java" />
+          <fileset dir="${test.src.dir}/aop" includes="**/${testcase}.java"/>
         </batchtest>
         <!--The following batch is for very special occasions only when
-                a non-FI tests are needed to be executed against FI-environment -->
+         a non-FI tests are needed to be executed against FI-environment -->
         <batchtest todir="${test.build.dir}" if="tests.testcaseonly">
-          <fileset dir="${test.src.dir}" includes="**/${testcase}.java" />
+          <fileset dir="${test.src.dir}" includes="**/${testcase}.java"/>
         </batchtest>
       </junit>
       <antcall target="checkfailure"/>
     </sequential>
   </macrodef>
 
+  <target name="test-core" depends="jar-test" description="Run core unit tests"> 
+    <macro-test-runner test.file="${test.all.tests.file}" />
+  </target>
+         
+  <target name="test-commit" depends="jar-test" 
+   description="Run approx 10-minute set of unit tests prior to commiting">
+    <macro-test-runner test.file="${test.commit.tests.file}" />
+  </target>
+  
   <target name="checkfailure" if="tests.failed">
     <touch file="${test.build.dir}/testsfailed"/>
     <fail unless="continueOnFailure">Tests failed!</fail>

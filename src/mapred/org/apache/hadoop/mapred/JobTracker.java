@@ -824,7 +824,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       synchronized (potentiallyFaultyTrackers) {
         fi = potentiallyFaultyTrackers.get(hostName);
         if (fi == null && createIfNeccessary) {
-          fi = new FaultInfo();
+          fi = new FaultInfo(clock.getTime());
           potentiallyFaultyTrackers.put(hostName, fi);
         }
       }

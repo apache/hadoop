@@ -151,7 +151,6 @@ abstract public class Task implements Writable, Configurable {
   private String pidFile = "";
   protected TaskUmbilicalProtocol umbilical;
   private int numSlotsRequired;
-  protected JobTokens jobTokens=null; // storage of the secret keys
   protected SecretKey tokenSecret;
 
   ////////////////////////////////////////////
