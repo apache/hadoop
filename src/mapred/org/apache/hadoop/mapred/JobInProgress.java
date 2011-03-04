@@ -3092,7 +3092,7 @@ public class JobInProgress {
 
     //close the user's FS
     try {
-      FileSystem.closeAllForUGI(userUGI);
+      fs.close();
     } catch (IOException ie) {
       LOG.warn("Ignoring exception " + StringUtils.stringifyException(ie) + 
           " while closing FileSystem for " + userUGI);
