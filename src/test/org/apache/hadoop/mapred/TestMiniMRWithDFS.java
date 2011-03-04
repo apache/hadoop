@@ -322,6 +322,9 @@ public class TestMiniMRWithDFS extends TestCase {
       dfs = new MiniDFSCluster(conf, 4, true, null);
       fileSys = dfs.getFileSystem();
       mr = new MiniMRCluster(taskTrackers, fileSys.getUri().toString(), 1);
+      // make cleanup inline sothat validation of existence of these directories
+      // can be done
+      mr.setInlineCleanupThreads();
 
       runPI(mr, mr.createJobConf());
       runWordCount(mr, mr.createJobConf());

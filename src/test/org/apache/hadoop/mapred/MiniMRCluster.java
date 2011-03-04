@@ -257,7 +257,18 @@ public class MiniMRCluster {
   public int getNumTaskTrackers() {
     return taskTrackerList.size();
   }
-    
+  
+  /**
+   * Sets inline cleanup threads to all task trackers sothat deletion of
+   * temporary files/dirs happen inline
+   */
+  public void setInlineCleanupThreads() {
+    for (int i = 0; i < getNumTaskTrackers(); i++) {
+      getTaskTrackerRunner(i).getTaskTracker().setCleanupThread(
+          new UtilsForTests.InlineCleanupQueue());
+    }
+  }
+
   /**
    * Wait until the system is idle.
    */

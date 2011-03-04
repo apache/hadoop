@@ -19,9 +19,11 @@
 package org.apache.hadoop.mapred;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.io.*;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Enumeration;
 import java.util.Properties;
 
@@ -46,6 +48,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.StringUtils;
 
 /** 
  * Utilities used in unit test.
@@ -426,7 +429,37 @@ public class UtilsForTests {
       }
     }
   }
-  
+
+  /**
+   * Cleans up files/dirs inline. CleanupQueue deletes in a separate thread
+   * asynchronously.
+   */
+  public static class InlineCleanupQueue extends CleanupQueue {
+    List<String> stalePaths = new ArrayList<String>();
+
+    public InlineCleanupQueue() {
+      // do nothing
+    }
+
+    @Override
+    public void addToQueue(PathDeletionContext... contexts) {
+      // delete paths in-line
+      for (PathDeletionContext context : contexts) {
+        try {
+          if (!deletePath(context)) {
+            LOG.warn("Stale path " + context.fullPath);
+            stalePaths.add(context.fullPath);
+          }
+        } catch (IOException e) {
+          LOG.warn("Caught exception while deleting path "
+              + context.fullPath);
+          LOG.info(StringUtils.stringifyException(e));
+          stalePaths.add(context.fullPath);
+        }
+      }
+    }
+  }
+
   static String getTaskSignalParameter(boolean isMap) {
     return isMap 
            ? "test.mapred.map.waiting.target" 

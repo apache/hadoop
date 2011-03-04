@@ -197,6 +197,17 @@ char *get_task_launcher_file(const char *job_dir, const char *attempt_dir) {
       attempt_dir);
 }
 
+/*
+ * Builds the full path of the dir(localTaskDir or localWorkDir)
+ * tt_root : is the base path(i.e. mapred-local-dir) sent to task-controller
+ * dir_to_be_deleted : is either taskDir($taskId) OR taskWorkDir($taskId/work)
+ */
+char *get_task_dir_path(const char *tt_root, const char *user,
+                        const char *jobid, const char *dir_to_be_deleted) {
+  return concatenate(TT_LOCAL_TASK_DIR_PATTERN, "task_dir_full_path", 4,
+                     tt_root, user, jobid, dir_to_be_deleted);
+}
+
 /**
  * Get the log directory for the given attempt.
  */
@@ -218,17 +229,17 @@ int check_tt_root(const char *tt_root) {
  * launcher file resolve to one and same. This is done so as to avoid
  * security pitfalls because of relative path components in the file name.
  */
-int check_task_launcher_path(char *path) {
+int check_path_for_relative_components(char *path) {
   char * resolved_path = (char *) canonicalize_file_name(path);
   if (resolved_path == NULL) {
     fprintf(LOGFILE,
-        "Error resolving the task launcher file path: %s. Passed path: %s\n",
+        "Error resolving the path: %s. Passed path: %s\n",
         strerror(errno), path);
     return ERROR_RESOLVING_FILE_PATH;
   }
   if (strcmp(resolved_path, path) != 0) {
     fprintf(LOGFILE,
-        "Relative path components in the file path: %s. Resolved path: %s\n",
+        "Relative path components in the path: %s. Resolved path: %s\n",
         path, resolved_path);
     free(resolved_path);
     return RELATIVE_PATH_COMPONENTS_IN_FILE_PATH;
@@ -255,20 +266,23 @@ static int change_owner(const char *path, uid_t uid, gid_t gid) {
 static int change_mode(const char *path, mode_t mode) {
   int exit_code = chmod(path, mode);
   if (exit_code != 0) {
-    fprintf(LOGFILE, "chown %d of path %s failed: %s.\n", mode, path,
+    fprintf(LOGFILE, "chmod %d of path %s failed: %s.\n", mode, path,
         strerror(errno));
   }
   return exit_code;
 }
 
 /**
- * Function to secure the given path. It does the following recursively:
+ * Function to change permissions of the given path. It does the following
+ * recursively:
  *    1) changes the owner/group of the paths to the passed owner/group
  *    2) changes the file permission to the passed file_mode and directory
  *       permission to the passed dir_mode
+ *
+ * should_check_ownership : boolean to enable checking of ownership of each path
  */
 static int secure_path(const char *path, uid_t uid, gid_t gid,
-    mode_t file_mode, mode_t dir_mode) {
+    mode_t file_mode, mode_t dir_mode, int should_check_ownership) {
   FTS *tree = NULL; // the file hierarchy
   FTSENT *entry = NULL; // a file in the hierarchy
   char *paths[] = { (char *) path, NULL };//array needs to be NULL-terminated
@@ -361,7 +375,8 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
     if (!process_path) {
       continue;
     }
-    if (compare_ownership(uid, gid, entry->fts_path) == 0) {
+    if (should_check_ownership &&
+          (compare_ownership(uid, gid, entry->fts_path) == 0)) {
       // already set proper permissions.
       // This might happen with distributed cache.
 #ifdef DEBUG
@@ -373,7 +388,7 @@ static int secure_path(const char *path, uid_t uid, gid_t gid,
       continue;
     }
 
-    if (check_ownership(entry->fts_path) != 0) {
+    if (should_check_ownership && (check_ownership(entry->fts_path) != 0)) {
       fprintf(LOGFILE,
           "Invalid file path. %s not user/group owned by the tasktracker.\n",
           entry->fts_path);
@@ -466,8 +481,9 @@ int prepare_attempt_directories(const char *job_id, const char *attempt_id,
         free(job_dir);
         break;
       }
-    } else if (secure_path(attempt_dir, user_detail->pw_uid, tasktracker_gid,
-        S_IRWXU | S_IRWXG, S_ISGID | S_IRWXU | S_IRWXG) != 0) {
+    } else if (secure_path(attempt_dir, user_detail->pw_uid,
+               tasktracker_gid, S_IRWXU | S_IRWXG, S_ISGID | S_IRWXU | S_IRWXG,
+               1) != 0) {
       // No setgid on files and setgid on dirs, 770
       fprintf(LOGFILE, "Failed to secure the attempt_dir %s\n", attempt_dir);
       failed = 1;
@@ -526,8 +542,8 @@ int prepare_task_logs(const char *log_dir, const char *task_id) {
   }
 
   gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
-  if (secure_path(task_log_dir, user_detail->pw_uid, tasktracker_gid, S_IRWXU
-      | S_IRWXG, S_ISGID | S_IRWXU | S_IRWXG) != 0) {
+  if (secure_path(task_log_dir, user_detail->pw_uid, tasktracker_gid,
+      S_IRWXU | S_IRWXG, S_ISGID | S_IRWXU | S_IRWXG, 1) != 0) {
     // setgid on dirs but not files, 770. As of now, there are no files though
     fprintf(LOGFILE, "Failed to secure the log_dir %s\n", task_log_dir);
     return -1;
@@ -640,9 +656,9 @@ int initialize_user(const char *user) {
         free(user_dir);
         break;
       }
-    } else if (secure_path(user_dir, user_detail->pw_uid, tasktracker_gid,
-        S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR | S_IXUSR | S_IRWXG)
-        != 0) {
+    } else if (secure_path(user_dir, user_detail->pw_uid,
+        tasktracker_gid, S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR |
+                         S_IXUSR | S_IRWXG, 1) != 0) {
       // No setgid on files and setgid on dirs, 570
       fprintf(LOGFILE, "Failed to secure the user_dir %s\n",
           user_dir);
@@ -722,7 +738,7 @@ int initialize_job(const char *jobid, const char *user) {
         break;
       }
     } else if (secure_path(job_dir, user_detail->pw_uid, tasktracker_gid,
-        S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR | S_IXUSR | S_IRWXG)
+        S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR | S_IXUSR | S_IRWXG, 1)
         != 0) {
       // No setgid on files and setgid on dirs, 570
       fprintf(LOGFILE, "Failed to secure the job_dir %s\n", job_dir);
@@ -848,7 +864,7 @@ int initialize_distributed_cache(const char *user) {
       }
     } else if (secure_path(distcache_dir, user_detail->pw_uid,
         tasktracker_gid, S_IRUSR | S_IXUSR | S_IRWXG, S_ISGID | S_IRUSR
-            | S_IXUSR | S_IRWXG) != 0) {
+            | S_IXUSR | S_IRWXG, 1) != 0) {
       // No setgid on files and setgid on dirs, 570
       fprintf(LOGFILE, "Failed to secure the distcache_dir %s\n",
           distcache_dir);
@@ -963,7 +979,7 @@ int run_task_as_user(const char * user, const char *jobid, const char *taskid,
   }
 
   errno = 0;
-  exit_code = check_task_launcher_path(task_script_path);
+  exit_code = check_path_for_relative_components(task_script_path);
   if(exit_code != 0) {
     goto cleanup;
   }
@@ -1047,4 +1063,61 @@ int kill_user_task(const char *user, const char *task_pid, int sig) {
   }
   cleanup();
   return 0;
+}
+
+/**
+ * Enables the path for deletion by changing the owner, group and permissions
+ * of the specified path and all the files/directories in the path recursively.
+ *     *  sudo chown user:mapred -R full_path
+ *     *  sudo chmod 2770 -R full_path
+ * Before changing permissions, makes sure that the given path doesn't contain
+ * any relative components.
+ * tt_root : is the base path(i.e. mapred-local-dir) sent to task-controller
+ * dir_to_be_deleted : is either taskDir OR taskWorkDir that is to be deleted
+ */
+int enable_task_for_cleanup(const char *tt_root, const char *user,
+           const char *jobid, const char *dir_to_be_deleted) {
+  int exit_code = 0;
+  gid_t tasktracker_gid = getegid(); // the group permissions of the binary.
+
+  char * full_path = NULL;
+  if (check_tt_root(tt_root) < 0) {
+    fprintf(LOGFILE, "invalid tt root passed %s\n", tt_root);
+    cleanup();
+    return INVALID_TT_ROOT;
+  }
+ 
+  full_path = get_task_dir_path(tt_root, user, jobid, dir_to_be_deleted);
+  if (full_path == NULL) {
+    fprintf(LOGFILE,
+            "Could not build the full path. Not deleting the dir %s\n",
+            dir_to_be_deleted);
+    exit_code = UNABLE_TO_BUILD_PATH; // may be malloc failed
+  }
+     // Make sure that the path given is not having any relative components
+  else if ((exit_code = check_path_for_relative_components(full_path)) != 0) {
+    fprintf(LOGFILE,
+    "Not changing permissions. Path may contain relative components.\n",
+         full_path);
+  }
+  else if (get_user_details(user) < 0) {
+    fprintf(LOGFILE, "Couldn't get the user details of %s.\n", user);
+    exit_code = INVALID_USER_NAME;
+  }
+  else if (exit_code = secure_path(full_path, user_detail->pw_uid,
+               tasktracker_gid,
+               S_IRWXU | S_IRWXG, S_ISGID | S_IRWXU | S_IRWXG, 0) != 0) {
+    // No setgid on files and setgid on dirs, 770.
+    // set 770 permissions for user, TTgroup for all files/directories in
+    // 'full_path' recursively sothat deletion of path by TaskTracker succeeds.
+
+    fprintf(LOGFILE, "Failed to set permissions for %s\n", full_path);
+  }
+
+  if (full_path != NULL) {
+    free(full_path);
+  }
+  // free configurations
+  cleanup();
+  return exit_code;
 }

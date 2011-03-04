@@ -193,7 +193,7 @@ public class Localizer {
     synchronized (localizedUser) {
 
       if (localizedUser.get()) {
-        // User-directories are already localized for his user.
+        // User-directories are already localized for this user.
         LOG.info("User-directories for the user " + user
             + " are already initialized on this TT. Not doing anything.");
         return;

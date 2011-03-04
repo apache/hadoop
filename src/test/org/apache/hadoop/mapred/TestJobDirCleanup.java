@@ -58,6 +58,9 @@ public class TestJobDirCleanup extends TestCase {
       namenode = fileSys.getUri().toString();
       mr = new MiniMRCluster(10, namenode, 3, 
           null, null, mrConf);
+      // make cleanup inline sothat validation of existence of these directories
+      // can be done
+      mr.setInlineCleanupThreads();
       final String jobTrackerName = "localhost:" + mr.getJobTrackerPort();
       JobConf jobConf = mr.createJobConf();
       runSleepJob(jobConf);
@@ -66,13 +69,8 @@ public class TestJobDirCleanup extends TestCase {
                            "/taskTracker/jobcache";
         File jobDir = new File(jobDirStr);
         String[] contents = jobDir.list();
-        while (contents.length > 0) {
-          try {
-            Thread.sleep(1000);
-            LOG.warn(jobDir +" not empty yet");
-            contents = jobDir.list();
-          } catch (InterruptedException ie){}
-        }
+        assertTrue("Contents of " + jobDir + " not cleanup.",
+                   (contents == null || contents.length == 0));
       }
     } catch (Exception ee){
     } finally {

@@ -69,6 +69,8 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.TaskController.JobInitializationContext;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
+import org.apache.hadoop.mapred.TaskController.TaskControllerPathDeletionContext;
 import org.apache.hadoop.mapred.TaskLog.LogFileDetail;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
@@ -186,7 +188,7 @@ public class TaskTracker
   
   // The filesystem where job files are stored
   FileSystem systemFS = null;
-  FileSystem localFs = null;
+  private FileSystem localFs = null;
   private final HttpServer server;
     
   volatile boolean shuttingDown = false;
@@ -401,6 +403,11 @@ public class TaskTracker
     return taskController;
   }
   
+  // Currently this is used only by tests
+  void setTaskController(TaskController t) {
+    taskController = t;
+  }
+  
   private RunningJob addTaskToJob(JobID jobId, 
                                   TaskInProgress tip) {
     synchronized (runningJobs) {
@@ -518,10 +525,7 @@ public class TaskTracker
   
   static String getTaskWorkDir(String user, String jobid, String taskid,
       boolean isCleanupAttempt) {
-    String dir = getLocalJobDir(user, jobid) + Path.SEPARATOR + taskid;
-    if (isCleanupAttempt) {
-      dir = dir + TASK_CLEANUP_SUFFIX;
-    }
+    String dir = getLocalTaskDir(user, jobid, taskid, isCleanupAttempt);
     return dir + Path.SEPARATOR + MRConstants.WORKDIR;
   }
 
@@ -1204,7 +1208,16 @@ public class TaskTracker
     taskCleanupThread.start();
     directoryCleanupThread = new CleanupQueue();
   }
+
+  // only used by tests
+  void setCleanupThread(CleanupQueue c) {
+    directoryCleanupThread = c;
+  }
   
+  CleanupQueue getCleanupThread() {
+    return directoryCleanupThread;
+  }
+
   /**
    * The connection to the JobTracker, used by the TaskRunner 
    * for locating remote files.
@@ -1620,6 +1633,44 @@ public class TaskTracker
   }
 
   /**
+   * Builds list of PathDeletionContext objects for the given paths
+   */
+  private static PathDeletionContext[] buildPathDeletionContexts(FileSystem fs,
+      Path[] paths) {
+    int i = 0;
+    PathDeletionContext[] contexts = new PathDeletionContext[paths.length];
+
+    for (Path p : paths) {
+      contexts[i++] = new PathDeletionContext(fs, p.toUri().getPath());
+    }
+    return contexts;
+  }
+
+  /**
+   * Builds list of TaskControllerPathDeletionContext objects for a task
+   * @param fs    : FileSystem in which the dirs to be deleted
+   * @param paths : mapred-local-dirs
+   * @param task  : the task whose taskDir or taskWorkDir is going to be deleted
+   * @param isWorkDir : the dir to be deleted is workDir or taskDir
+   * @param taskController : the task-controller to be used for deletion of
+   *                         taskDir or taskWorkDir
+   */
+  static PathDeletionContext[] buildTaskControllerPathDeletionContexts(
+      FileSystem fs, Path[] paths, Task task, boolean isWorkDir,
+      TaskController taskController)
+      throws IOException {
+    int i = 0;
+    PathDeletionContext[] contexts =
+                          new TaskControllerPathDeletionContext[paths.length];
+
+    for (Path p : paths) {
+      contexts[i++] = new TaskControllerPathDeletionContext(fs, p, task,
+                          isWorkDir, taskController);
+    }
+    return contexts;
+  }
+
+  /**
    * The task tracker is done with this job, so we need to clean up.
    * @param action The action with the job
    * @throws IOException
@@ -1668,8 +1719,9 @@ public class TaskTracker
    */
   void removeJobFiles(String user, String jobId)
   throws IOException {
-    directoryCleanupThread.addToQueue(localFs, getLocalFiles(fConf,
-        getLocalJobDir(user, jobId)));
+    PathDeletionContext[] contexts = buildPathDeletionContexts(localFs,
+        getLocalFiles(fConf, getLocalJobDir(user, jobId)));
+    directoryCleanupThread.addToQueue(contexts);
   }
 
   /**
@@ -2766,29 +2818,33 @@ public class TaskTracker
           runner.close();
         }
 
-        String localTaskDir =
-            getLocalTaskDir(task.getUser(), task.getJobID().toString(), taskId
-                .toString(), task.isTaskCleanupTask());
         if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
           // No jvm reuse, remove everything
-          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
-              defaultJobConf, localTaskDir));
+          PathDeletionContext[] contexts =
+            buildTaskControllerPathDeletionContexts(localFs,
+                getLocalFiles(fConf, ""), task, false/* not workDir */,
+                taskController);
+          directoryCleanupThread.addToQueue(contexts);
         } else {
           // Jvm reuse. We don't delete the workdir since some other task
           // (running in the same JVM) might be using the dir. The JVM
           // running the tasks would clean the workdir per a task in the
           // task process itself.
-          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
-              defaultJobConf, localTaskDir + Path.SEPARATOR
-                  + TaskTracker.JOBFILE));
+          String localTaskDir =
+            getLocalTaskDir(task.getUser(), task.getJobID().toString(), taskId
+                .toString(), task.isTaskCleanupTask());
+          PathDeletionContext[] contexts = buildPathDeletionContexts(
+              localFs, getLocalFiles(defaultJobConf, localTaskDir +
+                         Path.SEPARATOR + TaskTracker.JOBFILE));
+          directoryCleanupThread.addToQueue(contexts);
         }
       } else {
         if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-          String taskWorkDir =
-              getTaskWorkDir(task.getUser(), task.getJobID().toString(),
-                  taskId.toString(), task.isTaskCleanupTask());
-          directoryCleanupThread.addToQueue(localFs, getLocalFiles(
-              defaultJobConf, taskWorkDir));
+          PathDeletionContext[] contexts =
+            buildTaskControllerPathDeletionContexts(localFs,
+              getLocalFiles(fConf, ""), task, true /* workDir */,
+              taskController);
+          directoryCleanupThread.addToQueue(contexts);
         }
       }
     }
@@ -3380,15 +3436,26 @@ public class TaskTracker
   
 
   // get the full paths of the directory in all the local disks.
-  private Path[] getLocalFiles(JobConf conf, String subdir) throws IOException{
+  Path[] getLocalFiles(JobConf conf, String subdir) throws IOException{
     String[] localDirs = conf.getLocalDirs();
     Path[] paths = new Path[localDirs.length];
     FileSystem localFs = FileSystem.getLocal(conf);
+    boolean subdirNeeded = (subdir != null) && (subdir.length() > 0);
     for (int i = 0; i < localDirs.length; i++) {
-      paths[i] = new Path(localDirs[i], subdir);
+      paths[i] = (subdirNeeded) ? new Path(localDirs[i], subdir)
+                                : new Path(localDirs[i]);
       paths[i] = paths[i].makeQualified(localFs);
     }
     return paths;
+  }
+
+  FileSystem getLocalFileSystem(){
+    return localFs;
+  }
+
+  // only used by tests
+  void setLocalFileSystem(FileSystem fs){
+    localFs = fs;
   }
 
   int getMaxCurrentMapTasks() {

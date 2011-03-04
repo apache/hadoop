@@ -30,7 +30,6 @@ import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.util.ProcessTree;
@@ -143,6 +142,22 @@ class JvmManager {
       reduceJvmManager.killJvm(jvmId);
     }
   }  
+
+  /**
+   * Adds the task's work dir to the cleanup queue of taskTracker for
+   * asynchronous deletion of work dir.
+   * @param tracker taskTracker
+   * @param task    the task whose work dir needs to be deleted
+   * @throws IOException
+   */
+  static void deleteWorkDir(TaskTracker tracker, Task task) throws IOException {
+    tracker.getCleanupThread().addToQueue(
+        TaskTracker.buildTaskControllerPathDeletionContexts(
+          tracker.getLocalFileSystem(),
+          tracker.getLocalFiles(tracker.getJobConf(), ""),
+          task, true /* workDir */,
+          tracker.getTaskController()));
+  }
 
   private static class JvmManagerForType {
     //Mapping from the JVM IDs to running Tasks
@@ -438,7 +453,7 @@ class JvmManager {
             //task at the beginning of each task in the task JVM.
             //For the last task, we do it here.
             if (env.conf.getNumTasksToExecutePerJvm() != 1) {
-              FileUtil.fullyDelete(env.workDir);
+              deleteWorkDir(tracker, initalContext.task);
             }
           } catch (IOException ie){}
         }

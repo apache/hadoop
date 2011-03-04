@@ -40,6 +40,7 @@ import org.apache.hadoop.mapred.JvmManager.JvmEnv;
 import org.apache.hadoop.mapred.TaskController.JobInitializationContext;
 import org.apache.hadoop.mapred.TaskController.TaskControllerContext;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.mapred.UtilsForTests.InlineCleanupQueue;
 
 import junit.framework.TestCase;
 
@@ -73,36 +74,20 @@ public class TestTaskTrackerLocalization extends TestCase {
   protected File[] attemptLogFiles;
   protected JobConf localizedTaskConf;
 
-  class InlineCleanupQueue extends CleanupQueue {
-    List<Path> stalePaths = new ArrayList<Path>();
-
-    public InlineCleanupQueue() {
-      // do nothing
-    }
-
-    @Override
-    public void addToQueue(FileSystem fs, Path... paths) {
-      // delete in-line
-      for (Path p : paths) {
-        try {
-          LOG.info("Trying to delete the path " + p);
-          if (!fs.delete(p, true)) {
-            LOG.warn("Stale path " + p.toUri().getPath());
-            stalePaths.add(p);
-          }
-        } catch (IOException e) {
-          LOG.warn("Caught exception while deleting path "
-              + p.toUri().getPath());
-          LOG.info(StringUtils.stringifyException(e));
-          stalePaths.add(p);
-        }
-      }
-    }
+  /**
+   * Dummy method in this base class. Only derived classes will define this
+   * method for checking if a test can be run.
+   */
+  protected boolean canRun() {
+    return true;
   }
 
   @Override
   protected void setUp()
       throws Exception {
+    if (!canRun()) {
+      return;
+    }
     TEST_ROOT_DIR =
         new File(System.getProperty("test.build.data", "/tmp"), getClass()
             .getSimpleName());
@@ -143,8 +128,9 @@ public class TestTaskTrackerLocalization extends TestCase {
     tracker.setConf(trackerFConf);
 
     // for test case system FS is the local FS
-    tracker.localFs = tracker.systemFS = FileSystem.getLocal(trackerFConf);
-
+    tracker.systemFS = FileSystem.getLocal(trackerFConf);
+    tracker.setLocalFileSystem(tracker.systemFS);
+    
     taskTrackerUGI = UserGroupInformation.login(trackerFConf);
 
     // Set up the task to be localized
@@ -159,8 +145,10 @@ public class TestTaskTrackerLocalization extends TestCase {
     taskController = new DefaultTaskController();
     taskController.setConf(trackerFConf);
     taskController.setup();
-    tracker.setLocalizer(new Localizer(tracker.localFs, localDirs,
-    taskController));
+
+    tracker.setTaskController(taskController);
+    tracker.setLocalizer(new Localizer(tracker.getLocalFileSystem(), localDirs,
+                                       taskController));
   }
 
   /**
@@ -204,6 +192,9 @@ public class TestTaskTrackerLocalization extends TestCase {
   @Override
   protected void tearDown()
       throws Exception {
+    if (!canRun()) {
+      return;
+    }
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
 
@@ -235,6 +226,9 @@ public class TestTaskTrackerLocalization extends TestCase {
    */
   public void testTaskControllerSetup()
       throws IOException {
+    if (!canRun()) {
+      return;
+    }
     // Task-controller is already set up in the test's setup method. Now verify.
     for (String localDir : localDirs) {
 
@@ -258,7 +252,9 @@ public class TestTaskTrackerLocalization extends TestCase {
    */
   public void testUserLocalization()
       throws IOException {
-
+    if (!canRun()) {
+      return;
+    }
     // /////////// The main method being tested
     tracker.getLocalizer().initializeUserDirs(task.getUser());
     // ///////////
@@ -329,7 +325,9 @@ public class TestTaskTrackerLocalization extends TestCase {
    */
   public void testJobLocalization()
       throws IOException {
-
+    if (!canRun()) {
+      return;
+    }
     tracker.getLocalizer().initializeUserDirs(task.getUser());
 
     // /////////// The main method being tested
@@ -423,7 +421,9 @@ public class TestTaskTrackerLocalization extends TestCase {
    */
   public void testTaskLocalization()
       throws IOException {
-
+    if (!canRun()) {
+      return;
+    }
     tracker.getLocalizer().initializeUserDirs(task.getUser());
     localizedJobConf = tracker.localizeJobFiles(task);
 
@@ -539,14 +539,102 @@ public class TestTaskTrackerLocalization extends TestCase {
   }
 
   /**
+   * Validates the removal of $taskid and $tasid/work under mapred-local-dir
+   * in cases where those directories cannot be deleted without adding
+   * write permission to the newly created directories under $taskid and
+   * $taskid/work
+   * Also see TestSetupWorkDir.createFileAndSetPermissions for details
+   */
+  void validateRemoveFiles(boolean needCleanup, boolean jvmReuse,
+                           TaskInProgress tip) throws IOException {
+    // create files and set permissions 555. Verify if task controller sets
+    // the permissions for TT to delete the taskDir or workDir
+    String dir = (!needCleanup || jvmReuse) ?
+        TaskTracker.getTaskWorkDir(task.getUser(), task.getJobID().toString(),
+          taskId.toString(), task.isTaskCleanupTask())
+      : TaskTracker.getLocalTaskDir(task.getUser(), task.getJobID().toString(),
+          taskId.toString(), task.isTaskCleanupTask());
+
+    Path[] paths = tracker.getLocalFiles(localizedJobConf, dir);
+    for (Path p : paths) {
+      if (tracker.getLocalFileSystem().exists(p)) {
+        TestSetupWorkDir.createFileAndSetPermissions(localizedJobConf, p);
+      }
+    }
+
+    InlineCleanupQueue cleanupQueue = new InlineCleanupQueue();
+    tracker.setCleanupThread(cleanupQueue);
+
+    tip.removeTaskFiles(needCleanup, taskId);
+
+    if (jvmReuse) {
+      // work dir should still exist and cleanup queue should be empty
+      assertTrue("cleanup queue is not empty after removeTaskFiles() in case "
+          + "of jvm reuse.", cleanupQueue.isQueueEmpty());
+      boolean workDirExists = false;
+      for (Path p : paths) {
+        if (tracker.getLocalFileSystem().exists(p)) {
+          workDirExists = true;
+        }
+      }
+      assertTrue("work dir does not exist in case of jvm reuse", workDirExists);
+
+      // now try to delete the work dir and verify that there are no stale paths
+      JvmManager.deleteWorkDir(tracker, task);
+    }
+    tracker.removeJobFiles(task.getUser(), jobId.toString());
+
+    assertTrue("Some task files are not deleted!! Number of stale paths is "
+        + cleanupQueue.stalePaths.size(), cleanupQueue.stalePaths.size() == 0);
+  }
+
+  /**
+   * Validates if task cleanup is done properly for a succeeded task
    * @throws IOException
    */
   public void testTaskCleanup()
       throws IOException {
+    if (!canRun()) {
+      return;
+    }
+    testTaskCleanup(false, false);// no needCleanup; no jvmReuse
+  }
 
+  /**
+   * Validates if task cleanup is done properly for a task that is not succeeded
+   * @throws IOException
+   */
+  public void testFailedTaskCleanup()
+  throws IOException {
+    if (!canRun()) {
+      return;
+    }
+    testTaskCleanup(true, false);// needCleanup; no jvmReuse
+  }
+
+  /**
+   * Validates if task cleanup is done properly for a succeeded task
+   * @throws IOException
+   */
+  public void testTaskCleanupWithJvmUse()
+      throws IOException {
+    if (!canRun()) {
+      return;
+    }
+    testTaskCleanup(false, true);// no needCleanup; jvmReuse
+  }
+
+  /**
+   * Validates if task cleanup is done properly
+   */
+  private void testTaskCleanup(boolean needCleanup, boolean jvmReuse)
+      throws IOException {
     // Localize job and localize task.
     tracker.getLocalizer().initializeUserDirs(task.getUser());
     localizedJobConf = tracker.localizeJobFiles(task);
+    if (jvmReuse) {
+      localizedJobConf.setNumTasksToExecutePerJvm(2);
+    }
     // Now initialize the job via task-controller so as to set
     // ownership/permissions of jars, job-work-dir
     JobInitializationContext jobContext = new JobInitializationContext();
@@ -585,18 +673,9 @@ public class TestTaskTrackerLocalization extends TestCase {
 
     // TODO: Let the task run and create files.
 
-    InlineCleanupQueue cleanupQueue = new InlineCleanupQueue();
-    tracker.directoryCleanupThread = cleanupQueue;
-
-    // ////////// The central methods being tested
-    tip.removeTaskFiles(true, taskId);
-    tracker.removeJobFiles(task.getUser(), jobId.toString());
-    // //////////
-
-    // TODO: make sure that all files intended to be deleted are deleted.
-
-    assertTrue("Some task files are not deleted!! Number of stale paths is "
-        + cleanupQueue.stalePaths.size(), cleanupQueue.stalePaths.size() == 0);
+    // create files and set permissions 555. Verify if task controller sets
+    // the permissions for TT to delete the task dir or work dir properly
+    validateRemoveFiles(needCleanup, jvmReuse, tip);
 
     // Check that the empty $mapred.local.dir/taskTracker/$user dirs are still
     // there.
@@ -604,7 +683,7 @@ public class TestTaskTrackerLocalization extends TestCase {
       Path userDir =
           new Path(localDir, TaskTracker.getUserDir(task.getUser()));
       assertTrue("User directory " + userDir + " is not present!!",
-          tracker.localFs.exists(userDir));
+          tracker.getLocalFileSystem().exists(userDir));
     }
 
     // Test userlogs cleanup.
@@ -624,7 +703,7 @@ public class TestTaskTrackerLocalization extends TestCase {
 
     // Logs should be there before cleanup.
     assertTrue("Userlogs dir " + logDir + " is not presen as expected!!",
-        tracker.localFs.exists(logDir));
+        tracker.getLocalFileSystem().exists(logDir));
 
     // ////////// Another being tested
     TaskLog.cleanup(-1); // -1 so as to move purgeTimeStamp to future and file
@@ -633,6 +712,6 @@ public class TestTaskTrackerLocalization extends TestCase {
 
     // Logs should be gone after cleanup.
     assertFalse("Userlogs dir " + logDir + " is not deleted as expected!!",
-        tracker.localFs.exists(logDir));
+        tracker.getLocalFileSystem().exists(logDir));
   }
 }

@@ -44,10 +44,15 @@ public class TestLocalizationWithLinuxTaskController extends
   private static String taskTrackerSpecialGroup;
 
   @Override
+  protected boolean canRun() {
+    return ClusterWithLinuxTaskController.shouldRun();
+  }
+
+  @Override
   protected void setUp()
       throws Exception {
 
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
+    if (!canRun()) {
       return;
     }
 
@@ -65,7 +70,8 @@ public class TestLocalizationWithLinuxTaskController extends
     taskController.setConf(trackerFConf);
     taskController.setup();
 
-    tracker.setLocalizer(new Localizer(tracker.localFs, localDirs,
+    tracker.setTaskController(taskController);
+    tracker.setLocalizer(new Localizer(tracker.getLocalFileSystem(), localDirs,
         taskController));
 
     // Rewrite conf so as to reflect task's correct user name.
@@ -83,7 +89,7 @@ public class TestLocalizationWithLinuxTaskController extends
   @Override
   protected void tearDown()
       throws Exception {
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
+    if (!canRun()) {
       return;
     }
     super.tearDown();
@@ -96,21 +102,6 @@ public class TestLocalizationWithLinuxTaskController extends
   @Override
   public void testTaskControllerSetup() {
     // Do nothing.
-  }
-
-  /**
-   * Test the localization of a user on the TT when {@link LinuxTaskController}
-   * is in use.
-   */
-  @Override
-  public void testUserLocalization()
-      throws IOException {
-
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
-      return;
-    }
-
-    super.testJobLocalization();
   }
 
   @Override
@@ -148,21 +139,6 @@ public class TestLocalizationWithLinuxTaskController extends
       checkFilePermissions(distributedCacheDir.getAbsolutePath(),
           "dr-xrws---", task.getUser(), taskTrackerSpecialGroup);
     }
-  }
-
-  /**
-   * Test job localization with {@link LinuxTaskController}. Also check the
-   * permissions and file ownership of the job related files.
-   */
-  @Override
-  public void testJobLocalization()
-      throws IOException {
-
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
-      return;
-    }
-
-    super.testJobLocalization();
   }
 
   @Override
@@ -210,21 +186,6 @@ public class TestLocalizationWithLinuxTaskController extends
     }
   }
 
-  /**
-   * Test task localization with {@link LinuxTaskController}. Also check the
-   * permissions and file ownership of task related files.
-   */
-  @Override
-  public void testTaskLocalization()
-      throws IOException {
-
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
-      return;
-    }
-
-    super.testTaskLocalization();
-  }
-
   @Override
   protected void checkTaskLocalization()
       throws IOException {
@@ -249,17 +210,5 @@ public class TestLocalizationWithLinuxTaskController extends
       checkFilePermissions(file.toUri().getPath(), "-rwxrwx---", task
           .getUser(), taskTrackerSpecialGroup);
     }
-  }
-
-  /**
-   * Test cleanup of task files with {@link LinuxTaskController}.
-   */
-  @Override
-  public void testTaskCleanup()
-      throws IOException {
-    if (!ClusterWithLinuxTaskController.shouldRun()) {
-      return;
-    }
-    super.testTaskCleanup();
   }
 }
