@@ -1834,6 +1834,12 @@ public class DataNode extends Configured
     return NetUtils.createSocketAddr(address);
   }
 
+  
+  @Override // DataNodeMXBean
+  public String getHostName() {
+    return this.machineName;
+  }
+  
   @Override // DataNodeMXBean
   public String getVersion() {
     return VersionInfo.getVersion();

@@ -24,6 +24,11 @@ package org.apache.hadoop.hdfs.server.datanode;
 public interface DataNodeMXBean {
   
   /**
+   * @return the host name
+   */
+  public String getHostName();
+  
+  /**
    * Gets the version of Hadoop.
    * 
    * @return the version of Hadoop

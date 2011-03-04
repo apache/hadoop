@@ -341,6 +341,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
   // precision of access times.
   private long accessTimePrecision = 0;
+  private String nameNodeHostName;
   
   /**
    * FSNamesystem constructor.
@@ -413,6 +414,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     if (dnsToSwitchMapping instanceof CachedDNSToSwitchMapping) {
       dnsToSwitchMapping.resolve(new ArrayList<String>(hostsReader.getHosts()));
     }
+    
+    InetSocketAddress socAddr = NameNode.getAddress(conf);
+    this.nameNodeHostName = socAddr.getHostName();
     
     registerWith(DefaultMetricsSystem.INSTANCE);
   }
@@ -5159,9 +5163,11 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     return authMethod;
   }
   
-  /**
-   * Class representing Namenode information for JMX interfaces
-   */
+  @Override // NameNodeMXBean
+  public String getHostName() {
+    return this.nameNodeHostName;
+  }
+  
   @Override // NameNodeMXBean
   public String getVersion() {
     return VersionInfo.getVersion();

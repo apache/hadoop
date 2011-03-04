@@ -47,6 +47,9 @@ public class TestNameNodeMXBean {
       MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxbeanName = new ObjectName(
         "Hadoop:service=NameNode,name=NameNodeInfo");
+      // get attribute "HostName"
+      String hostname = (String) mbs.getAttribute(mxbeanName, "HostName");
+      Assert.assertEquals(fsn.getHostName(), hostname);
       // get attribute "Version"
       String version = (String) mbs.getAttribute(mxbeanName, "Version");
       Assert.assertEquals(fsn.getVersion(), version);

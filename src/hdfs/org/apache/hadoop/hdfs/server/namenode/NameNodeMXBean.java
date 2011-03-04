@@ -24,6 +24,11 @@ package org.apache.hadoop.hdfs.server.namenode;
 public interface NameNodeMXBean {
 
   /**
+   * @return the host name
+   */
+  public String getHostName();
+  
+  /**
    * Gets the version of Hadoop.
    * 
    * @return the version
