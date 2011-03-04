@@ -480,8 +480,14 @@ class JSPUtil {
       }
     }
 
+    UserGroupInformation currentUser;
+    if (user == null) {
+      currentUser = UserGroupInformation.getCurrentUser();
+    } else {
+      currentUser = UserGroupInformation.createRemoteUser(user);
+    }
     jobTracker.getJobACLsManager().checkAccess(JobID.forName(jobid),
-        UserGroupInformation.createRemoteUser(user), JobACL.VIEW_JOB,
+        currentUser, JobACL.VIEW_JOB,
         jobInfo.get(Keys.USER), jobInfo.getJobACLs().get(JobACL.VIEW_JOB));
     return jobInfo;
   }
