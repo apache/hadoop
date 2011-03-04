@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapred.gridmix;
 
 import java.io.IOException;
+
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,6 +39,7 @@ import org.apache.hadoop.fs.Path;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.mapred.gridmix.RandomAlgorithms.Selector;
 
 /**
  * Class for caching a pool of input data to be used by synthetic jobs for
@@ -223,22 +225,15 @@ class FilePool {
         return getSize();
       }
 
-      IndexMapper mapping;
-      if ((curdir.size() < 200) || ((double) targetSize / getSize() > 0.5)) {
-        mapping = new DenseIndexMapper(curdir.size());
-      } else {
-        mapping = new SparseIndexMapper();
-      }
-
+      Selector selector = new Selector(curdir.size(), (double) targetSize
+          / getSize(), rand);
+      
       ArrayList<Integer> selected = new ArrayList<Integer>();
       long ret = 0L;
-      int poolSize = curdir.size();
       do {
-        int pos = rand.nextInt(poolSize);
-        int index = mapping.get(pos);
+        int index = selector.next();
         selected.add(index);
         ret += curdir.get(index).getLen();
-        mapping.swap(pos, --poolSize);
       } while (ret < targetSize);
 
       for (Integer i : selected) {

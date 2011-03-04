@@ -20,14 +20,23 @@ package org.apache.hadoop.mapred.gridmix;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.ClusterStatus;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.gridmix.GenerateData.GenSplit;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public enum JobCreator {
 
-  LOADJOB("LOADJOB") {
+  LOADJOB {
     @Override
     public GridmixJob createGridmixJob(
       Configuration conf, long submissionMillis, JobStory jobdesc, Path outRoot,
@@ -35,22 +44,39 @@ public enum JobCreator {
       return new LoadJob(conf, submissionMillis, jobdesc, outRoot, ugi, seq);
     }},
 
-  SLEEPJOB("SLEEPJOB") {
+  SLEEPJOB {
+    private String[] hosts;
+      
     @Override
     public GridmixJob createGridmixJob(
       Configuration conf, long submissionMillis, JobStory jobdesc, Path outRoot,
       UserGroupInformation ugi, int seq) throws IOException {
-      return new SleepJob(conf, submissionMillis, jobdesc, outRoot, ugi, seq);
+      int numLocations = conf.getInt(SLEEPJOB_RANDOM_LOCATIONS, 0);
+      if (numLocations < 0) numLocations=0;
+      if ((numLocations > 0) && (hosts == null)) {
+        final JobClient client = new JobClient(new JobConf(conf));
+        ClusterStatus stat = client.getClusterStatus(true);
+        final int nTrackers = stat.getTaskTrackers();
+        final ArrayList<String> hostList = new ArrayList<String>(nTrackers);
+        final Pattern trackerPattern = Pattern.compile("tracker_([^:]*):.*");
+        final Matcher m = trackerPattern.matcher("");
+        for (String tracker : stat.getActiveTrackerNames()) {
+          m.reset(tracker);
+          if (!m.find()) {
+            continue;
+          }
+          final String name = m.group(1);
+          hostList.add(name);
+        }
+        hosts = hostList.toArray(new String[hostList.size()]);
+      }
+      return new SleepJob(conf, submissionMillis, jobdesc, outRoot, ugi, seq,
+          numLocations, hosts);
     }};
 
   public static final String GRIDMIX_JOB_TYPE = "gridmix.job.type";
-
-
-  private final String name;
-
-  JobCreator(String name) {
-    this.name = name;
-  }
+  public static final String SLEEPJOB_RANDOM_LOCATIONS = 
+    "gridmix.sleep.fake-locations";
 
   public abstract GridmixJob createGridmixJob(
     final Configuration conf, long submissionMillis, final JobStory jobdesc,

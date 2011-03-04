@@ -44,7 +44,10 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
    * overloaded. For running maps, we only count them partially. Namely, a 40%
    * completed map is counted as 0.6 map tasks in our calculation.
    */
-  static final float OVERLOAD_MAPTASK_MAPSLOT_RATIO = 2.0f;
+  private static final float OVERLOAD_MAPTASK_MAPSLOT_RATIO = 2.0f;
+  public static final String CONF_OVERLOAD_MAPTASK_MAPSLOT_RATIO=
+      "gridmix.throttle.maps.task-to-slot-ratio";
+  final float overloadMapTaskMapSlotRatio;
 
   /**
    * The minimum ratio between pending+running reduce tasks (aka. incomplete
@@ -53,19 +56,37 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
    * Namely, a 40% completed reduce is counted as 0.6 reduce tasks in our
    * calculation.
    */
-  static final float OVERLOAD_REDUCETASK_REDUCESLOT_RATIO = 2.5f;
+  private static final float OVERLOAD_REDUCETASK_REDUCESLOT_RATIO = 2.5f;
+  public static final String CONF_OVERLOAD_REDUCETASK_REDUCESLOT_RATIO=
+    "gridmix.throttle.reduces.task-to-slot-ratio";
+  final float overloadReduceTaskReduceSlotRatio;
 
   /**
    * The maximum share of the cluster's mapslot capacity that can be counted
    * toward a job's incomplete map tasks in overload calculation.
    */
-  static final float MAX_MAPSLOT_SHARE_PER_JOB=0.1f;
-
+  private static final float MAX_MAPSLOT_SHARE_PER_JOB=0.1f;
+  public static final String CONF_MAX_MAPSLOT_SHARE_PER_JOB=
+    "gridmix.throttle.maps.max-slot-share-per-job";  
+  final float maxMapSlotSharePerJob;
+  
   /**
    * The maximum share of the cluster's reduceslot capacity that can be counted
    * toward a job's incomplete reduce tasks in overload calculation.
    */
-  static final float MAX_REDUCESLOT_SHARE_PER_JOB=0.1f;
+  private static final float MAX_REDUCESLOT_SHARE_PER_JOB=0.1f;
+  public static final String CONF_MAX_REDUCESLOT_SHARE_PER_JOB=
+    "gridmix.throttle.reducess.max-slot-share-per-job";  
+  final float maxReduceSlotSharePerJob;
+
+  /**
+   * The ratio of the maximum number of pending+running jobs over the number of
+   * task trackers.
+   */
+  private static final float MAX_JOB_TRACKER_RATIO=1.0f;
+  public static final String CONF_MAX_JOB_TRACKER_RATIO=
+    "gridmix.throttle.jobs-to-tracker-ratio";  
+  final float maxJobTrackerRatio;
 
   /**
    * Creating a new instance does not start the thread.
@@ -84,6 +105,17 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
     throws IOException {
     super(
       submitter, jobProducer, scratch, conf, startFlag, resolver);
+    overloadMapTaskMapSlotRatio = conf.getFloat(
+        CONF_OVERLOAD_MAPTASK_MAPSLOT_RATIO, OVERLOAD_MAPTASK_MAPSLOT_RATIO);
+    overloadReduceTaskReduceSlotRatio = conf.getFloat(
+        CONF_OVERLOAD_REDUCETASK_REDUCESLOT_RATIO, 
+        OVERLOAD_REDUCETASK_REDUCESLOT_RATIO);
+    maxMapSlotSharePerJob = conf.getFloat(
+        CONF_MAX_MAPSLOT_SHARE_PER_JOB, MAX_MAPSLOT_SHARE_PER_JOB);
+    maxReduceSlotSharePerJob = conf.getFloat(
+        CONF_MAX_REDUCESLOT_SHARE_PER_JOB, MAX_REDUCESLOT_SHARE_PER_JOB);
+    maxJobTrackerRatio = conf.getFloat(
+        CONF_MAX_JOB_TRACKER_RATIO, MAX_JOB_TRACKER_RATIO);
   }
 
   public Thread createReaderThread() {
@@ -194,19 +226,19 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
     }
   }
 
-  static float calcEffectiveIncompleteMapTasks(int mapSlotCapacity,
+  float calcEffectiveIncompleteMapTasks(int mapSlotCapacity,
       int numMaps, float mapProgress) {
     float maxEffIncompleteMapTasks = Math.max(1.0f, mapSlotCapacity
-        * MAX_MAPSLOT_SHARE_PER_JOB);
+        * maxMapSlotSharePerJob);
     float mapProgressAdjusted = Math.max(Math.min(mapProgress, 1.0f), 0.0f);
     return Math.min(maxEffIncompleteMapTasks, numMaps
         * (1.0f - mapProgressAdjusted));
   }
 
-  static float calcEffectiveIncompleteReduceTasks(int reduceSlotCapacity,
+  float calcEffectiveIncompleteReduceTasks(int reduceSlotCapacity,
       int numReduces, float reduceProgress) {
     float maxEffIncompleteReduceTasks = Math.max(1.0f, reduceSlotCapacity
-        * MAX_REDUCESLOT_SHARE_PER_JOB);
+        * maxReduceSlotSharePerJob);
     float reduceProgressAdjusted = Math.max(Math.min(reduceProgress, 1.0f),
         0.0f);
     return Math.min(maxEffIncompleteReduceTasks, numReduces
@@ -226,7 +258,8 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
     loadStatus.reduceSlotCapacity = clusterStatus.getMaxReduceTasks();
     
     
-    loadStatus.numJobsBackfill = clusterStatus.getTaskTrackers()
+    loadStatus.numJobsBackfill = 
+      (int)(maxJobTrackerRatio*clusterStatus.getTaskTrackers())
         - stats.getNumRunningJob();
     if (loadStatus.numJobsBackfill <= 0) {
       if (LOG.isDebugEnabled()) {
@@ -244,7 +277,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
       incompleteMapTasks += calcEffectiveIncompleteMapTasks(clusterStatus
           .getMaxMapTasks(), noOfMaps, mapProgress);
     }
-    loadStatus.mapSlotsBackfill = (int) (OVERLOAD_MAPTASK_MAPSLOT_RATIO
+    loadStatus.mapSlotsBackfill = (int) (overloadMapTaskMapSlotRatio
         * clusterStatus.getMaxMapTasks() - incompleteMapTasks);
     if (loadStatus.mapSlotsBackfill <= 0) {
       if (LOG.isDebugEnabled()) {
@@ -264,7 +297,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
             clusterStatus.getMaxReduceTasks(), noOfReduces, reduceProgress);
       }
     }
-    loadStatus.reduceSlotsBackfill = (int) (OVERLOAD_REDUCETASK_REDUCESLOT_RATIO
+    loadStatus.reduceSlotsBackfill = (int) (overloadReduceTaskReduceSlotRatio
         * clusterStatus.getMaxReduceTasks() - incompleteReduceTasks);
     if (loadStatus.reduceSlotsBackfill <= 0) {
       if (LOG.isDebugEnabled()) {

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.mapred.TaskStatus;
+import org.apache.hadoop.mapred.gridmix.RandomAlgorithms.Selector;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
@@ -53,16 +55,42 @@ import org.apache.commons.logging.LogFactory;
 
 public class SleepJob extends GridmixJob {
   public static final Log LOG = LogFactory.getLog(SleepJob.class);
-
+  private static final ThreadLocal <Random> rand = 
+    new ThreadLocal <Random> () {
+        @Override protected Random initialValue() {
+            return new Random();
+    }
+  };
+  
+  public static final String SLEEPJOB_MAPTASK_ONLY="gridmix.sleep.maptask-only";
+  private final boolean mapTasksOnly;
+  private final int fakeLocations;
+  private final String[] hosts;
+  private final Selector selector;
+  
   /**
    * Interval at which to report progress, in seconds.
    */
   public static final String GRIDMIX_SLEEP_INTERVAL = "gridmix.sleep.interval";
+  public static final String GRIDMIX_SLEEP_MAX_MAP_TIME = 
+    "gridmix.sleep.max-map-time";
+  public static final String GRIDMIX_SLEEP_MAX_REDUCE_TIME = 
+    "gridmix.sleep.max-reduce-time";
 
-  public SleepJob(
-    Configuration conf, long submissionMillis, JobStory jobdesc, Path outRoot,
-    UserGroupInformation ugi, int seq) throws IOException {
+  private long mapMaxSleepTime, reduceMaxSleepTime;
+
+  public SleepJob(Configuration conf, long submissionMillis, JobStory jobdesc,
+      Path outRoot, UserGroupInformation ugi, int seq, int numLocations,
+      String[] hosts) throws IOException {
     super(conf, submissionMillis, jobdesc, outRoot, ugi, seq);
+    this.fakeLocations = numLocations;
+    this.hosts = hosts;
+    this.selector = (fakeLocations > 0)? new Selector(hosts.length, (float) fakeLocations
+        / hosts.length, rand.get()) : null;
+    this.mapTasksOnly = conf.getBoolean(SLEEPJOB_MAPTASK_ONLY, false);
+    mapMaxSleepTime = conf.getLong(GRIDMIX_SLEEP_MAX_MAP_TIME, Long.MAX_VALUE);
+    reduceMaxSleepTime = conf.getLong(GRIDMIX_SLEEP_MAX_REDUCE_TIME,
+        Long.MAX_VALUE);
   }
 
   @Override
@@ -74,7 +102,7 @@ public class SleepJob extends GridmixJob {
           throws IOException, ClassNotFoundException, InterruptedException {
           job.setMapperClass(SleepMapper.class);
           job.setReducerClass(SleepReducer.class);
-          job.setNumReduceTasks(jobdesc.getNumberReduces());
+          job.setNumReduceTasks((mapTasksOnly) ? 0 : jobdesc.getNumberReduces());
           job.setMapOutputKeyClass(GridmixKey.class);
           job.setMapOutputValueClass(NullWritable.class);
           job.setSortComparatorClass(GridmixKey.Comparator.class);
@@ -339,7 +367,7 @@ public class SleepJob extends GridmixJob {
   @Override
   void buildSplits(FilePool inputDir) throws IOException {
     final List<InputSplit> splits = new ArrayList<InputSplit>();
-    final int reds = jobdesc.getNumberReduces();
+    final int reds = (mapTasksOnly) ? 0 : jobdesc.getNumberReduces();
     final int maps = jobdesc.getNumberMaps();
     for (int i = 0; i < maps; ++i) {
       final int nSpec = reds / maps + ((reds % maps) > i ? 1 : 0);
@@ -349,7 +377,8 @@ public class SleepJob extends GridmixJob {
           (ReduceTaskAttemptInfo) getSuccessfulAttemptInfo(
             TaskType.REDUCE, i + j * maps);
         // Include only merge/reduce time
-        redDurations[j] = info.getMergeRuntime() + info.getReduceRuntime();
+        redDurations[j] = Math.min(reduceMaxSleepTime, info.getMergeRuntime()
+            + info.getReduceRuntime());
         if (LOG.isDebugEnabled()) {
           LOG.debug(
             String.format(
@@ -358,9 +387,19 @@ public class SleepJob extends GridmixJob {
         }
       }
       final TaskAttemptInfo info = getSuccessfulAttemptInfo(TaskType.MAP, i);
-      splits.add(
-        new SleepSplit(
-          i, info.getRuntime(), redDurations, maps, new String[0]));
+      ArrayList<String> locations = new ArrayList<String>(fakeLocations);
+      if (fakeLocations > 0) {
+        selector.reset();
+      }
+      for (int k=0; k<fakeLocations; ++k) {
+        int index = selector.next();
+        if (index < 0) break;
+        locations.add(hosts[index]);
+      }
+
+      splits.add(new SleepSplit(i,
+          Math.min(info.getRuntime(), mapMaxSleepTime), redDurations, maps,
+          locations.toArray(new String[locations.size()])));
     }
     pushDescription(id(), splits);
   }
