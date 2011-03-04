@@ -73,6 +73,8 @@ if [ $# = 0 ]; then
   echo "  jar <jar>            run a jar file"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
   echo "  archive -archiveName NAME <src>* <dest> create a hadoop archive"
+  echo "  classpath            prints the class path needed to get the"
+  echo "                       Hadoop jar and the required libraries"
   echo "  daemonlog            get/set the log level for each daemon"
   echo " or"
   echo "  CLASSNAME            run the class named CLASSNAME"
@@ -182,7 +184,13 @@ fi
 unset IFS
 
 # figure out which class to run
-if [ "$COMMAND" = "namenode" ] ; then
+if [ "$COMMAND" = "classpath" ] ; then
+  if $cygwin; then
+    CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+  fi
+  echo $CLASSPATH
+  exit
+elif [ "$COMMAND" = "namenode" ] ; then
   CLASS='org.apache.hadoop.hdfs.server.namenode.NameNode'
   HADOOP_OPTS="$HADOOP_OPTS $HADOOP_NAMENODE_OPTS"
 elif [ "$COMMAND" = "secondarynamenode" ] ; then

@@ -409,6 +409,15 @@
 					 Runs the class named CLASSNAME.
 				</p>
 			</section>
+			<section>
+				<title> classpath </title>
+				<p>
+					Prints the class path needed to get the Hadoop jar and the required libraries.
+				</p>
+				<p>
+					<code>Usage: hadoop classpath</code>
+				</p>
+			</section>
     </section>
 		<section>
 			<title> Administration Commands </title>
