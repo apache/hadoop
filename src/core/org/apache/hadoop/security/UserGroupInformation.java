@@ -448,7 +448,7 @@ public class UserGroupInformation {
    * Get the Kerberos TGT
    * @return the user's TGT or null if none was found
    */
-  private KerberosTicket getTGT() {
+  private synchronized KerberosTicket getTGT() {
     Set<KerberosTicket> tickets = 
       subject.getPrivateCredentials(KerberosTicket.class);
     for(KerberosTicket ticket: tickets) {
@@ -674,13 +674,10 @@ public class UserGroupInformation {
         || !isKeytab)
       return;
     KerberosTicket tgt = getTGT();
-    if (tgt == null) {
+    if (tgt != null && System.currentTimeMillis() < getRefreshTime(tgt)) {
       return;
     }
-
-    if (System.currentTimeMillis() > getRefreshTime(tgt)) {
-      reloginFromKeytab();
-    }
+    reloginFromKeytab();
   }
   
   /**
