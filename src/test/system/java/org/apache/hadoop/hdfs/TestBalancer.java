@@ -97,7 +97,7 @@ public class TestBalancer {
     }
 
     // Trivial @Test
-    public void testNameNodePing() throws IOException {
+    public void testNamenodePing() throws IOException {
         LOG.info("testing filesystem ping");
         NNClient namenode = dfsCluster.getNNClient();
         namenode.ping();
@@ -105,7 +105,7 @@ public class TestBalancer {
     }
 
     // Trivial @Test
-    public void testNameNodeConnectDisconnect() throws IOException {
+    public void testNamenodeConnectDisconnect() throws IOException {
         LOG.info("connecting to namenode");
         NNClient namenode = dfsCluster.getNNClient();
         namenode.connect();
@@ -132,7 +132,7 @@ public class TestBalancer {
         List<DNClient> testDNList = null;
         Path balancerTempDir = null;
         try {
-            DNClient[] datanodes = getReserveDataNodes();
+            DNClient[] datanodes = getReserveDatanodes();
             DNClient datanode1 = datanodes[0];
             DNClient datanode2 = datanodes[1];
 
@@ -143,24 +143,22 @@ public class TestBalancer {
                 try {
                     DNClient dn = iter.next();
                     // kill doesn't work with secure-HDFS, so using our stopDataNode() method
-                    stopDataNode( dn );
+                    stopDatanode( dn );
                     i++;
                 } catch (Exception e) {
                     LOG.info("error shutting down node " + i + ": " + e);
                 }
             }
-            
+
             LOG.info("attempting to kill both test nodes");
             // TODO add check to make sure there is enough capacity on these nodes to run test
-            stopDataNode(datanode1);
-            stopDataNode(datanode2);
+            stopDatanode(datanode1);
+            stopDatanode(datanode2);
 
             LOG.info("starting up datanode ["+
             datanode1.getHostName()+
             "] and loading it with data");
-            startDataNode(datanode1);
-            // TODO make an appropriate JMXListener interface
-            JMXListenerBean lsnr1 = JMXListenerBean.listenForDataNodeInfo(datanode1);
+            startDatanode(datanode1);
 
             // mkdir balancer-temp
             balancerTempDir = makeTempDir();
@@ -170,19 +168,20 @@ public class TestBalancer {
             generateFileSystemLoad(2);  // generate 2 blocks of test data
 
             LOG.info("measure space used on 1st node");
-            long usedSpace0 = lsnr1.getDataNodeUsedSpace();
+            long usedSpace0 = getDatanodeUsedSpace(datanode1);
             LOG.info("datanode " + datanode1.getHostName()
                     + " contains " + usedSpace0 + " bytes");
 
             LOG.info("bring up a 2nd node and run balancer on DFS");
-            startDataNode(datanode2);
+            startDatanode(datanode2);
             runBalancer();
 
-            JMXListenerBean lsnr2 = JMXListenerBean.listenForDataNodeInfo(datanode2);
+            //JMXListenerBean lsnr2 = JMXListenerBean.listenForDataNodeInfo(datanode2);
+
             LOG.info("measure blocks and files on both nodes, assert these "
                     + "counts are identical pre- and post-balancer run");
-            long usedSpace1 = lsnr1.getDataNodeUsedSpace();
-            long usedSpace2 = lsnr2.getDataNodeUsedSpace();
+            long usedSpace1 = getDatanodeUsedSpace(datanode1);
+            long usedSpace2 = getDatanodeUsedSpace(datanode2);
             long observedValue = usedSpace1 + usedSpace2;
             long expectedValue = usedSpace0;
             int errorTolerance = 10;
@@ -217,13 +216,13 @@ public class TestBalancer {
 
             while (iter.hasNext()) {
                 DNClient dn = iter.next();
-                startDataNode( dn );
+                startDatanode( dn );
             }
         }
     }
 
     /** Kill all datanodes but 2, return a list of the reserved datanodes */
-    private DNClient[] getReserveDataNodes() {
+    private DNClient[] getReserveDatanodes() {
         List<DNClient> testDNs = new LinkedList<DNClient>();
         List<DNClient> dieDNs = new LinkedList<DNClient>();
         LOG.info("getting collection of live data nodes");
@@ -256,10 +255,10 @@ public class TestBalancer {
         dieDNs.remove(testDN);
 
         LOG.info("nodes reserved for test");
-        printDataNodeList(testDNs);
+        printDatanodeList(testDNs);
 
         LOG.info("nodes not used in test");
-        printDataNodeList(dieDNs);
+        printDatanodeList(dieDNs);
 
         DNClient[] arr = new DNClient[]{};
         return (DNClient[]) testDNs.toArray(arr);
@@ -329,19 +328,19 @@ public class TestBalancer {
         srcFs.delete(temp, true);
     }
 
-    private void printDataNodeList(List<DNClient> lis) {
+    private void printDatanodeList(List<DNClient> lis) {
         for (DNClient datanode : lis) {
             LOG.info("\t" + datanode.getHostName());
         }
     }
 
     private final static String CMD_STOP_DN = "sudo yinst stop hadoop_datanode_admin";
-    private void stopDataNode(DNClient dn) {
+    private void stopDatanode(DNClient dn) {
         String dnHost = dn.getHostName();
         runAndWatch(dnHost, CMD_STOP_DN);
     }
     private final static String CMD_START_DN = "sudo yinst start hadoop_datanode_admin";
-    private void startDataNode(DNClient dn) {
+    private void startDatanode(DNClient dn) {
         String dnHost = dn.getHostName();
         runAndWatch(dnHost, CMD_START_DN);
     }
@@ -419,222 +418,23 @@ public class TestBalancer {
     private void watchProcStream(InputStream in, PrintStream out) {
         new Thread(new StreamWatcher(in, out)).start();
     }
-
-    static class JMXListenerBean {
-
-        static final String OPTION_REMOTE_PORT       = "-Dcom.sun.management.jmxremote.port";
-        static final String HADOOP_JMX_SERVICE_NAME  = "HadoopInfo";
-        static final String HADOOP_JMX_INFO_DATANODE = "DataNodeInfo";
-
-        public static JMXListenerBean listenFor(
-                AbstractDaemonClient remoteDaemon,
-                String typeName)
-            throws
-                java.io.IOException,
-                InstanceNotFoundException {
-            String hostName = remoteDaemon.getHostName();
-            int portNum = getJmxPortNumber(remoteDaemon);
-            ObjectName jmxBeanName = getJmxBeanName(typeName);
-            return new JMXListenerBean(hostName, portNum, jmxBeanName);
+    private static final String DATANODE_VOLUME_INFO = "VolumeInfo";
+    private static final String ATTRNAME_USED_SPACE="usedSpace";
+    private long getDatanodeUsedSpace(DNClient datanode) throws IOException {
+        Object volInfo = datanode.getDaemonAttribute(DATANODE_VOLUME_INFO);
+        Assert.assertNotNull("Attribute %s should be non-null", volInfo);
+        String strVolInfo = volInfo.toString();
+        LOG.debug( String.format("Value of %s: %s",
+                   DATANODE_VOLUME_INFO,
+                   strVolInfo) );
+        Map volInfoMap = (Map) JSON.parse(strVolInfo);
+        long totalUsedSpace = 0L;
+        for(Object key: volInfoMap.keySet()) {
+            Map attrMap = (Map) volInfoMap.get(key);
+            long usedSpace = (Long) attrMap.get(ATTRNAME_USED_SPACE);
+            totalUsedSpace += usedSpace;
         }
-
-        public static JMXListenerBean listenForDataNodeInfo(
-                AbstractDaemonClient remoteDaemon)
-            throws
-                java.io.IOException,
-                InstanceNotFoundException {
-            return listenFor(remoteDaemon, HADOOP_JMX_INFO_DATANODE);
-        }
-
-        private static int getJmxPortNumber(AbstractDaemonClient daemon) throws java.io.IOException {
-            String hadoopOpts = daemon.getProcessInfo().getEnv().get("HADOOP_OPTS");
-            int portNumber = 0;
-            boolean found = false;
-            String[] options = hadoopOpts.split(" ");
-            for(String opt : options) {
-                if(opt.startsWith(OPTION_REMOTE_PORT)) {
-                    found = true;
-                    try {
-                        portNumber = Integer.parseInt(opt.split("=")[1]);
-                    } catch(NumberFormatException numFmtExc) {
-                        throw new IllegalArgumentException("JMX remote port is not an integer");
-                    } catch(ArrayIndexOutOfBoundsException outOfBoundsExc) {
-                        throw new IllegalArgumentException("JMX remote port not found");
-                    }
-                }
-            }
-            if (!found) {
-                String errMsg =
-                        String.format("Cannot detect JMX remote port for %s daemon on host %s",
-                        getDaemonType(daemon),
-                        daemon.getHostName());
-                throw new IllegalArgumentException(errMsg);
-            }
-            return portNumber;
-        }
-
-        private static String getDaemonType(AbstractDaemonClient daemon) {
-            Class daemonClass = daemon.getClass();
-            if (daemonClass.equals(DNClient.class))
-                return "datanode";
-            else if (daemonClass.equals(TTClient.class))
-                return "tasktracker";
-            else if (daemonClass.equals(NNClient.class))
-                return "namenode";
-            else if (daemonClass.equals(JTClient.class))
-                return "jobtracker";
-            else
-                return "unknown";
-        }
-
-        private MBeanServerConnection establishJmxConnection() {
-            MBeanServerConnection conn = null;
-            String urlPattern = String.format(
-                        "service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi",
-                        hostName, portNumber );
-            try {
-                JMXServiceURL url = new JMXServiceURL(urlPattern);
-                JMXConnector connector = JMXConnectorFactory.connect(url,null);
-                conn = connector.getMBeanServerConnection();
-            } catch(java.net.MalformedURLException badURLExc) {
-                LOG.debug("bad url: "+urlPattern, badURLExc);
-            } catch(java.io.IOException ioExc) {
-                LOG.debug("i/o error!", ioExc);
-            }
-            return conn;
-        }
-
-        private static ObjectName getJmxBeanName(String typeName) {
-            ObjectName jmxBean = null;
-            String jmxRef = String.format(
-                    "%s:type=%s",
-                    HADOOP_JMX_SERVICE_NAME, typeName);
-            try {
-                jmxBean = new ObjectName(jmxRef);
-            } catch(MalformedObjectNameException badObjNameExc) {
-                LOG.debug("bad jmx name: "+jmxRef, badObjNameExc);
-            }
-            return jmxBean;
-        }
-
-        private String hostName;
-        private int portNumber;
-        private ObjectName beanName;
-
-        private JMXListenerBean(String hostName, int portNumber, ObjectName beanName)
-                throws
-                IOException,
-                InstanceNotFoundException {
-            //this.conn = conn;
-            this.hostName = hostName;
-            this.portNumber = portNumber;
-            this.beanName = beanName;
-        }
-
-        private Object getAttribute(String attribName)
-                throws
-                javax.management.AttributeNotFoundException,
-                javax.management.InstanceNotFoundException,
-                javax.management.ReflectionException,
-                javax.management.MBeanException,
-                java.io.IOException {
-
-            MBeanServerConnection conn = establishJmxConnection();
-            return conn.getAttribute(beanName, attribName);
-        }
-
-        private final static String TITLE_UBAR;
-        private final static String TOTAL_OBAR;
-        static {
-            char[] ubar1 = new char[100];
-            Arrays.fill(ubar1, '=');
-            TITLE_UBAR = new String(ubar1);
-            Arrays.fill(ubar1, '-');
-            TOTAL_OBAR = new String(ubar1);
-        }
-
-        private void printVolInfo(Map volInfoMap) {
-            StringBuilder bldr = new StringBuilder();
-            if (LOG.isDebugEnabled()) {
-                String spaceType = (String)volInfoMap.get("spaceType");
-                String spaceTypeHeader = "Space ";
-                if(spaceType.startsWith("used")) {
-                    spaceTypeHeader += "Used";
-                } else {
-                    spaceTypeHeader += "Free";
-                }
-                String titleLine = String.format(
-                    "%30s\t%20s\n%30s\t%20s",
-                    "Volume", "Space "+spaceType, TITLE_UBAR, TITLE_UBAR);
-                bldr.append( titleLine );
-                for (Object key : volInfoMap.keySet()) {
-                    if ("total".equals(key))
-                        continue;
-
-                    Map attrMap = (Map) volInfoMap.get(key);
-                    long usedSpace = (Long) attrMap.get(spaceType);
-                    bldr.append(String.format("%30s\t%20s",key,usedSpace));
-                }
-                String totalLine = String.format(
-                        "%30s\t%20s\n%30s\t%20s",
-                        TOTAL_OBAR, TOTAL_OBAR, "Total", volInfoMap.get("total"));
-                bldr.append(totalLine);
-                LOG.debug( bldr.toString() );
-            }
-        }
-
-        public Map processVolInfo(String spaceType)
-                throws
-                javax.management.AttributeNotFoundException,
-                javax.management.InstanceNotFoundException,
-                javax.management.ReflectionException,
-                javax.management.MBeanException,
-                java.io.IOException {
-
-            Object volInfo = getAttribute("VolumeInfo");
-            LOG.debug("retrieved volume info object " + volInfo);
-            Map info = (Map) JSON.parse(volInfo.toString());
-            long total = 0L;
-            for (Object key : info.keySet()) {
-                Map attrMap = (Map) info.get(key);
-                long volAlloc = (Long) attrMap.get(spaceType);
-                LOG.info(String.format("volume %s has %d bytes space in use", key, volAlloc));
-                total  += volAlloc;
-            }
-            info.put("total", total);
-            info.put("spaceType", spaceType);
-            return info;
-        }
-
-        public long getDataNodeUsedSpace()
-                throws
-                javax.management.AttributeNotFoundException,
-                javax.management.InstanceNotFoundException,
-                javax.management.ReflectionException,
-                javax.management.MBeanException,
-                java.io.IOException {
-
-            LOG.debug("checking DFS space used on host " + hostName);
-            Map volInfoMap = processVolInfo("usedSpace");
-            printVolInfo(volInfoMap);
-            long totalUsedSpace =  Long.parseLong(volInfoMap.get("total").toString());
-            return totalUsedSpace;
-        }
-
-        public long getDataNodeFreeSpace()
-                throws
-                javax.management.AttributeNotFoundException,
-                javax.management.InstanceNotFoundException,
-                javax.management.ReflectionException,
-                javax.management.MBeanException,
-                java.io.IOException {
-
-            LOG.debug("checking DFS space free on host " + hostName);
-            Map volInfoMap = processVolInfo("freeSpace");
-            printVolInfo(volInfoMap);
-            long totalFreeSpace = Long.parseLong(volInfoMap.get("total").toString());
-            return totalFreeSpace;
-        }
+        return totalUsedSpace;
     }
 
     /** simple utility to watch streams from an exec'ed process */
@@ -678,4 +478,348 @@ public class TestBalancer {
             }
         }
     }
+
+    /**
+     * Balancer_01
+     * Start balancer and check if the cluster is balanced after the run.
+     * Cluster should end up in balanced state.
+     */
+    @Test
+    public void testBalancerSimple() throws IOException {
+        // run balancer on "normal"cluster cluster
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_02
+     * Test a cluster with even distribution, then a new empty node is
+     * added to the cluster.
+     */
+    @Test
+    public void testBalancerEvenDistributionWithNewNodeAdded() throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_03
+     * Bring up a 1-node DFS cluster. Set files replication factor to be 1
+     * and fill up the node to 30% full. Then add an empty datanode.
+     */
+     @Test
+     public void testBalancerSingleNodeClusterWithNewNodeAdded() throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+     }
+
+    /**
+     * Balancer_04
+     * The same as _03 except that the empty new data node is on a
+     * different rack.
+     */
+     @Test
+     public void testBalancerSingleNodeClusterWithNewNodeAddedFromDifferentRack()
+             throws IOException {
+         throw new UnsupportedOperationException("not implemented yet!");
+     }
+
+    /**
+     * Balancer_05
+     * The same as _03 except that the empty new data node is half the
+     * capacity as the old one.
+     */
+     @Test
+     public void testBalancerSingleNodeClusterWithHalfCapacityNewNode() {
+         throw new UnsupportedOperationException("not implemented yet!");
+     }
+
+    /**
+     * Balancer_06
+     * Bring up a 2-node cluster and fill one node to be 60% and the
+     * other to be 10% full. All nodes are on different racks.
+     */
+     @Test
+    public void testBalancerTwoNodeMultiRackCluster() {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_07
+     * Bring up a dfs cluster with nodes A and B. Set file replication
+     * factor to be 2 and fill up the cluster to 30% full. Then add an
+     * empty data node C. All three nodes are on the same rack.
+     */
+     @Test
+     public void testBalancerTwoNodeSingleRackClusterWuthNewNodeAdded()
+             throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+     }
+
+    /**
+     * Balancer_08
+     * The same as _07 except that A, B and C are on different racks.
+     */
+     @Test
+     public void testBalancerTwoNodeMultiRackClusterWithNewNodeAdded()
+             throws IOException {
+         throw new UnsupportedOperationException("not implemented yet!");
+     }
+
+     /**
+     * Balancer_09
+     * The same as _07 except that interrupt balancing.
+     */
+     @Test
+     public void testBalancerTwoNodeSingleRackClusterInterruptingRebalance()
+             throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_10
+     * Restart rebalancing until it is done.
+     */
+    @Test
+    public void testBalancerRestartInterruptedBalancerUntilDone()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_11
+     * The same as _07 except that the namenode is shutdown while rebalancing.
+     */
+    @Test
+    public void testBalancerTwoNodeSingleRackShutdownNameNodeDuringRebalance()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_12
+     * The same as _05 except that FS writes occur during rebalancing.
+     */
+    @Test
+    public void
+    testBalancerSingleNodeClusterWithHalfCapacityNewNodeRebalanceWithConcurrentFSWrites()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_13
+     * The same as _05 except that FS deletes occur during rebalancing.
+     */
+    @Test
+    public void testBalancerSingleNodeClusterWithHalfCapacityNewNodeRebalanceWithConcurrentFSDeletes()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_14
+     * The same as _05 except that FS deletes AND writes occur during
+     * rebalancing.
+     */
+    @Test
+    public void testBalancerSingleNodeClusterWithHalfCapacityNewNodeRebalanceWithConcurrentFSDeletesAndWrites()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_15
+     * Scalability test: Populate a 750-node cluster, then
+     *    1. Run rebalancing after 3 nodes are added
+     *    2. Run rebalancing after 2 racks of nodes (60 nodes) are added
+     *    3. Run rebalancing after 2 racks of nodes are added and concurrently
+     *       executing file writing and deleting at the same time
+     */
+    @Test
+    public void testBalancerScalability() throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_16
+     * Start balancer with a negative threshold value.
+     */
+    @Test
+    public void testBalancerConfiguredWithThresholdValueNegative()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_17
+     * Start balancer with out-of-range threshold value
+     *  (e.g. -123, 0, -324, 100000, -12222222, 1000000000, -10000, 345, 989)
+     */
+    @Test
+    public void testBalancerConfiguredWithThresholdValueOutOfRange()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_18
+     * Start balancer with alpha-numeric threshold value
+     *  (e.g., 103dsf, asd234, asfd, ASD, #$asd, 2345&, $35, %34)
+     */
+    @Test
+    public void testBalancerConfiguredWithThresholdValueAlphanumeric()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_19
+     * Start 2 instances of balancer on the same gateway
+     */
+    @Test
+    public void testBalancerRunTwoConcurrentInstancesOnSingleGateway()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_20
+     * Start 2 instances of balancer on two different gateways
+     */
+    @Test
+    public void testBalancerRunTwoConcurrentInstancesOnDistinctGateways()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_21
+     * Start balancer when the cluster is already balanced
+     */
+    @Test
+    public void testBalancerOnBalancedCluster() throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * Balancer_22
+     * Running the balancer with half the data nodes not running
+     */
+     @Test
+     public void testBalancerWithOnlyHalfOfDataNodesRunning()
+             throws IOException {
+         throw new UnsupportedOperationException("not implemented yet!");
+     }
+
+    /**
+     * Balancer_23
+     * Running the balancer and simultaneously simulating load on the
+     * cluster with half the data nodes not running.
+     */
+     @Test
+     public void testBalancerOnBusyClusterWithOnlyHalfOfDatanodesRunning()
+             throws IOException {
+         throw new UnsupportedOperationException("not implemented yet!");
+     }
+
+    /**
+     * Protocol Test Prelude
+     *
+     * First set up 3 node cluster with nodes NA, NB and NC, which are on
+     * different racks. Then create a file with one block B with a replication
+     * factor 3. Finally add a new node ND to the cluster on the same rack as NC.
+     */
+
+    /**
+     * ProtocolTest_01
+     * Copy block B from ND to NA with del hint NC
+     */
+    @Test
+    public void
+    testBlockReplacementProtocolFailWhenCopyBlockSourceDoesNotHaveBlockToCopy()
+            throws IOException {
+         throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /*
+     * ProtocolTest_02
+     * Copy block B from NA to NB with del hint NB
+     */
+    @Test
+    public void
+    testBlockReplacementProtocolFailWhenCopyBlockDestinationContainsBlockCopy()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * ProtocolTest_03
+     * Copy block B from NA to ND with del hint NB
+     */
+    @Test
+    public void testBlockReplacementProtocolCopyBlock() throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * ProtocolTest_04
+     * Copy block B from NB to NC with del hint NA
+     */
+    @Test
+    public void testBlockReplacementProtocolWithInvalidHint()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * ThrottleTest_01
+     * Create a throttler with 1MB/s bandwidth. Send 6MB data, and throttle
+     * at 0.5MB, 0.75MB, and in the end [1MB/s?].
+     */
+
+    /**
+     * NamenodeProtocolTest_01
+     * Get blocks from datanode 0 with a size of 2 blocks.
+     */
+    @Test
+    public void testNamenodeProtocolGetBlocksCheckThroughput()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * NamenodeProtocolTest_02
+     * Get blocks from datanode 0 with a size of 1 block.
+     */
+    @Test
+    public void testNamenodeProtocolGetSingleBlock()
+            throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+
+    /**
+     * NamenodeProtocolTest_03
+     * Get blocks from datanode 0 with a size of 0.
+     */
+    @Test
+    public void testNamenodeProtocolGetZeroBlocks() throws IOException {
+        throw new UnsupportedOperationException("not implemented yet!");
+    }
+    /**
+     * NamenodeProtocolTest_04
+     * Get blocks from datanode 0 with a size of -1.
+     */
+    @Test
+    public void testNamenodeProtocolGetMinusOneBlocks() throws Exception {
+
+    }
+
+    /**
+     * NamenodeProtocolTest_05
+     * Get blocks from a non-existent datanode.
+     */
+    @Test
+    public void testNamenodeProtocolGetBlocksFromNonexistentDatanode()
+            throws IOException {
+
+    }
 }
+
