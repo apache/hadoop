@@ -76,6 +76,21 @@ neutral at the forward-port stage -->
   before pushing into new config folder location in the cluster.
   </description>
 </property>
+<property>
+  <name>test.system.hdrc.suspend.cmd</name>
+  <value>kill -SIGSTOP</value>
+  <description>
+    Command for suspending the given process.
+  </description>
+</property>
+<property>
+  <name>test.system.hdrc.resume.cmd</name>
+  <value>kill -SIGCONT</value>
+  <description>
+  Command for resuming the given suspended process.
+  </description>
+</property>
+
 
 <!-- Mandatory keys to be set for the multi user support to be enabled.  -->
 

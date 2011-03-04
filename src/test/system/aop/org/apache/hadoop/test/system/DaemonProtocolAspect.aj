@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -273,6 +274,56 @@ public aspect DaemonProtocolAspect {
     String output = shexec.getOutput();
     return Integer.parseInt(output.replaceAll("\n", "").trim());
   }
+  
+  /**
+   * This method is used for suspending the process.
+   * @param pid process id
+   * @throws IOException if an I/O error occurs.
+   * @return true if process is suspended otherwise false.
+   */
+  public boolean DaemonProtocol.suspendProcess(String pid) throws IOException {
+    String suspendCmd = getDaemonConf().get("test.system.hdrc.suspend.cmd",
+        "kill -SIGSTOP");
+    String [] command = {"bash", "-c", suspendCmd + " " + pid};
+    ShellCommandExecutor shexec = new ShellCommandExecutor(command);
+    try {
+      shexec.execute();
+    } catch (Shell.ExitCodeException e) {
+      LOG.warn("suspended process throws an exitcode "
+          + "exception for not being suspended the given process id.");
+      return false;
+    }
+    LOG.info("The suspend process command is :"
+        + shexec.toString()
+        + " and the output for the command is "
+        + shexec.getOutput());
+    return true;
+  }
+
+  /**
+   * This method is used for resuming the process
+   * @param pid process id of suspended process.
+   * @throws IOException if an I/O error occurs.
+   * @return true if suspeneded process is resumed otherwise false.
+   */
+  public boolean DaemonProtocol.resumeProcess(String pid) throws IOException {
+    String resumeCmd = getDaemonConf().get("test.system.hdrc.resume.cmd",
+        "kill -SIGCONT");
+    String [] command = {"bash", "-c", resumeCmd + " " + pid};
+    ShellCommandExecutor shexec = new ShellCommandExecutor(command);
+    try {
+      shexec.execute();
+    } catch(Shell.ExitCodeException e) {
+        LOG.warn("Resume process throws an exitcode "
+          + "exception for not being resumed the given process id.");
+      return false;
+    }
+    LOG.info("The resume process command is :"
+        + shexec.toString()
+        + " and the output for the command is "
+        + shexec.getOutput());
+    return true;
+  }
 
   private String DaemonProtocol.user = null;
   
@@ -284,4 +335,3 @@ public aspect DaemonProtocolAspect {
     this.user = user;
   }
 }
-

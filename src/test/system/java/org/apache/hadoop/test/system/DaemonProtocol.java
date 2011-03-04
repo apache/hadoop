@@ -162,4 +162,21 @@ public interface DaemonProtocol extends VersionedProtocol{
    * @throws IOException in case of errors
    */
   String getDaemonUser() throws IOException;
+  
+  /**
+   * It uses for suspending the process.
+   * @param pid process id.
+   * @return true if the process is suspended otherwise false.
+   * @throws IOException if an I/O error occurs.
+   */
+  boolean suspendProcess(String pid) throws IOException;
+
+  /**
+   * It uses for resuming the suspended process.
+   * @param pid process id
+   * @return true if suspended process is resumed otherwise false.
+   * @throws IOException if an I/O error occurs.
+   */
+  boolean resumeProcess(String pid) throws IOException;
+
 }
