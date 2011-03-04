@@ -74,11 +74,6 @@ public class TaskLog {
     if (!LOG_DIR.exists()) {
       LOG_DIR.mkdirs();
     }
-    try {
-      localFS = FileSystem.getLocal(new Configuration());
-    } catch (IOException ie) {
-      throw new RuntimeException(ie);
-    }
   }
 
   public static File getTaskLogFile(TaskAttemptID taskid, boolean isCleanup,
@@ -167,6 +162,9 @@ public class TaskLog {
    * determined by checking the job's log directory.
    */
   static String obtainLogDirOwner(TaskAttemptID taskid) throws IOException {
+    if (localFS == null) {
+      localFS = FileSystem.getLocal(new Configuration());
+    }
     FileSystem raw = localFS.getRaw();
     Path jobLogDir = new Path(getJobDir(taskid.getJobID()).getAbsolutePath());
     FileStatus jobStat = raw.getFileStatus(jobLogDir);
@@ -237,6 +235,9 @@ public class TaskLog {
     Path indexFilePath = new Path(indexFile.getAbsolutePath());
     Path tmpIndexFilePath = new Path(tmpIndexFile.getAbsolutePath());
 
+    if (localFS == null) {// set localFS once
+      localFS = FileSystem.getLocal(new Configuration());
+    }
     localFS.rename (tmpIndexFilePath, indexFilePath);
   }
 
