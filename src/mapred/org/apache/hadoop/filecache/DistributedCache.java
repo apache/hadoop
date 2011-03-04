@@ -138,6 +138,41 @@ public class DistributedCache {
    */
   public static final String CACHE_ARCHIVES_SIZES = 
     "mapred.cache.archives.filesizes";
+
+  /**
+   * Warning: {@link #CACHE_ARCHIVES_TIMESTAMPS} is not a *public* constant.
+   **/
+  public static final String CACHE_ARCHIVES_TIMESTAMPS = "mapred.cache.archives.timestamps";
+
+  /**
+   * Warning: {@link #CACHE_FILES_TIMESTAMPS} is not a *public* constant.
+   **/
+  public static final String CACHE_FILES_TIMESTAMPS = "mapred.cache.files.timestamps";
+
+  /**
+   * Warning: {@link #CACHE_ARCHIVES} is not a *public* constant.
+   **/
+  public static final String CACHE_ARCHIVES = "mapred.cache.archives";
+
+  /**
+   * Warning: {@link #CACHE_FILES} is not a *public* constant.
+   **/
+  public static final String CACHE_FILES = "mapred.cache.files";
+
+  /**
+   * Warning: {@link #CACHE_LOCALARCHIVES} is not a *public* constant.
+   **/
+  public static final String CACHE_LOCALARCHIVES = "mapred.cache.localArchives";
+
+  /**
+   * Warning: {@link #CACHE_LOCALFILES} is not a *public* constant.
+   **/
+  public static final String CACHE_LOCALFILES = "mapred.cache.localFiles";
+
+  /**
+   * Warning: {@link #CACHE_SYMLINK} is not a *public* constant.
+   **/
+  public static final String CACHE_SYMLINK = "mapred.create.symlink";
   
   /**
    * Get the locally cached file or archive; it could either be 
@@ -379,7 +414,7 @@ public class DistributedCache {
    */
   public static void setCacheArchives(URI[] archives, Configuration conf) {
     String sarchives = StringUtils.uriToString(archives);
-    conf.set("mapred.cache.archives", sarchives);
+    conf.set(CACHE_ARCHIVES, sarchives);
   }
 
   /**
@@ -390,7 +425,7 @@ public class DistributedCache {
    */
   public static void setCacheFiles(URI[] files, Configuration conf) {
     String sfiles = StringUtils.uriToString(files);
-    conf.set("mapred.cache.files", sfiles);
+    conf.set(CACHE_FILES, sfiles);
   }
 
   /**
@@ -401,7 +436,7 @@ public class DistributedCache {
    * @throws IOException
    */
   public static URI[] getCacheArchives(Configuration conf) throws IOException {
-    return StringUtils.stringToURI(conf.getStrings("mapred.cache.archives"));
+    return StringUtils.stringToURI(conf.getStrings(CACHE_ARCHIVES));
   }
 
   /**
@@ -412,7 +447,7 @@ public class DistributedCache {
    * @throws IOException
    */
   public static URI[] getCacheFiles(Configuration conf) throws IOException {
-    return StringUtils.stringToURI(conf.getStrings("mapred.cache.files"));
+    return StringUtils.stringToURI(conf.getStrings(CACHE_FILES));
   }
 
   /**
@@ -425,7 +460,7 @@ public class DistributedCache {
   public static Path[] getLocalCacheArchives(Configuration conf)
     throws IOException {
     return StringUtils.stringToPath(conf
-                                    .getStrings("mapred.cache.localArchives"));
+                                    .getStrings(CACHE_LOCALARCHIVES));
   }
 
   /**
@@ -437,7 +472,7 @@ public class DistributedCache {
    */
   public static Path[] getLocalCacheFiles(Configuration conf)
     throws IOException {
-    return StringUtils.stringToPath(conf.getStrings("mapred.cache.localFiles"));
+    return StringUtils.stringToPath(conf.getStrings(CACHE_LOCALFILES));
   }
 
   /**
@@ -448,7 +483,7 @@ public class DistributedCache {
    * @throws IOException
    */
   public static String[] getArchiveTimestamps(Configuration conf) {
-    return conf.getStrings("mapred.cache.archives.timestamps");
+    return conf.getStrings(CACHE_ARCHIVES_TIMESTAMPS);
   }
 
 
@@ -460,7 +495,7 @@ public class DistributedCache {
    * @throws IOException
    */
   public static String[] getFileTimestamps(Configuration conf) {
-    return conf.getStrings("mapred.cache.files.timestamps");
+    return conf.getStrings(CACHE_FILES_TIMESTAMPS);
   }
 
   /**
@@ -471,7 +506,7 @@ public class DistributedCache {
    * The order should be the same as the order in which the archives are added.
    */
   public static void setArchiveTimestamps(Configuration conf, String timestamps) {
-    conf.set("mapred.cache.archives.timestamps", timestamps);
+    conf.set(CACHE_ARCHIVES_TIMESTAMPS, timestamps);
   }
 
   /**
@@ -482,7 +517,7 @@ public class DistributedCache {
    * The order should be the same as the order in which the files are added.
    */
   public static void setFileTimestamps(Configuration conf, String timestamps) {
-    conf.set("mapred.cache.files.timestamps", timestamps);
+    conf.set(CACHE_FILES_TIMESTAMPS, timestamps);
   }
   
   /**
@@ -492,7 +527,7 @@ public class DistributedCache {
    * @param str a comma separated list of local archives
    */
   public static void setLocalArchives(Configuration conf, String str) {
-    conf.set("mapred.cache.localArchives", str);
+    conf.set(CACHE_LOCALARCHIVES, str);
   }
 
   /**
@@ -502,7 +537,7 @@ public class DistributedCache {
    * @param str a comma separated list of local files
    */
   public static void setLocalFiles(Configuration conf, String str) {
-    conf.set("mapred.cache.localFiles", str);
+    conf.set(CACHE_LOCALFILES, str);
   }
 
   /**
@@ -512,8 +547,8 @@ public class DistributedCache {
    * @param conf Configuration to add the cache to
    */
   public static void addCacheArchive(URI uri, Configuration conf) {
-    String archives = conf.get("mapred.cache.archives");
-    conf.set("mapred.cache.archives", archives == null ? uri.toString()
+    String archives = conf.get(CACHE_ARCHIVES);
+    conf.set(CACHE_ARCHIVES, archives == null ? uri.toString()
              : archives + "," + uri.toString());
   }
   
@@ -524,20 +559,20 @@ public class DistributedCache {
    * @param conf Configuration to add the cache to
    */
   public static void addCacheFile(URI uri, Configuration conf) {
-    String files = conf.get("mapred.cache.files");
-    conf.set("mapred.cache.files", files == null ? uri.toString() : files + ","
+    String files = conf.get(CACHE_FILES);
+    conf.set(CACHE_FILES, files == null ? uri.toString() : files + ","
              + uri.toString());
   }
 
   /**
-   * Add an file path to the current set of classpath entries It adds the file
+   * Add a file path to the current set of classpath entries. It adds the file
    * to cache as well.  Intended to be used by user code.
    * 
    * @param file Path of the file to be added
    * @param conf Configuration that contains the classpath setting
    */
   public static void addFileToClassPath(Path file, Configuration conf)
-    throws IOException {
+        throws IOException {
     String classpath = conf.get("mapred.job.classpath.files");
     conf.set("mapred.job.classpath.files", classpath == null ? file.toString()
              : classpath + System.getProperty("path.separator") + file.toString());
@@ -611,7 +646,7 @@ public class DistributedCache {
    * @param conf the jobconf 
    */
   public static void createSymlink(Configuration conf){
-    conf.set("mapred.create.symlink", "yes");
+    conf.set(CACHE_SYMLINK, "yes");
   }
   
   /**
@@ -622,7 +657,7 @@ public class DistributedCache {
    * @return true if symlinks are to be created- else return false
    */
   public static boolean getSymlink(Configuration conf){
-    String result = conf.get("mapred.create.symlink");
+    String result = conf.get(CACHE_SYMLINK);
     if ("yes".equals(result)){
       return true;
     }

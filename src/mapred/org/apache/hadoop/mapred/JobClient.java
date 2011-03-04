@@ -750,7 +750,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       ClassNotFoundException,
       InterruptedException,
       IOException{
-
         JobConf jobCopy = job;
         Path jobStagingArea = JobSubmissionFiles.getStagingDir(JobClient.this,
             jobCopy);
@@ -766,6 +765,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
             jobCopy.getCredentials().readTokenStorageFile
                (new Path("file:///" +  binaryTokenFilename), jobCopy);
           }
+
+          // First we check whether the cached archives and files are legal.
+          TrackerDistributedCacheManager.validate(jobCopy);
 
           copyAndConfigureFiles(jobCopy, submitJobDir);
 
@@ -806,7 +808,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           } finally {
             out.close();
           }
-
 
           //
           // Now, actually submit the job (using the submit name)

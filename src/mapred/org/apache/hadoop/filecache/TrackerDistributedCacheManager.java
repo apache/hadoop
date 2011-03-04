@@ -20,6 +20,7 @@ package org.apache.hadoop.filecache;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.RunJar;
@@ -770,5 +772,77 @@ public class TrackerDistributedCacheManager {
     }
 
     TokenCache.obtainTokensForNamenodes(credentials, ps, job);
+  }
+
+  /** 
+   * This is part of the framework API.  It's called within the job
+   * submission code only, not by users.  In the non-error case it has
+   * no side effects and returns normally.  If there's a URI in both
+   * mapred.cache.files and mapred.cache.archives, it throws its
+   * exception. 
+   * @param conf a {@link Configuration} to be cheked for duplication
+   * in cached URIs 
+   * @throws InvalidJobConfException
+   **/
+  public static void validate(Configuration conf)
+                          throws InvalidJobConfException {
+    final String[] archiveStrings
+      = conf.getStrings(DistributedCache.CACHE_ARCHIVES);
+    final String[] fileStrings = conf.getStrings(DistributedCache.CACHE_FILES);
+
+    Path thisSubject = null;
+
+    String thisCategory = DistributedCache.CACHE_ARCHIVES;
+
+    if (archiveStrings != null && fileStrings != null) {
+      final Set<Path> archivesSet = new HashSet<Path>();
+
+      for (String archiveString : archiveStrings) {
+        archivesSet.add(coreLocation(archiveString, conf));
+      }
+
+      thisCategory = DistributedCache.CACHE_FILES;
+
+      for (String fileString : fileStrings) {
+        thisSubject = coreLocation(fileString, conf);
+
+        if (archivesSet.contains(thisSubject)) {
+          throw new InvalidJobConfException
+            ("The core URI, \""
+             + thisSubject
+             + "\" is listed both in " + DistributedCache.CACHE_FILES
+             + " and in " + DistributedCache.CACHE_ARCHIVES + " .");
+        }
+      }
+    }
+  }
+
+  private static Path coreLocation(String uriString, Configuration conf) 
+       throws InvalidJobConfException {
+    // lose the fragment, if it's likely to be a symlink name
+    if (DistributedCache.getSymlink(conf)) {
+      try {
+        URI uri = new URI(uriString);
+        uriString
+          = (new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(),
+                     null, null)
+             .toString());
+      } catch (URISyntaxException e) {
+        throw new InvalidJobConfException
+          ("Badly formatted URI: " + uriString, e);
+      }
+    }
+        
+    Path path = new Path(uriString);
+
+    try {
+      path = path.makeQualified(path.getFileSystem(conf));
+    } catch (IOException e) {
+      throw new InvalidJobConfException
+        ("Invalid file system in distributed cache for the URI: "
+         + uriString, e);
+    }
+
+    return path;
   }
 }
