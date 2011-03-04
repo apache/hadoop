@@ -24,5 +24,11 @@
   <artifactId>hadoop-examples</artifactId>
   <packaging>jar</packaging>
   <version>@version</version>
-  <dependencies/>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-core</artifactId>
+      <version>@version</version>
+    </dependency>
+  </dependencies>
 </project>

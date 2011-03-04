@@ -234,8 +234,6 @@
 
   <!--this is how artifacts that get built are named-->
   <property name="ivy.publish.pattern" value="hadoop-[revision]-core.[ext]"/>
-  <property name="hadoop.jar" 
-    location="${build.dir}/hadoop-${hadoop.version}-core.jar"/>
 
   <!-- jdiff.home property set -->
   <property name="jdiff.home" 
@@ -1260,7 +1258,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
+  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -2090,7 +2088,6 @@
         </exec>
       </sequential>
     </macrodef>
-    <echo> phassphrase : ${gpg.passphrase} </echo>
     <sign-artifact input.file="${hadoop-core.jar}" 
      output.file="${hadoop-core.jar}.asc" gpg.passphrase="${gpg.passphrase}"/>
     <sign-artifact input.file="${hadoop-test.jar}" 
@@ -2126,7 +2123,7 @@
          <pom refid="hadoop.core"/>
      </artifact:deploy>
      <artifact:deploy file="${hadoop-test.jar}">
-         <remoteRepository id="apache.snapshosts.https" url="${asfsnapshotrepo}"/>
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
          <pom refid="hadoop.test"/>
      </artifact:deploy> 
      <artifact:deploy file="${hadoop-examples.jar}">
@@ -2138,7 +2135,7 @@
          <pom refid="hadoop.tools"/>
      </artifact:deploy>
      <artifact:deploy file="${hadoop-streaming.jar}">
-         <remoteRepository id="apache.snapshosts.https" url="${asfsnapshotrepo}"/>
+         <remoteRepository id="apache.snapshots.https" url="${asfsnapshotrepo}"/>
          <pom refid="hadoop.streaming"/>
      </artifact:deploy>
   </target>
