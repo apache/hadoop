@@ -3335,5 +3335,146 @@
       </comparators>
     </test>
     -->
+    
+
+     <test> <!--Tested -->
+      <description>Verifying chmod operation is not permitted in safemode</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /test </command>
+        <command>-fs NAMENODE -touchz /test/file1 </command>
+        <dfs-admin-command>-fs NAMENODE -safemode enter </dfs-admin-command>
+        <command>-fs NAMENODE -chmod 777 /test/file1 </command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -safemode leave </dfs-admin-command>
+       <dfs-admin-command>-fs NAMENODE -rmr  /test </dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Cannot set permission for /test/file1. Name node is in safe mode.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    <test> <!--Tested -->
+      <description>Verifying chown operation is not permitted in safemode</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /test </command>
+        <command>-fs NAMENODE -touchz /test/file1 </command>
+        <dfs-admin-command>-fs NAMENODE -safemode enter </dfs-admin-command>
+        <command>-fs NAMENODE -chown root /test/file1 </command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -safemode leave </dfs-admin-command>
+       <dfs-admin-command>-fs NAMENODE -rmr  /test </dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Cannot set owner for /test/file1. Name node is in safe mode.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+   <test> <!--Tested -->
+      <description>Verifying chgrp operation is not permitted in safemode</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /test </command>
+        <command>-fs NAMENODE -touchz /test/file1 </command>
+        <dfs-admin-command>-fs NAMENODE -safemode enter </dfs-admin-command>
+        <command>-fs NAMENODE -chgrp newgroup /test/file1 </command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -safemode leave </dfs-admin-command>
+       <dfs-admin-command>-fs NAMENODE -rmr  /test </dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>Cannot set owner for /test/file1. Name node is in safe mode.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+
+    
+   <test> <!--Tested -->
+      <description>Verifying setQuota operation is not permitted in safemode</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /test </command>
+        <dfs-admin-command>-fs NAMENODE -safemode enter </dfs-admin-command>
+        <dfs-admin-command>-fs NAMENODE -setQuota 100 /test </dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -safemode leave </dfs-admin-command>
+       <dfs-admin-command>-fs NAMENODE -rmr  /test </dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>setQuota: org.apache.hadoop.hdfs.server.namenode.SafeModeException: Cannot set quota on /test. Name node is in safe mode.</expected-output>
+        </comparator>
+      </comparators>
+  </test>
+  
+  <test> <!--Tested -->
+      <description>Verifying clrQuota operation is not permitted in safemode</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /test </command>
+        <dfs-admin-command>-fs NAMENODE -safemode enter </dfs-admin-command>
+        <dfs-admin-command>-fs NAMENODE -clrQuota  /test </dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -safemode leave </dfs-admin-command>
+       <dfs-admin-command>-fs NAMENODE -rmr  /test </dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>clrQuota: org.apache.hadoop.hdfs.server.namenode.SafeModeException: Cannot set quota on /test. Name node is in safe mode.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+  
+    
+   <test> <!--Tested -->
+      <description>Verifying setSpaceQuota operation is not permitted in safemode</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /test </command>
+        <dfs-admin-command>-fs NAMENODE -safemode enter </dfs-admin-command>
+        <dfs-admin-command>-fs NAMENODE -setSpaceQuota 100 /test </dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -safemode leave </dfs-admin-command>
+       <dfs-admin-command>-fs NAMENODE -rmr  /test </dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>setSpaceQuota: org.apache.hadoop.hdfs.server.namenode.SafeModeException: Cannot set quota on /test. Name node is in safe mode.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+  
+  <test> <!--Tested -->
+      <description>Verifying clrSpaceQuota operation is not permitted in safemode</description>
+      <test-commands>
+        <command>-fs NAMENODE -mkdir /test </command>
+        <dfs-admin-command>-fs NAMENODE -safemode enter </dfs-admin-command>
+        <dfs-admin-command>-fs NAMENODE -clrSpaceQuota  /test </dfs-admin-command>
+      </test-commands>
+      <cleanup-commands>
+        <dfs-admin-command>-fs NAMENODE -safemode leave </dfs-admin-command>
+       <dfs-admin-command>-fs NAMENODE -rmr  /test </dfs-admin-command>
+      </cleanup-commands>
+      <comparators>
+        <comparator>
+          <type>SubstringComparator</type>
+          <expected-output>clrSpaceQuota: org.apache.hadoop.hdfs.server.namenode.SafeModeException: Cannot set quota on /test. Name node is in safe mode.</expected-output>
+        </comparator>
+      </comparators>
+    </test>
+  
+
   </tests>
 </configuration>

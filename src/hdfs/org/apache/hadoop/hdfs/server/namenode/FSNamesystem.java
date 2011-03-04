@@ -758,6 +758,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public synchronized void setPermission(String src, FsPermission permission
       ) throws IOException {
+    if (isInSafeMode())
+       throw new SafeModeException("Cannot set permission for " + src, safeMode);
     checkOwner(src);
     dir.setPermission(src, permission);
     getEditLog().logSync();
@@ -775,6 +777,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    */
   public synchronized void setOwner(String src, String username, String group
       ) throws IOException {
+    if (isInSafeMode())
+       throw new SafeModeException("Cannot set owner for " + src, safeMode);
     FSPermissionChecker pc = checkOwner(src);
     if (!pc.isSuper) {
       if (username != null && !pc.user.equals(username)) {
@@ -1880,7 +1884,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
    * contract.
    */
   void setQuota(String path, long nsQuota, long dsQuota) throws IOException {
-    if (isPermissionEnabled) {
+   if (isInSafeMode())
+      throw new SafeModeException("Cannot set quota on " + path, safeMode); 
+   if (isPermissionEnabled) {
       checkSuperuserPrivilege();
     }
     

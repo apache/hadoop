@@ -22,6 +22,9 @@ Release 0.20.2 - Unreleased
     HDFS-187. Initialize secondary namenode http address in TestStartup.
     (Todd Lipcon via szetszwo)
 
+    HDFS-185. Disallow chown, chgrp, chmod, setQuota, and setSpaceQuota when
+    name-node is in safemode. (Ravi Phulari via shv)
+
 Release 0.20.1 - 2009-09-01
 
   INCOMPATIBLE CHANGES
