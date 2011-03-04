@@ -1021,8 +1021,10 @@ abstract public class Task implements Writable, Configurable {
    *          the path.
    * @return a Statistics instance, or null if none is found for the scheme.
    */
-  protected static Statistics getFsStatistics(Path path) {
+  protected static Statistics getFsStatistics(Path path, Configuration conf)
+      throws IOException {
     Statistics matchedStats = null;
+    path = path.getFileSystem(conf).makeQualified(path);
     for (Statistics stats : FileSystem.getAllStatistics()) {
       if (stats.getScheme().equals(path.toUri().getScheme())) {
         matchedStats = stats;
