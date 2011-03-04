@@ -68,7 +68,7 @@ class test_HadoopCommand(unittest.TestCase):
     #   that pkgdir is specified at the time of object creation.
     # END OF TODO
     self.hadoopCommand = HadoopCommand(self.id, self.desc, self.tempDir,
-                          self.pkgDir, self.log, self.javaHome,
+                          self.pkgDir, (50000, 60000), self.log, self.javaHome,
                           self.mrSysDir, restart=True)
     self.hadoopSite = os.path.join( self.hadoopCommand.confdir,
                                     'hadoop-site.xml')

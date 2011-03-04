@@ -210,7 +210,7 @@ def createMRSystemDirectoryManager(dict, log):
 class HadoopCommand:
   """Runs a single hadoop command"""
     
-  def __init__(self, id, desc, tempdir, tardir, log, javahome, 
+  def __init__(self, id, desc, tempdir, tardir, hadoopportrange, log, javahome, 
                 mrSysDir, restart=False):
     self.desc = desc
     self.log = log
@@ -230,6 +230,7 @@ class HadoopCommand:
     self.child = None
     self.restart = restart
     self.filledInKeyVals = []
+    self.__hadoopPortRange = hadoopportrange
     self._createWorkDirs()
     self._createHadoopSiteXml()
     self._createHadoopLogDir()
@@ -253,8 +254,9 @@ class HadoopCommand:
   def createXML(self, doc, attr, topElement, final):
     for k,v in attr.iteritems():
       self.log.debug('_createHadoopSiteXml: ' + str(k) + " " + str(v))
+      lowport, highport = self.__hadoopPortRange
       if ( v == "fillinport" ):
-        v = "%d" % (ServiceUtil.getUniqRandomPort(low=50000, log=self.log))
+        v = "%d" % (ServiceUtil.getUniqRandomPort(low=lowport, high=highport, log=self.log))
 
       keyvalpair = ''
       if isinstance(v, (tuple, list)):
@@ -270,7 +272,7 @@ class HadoopCommand:
         self.filledInKeyVals.append(keyvalpair)
 	
       if ( v == "fillinhostport"):
-        port = "%d" % (ServiceUtil.getUniqRandomPort(low=50000, log=self.log))
+        port = "%d" % (ServiceUtil.getUniqRandomPort(low=lowport, high=highport, log=self.log))
         self.log.debug('Setting hostname to: %s' % local_fqdn())
         v = local_fqdn() + ':' + port
       
@@ -613,7 +615,7 @@ class HodRing(hodBaseService):
       mrSysDir = getMapredSystemDirectory(self._cfg['mapred-system-dir-root'],
                           self._cfg['userid'], self._cfg['service-id'])
       self.log.debug('mrsysdir is %s' % mrSysDir)
-      cmd = HadoopCommand(id, desc, self.__tempDir, self.__pkgDir, self.log, 
+      cmd = HadoopCommand(id, desc, self.__tempDir, self.__pkgDir, self._cfg['hadoop-port-range'], self.log, 
                           self._cfg['java-home'], mrSysDir, restart)
     
       self.__hadoopLogDirs.append(cmd.logdir)

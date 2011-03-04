@@ -315,6 +315,10 @@
                     be used by HOD to upload logs if a HDFS URL is specified in log-destination-uri
                     option. Note that this is useful if the users are using a tarball whose version
                     may differ from the external, static HDFS version.</li>
+
+          <li>hadoop-port-range: Range of ports, among which an available port shall
+                             be picked for use to run a Hadoop Service, like JobTracker or TaskTracker. </li>
+          
                                       
         </ul>
       </section>

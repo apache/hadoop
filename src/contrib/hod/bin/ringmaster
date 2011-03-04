@@ -244,6 +244,9 @@ defList = { 'ringmaster' : (
                
              ('http-port-range', 'range', 'HTTP port range n-m.',
               False, None, True, True),
+  
+             ('hadoop-port-range', 'range', 'Hadoop port range n-m.',
+              False, None, True, True),
                
              ('command', 'string', 'Command for hodring to run.',
               False, None, False, True),
