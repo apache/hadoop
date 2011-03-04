@@ -724,11 +724,14 @@ public class DataNode extends Configured
   }
   
   
-  /* Check if there is no space in disk or the disk is read-only
-   *  when IOException occurs. 
-   * If so, handle the error */
-  protected void checkDiskError( IOException e ) throws IOException {
-    if (e.getMessage() != null && 
+  /** Check if there is no space in disk 
+   *  @param e that caused this checkDiskError call
+   **/
+  protected void checkDiskError(Exception e ) throws IOException {
+    
+    LOG.warn("checkDiskError: exception: ", e);
+    
+    if (e.getMessage() != null &&
         e.getMessage().startsWith("No space left on device")) {
       throw new DiskOutOfSpaceException("No space left on device");
     } else {
@@ -736,8 +739,11 @@ public class DataNode extends Configured
     }
   }
   
-  /* Check if there is no disk space and if so, handle the error*/
-  protected void checkDiskError( ) throws IOException {
+  /**
+   *  Check if there is a disk failure and if so, handle the error
+   *
+   **/
+  protected void checkDiskError( ) {
     try {
       data.checkDataDir();
     } catch(DiskErrorException de) {
@@ -746,13 +752,31 @@ public class DataNode extends Configured
   }
   
   private void handleDiskError(String errMsgr) {
-    LOG.warn("DataNode is shutting down.\n" + errMsgr);
-    shouldRun = false;
+    boolean hasEnoughResource = data.hasEnoughResource();
+    LOG.warn("DataNode.handleDiskError: Keep Running: " + hasEnoughResource);
+    
+    //if hasEnoughtResource = true - more volumes are available, so we don't want 
+    // to shutdown DN completely and don't want NN to remove it.
+    int dp_error = DatanodeProtocol.DISK_ERROR;
+    if(hasEnoughResource == false) {
+      // DN will be shutdown and NN should remove it
+      dp_error = DatanodeProtocol.FATAL_DISK_ERROR;
+    }
+    //inform NameNode
     try {
       namenode.errorReport(
-                           dnRegistration, DatanodeProtocol.DISK_ERROR, errMsgr);
+                           dnRegistration, dp_error, errMsgr);
     } catch(IOException ignored) {              
     }
+    
+    
+    if(hasEnoughResource) {
+      scheduleBlockReport(0);
+      return; // do not shutdown
+    }
+    
+    LOG.warn("DataNode is shutting down.\n" + errMsgr);
+    shouldRun = false; 
   }
     
   /** Number of concurrent xceivers per node. */
@@ -1261,6 +1285,9 @@ public class DataNode extends Configured
       } catch (IOException ie) {
         LOG.warn(dnRegistration + ":Failed to transfer " + b + " to " + targets[0].getName()
             + " got " + StringUtils.stringifyException(ie));
+        // check if there are any disk problem
+        datanode.checkDiskError();
+        
       } finally {
         xmitsInProgress.getAndDecrement();
         IOUtils.closeStream(blockSender);

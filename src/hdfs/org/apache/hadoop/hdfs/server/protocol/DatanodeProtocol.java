@@ -50,8 +50,9 @@ public interface DatanodeProtocol extends VersionedProtocol {
   
   // error code
   final static int NOTIFY = 0;
-  final static int DISK_ERROR = 1;
+  final static int DISK_ERROR = 1; // there are still valid volumes on DN
   final static int INVALID_BLOCK = 2;
+  final static int FATAL_DISK_ERROR = 3; // no valid volumes left on DN
 
   /**
    * Determines actions that data node should perform 

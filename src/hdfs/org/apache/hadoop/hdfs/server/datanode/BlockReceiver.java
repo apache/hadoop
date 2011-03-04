@@ -117,6 +117,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
       
       // check if there is a disk error
       IOException cause = FSDataset.getCauseIfDiskError(ioe);
+      DataNode.LOG.warn("IOException in BlockReceiver constructor. Cause is ",
+          cause);
+      
       if (cause != null) { // possible disk error
         ioe = cause;
         datanode.checkDiskError(ioe); // may throw an exception here
@@ -830,7 +833,14 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                 DataTransferProtocol.OP_STATUS_SUCCESS}).write(replyOut);
             replyOut.flush();
         } catch (Exception e) {
+          LOG.warn("IOException in BlockReceiver.lastNodeRun: ", e);
           if (running) {
+            try {
+              datanode.checkDiskError(e); // may throw an exception here
+            } catch (IOException ioe) {
+              LOG.warn("DataNode.chekDiskError failed in lastDataNodeRun with: ",
+                  ioe);
+            }
             LOG.info("PacketResponder " + block + " " + numTargets + 
                      " Exception " + StringUtils.stringifyException(e));
             running = false;
