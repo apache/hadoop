@@ -73,7 +73,9 @@ class ResourceEstimator {
     } else {
       long inputSize = job.getInputLength() + job.desiredMaps(); 
       //add desiredMaps() so that randomwriter case doesn't blow up
-      long estimate = Math.round((inputSize * 
+      //the multiplication might lead to overflow, casting it with
+      //double prevents it
+      long estimate = Math.round(((double)inputSize * 
           completedMapsOutputSize * 2.0)/completedMapsInputSize);
       if (LOG.isDebugEnabled()) {
         LOG.debug("estimate total map output will be " + estimate);
