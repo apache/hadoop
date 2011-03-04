@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs;
 
 import junit.framework.TestCase;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Random;
 
@@ -126,8 +128,12 @@ public class TestFileStatus extends TestCase {
       // test listStatus on a non-existent file/directory
       stats = fs.listStatus(dir);
       assertEquals(null, stats);
-      status = fs.getFileStatus(dir);
-      assertEquals(null, status);
+      try {
+        status = fs.getFileStatus(dir);
+        fail("getFileStatus of non-existent path should fail");
+      } catch (FileNotFoundException fe) {
+        assertTrue(fe.getMessage().startsWith("File does not exist"));
+      }
       
       // create the directory
       assertTrue(fs.mkdirs(dir));
