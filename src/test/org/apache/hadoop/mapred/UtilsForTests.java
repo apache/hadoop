@@ -548,7 +548,9 @@ public class UtilsForTests {
                            int numReds) throws IOException {
 
     FileSystem fs = FileSystem.get(conf);
-    fs.delete(outDir, true);
+    if (fs.exists(outDir)) {
+      fs.delete(outDir, true);
+    }
     if (!fs.exists(inDir)) {
       fs.mkdirs(inDir);
     }
@@ -683,5 +685,52 @@ public class UtilsForTests {
     config.writeXml(fos);
     fos.close();
   }
+
+  
+  /**
+   * Get PID from a pid-file.
+   * 
+   * @param pidFileName
+   *          Name of the pid-file.
+   * @return the PID string read from the pid-file. Returns null if the
+   *         pidFileName points to a non-existing file or if read fails from the
+   *         file.
+   */
+  public static String getPidFromPidFile(String pidFileName) {
+    BufferedReader pidFile = null;
+    FileReader fReader = null;
+    String pid = null;
+
+    try {
+      fReader = new FileReader(pidFileName);
+      pidFile = new BufferedReader(fReader);
+    } catch (FileNotFoundException f) {
+      LOG.debug("PidFile doesn't exist : " + pidFileName);
+      return pid;
+    }
+
+    try {
+      pid = pidFile.readLine();
+    } catch (IOException i) {
+      LOG.error("Failed to read from " + pidFileName);
+    } finally {
+      try {
+        if (fReader != null) {
+          fReader.close();
+        }
+        try {
+          if (pidFile != null) {
+            pidFile.close();
+          }
+        } catch (IOException i) {
+          LOG.warn("Error closing the stream " + pidFile);
+        }
+      } catch (IOException i) {
+        LOG.warn("Error closing the stream " + fReader);
+      }
+    }
+    return pid;
+  }
+  
 }
 

@@ -96,7 +96,8 @@ class Application<K1 extends WritableComparable, V1 extends Writable,
     File stdout = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDOUT);
     File stderr = TaskLog.getTaskLogFile(taskid, TaskLog.LogName.STDERR);
     long logLength = TaskLog.getTaskLogLength(conf);
-    cmd = TaskLog.captureOutAndError(cmd, stdout, stderr, logLength);
+    cmd = TaskLog.captureOutAndError(null, cmd, stdout, stderr, logLength,
+        false);
 
     process = runClient(cmd, env);
     clientSocket = serverSocket.accept();

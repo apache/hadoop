@@ -36,6 +36,7 @@ import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.log4j.LogManager;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
 /** 
@@ -45,7 +46,7 @@ import org.apache.hadoop.util.StringUtils;
 class Child {
 
   public static final Log LOG =
-    LogFactory.getLog(TaskTracker.class);
+    LogFactory.getLog(Child.class);
 
   static volatile TaskAttemptID taskid = null;
   static volatile boolean isCleanup;
@@ -99,18 +100,18 @@ class Child {
     t.setName("Thread for syncLogs");
     t.setDaemon(true);
     t.start();
-    //for the memory management, a PID file is written and the PID file
-    //is written once per JVM. We simply symlink the file on a per task
-    //basis later (see below). Long term, we should change the Memory
-    //manager to use JVMId instead of TaskAttemptId
-    Path srcPidPath = null;
-    Path dstPidPath = null;
+    
+    String pid = "";
+    if (!Shell.WINDOWS) {
+      pid = System.getenv().get("JVM_PID");
+    }
+    JvmContext context = new JvmContext(jvmId, pid);
     int idleLoopCount = 0;
     Task task = null;
     try {
       while (true) {
         taskid = null;
-        JvmTask myTask = umbilical.getTask(jvmId);
+        JvmTask myTask = umbilical.getTask(context);
         if (myTask.shouldDie()) {
           break;
         } else {
@@ -137,18 +138,6 @@ class Child {
         //are viewable immediately
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
-        if (job.getBoolean("task.memory.mgmt.enabled", false)) {
-          if (srcPidPath == null) {
-            srcPidPath = new Path(task.getPidFile());
-          }
-          //since the JVM is running multiple tasks potentially, we need
-          //to do symlink stuff only for the subsequent tasks
-          if (!taskid.equals(firstTaskid)) {
-            dstPidPath = new Path(task.getPidFile());
-            FileUtil.symLink(srcPidPath.toUri().getPath(), 
-                dstPidPath.toUri().getPath());
-          }
-        }
         //setupWorkDir actually sets up the symlinks for the distributed
         //cache. After a task exits we wipe the workdir clean, and hence
         //the symlinks have to be rebuilt.
@@ -170,11 +159,6 @@ class Child {
           task.run(job, umbilical);             // run the task
         } finally {
           TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
-          if (!taskid.equals(firstTaskid) && 
-              job.getBoolean("task.memory.mgmt.enabled", false)) {
-            // delete the pid-file's symlink
-            new File(dstPidPath.toUri().getPath()).delete();
-          }
         }
         if (numTasksToExecute > 0 && ++numTasksExecuted == numTasksToExecute) {
           break;

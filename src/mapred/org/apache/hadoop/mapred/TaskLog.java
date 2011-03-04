@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ProcessTree;
+import org.apache.hadoop.util.Shell;
 import org.apache.log4j.Appender;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
@@ -50,7 +52,7 @@ import org.apache.log4j.Logger;
  */
 public class TaskLog {
   private static final Log LOG =
-    LogFactory.getLog(TaskLog.class.getName());
+    LogFactory.getLog(TaskLog.class);
 
   private static final File LOG_DIR = 
     new File(System.getProperty("hadoop.log.dir"), 
@@ -403,7 +405,7 @@ public class TaskLog {
                                                 long tailLength
                                                ) throws IOException {
     return captureOutAndError(null, cmd, stdoutFilename,
-                              stderrFilename, tailLength, null );
+                              stderrFilename, tailLength, false);
   }
 
   /**
@@ -425,7 +427,7 @@ public class TaskLog {
                                                 long tailLength
                                                ) throws IOException {
     return captureOutAndError(setup, cmd, stdoutFilename, stderrFilename,
-        tailLength, null);
+        tailLength, false);
   }
 
   /**
@@ -438,9 +440,11 @@ public class TaskLog {
    * @param stdoutFilename The filename that stdout should be saved to
    * @param stderrFilename The filename that stderr should be saved to
    * @param tailLength The length of the tail to be saved.
-   * @param pidFileName The name of the pid-file
+   * @deprecated pidFiles are no more used. Instead pid is exported to
+   *             env variable JVM_PID.
    * @return the modified command that should be run
    */
+  @Deprecated
   public static List<String> captureOutAndError(List<String> setup,
                                                 List<String> cmd, 
                                                 File stdoutFilename,
@@ -448,15 +452,68 @@ public class TaskLog {
                                                 long tailLength,
                                                 String pidFileName
                                                ) throws IOException {
+    return captureOutAndError(setup, cmd, stdoutFilename, stderrFilename,
+        tailLength, false, pidFileName);
+  }
+  
+  /**
+   * Wrap a command in a shell to capture stdout and stderr to files.
+   * Setup commands such as setting memory limit can be passed which 
+   * will be executed before exec.
+   * If the tailLength is 0, the entire output will be saved.
+   * @param setup The setup commands for the execed process.
+   * @param cmd The command and the arguments that should be run
+   * @param stdoutFilename The filename that stdout should be saved to
+   * @param stderrFilename The filename that stderr should be saved to
+   * @param tailLength The length of the tail to be saved.
+   * @param useSetsid Should setsid be used in the command or not.
+   * @deprecated pidFiles are no more used. Instead pid is exported to
+   *             env variable JVM_PID.
+   * @return the modified command that should be run
+   * 
+   */
+  @Deprecated
+  public static List<String> captureOutAndError(List<String> setup,
+      List<String> cmd, 
+      File stdoutFilename,
+      File stderrFilename,
+      long tailLength,
+      boolean useSetsid,
+      String pidFileName
+     ) throws IOException {
+    return captureOutAndError(setup,cmd, stdoutFilename, stderrFilename, tailLength,
+        useSetsid);
+  }
+
+  /**
+   * Wrap a command in a shell to capture stdout and stderr to files.
+   * Setup commands such as setting memory limit can be passed which 
+   * will be executed before exec.
+   * If the tailLength is 0, the entire output will be saved.
+   * @param setup The setup commands for the execed process.
+   * @param cmd The command and the arguments that should be run
+   * @param stdoutFilename The filename that stdout should be saved to
+   * @param stderrFilename The filename that stderr should be saved to
+   * @param tailLength The length of the tail to be saved.
+   * @param useSetsid Should setsid be used in the command or not.
+   * @return the modified command that should be run
+   */
+  public static List<String> captureOutAndError(List<String> setup,
+      List<String> cmd, 
+      File stdoutFilename,
+      File stderrFilename,
+      long tailLength,
+      boolean useSetsid
+     ) throws IOException {
     List<String> result = new ArrayList<String>(3);
     result.add(bashCommand);
     result.add("-c");
     String mergedCmd = buildCommandLine(setup, cmd,
         stdoutFilename,
         stderrFilename, tailLength,
-        pidFileName);
+        useSetsid);
     result.add(mergedCmd.toString());
-    return result;
+    return result; 
   }
   
   
@@ -464,17 +521,15 @@ public class TaskLog {
       List<String> cmd, 
       File stdoutFilename,
       File stderrFilename,
-      long tailLength, 
-      String pidFileName) throws IOException {
+      long tailLength,
+      boolean useSetSid) throws IOException {
     
     String stdout = FileUtil.makeShellPath(stdoutFilename);
     String stderr = FileUtil.makeShellPath(stderrFilename);
     StringBuffer mergedCmd = new StringBuffer();
-    // Spit out the pid to pidFileName
-    if (pidFileName != null) {
-      mergedCmd.append("echo $$ > ");
-      mergedCmd.append(pidFileName);
-      mergedCmd.append(" ;");
+    
+    if (!Shell.WINDOWS) {
+      mergedCmd.append(" export JVM_PID=`echo $$` ; ");
     }
 
     if (setup != null && setup.size() > 0) {
@@ -483,6 +538,9 @@ public class TaskLog {
     }
     if (tailLength > 0) {
       mergedCmd.append("(");
+    } else if (ProcessTree.isSetsidAvailable && useSetSid 
+        && !Shell.WINDOWS) {
+      mergedCmd.append("exec setsid ");
     } else {
       mergedCmd.append("exec ");
     }

@@ -198,12 +198,10 @@
 </property>
 
 <property>
-  <name>mapred.tasktracker.procfsbasedprocesstree.sleeptime-before-sigkill</name>
+  <name>mapred.tasktracker.tasks.sleeptime-before-sigkill</name>
   <value>5000</value>
   <description>The time, in milliseconds, the tasktracker waits for sending a
-  SIGKILL to a process that has overrun memory limits, after it has been sent
-  a SIGTERM. Used only if tasks' memory management is enabled via
-  mapred.tasktracker.tasks.maxmemory.</description>
+  SIGKILL to a process, after it has been sent a SIGTERM.</description>
 </property>
 
 <property>

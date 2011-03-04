@@ -199,7 +199,6 @@ public class TaskTracker
   private static final String SUBDIR = "taskTracker";
   private static final String CACHEDIR = "archive";
   private static final String JOBCACHE = "jobcache";
-  private static final String PID = "pid";
   private static final String OUTPUT = "output";
   private JobConf originalConf;
   private JobConf fConf;
@@ -419,13 +418,14 @@ public class TaskTracker
 	return taskDir;
   }
 
-  static String getPidFile(String jobid, 
-                           String taskid, 
-                           boolean isCleanup) {
-    return  getLocalTaskDir(jobid, taskid, isCleanup)
-            + Path.SEPARATOR + PID;
+  String getPid(TaskAttemptID tid) {
+    TaskInProgress tip = tasks.get(tid);
+    if (tip != null) {
+      return jvmManager.getPid(tip.getTaskRunner());
+    }
+    return null;
   }
-
+  
   public long getProtocolVersion(String protocol, 
                                  long clientVersion) throws IOException {
     if (protocol.equals(TaskUmbilicalProtocol.class.getName())) {
@@ -760,7 +760,7 @@ public class TaskTracker
     }
   }
 
-  private LocalDirAllocator lDirAlloc = 
+  private static LocalDirAllocator lDirAlloc = 
                               new LocalDirAllocator("mapred.local.dir");
 
   // intialize the job directory
@@ -1742,13 +1742,12 @@ public class TaskTracker
   }
   
   void addToMemoryManager(TaskAttemptID attemptId, boolean isMap,
-                          JobConf conf, 
-                          String pidFile) {
+                          JobConf conf) {
     if (isTaskMemoryManagerEnabled()) {
       taskMemoryManager.addTask(attemptId, 
           isMap ? conf
               .getMemoryForMapTask() * 1024 * 1024L : conf
-              .getMemoryForReduceTask() * 1024 * 1024L, pidFile);
+              .getMemoryForReduceTask() * 1024 * 1024L);
     }
   }
 
@@ -2534,9 +2533,12 @@ public class TaskTracker
   /**
    * Called upon startup by the child process, to fetch Task data.
    */
-  public synchronized JvmTask getTask(JVMId jvmId) 
+  public synchronized JvmTask getTask(JvmContext context) 
   throws IOException {
+    JVMId jvmId = context.jvmId;
     LOG.debug("JVM with ID : " + jvmId + " asked for a task");
+    // save pid of task JVM sent by child
+    jvmManager.setPidToJvm(jvmId, context.pid);
     if (!jvmManager.isJvmKnown(jvmId)) {
       LOG.info("Killing unknown JVM " + jvmId);
       return new JvmTask(null, true);

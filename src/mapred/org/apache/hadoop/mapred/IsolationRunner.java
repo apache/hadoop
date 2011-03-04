@@ -63,7 +63,7 @@ public class IsolationRunner {
       LOG.info("Task " + taskId + " reporting fatal error: " + msg);
     }
 
-    public JvmTask getTask(JVMId jvmId) throws IOException {
+    public JvmTask getTask(JvmContext context) throws IOException {
       return null;
     }
 

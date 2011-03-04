@@ -23,16 +23,21 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Random;
+import java.util.Vector;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.UtilsForTests;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import junit.framework.TestCase;
 
+/**
+ * A JUnit test to test ProcfsBasedProcessTree.
+ */
 public class TestProcfsBasedProcessTree extends TestCase {
 
   private static final Log LOG = LogFactory
@@ -41,23 +46,28 @@ public class TestProcfsBasedProcessTree extends TestCase {
       "test.build.data", "/tmp")).toString().replace(' ', '+');
 
   private ShellCommandExecutor shexec = null;
-  private String pidFile;
+  private String pidFile, lowestDescendant;
   private String shellScript;
-  private static final int N = 10; // Controls the RogueTask
+  private static final int N = 6; // Controls the RogueTask
 
-  private static final int memoryLimit = 15 * 1024 * 1024; // 15MB
-  private static final long PROCESSTREE_RECONSTRUCTION_INTERVAL =
-    ProcfsBasedProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL; // msec
 
   private class RogueTaskThread extends Thread {
     public void run() {
       try {
-        String args[] = { "bash", "-c",
-            "echo $$ > " + pidFile + "; sh " + shellScript + " " + N + ";" };
-        shexec = new ShellCommandExecutor(args);
+        Vector<String> args = new Vector<String>();
+        if(ProcessTree.isSetsidAvailable) {
+          args.add("setsid");
+        }
+        args.add("bash");
+        args.add("-c");
+        args.add(" echo $$ > " + pidFile + "; sh " +
+            shellScript + " " + N + ";") ;
+        shexec = new ShellCommandExecutor(args.toArray(new String[0]));
         shexec.execute();
       } catch (ExitCodeException ee) {
-        LOG.info("Shell Command exit with a non-zero exit code. " + ee);
+        LOG.info("Shell Command exit with a non-zero exit code. This is" +
+            " expected as we are killing the subprocesses of the" +
+            " task intentionally. " + ee);
       } catch (IOException ioe) {
         LOG.info("Error executing shell command " + ioe);
       } finally {
@@ -77,7 +87,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
     }
 
     // read from pidFile
-    return ProcfsBasedProcessTree.getPidFromPidFile(pidFile);
+    return UtilsForTests.getPidFromPidFile(pidFile);
   }
 
   public void testProcessTree() {
@@ -94,26 +104,34 @@ public class TestProcfsBasedProcessTree extends TestCase {
     }
     // create shell script
     Random rm = new Random();
-    File tempFile = new File(this.getName() + "_shellScript_" + rm.nextInt()
-        + ".sh");
+    File tempFile = new File(TEST_ROOT_DIR, this.getName() + "_shellScript_"
+        + rm.nextInt() + ".sh");
     tempFile.deleteOnExit();
-    shellScript = tempFile.getName();
+    shellScript = TEST_ROOT_DIR + File.separator + tempFile.getName();
 
     // create pid file
-    tempFile = new File(this.getName() + "_pidFile_" + rm.nextInt() + ".pid");
+    tempFile = new File(TEST_ROOT_DIR,  this.getName() + "_pidFile_" +
+                        rm.nextInt() + ".pid");
     tempFile.deleteOnExit();
-    pidFile = tempFile.getName();
+    pidFile = TEST_ROOT_DIR + File.separator + tempFile.getName();
+
+    lowestDescendant = TEST_ROOT_DIR + File.separator + "lowestDescendantPidFile";
 
     // write to shell-script
     try {
       FileWriter fWriter = new FileWriter(shellScript);
       fWriter.write(
           "# rogue task\n" +
-          "sleep 10\n" +
+          "sleep 1\n" +
           "echo hello\n" +
           "if [ $1 -ne 0 ]\n" +
           "then\n" +
           " sh " + shellScript + " $(($1-1))\n" +
+          "else\n" +
+          " echo $$ > " + lowestDescendant + "\n" +
+          " while true\n do\n" +
+          "  sleep 5\n" +
+          " done\n" +
           "fi");
       fWriter.close();
     } catch (IOException ioe) {
@@ -125,26 +143,31 @@ public class TestProcfsBasedProcessTree extends TestCase {
     t.start();
     String pid = getRogueTaskPID();
     LOG.info("Root process pid: " + pid);
-    ProcfsBasedProcessTree p = new ProcfsBasedProcessTree(pid);
+    ProcfsBasedProcessTree p = new ProcfsBasedProcessTree(pid,
+        ProcessTree.isSetsidAvailable,
+        ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
     p = p.getProcessTree(); // initialize
-    try {
-      while (true) {
-        LOG.info("ProcessTree: " + p.toString());
-        long mem = p.getCumulativeVmem();
-        LOG.info("Memory usage: " + mem + "bytes.");
-        if (mem > memoryLimit) {
-          p.destroy();
-          break;
-        }
-        Thread.sleep(PROCESSTREE_RECONSTRUCTION_INTERVAL);
-        p = p.getProcessTree(); // reconstruct
+    LOG.info("ProcessTree: " + p.toString());
+    File leaf = new File(lowestDescendant);
+    //wait till lowest descendant process of Rougue Task starts execution
+    while (!leaf.exists()) {
+      try {
+        Thread.sleep(500);
+      } catch (InterruptedException ie) {
+        break;
       }
-    } catch (InterruptedException ie) {
-      LOG.info("Interrupted.");
     }
-
-    assertFalse("ProcessTree must have been gone", p.isAlive());
-
+    
+    p = p.getProcessTree(); // reconstruct
+    LOG.info("ProcessTree: " + p.toString());
+    // destroy the map task and all its subprocesses
+    p.destroy(true/*in the background*/);
+    if(ProcessTree.isSetsidAvailable) {// whole processtree should be gone
+      assertEquals(false, p.isAnyProcessInTreeAlive());
+    }
+    else {// process should be gone
+      assertEquals(false, p.isAlive());
+    }
     // Not able to join thread sometimes when forking with large N.
     try {
       t.join(2000);

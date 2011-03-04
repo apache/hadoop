@@ -126,7 +126,7 @@ class LinuxTaskController extends TaskController {
     // get the JVM command line.
     String cmdLine = 
       TaskLog.buildCommandLine(env.setup, env.vargs, env.stdout, env.stderr,
-          env.logSize, env.pidFile);
+          env.logSize, true);
     StringBuffer sb = new StringBuffer();
     //export out all the environment variable before child command.
     for(Entry<String, String> entry : env.env.entrySet()) {
