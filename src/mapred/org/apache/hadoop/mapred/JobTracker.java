@@ -50,6 +50,8 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import javax.security.auth.login.LoginException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -77,7 +79,9 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.PermissionChecker;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ConfiguredPolicy;
@@ -377,6 +381,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                         faultyTrackers.numBlacklistedTrackers -= 1;
                       }
                       updateTaskTrackerStatus(trackerName, null);
+                      
+                      // remove the mapping from the hosts list
+                      String hostname = newProfile.getHost();
+                      hostnameToTrackerName.get(hostname).remove(trackerName);
                     } else {
                       // Update time by inserting latest profile
                       trackerExpiryQueue.add(newProfile);
@@ -1508,6 +1516,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // All the known TaskInProgress items, mapped to by taskids (taskid->TIP)
   Map<TaskAttemptID, TaskInProgress> taskidToTIPMap =
     new TreeMap<TaskAttemptID, TaskInProgress>();
+  // (hostname --> Set(trackername))
+  // This is used to keep track of all trackers running on one host. While
+  // decommissioning the host, all the trackers on the host will be lost.
+  Map<String, Set<String>> hostnameToTrackerName = 
+    Collections.synchronizedMap(new TreeMap<String, Set<String>>());
+  
 
   // (taskid --> trackerID) 
   TreeMap<TaskAttemptID, String> taskidToTrackerMap = new TreeMap<TaskAttemptID, String>();
@@ -1594,6 +1608,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   FileSystem fs = null;
   Path systemDir = null;
   private JobConf conf;
+  private final UserGroupInformation mrOwner;
+  private final String supergroup;
 
   long limitMaxMemForMapTasks;
   long limitMaxMemForReduceTasks;
@@ -1611,6 +1627,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   
   JobTracker(JobConf conf, String identifier) 
   throws IOException, InterruptedException {   
+    // find the owner of the process
+    try {
+      mrOwner = UnixUserGroupInformation.login(conf);
+    } catch (LoginException e) {
+      throw new IOException(StringUtils.stringifyException(e));
+    }
+    supergroup = conf.get("mapred.permissions.supergroup", "supergroup");
+    LOG.info("Starting jobtracker with owner as " + mrOwner.getUserName() 
+             + " and supergroup as " + supergroup);
+
     //
     // Grab some static constants
     //
@@ -2457,11 +2483,23 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   private void addNewTracker(TaskTrackerStatus status) {
     trackerExpiryQueue.add(status);
+
     //  Register the tracker if its not registered
+    String hostname = status.getHost();
     if (getNode(status.getTrackerName()) == null) {
       // Making the network location resolution inline .. 
-      resolveAndAddToTopology(status.getHost());
+      resolveAndAddToTopology(hostname);
     }
+
+    // add it to the set of tracker per host
+    Set<String> trackers = hostnameToTrackerName.get(hostname);
+    if (trackers == null) {
+      trackers = Collections.synchronizedSet(new HashSet<String>());
+      hostnameToTrackerName.put(hostname, trackers);
+    }
+    LOG.info("Adding tracker " + status.getTrackerName() + " to host " 
+             + hostname);
+    trackers.add(status.getTrackerName());
   }
 
   public Node resolveAndAddToTopology(String name) {
@@ -3241,7 +3279,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             totalReduces,
             totalMapTaskCapacity,
             totalReduceTaskCapacity, 
-            state);
+            state, getExcludedNodes().size()
+            );
       } else {
         return new ClusterStatus(taskTrackers.size() - 
             getBlacklistedTrackerCount(),
@@ -3251,7 +3290,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             totalReduces,
             totalMapTaskCapacity,
             totalReduceTaskCapacity, 
-            state);          
+            state, getExcludedNodes().size());          
       }
     }
   }
@@ -3829,6 +3868,64 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
   
+  /**
+   * Rereads the config to get hosts and exclude list file names.
+   * Rereads the files to update the hosts and exclude lists.
+   */
+  public synchronized void refreshNodes() throws IOException {
+    // check access
+    PermissionChecker.checkSuperuserPrivilege(mrOwner, supergroup);
+
+    // Reread the config to get mapred.hosts and mapred.hosts.exclude filenames.
+    // Update the file names and refresh internal includes and excludes list
+    LOG.info("Refreshing hosts information");
+    Configuration conf = new Configuration();
+
+    hostsReader.updateFileNames(conf.get("mapred.hosts",""), 
+                                conf.get("mapred.hosts.exclude", ""));
+    hostsReader.refresh();
+    
+    Set<String> excludeSet = new HashSet<String>();
+    for(Map.Entry<String, TaskTrackerStatus> eSet : taskTrackers.entrySet()) {
+      String trackerName = eSet.getKey();
+      TaskTrackerStatus status = eSet.getValue();
+      // Check if not include i.e not in host list or in hosts list but excluded
+      if (!inHostsList(status) || inExcludedHostsList(status)) {
+          excludeSet.add(status.getHost()); // add to rejected trackers
+      }
+    }
+    decommissionNodes(excludeSet);
+  }
+
+  // main decommission
+  private synchronized void decommissionNodes(Set<String> hosts) 
+  throws IOException {  
+    LOG.info("Decommissioning " + hosts.size() + " nodes");
+    // create a list of tracker hostnames
+    synchronized (taskTrackers) {
+      synchronized (trackerExpiryQueue) {
+        for (String host : hosts) {
+          LOG.info("Decommissioning host " + host);
+          Set<String> trackers = hostnameToTrackerName.remove(host);
+          if (trackers != null) {
+            for (String tracker : trackers) {
+              LOG.info("Losing tracker " + tracker + " on host " + host);
+              lostTaskTracker(tracker); // lose the tracker
+              updateTaskTrackerStatus(tracker, null);
+            }
+          }
+          LOG.info("Host " + host + " is ready for decommissioning");
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns a set of excluded nodes.
+   */
+  Collection<String> getExcludedNodes() {
+    return hostsReader.getExcludedHosts();
+  }
 
   /**
    * Get the localized job file path on the job trackers local file system

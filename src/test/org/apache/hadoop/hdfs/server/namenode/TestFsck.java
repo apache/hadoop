@@ -55,11 +55,11 @@ public class TestFsck extends TestCase {
     ByteArrayOutputStream bStream = new ByteArrayOutputStream();
     PrintStream newOut = new PrintStream(bStream, true);
     System.setOut(newOut);
-    ((Log4JLogger)PermissionChecker.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSPermissionChecker.LOG).getLogger().setLevel(Level.ALL);
     int errCode = ToolRunner.run(new DFSck(conf), path);
     if (checkErrorCode)
       assertEquals(expectedErrCode, errCode);
-    ((Log4JLogger)PermissionChecker.LOG).getLogger().setLevel(Level.INFO);
+    ((Log4JLogger)FSPermissionChecker.LOG).getLogger().setLevel(Level.INFO);
     System.setOut(oldOut);
     return bStream.toString();
   }

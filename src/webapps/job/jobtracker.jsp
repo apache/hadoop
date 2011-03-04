@@ -32,7 +32,8 @@
               "<th>Total Submissions</th>" +
               "<th>Nodes</th><th>Map Task Capacity</th>" +
               "<th>Reduce Task Capacity</th><th>Avg. Tasks/Node</th>" + 
-              "<th>Blacklisted Nodes</th></tr>\n");
+              "<th>Blacklisted Nodes</th>" +
+              "<th>Excluded Nodes</th></tr>\n");
     out.print("<tr><td>" + status.getMapTasks() + "</td><td>" +
               status.getReduceTasks() + "</td><td>" + 
               tracker.getTotalSubmissions() +
@@ -43,6 +44,8 @@
               "</td><td>" + tasksPerNode +
               "</td><td><a href=\"machines.jsp?type=blacklisted\">" +
               status.getBlacklistedTrackers() + "</a>" +
+              "</td><td><a href=\"machines.jsp?type=excluded\">" +
+              status.getNumExcludedNodes() + "</a>" +
               "</td></tr></table>\n");
 
     out.print("<br>");

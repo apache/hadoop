@@ -55,6 +55,7 @@ public class MiniMRCluster {
   private String namenode;
   private UnixUserGroupInformation ugi = null;
   private JobConf conf;
+  private int numTrackerToExclude;
     
   private JobConf job;
   
@@ -266,13 +267,16 @@ public class MiniMRCluster {
     JobClient client;
     try {
       client = new JobClient(job);
-      while(client.getClusterStatus().getTaskTrackers()<taskTrackerList.size()) {
+      ClusterStatus status = client.getClusterStatus();
+      while(status.getTaskTrackers() + numTrackerToExclude 
+            < taskTrackerList.size()) {
         for(TaskTrackerRunner runner : taskTrackerList) {
           if(runner.isDead) {
             throw new RuntimeException("TaskTracker is dead");
           }
         }
         Thread.sleep(1000);
+        status = client.getClusterStatus();
       }
     }
     catch (IOException ex) {
@@ -420,6 +424,14 @@ public class MiniMRCluster {
       int numTaskTrackers, String namenode, 
       int numDir, String[] racks, String[] hosts, UnixUserGroupInformation ugi,
       JobConf conf) throws IOException {
+    this(jobTrackerPort, taskTrackerPort, numTaskTrackers, namenode, numDir, 
+         racks, hosts, ugi, conf, 0);
+  }
+  
+  public MiniMRCluster(int jobTrackerPort, int taskTrackerPort,
+      int numTaskTrackers, String namenode, 
+      int numDir, String[] racks, String[] hosts, UnixUserGroupInformation ugi,
+      JobConf conf, int numTrackerToExclude) throws IOException {
     if (racks != null && racks.length < numTaskTrackers) {
       LOG.error("Invalid number of racks specified. It should be at least " +
           "equal to the number of tasktrackers");
@@ -454,6 +466,7 @@ public class MiniMRCluster {
     this.namenode = namenode;
     this.ugi = ugi;
     this.conf = conf; // this is the conf the mr starts with
+    this.numTrackerToExclude = numTrackerToExclude;
 
     // start the jobtracker
     startJobTracker();

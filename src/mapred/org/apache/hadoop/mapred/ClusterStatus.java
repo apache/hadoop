@@ -61,6 +61,7 @@ public class ClusterStatus implements Writable {
   private Collection<String> activeTrackers = new ArrayList<String>();
   private Collection<String> blacklistedTrackers = new ArrayList<String>();
   private int numBlacklistedTrackers;
+  private int numExcludedNodes;
   private long ttExpiryInterval;
   private int map_tasks;
   private int reduce_tasks;
@@ -105,8 +106,19 @@ public class ClusterStatus implements Writable {
   ClusterStatus(int trackers, int blacklists, long ttExpiryInterval, 
                 int maps, int reduces,
                 int maxMaps, int maxReduces, JobTracker.State state) {
+    this(trackers, blacklists, ttExpiryInterval, maps, reduces, maxMaps, 
+         maxReduces, state, 0);
+  }
+
+  /**
+   * @param numDecommissionedNodes number of decommission trackers
+   */
+  ClusterStatus(int trackers, int blacklists, long ttExpiryInterval, 
+                int maps, int reduces, int maxMaps, int maxReduces, 
+                JobTracker.State state, int numDecommissionedNodes) {
     numActiveTrackers = trackers;
     numBlacklistedTrackers = blacklists;
+    this.numExcludedNodes = numDecommissionedNodes;
     this.ttExpiryInterval = ttExpiryInterval;
     map_tasks = maps;
     reduce_tasks = reduces;
@@ -134,8 +146,19 @@ public class ClusterStatus implements Writable {
       long ttExpiryInterval,
       int maps, int reduces, int maxMaps, int maxReduces, 
       JobTracker.State state) {
+    this(activeTrackers, blacklistedTrackers, ttExpiryInterval, maps, reduces, 
+         maxMaps, maxReduces, state, 0);
+  }
+
+  /**
+   * @param numDecommissionNodes number of decommission trackers
+   */
+  ClusterStatus(Collection<String> activeTrackers, 
+                Collection<String> blacklistedTrackers, long ttExpiryInterval,
+                int maps, int reduces, int maxMaps, int maxReduces, 
+                JobTracker.State state, int numDecommissionNodes) {
     this(activeTrackers.size(), blacklistedTrackers.size(), ttExpiryInterval, 
-        maps, reduces, maxMaps, maxReduces, state);
+        maps, reduces, maxMaps, maxReduces, state, numDecommissionNodes);
     this.activeTrackers = activeTrackers;
     this.blacklistedTrackers = blacklistedTrackers;
   }
@@ -175,6 +198,14 @@ public class ClusterStatus implements Writable {
    */
   public int getBlacklistedTrackers() {
     return numBlacklistedTrackers;
+  }
+  
+  /**
+   * Get the number of excluded hosts in the cluster.
+   * @return the number of excluded hosts in the cluster.
+   */
+  public int getNumExcludedNodes() {
+    return numExcludedNodes;
   }
   
   /**
@@ -270,6 +301,7 @@ public class ClusterStatus implements Writable {
         Text.writeString(out, tracker);
       }
     }
+    out.writeInt(numExcludedNodes);
     out.writeLong(ttExpiryInterval);
     out.writeInt(map_tasks);
     out.writeInt(reduce_tasks);
@@ -297,6 +329,7 @@ public class ClusterStatus implements Writable {
         blacklistedTrackers.add(name);
       }
     }
+    numExcludedNodes = in.readInt();
     ttExpiryInterval = in.readLong();
     map_tasks = in.readInt();
     reduce_tasks = in.readInt();
