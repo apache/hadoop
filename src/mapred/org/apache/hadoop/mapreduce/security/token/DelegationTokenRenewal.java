@@ -18,16 +18,15 @@
 
 package org.apache.hadoop.mapreduce.security.token;
 
+import java.io.IOException;
 import java.net.URI;
-import java.security.AccessControlException;
+import org.apache.hadoop.security.AccessControlException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -80,6 +79,14 @@ public class DelegationTokenRenewal {
     public String toString() {
       return token + ";exp="+expirationDate;
     }
+    @Override
+    public boolean equals (Object obj) {
+      return token.equals(((DelegationTokenToRenew)obj).token);
+    }
+    @Override
+    public int hashCode() {
+      return token.hashCode();
+    }
   }
   
   // global single timer (daemon)
@@ -87,19 +94,14 @@ public class DelegationTokenRenewal {
   
   //managing the list of tokens using Map
   // jobId=>List<tokens>
-  private static Map<JobID, List<DelegationTokenToRenew>> delegationTokens = 
-    Collections.synchronizedMap(new HashMap<JobID, 
-                                       List<DelegationTokenToRenew>>());
+  private static List<DelegationTokenToRenew> delegationTokens = 
+    Collections.synchronizedList(new ArrayList<DelegationTokenToRenew>());
   //adding token
-  private static void addTokenToMap(DelegationTokenToRenew t) {
-    // see if a list already exists
-    JobID jobId = t.jobId;
-    List<DelegationTokenToRenew> l = delegationTokens.get(jobId);
-    if(l==null) {
-      l = new ArrayList<DelegationTokenToRenew>();
-      delegationTokens.put(jobId, l);
-    }
-    l.add(t);
+  private static void addTokenToList(DelegationTokenToRenew t) {
+    //check to see if the token already exists in the list
+    if (delegationTokens.contains(t))
+      return;
+    delegationTokens.add(t);
   }
   
   // kind of tokens we currently renew
@@ -128,7 +130,7 @@ public class DelegationTokenRenewal {
       DelegationTokenToRenew dtr = 
         new DelegationTokenToRenew(jobId, dt, conf, now); 
 
-      addTokenToMap(dtr);
+      addTokenToList(dtr);
       
       setTimerForTokenRenewal(dtr, true);
       LOG.info("registering token for renewal for service =" + dt.getService()+
@@ -147,15 +149,14 @@ public class DelegationTokenRenewal {
         DistributedFileSystem dfs = getDFSForToken(token, conf);
         newExpirationDate = dfs.renewDelegationToken(token);
       } catch (InvalidToken ite) {
-        LOG.warn("token canceled - not scheduling for renew");
+        LOG.warn("invalid token - not scheduling for renew");
         removeFailedDelegationToken(dttr);
-        throw new Exception("failed to renew token", ite);
-      } catch (AccessControlException ace) {
-        LOG.warn("token canceled - not scheduling for renew");
-        removeFailedDelegationToken(dttr);
-        throw new Exception("failed to renew token", ace);
-      } catch (Exception ioe) {
+        throw new IOException("failed to renew token", ite);
+      } catch (AccessControlException ioe) {
         LOG.warn("failed to renew token:"+token, ioe);
+        removeFailedDelegationToken(dttr);
+      } catch (Exception e) {
+        LOG.warn("failed to renew token:"+token, e);
         // returns default expiration date
       }
     } else {
@@ -266,26 +267,13 @@ public class DelegationTokenRenewal {
    */
   private static void removeFailedDelegationToken(DelegationTokenToRenew t) {
     JobID jobId = t.jobId;
-    List<DelegationTokenToRenew> l = delegationTokens.get(jobId);
-    if(l==null) return;
-
-    Iterator<DelegationTokenToRenew> it = l.iterator();
-    while(it.hasNext()) {
-      DelegationTokenToRenew dttr = it.next();
-      if(dttr == t) {
-        if (LOG.isDebugEnabled())
-          LOG.debug("removing failed delegation token for jobid=" + jobId + 
-            ";t=" + dttr.token.getService());
-
-        // cancel the timer
-        if(dttr.timerTask!=null)
-          dttr.timerTask.cancel();
-
-        // no need to cancel the token - it is invalid
-        it.remove();
-        break; //should be only one
-      }
-    }
+    if (LOG.isDebugEnabled())
+      LOG.debug("removing failed delegation token for jobid=" + jobId + 
+          ";t=" + t.token.getService());
+    delegationTokens.remove(t);
+    // cancel the timer
+    if(t.timerTask!=null)
+      t.timerTask.cancel();
   }
   
   /**
@@ -293,24 +281,25 @@ public class DelegationTokenRenewal {
    * @param jobId
    */
   public static void removeDelegationTokenRenewalForJob(JobID jobId) {
-    List<DelegationTokenToRenew> l = delegationTokens.remove(jobId);
-    if(l==null) return;
+    synchronized (delegationTokens) {
+      Iterator<DelegationTokenToRenew> it = delegationTokens.iterator();
+      while(it.hasNext()) {
+        DelegationTokenToRenew dttr = it.next();
+        if (dttr.jobId.equals(jobId)) {
+          if (LOG.isDebugEnabled())
+            LOG.debug("removing delegation token for jobid=" + jobId + 
+                ";t=" + dttr.token.getService());
 
-    Iterator<DelegationTokenToRenew> it = l.iterator();
-    while(it.hasNext()) {
-      DelegationTokenToRenew dttr = it.next();
-      if (LOG.isDebugEnabled())
-        LOG.debug("removing delegation token for jobid=" + jobId + 
-          ";t=" + dttr.token.getService());
+          // cancel the timer
+          if(dttr.timerTask!=null)
+            dttr.timerTask.cancel();
 
-      // cancel the timer
-      if(dttr.timerTask!=null)
-        dttr.timerTask.cancel();
+          // cancel the token
+          cancelToken(dttr);
 
-      // cancel the token
-      cancelToken(dttr);
-
-      it.remove();
+          it.remove();
+        }
+      }
     }
   }
 }

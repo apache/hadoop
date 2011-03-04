@@ -401,6 +401,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   private Path stagingAreaDir = null;
   
   private FileSystem fs = null;
+  private UserGroupInformation ugi;
 
   /**
    * Create a job client.
@@ -427,6 +428,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   public void init(JobConf conf) throws IOException {
     String tracker = conf.get("mapred.job.tracker", "local");
+    this.ugi = UserGroupInformation.getCurrentUser();
     if ("local".equals(tracker)) {
       conf.setNumMapTasks(1);
       this.jobSubmitClient = new LocalJobRunner(conf);
@@ -451,6 +453,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    */
   public JobClient(InetSocketAddress jobTrackAddr, 
                    Configuration conf) throws IOException {
+    this.ugi = UserGroupInformation.getCurrentUser();
     jobSubmitClient = createRPCProxy(jobTrackAddr, conf);
   }
 
@@ -468,13 +471,22 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * for submission to the MapReduce system.
    * 
    * @return the filesystem handle.
+   * @throws IOException 
    */
   public synchronized FileSystem getFs() throws IOException {
     if (this.fs == null) {
-      Path sysDir = getSystemDir();
-      this.fs = sysDir.getFileSystem(getConf());
+      try {
+        this.fs = ugi.doAs(new PrivilegedExceptionAction<FileSystem>() {
+          public FileSystem run() throws IOException {
+            Path sysDir = getSystemDir();
+            return sysDir.getFileSystem(getConf());
+          }
+        });
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
     }
-    return fs;
+    return this.fs;
   }
   
   /* see if two file systems are the same or not
@@ -517,8 +529,9 @@ public class JobClient extends Configured implements MRConstants, Tool  {
 
   // copies a file to the jobtracker filesystem and returns the path where it
   // was copied to
-  private Path copyRemoteFiles(FileSystem jtFs, Path parentDir, Path originalPath, 
-                               JobConf job, short replication) throws IOException {
+  private Path copyRemoteFiles(FileSystem jtFs, Path parentDir, 
+      final Path originalPath, final JobConf job, short replication) 
+  throws IOException, InterruptedException {
     //check if we do not need to copy the files
     // is jt using the same file system.
     // just checking for uri strings... doing no dns lookups 
@@ -527,6 +540,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     
     FileSystem remoteFs = null;
     remoteFs = originalPath.getFileSystem(job);
+    
     if (compareFs(remoteFs, jtFs)) {
       return originalPath;
     }
@@ -546,7 +560,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @throws IOException
    */
   private void copyAndConfigureFiles(JobConf job, Path jobSubmitDir) 
-  throws IOException {
+  throws IOException, InterruptedException {
     short replication = (short)job.getInt("mapred.submit.replication", 10);
     copyAndConfigureFiles(job, jobSubmitDir, replication);
 
@@ -557,7 +571,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
   
   private void copyAndConfigureFiles(JobConf job, Path submitJobDir, 
-      short replication) throws IOException {
+      short replication) throws IOException, InterruptedException {
     
     if (!(job.getBoolean("mapred.used.genericoptionsparser", false))) {
       LOG.warn("Use GenericOptionsParser for parsing the arguments. " +
@@ -721,7 +735,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
    * @throws IOException
    */
   public 
-  RunningJob submitJobInternal(JobConf job
+  RunningJob submitJobInternal(final JobConf job
                                ) throws FileNotFoundException, 
                                         ClassNotFoundException,
                                         InterruptedException,
@@ -729,67 +743,80 @@ public class JobClient extends Configured implements MRConstants, Tool  {
     /*
      * configure the command line options correctly on the submitting dfs
      */
-    Path jobStagingArea = JobSubmissionFiles.getStagingDir(this, job);
-    JobID jobId = jobSubmitClient.getNewJobId();
-    Path submitJobDir = new Path(jobStagingArea, jobId.toString());
-    job.set("mapreduce.job.dir", submitJobDir.toString());
-    JobStatus status = null;
-    try {
-      
-      copyAndConfigureFiles(job, submitJobDir);
-      
-      // get delegation token for the dir
-      TokenCache.obtainTokensForNamenodes(new Path [] {submitJobDir}, job);
-      
-      Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
-      int reduces = job.getNumReduceTasks();
-      JobContext context = new JobContext(job, jobId);
-      
-      job = (JobConf)context.getConfiguration();
+    return ugi.doAs(new PrivilegedExceptionAction<RunningJob>() {
+      public RunningJob run() throws FileNotFoundException, 
+      ClassNotFoundException,
+      InterruptedException,
+      IOException{
 
-      // Check the output specification
-      if (reduces == 0 ? job.getUseNewMapper() : job.getUseNewReducer()) {
-        org.apache.hadoop.mapreduce.OutputFormat<?,?> output =
-          ReflectionUtils.newInstance(context.getOutputFormatClass(), job);
-        output.checkOutputSpecs(context);
-      } else {
-        job.getOutputFormat().checkOutputSpecs(fs, job);
+        JobConf jobCopy = job;
+        Path jobStagingArea = JobSubmissionFiles.getStagingDir(JobClient.this,
+            jobCopy);
+        JobID jobId = jobSubmitClient.getNewJobId();
+        Path submitJobDir = new Path(jobStagingArea, jobId.toString());
+        jobCopy.set("mapreduce.job.dir", submitJobDir.toString());
+        JobStatus status = null;
+        try {
+
+          copyAndConfigureFiles(jobCopy, submitJobDir);
+
+          // get delegation token for the dir
+          TokenCache.obtainTokensForNamenodes(new Path [] {submitJobDir},
+              jobCopy);
+
+          Path submitJobFile = JobSubmissionFiles.getJobConfPath(submitJobDir);
+          int reduces = jobCopy.getNumReduceTasks();
+          JobContext context = new JobContext(jobCopy, jobId);
+
+          jobCopy = (JobConf)context.getConfiguration();
+
+          // Check the output specification
+          if (reduces == 0 ? jobCopy.getUseNewMapper() : 
+            jobCopy.getUseNewReducer()) {
+            org.apache.hadoop.mapreduce.OutputFormat<?,?> output =
+              ReflectionUtils.newInstance(context.getOutputFormatClass(),
+                  jobCopy);
+            output.checkOutputSpecs(context);
+          } else {
+            jobCopy.getOutputFormat().checkOutputSpecs(fs, jobCopy);
+          }
+
+          // Create the splits for the job
+          LOG.debug("Creating splits at " + fs.makeQualified(submitJobDir));
+          int maps = writeSplits(context, submitJobDir);
+          jobCopy.setNumMapTasks(maps);
+
+          // Write job file to JobTracker's fs        
+          FSDataOutputStream out = 
+            FileSystem.create(fs, submitJobFile,
+                new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
+
+          try {
+            jobCopy.writeXml(out);
+          } finally {
+            out.close();
+          }
+
+
+          //
+          // Now, actually submit the job (using the submit name)
+          //
+          populateTokenCache(jobCopy);
+          status = jobSubmitClient.submitJob(
+              jobId, submitJobDir.toString(), TokenCache.getTokenStorage());
+          if (status != null) {
+            return new NetworkedJob(status);
+          } else {
+            throw new IOException("Could not launch job");
+          }
+        } finally {
+          if (status == null) {
+            LOG.info("Cleaning up the staging area " + submitJobDir);
+            fs.delete(submitJobDir, true);
+          }
+        }
       }
-
-      // Create the splits for the job
-      LOG.debug("Creating splits at " + fs.makeQualified(submitJobDir));
-      int maps = writeSplits(context, submitJobDir);
-      job.setNumMapTasks(maps);
-
-      // Write job file to JobTracker's fs        
-      FSDataOutputStream out = 
-        FileSystem.create(fs, submitJobFile,
-            new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION));
-
-      try {
-        job.writeXml(out);
-      } finally {
-        out.close();
-      }
-      
-
-      //
-      // Now, actually submit the job (using the submit name)
-      //
-      populateTokenCache(job);
-      status = jobSubmitClient.submitJob(
-         jobId, submitJobDir.toString(), TokenCache.getTokenStorage());
-      if (status != null) {
-        return new NetworkedJob(status);
-      } else {
-        throw new IOException("Could not launch job");
-      }
-    } finally {
-      if (status == null) {
-        LOG.info("Cleaning up the staging area " + submitJobDir);
-        fs.delete(submitJobDir, true);
-      }
-    }
+    });
   }
 
   @SuppressWarnings("unchecked")

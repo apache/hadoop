@@ -233,7 +233,7 @@ public class TestDelegationTokenRenewal {
     // first 3 initial renewals + 1 real
     int numberOfExpectedRenewals = 3+1; 
     
-    int attempts = 4;
+    int attempts = 10;
     while(attempts-- > 0) {
       try {
         Thread.sleep(3*1000); // sleep 3 seconds, so it has time to renew
@@ -269,16 +269,10 @@ public class TestDelegationTokenRenewal {
     JobID jid2 = new JobID("job2",1);
     DelegationTokenRenewal.registerDelegationTokensForRenewal(jid2, ts, conf);
     DelegationTokenRenewal.removeDelegationTokenRenewalForJob(jid2);
-    numberOfExpectedRenewals++; // one more initial renewal
-    attempts = 4;
-    while(attempts-- > 0) {
-      try {
-        Thread.sleep(3*1000); // sleep 3 seconds, so it has time to renew
-      } catch (InterruptedException e) {}
-      // since we cannot guarantee timely execution - let's give few chances
-      if(dfs.getCounter()==numberOfExpectedRenewals)
-        break;
-    }
+    numberOfExpectedRenewals = dfs.getCounter(); // number of renewals so far
+    try {
+      Thread.sleep(6*1000); // sleep 6 seconds, so it has time to renew
+    } catch (InterruptedException e) {}
     System.out.println("Counter = " + dfs.getCounter() + ";t="+dfs.getToken());
     
     // counter and the token should stil be the old ones

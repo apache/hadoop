@@ -27,6 +27,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.HashPartitioner;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * A read-only view of the job that is provided to the tasks while they
@@ -59,9 +60,16 @@ public class JobContext {
   public static final String JOB_CANCEL_DELEGATION_TOKEN = 
     "mapreduce.job.complete.cancel.delegation.tokens";
   
+  protected UserGroupInformation ugi;
+  
   public JobContext(Configuration conf, JobID jobId) {
     this.conf = new org.apache.hadoop.mapred.JobConf(conf);
     this.jobId = jobId;
+    try {
+      this.ugi = UserGroupInformation.getCurrentUser();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**

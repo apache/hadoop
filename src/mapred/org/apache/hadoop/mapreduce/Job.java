@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -468,9 +469,15 @@ public class Job extends JobContext {
   /**
    * Open a connection to the JobTracker
    * @throws IOException
+   * @throws InterruptedException 
    */
-  private void connect() throws IOException {
-    jobClient = new JobClient((JobConf) getConfiguration());
+  private void connect() throws IOException, InterruptedException {
+    ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        jobClient = new JobClient((JobConf) getConfiguration());    
+        return null;
+      }
+    });
   }
   
   /**
