@@ -138,25 +138,25 @@ public class TestJobTrackerInstrumentation extends TestCase {
     }
     
     @Override
-    public synchronized void addRunningMaps(JobID id, int task)
+    public synchronized void addRunningMaps(int task)
     {
       incrRunningMaps += task;
     }
 
     @Override
-    public synchronized void decRunningMaps(JobID id, int task) 
+    public synchronized void decRunningMaps(int task) 
     {
       decrRunningMaps += task;
     }
 
     @Override
-    public synchronized void addRunningReduces(JobID id, int task)
+    public synchronized void addRunningReduces(int task)
     {
       incrRunningReduces += task;
     }
 
     @Override
-    public synchronized void decRunningReduces(JobID id, int task)
+    public synchronized void decRunningReduces(int task)
     {
       decrRunningReduces += task;
     }

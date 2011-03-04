@@ -341,25 +341,25 @@ class JobTrackerMetricsInst extends JobTrackerInstrumentation implements Updater
   }
 
   @Override
-  public synchronized void addRunningMaps(JobID id, int task)
+  public synchronized void addRunningMaps(int task)
   {
     numRunningMaps += task;
   }
 
   @Override
-  public synchronized void decRunningMaps(JobID id, int task) 
+  public synchronized void decRunningMaps(int task) 
   {
     numRunningMaps -= task;
   }
 
   @Override
-  public synchronized void addRunningReduces(JobID id, int task)
+  public synchronized void addRunningReduces(int task)
   {
     numRunningReduces += task;
   }
 
   @Override
-  public synchronized void decRunningReduces(JobID id, int task)
+  public synchronized void decRunningReduces(int task)
   {
     numRunningReduces -= task;
   }

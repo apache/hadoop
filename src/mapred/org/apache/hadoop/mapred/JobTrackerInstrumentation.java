@@ -127,16 +127,16 @@ class JobTrackerInstrumentation {
   public void decRunningJob(JobConf conf, JobID id) 
   { }
 
-  public void addRunningMaps(JobID id, int task)
+  public void addRunningMaps(int tasks)
   { }
 
-  public void decRunningMaps(JobID id, int task) 
+  public void decRunningMaps(int tasks) 
   { }
 
-  public void addRunningReduces(JobID id, int task)
+  public void addRunningReduces(int tasks)
   { }
 
-  public void decRunningReduces(JobID id, int task)
+  public void decRunningReduces(int tasks)
   { }
 
   public void killedMap(TaskAttemptID taskAttemptID)
