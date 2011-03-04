@@ -44,9 +44,9 @@ public class ContentSummaryServlet extends DfsServlet {
       (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
     final UserGroupInformation ugi = getUGI(request, conf);
     try {
-      ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      ugi.doAs(new PrivilegedExceptionAction<Void>() {
         @Override
-        public Object run() throws Exception {
+        public Void run() throws Exception {
           final String path = request.getPathInfo();
 
           final PrintWriter out = response.getWriter();
@@ -69,8 +69,7 @@ public class ContentSummaryServlet extends DfsServlet {
             }
             xml.endTag();
           } catch(IOException ioe) {
-            new RemoteException(ioe.getClass().getName(), ioe.getMessage()
-                ).writeXml(path, xml);
+            writeXml(ioe, path, xml);
           }
           xml.endDocument();
           return null;

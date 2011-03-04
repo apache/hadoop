@@ -34,9 +34,9 @@ import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
+import org.znerd.xmlenc.XMLOutputter;
 
 /**
  * A base class for the servlets in DFS.
@@ -46,6 +46,25 @@ abstract class DfsServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   static final Log LOG = LogFactory.getLog(DfsServlet.class.getCanonicalName());
+
+  /** Write the object to XML format */
+  protected void writeXml(Exception except,
+                          String path, XMLOutputter doc) throws IOException {
+    doc.startTag(RemoteException.class.getSimpleName());
+    doc.attribute("path", path);
+    if (except instanceof RemoteException) {
+      doc.attribute("class", ((RemoteException) except).getClassName());
+    } else {
+      doc.attribute("class", except.getClass().getName());      
+    }
+    String msg = except.getLocalizedMessage();
+    int i = msg.indexOf("\n");
+    if (i >= 0) {
+      msg = msg.substring(0, i);
+    }
+    doc.attribute("message", msg.substring(msg.indexOf(":") + 1).trim());
+    doc.endTag();
+  }
 
   /** Get {@link UserGroupInformation} from request 
    *    * @throws IOException */
@@ -60,6 +79,12 @@ abstract class DfsServlet extends HttpServlet {
    */
   protected ClientProtocol createNameNodeProxy() throws IOException {
     ServletContext context = getServletContext();
+    // if we are running in the Name Node, use it directly rather than via 
+    // rpc
+    NameNode nn = (NameNode) context.getAttribute("name.node");
+    if (nn != null) {
+      return nn;
+    }
     InetSocketAddress nnAddr = (InetSocketAddress)context.getAttribute("name.node.address");
     Configuration conf = new Configuration(
         (Configuration)context.getAttribute(JspHelper.CURRENT_CONF));

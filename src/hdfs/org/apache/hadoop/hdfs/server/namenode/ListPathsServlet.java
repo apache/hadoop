@@ -138,60 +138,63 @@ public class ListPathsServlet extends DfsServlet {
       final Configuration conf = 
         (Configuration) getServletContext().getAttribute(JspHelper.CURRENT_CONF);
       
-      ClientProtocol nnproxy = getUGI(request, conf).doAs
-        (new PrivilegedExceptionAction<ClientProtocol>() {
+      getUGI(request, conf).doAs
+        (new PrivilegedExceptionAction<Void>() {
         @Override
-        public ClientProtocol run() throws IOException {
-          return createNameNodeProxy();
+        public Void run() throws IOException {
+          ClientProtocol nn = createNameNodeProxy();
+          doc.declaration();
+          doc.startTag("listing");
+          for (Map.Entry<String,String> m : root.entrySet()) {
+            doc.attribute(m.getKey(), m.getValue());
+          }
+
+          HdfsFileStatus base = nn.getFileInfo(path);
+          if ((base != null) && base.isDir()) {
+            writeInfo(path, base, doc);
+          }
+
+          Stack<String> pathstack = new Stack<String>();
+          pathstack.push(path);
+          while (!pathstack.empty()) {
+            String p = pathstack.pop();
+            try {
+              byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;         
+              DirectoryListing thisListing;
+              do {
+                assert lastReturnedName != null;
+                thisListing = nn.getListing(p, lastReturnedName);
+                if (thisListing == null) {
+                  if (lastReturnedName.length == 0) {
+                    LOG.warn("ListPathsServlet - Path " + p + " does not exist");
+                  }
+                  break;
+                }
+                HdfsFileStatus[] listing = thisListing.getPartialListing();
+                for (HdfsFileStatus i : listing) {
+                  String localName = i.getLocalName();
+                  if (exclude.matcher(localName).matches()
+                      || !filter.matcher(localName).matches()) {
+                    continue;
+                  }
+                  if (recur && i.isDir()) {
+                    pathstack.push(new Path(p, localName).toUri().getPath());
+                  }
+                  writeInfo(p, i, doc);
+                }
+                lastReturnedName = thisListing.getLastName();
+              } while (thisListing.hasMore());
+            } catch(IOException re) {
+              writeXml(re, p, doc);
+            }
+          }
+          if (doc != null) {
+            doc.endDocument();
+          }
+          return null;
         }
       });
       
-      doc.declaration();
-      doc.startTag("listing");
-      for (Map.Entry<String,String> m : root.entrySet()) {
-        doc.attribute(m.getKey(), m.getValue());
-      }
-
-      HdfsFileStatus base = nnproxy.getFileInfo(path);
-      if ((base != null) && base.isDir()) {
-        writeInfo(path, base, doc);
-      }
-
-      Stack<String> pathstack = new Stack<String>();
-      pathstack.push(path);
-      while (!pathstack.empty()) {
-        String p = pathstack.pop();
-        try {
-          byte[] lastReturnedName = HdfsFileStatus.EMPTY_NAME;         
-          DirectoryListing thisListing;
-          do {
-            assert lastReturnedName != null;
-            thisListing = nnproxy.getListing(p, lastReturnedName);
-            if (thisListing == null) {
-              if (lastReturnedName.length == 0) {
-                LOG.warn("ListPathsServlet - Path " + p + " does not exist");
-              }
-              break;
-            }
-            HdfsFileStatus[] listing = thisListing.getPartialListing();
-            for (HdfsFileStatus i : listing) {
-              String localName = i.getLocalName();
-              if (exclude.matcher(localName).matches()
-                  || !filter.matcher(localName).matches()) {
-                continue;
-              }
-              if (recur && i.isDir()) {
-                pathstack.push(new Path(p, localName).toUri().getPath());
-              }
-              writeInfo(p, i, doc);
-            }
-            lastReturnedName = thisListing.getLastName();
-          } while (thisListing.hasMore());
-        } catch(RemoteException re) {re.writeXml(p, doc);}
-      }
-      if (doc != null) {
-        doc.endDocument();
-      }
     } catch (InterruptedException e) {
       LOG.warn("ListPathServlet encountered InterruptedException", e);
       response.sendError(400, e.getMessage());
