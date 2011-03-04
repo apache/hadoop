@@ -88,6 +88,7 @@
       <include name="**/*.jar" />
     </fileset>
     <path refid="${ant.project.name}.common-classpath"/>
+    <pathelement path="${clover.jar}"/>
   </path>
 
   <!-- the unit test classpath -->

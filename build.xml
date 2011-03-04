@@ -869,6 +869,7 @@
   <target name="test-contrib" depends="compile, compile-core-test" description="Run contrib unit tests">
     <subant target="test">
        <property name="version" value="${version}"/>
+       <property name="clover.jar" value="${clover.jar}"/>
        <fileset file="${contrib.dir}/build.xml"/>
     </subant> 
   </target>
