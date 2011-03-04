@@ -34,6 +34,9 @@ import org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster;
 import org.apache.hadoop.test.system.process.MultiUserHadoopDaemonRemoteCluster;
 import org.apache.hadoop.test.system.process.RemoteProcess;
 import org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster.HadoopDaemonInfo;
+import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.mapred.TaskID;
+import java.util.Collection;
 
 /**
  * Concrete AbstractDaemonCluster representing a Map-Reduce cluster.
@@ -141,6 +144,26 @@ public class MRCluster extends AbstractDaemonCluster {
     for(JobInfo job : jobs) {
       jtClient.getClient().killJob(
           org.apache.hadoop.mapred.JobID.downgrade(job.getID()));
+    }
+  }
+  /**
+    * Allow the job to continue through MR control job.
+    * @param id of the job. 
+    * @throws IOException when failed to get task info. 
+    */
+  public void signalAllTasks(JobID id) throws IOException{
+    TaskInfo[] taskInfos = getJTClient().getProxy().getTaskInfo(id);
+    if(taskInfos !=null) {
+      for (TaskInfo taskInfoRemaining : taskInfos) {
+        if(taskInfoRemaining != null) {
+          FinishTaskControlAction action = new FinishTaskControlAction(TaskID
+              .downgrade(taskInfoRemaining.getTaskID()));
+          Collection<TTClient> tts = getTTClients();
+          for (TTClient cli : tts) {
+            cli.getProxy().sendAction(action);
+          }
+        }
+      }  
     }
   }
 

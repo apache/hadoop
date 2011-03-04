@@ -329,6 +329,28 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
   }
 
   /**
+   * The method provides the information on the job has stopped or not
+   * @return indicates true if the job has stopped false otherwise.
+   * @param job id has the information of the running job.
+   * @throw IOException is thrown if the job info cannot be fetched.   
+   */
+  public boolean isJobStopped(JobID id) throws IOException{
+    int counter = 0;
+    JobInfo jInfo = getProxy().getJobInfo(id);
+    if(jInfo != null ) {
+      while (counter < 60) {
+        if (jInfo.getStatus().isJobComplete()) {
+          break;
+        }
+        UtilsForTests.waitFor(1000);
+        jInfo = getProxy().getJobInfo(id);
+        counter ++;
+      }
+    }
+    return (counter != 60)? true : false;
+  }
+
+  /**
    * It uses to check whether job is started or not.
    * @param id job id
    * @return true if job is running.

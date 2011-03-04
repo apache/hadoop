@@ -136,12 +136,12 @@ public class TestJobKill {
       RunningJob rJob = cluster.getJTClient().getClient().submitJob(jconf);
       JobInfo info = wovenClient.getJobInfo(rJob.getID());
       Assert.assertNotNull("Job Info is null",info);
-      JobID id = rJob.getID();
-      while (info.runningMaps() != 1) {
-        Thread.sleep(1000);
-        info = wovenClient.getJobInfo(id);
-      }
+      JobID id = rJob.getID();      
+      Assert.assertTrue("Failed to start the job",
+          cluster.getJTClient().isJobStarted(id));
       rJob.killJob();
+      Assert.assertTrue("Failed to kill the job",
+          cluster.getJTClient().isJobStopped(id));
     }
     checkCleanup(jconf);
     deleteOutputDir();

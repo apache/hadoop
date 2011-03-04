@@ -27,6 +27,9 @@ import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.TaskTrackerStatus;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.test.system.process.RemoteProcess;
+import org.apache.hadoop.mapred.TaskID;
+import org.apache.hadoop.mapred.TaskStatus;
+import org.apache.hadoop.mapred.UtilsForTests;
 
 /**
  * TaskTracker client for system tests. Assumption of the class is that the
@@ -85,6 +88,30 @@ public class TTClient extends MRDaemonClient<TTProtocol> {
    */
   public TaskTrackerStatus getStatus() throws IOException {
     return getProxy().getStatus();
+  }
+  
+  /**
+   * This methods provides the information on the particular task managed
+   * by a task tracker has stopped or not. 
+   * @param TaskID is id of the task to get the status.
+   * @throws IOException if there is an error. 
+   * @return true is stopped. 
+   */
+  public boolean isTaskStopped(TaskID tID) throws IOException {
+    int counter = 0;
+    if(tID != null && proxy.getTask(tID) != null) {
+      TaskStatus.State tState= proxy.getTask(tID).getTaskStatus().getRunState();
+      while ( counter < 60) {
+        if(tState != TaskStatus.State.RUNNING && 
+            tState != TaskStatus.State.UNASSIGNED) {
+          break;
+        }
+        UtilsForTests.waitFor(1000);
+        tState= proxy.getTask(tID).getTaskStatus().getRunState();
+        counter++;
+      }      
+    }
+    return (counter != 60)? true : false;
   }
 
 }

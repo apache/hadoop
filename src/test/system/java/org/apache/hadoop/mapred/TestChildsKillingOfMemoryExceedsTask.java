@@ -290,11 +290,8 @@ public class TestChildsKillingOfMemoryExceedsTask {
     Assert.assertTrue("Map process is not alive before task fails.", 
         ttIns.isProcessTreeAlive(pid));
 
-    while (ttIns.getTask(tID).getTaskStatus().getRunState() 
-        == TaskStatus.State.RUNNING) {
-      UtilsForTests.waitFor(1000);
-      ttIns = ttClientIns.getProxy();
-    }
+    Assert.assertTrue("Task did not stop " + tID, 
+        ttClientIns.isTaskStopped(tID));
 
     String[] taskDiagnostics = runJob.getTaskDiagnostics(tAttID);
     Assert.assertNotNull("Task diagnostics is null.", taskDiagnostics);
@@ -307,15 +304,8 @@ public class TestChildsKillingOfMemoryExceedsTask {
 
     LOG.info("Waiting till the job is completed...");
     counter = 0;
-    while (counter < 60) {
-      if (jInfo.getStatus().isJobComplete()) {
-        break;
-      }
-      UtilsForTests.waitFor(1000);
-      jInfo = wovenClient.getJobInfo(id);
-      counter ++;
-    }
-    Assert.assertTrue("Job has not been completed...", counter != 60);
+    Assert.assertTrue("Job has not been completed...", 
+        cluster.getJTClient().isJobStopped(id));
     ttIns = ttClientIns.getProxy();
     ttIns.sendAction(action);
     UtilsForTests.waitFor(1000);

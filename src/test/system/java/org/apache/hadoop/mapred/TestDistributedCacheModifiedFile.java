@@ -297,14 +297,7 @@ public class TestDistributedCacheModifiedFile {
         }
       }
       //Allow the job to continue through MR control job.
-      for (TaskInfo taskInfoRemaining : taskInfos) {
-        FinishTaskControlAction action = new FinishTaskControlAction(TaskID
-           .downgrade(taskInfoRemaining.getTaskID()));
-        Collection<TTClient> tts = cluster.getTTClients();
-        for (TTClient cli : tts) {
-          cli.getProxy().sendAction(action);
-        }
-      }
+      cluster.signalAllTasks(rJob.getID());
 
       //Killing the job because all the verification needed
       //for this testcase is completed.
