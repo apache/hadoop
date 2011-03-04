@@ -88,7 +88,6 @@
   <!-- Classpath for running system tests -->
   <path id="test.system.classpath">
         <pathelement location="${hadoop.conf.dir.deployed}" />
-        <pathelement location="${hadoop.conf.dir}" />
         <pathelement location="${system-test-build-dir}/test/extraconf" />
         <pathelement location="${system-test-build-dir}/test/classes" />
         <pathelement location="${system-test-build-dir}/classes" />
@@ -114,16 +113,11 @@
   <!-- ================ -->
   <!-- run system tests -->
   <!-- ================ -->
-  <target name="test-system" depends="-test-system-deployed, -test-system-local"
+  <target name="test-system" depends="ivy-retrieve-common"
     description="Run system tests">
-  </target>
-
-  <target name="-test-system-local"
-    depends="ivy-retrieve-common, prepare-test-system" 
-    unless="hadoop.conf.dir.deployed">
-    <macro-jar-examples
-      build.dir="${system-test-build-dir}"
-      basedir="${system-test-build-dir}/examples">
+    <subant buildpath="build.xml" target="jar-test-system"/>
+    <macro-jar-examples build.dir="${system-test-build-dir}"
+                        basedir="${system-test-build-dir}/examples">
     </macro-jar-examples>
     <macro-test-runner test.file="${test.all.tests.file}"
                        classpath="test.system.classpath"
@@ -147,12 +141,6 @@
                        hadoop.conf.dir="${hadoop.conf.dir}"
                        hadoop.conf.dir.deployed="${hadoop.conf.dir.deployed}">
     </macro-test-runner>
-  </target>
-
-  <target name="prepare-test-system" depends="jar-test-system">
-    <subant buildpath="build.xml" target="inject-system-faults">
-      <property name="build.dir" value="${system-test-build-dir}" />
-    </subant>
   </target>
 
   <target name="injectfaults"
@@ -259,4 +247,43 @@
   </macrodef>
 
   <!--End of Fault Injection (FI) related session-->
+
+  <!-- Start of cluster controller binary target -->
+  <property name="runAs.src" 
+    value ="${test.src.dir}/system/c++/runAs"/>
+  <property name="runAs.build.dir" 
+    value="${system-test-build-dir}/c++-build"/>
+  <property name="runAs.configure.script" 
+    value="${runAs.build.dir}/configure"/>
+  <target name="init-runAs-build">
+    <condition property="runAs.parameters.passed">
+      <not>
+        <equals arg1="${run-as.hadoop.home.dir}" 
+          arg2="$${run-as.hadoop.home.dir}"/>
+      </not>
+    </condition>
+    <fail unless="runAs.parameters.passed" 
+          message="Required parameters run-as.hadoop.home.dir not passed to the build"/>
+    <mkdir dir="${runAs.build.dir}"/>
+    <copy todir="${runAs.build.dir}" overwrite="true">
+      <fileset dir="${runAs.src}" includes="**/*"/>
+    </copy>
+    <chmod perm="+x" file="${runAs.configure.script}">
+    </chmod>
+  </target>
+
+  <target name="configure-runAs" 
+    depends="init-runAs-build">
+    <exec executable="${runAs.configure.script}" 
+      dir="${runAs.build.dir}" failonerror="true">
+      <arg value="--with-home=${run-as.hadoop.home.dir}"/>
+    </exec>
+  </target>
+  <target name="run-as" depends="configure-runAs">
+    <exec executable="${make.cmd}" dir="${runAs.build.dir}" 
+        searchpath="yes" failonerror="yes">
+     <arg value="all" />
+    </exec>
+  </target>
+  <!-- End of cluster controller binary target -->
 </project>

@@ -56,11 +56,17 @@ public abstract class HadoopDaemonRemoteCluster
   private static final Log LOG = LogFactory
       .getLog(HadoopDaemonRemoteCluster.class.getName());
 
+  public static final String CONF_HADOOPNEWCONFDIR =
+    "test.system.hdrc.hadoopnewconfdir";
   /**
    * Key used to configure the HADOOP_HOME to be used by the
    * HadoopDaemonRemoteCluster.
    */
-  public final static String CONF_HADOOPHOME = "test.system.hdrc.hadoophome";
+  public final static String CONF_HADOOPHOME =
+    "test.system.hdrc.hadoophome";
+
+  public final static String CONF_SCRIPTDIR =
+    "test.system.hdrc.deployed.scripts.dir";
   /**
    * Key used to configure the HADOOP_CONF_DIR to be used by the
    * HadoopDaemonRemoteCluster.
@@ -72,24 +78,68 @@ public abstract class HadoopDaemonRemoteCluster
     "test.system.hdrc.deployed.hadoopconfdir";
 
   private String hadoopHome;
-  private String hadoopConfDir;
-  private String deployed_hadoopConfDir;
+  protected String hadoopConfDir;
+  protected String scriptsDir;
+  protected String hadoopNewConfDir;
   private final Set<Enum<?>> roles;
-
   private final List<HadoopDaemonInfo> daemonInfos;
   private List<RemoteProcess> processes;
-
+  protected Configuration conf;
+  
   public static class HadoopDaemonInfo {
     public final String cmd;
     public final Enum<?> role;
-    public final String hostFile;
-    public HadoopDaemonInfo(String cmd, Enum<?> role, String hostFile) {
+    public final List<String> hostNames;
+    public HadoopDaemonInfo(String cmd, Enum<?> role, List<String> hostNames) {
       super();
       this.cmd = cmd;
       this.role = role;
-      this.hostFile = hostFile;
-      LOG.info("Created HadoopDaemonInfo for " + cmd + " " + role + " from " + hostFile);
+      this.hostNames = hostNames;
     }
+
+    public HadoopDaemonInfo(String cmd, Enum<?> role, String hostFile) 
+        throws IOException {
+      super();
+      this.cmd = cmd;
+      this.role = role;
+      File file = new File(getDeployedHadoopConfDir(), hostFile);
+      BufferedReader reader = null;
+      hostNames = new ArrayList<String>();
+      try {
+        reader = new BufferedReader(new FileReader(file));
+        String host = null;
+        while ((host = reader.readLine()) != null) {
+          if (host.trim().isEmpty() || host.startsWith("#")) {
+            // Skip empty and possible comment lines
+            // throw new IllegalArgumentException(
+            // "Hostname could not be found in file " + hostFile);
+            continue;
+          }
+          hostNames.add(host.trim());
+        }
+        if (hostNames.size() < 1) {
+          throw new IllegalArgumentException("At least one hostname "
+              +
+            "is required to be present in file - " + hostFile);
+        }
+      } finally {
+        try {
+          reader.close();
+        } catch (IOException e) {
+          LOG.warn("Could not close reader");
+        }
+      }
+      LOG.info("Created HadoopDaemonInfo for " + cmd + " " + role + " from " 
+          + hostFile);
+    }
+  }
+
+  @Override
+  public String pushConfig(String localDir) throws IOException {
+    for (RemoteProcess process : processes){
+      process.pushConfig(localDir);
+    }
+    return hadoopNewConfDir;
   }
 
   public HadoopDaemonRemoteCluster(List<HadoopDaemonInfo> daemonInfos) {
@@ -102,9 +152,10 @@ public abstract class HadoopDaemonRemoteCluster
 
   @Override
   public void init(Configuration conf) throws IOException {
+    this.conf = conf;
     populateDirectories(conf);
     this.processes = new ArrayList<RemoteProcess>();
-    populateDaemons(deployed_hadoopConfDir);
+    populateDaemons();
   }
 
   @Override
@@ -130,17 +181,10 @@ public abstract class HadoopDaemonRemoteCluster
    *           values for the required keys.
    */
   protected void populateDirectories(Configuration conf) {
-    hadoopHome = conf.get(CONF_HADOOPHOME, System
-        .getProperty(CONF_HADOOPHOME));
-    hadoopConfDir = conf.get(CONF_HADOOPCONFDIR, System
-        .getProperty(CONF_HADOOPCONFDIR));
-
-    deployed_hadoopConfDir = conf.get(CONF_DEPLOYED_HADOOPCONFDIR,
-      System.getProperty(CONF_DEPLOYED_HADOOPCONFDIR));
-    if (deployed_hadoopConfDir == null || deployed_hadoopConfDir.isEmpty()) {
-      deployed_hadoopConfDir = hadoopConfDir;
-    }
-
+    hadoopHome = conf.get(CONF_HADOOPHOME);
+    hadoopConfDir = conf.get(CONF_HADOOPCONFDIR);
+    scriptsDir = conf.get(CONF_SCRIPTDIR);
+    hadoopNewConfDir = conf.get(CONF_HADOOPNEWCONFDIR);
     if (hadoopHome == null || hadoopConfDir == null || hadoopHome.isEmpty()
         || hadoopConfDir.isEmpty()) {
       LOG.error("No configuration "
@@ -149,7 +193,17 @@ public abstract class HadoopDaemonRemoteCluster
           "No Configuration passed for hadoop home " +
           "and hadoop conf directories");
     }
+  }
 
+  public static String getDeployedHadoopConfDir() {
+    String dir = System.getProperty(CONF_DEPLOYED_HADOOPCONFDIR);
+    if (dir == null || dir.isEmpty()) {
+      LOG.error("No configuration "
+          + "for the CONF_DEPLOYED_HADOOPCONFDIR passed");
+      throw new IllegalArgumentException(
+          "No Configuration passed for hadoop deployed conf directory");
+    }
+    return dir;
   }
 
   @Override
@@ -160,48 +214,50 @@ public abstract class HadoopDaemonRemoteCluster
   }
 
   @Override
+  public void start(String newConfLocation)throws IOException {
+    for (RemoteProcess process : processes) {
+      process.start(newConfLocation);
+    }
+  }
+
+  @Override
   public void stop() throws IOException {
     for (RemoteProcess process : processes) {
       process.kill();
     }
   }
 
-  protected void populateDaemon(String confLocation, 
-      HadoopDaemonInfo info) throws IOException {
-    File hostFile = new File(confLocation, info.hostFile);
-    BufferedReader reader = null;
-    reader = new BufferedReader(new FileReader(hostFile));
-    String host = null;
-    try {
-      boolean foundAtLeastOne = false;
-      while ((host = reader.readLine()) != null) {
-        if (host.trim().isEmpty()) {
-          throw new IllegalArgumentException(
-          "Hostname could not be found in file " + info.hostFile);
-        }
-        InetAddress addr = InetAddress.getByName(host);
-        RemoteProcess process = new ScriptDaemon(info.cmd, 
-            addr.getCanonicalHostName(), info.role);
-        processes.add(process);
-        foundAtLeastOne = true;
-      }
-      if (!foundAtLeastOne) {
-        throw new IllegalArgumentException("Alteast one hostname " +
-          "is required to be present in file - " + info.hostFile);
-      }
-    } finally {
-      try {
-        reader.close();
-      } catch (Exception e) {
-        LOG.warn("Could not close reader");
-      }
+  @Override
+  public void stop(String newConfLocation) throws IOException {
+    for (RemoteProcess process : processes) {
+      process.kill(newConfLocation);
     }
   }
 
-  protected void populateDaemons(String confLocation) throws IOException {
+  protected void populateDaemon(HadoopDaemonInfo info) throws IOException {
+    for (String host : info.hostNames) {
+      InetAddress addr = InetAddress.getByName(host);
+      RemoteProcess process = getProcessManager(info, 
+          addr.getCanonicalHostName());
+      processes.add(process);
+    }
+  }
+
+  protected void populateDaemons() throws IOException {
    for (HadoopDaemonInfo info : daemonInfos) {
-     populateDaemon(confLocation, info);
+     populateDaemon(info);
    }
+  }
+
+  @Override
+  public boolean isMultiUserSupported() throws IOException {
+    return false;
+  }
+
+  protected RemoteProcess getProcessManager(
+      HadoopDaemonInfo info, String hostName) {
+    RemoteProcess process = new ScriptDaemon(info.cmd, hostName, info.role);
+    return process;
   }
 
   /**
@@ -214,8 +270,9 @@ public abstract class HadoopDaemonRemoteCluster
     private static final String STOP_COMMAND = "stop";
     private static final String START_COMMAND = "start";
     private static final String SCRIPT_NAME = "hadoop-daemon.sh";
-    private final String daemonName;
-    private final String hostName;
+    private static final String PUSH_CONFIG ="pushConfig.sh";
+    protected final String daemonName;
+    protected final String hostName;
     private final Enum<?> role;
 
     public ScriptDaemon(String daemonName, String hostName, Enum<?> role) {
@@ -229,13 +286,57 @@ public abstract class HadoopDaemonRemoteCluster
       return hostName;
     }
 
-    private ShellCommandExecutor buildCommandExecutor(String command) {
-      String[] commandArgs = getCommand(command);
-      File binDir = getBinDir();
+    private String[] getPushConfigCommand(String localDir, String remoteDir,
+        File scriptDir) throws IOException{
+      ArrayList<String> cmdArgs = new ArrayList<String>();
+      cmdArgs.add(scriptDir.getAbsolutePath() + File.separator + PUSH_CONFIG);
+      cmdArgs.add(localDir);
+      cmdArgs.add(hostName);
+      cmdArgs.add(remoteDir);
+      cmdArgs.add(hadoopConfDir);
+      return (String[]) cmdArgs.toArray(new String[cmdArgs.size()]);
+    }
+
+    private ShellCommandExecutor buildPushConfig(String local, String remote )
+        throws IOException {
+      File scriptDir = new File(scriptsDir);
+      String[] commandArgs = getPushConfigCommand(local, remote, scriptDir);
       HashMap<String, String> env = new HashMap<String, String>();
-      env.put("HADOOP_CONF_DIR", hadoopConfDir);
       ShellCommandExecutor executor = new ShellCommandExecutor(commandArgs,
-          binDir, env);
+          scriptDir, env);
+      LOG.info(executor.toString());
+      return executor;
+    }
+
+    private ShellCommandExecutor createNewConfDir() throws IOException {
+      ArrayList<String> cmdArgs = new ArrayList<String>();
+      cmdArgs.add("ssh");
+      cmdArgs.add(hostName);
+      cmdArgs.add("if [ -d "+ hadoopNewConfDir+
+          " ];\n then echo Will remove existing directory;  rm -rf "+
+          hadoopNewConfDir+";\nmkdir "+ hadoopNewConfDir+"; else \n"+
+          "echo " + hadoopNewConfDir + " doesnt exist hence creating" +
+          ";  mkdir " + hadoopNewConfDir + ";\n  fi");
+      String[] cmd = (String[]) cmdArgs.toArray(new String[cmdArgs.size()]);
+      ShellCommandExecutor executor = new ShellCommandExecutor(cmd);
+      LOG.info(executor.toString());
+      return executor;
+    }
+
+    @Override
+    public void pushConfig(String localDir) throws IOException {
+      createNewConfDir().execute();
+      buildPushConfig(localDir, hadoopNewConfDir).execute();
+    }
+
+    private ShellCommandExecutor buildCommandExecutor(String command,
+        String confDir) {
+      String[] commandArgs = getCommand(command, confDir);
+      File cwd = new File(".");
+      HashMap<String, String> env = new HashMap<String, String>();
+      env.put("HADOOP_CONF_DIR", confDir);
+      ShellCommandExecutor executor
+        = new ShellCommandExecutor(commandArgs, cwd, env);
       LOG.info(executor.toString());
       return executor;
     }
@@ -245,14 +346,14 @@ public abstract class HadoopDaemonRemoteCluster
       return binDir;
     }
 
-    private String[] getCommand(String command) {
+    protected String[] getCommand(String command, String confDir) {
       ArrayList<String> cmdArgs = new ArrayList<String>();
       File binDir = getBinDir();
       cmdArgs.add("ssh");
       cmdArgs.add(hostName);
       cmdArgs.add(binDir.getAbsolutePath() + File.separator + SCRIPT_NAME);
       cmdArgs.add("--config");
-      cmdArgs.add(hadoopConfDir);
+      cmdArgs.add(confDir);
       // XXX Twenty internal version does not support --script option.
       cmdArgs.add(command);
       cmdArgs.add(daemonName);
@@ -261,12 +362,38 @@ public abstract class HadoopDaemonRemoteCluster
 
     @Override
     public void kill() throws IOException {
-      buildCommandExecutor(STOP_COMMAND).execute();
+      kill(hadoopConfDir);
     }
 
     @Override
     public void start() throws IOException {
-      buildCommandExecutor(START_COMMAND).execute();
+      start(hadoopConfDir);
+    }
+
+    public void start(String newConfLocation) throws IOException {
+      ShellCommandExecutor cme = buildCommandExecutor(START_COMMAND,
+          newConfLocation);
+      cme.execute();
+      String output = cme.getOutput();
+      if (!output.isEmpty()) { //getOutput() never returns null value
+        if (output.toLowerCase().contains("error")) {
+          LOG.warn("Error is detected.");
+          throw new IOException("Start error\n" + output);
+        }
+      }
+    }
+
+    public void kill(String newConfLocation) throws IOException {
+      ShellCommandExecutor cme
+        = buildCommandExecutor(STOP_COMMAND, newConfLocation);
+      cme.execute();
+      String output = cme.getOutput();
+      if (!output.isEmpty()) { //getOutput() never returns null value
+        if (output.toLowerCase().contains("error")) {
+          LOG.info("Error is detected.");
+          throw new IOException("Kill error\n" + output);
+        }
+      }
     }
 
     @Override

@@ -35,7 +35,7 @@ public interface DaemonProtocol extends VersionedProtocol{
   /**
    * Returns the Daemon configuration.
    * @return Configuration
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   Configuration getDaemonConf() throws IOException;
 
@@ -51,7 +51,7 @@ public interface DaemonProtocol extends VersionedProtocol{
    * Check if the Daemon is ready to accept RPC connections.
    * 
    * @return true if Daemon is ready to accept RPC connection.
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   boolean isReady() throws IOException;
 
@@ -60,7 +60,7 @@ public interface DaemonProtocol extends VersionedProtocol{
    * 
    * @return returns system level view of the Daemon process.
    * 
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   ProcessInfo getProcessInfo() throws IOException;
   
@@ -85,16 +85,16 @@ public interface DaemonProtocol extends VersionedProtocol{
    * @param local
    *          whether the path is local or not
    * @return the statuses of the files/directories in the given patch
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   FileStatus[] listStatus(String path, boolean local) throws IOException;
   
   /**
    * Enables a particular control action to be performed on the Daemon <br/>
    * 
-   * @param control action to be enabled.
+   * @param action is a control action  to be enabled.
    * 
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   @SuppressWarnings("unchecked")
   void sendAction(ControlAction action) throws IOException;
@@ -107,7 +107,7 @@ public interface DaemonProtocol extends VersionedProtocol{
    * 
    * @return true if action is still in waiting queue of 
    *          actions to be delivered.
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   @SuppressWarnings("unchecked")
   boolean isActionPending(ControlAction action) throws IOException;
@@ -117,7 +117,7 @@ public interface DaemonProtocol extends VersionedProtocol{
    * daemon maintains. <br/>
    * <i><b>Not to be directly called by Test Case or clients.</b></i>
    * @param action to be removed
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   
   @SuppressWarnings("unchecked")
@@ -126,7 +126,7 @@ public interface DaemonProtocol extends VersionedProtocol{
   /**
    * Clears out the list of control actions on the particular daemon.
    * <br/>
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   void clearActions() throws IOException;
   
@@ -136,7 +136,7 @@ public interface DaemonProtocol extends VersionedProtocol{
    * <i><b>Not to be directly used by clients</b></i>
    * @param key target
    * @return list of actions.
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   @SuppressWarnings("unchecked")
   ControlAction[] getActions(Writable key) throws IOException;
@@ -145,11 +145,21 @@ public interface DaemonProtocol extends VersionedProtocol{
    * Gets the number of times a particular pattern has been found in the 
    * daemons log file.<br/>
    * <b><i>Please note that search spans across all previous messages of
-   * Daemon, so better practise is to get previous counts before an operation
-   * and then recheck if the sequence of action has caused any problems</i></b>
-   * @param pattern
+   * Daemon, so better practice is to get previous counts before an operation
+   * and then re-check if the sequence of action has caused any problems</i></b>
+   * @param pattern to look for in the damon's log file
+   * @param List of exceptions to ignore
    * @return number of times the pattern if found in log file.
-   * @throws IOException
+   * @throws IOException in case of errors
    */
-  int getNumberOfMatchesInLogFile(String pattern) throws IOException;
+  int getNumberOfMatchesInLogFile(String pattern,String[] list) 
+      throws IOException;
+
+  /**
+   * Gets the user who started the particular daemon initially. <br/>
+   * 
+   * @return user who started the particular daemon.
+   * @throws IOException in case of errors
+   */
+  String getDaemonUser() throws IOException;
 }

@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.test.system.JTProtocol;
 import org.apache.hadoop.mapreduce.test.system.JobInfo;
 import org.apache.hadoop.mapreduce.test.system.TTInfo;
 import org.apache.hadoop.mapreduce.test.system.TaskInfo;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.system.DaemonProtocol;
 
 /**
@@ -195,6 +196,13 @@ public privileged aspect JobTrackerAspect {
   after(JobConf conf, String jobtrackerIndentifier) 
     returning (JobTracker tracker): jtConstructorPointCut(conf, 
         jobtrackerIndentifier) {
+    try {
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      tracker.setUser(ugi.getShortUserName());
+    } catch (IOException e) {
+      tracker.LOG.warn("Unable to get the user information for the " +
+      		"Jobtracker");
+    }
     tracker.setReady(true);
   }
   

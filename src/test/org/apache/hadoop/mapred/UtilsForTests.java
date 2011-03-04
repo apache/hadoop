@@ -34,6 +34,7 @@ import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
@@ -815,5 +816,39 @@ public class UtilsForTests {
       throw new RuntimeException("Could not start jt", e);
     }
   }
+
+  /**
+   * This creates a file in the dfs
+   * @param dfs FileSystem Local File System where file needs to be picked
+   * @param URIPATH Path dfs path where file needs to be copied
+   * @param permission FsPermission File permission
+   * @return returns the DataOutputStream
+   */
+  public static DataOutputStream
+      createTmpFileDFS(FileSystem dfs, Path URIPATH,
+      FsPermission permission, String input) throws Exception {
+    //Creating the path with the file
+    DataOutputStream file =
+      FileSystem.create(dfs, URIPATH, permission);
+    file.writeBytes(input);
+    file.close();
+    return file;
+  }
+
+  /**
+   * This formats the long tasktracker name to just the FQDN
+   * @param taskTrackerLong String The long format of the tasktracker string
+   * @return String The FQDN of the tasktracker
+   * @throws Exception
+   */
+  public static String getFQDNofTT (String taskTrackerLong) throws Exception {
+    //Getting the exact FQDN of the tasktracker from the tasktracker string.
+    String[] firstSplit = taskTrackerLong.split("_");
+    String tmpOutput = firstSplit[1];
+    String[] secondSplit = tmpOutput.split(":");
+    String tmpTaskTracker = secondSplit[0];
+    return tmpTaskTracker;
+  }
+
 }
 

@@ -68,4 +68,11 @@ public interface TTTaskInfo extends Writable {
    * @return true if it is a clean up of task.
    */
   boolean isTaskCleanupTask();
+
+  /**
+   * Gets the pid of the running task on the task-tracker.
+   * 
+   * @return pid of the task.
+   */
+  String getPid();
 }

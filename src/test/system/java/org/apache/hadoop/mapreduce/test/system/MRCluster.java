@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapreduce.test.system;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -30,7 +31,9 @@ import org.apache.hadoop.test.system.AbstractDaemonClient;
 import org.apache.hadoop.test.system.AbstractDaemonCluster;
 import org.apache.hadoop.test.system.process.ClusterProcessManager;
 import org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster;
+import org.apache.hadoop.test.system.process.MultiUserHadoopDaemonRemoteCluster;
 import org.apache.hadoop.test.system.process.RemoteProcess;
+import org.apache.hadoop.test.system.process.HadoopDaemonRemoteCluster.HadoopDaemonInfo;
 
 /**
  * Concrete AbstractDaemonCluster representing a Map-Reduce cluster.
@@ -44,21 +47,23 @@ public class MRCluster extends AbstractDaemonCluster {
     "test.system.mr.clusterprocess.impl.class";
 
   /**
-   * Key is used to to point to the file containing hostname of the jobtracker
-   */
-  public static final String CONF_HADOOP_JT_HOSTFILE_NAME =
-    "test.system.hdrc.jt.hostfile";
-  /**
    * Key is used to to point to the file containing hostnames of tasktrackers
    */
   public static final String CONF_HADOOP_TT_HOSTFILE_NAME =
     "test.system.hdrc.tt.hostfile";
 
-  private static String JT_hostFileName;
+  private static List<HadoopDaemonInfo> mrDaemonInfos = 
+    new ArrayList<HadoopDaemonInfo>();
   private static String TT_hostFileName;
+  private static String jtHostName;
 
   protected enum Role {JT, TT};
-  
+
+  static{
+    Configuration.addDefaultResource("mapred-default.xml");
+    Configuration.addDefaultResource("mapred-site.xml");
+  }
+
   private MRCluster(Configuration conf, ClusterProcessManager rCluster)
       throws IOException {
     super(conf, rCluster);
@@ -74,14 +79,20 @@ public class MRCluster extends AbstractDaemonCluster {
    */
   public static MRCluster createCluster(Configuration conf) 
       throws Exception {
-    JT_hostFileName = conf.get(CONF_HADOOP_JT_HOSTFILE_NAME,
-      System.getProperty(CONF_HADOOP_JT_HOSTFILE_NAME,
-        "clusterControl.masters.jt"));
-    TT_hostFileName = conf.get(CONF_HADOOP_TT_HOSTFILE_NAME,
-      System.getProperty(CONF_HADOOP_TT_HOSTFILE_NAME, "slaves"));
-
-    String implKlass = conf.get(CLUSTER_PROCESS_MGR_IMPL, System
-        .getProperty(CLUSTER_PROCESS_MGR_IMPL));
+    conf.addResource("system-test.xml");
+    TT_hostFileName = conf.get(CONF_HADOOP_TT_HOSTFILE_NAME, "slaves");
+    String jtHostPort = conf.get("mapred.job.tracker");
+    if (jtHostPort == null) {
+      throw new Exception("mapred.job.tracker is not set.");
+    }
+    jtHostName = jtHostPort.trim().split(":")[0];
+    
+    mrDaemonInfos.add(new HadoopDaemonInfo("jobtracker", 
+        Role.JT, Arrays.asList(new String[]{jtHostName})));
+    mrDaemonInfos.add(new HadoopDaemonInfo("tasktracker", 
+        Role.TT, TT_hostFileName));
+    
+    String implKlass = conf.get(CLUSTER_PROCESS_MGR_IMPL);
     if (implKlass == null || implKlass.isEmpty()) {
       implKlass = MRProcessManager.class.getName();
     }
@@ -145,11 +156,14 @@ public class MRCluster extends AbstractDaemonCluster {
   }
 
   public static class MRProcessManager extends HadoopDaemonRemoteCluster{
-    private static final List<HadoopDaemonInfo> mrDaemonInfos = 
-      Arrays.asList(new HadoopDaemonInfo[]{
-          new HadoopDaemonInfo("jobtracker", Role.JT, JT_hostFileName),
-          new HadoopDaemonInfo("tasktracker", Role.TT, TT_hostFileName)});
     public MRProcessManager() {
+      super(mrDaemonInfos);
+    }
+  }
+
+  public static class MultiMRProcessManager
+      extends MultiUserHadoopDaemonRemoteCluster {
+    public MultiMRProcessManager() {
       super(mrDaemonInfos);
     }
   }

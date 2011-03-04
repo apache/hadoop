@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapred;
 
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 
 import junit.framework.Assert;
@@ -39,6 +40,8 @@ import org.apache.hadoop.mapreduce.test.system.TTClient;
 import org.apache.hadoop.mapreduce.test.system.TTInfo;
 import org.apache.hadoop.mapreduce.test.system.TTTaskInfo;
 import org.apache.hadoop.mapreduce.test.system.TaskInfo;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.system.AbstractDaemonClient;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -86,22 +89,41 @@ public class TestCluster {
     cluster.getJTClient().verifyJobHistory(rJob.getID());
   }
 
-  @Test
+  //@Test
   public void testFileStatus() throws Exception {
-    JTClient jt = cluster.getJTClient();
-    String dir = ".";
-    checkFileStatus(jt.getFileStatus(dir, true));
-    checkFileStatus(jt.listStatus(dir, false, true), dir);
-    for (TTClient tt : cluster.getTTClients()) {
-      String[] localDirs = tt.getMapredLocalDirs();
-      for (String localDir : localDirs) {
-        checkFileStatus(tt.listStatus(localDir, true, false), localDir);
-        checkFileStatus(tt.listStatus(localDir, true, true), localDir);
+    UserGroupInformation ugi =
+        UserGroupInformation.createRemoteUser(cluster
+            .getJTClient().getProxy().getDaemonUser());
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        MRCluster myCluster = null;
+        try {
+          myCluster = MRCluster.createCluster(cluster.getConf());
+          myCluster.connect();
+          JTClient jt = myCluster.getJTClient();
+          String dir = ".";
+          checkFileStatus(jt.getFileStatus(dir, true));
+          checkFileStatus(jt.listStatus(dir, false, true), dir);
+          for (TTClient tt : myCluster.getTTClients()) {
+            String[] localDirs = tt.getMapredLocalDirs();
+            for (String localDir : localDirs) {
+              checkFileStatus(tt.listStatus(localDir, true, false), localDir);
+              checkFileStatus(tt.listStatus(localDir, true, true), localDir);
+            }
+          }
+          String systemDir = jt.getClient().getSystemDir().toString();
+          checkFileStatus(jt.listStatus(systemDir, false, true), systemDir);
+          checkFileStatus(jt.listStatus(jt.getLogDir(), true, true), jt
+              .getLogDir());
+        } finally {
+          if (myCluster != null) {
+            myCluster.disconnect();
+          }
+        }
+        return null;
       }
-    }
-    String systemDir = jt.getClient().getSystemDir().toString();
-    checkFileStatus(jt.listStatus(systemDir, false, true), systemDir);
-    checkFileStatus(jt.listStatus(jt.getLogDir(), true, true), jt.getLogDir());
+    });
   }
 
   private void checkFileStatus(FileStatus[] fs, String path) {
@@ -149,6 +171,10 @@ public class TestCluster {
     LOG.info("Waiting till job starts running one map");
 
     TaskInfo[] myTaskInfos = wovenClient.getTaskInfo(id);
+    boolean isOneTaskStored = false;
+    String sometaskpid = null;
+    org.apache.hadoop.mapreduce.TaskAttemptID sometaskId = null;
+    TTClient myCli = null;
     for(TaskInfo info : myTaskInfos) {
       if(!info.isSetupOrCleanup()) {
         String[] taskTrackers = info.getTaskTrackers();
@@ -162,6 +188,27 @@ public class TestCluster {
           Assert.assertNotNull(ttTaskInfo.getUser());
           Assert.assertTrue(ttTaskInfo.getTaskStatus().getProgress() >= 0.0);
           Assert.assertTrue(ttTaskInfo.getTaskStatus().getProgress() <= 1.0);
+          //Get the pid of the task attempt. The task need not have 
+          //reported the pid of the task by the time we are checking
+          //the pid. So perform null check.
+          String pid = ttTaskInfo.getPid();
+          int i = 1;
+          while(pid.isEmpty()) {
+            Thread.sleep(1000);
+            LOG.info("Waiting for task to report its pid back");
+            ttTaskInfo = ttCli.getProxy().getTask(taskId);
+            pid = ttTaskInfo.getPid();
+            if(i == 40) {
+              Assert.fail("The task pid not reported for 40 seconds.");
+            }
+            i++;
+          }
+          if(!isOneTaskStored) {
+            sometaskpid = pid;
+            sometaskId = ttTaskInfo.getTaskStatus().getTaskID();
+            myCli = ttCli;
+            isOneTaskStored = true;
+          }
           LOG.info("verified task progress to be between 0 and 1");
           State state = ttTaskInfo.getTaskStatus().getRunState();
           if (ttTaskInfo.getTaskStatus().getProgress() < 1.0 &&
@@ -176,5 +223,97 @@ public class TestCluster {
       }
     }
     rJob.killJob();
+    int i = 1;
+    while (!rJob.isComplete()) {
+      Thread.sleep(1000);
+      if (i == 40) {
+        Assert
+            .fail("The job not completed within 40 seconds after killing it.");
+      }
+      i++;
+    }
+    TTTaskInfo myTaskInfo = myCli.getProxy().getTask(sometaskId.getTaskID());
+    i = 0;
+    while (myTaskInfo != null && !myTaskInfo.getPid().isEmpty()) {
+      LOG.info("sleeping till task is retired from TT memory");
+      Thread.sleep(1000);
+      myTaskInfo = myCli.getProxy().getTask(sometaskId.getTaskID());
+      if (i == 40) {
+        Assert
+            .fail("Task not retired from TT memory within 40 seconds of job completeing");
+      }
+      i++;
+    }
+    Assert.assertFalse(myCli.getProxy().isProcessTreeAlive(sometaskpid));
   }
+  
+  @Test
+  public void testClusterRestart() throws Exception {
+    cluster.stop();
+    // Give the cluster time to stop the whole cluster.
+    AbstractDaemonClient cli = cluster.getJTClient();
+    int i = 1;
+    while (i < 40) {
+      try {
+        cli.ping();
+        Thread.sleep(1000);
+        i++;
+      } catch (Exception e) {
+        break;
+      }
+    }
+    if (i >= 40) {
+      Assert.fail("JT on " + cli.getHostName() + " Should have been down.");
+    }
+    i = 1;
+    for (AbstractDaemonClient tcli : cluster.getTTClients()) {
+      i = 1;
+      while (i < 40) {
+        try {
+          tcli.ping();
+          Thread.sleep(1000);
+          i++;
+        } catch (Exception e) {
+          break;
+        }
+      }
+      if (i >= 40) {
+        Assert.fail("TT on " + tcli.getHostName() + " Should have been down.");
+      }
+    }
+    cluster.start();
+    cli = cluster.getJTClient();
+    i = 1;
+    while (i < 40) {
+      try {
+        cli.ping();
+        break;
+      } catch (Exception e) {
+        i++;
+        Thread.sleep(1000);
+        LOG.info("Waiting for Jobtracker on host : "
+            + cli.getHostName() + " to come up.");
+      }
+    }
+    if (i >= 40) {
+      Assert.fail("JT on " + cli.getHostName() + " Should have been up.");
+    }
+    for (AbstractDaemonClient tcli : cluster.getTTClients()) {
+      i = 1;
+      while (i < 40) {
+        try {
+          tcli.ping();
+          break;
+        } catch (Exception e) {
+          i++;
+          Thread.sleep(1000);
+          LOG.info("Waiting for Tasktracker on host : "
+              + tcli.getHostName() + " to come up.");
+        }
+      }
+      if (i >= 40) {
+        Assert.fail("TT on " + tcli.getHostName() + " Should have been Up.");
+      }
+    }
+  } 
 }

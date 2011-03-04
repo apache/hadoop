@@ -29,6 +29,7 @@ import org.apache.hadoop.mapred.Task.TaskReporter;
 import org.apache.hadoop.mapreduce.test.system.FinishTaskControlAction;
 import org.apache.hadoop.test.system.ControlAction;
 import org.apache.hadoop.test.system.DaemonProtocol;
+import org.apache.hadoop.mapreduce.test.system.TTProtocol;
 
 public privileged aspect TaskAspect {
 
@@ -106,8 +107,8 @@ public privileged aspect TaskAspect {
   after(Class k, long version, InetSocketAddress addr, Configuration conf) 
     throws IOException : rpcInterceptor(k, version, addr, conf) {
     daemonProxy = 
-      (DaemonProtocol) RPC.getProxy(
-          DaemonProtocol.class, DaemonProtocol.versionID, addr, conf);
+      (TTProtocol) RPC.getProxy(
+          TTProtocol.class, TTProtocol.versionID, addr, conf);
   }
   
 }

@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +36,7 @@ import org.apache.hadoop.test.system.process.RemoteProcess;
 public abstract class AbstractDaemonCluster {
 
   private static final Log LOG = LogFactory.getLog(AbstractDaemonCluster.class);
-
+  private String [] excludeExpList ;
   private Configuration conf;
   protected ClusterProcessManager clusterManager;
   private Map<Enum<?>, List<AbstractDaemonClient>> daemons = 
@@ -58,6 +57,17 @@ public abstract class AbstractDaemonCluster {
     this.conf = conf;
     this.clusterManager = rcluster;
     createAllClients();
+  }
+
+  /**
+   * The method returns the cluster manager. The system test cases require an
+   * instance of HadoopDaemonRemoteCluster to invoke certain operation on the
+   * daemon.
+   * 
+   * @return instance of clusterManager
+   */
+  public ClusterProcessManager getClusterManager() {
+    return clusterManager;
   }
 
   protected void createAllClients() throws IOException {
@@ -131,14 +141,18 @@ public abstract class AbstractDaemonCluster {
   }
 
   protected void waitForDaemon(AbstractDaemonClient d) {
+    final int TEN_SEC = 10000;
     while(true) {
       try {
-        LOG.info("Waiting for daemon in host to come up : " + d.getHostName());
+        LOG.info("Waiting for daemon at " + d.getHostName() + " to come up.");
+        LOG.info("Daemon might not be " +
+            "ready or the call to setReady() method hasn't been " +
+            "injected to " + d.getClass() + " ");
         d.connect();
         break;
       } catch (IOException e) {
         try {
-          Thread.sleep(10000);
+          Thread.sleep(TEN_SEC);
         } catch (InterruptedException ie) {
         }
       }
@@ -212,7 +226,17 @@ public abstract class AbstractDaemonCluster {
     ensureClean();
     populateExceptionCounts();
   }
-
+  
+  /**
+   * This is mainly used for the test cases to set the list of exceptions
+   * that will be excluded.
+   * @param excludeExpList list of exceptions to exclude
+   */
+  public void setExcludeExpList(String [] excludeExpList)
+  {
+    this.excludeExpList = excludeExpList;
+  }
+  
   public void clearAllControlActions() throws IOException {
     for (List<AbstractDaemonClient> set : daemons.values()) {
       for (AbstractDaemonClient daemon : set) {
@@ -248,7 +272,7 @@ public abstract class AbstractDaemonCluster {
   protected void populateExceptionCounts() throws IOException {
     for(List<AbstractDaemonClient> lst : daemons.values()) {
       for(AbstractDaemonClient d : lst) {
-        d.populateExceptionCount();
+        d.populateExceptionCount(excludeExpList);
       }
     }
   }
@@ -261,7 +285,7 @@ public abstract class AbstractDaemonCluster {
   protected void assertNoExceptionMessages() throws IOException {
     for(List<AbstractDaemonClient> lst : daemons.values()) {
       for(AbstractDaemonClient d : lst) {
-        d.assertNoExceptionsOccurred();
+        d.assertNoExceptionsOccurred(excludeExpList);
       }
     }
   }

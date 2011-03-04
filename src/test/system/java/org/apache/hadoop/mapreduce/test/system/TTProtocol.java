@@ -18,17 +18,26 @@
 
 package org.apache.hadoop.mapreduce.test.system;
 
-import java.io.IOException;
-
 import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapred.TaskTrackerStatus;
 import org.apache.hadoop.mapreduce.TaskID;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSelector;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.token.TokenInfo;
 import org.apache.hadoop.test.system.DaemonProtocol;
+
+import java.io.IOException;
 
 /**
  * TaskTracker RPC interface to be used for cluster tests.
+ *
+ * The protocol has to be annotated so KerberosInfo can be filled in during
+ * creation of a ipc.Client connection
  */
+@KerberosInfo(
+    serverPrincipal = TaskTracker.TT_USER_NAME)
+@TokenInfo(JobTokenSelector.class)
 public interface TTProtocol extends DaemonProtocol {
 
   public static final long versionID = 1L;
@@ -36,8 +45,8 @@ public interface TTProtocol extends DaemonProtocol {
    * Gets latest status which was sent in heartbeat to the {@link JobTracker}. 
    * <br/>
    * 
-   * @return status
-   * @throws IOException
+   * @return status of the TaskTracker daemon
+   * @throws IOException in case of errors
    */
   TaskTrackerStatus getStatus() throws IOException;
 
@@ -45,17 +54,28 @@ public interface TTProtocol extends DaemonProtocol {
    * Gets list of all the tasks in the {@link TaskTracker}.<br/>
    * 
    * @return list of all the tasks
-   * @throws IOException
+   * @throws IOException in case of errors
    */
   TTTaskInfo[] getTasks() throws IOException;
 
   /**
    * Gets the task associated with the id.<br/>
    * 
-   * @param id of the task.
+   * @param taskID of the task.
    * 
-   * @return
-   * @throws IOException
+   * @return returns task info <code>TTTaskInfo</code>
+   * @throws IOException in case of errors
    */
   TTTaskInfo getTask(TaskID taskID) throws IOException;
+
+  /**
+   * Checks if any of process in the process tree of the task is alive
+   * or not. <br/>
+   * 
+   * @param pid
+   *          of the task attempt
+   * @return true if task process tree is alive.
+   * @throws IOException in case of errors
+   */
+  boolean isProcessTreeAlive(String pid) throws IOException;
 }

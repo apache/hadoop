@@ -19,40 +19,22 @@
 package org.apache.hadoop.mapred;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.StringTokenizer;
-
-import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-
-import org.apache.hadoop.examples.SleepJob;
-import org.apache.hadoop.examples.WordCount.IntSumReducer;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.OutputFormat;
-import org.apache.hadoop.mapreduce.Reducer;
-import org.apache.hadoop.mapred.TextOutputFormat;
-
-import org.apache.hadoop.mapreduce.test.system.JTClient;
 import org.apache.hadoop.mapreduce.test.system.MRCluster;
-import org.apache.hadoop.mapreduce.test.system.TTClient;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.io.Text;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -73,7 +55,11 @@ public class TestTaskOwner {
     cluster = MRCluster.createCluster(new Configuration());
     cluster.setUp();
     FileSystem fs = inDir.getFileSystem(cluster.getJTClient().getConf());
-    fs.create(inDir);
+    // Make sure that all is clean in case last tearDown wasn't successful
+    fs.delete(outDir, true);
+    fs.delete(inDir, true);
+
+    fs.create(inDir, true);
   }
 
   @Test
@@ -104,7 +90,6 @@ public class TestTaskOwner {
     // as the
     // user name that was used to launch the task in the first place
     FileSystem fs = outDir.getFileSystem(conf);
-    StringBuffer result = new StringBuffer();
 
     Path[] fileList = FileUtil.stat2Paths(fs.listStatus(outDir,
      new Utils.OutputFileUtils.OutputFilesFilter()));
@@ -128,20 +113,18 @@ public class TestTaskOwner {
               .toString());
            break;
          }
-
         }
         file.close();
      }
-
   }
 
   @AfterClass
   public static void tearDown() throws java.lang.Exception {
     FileSystem fs = outDir.getFileSystem(cluster.getJTClient().getConf());
     fs.delete(outDir, true);
+    fs.delete(inDir, true);
     cluster.tearDown();
    }
-
 }
 
 

@@ -37,13 +37,14 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
   Configuration conf;
   String user;
   boolean isTaskCleanupTask;
+  private String pid;
 
   public TTTaskInfoImpl() {
   }
 
   public TTTaskInfoImpl(boolean slotTaken, boolean wasKilled,
       TaskStatus status, Configuration conf, String user,
-      boolean isTaskCleanupTask) {
+      boolean isTaskCleanupTask, String pid) {
     super();
     this.slotTaken = slotTaken;
     this.wasKilled = wasKilled;
@@ -51,6 +52,7 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
     this.conf = conf;
     this.user = user;
     this.isTaskCleanupTask = isTaskCleanupTask;
+    this.pid = pid;
   }
 
   @Override
@@ -82,6 +84,11 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
   }
   
   @Override
+  public String getPid() {
+    return pid;
+  }
+  
+  @Override
   public void readFields(DataInput in) throws IOException {
     slotTaken = in.readBoolean();
     wasKilled = in.readBoolean();
@@ -89,6 +96,7 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
     conf.readFields(in);
     user = in.readUTF();
     isTaskCleanupTask = in.readBoolean();
+    pid = in.readUTF();
   }
 
   @Override
@@ -98,6 +106,11 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
     conf.write(out);
     out.writeUTF(user);
     out.writeBoolean(isTaskCleanupTask);
+    if (pid != null) {
+      out.writeUTF(pid);
+    } else {
+      out.writeUTF("");
+    }
     status.write(out);
   }
 
@@ -109,8 +122,8 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
 
     public MapTTTaskInfo(boolean slotTaken, boolean wasKilled,
         MapTaskStatus status, Configuration conf, String user,
-        boolean isTaskCleanup) {
-      super(slotTaken, wasKilled, status, conf, user, isTaskCleanup);
+        boolean isTaskCleanup,String pid) {
+      super(slotTaken, wasKilled, status, conf, user, isTaskCleanup, pid);
     }
 
     @Override
@@ -133,8 +146,8 @@ abstract class TTTaskInfoImpl implements TTTaskInfo {
 
     public ReduceTTTaskInfo(boolean slotTaken, boolean wasKilled,
         ReduceTaskStatus status, Configuration conf, String user,
-        boolean isTaskCleanup) {
-      super(slotTaken, wasKilled, status, conf, user, isTaskCleanup);
+        boolean isTaskCleanup, String pid) {
+      super(slotTaken, wasKilled, status, conf, user, isTaskCleanup, pid);
     }
 
     @Override

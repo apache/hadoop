@@ -32,30 +32,42 @@ public interface JTProtocol extends DaemonProtocol {
 
   /**
    * Get the information pertaining to given job.<br/>
+   * The returned JobInfo object can be null when the
+   * specified job by the job id is retired from the 
+   * JobTracker memory which happens after job is 
+   * completed. <br/>
    * 
    * @param id
    *          of the job for which information is required.
-   * @return information of regarding job.
+   * @return information of regarding job null if job is 
+   *         retired from JobTracker memory.
    * @throws IOException
    */
   public JobInfo getJobInfo(JobID jobID) throws IOException;
 
   /**
    * Gets the information pertaining to a task. <br/>
-   * 
+   * The returned TaskInfo object can be null when the 
+   * specified task specified by the task id is retired
+   * from the JobTracker memory which happens after the
+   * job is completed. <br/>
    * @param id
    *          of the task for which information is required.
-   * @return information of regarding the task.
+   * @return information of regarding the task null if the 
+   *          task is retired from JobTracker memory.
    * @throws IOException
    */
   public TaskInfo getTaskInfo(TaskID taskID) throws IOException;
 
   /**
    * Gets the information pertaining to a given TaskTracker. <br/>
-   * 
+   * The returned TTInfo class can be null if the given TaskTracker
+   * information is removed from JobTracker memory which is done
+   * when the TaskTracker is marked lost by the JobTracker. <br/>
    * @param name
    *          of the tracker.
-   * @return information regarding the tracker.
+   * @return information regarding the tracker null if the TaskTracker
+   *          is marked lost by the JobTracker.
    * @throws IOException
    */
   public TTInfo getTTInfo(String trackerName) throws IOException;

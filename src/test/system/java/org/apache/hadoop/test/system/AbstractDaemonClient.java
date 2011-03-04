@@ -22,9 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.List;
-
 import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -224,67 +222,73 @@ public abstract class AbstractDaemonClient<PROXY extends DaemonProtocol> {
    * Gets number of times FATAL log messages where logged in Daemon logs. 
    * <br/>
    * Pattern used for searching is FATAL. <br/>
-   * 
+   * @param excludeExpList list of exception to exclude 
    * @return number of occurrence of fatal message.
    * @throws IOException
    */
-  public int getNumberOfFatalStatementsInLog() throws IOException {
+  public int getNumberOfFatalStatementsInLog(String [] excludeExpList)
+      throws IOException {
     DaemonProtocol proxy = getProxy();
     String pattern = "FATAL";
-    return proxy.getNumberOfMatchesInLogFile(pattern);
+    return proxy.getNumberOfMatchesInLogFile(pattern, excludeExpList);
   }
 
   /**
    * Gets number of times ERROR log messages where logged in Daemon logs. 
    * <br/>
    * Pattern used for searching is ERROR. <br/>
-   * 
+   * @param excludeExpList list of exception to exclude 
    * @return number of occurrence of error message.
    * @throws IOException
    */
-  public int getNumberOfErrorStatementsInLog() throws IOException {
+  public int getNumberOfErrorStatementsInLog(String[] excludeExpList) 
+      throws IOException {
     DaemonProtocol proxy = getProxy();
-    String pattern = "ERROR";
-    return proxy.getNumberOfMatchesInLogFile(pattern);
+    String pattern = "ERROR";    
+    return proxy.getNumberOfMatchesInLogFile(pattern, excludeExpList);
   }
 
   /**
    * Gets number of times Warning log messages where logged in Daemon logs. 
    * <br/>
    * Pattern used for searching is WARN. <br/>
-   * 
+   * @param excludeExpList list of exception to exclude 
    * @return number of occurrence of warning message.
    * @throws IOException
    */
-  public int getNumberOfWarnStatementsInLog() throws IOException {
+  public int getNumberOfWarnStatementsInLog(String[] excludeExpList) 
+      throws IOException {
     DaemonProtocol proxy = getProxy();
     String pattern = "WARN";
-    return proxy.getNumberOfMatchesInLogFile(pattern);
+    return proxy.getNumberOfMatchesInLogFile(pattern, excludeExpList);
   }
 
   /**
    * Gets number of time given Exception were present in log file. <br/>
    * 
    * @param e exception class.
+   * @param excludeExpList list of exceptions to exclude. 
    * @return number of exceptions in log
    * @throws IOException
    */
-  public int getNumberOfExceptionsInLog(Exception e)
-      throws IOException {
+  public int getNumberOfExceptionsInLog(Exception e,
+      String[] excludeExpList) throws IOException {
     DaemonProtocol proxy = getProxy();
-    String pattern = e.getClass().getSimpleName();
-    return proxy.getNumberOfMatchesInLogFile(pattern);
+    String pattern = e.getClass().getSimpleName();    
+    return proxy.getNumberOfMatchesInLogFile(pattern, excludeExpList);
   }
 
   /**
    * Number of times ConcurrentModificationException present in log file. 
    * <br/>
+   * @param excludeExpList list of exceptions to exclude.
    * @return number of times exception in log file.
    * @throws IOException
    */
-  public int getNumberOfConcurrentModificationExceptionsInLog()
-      throws IOException {
-    return getNumberOfExceptionsInLog(new ConcurrentModificationException());
+  public int getNumberOfConcurrentModificationExceptionsInLog(
+      String[] excludeExpList) throws IOException {
+    return getNumberOfExceptionsInLog(new ConcurrentModificationException(),
+        excludeExpList);
   }
 
   private int errorCount;
@@ -294,16 +298,17 @@ public abstract class AbstractDaemonClient<PROXY extends DaemonProtocol> {
   /**
    * Populate the initial exception counts to be used to assert once a testcase
    * is done there was no exception in the daemon when testcase was run.
-   * 
+   * @param excludeExpList list of exceptions to exclude
    * @throws IOException
    */
-  protected void populateExceptionCount() throws IOException {
-    errorCount = getNumberOfErrorStatementsInLog();
+  protected void populateExceptionCount(String [] excludeExpList) 
+      throws IOException {
+    errorCount = getNumberOfErrorStatementsInLog(excludeExpList);
     LOG.info("Number of error messages in logs : " + errorCount);
-    fatalCount = getNumberOfFatalStatementsInLog();
+    fatalCount = getNumberOfFatalStatementsInLog(excludeExpList);
     LOG.info("Number of fatal statement in logs : " + fatalCount);
     concurrentExceptionCount =
-        getNumberOfConcurrentModificationExceptionsInLog();
+        getNumberOfConcurrentModificationExceptionsInLog(excludeExpList);
     LOG.info("Number of concurrent modification in logs : "
         + concurrentExceptionCount);
   }
@@ -314,16 +319,18 @@ public abstract class AbstractDaemonClient<PROXY extends DaemonProtocol> {
    * <b><i>
    * Pre-req for the method is that populateExceptionCount() has 
    * to be called before calling this method.</b></i>
+   * @param excludeExpList list of exceptions to exclude
    * @throws IOException
    */
-  protected void assertNoExceptionsOccurred() throws IOException {
-    int newerrorCount = getNumberOfErrorStatementsInLog();
-    LOG.info("Number of error messages while asserting : " + newerrorCount);
-    int newfatalCount = getNumberOfFatalStatementsInLog();
+  protected void assertNoExceptionsOccurred(String [] excludeExpList) 
+      throws IOException {
+    int newerrorCount = getNumberOfErrorStatementsInLog(excludeExpList);
+    LOG.info("Number of error messages while asserting :" + newerrorCount);
+    int newfatalCount = getNumberOfFatalStatementsInLog(excludeExpList);
     LOG.info("Number of fatal messages while asserting : " + newfatalCount);
     int newconcurrentExceptionCount =
-        getNumberOfConcurrentModificationExceptionsInLog();
-    LOG.info("Number of concurrentmodification execption while asserting :"
+        getNumberOfConcurrentModificationExceptionsInLog(excludeExpList);
+    LOG.info("Number of concurrentmodification exception while asserting :"
         + newconcurrentExceptionCount);
     Assert.assertEquals(
         "New Error Messages logged in the log file", errorCount, newerrorCount);

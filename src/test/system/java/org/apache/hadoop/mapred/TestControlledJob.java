@@ -98,11 +98,22 @@ public class TestControlledJob {
     }
     
     jInfo = wovenClient.getJobInfo(id);
-    while(!jInfo.getStatus().isJobComplete()) {
-      Thread.sleep(1000);
-      jInfo = wovenClient.getJobInfo(id);
+    int i = 1;
+    if (jInfo != null) {
+      while (!jInfo.getStatus().isJobComplete()) {
+        Thread.sleep(1000);
+        jInfo = wovenClient.getJobInfo(id);
+        if (jInfo == null) {
+          break;
+        }
+        if(i > 40) {
+          Assert.fail("Controlled Job with ID : "
+              + jInfo.getID()
+              + " has not completed in 40 seconds after signalling.");
+        }
+        i++;
+      }
     }
-    
     LOG.info("Job sucessfully completed after signalling!!!!");
   }
 }

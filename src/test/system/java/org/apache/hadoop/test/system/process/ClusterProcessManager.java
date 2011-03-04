@@ -60,10 +60,41 @@ public interface ClusterProcessManager {
   void start() throws IOException;
 
   /**
+   * Starts the daemon from the user specified conf dir.
+   * @param newConfLocation the dir where the new conf files reside.
+   * @throws IOException
+   */
+  void start(String newConfLocation) throws IOException;
+
+  /**
+   * Stops the daemon running from user specified conf dir.
+   * 
+   * @param newConfLocation
+   *          the dir where ther new conf files reside.
+   * @throws IOException
+   */
+  void stop(String newConfLocation) throws IOException;
+
+  /**
    * Method to shutdown all the remote daemons.<br/>
    * 
    * @throws IOException if shutdown procedure fails.
    */
   void stop() throws IOException;
+  
+  /**
+   * Gets if multi-user support is enabled for this cluster. 
+   * <br/>
+   * @return true if multi-user support is enabled.
+   * @throws IOException
+   */
+  boolean isMultiUserSupported() throws IOException;
 
+  /**
+   * The pushConfig is used to push a new config to the daemons.
+   * @param localDir
+   * @return is the remoteDir location where config will be pushed
+   * @throws IOException
+   */
+  String pushConfig(String localDir) throws IOException;
 }

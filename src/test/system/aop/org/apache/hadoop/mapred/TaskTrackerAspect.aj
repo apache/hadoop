@@ -26,9 +26,12 @@ import org.apache.hadoop.mapreduce.test.system.TTProtocol;
 import org.apache.hadoop.mapreduce.test.system.TTTaskInfo;
 import org.apache.hadoop.mapred.TTTaskInfoImpl.MapTTTaskInfo;
 import org.apache.hadoop.mapred.TTTaskInfoImpl.ReduceTTTaskInfo;
-import org.apache.hadoop.test.system.ControlAction;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.system.DaemonProtocol;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
 
 public privileged aspect TaskTrackerAspect {
 
@@ -36,6 +39,7 @@ public privileged aspect TaskTrackerAspect {
 
   // Add a last sent status field to the Tasktracker class.
   TaskTrackerStatus TaskTracker.lastSentStatus = null;
+  static String TaskTracker.TASKJARDIR = TaskTracker.JARSDIR;
 
   public synchronized TaskTrackerStatus TaskTracker.getStatus()
       throws IOException {
@@ -75,11 +79,11 @@ public privileged aspect TaskTrackerAspect {
     if (tip.task.isMapTask()) {
       info = new MapTTTaskInfo(tip.slotTaken, tip.wasKilled,
           (MapTaskStatus) tip.getStatus(), tip.getJobConf(), tip.getTask()
-              .getUser(), tip.getTask().isTaskCleanupTask());
+              .getUser(), tip.getTask().isTaskCleanupTask(), getPid(tip.getTask().getTaskID()));
     } else {
       info = new ReduceTTTaskInfo(tip.slotTaken, tip.wasKilled,
           (ReduceTaskStatus) tip.getStatus(), tip.getJobConf(), tip.getTask()
-              .getUser(), tip.getTask().isTaskCleanupTask());
+              .getUser(), tip.getTask().isTaskCleanupTask(),getPid(tip.getTask().getTaskID()));
     }
     return info;
   }
@@ -98,6 +102,13 @@ public privileged aspect TaskTrackerAspect {
 
   after(JobConf conf) returning (TaskTracker tracker): 
     ttConstructorPointCut(conf) {
+    try {
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      tracker.setUser(ugi.getShortUserName());
+    } catch (IOException e) {
+      tracker.LOG.warn("Unable to get the user information for the " +
+          "Jobtracker");
+    }
     tracker.setReady(true);
   }
   
@@ -114,6 +125,31 @@ public privileged aspect TaskTrackerAspect {
     } else {
       return proceed(protocol, clientVersion);
     }
-  }
+  }  
 
+  public boolean TaskTracker.isProcessTreeAlive(String pid) throws IOException {
+    // Command to be executed is as follows :
+    // ps -o pid,ppid,sid,command -e | grep -v ps | grep -v grep | grep
+    // "$pid"
+    String checkerCommand =
+        getDaemonConf().get(
+            "test.system.processgroup_checker_command",
+            "ps -o pid,ppid,sid,command -e "
+                + "| grep -v ps | grep -v grep | grep \"$");
+    String[] command =
+        new String[] { "bash", "-c", checkerCommand + pid + "\"" };
+    ShellCommandExecutor shexec = new ShellCommandExecutor(command);
+    try {
+      shexec.execute();
+    } catch (Shell.ExitCodeException e) {
+      TaskTracker.LOG
+          .info("The process tree grep threw a exitcode exception pointing "
+              + "to process tree not being alive.");
+      return false;
+    }
+    TaskTracker.LOG.info("The task grep command is : "
+        + shexec.toString() + " the output from command is : "
+        + shexec.getOutput());
+    return true;
+  }
 }

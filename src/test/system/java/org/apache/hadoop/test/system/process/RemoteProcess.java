@@ -19,6 +19,7 @@
 package org.apache.hadoop.test.system.process;
 
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
 
 /**
  * Interface to manage the remote process.
@@ -37,18 +38,37 @@ public interface RemoteProcess {
    * @throws IOException if startup fails.
    */
   void start() throws IOException;
-
+  /**
+   * Starts a daemon from user specified conf dir. 
+   * @param newConfLocation is dir where new conf resides. 
+   * @throws IOException
+   */
+  void start(String newConfLocation) throws IOException;
   /**
    * Stop a given daemon process.<br/>
    * 
    * @throws IOException if shutdown fails.
    */
   void kill() throws IOException;
-
+  
+  /**
+   * Stops a given daemon running from user specified 
+   * conf dir. </br>
+   * @throws IOException
+   * @param newconfLocation dir location where new conf resides. 
+   */
+   void kill(String newConfLocation) throws IOException;
   /**
    * Get the role of the Daemon in the cluster.
    * 
    * @return Enum
    */
   Enum<?> getRole();
+  
+  /**
+   * Pushed the configuration to new configuration directory 
+   * @param localDir
+   * @throws IOException
+   */
+  void pushConfig(String localDir) throws IOException;
 }
