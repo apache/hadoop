@@ -83,8 +83,11 @@ public class TestJobACLs {
     conf.setBoolean("mapred.job.tracker.persist.jobstatus.active", true);
     conf.set("mapred.job.tracker.persist.jobstatus.hours", "1");
 
-    mr =
-        new MiniMRCluster(0, 0, 0, "file:///", 1, null, null, MR_UGI, conf);
+    // Let us have enough slots sothat there won't be contention for slots
+    // for launching JOB_CLEANUP tasks
+    conf.set("mapred.tasktracker.map.tasks.maximum", "4");
+
+    mr = new MiniMRCluster(0, 0, 2, "file:///", 1, null, null, MR_UGI, conf);
   }
 
   /**
@@ -140,6 +143,14 @@ public class TestJobACLs {
     job.killJob();
   }
 
+  /**
+   * Submits a sleep job with 1 map task that runs for a long time(2000 sec)
+   * @param clusterConf
+   * @param user the jobOwner
+   * @return RunningJob that is started
+   * @throws IOException
+   * @throws InterruptedException
+   */
   private RunningJob submitJobAsUser(final JobConf clusterConf, String user)
       throws IOException, InterruptedException {
     UserGroupInformation ugi =
@@ -150,7 +161,7 @@ public class TestJobACLs {
         JobClient jobClient = new JobClient(clusterConf);
         SleepJob sleepJob = new SleepJob();
         sleepJob.setConf(clusterConf);
-        JobConf jobConf = sleepJob.setupJobConf(0, 0, 1000, 1000, 1000, 1000);
+        JobConf jobConf = sleepJob.setupJobConf(1, 0, 2000, 1000, 1000, 1000);
         RunningJob runningJob = jobClient.submitJob(jobConf);
         return runningJob;
       }
