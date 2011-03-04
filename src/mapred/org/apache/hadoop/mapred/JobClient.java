@@ -55,9 +55,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -68,6 +70,8 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -1775,7 +1779,53 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException {
     return jobSubmitClient.getQueueAclsForCurrentUser();
   }
+  /* Get a delegation token for the user from the JobTracker.
+   * @param renewer the user who can renew the token
+   * @return the new token
+   * @throws IOException
+   */
+  public Token<DelegationTokenIdentifier> 
+    getDelegationToken(Text renewer) throws IOException, InterruptedException {
+    Token<DelegationTokenIdentifier> result =
+      jobSubmitClient.getDelegationToken(renewer);
+    InetSocketAddress addr = JobTracker.getAddress(new Configuration());
+    StringBuilder service = new StringBuilder();
+    service.append(NetUtils.normalizeHostName(addr.getAddress().
+                                              getHostAddress()));
+    service.append(':');
+    service.append(addr.getPort());
+    result.setService(new Text(service.toString()));
+    return result;
+  }
 
+  /**
+   * Renew a delegation token
+   * @param token the token to renew
+   * @return true if the renewal went well
+   * @throws InvalidToken
+   * @throws IOException
+   */
+  public boolean renewDelegationToken(Token<DelegationTokenIdentifier> token)
+  throws InvalidToken, IOException, InterruptedException {
+    try {
+      return jobSubmitClient.renewDelegationToken(token);
+    } catch (RemoteException re) {
+      throw re.unwrapRemoteException(InvalidToken.class);
+    }
+  }
+
+  /**
+   * Cancel a delegation token from the JobTracker
+   * @param token the token to cancel
+   * @return true if everything went well
+   * @throws IOException
+   */
+  public boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token
+                                       ) throws IOException, 
+                                                InterruptedException {
+    return jobSubmitClient.cancelDelegationToken(token);
+  }
+ 
   /**
    */
   public static void main(String argv[]) throws Exception {

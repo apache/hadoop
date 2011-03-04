@@ -35,7 +35,9 @@ import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.io.DataOutputBuffer;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapreduce.split.SplitMetaInfoReader;
@@ -43,6 +45,7 @@ import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.TokenStorage;
+import org.apache.hadoop.security.token.Token;
 
 /** Implements MapReduce locally, in-process, for debugging. */ 
 class LocalJobRunner implements JobSubmissionProtocol {
@@ -536,4 +539,22 @@ class LocalJobRunner implements JobSubmissionProtocol {
   public QueueAclsInfo[] getQueueAclsForCurrentUser() throws IOException{
     return null;
   }
+  
+  @Override
+  public boolean cancelDelegationToken(Token<DelegationTokenIdentifier> token
+                                       ) throws IOException,
+                                                InterruptedException {
+    return false;
+  }  
+  @Override
+  public Token<DelegationTokenIdentifier> 
+     getDelegationToken(Text renewer) throws IOException, InterruptedException {
+    return null;
+  }  
+  @Override
+  public boolean renewDelegationToken(Token<DelegationTokenIdentifier> token
+                                      ) throws IOException,InterruptedException{
+    return false;
+  }  
+
 }
