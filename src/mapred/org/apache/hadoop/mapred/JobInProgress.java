@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
+import org.apache.hadoop.mapred.AuditLogger;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapreduce.JobACL;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -374,8 +375,12 @@ public class JobInProgress {
       this.conf.setUser(user);
     }
     if (!conf.getUser().equals(user)) {
-      throw new IOException("The username obtained from the conf doesn't " +
-            "match the username the user authenticated as");
+      String desc = "The username obtained from the conf doesn't " +
+                      "match the username the user authenticated as";
+      AuditLogger.logFailure(user, 
+          QueueManager.QueueOperation.SUBMIT_JOB.name(), conf.getUser(), 
+          jobId.toString(), desc);
+      throw new IOException(desc);
     }
     this.priority = conf.getJobPriority();
     this.status.setJobPriority(this.priority);

@@ -23,6 +23,8 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapred.AuditLogger;
+import org.apache.hadoop.mapred.AuditLogger.Constants;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -109,34 +111,23 @@ public abstract class JobACLsManager {
 	      JobACL jobOperation, String jobOwner, AccessControlList jobACL)
 	      throws AccessControlException {
 
+	    String user = callerUGI.getShortUserName();
 	    if (!isJobLevelAuthorizationEnabled()) {
 	      return;
 	    }
 
-	    // Check for superusers/supergroups
-	    if (isSuperUserOrSuperGroup(callerUGI)) {
-	      LOG.info("superuser/supergroupMember "
-	          + callerUGI.getShortUserName() + " trying to perform "
-	          + jobOperation.toString() + " on " + jobId);
+	    // Allow superusers/supergroups
+	    // Allow Job-owner as the job's owner is always part of all the ACLs
+	    if (callerUGI.getShortUserName().equals(jobOwner)
+	        || isSuperUserOrSuperGroup(callerUGI) 
+	        || jobACL.isUserAllowed(callerUGI)) {
+	      AuditLogger.logSuccess(user, jobOperation.name(),  jobId.toString());
 	      return;
 	    }
 
-	    // Job-owner is always part of all the ACLs
-	    if (callerUGI.getShortUserName().equals(jobOwner)) {
-	      LOG.info("Jobowner " + callerUGI.getShortUserName()
-	          + " trying to perform " + jobOperation.toString() + " on "
-	          + jobId);
-	      return;
-	    }
-
-	    
-	    if (jobACL.isUserAllowed(callerUGI)) {
-	      LOG.info("Normal user " + callerUGI.getShortUserName()
-	          + " trying to perform " + jobOperation.toString() + " on "
-	          + jobId);
-	      return;
-	    }
-
+	    // log this event to the audit log
+	    AuditLogger.logFailure(user, jobOperation.name(), jobACL.toString(), 
+	                           jobId.toString(), Constants.UNAUTHORIZED_USER);
 	    throw new AccessControlException(callerUGI
 	        + " is not authorized for performing the operation "
 	        + jobOperation.toString() + " on " + jobId + ". "

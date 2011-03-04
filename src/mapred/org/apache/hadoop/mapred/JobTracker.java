@@ -30,6 +30,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.security.PrivilegedExceptionAction;
@@ -76,6 +77,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
+import org.apache.hadoop.mapred.AuditLogger.Constants;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
@@ -3740,6 +3742,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     LOG.info("Job " + jobId + " added successfully for user '" 
              + job.getJobConf().getUser() + "' to queue '" 
              + job.getJobConf().getQueueName() + "'");
+    AuditLogger.logSuccess(job.getUser(), 
+        QueueManager.QueueOperation.SUBMIT_JOB.name(), jobId.toString());
     return job.getStatus();
   }
 
@@ -4573,14 +4577,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Rereads the files to update the hosts and exclude lists.
    */
   public synchronized void refreshNodes() throws IOException {
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
     // check access
     if (!isSuperUserOrSuperGroup(UserGroupInformation.getCurrentUser(), mrOwner,
                                  supergroup)) {
-      String user = UserGroupInformation.getCurrentUser().getShortUserName();
+      AuditLogger.logFailure(user, Constants.REFRESH_NODES, 
+          mrOwner + " " + supergroup, Constants.JOBTRACKER, 
+          Constants.UNAUTHORIZED_USER);
       throw new AccessControlException(user + 
                                        " is not authorized to refresh nodes.");
     }
     
+    AuditLogger.logSuccess(user, Constants.REFRESH_NODES, Constants.JOBTRACKER);
     // call the actual api
     refreshHosts();
   }
