@@ -160,7 +160,7 @@ public class TrackerDistributedCacheManager {
         String cachePath = new Path (subDir, 
           new Path(uniqueString, makeRelative(cache, conf))).toString();
         localPath = lDirAllocator.getLocalPathForWrite(cachePath,
-          fileStatus.getLen(), trackerConf);
+          fileStatus.getLen(), trackerConf, isPublic);
         lcacheStatus = 
           new CacheStatus(new Path(localPath.toString().replace(cachePath, "")), 
                           localPath, new Path(subDir), uniqueString, 
@@ -479,7 +479,8 @@ public class TrackerDistributedCacheManager {
     } else {
       parchive = destination;
     }
-    if (!localFs.mkdirs(destination.getParent())) {
+    LOG.info("Creating " + destination + " with " + permission);
+    if (!localFs.mkdirs(destination.getParent(), permission)) {
       throw new IOException("Mkdirs failed to create directory " +
                             destination);
     }

@@ -307,7 +307,7 @@ public class JobLocalizer {
                                              boolean isArchive
                                              ) throws IOException {
     if (null == sources && null == dests && null == times && null == isPublic) {
-      return new long[0];
+      return null;
     }
     if (sources.length != dests.length ||
         sources.length != times.length ||
@@ -381,7 +381,9 @@ public class JobLocalizer {
     TaskTracker.resetNumTasksPerJvm(jConf);
 
     long[] sizes = downloadPrivateCache(jConf);
-    taskTracker.updatePrivateDistributedCacheSizes(jobid, sizes);
+    if (sizes != null) {
+      taskTracker.updatePrivateDistributedCacheSizes(jobid, sizes);
+    }
 
     // Create job-acls.xml file in job userlog dir and write the needed
     // info for authorization of users for viewing task logs of this job.
