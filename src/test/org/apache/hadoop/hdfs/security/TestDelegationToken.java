@@ -22,6 +22,8 @@ package org.apache.hadoop.hdfs.security;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 
 import junit.framework.Assert;
 
@@ -32,6 +34,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
@@ -148,6 +151,64 @@ public class TestDelegationToken {
     Log.info("A valid token should have non-null password, and should be renewed successfully");
     Assert.assertTrue(null != dtSecretManager.retrievePassword(identifier));
     dtSecretManager.renewToken(token, "JobTracker");
+  }
+  
+  @Test
+  public void testDelegationTokenWithDoAs() throws Exception {
+    final DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
+    final Token<DelegationTokenIdentifier> token = dfs.getDelegationToken(new Text(
+        "JobTracker/foo.com@FOO.COM"));
+    final UserGroupInformation longUgi = UserGroupInformation
+        .createRemoteUser("JobTracker/foo.com@FOO.COM");
+    final UserGroupInformation shortUgi = UserGroupInformation
+        .createRemoteUser("JobTracker");
+    longUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        final DistributedFileSystem dfs = (DistributedFileSystem) cluster
+            .getFileSystem();
+        try {
+          //try renew with long name
+          dfs.renewDelegationToken(token);
+        } catch (IOException e) {
+          Assert.fail("Could not renew delegation token for user "+longUgi);
+        }
+        return null;
+      }
+    });
+    shortUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        final DistributedFileSystem dfs = (DistributedFileSystem) cluster
+            .getFileSystem();
+        try {
+          //try renew with long name
+          dfs.renewDelegationToken(token);
+          Assert.fail("Should not renew delegation token for short user name");
+        } catch (IOException e) {
+          //PASS
+        }
+        try {
+          //try cancel with long name
+          dfs.cancelDelegationToken(token);
+          Assert.fail("Should not cancel delegation token for short user name");
+        } catch (IOException e) {
+          //PASS
+        }
+        return null;
+      }
+    });
+    longUgi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        final DistributedFileSystem dfs = (DistributedFileSystem) cluster
+            .getFileSystem();
+        try {
+          //try cancel with long name
+          dfs.cancelDelegationToken(token);
+        } catch (IOException e) {
+          Assert.fail("Could not cancel delegation token for user "+longUgi);
+        }
+        return null;
+      }
+    });
   }
  
 }

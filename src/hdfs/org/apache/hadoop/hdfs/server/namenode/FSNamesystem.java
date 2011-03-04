@@ -4979,7 +4979,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new IOException(
           "Delegation Token can be renewed only with kerberos or web authentication");
     }
-    String renewer = UserGroupInformation.getCurrentUser().getShortUserName();
+    String renewer = UserGroupInformation.getCurrentUser().getUserName();
     long expiryTime = dtSecretManager.renewToken(token, renewer);
     DelegationTokenIdentifier id = new DelegationTokenIdentifier();
     ByteArrayInputStream buf = new ByteArrayInputStream(token.getIdentifier());
@@ -4999,7 +4999,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
     if (isInSafeMode()) {
       throw new SafeModeException("Cannot cancel delegation token", safeMode);
     }
-    String canceller = UserGroupInformation.getCurrentUser().getShortUserName();
+    String canceller = UserGroupInformation.getCurrentUser().getUserName();
     DelegationTokenIdentifier id = dtSecretManager
         .cancelToken(token, canceller);
     logCancelDelegationToken(id);
