@@ -1,5 +1,14 @@
 Hadoop Change Log
 
+Release 0.20.3 - Unreleased
+
+  IMPROVEMENTS
+
+  BUG FIXES
+
+    HDFS-955. New implementation of saveNamespace() to avoid loss of edits 
+    when name-node fails during saving. (shv)
+
 Release 0.20.2 - Unreleased
 
   BUG FIXES

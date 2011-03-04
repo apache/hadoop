@@ -351,18 +351,6 @@ public class FSEditLog {
   }
 
   /**
-   * Create edits.new if non existent.
-   */
-  synchronized void createNewIfMissing() throws IOException {
- for (Iterator<StorageDirectory> it = 
-       fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
-      File newFile = getEditNewFile(it.next());
-      if (!newFile.exists())
-        createEditLogFile(newFile);
-    }
-  }
-  
-  /**
    * Shutdown the file store.
    */
   public synchronized void close() throws IOException {

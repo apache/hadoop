@@ -3707,7 +3707,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
       throw new IOException("Safe mode should be turned ON " +
                             "in order to create namespace image.");
     }
-    getFSImage().saveFSImage();
+    getFSImage().saveNamespace(true);
     LOG.info("New namespace image has been created.");
   }
 

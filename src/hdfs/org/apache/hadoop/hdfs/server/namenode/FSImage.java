@@ -410,12 +410,7 @@ public class FSImage extends Storage {
       // rename current to tmp
       rename(curDir, tmpDir);
       // save new image
-      if (!curDir.mkdir())
-        throw new IOException("Cannot create directory " + curDir);
-      saveFSImage(getImageFile(sd, NameNodeFile.IMAGE));
-      editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
-      // write version and time files
-      sd.write();
+      saveCurrent(sd);
       // rename tmp to previous
       rename(tmpDir, prevDir);
       isUpgradeFinalized = false;
@@ -523,7 +518,7 @@ public class FSImage extends Storage {
     realImage.setStorageInfo(ckptImage);
     fsNamesys.dir.fsImage = realImage;
     // and save it
-    saveFSImage();
+    saveNamespace(false);
   }
 
   void finalizeUpgrade() throws IOException {
@@ -791,9 +786,24 @@ public class FSImage extends Storage {
       throw new IOException("Edits file is not found in " + editsDirs);
 
     // Make sure we are loading image and edits from same checkpoint
-    if (latestNameCheckpointTime != latestEditsCheckpointTime)
-      throw new IOException("Inconsitent storage detected, " +
-                            "name and edits storage do not match");
+    if (latestNameCheckpointTime > latestEditsCheckpointTime
+        && latestNameSD != latestEditsSD
+        && latestNameSD.getStorageDirType() == NameNodeDirType.IMAGE
+        && latestEditsSD.getStorageDirType() == NameNodeDirType.EDITS) {
+      // This is a rare failure when NN has image-only and edits-only
+      // storage directories, and fails right after saving images,
+      // in some of the storage directories, but before purging edits.
+      // See -NOTE- in saveNamespace().
+      LOG.error("This is a rare failure scenario!!!");
+      LOG.error("Image checkpoint time " + latestNameCheckpointTime +
+                " > edits checkpoint time " + latestEditsCheckpointTime);
+      LOG.error("Name-node will treat the image as the latest state of " +
+                "the namespace. Old edits will be discarded.");
+    } else if (latestNameCheckpointTime != latestEditsCheckpointTime)
+      throw new IOException("Inconsistent storage detected, " +
+                      "image and edits checkpoint times do not match. " +
+                      "image checkpoint time = " + latestNameCheckpointTime +
+                      "edits checkpoint time = " + latestEditsCheckpointTime);
     
     // Recover from previous interrrupted checkpoint if any
     needToSave |= recoverInterruptedCheckpoint(latestNameSD, latestEditsSD);
@@ -810,7 +820,11 @@ public class FSImage extends Storage {
         + (FSNamesystem.now() - startTime)/1000 + " seconds.");
     
     // Load latest edits
-    needToSave |= (loadFSEdits(latestEditsSD) > 0);
+    if (latestNameCheckpointTime > latestEditsCheckpointTime)
+      // the image is already current, discard edits
+      needToSave |= true;
+    else // latestNameCheckpointTime == latestEditsCheckpointTime
+      needToSave |= (loadFSEdits(latestEditsSD) > 0);
     
     return needToSave;
   }
@@ -1041,26 +1055,141 @@ public class FSImage extends Storage {
   }
 
   /**
-   * Save the contents of the FS image
-   * and create empty edits.
+   * Save the contents of the FS image and create empty edits.
+   * 
+   * In order to minimize the recovery effort in case of failure during
+   * saveNamespace the algorithm reduces discrepancy between directory states
+   * by performing updates in the following order:
+   * <ol>
+   * <li> rename current to lastcheckpoint.tmp for all of them,</li>
+   * <li> save image and recreate edits for all of them,</li>
+   * <li> rename lastcheckpoint.tmp to previous.checkpoint.</li>
+   * </ol>
+   * On stage (2) we first save all images, then recreate edits.
+   * Otherwise the name-node may purge all edits and fail,
+   * in which case the journal will be lost.
    */
-  public void saveFSImage() throws IOException {
-    editLog.createNewIfMissing();
-    for (Iterator<StorageDirectory> it = 
-                           dirIterator(); it.hasNext();) {
+  void saveNamespace(boolean renewCheckpointTime) throws IOException {
+    editLog.close();
+    if(renewCheckpointTime)
+      this.checkpointTime = FSNamesystem.now();
+
+    // mv current -> lastcheckpoint.tmp
+    for (Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {
       StorageDirectory sd = it.next();
-      NameNodeDirType dirType = (NameNodeDirType)sd.getStorageDirType();
-      if (dirType.isOfType(NameNodeDirType.IMAGE))
-        saveFSImage(getImageFile(sd, NameNodeFile.IMAGE_NEW));
-      if (dirType.isOfType(NameNodeDirType.EDITS)) {    
-        editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
-        File editsNew = getImageFile(sd, NameNodeFile.EDITS_NEW);
-        if (editsNew.exists()) 
-          editLog.createEditLogFile(editsNew);
+      try {
+        moveCurrent(sd);
+      } catch(IOException ie) {
+        LOG.error("Unable to move current for " + sd.getRoot(), ie);
+        processIOError(sd.getRoot());
       }
     }
+
+    // save images into current
+    for (Iterator<StorageDirectory> it = dirIterator(NameNodeDirType.IMAGE);
+                                                              it.hasNext();) {
+      StorageDirectory sd = it.next();
+      try {
+        saveCurrent(sd);
+      } catch(IOException ie) {
+        LOG.error("Unable to save image for " + sd.getRoot(), ie);
+        processIOError(sd.getRoot());
+      }
+    }
+
+    // -NOTE-
+    // If NN has image-only and edits-only storage directories and fails here 
+    // the image will have the latest namespace state.
+    // During startup the image-only directories will recover by discarding
+    // lastcheckpoint.tmp, while
+    // the edits-only directories will recover by falling back
+    // to the old state contained in their lastcheckpoint.tmp.
+    // The edits directories should be discarded during startup because their
+    // checkpointTime is older than that of image directories.
+
+    // recreate edits in current
+    for (Iterator<StorageDirectory> it = dirIterator(NameNodeDirType.EDITS);
+                                                              it.hasNext();) {
+      StorageDirectory sd = it.next();
+      try {
+        saveCurrent(sd);
+      } catch(IOException ie) {
+        LOG.error("Unable to save edits for " + sd.getRoot(), ie);
+        processIOError(sd.getRoot());
+      }
+    }
+    // mv lastcheckpoint.tmp -> previous.checkpoint
+    for (Iterator<StorageDirectory> it = dirIterator(); it.hasNext();) {
+      StorageDirectory sd = it.next();
+      try {
+        moveLastCheckpoint(sd);
+      } catch(IOException ie) {
+        LOG.error("Unable to move last checkpoint for " + sd.getRoot(), ie);
+        processIOError(sd.getRoot());
+      }
+    }
+    if(!editLog.isOpen()) editLog.open();
     ckptState = CheckpointStates.UPLOAD_DONE;
-    rollFSImage();
+  }
+
+  /**
+   * Save current image and empty journal into {@code current} directory.
+   */
+  protected void saveCurrent(StorageDirectory sd) throws IOException {
+    File curDir = sd.getCurrentDir();
+    NameNodeDirType dirType = (NameNodeDirType)sd.getStorageDirType();
+    // save new image or new edits
+    if (!curDir.exists() && !curDir.mkdir())
+      throw new IOException("Cannot create directory " + curDir);
+    if (dirType.isOfType(NameNodeDirType.IMAGE))
+      saveFSImage(getImageFile(sd, NameNodeFile.IMAGE));
+    if (dirType.isOfType(NameNodeDirType.EDITS))
+      editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
+    // write version and time files
+    sd.write();
+  }
+
+  /**
+   * Move {@code current} to {@code lastcheckpoint.tmp} and
+   * recreate empty {@code current}.
+   * {@code current} is moved only if it is well formatted,
+   * that is contains VERSION file.
+   * 
+   * @see org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory#getLastCheckpointTmp()
+   * @see org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory#getPreviousCheckpoint()
+   */
+  protected void moveCurrent(StorageDirectory sd)
+  throws IOException {
+    File curDir = sd.getCurrentDir();
+    File tmpCkptDir = sd.getLastCheckpointTmp();
+    // mv current -> lastcheckpoint.tmp
+    // only if current is formatted - has VERSION file
+    if(sd.getVersionFile().exists()) {
+      assert curDir.exists() : curDir + " directory must exist.";
+      assert !tmpCkptDir.exists() : tmpCkptDir + " directory must not exist.";
+      rename(curDir, tmpCkptDir);
+    }
+    // recreate current
+    if(!curDir.exists() && !curDir.mkdir())
+      throw new IOException("Cannot create directory " + curDir);
+  }
+
+  /**
+   * Move {@code lastcheckpoint.tmp} to {@code previous.checkpoint}
+   * 
+   * @see org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory#getPreviousCheckpoint()
+   * @see org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory#getLastCheckpointTmp()
+   */
+  protected void moveLastCheckpoint(StorageDirectory sd)
+  throws IOException {
+    File tmpCkptDir = sd.getLastCheckpointTmp();
+    File prevCkptDir = sd.getPreviousCheckpoint();
+    // remove previous.checkpoint
+    if (prevCkptDir.exists())
+      deleteDir(prevCkptDir);
+    // rename lastcheckpoint.tmp -> previous.checkpoint
+    if(tmpCkptDir.exists())
+      rename(tmpCkptDir, prevCkptDir);
   }
 
   /**
@@ -1090,12 +1219,7 @@ public class FSImage extends Storage {
     sd.clearDirectory(); // create currrent dir
     sd.lock();
     try {
-      NameNodeDirType dirType = (NameNodeDirType)sd.getStorageDirType();
-      if (dirType.isOfType(NameNodeDirType.IMAGE))
-        saveFSImage(getImageFile(sd, NameNodeFile.IMAGE));
-      if (dirType.isOfType(NameNodeDirType.EDITS))
-        editLog.createEditLogFile(getImageFile(sd, NameNodeFile.EDITS));
-      sd.write();
+      saveCurrent(sd);
     } finally {
       sd.unlock();
     }
