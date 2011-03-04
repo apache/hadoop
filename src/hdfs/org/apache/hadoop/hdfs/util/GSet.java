@@ -38,6 +38,7 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    * @param key The given key.
    * @return true if the given key equals to a stored element.
    *         Otherwise, return false.
+   * @throws NullPointerException if key == null.
    */
   boolean contains(K key);
 
@@ -47,6 +48,7 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    * @param key The given key.
    * @return The stored element if it exists.
    *         Otherwise, return null.
+   * @throws NullPointerException if key == null.
    */
   E get(K key);
 
@@ -63,6 +65,7 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    * @param element The element being put.
    * @return the previous stored element if there is any.
    *         Otherwise, return null.
+   * @throws NullPointerException if element == null.
    */
   E put(E element);
 
@@ -72,6 +75,7 @@ public interface GSet<K, E extends K> extends Iterable<E> {
    * @param key The key of the element being removed.
    * @return If such element exists, return it.
    *         Otherwise, return null. 
-   */
+    * @throws NullPointerException if key == null.
+  */
   E remove(K key);
 }

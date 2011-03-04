@@ -21,7 +21,7 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.util.GSet;
-import org.apache.hadoop.hdfs.util.GSetByHashMap;
+import org.apache.hadoop.hdfs.util.LightWeightGSet;
 
 /**
  * This class maintains the map from a block to its metadata.
@@ -33,8 +33,11 @@ class BlocksMap {
   /**
    * Internal class for block metadata.
    */
-  static class BlockInfo extends Block {
+  static class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     private INodeFile          inode;
+
+    /** For implementing {@link LightWeightGSet.LinkedElement} interface */
+    private LightWeightGSet.LinkedElement nextLinkedElement;
 
     /**
      * This array contains triplets of references.
@@ -268,6 +271,16 @@ class BlocksMap {
       }
       return true;
     }
+
+    @Override
+    public LightWeightGSet.LinkedElement getNext() {
+      return nextLinkedElement;
+    }
+
+    @Override
+    public void setNext(LightWeightGSet.LinkedElement next) {
+      this.nextLinkedElement = next;
+    }
   }
 
   private static class NodeIterator implements Iterator<DatanodeDescriptor> {
@@ -292,20 +305,45 @@ class BlocksMap {
     }
   }
 
-  // Used for tracking HashMap capacity growth
-  private int capacity;
-  private final float loadFactor;
+  /** Constant {@link LightWeightGSet} capacity. */
+  private final int capacity;
   
   private GSet<Block, BlockInfo> blocks;
 
   BlocksMap(int initialCapacity, float loadFactor) {
-    this.capacity = 1;
-    // Capacity is initialized to the next multiple of 2 of initialCapacity
-    while (this.capacity < initialCapacity)
-      this.capacity <<= 1;
-    this.loadFactor = loadFactor;
-    this.blocks = new GSetByHashMap<Block, BlockInfo>(
-        initialCapacity, loadFactor);
+    this.capacity = computeCapacity();
+    this.blocks = new LightWeightGSet<Block, BlockInfo>(capacity);
+  }
+
+  /**
+   * Let t = 2% of max memory.
+   * Let e = round(log_2 t).
+   * Then, we choose capacity = 2^e/(size of reference),
+   * unless it is outside the close interval [1, 2^30].
+   */
+  private static int computeCapacity() {
+    //VM detection
+    //See http://java.sun.com/docs/hotspot/HotSpotFAQ.html#64bit_detection
+    final String vmBit = System.getProperty("sun.arch.data.model");
+
+    //2% of max memory
+    final double twoPC = Runtime.getRuntime().maxMemory()/50.0;
+
+    //compute capacity
+    final int e1 = (int)(Math.log(twoPC)/Math.log(2.0) + 0.5);
+    final int e2 = e1 - ("32".equals(vmBit)? 2: 3);
+    final int exponent = e2 < 0? 0: e2 > 30? 30: e2;
+    final int c = 1 << exponent;
+
+    LightWeightGSet.LOG.info("VM type       = " + vmBit + "-bit");
+    LightWeightGSet.LOG.info("2% max memory = " + twoPC/(1 << 20) + " MB");
+    LightWeightGSet.LOG.info("capacity      = 2^" + exponent
+        + " = " + c + " entries");
+    return c;
+  }
+
+  void close() {
+    blocks = null;
   }
 
   /**
@@ -440,10 +478,6 @@ class BlocksMap {
   
   /** Get the capacity of the HashMap that stores blocks */
   public int getCapacity() {
-    // Capacity doubles every time the map size reaches the threshold
-    while (blocks.size() > (int)(capacity * loadFactor)) {
-      capacity <<= 1;
-    }
     return capacity;
   }
 }

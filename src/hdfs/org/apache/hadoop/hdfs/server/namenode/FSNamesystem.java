@@ -525,6 +525,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
           lmthread.join(3000);
         }
         dir.close();
+        blocksMap.close();
       } catch (InterruptedException ie) {
       } catch (IOException ie) {
         LOG.error("Error closing FSDirectory", ie);
