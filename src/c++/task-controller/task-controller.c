@@ -91,6 +91,7 @@ int check_tt_root(const char *tt_root) {
       found = 0;
       break;
     }
+    ++mapred_local_dir; 
   }
   free(mapred_local_dir);
   return found;

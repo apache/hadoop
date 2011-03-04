@@ -203,35 +203,27 @@ const char * get_value(char* key) {
 }
 
 const char ** get_values(char * key) {
-  const char ** toPass = NULL;
-  const char * value = get_value(key);
   char *tempTok = NULL;
   char *tempstr = NULL;
   int size = 0;
-  int len;
+  int toPassSize = MAX_SIZE;
+  const char** toPass = (const char **) malloc(sizeof(char *) * toPassSize);
+
   //first allocate any array of 10
+  const char * value = get_value(key);
   if(value != NULL) {
-    toPass = (const char **) malloc(sizeof(char *) * MAX_SIZE);
     tempTok = strtok_r((char *)value, ",", &tempstr);
-    if (tempTok != NULL) {
-      while (1) {
-        toPass[size++] = tempTok;
-        tempTok = strtok_r(NULL, ",", &tempstr);
-        if(tempTok == NULL){
-          break;
-        }
-        if((size % MAX_SIZE) == 0) {
-          toPass = (const char **) realloc(toPass,(sizeof(char *) *
-              (MAX_SIZE * ((size/MAX_SIZE) +1))));
-        }
+    while (tempTok != NULL) {
+      toPass[size++] = tempTok;
+      if(size == toPassSize) {
+        toPassSize += MAX_SIZE;
+        toPass = (const char **) realloc(toPass,(sizeof(char *) *
+                                         (MAX_SIZE * toPassSize)));
       }
-    } else {
-      toPass[size] = (char *)value;
+      tempTok = strtok_r(NULL, ",", &tempstr);
     }
   }
-  if(size > 0) {
-    toPass[size] = NULL;
-  }
+  toPass[size] = NULL;
   return toPass;
 }
 
