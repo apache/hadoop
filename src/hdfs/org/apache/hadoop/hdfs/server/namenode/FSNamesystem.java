@@ -49,6 +49,7 @@ import java.util.TreeSet;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
+import javax.management.InstanceNotFoundException;
 import javax.management.MBeanServer;
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -342,6 +343,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
 
   // precision of access times.
   private long accessTimePrecision = 0;
+  
+  private ObjectName mxBeanName = null;
   
   /**
    * FSNamesystem constructor.
@@ -4804,6 +4807,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
   public void shutdown() {
     if (mbeanName != null)
       MBeans.unregister(mbeanName);
+    if (mxBeanName != null)
+      unRegisterMXBean();
   }
   
 
@@ -5158,15 +5163,32 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
    */
   private void registerMXBean() {
     // register MXBean
-    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-    try {
-      ObjectName mxbeanName = new ObjectName("HadoopInfo:type=NameNodeInfo");
-      mbs.registerMBean(this, mxbeanName);
-    } catch ( javax.management.JMException e ) {
-      LOG.warn("Failed to register NameNodeMXBean", e);
+    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    if (mxBeanName == null) {
+      try {
+        mxBeanName = new ObjectName("HadoopInfo:type=NameNodeInfo");
+        mbs.registerMBean(this, mxBeanName);
+      } catch ( javax.management.JMException e ) {
+        LOG.warn("Failed to register NameNodeMXBean", e);
+      }
     }
   }
 
+  private void unRegisterMXBean() {
+    if (mxBeanName == null)
+      return;
+    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    if (mbs.isRegistered(mxBeanName)){
+      try {
+        mbs.unregisterMBean(mxBeanName);
+      } catch (InstanceNotFoundException e ) {
+        LOG.warn(mxBeanName, e);
+      } catch (javax.management.JMException e) {
+        LOG.warn("Error unregistering "+ mxBeanName, e);
+      }
+      mxBeanName = null;
+    }
+  }
   /**
    * Class representing Namenode information for JMX interfaces
    */

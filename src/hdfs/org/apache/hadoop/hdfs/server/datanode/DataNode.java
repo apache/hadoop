@@ -116,6 +116,7 @@ import org.mortbay.util.ajax.JSON;
 import java.lang.management.ManagementFactory;  
 
 import javax.management.InstanceAlreadyExistsException;
+import javax.management.InstanceNotFoundException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer; 
 import javax.management.ObjectName;
@@ -235,6 +236,8 @@ public class DataNode extends Configured
   public Server ipcServer;
 
   private SecureResources secureResources = null;
+  
+  private ObjectName mxBeanName = null;
   
   /**
    * Current system time.
@@ -466,12 +469,30 @@ public class DataNode extends Configured
 
   private void registerMXBean() {
     // register MXBean
-    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
-    try {
-      ObjectName mxbeanName = new ObjectName("HadoopInfo:type=DataNodeInfo");
-      mbs.registerMBean(this, mxbeanName);
-    } catch ( javax.management.JMException e ) {
-      LOG.warn("Failed to register NameNode MXBean", e);
+    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
+    if (mxBeanName == null) {
+      try {
+        mxBeanName = new ObjectName("HadoopInfo:type=DataNodeInfo");
+        mbs.registerMBean(this, mxBeanName);
+      } catch ( javax.management.JMException e ) {
+        LOG.warn("Failed to register DataNodeMXBean", e);
+      }
+    }
+  }
+  
+  private void unRegisterMXBean() {
+    if (mxBeanName == null)
+      return;
+    final MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
+    if (mbs.isRegistered(mxBeanName)){
+      try {
+        mbs.unregisterMBean(mxBeanName);
+      } catch (InstanceNotFoundException e ) {
+        LOG.warn(mxBeanName, e);
+      } catch (javax.management.JMException e) {
+        LOG.warn("Error unregistering "+ mxBeanName, e);
+      }
+      mxBeanName = null;
     }
   }
   
@@ -684,6 +705,7 @@ public class DataNode extends Configured
    * Otherwise, deadlock might occur.
    */
   public void shutdown() {
+    this.unRegisterMXBean();
     if (infoServer != null) {
       try {
         infoServer.stop();
