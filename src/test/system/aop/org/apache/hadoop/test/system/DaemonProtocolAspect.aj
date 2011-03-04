@@ -256,19 +256,31 @@ public aspect DaemonProtocolAspect {
   public int DaemonProtocol.getNumberOfMatchesInLogFile(String pattern,
       String[] list) throws IOException {
     StringBuffer filePattern = new StringBuffer(getFilePattern());    
-    if(list != null){
-      for(int i =0; i < list.length; ++i)
-      {
-        filePattern.append(" | grep -v " + list[i] );
+    String[] cmd = null;
+    if (list != null) {
+      StringBuffer filterExpPattern = new StringBuffer();
+      int index=0;
+      for (String excludeExp : list) {
+        if (index++ < list.length -1) {
+           filterExpPattern.append("grep -v " + excludeExp + " | ");
+        } else {
+           filterExpPattern.append("grep -vc " + excludeExp);
+        }
       }
-    }  
-    String[] cmd =
-        new String[] {
-            "bash",
-            "-c",
-            "grep -c "
+      cmd = new String[] {
+                "bash",
+                "-c",
+                "grep "
+                + pattern + " " + filePattern + " | "
+                + filterExpPattern};
+    } else {
+      cmd = new String[] {
+                "bash",
+                "-c",
+                "grep -c "
                 + pattern + " " + filePattern
                 + " | awk -F: '{s+=$2} END {print s}'" };    
+    }
     ShellCommandExecutor shexec = new ShellCommandExecutor(cmd);
     shexec.execute();
     String output = shexec.getOutput();
