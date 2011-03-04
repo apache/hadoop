@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import junit.framework.TestCase;
 
@@ -55,7 +56,8 @@ public class TestIndexCache extends TestCase {
       Path f = new Path(p, Integer.toString(totalsize, 36));
       writeFile(fs, f, totalsize, partsPerMap);
       IndexRecord rec = cache.getIndexInformation(
-          Integer.toString(totalsize, 36), r.nextInt(partsPerMap), f);
+          Integer.toString(totalsize, 36), r.nextInt(partsPerMap), f,
+          UserGroupInformation.getCurrentUser().getShortUserName());
       checkRecord(rec, totalsize);
     }
 
@@ -66,7 +68,8 @@ public class TestIndexCache extends TestCase {
     for (int i = bytesPerFile; i < 1024 * 1024; i += bytesPerFile) {
       Path f = new Path(p, Integer.toString(i, 36));
       IndexRecord rec = cache.getIndexInformation(Integer.toString(i, 36),
-          r.nextInt(partsPerMap), f);
+          r.nextInt(partsPerMap), f,
+          UserGroupInformation.getCurrentUser().getShortUserName());
       checkRecord(rec, i);
     }
 
@@ -74,14 +77,16 @@ public class TestIndexCache extends TestCase {
     Path f = new Path(p, Integer.toString(totalsize, 36));
     writeFile(fs, f, totalsize, partsPerMap);
     cache.getIndexInformation(Integer.toString(totalsize, 36),
-        r.nextInt(partsPerMap), f);
+        r.nextInt(partsPerMap), f,
+        UserGroupInformation.getCurrentUser().getShortUserName());
     fs.delete(f, false);
 
     // oldest fails to read, or error
     boolean fnf = false;
     try {
       cache.getIndexInformation(Integer.toString(bytesPerFile, 36),
-          r.nextInt(partsPerMap), new Path(p, Integer.toString(bytesPerFile)));
+          r.nextInt(partsPerMap), new Path(p, Integer.toString(bytesPerFile)),
+          UserGroupInformation.getCurrentUser().getShortUserName());
     } catch (IOException e) {
       if (e.getCause() == null ||
           !(e.getCause()  instanceof FileNotFoundException)) {
@@ -96,11 +101,13 @@ public class TestIndexCache extends TestCase {
     // should find all the other entries
     for (int i = bytesPerFile << 1; i < 1024 * 1024; i += bytesPerFile) {
       IndexRecord rec = cache.getIndexInformation(Integer.toString(i, 36),
-          r.nextInt(partsPerMap), new Path(p, Integer.toString(i, 36)));
+          r.nextInt(partsPerMap), new Path(p, Integer.toString(i, 36)),
+          UserGroupInformation.getCurrentUser().getShortUserName());
       checkRecord(rec, i);
     }
     IndexRecord rec = cache.getIndexInformation(Integer.toString(totalsize, 36),
-        r.nextInt(partsPerMap), f);
+        r.nextInt(partsPerMap), f,
+        UserGroupInformation.getCurrentUser().getShortUserName());
     checkRecord(rec, totalsize);
   }
 
@@ -130,7 +137,8 @@ public class TestIndexCache extends TestCase {
     out.writeLong(iout.getChecksum().getValue());
     dout.close();
     try {
-      cache.getIndexInformation("badindex", 7, f);
+      cache.getIndexInformation("badindex", 7, f, 
+          UserGroupInformation.getCurrentUser().getShortUserName());
       fail("Did not detect bad checksum");
     } catch (IOException e) {
       if (!(e.getCause() instanceof ChecksumException)) {

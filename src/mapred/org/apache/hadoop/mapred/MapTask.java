@@ -65,6 +65,7 @@ import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitIndex;
 import org.apache.hadoop.mapreduce.split.JobSplit.TaskSplitMetaInfo;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.Progress;
@@ -1506,7 +1507,8 @@ class MapTask extends Task {
       // read in paged indices
       for (int i = indexCacheList.size(); i < numSpills; ++i) {
         Path indexFileName = mapOutputFile.getSpillIndexFile(i);
-        indexCacheList.add(new SpillRecord(indexFileName, job));
+        indexCacheList.add(new SpillRecord(indexFileName, job, 
+            UserGroupInformation.getCurrentUser().getShortUserName()));
       }
 
       //make correction in the length to include the sequence file header

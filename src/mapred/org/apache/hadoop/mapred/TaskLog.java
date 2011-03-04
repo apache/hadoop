@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -39,8 +40,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.util.ProcessTree;
 import org.apache.hadoop.util.Shell;
@@ -106,7 +109,8 @@ public class TaskLog {
         new HashMap<LogName, LogFileDetail>();
 
     File indexFile = getIndexFile(taskid, isCleanup);
-    BufferedReader fis = new BufferedReader(new java.io.FileReader(indexFile));
+    BufferedReader fis = new BufferedReader(new InputStreamReader(
+      SecureIOUtils.openForRead(indexFile, obtainLogDirOwner(taskid), null)));
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
     //stdout:<start-offset in the stdout file> <length>
@@ -153,6 +157,18 @@ public class TaskLog {
     return new File(getAttemptDir(taskid, isCleanup), "log.index");
   }
 
+  /**
+   * Obtain the owner of the log dir. This is 
+   * determined by checking the job's log directory.
+   */
+  static String obtainLogDirOwner(TaskAttemptID taskid) throws IOException {
+    Configuration conf = new Configuration();
+    FileSystem raw = FileSystem.getLocal(conf).getRaw();
+    Path jobLogDir = new Path(getJobDir(taskid.getJobID()).getAbsolutePath());
+    FileStatus jobStat = raw.getFileStatus(jobLogDir);
+    return jobStat.getOwner();
+  }
+
   static String getBaseLogDir() {
     return System.getProperty("hadoop.log.dir");
   }
@@ -194,7 +210,8 @@ public class TaskLog {
     File tmpIndexFile = getTmpIndexFile(currentTaskid, isCleanup);
     
     BufferedOutputStream bos = 
-      new BufferedOutputStream(new FileOutputStream(tmpIndexFile,false));
+      new BufferedOutputStream(
+        SecureIOUtils.createForWrite(tmpIndexFile, 0644));
     DataOutputStream dos = new DataOutputStream(bos);
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
@@ -330,7 +347,9 @@ public class TaskLog {
       start += fileDetail.start;
       end += fileDetail.start;
       bytesRemaining = end - start;
-      file = new FileInputStream(new File(fileDetail.location, kind.toString()));
+      String owner = obtainLogDirOwner(taskid);
+      file = SecureIOUtils.openForRead(new File(fileDetail.location, kind.toString()), 
+          owner, null);
       // skip upto start
       long pos = 0;
       while (pos < start) {

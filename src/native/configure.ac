@@ -95,6 +95,9 @@ AC_C_CONST
 # Checks for library functions.
 AC_CHECK_FUNCS([memset])
 
+# Check for nonstandard STRERROR_R
+AC_FUNC_STRERROR_R
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
 

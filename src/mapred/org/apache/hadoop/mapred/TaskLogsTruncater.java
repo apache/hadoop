@@ -20,7 +20,6 @@ package org.apache.hadoop.mapred;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
@@ -32,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapred.TaskLog.LogFileDetail;
@@ -74,6 +74,15 @@ public class TaskLogsTruncater {
    * retainSize.
    */
   public void truncateLogs(JVMInfo lInfo) {
+    Task firstAttempt = lInfo.getAllAttempts().get(0);
+    String owner;
+    try {
+      owner = TaskLog.obtainLogDirOwner(firstAttempt.getTaskID());
+    } catch (IOException ioe) {
+      LOG.error("Unable to create a secure IO context to truncate logs for " +
+        firstAttempt, ioe);
+      return;
+    }
 
     // Read the log-file details for all the attempts that ran in this JVM
     Map<Task, Map<LogName, LogFileDetail>> taskLogFileDetails;
@@ -120,7 +129,7 @@ public class TaskLogsTruncater {
       // ////// Open truncate.tmp file for writing //////
       File tmpFile = new File(attemptLogDir, "truncate.tmp");
       try {
-        tmpFileOutputStream = new FileOutputStream(tmpFile);
+        tmpFileOutputStream = SecureIOUtils.createForWrite(tmpFile, 0644);
       } catch (IOException ioe) {
         LOG.warn("Cannot open " + tmpFile.getAbsolutePath()
             + " for writing truncated log-file "
@@ -132,11 +141,11 @@ public class TaskLogsTruncater {
 
       // ////// Open logFile for reading //////
       try {
-        logFileInputStream = new FileInputStream(logFile);
-      } catch (FileNotFoundException fe) {
+        logFileInputStream = SecureIOUtils.openForRead(logFile, owner, null);
+      } catch (IOException ioe) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Cannot open " + logFile.getAbsolutePath()
-              + " for reading. Continuing with other log files");
+              + " for reading. Continuing with other log files", ioe);
         }
         try {
           tmpFileOutputStream.close();
@@ -275,8 +284,8 @@ public class TaskLogsTruncater {
 
   /**
    * Get the logFileDetails of all the list of attempts passed.
+   * @param allAttempts the attempts we are interested in
    * 
-   * @param lInfo
    * @return a map of task to the log-file detail
    * @throws IOException
    */
@@ -287,8 +296,7 @@ public class TaskLogsTruncater {
     for (Task task : allAttempts) {
       Map<LogName, LogFileDetail> allLogsFileDetails;
       allLogsFileDetails =
-          TaskLog.getAllLogsFileDetails(task.getTaskID(),
-              task.isTaskCleanupTask());
+          TaskLog.getAllLogsFileDetails(task.getTaskID(), task.isTaskCleanupTask());
       taskLogFileDetails.put(task, allLogsFileDetails);
     }
     return taskLogFileDetails;

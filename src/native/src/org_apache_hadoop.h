@@ -50,6 +50,22 @@
 	} \
   }
 
+/* Helper macro to return if an exception is pending */
+#define PASS_EXCEPTIONS(env) \
+  { \
+    if ((*env)->ExceptionCheck(env)) return; \
+  }
+
+#define PASS_EXCEPTIONS_GOTO(env, target) \
+  { \
+    if ((*env)->ExceptionCheck(env)) goto target; \
+  }
+
+#define PASS_EXCEPTIONS_RET(env, ret) \
+  { \
+    if ((*env)->ExceptionCheck(env)) return (ret); \
+  }
+
 /** 
  * A helper function to dlsym a 'symbol' from a given library-handle. 
  * 

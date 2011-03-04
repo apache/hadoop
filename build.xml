@@ -548,6 +548,7 @@
   	
     <mkdir dir="${build.native}/lib"/>
     <mkdir dir="${build.native}/src/org/apache/hadoop/io/compress/zlib"/>
+    <mkdir dir="${build.native}/src/org/apache/hadoop/io/nativeio"/>
     <mkdir dir="${build.native}/src/org/apache/hadoop/security"/>
 
   	<javah
@@ -560,6 +561,14 @@
       <class name="org.apache.hadoop.io.compress.zlib.ZlibDecompressor" />
   	</javah>
 
+        <javah
+          classpath="${build.classes}"
+          destdir="${build.native}/src/org/apache/hadoop/io/nativeio"
+       force="yes"
+          verbose="yes"
+          >
+          <class name="org.apache.hadoop.io.nativeio.NativeIO" />
+        </javah>
   	<javah
   	  classpath="${build.classes}"
   	  destdir="${build.native}/src/org/apache/hadoop/security"
