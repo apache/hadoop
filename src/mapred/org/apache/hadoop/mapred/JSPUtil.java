@@ -456,7 +456,7 @@ class JSPUtil {
    * @throws IOException
    */
   static JobInfo getJobInfo(Path logFile, FileSystem fs,
-      JobTracker jobTracker) throws IOException {
+      JobTracker jobTracker, String user) throws IOException {
     String jobid = getJobID(logFile.getName());
     JobInfo jobInfo = null;
     synchronized(jobHistoryCache) {
@@ -466,7 +466,7 @@ class JSPUtil {
         LOG.info("Loading Job History file "+jobid + ".   Cache size is " +
             jobHistoryCache.size());
         DefaultJobHistoryParser.parseJobTasks(logFile.toUri().getPath(),
-            jobInfo, logFile.getFileSystem(jobTracker.conf));
+            jobInfo, fs);
       }
       jobHistoryCache.put(jobid, jobInfo);
       int CACHE_SIZE = 
@@ -481,7 +481,7 @@ class JSPUtil {
     }
 
     jobTracker.getJobACLsManager().checkAccess(JobID.forName(jobid),
-        UserGroupInformation.getCurrentUser(), JobACL.VIEW_JOB,
+        UserGroupInformation.createRemoteUser(user), JobACL.VIEW_JOB,
         jobInfo.get(Keys.USER), jobInfo.getJobACLs().get(JobACL.VIEW_JOB));
     return jobInfo;
   }
@@ -509,16 +509,7 @@ class JSPUtil {
     JobInfo job = null;
     if (user != null) {
       try {
-        final UserGroupInformation ugi =
-            UserGroupInformation.createRemoteUser(user);
-        job =
-            ugi.doAs(new PrivilegedExceptionAction<JobHistory.JobInfo>() {
-              public JobInfo run() throws IOException {
-                // checks job view permission
-                JobInfo jobInfo = JSPUtil.getJobInfo(logFile, fs, jobTracker);
-                return jobInfo;
-              }
-            });
+        job = JSPUtil.getJobInfo(logFile, fs, jobTracker, user);
       } catch (AccessControlException e) {
         String errMsg =
             String.format(
@@ -532,7 +523,7 @@ class JSPUtil {
       }
     } else {
       // no authorization needed
-      job = JSPUtil.getJobInfo(logFile, fs, jobTracker);
+      job = JSPUtil.getJobInfo(logFile, fs, jobTracker, user);
     }
     return job;
   }
