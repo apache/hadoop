@@ -22,7 +22,9 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import junit.framework.TestCase;
@@ -31,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -60,6 +63,14 @@ public class TestNodeRefresh extends TestCase {
                             int numExcluded, Configuration conf) 
   throws IOException {
     try {
+   // create fake mapping for the groups
+      Map<String, String[]> u2g_map = new HashMap<String, String[]> (1);
+      u2g_map.put("user1", new String[] {"user1" });
+      u2g_map.put("user2", new String[] {"user2" });
+      u2g_map.put("user3", new String[] {"abc" });
+      u2g_map.put("user4", new String[] {"supergroup" });
+      DFSTestUtil.updateConfWithFakeGroupMapping(conf, u2g_map);
+      
       conf.setBoolean("dfs.replication.considerLoad", false);
       
       // prepare hosts info
@@ -166,7 +177,7 @@ public class TestNodeRefresh extends TestCase {
     // refresh with super user
     success = false;
     UserGroupInformation ugi_super =
-      TestMiniMRWithDFSWithDistinctUsers.createUGI("user2", true);
+      TestMiniMRWithDFSWithDistinctUsers.createUGI("user4", true);
     client = getClient(conf, ugi_super);
     try {
       client.refreshNodes();

@@ -28,6 +28,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.AdminOperationsProtocol;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.util.StringUtils;
@@ -54,8 +55,8 @@ public class MRAdmin extends Configured implements Tool {
   private static void printHelp(String cmd) {
     String summary = "hadoop mradmin is the command to execute Map-Reduce administrative commands.\n" +
     "The full syntax is: \n\n" +
-    "hadoop mradmin [-refreshServiceAcl] [-refreshQueueAcls] [-help [cmd]] "
-    + "[-refreshNodes]\n"; 
+    "hadoop mradmin [-refreshServiceAcl] [-refreshQueueAcls] " +
+    "[-refreshNodes] [-refreshUserToGroupsMappings] [-help [cmd]]\n";
 
   String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
     "\t\tJobtracker will reload the authorization policy file.\n";
@@ -64,6 +65,9 @@ public class MRAdmin extends Configured implements Tool {
         "-refreshQueueAcls: Reload the queue acls\n"
             + "\t\tJobTracker will reload the mapred-queue-acls.xml file.\n";
 
+  String refreshUserToGroupsMappings = 
+    "-refreshUserToGroupsMappings: Refresh user-to-groups mappings\n";
+  
   String refreshNodes =
     "-refreshNodes: Refresh the hosts information at the jobtracker.\n";
   
@@ -74,6 +78,8 @@ public class MRAdmin extends Configured implements Tool {
     System.out.println(refreshServiceAcl);
   } else if ("refreshQueueAcls".equals(cmd)) {
     System.out.println(refreshQueueAcls);
+  } else if ("refreshUserToGroupsMappings".equals(cmd)) {
+    System.out.println(refreshUserToGroupsMappings);
   }  else if ("refreshNodes".equals(cmd)) {
     System.out.println(refreshNodes);
   } else if ("help".equals(cmd)) {
@@ -82,6 +88,7 @@ public class MRAdmin extends Configured implements Tool {
     System.out.println(summary);
     System.out.println(refreshServiceAcl);
     System.out.println(refreshQueueAcls);
+    System.out.println(refreshUserToGroupsMappings);
     System.out.println(refreshNodes);
     System.out.println(help);
     System.out.println();
@@ -99,12 +106,15 @@ public class MRAdmin extends Configured implements Tool {
       System.err.println("Usage: java MRAdmin" + " [-refreshServiceAcl]");
     } else if ("-refreshQueueAcls".equals(cmd)) {
       System.err.println("Usage: java MRAdmin" + " [-refreshQueueAcls]");
+    } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
+      System.err.println("Usage: java MRAdmin" + " [-refreshUserToGroupsMappings]");
     } else if ("-refreshNodes".equals(cmd)) {
       System.err.println("Usage: java MRAdmin" + " [-refreshNodes]");
     } else {
       System.err.println("Usage: java MRAdmin");
       System.err.println("           [-refreshServiceAcl]");
       System.err.println("           [-refreshQueueAcls]");
+      System.err.println("           [-refreshUserToGroupsMappings]");
       System.err.println("           [-refreshNodes]");
       System.err.println("           [-help [cmd]]");
       System.err.println();
@@ -186,7 +196,30 @@ public class MRAdmin extends Configured implements Tool {
     
     return 0;
   }
-  
+
+  /**
+   * Refresh the user-to-groups mappings on the {@link JobTracker}.
+   * @return exitcode 0 on success, non-zero on failure
+   * @throws IOException
+   */
+  private int refreshUserToGroupsMappings() throws IOException {
+    // Get the current configuration
+    Configuration conf = getConf();
+    // Create the client
+    RefreshUserToGroupMappingsProtocol refreshProtocol =
+      (RefreshUserToGroupMappingsProtocol)
+      RPC.getProxy(RefreshUserToGroupMappingsProtocol.class,
+                   RefreshUserToGroupMappingsProtocol.versionID,
+                   JobTracker.getAddress(conf), getUGI(conf), conf,
+                   NetUtils.getSocketFactory(conf,
+                                             RefreshUserToGroupMappingsProtocol.class));
+
+    // Refresh the user-to-groups mappings
+    refreshProtocol.refreshUserToGroupsMappings(conf);
+
+    return 0;
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     if (args.length < 1) {
@@ -202,7 +235,7 @@ public class MRAdmin extends Configured implements Tool {
     // verify that we have enough command line parameters
     //
     if ("-refreshServiceAcl".equals(cmd) || "-refreshQueueAcls".equals(cmd)
-        || "-refreshNodes".equals(cmd)) {
+        || "-refreshNodes".equals(cmd) || "-refreshUserToGroupsMappings".equals(cmd)) {
       if (args.length != 1) {
         printUsage(cmd);
         return exitCode;
@@ -215,6 +248,8 @@ public class MRAdmin extends Configured implements Tool {
         exitCode = refreshAuthorizationPolicy();
       } else if ("-refreshQueueAcls".equals(cmd)) {
         exitCode = refreshQueueAcls();
+      } else if ("-refreshUserToGroupsMappings".equals(cmd)) {
+        exitCode = refreshUserToGroupsMappings();
       } else if ("-refreshNodes".equals(cmd)) {
         exitCode = refreshNodes();
       } else if ("-help".equals(cmd)) {

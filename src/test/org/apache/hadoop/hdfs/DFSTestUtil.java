@@ -25,7 +25,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -38,6 +41,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -292,4 +296,84 @@ public class DFSTestUtil {
         new UnixUserGroupInformation(username, groups));
     return c;
   }
+  
+  
+  /**
+   * modify conf to contain fake users with fake group
+   * @param conf to modify
+   * @throws IOException
+   */
+  static public void updateConfigurationWithFakeUsername(Configuration conf) {
+    // fake users
+    String username="fakeUser1";
+    String[] groups = {"fakeGroup1"};
+    // mapping to groups
+    Map<String, String[]> u2g_map = new HashMap<String, String[]>(1);
+    u2g_map.put(username, groups);
+    updateConfWithFakeGroupMapping(conf, u2g_map);
+    
+    UnixUserGroupInformation.saveToConf(conf,
+        UnixUserGroupInformation.UGI_PROPERTY_NAME,
+        new UnixUserGroupInformation(username, groups));
+  }
+  
+  /**
+   * mock class to get group mapping for fake users
+   * 
+   */
+  static class MockUnixGroupsMapping extends ShellBasedUnixGroupsMapping {
+    static Map<String, String []> fakeUser2GroupsMap;
+    private static final List<String> defaultGroups;
+    static {
+      defaultGroups = new ArrayList<String>(1);
+      defaultGroups.add("supergroup");
+      fakeUser2GroupsMap = new HashMap<String, String[]>();
+    }
+  
+    @Override
+    public List<String> getGroups(String user) throws IOException {
+      boolean found = false;
+      
+      // check to see if this is one of fake users
+      List<String> l = new ArrayList<String>();
+      for(String u : fakeUser2GroupsMap.keySet()) {  
+        if(user.equals(u)) {
+          found = true;
+          for(String gr : fakeUser2GroupsMap.get(u)) {
+            l.add(gr);
+          }
+        }
+      }
+      
+      // default
+      if(!found) {
+        l =  super.getGroups(user);
+        if(l.size() == 0) {
+          System.out.println("failed to get real group for " + user + 
+              "; using default");
+          return defaultGroups;
+        }
+      }
+      return l;
+    }
+  }
+  
+  /**
+   * update the configuration with fake class for mapping user to groups
+   * @param conf
+   * @param map - user to groups mapping
+   */
+  static public void updateConfWithFakeGroupMapping
+    (Configuration conf, Map<String, String []> map) {
+    if(map!=null) {
+      MockUnixGroupsMapping.fakeUser2GroupsMap = map;
+    }
+    
+    // fake mapping user to groups
+    conf.setClass("hadoop.security.group.mapping",
+        DFSTestUtil.MockUnixGroupsMapping.class,
+        ShellBasedUnixGroupsMapping.class);
+    
+  }
+  
 }

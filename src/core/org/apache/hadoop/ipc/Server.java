@@ -67,6 +67,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /** An abstract IPC service.  IPC calls take a single {@link Writable} as a
  * parameter, and return a {@link Writable} as their value.  A service runs on
@@ -890,8 +891,13 @@ public abstract class Server {
       }
       
       // TODO: Get the user name from the GSS API for Kerberbos-based security
-      // Create the user subject
-      user = SecurityUtil.getSubject(header.getUgi());
+      // Create the user subject; however use the groups as defined on the
+      // server-side, don't trust the user groups provided by the client
+      UserGroupInformation ugi = header.getUgi();
+      user = null;
+      if(ugi != null) {
+        user = SecurityUtil.getSubject(conf, header.getUgi().getUserName());
+      }
     }
     
     private void processData() throws  IOException, InterruptedException {
@@ -902,7 +908,7 @@ public abstract class Server {
       if (LOG.isDebugEnabled())
         LOG.debug(" got #" + id);
 
-      Writable param = ReflectionUtils.newInstance(paramClass, conf);           // read param
+      Writable param = ReflectionUtils.newInstance(paramClass, conf);//read param
       param.readFields(dis);        
         
       Call call = new Call(id, param, this);

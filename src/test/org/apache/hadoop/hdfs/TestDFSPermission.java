@@ -18,16 +18,24 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 import javax.security.auth.login.LoginException;
 
-import org.apache.commons.logging.*;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.fs.*;
-import org.apache.hadoop.fs.permission.*;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 
@@ -79,6 +87,13 @@ public class TestDFSPermission extends TestCase {
       
       // explicitly turn on permission checking
       conf.setBoolean("dfs.permissions", true);
+      
+      // create fake mapping for the groups
+      Map<String, String[]> u2g_map = new HashMap<String, String[]> (3);
+      u2g_map.put(USER1_NAME, new String[] {GROUP1_NAME, GROUP2_NAME });
+      u2g_map.put(USER2_NAME, new String[] {GROUP2_NAME, GROUP3_NAME });
+      u2g_map.put(USER3_NAME, new String[] {GROUP3_NAME, GROUP4_NAME });
+      DFSTestUtil.updateConfWithFakeGroupMapping(conf, u2g_map);
       
       // Initiate all four users
       SUPERUSER = UnixUserGroupInformation.login(conf);

@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.security;
 
+import java.io.IOException;
 import java.security.Policy;
 import java.security.Principal;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -40,6 +42,8 @@ public class SecurityUtil {
     setPolicy(new ConfiguredPolicy(new Configuration(), 
                                    PolicyProvider.DEFAULT_POLICY_PROVIDER));
   }
+  
+  private static Groups GROUPS = null;
   
   /**
    * Set the global security policy for Hadoop.
@@ -62,6 +66,18 @@ public class SecurityUtil {
   }
   
   /**
+   * Get the {@link Groups} being used to map user-to-groups.
+   * @return the <code>Groups</code> being used to map user-to-groups.
+   */
+  public static Groups getUserToGroupsMappingService(Configuration conf) {
+    if(GROUPS == null) {
+      LOG.info(" Creating new Groups object");
+      GROUPS = new Groups(conf);
+    }
+    return GROUPS;
+  }
+  
+  /**
    * Get the {@link Subject} for the user identified by <code>ugi</code>.
    * @param ugi user
    * @return the {@link Subject} for the user identified by <code>ugi</code>
@@ -70,15 +86,53 @@ public class SecurityUtil {
     if (ugi == null) {
       return null;
     }
-    
-    Set<Principal> principals =       // Number of principals = username + #groups 
-      new HashSet<Principal>(ugi.getGroupNames().length+1);
+    // Number of principals = username + #groups + ugi
+    Set<Principal> principals =   
+      new HashSet<Principal>(ugi.getGroupNames().length+1+1);
     User userPrincipal = new User(ugi.getUserName()); 
     principals.add(userPrincipal);
     for (String group : ugi.getGroupNames()) {
       Group groupPrincipal = new Group(group);
       principals.add(groupPrincipal);
     }
+    principals.add(ugi);
+    Subject user = 
+      new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
+    
+    return user;
+  }
+  
+  /**
+   * Get the {@link Subject} for the user identified by <code>userName</code>.
+   * @param userName user name
+   * @return the {@link Subject} for the user identified by <code>userName</code>
+   * @throws IOException
+   */
+  public static Subject getSubject(Configuration conf, String userName) 
+    throws IOException {
+    if (userName == null) {
+      return null;
+    }
+    
+    Set<Principal> principals = new HashSet<Principal>();
+    User userPrincipal = new User(userName); 
+    principals.add(userPrincipal);
+    
+    // Get user's groups
+    List<String> groups = getUserToGroupsMappingService(conf).getGroups(userName);
+    StringBuffer sb = new StringBuffer("Groups for '" + userName + "': <");
+    for (String group : groups) {
+      Group groupPrincipal = new Group(group);
+      principals.add(groupPrincipal);
+      sb.append(group + " ");
+    }
+    sb.append(">");
+    LOG.info(sb);
+    
+    // Create the ugi with the right groups
+    UserGroupInformation ugi = 
+      new UnixUserGroupInformation(userName, 
+                                   groups.toArray(new String[groups.size()]));
     principals.add(ugi);
     Subject user = 
       new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
