@@ -39,7 +39,7 @@ private static final long serialVersionUID = 526456771152222127L;
 </h1>
 <div>
 Scheduling Information :
-<%= HtmlQuoting.quoteHtmlChars(schedulingInfoString.replaceAll("\n","<br/>")) %>
+<%= HtmlQuoting.quoteHtmlChars(schedulingInfoString).replaceAll("\n","<br/>") %>
 </div>
 <hr/>
 <%

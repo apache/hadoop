@@ -127,7 +127,7 @@ for(JobQueueInfo queue: queues) {
 %>
 <tr>
 <td><a href="jobqueue_details.jsp?queueName=<%=queueName%>"><%=queueName%></a></td>
-<td><%=HtmlQuoting.quoteHtmlChars(schedulingInformation.replaceAll("\n","<br/>")) %>
+<td><%=HtmlQuoting.quoteHtmlChars(schedulingInformation).replaceAll("\n","<br/>") %>
 </td>
 </tr>
 <%
