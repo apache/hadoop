@@ -370,9 +370,7 @@ public class JobLocalizer {
     // Download the job.jar for this job from the system FS
     localizeJobJarFile(jConf);
 
-    //setup the distributed cache
     jConf.set(JOB_LOCAL_CTXT, ttConf.get(JOB_LOCAL_CTXT));
-    downloadPrivateCache(jConf);
 
     //update the config some more
     jConf.set(TokenCache.JOB_TOKENS_FILENAME, localJobTokenFile.toString());
@@ -380,6 +378,7 @@ public class JobLocalizer {
         ttConf.get(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
     TaskTracker.resetNumTasksPerJvm(jConf);
 
+    //setup the distributed cache
     long[] sizes = downloadPrivateCache(jConf);
     if (sizes != null) {
       taskTracker.updatePrivateDistributedCacheSizes(jobid, sizes);
