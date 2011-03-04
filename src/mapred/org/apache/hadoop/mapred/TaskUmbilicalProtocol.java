@@ -157,4 +157,13 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
                                                        TaskAttemptID id) 
   throws IOException;
 
+  /**
+   * The job initializer needs to report the sizes of the archive
+   * objects in the private distributed cache.
+   * @param jobId the job to update
+   * @param sizes the array of sizes that were computed
+   * @throws IOException
+   */
+  void updatePrivateDistributedCacheSizes(org.apache.hadoop.mapreduce.JobID jobId,
+                                          long[] sizes) throws IOException;
 }

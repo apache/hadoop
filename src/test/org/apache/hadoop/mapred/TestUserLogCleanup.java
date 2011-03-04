@@ -27,6 +27,7 @@ import org.apache.hadoop.mapred.UtilsForTests.FakeClock;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.*;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.junit.Assert.*;
 
@@ -59,10 +60,13 @@ public class TestUserLogCleanup {
   }
 
   private File localizeJob(JobID jobid) throws IOException {
+    String user = UserGroupInformation.getCurrentUser().getShortUserName();
+    new JobLocalizer(tt.getJobConf(), user, 
+                     jobid.toString()).initializeJobLogDir();
     File jobUserlog = TaskLog.getJobDir(jobid);
     JobConf conf = new JobConf();
     // localize job log directory
-    tt.initializeJobLogDir(jobid, conf);
+    tt.saveLogDir(jobid, conf);
     assertTrue(jobUserlog + " directory is not created.", jobUserlog.exists());
     return jobUserlog;
   }
@@ -78,8 +82,7 @@ public class TestUserLogCleanup {
     tt = new TaskTracker();
     tt.setConf(new JobConf(conf));
     localizer = new Localizer(FileSystem.get(conf), conf
-        .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY),
-        new DefaultTaskController());
+        .getStrings(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
     tt.setLocalizer(localizer);
     userLogManager = new UtilsForTests.InLineUserLogManager(conf);
     userLogCleaner = userLogManager.getUserLogCleaner();

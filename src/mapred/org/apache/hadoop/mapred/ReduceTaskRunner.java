@@ -25,9 +25,10 @@ import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 class ReduceTaskRunner extends TaskRunner {
 
   public ReduceTaskRunner(TaskInProgress task, TaskTracker tracker, 
-                          JobConf conf) throws IOException {
+                          JobConf conf, TaskTracker.RunningJob rjob
+                          ) throws IOException {
     
-    super(task, tracker, conf);
+    super(task, tracker, conf, rjob);
   }
 
   /** Assemble all of the map output files */

@@ -17,19 +17,24 @@
 */
 package org.apache.hadoop.mapred;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
-import org.apache.hadoop.mapred.JvmManager.JvmEnv;
-import org.apache.hadoop.mapreduce.server.tasktracker.Localizer;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.util.ProcessTree.Signal;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
@@ -48,360 +53,153 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 public abstract class TaskController implements Configurable {
   
   private Configuration conf;
-  
+
   public static final Log LOG = LogFactory.getLog(TaskController.class);
+  
+  //Name of the executable script that will contain the child
+  // JVM command line. See writeCommand for details.
+  protected static final String COMMAND_FILE = "taskjvm.sh";
+  
+  protected LocalDirAllocator allocator;
+
+  final public static FsPermission TASK_LAUNCH_SCRIPT_PERMISSION =
+  FsPermission.createImmutable((short) 0700); // rwx--------
   
   public Configuration getConf() {
     return conf;
   }
 
-  // The list of directory paths specified in the variable mapred.local.dir.
-  // This is used to determine which among the list of directories is picked up
-  // for storing data for a particular task.
-  protected String[] mapredLocalDirs;
-
   public void setConf(Configuration conf) {
     this.conf = conf;
-    mapredLocalDirs = conf.getStrings("mapred.local.dir");
   }
 
   /**
-   * Sets up the permissions of the following directories on all the configured
-   * disks:
-   * <ul>
-   * <li>mapred-local directories</li>
-   * <li>Hadoop log directories</li>
-   * </ul>
+   * Does initialization and setup.
+   * @param allocator the local dir allocator to use
    */
-  public void setup() throws IOException {
-    for (String localDir : this.mapredLocalDirs) {
-      // Set up the mapred-local directories.
-      File mapredlocalDir = new File(localDir);
-      if (!mapredlocalDir.exists() && !mapredlocalDir.mkdirs()) {
-        LOG.warn("Unable to create mapred-local directory : "
-            + mapredlocalDir.getPath());
+  public abstract void setup(LocalDirAllocator allocator) throws IOException;
+  
+  /**
+   * Create all of the directories necessary for the job to start and download
+   * all of the job and private distributed cache files.
+   * Creates both the user directories and the job log directory.
+   * @param user the user name
+   * @param jobid the job
+   * @param credentials a filename containing the job secrets
+   * @param jobConf the path to the localized configuration file
+   * @param taskTracker the connection the task tracker
+   * @throws IOException
+   */
+  public abstract void initializeJob(String user, String jobid, 
+                                     Path credentials, Path jobConf,
+                                     TaskUmbilicalProtocol taskTracker) 
+  throws IOException;
+  
+  /**
+   * Create all of the directories for the task and launches the child jvm.
+   * @param user the user name
+   * @param jobId the jobId in question
+   * @param attemptId the attempt id (cleanup attempts have .cleanup suffix)
+   * @param setup list of shell commands to execute before the jvm
+   * @param jvmArguments list of jvm arguments
+   * @param currentWorkDirectory the full path of the cwd for the task
+   * @param stdout the file to redirect stdout to
+   * @param stderr the file to redirect stderr to
+   * @return the exit code for the task
+   * @throws IOException
+   */
+  public abstract
+  int launchTask(String user, 
+                 String jobId,
+                 String attemptId,
+                 List<String> setup,
+                 List<String> jvmArguments,
+                 File currentWorkDirectory,
+                 String stdout,
+                 String stderr) throws IOException;
+  
+  /**
+   * Send a signal to a task pid as the user.
+   * @param user the user name
+   * @param taskPid the pid of the task
+   * @param signal the id of the signal to send
+   */
+  public abstract void signalTask(String user, int taskPid, 
+                                  Signal signal) throws IOException;
+  
+  /**
+   * Delete the user's files under all of the task tracker root directories.
+   * @param user the user name
+   * @param subDir the path relative to the user's subdirectory under
+   *        the task tracker root directories.
+   * @throws IOException
+   */
+  public abstract void deleteAsUser(String user, 
+                                    String subDir) throws IOException;
+  
+  /**
+   * Delete the user's files under the userlogs directory.
+   * @param user the user to work as
+   * @param subDir the path under the userlogs directory.
+   * @throws IOException
+   */
+  public abstract void deleteLogAsUser(String user, 
+                                       String subDir) throws IOException;
+  
+  static class DeletionContext extends CleanupQueue.PathDeletionContext {
+    private TaskController controller;
+    private boolean isLog;
+    private String user;
+    private String subDir;
+    DeletionContext(TaskController controller, boolean isLog, String user, 
+                    String subDir) {
+      super(null, null);
+      this.controller = controller;
+      this.isLog = isLog;
+      this.user = user;
+      this.subDir = subDir;
+    }
+    
+    @Override
+    protected void deletePath() throws IOException {
+      if (isLog) {
+        controller.deleteLogAsUser(user, subDir);
       } else {
-        Localizer.PermissionsHandler.setPermissions(mapredlocalDir,
-            Localizer.PermissionsHandler.sevenFiveFive);
+        controller.deleteAsUser(user, subDir);
       }
-    }
-
-    // Set up the user log directory
-    File taskLog = TaskLog.getUserLogDir();
-    if (!taskLog.exists() && !taskLog.mkdirs()) {
-      LOG.warn("Unable to create taskLog directory : " + taskLog.getPath());
-    } else {
-      Localizer.PermissionsHandler.setPermissions(taskLog,
-          Localizer.PermissionsHandler.sevenFiveFive);
     }
   }
 
-  /**
-   * Take task-controller specific actions to initialize job. This involves
-   * setting appropriate permissions to job-files so as to secure the files to
-   * be accessible only by the user's tasks.
-   * 
-   * @throws IOException
-   */
-  abstract void initializeJob(JobInitializationContext context) throws IOException;
-
-  /**
-   * Take task-controller specific actions to initialize the distributed cache
-   * file. This involves setting appropriate permissions for these files so as
-   * to secure them to be accessible only their owners.
-   * 
-   * @param context
-   * @throws IOException
-   */
-  public abstract void initializeDistributedCacheFile(DistributedCacheFileContext context)
-      throws IOException;
-
-  /**
-   * Launch a task JVM
-   * 
-   * This method defines how a JVM will be launched to run a task. Each
-   * task-controller should also do an
-   * {@link #initializeTask(TaskControllerContext)} inside this method so as to
-   * initialize the task before launching it. This is for reasons of
-   * task-controller specific optimizations w.r.t combining initialization and
-   * launching of tasks.
-   * 
-   * @param context the context associated to the task
-   */
-  abstract void launchTaskJVM(TaskControllerContext context)
-                                      throws IOException;
-
-  /**
-   * Top level cleanup a task JVM method.
-   *
-   * The current implementation does the following.
-   * <ol>
-   * <li>Sends a graceful terminate signal to task JVM allowing its sub-process
-   * to cleanup.</li>
-   * <li>Waits for stipulated period</li>
-   * <li>Sends a forceful kill signal to task JVM, terminating all its
-   * sub-process forcefully.</li>
-   * </ol>
-   * 
-   * @param context the task for which kill signal has to be sent.
-   */
-  final void destroyTaskJVM(TaskControllerContext context) {
-    terminateTask(context);
+  //Write the JVM command line to a file under the specified directory
+  // Note that the JVM will be launched using a setuid executable, and
+  // could potentially contain strings defined by a user. Hence, to
+  // prevent special character attacks, we write the command line to
+  // a file and execute it.
+  protected static String writeCommand(String cmdLine, FileSystem fs,
+      Path commandFile) throws IOException {
+    PrintWriter pw = null;
+    LOG.info("Writing commands to " + commandFile);
     try {
-      Thread.sleep(context.sleeptimeBeforeSigkill);
-    } catch (InterruptedException e) {
-      LOG.warn("Sleep interrupted : " + 
-          StringUtils.stringifyException(e));
-    }
-    killTask(context);
-  }
-
-  /** Perform initializing actions required before a task can run.
-    * 
-    * For instance, this method can be used to setup appropriate
-    * access permissions for files and directories that will be
-    * used by tasks. Tasks use the job cache, log, and distributed cache
-    * directories and files as part of their functioning. Typically,
-    * these files are shared between the daemon and the tasks
-    * themselves. So, a TaskController that is launching tasks
-    * as different users can implement this method to setup
-    * appropriate ownership and permissions for these directories
-    * and files.
-    */
-  abstract void initializeTask(TaskControllerContext context)
-      throws IOException;
-
-  /**
-   * Contains task information required for the task controller.  
-   */
-  static class TaskControllerContext {
-    // task being executed
-    Task task;
-    ShellCommandExecutor shExec;     // the Shell executor executing the JVM for this task.
-
-    // Information used only when this context is used for launching new tasks.
-    JvmEnv env;     // the JVM environment for the task.
-
-    // Information used only when this context is used for destroying a task jvm.
-    String pid; // process handle of task JVM.
-    long sleeptimeBeforeSigkill; // waiting time before sending SIGKILL to task JVM after sending SIGTERM
-  }
-
-  /**
-   * Contains info related to the path of the file/dir to be deleted. This info
-   * is needed by task-controller to build the full path of the file/dir
-   */
-  static abstract class TaskControllerPathDeletionContext 
-  extends PathDeletionContext {
-    TaskController taskController;
-    String user;
-
-    /**
-     * mapredLocalDir is the base dir under which to-be-deleted jobLocalDir, 
-     * taskWorkDir or taskAttemptDir exists. fullPath of jobLocalDir, 
-     * taskAttemptDir or taskWorkDir is built using mapredLocalDir, jobId, 
-     * taskId, etc.
-     */
-    Path mapredLocalDir;
-
-    public TaskControllerPathDeletionContext(FileSystem fs, Path mapredLocalDir,
-                                             TaskController taskController,
-                                             String user) {
-      super(fs, null);
-      this.taskController = taskController;
-      this.mapredLocalDir = mapredLocalDir;
-      this.user = user;
-    }
-
-    @Override
-    protected String getPathForCleanup() {
-      if (fullPath == null) {
-        fullPath = buildPathForDeletion();
+      pw = new PrintWriter(FileSystem.create(
+            fs, commandFile, TASK_LAUNCH_SCRIPT_PERMISSION));
+      pw.write(cmdLine);
+    } catch (IOException ioe) {
+      LOG.error("Caught IOException while writing JVM command line to file. ",
+          ioe);
+    } finally {
+      if (pw != null) {
+        pw.close();
       }
-      return fullPath;
     }
-
-    /**
-     * Return the component of the path under the {@link #mapredLocalDir} to be 
-     * cleaned up. Its the responsibility of the class that extends 
-     * {@link TaskControllerPathDeletionContext} to provide the correct 
-     * component. For example 
-     *  - For task related cleanups, either the task-work-dir or task-local-dir
-     *    might be returned depending on jvm reuse.
-     *  - For job related cleanup, simply the job-local-dir might be returned.
-     */
-    abstract protected String getPath();
-    
-    /**
-     * Builds the path of taskAttemptDir OR taskWorkDir based on
-     * mapredLocalDir, jobId, taskId, etc
-     */
-    String buildPathForDeletion() {
-      return mapredLocalDir.toUri().getPath() + Path.SEPARATOR + getPath();
-    }
+    return commandFile.makeQualified(fs).toUri().getPath();
   }
-
-  /** Contains info related to the path of the file/dir to be deleted. This info
-   * is needed by task-controller to build the full path of the task-work-dir or
-   * task-local-dir depending on whether the jvm is reused or not.
-   */
-  static class TaskControllerTaskPathDeletionContext 
-  extends TaskControllerPathDeletionContext {
-    final Task task;
-    final boolean isWorkDir;
-    
-    public TaskControllerTaskPathDeletionContext(FileSystem fs, 
-        Path mapredLocalDir, Task task, boolean isWorkDir, 
-        TaskController taskController) {
-      super(fs, mapredLocalDir, taskController, task.getUser());
-      this.task = task;
-      this.isWorkDir = isWorkDir;
-    }
-    
-    /**
-     * Returns the taskWorkDir or taskLocalDir based on whether 
-     * {@link TaskControllerTaskPathDeletionContext} is configured to delete
-     * the workDir.
-     */
-    @Override
-    protected String getPath() {
-      String subDir = (isWorkDir) ? TaskTracker.getTaskWorkDir(task.getUser(),
-          task.getJobID().toString(), task.getTaskID().toString(),
-          task.isTaskCleanupTask())
-        : TaskTracker.getLocalTaskDir(task.getUser(),
-          task.getJobID().toString(), task.getTaskID().toString(),
-          task.isTaskCleanupTask());
-      return subDir;
-    }
-
-    /**
-     * Makes the path(and its subdirectories recursively) fully deletable by
-     * setting proper permissions(770) by task-controller
-     */
-    @Override
-    protected void enablePathForCleanup() throws IOException {
-      getPathForCleanup();// allow init of fullPath, if not inited already
-      if (fs.exists(new Path(fullPath))) {
-        taskController.enableTaskForCleanup(this);
+  
+  protected void logOutput(String output) {
+    String shExecOutput = output;
+    if (shExecOutput != null) {
+      for (String str : shExecOutput.split("\n")) {
+        LOG.info(str);
       }
     }
   }
-
-  /** Contains info related to the path of the file/dir to be deleted. This info
-   * is needed by task-controller to build the full path of the job-local-dir.
-   */
-  static class TaskControllerJobPathDeletionContext 
-  extends TaskControllerPathDeletionContext {
-    final JobID jobId;
-    
-    public TaskControllerJobPathDeletionContext(FileSystem fs, 
-        Path mapredLocalDir, JobID id, String user, 
-        TaskController taskController) {
-      super(fs, mapredLocalDir, taskController, user);
-      this.jobId = id;
-    }
-    
-    /**
-     * Returns the jobLocalDir of the job to be cleaned up.
-     */
-    @Override
-    protected String getPath() {
-      return TaskTracker.getLocalJobDir(user, jobId.toString());
-    }
-    
-    /**
-     * Makes the path(and its sub-directories recursively) fully deletable by
-     * setting proper permissions(770) by task-controller
-     */
-    @Override
-    protected void enablePathForCleanup() throws IOException {
-      getPathForCleanup();// allow init of fullPath, if not inited already
-      if (fs.exists(new Path(fullPath))) {
-        taskController.enableJobForCleanup(this);
-      }
-    }
-  }
-  
-  /**
-   * NOTE: This class is internal only class and not intended for users!!
-   * 
-   */
-  public static class InitializationContext {
-    public File workDir;
-    public String user;
-    
-    public InitializationContext() {
-    }
-    
-    public InitializationContext(String user, File workDir) {
-      this.user = user;
-      this.workDir = workDir;
-    }
-  }
-  
-  /**
-   * This is used for initializing the private localized files in distributed
-   * cache. Initialization would involve changing permission, ownership and etc.
-   */
-  public static class DistributedCacheFileContext extends InitializationContext {
-    // base directory under which file has been localized
-    Path localizedBaseDir;
-    // the unique string used to construct the localized path
-    String uniqueString;
-
-    public DistributedCacheFileContext(String user, File workDir,
-        Path localizedBaseDir, String uniqueString) {
-      super(user, workDir);
-      this.localizedBaseDir = localizedBaseDir;
-      this.uniqueString = uniqueString;
-    }
-
-    public Path getLocalizedUniqueDir() {
-      return new Path(localizedBaseDir, new Path(TaskTracker
-          .getPrivateDistributedCacheDir(user), uniqueString));
-    }
-  }
-
-  static class JobInitializationContext extends InitializationContext {
-    JobID jobid;
-  }
-
-  /**
-   * Sends a graceful terminate signal to taskJVM and it sub-processes. 
-   *   
-   * @param context task context
-   */
-  abstract void terminateTask(TaskControllerContext context);
-  
-  /**
-   * Enable the task for cleanup by changing permissions of the path
-   * @param context   path deletion context
-   * @throws IOException
-   */
-  abstract void enableTaskForCleanup(PathDeletionContext context)
-      throws IOException;
-  /**
-   * Sends a KILL signal to forcefully terminate the taskJVM and its
-   * sub-processes.
-   * 
-   * @param context task context
-   */
-  abstract void killTask(TaskControllerContext context);
-
-  /**
-   * Initialize user on this TaskTracer in a TaskController specific manner.
-   * 
-   * @param context
-   * @throws IOException
-   */
-  public abstract void initializeUser(InitializationContext context)
-      throws IOException;
-  
-  /**
-   * Enable the job for cleanup by changing permissions of the path
-   * @param context   path deletion context
-   * @throws IOException
-   */
-  abstract void enableJobForCleanup(PathDeletionContext context)
-    throws IOException;
 }

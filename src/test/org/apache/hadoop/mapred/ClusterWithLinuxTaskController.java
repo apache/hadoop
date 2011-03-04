@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.TestTrackerDistributedCacheManager;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -74,17 +75,16 @@ public class ClusterWithLinuxTaskController extends TestCase {
         + "/task-controller";
 
     @Override
-    public void setup() throws IOException {
+    public void setup(LocalDirAllocator allocator) throws IOException {
       // get the current ugi and set the task controller group owner
       getConf().set(TT_GROUP, taskTrackerSpecialGroup);
 
       // write configuration file
       configurationFile = createTaskControllerConf(System
           .getProperty(TASKCONTROLLER_PATH), getConf());
-      super.setup();
+      super.setup(allocator);
     }
 
-    @Override
     protected String getTaskControllerExecutablePath() {
       return taskControllerExePath;
     }

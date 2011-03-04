@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -184,13 +183,8 @@ class TaskMemoryManagerThread extends Thread {
               // itself is still retained in runningTasks till successful
               // transmission to JT
 
-              // create process tree object
-              long sleeptimeBeforeSigkill = taskTracker.getJobConf().getLong(
-                  "mapred.tasktracker.tasks.sleeptime-before-sigkill",
-                  ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
-              
-              ProcfsBasedProcessTree pt = new ProcfsBasedProcessTree(
-                  pId,ProcessTree.isSetsidAvailable, sleeptimeBeforeSigkill);
+              ProcfsBasedProcessTree pt = 
+                new ProcfsBasedProcessTree(pId, ProcessTree.isSetsidAvailable);
               LOG.debug("Tracking ProcessTree " + pId + " for the first time");
 
               ptInfo.setPid(pId);
@@ -228,10 +222,9 @@ class TaskMemoryManagerThread extends Thread {
                     + "bytes. Killing task. \nDump of the process-tree for "
                     + tid + " : \n" + pTree.getProcessTreeDump();
             LOG.warn(msg);
+            // kill the task
             taskTracker.cleanUpOverMemoryTask(tid, true, msg);
 
-            // Now destroy the ProcessTree, remove it from monitoring map.
-            pTree.destroy(true/*in the background*/);
             it.remove();
             LOG.info("Removed ProcessTree with root " + pId);
           } else {
@@ -365,8 +358,6 @@ class TaskMemoryManagerThread extends Thread {
         taskTracker.cleanUpOverMemoryTask(tid, false, msg);
         // Now destroy the ProcessTree, remove it from monitoring map.
         ProcessTreeInfo ptInfo = processTreeInfoMap.get(tid);
-        ProcfsBasedProcessTree pTree = ptInfo.getProcessTree();
-        pTree.destroy(true/*in the background*/);
         processTreeInfoMap.remove(tid);
         LOG.info("Removed ProcessTree with root " + ptInfo.getPID());
       }

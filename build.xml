@@ -177,9 +177,10 @@
     stored for compilation -->
   <property name="build.c++.task-controller" 
     value="${build.c++}/task-controller" />
-  <!-- the default install dir is build directory override it using
-   -Dtask-controller.install.dir=$HADOOP_HOME/bin -->
-  <property name="task-controller.install.dir" value="${dist.dir}/bin" />
+  <property name="task-controller.prefix.dir" value="${dist.dir}" />
+  <!-- the configuration directory for the linux task controller -->
+  <property name="hadoop.conf.dir" value="/etc/hadoop"/>
+
   <!-- end of task-controller properties -->
 
   <!-- jsvc properties set here -->
@@ -2272,62 +2273,34 @@
   </target>
 
   <!-- taskcontroller targets -->
-  <target name="init-task-controller-build">
+  <target name="task-controller" depends="init">
+    <exec executable="autoreconf" 
+          dir="${c++.task-controller.src}"
+          searchpath="yes" failonerror="yes">
+      <arg value="-i"/>
+    </exec>
     <mkdir dir="${build.c++.task-controller}" />
-    <copy todir="${build.c++.task-controller}">
-      <fileset dir="${c++.task-controller.src}" includes="*.c"/>
-      <fileset dir="${c++.task-controller.src}" includes="*.h"/>
-    </copy>
-    <chmod file="${c++.task-controller.src}/configure" perm="ugo+x"/> 
-    <condition property="task-controller.conf.dir.passed">
-      <not>
-        <equals arg1="${hadoop.conf.dir}" arg2="$${hadoop.conf.dir}"/>
-      </not>
-    </condition>
-  </target>
-  <target name="configure-task-controller" depends="init,
-          init-task-controller-build,
-          task-controller-configuration-with-confdir,
-          task-controller-configuration-with-no-confdir">
-  </target>
-  <target name="task-controller-configuration-with-confdir" 
-          if="task-controller.conf.dir.passed" >
-    <exec executable="${c++.task-controller.src}/configure" 
-          dir="${build.c++.task-controller}" failonerror="yes">
-      <arg value="--prefix=${task-controller.install.dir}" />
-      <arg value="--with-confdir=${hadoop.conf.dir}" />
+    <exec executable="${c++.task-controller.src}/configure"
+          dir="${build.c++.task-controller}">
+      <arg value="--prefix=${task-controller.prefix.dir}"/>
+      <env key="CFLAGS" 
+           value="-DHADOOP_CONF_DIR=${hadoop.conf.dir}"/>
+    </exec>
+    <!-- delete main in case HADOOP_CONF_DIR is different -->
+    <delete file="${build.c++.task-controller}/impl/main.o"
+            quiet="true" failonerror="false"/>
+    <exec executable="make"
+          dir="${build.c++.task-controller}"
+          searchpath="yes" failonerror="yes">
+      <arg value="install"/>
     </exec>
   </target>
-  <target name="task-controller-configuration-with-no-confdir" 
-          unless="task-controller.conf.dir.passed">
-    <exec executable="${c++.task-controller.src}/configure" 
-          dir="${build.c++.task-controller}" failonerror="yes">
-      <arg value="--prefix=${task-controller.install.dir}" />
-    </exec>
-  </target>
-  <!--
-    * Create the installation directory.
-    * Do a make install.
-   -->
-  <target name="task-controller" depends="configure-task-controller">
-    <mkdir dir="${task-controller.install.dir}" />
-    <exec executable="${make.cmd}" dir="${build.c++.task-controller}" 
-        searchpath="yes" failonerror="yes">
-      <arg value="install" />
-    </exec>
-  </target>
-  <target name="test-task-controller" depends="task-controller">
-    <copy todir="${build.c++.task-controller}" verbose="true">
-      <fileset dir="${c++.task-controller.src}" includes="tests/"/>
-    </copy>
-    <exec executable="${make.cmd}" dir="${build.c++.task-controller}" 
-        searchpath="yes" failonerror="yes">
-      <arg value="clean" />
-      <arg value="test" />
-    </exec>
-    <exec executable="${build.c++.task-controller}/tests/test-task-controller"
-        dir="${build.c++.task-controller}/tests/"
-        failonerror="yes">
+
+  <target name="test-task-controller" depends="init,task-controller">
+    <exec executable="make"
+          dir="${build.c++.task-controller}"
+          searchpath="yes" failonerror="yes">
+      <arg value="check"/>
     </exec>
   </target>
 

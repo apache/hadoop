@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.LocalDirAllocator;
 
 import junit.framework.TestCase;
 
@@ -42,11 +43,6 @@ public class TestLinuxTaskController extends TestCase {
 
   public static class MyLinuxTaskController extends LinuxTaskController {
     String taskControllerExePath = taskControllerPath + "/task-controller";
-
-    @Override
-    protected String getTaskControllerExecutablePath() {
-      return taskControllerExePath;
-    }
   }
 
   private void validateTaskControllerSetup(TaskController controller,
@@ -55,7 +51,7 @@ public class TestLinuxTaskController extends TestCase {
       // task controller setup should fail validating permissions.
       Throwable th = null;
       try {
-        controller.setup();
+        controller.setup(new LocalDirAllocator("mapred.local.dir"));
       } catch (IOException ie) {
         th = ie;
       }
@@ -64,7 +60,7 @@ public class TestLinuxTaskController extends TestCase {
           + INVALID_TASKCONTROLLER_PERMISSIONS, th.getMessage().contains(
           "with exit code " + INVALID_TASKCONTROLLER_PERMISSIONS));
     } else {
-      controller.setup();
+      controller.setup(new LocalDirAllocator("mapred.local.dir"));
     }
 
   }

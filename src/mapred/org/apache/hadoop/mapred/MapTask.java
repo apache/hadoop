@@ -128,8 +128,10 @@ class MapTask extends Task {
   
   @Override
   public TaskRunner createRunner(TaskTracker tracker, 
-      TaskTracker.TaskInProgress tip) {
-    return new MapTaskRunner(tip, tracker, this.conf);
+                                 TaskTracker.TaskInProgress tip,
+                                 TaskTracker.RunningJob rjob
+                                 ) throws IOException {
+    return new MapTaskRunner(tip, tracker, this.conf, rjob);
   }
 
   @Override

@@ -3140,8 +3140,7 @@ public class JobInProgress {
         }
 
         Path tempDir = jobtracker.getSystemDirectoryForJob(getJobID());
-        new CleanupQueue().addToQueue(new PathDeletionContext(
-            jobtracker.getFileSystem(), tempDir.toUri().getPath())); 
+        new CleanupQueue().addToQueue(new PathDeletionContext(tempDir, conf)); 
       } catch (IOException e) {
         LOG.warn("Error cleaning up "+profile.getJobID()+": "+e);
       }

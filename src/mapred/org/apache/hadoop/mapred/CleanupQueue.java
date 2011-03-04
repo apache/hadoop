@@ -24,7 +24,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 class CleanupQueue {
@@ -54,24 +54,23 @@ class CleanupQueue {
    * Contains info related to the path of the file/dir to be deleted
    */
   static class PathDeletionContext {
-    String fullPath;// full path of file or dir
-    FileSystem fs;
+    Path fullPath;// full path of file or dir
+    Configuration conf;
 
-    public PathDeletionContext(FileSystem fs, String fullPath) {
-      this.fs = fs;
+    public PathDeletionContext(Path fullPath, Configuration conf) {
       this.fullPath = fullPath;
+      this.conf = conf;
     }
     
-    protected String getPathForCleanup() {
+    protected Path getPathForCleanup() {
       return fullPath;
     }
 
     /**
-     * Makes the path(and its subdirectories recursively) fully deletable
+     * Deletes the path (and its subdirectories recursively)
      */
-    protected void enablePathForCleanup() throws IOException {
-      // Do nothing by default.
-      // Subclasses can override to provide enabling for deletion.
+    protected void deletePath() throws IOException {
+      fullPath.getFileSystem(conf).delete(fullPath, true);
     }
   }
 
@@ -80,19 +79,6 @@ class CleanupQueue {
    */
   void addToQueue(PathDeletionContext... contexts) {
     cleanupThread.addToQueue(contexts);
-  }
-
-  protected static boolean deletePath(PathDeletionContext context)
-            throws IOException {
-    context.enablePathForCleanup();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Trying to delete " + context.fullPath);
-    }
-    if (context.fs.exists(new Path(context.fullPath))) {
-      return context.fs.delete(new Path(context.fullPath), true);
-    }
-    return true;
   }
 
   // currently used by tests only
@@ -128,11 +114,9 @@ class CleanupQueue {
       while (true) {
         try {
           context = queue.take();
+          context.deletePath();
           // delete the path.
-          if (!deletePath(context)) {
-            LOG.warn("CleanupThread:Unable to delete path " + context.fullPath);
-          }
-          else if (LOG.isDebugEnabled()) {
+          if (LOG.isDebugEnabled()) {
             LOG.debug("DELETED " + context.fullPath);
           }
         } catch (InterruptedException t) {

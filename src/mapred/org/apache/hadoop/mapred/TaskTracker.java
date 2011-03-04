@@ -55,6 +55,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.TaskDistributedCacheManager;
 import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.mapreduce.server.tasktracker.*;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.*;
@@ -66,17 +67,15 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.QueueManager.QueueACL;
-import org.apache.hadoop.mapred.TaskController.JobInitializationContext;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
-import org.apache.hadoop.mapred.TaskController.TaskControllerPathDeletionContext;
-import org.apache.hadoop.mapred.TaskController.TaskControllerTaskPathDeletionContext;
-import org.apache.hadoop.mapred.TaskController.TaskControllerJobPathDeletionContext;
+import org.apache.hadoop.mapred.TaskController.DeletionContext;
 import org.apache.hadoop.mapred.TaskLog.LogFileDetail;
 import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
@@ -157,14 +156,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   public static final Log ClientTraceLog =
     LogFactory.getLog(TaskTracker.class.getName() + ".clienttrace");
 
-  // Job ACLs file is created by TaskTracker under userlogs/$jobid directory for
-  // each job at job localization time. This will be used by TaskLogServlet for
-  // authorizing viewing of task logs of that job
+  //Job ACLs file is created by TaskController under userlogs/$jobid directory
+  //for each job at job localization time. This will be used by TaskLogServlet 
+  //for authorizing viewing of task logs of that job
   static String jobACLsFile = "job-acls.xml";
 
   volatile boolean running = true;
 
   private LocalDirAllocator localDirAllocator;
+  private String[] localdirs;
   String taskTrackerName;
   String localHostname;
   InetSocketAddress jobTrackAddr;
@@ -242,9 +242,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   static final String DISTCACHEDIR = "distcache";
   static final String JOBCACHE = "jobcache";
   static final String OUTPUT = "output";
-  private static final String JARSDIR = "jars";
+  static final String JARSDIR = "jars";
   static final String LOCAL_SPLIT_FILE = "split.info";
   static final String JOBFILE = "job.xml";
+  static final String TT_PRIVATE_DIR = "ttprivate";
+  static final String JVM_EXTRA_ENV_FILE = "jvm.extra.env";
 
   static final String JOB_LOCAL_DIR = "job.local.dir";
   static final String JOB_TOKEN_FILE="jobToken"; //localized file
@@ -440,18 +442,28 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   static String getLocalJobConfFile(String user, String jobid) {
     return getLocalJobDir(user, jobid) + Path.SEPARATOR + TaskTracker.JOBFILE;
   }
+  
+  static String getPrivateDirJobConfFile(String user, String jobid) {
+    return TT_PRIVATE_DIR + Path.SEPARATOR + getLocalJobConfFile(user, jobid);
+  }
 
   static String getTaskConfFile(String user, String jobid, String taskid,
       boolean isCleanupAttempt) {
     return getLocalTaskDir(user, jobid, taskid, isCleanupAttempt)
     + Path.SEPARATOR + TaskTracker.JOBFILE;
   }
+  
+  static String getPrivateDirTaskScriptLocation(String user, String jobid, 
+     String taskid) {
+    return TT_PRIVATE_DIR + Path.SEPARATOR + 
+           getLocalTaskDir(user, jobid, taskid);
+  }
 
   static String getJobJarsDir(String user, String jobid) {
     return getLocalJobDir(user, jobid) + Path.SEPARATOR + TaskTracker.JARSDIR;
   }
 
-  static String getJobJarFile(String user, String jobid) {
+  public static String getJobJarFile(String user, String jobid) {
     return getJobJarsDir(user, jobid) + Path.SEPARATOR + "job.jar";
   }
   
@@ -470,7 +482,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     + TaskTracker.OUTPUT;
   }
 
-  static String getLocalTaskDir(String user, String jobid, String taskid) {
+  public static String getLocalTaskDir(String user, String jobid, 
+      String taskid) {
     return getLocalTaskDir(user, jobid, taskid, false);
   }
   
@@ -491,6 +504,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
   static String getLocalJobTokenFile(String user, String jobid) {
     return getLocalJobDir(user, jobid) + Path.SEPARATOR + TaskTracker.JOB_TOKEN_FILE;
+  }
+  
+  static String getPrivateDirJobTokenFile(String user, String jobid) {
+    return TT_PRIVATE_DIR + Path.SEPARATOR + 
+           getLocalJobTokenFile(user, jobid); 
+  }
+  
+  static String getPrivateDirForJob(String user, String jobid) {
+    return TT_PRIVATE_DIR + Path.SEPARATOR + getLocalJobDir(user, jobid) ;
   }
 
   private FileSystem getFS(final Path filePath, JobID jobId,
@@ -522,6 +544,23 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     }
   }
 
+  /**
+   * Delete all of the user directories.
+   * @param conf the TT configuration
+   * @throws IOException
+   */
+  private void deleteUserDirectories(Configuration conf) throws IOException {
+    for(String root: localdirs) {
+      for(FileStatus status: localFs.listStatus(new Path(root, SUBDIR))) {
+        String owner = status.getOwner();
+        String path = status.getPath().getName();
+        if (path.endsWith("/" + owner)) {
+          taskController.deleteAsUser(owner, "");
+        }
+      }
+    }
+  }
+
   public static final String TT_USER_NAME = "mapreduce.tasktracker.kerberos.principal";
   public static final String TT_KEYTAB_FILE =
     "mapreduce.tasktracker.keytab.file";  
@@ -548,8 +587,18 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     }
  
     //check local disk
-    checkLocalDirs(this.fConf.getLocalDirs());
+    checkLocalDirs((localdirs = this.fConf.getLocalDirs()));
+    deleteUserDirectories(fConf);
     fConf.deleteLocalFiles(SUBDIR);
+    final FsPermission ttdir = FsPermission.createImmutable((short) 0755);
+    for (String s : localdirs) {
+      localFs.mkdirs(new Path(s, SUBDIR), ttdir);
+    }
+    fConf.deleteLocalFiles(TT_PRIVATE_DIR);
+    final FsPermission priv = FsPermission.createImmutable((short) 0700);
+    for (String s : localdirs) {
+      localFs.mkdirs(new Path(s, TT_PRIVATE_DIR), priv);
+    }
 
     // Clear out state tables
     this.tasks.clear();
@@ -608,14 +657,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     this.taskTrackerName = "tracker_" + localHostname + ":" + taskReportAddress;
     LOG.info("Starting tracker " + taskTrackerName);
 
-    Class<? extends TaskController> taskControllerClass = fConf.getClass(
-        "mapred.task.tracker.task-controller", DefaultTaskController.class, TaskController.class);
-    taskController = (TaskController) ReflectionUtils.newInstance(
-        taskControllerClass, fConf);
-
-    // setup and create jobcache directory with appropriate permissions
-    taskController.setup();
-
     // Initialize DistributedCache
     this.distributedCacheManager = new TrackerDistributedCacheManager(
         this.fConf, taskController);
@@ -651,7 +692,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     reduceLauncher.start();
 
     // create a localizer instance
-    setLocalizer(new Localizer(localFs, fConf.getLocalDirs(), taskController));
+    setLocalizer(new Localizer(localFs, fConf.getLocalDirs()));
 
     //Start up node health checker service.
     if (shouldStartHealthMonitor(this.fConf)) {
@@ -897,25 +938,18 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     JobID jobId = t.getJobID();
     RunningJob rjob = addTaskToJob(jobId, tip);
 
-    // Initialize the user directories if needed.
-    getLocalizer().initializeUserDirs(t.getUser());
-
     synchronized (rjob) {
       if (!rjob.localized) {
-        JobConf localJobConf = localizeJobFiles(t, rjob);
-        // initialize job log directory
-        initializeJobLogDir(jobId, localJobConf);
-
-        // Now initialize the job via task-controller so as to set
-        // ownership/permissions of jars, job-work-dir. Note that initializeJob
-        // should be the last call after every other directory/file to be
-        // directly under the job directory is created.
-        JobInitializationContext context = new JobInitializationContext();
-        context.jobid = jobId;
-        context.user = t.getUser();
-        context.workDir = new File(localJobConf.get(JOB_LOCAL_DIR));
-        taskController.initializeJob(context);
-        
+        Path localJobConfPath = initializeJob(t, rjob);
+        JobConf localJobConf = new JobConf(localJobConfPath);
+        //to be doubly sure, overwrite the user in the config with the one the TT 
+        //thinks it is
+        localJobConf.setUser(t.getUser());
+        //also reset the #tasks per jvm
+        resetNumTasksPerJvm(localJobConf);
+        //set the base jobconf path in rjob; all tasks will use
+        //this as the base path when they run
+        rjob.localizedJobConf = localJobConfPath;
         rjob.jobConf = localJobConf;  
         rjob.keepJobFiles = ((localJobConf.getKeepTaskFilesPattern() != null) ||
                              localJobConf.getKeepFailedTaskFiles());
@@ -930,35 +964,31 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * Localize the job on this tasktracker. Specifically
    * <ul>
    * <li>Cleanup and create job directories on all disks</li>
+   * <li>Download the credentials file</li>
    * <li>Download the job config file job.xml from the FS</li>
-   * <li>Create the job work directory and set {@link TaskTracker#JOB_LOCAL_DIR}
-   * in the configuration.
-   * <li>Download the job jar file job.jar from the FS, unjar it and set jar
-   * file in the configuration.</li>
+   * <li>Invokes the {@link TaskController} to do the rest of the job 
+   * initialization</li>
    * </ul>
    *
    * @param t task whose job has to be localized on this TT
-   * @return the modified job configuration to be used for all the tasks of this
-   *         job as a starting point.
+   * @param rjob the {@link RunningJob}
+   * @return the path to the job configuration to be used for all the tasks
+   *         of this job as a starting point.
    * @throws IOException
    */
-  JobConf localizeJobFiles(Task t, RunningJob rjob)
-      throws IOException, InterruptedException {
-    JobID jobId = t.getJobID();
+  Path initializeJob(final Task t, RunningJob rjob)
+  throws IOException, InterruptedException {
+    final JobID jobId = t.getJobID();
 
-    Path jobFile = new Path(t.getJobFile());
-    String userName = t.getUser();
-    JobConf userConf = new JobConf(getJobConf());
-    
-    // Initialize the job directories first
-    FileSystem localFs = FileSystem.getLocal(fConf);
-    getLocalizer().initializeJobDirs(userName, jobId);
-    
+    final Path jobFile = new Path(t.getJobFile());
+    final String userName = t.getUser();
+    final Configuration conf = getJobConf();
+
     // save local copy of JobToken file
-    String localJobTokenFile = localizeJobTokenFile(t.getUser(), jobId);
+    final String localJobTokenFile = localizeJobTokenFile(t.getUser(), jobId);
     rjob.ugi = UserGroupInformation.createRemoteUser(t.getUser());
-    
-    Credentials ts = TokenCache.loadTokens(localJobTokenFile, fConf);
+
+    Credentials ts = TokenCache.loadTokens(localJobTokenFile, conf);
     Token<JobTokenIdentifier> jt = TokenCache.getJobToken(ts);
     if (jt != null) { //could be null in the case of some unit tests
       getJobTokenSecretManager().addTokenForJob(jobId.toString(), jt);
@@ -967,107 +997,108 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       rjob.ugi.addToken(token);
     }
 
-    FileSystem userFs = getFS(jobFile, jobId, userConf);
+    FileSystem userFs = getFS(jobFile, jobId, conf);
 
     // Download the job.xml for this job from the system FS
-    Path localJobFile =
-        localizeJobConfFile(new Path(t.getJobFile()), userName, userFs, jobId);
-
+    final Path localJobFile =
+      localizeJobConfFile(new Path(t.getJobFile()), userName, userFs, jobId);
     JobConf localJobConf = new JobConf(localJobFile);
-    //WE WILL TRUST THE USERNAME THAT WE GOT FROM THE JOBTRACKER
-    //AS PART OF THE TASK OBJECT
-    localJobConf.setUser(userName);
-    
-    // set the location of the token file into jobConf to transfer 
-    // the name to TaskRunner
-    localJobConf.set(TokenCache.JOB_TOKENS_FILENAME, localJobTokenFile);
-    // create the 'job-work' directory: job-specific shared directory for use as
-    // scratch space by all tasks of the same job running on this TaskTracker.
-    Path workDir =
-        lDirAlloc.getLocalPathForWrite(getJobWorkDir(userName,
-            jobId.toString()), fConf);
-    if (!localFs.mkdirs(workDir)) {
-      throw new IOException("Mkdirs failed to create "
-          + workDir.toString());
+
+    // Setup the public distributed cache
+    TaskDistributedCacheManager taskDistributedCacheManager =
+      getTrackerDistributedCacheManager()
+     .newTaskDistributedCacheManager(jobId, localJobConf);
+    rjob.distCacheMgr = taskDistributedCacheManager;
+    taskDistributedCacheManager.setupCache(TaskTracker.getPublicDistributedCacheDir(),
+        TaskTracker.getPrivateDistributedCacheDir(userName));
+
+    // Set some config values
+    localJobConf.set(JobConf.MAPRED_LOCAL_DIR_PROPERTY,
+        getJobConf().get(JobConf.MAPRED_LOCAL_DIR_PROPERTY));
+    if (conf.get("slave.host.name") != null) {
+      localJobConf.set("slave.host.name", conf.get("slave.host.name"));
     }
-    System.setProperty(JOB_LOCAL_DIR, workDir.toUri().getPath());
-    localJobConf.set(JOB_LOCAL_DIR, workDir.toUri().getPath());
+    resetNumTasksPerJvm(localJobConf);
+    localJobConf.setUser(t.getUser());
 
-    // Download the job.jar for this job from the system FS
-    localizeJobJarFile(userName, jobId, userFs, localJobConf);
+    // write back the config (this config will have the updates that the
+    // distributed cache manager makes as well)
+    JobLocalizer.writeLocalJobFile(localJobFile, localJobConf);
 
-    return localJobConf;
+    /**
+      * Now initialize the job via task-controller to do the rest of the
+      * job-init. Do this within a doAs since the distributed cache is also set
+      * up in {@link TaskController#initializeJob(String, JobID, Path, Path)}
+      * To support potential authenticated HDFS accesses, we need the tokens
+      */
+    rjob.ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      public Object run() throws IOException {
+        try {
+          taskController.initializeJob(t.getUser(), jobId.toString(), 
+              new Path(localJobTokenFile), localJobFile, TaskTracker.this);
+        } catch (IOException e) {
+          try {
+            // called holding lock on RunningJob
+            removeJobFiles(t.getUser(), jobId);
+          } catch (IOException e2) {
+            LOG.warn("Failed to add " + jobId + " to cleanup queue", e2);
+          }
+          throw e;
+        }
+        return null;
+      }
+    });
+    //search for the conf that the initializeJob created
+    //need to look up certain configs from this conf, like
+    //the distributed cache, profiling, etc. ones
+    Path initializedConf = lDirAlloc.getLocalPathToRead(getLocalJobConfFile(
+           userName, jobId.toString()), getJobConf());
+    return initializedConf;
+  }
+  
+  /** If certain configs are enabled, the jvm-reuse should be disabled
+   * @param localJobConf
+   */
+  static void resetNumTasksPerJvm(JobConf localJobConf) {
+    boolean debugEnabled = false;
+    if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
+      return;
+    }
+    if (localJobConf.getMapDebugScript() != null || 
+        localJobConf.getReduceDebugScript() != null) {
+      debugEnabled = true;
+    }
+    String keepPattern = localJobConf.getKeepTaskFilesPattern();
+    
+    if (debugEnabled || localJobConf.getProfileEnabled() ||
+        keepPattern != null || localJobConf.getKeepFailedTaskFiles()) {
+      //disable jvm reuse
+      localJobConf.setNumTasksToExecutePerJvm(1);
+    }
   }
 
-  // Create job userlog dir.
-  // Create job acls file in job log dir, if needed.
-  void initializeJobLogDir(JobID jobId, JobConf localJobConf)
+  // Remove the log dir from the tasklog cleanup thread
+  void saveLogDir(JobID jobId, JobConf localJobConf)
       throws IOException {
     // remove it from tasklog cleanup thread first,
     // it might be added there because of tasktracker reinit or restart
     JobStartedEvent jse = new JobStartedEvent(jobId);
     getUserLogManager().addLogEvent(jse);
-    localizer.initializeJobLogDir(jobId);
-
-    if (areACLsEnabled()) {
-      // Create job-acls.xml file in job userlog dir and write the needed
-      // info for authorization of users for viewing task logs of this job.
-      writeJobACLs(localJobConf, TaskLog.getJobDir(jobId));
-    }
   }
 
-  /**
-   *  Creates job-acls.xml under the given directory logDir and writes
-   *  job-view-acl, queue-admins-acl, jobOwner name and queue name into this
-   *  file.
-   *  queue name is the queue to which the job was submitted to.
-   *  queue-admins-acl is the queue admins ACL of the queue to which this
-   *  job was submitted to.
-   * @param conf   job configuration
-   * @param logDir job userlog dir
-   * @throws IOException
-   */
-  private static void writeJobACLs(JobConf conf, File logDir) throws IOException {
-    File aclFile = new File(logDir, jobACLsFile);
-    JobConf aclConf = new JobConf(false);
-
-    // set the job view acl in aclConf
-    String jobViewACL = conf.get(JobContext.JOB_ACL_VIEW_JOB, " ");
-    aclConf.set(JobContext.JOB_ACL_VIEW_JOB, jobViewACL);
-
-    // set the job queue name in aclConf
-    String queue = conf.getQueueName();
-    aclConf.setQueueName(queue);
-
-    // set the queue admins acl in aclConf
-    String qACLName = QueueManager.toFullPropertyName(queue,
-        QueueACL.ADMINISTER_JOBS.getAclName());
-    String queueAdminsACL = conf.get(qACLName, " ");
-    aclConf.set(qACLName, queueAdminsACL);
-
-    // set jobOwner as user.name in aclConf
-    String jobOwner = conf.getUser();
-    aclConf.set("user.name", jobOwner);
-
-    FileOutputStream out = new FileOutputStream(aclFile);
-    try {
-      aclConf.writeXml(out);
-    } finally {
-      out.close();
-    }
-    Localizer.PermissionsHandler.setPermissions(aclFile,
-        Localizer.PermissionsHandler.sevenZeroZero);
-  }
-
+  
   /**
    * Download the job configuration file from the FS.
    *
-   * @param t Task whose job file has to be downloaded
-   * @param jobId jobid of the task
+   * @param jobFile the original location of the configuration file
+   * @param user the user in question
+   * @param userFs the FileSystem created on behalf of the user
+   * @param jobId jobid in question
    * @return the local file system path of the downloaded file.
    * @throws IOException
    */
-  private Path localizeJobConfFile(Path jobFile, String user, FileSystem userFs, JobID jobId)
+  private Path localizeJobConfFile(Path jobFile, String user, 
+      FileSystem userFs, JobID jobId)
   throws IOException {
     // Get sizes of JobFile and JarFile
     // sizes are -1 if they are not present.
@@ -1080,7 +1111,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       jobFileSize = -1;
     }
     Path localJobFile =
-      lDirAlloc.getLocalPathForWrite(getLocalJobConfFile(user,
+      lDirAlloc.getLocalPathForWrite(getPrivateDirJobConfFile(user,
           jobId.toString()), jobFileSize, fConf);
 
     // Download job.xml
@@ -1088,58 +1119,16 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     return localJobFile;
   }
 
-  /**
-   * Download the job jar file from FS to the local file system and unjar it.
-   * Set the local jar file in the passed configuration.
-   *
-   * @param jobId
-   * @param userFs
-   * @param localJobConf
-   * @throws IOException
-   */
-  private void localizeJobJarFile(String user, JobID jobId, FileSystem userFs,
-      JobConf localJobConf)
-  throws IOException {
-    // copy Jar file to the local FS and unjar it.
-    String jarFile = localJobConf.getJar();
-    FileStatus status = null;
-    long jarFileSize = -1;
-    if (jarFile != null) {
-      Path jarFilePath = new Path(jarFile);
-      try {
-        status = userFs.getFileStatus(jarFilePath);
-        jarFileSize = status.getLen();
-      } catch (FileNotFoundException fe) {
-        jarFileSize = -1;
-      }
-      // Here we check for five times the size of jarFileSize to accommodate for
-      // unjarring the jar file in the jars directory
-      Path localJarFile =
-        lDirAlloc.getLocalPathForWrite(
-            getJobJarFile(user, jobId.toString()), 5 * jarFileSize, fConf);
-
-      //Download job.jar
-      userFs.copyToLocalFile(jarFilePath, localJarFile);
-
-      localJobConf.setJar(localJarFile.toString());
-
-      // Also un-jar the job.jar files. We un-jar it so that classes inside
-      // sub-directories, for e.g., lib/, classes/ are available on class-path
-      RunJar.unJar(new File(localJarFile.toString()), new File(localJarFile
-          .getParent().toString()));
-    }
-  }
-
   private void launchTaskForJob(TaskInProgress tip, JobConf jobConf,
-      UserGroupInformation ugi) throws IOException {
+                                RunningJob rjob) throws IOException {
     synchronized (tip) {
       tip.setJobConf(jobConf);
-      tip.setUGI(ugi);
-      tip.launchTask();
+      tip.setUGI(rjob.ugi);
+      tip.launchTask(rjob);
     }
   }
     
-  public synchronized void shutdown() throws IOException {
+  public synchronized void shutdown() throws IOException, InterruptedException {
     shuttingDown = true;
     close();
     if (this.server != null) {
@@ -1156,8 +1145,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * any running tasks or threads, and cleanup disk space.  A new TaskTracker
    * within the same process space might be restarted, so everything must be
    * clean.
+   * @throws InterruptedException 
    */
-  public synchronized void close() throws IOException {
+  public synchronized void close() throws IOException, InterruptedException {
     //
     // Kill running tasks.  Do this in a 2nd vector, called 'tasksToClose',
     // because calling jobHasFinished() may result in an edit to 'tasks'.
@@ -1246,8 +1236,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     // objects
     FileSystem local = FileSystem.getLocal(conf);
     this.localDirAllocator = new LocalDirAllocator("mapred.local.dir");
+    Class<? extends TaskController> taskControllerClass = 
+      conf.getClass("mapred.task.tracker.task-controller", 
+                     DefaultTaskController.class, TaskController.class);
+   taskController = 
+     (TaskController) ReflectionUtils.newInstance(taskControllerClass, conf);
+   taskController.setup(localDirAllocator);
+
     // create user log manager
-    setUserLogManager(new UserLogManager(conf));
+    setUserLogManager(new UserLogManager(conf, taskController));
     SecurityUtil.login(originalConf, TT_KEYTAB_FILE, TT_USER_NAME);
 
     initialize();
@@ -1688,70 +1685,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   }
 
   /**
-   * Builds list of PathDeletionContext objects for the given paths
-   */
-  private static PathDeletionContext[] buildPathDeletionContexts(FileSystem fs,
-      Path[] paths) {
-    int i = 0;
-    PathDeletionContext[] contexts = new PathDeletionContext[paths.length];
-
-    for (Path p : paths) {
-      contexts[i++] = new PathDeletionContext(fs, p.toUri().getPath());
-    }
-    return contexts;
-  }
-
-  /**
-   * Builds list of {@link TaskControllerJobPathDeletionContext} objects for a 
-   * job each pointing to the job's jobLocalDir.
-   * @param fs    : FileSystem in which the dirs to be deleted
-   * @param paths : mapred-local-dirs
-   * @param id    : {@link JobID} of the job for which the local-dir needs to 
-   *                be cleaned up.
-   * @param user  : Job owner's username
-   * @param taskController : the task-controller to be used for deletion of
-   *                         jobLocalDir
-   */
-  static PathDeletionContext[] buildTaskControllerJobPathDeletionContexts(
-      FileSystem fs, Path[] paths, JobID id, String user,
-      TaskController taskController)
-      throws IOException {
-    int i = 0;
-    PathDeletionContext[] contexts =
-                          new TaskControllerPathDeletionContext[paths.length];
-
-    for (Path p : paths) {
-      contexts[i++] = new TaskControllerJobPathDeletionContext(fs, p, id, user,
-                                                               taskController);
-    }
-    return contexts;
-  } 
-  
-  /**
-   * Builds list of TaskControllerTaskPathDeletionContext objects for a task
-   * @param fs    : FileSystem in which the dirs to be deleted
-   * @param paths : mapred-local-dirs
-   * @param task  : the task whose taskDir or taskWorkDir is going to be deleted
-   * @param isWorkDir : the dir to be deleted is workDir or taskDir
-   * @param taskController : the task-controller to be used for deletion of
-   *                         taskDir or taskWorkDir
-   */
-  static PathDeletionContext[] buildTaskControllerTaskPathDeletionContexts(
-      FileSystem fs, Path[] paths, Task task, boolean isWorkDir,
-      TaskController taskController)
-      throws IOException {
-    int i = 0;
-    PathDeletionContext[] contexts =
-                          new TaskControllerPathDeletionContext[paths.length];
-
-    for (Path p : paths) {
-      contexts[i++] = new TaskControllerTaskPathDeletionContext(fs, p, task,
-                          isWorkDir, taskController);
-    }
-    return contexts;
-  }
-
-  /**
    * The task tracker is done with this job, so we need to clean up.
    * @param action The action with the job
    * @throws IOException
@@ -1778,7 +1711,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         }
         // Delete the job directory for this  
         // task if the job is done/failed
-        if (!rjob.keepJobFiles) {
+        if (!rjob.keepJobFiles && rjob.localized) {
           removeJobFiles(rjob.jobConf.getUser(), rjob.getJobID());
         }
         // add job to user log manager
@@ -1812,12 +1745,21 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * @param rjob
    * @throws IOException
    */
-  void removeJobFiles(String user, JobID jobId)
-  throws IOException {
-    PathDeletionContext[] contexts = 
-      buildTaskControllerJobPathDeletionContexts(localFs, 
-          getLocalFiles(fConf, ""), jobId, user, taskController);
-    directoryCleanupThread.addToQueue(contexts);
+  void removeJobFiles(String user, JobID jobId) throws IOException {
+    String userDir = getUserDir(user);
+    String jobDir = getLocalJobDir(user, jobId.toString());
+    PathDeletionContext jobCleanup = 
+      new TaskController.DeletionContext(getTaskController(), false, user, 
+                                         jobDir.substring(userDir.length()));
+    directoryCleanupThread.addToQueue(jobCleanup);
+    
+    for (String str : localdirs) {
+      Path ttPrivateJobDir = FileSystem.getLocal(fConf).makeQualified(
+        new Path(str, TaskTracker.getPrivateDirForJob(user, jobId.toString())));
+      PathDeletionContext ttPrivateJobCleanup =
+        new CleanupQueue.PathDeletionContext(ttPrivateJobDir, fConf);
+      directoryCleanupThread.addToQueue(ttPrivateJobCleanup);
+    }
   }
 
   /**
@@ -2113,12 +2055,14 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * Start a new task.
    * All exceptions are handled locally, so that we don't mess up the
    * task tracker.
+   * @throws InterruptedException 
    */
-  void startNewTask(TaskInProgress tip) {
+  void startNewTask(TaskInProgress tip) throws InterruptedException {
     try {
       RunningJob rjob = localizeJob(tip);
+      tip.getTask().setJobFile(rjob.localizedJobConf.toString());
       // Localization is done. Neither rjob.jobConf nor rjob.ugi can be null
-      launchTaskForJob(tip, new JobConf(rjob.jobConf), rjob.ugi); 
+      launchTaskForJob(tip, new JobConf(rjob.jobConf), rjob); 
     } catch (Throwable e) {
       String msg = ("Error initializing " + tip.getTask().getTaskID() + 
                     ":\n" + StringUtils.stringifyException(e));
@@ -2128,8 +2072,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         tip.kill(true);
         tip.cleanup(true);
       } catch (IOException ie2) {
-        LOG.info("Error cleaning up " + tip.getTask().getTaskID() + ":\n" +
-                 StringUtils.stringifyException(ie2));          
+        LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
+      } catch (InterruptedException ie2) {
+        LOG.info("Error cleaning up " + tip.getTask().getTaskID(), ie2);
       }
         
       // Careful! 
@@ -2238,7 +2183,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     private TaskRunner runner;
     volatile boolean done = false;
     volatile boolean wasKilled = false;
-    private JobConf defaultJobConf;
+    private JobConf ttConf;
     private JobConf localJobConf;
     private boolean keepFailedTaskFiles;
     private boolean alwaysKeepTaskFiles;
@@ -2270,7 +2215,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       this.task = task;
       this.launcher = launcher;
       this.lastProgressReport = System.currentTimeMillis();
-      this.defaultJobConf = conf;
+      this.ttConf = conf;
       localJobConf = null;
       taskStatus = TaskStatus.createTaskStatus(task.isMapTask(), task.getTaskID(), 
                                                0.0f, 
@@ -2289,69 +2234,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         
     void localizeTask(Task task) throws IOException{
 
-      FileSystem localFs = FileSystem.getLocal(fConf);
-
-      // create taskDirs on all the disks.
-      getLocalizer().initializeAttemptDirs(task.getUser(),
-          task.getJobID().toString(), task.getTaskID().toString(),
-          task.isTaskCleanupTask());
-
-      // create the working-directory of the task 
-      Path cwd =
-          lDirAlloc.getLocalPathForWrite(getTaskWorkDir(task.getUser(), task
-              .getJobID().toString(), task.getTaskID().toString(), task
-              .isTaskCleanupTask()), defaultJobConf);
-      if (!localFs.mkdirs(cwd)) {
-        throw new IOException("Mkdirs failed to create " 
-                    + cwd.toString());
-      }
-
-      localJobConf.set("mapred.local.dir",
-                       fConf.get("mapred.local.dir"));
-
-      if (fConf.get("slave.host.name") != null) {
-        localJobConf.set("slave.host.name",
-                         fConf.get("slave.host.name"));
-      }
-            
-      keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
-
       // Do the task-type specific localization
+//TODO: are these calls really required
       task.localizeConfiguration(localJobConf);
       
-      List<String[]> staticResolutions = NetUtils.getAllStaticResolutions();
-      if (staticResolutions != null && staticResolutions.size() > 0) {
-        StringBuffer str = new StringBuffer();
-
-        for (int i = 0; i < staticResolutions.size(); i++) {
-          String[] hostToResolved = staticResolutions.get(i);
-          str.append(hostToResolved[0]+"="+hostToResolved[1]);
-          if (i != staticResolutions.size() - 1) {
-            str.append(',');
-          }
-        }
-        localJobConf.set("hadoop.net.static.resolutions", str.toString());
-      }
-      if (task.isMapTask()) {
-        debugCommand = localJobConf.getMapDebugScript();
-      } else {
-        debugCommand = localJobConf.getReduceDebugScript();
-      }
-      String keepPattern = localJobConf.getKeepTaskFilesPattern();
-      if (keepPattern != null) {
-        alwaysKeepTaskFiles = 
-          Pattern.matches(keepPattern, task.getTaskID().toString());
-      } else {
-        alwaysKeepTaskFiles = false;
-      }
-      if (debugCommand != null || localJobConf.getProfileEnabled() ||
-          alwaysKeepTaskFiles || keepFailedTaskFiles) {
-        //disable jvm reuse
-        localJobConf.setNumTasksToExecutePerJvm(1);
-      }
-      if (isTaskMemoryManagerEnabled()) {
-        localJobConf.setBoolean("task.memory.mgmt.enabled", true);
-      }
       task.setConf(localJobConf);
     }
         
@@ -2374,6 +2260,18 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       keepFailedTaskFiles = localJobConf.getKeepFailedTaskFiles();
       taskTimeout = localJobConf.getLong("mapred.task.timeout", 
                                          10 * 60 * 1000);
+      if (task.isMapTask()) {
+        debugCommand = localJobConf.getMapDebugScript();
+      } else {
+        debugCommand = localJobConf.getReduceDebugScript();
+      }
+      String keepPattern = localJobConf.getKeepTaskFilesPattern();
+      if (keepPattern != null) {
+        alwaysKeepTaskFiles = 
+          Pattern.matches(keepPattern, task.getTaskID().toString());
+      } else {
+        alwaysKeepTaskFiles = false;
+      }
     }
         
     public synchronized JobConf getJobConf() {
@@ -2394,7 +2292,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     /**
      * Kick off the task execution
      */
-    public synchronized void launchTask() throws IOException {
+    public synchronized void launchTask(RunningJob rjob) throws IOException {
       if (this.taskStatus.getRunState() == TaskStatus.State.UNASSIGNED ||
           this.taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN ||
           this.taskStatus.getRunState() == TaskStatus.State.KILLED_UNCLEAN) {
@@ -2402,7 +2300,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         if (this.taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
           this.taskStatus.setRunState(TaskStatus.State.RUNNING);
         }
-        setTaskRunner(task.createRunner(TaskTracker.this, this));
+        setTaskRunner(task.createRunner(TaskTracker.this, this, rjob));
         this.runner.start();
         this.taskStatus.setStartTime(System.currentTimeMillis());
       } else {
@@ -2466,8 +2364,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
               "Groups=" + taskCounters.getGroupNames().size() + " Limit=" +
               Counters.MAX_GROUP_LIMIT);
           kill(true);
-        } catch(IOException ie) {
-          LOG.error("Error killing task " + task.getTaskID(), ie);
+        } catch (IOException e) {
+          LOG.error("Error killing task " + task.getTaskID(), e);
+        } catch (InterruptedException e) {
+          LOG.error("Error killing task " + task.getTaskID(), e);
         }
       }
       
@@ -2828,7 +2728,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             getRunState() == TaskStatus.State.UNASSIGNED ||
             getRunState() == TaskStatus.State.COMMIT_PENDING ||
             isCleaningup()) {
-          kill(wasFailure);
+          try {
+            kill(wasFailure);
+          } catch (InterruptedException e) {
+            throw new IOException("Interrupted while killing " +
+                getTask().getTaskID(), e);
+          }
         }
       }
       
@@ -2839,8 +2744,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     /**
      * Something went wrong and the task must be killed.
      * @param wasFailure was it a failure (versus a kill request)?
+     * @throws InterruptedException 
      */
-    public synchronized void kill(boolean wasFailure) throws IOException {
+    public synchronized void kill(boolean wasFailure
+                                  ) throws IOException, InterruptedException {
       if (taskStatus.getRunState() == TaskStatus.State.RUNNING ||
           taskStatus.getRunState() == TaskStatus.State.COMMIT_PENDING ||
           isCleaningup()) {
@@ -2942,7 +2849,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           return;
         }
         try {
-          removeTaskFiles(needCleanup, taskId);
+          removeTaskFiles(needCleanup);
         } catch (Throwable ie) {
           LOG.info("Error cleaning up task runner: "
               + StringUtils.stringifyException(ie));
@@ -2954,47 +2861,27 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
      * Some or all of the files from this task are no longer required. Remove
      * them via CleanupQueue.
      * 
-     * @param needCleanup
+     * @param removeOutputs remove outputs as well as output
      * @param taskId
      * @throws IOException 
      */
-    void removeTaskFiles(boolean needCleanup, TaskAttemptID taskId)
-        throws IOException {
-      if (needCleanup) {
-        if (runner != null) {
-          // cleans up the output directory of the task (where map outputs
-          // and reduce inputs get stored)
-          runner.close();
-        }
-
-        if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-          // No jvm reuse, remove everything
-          PathDeletionContext[] contexts =
-            buildTaskControllerTaskPathDeletionContexts(localFs,
-                getLocalFiles(fConf, ""), task, false/* not workDir */,
-                taskController);
-          directoryCleanupThread.addToQueue(contexts);
+    void removeTaskFiles(boolean removeOutputs) throws IOException {
+      if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
+        String user = ugi.getShortUserName();
+        int userDirLen = TaskTracker.getUserDir(user).length();
+        String jobId = task.getJobID().toString();
+        String taskId = task.getTaskID().toString();
+        boolean cleanup = task.isTaskCleanupTask();
+        String taskDir;
+        if (!removeOutputs) {
+          taskDir = TaskTracker.getTaskWorkDir(user, jobId, taskId, cleanup);
         } else {
-          // Jvm reuse. We don't delete the workdir since some other task
-          // (running in the same JVM) might be using the dir. The JVM
-          // running the tasks would clean the workdir per a task in the
-          // task process itself.
-          String localTaskDir =
-            getLocalTaskDir(task.getUser(), task.getJobID().toString(), taskId
-                .toString(), task.isTaskCleanupTask());
-          PathDeletionContext[] contexts = buildPathDeletionContexts(
-              localFs, getLocalFiles(defaultJobConf, localTaskDir +
-                         Path.SEPARATOR + TaskTracker.JOBFILE));
-          directoryCleanupThread.addToQueue(contexts);
+          taskDir = TaskTracker.getLocalTaskDir(user, jobId, taskId, cleanup);
         }
-      } else {
-        if (localJobConf.getNumTasksToExecutePerJvm() == 1) {
-          PathDeletionContext[] contexts =
-            buildTaskControllerTaskPathDeletionContexts(localFs,
-              getLocalFiles(fConf, ""), task, true /* workDir */,
-              taskController);
-          directoryCleanupThread.addToQueue(contexts);
-        }
+        PathDeletionContext item =
+          new TaskController.DeletionContext(taskController, false, user,
+                                             taskDir.substring(userDirLen));          
+        directoryCleanupThread.addToQueue(item);
       }
     }
         
@@ -3033,7 +2920,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     if (rjob == null) { //kill the JVM since the job is dead
       LOG.info("Killing JVM " + jvmId + " since job " + jvmId.getJobId() +
                " is dead");
-      jvmManager.killJvm(jvmId);
+      try {
+        jvmManager.killJvm(jvmId);
+      } catch (InterruptedException e) {
+        LOG.warn("Failed to kill " + jvmId, e);
+      }
       return new JvmTask(null, true);
     }
     TaskInProgress tip = jvmManager.getTaskForJvm(jvmId);
@@ -3226,12 +3117,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   static class RunningJob{
     private JobID jobid; 
     private JobConf jobConf;
+    private Path localizedJobConf;
     // keep this for later use
     volatile Set<TaskInProgress> tasks;
     boolean localized;
     boolean keepJobFiles;
     UserGroupInformation ugi;
     FetchStatus f;
+    TaskDistributedCacheManager distCacheMgr;
+    
     RunningJob(JobID jobid) {
       this.jobid = jobid;
       localized = false;
@@ -3850,7 +3744,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       jobTokenSize = status.getLen();
       
       Path localJobTokenFile =
-          lDirAlloc.getLocalPathForWrite(getLocalJobTokenFile(user, 
+          lDirAlloc.getLocalPathForWrite(getPrivateDirJobTokenFile(user, 
               jobId.toString()), jobTokenSize, fConf);
     
       String localJobTokenFileStr = localJobTokenFile.toUri().getPath();
@@ -3936,4 +3830,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     return map;
   }
   // End MXBean implemenation
+
+  @Override
+  public void 
+  updatePrivateDistributedCacheSizes(org.apache.hadoop.mapreduce.JobID jobId,
+                                     long[] sizes
+                                     ) throws IOException {
+    distributedCacheManager.setArchiveSizes(jobId, sizes);
+  }
+
 }

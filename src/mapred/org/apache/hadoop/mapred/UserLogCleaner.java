@@ -31,6 +31,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
@@ -118,7 +119,7 @@ public class UserLogCleaner extends Thread {
   }
 
   public void deleteJobLogs(JobID jobid) throws IOException {
-    deleteLogPath(TaskLog.getJobDir(jobid).getAbsolutePath());
+    deleteLogPath(jobid.toString());
   }
 
   /**
@@ -134,26 +135,22 @@ public class UserLogCleaner extends Thread {
   public void clearOldUserLogs(Configuration conf) throws IOException {
     File userLogDir = TaskLog.getUserLogDir();
     if (userLogDir.exists()) {
-      String[] logDirs = userLogDir.list();
-      if (logDirs.length > 0) {
+      long now = clock.getTime();
+      for(String logDir: userLogDir.list()) {
         // add all the log dirs to taskLogsMnonitor.
-        long now = clock.getTime();
-        for (String logDir : logDirs) {
-          JobID jobid = null;
-          try {
-            jobid = JobID.forName(logDir);
-          } catch (IllegalArgumentException ie) {
-            // if the directory is not a jobid, delete it immediately
-            deleteLogPath(new File(userLogDir, logDir).getAbsolutePath());
-            continue;
-          }
-          // add the job log directory for deletion with default retain hours,
-          // if it is not already added
-          if (!completedJobs.containsKey(jobid)) {
-            JobCompletedEvent jce = new JobCompletedEvent(jobid, now,
-                getUserlogRetainHours(conf));
-            userLogManager.addLogEvent(jce);
-          }
+        JobID jobid = null;
+        try {
+          jobid = JobID.forName(logDir);
+        } catch (IllegalArgumentException ie) {
+          deleteLogPath(logDir);
+          continue;
+        }
+        // add the job log directory for deletion with default retain hours,
+        // if it is not already added
+        if (!completedJobs.containsKey(jobid)) {
+          JobCompletedEvent jce = 
+            new JobCompletedEvent(jobid, now,getUserlogRetainHours(conf));
+          userLogManager.addLogEvent(jce);
         }
       }
     }
@@ -208,7 +205,11 @@ public class UserLogCleaner extends Thread {
    */
   private void deleteLogPath(String logPath) throws IOException {
     LOG.info("Deleting user log path " + logPath);
-    PathDeletionContext context = new PathDeletionContext(localFs, logPath);
-    cleanupQueue.addToQueue(context);
+    String logRoot = TaskLog.getUserLogDir().toString();
+    String user = localFs.getFileStatus(new Path(logRoot, logPath)).getOwner();
+    TaskController controller = userLogManager.getTaskController();
+    PathDeletionContext item = 
+      new TaskController.DeletionContext(controller, true, user, logPath);
+    cleanupQueue.addToQueue(item);
   }
 }

@@ -26,11 +26,15 @@ import java.util.Vector;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.TrackerDistributedCacheManager;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.mapred.JvmManager.JvmManagerForType;
 import org.apache.hadoop.mapred.JvmManager.JvmManagerForType.JvmRunner;
 import org.apache.hadoop.mapred.JvmManager.JvmEnv;
+import org.apache.hadoop.mapred.TaskTracker.RunningJob;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
@@ -98,7 +102,14 @@ public class TestTaskEnvironment {
     Task task = new MapTask(null, attemptID, 0, null, MAP_SLOTS);
     task.setConf(taskConf);
     TaskInProgress tip = tt.new TaskInProgress(task, taskConf);
-    final TaskRunner taskRunner = task.createRunner(tt, tip);
+    RunningJob rjob = new RunningJob(attemptID.getJobID());
+    TaskController taskController = new DefaultTaskController();
+    taskController.setConf(ttConf);
+    rjob.distCacheMgr = 
+      new TrackerDistributedCacheManager(ttConf, taskController).
+      newTaskDistributedCacheManager(attemptID.getJobID(), taskConf);
+      
+    final TaskRunner taskRunner = task.createRunner(tt, tip, rjob);
     String errorInfo = "Child error";
     String mapredChildEnv = taskRunner.getChildEnv(taskConf);
     taskRunner.updateUserLoginEnv(errorInfo, user, taskConf, env);
@@ -111,9 +122,7 @@ public class TestTaskEnvironment {
     workDir.mkdir();
     final File stdout = new File(TEST_DIR, "stdout");
     final File stderr = new File(TEST_DIR, "stderr");
-    JvmEnv jenv = jvmManager.constructJvmEnv(null, vargs,
-      stdout,stderr, 100, workDir, env, taskConf);
-    Map<String, String> jvmenvmap = jenv.env;
+    Map<String, String> jvmenvmap = env;
     String javaOpts = taskRunner.getChildJavaOpts(ttConf, 
       JobConf.MAPRED_MAP_TASK_JAVA_OPTS);
 

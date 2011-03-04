@@ -156,7 +156,6 @@ public class TestMiniMRWithDFS extends TestCase {
           .isDirectory());
       LOG.info("Verifying contents of mapred.local.dir "
           + localDir.getAbsolutePath());
-
       // Verify contents(user-dir) of tracker-sub-dir
       File trackerSubDir = new File(localDir, TaskTracker.SUBDIR);
       if (trackerSubDir.isDirectory()) {

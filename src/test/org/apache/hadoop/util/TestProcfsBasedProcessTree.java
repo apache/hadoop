@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.ProcessTree.Signal;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.mapred.UtilsForTests;
@@ -147,8 +148,7 @@ public class TestProcfsBasedProcessTree extends TestCase {
     String pid = getRogueTaskPID();
     LOG.info("Root process pid: " + pid);
     ProcfsBasedProcessTree p = new ProcfsBasedProcessTree(pid,
-        ProcessTree.isSetsidAvailable,
-        ProcessTree.DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+        ProcessTree.isSetsidAvailable);
     p = p.getProcessTree(); // initialize
     LOG.info("ProcessTree: " + p.toString());
     File leaf = new File(lowestDescendant);
@@ -168,7 +168,11 @@ public class TestProcfsBasedProcessTree extends TestCase {
     String processTreeDump = p.getProcessTreeDump();
 
     // destroy the map task and all its subprocesses
-    p.destroy(true/*in the background*/);
+    if (ProcessTree.isSetsidAvailable) {
+      ProcessTree.killProcessGroup(pid, Signal.KILL);
+    } else {
+      ProcessTree.killProcess(pid, Signal.KILL);
+    }
     if(ProcessTree.isSetsidAvailable) {// whole processtree should be gone
       assertEquals(false, p.isAnyProcessInTreeAlive());
     }

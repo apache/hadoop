@@ -29,14 +29,10 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.Arrays;
 import java.util.LinkedList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.util.Shell.ExitCodeException;
-import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 /**
  * A Proc file-system based ProcessTree. Works only on Linux.
@@ -47,8 +43,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       .getLog(ProcfsBasedProcessTree.class);
 
   private static final String PROCFS = "/proc/";
-  public static final long DEFAULT_SLEEPTIME_BEFORE_SIGKILL = 5000L;
-  private long sleepTimeBeforeSigKill = DEFAULT_SLEEPTIME_BEFORE_SIGKILL;
   private static final Pattern PROCFS_STAT_FILE_FORMAT = Pattern
       .compile("^([0-9-]+)\\s([^\\s]+)\\s[^\\s]\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+)\\s([0-9-]+\\s){16}([0-9]+)(\\s[0-9-]+){16}");
 
@@ -61,21 +55,14 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   
   private Integer pid = -1;
 
-  private boolean setsidUsed = false;
-  
-  private long sleeptimeBeforeSigkill = DEFAULT_SLEEPTIME_BEFORE_SIGKILL;
-  
   private Map<Integer, ProcessInfo> processTree = new HashMap<Integer, ProcessInfo>();
 
   public ProcfsBasedProcessTree(String pid) {
-    this(pid, false, DEFAULT_SLEEPTIME_BEFORE_SIGKILL);
+    this(pid, false);
   }
   
-  public ProcfsBasedProcessTree(String pid, boolean setsidUsed,
-      long sigkillInterval) {
+  public ProcfsBasedProcessTree(String pid, boolean setsidUsed) {
     this(pid,PROCFS);
-    this.setsidUsed = setsidUsed;
-    sleeptimeBeforeSigkill = sigkillInterval; 
   }
 
   public ProcfsBasedProcessTree(String pid, String procfsDir) {
@@ -83,17 +70,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     this.procfsDir = procfsDir;
   }
   
-  /**
-   * Sets SIGKILL interval
-   * @deprecated Use {@link ProcfsBasedProcessTree#ProcfsBasedProcessTree(
-   *                  String, boolean, long)} instead
-   * @param interval The time to wait before sending SIGKILL
-   *                 after sending SIGTERM
-   */
-  public void setSigKillInterval(long interval) {
-    sleepTimeBeforeSigKill = interval;
-  }
-
   /**
    * Checks if the ProcfsBasedProcessTree is available on this system.
    * 
@@ -218,81 +194,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     return false;
   }
 
-  /** Verify that the given process id is same as its process group id.
-   * @param pidStr Process id of the to-be-verified-process
-   */
-  private static boolean assertPidPgrpidForMatch(String pidStr) {
-    Integer pId = Integer.parseInt(pidStr);
-    // Get information for this process
-    ProcessInfo pInfo = new ProcessInfo(pId);
-    pInfo = constructProcessInfo(pInfo);
-    //make sure that pId and its pgrpId match
-    if (!pInfo.getPgrpId().equals(pId)) {
-      LOG.warn("Unexpected: Process with PID " + pId +
-               " is not a process group leader.");
-      return false;
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(pId + " is a process group leader, as expected.");
-    }
-    return true;
-  }
-
-  /** Make sure that the given pid is a process group leader and then
-   * destroy the process group.
-   * @param pgrpId   Process group id of to-be-killed-processes
-   * @param interval The time to wait before sending SIGKILL
-   *                 after sending SIGTERM
-   * @param inBackground Process is to be killed in the back ground with
-   *                     a separate thread
-   */
-  public static void assertAndDestroyProcessGroup(String pgrpId, long interval,
-                       boolean inBackground)
-         throws IOException {
-    // Make sure that the pid given is a process group leader
-    if (!assertPidPgrpidForMatch(pgrpId)) {
-      throw new IOException("Process with PID " + pgrpId  +
-                          " is not a process group leader.");
-    }
-    destroyProcessGroup(pgrpId, interval, inBackground);
-  }
-
-  /**
-   * Destroy the process-tree.
-   */
-  public void destroy() {
-    destroy(true);
-  }
-  
-  /**
-   * Destroy the process-tree.
-   * @param inBackground Process is to be killed in the back ground with
-   *                     a separate thread
-   */
-  public void destroy(boolean inBackground) {
-    LOG.debug("Killing ProcfsBasedProcessTree of " + pid);
-    if (pid == -1) {
-      return;
-    }
-    if (isAlive(pid.toString())) {
-      if (isSetsidAvailable && setsidUsed) {
-        // In this case, we know that pid got created using setsid. So kill the
-        // whole processGroup.
-        try {
-          assertAndDestroyProcessGroup(pid.toString(), sleeptimeBeforeSigkill,
-                              inBackground);
-        } catch (IOException e) {
-          LOG.warn(StringUtils.stringifyException(e));
-        }
-      }
-      else {
-        //TODO: Destroy all the processes in the subtree in this case also.
-        // For the time being, killing only the root process.
-        destroyProcess(pid.toString(), sleeptimeBeforeSigkill, inBackground);
-      }
-    }
-  }
-
   private static final String PROCESSTREE_DUMP_FORMAT =
       "\t|- %d %d %d %d %s %d %s\n";
 
@@ -383,15 +284,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
   }
 
   /**
-   * 
-   * Construct the ProcessInfo using the process' PID and procfs and return the
-   * same. Returns null on failing to read from procfs,
-   */
-  private static ProcessInfo constructProcessInfo(ProcessInfo pinfo) {
-    return constructProcessInfo(pinfo, PROCFS);
-  }
-
-  /**
    * Construct the ProcessInfo using the process' PID and procfs rooted at the
    * specified directory and return the same. It is provided mainly to assist
    * testing purposes.
@@ -448,58 +340,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
     return ret;
   }
   
-  /**
-   * Is the process with PID pid still alive?
-   */
-  private boolean isAlive(Integer pid) {
-    // This method assumes that isAlive is called on a pid that was alive not
-    // too long ago, and hence assumes no chance of pid-wrapping-around.
-    ShellCommandExecutor shexec = null;
-    try {
-      String[] args = { "kill", "-0", pid.toString() };
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (ExitCodeException ee) {
-      return false;
-    } catch (IOException ioe) {
-      LOG.warn("Error executing shell command "
-          + Arrays.toString(shexec.getExecString()) + ioe);
-      return false;
-    }
-    return (shexec.getExitCode() == 0 ? true : false);
-  }
-
-  /**
-   * Helper thread class that kills process-tree with SIGKILL in background
-   */
-  private class SigKillThread extends Thread {
-
-    public void run() {
-      this.setName(this.getClass().getName() + "-" + String.valueOf(pid));
-      ShellCommandExecutor shexec = null;
-
-      try {
-        // Sleep for some time before sending SIGKILL
-        Thread.sleep(sleepTimeBeforeSigKill);
-      } catch (InterruptedException i) {
-        LOG.warn("Thread sleep is interrupted.");
-      }
-
-      // Kill the root process with SIGKILL if it is still alive
-      if (ProcfsBasedProcessTree.this.isAlive(pid)) {
-        try {
-          String[] args = { "kill", "-9", pid.toString() };
-          shexec = new ShellCommandExecutor(args);
-          shexec.execute();
-        } catch (IOException ioe) {
-          LOG.warn("Error executing shell command " + ioe);
-        } finally {
-          LOG.info("Killing " + pid + " with SIGKILL. Exit code "
-              + shexec.getExitCode());
-        }
-      }
-    }
-  }
   /**
    * Returns a string printing PIDs of process present in the
    * ProcfsBasedProcessTree. Output format : [pid pid ..]
@@ -563,13 +403,6 @@ public class ProcfsBasedProcessTree extends ProcessTree {
       return age;
     }
     
-    public boolean isParent(ProcessInfo p) {
-      if (pid.equals(p.getPpid())) {
-        return true;
-      }
-      return false;
-    }
-
     public void updateProcessInfo(String name, Integer ppid, Integer pgrpId,
         Integer sessionId, Long vmem) {
       this.name = name;

@@ -451,7 +451,9 @@ abstract public class Task implements Writable, Configurable {
   /** Return an approprate thread runner for this task. 
    * @param tip TODO*/
   public abstract TaskRunner createRunner(TaskTracker tracker, 
-      TaskTracker.TaskInProgress tip) throws IOException;
+                                          TaskTracker.TaskInProgress tip, 
+                                          TaskTracker.RunningJob rjob
+                                          ) throws IOException;
 
   /** The number of milliseconds between progress reports. */
   public static final int PROGRESS_INTERVAL = 3000;

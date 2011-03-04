@@ -16,10 +16,32 @@
  * limitations under the License.
  */
 
+// ensure we get the posix version of dirname by including this first
+#include <libgen.h> 
+
 #include "configuration.h"
+#include "task-controller.h"
 
+#include <errno.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
-char * hadoop_conf_dir;
+#define INCREMENT_SIZE 1000
+#define MAX_SIZE 10
+
+struct confentry {
+  const char *key;
+  const char *value;
+};
+
+struct configuration {
+  int size;
+  struct confentry **confdetails;
+};
 
 struct configuration config={.size=0, .confdetails=NULL};
 
@@ -41,39 +63,69 @@ void free_configurations() {
   config.size = 0;
 }
 
+/**
+ * Is the file/directory only writable by root.
+ * Returns 1 if true
+ */
+static int is_only_root_writable(const char *file) {
+  struct stat file_stat;
+  if (stat(file, &file_stat) != 0) {
+    fprintf(LOGFILE, "Can't stat file %s - %s\n", file, strerror(errno));
+    return 0;
+  }
+  if (file_stat.st_uid != 0) {
+    fprintf(LOGFILE, "File %s must be owned by root, but is owned by %d\n",
+            file, file_stat.st_uid);
+    return 0;
+  }
+  if ((file_stat.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
+    fprintf(LOGFILE, 
+	    "File %s must not be world or group writable, but is %03o\n",
+	    file, file_stat.st_mode & (~S_IFMT));
+    return 0;
+  }
+  return 1;
+}
+
+/**
+ * Ensure that the configuration file and all of the containing directories
+ * are only writable by root. Otherwise, an attacker can change the 
+ * configuration and potentially cause damage.
+ * returns 0 if permissions are ok
+ */
+int check_configuration_permissions(const char* file_name) {
+  // copy the input so that we can modify it with dirname
+  char* dir = strdup(file_name);
+  char* buffer = dir;
+  do {
+    if (!is_only_root_writable(dir)) {
+      free(buffer);
+      return -1;
+    }
+    dir = dirname(dir);
+  } while (strcmp(dir, "/") != 0);
+  free(buffer);
+  return 0;
+}
+
 //function used to load the configurations present in the secure config
-void get_configs() {
+void read_config(const char* file_name) {
+  fprintf(LOGFILE, "Reading task controller config from %s\n" , file_name);
   FILE *conf_file;
   char *line;
   char *equaltok;
   char *temp_equaltok;
   size_t linesize = 1000;
   int size_read = 0;
-  int str_len = 0;
-  char *file_name = NULL;
-
-#ifndef HADOOP_CONF_DIR
-  str_len = strlen(CONF_FILE_PATTERN) + strlen(hadoop_conf_dir);
-  file_name = (char *) malloc(sizeof(char) * (str_len + 1));
-#else
-  str_len = strlen(CONF_FILE_PATTERN) + strlen(HADOOP_CONF_DIR);
-  file_name = (char *) malloc(sizeof(char) * (str_len + 1));
-#endif
 
   if (file_name == NULL) {
-    fprintf(LOGFILE, "Malloc failed :Out of memory \n");
-    return;
+    fprintf(LOGFILE, "Null configuration filename passed in\n");
+    exit(INVALID_CONFIG_FILE);
   }
-  memset(file_name,'\0',str_len +1);
-#ifndef HADOOP_CONF_DIR
-  snprintf(file_name,str_len, CONF_FILE_PATTERN, hadoop_conf_dir);
-#else
-  snprintf(file_name, str_len, CONF_FILE_PATTERN, HADOOP_CONF_DIR);
-#endif
 
-#ifdef DEBUG
-  fprintf(LOGFILE, "get_configs :Conf file name is : %s \n", file_name);
-#endif
+  #ifdef DEBUG
+    fprintf(LOGFILE, "read_config :Conf file name is : %s \n", file_name);
+  #endif
 
   //allocate space for ten configuration items.
   config.confdetails = (struct confentry **) malloc(sizeof(struct confentry *)
@@ -82,14 +134,13 @@ void get_configs() {
   conf_file = fopen(file_name, "r");
   if (conf_file == NULL) {
     fprintf(LOGFILE, "Invalid conf file provided : %s \n", file_name);
-    free(file_name);
-    return;
+    exit(INVALID_CONFIG_FILE);
   }
   while(!feof(conf_file)) {
     line = (char *) malloc(linesize);
     if(line == NULL) {
       fprintf(LOGFILE, "malloc failed while reading configuration file.\n");
-      goto cleanup;
+      exit(OUT_OF_MEMORY);
     }
     size_read = getline(&line,&linesize,conf_file);
     //feof returns true only after we read past EOF.
@@ -98,8 +149,9 @@ void get_configs() {
     if (size_read == -1) {
       if(!feof(conf_file)){
         fprintf(LOGFILE, "getline returned error.\n");
-        goto cleanup;
+        exit(INVALID_CONFIG_FILE);
       }else {
+        free(line);
         break;
       }
     }
@@ -125,9 +177,9 @@ void get_configs() {
       goto cleanup;
     }
 
-#ifdef DEBUG
-    fprintf(LOGFILE, "get_configs : Adding conf key : %s \n", equaltok);
-#endif
+    #ifdef DEBUG
+      fprintf(LOGFILE, "read_config : Adding conf key : %s \n", equaltok);
+    #endif
 
     memset(config.confdetails[config.size], 0, sizeof(struct confentry));
     config.confdetails[config.size]->key = (char *) malloc(
@@ -146,9 +198,9 @@ void get_configs() {
       continue;
     }
 
-#ifdef DEBUG
-    fprintf(LOGFILE, "get_configs : Adding conf value : %s \n", equaltok);
-#endif
+    #ifdef DEBUG
+      fprintf(LOGFILE, "read_config : Adding conf value : %s \n", equaltok);
+    #endif
 
     config.confdetails[config.size]->value = (char *) malloc(
             sizeof(char) * (strlen(equaltok)+1));
@@ -169,8 +221,12 @@ void get_configs() {
 
   //close the file
   fclose(conf_file);
+
+  if (config.size == 0) {
+    fprintf(LOGFILE, "Invalid configuration provided in %s\n", file_name);
+    exit(INVALID_CONFIG_FILE);
+  }
   //clean up allocated file name
-  free(file_name);
   return;
   //free spaces alloced.
   cleanup:
@@ -178,7 +234,6 @@ void get_configs() {
     free(line);
   }
   fclose(conf_file);
-  free(file_name);
   free_configurations();
   return;
 }
@@ -189,15 +244,8 @@ void get_configs() {
  * array, next time onwards used the populated array.
  *
  */
-const char * get_value(const char* key) {
+char * get_value(const char* key) {
   int count;
-  if (config.size == 0) {
-    get_configs();
-  }
-  if (config.size == 0) {
-    fprintf(LOGFILE, "Invalid configuration provided\n");
-    return NULL;
-  }
   for (count = 0; count < config.size; count++) {
     if (strcmp(config.confdetails[count]->key, key) == 0) {
       return strdup(config.confdetails[count]->value);
@@ -210,9 +258,9 @@ const char * get_value(const char* key) {
  * Function to return an array of values for a key.
  * Value delimiter is assumed to be a comma.
  */
-const char ** get_values(const char * key) {
-  const char ** toPass = NULL;
-  const char *value = get_value(key);
+char ** get_values(const char * key) {
+  char ** toPass = NULL;
+  char *value = get_value(key);
   char *tempTok = NULL;
   char *tempstr = NULL;
   int size = 0;
@@ -220,14 +268,14 @@ const char ** get_values(const char * key) {
 
   //first allocate any array of 10
   if(value != NULL) {
-    toPass = (const char **) malloc(sizeof(char *) * toPassSize);
+    toPass = (char **) malloc(sizeof(char *) * toPassSize);
     tempTok = strtok_r((char *)value, ",", &tempstr);
     while (tempTok != NULL) {
       toPass[size++] = tempTok;
       if(size == toPassSize) {
         toPassSize += MAX_SIZE;
-        toPass = (const char **) realloc(toPass,(sizeof(char *) *
-                                         (MAX_SIZE * toPassSize)));
+        toPass = (char **) realloc(toPass,(sizeof(char *) *
+                                           (MAX_SIZE * toPassSize)));
       }
       tempTok = strtok_r(NULL, ",", &tempstr);
     }
@@ -238,3 +286,12 @@ const char ** get_values(const char * key) {
   return toPass;
 }
 
+// free an entry set of values
+void free_values(char** values) {
+  if (*values != NULL) {
+    free(*values);
+  }
+  if (values != NULL) {
+    free(values);
+  }
+}

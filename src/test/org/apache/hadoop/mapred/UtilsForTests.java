@@ -47,11 +47,13 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.CleanupQueue.PathDeletionContext;
 import org.apache.hadoop.mapred.SortValidator.RecordStatsChecker.NonSplitableSequenceFileInputFormat;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogEvent;
 import org.apache.hadoop.mapreduce.server.tasktracker.userlogs.UserLogManager;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 /** 
@@ -439,7 +441,7 @@ public class UtilsForTests {
    * asynchronously.
    */
   public static class InlineCleanupQueue extends CleanupQueue {
-    List<String> stalePaths = new ArrayList<String>();
+    List<Path> stalePaths = new ArrayList<Path>();
 
     public InlineCleanupQueue() {
       // do nothing
@@ -461,6 +463,17 @@ public class UtilsForTests {
           stalePaths.add(context.fullPath);
         }
       }
+    }
+    static boolean deletePath(PathDeletionContext context) throws IOException {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Trying to delete " + context.fullPath);
+      }
+//      FileSystem fs = context.fullPath.getFileSystem(context.conf);
+//      if (fs.exists(context.fullPath)) {
+//        return fs.delete(context.fullPath, true);
+//      }
+      context.deletePath();
+      return true;
     }
   }
 

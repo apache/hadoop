@@ -142,6 +142,23 @@ public class LocalDirAllocator {
     return context.getLocalPathToRead(pathStr, conf);
   }
 
+  /**
+   * Get all of the paths that currently exist in the working directories.
+   * @param pathStr the path underneath the roots
+   * @param conf the configuration to look up the roots in
+   * @return all of the paths that exist under any of the roots
+   * @throws IOException
+   */
+  public Iterable<Path> getAllLocalPathsToRead(String pathStr, 
+                                               Configuration conf
+                                               ) throws IOException {
+    AllocatorPerContext context;
+    synchronized (this) {
+      context = obtainContext(contextCfgItemName);
+    }
+    return context.getAllLocalPathsToRead(pathStr, conf);    
+  }
+
   /** Creates a temporary file in the local FS. Pass size as -1 if not known 
    *  apriori. We round-robin over the set of disks (via the configured dirs) 
    *  and select the first complete path which has enough space. A file is
@@ -210,7 +227,8 @@ public class LocalDirAllocator {
     /** This method gets called everytime before any read/write to make sure
      * that any change to localDirs is reflected immediately.
      */
-    private void confChanged(Configuration conf) throws IOException {
+    private synchronized void confChanged(Configuration conf
+                                          ) throws IOException {
       String newLocalDirs = conf.get(contextCfgItemName);
       if (!newLocalDirs.equals(savedLocalDirs)) {
         localDirs = conf.getStrings(contextCfgItemName);
@@ -270,17 +288,6 @@ public class LocalDirAllocator {
       return dirNumLastAccessed;
     }
     
-    /** Get a path from the local FS. This method should be used if the size of 
-     *  the file is not known a priori. 
-     *  
-     *  It will use roulette selection, picking directories
-     *  with probability proportional to their available space. 
-     */
-    public synchronized Path getLocalPathForWrite(String path, 
-        Configuration conf) throws IOException {
-      return getLocalPathForWrite(path, SIZE_UNKNOWN, conf);
-    }
-
     /** Get a path from the local FS. If size is known, we go
      *  round-robin over the set of disks (via the configured dirs) and return
      *  the first complete path which has enough space.
@@ -393,6 +400,76 @@ public class LocalDirAllocator {
       //no path found
       throw new DiskErrorException ("Could not find " + pathStr +" in any of" +
       " the configured local directories");
+    }
+
+    private static 
+    class PathIterator implements Iterator<Path>, Iterable<Path> {
+      private final FileSystem fs;
+      private final String pathStr;
+      private int i = 0;
+      private final String[] rootDirs;
+      private Path next = null;
+
+      private PathIterator(FileSystem fs, String pathStr, String[] rootDirs
+                           ) throws IOException {
+        this.fs = fs;
+        this.pathStr = pathStr;
+        this.rootDirs = rootDirs;
+        advance();
+      }
+
+      @Override
+      public boolean hasNext() {
+        return next != null;
+      }
+
+      private void advance() throws IOException {
+        while (i < rootDirs.length) {
+          next = new Path(rootDirs[i++], pathStr);
+          if (fs.exists(next)) {
+            return;
+          }
+        }
+        next = null;
+      }
+
+      @Override
+      public Path next() {
+        Path result = next;
+        try {
+          advance();
+        } catch (IOException ie) {
+          throw new RuntimeException("Can't check existance of " + next, ie);
+        }
+        return result;
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException("read only iterator");
+      }
+
+      @Override
+      public Iterator<Path> iterator() {
+        return this;
+      }
+    }
+
+    /**
+     * Get all of the paths that currently exist in the working directories.
+     * @param pathStr the path underneath the roots
+     * @param conf the configuration to look up the roots in
+     * @return all of the paths that exist under any of the roots
+     * @throws IOException
+     */
+    synchronized Iterable<Path> getAllLocalPathsToRead(String pathStr,
+                                                       Configuration conf
+                                                       ) throws IOException {
+      confChanged(conf);
+      if (pathStr.startsWith("/")) {
+        pathStr = pathStr.substring(1);
+      }
+      return new PathIterator(localFS, pathStr, localDirs);
     }
 
     /** We search through all the configured dirs for the file's existence

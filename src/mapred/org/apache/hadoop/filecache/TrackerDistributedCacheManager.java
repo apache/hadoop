@@ -21,6 +21,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -33,8 +36,6 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.TaskController;
-import org.apache.hadoop.mapred.TaskController.DistributedCacheFileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -44,7 +45,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.mapred.InvalidJobConfException;
+import org.apache.hadoop.mapred.TaskController;
+import org.apache.hadoop.mapred.TaskTracker;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.RunJar;
@@ -63,6 +67,11 @@ public class TrackerDistributedCacheManager {
   // cacheID to cacheStatus mapping
   private TreeMap<String, CacheStatus> cachedArchives = 
     new TreeMap<String, CacheStatus>();
+  private Map<JobID, TaskDistributedCacheManager> jobArchives =
+    new HashMap<JobID, TaskDistributedCacheManager>();
+  private final TaskController taskController;
+  private static final FsPermission PUBLIC_CACHE_OBJECT_PERM =
+    FsPermission.createImmutable((short) 0755);
 
   // For holding the properties of each cache directory
   static class CacheDir {
@@ -84,19 +93,17 @@ public class TrackerDistributedCacheManager {
   private final LocalFileSystem localFs;
   
   private LocalDirAllocator lDirAllocator;
-  
-  private TaskController taskController;
-  
+    
   private Configuration trackerConf;
   
   private Random random = new Random();
 
   public TrackerDistributedCacheManager(Configuration conf,
-      TaskController taskController) throws IOException {
+                                        TaskController controller
+                                        ) throws IOException {
     this.localFs = FileSystem.getLocal(conf);
     this.trackerConf = conf;
     this.lDirAllocator = new LocalDirAllocator("mapred.local.dir");
-    this.taskController = taskController;
 
     // setting the cache size to a default of 10GB
     this.allowedCacheSize = conf.getLong
@@ -105,6 +112,7 @@ public class TrackerDistributedCacheManager {
     this.allowedCacheSubdirs = conf.getLong
       ("mapreduce.tasktracker.local.cache.numberdirectories",
        DEFAULT_CACHE_SUBDIR_LIMIT);
+    this.taskController = controller;
   }
 
   /**
@@ -125,13 +133,6 @@ public class TrackerDistributedCacheManager {
    *  In case of a file, the path to the file is returned
    * @param confFileStamp this is the hdfs file modification timestamp to verify
    * that the file to be cached hasn't changed since the job started
-   * @param currentWorkDir this is the directory where you would want to create
-   * symlinks for the locally cached files/archives
-   * @param honorSymLinkConf if this is false, then the symlinks are not
-   * created even if conf says so (this is required for an optimization in task
-   * launches
-   * NOTE: This is effectively always on since r696957, since there is no code
-   * path that does not use this.
    * @param isPublic to know the cache file is accessible to public or private
    * @return the path to directory where the archives are unjarred in case of
    * archives, the path to the file where the file is copied locally
@@ -140,12 +141,14 @@ public class TrackerDistributedCacheManager {
   Path getLocalCache(URI cache, Configuration conf,
       String subDir, FileStatus fileStatus,
       boolean isArchive, long confFileStamp,
-      Path currentWorkDir, boolean honorSymLinkConf, boolean isPublic)
+      boolean isPublic)
       throws IOException {
     String key;
-    key = getKey(cache, conf, confFileStamp, getLocalizedCacheOwner(isPublic));
+    String user = getLocalizedCacheOwner(isPublic);
+    key = getKey(cache, conf, confFileStamp, user);
     CacheStatus lcacheStatus;
     Path localizedPath = null;
+    Path localPath = null;
     synchronized (cachedArchives) {
       lcacheStatus = cachedArchives.get(key);
       if (lcacheStatus == null) {
@@ -156,10 +159,12 @@ public class TrackerDistributedCacheManager {
              + "_" + (confFileStamp % Integer.MAX_VALUE));
         String cachePath = new Path (subDir, 
           new Path(uniqueString, makeRelative(cache, conf))).toString();
-        Path localPath = lDirAllocator.getLocalPathForWrite(cachePath,
+        localPath = lDirAllocator.getLocalPathForWrite(cachePath,
           fileStatus.getLen(), trackerConf);
-        lcacheStatus = new CacheStatus(new Path(localPath.toString().replace(
-          cachePath, "")), localPath, new Path(subDir), uniqueString);
+        lcacheStatus = 
+          new CacheStatus(new Path(localPath.toString().replace(cachePath, "")), 
+                          localPath, new Path(subDir), uniqueString, 
+                          isPublic ? null : user);
         cachedArchives.put(key, lcacheStatus);
       }
 
@@ -172,15 +177,20 @@ public class TrackerDistributedCacheManager {
       // do the localization, after releasing the global lock
       synchronized (lcacheStatus) {
         if (!lcacheStatus.isInited()) {
-          localizedPath = localizeCache(conf, cache, confFileStamp,
-              lcacheStatus, fileStatus, isArchive, isPublic);
+          if (isPublic) {
+            localizedPath = localizePublicCacheObject(conf, 
+                cache, 
+                confFileStamp,
+                lcacheStatus, fileStatus, 
+                isArchive);
+          } else {
+            localizedPath = localPath;
+          }
           lcacheStatus.initComplete();
         } else {
           localizedPath = checkCacheStatusValidity(conf, cache, confFileStamp,
-              lcacheStatus, fileStatus, isArchive);
+              lcacheStatus, fileStatus, isArchive);            
         }
-        createSymlink(conf, cache, lcacheStatus, isArchive,
-            currentWorkDir, honorSymLinkConf);
       }
 
       // try deleting stuff if you can
@@ -240,6 +250,21 @@ public class TrackerDistributedCacheManager {
     }
   }
 
+  void setSize(URI cache, Configuration conf, long timeStamp,
+               String owner, long size) throws IOException {
+    String key = getKey(cache, conf, timeStamp, owner);
+    synchronized (cachedArchives) {
+      CacheStatus lcacheStatus = cachedArchives.get(key);
+      if (lcacheStatus == null) {
+        LOG.warn("Cannot find localized cache: " + cache + 
+                 " (key: " + key + ") in setSize!");
+        return;
+      }
+      lcacheStatus.size = size;
+      addCacheInfoUpdate(lcacheStatus);
+    }
+  }
+
   /*
    * This method is called from unit tests. 
    */
@@ -284,7 +309,6 @@ public class TrackerDistributedCacheManager {
           it.hasNext();) {
         String cacheId = it.next();
         CacheStatus lcacheStatus = cachedArchives.get(cacheId);
-        
         // if reference count is zero 
         // mark the cache for deletion
         if (lcacheStatus.refcount == 0) {
@@ -299,22 +323,28 @@ public class TrackerDistributedCacheManager {
     // do the deletion, after releasing the global lock
     for (CacheStatus lcacheStatus : deleteList) {
       synchronized (lcacheStatus) {
-        FileSystem localFS = FileSystem.getLocal(conf);
-
         Path potentialDeletee = lcacheStatus.localizedLoadPath;
+        Path localizedDir = lcacheStatus.getLocalizedUniqueDir();
+        if (lcacheStatus.user == null) {
 
-        localFS.delete(potentialDeletee, true);
+          localFs.delete(potentialDeletee, true);
 
-        // Update the maps baseDirSize and baseDirNumberSubDir
-        LOG.info("Deleted path " + potentialDeletee);
+          // Update the maps baseDirSize and baseDirNumberSubDir
+          LOG.info("Deleted path " + potentialDeletee);
 
-        try {
-          localFS.delete(lcacheStatus.getLocalizedUniqueDir(), true);
-        } catch (IOException e) {
-          LOG.warn("Could not delete distributed cache empty directory "
-                   + lcacheStatus.getLocalizedUniqueDir());
+          try {
+            localFs.delete(localizedDir, true);
+          } catch (IOException e) {
+            LOG.warn("Could not delete distributed cache empty directory "
+                     + localizedDir);
+          }
+        } else {
+          int userDir = TaskTracker.getUserDir(lcacheStatus.user).length();
+          taskController.deleteAsUser(lcacheStatus.user,
+                                      potentialDeletee.toString().substring(userDir));
+          taskController.deleteAsUser(lcacheStatus.user,
+                                      localizedDir.toString().substring(userDir));          
         }
-
         deleteCacheInfoUpdate(lcacheStatus);
       }
     }
@@ -409,51 +439,54 @@ public class TrackerDistributedCacheManager {
     return false;
   }
 
-  private void createSymlink(Configuration conf, URI cache,
-      CacheStatus cacheStatus, boolean isArchive,
-      Path currentWorkDir, boolean honorSymLinkConf) throws IOException {
-    boolean doSymlink = honorSymLinkConf && DistributedCache.getSymlink(conf);
-    if(cache.getFragment() == null) {
-      doSymlink = false;
-    }
-
-    String link = 
-      currentWorkDir.toString() + Path.SEPARATOR + cache.getFragment();
-    File flink = new File(link);
-    if (doSymlink){
-      if (!flink.exists()) {
-        FileUtil.symLink(cacheStatus.localizedLoadPath.toString(), link);
-      }
-    }
-  }
-
-  //the method which actually copies the caches locally and unjars/unzips them
-  // and does chmod for the files
-  Path localizeCache(Configuration conf,
-                                      URI cache, long confFileStamp,
-                                      CacheStatus cacheStatus,
-                                      FileStatus fileStatus,
-                                      boolean isArchive, boolean isPublic)
-      throws IOException {
-    FileSystem fs = FileSystem.get(cache, conf);
+  /**
+   * Download a given path to the local file system.
+   * @param conf the job's configuration
+   * @param source the source to copy from
+   * @param destination where to copy the file. must be local fs
+   * @param desiredTimestamp the required modification timestamp of the source
+   * @param isArchive is this an archive that should be expanded
+   * @param permission the desired permissions of the file.
+   * @return for archives, the number of bytes in the unpacked directory
+   * @throws IOException
+   */
+  public static long downloadCacheObject(Configuration conf,
+                                         URI source,
+                                         Path destination,
+                                         long desiredTimestamp,
+                                         boolean isArchive,
+                                         FsPermission permission
+                                         ) throws IOException {
+    FileSystem sourceFs = FileSystem.get(source, conf);
     FileSystem localFs = FileSystem.getLocal(conf);
+    
+    Path sourcePath = new Path(source.getPath());
+    long modifiedTime = 
+      sourceFs.getFileStatus(sourcePath).getModificationTime();
+    if (modifiedTime != desiredTimestamp) {
+      DateFormat df = DateFormat.getDateTimeInstance(DateFormat.SHORT, 
+                                                     DateFormat.SHORT);
+      throw new IOException("The distributed cache object " + source + 
+                            " changed during the job from " + 
+                            df.format(new Date(desiredTimestamp)) + " to " +
+                            df.format(new Date(modifiedTime)));
+    }
+    
     Path parchive = null;
     if (isArchive) {
-      parchive = new Path(cacheStatus.localizedLoadPath,
-        new Path(cacheStatus.localizedLoadPath.getName()));
+      parchive = new Path(destination,
+        new Path(destination.getName()));
     } else {
-      parchive = cacheStatus.localizedLoadPath;
+      parchive = destination;
     }
-
-    if (!localFs.mkdirs(parchive.getParent())) {
+    if (!localFs.mkdirs(destination.getParent())) {
       throw new IOException("Mkdirs failed to create directory " +
-          cacheStatus.localizedLoadPath.toString());
+                            destination);
     }
 
-    String cacheId = cache.getPath();
-    fs.copyToLocalFile(new Path(cacheId), parchive);
+    sourceFs.copyToLocalFile(sourcePath, parchive);
     if (isArchive) {
-      String tmpArchive = parchive.toString().toLowerCase();
+      String tmpArchive = destination.toString().toLowerCase();
       File srcFile = new File(parchive.toString());
       File destDir = new File(parchive.getParent().toString());
       LOG.info(String.format("Extracting %s to %s",
@@ -472,44 +505,35 @@ public class TrackerDistributedCacheManager {
         // and copy the file into the dir as it is
       }
     }
-    long cacheSize =
+    // set proper permissions for the localized directory
+    localFs.setPermission(destination, permission);
+
+    LOG.info(String.format("Cached %s as %s",
+             source.toString(), destination.toString()));
+    long cacheSize = 
       FileUtil.getDU(new File(parchive.getParent().toString()));
-    cacheStatus.size = cacheSize;
+    return cacheSize;
+  }
+
+  //the method which actually copies the caches locally and unjars/unzips them
+  // and does chmod for the files
+  Path localizePublicCacheObject(Configuration conf,
+                                 URI cache, long confFileStamp,
+                                 CacheStatus cacheStatus,
+                                 FileStatus fileStatus,
+                                 boolean isArchive) throws IOException {
+    long size = downloadCacheObject(conf, cache, cacheStatus.localizedLoadPath,
+                                    confFileStamp, isArchive, 
+                                    PUBLIC_CACHE_OBJECT_PERM);
+    cacheStatus.size = size;
     
     // Increase the size and sub directory count of the cache
     // from baseDirSize and baseDirNumberSubDir.
     addCacheInfoUpdate(cacheStatus);
 
-    // set proper permissions for the localized directory
-    setPermissions(conf, cacheStatus, isPublic);
-
-    // update cacheStatus to reflect the newly cached file
-    cacheStatus.mtime = DistributedCache.getTimestamp(conf, cache);
-
     LOG.info(String.format("Cached %s as %s",
              cache.toString(), cacheStatus.localizedLoadPath));
     return cacheStatus.localizedLoadPath;
-  }
-
-  private void setPermissions(Configuration conf, CacheStatus cacheStatus,
-      boolean isPublic) throws IOException {
-    if (isPublic) {
-      Path localizedUniqueDir = cacheStatus.getLocalizedUniqueDir();
-      LOG.info("Doing chmod on localdir :" + localizedUniqueDir);
-      try {
-        FileUtil.chmod(localizedUniqueDir.toString(), "ugo+rx", true);
-      } catch (InterruptedException e) {
-        LOG.warn("Exception in chmod" + e.toString());
-        throw new IOException(e);
-      }
-    } else {
-      // invoke taskcontroller to set permissions
-      DistributedCacheFileContext context = new DistributedCacheFileContext(
-          conf.get("user.name"), new File(cacheStatus.localizedBaseDir
-              .toString()), cacheStatus.localizedBaseDir,
-          cacheStatus.uniqueString);
-      taskController.initializeDistributedCacheFile(context);
-    }
   }
 
   private static boolean isTarFile(String filename) {
@@ -537,9 +561,6 @@ public class TrackerDistributedCacheManager {
       " has changed on HDFS since job started");
     }
 
-    if (dfsFileStamp != lcacheStatus.mtime) {
-      return false;
-    }
     return true;
   }
 
@@ -595,9 +616,6 @@ public class TrackerDistributedCacheManager {
     // number of instances using this cache
     int refcount;
 
-    // the cache-file modification time
-    long mtime;
-
     // is it initialized ?
     boolean inited = false;
 
@@ -607,17 +625,20 @@ public class TrackerDistributedCacheManager {
     
     // unique string used in the construction of local load path
     String uniqueString;
+    
+    // The user that owns the cache entry or null if it is public
+    final String user;
 
     public CacheStatus(Path baseDir, Path localLoadPath, Path subDir,
-        String uniqueString) {
+                       String uniqueString, String user) {
       super();
       this.localizedLoadPath = localLoadPath;
       this.refcount = 0;
-      this.mtime = -1;
       this.localizedBaseDir = baseDir;
       this.size = 0;
       this.subDir = subDir;
       this.uniqueString = uniqueString;
+      this.user = user;
     }
     
     Path getBaseDir(){
@@ -657,11 +678,29 @@ public class TrackerDistributedCacheManager {
     }
   }
 
-  public TaskDistributedCacheManager newTaskDistributedCacheManager(
-      Configuration taskConf) throws IOException {
-    return new TaskDistributedCacheManager(this, taskConf);
+  public TaskDistributedCacheManager 
+  newTaskDistributedCacheManager(JobID jobId,
+                                 Configuration taskConf) throws IOException {
+    TaskDistributedCacheManager result = 
+      new TaskDistributedCacheManager(this, taskConf);
+    jobArchives.put(jobId, result);
+    return result;
   }
 
+  public void releaseJob(JobID jobId) throws IOException {
+    TaskDistributedCacheManager mgr = jobArchives.get(jobId);
+    if (mgr != null) {
+      mgr.release();
+      jobArchives.remove(jobId);
+    }
+  }
+
+  public void setArchiveSizes(JobID jobId, long[] sizes) throws IOException {
+    TaskDistributedCacheManager mgr = jobArchives.get(jobId);
+    if (mgr != null) {
+      mgr.setSizes(sizes);
+    }
+  }
 
   /**
    * Determines timestamps of files to be cached, and stores those
@@ -744,25 +783,37 @@ public class TrackerDistributedCacheManager {
     }
   }
   
+  private static boolean[] parseBooleans(String[] strs) {
+    if (null == strs) {
+      return null;
+    }
+    boolean[] result = new boolean[strs.length];
+    for(int i=0; i < strs.length; ++i) {
+      result[i] = Boolean.parseBoolean(strs[i]);
+    }
+    return result;
+  }
+
   /**
    * Get the booleans on whether the files are public or not.  Used by 
    * internal DistributedCache and MapReduce code.
    * @param conf The configuration which stored the timestamps
-   * @return a string array of booleans 
+   * @return array of booleans 
    * @throws IOException
    */
-  static String[] getFileVisibilities(Configuration conf) {
-    return conf.getStrings(JobContext.CACHE_FILE_VISIBILITIES);
+  public static boolean[] getFileVisibilities(Configuration conf) {
+    return parseBooleans(conf.getStrings(JobContext.CACHE_FILE_VISIBILITIES));
   }
 
   /**
    * Get the booleans on whether the archives are public or not.  Used by 
    * internal DistributedCache and MapReduce code.
    * @param conf The configuration which stored the timestamps
-   * @return a string array of booleans 
+   * @return array of booleans 
    */
-  static String[] getArchiveVisibilities(Configuration conf) {
-    return conf.getStrings(JobContext.CACHE_ARCHIVES_VISIBILITIES);
+  public static boolean[] getArchiveVisibilities(Configuration conf) {
+    return parseBooleans(conf.getStrings(JobContext.
+                                           CACHE_ARCHIVES_VISIBILITIES));
   }
 
   /**
@@ -837,16 +888,12 @@ public class TrackerDistributedCacheManager {
 
     Path thisSubject = null;
 
-    String thisCategory = DistributedCache.CACHE_ARCHIVES;
-
     if (archiveStrings != null && fileStrings != null) {
       final Set<Path> archivesSet = new HashSet<Path>();
 
       for (String archiveString : archiveStrings) {
         archivesSet.add(coreLocation(archiveString, conf));
       }
-
-      thisCategory = DistributedCache.CACHE_FILES;
 
       for (String fileString : fileStrings) {
         thisSubject = coreLocation(fileString, conf);

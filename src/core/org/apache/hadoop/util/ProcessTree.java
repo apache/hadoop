@@ -33,8 +33,20 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 public class ProcessTree {
 
   private static final Log LOG = LogFactory.getLog(ProcessTree.class);
-
-  public static final long DEFAULT_SLEEPTIME_BEFORE_SIGKILL = 5000L;
+  
+  /**
+   * The constants for the signals.
+   */
+  public static enum Signal {
+    QUIT(3), KILL(9), TERM(15);
+    private int value;
+    private Signal(int value) {
+      this.value = value;
+    }
+    public int getValue() {
+      return value;
+    }
+  }
 
   public static final boolean isSetsidAvailable = isSetsidSupported();
   private static boolean isSetsidSupported() {
@@ -49,95 +61,8 @@ public class ProcessTree {
       setsidSupported = false;
     } finally { // handle the exit code
       LOG.info("setsid exited with exit code " + shexec.getExitCode());
-      return setsidSupported;
     }
-  }
-
-  /**
-   * Destroy the process-tree.
-   * @param pid process id of the root process of the subtree of processes
-   *            to be killed
-   * @param sleeptimeBeforeSigkill The time to wait before sending SIGKILL
-   *                               after sending SIGTERM
-   * @param isProcessGroup pid is a process group leader or not
-   * @param inBackground Process is to be killed in the back ground with
-   *                     a separate thread
-   */
-  public static void destroy(String pid, long sleeptimeBeforeSigkill,
-                             boolean isProcessGroup, boolean inBackground) {
-    if(isProcessGroup) {
-      destroyProcessGroup(pid, sleeptimeBeforeSigkill, inBackground);
-    }
-    else {
-      //TODO: Destroy all the processes in the subtree in this case also.
-      // For the time being, killing only the root process.
-      destroyProcess(pid, sleeptimeBeforeSigkill, inBackground);
-    }
-  }
-
-  /** Destroy the process.
-   * @param pid Process id of to-be-killed-process
-   * @param sleeptimeBeforeSigkill The time to wait before sending SIGKILL
-   *                               after sending SIGTERM
-   * @param inBackground Process is to be killed in the back ground with
-   *                     a separate thread
-   */
-  protected static void destroyProcess(String pid, long sleeptimeBeforeSigkill,
-                                    boolean inBackground) {
-    terminateProcess(pid);
-    sigKill(pid, false, sleeptimeBeforeSigkill, inBackground);
-  }
-
-  /** Destroy the process group.
-   * @param pgrpId Process group id of to-be-killed-processes
-   * @param sleeptimeBeforeSigkill The time to wait before sending SIGKILL
-   *                               after sending SIGTERM
-   * @param inBackground Process group is to be killed in the back ground with
-   *                     a separate thread
-   */
-  protected static void destroyProcessGroup(String pgrpId,
-                       long sleeptimeBeforeSigkill, boolean inBackground) {
-    terminateProcessGroup(pgrpId);
-    sigKill(pgrpId, true, sleeptimeBeforeSigkill, inBackground);
-  }
-
-  /**
-   * Sends terminate signal to the process, allowing it to gracefully exit.
-   * 
-   * @param pid pid of the process to be sent SIGTERM
-   */
-  public static void terminateProcess(String pid) {
-    ShellCommandExecutor shexec = null;
-    try {
-      String[] args = { "kill", pid };
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (IOException ioe) {
-      LOG.warn("Error executing shell command " + ioe);
-    } finally {
-      LOG.info("Killing process " + pid +
-               " with SIGTERM. Exit code " + shexec.getExitCode());
-    }
-  }
-
-  /**
-   * Sends terminate signal to all the process belonging to the passed process
-   * group, allowing the group to gracefully exit.
-   * 
-   * @param pgrpId process group id
-   */
-  public static void terminateProcessGroup(String pgrpId) {
-    ShellCommandExecutor shexec = null;
-    try {
-      String[] args = { "kill", "--", "-" + pgrpId };
-      shexec = new ShellCommandExecutor(args);
-      shexec.execute();
-    } catch (IOException ioe) {
-      LOG.warn("Error executing shell command " + ioe);
-    } finally {
-      LOG.info("Killing all processes in the process group " + pgrpId +
-               " with SIGTERM. Exit code " + shexec.getExitCode());
-    }
+    return setsidSupported;
   }
 
   /**
@@ -160,83 +85,63 @@ public class ProcessTree {
         LOG.warn("Thread sleep is interrupted.");
       }
       if(isProcessGroup) {
-        killProcessGroup(pid);
+        killProcessGroup(pid, Signal.KILL);
       } else {
-        killProcess(pid);
+        killProcess(pid, Signal.KILL);
       }
     }  
   }
   
-
-  /** Kills the process(OR process group) by sending the signal SIGKILL
-   * @param pid Process id(OR process group id) of to-be-deleted-process
-   * @param isProcessGroup Is pid a process group id of to-be-deleted-processes
-   * @param sleeptimeBeforeSigkill The time to wait before sending SIGKILL
-   *                               after sending SIGTERM
-   * @param inBackground Process is to be killed in the back ground with
-   *                     a separate thread
-   */
-  private static void sigKill(String pid, boolean isProcessGroup,
-                        long sleeptimeBeforeSigkill, boolean inBackground) {
-
-    if(inBackground) { // use a separate thread for killing
-      SigKillThread sigKillThread = new SigKillThread(pid, isProcessGroup,
-                                                      sleeptimeBeforeSigkill);
-      sigKillThread.setDaemon(true);
-      sigKillThread.start();
-    }
-    else {
-      sigKillInCurrentThread(pid, isProcessGroup, sleeptimeBeforeSigkill);
-    }
-  }
-
   /**
-   * Sends kill signal to process, forcefully terminating the process.
+   * Sends signal to process, forcefully terminating the process.
    * 
    * @param pid process id
+   * @param signal the signal number to send
    */
-  public static void killProcess(String pid) {
+  public static void killProcess(String pid, Signal signal) {
 
     //If process tree is not alive then return immediately.
     if(!ProcessTree.isAlive(pid)) {
       return;
     }
-    String[] args = { "kill", "-9", pid };
+    String[] args = { "kill", "-" + signal.getValue(), pid };
     ShellCommandExecutor shexec = new ShellCommandExecutor(args);
     try {
       shexec.execute();
     } catch (IOException e) {
-      LOG.warn("Error sending SIGKILL to process "+ pid + " ."+ 
+      LOG.warn("Error sending signal " + signal + " to process "+ pid + " ."+ 
           StringUtils.stringifyException(e));
     } finally {
-      LOG.info("Killing process " + pid + " with SIGKILL. Exit code "
-          + shexec.getExitCode());
+      LOG.info("Killing process " + pid + " with signal " + signal + 
+               ". Exit code " + shexec.getExitCode());
     }
   }
 
   /**
-   * Sends kill signal to all process belonging to same process group,
+   * Sends signal to all process belonging to same process group,
    * forcefully terminating the process group.
    * 
    * @param pgrpId process group id
+   * @param signal the signal number to send
    */
-  public static void killProcessGroup(String pgrpId) {
+  public static void killProcessGroup(String pgrpId, Signal signal) {
 
     //If process tree is not alive then return immediately.
     if(!ProcessTree.isProcessGroupAlive(pgrpId)) {
       return;
     }
 
-    String[] args = { "kill", "-9", "-"+pgrpId };
+    String[] args = { "kill", "-" + signal.getValue() , "-"+pgrpId };
     ShellCommandExecutor shexec = new ShellCommandExecutor(args);
     try {
       shexec.execute();
     } catch (IOException e) {
-      LOG.warn("Error sending SIGKILL to process group "+ pgrpId + " ."+ 
+      LOG.warn("Error sending signal " + signal + " to process group "+ 
+               pgrpId + " ."+ 
           StringUtils.stringifyException(e));
     } finally {
-      LOG.info("Killing process group" + pgrpId + " with SIGKILL. Exit code "
-          + shexec.getExitCode());
+      LOG.info("Killing process group" + pgrpId + " with signal " + signal + 
+               ". Exit code " + shexec.getExitCode());
     }
   }
   
@@ -297,7 +202,7 @@ public class ProcessTree {
     private String pid = null;
     private boolean isProcessGroup = false;
 
-    private long sleepTimeBeforeSigKill = DEFAULT_SLEEPTIME_BEFORE_SIGKILL;
+    private final long sleepTimeBeforeSigKill;
 
     private SigKillThread(String pid, boolean isProcessGroup, long interval) {
       this.pid = pid;
