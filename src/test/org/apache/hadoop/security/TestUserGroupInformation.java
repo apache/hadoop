@@ -303,4 +303,19 @@ public class TestUserGroupInformation {
       new UserGroupInformation(proxyUgi3.getSubject());
     Assert.assertEquals(proxyUgi3, proxyUgi4);
   }
+  
+  public static void verifyLoginMetrics(int success, int failure)
+      throws IOException {
+    // Ensure metrics related to kerberos login is updated.
+    UserGroupInformation.UgiMetrics metrics = UserGroupInformation.metrics;
+    metrics.doUpdates(null);
+    if (success > 0) {
+      assertEquals(success, metrics.loginSuccess.getPreviousIntervalNumOps());
+      assertTrue(metrics.loginSuccess.getPreviousIntervalAverageTime() > 0);
+    }
+    if (failure > 0) {
+      assertEquals(failure, metrics.loginFailure.getPreviousIntervalNumOps());
+      assertTrue(metrics.loginFailure.getPreviousIntervalAverageTime() > 0);
+    }
+  }
 }

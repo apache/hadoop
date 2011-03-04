@@ -47,6 +47,7 @@ import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslRpcClient;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.TestUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 
@@ -249,6 +250,7 @@ public class TestSaslRPC {
     newConf.set(SERVER_PRINCIPAL_KEY, principal);
     newConf.set(SERVER_KEYTAB_KEY, keytab);
     SecurityUtil.login(newConf, SERVER_KEYTAB_KEY, SERVER_PRINCIPAL_KEY);
+    TestUserGroupInformation.verifyLoginMetrics(1, 0);
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     System.out.println("UGI: " + current);
 

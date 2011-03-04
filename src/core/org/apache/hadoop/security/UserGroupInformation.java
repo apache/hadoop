@@ -50,6 +50,13 @@ import javax.security.auth.spi.LoginModule;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics.MetricsContext;
+import org.apache.hadoop.metrics.MetricsRecord;
+import org.apache.hadoop.metrics.MetricsUtil;
+import org.apache.hadoop.metrics.Updater;
+import org.apache.hadoop.metrics.util.MetricsBase;
+import org.apache.hadoop.metrics.util.MetricsRegistry;
+import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -71,6 +78,41 @@ public class UserGroupInformation {
    * Percentage of the ticket window to use before we renew ticket.
    */
   private static final float TICKET_RENEW_WINDOW = 0.80f;
+  
+  /** 
+   * UgiMetrics maintains UGI activity statistics
+   * and publishes them through the metrics interfaces.
+   */
+  static class UgiMetrics implements Updater {
+    final MetricsTimeVaryingRate loginSuccess;
+    final MetricsTimeVaryingRate loginFailure;
+    private final MetricsRecord metricsRecord;
+    private final MetricsRegistry registry;
+
+    UgiMetrics() {
+      registry = new MetricsRegistry();
+      loginSuccess = new MetricsTimeVaryingRate("loginSuccess", registry,
+          "Rate of successful kerberos logins and time taken in milliseconds");
+      loginFailure = new MetricsTimeVaryingRate("loginFailure", registry,
+          "Rate of failed kerberos logins and time taken in milliseconds");
+      final MetricsContext metricsContext = MetricsUtil.getContext("ugi");
+      metricsRecord = MetricsUtil.createRecord(metricsContext, "ugi");
+      metricsContext.registerUpdater(this);
+    }
+
+    /**
+     * Push the metrics to the monitoring subsystem on doUpdate() call.
+     */
+    @Override
+    public void doUpdates(final MetricsContext context) {
+      synchronized (this) {
+        for (MetricsBase m : registry.getMetricsList()) {
+          m.pushMetric(metricsRecord);
+        }
+      }
+      metricsRecord.update();
+    }
+  }
   
   /**
    * A login module that looks at the Kerberos, Unix, or Windows principal and
@@ -132,6 +174,8 @@ public class UserGroupInformation {
     }
   }
 
+  /** Metrics to track UGI activity */
+  static UgiMetrics metrics = new UgiMetrics();
   /** Are the static variables that depend on configuration initialized? */
   private static boolean isInitialized = false;
   /** Should we use Kerberos configuration? */
@@ -506,7 +550,7 @@ public class UserGroupInformation {
   }
   /**
    * Log a user in from a keytab file. Loads a user identity from a keytab
-   * file and login them in. They become the currently logged-in user.
+   * file and logs them in. They become the currently logged-in user.
    * @param user the principal name to load from the keytab
    * @param path the path to the keytab file
    * @throws IOException if the keytab file can't be read
@@ -523,14 +567,20 @@ public class UserGroupInformation {
     keytabPrincipal = user;
     Subject subject = new Subject();
     LoginContext login;   
+    long start = 0;
     try {
       login = 
         new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
+      start = System.currentTimeMillis();
       login.login();
+      metrics.loginSuccess.inc(System.currentTimeMillis() - start);
       loginUser = new UserGroupInformation(subject);
       loginUser.setLogin(login);
       loginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (LoginException le) {
+      if (start > 0) {
+        metrics.loginFailure.inc(System.currentTimeMillis() - start);
+      }
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
     }
@@ -594,22 +644,29 @@ public class UserGroupInformation {
     String oldKeytabFile = null;
     String oldKeytabPrincipal = null;
 
+    long start = 0;
     try {
       oldKeytabFile = keytabFile;
       oldKeytabPrincipal = keytabPrincipal;
       keytabFile = path;
       keytabPrincipal = user;
       Subject subject = new Subject();
+      
       LoginContext login = 
         new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject); 
        
+      start = System.currentTimeMillis();
       login.login();
+      metrics.loginSuccess.inc(System.currentTimeMillis() - start);
       UserGroupInformation newLoginUser = new UserGroupInformation(subject);
       newLoginUser.setLogin(login);
       newLoginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
       
       return newLoginUser;
     } catch (LoginException le) {
+      if (start > 0) {
+        metrics.loginFailure.inc(System.currentTimeMillis() - start);
+      }
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
     } finally {
@@ -620,7 +677,7 @@ public class UserGroupInformation {
   
   /**
    * Re-Login a user in from a keytab file. Loads a user identity from a keytab
-   * file and login them in. They become the currently logged-in user. This
+   * file and logs them in. They become the currently logged-in user. This
    * method assumes that {@link #loginUserFromKeytab(String, String)} had 
    * happened already.
    * The Subject field of this UserGroupInformation object is updated to have
@@ -640,6 +697,7 @@ public class UserGroupInformation {
     if (!hasSufficientTimeElapsed()) {
       return;
     }
+    long start = 0;
     try {
       LOG.info("Initiating logout for " + getUserName());
       //clear up the kerberos state. But the tokens are not cleared! As per 
@@ -652,9 +710,14 @@ public class UserGroupInformation {
         new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, 
             getSubject());
       LOG.info("Initiating re-login for " + keytabPrincipal);
+      start = System.currentTimeMillis();
       login.login();
+      metrics.loginSuccess.inc(System.currentTimeMillis() - start);
       setLogin(login);
     } catch (LoginException le) {
+      if (start > 0) {
+        metrics.loginFailure.inc(System.currentTimeMillis() - start);
+      }
       throw new IOException("Login failure for " + keytabPrincipal + 
           " from keytab " + keytabFile, le);
     } 
