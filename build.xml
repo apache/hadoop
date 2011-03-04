@@ -967,7 +967,6 @@
     <property name="continueOnFailure" value="true"/>
     <antcall target="test-core"/>
     <antcall target="test-contrib"/>
-    <antcall target="run-test-core-fault-inject"/>
     <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
     <fail if="testsfailed">Tests failed!</fail>
   </target>
