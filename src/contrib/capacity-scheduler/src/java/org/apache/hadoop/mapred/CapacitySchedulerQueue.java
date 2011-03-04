@@ -698,9 +698,13 @@ class CapacitySchedulerQueue {
       ++waitingJobs;
     }
     
-    public void jobInitialized(JobInProgress job) {
+    public void removeWaitingJob(JobInProgress job) {
       --waitingJobs;
-      
+    }
+    
+    public void jobInitialized(JobInProgress job) {
+      removeWaitingJob(job);
+
       ++runningJobs;
       activeTasks += job.desiredTasks();
     }
@@ -820,7 +824,13 @@ class CapacitySchedulerQueue {
   }
   
   synchronized JobInProgress removeWaitingJob(JobSchedulingInfo schedInfo) {
-    return waitingJobs.remove(schedInfo);
+    JobInProgress job = waitingJobs.remove(schedInfo);
+    if (job != null) {
+      String user = job.getProfile().getUser();
+      UserInfo userInfo = users.get(user);
+      userInfo.removeWaitingJob(job);
+    }
+    return job;
   }
 
   synchronized int getNumActiveUsers() {
@@ -1028,7 +1038,7 @@ class CapacitySchedulerQueue {
     }
     
     // Check if queue has too many active tasks
-    if ((activeTasks + currentlyInitializedTasks + job.desiredTasks()) >= 
+    if ((activeTasks + currentlyInitializedTasks + job.desiredTasks()) > 
          maxActiveTasks) {
       LOG.info("Queue '" + getQueueName() + "' has " + activeTasks + 
           " active tasks and " + currentlyInitializedTasks + " tasks about to" +
@@ -1073,7 +1083,7 @@ class CapacitySchedulerQueue {
     
     // Check if the user has too many active tasks
     int userActiveTasks = getNumActiveTasksByUser(user);
-    if ((userActiveTasks + currentlyInitializedTasks) >= 
+    if ((userActiveTasks + currentlyInitializedTasks + job.desiredTasks()) > 
         maxActiveTasksPerUser) {
       LOG.info(getQueueName() + " has " + userActiveTasks + 
           " active tasks and " + currentlyInitializedTasks + " tasks about to" +
