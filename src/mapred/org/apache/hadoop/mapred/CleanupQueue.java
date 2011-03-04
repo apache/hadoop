@@ -46,7 +46,7 @@ class CleanupQueue {
    * {@link CleanupQueue#addToQueue(PathDeletionContext...)} to add paths for
    * deletion.
    */
-  private CleanupQueue() { }
+  protected CleanupQueue() { }
   
   /**
    * Contains info related to the path of the file/dir to be deleted
