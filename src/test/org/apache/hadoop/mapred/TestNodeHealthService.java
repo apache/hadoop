@@ -152,8 +152,9 @@ public class TestNodeHealthService extends TestCase {
     LOG.info("Checking Healthy--->timeout");
     assertFalse("Node health status reported healthy even after timeout",
         healthStatus.isNodeHealthy());
-    assertFalse("Node health status reported healthy even after timeout",
-        healthStatus.getHealthReport().isEmpty());
+    assertEquals("Node time out message not propogated", healthStatus
+        .getHealthReport(),
+        NodeHealthCheckerService.NODE_HEALTH_SCRIPT_TIMED_OUT_MSG);
   }
 
 }
