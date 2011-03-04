@@ -24,7 +24,6 @@ fi
 		then
 	    		(cd hudson && git pull)
 		else
-	    	# git clone ssh://gwbl2001.blue.ygrid.yahoo.com/grid/0/gs/gridre/hudson.git
 	    	git clone $GIT_REPO
 		fi
 	fi
