@@ -24,13 +24,17 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.util.Iterator;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.lib.IdentityMapper;
 import org.apache.hadoop.mapred.lib.IdentityReducer;
+import org.apache.hadoop.util.StringUtils;
+import org.hsqldb.lib.StringUtil;
 
 public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
   
@@ -44,8 +48,10 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
       output.collect(key, value);
       reporter.incrCounter(EnumCounter.MAP_RECORDS, 1);
       reporter.incrCounter("StringCounter", "MapRecords", 1);
+      for (int i =0; i < 50; i++) {
+        reporter.incrCounter("StringCounter", "countername" + i, 1);
+      }      
     }
-
   }
   
   public void testMapReduceJob() throws Exception {
@@ -94,12 +100,26 @@ public class TestUserDefinedCounters extends ClusterMapReduceTestCase {
       reader.close();
       assertEquals(4, counter);
     }
-    
+
     assertEquals(4,
         runningJob.getCounters().getCounter(EnumCounter.MAP_RECORDS));
+    Counters counters = runningJob.getCounters();
     assertEquals(4,
         runningJob.getCounters().getGroup("StringCounter")
         .getCounter("MapRecords"));
+    assertTrue(counters.getGroupNames().size() <= 51);
+    int i = 0;
+    while (counters.size() < Counters.MAX_COUNTER_LIMIT) {
+      counters.incrCounter("IncrCounter", "limit " + i, 2);
+      i++;
+    }
+    try {
+      counters.incrCounter("IncrCountertest", "test", 2);
+      assertTrue(false);
+    } catch(RuntimeException re) {
+      System.out.println("Exceeded counter " + 
+          StringUtils.stringifyException(re));
+    }
   }
 
 }

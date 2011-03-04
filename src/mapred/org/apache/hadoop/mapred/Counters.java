@@ -61,6 +61,17 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   private static char[] charsToEscape =  {GROUP_OPEN, GROUP_CLOSE, 
                                           COUNTER_OPEN, COUNTER_CLOSE, 
                                           UNIT_OPEN, UNIT_CLOSE};
+  /** limit on the size of the name of the group **/
+  private static final int GROUP_NAME_LIMIT = 128;
+  /** limit on the size of the counter name **/
+  private static final int COUNTER_NAME_LIMIT = 64;
+  /** the max number of counters **/
+  static final int MAX_COUNTER_LIMIT = 80;
+  /** the max groups allowed **/
+  static final int MAX_GROUP_LIMIT = 50;
+  
+  /** the number of current counters**/
+  private int numCounters = 0;
   
   //private static Log log = LogFactory.getLog("Counters.class");
   
@@ -141,7 +152,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    *  <p><code>Group</code>handles localization of the class name and the 
    *  counter names.</p>
    */
-  public static class Group implements Writable, Iterable<Counter> {
+  public class Group implements Writable, Iterable<Counter> {
     private String groupName;
     private String displayName;
     private Map<String, Counter> subcounters = new HashMap<String, Counter>();
@@ -162,16 +173,7 @@ public class Counters implements Writable, Iterable<Counters.Group> {
                (bundle == null ? "nothing" : "bundle"));
       }
     }
-    
-    /**
-     * Returns the specified resource bundle, or throws an exception.
-     * @throws MissingResourceException if the bundle isn't found
-     */
-    private static ResourceBundle getResourceBundle(String enumClassName) {
-      String bundleName = enumClassName.replace('$','_');
-      return ResourceBundle.getBundle(bundleName);
-    }
-    
+        
     /**
      * Returns raw name of the group.  This is the name of the enum class
      * for this group of counters.
@@ -298,13 +300,20 @@ public class Counters implements Writable, Iterable<Counters.Group> {
      * @return the counter
      */
     public synchronized Counter getCounterForName(String name) {
-      Counter result = subcounters.get(name);
+      String shortName = getShortName(name, COUNTER_NAME_LIMIT);
+      Counter result = subcounters.get(shortName);
       if (result == null) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding " + name);
+          LOG.debug("Adding " + shortName);
         }
-        result = new Counter(name, localize(name + ".name", name), 0L);
-        subcounters.put(name, result);
+        numCounters = (numCounters == 0) ? Counters.this.size(): numCounters; 
+        if (numCounters >= MAX_COUNTER_LIMIT) {
+          throw new RuntimeException("Exceeded the number of counters: " 
+              + "Num = " + numCounters + " " + "Limit: " + MAX_COUNTER_LIMIT);
+        }
+        result = new Counter(shortName, localize(shortName + ".name", shortName), 0L);
+        subcounters.put(shortName, result);
+        numCounters++;
       }
       return result;
     }
@@ -365,7 +374,16 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * typical usage.
    */
   private Map<Enum, Counter> cache = new IdentityHashMap<Enum, Counter>();
-  
+
+  /**
+   * Returns the specified resource bundle, or throws an exception.
+   * @throws MissingResourceException if the bundle isn't found
+   */
+  private static ResourceBundle getResourceBundle(String enumClassName) {
+    String bundleName = enumClassName.replace('$','_');
+    return ResourceBundle.getBundle(bundleName);
+  }
+
   /**
    * Returns the names of all counter classes.
    * @return Set of counter names.
@@ -383,13 +401,20 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * with the specified name.
    */
   public synchronized Group getGroup(String groupName) {
-    Group result = counters.get(groupName);
+    String shortGroupName = getShortName(groupName, GROUP_NAME_LIMIT);
+    Group result = counters.get(shortGroupName);
     if (result == null) {
-      result = new Group(groupName);
-      counters.put(groupName, result);
+      /** check if we have exceeded the max number on groups **/
+      if (counters.size() > MAX_GROUP_LIMIT) {
+        throw new RuntimeException("Number of groups in Counters" +
+        		" exceeded: limit " 
+            + MAX_GROUP_LIMIT);
+      }
+      result = new Group(shortGroupName);
+      counters.put(shortGroupName, result);
     }
     return result;
-  }
+  } 
 
   /**
    * Find the counter for the given enum. The same enum will always return the
@@ -401,8 +426,10 @@ public class Counters implements Writable, Iterable<Counters.Group> {
     Counter counter = cache.get(key);
     if (counter == null) {
       Group group = getGroup(key.getDeclaringClass().getName());
-      counter = group.getCounterForName(key.toString());
-      cache.put(key, counter);
+      if (group != null) {
+        counter = group.getCounterForName(key.toString());
+        if (counter != null)  cache.put(key, counter);
+      }
     }
     return counter;    
   }
@@ -414,10 +441,11 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @return the counter for that name
    */
   public synchronized Counter findCounter(String group, String name) {
-    return getGroup(group).getCounterForName(name);
+    Group retGroup = getGroup(group);
+    return (retGroup == null) ? null: retGroup.getCounterForName(name);
   }
 
-  /**
+  /** 
    * Find a counter by using strings
    * @param group the name of the group
    * @param id the id of the counter within the group (0 to N-1)
@@ -427,7 +455,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    */
   @Deprecated
   public synchronized Counter findCounter(String group, int id, String name) {
-    return getGroup(group).getCounterForName(name);
+    Group retGroup = getGroup(group);
+    return (retGroup == null) ? null: retGroup.getCounterForName(name);
   }
 
   /**
@@ -448,7 +477,13 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * @param amount amount by which counter is to be incremented
    */
   public synchronized void incrCounter(String group, String counter, long amount) {
-    getGroup(group).getCounterForName(counter).increment(amount);
+    Group retGroup = getGroup(group);
+    if (retGroup != null) {
+      Counter retCounter = retGroup.getCounterForName(counter);
+      if (retCounter != null ) {
+        retCounter.increment(amount);
+      }
+    }
   }
   
   /**
@@ -456,7 +491,8 @@ public class Counters implements Writable, Iterable<Counters.Group> {
    * does not exist.
    */
   public synchronized long getCounter(Enum key) {
-    return findCounter(key).getValue();
+    Counter retCounter = findCounter(key);
+    return (retCounter == null) ? 0 : retCounter.getValue();
   }
   
   /**
@@ -467,9 +503,15 @@ public class Counters implements Writable, Iterable<Counters.Group> {
   public synchronized void incrAllCounters(Counters other) {
     for (Group otherGroup: other) {
       Group group = getGroup(otherGroup.getName());
+      if (group == null) {
+        continue;
+      }
       group.displayName = otherGroup.displayName;
       for (Counter otherCounter : otherGroup) {
         Counter counter = group.getCounterForName(otherCounter.getName());
+        if (counter == null) {
+          continue;
+        }
         counter.setDisplayName(otherCounter.getDisplayName());
         counter.increment(otherCounter.getValue());
       }
@@ -613,6 +655,18 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       builder.append(group);
     }
     return builder.toString();
+  }
+  
+  /**
+   * return the short name of a counter/group name
+   * truncates from beginning.
+   * @param name the name of a group or counter
+   * @param limit the limit of characters
+   * @return the short name
+   */
+  static String getShortName(String name, int limit) {
+    return (name.length() > limit ?
+          name.substring(name.length() - limit, name.length()): name);
   }
 
   // Extracts a block (data enclosed within delimeters) ignoring escape 

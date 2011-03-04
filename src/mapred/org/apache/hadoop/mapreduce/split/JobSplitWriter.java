@@ -32,7 +32,6 @@ import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
 import org.apache.hadoop.mapreduce.split.JobSplit.SplitMetaInfo;
 
@@ -44,6 +43,8 @@ public class JobSplitWriter {
 
   private static final int splitVersion = JobSplit.META_SPLIT_VERSION;
   private static final byte[] SPLIT_FILE_HEADER;
+  private static final int MAX_BLOCK_LOCATIONS = 100;
+  
   static {
     try {
       SPLIT_FILE_HEADER = "SPL".getBytes("UTF-8");
@@ -73,12 +74,12 @@ public class JobSplitWriter {
   }
   
   public static void createSplitFiles(Path jobSubmitDir, 
-      Configuration conf, FileSystem fs, 
+      Configuration conf, FileSystem   fs, 
       org.apache.hadoop.mapred.InputSplit[] splits) 
   throws IOException {
     FSDataOutputStream out = createFile(fs, 
         JobSubmissionFiles.getJobSplitFile(jobSubmitDir), conf);
-    SplitMetaInfo[] info = writeOldSplits(splits, out);
+    SplitMetaInfo[] info = writeOldSplits(splits, out, conf);
     out.close();
     writeJobSplitMetaInfo(fs,JobSubmissionFiles.getJobSplitMetaFile(jobSubmitDir), 
         new FsPermission(JobSubmissionFiles.JOB_FILE_PERMISSION), splitVersion,
@@ -119,9 +120,15 @@ public class JobSplitWriter {
         serializer.open(out);
         serializer.serialize(split);
         int currCount = out.size();
+        String[] locations = split.getLocations();
+        if (locations.length > MAX_BLOCK_LOCATIONS) {
+          throw new IOException("Max block location exceeded for split: "
+              + split + " splitsize: " + locations.length +
+              " maxsize: " + MAX_BLOCK_LOCATIONS);
+        }
         info[i++] = 
           new JobSplit.SplitMetaInfo( 
-              split.getLocations(), offset,
+              locations, offset,
               split.getLength());
         offset += currCount - prevCount;
       }
@@ -131,7 +138,7 @@ public class JobSplitWriter {
   
   private static SplitMetaInfo[] writeOldSplits(
       org.apache.hadoop.mapred.InputSplit[] splits,
-      FSDataOutputStream out) throws IOException {
+      FSDataOutputStream out, Configuration conf) throws IOException {
     SplitMetaInfo[] info = new SplitMetaInfo[splits.length];
     if (splits.length != 0) {
       int i = 0;
@@ -141,8 +148,14 @@ public class JobSplitWriter {
         Text.writeString(out, split.getClass().getName());
         split.write(out);
         int currLen = out.size();
+        String[] locations = split.getLocations();
+        if (locations.length > MAX_BLOCK_LOCATIONS) {
+          throw new IOException("Max block location exceeded for split: "
+              + split + " splitsize: " + locations.length +
+              " maxsize: " + MAX_BLOCK_LOCATIONS);
+        }
         info[i++] = new JobSplit.SplitMetaInfo( 
-            split.getLocations(), offset,
+            locations, offset,
             split.getLength());
         offset += currLen - prevLen;
       }

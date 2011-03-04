@@ -44,6 +44,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
 public class JobSplit {
   static final int META_SPLIT_VERSION = 1;
   static final byte[] META_SPLIT_FILE_HEADER;
+  
   static {
     try {
       META_SPLIT_FILE_HEADER = "META-SPL".getBytes("UTF-8");

@@ -507,6 +507,8 @@ abstract public class Task implements Writable, Configurable {
     private InputSplit split = null;
     private Progress taskProgress;
     private Thread pingThread = null;
+    private static final int PROGRESS_STATUS_LEN_LIMIT = 512;
+    
     /**
      * flag that indicates whether progress update needs to be sent to parent.
      * If true, it has been set. If false, it has been reset. 
@@ -527,6 +529,12 @@ abstract public class Task implements Writable, Configurable {
       return progressFlag.getAndSet(false);
     }
     public void setStatus(String status) {
+      //Check to see if the status string 
+      // is too long and just concatenate it
+      // to progress limit characters.
+      if (status.length() > PROGRESS_STATUS_LEN_LIMIT) {
+        status = status.substring(0, PROGRESS_STATUS_LEN_LIMIT);
+      }
       taskProgress.setStatus(status);
       // indicate that progress update needs to be sent
       setProgressFlag();
