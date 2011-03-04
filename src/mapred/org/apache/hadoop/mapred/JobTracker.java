@@ -2126,14 +2126,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     infoServer.setAttribute("job.tracker", this);
     // initialize history parameters.
     final JobTracker jtFinal = this;
-    boolean historyInitialized = 
-      getMROwner().doAs(new PrivilegedExceptionAction<Boolean>() {
-        @Override
-        public Boolean run() throws Exception {
-          return JobHistory.init(jtFinal, conf,jtFinal.localMachine, 
-              jtFinal.startTime);
-        }
-      });
+    getMROwner().doAs(new PrivilegedExceptionAction<Boolean>() {
+      @Override
+      public Boolean run() throws Exception {
+        JobHistory.init(jtFinal, conf,jtFinal.localMachine, 
+            jtFinal.startTime);
+        return true;
+      }
+    });
     
     infoServer.addServlet("reducegraph", "/taskgraph", TaskGraphServlet.class);
     infoServer.start();
@@ -2202,7 +2202,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         // Check if the history is enabled .. as we cant have persistence with 
         // history disabled
         if (conf.getBoolean("mapred.jobtracker.restart.recover", false) 
-            && !JobHistory.isDisableHistory()
             && systemDirData != null) {
           for (FileStatus status : systemDirData) {
             try {
@@ -2249,20 +2248,18 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 
     // Initialize history DONE folder
-    if (historyInitialized) {
-      FileSystem historyFS = getMROwner().doAs(
-          new PrivilegedExceptionAction<FileSystem>() {
-        public FileSystem run() throws IOException {
-          JobHistory.initDone(conf, fs);
-          final String historyLogDir = 
-            JobHistory.getCompletedJobHistoryLocation().toString();
-          infoServer.setAttribute("historyLogDir", historyLogDir);
-          
-          return new Path(historyLogDir).getFileSystem(conf);
-        }
-      });
-      infoServer.setAttribute("fileSys", historyFS);
-    }
+    FileSystem historyFS = getMROwner().doAs(
+        new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws IOException {
+        JobHistory.initDone(conf, fs);
+        final String historyLogDir = 
+          JobHistory.getCompletedJobHistoryLocation().toString();
+        infoServer.setAttribute("historyLogDir", historyLogDir);
+        
+        return new Path(historyLogDir).getFileSystem(conf);
+      }
+    });
+    infoServer.setAttribute("fileSys", historyFS);
 
     this.dnsToSwitchMapping = ReflectionUtils.newInstance(
         conf.getClass("topology.node.switch.mapping.impl", ScriptBasedMapping.class,
