@@ -123,14 +123,12 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
   public void verifyRunningJob(JobID jobId) throws Exception {
   }
 
-  private boolean checkJobValidityForProceeding(JobID jobId, JobInfo jobInfo)
-  throws IOException {
-    if (jobInfo != null) {
-      return true;
-    } else if (jobInfo == null && !getProxy().isJobRetired(jobId)) {
+  private JobInfo getJobInfo(JobID jobId) throws IOException {
+    JobInfo info = getProxy().getJobInfo(jobId);
+    if (info == null && !getProxy().isJobRetired(jobId)) {
       Assert.fail("Job id : " + jobId + " has never been submitted to JT");
     }
-    return false;
+    return info;
   }
   
   /**
@@ -166,16 +164,16 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
           org.apache.hadoop.mapred.JobID.downgrade(id));
     }
     verifyJobDetails(id);
-    JobInfo jobInfo = getProxy().getJobInfo(id);
-    if(jobInfo == null && 
-        !getProxy().isJobRetired(id)) {
-      Assert.fail("The passed job id : " + id + 
-          " is not submitted to JT.");
-    }
-    while(!jobInfo.isHistoryFileCopied()) {
-      Thread.sleep(1000);
-      LOG.info(id+" waiting for history file to copied");
-      jobInfo = getProxy().getJobInfo(id);
+    JobInfo jobInfo = getJobInfo(id);
+    if(jobInfo != null) {
+      while(!jobInfo.isHistoryFileCopied()) {
+        Thread.sleep(1000);
+        LOG.info(id+" waiting for history file to copied");
+        jobInfo = getJobInfo(id);
+        if(jobInfo == null) {
+          break;
+        }
+      }
     }
     verifyJobHistory(id);
   }
@@ -192,14 +190,17 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
    */
   public void verifyJobDetails(JobID jobId) throws Exception {
     // wait till the setup is launched and finished.
-    JobInfo jobInfo = getProxy().getJobInfo(jobId);
-    if(!checkJobValidityForProceeding(jobId, jobInfo)){
+    JobInfo jobInfo = getJobInfo(jobId);
+    if(jobInfo == null){
       return;
     }
     LOG.info("waiting for the setup to be finished");
     while (!jobInfo.isSetupFinished()) {
       Thread.sleep(2000);
-      jobInfo = getProxy().getJobInfo(jobId);
+      jobInfo = getJobInfo(jobId);
+      if(jobInfo == null) {
+        break;
+      }
     }
     // verify job id.
     assertTrue(jobId.toString().startsWith("job_"));
@@ -208,11 +209,16 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
     verifyNumTasks(jobId);
     // should verify job progress.
     verifyJobProgress(jobId);
-    jobInfo = getProxy().getJobInfo(jobId);
+    jobInfo = getJobInfo(jobId);
+    if(jobInfo == null) {
+      return;
+    }
     if (jobInfo.getStatus().getRunState() == JobStatus.SUCCEEDED) {
       // verify if map/reduce progress reached 1.
-      jobInfo = getProxy().getJobInfo(jobId);
-      checkJobValidityForProceeding(jobId, jobInfo);
+      jobInfo = getJobInfo(jobId);
+      if (jobInfo == null) {
+        return;
+      }
       assertEquals(1.0, jobInfo.getStatus().mapProgress(), 0.001);
       assertEquals(1.0, jobInfo.getStatus().reduceProgress(), 0.001);
       // verify successful finish of tasks.
@@ -220,8 +226,10 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
     }
     if (jobInfo.getStatus().isJobComplete()) {
       // verify if the cleanup is launched.
-      jobInfo = getProxy().getJobInfo(jobId);
-      checkJobValidityForProceeding(jobId, jobInfo);
+      jobInfo = getJobInfo(jobId);
+      if (jobInfo == null) {
+        return;
+      }
       assertTrue(jobInfo.isCleanupLaunched());
       LOG.info("Verified launching of cleanup");
     }
@@ -229,9 +237,8 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
 
   
   public void verifyAllTasksSuccess(JobID jobId) throws IOException {
-    JobInfo jobInfo = getProxy().getJobInfo(jobId);
-    
-    if(!checkJobValidityForProceeding(jobId, jobInfo)){ 
+    JobInfo jobInfo = getJobInfo(jobId);
+    if (jobInfo == null) {
       return;
     }
     
@@ -259,8 +266,8 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
   
   public void verifyJobProgress(JobID jobId) throws IOException {
     JobInfo jobInfo;
-    jobInfo = getProxy().getJobInfo(jobId);
-    if(!checkJobValidityForProceeding(jobId, jobInfo)){
+    jobInfo = getJobInfo(jobId);
+    if (jobInfo == null) {
       return;
     }
     assertTrue(jobInfo.getStatus().mapProgress() >= 0 && jobInfo.getStatus()
@@ -275,8 +282,8 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
   
   public void verifyNumTasks(JobID jobId) throws IOException {
     JobInfo jobInfo;
-    jobInfo = getProxy().getJobInfo(jobId);
-    if(!checkJobValidityForProceeding(jobId, jobInfo)) {
+    jobInfo = getJobInfo(jobId);
+    if (jobInfo == null) {
       return;
     }
     assertEquals(jobInfo.numMaps(), (jobInfo.runningMaps()
@@ -299,13 +306,9 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
    * @throws IOException
    */
   public void verifyJobHistory(JobID jobId) throws IOException {
-    JobInfo info = getProxy().getJobInfo(jobId);
+    JobInfo info = getJobInfo(jobId);
     String url ="";
-    info = getProxy().getJobInfo(jobId);
-    if(info == null && !getProxy().isJobRetired(jobId)) {
-      Assert.fail("Job id : " + jobId + 
-          " has never been submitted to JT");
-    } else if(info == null) {
+    if(info == null) {
       LOG.info("Job has been retired from JT memory : " + jobId);
       url = getProxy().getJobHistoryLocationForRetiredJob(jobId);
     } else {
