@@ -43,14 +43,13 @@ privileged aspect JobInProgressAspect {
           this.pendingMaps(), this.pendingReduces(), this.finishedMaps(), this
               .finishedReduces(), this.getStatus(), historyLoc, this
               .getBlackListedTrackers(), false, this.numMapTasks,
-          this.numReduceTasks, this.isHistoryFileCopied());
+          this.numReduceTasks);
     } else {
       jobInfoImpl = new JobInfoImpl(
           this.getJobID(), false, false, false, 0, 0, this.pendingMaps(), this
               .pendingReduces(), this.finishedMaps(), this.finishedReduces(),
           this.getStatus(), historyLoc, this.getBlackListedTrackers(), this
-              .isComplete(), this.numMapTasks, this.numReduceTasks, 
-              this.isHistoryFileCopied());
+              .isComplete(), this.numMapTasks, this.numReduceTasks);
     }
     jobInfoImpl.setFinishTime(getJobFinishTime());
     jobInfoImpl.setLaunchTime(getJobLaunchTime());

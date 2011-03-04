@@ -130,13 +130,6 @@ public interface JobInfo extends Writable {
   List<String> getBlackListedTrackers();
   
   /**
-   * Gets if the history file of the job is copied to the done 
-   * location <br/>
-   * 
-   * @return true if history file copied.
-   */
-  boolean isHistoryFileCopied();
-  /**
    * Get the launch time of a job.
    * @return long - launch time for a job.
    */

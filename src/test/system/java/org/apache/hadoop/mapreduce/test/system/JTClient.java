@@ -18,10 +18,18 @@
 
 package org.apache.hadoop.mapreduce.test.system;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.StringTokenizer;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -30,16 +38,10 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobStatus;
 import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.mapred.TaskStatus;
+import org.apache.hadoop.mapred.UtilsForTests;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.test.system.process.RemoteProcess;
-import org.apache.hadoop.mapred.TaskStatus;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.mapreduce.test.system.TaskInfo;
-import org.apache.hadoop.mapred.UtilsForTests;
-import static org.junit.Assert.*;
-import java.util.HashMap;
-import java.util.StringTokenizer;
 
 /**
  * JobTracker client for system tests.
@@ -167,17 +169,6 @@ public class JTClient extends MRDaemonClient<JTProtocol> {
           org.apache.hadoop.mapred.JobID.downgrade(id));
     }
     verifyJobDetails(id);
-    JobInfo jobInfo = getJobInfo(id);
-    if(jobInfo != null) {
-      while(!jobInfo.isHistoryFileCopied()) {
-        Thread.sleep(1000);
-        LOG.info(id+" waiting for history file to copied");
-        jobInfo = getJobInfo(id);
-        if(jobInfo == null) {
-          break;
-        }
-      }
-    }
     verifyJobHistory(id);
   }
 
