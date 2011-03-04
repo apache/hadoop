@@ -41,7 +41,7 @@ public interface RemoteProcess {
   /**
    * Starts a daemon from user specified conf dir. 
    * @param newConfLocation is dir where new conf resides. 
-   * @throws IOException
+   * @throws IOException if start of process fails from new location.
    */
   void start(String newConfLocation) throws IOException;
   /**
@@ -54,7 +54,7 @@ public interface RemoteProcess {
   /**
    * Stops a given daemon running from user specified 
    * conf dir. </br>
-   * @throws IOException
+   * @throws IOException if kill fails from new conf location.
    * @param newconfLocation dir location where new conf resides. 
    */
    void kill(String newConfLocation) throws IOException;
@@ -67,8 +67,9 @@ public interface RemoteProcess {
   
   /**
    * Pushed the configuration to new configuration directory 
-   * @param localDir
-   * @throws IOException
+   * @param localDir The local directory which has config files that will be 
+   * pushed to the remote location
+   * @throws IOException is thrown if the pushConfig results in a error. 
    */
   void pushConfig(String localDir) throws IOException;
 }

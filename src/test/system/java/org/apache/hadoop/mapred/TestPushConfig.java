@@ -40,7 +40,7 @@ public class TestPushConfig {
    * in local input directory and pushes all the files from the local to the 
    * remote conf directory. This functionality is required is change the config
    * on the fly and restart the cluster which will be used by other test cases
-   * @throws Exception 
+   * @throws Exception is thrown if pushConfig fails. 
    */
   @Test
   public void testPushConfig() throws Exception {

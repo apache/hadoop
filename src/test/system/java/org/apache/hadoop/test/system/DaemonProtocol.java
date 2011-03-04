@@ -147,12 +147,12 @@ public interface DaemonProtocol extends VersionedProtocol{
    * <b><i>Please note that search spans across all previous messages of
    * Daemon, so better practice is to get previous counts before an operation
    * and then re-check if the sequence of action has caused any problems</i></b>
-   * @param pattern to look for in the damon's log file
-   * @param List of exceptions to ignore
+   * @param pattern to look for in the daemon's log file
+   * @param list Exceptions that will be ignored from log file. 
    * @return number of times the pattern if found in log file.
    * @throws IOException in case of errors
    */
-  int getNumberOfMatchesInLogFile(String pattern,String[] list) 
+  int getNumberOfMatchesInLogFile(String pattern, String[] list) 
       throws IOException;
 
   /**
