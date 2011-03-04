@@ -73,7 +73,9 @@ public class SecurityUtil {
    * to ensure that in a cross-realm environment the remote host will be 
    * successfully authenticated.  
    * 
-   * This method will be removed when the Java behavior is changed.
+   * This method is internal to Hadoop and should not be used by other 
+   * applications.  This method should not be considered stable or open: 
+   * it will be removed when the Java behavior is changed.
    * 
    * @param remoteHost Target URL the krb-https client will access
    */
