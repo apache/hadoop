@@ -35,6 +35,7 @@ import java.security.SecureRandom;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -71,7 +72,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
-import org.apache.hadoop.hdfs.server.datanode.FSDataset.FSVolume;
+import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.datanode.SecureDataNodeStarter.SecureResources;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeInstrumentation;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -117,7 +118,6 @@ import java.lang.management.ManagementFactory;
 import javax.management.InstanceAlreadyExistsException;
 import javax.management.MBeanRegistrationException;
 import javax.management.MBeanServer; 
-import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 
 /**********************************************************
@@ -360,8 +360,8 @@ public class DataNode extends Configured
       this.data = new FSDataset(storage, conf);
     }
       
-    // register datanode MBean
-    registerMBean();
+    // register datanode MXBean
+    registerMXBean();
     
     // find free port or use privileged port provide
     ServerSocket ss;
@@ -464,14 +464,14 @@ public class DataNode extends Configured
     LOG.info("dnRegistration = " + dnRegistration);
   }
 
-  private void registerMBean() {
+  private void registerMXBean() {
     // register MXBean
     MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
     try {
-      ObjectName mxbeanName = new ObjectName("hadoop:type=DataNodeInfo");
+      ObjectName mxbeanName = new ObjectName("HadoopInfo:type=DataNodeInfo");
       mbs.registerMBean(this, mxbeanName);
-    } catch (javax.management.JMException e1) {
-      LOG.warn("Failed to register DataNode MBean");
+    } catch ( javax.management.JMException e ) {
+      LOG.warn("Failed to register NameNode MXBean", e);
     }
   }
   
@@ -1829,63 +1829,44 @@ public class DataNode extends Configured
     return NetUtils.createSocketAddr(address);
   }
 
-  /**
-   * Class for representing the Datanode volume information in MBean interface
-   */
-  class VolumeInfo{
-    private final String directory;
-    private final long usedSpace;
-    private final long freeSpace;
-    private final long reservedSpace;
-    
-    VolumeInfo(String dir, long usedSpace, long freeSpace, long reservedSpace) {
-      this.directory = dir;
-      this.usedSpace = usedSpace;
-      this.freeSpace = freeSpace;
-      this.reservedSpace = reservedSpace;
-    }
-  }
-
-  @Override
+  @Override // DataNodeMXBean
   public String getVersion() {
     return VersionInfo.getVersion();
   }
   
-  @Override
+  @Override // DataNodeMXBean
   public String getRpcPort(){
     InetSocketAddress ipcAddr = NetUtils.createSocketAddr(
         this.getConf().get("dfs.datanode.ipc.address"));
     return Integer.toString(ipcAddr.getPort());
   }
 
-  @Override
+  @Override // DataNodeMXBean
   public String getHttpPort(){
     return this.getConf().get("dfs.datanode.info.port");
   }
 
-  @Override
+  @Override // DataNodeMXBean
   public String getNamenodeAddress(){
     return nameNodeAddr.getHostName();
   }
 
-  @Override
-  public synchronized String getVolumeInfo() {
-    List<VolumeInfo> list = new ArrayList<VolumeInfo>(3);
-    FSVolume[] volumes = ((FSDataset) this.data).volumes.volumes;
-    for (int idx = 0; idx < volumes.length; idx++) {
-      try {
-        VolumeInfo info = new VolumeInfo(volumes[idx].toString(),
-                                         volumes[idx].getDfsUsed(),
-                                         volumes[idx].getAvailable(),
-                                         volumes[idx].getReserved());
-        list.add(info);
-      } catch (IOException e) {
-        LOG.warn("Exception while accessing volume info ", e);
-      }
-        
+  /**
+   * Returned information is a JSON representation of a map with 
+   * volume name as the key and value is a map of volume attribute 
+   * keys to its values
+   */
+  @Override // DataNodeMXBean
+  public String getVolumeInfo() {
+    final Map<String, Object> info = new HashMap<String, Object>();
+    Collection<VolumeInfo> volumes = ((FSDataset)this.data).getVolumeInfo();
+    for (VolumeInfo v : volumes) {
+      final Map<String, Object> innerInfo = new HashMap<String, Object>();
+      innerInfo.put("usedSpace", v.usedSpace);
+      innerInfo.put("freeSpace", v.freeSpace);
+      innerInfo.put("reservedSpace", v.reservedSpace);
+      info.put(v.directory, innerInfo);
     }
-    VolumeInfo[] result = new VolumeInfo[list.size()];
-    list.toArray(result);
-    return JSON.toString(result);
+    return JSON.toString(info);
   }
 }

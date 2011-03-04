@@ -22,9 +22,40 @@ package org.apache.hadoop.hdfs.server.datanode;
  * This is the JMX management interface for data node information
  */
 public interface DataNodeMXBean {
+  
+  /**
+   * Gets the version of Hadoop.
+   * 
+   * @return the version of Hadoop
+   */
   public String getVersion();
+  
+  /**
+   * Gets the rpc port.
+   * 
+   * @return the rpc port
+   */
   public String getRpcPort();
+  
+  /**
+   * Gets the http port.
+   * 
+   * @return the http port
+   */
   public String getHttpPort();
+  
+  /**
+   * Gets the namenode IP address.
+   * 
+   * @return the namenode IP address
+   */
   public String getNamenodeAddress();
+  
+  /**
+   * Gets the information of each volume on the Datanode. Please
+   * see the implementation for the format of returned information.
+   * 
+   * @return the volume info
+   */
   public String getVolumeInfo();
 }

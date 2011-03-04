@@ -23,21 +23,111 @@ package org.apache.hadoop.hdfs.server.namenode;
  */
 public interface NameNodeMXBean {
 
+  /**
+   * Gets the version of Hadoop.
+   * 
+   * @return the version
+   */
   public String getVersion();
-  public String getUsed();
-  public String getFree();
-  public String getTotal();
+  
+  /**
+   * Gets the used space by data nodes.
+   * 
+   * @return the used space by data nodes
+   */
+  public long getUsed();
+  
+  /**
+   * Gets total non-used raw bytes.
+   * 
+   * @return total non-used raw bytes
+   */
+  public long getFree();
+  
+  /**
+   * Gets total raw bytes including non-dfs used space.
+   * 
+   * @return the total raw bytes including non-dfs used space
+   */
+  public long getTotal();
+  
+  /**
+   * Gets the safemode status
+   * 
+   * @return the safemode status
+   * 
+   */
   public String getSafemode();
+  
+  /**
+   * Checks if upgrade is finalized.
+   * 
+   * @return true, if upgrade is finalized
+   */
   public boolean isUpgradeFinalized();
-  public String getNondfs();
-  public String getPercentused();
-  public String getPercentRemaining();
-  public String getTotalblocks();
-  public String getTotalfiles();
+  
+  /**
+   * Gets total used space by data nodes for non DFS purposes such as storing
+   * temporary files on the local file system
+   * 
+   * @return the non dfs space of the cluster
+   */
+  public long getNonDfsUsedSpace();
+  
+  /**
+   * Gets the total used space by data nodes as percentage of total capacity
+   * 
+   * @return the percentage of used space on the cluster.
+   */
+  public float getPercentUsed();
+  
+  /**
+   * Gets the total remaining space by data nodes as percentage of total 
+   * capacity
+   * 
+   * @return the percentage of the remaining space on the cluster
+   */
+  public float getPercentRemaining();
+  
+  /**
+   * Gets the total numbers of blocks on the cluster.
+   * 
+   * @return the total number of blocks of the cluster
+   */
+  public long getTotalBlocks();
+  
+  /**
+   * Gets the total number of files on the cluster
+   * 
+   * @return the total number of files on the cluster
+   */
+  public long getTotalFiles();
+  
+  /**
+   * Gets the number of threads.
+   * 
+   * @return the number of threads
+   */
+  public int getThreads();
 
-
-  // each data node 
-  public String getAliveNodeInfo();
-  public String getDeadNodeInfo();
-  public String getDecomNodeInfo();
+  /**
+   * Gets the live node information of the cluster.
+   * 
+   * @return the live node information
+   */
+  public String getLiveNodes();
+  
+  /**
+   * Gets the dead node information of the cluster.
+   * 
+   * @return the dead node information
+   */
+  public String getDeadNodes();
+  
+  /**
+   * Gets the decommissioning node information of the cluster.
+   * 
+   * @return the decommissioning node information
+   */
+  public String getDecomNodes();
 }
