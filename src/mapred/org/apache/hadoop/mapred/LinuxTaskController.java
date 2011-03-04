@@ -133,7 +133,7 @@ class LinuxTaskController extends TaskController {
     List<String> launchTaskJVMArgs = buildTaskCommandArgs(context);
     ShellCommandExecutor shExec =  buildTaskControllerExecutor(
                                     TaskCommands.LAUNCH_TASK_JVM, 
-                                    env.conf.getUser(),
+                                    context.task.getUser(),
                                     launchTaskJVMArgs, env);
     context.shExec = shExec;
     shExec.execute();
@@ -207,7 +207,7 @@ class LinuxTaskController extends TaskController {
     try {
       ShellCommandExecutor shExec = buildTaskControllerExecutor(
                                       TaskCommands.KILL_TASK_JVM,
-                                      context.env.conf.getUser(),
+                                      context.task.getUser(),
                                       killTaskJVMArgs, 
                                       context.env);
       shExec.execute();

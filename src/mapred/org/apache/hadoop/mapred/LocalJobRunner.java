@@ -166,7 +166,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
             MapTask map = new MapTask(file.toString(),  
                                       mapId, i,
                                       rawSplits[i].getClassName(),
-                                      rawSplits[i].getBytes());
+                                      rawSplits[i].getBytes(), job.getUser());
             JobConf localConf = new JobConf(job);
             map.setJobFile(localFile.toString());
             map.localizeConfiguration(localConf);
@@ -205,7 +205,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
             }
             if (!this.isInterrupted()) {
               ReduceTask reduce = new ReduceTask(file.toString(), 
-                                                 reduceId, 0, mapIds.size());
+                                                 reduceId, 0, mapIds.size(), job.getUser());
               JobConf localConf = new JobConf(job);
               reduce.setJobFile(localFile.toString());
               reduce.localizeConfiguration(localConf);

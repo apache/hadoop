@@ -337,6 +337,9 @@ public class TestRecoveryManager extends TestCase {
     RunningJob rJob = jc.submitJob(job);
     LOG.info("Submitted first job " + rJob.getID());
 
+    // wait for 1 min
+    UtilsForTests.waitFor(60000);
+
     // kill the jobtracker multiple times and check if the count is correct
     for (int i = 1; i <= 5; ++i) {
       LOG.info("Stopping jobtracker for " + i + " time");
@@ -369,9 +372,6 @@ public class TestRecoveryManager extends TestCase {
     UtilsForTests.configureWaitingJobConf(job1, 
         new Path(TEST_DIR, "input"), new Path(TEST_DIR, "output7"), 50, 0, 
         "test-recovery-manager", signalFile, signalFile);
-    
-    // make sure that the job id's dont clash
-    jobtracker.getNewJobId();
 
     // submit a new job
     rJob = jc.submitJob(job1);

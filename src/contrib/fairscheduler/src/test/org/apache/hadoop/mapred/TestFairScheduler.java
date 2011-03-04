@@ -67,7 +67,7 @@ public class TestFairScheduler extends TestCase {
     public Task obtainNewMapTask(final TaskTrackerStatus tts, int clusterSize,
         int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(true);
-      Task task = new MapTask("", attemptId, 0, "", new BytesWritable()) {
+      Task task = new MapTask("", attemptId, 0, "", new BytesWritable(), getJobConf().getUser()) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -82,7 +82,7 @@ public class TestFairScheduler extends TestCase {
     public Task obtainNewReduceTask(final TaskTrackerStatus tts,
         int clusterSize, int ignored) throws IOException {
       TaskAttemptID attemptId = getTaskAttemptID(false);
-      Task task = new ReduceTask("", attemptId, 0, 10) {
+      Task task = new ReduceTask("", attemptId, 0, 10, getJobConf().getUser()) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());

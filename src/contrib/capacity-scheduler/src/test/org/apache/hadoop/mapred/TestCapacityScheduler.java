@@ -200,7 +200,7 @@ public class TestCapacityScheduler extends TestCase {
         }
       }
       TaskAttemptID attemptId = getTaskAttemptID(true, areAllMapsRunning);
-      Task task = new MapTask("", attemptId, 0, "", new BytesWritable()) {
+      Task task = new MapTask("", attemptId, 0, "", new BytesWritable(), getJobConf().getUser()) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());
@@ -242,7 +242,7 @@ public class TestCapacityScheduler extends TestCase {
         }
       }
       TaskAttemptID attemptId = getTaskAttemptID(false, areAllReducesRunning);
-      Task task = new ReduceTask("", attemptId, 0, 10) {
+      Task task = new ReduceTask("", attemptId, 0, 10, getJobConf().getUser()) {
         @Override
         public String toString() {
           return String.format("%s on %s", getTaskID(), tts.getTrackerName());

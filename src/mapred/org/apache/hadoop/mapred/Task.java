@@ -136,6 +136,7 @@ abstract class Task implements Writable, Configurable {
   protected TaskAttemptContext taskContext;
   protected org.apache.hadoop.mapreduce.OutputFormat<?,?> outputFormat;
   protected org.apache.hadoop.mapreduce.OutputCommitter committer;
+  protected String username;
   protected final Counters.Counter spilledRecordsCounter;
   private String pidFile = "";
   protected TaskUmbilicalProtocol umbilical;
@@ -150,7 +151,8 @@ abstract class Task implements Writable, Configurable {
     spilledRecordsCounter = counters.findCounter(Counter.SPILLED_RECORDS);
   }
 
-  public Task(String jobFile, TaskAttemptID taskId, int partition) {
+  public Task(String jobFile, TaskAttemptID taskId, int partition, String username) {
+    this.username = username;
     this.jobFile = jobFile;
     this.taskId = taskId;
      
@@ -318,6 +320,9 @@ abstract class Task implements Writable, Configurable {
     return !jobSetup && !jobCleanup && !taskCleanup;
   }
   
+  String getUser() {
+    return username;
+  }
   ////////////////////////////////////////////
   // Writable methods
   ////////////////////////////////////////////
@@ -331,6 +336,7 @@ abstract class Task implements Writable, Configurable {
     out.writeBoolean(skipping);
     out.writeBoolean(jobCleanup);
     out.writeBoolean(jobSetup);
+    Text.writeString(out, username);
     out.writeBoolean(writeSkipRecs);
     out.writeBoolean(taskCleanup);  
     Text.writeString(out, pidFile);
@@ -348,6 +354,7 @@ abstract class Task implements Writable, Configurable {
     skipping = in.readBoolean();
     jobCleanup = in.readBoolean();
     jobSetup = in.readBoolean();
+    username = Text.readString(in);
     writeSkipRecs = in.readBoolean();
     taskCleanup = in.readBoolean();
     if (taskCleanup) {

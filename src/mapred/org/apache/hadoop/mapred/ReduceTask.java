@@ -150,8 +150,8 @@ class ReduceTask extends Task {
   }
 
   public ReduceTask(String jobFile, TaskAttemptID taskId,
-                    int partition, int numMaps) {
-    super(jobFile, taskId, partition);
+                    int partition, int numMaps, String username) {
+    super(jobFile, taskId, partition, username);
     this.numMaps = numMaps;
   }
   

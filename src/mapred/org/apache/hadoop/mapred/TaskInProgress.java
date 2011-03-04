@@ -928,9 +928,10 @@ class TaskInProgress {
       } else {
         split = new BytesWritable();
       }
-      t = new MapTask(jobFile, taskid, partition, splitClass, split);
+      t = new MapTask(jobFile, taskid, partition, splitClass, split, 
+                      job.getUser());
     } else {
-      t = new ReduceTask(jobFile, taskid, partition, numMaps);
+      t = new ReduceTask(jobFile, taskid, partition, numMaps, job.getUser());
     }
     if (jobCleanup) {
       t.setJobCleanupTask();
