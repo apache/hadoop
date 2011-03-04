@@ -376,7 +376,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
 
   public static Collection<URI> getStorageDirs(Configuration conf,
                                                 String propertyName) {
-    Collection<String> dirNames = conf.getStringCollection(propertyName);
+    Collection<String> dirNames = conf.getTrimmedStringCollection(propertyName);
     StartupOption startOpt = NameNode.getStartupOption(conf);
     if(startOpt == StartupOption.IMPORT) {
       // In case of IMPORT this will get rid of default directories 
@@ -387,7 +387,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
       cE.addResource("core-default.xml");
       cE.addResource("core-site.xml");
       cE.addResource("hdfs-default.xml");
-      Collection<String> dirNames2 = cE.getStringCollection(propertyName);
+      Collection<String> dirNames2 = cE.getTrimmedStringCollection(propertyName);
       dirNames.removeAll(dirNames2);
       if(dirNames.isEmpty())
         LOG.warn("!!! WARNING !!!" +

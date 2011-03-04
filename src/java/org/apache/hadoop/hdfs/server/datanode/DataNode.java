@@ -2027,7 +2027,7 @@ public class DataNode extends Configured
 
   static Collection<URI> getStorageDirs(Configuration conf) {
     Collection<String> dirNames =
-      conf.getStringCollection(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
+      conf.getTrimmedStringCollection(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY);
     return Util.stringCollectionAsURIs(dirNames);
   }
 

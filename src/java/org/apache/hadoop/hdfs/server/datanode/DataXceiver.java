@@ -88,6 +88,20 @@ class DataXceiver extends DataTransferProtocol.Receiver
     }
   }
 
+  /**
+   * Update the current thread's name to contain the current status.
+   * Use this only after this receiver has started on its thread, i.e.,
+   * outside the constructor.
+   */
+  private void updateCurrentThreadName(String status) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("DataXceiver for client ").append(remoteAddress);
+    if (status != null) {
+      sb.append(" [").append(status).append("]");
+    }
+    Thread.currentThread().setName(sb.toString());
+  }
+
   /** Return the datanode object. */
   DataNode getDataNode() {return datanode;}
 
@@ -95,6 +109,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
    * Read/write data from/to the DataXceiveServer.
    */
   public void run() {
+    updateCurrentThreadName("Waiting for operation");
+
     DataInputStream in=null; 
     try {
       in = new DataInputStream(
@@ -119,6 +135,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
         LOG.debug(datanode.getMachineName() + ":Number of active connections is: "
             + datanode.getXceiverCount());
       }
+      updateCurrentThreadName("Cleaning up");
       IOUtils.closeStream(in);
       IOUtils.closeSocket(s);
       dataXceiverServer.childSockets.remove(s);
@@ -166,6 +183,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
             dnR.getStorageID(), block, "%d")
         : dnR + " Served block " + block + " to " +
             s.getInetAddress();
+
+    updateCurrentThreadName("Sending block " + block);
     try {
       try {
         blockSender = new BlockSender(block, startOffset, length,
@@ -212,6 +231,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
       long newGs, long minBytesRcvd, long maxBytesRcvd,
       String client, DatanodeInfo srcDataNode, DatanodeInfo[] targets,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
+    updateCurrentThreadName("Receiving block " + block + " client=" + client);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("writeBlock receive buf size " + s.getReceiveBufferSize() +
@@ -427,11 +447,13 @@ class DataXceiver extends DataTransferProtocol.Receiver
       }
     }
 
+    updateCurrentThreadName("Reading metadata for block " + block);
     final MetaDataInputStream metadataIn = 
       datanode.data.getMetaDataInputStream(block);
     final DataInputStream checksumIn = new DataInputStream(new BufferedInputStream(
         metadataIn, BUFFER_SIZE));
 
+    updateCurrentThreadName("Getting checksum for block " + block);
     try {
       //read metadata file
       final BlockMetadataHeader header = BlockMetadataHeader.readHeader(checksumIn);
@@ -470,6 +492,7 @@ class DataXceiver extends DataTransferProtocol.Receiver
   @Override
   protected void opCopyBlock(DataInputStream in, ExtendedBlock block,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
+    updateCurrentThreadName("Copying block " + block);
     // Read in the header
     if (datanode.isBlockTokenEnabled) {
       try {
@@ -545,6 +568,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
   protected void opReplaceBlock(DataInputStream in,
       ExtendedBlock block, String sourceID, DatanodeInfo proxySource,
       Token<BlockTokenIdentifier> blockToken) throws IOException {
+    updateCurrentThreadName("Replacing block " + block + " from " + sourceID);
+
     /* read header */
     block.setNumBytes(dataXceiverServer.estimateBlockSize);
     if (datanode.isBlockTokenEnabled) {

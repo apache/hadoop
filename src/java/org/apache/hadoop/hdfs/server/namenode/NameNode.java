@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -1403,6 +1406,15 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   private static boolean format(Configuration conf,
                                 boolean isConfirmationNeeded)
       throws IOException {
+    if (!conf.getBoolean(DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY, 
+                         DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_DEFAULT)) {
+      throw new IOException("The option " + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY
+                             + " is set to false for this filesystem, so it "
+                             + "cannot be formatted. You will need to set "
+                             + DFS_NAMENODE_SUPPORT_ALLOW_FORMAT_KEY +" parameter "
+                             + "to true in order to format this filesystem");
+    }
+    
     Collection<URI> dirsToFormat = FSNamesystem.getNamespaceDirs(conf);
     Collection<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);

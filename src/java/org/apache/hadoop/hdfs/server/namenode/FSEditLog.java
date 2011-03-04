@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -268,7 +269,7 @@ public class FSEditLog {
    *  except fsimage.processIOError)
    */
   synchronized void processIOError(
-      ArrayList<EditLogOutputStream> errorStreams,
+      List<EditLogOutputStream> errorStreams,
       boolean propagate) {
     
     if (errorStreams == null || errorStreams.size() == 0) {

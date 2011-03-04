@@ -442,6 +442,18 @@ Release 0.22.0 - Unreleased
 
     HDFS-1387. Update HDFS permissions guide for security. (Todd Lipcon via eli)
 
+    HDFS-455. Make NN and DN handle in a intuitive way comma-separated 
+    configuration strings. (Michele Catasta via eli)
+
+    HDFS-1071. savenamespace should write the fsimage to all configured 
+    fs.name.dir in parallel (Dmytro Molkov via jghoman)
+ 
+    HDFS-1055. Improve thread naming for DataXceivers. 
+    (Todd Lipcon and Ramkumar Vadali via eli).
+
+    HDFS-718. Configuration parameter to prevent accidental formatting of 
+    HDFS filesystem. (Andrew Ryan via jghoman)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)

@@ -554,4 +554,13 @@ creations/deletions), or "all".</description>
   </description>
 </property>
 
+<property>
+  <name>dfs.namenode.support.allow.format</name>
+  <value>true</value>
+  <description>Does HDFS namenode allow itself to be formatted?
+               You may consider setting this to false for any production
+               cluster, to avoid any possibility of formatting a running DFS.
+  </description>
+</property>
+
 </configuration>
