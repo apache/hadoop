@@ -161,8 +161,8 @@ class MapTask extends Task {
   }
 
   /**
-   * This class wraps the user's record reader to update the counters and progress
-   * as records are read.
+   * This class wraps the user's record reader to update the counters and
+   * progress as records are read.
    * @param <K>
    * @param <V>
    */
