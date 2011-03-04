@@ -18,10 +18,7 @@
 package org.apache.hadoop.tools.rumen;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -44,15 +41,12 @@ import org.codehaus.jackson.annotate.JsonAnySetter;
  * 
  */
 public class LoggedLocation implements DeepCompare {
-   static final Map<List<String>, List<String>> layersCache = 
-    new HashMap<List<String>, List<String>>();
-
   /**
    * The full path from the root of the network to the host.
    * 
    * NOTE that this assumes that the network topology is a tree.
    */
-  List<String> layers = Collections.emptyList();
+  List<String> layers = new ArrayList<String>();
 
   static private Set<String> alreadySeenAnySetterAttributes =
       new TreeSet<String>();
@@ -62,26 +56,7 @@ public class LoggedLocation implements DeepCompare {
   }
 
   void setLayers(List<String> layers) {
-    if (layers == null || layers.isEmpty()) {
-      this.layers = Collections.emptyList();
-    } else {
-      synchronized (layersCache) {
-        List<String> found = layersCache.get(layers);
-        if (found == null) {
-          // make a copy with interned string.
-          List<String> clone = new ArrayList<String>(layers.size());
-          for (String s : layers) {
-            clone.add(s.intern());
-          }
-          // making it read-only as we are sharing them.
-          List<String> readonlyLayers = Collections.unmodifiableList(clone);
-          layersCache.put(readonlyLayers, readonlyLayers);
-          this.layers = readonlyLayers;
-        } else {
-          this.layers = found;
-        }
-      }
-    }
+    this.layers = layers;
   }
 
   @SuppressWarnings("unused")
