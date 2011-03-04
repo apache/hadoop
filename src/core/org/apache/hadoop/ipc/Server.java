@@ -1006,6 +1006,16 @@ public abstract class Server {
           byte[] method = new byte[] {rpcHeaderBuffer.get(1)};
           authMethod = AuthMethod.read(new DataInputStream(
               new ByteArrayInputStream(method)));
+          dataLengthBuffer.flip();          
+          if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
+            //Warning is ok since this is not supposed to happen.
+            LOG.warn("Incorrect header or version mismatch from " + 
+                     hostAddress + ":" + remotePort +
+                     " got version " + version + 
+                     " expected version " + CURRENT_VERSION);
+            return -1;
+          }
+          dataLengthBuffer.clear();
           if (authMethod == null) {
             throw new IOException("Unable to read authentication method");
           }
@@ -1030,16 +1040,6 @@ public abstract class Server {
             useSasl = true;
           }
           
-          dataLengthBuffer.flip();          
-          if (!HEADER.equals(dataLengthBuffer) || version != CURRENT_VERSION) {
-            //Warning is ok since this is not supposed to happen.
-            LOG.warn("Incorrect header or version mismatch from " + 
-                     hostAddress + ":" + remotePort +
-                     " got version " + version + 
-                     " expected version " + CURRENT_VERSION);
-            return -1;
-          }
-          dataLengthBuffer.clear();
           rpcHeaderBuffer = null;
           rpcHeaderRead = true;
           continue;
