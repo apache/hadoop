@@ -864,4 +864,40 @@
   </description>
 </property>
 
+<!--  Node health script variables -->
+
+<property>
+  <name>mapred.healthChecker.script.path</name>
+  <value></value>
+  <description>Absolute path to the script which is
+  periodicallyrun by the node health monitoring service to determine if
+  the node is healthy or not. If the value of this key is empty or the
+  file does not exist in the location configured here, the node health
+  monitoring service is not started.</description>
+</property>
+
+<property>
+  <name>mapred.healthChecker.interval</name>
+  <value>60000</value>
+  <description>Frequency of the node health script to be run,
+  in milliseconds</description>
+</property>
+
+<property>
+  <name>mapred.healthChecker.script.timeout</name>
+  <value>600000</value>
+  <description>Time after node health script should be killed if 
+  unresponsive and considered that the script has failed.</description>
+</property>
+
+<property>
+  <name>mapred.healthChecker.script.args</name>
+  <value></value>
+  <description>List of arguments which are to be passed to 
+  node health script when it is being launched comma seperated.
+  </description>
+</property>
+
+<!--  end of node health script variables -->
+
 </configuration>

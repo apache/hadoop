@@ -20,7 +20,10 @@ package org.apache.hadoop.util;
 import junit.framework.TestCase;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 public class TestShell extends TestCase {
 
@@ -70,6 +73,27 @@ public class TestShell extends TestCase {
     assertInString(command,"ls");
     assertInString(command, " .. ");
     assertInString(command, "\"arg 2\"");
+  }
+  
+  public void testShellCommandTimeout() throws Throwable {
+    String rootDir = new File(System.getProperty(
+        "test.build.data", "/tmp")).getAbsolutePath();
+    File shellFile = new File(rootDir, "timeout.sh");
+    String timeoutCommand = "sleep 4; echo \"hello\"";
+    PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+    writer.println(timeoutCommand);
+    writer.close();
+    shellFile.setExecutable(true);
+    Shell.ShellCommandExecutor shexc 
+    = new Shell.ShellCommandExecutor(new String[]{shellFile.getAbsolutePath()},
+                                      null, null, 100);
+    try {
+      shexc.execute();
+    } catch (Exception e) {
+      //When timing out exception is thrown.
+    }
+    shellFile.delete();
+    assertTrue("Script didnt not timeout" , shexc.isTimedOut());
   }
 
   private void testInterval(long interval) throws IOException {

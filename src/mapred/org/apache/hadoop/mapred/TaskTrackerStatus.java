@@ -53,6 +53,7 @@ public class TaskTrackerStatus implements Writable {
   volatile long lastSeen;
   private int maxMapTasks;
   private int maxReduceTasks;
+  private TaskTrackerHealthStatus healthStatus;
    
   /**
    * Class representing a collection of resources on this tasktracker.
@@ -196,6 +197,7 @@ public class TaskTrackerStatus implements Writable {
   public TaskTrackerStatus() {
     taskReports = new ArrayList<TaskStatus>();
     resStatus = new ResourceStatus();
+    this.healthStatus = new TaskTrackerHealthStatus();
   }
 
   /**
@@ -213,6 +215,7 @@ public class TaskTrackerStatus implements Writable {
     this.maxMapTasks = maxMapTasks;
     this.maxReduceTasks = maxReduceTasks;
     this.resStatus = new ResourceStatus();
+    this.healthStatus = new TaskTrackerHealthStatus();
   }
 
   /**
@@ -377,13 +380,128 @@ public class TaskTrackerStatus implements Writable {
   ResourceStatus getResourceStatus() {
     return resStatus;
   }
+
+  /**
+   * Returns health status of the task tracker.
+   * @return health status of Task Tracker
+   */
+  public TaskTrackerHealthStatus getHealthStatus() {
+    return healthStatus;
+  }
+
+  /**
+   * Static class which encapsulates the Node health
+   * related fields.
+   * 
+   */
+  /**
+   * Static class which encapsulates the Node health
+   * related fields.
+   * 
+   */
+  static class TaskTrackerHealthStatus implements Writable {
+    
+    private boolean isNodeHealthy;
+    
+    private String healthReport;
+    
+    private long lastReported;
+    
+    public TaskTrackerHealthStatus(boolean isNodeHealthy, String healthReport,
+        long lastReported) {
+      this.isNodeHealthy = isNodeHealthy;
+      this.healthReport = healthReport;
+      this.lastReported = lastReported;
+    }
+    
+    public TaskTrackerHealthStatus() {
+      this.isNodeHealthy = true;
+      this.healthReport = "";
+      this.lastReported = System.currentTimeMillis();
+    }
+
+    /**
+     * Sets whether or not a task tracker is healthy or not, based on the
+     * output from the node health script.
+     * 
+     * @param isNodeHealthy
+     */
+    void setNodeHealthy(boolean isNodeHealthy) {
+      this.isNodeHealthy = isNodeHealthy;
+    }
+
+    /**
+     * Returns if node is healthy or not based on result from node health
+     * script.
+     * 
+     * @return true if the node is healthy.
+     */
+    boolean isNodeHealthy() {
+      return isNodeHealthy;
+    }
+
+    /**
+     * Sets the health report based on the output from the health script.
+     * 
+     * @param healthReport
+     *          String listing cause of failure.
+     */
+    void setHealthReport(String healthReport) {
+      this.healthReport = healthReport;
+    }
+
+    /**
+     * Returns the health report of the node if any, The health report is
+     * only populated when the node is not healthy.
+     * 
+     * @return health report of the node if any
+     */
+    String getHealthReport() {
+      return healthReport;
+    }
+
+    /**
+     * Sets when the TT got its health information last 
+     * from node health monitoring service.
+     * 
+     * @param lastReported last reported time by node 
+     * health script
+     */
+    public void setLastReported(long lastReported) {
+      this.lastReported = lastReported;
+    }
+
+    /**
+     * Gets time of most recent node health update.
+     * 
+     * @return time stamp of most recent health update.
+     */
+    public long getLastReported() {
+      return lastReported;
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      isNodeHealthy = in.readBoolean();
+      healthReport = Text.readString(in);
+      lastReported = in.readLong();
+    }
+    
+    @Override
+    public void write(DataOutput out) throws IOException {
+      out.writeBoolean(isNodeHealthy);
+      Text.writeString(out, healthReport);
+      out.writeLong(lastReported);
+    }
+    
+  }
   
   ///////////////////////////////////////////
   // Writable
   ///////////////////////////////////////////
   public void write(DataOutput out) throws IOException {
-    UTF8.writeString(out, trackerName);
-    UTF8.writeString(out, host);
+    Text.writeString(out, trackerName);
+    Text.writeString(out, host);
     out.writeInt(httpPort);
     out.writeInt(failures);
     out.writeInt(maxMapTasks);
@@ -394,11 +512,12 @@ public class TaskTrackerStatus implements Writable {
     for (TaskStatus taskStatus : taskReports) {
       TaskStatus.writeTaskStatus(out, taskStatus);
     }
+    getHealthStatus().write(out);
   }
 
   public void readFields(DataInput in) throws IOException {
-    this.trackerName = UTF8.readString(in);
-    this.host = UTF8.readString(in);
+    this.trackerName = Text.readString(in);
+    this.host = Text.readString(in);
     this.httpPort = in.readInt();
     this.failures = in.readInt();
     this.maxMapTasks = in.readInt();
@@ -410,5 +529,6 @@ public class TaskTrackerStatus implements Writable {
     for (int i = 0; i < numTasks; i++) {
       taskReports.add(TaskStatus.readTaskStatus(in));
     }
+    getHealthStatus().readFields(in);
   }
 }

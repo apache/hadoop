@@ -66,6 +66,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
+import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.mapred.pipes.Submitter;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.metrics.MetricsContext;
@@ -236,6 +237,11 @@ public class TaskTracker
   * Handle to the specific instance of the {@link TaskController} class
   */
   private TaskController taskController;
+  
+  /**
+   * Handle to the specific instance of the {@link NodeHealthCheckerService}
+   */
+  private NodeHealthCheckerService healthChecker;
   
   /*
    * A list of commitTaskActions for whom commit response has been received 
@@ -554,6 +560,11 @@ public class TaskTracker
     
     //setup and create jobcache directory with appropriate permissions
     taskController.setup();
+    
+    //Start up node health checker service.
+    if (shouldStartHealthMonitor(this.fConf)) {
+      startHealthMonitor(this.fConf);
+    }
   }
 
   public static Class<? extends TaskTrackerInstrumentation> getInstrumentationClass(
@@ -913,6 +924,11 @@ public class TaskTracker
       taskReportServer.stop();
       taskReportServer = null;
     }
+    if (healthChecker != null) {
+      //stop node health checker service
+      healthChecker.stop();
+      healthChecker = null;
+    }
   }
 
   /**
@@ -1231,7 +1247,18 @@ public class TaskTracker
       status.getResourceStatus().setReduceSlotMemorySizeOnTT(
           reduceSlotSizeMemoryOnTT);
     }
-      
+    //add node health information
+    
+    TaskTrackerHealthStatus healthStatus = status.getHealthStatus();
+    synchronized (this) {
+      if (healthChecker != null) {
+        healthChecker.setHealthStatus(healthStatus);
+      } else {
+        healthStatus.setNodeHealthy(true);
+        healthStatus.setLastReported(0L);
+        healthStatus.setHealthReport("");
+      }
+    }
     //
     // Xmit the heartbeat
     //
@@ -3198,5 +3225,25 @@ public class TaskTracker
         LOG.warn("Couldn't purge the task of " + tid + ". Error : " + ioe);
       }
     }
+  }
+  
+  /**
+   * Wrapper method used by TaskTracker to check if {@link  NodeHealthCheckerService}
+   * can be started
+   * @param conf configuration used to check if service can be started
+   * @return true if service can be started
+   */
+  private boolean shouldStartHealthMonitor(Configuration conf) {
+    return NodeHealthCheckerService.shouldRun(conf);
+  }
+  
+  /**
+   * Wrapper method used to start {@link NodeHealthCheckerService} for 
+   * Task Tracker
+   * @param conf Configuration used by the service.
+   */
+  private void startHealthMonitor(Configuration conf) {
+    healthChecker = new NodeHealthCheckerService(conf);
+    healthChecker.start();
   }
 }

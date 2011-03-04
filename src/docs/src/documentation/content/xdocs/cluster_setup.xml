@@ -589,6 +589,63 @@
             </section>
             
           </section>
+          <section>
+            <title>Monitoring Health of TaskTracker Nodes</title>
+            <p>Hadoop Map/Reduce provides a mechanism by which administrators 
+            can configure the TaskTracker to run an administrator supplied
+            script periodically to determine if a node is healthy or not.
+            Administrators can determine if the node is in a healthy state
+            by performing any checks of their choice in the script. If the
+            script detects the node to be in an unhealthy state, it must print
+            a line to standard output beginning with the string <em>ERROR</em>.
+            The TaskTracker spawns the script periodically and checks its 
+            output. If the script's output contains the string <em>ERROR</em>,
+            as described above, the node's status is reported as 'unhealthy'
+            and the node is black-listed on the JobTracker. No further tasks 
+            will be assigned to this node. However, the
+            TaskTracker continues to run the script, so that if the node
+            becomes healthy again, it will be removed from the blacklisted
+            nodes on the JobTracker automatically. The node's health
+            along with the output of the script, if it is unhealthy, is
+            available to the administrator in the JobTracker's web interface.
+            The time since the node was healthy is also displayed on the 
+            web interface.
+            </p>
+            
+            <section>
+            <title>Configuring the Node Health Check Script</title>
+            <p>The following parameters can be used to control the node health 
+            monitoring script in <em>mapred-site.xml</em>.</p>
+            <table>
+            <tr><th>Name</th><th>Description</th></tr>
+            <tr><td><code>mapred.healthChecker.script.path</code></td>
+            <td>Absolute path to the script which is periodically run by the 
+            TaskTracker to determine if the node is 
+            healthy or not. The file should be executable by the TaskTracker.
+            If the value of this key is empty or the file does 
+            not exist or is not executable, node health monitoring
+            is not started.</td>
+            </tr>
+            <tr>
+            <td><code>mapred.healthChecker.interval</code></td>
+            <td>Frequency at which the node health script is run, 
+            in milliseconds</td>
+            </tr>
+            <tr>
+            <td><code>mapred.healthChecker.script.timeout</code></td>
+            <td>Time after which the node health script will be killed by
+            the TaskTracker if unresponsive.
+            The node is marked unhealthy. if node health script times out.</td>
+            </tr>
+            <tr>
+            <td><code>mapred.healthChecker.script.args</code></td>
+            <td>Extra arguments that can be passed to the node health script 
+            when launched.
+            These should be comma separated list of arguments. </td>
+            </tr>
+            </table>
+            </section>
+          </section>
           
         </section>
         <section>
