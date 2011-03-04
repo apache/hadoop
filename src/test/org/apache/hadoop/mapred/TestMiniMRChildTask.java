@@ -294,4 +294,22 @@ public class TestMiniMRChildTask extends TestCase {
       tearDown();
     }
   }
+  
+  void runTestTaskEnv(JobConf conf, Path inDir, Path outDir) throws IOException {
+    String input = "The input";
+    configure(conf, inDir, outDir, input, EnvCheckMapper.class);
+    // test 
+    //  - new SET of new var (MY_PATH)
+    //  - set of old var (HOME)
+    //  - append to an old var from modified env (LD_LIBRARY_PATH)
+    //  - append to an old var from tt's env (PATH)
+    //  - append to a new var (NEW_PATH)
+    conf.set("mapred.child.env", 
+             "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp,"
+             + "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
+    conf.set("path", System.getenv("PATH"));
+    RunningJob job = JobClient.runJob(conf);
+    assertTrue("The environment checker job failed.", job.isSuccessful());
+  }
+  
 }
