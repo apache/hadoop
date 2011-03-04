@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.ChecksumFileSystem;
 import org.apache.hadoop.fs.FSError;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
@@ -81,6 +82,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -420,6 +422,56 @@ class ReduceTask extends Task {
     done(umbilical, reporter);
   }
 
+  private class OldTrackingRecordWriter<K, V> implements RecordWriter<K, V> {
+
+    private final RecordWriter<K, V> real;
+    private final org.apache.hadoop.mapred.Counters.Counter outputRecordCounter;
+    private final org.apache.hadoop.mapred.Counters.Counter fileOutputByteCounter;
+    private final Statistics fsStats;
+
+    public OldTrackingRecordWriter(
+        org.apache.hadoop.mapred.Counters.Counter outputRecordCounter,
+        JobConf job, TaskReporter reporter, String finalName)
+        throws IOException {
+      this.outputRecordCounter = outputRecordCounter;
+      this.fileOutputByteCounter = reporter
+          .getCounter(FileOutputFormat.Counter.BYTES_WRITTEN);
+      Statistics matchedStats = null;
+      if (job.getOutputFormat() instanceof FileOutputFormat) {
+        matchedStats = getFsStatistics(FileOutputFormat.getOutputPath(job));
+      }
+      fsStats = matchedStats;
+
+      FileSystem fs = FileSystem.get(job);
+      long bytesOutPrev = getOutputBytes(fsStats);
+      this.real = job.getOutputFormat().getRecordWriter(fs, job, finalName,
+          reporter);
+      long bytesOutCurr = getOutputBytes(fsStats);
+      fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
+    }
+
+    @Override
+    public void write(K key, V value) throws IOException {
+      long bytesOutPrev = getOutputBytes(fsStats);
+      real.write(key, value);
+      long bytesOutCurr = getOutputBytes(fsStats);
+      fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
+      outputRecordCounter.increment(1);
+    }
+
+    @Override
+    public void close(Reporter reporter) throws IOException {
+      long bytesOutPrev = getOutputBytes(fsStats);
+      real.close(reporter);
+      long bytesOutCurr = getOutputBytes(fsStats);
+      fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
+    }
+
+    private long getOutputBytes(Statistics stats) {
+      return stats == null ? 0 : stats.getBytesWritten();
+    }
+  }
+  
   @SuppressWarnings("unchecked")
   private <INKEY,INVALUE,OUTKEY,OUTVALUE>
   void runOldReducer(JobConf job,
@@ -434,17 +486,14 @@ class ReduceTask extends Task {
     // make output collector
     String finalName = getOutputName(getPartition());
 
-    FileSystem fs = FileSystem.get(job);
-
-    final RecordWriter<OUTKEY,OUTVALUE> out = 
-      job.getOutputFormat().getRecordWriter(fs, job, finalName, reporter);  
+    final RecordWriter<OUTKEY, OUTVALUE> out = new OldTrackingRecordWriter<OUTKEY, OUTVALUE>(
+        reduceOutputCounter, job, reporter, finalName);
     
     OutputCollector<OUTKEY,OUTVALUE> collector = 
       new OutputCollector<OUTKEY,OUTVALUE>() {
         public void collect(OUTKEY key, OUTVALUE value)
           throws IOException {
           out.write(key, value);
-          reduceOutputCounter.increment(1);
           // indicate that progress update needs to be sent
           reporter.progress();
         }
@@ -492,27 +541,56 @@ class ReduceTask extends Task {
     }
   }
 
-  static class NewTrackingRecordWriter<K,V> 
+  private class NewTrackingRecordWriter<K,V> 
       extends org.apache.hadoop.mapreduce.RecordWriter<K,V> {
     private final org.apache.hadoop.mapreduce.RecordWriter<K,V> real;
     private final org.apache.hadoop.mapreduce.Counter outputRecordCounter;
+    private final org.apache.hadoop.mapreduce.Counter fileOutputByteCounter;
+    private final Statistics fsStats;
   
-    NewTrackingRecordWriter(org.apache.hadoop.mapreduce.RecordWriter<K,V> real,
-                            org.apache.hadoop.mapreduce.Counter recordCounter) {
-      this.real = real;
+    NewTrackingRecordWriter(org.apache.hadoop.mapreduce.Counter recordCounter,
+        JobConf job, TaskReporter reporter,
+        org.apache.hadoop.mapreduce.TaskAttemptContext taskContext)
+        throws InterruptedException, IOException {
       this.outputRecordCounter = recordCounter;
+      this.fileOutputByteCounter = reporter
+          .getCounter(org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.Counter.BYTES_WRITTEN);
+      Statistics matchedStats = null;
+      // TaskAttemptContext taskContext = new TaskAttemptContext(job,
+      // getTaskID());
+      if (outputFormat instanceof org.apache.hadoop.mapreduce.lib.output.FileOutputFormat) {
+        matchedStats = getFsStatistics(org.apache.hadoop.mapreduce.lib.output.FileOutputFormat
+            .getOutputPath(taskContext));
+      }
+      fsStats = matchedStats;
+
+      long bytesOutPrev = getOutputBytes(fsStats);
+      this.real = (org.apache.hadoop.mapreduce.RecordWriter<K, V>) outputFormat
+          .getRecordWriter(taskContext);
+      long bytesOutCurr = getOutputBytes(fsStats);
+      fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
     }
 
     @Override
     public void close(TaskAttemptContext context) throws IOException,
     InterruptedException {
+      long bytesOutPrev = getOutputBytes(fsStats);
       real.close(context);
+      long bytesOutCurr = getOutputBytes(fsStats);
+      fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
     }
 
     @Override
     public void write(K key, V value) throws IOException, InterruptedException {
+      long bytesOutPrev = getOutputBytes(fsStats);
       real.write(key,value);
+      long bytesOutCurr = getOutputBytes(fsStats);
+      fileOutputByteCounter.increment(bytesOutCurr - bytesOutPrev);
       outputRecordCounter.increment(1);
+    }
+    
+    private long getOutputBytes(Statistics stats) {
+      return stats == null ? 0 : stats.getBytesWritten();
     }
   }
 
@@ -556,11 +634,9 @@ class ReduceTask extends Task {
     org.apache.hadoop.mapreduce.Reducer<INKEY,INVALUE,OUTKEY,OUTVALUE> reducer =
       (org.apache.hadoop.mapreduce.Reducer<INKEY,INVALUE,OUTKEY,OUTVALUE>)
         ReflectionUtils.newInstance(taskContext.getReducerClass(), job);
-    org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE> output =
-      (org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE>)
-        outputFormat.getRecordWriter(taskContext);
      org.apache.hadoop.mapreduce.RecordWriter<OUTKEY,OUTVALUE> trackedRW = 
-       new NewTrackingRecordWriter<OUTKEY, OUTVALUE>(output, reduceOutputCounter);
+       new NewTrackingRecordWriter<OUTKEY, OUTVALUE>(reduceOutputCounter,
+         job, reporter, taskContext);
     job.setBoolean("mapred.skip.on", isSkipping());
     org.apache.hadoop.mapreduce.Reducer.Context 
          reducerContext = createReduceContext(reducer, job, getTaskID(),
@@ -570,7 +646,7 @@ class ReduceTask extends Task {
                                                reporter, comparator, keyClass,
                                                valueClass);
     reducer.run(reducerContext);
-    output.close(reducerContext);
+    trackedRW.close(reducerContext);
   }
 
   private static enum CopyOutputErrorType {

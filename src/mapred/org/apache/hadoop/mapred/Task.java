@@ -73,6 +73,7 @@ abstract public class Task implements Writable, Configurable {
     MAP_SKIPPED_RECORDS,
     MAP_INPUT_BYTES, 
     MAP_OUTPUT_BYTES,
+    MAP_OUTPUT_MATERIALIZED_BYTES,
     COMBINE_INPUT_RECORDS,
     COMBINE_OUTPUT_RECORDS,
     REDUCE_INPUT_GROUPS,
@@ -990,6 +991,25 @@ abstract public class Task implements Writable, Configurable {
     done(umbilical, reporter);
   }
   
+  /**
+   * Gets a handle to the Statistics instance based on the scheme associated
+   * with path.
+   * 
+   * @param path
+   *          the path.
+   * @return a Statistics instance, or null if none is found for the scheme.
+   */
+  protected static Statistics getFsStatistics(Path path) {
+    Statistics matchedStats = null;
+    for (Statistics stats : FileSystem.getAllStatistics()) {
+      if (stats.getScheme().equals(path.toUri().getScheme())) {
+        matchedStats = stats;
+        break;
+      }
+    }
+    return matchedStats;
+  }
+
   public void setConf(Configuration conf) {
     if (conf instanceof JobConf) {
       this.conf = (JobConf) conf;

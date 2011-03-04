@@ -60,6 +60,9 @@ public abstract class FileInputFormat<K, V> implements InputFormat<K, V> {
 
   public static final Log LOG =
     LogFactory.getLog(FileInputFormat.class);
+  public static enum Counter { 
+    BYTES_READ
+  }
 
   private static final double SPLIT_SLOP = 1.1;   // 10% slop
 

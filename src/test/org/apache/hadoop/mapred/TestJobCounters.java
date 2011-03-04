@@ -33,7 +33,11 @@ import junit.framework.TestSuite;
 import static org.apache.hadoop.mapred.Task.Counter.SPILLED_RECORDS;
 import static org.apache.hadoop.mapred.Task.Counter.MAP_INPUT_RECORDS;
 import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_RECORDS;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_INPUT_BYTES;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_BYTES;
+import static org.apache.hadoop.mapred.Task.Counter.MAP_OUTPUT_MATERIALIZED_BYTES;
 
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -41,6 +45,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapred.FileInputFormat;
 
 /**
  * This is an wordcount application that tests job counters.
@@ -57,6 +62,29 @@ public class TestJobCounters extends TestCase {
   String TEST_ROOT_DIR = new Path(System.getProperty("test.build.data",
                           File.separator + "tmp")).toString().replace(' ', '+');
  
+  private void validateMapredFileCounters(Counters counter, long mapInputBytes,
+      long fileBytesRead, long fileBytesWritten, long mapOutputBytes,
+      long mapOutputMaterializedBytes) {
+
+    assertTrue(counter.findCounter(MAP_INPUT_BYTES).getValue() != 0);
+    assertEquals(mapInputBytes, counter.findCounter(MAP_INPUT_BYTES).getValue());
+
+    assertTrue(counter.findCounter(FileInputFormat.Counter.BYTES_READ)
+        .getValue() != 0);
+    assertEquals(fileBytesRead,
+        counter.findCounter(FileInputFormat.Counter.BYTES_READ).getValue());
+
+    assertTrue(counter.findCounter(FileOutputFormat.Counter.BYTES_WRITTEN)
+        .getValue() != 0);
+
+    if (mapOutputBytes >= 0) {
+      assertTrue(counter.findCounter(MAP_OUTPUT_BYTES).getValue() != 0);
+    }
+    if (mapOutputMaterializedBytes >= 0) {
+      assertTrue(counter.findCounter(MAP_OUTPUT_MATERIALIZED_BYTES).getValue() != 0);
+    }
+  }
+  
   private void validateMapredCounters(Counters counter, long spillRecCnt, 
                                 long mapInputRecords, long mapOutputRecords) {
     // Check if the numer of Spilled Records is same as expected
@@ -68,6 +96,35 @@ public class TestJobCounters extends TestCase {
       counter.findCounter(MAP_OUTPUT_RECORDS).getCounter());
   }
 
+  
+  private void validateFileCounters(
+      org.apache.hadoop.mapreduce.Counters counter, long fileBytesRead,
+      long fileBytesWritten, long mapOutputBytes,
+      long mapOutputMaterializedBytes) {
+    assertTrue(counter
+        .findCounter(
+            org.apache.hadoop.mapreduce.lib.input.FileInputFormat.Counter.BYTES_READ)
+        .getValue() != 0);
+    assertEquals(
+        fileBytesRead,
+        counter
+            .findCounter(
+                org.apache.hadoop.mapreduce.lib.input.FileInputFormat.Counter.BYTES_READ)
+            .getValue());
+
+    assertTrue(counter
+        .findCounter(
+            org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.Counter.BYTES_WRITTEN)
+        .getValue() != 0);
+
+    if (mapOutputBytes >= 0) {
+      assertTrue(counter.findCounter(MAP_OUTPUT_BYTES).getValue() != 0);
+    }
+    if (mapOutputMaterializedBytes >= 0) {
+      assertTrue(counter.findCounter(MAP_OUTPUT_MATERIALIZED_BYTES).getValue() != 0);
+    }
+  }
+  
   private void validateCounters(org.apache.hadoop.mapreduce.Counters counter, 
                                 long spillRecCnt, 
                                 long mapInputRecords, long mapOutputRecords) {
@@ -142,13 +199,17 @@ public class TestJobCounters extends TestCase {
         throw new IOException("Mkdirs failed to create " + wordsIns.toString());
       }
 
+      long inputSize = 0;
       //create 3 input files each with 5*2k words
       File inpFile = new File(inDir + "input5_2k_1");
       createWordsFile(inpFile);
+      inputSize += inpFile.length();
       inpFile = new File(inDir + "input5_2k_2");
       createWordsFile(inpFile);
+      inputSize += inpFile.length();
       inpFile = new File(inDir + "input5_2k_3");
       createWordsFile(inpFile);
+      inputSize += inpFile.length();
 
       FileInputFormat.setInputPaths(conf, inDir);
       Path outputPath1 = new Path(outDir, "output5_2k_3");
@@ -172,10 +233,12 @@ public class TestJobCounters extends TestCase {
       //3 maps and 2.5k lines --- So total 7.5k map input records
       //3 maps and 10k words in each --- So total of 30k map output recs
       validateMapredCounters(c1, 64000, 7500, 30000);
+      validateMapredFileCounters(c1, inputSize, inputSize, 0, 0, 0);
 
       //create 4th input file each with 5*2k words and test with 4 maps
       inpFile = new File(inDir + "input5_2k_4");
       createWordsFile(inpFile);
+      inputSize += inpFile.length();
       conf.setNumMapTasks(4);
       Path outputPath2 = new Path(outDir, "output5_2k_4");
       FileOutputFormat.setOutputPath(conf, outputPath2);
@@ -198,6 +261,7 @@ public class TestJobCounters extends TestCase {
       // 4 maps and 2.5k words in each --- So 10k map input records
       // 4 maps and 10k unique words --- So 40k map output records
       validateMapredCounters(c1, 88000, 10000, 40000);
+      validateMapredFileCounters(c1, inputSize, inputSize, 0, 0, 0);
       
       // check for a map only job
       conf.setNumReduceTasks(0);
@@ -209,6 +273,7 @@ public class TestJobCounters extends TestCase {
       // 4 maps and 2.5k words in each --- So 10k map input records
       // 4 maps and 10k unique words --- So 40k map output records
       validateMapredCounters(c1, 0, 10000, 40000);
+      validateMapredFileCounters(c1, inputSize, inputSize, 0, -1, -1);
     } finally {
       //clean up the input and output files
       if (fs.exists(testDir)) {
@@ -278,13 +343,17 @@ public class TestJobCounters extends TestCase {
       }
       String outDir = testDir + File.separator;
 
+      long inputSize = 0;
       //create 3 input files each with 5*2k words
       File inpFile = new File(inDir + "input5_2k_1");
       createWordsFile(inpFile);
+      inputSize += inpFile.length();
       inpFile = new File(inDir + "input5_2k_2");
       createWordsFile(inpFile);
+      inputSize += inpFile.length();
       inpFile = new File(inDir + "input5_2k_3");
       createWordsFile(inpFile);
+      inputSize += inpFile.length();
 
       FileInputFormat.setInputPaths(conf, inDir);
       Path outputPath1 = new Path(outDir, "output5_2k_3");
@@ -307,6 +376,7 @@ public class TestJobCounters extends TestCase {
       job.waitForCompletion(false);
       
       org.apache.hadoop.mapreduce.Counters c1 = job.getCounters();
+      LogFactory.getLog(this.getClass()).info(c1);
       // 3maps & in each map, 4 first level spills --- So total 12.
       // spilled records count:
       // Each Map: 1st level:2k+2k+2k+2k=8k;2ndlevel=4k+4k=8k;
@@ -323,10 +393,12 @@ public class TestJobCounters extends TestCase {
       //3 maps and 2.5k lines --- So total 7.5k map input records
       //3 maps and 10k words in each --- So total of 30k map output recs
       validateCounters(c1, 64000, 7500, 30000);
+      validateFileCounters(c1, inputSize, 0, 0, 0);
 
       //create 4th input file each with 5*2k words and test with 4 maps
       inpFile = new File(inDir + "input5_2k_4");
       createWordsFile(inpFile);
+      inputSize += inpFile.length();
       JobConf newJobConf = new JobConf(job.getConfiguration());
       
       Path outputPath2 = new Path(outDir, "output5_2k_4");
@@ -336,6 +408,7 @@ public class TestJobCounters extends TestCase {
       Job newJob = new Job(newJobConf);
       newJob.waitForCompletion(false);
       c1 = newJob.getCounters();
+      LogFactory.getLog(this.getClass()).info(c1);
       // 4maps & in each map 4 first level spills --- So total 16.
       // spilled records count:
       // Each Map: 1st level:2k+2k+2k+2k=8k;2ndlevel=4k+4k=8k;
@@ -352,6 +425,7 @@ public class TestJobCounters extends TestCase {
       // 4 maps and 2.5k words in each --- So 10k map input records
       // 4 maps and 10k unique words --- So 40k map output records
       validateCounters(c1, 88000, 10000, 40000);
+      validateFileCounters(c1, inputSize, 0, 0, 0);
       
       JobConf newJobConf2 = new JobConf(newJob.getConfiguration());
       
@@ -363,9 +437,12 @@ public class TestJobCounters extends TestCase {
       newJob2.setNumReduceTasks(0);
       newJob2.waitForCompletion(false);
       c1 = newJob2.getCounters();
+      LogFactory.getLog(this.getClass()).info(c1);
       // 4 maps and 2.5k words in each --- So 10k map input records
       // 4 maps and 10k unique words --- So 40k map output records
       validateCounters(c1, 0, 10000, 40000);
+      validateFileCounters(c1, inputSize, 0, -1, -1);
+      
     } finally {
       //clean up the input and output files
       if (fs.exists(testDir)) {
