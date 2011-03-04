@@ -46,11 +46,13 @@ import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.namenode.JspHelper;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.tools.DelegationTokenFetcher;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -105,17 +107,16 @@ public class HftpFileSystem extends FileSystem {
     nnAddr = NetUtils.createSocketAddr(name.toString());
     
     if (UserGroupInformation.isSecurityEnabled()) {
-      StringBuffer sb = new StringBuffer(HFTP_SERVICE_NAME_KEY);
       // configuration has the actual service name for this url. Build the key 
       // and get it.
-      final String key = sb.append(NetUtils.normalizeHostName(name.getHost())).
-        append(".").append(name.getPort()).toString();
-      
-      LOG.debug("Trying to find DT for " + name + " using key=" + key + "; conf=" + conf.get(key, ""));
+      final String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+
+      SecurityUtil.buildDTServiceName(name, NameNode.DEFAULT_PORT);
+
+      LOG.debug("Trying to find DT for " + name + " using key=" + key + 
+          "; conf=" + conf.get(key, ""));
       Text nnServiceNameText = new Text(conf.get(key, ""));
       
-      Collection<Token<? extends TokenIdentifier>> tokens =
-        ugi.getTokens();
+      Collection<Token<? extends TokenIdentifier>> tokens = ugi.getTokens();
       //try finding a token for this namenode (esp applicable for tasks
       //using hftp). If there exists one, just set the delegationField
       for (Token<? extends TokenIdentifier> t : tokens) {

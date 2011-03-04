@@ -34,9 +34,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
-import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.KerberosName;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -93,7 +93,8 @@ public class TokenCache {
       if(fs instanceof DistributedFileSystem) {
         DistributedFileSystem dfs = (DistributedFileSystem)fs;
         URI uri = fs.getUri();
-        String fs_addr = buildDTServiceName(uri);
+        String fs_addr = 
+            SecurityUtil.buildDTServiceName(uri, NameNode.DEFAULT_PORT);
 
         // see if we already have the token
         Token<DelegationTokenIdentifier> token = 
@@ -129,7 +130,8 @@ public class TokenCache {
         LOG.info("Got dt for " + p + ";uri="+ fs_addr + 
             ";t.service="+token.getService());
       } else if (fs instanceof HftpFileSystem) {
-        String fs_addr = buildDTServiceName(fs.getUri());
+        String fs_addr = 
+          SecurityUtil.buildDTServiceName(fs.getUri(), NameNode.DEFAULT_PORT);
         Token<DelegationTokenIdentifier> token = 
           TokenCache.getDelegationToken(credentials, fs_addr); 
         if(token != null) {
@@ -146,9 +148,11 @@ public class TokenCache {
         // to find the correct DT we need to know the mapping between Hftp port 
         // and RPC one. hence this new setting in the conf.
         URI uri = ((HftpFileSystem) fs).getUri();
-        String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+uri.getHost() + "." + uri.getPort();
+        String key = HftpFileSystem.HFTP_SERVICE_NAME_KEY+
+           SecurityUtil.buildDTServiceName(uri, NameNode.DEFAULT_PORT);
         conf.set(key, t.getService().toString());
-        LOG.info("GOT dt for " + p + " and stored in conf as " + key + "=" + t.getService());
+        LOG.info("GOT dt for " + p + " and stored in conf as " + key + "=" 
+            + t.getService());
       }
     }
   }
@@ -217,23 +221,5 @@ public class TokenCache {
   @SuppressWarnings("unchecked")
   public static Token<JobTokenIdentifier> getJobToken(Credentials credentials) {
     return (Token<JobTokenIdentifier>) credentials.getToken(JOB_TOKEN);
-  }
-
-  /**
-   * create service name for Delegation token ip:port
-   * @param uri
-   * @return "ip:port"
-   */
-  public static String buildDTServiceName(URI uri) {
-    int port = uri.getPort();
-    if(port == -1) 
-      port = NameNode.DEFAULT_PORT;
-    
-    // build the service name string "/ip:port"
-    // for whatever reason using NetUtils.createSocketAddr(target).toString()
-    // returns "localhost/ip:port"
-    StringBuffer sb = new StringBuffer();
-    sb.append(NetUtils.normalizeHostName(uri.getHost())).append(":").append(port);
-    return sb.toString();
   }
 }

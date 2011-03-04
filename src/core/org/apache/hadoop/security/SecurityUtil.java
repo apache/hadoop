@@ -18,6 +18,7 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.URI;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.security.AccessController;
@@ -29,7 +30,7 @@ import javax.security.auth.kerberos.KerberosTicket;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.net.NetUtils;
 
 import sun.security.jgss.krb5.Krb5Util;
 import sun.security.krb5.Credentials;
@@ -194,5 +195,23 @@ public class SecurityUtil {
     String principalName = SecurityUtil.getServerPrincipal(principalConfig,
         hostname);
     UserGroupInformation.loginUserFromKeytab(principalName, keytabFilename);
+  }
+  
+  /**
+   * create service name for Delegation token ip:port
+   * @param uri
+   * @return "ip:port"
+   */
+  public static String buildDTServiceName(URI uri, int defPort) {
+    int port = uri.getPort();
+    if(port == -1) 
+      port = defPort;
+    
+    // build the service name string "/ip:port"
+    // for whatever reason using NetUtils.createSocketAddr(target).toString()
+    // returns "localhost/ip:port"
+    StringBuffer sb = new StringBuffer();
+    sb.append(NetUtils.normalizeHostName(uri.getHost())).append(":").append(port);
+    return sb.toString();
   }
 }

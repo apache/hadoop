@@ -18,7 +18,10 @@
 package org.apache.hadoop.mapreduce.security;
 
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,12 +52,10 @@ import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
@@ -265,7 +266,8 @@ public class TestTokenCache {
     TokenCache.obtainTokensForNamenodesInternal(credentials, new Path [] {p1, p2},
                                         jConf);
     // this token is keyed by hostname:port key.
-    String fs_addr = TokenCache.buildDTServiceName(p1.toUri()); 
+    String fs_addr = 
+      SecurityUtil.buildDTServiceName(p1.toUri(), NameNode.DEFAULT_PORT); 
     Token<DelegationTokenIdentifier> nnt =
       TokenCache.getDelegationToken(credentials, fs_addr);
 
