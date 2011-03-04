@@ -256,6 +256,10 @@
       rev="${slf4j-log4j12.version}"
       conf="common->master">
     </dependency>
+    <dependency org="org.codehaus.jackson"
+      name="jackson-mapper-asl"
+      rev="1.0.1"
+      conf="common->default"/>
     </dependencies>
   
 </ivy-module>

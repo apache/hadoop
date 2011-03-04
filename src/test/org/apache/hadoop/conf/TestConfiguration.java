@@ -25,12 +25,15 @@ import java.io.DataInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
+import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.fs.Path;
+import org.codehaus.jackson.map.ObjectMapper;
 
 
 public class TestConfiguration extends TestCase {
@@ -389,4 +392,181 @@ public class TestConfiguration extends TestCase {
       TestConfiguration.class.getName()
     });
   }
+
+  static class JsonConfiguration {
+    JsonProperty[] properties;
+
+    public JsonProperty[] getProperties() {
+      return properties;
+    }
+
+    public void setProperties(JsonProperty[] properties) {
+      this.properties = properties;
+    }
+  }
+  
+  static class JsonProperty {
+    String key;
+    public String getKey() {
+      return key;
+    }
+    public void setKey(String key) {
+      this.key = key;
+    }
+    public String getValue() {
+      return value;
+    }
+    public void setValue(String value) {
+      this.value = value;
+    }
+    public boolean getIsFinal() {
+      return isFinal;
+    }
+    public void setIsFinal(boolean isFinal) {
+      this.isFinal = isFinal;
+    }
+    public String getResource() {
+      return resource;
+    }
+    public void setResource(String resource) {
+      this.resource = resource;
+    }
+    String value;
+    boolean isFinal;
+    String resource;
+  }
+  
+  public void testDumpConfiguration () throws IOException {
+    StringWriter outWriter = new StringWriter();
+    Configuration.dumpConfiguration(conf, outWriter);
+    String jsonStr = outWriter.toString();
+    ObjectMapper mapper = new ObjectMapper();
+    JsonConfiguration jconf = 
+      mapper.readValue(jsonStr, JsonConfiguration.class);
+    int defaultLength = jconf.getProperties().length;
+    
+    // add 3 keys to the existing configuration properties
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.key1", "value1");
+    appendProperty("test.key2", "value2",true);
+    appendProperty("test.key3", "value3");
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    conf.addResource(fileResource);
+    out.close();
+    
+    outWriter = new StringWriter();
+    Configuration.dumpConfiguration(conf, outWriter);
+    jsonStr = outWriter.toString();
+    mapper = new ObjectMapper();
+    jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
+    int length = jconf.getProperties().length;
+    // check for consistency in the number of properties parsed in Json format.
+    assertEquals(length, defaultLength+3);
+    
+    //change few keys in another resource file
+    out=new BufferedWriter(new FileWriter(CONFIG2));
+    startConfig();
+    appendProperty("test.key1", "newValue1");
+    appendProperty("test.key2", "newValue2");
+    endConfig();
+    Path fileResource1 = new Path(CONFIG2);
+    conf.addResource(fileResource1);
+    out.close();
+    
+    outWriter = new StringWriter();
+    Configuration.dumpConfiguration(conf, outWriter);
+    jsonStr = outWriter.toString();
+    mapper = new ObjectMapper();
+    jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
+    
+    // put the keys and their corresponding attributes into a hashmap for their 
+    // efficient retrieval
+    HashMap<String,JsonProperty> confDump = new HashMap<String,JsonProperty>();
+    for(JsonProperty prop : jconf.getProperties()) {
+      confDump.put(prop.getKey(), prop);
+    }
+    // check if the value and resource of test.key1 is changed
+    assertEquals("newValue1", confDump.get("test.key1").getValue());
+    assertEquals(false, confDump.get("test.key1").getIsFinal());
+    assertEquals(fileResource1.toString(),
+        confDump.get("test.key1").getResource());
+    // check if final parameter test.key2 is not changed, since it is first 
+    // loaded as final parameter
+    assertEquals("value2", confDump.get("test.key2").getValue());
+    assertEquals(true, confDump.get("test.key2").getIsFinal());
+    assertEquals(fileResource.toString(),
+        confDump.get("test.key2").getResource());
+    // check for other keys which are not modified later
+    assertEquals("value3", confDump.get("test.key3").getValue());
+    assertEquals(false, confDump.get("test.key3").getIsFinal());
+    assertEquals(fileResource.toString(),
+        confDump.get("test.key3").getResource());
+    // check for resource to be "Unknown" for keys which are loaded using 'set' 
+    // and expansion of properties
+    conf.set("test.key4", "value4");
+    conf.set("test.key5", "value5");
+    conf.set("test.key6", "${test.key5}");
+    outWriter = new StringWriter();
+    Configuration.dumpConfiguration(conf, outWriter);
+    jsonStr = outWriter.toString();
+    mapper = new ObjectMapper();
+    jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
+    confDump = new HashMap<String, JsonProperty>();
+    for(JsonProperty prop : jconf.getProperties()) {
+      confDump.put(prop.getKey(), prop);
+    }
+    assertEquals("value5",confDump.get("test.key6").getValue());
+    assertEquals("Unknown", confDump.get("test.key4").getResource());
+    outWriter.close();
+  }
+  
+  public void testDumpConfiguratioWithoutDefaults() throws IOException {
+    // check for case when default resources are not loaded
+    Configuration config = new Configuration(false);
+    StringWriter outWriter = new StringWriter();
+    Configuration.dumpConfiguration(config, outWriter);
+    String jsonStr = outWriter.toString();
+    ObjectMapper mapper = new ObjectMapper();
+    JsonConfiguration jconf = 
+      mapper.readValue(jsonStr, JsonConfiguration.class);
+    
+    //ensure that no properties are loaded.
+    assertEquals(0, jconf.getProperties().length);
+    
+    // add 2 keys
+    out=new BufferedWriter(new FileWriter(CONFIG));
+    startConfig();
+    appendProperty("test.key1", "value1");
+    appendProperty("test.key2", "value2",true);
+    endConfig();
+    Path fileResource = new Path(CONFIG);
+    config.addResource(fileResource);
+    out.close();
+    
+    outWriter = new StringWriter();
+    Configuration.dumpConfiguration(config, outWriter);
+    jsonStr = outWriter.toString();
+    mapper = new ObjectMapper();
+    jconf = mapper.readValue(jsonStr, JsonConfiguration.class);
+    
+    HashMap<String, JsonProperty>confDump = new HashMap<String, JsonProperty>();
+    for (JsonProperty prop : jconf.getProperties()) {
+      confDump.put(prop.getKey(), prop);
+    }
+    //ensure only 2 keys are loaded
+    assertEquals(2,jconf.getProperties().length);
+    //ensure the values are consistent
+    assertEquals(confDump.get("test.key1").getValue(),"value1");
+    assertEquals(confDump.get("test.key2").getValue(),"value2");
+    //check the final tag
+    assertEquals(false, confDump.get("test.key1").getIsFinal());
+    assertEquals(true, confDump.get("test.key2").getIsFinal());
+    //check the resource for each property
+    for (JsonProperty prop : jconf.getProperties()) {
+      assertEquals(fileResource.toString(),prop.getResource());
+    }
+  }
 }
+
