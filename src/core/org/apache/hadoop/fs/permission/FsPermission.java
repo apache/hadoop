@@ -17,17 +17,23 @@
  */
 package org.apache.hadoop.fs.permission;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableFactories;
+import org.apache.hadoop.io.WritableFactory;
 
 /**
  * A class for file/directory permissions.
  */
 public class FsPermission implements Writable {
+  private static final Log LOG = LogFactory.getLog(FsPermission.class);
+  
   static final WritableFactory FACTORY = new WritableFactory() {
     public Writable newInstance() { return new FsPermission(); }
   };
@@ -154,15 +160,31 @@ public class FsPermission implements Writable {
   }
 
   /** umask property label */
-  public static final String UMASK_LABEL = "dfs.umask";
+  public static final String DEPRECATED_UMASK_LABEL = "dfs.umask"; 
+  public static final String UMASK_LABEL = "dfs.umaskmode";
   public static final int DEFAULT_UMASK = 0022;
 
   /** Get the user file creation mask (umask) */
   public static FsPermission getUMask(Configuration conf) {
     int umask = DEFAULT_UMASK;
-    if (conf != null) {
-      umask = conf.getInt(UMASK_LABEL, DEFAULT_UMASK);
+    
+    // Attempt to pull value from configuration, trying new key first and then
+    // deprecated key, along with a warning, if not present
+    if(conf != null) {
+      String confUmask = conf.get(UMASK_LABEL);
+      if(confUmask != null) { // UMASK_LABEL is set
+        umask = new UmaskParser(confUmask).getUMask();
+      } else { // check for deprecated key label
+        int oldStyleValue = conf.getInt(DEPRECATED_UMASK_LABEL, Integer.MIN_VALUE);
+        if(oldStyleValue != Integer.MIN_VALUE) { // Property was set with old key
+          LOG.warn(DEPRECATED_UMASK_LABEL + " configuration key is deprecated. " +
+              "Convert to " + UMASK_LABEL + ", using octal or symbolic umask " +
+              "specifications.");
+          umask = oldStyleValue;
+        }
+      }
     }
+    
     return new FsPermission((short)umask);
   }
   /** Set the user file creation mask (umask) */

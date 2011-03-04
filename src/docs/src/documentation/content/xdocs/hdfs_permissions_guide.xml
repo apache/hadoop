@@ -177,9 +177,9 @@ If a cluster starts with a version 0.15 data set (<code>fsimage</code>), all fil
 	<dd>
 		The choice of initial mode during upgrade. The <em>x</em> permission is <em>never</em> set for files. For configuration files, the decimal value <em>511<sub>10</sub></em> may be used.
 	</dd>
-	<dt><code>dfs.umask = 022</code></dt>
+	<dt><code>dfs.umaskmode = 022</code></dt>
 	<dd>
-		The <code>umask</code> used when creating files and directories. For configuration files, the decimal value <em>18<sub>10</sub></em> may be used.
+		The <code>umask</code> used when creating files and directories. May be specified either via three octal digits or symbolic values, with the same constraints as the dfs chmod command.
 	</dd>
 </dl>
 </section>

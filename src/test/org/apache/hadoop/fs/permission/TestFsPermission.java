@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.fs.permission;
 
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+
 import junit.framework.TestCase;
 
 import static org.apache.hadoop.fs.permission.FsAction.*;
@@ -66,5 +70,61 @@ public class TestFsPermission extends TestCase {
       }
       assertEquals(i, FsPermission.valueOf(b.toString()).toShort());
     }
+  }
+
+  public void testUMaskParser() throws IOException {
+    Configuration conf = new Configuration();
+    
+    // Ensure that we get the right octal values back for all legal values
+    for(FsAction u : FsAction.values()) {
+      for(FsAction g : FsAction.values()) {
+        for(FsAction o : FsAction.values()) {
+          FsPermission f = new FsPermission(u, g, o);
+          String asOctal = String.format("%1$03o", f.toShort());
+          conf.set(FsPermission.UMASK_LABEL, asOctal);
+          FsPermission fromConf = FsPermission.getUMask(conf);
+          assertEquals(f, fromConf);
+        }
+      }
+    }
+  }
+
+  public void TestSymbolicUmasks() {
+    Configuration conf = new Configuration();
+    
+    // Test some symbolic settings       Setting       Octal result
+    String [] symbolic = new String [] { "a+rw",        "666",
+                                         "u=x,g=r,o=w", "142",
+                                         "u=x",         "100" };
+    
+    for(int i = 0; i < symbolic.length; i += 2) {
+      conf.set(FsPermission.UMASK_LABEL, symbolic[i]);
+      short val = Short.valueOf(symbolic[i + 1], 8);
+      assertEquals(val, FsPermission.getUMask(conf).toShort());
+    }
+  }
+
+  public void testBadUmasks() {
+    Configuration conf = new Configuration();
+    
+    for(String b : new String [] {"1777", "22", "99", "foo", ""}) {
+      conf.set(FsPermission.UMASK_LABEL, b); 
+      try {
+        FsPermission.getUMask(conf);
+        fail("Shouldn't have been able to parse bad umask");
+      } catch(IllegalArgumentException iae) {
+        assertEquals(iae.getMessage(), b);
+      }
+    }
+  }
+  
+  // Ensure that when the deprecated decimal umask key is used, it is correctly
+  // parsed as such and converted correctly to an FsPermission value
+  public void testDeprecatedUmask() {
+    Configuration conf = new Configuration();
+    conf.set(FsPermission.DEPRECATED_UMASK_LABEL, "302"); // 302 = 0456
+    FsPermission umask = FsPermission.getUMask(conf);
+
+    assertEquals(0456, umask.toShort());
   }
 }
