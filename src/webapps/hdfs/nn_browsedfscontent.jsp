@@ -20,18 +20,16 @@
   import="java.net.URLEncoder"
 %>
 <%!
-  static String getDelegationToken(final NameNode nn, final String user
-                                   ) throws IOException, InterruptedException {
-    if (user == null) {
-      return null;
-    }
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+  static String getDelegationToken(final NameNode nn,
+                                   HttpServletRequest request, Configuration conf) 
+                                   throws IOException, InterruptedException {
+    final UserGroupInformation ugi = JspHelper.getUGI(request, conf);
     Token<DelegationTokenIdentifier> token =
       ugi.doAs(
               new PrivilegedExceptionAction<Token<DelegationTokenIdentifier>>()
           {
             public Token<DelegationTokenIdentifier> run() throws IOException {
-              return nn.getDelegationToken(new Text(user));
+              return nn.getDelegationToken(new Text(ugi.getUserName()));
             }
           });
     return token.encodeToUrlString();
@@ -40,9 +38,10 @@
   public void redirectToRandomDataNode(
                             NameNode nn, 
                             HttpServletRequest request,
-                            HttpServletResponse resp
+                            HttpServletResponse resp,
+                            Configuration conf
                            ) throws IOException, InterruptedException {
-    String tokenString = getDelegationToken(nn, request.getRemoteUser());
+    String tokenString = getDelegationToken(nn, request, conf);
     FSNamesystem fsn = nn.getNamesystem();
     String datanode = fsn.randomDataNode();
     String redirectLocation;
@@ -76,7 +75,7 @@
 <% 
   NameNode nn = (NameNode)application.getAttribute("name.node");
   Configuration conf = (Configuration) application.getAttribute("name.conf");
-  redirectToRandomDataNode(nn, request, response); 
+  redirectToRandomDataNode(nn, request, response, conf); 
 %>
 <hr>
 

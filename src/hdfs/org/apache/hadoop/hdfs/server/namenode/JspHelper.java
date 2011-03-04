@@ -450,6 +450,8 @@ public class JspHelper {
                                 "authenticated by filter");
         }
         ugi = UserGroupInformation.createRemoteUser(user);
+        // This is not necessarily true, could have been auth'ed by user-facing
+        // filter
         ugi.setAuthenticationMethod(AuthenticationMethod.KERBEROS_SSL);
       }
     } else { // Security's not on, pull from url
