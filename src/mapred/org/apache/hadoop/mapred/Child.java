@@ -40,6 +40,8 @@ import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.jvm.JvmMetrics;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
 import org.apache.log4j.LogManager;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
@@ -70,9 +72,10 @@ class Child {
 
     // file name is passed thru env
     String jobTokenFile = System.getenv().get("JOB_TOKEN_FILE");
-    FileSystem localFs = FileSystem.getLocal(defaultConf);
-    Token<JobTokenIdentifier> jt = loadJobToken(jobTokenFile, localFs);
-    LOG.debug("Child: got jobTokenfile=" + jobTokenFile);
+    defaultConf.set(JobContext.JOB_TOKEN_FILE, jobTokenFile);
+    TokenStorage ts = TokenCache.loadTaskTokenStorage(defaultConf);
+    LOG.debug("loading token. # keys =" +ts.numberOfSecretKeys() + 
+        "; from file=" + jobTokenFile);
 
     TaskUmbilicalProtocol umbilical =
       (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
@@ -151,6 +154,8 @@ class Child {
         TaskLog.syncLogs(firstTaskid, taskid, isCleanup);
         JobConf job = new JobConf(task.getJobFile());
 
+        // set job shuffle token
+         Token<JobTokenIdentifier> jt = (Token<JobTokenIdentifier>)ts.getJobToken();
         // set the jobTokenFile into task
         task.setJobTokenSecret(JobTokenSecretManager.createSecretKey(jt.getPassword()));
 
@@ -220,23 +225,5 @@ class Child {
       // there is no more logging done.
       LogManager.shutdown();
     }
-  }
-  
-  /**
-   * load job token from a file
-   * @param jobTokenFile
-   * @param conf
-   * @throws IOException
-   */
-  private static Token<JobTokenIdentifier> loadJobToken(String jobTokenFile, FileSystem localFS) 
-  throws IOException {
-    Path localJobTokenFile = new Path (jobTokenFile);
-    FSDataInputStream in = localFS.open(localJobTokenFile);
-    Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>();
-    jt.readFields(in);
-        
-    LOG.debug("Loaded jobTokenFile from: "+localJobTokenFile.toUri().getPath());
-    in.close();
-    return jt;
   }
 }

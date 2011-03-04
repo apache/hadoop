@@ -87,7 +87,6 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UnixUserGroupInformation;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ConfiguredPolicy;
 import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
@@ -101,6 +100,8 @@ import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
 
 /*******************************************************
  * TaskTracker is a process that starts and tracks MR Tasks
@@ -919,10 +920,8 @@ public class TaskTracker
                              localJobConf.getKeepFailedTaskFiles());
         // save local copy of JobToken file
         localizeJobTokenFile(t.getUser(), jobId, localJobConf);       
-        FSDataInputStream in = localFs.open(new Path(
-            rjob.jobConf.get(JobContext.JOB_TOKEN_FILE)));
-        Token<JobTokenIdentifier> jt = new Token<JobTokenIdentifier>();
-        jt.readFields(in); 
+        TokenStorage ts = TokenCache.loadTokens(rjob.jobConf);
+        Token<JobTokenIdentifier> jt = (Token<JobTokenIdentifier>)ts.getJobToken(); 
         getJobTokenSecretManager().addTokenForJob(jobId.toString(), jt);
  
         rjob.localized = true;

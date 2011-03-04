@@ -21,6 +21,7 @@ package org.apache.hadoop.mapred;
 import java.io.IOException;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
 
 /** 
  * Protocol that a JobClient and the central JobTracker use to communicate.  The
@@ -63,8 +64,9 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * Version 22: Job submission files are uploaded to a staging area under
    *             user home dir. JobTracker reads the required files from the
    *             staging area using user credentials passed via the rpc. 
+   * Version 23: Provide TokenStorage object while submitting a job
    */
-  public static final long versionID = 22L;
+  public static final long versionID = 23L;
 
   /**
    * Allocate a name for the job.
@@ -78,7 +80,7 @@ interface JobSubmissionProtocol extends VersionedProtocol {
    * that job.
    * The job files should be submitted in <b>jobSubmitDir</b>.
    */
-  public JobStatus submitJob(JobID jobName, String jobSubmitDir) 
+  public JobStatus submitJob(JobID jobName, String jobSubmitDir, TokenStorage ts) 
   throws IOException;
 
   /**

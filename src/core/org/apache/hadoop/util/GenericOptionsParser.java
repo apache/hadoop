@@ -222,6 +222,11 @@ public class GenericOptionsParser {
     .withDescription("comma separated archives to be unarchived" +
                      " on the compute machines.")
     .create("archives");
+    // file with security tokens
+    Option tokensFile = OptionBuilder.withArgName("tokensFile")
+    .hasArg()
+    .withDescription("name of the file with the tokens")
+    .create("tokenCacheFile");
 
     opts.addOption(fs);
     opts.addOption(jt);
@@ -230,6 +235,7 @@ public class GenericOptionsParser {
     opts.addOption(libjars);
     opts.addOption(files);
     opts.addOption(archives);
+    opts.addOption(tokensFile);
 
     return opts;
   }
@@ -288,6 +294,25 @@ public class GenericOptionsParser {
       }
     }
     conf.setBoolean("mapred.used.genericoptionsparser", true);
+    
+    // tokensFile
+    if(line.hasOption("tokenCacheFile")) {
+      String fileName = line.getOptionValue("tokenCacheFile");
+      // check if the local file exists
+      try 
+      {
+        FileSystem localFs = FileSystem.getLocal(conf);
+        Path p = new Path(fileName);
+        if (!localFs.exists(p)) {
+          throw new FileNotFoundException("File "+fileName+" does not exist.");
+        }
+
+        LOG.debug("setting conf tokensFile: " + fileName);
+        conf.set("tokenCacheFile", localFs.makeQualified(p).toString());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
   
   /**

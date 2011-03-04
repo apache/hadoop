@@ -72,7 +72,7 @@ public class TestMiniMRWithDFSWithDistinctUsers extends TestCase {
     jobSubmitDir = jobSubmitDir.makeQualified(fs);
     uploadJobFiles(JobID.downgrade(id), splits, jobSubmitDir, job);
    
-    jobSubmitClient.submitJob(id, jobSubmitDir.toString());
+    jobSubmitClient.submitJob(id, jobSubmitDir.toString(), null);
    
     JobClient jc = new JobClient(job);
     return jc.getJob(JobID.downgrade(id));

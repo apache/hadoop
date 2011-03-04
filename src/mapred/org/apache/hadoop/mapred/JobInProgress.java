@@ -42,6 +42,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobHistory.Values;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -121,6 +123,8 @@ class JobInProgress {
 
   JobPriority priority = JobPriority.NORMAL;
   final JobTracker jobtracker;
+  
+  protected TokenStorage tokenStorage;
 
   // NetworkTopology Node to the set of TIPs
   Map<Node, List<TaskInProgress>> nonRunningMapCache;
@@ -290,11 +294,11 @@ class JobInProgress {
   
   public JobInProgress(JobID jobid, JobTracker jobtracker, 
                        JobConf default_conf, int rCount) throws IOException {
-    this(jobtracker, default_conf, null, rCount);
+    this(jobtracker, default_conf, null, rCount, null);
   }
 
-  JobInProgress(JobTracker jobtracker,
-                JobConf default_conf, JobInfo jobInfo, int rCount) 
+  JobInProgress(JobTracker jobtracker, JobConf default_conf, 
+      JobInfo jobInfo, int rCount, TokenStorage ts) 
   throws IOException {
     this.restartCount = rCount;
     this.jobId = JobID.downgrade(jobInfo.getJobID());
@@ -358,6 +362,7 @@ class JobInProgress {
     this.nonRunningReduces = new LinkedList<TaskInProgress>();    
     this.runningReduces = new LinkedHashSet<TaskInProgress>();
     this.resourceEstimator = new ResourceEstimator(this);
+    this.tokenStorage = ts;
   }
 
   /**
@@ -512,7 +517,7 @@ class JobInProgress {
     //
     // generate security keys needed by Tasks
     //
-    generateJobToken(jobtracker.getFileSystem());
+    generateAndStoreTokens();
     
     //
     // read input splits and create a map per a split
@@ -3071,20 +3076,28 @@ class JobInProgress {
    * generate job token and save it into the file
    * @throws IOException
    */
-  private void generateJobToken(FileSystem fs) throws IOException {
+  private void generateAndStoreTokens() throws IOException {
     Path jobDir = jobtracker.getSystemDirectoryForJob(jobId);
     Path keysFile = new Path(jobDir, SecureShuffleUtils.JOB_TOKEN_FILENAME);
     // we need to create this file using the jobtracker's filesystem
-    FSDataOutputStream os = fs.create(keysFile);
+    FSDataOutputStream os = jobtracker.getFileSystem().create(keysFile);
     //create JobToken file and write token to it
     JobTokenIdentifier identifier = new JobTokenIdentifier(new Text(jobId
         .toString()));
     Token<JobTokenIdentifier> token = new Token<JobTokenIdentifier>(identifier,
         jobtracker.getJobTokenSecretManager());
     token.setService(identifier.getJobId());
-    token.write(os);
+    
+    // add this token to the tokenStorage
+    if(tokenStorage == null)
+      tokenStorage = new TokenStorage();
+
+    tokenStorage.setJobToken(token);
+        
+    // write TokenStorage out
+    tokenStorage.write(os);
     os.close();
-    LOG.debug("jobToken generated and stored in "+ keysFile.toUri().getPath());
+    LOG.info("jobToken generated and stored with users keys in "
+        + keysFile.toUri().getPath());
   }
-  
 }

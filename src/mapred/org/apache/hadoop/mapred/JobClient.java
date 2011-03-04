@@ -19,9 +19,7 @@ package org.apache.hadoop.mapred;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -40,6 +38,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import javax.security.auth.login.LoginException;
 
@@ -55,22 +54,16 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.io.BytesWritable;
-import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
-import org.apache.hadoop.io.serializer.SerializationFactory;
-import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapred.Counters.Counter;
 import org.apache.hadoop.mapred.Counters.Group;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobSubmissionFiles;
+import org.apache.hadoop.mapreduce.security.TokenStorage;
 import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UnixUserGroupInformation;
@@ -78,6 +71,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * <code>JobClient</code> is the primary interface for the user-job to interact
@@ -789,11 +783,30 @@ public class JobClient extends Configured implements MRConstants, Tool  {
       } finally {
         out.close();
       }
+      
+      // create TokenStorage object with user secretKeys
+      String tokensFileName = job.get("tokenCacheFile");
+      TokenStorage tokenStorage = null;
+      if(tokensFileName != null) {
+        LOG.info("loading secret keys from " + tokensFileName);
+        String localFileName = new Path(tokensFileName).toUri().getPath();
+        tokenStorage = new TokenStorage();
+        // read JSON
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, String> nm = 
+          mapper.readValue(new File(localFileName), Map.class);
+        
+        for(Map.Entry<String, String> ent: nm.entrySet()) {
+          LOG.debug("adding secret key alias="+ent.getKey());
+          tokenStorage.addSecretKey(new Text(ent.getKey()), ent.getValue().getBytes());
+        }
+      }
 
       //
       // Now, actually submit the job (using the submit name)
       //
-      status = jobSubmitClient.submitJob(jobId, submitJobDir.toString());
+      status = jobSubmitClient.submitJob(
+          jobId, submitJobDir.toString(), tokenStorage);
       if (status != null) {
         return new NetworkedJob(status);
       } else {
