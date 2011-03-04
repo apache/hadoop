@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.DistributedFileSystem.DiskStatus;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.FSConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.fs.Path;
@@ -623,6 +625,13 @@ public class DFSAdmin extends FsShell {
     // Get the current configuration
     Configuration conf = getConf();
     
+    // for security authorization
+    // server principal for this call   
+    // should be NN's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
+    
+    
     // Create the client
     RefreshAuthorizationPolicyProtocol refreshProtocol = 
       (RefreshAuthorizationPolicyProtocol) 
@@ -646,6 +655,12 @@ public class DFSAdmin extends FsShell {
   public int refreshUserToGroupsMappings() throws IOException {
     // Get the current configuration
     Configuration conf = getConf();
+    
+    // for security authorization
+    // server principal for this call 
+    // should be NAMENODE's one.
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        conf.get(DFSConfigKeys.DFS_NAMENODE_USER_NAME_KEY, ""));
     
     // Create the client
     RefreshUserToGroupMappingsProtocol refreshProtocol = 

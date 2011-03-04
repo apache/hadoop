@@ -234,6 +234,11 @@ public class Client {
         if (krbInfo != null) {
           String serverKey = krbInfo.serverPrincipal();
           if (serverKey != null) {
+            if(LOG.isDebugEnabled()) {
+            LOG.debug("server principal key for protocol="
+                + protocol.getCanonicalName() + " is " + serverKey + 
+                " and val =" + conf.get(serverKey));
+            }
             serverPrincipal = conf.get(serverKey);
           }
         }

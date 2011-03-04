@@ -21,15 +21,16 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.mapred.AdminOperationsProtocol;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.JobTracker;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.RefreshUserToGroupMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -129,6 +130,14 @@ public class MRAdmin extends Configured implements Tool {
     // Get the current configuration
     Configuration conf = getConf();
     
+    // for security authorization
+    // server principal for this call   
+    // should be JT's one.
+    JobConf jConf = new JobConf(conf);
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        jConf.get(JobTracker.JT_USER_NAME, ""));
+    
+    
     // Create the client
     RefreshAuthorizationPolicyProtocol refreshProtocol = 
       (RefreshAuthorizationPolicyProtocol) 
@@ -196,6 +205,16 @@ public class MRAdmin extends Configured implements Tool {
   private int refreshUserToGroupsMappings() throws IOException {
     // Get the current configuration
     Configuration conf = getConf();
+
+    // for security authorization
+    // server principal for this call   
+    // should be JT's one.
+    JobConf jConf = new JobConf(conf);
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY, 
+        jConf.get(JobTracker.JT_USER_NAME, ""));
+    
+    
+    
     // Create the client
     RefreshUserToGroupMappingsProtocol refreshProtocol =
       (RefreshUserToGroupMappingsProtocol)
