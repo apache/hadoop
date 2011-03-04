@@ -139,6 +139,7 @@ public class DataNode extends Configured
         ", bytes: %s" +  // byte count
         ", op: %s" +     // operation
         ", cliID: %s" +  // DFSClient id
+        ", offset: %s" + // offset
         ", srvID: %s" +  // DatanodeRegistration
         ", blockid: %s"; // block id
   static final Log ClientTraceLog =
