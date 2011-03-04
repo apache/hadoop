@@ -329,7 +329,9 @@ public class TestJobTrackerRestart extends TestCase {
   private void testJobHistoryFiles(JobID id, JobConf conf) 
   throws IOException  {
     // Get the history files for users
-    String logFileName = JobHistory.JobInfo.getJobHistoryFileName(conf, id);
+    Path dir = JobHistory.getCompletedJobHistoryLocation();
+    String logFileName = JobHistory.JobInfo.getJobHistoryFileName(conf, id, 
+                                                                  dir);
     String tempLogFileName = 
       JobHistory.JobInfo.getSecondaryJobHistoryFile(logFileName);
     
@@ -349,7 +351,7 @@ public class TestJobTrackerRestart extends TestCase {
     
     // II. Framework files
     // Get the history file
-    logFile = JobHistory.JobInfo.getJobHistoryLogLocation(logFileName);
+    logFile = new Path(dir, logFileName);
     fileSys = logFile.getFileSystem(conf);
     
     // Check if the history file exists
