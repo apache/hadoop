@@ -85,9 +85,11 @@ public class TestStreamingJobProcessTree {
         "-D", "mapred.map.tasks=1",
         "-D", "mapred.reduce.tasks=0",
         "-D", "mapred.map.max.attempts=1",
-        "-D", "mapred.cluster.max.map.memory.mb=2",
-        "-D", "mapred.cluster.map.memory.mb=1",
-        "-D", "mapred.job.map.memory.mb=0.5"
+        "-D", "mapred.cluster.max.map.memory.mb=2048",
+        "-D", "mapred.cluster.reduce.memory.mb=1024",
+        "-D", "mapred.cluster.max.reduce.memory.mb=2048",
+        "-D", "mapred.cluster.map.memory.mb=1024",
+        "-D", "mapred.job.map.memory.mb=512"
     };
     
     String [] otherArgs = new String[] {
@@ -97,27 +99,53 @@ public class TestStreamingJobProcessTree {
     };
     JobID jobId = getJobId(runtimeArgs, otherArgs);
     LOG.info("Job ID:" + jobId);
+    if (jobId == null) {
+      jobId = getJobId(runtimeArgs, otherArgs);
+    }
     Assert.assertNotNull("Job ID not found for 1 min", jobId);
     Assert.assertTrue("Job has not been started for 1 min.", 
         cluster.getJTClient().isJobStarted(jobId));
-    TaskInfo taskInfo = getTaskInfo(jobId);
+    TaskInfo taskInfo = getTaskInfo(jobId, true);
     Assert.assertNotNull("TaskInfo is null",taskInfo);
     Assert.assertTrue("Task has not been started for 1 min.", 
         cluster.getJTClient().isTaskStarted(taskInfo));
     JTProtocol wovenClient = cluster.getJTClient().getProxy();
     int counter = 0;
+    TaskInfo tempTaskInfo;
     while (counter++ < 60) {
       if (taskInfo.getTaskStatus().length == 0) {
         UtilsForTests.waitFor(1000);
+        tempTaskInfo = taskInfo;
         taskInfo = wovenClient.getTaskInfo(taskInfo.getTaskID());
       }else if (taskInfo.getTaskStatus()[0].getRunState() ==
           TaskStatus.State.RUNNING) {
         UtilsForTests.waitFor(1000);
+        tempTaskInfo = taskInfo;
         taskInfo = wovenClient.getTaskInfo(taskInfo.getTaskID());
+      } else {
+        break;
+      }
+
+      if (taskInfo == null) {
+        taskInfo = tempTaskInfo;
+        break;
       }
     }
 
     verifyProcessTreeOverLimit(taskInfo,jobId);
+    JobInfo jInfo = wovenClient.getJobInfo(jobId);
+    LOG.info("Waiting till the job is completed...");
+    counter = 0;
+    while (counter++ < 60) {
+      if (jInfo == null) {
+        break;
+      } else if (jInfo.getStatus().isJobComplete()) {
+        break;
+      }
+      UtilsForTests.waitFor(100);
+      jInfo = wovenClient.getJobInfo(jobId);
+    }
+    UtilsForTests.waitFor(1000);
   }
   
   /**
@@ -130,39 +158,68 @@ public class TestStreamingJobProcessTree {
      IOException {
     String runtimeArgs [] = {
             "-D", "mapred.job.name=ProcTreeStreamJob",
-            "-D", "mapred.reduce.tasks=2",
+            "-D", "mapred.reduce.tasks=1",
+            "-D", "mapred.map.tasks=1",
             "-D", "mapred.reduce.max.attempts=1",
-            "-D", "mapred.cluster.max.reduce.memory.mb=2",
-            "-D", "mapred.cluster.reduce.memory.mb=1",
-            "-D","mapred.job.reduce.memory.mb=0.5"};
+            "-D", "mapred.cluster.max.map.memory.mb=2048",
+            "-D", "mapred.cluster.map.memory.mb=1024",
+            "-D", "mapred.cluster.max.reduce.memory.mb=20248",
+            "-D", "mapred.cluster.reduce.memory.mb=1024",
+            "-D", "mapred.job.reduce.memory.mb=512"};
 
     String [] otherArgs = new String[] {
             "-input", inputDir.toString(),
             "-output", outputDir.toString(),
+            "-mapper", "/bin/cat",
             "-reducer", "ProcessTree.sh"
     };
 
+    cleanup(outputDir, conf);
     JobID jobId = getJobId(runtimeArgs, otherArgs);
+    if (jobId == null) {
+      jobId = getJobId(runtimeArgs, otherArgs);
+    }
     Assert.assertNotNull("Job ID not found for 1 min", jobId);
     Assert.assertTrue("Job has not been started for 1 min.", 
         cluster.getJTClient().isJobStarted(jobId));
-    TaskInfo taskInfo = getTaskInfo(jobId);
+    TaskInfo taskInfo = getTaskInfo(jobId, false);
     Assert.assertNotNull("TaskInfo is null",taskInfo);
     Assert.assertTrue("Task has not been started for 1 min.", 
         cluster.getJTClient().isTaskStarted(taskInfo));    
     JTProtocol wovenClient = cluster.getJTClient().getProxy();
     int counter = 0;
+    TaskInfo tempTaskInfo;
     while (counter++ < 60) {
       if (taskInfo.getTaskStatus().length == 0) {
         UtilsForTests.waitFor(1000);
+        tempTaskInfo = taskInfo;
         taskInfo = wovenClient.getTaskInfo(taskInfo.getTaskID());
       }else if (taskInfo.getTaskStatus()[0].getRunState() == 
           TaskStatus.State.RUNNING) {
         UtilsForTests.waitFor(1000);
+        tempTaskInfo = taskInfo;
         taskInfo = wovenClient.getTaskInfo(taskInfo.getTaskID());
+      } else {
+        break;
+      }
+      if (taskInfo == null) {
+        taskInfo = tempTaskInfo;
+        break;
       }
     }
     verifyProcessTreeOverLimit(taskInfo,jobId);
+    JobInfo jInfo = wovenClient.getJobInfo(jobId); 
+    LOG.info("Waiting till the job is completed...");
+    counter = 0;
+    while (counter++ < 60) {
+      if(jInfo == null) {
+        break;
+      } else if (jInfo.getStatus().isJobComplete()) {
+        break;
+      }
+      UtilsForTests.waitFor(1000);
+      jInfo = wovenClient.getJobInfo(jobId);
+    }
   }
   
   private void verifyProcessTreeOverLimit(TaskInfo taskInfo, JobID jobId) 
@@ -173,7 +230,7 @@ public class TestStreamingJobProcessTree {
       + "Current usage : [0-9]*bytes. Limit : %sbytes. Killing task.";
     Pattern taskOverLimitPattern = 
         Pattern.compile(String.format(taskOverLimitPatternString, 
-        String.valueOf(500 * 1024L)));
+        String.valueOf(512 * 1024 * 1024L)));
     LOG.info("Task OverLimit Pattern:" + taskOverLimitPattern);
     TaskID tID = TaskID.downgrade(taskInfo.getTaskID());
     TaskAttemptID taskAttID = new TaskAttemptID(tID, 0);
@@ -219,6 +276,7 @@ public class TestStreamingJobProcessTree {
     int totalJobs = jobClient.getAllJobs().length;
     String [] args = buildArgs(runtimeArgs, otherArgs);
     cleanup(outputDir, conf);
+    conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
     runSJ = new RunStreamJob(conf, streamJob, args);
     runSJ.start();
     while (counter++ < 60) {
@@ -234,20 +292,16 @@ public class TestStreamingJobProcessTree {
     return jobId;
   }
   
-  private TaskInfo getTaskInfo(JobID jobId) 
+  private TaskInfo getTaskInfo(JobID jobId, boolean isMap) 
       throws IOException {
     JTProtocol wovenClient = cluster.getJTClient().getProxy();
     JobInfo jInfo = wovenClient.getJobInfo(jobId);
-    JobStatus jobStatus = jInfo.getStatus();
-    // Make sure that map is running and start progress 10%. 
-    while (jobStatus.mapProgress() < 0.1f) {
-      UtilsForTests.waitFor(100);
-      jobStatus = wovenClient.getJobInfo(jobId).getStatus();
-    }
     TaskInfo[] taskInfos = wovenClient.getTaskInfo(jobId);
     for (TaskInfo taskinfo : taskInfos) {
       if (!taskinfo.isSetupOrCleanup()) {
-        return taskinfo;
+        if (taskinfo.getTaskID().isMap() == isMap) {
+          return taskinfo;
+        }
       }
     }
     return null;

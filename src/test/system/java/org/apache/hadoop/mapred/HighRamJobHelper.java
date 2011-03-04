@@ -33,6 +33,7 @@ public class HighRamJobHelper {
     String jobArgs []= {"-D","mapred.cluster.max.map.memory.mb=2048", 
                         "-D","mapred.cluster.max.reduce.memory.mb=2048", 
                         "-D","mapred.cluster.map.memory.mb=1024", 
+                        "-D","mapreduce.job.complete.cancel.delegation.tokens=false",
                         "-D","mapred.cluster.reduce.memory.mb=1024",
                         "-m", "6", 
                         "-r", "2", 

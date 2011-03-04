@@ -250,7 +250,13 @@ public class TestJobCacheDirectoriesCleanUp {
       String localTaskDir = localDir + "/" + 
           TaskTracker.getLocalTaskDir(getUser(), jobId.toString(), 
           taskAttID.toString() + "/work/");
-      if (ttClient.getFileStatus(localTaskDir,true).isDir()) {
+      boolean fstatus = false;
+      try {
+        fstatus = ttClient.getFileStatus(localTaskDir,true).isDir(); 
+      } catch(Exception exp) {
+        fstatus = false;
+      }
+      if (fstatus) {
          ttClient.createFile(localTaskDir, customFile, permission, true);
          ttClient.createFolder(localTaskDir, customFolder, permission, true);
          list.add(localTaskDir + customFile);

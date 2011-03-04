@@ -275,7 +275,7 @@ public class TestCacheFileReferenceCount {
       file.writeBytes(input);
     }
     file.close();
-    dfs.setPermission(tmpFolderPath, new FsPermission(FsAction.ALL, 
+    dfs.setPermission(new Path(tmpFolderPath, cacheFile), new FsPermission(FsAction.ALL, 
         FsAction.ALL, FsAction.ALL));
     URI uri = URI.create(new Path(tmpFolderPath, cacheFile).toString());
     return uri;

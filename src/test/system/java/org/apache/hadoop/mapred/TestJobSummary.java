@@ -89,6 +89,7 @@ public class TestJobSummary {
   public void testJobSummaryInfoOfKilledJob() throws IOException, 
           InterruptedException {
     SleepJob job = new SleepJob();
+    conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
     job.setConf(conf);
     conf = job.setupJobConf(2, 1, 4000, 4000, 100, 100);
     JobConf jobConf = new JobConf(conf);
@@ -113,6 +114,7 @@ public class TestJobSummary {
   public void testJobSummaryInfoOfFailedJob() throws IOException, 
           InterruptedException {
     conf = remoteJTClient.getDaemonConf();
+    conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
     JobConf jobConf = new JobConf(conf);
     jobConf.setJobName("Fail Job");
     jobConf.setJarByClass(GenerateTaskChildProcess.class);
@@ -147,6 +149,7 @@ public class TestJobSummary {
     SleepJob job = new SleepJob();
     job.setConf(conf);
     conf = job.setupJobConf(2, 1, 4000, 4000, 100, 100);
+    conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
     JobConf jobConf = new JobConf(conf);
     JobQueueInfo [] queues = jobClient.getQueues();
     for (JobQueueInfo queueInfo : queues ){

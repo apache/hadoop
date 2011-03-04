@@ -217,6 +217,7 @@ public class TestTaskKillingOfStreamingJob {
     int totalJobs = client.getAllJobs().length;
     String [] streamingArgs = generateArgs(runtimeArgs);
     cleanup(outputDir, conf);
+    conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
     final RunStreamingJob streamJobThread = new RunStreamingJob(conf,
         streamJob,streamingArgs);
     streamJobThread.start();
