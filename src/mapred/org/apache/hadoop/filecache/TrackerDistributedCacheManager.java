@@ -187,6 +187,16 @@ public class TrackerDistributedCacheManager {
                                                       isArchive);
           } else {
             localizedPath = localPath;
+            if (!isArchive) {
+              //for private archives, the lengths come over RPC from the 
+              //JobLocalizer since the JobLocalizer is the one who expands
+              //archives and gets the total length
+              lcacheStatus.size = fileStatus.getLen();
+
+              // Increase the size and sub directory count of the cache
+              // from baseDirSize and baseDirNumberSubDir.
+              addCacheInfoUpdate(lcacheStatus);
+            }
           }
           lcacheStatus.initComplete();
         } else {
