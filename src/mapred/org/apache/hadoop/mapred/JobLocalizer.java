@@ -276,6 +276,7 @@ public class JobLocalizer {
       // sub-directories, for e.g., lib/, classes/ are available on class-path
       RunJar.unJar(new File(localJarFile.toString()),
           new File(localJarFile.getParent().toString()));
+      FileUtil.chmod(localJarFile.getParent().toString(), "ugo+rx", true);
     }
   }
 
