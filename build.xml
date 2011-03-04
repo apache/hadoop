@@ -179,9 +179,6 @@
   <!-- jsvc properties set here -->
   <property name="c++.jsvc.src" 
     value="${basedir}/src/c++/jsvc" />
-  <property name="build.c++.jsvc"
-    value="${build.c++}/jsvc" />
-  <property name="jsvc.install.dir" value="${dist.dir}/bin" />
 	
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
@@ -2260,14 +2257,13 @@
   <!-- end of task-controller targets -->
 
   <!-- jsvc targets -->
-  <target name="jsvc">
-    <mkdir dir="${build.c++.jsvc}" />
-    <exec executable="sh" dir="${build.c++.jsvc}"
-        failonerror="yes">
-        <arg value="${c++.jsvc.src}/build.sh" />
-    </exec>
-    <copy file="${build.c++.jsvc}/jsvc" todir="${jsvc.install.dir}" 
-        verbose="true" />
+  <target name="jsvc" if="compile.c++">
+    <subant target="jsvc">
+      <property name="c++.jsvc.src" value="${c++.jsvc.src}" />
+      <property name="build.c++.jsvc" value="${build.c++}/jsvc" />
+      <property name="jsvc.install.dir" value="${dist.dir}/bin" /> 
+      <fileset file="${c++.jsvc.src}/build.xml"/>
+    </subant>
   </target>
 
 </project>
