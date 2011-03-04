@@ -265,6 +265,18 @@ public class Job extends JobContext {
   }
 
   /**
+   * Get the <i>progress</i> of the job's setup, as a float between 0.0 
+   * and 1.0.  When the job setup is completed, the function returns 1.0.
+   * 
+   * @return the progress of the job's setup.
+   * @throws IOException
+   */
+  public float setupProgress() throws IOException {
+    ensureState(JobState.RUNNING);
+    return info.setupProgress();
+  }
+
+  /**
    * Get the <i>progress</i> of the job's map-tasks, as a float between 0.0 
    * and 1.0.  When all map tasks have completed, the function returns 1.0.
    * 

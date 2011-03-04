@@ -110,7 +110,7 @@ public class FileOutputCommitter extends OutputCommitter {
    */
   public void commitJob(JobContext context) throws IOException {
     // delete the _temporary folder
-    cleanup(context);
+    cleanupJob(context);
     // check if the o/p dir should be marked
     if (shouldMarkOutputDir(context.getConfiguration())) {
       // create a _success file in the o/p folder
@@ -118,8 +118,9 @@ public class FileOutputCommitter extends OutputCommitter {
     }
   }
 
-  private void cleanup(JobContext context) 
-  throws IOException {
+  @Override
+  @Deprecated
+  public void cleanupJob(JobContext context) throws IOException {
     if (outputPath != null) {
       Path tmpDir = new Path(outputPath, FileOutputCommitter.TEMP_DIR_NAME);
       FileSystem fileSys = tmpDir.getFileSystem(context.getConfiguration());
@@ -139,7 +140,7 @@ public class FileOutputCommitter extends OutputCommitter {
   @Override
   public void abortJob(JobContext context, JobStatus.State state)
   throws IOException {
-    cleanup(context);
+    cleanupJob(context);
   }
   
   /**

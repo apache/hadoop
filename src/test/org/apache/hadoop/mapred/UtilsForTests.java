@@ -222,7 +222,7 @@ public class UtilsForTests {
   /**
    * A utility that waits for specified amount of time
    */
-  static void waitFor(long duration) {
+  public static void waitFor(long duration) {
     try {
       synchronized (waitLock) {
         waitLock.wait(duration);

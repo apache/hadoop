@@ -41,6 +41,8 @@ public class TestJobCleanup extends TestCase {
   private static String TEST_ROOT_DIR =
       new File(System.getProperty("test.build.data", "/tmp") + "/" 
                + "test-job-cleanup").toString();
+  private static final String CUSTOM_CLEANUP_FILE_NAME = 
+    "_custom_cleanup";
   private static final String ABORT_KILLED_FILE_NAME = 
     "_custom_abort_killed";
   private static final String ABORT_FAILED_FILE_NAME = 
@@ -83,6 +85,21 @@ public class TestJobCleanup extends TestCase {
       }
     };
     return setup;
+  }
+  
+  /** 
+   * Committer with deprecated {@link FileOutputCommitter#cleanupJob(JobContext)}
+   * making a _failed/_killed in the output folder
+   */
+  static class CommitterWithCustomDeprecatedCleanup extends FileOutputCommitter {
+    @Override
+    public void cleanupJob(JobContext context) throws IOException {
+      System.err.println("---- HERE ----");
+      JobConf conf = context.getJobConf();
+      Path outputPath = FileOutputFormat.getOutputPath(conf);
+      FileSystem fs = outputPath.getFileSystem(conf);
+      fs.create(new Path(outputPath, CUSTOM_CLEANUP_FILE_NAME)).close();
+    }
   }
   
   /** 
@@ -263,5 +280,27 @@ public class TestJobCleanup extends TestCase {
     testKilledJob(ABORT_KILLED_FILE_NAME, CommitterWithCustomAbort.class, 
                   new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME,
                                 ABORT_FAILED_FILE_NAME});
+  }
+
+  /**
+   * Test if a failed job with custom committer runs the deprecated
+   * {@link FileOutputCommitter#cleanupJob(JobContext)} code for api 
+   * compatibility testing.
+   */
+  public void testCustomCleanup() throws IOException {
+    // check with a successful job
+    testSuccessfulJob(CUSTOM_CLEANUP_FILE_NAME, 
+                      CommitterWithCustomDeprecatedCleanup.class,
+                      new String[] {});
+    
+    // check with a failed job
+    testFailedJob(CUSTOM_CLEANUP_FILE_NAME, 
+                  CommitterWithCustomDeprecatedCleanup.class, 
+                  new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
+    
+    // check with a killed job
+    testKilledJob(TestJobCleanup.CUSTOM_CLEANUP_FILE_NAME, 
+                  CommitterWithCustomDeprecatedCleanup.class, 
+                  new String[] {FileOutputCommitter.SUCCEEDED_FILE_NAME});
   }
 }

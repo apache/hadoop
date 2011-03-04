@@ -77,13 +77,15 @@ public class FileOutputCommitter extends OutputCommitter {
   
   @Override
   public void commitJob(JobContext context) throws IOException {
-    cleanup(context);
+    cleanupJob(context);
     if (getOutputDirMarking(context.getJobConf())) {
       markSuccessfulOutputDir(context);
     }
   }
   
-  private void cleanup(JobContext context) throws IOException {
+  @Override
+  @Deprecated
+  public void cleanupJob(JobContext context) throws IOException {
     JobConf conf = context.getJobConf();
     // do the clean up of temporary directory
     Path outputPath = FileOutputFormat.getOutputPath(conf);
@@ -107,7 +109,7 @@ public class FileOutputCommitter extends OutputCommitter {
    */
   @Override
   public void abortJob(JobContext context, int runState) throws IOException {
-    cleanup(context);
+    cleanupJob(context);
   }
   
   public void setupTask(TaskAttemptContext context) throws IOException {
