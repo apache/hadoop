@@ -76,6 +76,18 @@ class CapacitySchedulerConf {
     "mapred.capacity-scheduler.task.limit.maxpmem";
 
   /**
+   *  Configuration that provides the maximum cap for the map task in a queue
+   *  at any given point of time.
+   */
+  static final String MAX_MAP_CAP_PROPERTY = "max.map.slots";
+
+  /**
+   *  Configuration that provides the maximum cap for the reduce task in a queue
+   *  at any given point of time.
+   */
+  static final String MAX_REDUCE_CAP_PROPERTY = "max.reduce.slots";
+
+  /**
    * The constant which defines the default initialization thread
    * polling interval, denoted in milliseconds.
    */
@@ -356,5 +368,41 @@ class CapacitySchedulerConf {
   public void setMaxWorkerThreads(int poolSize) {
     rmConf.setInt(
         "mapred.capacity-scheduler.init-worker-threads", poolSize);
+  }
+
+  /**
+   * get the max map slots cap
+   * @param queue
+   * @return
+   */
+  public int getMaxMapCap(String queue) {
+    return rmConf.getInt(toFullPropertyName(queue,MAX_MAP_CAP_PROPERTY),-1);
+  }
+
+  /**
+   * Used for testing
+   * @param queue
+   * @param val
+   */
+  public void setMaxMapCap(String queue,int val) {
+    rmConf.setInt(toFullPropertyName(queue,MAX_MAP_CAP_PROPERTY),val);
+  }
+
+  /**
+   * get the max reduce slots cap
+   * @param queue
+   * @return
+   */
+  public int getMaxReduceCap(String queue) {
+    return rmConf.getInt(toFullPropertyName(queue,MAX_REDUCE_CAP_PROPERTY),-1);    
+  }
+
+  /**
+   * Used for testing
+   * @param queue
+   * @param val
+   */
+  public void setMaxReduceCap(String queue,int val) {
+    rmConf.setInt(toFullPropertyName(queue,MAX_REDUCE_CAP_PROPERTY),val);
   }
 }

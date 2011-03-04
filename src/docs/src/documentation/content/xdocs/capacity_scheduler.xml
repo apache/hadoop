@@ -204,6 +204,38 @@
           	users, no user can use more than 25% of the queue's resources. A 
           	value of 100 implies no user limits are imposed.</td>
           </tr>
+          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.max.map.slots</td>
+          	<td>
+		    This value is the maximum max slots that can be used in a
+		    queue at any point of time. So for example assuming above config value
+		    is 100 , not more than 100 tasks would be in the queue at any point of
+		    time, assuming each task takes one slot.
+
+		    Default value of -1 would disable this capping feature
+
+		    Typically the queue capacity should be equal to this limit.
+		    If queue capacity is more than this limit, excess capacity will be
+		    used by the other queues. If queue capacity is less than the above
+		    limit , then the limit would be the queue capacity - as in the current
+		    implementation
+                </td>
+          </tr>
+          <tr><td>mapred.capacity-scheduler.queue.&lt;queue-name&gt;.max.reduce.slots</td>
+          	<td>
+		    This value is the maximum reduce slots that can be used in a
+		    queue at any point of time. So for example assuming above config value
+		    is 100 , not more than 100 tasks would be in the queue at any point of
+		    time, assuming each task takes one slot.
+
+		    Default value of -1 would disable this capping feature
+
+		    Typically the queue capacity should be equal to this limit.
+		    If queue capacity is more than this limit, excess capacity will be
+		    used by the other queues. If queue capacity is less than the above
+		    limit , then the limit would be the queue capacity - as in the current
+		    implementation
+                </td>
+          </tr>
         </table>
       </section>
       
