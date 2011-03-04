@@ -392,10 +392,18 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.child.java.opts</td>
+                    <td>mapred.map.child.java.opts</td>
                     <td>-Xmx512M</td>
                     <td>
-                      Larger heap-size for child jvms of maps/reduces. 
+                      Larger heap-size for child jvms of maps. 
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>conf/mapred-site.xml</td>
+                    <td>mapred.reduce.child.java.opts</td>
+                    <td>-Xmx512M</td>
+                    <td>
+                      Larger heap-size for child jvms of reduces. 
                     </td>
                   </tr>
                   <tr>
@@ -465,9 +473,17 @@
                   </tr>
                   <tr>
                     <td>conf/mapred-site.xml</td>
-                    <td>mapred.child.java.opts</td>
+                    <td>mapred.map.child.java.opts</td>
+                    <td>-Xmx512M</td>
+                    <td>
+                      Larger heap-size for child jvms of maps. 
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>conf/mapred-site.xml</td>
+                    <td>mapred.reduce.child.java.opts</td>
                     <td>-Xmx1024M</td>
-                    <td>Larger heap-size for child jvms of maps/reduces.</td>
+                    <td>Larger heap-size for child jvms of reduces.</td>
                   </tr>
                 </table>
               </li>

@@ -18,6 +18,8 @@
 package org.apache.hadoop.mapred;
 
 import java.io.*;
+import java.util.Iterator;
+
 import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
@@ -41,6 +43,11 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 public class TestMiniMRChildTask extends TestCase {
   private static final Log LOG =
     LogFactory.getLog(TestMiniMRChildTask.class.getName());
+
+  private final static String OLD_CONFIGS = "test.old.configs";
+  private final static String TASK_OPTS_VAL = "-Xmx200m";
+  private final static String MAP_OPTS_VAL = "-Xmx200m";
+  private final static String REDUCE_OPTS_VAL = "-Xmx300m";
 
   private MiniMRCluster mr;
   private MiniDFSCluster dfs;
@@ -85,7 +92,8 @@ public class TestMiniMRChildTask extends TestCase {
 
   // configure a job
   private void configure(JobConf conf, Path inDir, Path outDir, String input,
-                         Class<? extends Mapper> map) 
+                         Class<? extends Mapper> map, 
+                         Class<? extends Reducer> reduce) 
   throws IOException {
     // set up the input file system and write input text.
     FileSystem inFs = inDir.getFileSystem(conf);
@@ -104,7 +112,7 @@ public class TestMiniMRChildTask extends TestCase {
     // configure the mapred Job which creates a tempfile in map.
     conf.setJobName("testmap");
     conf.setMapperClass(map);
-    conf.setReducerClass(IdentityReducer.class);
+    conf.setReducerClass(reduce);
     conf.setNumMapTasks(1);
     conf.setNumReduceTasks(0);
     FileInputFormat.setInputPaths(conf, inDir);
@@ -127,7 +135,8 @@ public class TestMiniMRChildTask extends TestCase {
                          Path outDir,
                          String input)
   throws IOException {
-    configure(conf, inDir, outDir, input, MapClass.class);
+    configure(conf, inDir, outDir, input, 
+              MapClass.class, IdentityReducer.class);
 
     FileSystem outFs = outDir.getFileSystem(conf);
     
@@ -147,16 +156,52 @@ public class TestMiniMRChildTask extends TestCase {
     outFs.delete(outDir, true);
   }
 
+  private static void checkEnv(String envName, String expValue, String mode) {
+    String envValue = System.getenv(envName).trim();
+    if ("append".equals(mode)) {
+      if (envValue == null || !envValue.contains(":")) {
+        throw new RuntimeException("Missing env variable");
+      } else {
+        String parts[] = envValue.split(":");
+        // check if the value is appended
+        if (!parts[parts.length - 1].equals(expValue)) {
+          throw new RuntimeException("Wrong env variable in append mode");
+        }
+      }
+    } else {
+      if (envValue == null || !envValue.equals(expValue)) {
+        throw new RuntimeException("Wrong env variable in noappend mode");
+      }
+    }
+  }
+
   // Mappers that simply checks if the desired user env are present or not
   static class EnvCheckMapper extends MapReduceBase implements
       Mapper<WritableComparable, Writable, WritableComparable, Writable> {
-    private static String PATH;
     
-    public void map(WritableComparable key, Writable value,
-        OutputCollector<WritableComparable, Writable> out, Reporter reporter)
-        throws IOException {
+    public void configure(JobConf job) {
+      boolean oldConfigs = job.getBoolean(OLD_CONFIGS, false);
+      if (oldConfigs) {
+        String javaOpts = job.get(JobConf.MAPRED_TASK_JAVA_OPTS);
+        assertNotNull(JobConf.MAPRED_TASK_JAVA_OPTS + " is null!", 
+                      javaOpts);
+        assertEquals(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: " + 
+                     javaOpts, 
+                     javaOpts, TASK_OPTS_VAL);
+      } else {
+        String mapJavaOpts = job.get(JobConf.MAPRED_MAP_TASK_JAVA_OPTS);
+        assertNotNull(JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " is null!", 
+                      mapJavaOpts);
+        assertEquals(JobConf.MAPRED_MAP_TASK_JAVA_OPTS + " has value of: " + 
+                     mapJavaOpts, 
+                     mapJavaOpts, MAP_OPTS_VAL);
+      }
+
+      String path = job.get("path");
+      
       // check if the pwd is there in LD_LIBRARY_PATH
       String pwd = System.getenv("PWD");
+      
       assertTrue("LD doesnt contain pwd", 
                  System.getenv("LD_LIBRARY_PATH").contains(pwd));
       
@@ -170,34 +215,69 @@ public class TestMiniMRChildTask extends TestCase {
       checkEnv("NEW_PATH", ":/tmp", "noappend");
       // check if X=$(tt's X var):/tmp for an old env variable inherited from 
       // the tt
-      checkEnv("PATH",  PATH + ":/tmp", "noappend");
+      checkEnv("PATH",  path + ":/tmp", "noappend");
     }
 
-    private void checkEnv(String envName, String expValue, String mode) 
-    throws IOException {
-      String envValue = System.getenv(envName).trim();
-      if ("append".equals(mode)) {
-        if (envValue == null || !envValue.contains(":")) {
-          throw new  IOException("Missing env variable");
-        } else {
-          String parts[] = envValue.split(":");
-          // check if the value is appended
-          if (!parts[parts.length - 1].equals(expValue)) {
-            throw new  IOException("Wrong env variable in append mode");
-          }
-        }
-      } else {
-        if (envValue == null || !envValue.equals(expValue)) {
-          throw new  IOException("Wrong env variable in noappend mode");
-        }
-      }
-    }
-    
-    public void configure(JobConf conf) {
-      PATH = conf.get("path");
+    public void map(WritableComparable key, Writable value,
+                    OutputCollector<WritableComparable, Writable> out, 
+                    Reporter reporter)
+        throws IOException {
     }
   }
 
+  static class EnvCheckReducer extends MapReduceBase 
+  implements Reducer<WritableComparable, Writable, WritableComparable, Writable> {
+    
+    @Override
+    public void configure(JobConf job) {
+      boolean oldConfigs = job.getBoolean(OLD_CONFIGS, false);
+      if (oldConfigs) {
+        String javaOpts = job.get(JobConf.MAPRED_TASK_JAVA_OPTS);
+        assertNotNull(JobConf.MAPRED_TASK_JAVA_OPTS + " is null!", 
+                      javaOpts);
+        assertEquals(JobConf.MAPRED_TASK_JAVA_OPTS + " has value of: " + 
+                     javaOpts, 
+                     javaOpts, TASK_OPTS_VAL);
+      } else {
+        String reduceJavaOpts = job.get(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS);
+        assertNotNull(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " is null!", 
+                      reduceJavaOpts);
+        assertEquals(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS + " has value of: " + 
+                     reduceJavaOpts, 
+                     reduceJavaOpts, REDUCE_OPTS_VAL);
+      }
+
+      String path = job.get("path");
+      
+      // check if the pwd is there in LD_LIBRARY_PATH
+      String pwd = System.getenv("PWD");
+      
+      assertTrue("LD doesnt contain pwd", 
+                 System.getenv("LD_LIBRARY_PATH").contains(pwd));
+      
+      // check if X=$X:/abc works for LD_LIBRARY_PATH
+      checkEnv("LD_LIBRARY_PATH", "/tmp", "append");
+      // check if X=/tmp works for an already existing parameter
+      checkEnv("HOME", "/tmp", "noappend");
+      // check if X=/tmp for a new env variable
+      checkEnv("MY_PATH", "/tmp", "noappend");
+      // check if X=$X:/tmp works for a new env var and results into :/tmp
+      checkEnv("NEW_PATH", ":/tmp", "noappend");
+      // check if X=$(tt's X var):/tmp for an old env variable inherited from 
+      // the tt
+      checkEnv("PATH",  path + ":/tmp", "noappend");
+
+    }
+
+    @Override
+    public void reduce(WritableComparable key, Iterator<Writable> values,
+                       OutputCollector<WritableComparable, Writable> output, 
+                       Reporter reporter)
+        throws IOException {
+    }
+    
+  }
+  
   @Override
   public void setUp() {
     try {
@@ -265,33 +345,74 @@ public class TestMiniMRChildTask extends TestCase {
   public void testTaskEnv(){
     try {
       JobConf conf = mr.createJobConf();
-      
       // initialize input, output directories
       Path inDir = new Path("testing/wc/input1");
       Path outDir = new Path("testing/wc/output1");
-      String input = "The input";
-      
-      configure(conf, inDir, outDir, input, EnvCheckMapper.class);
-
       FileSystem outFs = outDir.getFileSystem(conf);
-      
-      // test 
-      //  - new SET of new var (MY_PATH)
-      //  - set of old var (HOME)
-      //  - append to an old var from modified env (LD_LIBRARY_PATH)
-      //  - append to an old var from tt's env (PATH)
-      //  - append to a new var (NEW_PATH)
-      conf.set("mapred.child.env", 
-               "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp,"
-               + "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
-      conf.set("path", System.getenv("PATH"));
-
-      JobClient.runJob(conf);
+      runTestTaskEnv(conf, inDir, outDir, false);
       outFs.delete(outDir, true);
     } catch(Exception e) {
       e.printStackTrace();
       fail("Exception in testing child env");
       tearDown();
     }
+  }
+  
+  /**
+   * Test to test if the user set *old* env variables reflect in the child
+   * processes. Mainly
+   *   - x=y (x can be a already existing env variable or a new variable)
+   *   - x=$x:y (replace $x with the current value of x)
+   */
+  public void testTaskOldEnv(){
+    try {
+      JobConf conf = mr.createJobConf();
+      // initialize input, output directories
+      Path inDir = new Path("testing/wc/input1");
+      Path outDir = new Path("testing/wc/output1");
+      FileSystem outFs = outDir.getFileSystem(conf);
+      runTestTaskEnv(conf, inDir, outDir, true);
+      outFs.delete(outDir, true);
+    } catch(Exception e) {
+      e.printStackTrace();
+      fail("Exception in testing child env");
+      tearDown();
+    }
+  }
+  
+  void runTestTaskEnv(JobConf conf, Path inDir, Path outDir, boolean oldConfigs) 
+  throws IOException {
+    String input = "The input";
+    configure(conf, inDir, outDir, input, 
+              EnvCheckMapper.class, EnvCheckReducer.class);
+    // test 
+    //  - new SET of new var (MY_PATH)
+    //  - set of old var (HOME)
+    //  - append to an old var from modified env (LD_LIBRARY_PATH)
+    //  - append to an old var from tt's env (PATH)
+    //  - append to a new var (NEW_PATH)
+    String mapTaskEnvKey = JobConf.MAPRED_MAP_TASK_ENV;
+    String reduceTaskEnvKey = JobConf.MAPRED_MAP_TASK_ENV;
+    String mapTaskJavaOptsKey = JobConf.MAPRED_MAP_TASK_JAVA_OPTS;
+    String reduceTaskJavaOptsKey = JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS;
+    String mapTaskJavaOpts = MAP_OPTS_VAL;
+    String reduceTaskJavaOpts = REDUCE_OPTS_VAL;
+    conf.setBoolean(OLD_CONFIGS, oldConfigs);
+    if (oldConfigs) {
+      mapTaskEnvKey = reduceTaskEnvKey = JobConf.MAPRED_TASK_ENV;
+      mapTaskJavaOptsKey = reduceTaskJavaOptsKey = JobConf.MAPRED_TASK_JAVA_OPTS;
+      mapTaskJavaOpts = reduceTaskJavaOpts = TASK_OPTS_VAL;
+    }
+    conf.set(mapTaskEnvKey, 
+             "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp," +
+             "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
+    conf.set(reduceTaskEnvKey, 
+             "MY_PATH=/tmp,HOME=/tmp,LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/tmp," +
+             "PATH=$PATH:/tmp,NEW_PATH=$NEW_PATH:/tmp");
+    conf.set("path", System.getenv("PATH"));
+    conf.set(mapTaskJavaOptsKey, mapTaskJavaOpts);
+    conf.set(reduceTaskJavaOptsKey, reduceTaskJavaOpts);
+    RunningJob job = JobClient.runJob(conf);
+    assertTrue("The environment checker job failed.", job.isSuccessful());
   }
 }

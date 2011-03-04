@@ -158,6 +158,153 @@ public class JobConf extends Configuration {
       "mapred.job.reduce.memory.mb";
 
   /**
+   * Configuration key to set the java command line options for the child
+   * map and reduce tasks.
+   * 
+   * Java opts for the task tracker child processes.
+   * The following symbol, if present, will be interpolated: @taskid@. 
+   * It is replaced by current TaskID. Any other occurrences of '@' will go 
+   * unchanged.
+   * For example, to enable verbose gc logging to a file named for the taskid in
+   * /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
+   *          -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+   * 
+   * The configuration variable {@link #MAPRED_TASK_ULIMIT} can be used to 
+   * control the maximum virtual memory of the child processes.
+   * 
+   * The configuration variable {@link #MAPRED_TASK_ENV} can be used to pass 
+   * other environment variables to the child processes.
+   * 
+   * @deprecated Use {@link #MAPRED_MAP_TASK_JAVA_OPTS} or 
+   *                 {@link #MAPRED_REDUCE_TASK_JAVA_OPTS}
+   */
+  @Deprecated
+  public static final String MAPRED_TASK_JAVA_OPTS = "mapred.child.java.opts";
+  
+  /**
+   * Configuration key to set the java command line options for the map tasks.
+   * 
+   * Java opts for the task tracker child map processes.
+   * The following symbol, if present, will be interpolated: @taskid@. 
+   * It is replaced by current TaskID. Any other occurrences of '@' will go 
+   * unchanged.
+   * For example, to enable verbose gc logging to a file named for the taskid in
+   * /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
+   *          -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+   * 
+   * The configuration variable {@link #MAPRED_MAP_TASK_ULIMIT} can be used to 
+   * control the maximum virtual memory of the map processes.
+   * 
+   * The configuration variable {@link #MAPRED_MAP_TASK_ENV} can be used to pass 
+   * other environment variables to the map processes.
+   */
+  public static final String MAPRED_MAP_TASK_JAVA_OPTS = 
+    "mapred.map.child.java.opts";
+  
+  /**
+   * Configuration key to set the java command line options for the reduce tasks.
+   * 
+   * Java opts for the task tracker child reduce processes.
+   * The following symbol, if present, will be interpolated: @taskid@. 
+   * It is replaced by current TaskID. Any other occurrences of '@' will go 
+   * unchanged.
+   * For example, to enable verbose gc logging to a file named for the taskid in
+   * /tmp and to set the heap maximum to be a gigabyte, pass a 'value' of:
+   *          -Xmx1024m -verbose:gc -Xloggc:/tmp/@taskid@.gc
+   * 
+   * The configuration variable {@link #MAPRED_REDUCE_TASK_ULIMIT} can be used  
+   * to control the maximum virtual memory of the reduce processes.
+   * 
+   * The configuration variable {@link #MAPRED_REDUCE_TASK_ENV} can be used to 
+   * pass process environment variables to the reduce processes.
+   */
+  public static final String MAPRED_REDUCE_TASK_JAVA_OPTS = 
+    "mapred.reduce.child.java.opts";
+  
+  public static final String DEFAULT_MAPRED_TASK_JAVA_OPTS = "-Xmx200m";
+  
+  /**
+   * Configuration key to set the maximum virutal memory available to the child
+   * map and reduce tasks (in kilo-bytes).
+   * 
+   * Note: This must be greater than or equal to the -Xmx passed to the JavaVM
+   *       via {@link #MAPRED_TASK_JAVA_OPTS}, else the VM might not start.
+   * 
+   * @deprecated Use {@link #MAPRED_MAP_TASK_ULIMIT} or 
+   *                 {@link #MAPRED_REDUCE_TASK_ULIMIT}
+   */
+  @Deprecated
+  public static final String MAPRED_TASK_ULIMIT = "mapred.child.ulimit";
+
+  /**
+   * Configuration key to set the maximum virutal memory available to the
+   * map tasks (in kilo-bytes).
+   * 
+   * Note: This must be greater than or equal to the -Xmx passed to the JavaVM
+   *       via {@link #MAPRED_MAP_TASK_JAVA_OPTS}, else the VM might not start.
+   */
+  public static final String MAPRED_MAP_TASK_ULIMIT = "mapred.map.child.ulimit";
+  
+  /**
+   * Configuration key to set the maximum virutal memory available to the
+   * reduce tasks (in kilo-bytes).
+   * 
+   * Note: This must be greater than or equal to the -Xmx passed to the JavaVM
+   *       via {@link #MAPRED_REDUCE_TASK_JAVA_OPTS}, else the VM might not start.
+   */
+  public static final String MAPRED_REDUCE_TASK_ULIMIT =
+    "mapred.reduce.child.ulimit";
+
+  /**
+   * Configuration key to set the environment of the child map/reduce tasks.
+   * 
+   * The format of the value is <code>k1=v1,k2=v2</code>. Further it can 
+   * reference existing environment variables via <code>$key</code>.
+   * 
+   * Example:
+   * <ul>
+   *   <li> A=foo - This will set the env variable A to foo. </li>
+   *   <li> B=$X:c This is inherit tasktracker's X env variable. </li>
+   * </ul>
+   * 
+   * @deprecated Use {@link #MAPRED_MAP_TASK_ENV} or 
+   *                 {@link #MAPRED_REDUCE_TASK_ENV}
+   */
+  @Deprecated
+  public static final String MAPRED_TASK_ENV = "mapred.child.env";
+
+  /**
+   * Configuration key to set the maximum virutal memory available to the
+   * map tasks.
+   * 
+   * The format of the value is <code>k1=v1,k2=v2</code>. Further it can 
+   * reference existing environment variables via <code>$key</code>.
+   * 
+   * Example:
+   * <ul>
+   *   <li> A=foo - This will set the env variable A to foo. </li>
+   *   <li> B=$X:c This is inherit tasktracker's X env variable. </li>
+   * </ul>
+   */
+  public static final String MAPRED_MAP_TASK_ENV = "mapred.map.child.env";
+  
+  /**
+   * Configuration key to set the maximum virutal memory available to the
+   * reduce tasks.
+   * 
+   * The format of the value is <code>k1=v1,k2=v2</code>. Further it can 
+   * reference existing environment variables via <code>$key</code>.
+   * 
+   * Example:
+   * <ul>
+   *   <li> A=foo - This will set the env variable A to foo. </li>
+   *   <li> B=$X:c This is inherit tasktracker's X env variable. </li>
+   * </ul>
+   */
+  public static final String MAPRED_REDUCE_TASK_ENV =
+    "mapred.reduce.child.env";
+
+  /**
    * Construct a map/reduce job configuration.
    */
   public JobConf() {

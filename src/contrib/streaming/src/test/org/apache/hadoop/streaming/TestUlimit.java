@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TestMiniMRWithDFS;
 
@@ -54,7 +55,7 @@ public class TestUlimit extends TestCase {
       "-reducer", "org.apache.hadoop.mapred.lib.IdentityReducer",
       "-numReduceTasks", "0",
       "-jobconf", "mapred.map.tasks=1",
-      "-jobconf", "mapred.child.ulimit=" + memLimit,
+      "-jobconf", JobConf.MAPRED_MAP_TASK_ULIMIT + "=" + memLimit,
       "-jobconf", "mapred.job.tracker=" + "localhost:" +
                                            mr.getJobTrackerPort(),
       "-jobconf", "fs.default.name=" + "hdfs://localhost:" 
