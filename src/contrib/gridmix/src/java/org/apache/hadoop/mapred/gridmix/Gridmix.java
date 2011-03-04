@@ -159,7 +159,7 @@ public class Gridmix extends Configured implements Tool {
       GridmixJobSubmissionPolicy policy = GridmixJobSubmissionPolicy.getPolicy(
         conf, GridmixJobSubmissionPolicy.STRESS);
       LOG.info(" Submission policy is " + policy.name());
-      statistics = new Statistics(conf, policy.getPollingInterval(), startFlag,userResolver);
+      statistics = new Statistics(conf, policy.getPollingInterval(), startFlag);
       monitor = createJobMonitor(statistics);
       int noOfSubmitterThreads = (policy == GridmixJobSubmissionPolicy.SERIAL) ? 1
           : Runtime.getRuntime().availableProcessors() + 1;
@@ -168,7 +168,7 @@ public class Gridmix extends Configured implements Tool {
         monitor, conf.getInt(
           GRIDMIX_SUB_THR, noOfSubmitterThreads), conf.getInt(
           GRIDMIX_QUE_DEP, 5), new FilePool(
-          conf, ioPath), userResolver);
+          conf, ioPath), userResolver,statistics);
       
       factory = createJobFactory(
         submitter, traceIn, scratchDir, conf, startFlag, userResolver);
@@ -190,9 +190,10 @@ public class Gridmix extends Configured implements Tool {
     return new JobMonitor(stats);
   }
 
-  protected JobSubmitter createJobSubmitter(JobMonitor monitor, int threads,
-      int queueDepth, FilePool pool,UserResolver resolver) throws IOException {
-    return new JobSubmitter(monitor, threads, queueDepth, pool, resolver);
+  protected JobSubmitter createJobSubmitter(
+    JobMonitor monitor, int threads, int queueDepth, FilePool pool,
+    UserResolver resolver, Statistics statistics) throws IOException {
+    return new JobSubmitter(monitor, threads, queueDepth, pool, statistics);
   }
 
   protected JobFactory createJobFactory(

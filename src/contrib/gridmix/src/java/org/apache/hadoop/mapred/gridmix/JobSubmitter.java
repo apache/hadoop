@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import java.io.IOException;
 import java.nio.channels.ClosedByInterruptException;
 import java.util.concurrent.ExecutorService;
@@ -25,12 +28,6 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.security.PrivilegedExceptionAction;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
-import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Component accepting deserialized job traces, computing split data, and
@@ -43,12 +40,12 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
 
   public static final Log LOG = LogFactory.getLog(JobSubmitter.class);
 
-  final Semaphore sem;
+  private final Semaphore sem;
   private final FilePool inputDir;
   private final JobMonitor monitor;
+  private final Statistics statistics;
   private final ExecutorService sched;
   private volatile boolean shutdown = false;
-  private final UserResolver resolver;
 
   /**
    * Initialize the submission component with downstream monitor and pool of
@@ -59,16 +56,18 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
    * @param queueDepth Max depth of pending work queue
    *   See {@link Gridmix#GRIDMIX_QUE_DEP}.
    * @param inputDir Set of files from which split data may be mined for
-   *   synthetic jobs.
+   * synthetic job
+   * @param statistics
    */
-  public JobSubmitter(JobMonitor monitor, int threads, int queueDepth,
-      FilePool inputDir, UserResolver resolver) {
+  public JobSubmitter(
+    JobMonitor monitor, int threads, int queueDepth, FilePool inputDir,
+    Statistics statistics) {
     sem = new Semaphore(queueDepth);
     sched = new ThreadPoolExecutor(threads, threads, 0L,
         TimeUnit.MILLISECONDS, new LinkedBlockingQueue<Runnable>());
     this.inputDir = inputDir;
     this.monitor = monitor;
-    this.resolver = resolver;
+    this.statistics = statistics;
   }
 
   /**
@@ -106,6 +105,7 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
         try {
           // submit job
           monitor.add(job.call());
+          statistics.addJobStats(job.getJob(), job.getJobDesc());
           LOG.debug("SUBMIT " + job + "@" + System.currentTimeMillis() +
               " (" + job.getJob().getJobID() + ")");
         } catch (IOException e) {
@@ -132,7 +132,7 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
         monitor.submissionFailed(job.getJob());
       } finally {
         sem.release();
-      }                               
+      }
     }
   }
 
@@ -154,6 +154,7 @@ class JobSubmitter implements Gridmix.Component<GridmixJob> {
 
   /**
    * (Re)scan the set of input files from which splits are derived.
+   * @throws java.io.IOException
    */
   public void refreshFilePool() throws IOException {
     inputDir.refresh();

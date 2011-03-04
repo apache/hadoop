@@ -352,7 +352,6 @@ public class TestGridmixSubmission {
     conf = new Configuration();
       conf.setEnum(GridmixJobSubmissionPolicy.JOB_SUBMISSION_POLICY,policy);
     conf = GridmixTestUtils.mrCluster.createJobConf(new JobConf(conf));
-//    GridmixTestUtils.createHomeAndStagingDirectory((JobConf)conf);
     // allow synthetic users to create home directories
     GridmixTestUtils.dfs.mkdirs(root, new FsPermission((short)0777));
     GridmixTestUtils.dfs.setPermission(root, new FsPermission((short)0777));

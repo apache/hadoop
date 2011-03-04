@@ -17,27 +17,26 @@
  */
 package org.apache.hadoop.mapred.gridmix;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapred.ClusterStatus;
-import org.apache.hadoop.mapred.JobStatus;
+import org.apache.hadoop.mapred.gridmix.Statistics.ClusterStats;
+import org.apache.hadoop.mapred.gridmix.Statistics.JobStats;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.Condition;
-import java.util.List;
 
 public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
   public static final Log LOG = LogFactory.getLog(StressJobFactory.class);
 
   private LoadStatus loadStatus = new LoadStatus();
-  private List<JobStatus> runningWaitingJobs;
   private final Condition overloaded = this.lock.newCondition();
   /**
    * The minimum ratio between pending+running map tasks (aka. incomplete map
@@ -45,7 +44,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
    * overloaded. For running maps, we only count them partially. Namely, a 40%
    * completed map is counted as 0.6 map tasks in our calculation.
    */
-  static final float OVERLAOD_MAPTASK_MAPSLOT_RATIO = 2.0f;
+  static final float OVERLOAD_MAPTASK_MAPSLOT_RATIO = 2.0f;
 
   /**
    * Creating a new instance does not start the thread.
@@ -115,7 +114,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
             }
 
             int noOfSlotsAvailable = loadStatus.numSlotsBackfill;
-            LOG.info(" No of slots to be backfilled are " + noOfSlotsAvailable);
+            LOG.info("No of slots to be backfilled are " + noOfSlotsAvailable);
 
             for (int i = 0; i < noOfSlotsAvailable; i++) {
               try {
@@ -133,7 +132,7 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
                       UserGroupInformation.createRemoteUser(
                         job.getUser())), sequence.getAndIncrement()));
               } catch (IOException e) {
-                LOG.error(" EXCEPTOIN in availableSlots ", e);
+                LOG.error("Error while submitting the job ", e);
                 error = e;
                 return;
               }
@@ -152,7 +151,6 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
   }
 
   /**
-   * <p/>
    * STRESS Once you get the notification from StatsCollector.Collect the
    * clustermetrics. Update current loadStatus with new load status of JT.
    *
@@ -163,11 +161,11 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
     lock.lock();
     try {
       ClusterStatus clusterMetrics = item.getStatus();
-      LoadStatus newStatus;
-      runningWaitingJobs = item.getRunningWaitingJobs();
-      newStatus = checkLoadAndGetSlotsToBackfill(item, clusterMetrics);
-      loadStatus.isOverloaded = newStatus.isOverloaded;
-      loadStatus.numSlotsBackfill = newStatus.numSlotsBackfill;
+      try {
+        checkLoadAndGetSlotsToBackfill(item,clusterMetrics);
+      } catch (IOException e) {
+        LOG.error("Couldn't get the new Status",e);
+      }
       overloaded.signalAll();
     } finally {
       lock.unlock();
@@ -178,47 +176,44 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
    * We try to use some light-weight mechanism to determine cluster load.
    *
    * @param stats
-   * @param clusterStatus
-   * @return Whether, from job client perspective, the cluster is overloaded.
+   * @param clusterStatus Cluster status
+   * @throws java.io.IOException
    */
-  private LoadStatus checkLoadAndGetSlotsToBackfill(
-    Statistics.ClusterStats stats, ClusterStatus clusterStatus) {
-    LoadStatus loadStatus = new LoadStatus();
+  private void checkLoadAndGetSlotsToBackfill(
+    ClusterStats stats, ClusterStatus clusterStatus) throws IOException {
     // If there are more jobs than number of task trackers, we assume the
-    // cluster is overloaded. This is to bound the memory usage of the
-    // simulator job tracker, in situations where we have jobs with small
-    // number of map tasks and large number of reduce tasks.
-    if (runningWaitingJobs.size() >= clusterStatus.getTaskTrackers()) {
+    // cluster is overloaded. 
+    if (stats.getNumRunningJob() >= clusterStatus.getTaskTrackers()) {
       if (LOG.isDebugEnabled()) {
         LOG.debug(
           System.currentTimeMillis() + " Overloaded is " +
             Boolean.TRUE.toString() + " #runningJobs >= taskTrackerCount (" +
-            runningWaitingJobs.size() + " >= " +
+            stats.getNumRunningJob() + " >= " +
             clusterStatus.getTaskTrackers() + " )\n");
       }
       loadStatus.isOverloaded = true;
       loadStatus.numSlotsBackfill = 0;
-      return loadStatus;
+      return;
     }
 
     float incompleteMapTasks = 0; // include pending & running map tasks.
-    for (JobStatus job : runningWaitingJobs) {
-      incompleteMapTasks += (1 - Math.min(
-        job.mapProgress(), 1.0)) * stats.getJobReports().get(
-        job.getJobID()).length;
+    for (JobStats job : ClusterStats.getRunningJobStats()) {
+      float mapProgress = job.getJob().mapProgress();
+      int noOfMaps = job.getNoOfMaps();
+      incompleteMapTasks += (1 - Math.min(mapProgress,1.0))* noOfMaps;
     }
 
     float overloadedThreshold =
-      OVERLAOD_MAPTASK_MAPSLOT_RATIO * clusterStatus.getMaxMapTasks();
+      OVERLOAD_MAPTASK_MAPSLOT_RATIO * clusterStatus.getMaxMapTasks();
     boolean overloaded = incompleteMapTasks > overloadedThreshold;
     String relOp = (overloaded) ? ">" : "<=";
     if (LOG.isDebugEnabled()) {
-      LOG.info(
+      LOG.debug(
         System.currentTimeMillis() + " Overloaded is " + Boolean.toString(
           overloaded) + " incompleteMapTasks " + relOp + " " +
-          OVERLAOD_MAPTASK_MAPSLOT_RATIO + "*mapSlotCapacity" + "(" +
+          OVERLOAD_MAPTASK_MAPSLOT_RATIO + "*mapSlotCapacity" + "(" +
           incompleteMapTasks + " " + relOp + " " +
-          OVERLAOD_MAPTASK_MAPSLOT_RATIO + "*" +
+          OVERLOAD_MAPTASK_MAPSLOT_RATIO + "*" +
           clusterStatus.getMaxMapTasks() + ")");
     }
     if (overloaded) {
@@ -233,12 +228,11 @@ public class StressJobFactory extends JobFactory<Statistics.ClusterStats> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Current load Status is " + loadStatus);
     }
-    return loadStatus;
   }
 
   static class LoadStatus {
-    volatile boolean isOverloaded = false;
-    volatile int numSlotsBackfill = -1;
+    boolean isOverloaded = false;
+    int numSlotsBackfill = -1;
 
     public String toString() {
       return " is Overloaded " + isOverloaded + " no of slots available " +

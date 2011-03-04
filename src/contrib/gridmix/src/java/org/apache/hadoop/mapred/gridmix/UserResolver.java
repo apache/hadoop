@@ -39,8 +39,7 @@ public interface UserResolver {
    * Configure the user map given the URI and configuration. The resolver's
    * contract will define how the resource will be interpreted, but the default
    * will typically interpret the URI as a {@link org.apache.hadoop.fs.Path}
-   * listing target users. The format of this file is defined by {@link
-   * #parseUserList}.
+   * listing target users. 
    * @param userdesc URI (possibly null) from which user information may be
    * loaded per the subclass contract.
    * @param conf The tool configuration.
