@@ -894,6 +894,8 @@
         <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}" />
         <sysproperty key="test.build.extraconf"
                      value="@{test.dir}/extraconf" />
+        <sysproperty key="java.security.krb5.conf"
+                     value="${test.src.dir}/krb5.conf"/>
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
         <sysproperty key="java.library.path"
           value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>

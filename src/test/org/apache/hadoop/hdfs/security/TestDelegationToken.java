@@ -53,6 +53,10 @@ public class TestDelegationToken {
     config = new Configuration();
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_KEY, 10000);
     config.setLong(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY, 5000);
+    config.set("hadoop.security.auth_to_local", 
+        "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" +
+        "DEFAULT");
+
     FileSystem.setDefaultUri(config, "hdfs://localhost:" + "0");
     cluster = new MiniDFSCluster(0, config, 1, true, true, true,  null, null, null, null);
     cluster.waitActive();

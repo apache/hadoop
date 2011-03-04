@@ -173,6 +173,13 @@ public class UserGroupInformation {
     // circular dependence.
     javax.security.auth.login.Configuration.setConfiguration
         (new HadoopConfiguration());
+    // give the configuration on how to translate Kerberos names
+    try {
+      KerberosName.setConfiguration(conf);
+    } catch (IOException ioe) {
+      throw new RuntimeException("Problem with Kerberos auth_to_local name " +
+                                 "configuration", ioe);
+    }
     isInitialized = true;
     UserGroupInformation.conf = conf;
   }
