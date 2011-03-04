@@ -36,7 +36,6 @@ public class MapsReExecutionImpact extends DiagnosticTest {
   private JobStatistics _job;
   private long _percentMapsReExecuted;
   
-  
   /**
    * 
    */
@@ -53,7 +52,7 @@ public class MapsReExecutionImpact extends DiagnosticTest {
      * Set the this._job
      */
     this._job = job;
-    
+
     /*
      * Calculate and return the impact
      */

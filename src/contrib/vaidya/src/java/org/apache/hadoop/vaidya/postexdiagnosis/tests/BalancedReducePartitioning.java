@@ -37,6 +37,7 @@ public class BalancedReducePartitioning extends DiagnosticTest {
   private long percentReduceRecordsSize;
   private double percent;
   private double impact;
+  private JobStatistics _job;
   
   /**
    * 
@@ -49,11 +50,19 @@ public class BalancedReducePartitioning extends DiagnosticTest {
   @Override
   public double evaluate(JobStatistics jobExecutionStats) {
     
+    /* Set the global job variable */
+    this._job = jobExecutionStats;
+
+    /* If Map only job then impact is zero */
+    if (jobExecutionStats.getStringValue(JobKeys.JOBTYPE).equals("MAP_ONLY")) {
+      this.impact = 0;
+      return this.impact;
+    }
+
     /*
      * Read this rule specific input PercentReduceRecords
      */
     this.percent = getInputElementDoubleValue("PercentReduceRecords", 0.90);
-    
     
     /*
      * Get the sorted reduce task list by number of INPUT_RECORDS (ascending) 
@@ -74,7 +83,6 @@ public class BalancedReducePartitioning extends DiagnosticTest {
     
     // Calculate Impact
     return this.impact = (1 - (double)this.busyReducers/(double)this.totalReduces);
-    
   }
 
   /*
@@ -82,7 +90,7 @@ public class BalancedReducePartitioning extends DiagnosticTest {
    */
   public void printReduceCounters (List<Hashtable<ReduceTaskKeys, String>> x, ReduceTaskKeys key) {
     for (int i=0; i<x.size(); i++) {
-      System.out.println("ind:"+i+", Value:<"+x.get(i).get(key)+">");
+      System.out.println("ind:"+i+", Value:"+x.get(i).get(key)+":");
     }
   }
   
