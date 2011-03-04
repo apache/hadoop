@@ -17,18 +17,24 @@
  */
 package org.apache.hadoop.security.authorize;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * Class representing a configured access control list.
  */
-public class AccessControlList {
+public class AccessControlList implements Writable {
   
   // Indicates an ACL string that represents access to all users
   public static final String WILDCARD_ACL_VALUE = "*";
+  private static final int INITIAL_CAPACITY = 256;
 
   // Set of users who are granted access.
   private Set<String> users;
@@ -47,12 +53,18 @@ public class AccessControlList {
    * @param aclString String representation of the ACL
    */
   public AccessControlList(String aclString) {
+    buildACL(aclString);
+  }
+
+  // build ACL from the given string
+  private void buildACL(String aclString) {
     users = new TreeSet<String>();
     groups = new TreeSet<String>();
     if (aclString.contains(WILDCARD_ACL_VALUE) && 
         aclString.trim().equals(WILDCARD_ACL_VALUE)) {
       allAllowed = true;
     } else {
+      allAllowed = false;
       String[] userGroupStrings = aclString.split(" ", 2);
       
       if (userGroupStrings.length >= 1) {
@@ -70,7 +82,7 @@ public class AccessControlList {
       }
     }
   }
-  
+
   public boolean isAllAllowed() {
     return allAllowed;
   }
@@ -119,28 +131,83 @@ public class AccessControlList {
   
   @Override
   public String toString() {
-    StringBuilder sb = new StringBuilder();
-    boolean first = true;
-    for(String user: users) {
-      if (!first) {
-        sb.append(",");
-      } else {
-        first = false;
-      }
-      sb.append(user);
+    String str = null;
+
+    if (allAllowed) {
+      str = "All users are allowed";
     }
-    if (!groups.isEmpty()) {
+    else if (users.isEmpty() && groups.isEmpty()) {
+      str = "No users are allowed";
+    }
+    else {
+      String usersStr = null;
+      String groupsStr = null;
+      if (!users.isEmpty()) {
+        usersStr = users.toString();
+      }
+      if (!groups.isEmpty()) {
+        groupsStr = groups.toString();
+      }
+
+      if (!users.isEmpty() && !groups.isEmpty()) {
+        str = "Users " + usersStr + " and members of the groups "
+            + groupsStr + " are allowed";
+      }
+      else if (!users.isEmpty()) {
+        str = "Users " + usersStr + " are allowed";
+      }
+      else {// users is empty array and groups is nonempty
+        str = "Members of the groups "
+            + groupsStr + " are allowed";
+      }
+    }
+
+    return str;
+  }
+
+  // Serializes the AccessControlList object
+  public void write(DataOutput out) throws IOException {
+    StringBuilder sb = new StringBuilder(INITIAL_CAPACITY);
+    if (allAllowed) {
+      sb.append('*');
+    }
+    else {
+      sb.append(getUsersString());
       sb.append(" ");
+      sb.append(getGroupsString());
     }
-    first = true;
-    for(String group: groups) {
+    Text.writeString(out, sb.toString());
+  }
+
+  // Deserialize
+  public void readFields(DataInput in) throws IOException {
+    String aclString = Text.readString(in);
+    buildACL(aclString);
+  }
+
+  // Returns comma-separated concatenated single String of the set 'users'
+  private String getUsersString() {
+    return getString(users);
+  }
+
+  // Returns comma-separated concatenated single String of the set 'groups'
+  private String getGroupsString() {
+    return getString(groups);
+  }
+
+  // Returns comma-separated concatenated single String of all strings of
+  // the given set
+  private String getString(Set<String> strings) {
+    StringBuilder sb = new StringBuilder(INITIAL_CAPACITY);
+    boolean first = true;
+    for(String str: strings) {
       if (!first) {
         sb.append(",");
       } else {
         first = false;
       }
-      sb.append(group);
+      sb.append(str);
     }
-    return sb.toString();    
+    return sb.toString();
   }
 }

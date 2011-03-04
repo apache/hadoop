@@ -34,7 +34,6 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobHistory.*;
@@ -44,6 +43,8 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
+
 /**
  * Tests the JobHistory files - to catch any changes to JobHistory that can
  * cause issues for the execution of JobTracker.RecoveryManager, HistoryViewer.
@@ -803,10 +804,14 @@ public class TestJobHistory extends TestCase {
 
     // Also JobACLs should be correct
     if (mr.getJobTrackerRunner().getJobTracker().areACLsEnabled()) {
-      assertEquals(conf.get(JobACL.VIEW_JOB.getAclName()),
-          jobInfo.getJobACLs().get(JobACL.VIEW_JOB).toString());
-      assertEquals(conf.get(JobACL.MODIFY_JOB.getAclName()),
-          jobInfo.getJobACLs().get(JobACL.MODIFY_JOB).toString());
+      AccessControlList acl = new AccessControlList(
+          conf.get(JobACL.VIEW_JOB.getAclName(), " "));
+      assertTrue(acl.toString().equals(
+          jobInfo.getJobACLs().get(JobACL.VIEW_JOB).toString()));
+      acl = new AccessControlList(
+          conf.get(JobACL.MODIFY_JOB.getAclName(), " "));
+      assertTrue(acl.toString().equals(
+          jobInfo.getJobACLs().get(JobACL.MODIFY_JOB).toString()));
     }
   }
 

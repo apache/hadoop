@@ -650,8 +650,8 @@ public class HttpServer implements FilterContainer {
       if (!adminsAcl.isUserAllowed(remoteUserUGI)) {
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User "
             + remoteUser + " is unauthorized to access this page. "
-            + "Only \"" + adminsAcl.toString()
-            + "\" can access this page.");
+            + "AccessControlList for accessing this page : "
+            + adminsAcl.toString());
         return false;
       }
     }

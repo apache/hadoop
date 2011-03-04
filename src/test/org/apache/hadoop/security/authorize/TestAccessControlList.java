@@ -43,6 +43,32 @@ public class TestAccessControlList extends TestCase {
     acl = new AccessControlList("*  ");
     assertTrue(acl.isAllAllowed());
   }
+
+  // check if AccessControlList.toString() works as expected
+  public void testToString() {
+    AccessControlList acl;
+
+    acl = new AccessControlList("*");
+    assertTrue(acl.toString().equals("All users are allowed"));
+
+    acl = new AccessControlList(" ");
+    assertTrue(acl.toString().equals("No users are allowed"));
+
+    acl = new AccessControlList("user1,user2");
+    assertTrue(acl.toString().equals("Users [user1, user2] are allowed"));
+
+    acl = new AccessControlList("user1,user2 ");// with space
+    assertTrue(acl.toString().equals("Users [user1, user2] are allowed"));
+
+    acl = new AccessControlList(" group1,group2");
+    assertTrue(acl.toString().equals(
+        "Members of the groups [group1, group2] are allowed"));
+
+    acl = new AccessControlList("user1,user2 group1,group2");
+    assertTrue(acl.toString().equals(
+        "Users [user1, user2] and " +
+        "members of the groups [group1, group2] are allowed"));
+  }
   
   public void testAccessControlList() throws Exception {
     AccessControlList acl;

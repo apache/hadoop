@@ -374,7 +374,7 @@ public class TestJobACLs {
 
     // Set the job up.
     final JobConf myConf = mr.createJobConf();
-    myConf.set(JobContext.JOB_ACL_VIEW_JOB, "user2");
+    myConf.set(JobContext.JOB_ACL_VIEW_JOB, "user2 group2");
 
     // Submit the job as user1
     RunningJob job = submitJobAsUser(myConf, jobSubmitter);
