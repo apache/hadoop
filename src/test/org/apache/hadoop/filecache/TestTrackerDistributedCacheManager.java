@@ -297,18 +297,57 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     if (!canRun()) {
       return;
     }
-    checkLocalizedPath("true");
-    checkLocalizedPath("false");
+    checkLocalizedPath(true);
+    checkLocalizedPath(false);
   }
   
-  private void checkLocalizedPath(String visibility) 
+  private void appendStringArray(StringBuilder buffer, String[] data) {
+    if (data != null && data.length != 0) {
+      buffer.append(data[0]);
+      for(int i=1; i < data.length; i++) {
+        buffer.append(',');
+        buffer.append(data[i]);
+      }
+    }
+  }
+
+  private void appendUriArray(StringBuilder buffer, URI[] data) {
+    if (data != null && data.length != 0) {
+      buffer.append(data[0]);
+      for(int i=1; i < data.length; i++) {
+        buffer.append(',');
+        buffer.append(data[i]);
+      }
+    }
+  }
+
+  private void dumpState(Configuration conf1) throws IOException {
+    StringBuilder buf = new StringBuilder();
+    buf.append("\nFiles:");
+    appendUriArray(buf, DistributedCache.getCacheFiles(conf1));
+    buf.append("\nArchives:");
+    appendUriArray(buf, DistributedCache.getCacheArchives(conf1));
+    buf.append("\nFile Visible:");
+    appendStringArray(buf, TrackerDistributedCacheManager.getFileVisibilities
+                      (conf1));
+    buf.append("\nArchive Visible:");
+    appendStringArray(buf, TrackerDistributedCacheManager.getArchiveVisibilities
+                      (conf1));
+    buf.append("\nFile timestamps:");
+    appendStringArray(buf, DistributedCache.getFileTimestamps(conf1));
+    buf.append("\nArchive timestamps:");
+    appendStringArray(buf, DistributedCache.getArchiveTimestamps(conf1));
+    LOG.info("state = " + buf.toString());
+  }
+  
+  private void checkLocalizedPath(boolean visibility) 
   throws IOException, LoginException, InterruptedException {
     TrackerDistributedCacheManager manager = 
       new TrackerDistributedCacheManager(conf, taskController);
     String userName = getJobOwnerName();
     File workDir = new File(TEST_ROOT_DIR, "workdir");
     Path cacheFile = new Path(TEST_ROOT_DIR, "fourthcachefile");
-    if ("true".equals(visibility)) {
+    if (visibility) {
       createPublicTempFile(cacheFile);
     } else {
       createPrivateTempFile(cacheFile);
@@ -319,6 +358,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     DistributedCache.addCacheFile(cacheFile.toUri(), conf1);
     TrackerDistributedCacheManager.determineTimestamps(conf1);
     TrackerDistributedCacheManager.determineCacheVisibilities(conf1);
+    dumpState(conf1);
 
     // Task localizing for job
     TaskDistributedCacheManager handle = manager
@@ -328,7 +368,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
           TaskTracker.getPublicDistributedCacheDir());
     TaskDistributedCacheManager.CacheFile c = handle.getCacheFiles().get(0);
     String distCacheDir;
-    if ("true".equals(visibility)) {
+    if (visibility) {
       distCacheDir = TaskTracker.getPublicDistributedCacheDir(); 
     } else {
       distCacheDir = TaskTracker.getPrivateDistributedCacheDir(userName);
@@ -337,19 +377,19 @@ public class TestTrackerDistributedCacheManager extends TestCase {
       manager.getLocalCache(cacheFile.toUri(), conf1, distCacheDir,
           fs.getFileStatus(cacheFile), false,
           c.timestamp, new Path(TEST_ROOT_DIR), false,
-          Boolean.parseBoolean(visibility));
+          visibility);
     assertTrue("Cache file didn't get localized in the expected directory. " +
         "Expected localization to happen within " + 
         ROOT_MAPRED_LOCAL_DIR + "/" + distCacheDir +
         ", but was localized at " + 
         localizedPath, localizedPath.toString().contains(distCacheDir));
-    if ("true".equals(visibility)) {
+    if (visibility) {
       checkPublicFilePermissions(new Path[]{localizedPath});
     } else {
       checkFilePermissions(new Path[]{localizedPath});
     }
   }
-  
+
   /**
    * Check proper permissions on the cache files
    * 
