@@ -22,7 +22,7 @@
 %>
 
 <%!
-  JspHelper jspHelper = new JspHelper();
+  static JspHelper jspHelper = new JspHelper();
 
   public void generateFileChunks(JspWriter out, HttpServletRequest req,
                                  Configuration conf

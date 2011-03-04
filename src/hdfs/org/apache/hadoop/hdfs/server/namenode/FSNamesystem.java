@@ -75,6 +75,7 @@ import java.io.DataOutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.Map.Entry;
 
 import javax.management.NotCompliantMBeanException;
@@ -145,7 +146,8 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean {
   private long accessTokenLifetime;
   
   // Scan interval is not configurable.
-  private final long DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL = 3600000; // 1 hour
+  private static final long DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL =
+    TimeUnit.MILLISECONDS.convert(1, TimeUnit.HOURS);
   private DelegationTokenSecretManager dtSecretManager;
 
   volatile long pendingReplicationBlocksCount = 0L;

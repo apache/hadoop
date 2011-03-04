@@ -279,8 +279,7 @@ public class TaskTrackerStatus implements Writable {
    */
   public int countMapTasks() {
     int mapCount = 0;
-    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
-      TaskStatus ts = (TaskStatus) it.next();
+    for (TaskStatus ts : taskReports) {
       if (ts.getIsMap() && isTaskRunning(ts)) {
         mapCount++;
       }
@@ -294,8 +293,7 @@ public class TaskTrackerStatus implements Writable {
    */
   public int countOccupiedMapSlots() {
     int mapSlotsCount = 0;
-    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
-      TaskStatus ts = (TaskStatus) it.next();
+    for (TaskStatus ts : taskReports) {
       if (ts.getIsMap() && isTaskRunning(ts)) {
         mapSlotsCount += ts.getNumSlots();
       }
@@ -317,8 +315,7 @@ public class TaskTrackerStatus implements Writable {
    */
   public int countReduceTasks() {
     int reduceCount = 0;
-    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
-      TaskStatus ts = (TaskStatus) it.next();
+    for (TaskStatus ts : taskReports) {
       if ((!ts.getIsMap()) && isTaskRunning(ts)) {
         reduceCount++;
       }
@@ -332,8 +329,7 @@ public class TaskTrackerStatus implements Writable {
    */
   public int countOccupiedReduceSlots() {
     int reduceSlotsCount = 0;
-    for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
-      TaskStatus ts = (TaskStatus) it.next();
+    for (TaskStatus ts : taskReports) {
       if ((!ts.getIsMap()) && isTaskRunning(ts)) {
         reduceSlotsCount += ts.getNumSlots();
       }

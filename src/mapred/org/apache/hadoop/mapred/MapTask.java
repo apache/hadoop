@@ -80,7 +80,6 @@ class MapTask extends Task {
   public static final int MAP_OUTPUT_INDEX_RECORD_LENGTH = 24;
 
   private TaskSplitIndex splitMetaInfo = new TaskSplitIndex();
-  private String splitClass;
   private final static int APPROX_HEADER_LENGTH = 150;
 
   private static final Log LOG = LogFactory.getLog(MapTask.class.getName());

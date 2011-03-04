@@ -1141,7 +1141,8 @@ public class JobHistory {
      * @deprecated Use 
      *     {@link #logSubmitted(JobID, JobConf, String, long, boolean)} instead.
      */
-    public static void logSubmitted(JobID jobId, JobConf jobConf, 
+     @Deprecated
+     public static void logSubmitted(JobID jobId, JobConf jobConf, 
                                     String jobConfPath, long submitTime) 
     throws IOException {
       logSubmitted(jobId, jobConf, jobConfPath, submitTime, true);
@@ -1499,6 +1500,7 @@ public class JobHistory {
      * @param restartCount number of times the job got restarted
      * @deprecated Use {@link #logJobInfo(JobID, long, long)} instead.
      */
+    @Deprecated
     public static void logJobInfo(JobID jobid, long submitTime, long launchTime,
                                   int restartCount){
       logJobInfo(jobid, submitTime, launchTime);

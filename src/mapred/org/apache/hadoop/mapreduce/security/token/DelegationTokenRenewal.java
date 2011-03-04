@@ -81,12 +81,14 @@ public class DelegationTokenRenewal {
     public void setTimerTask(TimerTask tTask) {
       timerTask = tTask;
     }
+    @Override
     public String toString() {
       return token + ";exp="+expirationDate;
     }
     @Override
-    public boolean equals (Object obj) {
-      return token.equals(((DelegationTokenToRenew)obj).token);
+    public boolean equals(Object obj) {
+      return obj instanceof DelegationTokenToRenew &&
+        token.equals(((DelegationTokenToRenew)obj).token);
     }
     @Override
     public int hashCode() {

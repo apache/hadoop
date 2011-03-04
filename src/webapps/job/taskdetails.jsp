@@ -17,6 +17,8 @@
 <%!static SimpleDateFormat dateFormat = new SimpleDateFormat(
       "d-MMM-yyyy HH:mm:ss");
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%!private void printConfirm(JspWriter out,
       String attemptid, String action) throws IOException {
     String url = "taskdetails.jsp?attemptid=" + attemptid;

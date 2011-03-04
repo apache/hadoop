@@ -286,6 +286,7 @@ public class JobInProgress {
    * Create an almost empty JobInProgress, which can be used only for tests
    */
   protected JobInProgress(JobID jobid, JobConf conf, JobTracker tracker) {
+    System.out.println("DEBUG3");
     this.conf = conf;
     this.jobId = jobid;
     this.numMapTasks = conf.getNumMapTasks();
@@ -319,22 +320,6 @@ public class JobInProgress {
     }
   }
   
-  /**
-   * Create a JobInProgress with the given job file, plus a handle
-   * to the tracker.
-   */
-  public JobInProgress(JobID jobid, JobTracker jobtracker, 
-                       JobConf default_conf) 
-  throws IOException, InterruptedException {
-    this(jobid, jobtracker, default_conf, 0);
-  }
-  
-  public JobInProgress(JobID jobid, JobTracker jobtracker, 
-                       JobConf default_conf, int rCount) 
-  throws IOException, InterruptedException {
-    this(jobtracker, default_conf, null, rCount, null);
-  }
-
   JobInProgress(JobTracker jobtracker, final JobConf default_conf, 
       JobInfo jobInfo, int rCount, Credentials ts) 
   throws IOException, InterruptedException {

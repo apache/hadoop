@@ -356,7 +356,7 @@ public class Localizer {
     if (!initStatus) {
       throw new IOException("Not able to initialize attempt directories "
           + "in any of the configured local directories for the attempt "
-          + attemptId.toString());
+          + attemptId);
     }
   }
 

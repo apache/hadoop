@@ -18,6 +18,9 @@
   import="org.apache.hadoop.security.authorize.AccessControlList"
 %>
 
+<%!	private static final long serialVersionUID = 1L;
+%>
+
 <%
   final JobTracker tracker = (JobTracker) application.getAttribute(
       "job.tracker");

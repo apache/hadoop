@@ -9,6 +9,8 @@
   import="java.text.SimpleDateFormat"  
   import="org.apache.hadoop.mapred.JobHistory.*"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%
     PathFilter jobLogFileFilter = new PathFilter() {
       public boolean accept(Path path) {
@@ -40,7 +42,7 @@
     }
 	
     if (null == job) {
-      String jobLogFile = (String)request.getParameter("logFile");
+      String jobLogFile = request.getParameter("logFile");
       job = new JobHistory.JobInfo(jobId); 
       DefaultJobHistoryParser.parseJobTasks(jobLogFile, job, fs) ; 
       request.getSession().setAttribute("job", job);

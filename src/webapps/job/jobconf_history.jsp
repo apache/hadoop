@@ -12,6 +12,8 @@
   import="org.apache.hadoop.security.AccessControlException"
 %>
 
+<%!	private static final long serialVersionUID = 1L;
+%>
 
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
@@ -23,7 +25,7 @@
   }
 
   Path logFile = new Path(logFileString);
-  String jobId = JSPUtil.getJobID(logFile.getName()).toString();
+  String jobId = JSPUtil.getJobID(logFile.getName());
 
 %>
   

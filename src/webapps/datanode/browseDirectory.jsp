@@ -131,7 +131,7 @@
               cols[4] = "";
             }
             String datanodeUrl = req.getRequestURL()+"?dir="+
-              URLEncoder.encode(files[i].getFullName(target).toString(), "UTF-8") + 
+              URLEncoder.encode(files[i].getFullName(target), "UTF-8") + 
               "&namenodeInfoPort=" + namenodeInfoPort + JspHelper.SET_DELEGATION + 
               tokenString;
             cols[0] = "<a href=\""+datanodeUrl+"\">"+localname+"</a>";

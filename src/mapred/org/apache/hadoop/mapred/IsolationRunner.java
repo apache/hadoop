@@ -120,7 +120,7 @@ public class IsolationRunner {
   
   private ClassLoader makeClassLoader(JobConf conf, 
                                              File workDir) throws IOException {
-    List<String> classPaths = new ArrayList();
+    List<String> classPaths = new ArrayList<String>();
     // Add jar clas files (includes lib/* and classes/*)
     String jar = conf.getJar();
     if (jar != null) {

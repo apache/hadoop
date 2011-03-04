@@ -11,6 +11,8 @@
   import="java.lang.Integer"
   import="java.text.SimpleDateFormat"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%
   final JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");

@@ -14,6 +14,8 @@
   import="org.apache.hadoop.mapreduce.JobACL"
   import="org.apache.hadoop.security.authorize.AccessControlList"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 
 <%! static SimpleDateFormat dateFormat = new SimpleDateFormat("d-MMM-yyyy HH:mm:ss") ; %>
 <%

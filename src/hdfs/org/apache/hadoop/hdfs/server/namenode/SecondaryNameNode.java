@@ -201,7 +201,7 @@ public class SecondaryNameNode implements Runnable {
           
           if(UserGroupInformation.isSecurityEnabled()) {
             System.setProperty("https.cipherSuites", 
-                Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES[0]);
+                Krb5AndCertsSslSocketConnector.KRB5_CIPHER_SUITES.get(0));
             InetSocketAddress secInfoSocAddr = 
               NetUtils.createSocketAddr(infoBindAddress + ":"+ conf.get(
                 "dfs.secondary.https.port", infoBindAddress + ":" + 0));

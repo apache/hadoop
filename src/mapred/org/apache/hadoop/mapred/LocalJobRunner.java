@@ -166,6 +166,7 @@ class LocalJobRunner implements JobSubmissionProtocol {
       return profile;
     }
     
+    @SuppressWarnings("unchecked")
     @Override
     public void run() {
       JobID jobId = profile.getJobID();

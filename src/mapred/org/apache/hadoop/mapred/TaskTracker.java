@@ -1032,8 +1032,7 @@ public class TaskTracker
     
     // set the location of the token file into jobConf to transfer 
     // the name to TaskRunner
-    localJobConf.set(TokenCache.JOB_TOKENS_FILENAME,
-        localJobTokenFile.toString());
+    localJobConf.set(TokenCache.JOB_TOKENS_FILENAME, localJobTokenFile);
     // create the 'job-work' directory: job-specific shared directory for use as
     // scratch space by all tasks of the same job running on this TaskTracker.
     Path workDir =
@@ -3392,6 +3391,7 @@ public class TaskTracker
    * to other nodes.
    */
   public static class MapOutputServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
     private static final int MAX_BYTES_TO_READ = 64 * 1024;
     @Override
     public void doGet(HttpServletRequest request, 
@@ -3682,7 +3682,7 @@ public class TaskTracker
         fConf.getClass(MAPRED_TASKTRACKER_MEMORY_CALCULATOR_PLUGIN_PROPERTY,
             null, MemoryCalculatorPlugin.class);
     MemoryCalculatorPlugin memoryCalculatorPlugin =
-        (MemoryCalculatorPlugin) MemoryCalculatorPlugin
+        MemoryCalculatorPlugin
             .getMemoryCalculatorPlugin(clazz, fConf);
     LOG.info(" Using MemoryCalculatorPlugin : " + memoryCalculatorPlugin);
 

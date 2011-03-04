@@ -9,6 +9,8 @@
   import="org.apache.hadoop.mapred.*"
   import="org.apache.hadoop.util.*"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%
   TaskTracker tracker = (TaskTracker) application.getAttribute("task.tracker");
   String trackerName = tracker.getName();

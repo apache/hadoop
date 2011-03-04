@@ -12,6 +12,8 @@
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"  
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 

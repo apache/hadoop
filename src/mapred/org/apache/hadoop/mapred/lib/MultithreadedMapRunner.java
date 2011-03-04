@@ -90,6 +90,8 @@ public class MultithreadedMapRunner<K1, V1, K2, V2>
    * queue, to a put, which waits on a full queue.
    */
   private static class BlockingArrayQueue extends ArrayBlockingQueue<Runnable> {
+ 
+    private static final long serialVersionUID = 1L;
     public BlockingArrayQueue(int capacity) {
       super(capacity);
     }

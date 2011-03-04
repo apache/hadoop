@@ -10,6 +10,8 @@
   import="org.apache.hadoop.mapreduce.*"
   import="org.apache.hadoop.util.*"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 <%
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   ClusterStatus status = tracker.getClusterStatus();

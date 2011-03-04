@@ -202,8 +202,8 @@ public class SaslRpcServer {
         }
         if (ac.isAuthorized()) {
           if (LOG.isDebugEnabled()) {
-            String username = getIdentifier(authzid, secretManager).getUser()
-            .getUserName().toString();
+            String username =
+              getIdentifier(authzid, secretManager).getUser().getUserName();
             LOG.debug("SASL server DIGEST-MD5 callback: setting "
                 + "canonicalized client ID: " + username);
           }

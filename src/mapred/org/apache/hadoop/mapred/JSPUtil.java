@@ -529,7 +529,7 @@ class JSPUtil {
       }
     } else {
       // no authorization needed
-      job = JSPUtil.getJobInfo(logFile, fs, jobTracker, user);
+      job = JSPUtil.getJobInfo(logFile, fs, jobTracker, null);
     }
     return job;
   }

@@ -8,6 +8,8 @@
   import="org.apache.hadoop.mapred.JSPUtil.JobWithViewAccessCheck"
   import="org.apache.hadoop.util.*"
 %>
+<%!	private static final long serialVersionUID = 1L;
+%>
 
 
 <%
