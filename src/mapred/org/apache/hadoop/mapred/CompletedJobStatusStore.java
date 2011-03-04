@@ -30,6 +30,9 @@ import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 
 /**
  * Persists and retrieves the Job info of a job into/from DFS.
@@ -55,7 +58,8 @@ class CompletedJobStatusStore implements Runnable {
 
   private static long HOUR = 1000 * 60 * 60;
   private static long SLEEP_TIME = 1 * HOUR;
-
+  final static FsPermission JOB_STATUS_STORE_DIR_PERMISSION = FsPermission
+      .createImmutable((short) 0750); // rwxr-x--
 
   CompletedJobStatusStore(Configuration conf, ACLsManager aclsManager)
       throws IOException {
@@ -74,12 +78,24 @@ class CompletedJobStatusStore implements Runnable {
       // set the fs
       this.fs = path.getFileSystem(conf);
       if (!fs.exists(path)) {
-        if (!fs.mkdirs(path)) {
-          active = false;
-          LOG.warn("Couldn't create " + jobInfoDir
-              + ". CompletedJobStore will be inactive.");
-          return;
+        if (!fs.mkdirs(path, new FsPermission(JOB_STATUS_STORE_DIR_PERMISSION))) {
+          throw new IOException(
+              "CompletedJobStatusStore mkdirs failed to create "
+                  + path.toString());
         }
+      } else {
+        FileStatus stat = fs.getFileStatus(path);
+        FsPermission actual = stat.getPermission();
+        if (!stat.isDir())
+          throw new DiskErrorException("not a directory: "
+                                   + path.toString());
+        FsAction user = actual.getUserAction();
+        if (!user.implies(FsAction.READ))
+          throw new DiskErrorException("directory is not readable: "
+                                   + path.toString());
+        if (!user.implies(FsAction.WRITE))
+          throw new DiskErrorException("directory is not writable: "
+                                   + path.toString());
       }
 
       if (retainTime == 0) {

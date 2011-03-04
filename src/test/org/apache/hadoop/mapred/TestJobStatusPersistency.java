@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.io.IOException;
 import java.util.Properties;
 
 import org.apache.hadoop.fs.FileSystem;
@@ -167,15 +168,15 @@ public class TestJobStatusPersistency extends ClusterMapReduceTestCase {
       config.set("mapred.job.tracker.persist.jobstatus.hours", "1");
       config.set("mapred.job.tracker.persist.jobstatus.dir", new Path(parent,
           "child").toUri().getPath());
-      mr = new MiniMRCluster(0, "file:///", 4, null, null, config);
-      assertFalse(
-          "CompletedJobStore is unexpectly active!",
-          mr.getJobTrackerRunner().getJobTracker().completedJobStatusStore.isActive());
+      boolean started = true;
+      JobConf conf = MiniMRCluster.configureJobConf(config, "file:///", 0, 0, null);
+      try {
+        JobTracker jt = JobTracker.startTracker(conf);
+      } catch (IOException ex) {
+        started = false;
+      }
     } finally {
       new File(parent.toUri().getPath()).setWritable(true, false);
-      if (mr != null) {
-        mr.shutdown();
-      }
     }
   }
 }
