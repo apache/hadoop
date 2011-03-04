@@ -151,6 +151,7 @@ public class TestDistributedCacheModifiedFile {
       SleepJob job = new SleepJob();
       job.setConf(conf);
       conf = job.setupJobConf(5, 1, 1000, 1000, 100, 100);
+      conf.setBoolean("mapreduce.job.complete.cancel.delegation.tokens", false);
 
       //Before starting, Modify the file
       String input = "This will be the content of\n" + "distributed cache\n";
