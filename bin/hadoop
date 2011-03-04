@@ -129,10 +129,10 @@ fi
 
 # CLASSPATH initially contains $HADOOP_CONF_DIR
 CLASSPATH="${HADOOP_CONF_DIR}"
-CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 if [ "$HADOOP_USER_CLASSPATH_FIRST" != "" ] && [ "$HADOOP_CLASSPATH" != "" ] ; then
   CLASSPATH=${CLASSPATH}:${HADOOP_CLASSPATH}
 fi
+CLASSPATH=${CLASSPATH}:$JAVA_HOME/lib/tools.jar
 
 # for developers, add Hadoop classes to CLASSPATH
 if [ -d "$HADOOP_HOME/build/classes" ]; then
