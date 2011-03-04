@@ -861,6 +861,14 @@
   <!-- Define a macro that will be used for fast and all test runs -->
   <macrodef name="macro-test-runner">
     <attribute name="test.file" />
+    <attribute name="classpath" />
+    <attribute name="test.dir" />
+    <attribute name="fileset.dir" />
+    <attribute name="hadoop.home" default="" />
+    <attribute name="hadoop.conf.dir" default="" />
+    <attribute name="hadoop.conf.dir.deployed" default="" />
+    <attribute name="test.krb5.conf" default="" />
+    <attribute name="test.krb5.conf.filename" default="" />
     <sequential>
       <delete file="${test.build.dir}/testsfailed"/>
       <delete dir="${test.build.data}"/>
@@ -892,8 +900,8 @@
         <sysproperty key="taskcontroller-ugi" value="${taskcontroller-ugi}" />
         <sysproperty key="test.build.extraconf"
                      value="@{test.dir}/extraconf" />
-        <sysproperty key="java.security.krb5.conf"
-                     value="${test.src.dir}/krb5.conf"/>
+        <sysproperty key="@{test.krb5.conf}"
+                     value="@{test.krb5.conf.filename}"/>
         <sysproperty key="hadoop.policy.file" value="hadoop-policy.xml" />
         <sysproperty key="java.library.path"
           value="${build.native}/lib:${lib.dir}/native/${build.platform}"/>
@@ -941,13 +949,27 @@
     </sequential>
   </macrodef>
 
-  <target name="test-core" depends="jar-test" description="Run core unit tests"> 
-    <macro-test-runner test.file="${test.all.tests.file}" />
-  </target>
-         
+  <target name="test-core" depends="jar-test" description="Run core unit tests">
+    <macro-test-runner test.file="${test.all.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf="java.security.krb5.conf"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       >
+    </macro-test-runner>
+  </target>   
+
   <target name="test-commit" depends="jar-test" 
-   description="Run approx 10-minute set of unit tests prior to commiting">
-    <macro-test-runner test.file="${test.commit.tests.file}" />
+    description="Run approx 10-minute set of unit tests prior to commiting">
+    <macro-test-runner test.file="${test.commit.tests.file}"
+                       classpath="${test.classpath.id}"
+                       test.dir="${test.build.dir}"
+                       fileset.dir="${test.src.dir}"
+                       test.krb5.conf="java.security.krb5.conf"
+                       test.krb5.conf.filename="${test.src.dir}/krb5.conf"
+                       >
+    </macro-test-runner>
   </target>
   
   <target name="checkfailure" if="tests.failed">
