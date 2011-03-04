@@ -388,7 +388,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       synchronized (rJob) {
         rJob.tasks.add(tip);
       }
-      runningJobs.notify(); //notify the fetcher thread
       return rJob;
     }
   }
@@ -963,6 +962,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
  
         rjob.localized = true;
       }
+    }
+    synchronized (runningJobs) {
+      runningJobs.notify(); //notify the fetcher thread
     }
     return rjob;
   }
