@@ -276,21 +276,10 @@ public class TrackerDistributedCacheManager {
     // do the deletion, after releasing the global lock
     for (CacheStatus lcacheStatus : deleteList) {
       synchronized (lcacheStatus) {
-        FileSystem localFS = FileSystem.getLocal(conf);
-
-        Path potentialDeletee = lcacheStatus.localizedLoadPath;
-
-        localFS.delete(potentialDeletee, true);
+        FileSystem.getLocal(conf).delete(lcacheStatus.localizedLoadPath, true);
 
         // Update the maps baseDirSize and baseDirNumberSubDir
-        LOG.info("Deleted path " + potentialDeletee);
-
-        try {
-          localFS.delete(lcacheStatus.getLocalizedUniqueDir(), true);
-        } catch (IOException e) {
-          LOG.warn("Could not delete distributed cache empty directory "
-                   + lcacheStatus.getLocalizedUniqueDir());
-        }
+        LOG.info("Deleted path " + lcacheStatus.localizedLoadPath);
 
         deleteCacheInfoUpdate(lcacheStatus);
       }

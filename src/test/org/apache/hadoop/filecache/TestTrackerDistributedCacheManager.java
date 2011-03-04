@@ -66,6 +66,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
   private static final int TEST_FILE_SIZE = 4 * 1024; // 4K
   private static final int LOCAL_CACHE_LIMIT = 5 * 1024; //5K
   private static final int LOCAL_CACHE_SUBDIR_LIMIT = 2;
+  private static final int LOCAL_CACHE_SUBDIR = 2;
   protected Configuration conf;
   protected Path firstCacheFile;
   protected Path secondCacheFile;
@@ -491,7 +492,7 @@ public class TestTrackerDistributedCacheManager extends TestCase {
     conf2.set("user.name", userName);
 
     // We first test the size limit
-    Path firstLocalCache = manager.getLocalCache(firstCacheFile.toUri(), conf2, 
+    Path localCache = manager.getLocalCache(firstCacheFile.toUri(), conf2, 
         TaskTracker.getPrivateDistributedCacheDir(userName),
         fs.getFileStatus(firstCacheFile), false,
         now, new Path(TEST_ROOT_DIR), false, false);
@@ -534,7 +535,6 @@ public class TestTrackerDistributedCacheManager extends TestCase {
            + "directory names when it deleted the files they contained "
            + "because they collectively exceeded the size limit.",
        localfs.listStatus(cachesBase).length > 1);
-    
     
     // Now we test the number of sub directories limit
     // Create the temporary cache files to be used in the tests.
