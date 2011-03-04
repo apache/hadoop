@@ -204,6 +204,12 @@ public class TestHdfsProxy extends TestCase {
     try {
 
       final Configuration dfsConf = new Configuration();
+      dfsConf.set("hadoop.proxyuser." + System.getProperty("user.name") +
+          ".groups", "users");
+      dfsConf.set("hadoop.proxyuser.users.hosts", "127.0.0.1,localhost");
+      dfsConf.set("hadoop.proxyuser." + System.getProperty("user.name") +
+          ".hosts", "127.0.0.1,localhost");
+      dfsConf.set("hadoop.security.authentication", "simple");
       cluster = new MiniDFSCluster(dfsConf, 2, true, null);
       cluster.waitActive();
 

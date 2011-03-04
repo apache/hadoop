@@ -311,7 +311,7 @@ public class ProxyFilter implements Filter {
       String ugi = rqst.getParameter("ugi");
       if (ugi != null) {
         rqst.setAttribute("authorized.ugi", UserGroupInformation.createRemoteUser(ugi));
-        rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", ugi);
+        rqst.setAttribute("org.apache.hadoop.hdfsproxy.authorized.userID", ugi.split(",")[0]);
       }
     }
     chain.doFilter(request, response);

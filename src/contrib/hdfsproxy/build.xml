@@ -45,6 +45,8 @@
   <property name="cargo.logging" value="high"/>
   <property name="cactus.formatter.type" value="xml"/>
   <property name="cactus.warfile.name" value="test"/>
+  <!-- Used for krb5.conf which is required to run unit tests with MiniDFS -->
+  <property name="test.krb5.conf.location" location="${hadoop.root}/src/test/krb5.conf"/>
 
   <available file="${hadoop.root}/build/classes" type="dir" property="test.available"/>
   <property environment="env"/>
@@ -223,10 +225,16 @@
     </cactifywar>
   </target>
 
-  <target name="test" depends="compile,compile-test,test-junit,test-cactus" description="Automated Test Framework"
+  <target name="test" depends="compile,compile-test,test-junit" description="Automated Test Framework"
           if="test.available"/>
 
   <target name="test-junit" depends="compile,compile-test" if="test.available">
+    <copy todir="${src.test.resources}/proxy-config">
+      <fileset dir="${proxy.conf.dir}" />
+    </copy>
+    <copy file="${proxy.conf.dir}/tomcat-web.xml" todir="${src.test.resources}"/>
+    <copy file="${proxy.conf.dir}/tomcat-forward-web.xml" todir="${src.test.resources}"/>
+
     <junit fork="yes" printsummary="yes" errorProperty="tests.failed" failureProperty="tests.failed">
       <classpath refid="test.classpath"/>
       <sysproperty key="test.build.data" value="${build.test}/data"/>
@@ -243,6 +251,7 @@
       <sysproperty key="javax.net.ssl.keyStorePassword" value="changeme"/>
       <sysproperty key="javax.net.ssl.keyPassword" value="changeme"/>
       <sysproperty key="javax.net.ssl.clientCert" value="${ssl.client.cert}"/>
+      <sysproperty key="java.security.krb5.conf" value="${test.krb5.conf.location}"/>
       <formatter type="xml"/>
       <batchtest todir="${test.build.dir}" unless="testcase">
         <fileset dir="${src.test}">
