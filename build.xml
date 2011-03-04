@@ -104,6 +104,7 @@
 
   <property name="test.hdfs.rpc.engine" value=""/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
+  <property name="test.junit.jvmargs" value="-ea" />
 
   <property name="web.src.dir" value="${basedir}/src/web"/>
   <property name="src.webapps" value="${basedir}/src/webapps"/>
@@ -592,6 +593,7 @@
         maxmemory="${test.junit.maxmemory}"
         dir="${basedir}" timeout="${test.timeout}"
         errorProperty="tests.failed" failureProperty="tests.failed">
+        <jvmarg value="${test.junit.jvmargs}" />
         <sysproperty key="test.build.data" value="@{test.dir}/data"/>
         <sysproperty key="test.cache.data" value="${test.cache.data}"/>     
         <sysproperty key="test.debug.data" value="${test.debug.data}"/>

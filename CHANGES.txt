@@ -292,6 +292,12 @@ Release 0.22.0 - Unreleased
     HDFS-811. Add metrics, failure reporting and additional tests for HDFS-457.
     (eli)
 
+    HDFS-895. Allow hflush/sync to occur in parallel with new writes
+    to the file. (Todd Lipcon via hairong)
+
+    HDFS-1500. TestOfflineImageViewer failing on trunk. (Todd Lipcon
+    via hairong)
+
   IMPROVEMENTS
 
     HDFS-1304. Add a new unit test for HftpFileSystem.open(..).  (szetszwo)
@@ -424,6 +430,8 @@ Release 0.22.0 - Unreleased
     HDFS-1160. Improve some FSDataset warnings and comments. (eli)
 
     HDFS-556. Provide info on failed volumes in the web ui. (eli)
+
+    HDFS-697. Enable asserts for tests by default. (eli)
 
   OPTIMIZATIONS
 
@@ -576,8 +584,13 @@ Release 0.22.0 - Unreleased
     other's service policies.  (Aaron T. Myers via tomwhite)
 
     HDFS-1440. Fix TestComputeInvalidateWork failure. (suresh)
+ 
+    HDFS-1498. FSDirectory#unprotectedConcat calls setModificationTime 
+    on a file. (eli)
 
     HDFS-1625. Ignore disk space values in TestDataNodeMXBean.  (szetszwo)
+
+    HDFS-1466. TestFcHdfsSymlink relies on /tmp/test not existing. (eli)
 
 Release 0.21.1 - Unreleased
 

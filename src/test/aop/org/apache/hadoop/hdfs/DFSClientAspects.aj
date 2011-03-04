@@ -86,13 +86,13 @@ privileged public aspect DFSClientAspects {
     LOG.info("FI: before pipelineClose:");
   }
 
-  pointcut checkAckQueue(DFSOutputStream.Packet cp):
-    call (void DFSOutputStream.waitAndQueuePacket(
-            DFSOutputStream.Packet))
+  pointcut checkAckQueue(DFSOutputStream stream):
+    call (void DFSOutputStream.waitAndQueueCurrentPacket())
     && withincode (void DFSOutputStream.writeChunk(..))
-    && args(cp);
+    && this(stream);
 
-  after(DFSOutputStream.Packet cp) : checkAckQueue (cp) {
+  after(DFSOutputStream stream) : checkAckQueue (stream) {
+    DFSOutputStream.Packet cp = stream.currentPacket;
     PipelineTest pTest = DataTransferTestUtil.getDataTransferTest();
     if (pTest != null && pTest instanceof PipelinesTest) {
       LOG.debug("FI: Recording packet # " + cp.seqno

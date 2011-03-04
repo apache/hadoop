@@ -114,12 +114,14 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
   private Packet currentPacket = null;
   private DataStreamer streamer;
   private long currentSeqno = 0;
+  private long lastQueuedSeqno = -1;
+  private long lastAckedSeqno = -1;
   private long bytesCurBlock = 0; // bytes writen in current block
   private int packetSize = 0; // write packet size, including the header.
   private int chunksPerPacket = 0;
   private volatile IOException lastException = null;
   private long artificialSlowdown = 0;
-  private long lastFlushOffset = -1; // offset when flush was invoked
+  private long lastFlushOffset = 0; // offset when flush was invoked
   //persist blocks on namenode
   private final AtomicBoolean persistBlocks = new AtomicBoolean(false);
   private volatile boolean appendChunk = false;   // appending to existing partial block
@@ -433,6 +435,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
               one = dataQueue.getFirst(); // regular data packet
             }
           }
+          assert one != null;
 
           // get new block from namenode.
           if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
@@ -669,6 +672,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
             block.setNumBytes(one.getLastByteOffsetBlock());
 
             synchronized (dataQueue) {
+              lastAckedSeqno = seqno;
               ackQueue.removeFirst();
               dataQueue.notifyAll();
             }
@@ -719,8 +723,21 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       
       if (!streamerClosed && dfsClient.clientRunning) {
         if (stage == BlockConstructionStage.PIPELINE_CLOSE) {
+
+          // If we had an error while closing the pipeline, we go through a fast-path
+          // where the BlockReceiver does not run. Instead, the DataNode just finalizes
+          // the block immediately during the 'connect ack' process. So, we want to pull
+          // the end-of-block packet from the dataQueue, since we don't actually have
+          // a true pipeline to send it over.
+          //
+          // We also need to set lastAckedSeqno to the end-of-block Packet's seqno, so that
+          // a client waiting on close() will be aware that the flush finished.
           synchronized (dataQueue) {
-            dataQueue.remove();  // remove the end of block packet
+            assert dataQueue.size() == 1;
+            Packet endOfBlockPacket = dataQueue.remove();  // remove the end of block packet
+            assert endOfBlockPacket.lastPacketInBlock;
+            assert lastAckedSeqno == endOfBlockPacket.seqno - 1;
+            lastAckedSeqno = endOfBlockPacket.seqno;
             dataQueue.notifyAll();
           }
           endBlock();
@@ -1130,14 +1147,20 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
     }
   }
 
-  private void queuePacket(Packet packet) {
+  private void queueCurrentPacket() {
     synchronized (dataQueue) {
-      dataQueue.addLast(packet);
+      if (currentPacket == null) return;
+      dataQueue.addLast(currentPacket);
+      lastQueuedSeqno = currentPacket.seqno;
+      if (DFSClient.LOG.isDebugEnabled()) {
+        DFSClient.LOG.debug("Queued packet " + currentPacket.seqno);
+      }
+      currentPacket = null;
       dataQueue.notifyAll();
     }
   }
 
-  private void waitAndQueuePacket(Packet packet) throws IOException {
+  private void waitAndQueueCurrentPacket() throws IOException {
     synchronized (dataQueue) {
       // If queue is full, then wait till we have enough space
       while (!closed && dataQueue.size() + ackQueue.size()  > MAX_PACKETS) {
@@ -1147,7 +1170,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         }
       }
       isClosed();
-      queuePacket(packet);
+      queueCurrentPacket();
     }
   }
 
@@ -1201,8 +1224,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
             ", blockSize=" + blockSize +
             ", appendChunk=" + appendChunk);
       }
-      waitAndQueuePacket(currentPacket);
-      currentPacket = null;
+      waitAndQueueCurrentPacket();
 
       // If the reopened file did not end at chunk boundary and the above
       // write filled up its partial chunk. Tell the summer to generate full 
@@ -1224,10 +1246,9 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
         currentPacket = new Packet(PacketHeader.PKT_HEADER_LEN, 0, 
             bytesCurBlock);
         currentPacket.lastPacketInBlock = true;
-        waitAndQueuePacket(currentPacket);
-        currentPacket = null;
+        waitAndQueueCurrentPacket();
         bytesCurBlock = 0;
-        lastFlushOffset = -1;
+        lastFlushOffset = 0;
       }
     }
   }
@@ -1244,60 +1265,88 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
    * but not neccessary on the DN's OS buffers. 
    *
    * It is a synchronous operation. When it returns,
-   * it gurantees that flushed data become visible to new readers. 
+   * it guarantees that flushed data become visible to new readers. 
    * It is not guaranteed that data has been flushed to 
    * persistent store on the datanode. 
    * Block allocations are persisted on namenode.
    */
   @Override
-  public synchronized void hflush() throws IOException {
+  public void hflush() throws IOException {
     dfsClient.checkOpen();
     isClosed();
     try {
-      /* Record current blockOffset. This might be changed inside
-       * flushBuffer() where a partial checksum chunk might be flushed.
-       * After the flush, reset the bytesCurBlock back to its previous value,
-       * any partial checksum chunk will be sent now and in next packet.
-       */
-      long saveOffset = bytesCurBlock;
+      long toWaitFor;
+      synchronized (this) {
+        /* Record current blockOffset. This might be changed inside
+         * flushBuffer() where a partial checksum chunk might be flushed.
+         * After the flush, reset the bytesCurBlock back to its previous value,
+         * any partial checksum chunk will be sent now and in next packet.
+         */
+        long saveOffset = bytesCurBlock;
+        Packet oldCurrentPacket = currentPacket;
+        // flush checksum buffer, but keep checksum buffer intact
+        flushBuffer(true);
+        // bytesCurBlock potentially incremented if there was buffered data
 
-      // flush checksum buffer, but keep checksum buffer intact
-      flushBuffer(true);
-
-      if(DFSClient.LOG.isDebugEnabled()) {
-        DFSClient.LOG.debug("DFSClient flush() : saveOffset " + saveOffset +  
+        if (DFSClient.LOG.isDebugEnabled()) {
+          DFSClient.LOG.debug(
+            "DFSClient flush() : saveOffset " + saveOffset +  
             " bytesCurBlock " + bytesCurBlock +
             " lastFlushOffset " + lastFlushOffset);
-      }
-      
-      // Flush only if we haven't already flushed till this offset.
-      if (lastFlushOffset != bytesCurBlock) {
+        }
+        // Flush only if we haven't already flushed till this offset.
+        if (lastFlushOffset != bytesCurBlock) {
+          assert bytesCurBlock > lastFlushOffset;
+          // record the valid offset of this flush
+          lastFlushOffset = bytesCurBlock;
+          waitAndQueueCurrentPacket();
+        } else {
+          // We already flushed up to this offset.
+          // This means that we haven't written anything since the last flush
+          // (or the beginning of the file). Hence, we should not have any
+          // packet queued prior to this call, since the last flush set
+          // currentPacket = null.
+          assert oldCurrentPacket == null :
+            "Empty flush should not occur with a currentPacket";
 
-        // record the valid offset of this flush
-        lastFlushOffset = bytesCurBlock;
+          // just discard the current packet since it is already been sent.
+          currentPacket = null;
+        }
+        // Restore state of stream. Record the last flush offset 
+        // of the last full chunk that was flushed.
+        //
+        bytesCurBlock = saveOffset;
+        toWaitFor = lastQueuedSeqno;
+      } // end synchronized
 
-        // wait for all packets to be sent and acknowledged
-        flushInternal();
-      } else {
-        // just discard the current packet since it is already been sent.
-        currentPacket = null;
-      }
-      
-      // Restore state of stream. Record the last flush offset 
-      // of the last full chunk that was flushed.
-      //
-      bytesCurBlock = saveOffset;
+      waitForAckedSeqno(toWaitFor);
 
       // If any new blocks were allocated since the last flush, 
       // then persist block locations on namenode. 
       //
       if (persistBlocks.getAndSet(false)) {
-        dfsClient.namenode.fsync(src, dfsClient.clientName);
+        try {
+          dfsClient.namenode.fsync(src, dfsClient.clientName);
+        } catch (IOException ioe) {
+          DFSClient.LOG.warn("Unable to persist blocks in hflush for " + src, ioe);
+          // If we got an error here, it might be because some other thread called
+          // close before our hflush completed. In that case, we should throw an
+          // exception that the stream is closed.
+          isClosed();
+          // If we aren't closed but failed to sync, we should expose that to the
+          // caller.
+          throw ioe;
+        }
       }
     } catch (IOException e) {
-        lastException = new IOException("IOException flush:" + e);
-        closeThreads(true);
-        throw e;
+      DFSClient.LOG.warn("Error while syncing", e);
+      synchronized (this) {
+        if (!closed) {
+          lastException = new IOException("IOException flush:" + e);
+          closeThreads(true);
+        }
+      }
+      throw e;
     }
   }
 
@@ -1338,26 +1387,39 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
    * Waits till all existing data is flushed and confirmations 
    * received from datanodes. 
    */
-  private synchronized void flushInternal() throws IOException {
-    dfsClient.checkOpen();
-    isClosed();
-    //
-    // If there is data in the current buffer, send it across
-    //
-    if (currentPacket != null) {
-      queuePacket(currentPacket);
-      currentPacket = null;
+  private void flushInternal() throws IOException {
+    long toWaitFor;
+    synchronized (this) {
+      dfsClient.checkOpen();
+      isClosed();
+      //
+      // If there is data in the current buffer, send it across
+      //
+      queueCurrentPacket();
+      toWaitFor = lastQueuedSeqno;
     }
 
+    waitForAckedSeqno(toWaitFor);
+  }
+
+  private void waitForAckedSeqno(long seqno) throws IOException {
+    if (DFSClient.LOG.isDebugEnabled()) {
+      DFSClient.LOG.debug("Waiting for ack for: " + seqno);
+    }
     synchronized (dataQueue) {
-      while (!closed && dataQueue.size() + ackQueue.size() > 0) {
+      while (!closed) {
+        isClosed();
+        if (lastAckedSeqno >= seqno) {
+          break;
+        }
         try {
-          dataQueue.wait();
-        } catch (InterruptedException  e) {
+          dataQueue.wait(1000); // when we receive an ack, we notify on dataQueue
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
         }
       }
-      isClosed();
     }
+    isClosed();
   }
 
   /**
@@ -1409,7 +1471,7 @@ class DFSOutputStream extends FSOutputSummer implements Syncable {
       flushBuffer();       // flush from all upper layers
 
       if (currentPacket != null) { 
-        waitAndQueuePacket(currentPacket);
+        waitAndQueueCurrentPacket();
       }
 
       if (bytesCurBlock != 0) {

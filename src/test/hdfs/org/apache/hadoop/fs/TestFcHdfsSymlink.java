@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
+import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import org.apache.hadoop.ipc.RemoteException;
 import static org.junit.Assert.*;
 import org.junit.Test;
@@ -46,11 +47,11 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
     return "hdfs";
   }
 
-  protected String testBaseDir1() {
+  protected String testBaseDir1() throws IOException {
     return "/test1";
   }
   
-  protected String testBaseDir2() {
+  protected String testBaseDir2() throws IOException {
     return "/test2";
   }
 
@@ -83,11 +84,11 @@ public class TestFcHdfsSymlink extends FileContextSymlinkBaseTest {
   @Test
   /** Link from Hdfs to LocalFs */
   public void testLinkAcrossFileSystems() throws IOException {
-    Path localDir  = new Path("file:///tmp/test");
-    Path localFile = new Path("file:///tmp/test/file");
+    Path localDir  = new Path("file://"+getAbsoluteTestRootDir(fc)+"/test");
+    Path localFile = new Path("file://"+getAbsoluteTestRootDir(fc)+"/test/file");
     Path link      = new Path(testBaseDir1(), "linkToFile");
     FileContext localFc = FileContext.getLocalFSFileContext();
-    localFc.delete(new Path("file:///tmp/test"), true);
+    localFc.delete(localDir, true);
     localFc.mkdir(localDir, FileContext.DEFAULT_PERM, true);
     localFc.setWorkingDirectory(localDir);
     assertEquals(localDir, localFc.getWorkingDirectory());

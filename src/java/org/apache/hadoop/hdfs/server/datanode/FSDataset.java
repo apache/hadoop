@@ -1650,8 +1650,10 @@ public class FSDataset implements FSConstants, FSDatasetInterface {
     FileChannel channel = file.getChannel();
     long oldPos = channel.position();
     long newPos = oldPos - checksumSize;
-    DataNode.LOG.info("Changing meta file offset of block " + b + " from " + 
-        oldPos + " to " + newPos);
+    if (DataNode.LOG.isDebugEnabled()) {
+      DataNode.LOG.debug("Changing meta file offset of block " + b + " from " +
+          oldPos + " to " + newPos);
+    }
     channel.position(newPos);
   }
 

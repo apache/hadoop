@@ -76,7 +76,7 @@ public class TestOfflineImageViewer extends TestCase {
   
   // Main entry point into testing.  Necessary since we only want to generate
   // the fsimage file once and use it for multiple tests. 
-  public void testOIV() {
+  public void testOIV() throws Exception {
     File originalFsimage = null;
     try {
     originalFsimage = initFsimage();
@@ -98,7 +98,7 @@ public class TestOfflineImageViewer extends TestCase {
 
   // Create a populated namespace for later testing.  Save its contents to a
   // data structure and store its fsimage location.
-  private File initFsimage() {
+  private File initFsimage() throws IOException {
     MiniDFSCluster cluster = null;
     File orig = null;
     try {
@@ -131,11 +131,9 @@ public class TestOfflineImageViewer extends TestCase {
       URI [] files = cluster.getNameDirs(0).toArray(new URI[0]);
       orig =  new File(files[0].getPath(), "current/fsimage");
       
-      if(!orig.exists())
+      if (!orig.exists()) {
         fail("Didn't generate or can't find fsimage.");
-
-    } catch (IOException e) {
-      fail("Failed trying to generate fsimage file: " + e.getMessage());
+      }
     } finally {
       if(cluster != null)
         cluster.shutdown();
@@ -152,7 +150,7 @@ public class TestOfflineImageViewer extends TestCase {
 
   // Verify that we can correctly generate an ls-style output for a valid 
   // fsimage
-  private void outputOfLSVisitor(File originalFsimage) {
+  private void outputOfLSVisitor(File originalFsimage) throws IOException {
     File testFile = new File(ROOT, "/basicCheck");
     File outputFile = new File(ROOT, "/basicCheckOutput");
     
@@ -167,8 +165,6 @@ public class TestOfflineImageViewer extends TestCase {
       HashMap<String, LsElements> fileOutput = readLsfile(outputFile);
       
       compareNamespaces(writtenFiles, fileOutput);
-    } catch (IOException e) {
-      fail("Failed reading valid file: " + e.getMessage());
     } finally {
       if(testFile.exists()) testFile.delete();
       if(outputFile.exists()) outputFile.delete();
@@ -178,7 +174,7 @@ public class TestOfflineImageViewer extends TestCase {
   
   // Confirm that attempting to read an fsimage file with an unsupported
   // layout results in an error
-  public void unsupportedFSLayoutVersion(File originalFsimage) {
+  public void unsupportedFSLayoutVersion(File originalFsimage) throws IOException {
     File testFile = new File(ROOT, "/invalidLayoutVersion");
     File outputFile = new File(ROOT, "invalidLayoutVersionOutput");
     
@@ -196,8 +192,6 @@ public class TestOfflineImageViewer extends TestCase {
           throw e; // wasn't error we were expecting
         System.out.println("Correctly failed at reading bad image version.");
       }
-    } catch (IOException e) {
-      fail("Problem testing unsupported layout version: " + e.getMessage());
     } finally {
       if(testFile.exists()) testFile.delete();
       if(outputFile.exists()) outputFile.delete();
@@ -205,7 +199,7 @@ public class TestOfflineImageViewer extends TestCase {
   }
   
   // Verify that image viewer will bail on a file that ends unexpectedly
-  private void truncatedFSImage(File originalFsimage) {
+  private void truncatedFSImage(File originalFsimage) throws IOException {
     File testFile = new File(ROOT, "/truncatedFSImage");
     File outputFile = new File(ROOT, "/trucnatedFSImageOutput");
     try {
@@ -221,9 +215,7 @@ public class TestOfflineImageViewer extends TestCase {
       } catch (EOFException e) {
         System.out.println("Correctly handled EOF");
       }
-      
-    } catch (IOException e) {
-      fail("Failed testing truncatedFSImage: " + e.getMessage());
+
     } finally {
       if(testFile.exists()) testFile.delete();
       if(outputFile.exists()) outputFile.delete();
@@ -373,7 +365,7 @@ public class TestOfflineImageViewer extends TestCase {
     }
   }
 
-  private void outputOfFileDistributionVisitor(File originalFsimage) {
+  private void outputOfFileDistributionVisitor(File originalFsimage) throws IOException {
     File testFile = new File(ROOT, "/basicCheck");
     File outputFile = new File(ROOT, "/fileDistributionCheckOutput");
 
@@ -394,8 +386,6 @@ public class TestOfflineImageViewer extends TestCase {
         assertEquals(row.length, 2);
         totalFiles += Integer.parseInt(row[1]);
       }
-    } catch (IOException e) {
-      fail("Failed reading valid file: " + e.getMessage());
     } finally {
       if(testFile.exists()) testFile.delete();
       if(outputFile.exists()) outputFile.delete();
