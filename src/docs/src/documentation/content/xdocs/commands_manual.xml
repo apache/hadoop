@@ -577,15 +577,23 @@
         </tr>
         </table>
       </section>
-			<section>
-				<title> jobtracker </title>
-				<p>
-					Runs the MapReduce job Tracker node.
-				</p> 
-				<p>
-					<code>Usage: hadoop jobtracker</code>
-				</p>
-			</section>
+      <section>
+	<title> jobtracker </title>
+	<p>Runs the MapReduce job Tracker node.</p> 
+	<p><code>Usage: hadoop jobtracker [-dumpConfiguration]</code></p>
+        <table>
+        <tr>
+        <th>COMMAND_OPTION</th><th> Description</th>
+        </tr>
+        <tr>
+        <td><code>-dumpConfiguration</code></td>
+        <td> Dumps the configuration used by the JobTracker alongwith queue
+        configuration in JSON format into Standard output used by the 
+        jobtracker and exits.</td>
+        </tr>
+        </table>
+				
+      </section>
 			
 			<section>
 				<title> namenode </title>
