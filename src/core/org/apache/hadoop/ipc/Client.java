@@ -1043,8 +1043,8 @@ public class Client {
      if (obj instanceof ConnectionId) {
        ConnectionId id = (ConnectionId) obj;
        return address.equals(id.address) && protocol == id.protocol && 
-              ticket == id.ticket;
-       //Note : ticket is a ref comparision.
+              ((ticket != null && ticket.equals(id.ticket)) ||
+               (ticket == id.ticket));
      }
      return false;
     }
@@ -1052,7 +1052,7 @@ public class Client {
     @Override
     public int hashCode() {
       return (address.hashCode() + PRIME * System.identityHashCode(protocol)) ^ 
-             System.identityHashCode(ticket);
+             (ticket == null ? 0 : ticket.hashCode());
     }
   }  
 }

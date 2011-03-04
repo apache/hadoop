@@ -228,7 +228,10 @@ public abstract class FileSystem extends Configured implements Closeable {
    * @throws IOException
    */
   public static void closeAll() throws IOException {
+    LOG.debug("Starting clear of FileSystem cache with " + CACHE.size() +
+              " elements.");
     CACHE.closeAll();
+    LOG.debug("Done clearing cache");
   }
 
   /** Make sure that a path specifies a FileSystem. */
@@ -1257,6 +1260,7 @@ public abstract class FileSystem extends Configured implements Closeable {
     // delete all files that were marked as delete-on-exit.
     processDeleteOnExit();
     CACHE.remove(this.key, this);
+    LOG.debug("Removing filesystem for " + getUri());
   }
 
   /** Return the total size of all files in the filesystem.*/
@@ -1382,6 +1386,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   private static FileSystem createFileSystem(URI uri, Configuration conf
       ) throws IOException {
     Class<?> clazz = conf.getClass("fs." + uri.getScheme() + ".impl", null);
+    LOG.debug("Creating filesystem for " + uri);
     if (clazz == null) {
       throw new IOException("No FileSystem for scheme: " + uri.getScheme());
     }
@@ -1484,6 +1489,14 @@ public abstract class FileSystem extends Configured implements Closeable {
       public String toString() {
         return "("+ugi.toString() + ")@" + scheme + "://" + authority;        
       }
+    }
+    
+    /**
+     * Get the number of file systems in the cache.
+     * @return the number of cached file systems
+     */
+    int size() {
+      return map.size();
     }
   }
   

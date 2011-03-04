@@ -647,7 +647,17 @@ public class TestFileSystem extends TestCase {
     assertNotSame(fsA, fsB);
     
     Token<T> t1 = mock(Token.class);
-    ugiA = UserGroupInformation.createRemoteUser("foo");
+    UserGroupInformation ugiA2 = UserGroupInformation.createRemoteUser("foo");
+    
+    fsA = ugiA2.doAs(new PrivilegedExceptionAction<FileSystem>() {
+      public FileSystem run() throws Exception {
+        return FileSystem.get(new URI("cachedfile://a"), conf);
+      }
+    });
+    // Although the users in the UGI are same, they have different subjects
+    // and so are different.
+    assertNotSame(fsA, fsA1);
+    
     ugiA.addToken(t1);
     
     fsA = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
@@ -655,20 +665,8 @@ public class TestFileSystem extends TestCase {
         return FileSystem.get(new URI("cachedfile://a"), conf);
       }
     });
-    //Although the users in the UGI are same, ugiA has tokens in it, and
-    //we should end up with different filesystems corresponding to the two UGIs
-    assertNotSame(fsA, fsA1);
-    
-    ugiA = UserGroupInformation.createRemoteUser("foo");
-    ugiA.addToken(t1);
-    
-    fsA1 = ugiA.doAs(new PrivilegedExceptionAction<FileSystem>() {
-      public FileSystem run() throws Exception {
-        return FileSystem.get(new URI("cachedfile://a"), conf);
-      }
-    });
-    //Now the users in the UGI are the same, and they also have the same token.
-    //We should have the same filesystem for both
+    // Make sure that different UGI's with the same subject lead to the same
+    // file system.
     assertSame(fsA, fsA1);
   }
 }
