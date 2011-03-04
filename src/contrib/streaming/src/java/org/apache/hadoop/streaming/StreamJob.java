@@ -897,7 +897,7 @@ public class StreamJob implements Tool {
       }
       if (!running_.isSuccessful()) {
         jobInfo();
-	LOG.error("Job not Successful!");
+	LOG.error("Job not successful. Error: " + running_.getFailureInfo());
 	return 1;
       }
       LOG.info("Job complete: " + jobId_);
