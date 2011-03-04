@@ -391,7 +391,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                         faultyTrackers.numBlacklistedTrackers -= 1;
                       }
                       updateTaskTrackerStatus(trackerName, null);
-                      
+                      statistics.taskTrackerRemoved(trackerName);
                       // remove the mapping from the hosts list
                       String hostname = newProfile.getHost();
                       hostnameToTaskTracker.get(hostname).remove(trackerName);
@@ -1795,6 +1795,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     
   private FaultyTrackersInfo faultyTrackers = new FaultyTrackersInfo();
   
+  private JobTrackerStatistics statistics = 
+    new JobTrackerStatistics();
   //
   // Watch and expire TaskTracker objects using these structures.
   // We can map from Name->TaskTrackerStatus, or we can expire by time.
@@ -2680,6 +2682,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
   }
 
+  JobTrackerStatistics getStatistics() {
+    return statistics;
+  }
   /**
    * Adds a new node to the jobtracker. It involves adding it to the expiry
    * thread and adding it for resolution
@@ -2705,6 +2710,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       trackers = Collections.synchronizedSet(new HashSet<TaskTracker>());
       hostnameToTaskTracker.put(hostname, trackers);
     }
+    statistics.taskTrackerAdded(status.getTrackerName());
     LOG.info("Adding tracker " + status.getTrackerName() + " to host " 
              + hostname);
     trackers.add(taskTracker);
