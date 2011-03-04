@@ -29,9 +29,16 @@ import org.apache.hadoop.hdfs.server.namenode.BlocksMap.BlockInfo;
 class INodeFile extends INode {
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
+  //Number of bits for Block size
+  static final short BLOCKBITS = 48;
+
+  //Header mask 64-bit representation
+  //Format: [16 bits for replication][48 bits for PreferredBlockSize]
+  static final long HEADERMASK = 0xffffL << BLOCKBITS;
+
+  protected long header;
+
   protected BlockInfo blocks[] = null;
-  protected short blockReplication;
-  protected long preferredBlockSize;
 
   INodeFile(PermissionStatus permissions,
             int nrBlocks, short replication, long modificationTime,
@@ -42,16 +49,15 @@ class INodeFile extends INode {
 
   protected INodeFile() {
     blocks = null;
-    blockReplication = 0;
-    preferredBlockSize = 0;
+    header = 0;
   }
 
   protected INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,
                       long atime, long preferredBlockSize) {
     super(permissions, modificationTime, atime);
-    this.blockReplication = replication;
-    this.preferredBlockSize = preferredBlockSize;
+    this.setReplication(replication);
+    this.setPreferredBlockSize(preferredBlockSize);
     blocks = blklist;
   }
 
@@ -70,14 +76,31 @@ class INodeFile extends INode {
 
   /**
    * Get block replication for the file 
-   * @return block replication
+   * @return block replication value
    */
   public short getReplication() {
-    return this.blockReplication;
+    return (short) ((header & HEADERMASK) >> BLOCKBITS);
   }
 
-  void setReplication(short replication) {
-    this.blockReplication = replication;
+  public void setReplication(short replication) {
+    if(replication <= 0)
+       throw new IllegalArgumentException("Unexpected value for the replication");
+    header = ((long)replication << BLOCKBITS) | (header & ~HEADERMASK);
+  }
+
+  /**
+   * Get preferred block size for the file
+   * @return preferred block size in bytes
+   */
+  public long getPreferredBlockSize() {
+        return header & ~HEADERMASK;
+  }
+
+  public void setPreferredBlockSize(long preferredBlkSize)
+  {
+    if((preferredBlkSize < 0) || (preferredBlkSize > ~HEADERMASK ))
+       throw new IllegalArgumentException("Unexpected value for the block size");
+    header = (header & HEADERMASK) | (preferredBlkSize & ~HEADERMASK);
   }
 
   /**
@@ -157,19 +180,11 @@ class INodeFile extends INode {
      */
     if (blkArr.length > 0 && blkArr[blkArr.length-1] != null && 
         isUnderConstruction()) {
-      size += preferredBlockSize - blocks[blocks.length-1].getNumBytes();
+      size += getPreferredBlockSize() - blocks[blocks.length-1].getNumBytes();
     }
-    return size * blockReplication;
+    return size * getReplication();
   }
   
-  /**
-   * Get the preferred block size of the file.
-   * @return the number of bytes
-   */
-  public long getPreferredBlockSize() {
-    return preferredBlockSize;
-  }
-
   /**
    * Return the penultimate allocated block for this file.
    */
@@ -187,7 +202,7 @@ class INodeFile extends INode {
       return (INodeFileUnderConstruction)this;
     }
     return new INodeFileUnderConstruction(name,
-        blockReplication, modificationTime, preferredBlockSize,
+        getReplication(), modificationTime, getPreferredBlockSize(),
         blocks, getPermissionStatus(),
         clientName, clientMachine, clientNode);
   }
