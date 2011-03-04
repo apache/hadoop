@@ -64,8 +64,9 @@ public class TestTaskChildsKilling {
 
   @BeforeClass
   public static void before() throws Exception {
-    Hashtable<String,Long> prop = new Hashtable<String,Long>();
+    Hashtable<String,Object> prop = new Hashtable<String,Object>();
     prop.put("mapred.map.max.attempts", 1L);
+    prop.put("mapreduce.job.complete.cancel.delegation.tokens",false);
     String [] expExcludeList = {"java.net.ConnectException",
         "java.io.IOException"};
     cluster = MRCluster.createCluster(conf);

@@ -410,11 +410,19 @@ public class TestTaskKilling {
                     isTempFolderExists);
     counter = 0;
     while (counter < 30) {
+      if (taskInfo.getTaskStatus().length > 0) {
+        break;
+      }
       UtilsForTests.waitFor(1000);
       taskInfo = remoteJTClient.getTaskInfo(tID);
       counter ++;
     }
 
+    while (taskInfo.getTaskStatus()[0].getRunState() == 
+      TaskStatus.State.RUNNING) {
+      UtilsForTests.waitFor(1000);
+      taskInfo = remoteJTClient.getTaskInfo(tID);
+    } 
     Assert.assertEquals("Task status has not been changed to FAILED.", 
             taskInfo.getTaskStatus()[0].getRunState(), 
                     TaskStatus.State.FAILED);

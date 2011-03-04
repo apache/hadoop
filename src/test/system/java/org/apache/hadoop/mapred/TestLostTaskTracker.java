@@ -44,8 +44,9 @@ public class TestLostTaskTracker {
     cluster = MRCluster.createCluster(conf);
     cluster.setExcludeExpList(expExcludeList);
     cluster.setUp();
-    Hashtable<String,Long> prop = new Hashtable<String,Long>();
+    Hashtable<String,Object> prop = new Hashtable<String,Object>();
     prop.put("mapred.tasktracker.expiry.interval",30000L);
+    prop.put("mapreduce.job.complete.cancel.delegation.tokens",false);
     cluster.restartClusterWithNewConfig(prop, confFile);
     UtilsForTests.waitFor(1000);
     conf = cluster.getJTClient().getProxy().getDaemonConf();

@@ -62,12 +62,13 @@ public class TestChildsKillingOfMemoryExceedsTask {
 
   @BeforeClass
   public static void before() throws Exception {
-    Hashtable<String,Long> prop = new Hashtable<String,Long>();
+    Hashtable<String,Object> prop = new Hashtable<String,Object>();
     prop.put("mapred.cluster.max.map.memory.mb", 2 * 1024L);
     prop.put("mapred.cluster.map.memory.mb", 1024L);
     prop.put("mapred.cluster.max.reduce.memory.mb", 2 * 1024L);
     prop.put("mapred.cluster.reduce.memory.mb", 1024L);
     prop.put("mapred.map.max.attempts", 1L);
+    prop.put("mapreduce.job.complete.cancel.delegation.tokens", false);
 
     String [] expExcludeList = {"java.net.ConnectException",
     "java.io.IOException"};
