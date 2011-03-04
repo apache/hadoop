@@ -460,7 +460,7 @@ public class JobLocalizer {
     // exists $logdir/userlogs/$jobid
     final Path localJobFile = lDirAlloc.getLocalPathToRead(JOBCONF, ttConf);
     final JobConf cfgJob = new JobConf(localJobFile);
-    createWorkDir(ttConf);
+    createWorkDir(cfgJob);
     localizeJobFiles(JobID.forName(jobid), cfgJob, localJobFile,
         localJobTokenFile, taskTracker);
 
