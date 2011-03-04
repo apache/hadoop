@@ -18,6 +18,7 @@
 package org.apache.hadoop.tools.rumen;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
@@ -44,9 +45,7 @@ public class LoggedTask implements DeepCompare {
   Pre21JobHistoryConstants.Values taskType;
   Pre21JobHistoryConstants.Values taskStatus;
   List<LoggedTaskAttempt> attempts = new ArrayList<LoggedTaskAttempt>();
-
-  ArrayList<LoggedLocation> preferredLocations =
-      new ArrayList<LoggedLocation>();
+  List<LoggedLocation> preferredLocations = Collections.emptyList();
 
   int numberMaps = -1;
   int numberReduces = -1;
@@ -130,15 +129,23 @@ public class LoggedTask implements DeepCompare {
   }
 
   void setAttempts(List<LoggedTaskAttempt> attempts) {
-    this.attempts = attempts;
+    if (attempts == null) {
+      this.attempts = new ArrayList<LoggedTaskAttempt>();
+    } else {
+      this.attempts = attempts;
+    }
   }
 
-  public ArrayList<LoggedLocation> getPreferredLocations() {
+  public List<LoggedLocation> getPreferredLocations() {
     return preferredLocations;
   }
 
-  void setPreferredLocations(ArrayList<LoggedLocation> preferredLocations) {
-    this.preferredLocations = preferredLocations;
+  void setPreferredLocations(List<LoggedLocation> preferredLocations) {
+    if (preferredLocations == null || preferredLocations.isEmpty()) {
+      this.preferredLocations = Collections.emptyList();
+    } else {
+      this.preferredLocations = preferredLocations;
+    }
   }
 
   public int getNumberMaps() {
@@ -204,8 +211,8 @@ public class LoggedTask implements DeepCompare {
     }
   }
 
-  private void compareLoggedLocations(ArrayList<LoggedLocation> c1,
-      ArrayList<LoggedLocation> c2, TreePath loc, String eltname)
+  private void compareLoggedLocations(List<LoggedLocation> c1,
+      List<LoggedLocation> c2, TreePath loc, String eltname)
       throws DeepInequalityException {
     if (c1 == null && c2 == null) {
       return;

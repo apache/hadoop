@@ -1285,7 +1285,7 @@ public class HadoopLogsAnalyzer extends Configured implements Tool {
           attempt.setLocation(host.makeLoggedLocation());
         }
 
-        ArrayList<LoggedLocation> locs = task.getPreferredLocations();
+        List<LoggedLocation> locs = task.getPreferredLocations();
 
         if (host != null && locs != null) {
           for (LoggedLocation loc : locs) {
