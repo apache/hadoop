@@ -28,6 +28,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -43,6 +45,7 @@ import org.apache.hadoop.security.token.TokenIdentifier;
  * secret keys and Tokens.
  */
 public class Credentials implements Writable {
+  private static final Log LOG = LogFactory.getLog(Credentials.class);
 
   private  Map<Text, byte[]> secretKeysMap = new HashMap<Text, byte[]>();
   private  Map<Text, Token<? extends TokenIdentifier>> tokenMap = 
@@ -72,7 +75,11 @@ public class Credentials implements Writable {
    * @param t the token object
    */
   public void addToken(Text alias, Token<? extends TokenIdentifier> t) {
-    tokenMap.put(alias, t);
+    if (t != null) {
+      tokenMap.put(alias, t);
+    } else {
+      LOG.warn("Null token ignored for " + alias);
+    }
   }
   
   /**

@@ -140,6 +140,7 @@ public class HftpFileSystem extends FileSystem {
             } catch (Exception e) {
               LOG.info("Couldn't get a delegation token from " + nnHttpUrl + 
               " using https.");
+              LOG.debug("error was ", e);
               //Maybe the server is in unsecure mode (that's bad but okay)
               return null;
             }
