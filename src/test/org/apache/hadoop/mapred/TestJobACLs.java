@@ -71,7 +71,7 @@ public class TestJobACLs {
     JobConf conf = new JobConf();
 
     // Enable job-level authorization
-    conf.setBoolean(JobTracker.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, true);
+    conf.setBoolean(JobConf.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, true);
 
     // Enable CompletedJobStore
     FileSystem fs = FileSystem.getLocal(conf);

@@ -7,21 +7,22 @@
   import="java.util.*"
   import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapred.JSPUtil.JobWithViewAccessCheck"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"  
-  import="org.apache.hadoop.util.*"
+  import="org.apache.hadoop.security.UserGroupInformation"
+  import="java.security.PrivilegedExceptionAction"
+  import="org.apache.hadoop.security.AccessControlException"
 %>
 <%!static SimpleDateFormat dateFormat = new SimpleDateFormat(
       "d-MMM-yyyy HH:mm:ss");
-
-  private static final String PRIVATE_ACTIONS_KEY = "webinterface.private.actions";%>
-<%!private void printConfirm(JspWriter out, String jobid, String tipid,
-      String taskid, String action) throws IOException {
-    String url = "taskdetails.jsp?jobid=" + jobid + "&tipid=" + tipid
-        + "&taskid=" + taskid;
+%>
+<%!private void printConfirm(JspWriter out,
+      String attemptid, String action) throws IOException {
+    String url = "taskdetails.jsp?attemptid=" + attemptid;
     out.print("<html><head><META http-equiv=\"refresh\" content=\"15;URL="
         + url + "\"></head>" + "<body><h3> Are you sure you want to kill/fail "
-        + taskid + " ?<h3><br><table border=\"0\"><tr><td width=\"100\">"
+        + attemptid + " ?<h3><br><table border=\"0\"><tr><td width=\"100\">"
         + "<form action=\"" + url + "\" method=\"post\">"
         + "<input type=\"hidden\" name=\"action\" value=\"" + action + "\" />"
         + "<input type=\"submit\" name=\"Kill/Fail\" value=\"Kill/Fail\" />"
@@ -31,53 +32,109 @@
         + "/></form></td></tr></table></body></html>");
   }%>
 <%
-    JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
-    String jobid = request.getParameter("jobid");
-    String tipid = request.getParameter("tipid");
-    String taskid = request.getParameter("taskid");
-    JobID jobidObj = JobID.forName(jobid);
-    TaskID tipidObj = TaskID.forName(tipid);
-    TaskAttemptID taskidObj = TaskAttemptID.forName(taskid);
-    
-    JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
-    
-    boolean privateActions = JSPUtil.conf.getBoolean(PRIVATE_ACTIONS_KEY,
-        false);
+    final JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
+
+    String attemptid = request.getParameter("attemptid");
+    final TaskAttemptID attemptidObj = TaskAttemptID.forName(attemptid);
+
+    // Obtain tipid for attemptid, if attemptid is available.
+    TaskID tipidObj =
+        (attemptidObj == null) ? TaskID.forName(request.getParameter("tipid"))
+                               : attemptidObj.getTaskID();
+    if (tipidObj == null) {
+      out.print("<b>tipid sent is not valid.</b><br>\n");
+      return;
+    }
+    // Obtain jobid from tipid
+    final JobID jobidObj = tipidObj.getJobID();
+    String jobid = jobidObj.toString();
+
+    JobWithViewAccessCheck myJob = JSPUtil.checkAccessAndGetJob(tracker, jobidObj,
+        request, response);
+    if (!myJob.isViewJobAllowed()) {
+      return; // user is not authorized to view this job
+    }
+
+    JobInProgress job = myJob.getJob();
+    if (job == null) {
+      out.print("<b>Job " + jobid + " not found.</b><br>\n");
+      return;
+    }
+    boolean privateActions = JSPUtil.privateActionsAllowed(tracker.conf);
     if (privateActions) {
       String action = request.getParameter("action");
       if (action != null) {
+        String user = request.getRemoteUser();
+        UserGroupInformation ugi = null;
+        if (user != null) {
+          ugi = UserGroupInformation.createRemoteUser(user);
+        }
         if (action.equalsIgnoreCase("confirm")) {
           String subAction = request.getParameter("subaction");
           if (subAction == null)
             subAction = "fail-task";
-          printConfirm(out, jobid, tipid, taskid, subAction);
+          printConfirm(out, attemptid, subAction);
           return;
         }
         else if (action.equalsIgnoreCase("kill-task") 
             && request.getMethod().equalsIgnoreCase("POST")) {
-          tracker.killTask(taskidObj, false);
+          if (ugi != null) {
+            try {
+              ugi.doAs(new PrivilegedExceptionAction<Void>() {
+              public Void run() throws IOException{
+
+                tracker.killTask(attemptidObj, false);// checks job modify permission
+                return null;
+              }
+              });
+            } catch(AccessControlException e) {
+              String errMsg = "User " + user + " failed to kill task "
+                  + attemptidObj + "!<br><br>" + e.getMessage() +
+                  "<hr><a href=\"jobdetails.jsp?jobid=" + jobid +
+                  "\">Go back to Job</a><br>";
+              JSPUtil.setErrorAndForward(errMsg, request, response);
+              return;
+            }
+          } else {// no authorization needed
+            tracker.killTask(attemptidObj, false);
+          }
           //redirect again so that refreshing the page will not attempt to rekill the task
-          response.sendRedirect("/taskdetails.jsp?" + "&subaction=kill-task"
-              + "&jobid=" + jobid + "&tipid=" + tipid);
+          response.sendRedirect("/taskdetails.jsp?subaction=kill-task" +
+              "&tipid=" + tipidObj.toString());
         }
         else if (action.equalsIgnoreCase("fail-task")
             && request.getMethod().equalsIgnoreCase("POST")) {
-          tracker.killTask(taskidObj, true);
-          response.sendRedirect("/taskdetails.jsp?" + "&subaction=fail-task"
-              + "&jobid=" + jobid + "&tipid=" + tipid);
+          if (ugi != null) {
+            try {
+              ugi.doAs(new PrivilegedExceptionAction<Void>() {
+              public Void run() throws IOException{
+
+                tracker.killTask(attemptidObj, true);// checks job modify permission
+                return null;
+              }
+              });
+            } catch(AccessControlException e) {
+              String errMsg = "User " + user + " failed to fail task "
+                  + attemptidObj + "!<br><br>" + e.getMessage() +
+                  "<hr><a href=\"jobdetails.jsp?jobid=" + jobid +
+                  "\">Go back to Job</a><br>";
+              JSPUtil.setErrorAndForward(errMsg, request, response);
+              return;
+            }
+          } else {// no authorization needed
+            tracker.killTask(attemptidObj, true);
+          }
+
+          response.sendRedirect("/taskdetails.jsp?subaction=fail-task" +
+              "&tipid=" + tipidObj.toString());
         }
       }
     }
-    TaskInProgress tip = null;
-    if (job != null && tipidObj != null) {
-      tip = job.getTaskInProgress(tipidObj);
-    }
+    TaskInProgress tip = job.getTaskInProgress(tipidObj);
     TaskStatus[] ts = null;
+    boolean isCleanupOrSetup = false;
     if (tip != null) { 
       ts = tip.getTaskStatuses();
-    }
-    boolean isCleanupOrSetup = false;
-    if ( tip != null) {
       isCleanupOrSetup = tip.isJobCleanupTask();
       if (!isCleanupOrSetup) {
         isCleanupOrSetup = tip.isJobSetupTask();
@@ -228,18 +285,19 @@
             out.print("<a href=\"" + entireLogUrl + "\">All</a><br/>");
           }
         }
-        out.print("</td><td>" + "<a href=\"/taskstats.jsp?jobid=" + jobid
-          + "&tipid=" + tipid + "&taskid=" + status.getTaskID() + "\">"
-          + ((status.getCounters() != null) ? status.getCounters().size() : 0) + "</a></td>");
+        out.print("</td><td>" + "<a href=\"/taskstats.jsp?attemptid=" +
+          status.getTaskID() + "\">"
+          + ((status.getCounters() != null) ? status.getCounters().size() : 0)
+          + "</a></td>");
         out.print("<td>");
         if (privateActions
           && status.getRunState() == TaskStatus.State.RUNNING) {
         out.print("<a href=\"/taskdetails.jsp?action=confirm"
-          + "&subaction=kill-task" + "&jobid=" + jobid + "&tipid="
-          + tipid + "&taskid=" + status.getTaskID() + "\" > Kill </a>");
+          + "&subaction=kill-task" + "&attemptid=" + status.getTaskID()
+          + "\" > Kill </a>");
         out.print("<br><a href=\"/taskdetails.jsp?action=confirm"
-          + "&subaction=fail-task" + "&jobid=" + jobid + "&tipid="
-          + tipid + "&taskid=" + status.getTaskID() + "\" > Fail </a>");
+          + "&subaction=fail-task" + "&attemptid=" + status.getTaskID()
+          + "\" > Fail </a>");
         }
         else
           out.print("<pre>&nbsp;</pre>");

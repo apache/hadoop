@@ -8,6 +8,7 @@
   import="java.util.*"
   import="org.apache.hadoop.http.HtmlQuoting"
   import="org.apache.hadoop.mapred.*"
+  import="org.apache.hadoop.mapred.JSPUtil.JobWithViewAccessCheck"
   import="org.apache.hadoop.util.*"
   import="java.text.SimpleDateFormat"  
 %>
@@ -15,33 +16,46 @@
   JobTracker tracker = (JobTracker) application.getAttribute("job.tracker");
   String trackerName = 
            StringUtils.simpleHostname(tracker.getJobTrackerMachine());
-  String jobid = request.getParameter("jobid");
-  String tipid = request.getParameter("tipid");
-  String taskid = request.getParameter("taskid");
-  JobID jobidObj = JobID.forName(jobid);
-  TaskID tipidObj = TaskID.forName(tipid);
-  TaskAttemptID taskidObj = TaskAttemptID.forName(taskid);
+  String attemptid = request.getParameter("attemptid");
+  TaskAttemptID attemptidObj = TaskAttemptID.forName(attemptid);
+  // Obtain tipid for attemptId, if attemptId is available.
+  TaskID tipidObj =
+      (attemptidObj == null) ? TaskID.forName(request.getParameter("tipid"))
+                             : attemptidObj.getTaskID();
+  // Obtain jobid from tipid
+  final JobID jobidObj = tipidObj.getJobID();
+  String jobid = jobidObj.toString();
   
-  JobInProgress job = (JobInProgress) tracker.getJob(jobidObj);
+  JobWithViewAccessCheck myJob = JSPUtil.checkAccessAndGetJob(tracker, jobidObj,
+      request, response);
+  if (!myJob.isViewJobAllowed()) {
+    return; // user is not authorized to view this job
+  }
+
+  JobInProgress job = myJob.getJob();
+  if (job == null) {
+    out.print("<b>Job " + jobid + " not found.</b><br>\n");
+    return;
+  }
   
   Format decimal = new DecimalFormat();
   Counters counters;
-  if (taskid == null) {
+  if (attemptid == null) {
     counters = tracker.getTipCounters(tipidObj);
-    taskid = tipid; // for page title etc
+    attemptid = tipidObj.toString(); // for page title etc
   }
   else {
-    TaskStatus taskStatus = tracker.getTaskStatus(taskidObj);
+    TaskStatus taskStatus = tracker.getTaskStatus(attemptidObj);
     counters = taskStatus.getCounters();
   }
 %>
 
 <html>
   <head>
-    <title>Counters for <%=taskid%></title>
+    <title>Counters for <%=attemptid%></title>
   </head>
 <body>
-<h1>Counters for <%=taskid%></h1>
+<h1>Counters for <%=attemptid%></h1>
 
 <hr>
 

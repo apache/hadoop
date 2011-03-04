@@ -1016,7 +1016,7 @@ public class JobInProgress {
           host = ttStatus.getHost();
         }
         httpTaskLogLocation = "http://" + host + ":" + ttStatus.getHttpPort(); 
-           //+ "/tasklog?plaintext=true&taskid=" + status.getTaskID();
+           //+ "/tasklog?plaintext=true&attemptid=" + status.getTaskID();
       }
 
       TaskCompletionEvent taskEvent = null;

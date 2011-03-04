@@ -1930,7 +1930,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                                 "expireLaunchingTasks");
 
   CompletedJobStatusStore completedJobStatusStore = null;
-  private JobACLsManager jobACLsManager;
+  private JobTrackerJobACLsManager jobACLsManager;
   Thread completedJobsStoreThread = null;
   RecoveryManager recoveryManager;
 
@@ -1969,7 +1969,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   static final String SUBDIR = "jobTracker";
   FileSystem fs = null;
   Path systemDir = null;
-  private JobConf conf;
+  JobConf conf;
   private final UserGroupInformation mrOwner;
   private final String supergroup;
 
@@ -2018,7 +2018,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       mrOwner = UserGroupInformation.getCurrentUser();
     }
   
-    supergroup = conf.get("mapred.permissions.supergroup", "supergroup");
+    supergroup = conf.get(JobConf.MR_SUPERGROUP,
+                          "supergroup");
     LOG.info("Starting jobtracker with owner as " + mrOwner.getShortUserName() 
              + " and supergroup as " + supergroup);
     long secretKeyInterval = 
@@ -2269,7 +2270,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         NetworkTopology.DEFAULT_HOST_LEVEL);
 
     // Initialize the jobACLSManager
-    jobACLsManager = new JobACLsManager(this);
+    jobACLsManager = new JobTrackerJobACLsManager(this);
     //initializes the job status store
     completedJobStatusStore = new CompletedJobStatusStore(jobACLsManager, conf);
   }
@@ -3750,7 +3751,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * @return
    */
   boolean isJobLevelAuthorizationEnabled() {
-    return conf.getBoolean(JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, false);
+    return conf.getBoolean(JobConf.JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG, false);
   }
 
   /**
@@ -4196,9 +4197,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   static final String MAPRED_CLUSTER_MAX_REDUCE_MEMORY_MB_PROPERTY =
       "mapred.cluster.max.reduce.memory.mb";
 
-  public static final String JOB_LEVEL_AUTHORIZATION_ENABLING_FLAG =
-      "mapreduce.cluster.job-authorization-enabled";
-
   /* 
    * Returns a list of TaskCompletionEvent for the given job, 
    * starting from fromEventId.
@@ -4561,13 +4559,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * Is the calling user a super user? Or part of the supergroup?
    * @return true, if it is a super user
    */
-  boolean isSuperUserOrSuperGroup(UserGroupInformation callerUGI) {
-    if (mrOwner.getShortUserName().equals(callerUGI.getShortUserName())) {
+  static boolean isSuperUserOrSuperGroup(UserGroupInformation callerUGI,
+      UserGroupInformation superUser, String superGroup) {
+    if (superUser.getShortUserName().equals(callerUGI.getShortUserName())) {
       return true;
     }
     String[] groups = callerUGI.getGroupNames();
     for(int i=0; i < groups.length; ++i) {
-      if (groups[i].equals(supergroup)) {
+      if (groups[i].equals(superGroup)) {
         return true;
       }
     }
@@ -4580,7 +4579,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   public synchronized void refreshNodes() throws IOException {
     // check access
-    if (!isSuperUserOrSuperGroup(UserGroupInformation.getCurrentUser())) {
+    if (!isSuperUserOrSuperGroup(UserGroupInformation.getCurrentUser(), mrOwner,
+                                 supergroup)) {
       String user = UserGroupInformation.getCurrentUser().getShortUserName();
       throw new AccessControlException(user + 
                                        " is not authorized to refresh nodes.");
@@ -4590,6 +4590,10 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     refreshHosts();
   }
   
+  UserGroupInformation getMROwner() {
+    return mrOwner;
+  }
+
   String getSuperGroup() {
     return supergroup;
   }

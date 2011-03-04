@@ -1228,7 +1228,7 @@ public class JobClient extends Configured implements MRConstants, Tool  {
   }
 
   static String getTaskLogURL(TaskAttemptID taskId, String baseUrl) {
-    return (baseUrl + "/tasklog?plaintext=true&taskid=" + taskId); 
+    return (baseUrl + "/tasklog?plaintext=true&attemptid=" + taskId); 
   }
   
   private static void displayTaskLogs(TaskAttemptID taskId, String baseUrl)

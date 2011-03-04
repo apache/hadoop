@@ -28,6 +28,7 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -457,6 +458,11 @@ public class TestTaskTrackerLocalization extends TestCase {
     localizedJobConf = tracker.localizeJobFiles(task, 
         new TaskTracker.RunningJob(task.getJobID()));
 
+    // Set job view ACLs in conf sothat validation of contents of jobACLsFile
+    // can be done against this value. Have both users and groups
+    String jobViewACLs = "user1,user2, group1,group2";
+    localizedJobConf.set(JobContext.JOB_ACL_VIEW_JOB, jobViewACLs);
+
     // Now initialize the job via task-controller so as to set
     // ownership/permissions of jars, job-work-dir
     JobInitializationContext jobContext = new JobInitializationContext();
@@ -496,7 +502,7 @@ public class TestTaskTrackerLocalization extends TestCase {
     runner.setupChildTaskConfiguration(lDirAlloc);
     TaskRunner.createChildTmpDir(new File(attemptWorkDir.toUri().getPath()),
         localizedJobConf);
-    attemptLogFiles = TaskRunner.prepareLogFiles(task.getTaskID());
+    attemptLogFiles = runner.prepareLogFiles(task.getTaskID());
 
     // Make sure the task-conf file is created
     Path localTaskFile =
@@ -566,6 +572,24 @@ public class TestTaskTrackerLocalization extends TestCase {
         + expectedStderr.toString() + " Observed : "
         + attemptLogFiles[1].toString(), expectedStderr.toString().equals(
         attemptLogFiles[1].toString()));
+
+    // Make sure that the job ACLs file exists in the task log dir
+    File jobACLsFile = new File(logDir, TaskRunner.jobACLsFile);
+    assertTrue("JobACLsFile is missing in the task log dir " + logDir,
+        jobACLsFile.exists());
+
+    // With default task controller, the job-acls file is owned by TT and
+    // permissions are 700
+    checkFilePermissions(jobACLsFile.getAbsolutePath(), "-rwx------",
+        taskTrackerUGI.getShortUserName(), taskTrackerUGI.getGroupNames()[0]);
+
+    // Validate the contents of jobACLsFile(both user name and job-view-acls)
+    Configuration jobACLsConf =
+        TaskLogServlet.getConfFromJobACLsFile(task.getTaskID().toString());
+    assertTrue(jobACLsConf.get("user.name").equals(
+        localizedJobConf.getUser()));
+    assertTrue(jobACLsConf.get(JobContext.JOB_ACL_VIEW_JOB).
+        equals(localizedJobConf.get(JobContext.JOB_ACL_VIEW_JOB)));
   }
 
   /**
@@ -711,7 +735,7 @@ public class TestTaskTrackerLocalization extends TestCase {
     runner.setupChildTaskConfiguration(lDirAlloc);
     TaskRunner.createChildTmpDir(new File(workDir.toUri().getPath()),
         localizedJobConf);
-    TaskRunner.prepareLogFiles(task.getTaskID());
+    runner.prepareLogFiles(task.getTaskID());
     Path localTaskFile =
         lDirAlloc.getLocalPathToRead(TaskTracker.getTaskConfFile(task
             .getUser(), task.getJobID().toString(), task.getTaskID()
