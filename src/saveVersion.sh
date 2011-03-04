@@ -21,6 +21,7 @@
 unset LANG
 unset LC_CTYPE
 version=$1
+build_dir=$2
 user=`whoami`
 date=`date`
 if [ -d .git ]; then
@@ -32,7 +33,7 @@ else
   revision=`svn info | sed -n -e 's/Last Changed Rev: \(.*\)/\1/p'`
   url=`svn info | sed -n -e 's/URL: \(.*\)/\1/p'`
 fi
-mkdir -p build/src/org/apache/hadoop
+mkdir -p $build_dir/src/org/apache/hadoop
 cat << EOF | \
   sed -e "s/VERSION/$version/" -e "s/USER/$user/" -e "s/DATE/$date/" \
       -e "s|URL|$url|" -e "s/REV/$revision/" \

@@ -265,6 +265,16 @@
        rev="${mockito-all.version}" 
        conf="common->default">
     </dependency>
+    <dependency org="org.aspectj"
+      name="aspectjrt"
+      rev="${aspectj.version}"
+      conf="common->default">
+    </dependency>
+    <dependency org="org.aspectj"
+      name="aspectjtools"
+      rev="${aspectj.version}"
+      conf="common->default">
+    </dependency>
     </dependencies>
   
 </ivy-module>

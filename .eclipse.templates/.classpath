@@ -37,6 +37,8 @@
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/slf4j-api-1.4.3.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/slf4j-log4j12-1.4.3.jar"/>
 	<classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/xmlenc-0.52.jar"/>
+        <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/aspectjrt-1.6.5.jar"/>
+        <classpathentry kind="lib" path="build/ivy/lib/Hadoop/common/aspectjtools-1.6.5.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftplet-api-1.0.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftpserver-core-1.0.0-SNAPSHOT.jar"/>
 	<classpathentry kind="lib" path="src/test/lib/ftpserver-server-1.0.0-SNAPSHOT.jar"/>
