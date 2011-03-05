@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Pair;
@@ -202,6 +203,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
       false, conf,
       0); // this is a DNC w/o high priority handlers
     this.address = new HServerAddress(rpcServer.getListenerAddress());
+
+    // initialize server principal (if using secure Hadoop)
+    User.login(conf, "hbase.master.keytab.file",
+        "hbase.master.kerberos.principal", this.address.getHostname());
 
     // set the thread name now we have an address
     setName(MASTER + "-" + this.address);

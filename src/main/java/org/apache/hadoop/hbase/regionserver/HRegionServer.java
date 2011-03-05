@@ -118,6 +118,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.WALObserver;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -344,6 +345,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       throw new NullPointerException("Server address cannot be null; "
           + "hbase-958 debugging");
     }
+
+    // login the server principal (if using secure Hadoop)
+    User.login(conf, "hbase.regionserver.keytab.file",
+        "hbase.regionserver.kerberos.principal", serverInfo.getHostname());
   }
 
   private static final int NORMAL_QOS = 0;

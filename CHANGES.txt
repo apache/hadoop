@@ -136,6 +136,8 @@ Release 0.90.2 - Unreleased
                log4j.properties
    HBASE-3591  completebulkload doesn't honor generic -D options
    HBASE-3594  Rest server fails because of missing asm jar
+   HBASE-3582  Allow HMaster and HRegionServer to login from keytab
+               when on secure Hadoop
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

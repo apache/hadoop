@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
@@ -42,10 +43,10 @@ public class TestUser {
   public void testRunAs() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     final User user = User.createUserForTesting(conf, "testuser", new String[]{"foo"});
-    final PrivilegedAction<String> action = new PrivilegedAction<String>(){
-      public String run() {
-        User u = User.getCurrent();
-        return u.getName();
+    final PrivilegedExceptionAction<String> action = new PrivilegedExceptionAction<String>(){
+      public String run() throws IOException {
+          User u = User.getCurrent();
+          return u.getName();
       }
     };
 
@@ -68,8 +69,8 @@ public class TestUser {
     assertEquals("User name in runAs() should match", "testuser", username);
 
     // verify that nested contexts work
-    user2.runAs(new PrivilegedAction(){
-      public Object run() {
+    user2.runAs(new PrivilegedExceptionAction(){
+      public Object run() throws IOException, InterruptedException{
         String nestedName = user.runAs(action);
         assertEquals("Nest name should match nested user", "testuser", nestedName);
         assertEquals("Current name should match current user",
