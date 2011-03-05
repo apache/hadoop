@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -28,37 +27,38 @@ import java.util.HashSet;
 import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
 /**
  * Holds row name and then a map of columns to cells.
  */
-public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializable, Cloneable {
+public class TRowResult implements TBase<TRowResult, TRowResult._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("TRowResult");
 
   private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)1);
   private static final TField COLUMNS_FIELD_DESC = new TField("columns", TType.MAP, (short)2);
 
-  public byte[] row;
-  public Map<byte[],TCell> columns;
+  public ByteBuffer row;
+  public Map<ByteBuffer,TCell> columns;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
     ROW((short)1, "row"),
     COLUMNS((short)2, "columns");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -67,7 +67,14 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // ROW
+          return ROW;
+        case 2: // COLUMNS
+          return COLUMNS;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -106,16 +113,16 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
 
   // isset id assignments
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
-        new MapMetaData(TType.MAP,
-            new FieldValueMetaData(TType.STRING),
-            new StructMetaData(TType.STRUCT, TCell.class))));
-  }});
-
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING        , "Text")));
+    tmpMap.put(_Fields.COLUMNS, new FieldMetaData("columns", TFieldRequirementType.DEFAULT,
+        new MapMetaData(TType.MAP,
+            new FieldValueMetaData(TType.STRING            , "Text"),
+            new StructMetaData(TType.STRUCT, TCell.class))));
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(TRowResult.class, metaDataMap);
   }
 
@@ -123,8 +130,8 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
   }
 
   public TRowResult(
-    byte[] row,
-    Map<byte[],TCell> columns)
+    ByteBuffer row,
+    Map<ByteBuffer,TCell> columns)
   {
     this();
     this.row = row;
@@ -139,13 +146,13 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
       this.row = other.row;
     }
     if (other.isSetColumns()) {
-      Map<byte[],TCell> __this__columns = new HashMap<byte[],TCell>();
-      for (Map.Entry<byte[], TCell> other_element : other.columns.entrySet()) {
+      Map<ByteBuffer,TCell> __this__columns = new HashMap<ByteBuffer,TCell>();
+      for (Map.Entry<ByteBuffer, TCell> other_element : other.columns.entrySet()) {
 
-        byte[] other_element_key = other_element.getKey();
+        ByteBuffer other_element_key = other_element.getKey();
         TCell other_element_value = other_element.getValue();
 
-        byte[] __this__columns_copy_key = other_element_key;
+        ByteBuffer __this__columns_copy_key = other_element_key;
 
         TCell __this__columns_copy_value = new TCell(other_element_value);
 
@@ -159,16 +166,27 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
     return new TRowResult(this);
   }
 
-  @Deprecated
-  public TRowResult clone() {
-    return new TRowResult(this);
+  @Override
+  public void clear() {
+    this.row = null;
+    this.columns = null;
   }
 
   public byte[] getRow() {
-    return this.row;
+    setRow(TBaseHelper.rightSize(row));
+    return row.array();
+  }
+
+  public ByteBuffer BufferForRow() {
+    return row;
   }
 
   public TRowResult setRow(byte[] row) {
+    setRow(ByteBuffer.wrap(row));
+    return this;
+  }
+
+  public TRowResult setRow(ByteBuffer row) {
     this.row = row;
     return this;
   }
@@ -192,18 +210,18 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
     return (this.columns == null) ? 0 : this.columns.size();
   }
 
-  public void putToColumns(byte[] key, TCell val) {
+  public void putToColumns(ByteBuffer key, TCell val) {
     if (this.columns == null) {
-      this.columns = new HashMap<byte[],TCell>();
+      this.columns = new HashMap<ByteBuffer,TCell>();
     }
     this.columns.put(key, val);
   }
 
-  public Map<byte[],TCell> getColumns() {
+  public Map<ByteBuffer,TCell> getColumns() {
     return this.columns;
   }
 
-  public TRowResult setColumns(Map<byte[],TCell> columns) {
+  public TRowResult setColumns(Map<ByteBuffer,TCell> columns) {
     this.columns = columns;
     return this;
   }
@@ -229,7 +247,7 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
       if (value == null) {
         unsetRow();
       } else {
-        setRow((byte[])value);
+        setRow((ByteBuffer)value);
       }
       break;
 
@@ -237,15 +255,11 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
       if (value == null) {
         unsetColumns();
       } else {
-        setColumns((Map<byte[],TCell>)value);
+        setColumns((Map<ByteBuffer,TCell>)value);
       }
       break;
 
     }
-  }
-
-  public void setFieldValue(int fieldID, Object value) {
-    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
   }
 
   public Object getFieldValue(_Fields field) {
@@ -260,12 +274,12 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
     throw new IllegalStateException();
   }
 
-  public Object getFieldValue(int fieldId) {
-    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-  }
-
   /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
+    if (field == null) {
+      throw new IllegalArgumentException();
+    }
+
     switch (field) {
     case ROW:
       return isSetRow();
@@ -273,10 +287,6 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
       return isSetColumns();
     }
     throw new IllegalStateException();
-  }
-
-  public boolean isSet(int fieldID) {
-    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -297,7 +307,7 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
     if (this_present_row || that_present_row) {
       if (!(this_present_row && that_present_row))
         return false;
-      if (!java.util.Arrays.equals(this.row, that.row))
+      if (!this.row.equals(that.row))
         return false;
     }
 
@@ -315,19 +325,42 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
 
   @Override
   public int hashCode() {
-    HashCodeBuilder builder = new HashCodeBuilder();
+    return 0;
+  }
 
-    boolean present_row = true && (isSetRow());
-    builder.append(present_row);
-    if (present_row)
-      builder.append(row);
+  public int compareTo(TRowResult other) {
+    if (!getClass().equals(other.getClass())) {
+      return getClass().getName().compareTo(other.getClass().getName());
+    }
 
-    boolean present_columns = true && (isSetColumns());
-    builder.append(present_columns);
-    if (present_columns)
-      builder.append(columns);
+    int lastComparison = 0;
+    TRowResult typedOther = (TRowResult)other;
 
-    return builder.toHashCode();
+    lastComparison = Boolean.valueOf(isSetRow()).compareTo(typedOther.isSetRow());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetRow()) {
+      lastComparison = TBaseHelper.compareTo(this.row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetColumns()).compareTo(typedOther.isSetColumns());
+    if (lastComparison != 0) {
+      return lastComparison;
+    }
+    if (isSetColumns()) {
+      lastComparison = TBaseHelper.compareTo(this.columns, typedOther.columns);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    return 0;
+  }
+
+  public _Fields fieldForId(int fieldId) {
+    return _Fields.findByThriftId(fieldId);
   }
 
   public void read(TProtocol iprot) throws TException {
@@ -339,41 +372,38 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
       if (field.type == TType.STOP) {
         break;
       }
-      _Fields fieldId = _Fields.findByThriftId(field.id);
-      if (fieldId == null) {
-        TProtocolUtil.skip(iprot, field.type);
-      } else {
-        switch (fieldId) {
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMNS:
-            if (field.type == TType.MAP) {
+      switch (field.id) {
+        case 1: // ROW
+          if (field.type == TType.STRING) {
+            this.row = iprot.readBinary();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 2: // COLUMNS
+          if (field.type == TType.MAP) {
+            {
+              TMap _map4 = iprot.readMapBegin();
+              this.columns = new HashMap<ByteBuffer,TCell>(2*_map4.size);
+              for (int _i5 = 0; _i5 < _map4.size; ++_i5)
               {
-                TMap _map4 = iprot.readMapBegin();
-                this.columns = new HashMap<byte[],TCell>(2*_map4.size);
-                for (int _i5 = 0; _i5 < _map4.size; ++_i5)
-                {
-                  byte[] _key6;
-                  TCell _val7;
-                  _key6 = iprot.readBinary();
-                  _val7 = new TCell();
-                  _val7.read(iprot);
-                  this.columns.put(_key6, _val7);
-                }
-                iprot.readMapEnd();
+                ByteBuffer _key6;
+                TCell _val7;
+                _key6 = iprot.readBinary();
+                _val7 = new TCell();
+                _val7.read(iprot);
+                this.columns.put(_key6, _val7);
               }
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
+              iprot.readMapEnd();
             }
-            break;
-        }
-        iprot.readFieldEnd();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        default:
+          TProtocolUtil.skip(iprot, field.type);
       }
+      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
 
@@ -394,7 +424,7 @@ public class TRowResult implements TBase<TRowResult._Fields>, java.io.Serializab
       oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
       {
         oprot.writeMapBegin(new TMap(TType.STRING, TType.STRUCT, this.columns.size()));
-        for (Map.Entry<byte[], TCell> _iter8 : this.columns.entrySet())
+        for (Map.Entry<ByteBuffer, TCell> _iter8 : this.columns.entrySet())
         {
           oprot.writeBinary(_iter8.getKey());
           _iter8.getValue().write(oprot);

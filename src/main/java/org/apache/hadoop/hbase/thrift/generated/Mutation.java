@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -28,18 +27,21 @@ import java.util.HashSet;
 import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
 /**
  * A Mutation object is used to either update or delete a column-value.
  */
-public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, Cloneable, Comparable<Mutation> {
+public class Mutation implements TBase<Mutation, Mutation._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("Mutation");
 
   private static final TField IS_DELETE_FIELD_DESC = new TField("isDelete", TType.BOOL, (short)1);
@@ -47,8 +49,8 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
   private static final TField VALUE_FIELD_DESC = new TField("value", TType.STRING, (short)3);
 
   public boolean isDelete;
-  public byte[] column;
-  public byte[] value;
+  public ByteBuffer column;
+  public ByteBuffer value;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
   public enum _Fields implements TFieldIdEnum {
@@ -56,12 +58,10 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
     COLUMN((short)2, "column"),
     VALUE((short)3, "value");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -70,7 +70,16 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // IS_DELETE
+          return IS_DELETE;
+        case 2: // COLUMN
+          return COLUMN;
+        case 3: // VALUE
+          return VALUE;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -111,16 +120,16 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
   private static final int __ISDELETE_ISSET_ID = 0;
   private BitSet __isset_bit_vector = new BitSet(1);
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.IS_DELETE, new FieldMetaData("isDelete", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.BOOL)));
-    put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.STRING)));
-  }});
-
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.IS_DELETE, new FieldMetaData("isDelete", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.BOOL)));
+    tmpMap.put(_Fields.COLUMN, new FieldMetaData("column", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING        , "Text")));
+    tmpMap.put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING        , "Text")));
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(Mutation.class, metaDataMap);
   }
 
@@ -131,8 +140,8 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
 
   public Mutation(
     boolean isDelete,
-    byte[] column,
-    byte[] value)
+    ByteBuffer column,
+    ByteBuffer value)
   {
     this();
     this.isDelete = isDelete;
@@ -160,9 +169,12 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
     return new Mutation(this);
   }
 
-  @Deprecated
-  public Mutation clone() {
-    return new Mutation(this);
+  @Override
+  public void clear() {
+    this.isDelete = false;
+
+    this.column = null;
+    this.value = null;
   }
 
   public boolean isIsDelete() {
@@ -189,10 +201,20 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
   }
 
   public byte[] getColumn() {
-    return this.column;
+    setColumn(TBaseHelper.rightSize(column));
+    return column.array();
+  }
+
+  public ByteBuffer BufferForColumn() {
+    return column;
   }
 
   public Mutation setColumn(byte[] column) {
+    setColumn(ByteBuffer.wrap(column));
+    return this;
+  }
+
+  public Mutation setColumn(ByteBuffer column) {
     this.column = column;
     return this;
   }
@@ -213,10 +235,20 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
   }
 
   public byte[] getValue() {
-    return this.value;
+    setValue(TBaseHelper.rightSize(value));
+    return value.array();
+  }
+
+  public ByteBuffer BufferForValue() {
+    return value;
   }
 
   public Mutation setValue(byte[] value) {
+    setValue(ByteBuffer.wrap(value));
+    return this;
+  }
+
+  public Mutation setValue(ByteBuffer value) {
     this.value = value;
     return this;
   }
@@ -250,7 +282,7 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
       if (value == null) {
         unsetColumn();
       } else {
-        setColumn((byte[])value);
+        setColumn((ByteBuffer)value);
       }
       break;
 
@@ -258,15 +290,11 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
       if (value == null) {
         unsetValue();
       } else {
-        setValue((byte[])value);
+        setValue((ByteBuffer)value);
       }
       break;
 
     }
-  }
-
-  public void setFieldValue(int fieldID, Object value) {
-    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
   }
 
   public Object getFieldValue(_Fields field) {
@@ -284,12 +312,12 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
     throw new IllegalStateException();
   }
 
-  public Object getFieldValue(int fieldId) {
-    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-  }
-
   /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
+    if (field == null) {
+      throw new IllegalArgumentException();
+    }
+
     switch (field) {
     case IS_DELETE:
       return isSetIsDelete();
@@ -299,10 +327,6 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
       return isSetValue();
     }
     throw new IllegalStateException();
-  }
-
-  public boolean isSet(int fieldID) {
-    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -332,7 +356,7 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
     if (this_present_column || that_present_column) {
       if (!(this_present_column && that_present_column))
         return false;
-      if (!java.util.Arrays.equals(this.column, that.column))
+      if (!this.column.equals(that.column))
         return false;
     }
 
@@ -341,7 +365,7 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
     if (this_present_value || that_present_value) {
       if (!(this_present_value && that_present_value))
         return false;
-      if (!java.util.Arrays.equals(this.value, that.value))
+      if (!this.value.equals(that.value))
         return false;
     }
 
@@ -350,24 +374,7 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
 
   @Override
   public int hashCode() {
-    HashCodeBuilder builder = new HashCodeBuilder();
-
-    boolean present_isDelete = true;
-    builder.append(present_isDelete);
-    if (present_isDelete)
-      builder.append(isDelete);
-
-    boolean present_column = true && (isSetColumn());
-    builder.append(present_column);
-    if (present_column)
-      builder.append(column);
-
-    boolean present_value = true && (isSetValue());
-    builder.append(present_value);
-    if (present_value)
-      builder.append(value);
-
-    return builder.toHashCode();
+    return 0;
   }
 
   public int compareTo(Mutation other) {
@@ -378,31 +385,41 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
     int lastComparison = 0;
     Mutation typedOther = (Mutation)other;
 
-    lastComparison = Boolean.valueOf(isSetIsDelete()).compareTo(isSetIsDelete());
+    lastComparison = Boolean.valueOf(isSetIsDelete()).compareTo(typedOther.isSetIsDelete());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(isDelete, typedOther.isDelete);
+    if (isSetIsDelete()) {
+      lastComparison = TBaseHelper.compareTo(this.isDelete, typedOther.isDelete);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetColumn()).compareTo(typedOther.isSetColumn());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetColumn()).compareTo(isSetColumn());
+    if (isSetColumn()) {
+      lastComparison = TBaseHelper.compareTo(this.column, typedOther.column);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetValue()).compareTo(typedOther.isSetValue());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(column, typedOther.column);
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = Boolean.valueOf(isSetValue()).compareTo(isSetValue());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(value, typedOther.value);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetValue()) {
+      lastComparison = TBaseHelper.compareTo(this.value, typedOther.value);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
+  }
+
+  public _Fields fieldForId(int fieldId) {
+    return _Fields.findByThriftId(fieldId);
   }
 
   public void read(TProtocol iprot) throws TException {
@@ -414,36 +431,33 @@ public class Mutation implements TBase<Mutation._Fields>, java.io.Serializable, 
       if (field.type == TType.STOP) {
         break;
       }
-      _Fields fieldId = _Fields.findByThriftId(field.id);
-      if (fieldId == null) {
-        TProtocolUtil.skip(iprot, field.type);
-      } else {
-        switch (fieldId) {
-          case IS_DELETE:
-            if (field.type == TType.BOOL) {
-              this.isDelete = iprot.readBool();
-              setIsDeleteIsSet(true);
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COLUMN:
-            if (field.type == TType.STRING) {
-              this.column = iprot.readBinary();
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case VALUE:
-            if (field.type == TType.STRING) {
-              this.value = iprot.readBinary();
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-        }
-        iprot.readFieldEnd();
+      switch (field.id) {
+        case 1: // IS_DELETE
+          if (field.type == TType.BOOL) {
+            this.isDelete = iprot.readBool();
+            setIsDeleteIsSet(true);
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 2: // COLUMN
+          if (field.type == TType.STRING) {
+            this.column = iprot.readBinary();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 3: // VALUE
+          if (field.type == TType.STRING) {
+            this.value = iprot.readBinary();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        default:
+          TProtocolUtil.skip(iprot, field.type);
       }
+      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
 

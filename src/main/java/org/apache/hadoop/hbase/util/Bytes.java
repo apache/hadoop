@@ -731,6 +731,20 @@ public class Bytes {
   }
 
   /**
+   * This method will get a sequence of bytes from pos -> limit,
+   * but will restore pos after.
+   * @param buf
+   * @return
+   */
+  public static byte[] getBytes(ByteBuffer buf) {
+    int savedPos = buf.position();
+    byte [] newBytes = new byte[buf.remaining()];
+    buf.get(newBytes);
+    buf.position(savedPos);
+    return newBytes;
+  }
+
+  /**
    * Put a short value out to the specified byte array position.
    * @param bytes the byte array
    * @param offset position in the array

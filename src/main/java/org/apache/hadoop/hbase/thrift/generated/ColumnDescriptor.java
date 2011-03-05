@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -28,12 +27,15 @@ import java.util.HashSet;
 import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
 /**
@@ -41,7 +43,7 @@ import org.apache.thrift.protocol.*;
  * such as the number of versions, compression settings, etc. It is
  * used as input when creating a table or adding a column.
  */
-public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.io.Serializable, Cloneable, Comparable<ColumnDescriptor> {
+public class ColumnDescriptor implements TBase<ColumnDescriptor, ColumnDescriptor._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("ColumnDescriptor");
 
   private static final TField NAME_FIELD_DESC = new TField("name", TType.STRING, (short)1);
@@ -54,7 +56,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
   private static final TField BLOCK_CACHE_ENABLED_FIELD_DESC = new TField("blockCacheEnabled", TType.BOOL, (short)8);
   private static final TField TIME_TO_LIVE_FIELD_DESC = new TField("timeToLive", TType.I32, (short)9);
 
-  public byte[] name;
+  public ByteBuffer name;
   public int maxVersions;
   public String compression;
   public boolean inMemory;
@@ -76,12 +78,10 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
     BLOCK_CACHE_ENABLED((short)8, "blockCacheEnabled"),
     TIME_TO_LIVE((short)9, "timeToLive");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -90,7 +90,28 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // NAME
+          return NAME;
+        case 2: // MAX_VERSIONS
+          return MAX_VERSIONS;
+        case 3: // COMPRESSION
+          return COMPRESSION;
+        case 4: // IN_MEMORY
+          return IN_MEMORY;
+        case 5: // BLOOM_FILTER_TYPE
+          return BLOOM_FILTER_TYPE;
+        case 6: // BLOOM_FILTER_VECTOR_SIZE
+          return BLOOM_FILTER_VECTOR_SIZE;
+        case 7: // BLOOM_FILTER_NB_HASHES
+          return BLOOM_FILTER_NB_HASHES;
+        case 8: // BLOCK_CACHE_ENABLED
+          return BLOCK_CACHE_ENABLED;
+        case 9: // TIME_TO_LIVE
+          return TIME_TO_LIVE;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -136,28 +157,28 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
   private static final int __TIMETOLIVE_ISSET_ID = 5;
   private BitSet __isset_bit_vector = new BitSet(6);
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.MAX_VERSIONS, new FieldMetaData("maxVersions", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.I32)));
-    put(_Fields.COMPRESSION, new FieldMetaData("compression", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.IN_MEMORY, new FieldMetaData("inMemory", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.BOOL)));
-    put(_Fields.BLOOM_FILTER_TYPE, new FieldMetaData("bloomFilterType", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.BLOOM_FILTER_VECTOR_SIZE, new FieldMetaData("bloomFilterVectorSize", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.I32)));
-    put(_Fields.BLOOM_FILTER_NB_HASHES, new FieldMetaData("bloomFilterNbHashes", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.I32)));
-    put(_Fields.BLOCK_CACHE_ENABLED, new FieldMetaData("blockCacheEnabled", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.BOOL)));
-    put(_Fields.TIME_TO_LIVE, new FieldMetaData("timeToLive", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.I32)));
-  }});
-
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.NAME, new FieldMetaData("name", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING        , "Text")));
+    tmpMap.put(_Fields.MAX_VERSIONS, new FieldMetaData("maxVersions", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.I32)));
+    tmpMap.put(_Fields.COMPRESSION, new FieldMetaData("compression", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING)));
+    tmpMap.put(_Fields.IN_MEMORY, new FieldMetaData("inMemory", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.BOOL)));
+    tmpMap.put(_Fields.BLOOM_FILTER_TYPE, new FieldMetaData("bloomFilterType", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING)));
+    tmpMap.put(_Fields.BLOOM_FILTER_VECTOR_SIZE, new FieldMetaData("bloomFilterVectorSize", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.I32)));
+    tmpMap.put(_Fields.BLOOM_FILTER_NB_HASHES, new FieldMetaData("bloomFilterNbHashes", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.I32)));
+    tmpMap.put(_Fields.BLOCK_CACHE_ENABLED, new FieldMetaData("blockCacheEnabled", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.BOOL)));
+    tmpMap.put(_Fields.TIME_TO_LIVE, new FieldMetaData("timeToLive", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.I32)));
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(ColumnDescriptor.class, metaDataMap);
   }
 
@@ -181,7 +202,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
   }
 
   public ColumnDescriptor(
-    byte[] name,
+    ByteBuffer name,
     int maxVersions,
     String compression,
     boolean inMemory,
@@ -236,16 +257,42 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
     return new ColumnDescriptor(this);
   }
 
-  @Deprecated
-  public ColumnDescriptor clone() {
-    return new ColumnDescriptor(this);
+  @Override
+  public void clear() {
+    this.name = null;
+    this.maxVersions = 3;
+
+    this.compression = "NONE";
+
+    this.inMemory = false;
+
+    this.bloomFilterType = "NONE";
+
+    this.bloomFilterVectorSize = 0;
+
+    this.bloomFilterNbHashes = 0;
+
+    this.blockCacheEnabled = false;
+
+    this.timeToLive = -1;
+
   }
 
   public byte[] getName() {
-    return this.name;
+    setName(TBaseHelper.rightSize(name));
+    return name.array();
+  }
+
+  public ByteBuffer BufferForName() {
+    return name;
   }
 
   public ColumnDescriptor setName(byte[] name) {
+    setName(ByteBuffer.wrap(name));
+    return this;
+  }
+
+  public ColumnDescriptor setName(ByteBuffer name) {
     this.name = name;
     return this;
   }
@@ -457,7 +504,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
       if (value == null) {
         unsetName();
       } else {
-        setName((byte[])value);
+        setName((ByteBuffer)value);
       }
       break;
 
@@ -528,10 +575,6 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
     }
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-  }
-
   public Object getFieldValue(_Fields field) {
     switch (field) {
     case NAME:
@@ -565,12 +608,12 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
     throw new IllegalStateException();
   }
 
-  public Object getFieldValue(int fieldId) {
-    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-  }
-
   /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
+    if (field == null) {
+      throw new IllegalArgumentException();
+    }
+
     switch (field) {
     case NAME:
       return isSetName();
@@ -594,10 +637,6 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
     throw new IllegalStateException();
   }
 
-  public boolean isSet(int fieldID) {
-    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
-  }
-
   @Override
   public boolean equals(Object that) {
     if (that == null)
@@ -616,7 +655,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
     if (this_present_name || that_present_name) {
       if (!(this_present_name && that_present_name))
         return false;
-      if (!java.util.Arrays.equals(this.name, that.name))
+      if (!this.name.equals(that.name))
         return false;
     }
 
@@ -697,54 +736,7 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
 
   @Override
   public int hashCode() {
-    HashCodeBuilder builder = new HashCodeBuilder();
-
-    boolean present_name = true && (isSetName());
-    builder.append(present_name);
-    if (present_name)
-      builder.append(name);
-
-    boolean present_maxVersions = true;
-    builder.append(present_maxVersions);
-    if (present_maxVersions)
-      builder.append(maxVersions);
-
-    boolean present_compression = true && (isSetCompression());
-    builder.append(present_compression);
-    if (present_compression)
-      builder.append(compression);
-
-    boolean present_inMemory = true;
-    builder.append(present_inMemory);
-    if (present_inMemory)
-      builder.append(inMemory);
-
-    boolean present_bloomFilterType = true && (isSetBloomFilterType());
-    builder.append(present_bloomFilterType);
-    if (present_bloomFilterType)
-      builder.append(bloomFilterType);
-
-    boolean present_bloomFilterVectorSize = true;
-    builder.append(present_bloomFilterVectorSize);
-    if (present_bloomFilterVectorSize)
-      builder.append(bloomFilterVectorSize);
-
-    boolean present_bloomFilterNbHashes = true;
-    builder.append(present_bloomFilterNbHashes);
-    if (present_bloomFilterNbHashes)
-      builder.append(bloomFilterNbHashes);
-
-    boolean present_blockCacheEnabled = true;
-    builder.append(present_blockCacheEnabled);
-    if (present_blockCacheEnabled)
-      builder.append(blockCacheEnabled);
-
-    boolean present_timeToLive = true;
-    builder.append(present_timeToLive);
-    if (present_timeToLive)
-      builder.append(timeToLive);
-
-    return builder.toHashCode();
+    return 0;
   }
 
   public int compareTo(ColumnDescriptor other) {
@@ -755,79 +747,101 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
     int lastComparison = 0;
     ColumnDescriptor typedOther = (ColumnDescriptor)other;
 
-    lastComparison = Boolean.valueOf(isSetName()).compareTo(isSetName());
+    lastComparison = Boolean.valueOf(isSetName()).compareTo(typedOther.isSetName());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(name, typedOther.name);
+    if (isSetName()) {
+      lastComparison = TBaseHelper.compareTo(this.name, typedOther.name);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetMaxVersions()).compareTo(typedOther.isSetMaxVersions());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetMaxVersions()).compareTo(isSetMaxVersions());
+    if (isSetMaxVersions()) {
+      lastComparison = TBaseHelper.compareTo(this.maxVersions, typedOther.maxVersions);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetCompression()).compareTo(typedOther.isSetCompression());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(maxVersions, typedOther.maxVersions);
+    if (isSetCompression()) {
+      lastComparison = TBaseHelper.compareTo(this.compression, typedOther.compression);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetInMemory()).compareTo(typedOther.isSetInMemory());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetCompression()).compareTo(isSetCompression());
+    if (isSetInMemory()) {
+      lastComparison = TBaseHelper.compareTo(this.inMemory, typedOther.inMemory);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetBloomFilterType()).compareTo(typedOther.isSetBloomFilterType());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(compression, typedOther.compression);
+    if (isSetBloomFilterType()) {
+      lastComparison = TBaseHelper.compareTo(this.bloomFilterType, typedOther.bloomFilterType);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetBloomFilterVectorSize()).compareTo(typedOther.isSetBloomFilterVectorSize());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetInMemory()).compareTo(isSetInMemory());
+    if (isSetBloomFilterVectorSize()) {
+      lastComparison = TBaseHelper.compareTo(this.bloomFilterVectorSize, typedOther.bloomFilterVectorSize);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetBloomFilterNbHashes()).compareTo(typedOther.isSetBloomFilterNbHashes());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(inMemory, typedOther.inMemory);
+    if (isSetBloomFilterNbHashes()) {
+      lastComparison = TBaseHelper.compareTo(this.bloomFilterNbHashes, typedOther.bloomFilterNbHashes);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetBlockCacheEnabled()).compareTo(typedOther.isSetBlockCacheEnabled());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetBloomFilterType()).compareTo(isSetBloomFilterType());
+    if (isSetBlockCacheEnabled()) {
+      lastComparison = TBaseHelper.compareTo(this.blockCacheEnabled, typedOther.blockCacheEnabled);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetTimeToLive()).compareTo(typedOther.isSetTimeToLive());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(bloomFilterType, typedOther.bloomFilterType);
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = Boolean.valueOf(isSetBloomFilterVectorSize()).compareTo(isSetBloomFilterVectorSize());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(bloomFilterVectorSize, typedOther.bloomFilterVectorSize);
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = Boolean.valueOf(isSetBloomFilterNbHashes()).compareTo(isSetBloomFilterNbHashes());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(bloomFilterNbHashes, typedOther.bloomFilterNbHashes);
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = Boolean.valueOf(isSetBlockCacheEnabled()).compareTo(isSetBlockCacheEnabled());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(blockCacheEnabled, typedOther.blockCacheEnabled);
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = Boolean.valueOf(isSetTimeToLive()).compareTo(isSetTimeToLive());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(timeToLive, typedOther.timeToLive);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetTimeToLive()) {
+      lastComparison = TBaseHelper.compareTo(this.timeToLive, typedOther.timeToLive);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
+  }
+
+  public _Fields fieldForId(int fieldId) {
+    return _Fields.findByThriftId(fieldId);
   }
 
   public void read(TProtocol iprot) throws TException {
@@ -839,83 +853,80 @@ public class ColumnDescriptor implements TBase<ColumnDescriptor._Fields>, java.i
       if (field.type == TType.STOP) {
         break;
       }
-      _Fields fieldId = _Fields.findByThriftId(field.id);
-      if (fieldId == null) {
-        TProtocolUtil.skip(iprot, field.type);
-      } else {
-        switch (fieldId) {
-          case NAME:
-            if (field.type == TType.STRING) {
-              this.name = iprot.readBinary();
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case MAX_VERSIONS:
-            if (field.type == TType.I32) {
-              this.maxVersions = iprot.readI32();
-              setMaxVersionsIsSet(true);
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case COMPRESSION:
-            if (field.type == TType.STRING) {
-              this.compression = iprot.readString();
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case IN_MEMORY:
-            if (field.type == TType.BOOL) {
-              this.inMemory = iprot.readBool();
-              setInMemoryIsSet(true);
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case BLOOM_FILTER_TYPE:
-            if (field.type == TType.STRING) {
-              this.bloomFilterType = iprot.readString();
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case BLOOM_FILTER_VECTOR_SIZE:
-            if (field.type == TType.I32) {
-              this.bloomFilterVectorSize = iprot.readI32();
-              setBloomFilterVectorSizeIsSet(true);
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case BLOOM_FILTER_NB_HASHES:
-            if (field.type == TType.I32) {
-              this.bloomFilterNbHashes = iprot.readI32();
-              setBloomFilterNbHashesIsSet(true);
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case BLOCK_CACHE_ENABLED:
-            if (field.type == TType.BOOL) {
-              this.blockCacheEnabled = iprot.readBool();
-              setBlockCacheEnabledIsSet(true);
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIME_TO_LIVE:
-            if (field.type == TType.I32) {
-              this.timeToLive = iprot.readI32();
-              setTimeToLiveIsSet(true);
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-        }
-        iprot.readFieldEnd();
+      switch (field.id) {
+        case 1: // NAME
+          if (field.type == TType.STRING) {
+            this.name = iprot.readBinary();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 2: // MAX_VERSIONS
+          if (field.type == TType.I32) {
+            this.maxVersions = iprot.readI32();
+            setMaxVersionsIsSet(true);
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 3: // COMPRESSION
+          if (field.type == TType.STRING) {
+            this.compression = iprot.readString();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 4: // IN_MEMORY
+          if (field.type == TType.BOOL) {
+            this.inMemory = iprot.readBool();
+            setInMemoryIsSet(true);
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 5: // BLOOM_FILTER_TYPE
+          if (field.type == TType.STRING) {
+            this.bloomFilterType = iprot.readString();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 6: // BLOOM_FILTER_VECTOR_SIZE
+          if (field.type == TType.I32) {
+            this.bloomFilterVectorSize = iprot.readI32();
+            setBloomFilterVectorSizeIsSet(true);
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 7: // BLOOM_FILTER_NB_HASHES
+          if (field.type == TType.I32) {
+            this.bloomFilterNbHashes = iprot.readI32();
+            setBloomFilterNbHashesIsSet(true);
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 8: // BLOCK_CACHE_ENABLED
+          if (field.type == TType.BOOL) {
+            this.blockCacheEnabled = iprot.readBool();
+            setBlockCacheEnabledIsSet(true);
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 9: // TIME_TO_LIVE
+          if (field.type == TType.I32) {
+            this.timeToLive = iprot.readI32();
+            setTimeToLiveIsSet(true);
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        default:
+          TProtocolUtil.skip(iprot, field.type);
       }
+      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
 

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -28,12 +27,15 @@ import java.util.HashSet;
 import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
 /**
@@ -42,13 +44,13 @@ import org.apache.thrift.protocol.*;
  * the timestamp of a cell to a first-class value, making it easy to take
  * note of temporal data. Cell is used all the way from HStore up to HTable.
  */
-public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Cloneable, Comparable<TCell> {
+public class TCell implements TBase<TCell, TCell._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("TCell");
 
   private static final TField VALUE_FIELD_DESC = new TField("value", TType.STRING, (short)1);
   private static final TField TIMESTAMP_FIELD_DESC = new TField("timestamp", TType.I64, (short)2);
 
-  public byte[] value;
+  public ByteBuffer value;
   public long timestamp;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
@@ -56,12 +58,10 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
     VALUE((short)1, "value"),
     TIMESTAMP((short)2, "timestamp");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -70,7 +70,14 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // VALUE
+          return VALUE;
+        case 2: // TIMESTAMP
+          return TIMESTAMP;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -111,14 +118,14 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
   private static final int __TIMESTAMP_ISSET_ID = 0;
   private BitSet __isset_bit_vector = new BitSet(1);
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.I64)));
-  }});
-
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
   static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.VALUE, new FieldMetaData("value", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING        , "Bytes")));
+    tmpMap.put(_Fields.TIMESTAMP, new FieldMetaData("timestamp", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.I64)));
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(TCell.class, metaDataMap);
   }
 
@@ -126,7 +133,7 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
   }
 
   public TCell(
-    byte[] value,
+    ByteBuffer value,
     long timestamp)
   {
     this();
@@ -151,16 +158,28 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
     return new TCell(this);
   }
 
-  @Deprecated
-  public TCell clone() {
-    return new TCell(this);
+  @Override
+  public void clear() {
+    this.value = null;
+    setTimestampIsSet(false);
+    this.timestamp = 0;
   }
 
   public byte[] getValue() {
-    return this.value;
+    setValue(TBaseHelper.rightSize(value));
+    return value.array();
+  }
+
+  public ByteBuffer BufferForValue() {
+    return value;
   }
 
   public TCell setValue(byte[] value) {
+    setValue(ByteBuffer.wrap(value));
+    return this;
+  }
+
+  public TCell setValue(ByteBuffer value) {
     this.value = value;
     return this;
   }
@@ -209,7 +228,7 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
       if (value == null) {
         unsetValue();
       } else {
-        setValue((byte[])value);
+        setValue((ByteBuffer)value);
       }
       break;
 
@@ -224,10 +243,6 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
     }
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-  }
-
   public Object getFieldValue(_Fields field) {
     switch (field) {
     case VALUE:
@@ -240,12 +255,12 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
     throw new IllegalStateException();
   }
 
-  public Object getFieldValue(int fieldId) {
-    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-  }
-
   /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
+    if (field == null) {
+      throw new IllegalArgumentException();
+    }
+
     switch (field) {
     case VALUE:
       return isSetValue();
@@ -253,10 +268,6 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
       return isSetTimestamp();
     }
     throw new IllegalStateException();
-  }
-
-  public boolean isSet(int fieldID) {
-    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -277,7 +288,7 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
     if (this_present_value || that_present_value) {
       if (!(this_present_value && that_present_value))
         return false;
-      if (!java.util.Arrays.equals(this.value, that.value))
+      if (!this.value.equals(that.value))
         return false;
     }
 
@@ -295,19 +306,7 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
 
   @Override
   public int hashCode() {
-    HashCodeBuilder builder = new HashCodeBuilder();
-
-    boolean present_value = true && (isSetValue());
-    builder.append(present_value);
-    if (present_value)
-      builder.append(value);
-
-    boolean present_timestamp = true;
-    builder.append(present_timestamp);
-    if (present_timestamp)
-      builder.append(timestamp);
-
-    return builder.toHashCode();
+    return 0;
   }
 
   public int compareTo(TCell other) {
@@ -318,23 +317,31 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
     int lastComparison = 0;
     TCell typedOther = (TCell)other;
 
-    lastComparison = Boolean.valueOf(isSetValue()).compareTo(isSetValue());
+    lastComparison = Boolean.valueOf(isSetValue()).compareTo(typedOther.isSetValue());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(value, typedOther.value);
+    if (isSetValue()) {
+      lastComparison = TBaseHelper.compareTo(this.value, typedOther.value);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(typedOther.isSetTimestamp());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetTimestamp()).compareTo(isSetTimestamp());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(timestamp, typedOther.timestamp);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetTimestamp()) {
+      lastComparison = TBaseHelper.compareTo(this.timestamp, typedOther.timestamp);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
+  }
+
+  public _Fields fieldForId(int fieldId) {
+    return _Fields.findByThriftId(fieldId);
   }
 
   public void read(TProtocol iprot) throws TException {
@@ -346,29 +353,26 @@ public class TCell implements TBase<TCell._Fields>, java.io.Serializable, Clonea
       if (field.type == TType.STOP) {
         break;
       }
-      _Fields fieldId = _Fields.findByThriftId(field.id);
-      if (fieldId == null) {
-        TProtocolUtil.skip(iprot, field.type);
-      } else {
-        switch (fieldId) {
-          case VALUE:
-            if (field.type == TType.STRING) {
-              this.value = iprot.readBinary();
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case TIMESTAMP:
-            if (field.type == TType.I64) {
-              this.timestamp = iprot.readI64();
-              setTimestampIsSet(true);
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-        }
-        iprot.readFieldEnd();
+      switch (field.id) {
+        case 1: // VALUE
+          if (field.type == TType.STRING) {
+            this.value = iprot.readBinary();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 2: // TIMESTAMP
+          if (field.type == TType.I64) {
+            this.timestamp = iprot.readI64();
+            setTimestampIsSet(true);
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        default:
+          TProtocolUtil.skip(iprot, field.type);
       }
+      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
 

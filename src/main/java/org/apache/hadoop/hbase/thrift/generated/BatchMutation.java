@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
-import org.apache.commons.lang.builder.HashCodeBuilder;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -28,24 +27,27 @@ import java.util.HashSet;
 import java.util.EnumSet;
 import java.util.Collections;
 import java.util.BitSet;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.thrift.*;
+import org.apache.thrift.async.*;
 import org.apache.thrift.meta_data.*;
+import org.apache.thrift.transport.*;
 import org.apache.thrift.protocol.*;
 
 /**
  * A BatchMutation object is used to apply a number of Mutations to a single row.
  */
-public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Serializable, Cloneable, Comparable<BatchMutation> {
+public class BatchMutation implements TBase<BatchMutation, BatchMutation._Fields>, java.io.Serializable, Cloneable {
   private static final TStruct STRUCT_DESC = new TStruct("BatchMutation");
 
   private static final TField ROW_FIELD_DESC = new TField("row", TType.STRING, (short)1);
   private static final TField MUTATIONS_FIELD_DESC = new TField("mutations", TType.LIST, (short)2);
 
-  public byte[] row;
+  public ByteBuffer row;
   public List<Mutation> mutations;
 
   /** The set of fields this struct contains, along with convenience methods for finding and manipulating them. */
@@ -53,12 +55,10 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
     ROW((short)1, "row"),
     MUTATIONS((short)2, "mutations");
 
-    private static final Map<Integer, _Fields> byId = new HashMap<Integer, _Fields>();
     private static final Map<String, _Fields> byName = new HashMap<String, _Fields>();
 
     static {
       for (_Fields field : EnumSet.allOf(_Fields.class)) {
-        byId.put((int)field._thriftId, field);
         byName.put(field.getFieldName(), field);
       }
     }
@@ -67,7 +67,14 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
      * Find the _Fields constant that matches fieldId, or null if its not found.
      */
     public static _Fields findByThriftId(int fieldId) {
-      return byId.get(fieldId);
+      switch(fieldId) {
+        case 1: // ROW
+          return ROW;
+        case 2: // MUTATIONS
+          return MUTATIONS;
+        default:
+          return null;
+      }
     }
 
     /**
@@ -106,15 +113,15 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
 
   // isset id assignments
 
-  public static final Map<_Fields, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new EnumMap<_Fields, FieldMetaData>(_Fields.class) {{
-    put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
-        new FieldValueMetaData(TType.STRING)));
-    put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT,
+  public static final Map<_Fields, FieldMetaData> metaDataMap;
+  static {
+    Map<_Fields, FieldMetaData> tmpMap = new EnumMap<_Fields, FieldMetaData>(_Fields.class);
+    tmpMap.put(_Fields.ROW, new FieldMetaData("row", TFieldRequirementType.DEFAULT,
+        new FieldValueMetaData(TType.STRING        , "Text")));
+    tmpMap.put(_Fields.MUTATIONS, new FieldMetaData("mutations", TFieldRequirementType.DEFAULT,
         new ListMetaData(TType.LIST,
             new StructMetaData(TType.STRUCT, Mutation.class))));
-  }});
-
-  static {
+    metaDataMap = Collections.unmodifiableMap(tmpMap);
     FieldMetaData.addStructMetaDataMap(BatchMutation.class, metaDataMap);
   }
 
@@ -122,7 +129,7 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
   }
 
   public BatchMutation(
-    byte[] row,
+    ByteBuffer row,
     List<Mutation> mutations)
   {
     this();
@@ -150,16 +157,27 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
     return new BatchMutation(this);
   }
 
-  @Deprecated
-  public BatchMutation clone() {
-    return new BatchMutation(this);
+  @Override
+  public void clear() {
+    this.row = null;
+    this.mutations = null;
   }
 
   public byte[] getRow() {
-    return this.row;
+    setRow(TBaseHelper.rightSize(row));
+    return row.array();
+  }
+
+  public ByteBuffer BufferForRow() {
+    return row;
   }
 
   public BatchMutation setRow(byte[] row) {
+    setRow(ByteBuffer.wrap(row));
+    return this;
+  }
+
+  public BatchMutation setRow(ByteBuffer row) {
     this.row = row;
     return this;
   }
@@ -224,7 +242,7 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
       if (value == null) {
         unsetRow();
       } else {
-        setRow((byte[])value);
+        setRow((ByteBuffer)value);
       }
       break;
 
@@ -239,10 +257,6 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
     }
   }
 
-  public void setFieldValue(int fieldID, Object value) {
-    setFieldValue(_Fields.findByThriftIdOrThrow(fieldID), value);
-  }
-
   public Object getFieldValue(_Fields field) {
     switch (field) {
     case ROW:
@@ -255,12 +269,12 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
     throw new IllegalStateException();
   }
 
-  public Object getFieldValue(int fieldId) {
-    return getFieldValue(_Fields.findByThriftIdOrThrow(fieldId));
-  }
-
   /** Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise */
   public boolean isSet(_Fields field) {
+    if (field == null) {
+      throw new IllegalArgumentException();
+    }
+
     switch (field) {
     case ROW:
       return isSetRow();
@@ -268,10 +282,6 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
       return isSetMutations();
     }
     throw new IllegalStateException();
-  }
-
-  public boolean isSet(int fieldID) {
-    return isSet(_Fields.findByThriftIdOrThrow(fieldID));
   }
 
   @Override
@@ -292,7 +302,7 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
     if (this_present_row || that_present_row) {
       if (!(this_present_row && that_present_row))
         return false;
-      if (!java.util.Arrays.equals(this.row, that.row))
+      if (!this.row.equals(that.row))
         return false;
     }
 
@@ -310,19 +320,7 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
 
   @Override
   public int hashCode() {
-    HashCodeBuilder builder = new HashCodeBuilder();
-
-    boolean present_row = true && (isSetRow());
-    builder.append(present_row);
-    if (present_row)
-      builder.append(row);
-
-    boolean present_mutations = true && (isSetMutations());
-    builder.append(present_mutations);
-    if (present_mutations)
-      builder.append(mutations);
-
-    return builder.toHashCode();
+    return 0;
   }
 
   public int compareTo(BatchMutation other) {
@@ -333,23 +331,31 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
     int lastComparison = 0;
     BatchMutation typedOther = (BatchMutation)other;
 
-    lastComparison = Boolean.valueOf(isSetRow()).compareTo(isSetRow());
+    lastComparison = Boolean.valueOf(isSetRow()).compareTo(typedOther.isSetRow());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = TBaseHelper.compareTo(row, typedOther.row);
+    if (isSetRow()) {
+      lastComparison = TBaseHelper.compareTo(this.row, typedOther.row);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+    }
+    lastComparison = Boolean.valueOf(isSetMutations()).compareTo(typedOther.isSetMutations());
     if (lastComparison != 0) {
       return lastComparison;
     }
-    lastComparison = Boolean.valueOf(isSetMutations()).compareTo(isSetMutations());
-    if (lastComparison != 0) {
-      return lastComparison;
-    }
-    lastComparison = TBaseHelper.compareTo(mutations, typedOther.mutations);
-    if (lastComparison != 0) {
-      return lastComparison;
+    if (isSetMutations()) {
+      lastComparison = TBaseHelper.compareTo(this.mutations, typedOther.mutations);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
     }
     return 0;
+  }
+
+  public _Fields fieldForId(int fieldId) {
+    return _Fields.findByThriftId(fieldId);
   }
 
   public void read(TProtocol iprot) throws TException {
@@ -361,39 +367,36 @@ public class BatchMutation implements TBase<BatchMutation._Fields>, java.io.Seri
       if (field.type == TType.STOP) {
         break;
       }
-      _Fields fieldId = _Fields.findByThriftId(field.id);
-      if (fieldId == null) {
-        TProtocolUtil.skip(iprot, field.type);
-      } else {
-        switch (fieldId) {
-          case ROW:
-            if (field.type == TType.STRING) {
-              this.row = iprot.readBinary();
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
-            }
-            break;
-          case MUTATIONS:
-            if (field.type == TType.LIST) {
+      switch (field.id) {
+        case 1: // ROW
+          if (field.type == TType.STRING) {
+            this.row = iprot.readBinary();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        case 2: // MUTATIONS
+          if (field.type == TType.LIST) {
+            {
+              TList _list0 = iprot.readListBegin();
+              this.mutations = new ArrayList<Mutation>(_list0.size);
+              for (int _i1 = 0; _i1 < _list0.size; ++_i1)
               {
-                TList _list0 = iprot.readListBegin();
-                this.mutations = new ArrayList<Mutation>(_list0.size);
-                for (int _i1 = 0; _i1 < _list0.size; ++_i1)
-                {
-                  Mutation _elem2;
-                  _elem2 = new Mutation();
-                  _elem2.read(iprot);
-                  this.mutations.add(_elem2);
-                }
-                iprot.readListEnd();
+                Mutation _elem2;
+                _elem2 = new Mutation();
+                _elem2.read(iprot);
+                this.mutations.add(_elem2);
               }
-            } else {
-              TProtocolUtil.skip(iprot, field.type);
+              iprot.readListEnd();
             }
-            break;
-        }
-        iprot.readFieldEnd();
+          } else {
+            TProtocolUtil.skip(iprot, field.type);
+          }
+          break;
+        default:
+          TProtocolUtil.skip(iprot, field.type);
       }
+      iprot.readFieldEnd();
     }
     iprot.readStructEnd();
 
