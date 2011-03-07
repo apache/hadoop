@@ -1,6 +1,1638 @@
 Hadoop Change Log
 
+Release 0.20.203.0 - unreleased
+
+    MAPREDUCE-2360. Remove stripping of scheme, authority from submit dir in 
+    support of viewfs. (cdouglas)
+    
+    MAPREDUCE-2359 Use correct file system to access distributed cache objects.
+    (Krishna Ramachandran)
+ 
+    MAPREDUCE-2361. "Fix Distributed Cache is not adding files to class paths
+    correctly" - Drop the host/scheme/fragment from URI (cdouglas)
+
+    MAPREDUCE-2362. Fix unit-test failures: TestBadRecords (NPE due to
+    rearranged MapTask code) and TestTaskTrackerMemoryManager
+    (need hostname in output-string pattern). (Greg Roelofs, Krishna 
+    Ramachandran)
+
+    HDFS-1729. Add statistics logging for better visibility into
+    startup time costs. (Matt Foley)
+
+    MAPREDUCE-2363.  When a queue is built without any access rights we 
+    explain the problem.  (Richard King)
+
+    MAPREDUCE-1563. TaskDiagnosticInfo may be missed sometime. (Krishna 
+    Ramachandran)
+
+    MAPREDUCE-2364. Don't hold the rjob lock while localizing resources. (ddas
+    via omalley)
+
+    HDFS:1598. Directory listing on hftp:// does not show
+    .*.crc files.  (szetszwo)
+
+    MAPREDUCE-2365. New counters for FileInputFormat (BYTES_READ) and 
+    FileOutputFormat (BYTES_WRITTEN). 
+    New counter MAP_OUTPUT_MATERIALIZED_BYTES for compressed MapOutputSize.
+    (Siddharth Seth)
+
+    HADOOP-7040. Change DiskErrorException to IOException (boryas)
+
+    HADOOP-7104. Remove unnecessary DNS reverse lookups from RPC layer 
+    (kzhang)
+
+    MAPREDUCE-2366.  Fix a problem where the task browser UI can't retrieve the
+    stdxxx printouts of streaming jobs that abend in the unix code, in
+    the common case where the containing job doesn't reuse JVM's.
+    (Richard King)
+
+    HADOOP-6977. Herriot daemon clients should vend statistics (cos)
+
+    HADOOP-6971. Clover build doesn't generate per-test coverage (cos)
+
+    HADOOP-6879. Provide SSH based (Jsch) remote execution API for system
+    tests. (cos)
+
+Release 0.20.202.0 - unreleased
+
+    MAPREDUCE-2355. Add a configuration knob 
+    mapreduce.tasktracker.outofband.heartbeat.damper that limits out of band
+    heartbeats (acmurthy)
+
+    MAPREDUCE-2356. Fix a race-condition that corrupted a task's state on the 
+    JobTracker. (Luke Lu)
+
+    MAPREDUCE-2357. Always propagate IOExceptions that are thrown by 
+    non-FileInputFormat. (Luke Lu)
+
+    HADOOP-7163. RPC handles SocketTimeOutException during SASL negotiation.
+    (ddas)
+
+    MAPREDUCE-2358. MapReduce assumes the default FileSystem is HDFS.
+    (Krishna Ramachandran)
+
+    MAPREDUCE-1904. Reducing locking contention in TaskTracker's 
+    MapOutputServlet LocalDirAllocator. (Rajesh Balamohan via acmurthy)
+
+    HDFS-1626. Make BLOCK_INVALIDATE_LIMIT configurable. (szetszwo)
+
+    HDFS-1584. Adds a check for whether relogin is needed to 
+    getDelegationToken in HftpFileSystem. (Kan Zhang via ddas)
+
+    HADOOP-7115. Reduces the number of calls to getpwuid_r and 
+    getpwgid_r, by implementing a cache in NativeIO. (ddas)
+
+    HADOOP-6882. An XSS security exploit in jetty-6.1.14. jetty upgraded to
+    6.1.26. (ddas)
+
+    MAPREDUCE-2278. Fixes a memory leak in the TaskTracker. (cdouglas)
+
+    HDFS-1353 redux. Modulate original 1353  to not bump RPC version.
+    (jhoman)
+
+    MAPREDUCE-2082 Race condition in writing the jobtoken password file when 
+    launching pipes jobs (jitendra and ddas)
+                
+    HADOOP-6978. Fixes task log servlet vulnerabilities via symlinks. 
+    (Todd Lipcon and Devaraj Das)
+
+    MAPREDUCE-2178. Write task initialization to avoid race 
+    conditions leading to privilege escalation and resource leakage by 
+    performing more actiions as the user. (Owen O'Malley, Devaraj Das, 
+    Chris Douglas via cdouglas)
+
+    HDFS-1364. HFTP client should support relogin from keytab
+
+    HADOOP-6907. Make RPC client to use per-proxy configuration.
+    (Kan Zhang via ddas)
+
+    MAPREDUCE-2055. Fix JobTracker to decouple job retirement from copy of 
+    job-history file to HDFS and enhance RetiredJobInfo to carry aggregated 
+    job-counters to prevent a disk roundtrip on job-completion to fetch 
+    counters for the JobClient. (Krishna Ramachandran via acmurthy)
+                
+    HDFS-1353. Remove most of getBlockLocation optimization (jghoman)
+
+    MAPREDUCE-2023. TestDFSIO read test may not read specified bytes. (htang)
+
+    HDFS-1340. A null delegation token is appended to the url if security is 
+    disabled when browsing filesystem.(boryas)
+
+    HDFS-1352. Fix jsvc.location. (jghoman)
+
+    HADOOP-6860. 'compile-fault-inject' should never be called directly. (cos)
+
+    MAPREDUCE-2005. TestDelegationTokenRenewal fails (boryas)
+
+    MAPREDUCE-2000. Rumen is not able to extract counters for Job history logs
+    from Hadoop 0.20. (htang)
+
+    MAPREDUCE-1961. ConcurrentModificationException when shutting down Gridmix.
+    (htang)
+
+    HADOOP-6899. RawLocalFileSystem set working directory does
+    not work for relative names. (suresh)
+
+    HDFS-495. New clients should be able to take over files lease if the old 
+    client died. (shv)
+
+    HADOOP-6728. Re-design and overhaul of the Metrics framework. (Luke Lu via
+    acmurthy)
+
+    MAPREDUCE-1966. Change blacklisting of tasktrackers on task failures to be
+    a simple graylist to fingerpoint bad tasktrackers. (Greg Roelofs via
+    acmurthy)
+
+    HADOOP-6864. Add ability to get netgroups (as returned by getent
+    netgroup command) using native code (JNI) instead of forking. (Erik Steffl)
+
+    HDFS-1318. HDFS Namenode and Datanode WebUI information needs to be 
+    accessible programmatically for scripts. (Tanping Wang via suresh)
+
+    HDFS-1315. Add fsck event to audit log and remove other audit log events 
+    corresponding to FSCK listStatus and open calls. (suresh)
+
+    MAPREDUCE-1941. Provides access to JobHistory file (raw) with job user/acl 
+    permission. (Srikanth Sundarrajan via ddas)
+
+    MAPREDUCE-291. Optionally a separate daemon should serve JobHistory.
+    (Srikanth Sundarrajan via ddas)
+
+    MAPREDUCE-1936. Make Gridmix3 more customizable (sync changes from trunk).
+    (htang)
+
+    HADOOP-5981. Fix variable substitution during parsing of child environment
+    variables. (Krishna Ramachandran via acmurthy)
+
+    MAPREDUCE-339. Greedily schedule failed tasks to cause early job failure.
+    (cdouglas)
+
+    MAPREDUCE-1872. Hardened CapacityScheduler to have comprehensive, coherent
+    limits on tasks/jobs for jobs/users/queues. Also, added the ability to
+    refresh queue definitions without the need to restart the JobTracker.
+    (acmurthy)
+
+    HDFS-1161. Make DN minimum valid volumes configurable. (shv)
+
+    HDFS-457. Reintroduce volume failure tolerance for DataNodes. (shv)
+
+    HDFS-1307 Add start time, end time and total time taken for FSCK 
+    to FSCK report. (suresh)
+
+    MAPREDUCE-1207. Sanitize user environment of map/reduce tasks and allow 
+    admins to set environment and java options. (Krishna Ramachandran via
+    acmurthy) 
+
+    HDFS-1298 - Add support in HDFS for new statistics added in FileSystem
+    to track the file system operations (suresh)
+
+    HDFS-1301. TestHDFSProxy need to use server side conf for ProxyUser  
+    stuff.(boryas)
+
+    HADOOP-6859 - Introduce additional statistics to FileSystem to track 
+    file system operations (suresh)
+
+    HADOOP-6818. Provides a JNI implementation of Unix Group resolution. The 
+    config hadoop.security.group.mapping should be set to 
+    org.apache.hadoop.security.JniBasedUnixGroupsMapping to enable this
+    implementation. (ddas)
+
+    MAPREDUCE-1938. Introduces a configuration for putting user classes before
+    the system classes during job submission and in task launches. Two things
+    need to be done in order to use this feature - 
+    (1) mapreduce.user.classpath.first : this should be set to true in the 
+    jobconf, and, (2) HADOOP_USER_CLASSPATH_FIRST : this is relevant for job 
+    submissions done using bin/hadoop shell script. HADOOP_USER_CLASSPATH_FIRST
+    should be defined in the environment with some non-empty value 
+    (like "true"), and then bin/hadoop should be executed. (ddas)
+
+    HADOOP-6669. Respect compression configuration when creating DefaultCodec
+    compressors. (Koji Noguchi via cdouglas)
+
+    HADOOP-6855. Add support for netgroups, as returned by command
+    getent netgroup. (Erik Steffl)
+
+    HDFS-599. Allow NameNode to have a seprate port for service requests from
+    client requests. (Dmytro Molkov via hairong)
+
+    HDFS-132. Fix namenode to not report files deleted metrics for deletions
+    done while replaying edits during startup. (shv)
+
+    MAPREDUCE-1521. Protection against incorrectly configured reduces
+    (mahadev) 
+
+    MAPREDUCE-1936. Make Gridmix3 more customizable. (htang)
+
+    MAPREDUCE-517. Enhance the CapacityScheduler to assign multiple tasks
+    per-heartbeat. (acmurthy) 
+
+    MAPREDUCE-323. Re-factor layout of JobHistory files on HDFS to improve 
+    operability. (Dick King via acmurthy) 
+
+    MAPREDUCE-1921. Ensure exceptions during reading of input data in map
+    tasks are augmented by information about actual input file which caused
+    the exception. (Krishna Ramachandran via acmurthy)  
+
+    MAPREDUCE-1118. Enhance the JobTracker web-ui to ensure tabular columns
+    are sortable, also added a /scheduler servlet to CapacityScheduler for
+    enhanced UI for queue information. (Krishna Ramachandran via acmurthy) 
+
+    HADOOP-5913. Add support for starting/stopping queues. (cdouglas)
+
+    HADOOP-6835. Add decode support for concatenated gzip files. (Greg Roelofs)
+
+    HDFS-1158. Revert HDFS-457. (shv)
+
+    MAPREDUCE-1699. Ensure JobHistory isn't disabled for any reason. (Krishna
+    Ramachandran via acmurthy)
+
+    MAPREDUCE-1682. Fix speculative execution to ensure tasks are not
+    scheduled after job failure. (acmurthy)
+
+    MAPREDUCE-1914. Ensure unique sub-directories for artifacts in the
+    DistributedCache are cleaned up. (Dick King via acmurthy)
+
+    HADOOP-6713. Multiple RPC Reader Threads (Bharathm)
+
+    HDFS-1250. Namenode should reject block reports and block received
+    requests from dead datanodes (suresh)
+
+    MAPREDUCE-1863. [Rumen] Null failedMapAttemptCDFs in job traces generated 
+    by Rumen. (htang)
+
+    MAPREDUCE-1309. Rumen refactory. (htang)
+
+    HDFS-1114. Implement LightWeightGSet for BlocksMap in order to reduce
+    NameNode memory footprint.  (szetszwo)
+
+    MAPREDUCE-572. Fixes DistributedCache.checkURIs to throw error if link is
+    missing for uri in cache archives. (amareshwari)
+
+    MAPREDUCE-787. Fix JobSubmitter to honor user given symlink in the path.
+    (amareshwari)
+
+    HADOOP-6815. refreshSuperUserGroupsConfiguration should use 
+    server side configuration for the refresh( boryas)
+
+    MAPREDUCE-1868. Add a read and connection timeout to JobClient while
+    pulling tasklogs. (Krishna Ramachandran via acmurthy)   
+
+    HDFS-1119. Introduce a GSet interface to BlocksMap.  (szetszwo)
+
+    MAPREDUCE-1778. Ensure failure to setup CompletedJobStatusStore is not
+    silently ignored by the JobTracker. (Krishna Ramachandran via acmurthy)  
+
+    MAPREDUCE-1538. Add a limit on the number of artifacts in the
+    DistributedCache to ensure we cleanup aggressively. (Dick King via
+    acmurthy) 
+
+    MAPREDUCE-1850. Add information about the host from which a job is
+    submitted. (Krishna Ramachandran via acmurthy) 
+
+    HDFS-1110. Reuses objects for commonly used file names in namenode to
+    reduce the heap usage. (suresh)
+
+    HADOOP-6810. Extract a subset of tests for smoke (DOA) validation. (cos)
+
+    HADOOP-6642. Remove debug stmt left from original patch. (cdouglas)
+
+    HADOOP-6808. Add comments on how to setup File/Ganglia Context for
+    kerberos metrics (Erik Steffl)
+
+    HDFS-1061.  INodeFile memory optimization. (bharathm)
+
+    HDFS-1109. HFTP supports filenames that contains the character "+".
+    (Dmytro Molkov via dhruba, backported by szetszwo)
+
+    HDFS-1085. Check file length and bytes read when reading a file through
+    hftp in order to detect failure.  (szetszwo)
+
+    HDFS-1311. Running tests with 'testcase' cause triple execution of the
+    same test case (cos)
+
+    HDFS-1150.FIX.  Verify datanodes' identities to clients in secure clusters.
+    Update to patch to improve handling of jsvc source in build.xml (jghoman)
+
+    HADOOP-6752. Remote cluster control functionality needs JavaDocs
+    improvement. (Balaji Rajagopalan via cos)
+
+    MAPREDUCE-1288. Fixes TrackerDistributedCacheManager to take into account
+    the owner of the localized file in the mapping from cache URIs to 
+    CacheStatus objects. (ddas)
+    
+    MAPREDUCE-1682. Fix speculative execution to ensure tasks are not
+    scheduled after job failure. (acmurthy) 
+
+    MAPREDUCE-1914. Ensure unique sub-directories for artifacts in the
+    DistributedCache are cleaned up. (Dick King via acmurthy) 
+
+    MAPREDUCE-1538. Add a limit on the number of artifacts in the
+    DistributedCache to ensure we cleanup aggressively. (Dick King via
+    acmurthy)
+
+    MAPREDUCE-1900. Fixes a FS leak that i missed in the earlier patch.
+    (ddas)
+
+    MAPREDUCE-1900. Makes JobTracker/TaskTracker close filesystems, created
+    on behalf of users, when they are no longer needed. (ddas)
+
+    HADOOP-6832. Add a static user plugin for web auth for external users.
+    (omalley)
+
+    HDFS-1007. Fixes a bug in SecurityUtil.buildDTServiceName to do
+    with handling of null hostname. (omalley)
+
+    HDFS-1007. makes long running servers using hftp work. Also has some
+    refactoring in the MR code to do with handling of delegation tokens. 
+    (omalley & ddas)
+
+    HDFS-1178. The NameNode servlets should not use RPC to connect to the
+    NameNode. (omalley)
+
+    MAPREDUCE-1807. Re-factor TestQueueManager. (Richard King via acmurthy)
+
+    HDFS-1150. Fixes the earlier patch to do logging in the right directory
+    and also adds facility for monitoring processes (via -Dprocname in the
+    command line). (Jakob Homan via ddas)
+
+    HADOOP-6781. security audit log shouldn't have exception in it. (boryas)
+
+    HADOOP-6776. Fixes the javadoc in UGI.createProxyUser. (ddas)
+
+    HDFS-1150. building jsvc from source tar. source tar is also checked in.
+    (jitendra)
+
+    HDFS-1150. Bugfix in the hadoop shell script. (ddas)
+
+    HDFS-1153. The navigation to /dfsnodelist.jsp with invalid input 
+    parameters produces NPE and HTTP 500 error (rphulari)
+    
+    MAPREDUCE-1664. Bugfix to enable queue administrators of a queue to
+    view job details of jobs submitted to that queue even though they
+    are not part of acl-view-job. 
+
+    HDFS-1150. Bugfix to add more knobs to secure datanode starter.
+
+    HDFS-1157. Modifications introduced by HDFS-1150 are breaking aspect's
+    bindings (cos)
+
+    HDFS-1130. Adds a configuration dfs.cluster.administrators for 
+    controlling access to the default servlets in hdfs. (ddas)
+
+    HADOOP-6706.FIX. Relogin behavior for RPC clients could be improved 
+    (boryas)
+
+    HDFS-1150. Verify datanodes' identities to clients in secure clusters.
+    (jghoman)
+
+    MAPREDUCE-1442. Fixed regex in job-history related to parsing Counter
+    values. (Luke Lu via acmurthy)  
+
+    HADOOP-6760. WebServer shouldn't increase port number in case of negative
+    port setting caused by Jetty's race. (cos)
+
+    HDFS-1146. Javadoc for getDelegationTokenSecretManager in FSNamesystem.
+    (jitendra)
+
+    HADOOP-6706. Fix on top of the earlier patch. Closes the connection
+    on a SASL connection failure, and retries again with a new
+    connection. (ddas)
+
+    MAPREDUCE-1716. Fix on top of earlier patch for logs truncation a.k.a 
+    MAPREDUCE-1100. Addresses log truncation issues when binary data is
+    written to log files and adds a header to a truncated log file to
+    inform users of the done trucation.
+
+    HDFS-1383. Improve the error messages when using hftp://.
+
+    MAPREDUCE-1744. Fixed DistributedCache apis to take a user-supplied
+    FileSystem to allow for better proxy behaviour for Oozie. (Richard King) 
+
+    MAPREDUCE-1733. Authentication between pipes processes and java 
+    counterparts. (jitendra)
+
+    MAPREDUCE-1664. Bugfix on top of the previous patch. (ddas)
+
+    HDFS-1136. FileChecksumServlets.RedirectServlet doesn't carry forward 
+    the delegation token (boryas)
+
+    HADOOP-6756. Change value of FS_DEFAULT_NAME_KEY from fs.defaultFS
+    to fs.default.name which is a correct name for 0.20 (steffl)
+
+    HADOOP-6756. Document (javadoc comments) and cleanup configuration
+    keys in CommonConfigurationKeys.java (steffl)
+
+    MAPREDUCE-1759. Exception message for unauthorized user doing killJob,
+    killTask, setJobPriority needs to be improved. (gravi via vinodkv)
+
+    HADOOP-6715. AccessControlList.toString() returns empty string when
+    we set acl to "*". (gravi via vinodkv)
+
+    HADOOP-6757. NullPointerException for hadoop clients launched from
+    streaming tasks. (amarrk via vinodkv)
+
+    HADOOP-6631. FileUtil.fullyDelete() should continue to delete other files
+    despite failure at any level. (vinodkv)
+
+    MAPREDUCE-1317. NPE in setHostName in Rumen. (rksingh)
+
+    MAPREDUCE-1754. Replace mapred.persmissions.supergroup with an acl : 
+    mapreduce.cluster.administrators and HADOOP-6748.: Remove
+    hadoop.cluster.administrators. Contributed by Amareshwari Sriramadasu.
+
+    HADOOP-6701.  Incorrect exit codes for "dfs -chown", "dfs -chgrp"
+    (rphulari)
+
+    HADOOP-6640. FileSystem.get() does RPC retires within a static
+    synchronized block. (hairong)
+
+    HDFS-1006. Removes unnecessary logins from the previous patch. (ddas)
+
+    HADOOP-6745. adding some java doc to Server.RpcMetrics, UGI (boryas)
+
+    MAPREDUCE-1707. TaskRunner can get NPE in getting ugi from TaskTracker. 
+    (vinodkv)
+
+    HDFS-1104. Fsck triggers full GC on NameNode. (hairong)
+
+    HADOOP-6332. Large-scale Automated Test Framework (sharad, Sreekanth
+    Ramakrishnan, at all via cos)
+
+    HADOOP-6526. Additional fix for test context on top of existing one. (cos)
+
+    HADOOP-6710. Symbolic umask for file creation is not conformant with posix.
+    (suresh)
+
+    HADOOP-6693. Added metrics to track kerberos login success and failure.
+    (suresh)
+
+    MAPREDUCE-1711. Gridmix should provide an option to submit jobs to the same
+    queues as specified in the trace. (rksing via htang)
+
+    MAPREDUCE-1687. Stress submission policy does not always stress the
+    cluster. (htang)
+
+    MAPREDUCE-1641. Bug-fix to ensure command line options such as
+    -files/-archives are checked for duplicate artifacts in the
+    DistributedCache. (Amareshwari Sreeramadasu via acmurthy) 
+
+    MAPREDUCE-1641. Fix DistributedCache to ensure same files cannot be put in
+    both the archives and files sections. (Richard King via acmurthy) 
+
+    HADOOP-6670. Fixes a testcase issue introduced by the earlier commit
+    of the HADOOP-6670 patch. (ddas)
+
+    MAPREDUCE-1718. Fixes a problem to do with correctly constructing
+    service name for the delegation token lookup in HftpFileSystem
+    (borya via ddas)
+
+    HADOOP-6674. Fixes the earlier patch to handle pings correctly (ddas).
+
+    MAPREDUCE-1664. Job Acls affect when Queue Acls are set. 
+    (Ravi Gummadi via vinodkv)
+
+    HADOOP-6718. Fixes a problem to do with clients not closing RPC
+    connections on a SASL failure. (ddas)
+
+    MAPREDUCE-1397. NullPointerException observed during task failures.
+    (Amareshwari Sriramadasu via vinodkv)
+
+    HADOOP-6670. Use the UserGroupInformation's Subject as the criteria for
+    equals and hashCode. (omalley)
+
+    HADOOP-6716. System won't start in non-secure mode when kerb5.conf 
+   (edu.mit.kerberos on Mac) is not present. (boryas)
+
+    MAPREDUCE-1607. Task controller may not set permissions for a 
+    task cleanup attempt's log directory. (Amareshwari Sreeramadasu via 
+    vinodkv)
+
+    MAPREDUCE-1533. JobTracker performance enhancements. (Amar Kamat via 
+    vinodkv)
+
+    MAPREDUCE-1701.  AccessControlException while renewing a delegation token 
+    in not correctly handled in the JobTracker. (boryas)
+
+    HDFS-481. Incremental patch to fix broken unit test in contrib/hdfsproxy
+
+    HADOOP-6706. Fixes a bug in the earlier version of the same patch (ddas)
+
+    HDFS-1096. allow dfsadmin/mradmin refresh of superuser proxy group 
+    mappings(boryas).
+
+    HDFS-1012. Support for cluster specific path entries in ldap for hdfsproxy
+    (Srikanth Sundarrajan via Nicholas)
+
+    HDFS-1011. Improve Logging in HDFSProxy to include cluster name associated
+    with the request (Srikanth Sundarrajan via Nicholas)
+
+    HDFS-1010. Retrieve group information from UnixUserGroupInformation 
+    instead of LdapEntry (Srikanth Sundarrajan via Nicholas)
+
+    HDFS-481. Bug fix - hdfsproxy: Stack overflow + Race conditions
+    (Srikanth Sundarrajan via Nicholas)
+
+    MAPREDUCE-1657. After task logs directory is deleted, tasklog servlet
+    displays wrong error message about job ACLs. (Ravi Gummadi via vinodkv)
+
+    MAPREDUCE-1692. Remove TestStreamedMerge from the streaming tests.
+    (Amareshwari Sriramadasu and Sreekanth Ramakrishnan via vinodkv)
+
+    HDFS-1081. Performance regression in 
+    DistributedFileSystem::getFileBlockLocations in secure systems (jhoman)
+    
+    MAPREDUCE-1656. JobStory should provide queue info. (htang)
+
+    MAPREDUCE-1317. Reducing memory consumption of rumen objects. (htang)
+
+    MAPREDUCE-1317. Reverting the patch since it caused build failures. (htang)
+
+    MAPREDUCE-1683. Fixed jobtracker web-ui to correctly display heap-usage.
+    (acmurthy)
+    
+    HADOOP-6706. Fixes exception handling for saslConnect. The ideal
+    solution is to the Refreshable interface but as Owen noted in 
+    HADOOP-6656, it doesn't seem to work as expected. (ddas)
+
+    MAPREDUCE-1617. TestBadRecords failed once in our test runs. (Amar
+    Kamat via vinodkv).
+
+    MAPREDUCE-587. Stream test TestStreamingExitStatus fails with Out of
+    Memory. (Amar Kamat via vinodkv).
+
+    HDFS-1096. Reverting the patch since it caused build failures. (ddas)
+
+    MAPREDUCE-1317. Reducing memory consumption of rumen objects. (htang)
+
+    MAPREDUCE-1680. Add a metric to track number of heartbeats processed by the
+    JobTracker. (Richard King via acmurthy)
+
+    MAPREDUCE-1683.  Removes JNI calls to get jvm current/max heap usage in
+    ClusterStatus by default. (acmurthy)
+
+    HADOOP-6687.  user object in the subject in UGI should be reused in case 
+    of a relogin. (jitendra)
+
+    HADOOP-5647. TestJobHistory fails if /tmp/_logs is not writable to. 
+    Testcase should not depend on /tmp. (Ravi Gummadi via vinodkv)
+
+    MAPREDUCE-181. Bug fix for Secure job submission. (Ravi Gummadi via 
+    vinodkv)
+
+    MAPREDUCE-1635. ResourceEstimator does not work after MAPREDUCE-842. 
+    (Amareshwari Sriramadasu via vinodkv)
+
+    MAPREDUCE-1526. Cache the job related information while submitting the 
+    job. (rksingh)
+
+    HADOOP-6674. Turn off SASL checksums for RPCs. (jitendra via omalley)
+
+    HADOOP-5958. Replace fork of DF with library call. (cdouglas via omalley)
+
+    HDFS-999.  Secondary namenode should login using kerberos if security
+    is configured. Bugfix to original patch. (jhoman)
+
+    MAPREDUCE-1594. Support for SleepJobs in Gridmix (rksingh)
+
+    HDFS-1007. Fix. ServiceName for delegation token for Hftp has hftp
+    port and not RPC port. 
+    
+    MAPREDUCE-1376. Support for varied user submissions in Gridmix (rksingh)
+
+    HDFS-1080.  SecondaryNameNode image transfer should use the defined 
+    http address rather than local ip address (jhoman)
+    
+    HADOOP-6661. User document for UserGroupInformation.doAs for secure
+    impersonation. (jitendra)
+
+    MAPREDUCE-1624. Documents the job credentials and associated details 
+    to do with delegation tokens (ddas)
+    HDFS-1036. Documentation for fetchdt for forrest (boryas)
+    HDFS-1039. New patch on top of previous patch. Gets namenode address
+    from conf. (jitendra)
+
+    HADOOP-6656. Renew Kerberos TGT when 80% of the renew lifetime has been
+    used up. (omalley)
+
+    HADOOP-6653. Protect against NPE in setupSaslConnection when real user is
+    null. (omalley)
+
+    HADOOP-6649. An error in the previous committed patch. (jitendra)
+
+    HADOOP-6652. ShellBasedUnixGroupsMapping shouldn't have a cache. 
+    (ddas)
+
+    HADOOP-6649. login object in UGI should be inside the subject
+    (jitendra)
+
+    HADOOP-6637.  Benchmark overhead of RPC session establishment
+    (shv via jitendra)
+
+    HADOOP-6648. Credentials must ignore null tokens that can be generated
+    when using HFTP to talk to insecure clusters. (omalley)
+
+    HADOOP-6632. Fix on JobTracker to reuse filesystem handles if possible.
+    (ddas)
+
+    HADOOP-6647. balancer fails with "is not authorized for protocol 
+    interface NamenodeProtocol" in secure environment (boryas)
+
+    MAPREDUCE-1612. job conf file is not accessible from job history 
+    web page. (Ravi Gummadi via vinodkv)
+
+    MAPREDUCE-1611. Refresh nodes and refresh queues doesnt work with 
+    service authorization enabled. (Amar Kamat via vinodkv)
+
+    HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method 
+   name - should use common naming convention (boryas)
+
+    MAPREDUCE-1609. Fixes a problem with localization of job log
+    directories when tasktracker is re-initialized that can result
+    in failed tasks. (Amareshwari Sriramadasu via yhemanth)
+
+    MAPREDUCE-1610. Update forrest documentation for directory
+    structure of localized files. (Ravi Gummadi via yhemanth)
+
+    MAPREDUCE-1532. Fixes a javadoc and an exception message in JobInProgress
+    when the authenticated user is different from the user in conf. (ddas)
+
+    MAPREDUCE-1417. Update forrest documentation for private
+    and public distributed cache files. (Ravi Gummadi via yhemanth)
+
+    HADOOP-6634. AccessControlList uses full-principal names to verify acls
+    causing queue-acls to fail (vinodkv)
+    
+    HADOOP-6642. Fix javac, javadoc, findbugs warnings. (chrisdo via acmurthy) 
+
+    HDFS-1044.  Cannot submit mapreduce job from secure client to 
+    unsecure sever. (boryas)
+    HADOOP-6638. try to relogin in a case of failed RPC connection 
+    (expired tgt) only in case the subject is loginUser or  
+    proxyUgi.realUser. (boryas)
+
+    HADOOP-6632. Support for using different Kerberos keys for different 
+    instances of Hadoop services. (jitendra)
+
+    HADOOP-6526. Need mapping from long principal names to local OS 
+    user names. (jitendra)
+
+    MAPREDUCE-1604. Update Forrest documentation for job authorization
+    ACLs. (Amareshwari Sriramadasu via yhemanth)
+
+    HDFS-1045.  In secure clusters, re-login is necessary for https 
+    clients before opening connections (jhoman)
+
+    HADOOP-6603.  Addition to original patch to be explicit
+    about new method not being for general use. (jhoman)
+
+    MAPREDUCE-1543. Add audit log messages for job and queue
+    access control checks. (Amar Kamat via yhemanth)
+
+    MAPREDUCE-1606. Fixed occassinal timeout in TestJobACL. (Ravi Gummadi via
+    acmurthy)
+
+   HADOOP-6633. normalize property names for JT/NN kerberos principal 
+    names in configuration. (boryas)
+
+    HADOOP-6613. Changes the RPC server so that version is checked first
+    on an incoming connection. (Kan Zhang via ddas)
+
+    HADOOP-5592. Fix typo in Streaming doc in reference to GzipCodec.
+    (Corinne Chandel via tomwhite)
+
+    MAPREDUCE-813. Updates Streaming and M/R tutorial documents.
+    (Corinne Chandel via ddas)
+
+    MAPREDUCE-927. Cleanup of task-logs should happen in TaskTracker instead
+    of the Child. (Amareshwari Sriramadasu via vinodkv)
+
+    HDFS-1039. Service should be set in the token in JspHelper.getUGI.
+    (jitendra)
+
+    MAPREDUCE-1599. MRBench reuses jobConf and credentials there in.
+    (jitendra)
+
+    MAPREDUCE-1522. FileInputFormat may use the default FileSystem for the
+    input path. (Tsz Wo (Nicholas), SZE via cdouglas)
+
+    HDFS-1036. In DelegationTokenFetch pass Configuration object so 
+    getDefaultUri will work correctly.
+
+    HDFS-1038. In nn_browsedfscontent.jsp fetch delegation token only if 
+    security is enabled. (jitendra)
+
+    HDFS-1036. in DelegationTokenFetch dfs.getURI returns no port (boryas)
+
+    HADOOP-6598. Verbose logging from the Group class (one more case)
+    (boryas)
+
+    HADOOP-6627. Bad Connection to FS" message in FSShell should print 
+    message from the exception (boryas)
+
+    HDFS-1033. In secure clusters, NN and SNN should verify that the remote 
+    principal during image and edits transfer (jhoman)
+
+    HDFS-1005. Fixes a bug to do with calling the cross-realm API in Fsck
+    client. (ddas)
+
+    MAPREDUCE-1422. Fix cleanup of localized job directory to work if files
+    with non-deletable permissions are created within it.
+    (Amar Kamat via yhemanth)
+
+    HDFS-1007. Fixes bugs to do with 20S cluster talking to 20 over 
+    hftp (borya)
+
+    MAPREDUCE:1566. Fixes bugs in the earlier patch. (ddas)
+
+    HDFS-992. A bug in backport for HDFS-992. (jitendra)
+
+    HADOOP-6598. Remove verbose logging from the Groups class. (borya)
+    HADOOP-6620. NPE if renewer is passed as null in getDelegationToken.
+    (jitendra)
+
+    HDFS-1023. Second Update to original patch to fix username (jhoman)
+
+    MAPREDUCE-1435. Add test cases to already committed patch for this
+    jira, synchronizing changes with trunk. (yhemanth)
+
+    HADOOP-6612. Protocols RefreshUserToGroupMappingsProtocol and 
+    RefreshAuthorizationPolicyProtocol  authorization settings thru 
+    KerberosInfo (boryas)
+
+    MAPREDUCE-1566. Bugfix for tests on top of the earlier patch. (ddas)
+
+    MAPREDUCE-1566. Mechanism to import tokens and secrets from a file in to
+    the submitted job. (omalley)
+
+    HADOOP-6603. Provide workaround for issue with Kerberos not
+    resolving corss-realm principal. (kan via jhoman)
+
+    HDFS-1023. Update to original patch to fix username (jhoman)
+
+    HDFS-814. Add an api to get the visible length of a 
+    DFSDataInputStream. (hairong)
+
+    HDFS-1023. Allow http server to start as regular user if https
+    principal is not defined. (jhoman)
+
+    HDFS-1022. Merge all three test specs files (common, hdfs, mapred)
+    into one. (steffl)
+
+    HDFS-101. DFS write pipeline: DFSClient sometimes does not detect
+    second datanode failure. (hairong)
+
+    HDFS-1015. Intermittent failure in TestSecurityTokenEditLog. (jitendra)
+
+    MAPREDUCE-1550. A bugfix on top of what was committed earlier (ddas).
+
+    MAPREDUCE-1155. DISABLING THE TestStreamingExitStatus temporarily. (ddas)
+
+    HDFS-1020. Changes the check for renewer from short name to long name
+    in the cancel/renew delegation token methods. (jitendra via ddas)
+
+    HDFS-1019. Fixes values of delegation token parameters in
+    hdfs-default.xml. (jitendra via ddas)
+
+    MAPREDUCE-1430. Fixes a backport issue with the earlier patch. (ddas)
+
+    MAPREDUCE-1559. Fixes a problem in DelegationTokenRenewal class to
+    do with using the right credentials when talking to the NameNode.(ddas)
+
+    MAPREDUCE-1550. Fixes a problem to do with creating a filesystem using
+    the user's UGI in the JobHistory browsing. (ddas)
+
+    HADOOP-6609. Fix UTF8 to use a thread local DataOutputBuffer instead of
+    a static that was causing a deadlock in RPC. (omalley)
+
+    HADOOP-6584. Fix javadoc warnings introduced by original HADOOP-6584
+    patch (jhoman)
+    
+    HDFS-1017. browsedfs jsp should call JspHelper.getUGI rather than using 
+    createRemoteUser(). (jhoman)
+
+    MAPREDUCE-899. Modified LinuxTaskController to check that task-controller
+    has right permissions and ownership before performing any actions.
+    (Amareshwari Sriramadasu via yhemanth)
+
+    HDFS-204. Revive number of files listed metrics. (hairong)
+
+    HADOOP-6569. FsShell#cat should avoid calling uneccessary getFileStatus
+    before opening a file to read. (hairong)
+
+    HDFS-1014. Error in reading delegation tokens from edit logs. (jitendra)
+
+    HDFS-458. Add under-10-min tests from 0.22 to 0.20.1xx, only the tests
+    that already exist in 0.20.1xx (steffl)
+
+    MAPREDUCE-1155. Just pulls out the TestStreamingExitStatus part of the
+    patch from jira (that went to 0.22). (ddas)
+ 
+    HADOOP-6600. Fix for branch backport only. Comparing of user should use
+    equals. (boryas).
+
+    HDFS-1006. Fixes NameNode and SecondaryNameNode to use kerberizedSSL for
+    the http communication. (Jakob Homan via ddas)
+
+    HDFS-1007. Fixes a bug on top of the earlier patch. (ddas)
+
+    HDFS-1005. Fsck security. Makes it work over kerberized SSL (boryas and 
+    jhoman)
+
+    HDFS-1007. Makes HFTP and Distcp use kerberized SSL. (ddas)
+
+    MAPREDUCE-1455. Fixes a testcase in the earlier patch. 
+    (Ravi Gummadi via ddas)
+
+    HDFS-992. Refactors block access token implementation to conform to the 
+    generic Token interface. (Kan Zhang via ddas)
+
+    HADOOP-6584. Adds KrbSSL connector for jetty. (Jakob Homan via ddas)
+
+    HADOOP-6589. Add a framework for better error messages when rpc connections
+    fail to authenticate. (Kan Zhang via omalley)
+
+    HADOOP-6600,HDFS-1003,MAPREDUCE-1539. mechanism for authorization check
+    for inter-server protocols(boryas)
+
+    HADOOP-6580,HDFS-993,MAPREDUCE-1516. UGI should contain authentication 
+    method.
+
+    Namenode and JT should issue a delegation token only for kerberos 
+    authenticated  clients. (jitendra)
+
+    HDFS-984,HADOOP-6573,MAPREDUCE-1537. Delegation Tokens should be persisted
+    in Namenode, and corresponding changes in common and mr. (jitendra)
+
+    HDFS-994. Provide methods for obtaining delegation token from Namenode for 
+    hftp and other uses. Incorporates HADOOP-6594: Update hdfs script to 
+    provide fetchdt tool. (jitendra)
+
+    HADOOP-6586. Log authentication and authorization failures and successes
+    (boryas)
+
+    HDFS-991. Allow use of delegation tokens to authenticate to the 
+    HDFS servlets. (omalley)
+
+    HADOOP-1849. Add undocumented configuration parameter for per handler 
+    call queue size in IPC Server. (shv)
+    
+    HADOOP-6599. Split existing RpcMetrics with summary in RpcMetrics and
+    details information in RpcDetailedMetrics. (suresh)
+
+    HDFS-985. HDFS should issue multiple RPCs for listing a large directory.
+    (hairong)
+
+    HDFS-1000. Updates libhdfs to use the new UGI. (ddas)
+
+    MAPREDUCE-1532. Ensures all filesystem operations at the client is done
+    as the job submitter. Also, changes the renewal to maintain list of tokens
+    to renew. (ddas)
+
+    HADOOP-6596. Add a version field to the seialization of the 
+    AbstractDelegationTokenIdentifier. (omalley)
+
+    HADOOP-5561. Add javadoc.maxmemory to build.xml to allow larger memory.
+    (jkhoman via omalley)
+
+    HADOOP-6579. Add a mechanism for encoding and decoding Tokens in to
+    url-safe strings. (omalley)
+
+    MAPREDUCE-1354. Make incremental changes in jobtracker for
+    improving scalability (acmurthy)
+
+    HDFS-999.Secondary namenode should login using kerberos if security
+    is configured(boryas)
+
+    MAPREDUCE-1466. Added a private configuration variable 
+    mapreduce.input.num.files, to store number of input files 
+    being processed by M/R job. (Arun Murthy via yhemanth)
+
+    MAPREDUCE-1403. Save file-sizes of each of the artifacts in 
+    DistributedCache in the JobConf (Arun Murthy via yhemanth)
+
+    HADOOP-6543. Fixes a compilation problem in the original commit. (ddas)
+
+    MAPREDUCE-1520. Moves a call to setWorkingDirectory in Child to within
+    a doAs block. (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-6543. Allows secure clients to talk to unsecure clusters. 
+    (Kan Zhang via ddas)
+
+    MAPREDUCE-1505. Delays construction of the job client until it is really
+    required. (Arun C Murthy via ddas)
+
+    HADOOP-6549. TestDoAsEffectiveUser should use ip address of the host
+    for superuser ip check. (jitendra)
+
+    HDFS-464. Fix memory leaks in libhdfs. (Christian Kunz via suresh)
+
+    HDFS-946. NameNode should not return full path name when lisitng a
+    diretory or getting the status of a file. (hairong)
+
+    MAPREDUCE-1398. Fix TaskLauncher to stop waiting for slots on a TIP 
+    that is killed / failed. (Amareshwari Sriramadasu via yhemanth)
+
+    MAPREDUCE-1476. Fix the M/R framework to not call commit for special 
+    tasks like job setup/cleanup and task cleanup.
+    (Amareshwari Sriramadasu via yhemanth)
+
+    HADOOP-6467.  Performance improvement for liststatus on directories in
+    hadoop archives. (mahadev)
+
+    HADOOP-6558. archive does not work with distcp -update. (nicholas via
+    mahadev)
+
+    HADOOP-6583. Captures authentication and authorization metrics. (ddas)
+
+    MAPREDUCE-1316. Fixes a memory leak of TaskInProgress instances in
+    the jobtracker. (Amar Kamat via yhemanth)
+
+    MAPREDUCE-670. Creates ant target for 10 mins patch test build.
+    (Jothi Padmanabhan via gkesavan)
+
+    MAPREDUCE-1430. JobTracker should be able to renew delegation tokens 
+    for the jobs(boryas)
+
+    HADOOP-6551, HDFS-986, MAPREDUCE-1503. Change API for tokens to throw
+    exceptions instead of returning booleans. (omalley)
+
+    HADOOP-6545. Changes the Key for the FileSystem to be UGI. (ddas)
+
+    HADOOP-6572. Makes sure that SASL encryption and push to responder queue 
+    for the RPC response happens atomically. (Kan Zhang via ddas)
+
+    HDFS-965. Split the HDFS TestDelegationToken into two tests, of which
+    one proxy users and the other normal users. (jitendra via omalley)
+
+    HADOOP-6560. HarFileSystem throws NPE for har://hdfs-/foo (nicholas via
+    mahadev)
+
+    MAPREDUCE-686. Move TestSpeculativeExecution.Fake* into a separate class
+    so that it can be used by other tests. (Jothi Padmanabhan via sharad)
+
+    MAPREDUCE-181. Fixes an issue in the use of the right config. (ddas)
+
+    MAPREDUCE-1026. Fixes a bug in the backport. (ddas)
+
+    HADOOP-6559. Makes the RPC client automatically re-login when the SASL 
+    connection setup fails. This is applicable to only keytab based logins. 
+    (ddas)
+
+    HADOOP-2141. Backport changes made in the original JIRA to aid
+    fast unit tests in Map/Reduce. (Amar Kamat via yhemanth)
+
+    HADOOP-6382.  Import the mavenizable pom file structure and adjust
+    the build targets and bin scripts. (gkesvan via ltucker)
+
+    MAPREDUCE-1425. archive throws OutOfMemoryError (mahadev) 
+
+    MAPREDUCE-1399. The archive command shows a null error message. (nicholas)
+
+    HADOOP-6552. Puts renewTGT=true and useTicketCache=true for the keytab 
+    kerberos options. (ddas)
+
+    MAPREDUCE-1433. Adds delegation token for MapReduce (ddas)
+
+    HADOOP-4359. Fixes a bug in the earlier backport. (ddas)
+
+    HADOOP-6547, HDFS-949, MAPREDUCE-1470. Move Delegation token into Common 
+    so that we can use it for MapReduce also. It is a combined patch for 
+    common, hdfs and mr. (jitendra)
+
+    HADOOP-6510,HDFS-935,MAPREDUCE-1464. Support for doAs to allow 
+    authenticated superuser to impersonate proxy users. It is a combined 
+    patch with compatible fixes in HDFS and MR. (jitendra)
+
+    MAPREDUCE-1435. Fixes the way symlinks are handled when cleaning up
+    work directory files. (Ravi Gummadi via yhemanth)
+
+    MAPREDUCE-6419. Fixes a bug in the backported patch. (ddas)
+
+    MAPREDUCE-1457. Fixes JobTracker to get the FileSystem object within 
+    getStagingAreaDir within a privileged block. Fixes Child.java to use the
+    appropriate UGIs while getting the TaskUmbilicalProtocol proxy and while
+    executing the task. Contributed by Jakob Homan. (ddas)
+
+    MAPREDUCE-1440. Replace the long user name in MapReduce with the local
+    name. (ddas) 
+
+    HADOOP-6419. Adds SASL based authentication to RPC. Also includes the 
+    MAPREDUCE-1335 and HDFS-933 patches. Contributed by Kan Zhang. 
+    (ddas)
+ 
+    HADOOP-6538. Sets hadoop.security.authentication to simple by default.
+    (ddas)
+
+    HDFS-938.  Replace calls to UGI.getUserName() with 
+    UGI.getShortUserName()(boryas)
+
+    HADOOP-6544. fix ivy settings to include JSON jackson.codehause.org
+     libs for .20 (boryas)
+     
+    HDFS-907. Add tests for getBlockLocations and totalLoad metrics. (rphulari)
+
+    HADOOP-6204. Implementing aspects development and fault injeciton
+    framework for Hadoop (cos)
+
+    MAPREDUCE-1432. Adds hooks in the jobtracker and tasktracker
+    for loading the tokens in the user's ugi. This is required for
+    the copying of files from the hdfs. (Devaraj Das vi boryas)
+
+    MAPREDUCE-1383. Automates fetching of delegation tokens in File*Formats
+    Distributed Cache and Distcp. Also, provides a config 
+    mapreduce.job.hdfs-servers that the jobs can populate with a comma 
+    separated list of namenodes. The job client automatically fetches 
+    delegation tokens from those namenodes.
+
+    HADOOP-6337. Update FilterInitializer class to be more visible
+    and take a conf for further development. (jhoman)
+
+    HADOOP-6520. UGI should load tokens from the environment. (jitendra)
+
+    HADOOP-6517, HADOOP-6518. Ability to add/get tokens from 
+    UserGroupInformation & Kerberos login in UGI should honor KRB5CCNAME
+    (jitendra)
+
+    HADOOP-6299. Reimplement the UserGroupInformation to use the OS
+    specific and Kerberos JAAS login. (jhoman, ddas, oom)
+    
+    HADOOP-6524. Contrib tests are failing Clover'ed build. (cos)
+
+    MAPREDUCE-842. Fixing a bug in the earlier version of the patch
+    related to improper localization of the job token file.
+    (Ravi Gummadi via yhemanth)
+
+    HDFS-919. Create test to validate the BlocksVerified metric (Gary Murry
+    via cos)
+
+    MAPREDUCE-1186. Modified code in distributed cache to set 
+    permissions only on required set of localized paths.
+    (Amareshwari Sriramadasu via yhemanth)
+
+    HDFS-899. Delegation Token Implementation. (Jitendra Nath Pandey)
+
+    MAPREDUCE-896. Enhance tasktracker to cleanup files that might have 
+    been created by user tasks with non-writable permissions. 
+    (Ravi Gummadi via yhemanth)
+
+    HADOOP-5879. Read compression level and strategy from Configuration for
+    gzip compression. (He Yongqiang via cdouglas)
+
+    HADOOP-6161. Add get/setEnum methods to Configuration. (cdouglas)
+
+    HADOOP-6382 Mavenize the build.xml targets and update the bin scripts
+    in preparation for publishing POM files (giri kesavan via ltucker)
+
+    HDFS-737. Add full path name of the file to the block information and 
+    summary of total number of files, blocks, live and deadnodes to 
+    metasave output. (Jitendra Nath Pandey via suresh)
+
+    HADOOP-6577. Add hidden configuration option "ipc.server.max.response.size"
+    to change the default 1 MB, the maximum size when large IPC handler 
+    response buffer is reset. (suresh)
+
+    HADOOP-6521. Fix backward compatiblity issue with umask when applications 
+    use deprecated param dfs.umask in configuration or use 
+    FsPermission.setUMask(). (suresh)
+
+    HDFS-737. Add full path name of the file to the block information and 
+    summary of total number of files, blocks, live and deadnodes to 
+    metasave output. (Jitendra Nath Pandey via suresh)
+
+    HADOOP-6521. Fix backward compatiblity issue with umask when applications 
+    use deprecated param dfs.umask in configuration or use 
+    FsPermission.setUMask(). (suresh)
+
+    MAPREDUCE-433. Use more reliable counters in TestReduceFetch.
+    (Christopher Douglas via ddas)
+
+    MAPREDUCE-744. Introduces the notion of a public distributed cache.
+    (ddas)
+
+    MAPREDUCE-1140. Fix DistributedCache to not decrement reference counts 
+    for unreferenced files in error conditions.    
+    (Amareshwari Sriramadasu via yhemanth)
+
+    MAPREDUCE-1284. Fix fts_open() call in task-controller that was failing 
+    LinuxTaskController unit tests. (Ravi Gummadi via yhemanth)
+
+    MAPREDUCE-1098. Fixed the distributed-cache to not do i/o while 
+    holding a global lock.
+    (Amareshwari Sriramadasu via acmurthy)
+
+    MAPREDUCE-1338. Introduces the notion of token cache using which 
+    tokens and secrets can be sent by the Job client to the JobTracker.
+    (Boris Shkolnik)
+
+    HADOOP-6495. Identifier should be serialized after the password is created
+    In Token constructor. (Jitendra Nath Pandey)
+
+    HADOOP-6506. Failing tests prevent the rest of test targets from
+    execution. (cos)
+
+    HADOOP-5457. Fix to continue to run builds even if contrib test fails.
+    (gkesavan)
+
+    MAPREDUCE-856. Setup secure permissions for distributed cache files.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+    MAPREDUCE-871. Fix ownership of Job/Task local files to have correct 
+    group ownership according to the egid of the tasktracker.
+    (Vinod Kumar Vavilapalli via yhemanth)
+    
+    MAPREDUCE-476. Extend DistributedCache to work locally (LocalJobRunner). 
+    (Philip Zeyliger via tomwhite)
+
+    MAPREDUCE-711. Removed Distributed Cache from Common, to move it under 
+    Map/Reduce. (Vinod Kumar Vavilapalli via yhemanth)
+
+    MAPREDUCE-478. Allow map and reduce jvm parameters, environment 
+    variables and ulimit to be set separately. (acmurthy)
+ 
+    MAPREDUCE-842. Setup secure permissions for localized job files, 
+    intermediate outputs and log files on tasktrackers.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+    MAPREDUCE-408. Fixes an assertion problem in TestKillSubProcesses.
+    (Ravi Gummadi via ddas)
+
+    HADOOP-4041. IsolationRunner does not work as documented.
+    (Philip Zeyliger via tomwhite)
+
+    MAPREDUCE-181. Changes the job submission process to be secure.
+    (Devaraj Das)
+
+    HADOOP-5737. Fixes a problem in the way the JobTracker used to talk to 
+    other daemons like the NameNode to get the job's files. Also adds APIs 
+    in the JobTracker to get the FileSystem objects as per the JobTracker's 
+    configuration. (Amar Kamat via ddas)
+ 
+    HADOOP-5771. Implements unit tests for LinuxTaskController.
+    (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
+
+    HADOOP-4656, HDFS-685, MAPREDUCE-1083. Use the user-to-groups mapping 
+    service in the NameNode and JobTracker. Combined patch for these 3 jiras 
+    otherwise tests fail. (Jitendra Nath Pandey)
+
+    MAPREDUCE-1250. Refactor job token to use a common token interface.
+    (Jitendra Nath Pandey)
+
+    MAPREDUCE-1026. Shuffle should be secure. (Jitendra Nath Pandey)
+
+    HADOOP-4268. Permission checking in fsck. (Jitendra Nath Pandey)
+
+    HADOOP-6415. Adding a common token interface for both job token and 
+    delegation token. (Jitendra Nath Pandey)
+
+    HADOOP-6367, HDFS-764. Moving Access Token implementation from Common to 
+    HDFS. These two jiras must be committed together otherwise build will
+    fail. (Jitendra Nath Pandey)
+
+    HDFS-409. Add more access token tests
+    (Jitendra Nath Pandey)
+
+    HADOOP-6132. RPC client opens an extra connection for VersionedProtocol.
+    (Jitendra Nath Pandey)
+
+    HDFS-445. pread() fails when cached block locations are no longer valid.
+    (Jitendra Nath Pandey)
+
+    HDFS-195. Need to handle access token expiration when re-establishing the 
+    pipeline for dfs write. (Jitendra Nath Pandey)
+
+    HADOOP-6176. Adding a couple private methods to AccessTokenHandler 
+    for testing purposes. (Jitendra Nath Pandey)
+
+    HADOOP-5824. remove OP_READ_METADATA functionality from Datanode.
+    (Jitendra Nath Pandey)
+
+    HADOOP-4359. Access Token: Support for data access authorization 
+    checking on DataNodes. (Jitendra Nath Pandey)
+
+    MAPREDUCE-1372. Fixed a ConcurrentModificationException in jobtracker.
+    (Arun C Murthy via yhemanth)
+
+    MAPREDUCE-1316. Fix jobs' retirement from the JobTracker to prevent memory
+    leaks via stale references. (Amar Kamat via acmurthy)  
+
+    MAPREDUCE-1342. Fixed deadlock in global blacklisting of tasktrackers. 
+    (Amareshwari Sriramadasu via acmurthy)  
+
+    HADOOP-6460. Reinitializes buffers used for serializing responses in ipc
+    server on exceeding maximum response size to free up Java heap. (suresh)
+
+    MAPREDUCE-1100. Truncate user logs to prevent TaskTrackers' disks from
+    filling up. (Vinod Kumar Vavilapalli via acmurthy) 
+
+    MAPREDUCE-1143. Fix running task counters to be updated correctly
+    when speculative attempts are running for a TIP.
+    (Rahul Kumar Singh via yhemanth)
+
+    HADOOP-6151, 6281, 6285,  6441. Add HTML quoting of the parameters to all
+    of the servlets to prevent XSS attacks. (omalley)
+
+    MAPREDUCE-896. Fix bug in earlier implementation to prevent
+    spurious logging in tasktracker logs for absent file paths.
+    (Ravi Gummadi via yhemanth)
+
+    MAPREDUCE-676. Fix Hadoop Vaidya to ensure it works for map-only jobs. 
+    (Suhas Gogate via acmurthy) 
+
+    HADOOP-5582. Fix Hadoop Vaidya to use new Counters in
+    org.apache.hadoop.mapreduce package. (Suhas Gogate via acmurthy) 
+
+    HDFS-595.  umask settings in configuration may now use octal or 
+    symbolic instead of decimal.  Update HDFS tests as such.  (jghoman)
+
+    MAPREDUCE-1068. Added a verbose error message when user specifies an
+    incorrect -file parameter. (Amareshwari Sriramadasu via acmurthy)  
+
+    MAPREDUCE-1171. Allow the read-error notification in shuffle to be
+    configurable. (Amareshwari Sriramadasu via acmurthy) 
+
+    MAPREDUCE-353. Allow shuffle read and connection timeouts to be
+    configurable. (Amareshwari Sriramadasu via acmurthy) 
+
+    HDFS-781. Namenode metrics PendingDeletionBlocks is not decremented. 
+    (suresh)
+ 
+    MAPREDUCE-1185. Redirect running job url to history url if job is already 
+    retired. (Amareshwari Sriramadasu and Sharad Agarwal via sharad)
+
+    MAPREDUCE-754. Fix NPE in expiry thread when a TT is lost. (Amar Kamat 
+    via sharad)
+
+    MAPREDUCE-896. Modify permissions for local files on tasktracker before
+    deletion so they can be deleted cleanly. (Ravi Gummadi via yhemanth)
+ 
+    HADOOP-5771. Implements unit tests for LinuxTaskController.
+    (Sreekanth Ramakrishnan and Vinod Kumar Vavilapalli via yhemanth)
+
+    MAPREDUCE-1124. Import Gridmix3 and Rumen. (cdouglas)
+
+    MAPREDUCE-1063. Document gridmix benchmark. (cdouglas)
+
+    HDFS-758. Changes to report status of decommissioining on the namenode web
+    UI. (jitendra)
+
+    HADOOP-6234. Add new option dfs.umaskmode to set umask in configuration
+    to use octal or symbolic instead of decimal. (Jakob Homan via suresh)
+
+    MAPREDUCE-1147. Add map output counters to new API. (Amar Kamat via
+    cdouglas)
+
+    MAPREDUCE-1182. Fix overflow in reduce causing allocations to exceed the
+    configured threshold. (cdouglas)
+
+    HADOOP-4933. Fixes a ConcurrentModificationException problem that shows up
+    when the history viewer is accessed concurrently.
+    (Amar Kamat via ddas)
+
+    MAPREDUCE-1140. Fix DistributedCache to not decrement reference counts for 
+    unreferenced files in error conditions.
+    (Amareshwari Sriramadasu via yhemanth)
+
+    HADOOP-6203. FsShell rm/rmr error message indicates exceeding Trash quota
+    and suggests using -skpTrash, when moving to trash fails.
+    (Boris Shkolnik via suresh)
+
+    HADOOP-5675. Do not launch a job if DistCp has no work to do. (Tsz Wo
+    (Nicholas), SZE via cdouglas)
+
+    HDFS-457. Better handling of volume failure in Data Node storage,
+    This fix is a port from hdfs-0.22 to common-0.20 by Boris Shkolnik.
+    Contributed by Erik Steffl
+
+    HDFS-625. Fix NullPointerException thrown from ListPathServlet. 
+    Contributed by Suresh Srinivas.
+
+    HADOOP-6343. Log unexpected throwable object caught in RPC.  
+    Contributed by Jitendra Nath Pandey
+
+    MAPREDUCE-1186. Fixed DistributedCache to do a recursive chmod on just the
+    per-cache directory, not all of mapred.local.dir.
+    (Amareshwari Sriramadasu via acmurthy)
+
+    MAPREDUCE-1231. Add an option to distcp to ignore checksums when used with
+    the upgrade option.
+    (Jothi Padmanabhan via yhemanth)
+
+    MAPREDUCE-1219. Fixed JobTracker to not collect per-job metrics, thus
+    easing load on it. (Amareshwari Sriramadasu via acmurthy)
+
+    HDFS-761. Fix failure to process rename operation from edits log due to
+    quota verification. (suresh)
+
+    MAPREDUCE-1196. Fix FileOutputCommitter to use the deprecated cleanupJob
+    api correctly. (acmurthy)
+
+    HADOOP-6344.  rm and rmr immediately delete files rather than sending
+    to trash, despite trash being enabled, if a user is over-quota. (jhoman)
+
+    MAPREDUCE-1160. Reduce verbosity of log lines in some Map/Reduce classes
+    to avoid filling up jobtracker logs on a busy cluster.
+    (Ravi Gummadi and Hong Tang via yhemanth)
+
+    HDFS-587. Add ability to run HDFS with MR test on non-default queue,
+    also updated junit dependendcy from junit-3.8.1 to junit-4.5 (to make
+    it possible to use Configured and Tool to process command line to
+    be able to specify a queue). Contributed by Erik Steffl.
+
+    MAPREDUCE-1158. Fix JT running maps and running reduces metrics.
+    (sharad)
+
+    MAPREDUCE-947. Fix bug in earlier implementation that was
+    causing unit tests to fail.
+    (Ravi Gummadi via yhemanth)
+
+    MAPREDUCE-1062. Fix MRReliabilityTest to work with retired jobs
+    (Contributed by Sreekanth Ramakrishnan)
+
+    MAPREDUCE-1090. Modified log statement in TaskMemoryManagerThread to
+    include task attempt id. (yhemanth)
+
+    MAPREDUCE-1098. Fixed the distributed-cache to not do i/o while
+    holding a global lock. (Amareshwari Sriramadasu via acmurthy)
+
+    MAPREDUCE-1048. Add occupied/reserved slot usage summary on
+    jobtracker UI. (Amareshwari Sriramadasu via sharad)
+
+    MAPREDUCE-1103. Added more metrics to Jobtracker. (sharad)
+
+    MAPREDUCE-947. Added commitJob and abortJob apis to OutputCommitter.
+    Enhanced FileOutputCommitter to create a _SUCCESS file for successful
+    jobs. (Amar Kamat & Jothi Padmanabhan via acmurthy) 
+
+    MAPREDUCE-1105. Remove max limit configuration in capacity scheduler in
+    favor of max capacity percentage thus allowing the limit to go over
+    queue capacity. (Rahul Kumar Singh via yhemanth)
+
+    MAPREDUCE-1086. Setup Hadoop logging environment for tasks to point to
+    task related parameters. (Ravi Gummadi via yhemanth)
+
+    MAPREDUCE-739. Allow relative paths to be created inside archives. 
+    (mahadev)
+
+    HADOOP-6097. Multiple bugs w/ Hadoop archives (mahadev)
+
+    HADOOP-6231. Allow caching of filesystem instances to be disabled on a
+    per-instance basis (ben slusky via mahadev)
+
+    MAPREDUCE-826.  harchive doesn't use ToolRunner / harchive returns 0 even
+    if the job fails with exception (koji via mahadev)
+
+    HDFS-686. NullPointerException is thrown while merging edit log and
+    image. (hairong)
+
+    HDFS-709. Fix TestDFSShell failure due to rename bug introduced by 
+    HDFS-677. (suresh)
+
+    HDFS-677. Rename failure when both source and destination quota exceeds
+    results in deletion of source. (suresh)
+
+    HADOOP-6284. Add a new parameter, HADOOP_JAVA_PLATFORM_OPTS, to
+    hadoop-config.sh so that it allows setting java command options for
+    JAVA_PLATFORM.  (Koji Noguchi via szetszwo)
+
+    MAPREDUCE-732. Removed spurious log statements in the node
+    blacklisting logic. (Sreekanth Ramakrishnan via yhemanth)
+
+    MAPREDUCE-144. Includes dump of the process tree in task diagnostics when 
+    a task is killed due to exceeding memory limits.
+    (Vinod Kumar Vavilapalli via yhemanth)
+
+    MAPREDUCE-979. Fixed JobConf APIs related to memory parameters to 
+    return values of new configuration variables when deprecated 
+    variables are disabled. (Sreekanth Ramakrishnan via yhemanth)
+
+    MAPREDUCE-277. Makes job history counters available on the job history
+    viewers. (Jothi Padmanabhan via ddas)
+
+    HADOOP-5625. Add operation duration to clienttrace. (Lei Xu 
+    via cdouglas)
+
+    HADOOP-5222. Add offset to datanode clienttrace. (Lei Xu via cdouglas)
+
+    HADOOP-6218. Adds a feature where TFile can be split by Record
+    Sequence number. Contributed by Hong Tang and Raghu Angadi.
+
+    MAPREDUCE-1088. Changed permissions on JobHistory files on local disk to
+    0744. Contributed by Arun C. Murthy.
+
+    HADOOP-6304. Use java.io.File.set{Readable|Writable|Executable} where
+    possible in RawLocalFileSystem. Contributed by Arun C. Murthy.
+    
+    MAPREDUCE-270. Fix the tasktracker to optionally send an out-of-band
+    heartbeat on task-completion for better job-latency. Contributed by
+    Arun C. Murthy
+    Configuration changes:
+      add mapreduce.tasktracker.outofband.heartbeat
+
+    MAPREDUCE-1030. Fix capacity-scheduler to assign a map and a reduce task
+    per-heartbeat. Contributed by Rahuk K Singh.
+
+    MAPREDUCE-1028. Fixed number of slots occupied by cleanup tasks to one
+    irrespective of slot size for the job. Contributed by Ravi Gummadi. 
+
+    MAPREDUCE-964. Fixed start and finish times of TaskStatus to be
+    consistent, thereby fixing inconsistencies in metering tasks.
+    Contributed by Sreekanth Ramakrishnan.
+
+    HADOOP-5976. Add a new command, classpath, to the hadoop 
+    script. Contributed by Owen O'Malley and Gary Murry
+
+    HADOOP-5784. Makes the number of heartbeats that should arrive 
+    a second at the JobTracker configurable. Contributed by 
+    Amareshwari Sriramadasu.
+
+    MAPREDUCE-945. Modifies MRBench and TestMapRed to use 
+    ToolRunner so that options such as queue name can be 
+    passed via command line. Contributed by Sreekanth Ramakrishnan.
+
+    HADOOP:5420 Correct bug in earlier implementation
+    by Arun C. Murthy
+
+    HADOOP-5363 Add support for proxying connections to multiple 
+    clusters with different versions to hdfsproxy. Contributed 
+    by Zhiyong Zhang
+
+    HADOOP-5780. Improve per block message prited by -metaSave 
+    in HDFS. (Raghu Angadi)
+
+    HADOOP-6227. Fix Configuration to allow final parameters to be set 
+    to null and prevent them from being overridden. Contributed by 
+    Amareshwari Sriramadasu.
+
+    MAPREDUCE-430  Added patch supplied by Amar Kamat to allow roll forward
+    on branch to includ externally committed patch.
+
+    MAPREDUCE-768. Provide an option to dump jobtracker configuration in 
+    JSON format to standard output. Contributed by V.V.Chaitanya
+
+    MAPREDUCE-834 Correct an issue created by merging this issue with
+    patch attached to external Jira.
+
+    HADOOP-6184 Provide an API to dump Configuration in a JSON format. 
+    Contributed by V.V.Chaitanya Krishna.
+
+    MAPREDUCE-745  Patch added for this issue to allow branch-0.20 to 
+    merge cleanly.
+
+    MAPREDUCE:478 Allow map and reduce jvm parameters, environment 
+    variables and ulimit to be set separately.
+
+    MAPREDUCE:682 Removes reservations on tasktrackers which are blacklisted. 
+    Contributed by Sreekanth Ramakrishnan.
+
+    HADOOP:5420 Support killing of process groups in LinuxTaskController 
+    binary
+
+    HADOOP-5488 Removes the pidfile management for the Task JVM from the 
+    framework and instead passes the PID back and forth between the 
+    TaskTracker and the Task processes. Contributed by Ravi Gummadi.
+
+    MAPREDUCE:467 Provide ability to collect statistics about total tasks and 
+    succeeded tasks in different time windows.
+
+    MAPREDUCE-817. Add a cache for retired jobs with minimal job
+    info and provide a way to access history file url
+
+    MAPREDUCE-814. Provide a way to configure completed job history
+    files to be on HDFS.
+
+    MAPREDUCE-838 Fixes a problem in the way commit of task outputs
+    happens. The bug was that even if commit failed, the task would be
+    declared as successful. Contributed by Amareshwari Sriramadasu.
+
+    MAPREDUCE-809 Fix job-summary logs to correctly record final status of 
+    FAILED and KILLED jobs.  
+
+    MAPREDUCE-740 Log a job-summary at the end of a job, while
+    allowing it to be configured to use a custom appender if desired.
+
+    MAPREDUCE-771 Fixes a bug which delays normal jobs in favor of
+    high-ram jobs.
+
+    HADOOP-5420 Support setsid based kill in LinuxTaskController.
+
+    MAPREDUCE-733 Fixes a bug that when a task tracker is killed ,
+    it throws exception. Instead it should catch it and process it and
+    allow the rest of the flow to go through
+
+    MAPREDUCE-734 Fixes a bug which prevented hi ram jobs from being
+    removed from the scheduler queue.
+
+    MAPREDUCE-693  Fixes a bug that when a job is submitted and the
+    JT is restarted (before job files have been written) and the job
+    is killed after recovery, the conf files fail to be moved to the
+    "done" subdirectory.
+
+    MAPREDUCE-722 Fixes a bug where more slots are getting reserved
+    for HiRAM job tasks than required.
+
+    MAPREDUCE-683 TestJobTrackerRestart failed because of stale
+    filemanager cache (which was created once per jvm). This patch makes
+    sure that the filemanager is inited upon every JobHistory.init()
+    and hence upon every restart. Note that this wont happen in production
+    as upon a restart the new jobtracker will start in a new jvm and
+    hence a new cache will be created.
+
+    MAPREDUCE-709 Fixes a bug where node health check script does
+    not display the correct message on timeout.
+
+    MAPREDUCE-708 Fixes a bug where node health check script does
+    not refresh the "reason for blacklisting".
+
+    MAPREDUCE-522 Rewrote TestQueueCapacities to make it simpler
+    and avoid timeout errors.
+
+    MAPREDUCE-532 Provided ability in the capacity scheduler to
+    limit the number of slots that can be concurrently used per queue
+    at any given time.
+
+    MAPREDUCE-211 Provides ability to run a health check script on
+    the tasktracker nodes and blacklist nodes if they are unhealthy.
+    Contributed by Sreekanth Ramakrishnan.
+
+    MAPREDUCE-516 Remove .orig file included by mistake.
+
+    MAPREDUCE-416 Moves the history file to a "done" folder whenever
+    a job completes.
+
+    HADOOP-5980 Previously, task spawned off by LinuxTaskController
+    didn't get LD_LIBRARY_PATH in their environment. The tasks will now
+    get same LD_LIBRARY_PATH value as when spawned off by
+    DefaultTaskController.
+
+    HADOOP-5981 This issue completes the feature mentioned in
+    HADOOP-2838. HADOOP-2838 provided a way to set env variables in
+    child process. This issue provides a way to inherit tt's env variables
+    and append or reset it. So now X=$X:y will inherit X (if there) and
+    append y to it.
+
+    HADOOP-5419  This issue is to provide an improvement on the
+    existing M/R framework to let users know which queues they have
+    access to, and for what operations. One use case for this would
+    that currently there is no easy way to know if the user has access
+    to submit jobs to a queue, until it fails with an access control
+    exception.
+
+    HADOOP-5420 Support setsid based kill in LinuxTaskController.
+
+    HADOOP-5643 Added the functionality to refresh jobtrackers node
+    list via command line (bin/hadoop mradmin -refreshNodes). The command
+    should be run as the jobtracker owner (jobtracker process owner)
+    or from a super group (mapred.permissions.supergroup).
+
+    HADOOP-2838 Now the users can set environment variables using
+    mapred.child.env. They can do the following X=Y : set X to Y X=$X:Y
+    : Append Y to X (which should be taken from the tasktracker)
+    
+    HADOOP-5818. Revert the renaming from FSNamesystem.checkSuperuserPrivilege
+    to checkAccess by HADOOP-5643.  (Amar Kamat via szetszwo)
+
+    HADOOP-5801. Fixes the problem: If the hosts file is changed across restart
+    then it should be refreshed upon recovery so that the excluded hosts are
+    lost and the maps are re-executed. (Amar Kamat via ddas)
+
+    HADOOP-5643. HADOOP-5643. Adds a way to decommission TaskTrackers 
+    while the JobTracker is running. (Amar Kamat via ddas)
+
+    HADOOP-5419. Provide a facility to query the Queue ACLs for the
+    current user.  (Rahul Kumar Singh via yhemanth)
+
+    HADOOP-5733. Add map/reduce slot capacity and blacklisted capacity to
+    JobTracker metrics. (Sreekanth Ramakrishnan via cdouglas)
+
+    HADOOP-5738. Split "waiting_tasks" JobTracker metric into waiting maps and
+    waiting reduces. (Sreekanth Ramakrishnan via cdouglas) 
+
+    HADOOP-4842. Streaming now allows specifiying a command for the combiner.
+    (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-4490. Provide ability to run tasks as job owners.
+    (Sreekanth Ramakrishnan via yhemanth)
+
+    HADOOP-5442. Paginate jobhistory display and added some search
+    capabilities. (Amar Kamat via acmurthy)
+
+    HADOOP-3327. Improves handling of READ_TIMEOUT during map output copying.
+    (Amareshwari Sriramadasu via ddas)
+
+    HADOOP-5113. Fixed logcondense to remove files for usernames
+    beginning with characters specified in the -l option.
+    (Peeyush Bishnoi via yhemanth)
+
+    HADOOP-2898. Provide an option to specify a port range for
+    Hadoop services provisioned by HOD.
+    (Peeyush Bishnoi via yhemanth)
+
+    HADOOP-4930. Implement a Linux native executable that can be used to
+    launch tasks as users. (Sreekanth Ramakrishnan via yhemanth)
+
 Release 0.20.3 - Unreleased
+
+  IMPROVEMENTS
 
   BUG FIXES
 
