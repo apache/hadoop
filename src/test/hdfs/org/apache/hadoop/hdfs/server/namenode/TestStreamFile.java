@@ -75,6 +75,7 @@ class MockHttpServletResponse implements HttpServletResponse {
     status = sc;
   }
   
+  @Deprecated
   public void setStatus(int sc, java.lang.String sm) {
   }
   
@@ -105,10 +106,12 @@ class MockHttpServletResponse implements HttpServletResponse {
   public void sendError(int a, java.lang.String b) {
   }
   
+  @Deprecated
   public String encodeRedirectUrl(java.lang.String a) {
     return null;
   }
   
+  @Deprecated
   public String encodeUrl(java.lang.String url) {
     return null;
   }
@@ -117,6 +120,7 @@ class MockHttpServletResponse implements HttpServletResponse {
     return null;
   }
   
+  @Deprecated
   public String encodeURL(java.lang.String url) {
     return null;
   }

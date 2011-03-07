@@ -242,7 +242,6 @@ class DataXceiver extends DataTransferProtocol.Receiver
     // forward the original version of the block to downstream mirrors, so
     // make a copy here.
     final ExtendedBlock originalBlock = new ExtendedBlock(block);
-
     block.setNumBytes(dataXceiverServer.estimateBlockSize);
     LOG.info("Receiving block " + block + 
              " src: " + remoteAddress +

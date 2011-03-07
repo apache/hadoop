@@ -187,7 +187,7 @@ class Checkpointer extends Daemon {
     File[] files = list.toArray(new File[list.size()]);
     assert files.length > 0 : "No checkpoint targets.";
     String nnHttpAddr = backupNode.nnHttpAddress;
-    TransferFsImage.getFileClient(nnHttpAddr, fileid, files);
+    TransferFsImage.getFileClient(nnHttpAddr, fileid, files, false);
     LOG.info("Downloaded file " + files[0].getName() + " size " +
              files[0].length() + " bytes.");
 
@@ -196,7 +196,7 @@ class Checkpointer extends Daemon {
     list = getFSImage().getFiles(NameNodeFile.EDITS, NameNodeDirType.EDITS);
     files = list.toArray(new File[list.size()]);
     assert files.length > 0 : "No checkpoint targets.";
-    TransferFsImage.getFileClient(nnHttpAddr, fileid, files);
+    TransferFsImage.getFileClient(nnHttpAddr, fileid, files, false);
     LOG.info("Downloaded file " + files[0].getName() + " size " +
         files[0].length() + " bytes.");
   }
@@ -213,7 +213,8 @@ class Checkpointer extends Daemon {
       "&token=" + sig.toString() +
       "&newChecksum=" + getFSImage().imageDigest.toString();
     LOG.info("Posted URL " + backupNode.nnHttpAddress + fileid);
-    TransferFsImage.getFileClient(backupNode.nnHttpAddress, fileid, (File[])null);
+    TransferFsImage.getFileClient(backupNode.nnHttpAddress, 
+        fileid, (File[])null, false);
   }
 
   /**

@@ -307,7 +307,6 @@ Release 0.22.0 - Unreleased
 
     HDFS-1096. fix for prev. commit. (boryas)
 
-
     HDFS-1096. allow dfsadmin/mradmin refresh of superuser proxy group
      mappings (boryas)
 
@@ -457,14 +456,15 @@ Release 0.22.0 - Unreleased
     HDFS-1500. TestOfflineImageViewer failing on trunk. (Todd Lipcon
     via hairong)
 
-    HDFS-1467. Append pipeline construction not succeeds with more than
-    one replica. (Todd Lipcon via hairong)
-
     HDFS-1483. DFSClient.getBlockLocations should indicate if corresponding
     blocks are corrupt. (Patrick Kling via hairong)
 
     HDFS-259. Remove intentionally corrupt 0.13 directory layout creation.
-    (Todd Lipcon via eli).
+    (Todd Lipcon via eli)
+
+    HDFS-1513. Fix a number of warnings. (eli)
+
+    HDFS-1481. NameNode should validate fsimage before rolling. (hairong)
 
   OPTIMIZATIONS
 
@@ -632,6 +632,12 @@ Release 0.22.0 - Unreleased
 
     HDFS-1487. FSDirectory.removeBlock() should update diskspace count 
     of the block owner node (Zhong Wang via eli).
+
+    HDFS-1467. Append pipeline never succeeds with more than one replica.
+    (Todd Lipcon via eli)
+
+    HDFS-1167. New property for local conf directory in system-test-hdfs.xml
+    file. (Vinay Thota via cos)
 
 Release 0.21.1 - Unreleased
 

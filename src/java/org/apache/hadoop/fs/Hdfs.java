@@ -319,7 +319,7 @@ public class Hdfs extends AbstractFileSystem {
   @Override
   public void renameInternal(Path src, Path dst) 
     throws IOException, UnresolvedLinkException {
-    dfs.rename(getUriPath(src), getUriPath(dst));
+    dfs.rename(getUriPath(src), getUriPath(dst), Options.Rename.NONE);
   }
 
   @Override

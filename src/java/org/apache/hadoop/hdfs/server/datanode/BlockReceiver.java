@@ -33,7 +33,6 @@ import java.util.LinkedList;
 import java.util.zip.Checksum;
 
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.fs.FSInputChecker;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -90,7 +89,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
                 String clientName, DatanodeInfo srcDataNode, DataNode datanode)
                 throws IOException {
     try{
-      this.block = new ExtendedBlock(inBlock);
+      this.block = inBlock;
       this.in = in;
       this.inAddr = inAddr;
       this.myAddr = myAddr;
@@ -700,6 +699,17 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   }
 
   /**
+   * Convert a checksum byte array to a long
+   */
+  static private long checksum2long(byte[] checksum) {
+    long crc = 0L;
+    for(int i=0; i<checksum.length; i++) {
+      crc |= (0xffL&(long)checksum[i])<<((checksum.length-i-1)*8);
+    }
+    return crc;
+  }
+
+  /**
    * reads in the partial crc chunk and computes checksum
    * of pre-existing data in partial chunk.
    */
@@ -740,11 +750,11 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
 
     // paranoia! verify that the pre-computed crc matches what we
     // recalculated just now
-    if (partialCrc.getValue() != FSInputChecker.checksum2long(crcbuf)) {
+    if (partialCrc.getValue() != checksum2long(crcbuf)) {
       String msg = "Partial CRC " + partialCrc.getValue() +
                    " does not match value computed the " +
                    " last time file was closed " +
-                   FSInputChecker.checksum2long(crcbuf);
+                   checksum2long(crcbuf);
       throw new IOException(msg);
     }
   }

@@ -82,8 +82,8 @@ public class TestLocalDFS extends TestCase {
                                     file1.toString()));
 
       // test home directory
-      Path home = new Path("/user/" + getUserName(fileSys))
-        .makeQualified(fileSys);
+      Path home = 
+        fileSys.makeQualified(new Path("/user/" + getUserName(fileSys))); 
       Path fsHome = fileSys.getHomeDirectory();
       assertEquals(home, fsHome);
 

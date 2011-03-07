@@ -124,7 +124,7 @@ public class TestModTime extends TestCase {
      //
      // create another directory
      //
-     Path dir2 = (new Path("testdir2/")).makeQualified(fileSys);
+     Path dir2 = fileSys.makeQualified(new Path("testdir2/"));
      System.out.println("Creating testdir2 " + dir2);
      assertTrue(fileSys.mkdirs(dir2));
      stat = fileSys.getFileStatus(dir2);

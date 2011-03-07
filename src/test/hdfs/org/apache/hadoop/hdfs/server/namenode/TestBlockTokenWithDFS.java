@@ -201,7 +201,7 @@ public class TestBlockTokenWithDFS extends TestCase {
       stm = fs.append(fileToAppend);
       int mid = rawData.length - 1;
       stm.write(rawData, 1, mid - 1);
-      stm.sync();
+      stm.hflush();
 
       /*
        * wait till token used in stm expires
@@ -253,7 +253,7 @@ public class TestBlockTokenWithDFS extends TestCase {
       // write a partial block
       int mid = rawData.length - 1;
       stm.write(rawData, 0, mid);
-      stm.sync();
+      stm.hflush();
 
       /*
        * wait till token used in stm expires
@@ -315,7 +315,7 @@ public class TestBlockTokenWithDFS extends TestCase {
        * testing READ interface on DN using a BlockReader
        */
 
-      DFSClient dfsclient = new DFSClient(new InetSocketAddress("localhost",
+      new DFSClient(new InetSocketAddress("localhost",
           cluster.getNameNodePort()), conf);
       List<LocatedBlock> locatedBlocks = cluster.getNameNode().getBlockLocations(
           FILE_TO_READ, 0, FILE_SIZE).getLocatedBlocks();

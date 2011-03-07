@@ -343,7 +343,7 @@ public class SecondaryNameNode implements Runnable {
                 NameNodeDirType.IMAGE);
             File[] srcNames = list.toArray(new File[list.size()]);
             assert srcNames.length > 0 : "No checkpoint targets.";
-            TransferFsImage.getFileClient(fsName, fileid, srcNames);
+            TransferFsImage.getFileClient(fsName, fileid, srcNames, false);
             LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
                      srcNames[0].length() + " bytes.");
         
@@ -352,7 +352,7 @@ public class SecondaryNameNode implements Runnable {
             list = getFSImage().getFiles(NameNodeFile.EDITS, NameNodeDirType.EDITS);
             srcNames = list.toArray(new File[list.size()]);;
             assert srcNames.length > 0 : "No checkpoint targets.";
-            TransferFsImage.getFileClient(fsName, fileid, srcNames);
+            TransferFsImage.getFileClient(fsName, fileid, srcNames, false);
             LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
                 srcNames[0].length() + " bytes.");
         
@@ -378,7 +378,7 @@ public class SecondaryNameNode implements Runnable {
       "&token=" + sig.toString() +
       "&newChecksum=" + checkpointImage.imageDigest;
     LOG.info("Posted URL " + fsName + fileid);
-    TransferFsImage.getFileClient(fsName, fileid, (File[])null);
+    TransferFsImage.getFileClient(fsName, fileid, (File[])null, false);
   }
 
   /**

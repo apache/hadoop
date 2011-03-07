@@ -394,7 +394,7 @@ public class TestGlobPaths extends TestCase {
   private Path[] prepareTesting(String pattern, String[] files)
     throws IOException {
     for(int i=0; i<Math.min(NUM_OF_PATHS, files.length); i++) {
-      path[i] = new Path(files[i]).makeQualified(fs);
+      path[i] = fs.makeQualified(new Path(files[i]));
       if (!fs.mkdirs(path[i])) {
         throw new IOException("Mkdirs failed to create " + path[i].toString());
       }
@@ -403,7 +403,8 @@ public class TestGlobPaths extends TestCase {
     Path[] globResults = FileUtil.stat2Paths(fs.globStatus(patternPath),
                                              patternPath);
     for(int i=0; i<globResults.length; i++) {
-      globResults[i] = globResults[i].makeQualified(fs);
+      globResults[i] = 
+        globResults[i].makeQualified(fs.getUri(), fs.getWorkingDirectory());
     }
     return globResults;
   }
@@ -411,7 +412,7 @@ public class TestGlobPaths extends TestCase {
   private Path[] prepareTesting(String pattern, String[] files,
       PathFilter filter) throws IOException {
     for(int i=0; i<Math.min(NUM_OF_PATHS, files.length); i++) {
-      path[i] = new Path(files[i]).makeQualified(fs);
+      path[i] = fs.makeQualified(new Path(files[i]));
       if (!fs.mkdirs(path[i])) {
         throw new IOException("Mkdirs failed to create " + path[i].toString());
       }
@@ -420,7 +421,8 @@ public class TestGlobPaths extends TestCase {
     Path[] globResults = FileUtil.stat2Paths(fs.globStatus(patternPath, filter),
                                              patternPath);
     for(int i=0; i<globResults.length; i++) {
-      globResults[i] = globResults[i].makeQualified(fs);
+      globResults[i] = 
+        globResults[i].makeQualified(fs.getUri(), fs.getWorkingDirectory());
     }
     return globResults;
   }

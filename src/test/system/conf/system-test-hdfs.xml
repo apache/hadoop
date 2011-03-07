@@ -87,6 +87,14 @@
   Command for resuming the given suspended process.
   </description>
 </property>
+<property>
+  <name>test.system.hdrc.hadoop.local.confdir</name>
+  <value>$(TO_DO_GLOBAL_TMP_DIR)/localconf</value>
+  <description>
+    A local directory where a new config file is placed before
+    being pushed into new config location on the cluster.
+  </description>
+</property>
 
 <!-- Mandatory keys to be set for the multi user support to be enabled.  -->
 

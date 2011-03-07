@@ -183,7 +183,7 @@ public class DistributedFileSystem extends FileSystem {
   /** {@inheritDoc} */
   @Override
   public Path getHomeDirectory() {
-    return new Path("/user/" + dfs.ugi.getShortUserName()).makeQualified(this);
+    return makeQualified(new Path("/user/" + dfs.ugi.getShortUserName()));
   }
 
   private String getPathName(Path file) {

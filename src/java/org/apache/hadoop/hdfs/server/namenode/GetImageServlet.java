@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.JspHelper;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 
@@ -91,14 +92,20 @@ public class GetImageServlet extends HttpServlet {
             // issue a HTTP get request to download the new fsimage 
             nnImage.validateCheckpointUpload(ff.getToken());
             nnImage.newImageDigest = ff.getNewChecksum();
-            reloginIfNecessary().doAs(new PrivilegedExceptionAction<Void>() {
+            MD5Hash downloadImageDigest = reloginIfNecessary().doAs(
+                new PrivilegedExceptionAction<MD5Hash>() {
                 @Override
-                public Void run() throws Exception {
-                  TransferFsImage.getFileClient(ff.getInfoServer(), "getimage=1", 
-                      nnImage.getFsImageNameCheckpoint());
-                  return null;
+                public MD5Hash run() throws Exception {
+                  return TransferFsImage.getFileClient(
+                      ff.getInfoServer(), "getimage=1", 
+                      nnImage.getFsImageNameCheckpoint(), true);
                 }
             });
+            if (!nnImage.newImageDigest.equals(downloadImageDigest)) {
+              throw new IOException("The downloaded image is corrupt," +
+                  " expecting a checksum " + nnImage.newImageDigest +
+                  " but received a checksum " + downloadImageDigest);
+            }
            nnImage.checkpointUploadDone();
           }
           return null;

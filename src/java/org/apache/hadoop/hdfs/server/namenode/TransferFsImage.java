@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.*;
 import java.net.*;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
 import java.util.Iterator;
 import java.util.Map;
 import java.lang.Math;
@@ -169,8 +171,11 @@ class TransferFsImage implements FSConstants {
   /**
    * Client-side Method to fetch file from a server
    * Copies the response from the URL to a list of local files.
+   * 
+   * @Return a digest of the received file if getChecksum is true
    */
-  static void getFileClient(String fsName, String id, File[] localPath)
+  static MD5Hash getFileClient(String fsName, String id, File[] localPath,
+      boolean getChecksum)
     throws IOException {
     byte[] buf = new byte[BUFFER_SIZE];
     String proto = UserGroupInformation.isSecurityEnabled() ? "https://" : "http://";
@@ -195,6 +200,11 @@ class TransferFsImage implements FSConstants {
     }
     long received = 0;
     InputStream stream = connection.getInputStream();
+    MessageDigest digester = null;
+    if (getChecksum) {
+      digester = MD5Hash.getDigester();
+      stream = new DigestInputStream(stream, digester);
+    }
     FileOutputStream[] output = null;
 
     try {
@@ -230,5 +240,6 @@ class TransferFsImage implements FSConstants {
                               advertisedSize);
       }
     }
+    return digester==null ? null : new MD5Hash(digester.digest());
   }
 }
