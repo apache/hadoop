@@ -559,7 +559,9 @@ public abstract class Server {
         LOG.info(getName() + ": readAndProcess caught InterruptedException", ieo);
         throw ieo;
       } catch (Exception e) {
-        LOG.info(getName() + ": readAndProcess threw exception " + e + ". Count of bytes read: " + count, e);
+        LOG.info(getName() + ": readAndProcess threw exception " + e +
+            " from client " + c.getHostAddress() +
+            ". Count of bytes read: " + count, e);
         count = -1; //so that the (count < 0) block is executed
       }
       if (count < 0) {

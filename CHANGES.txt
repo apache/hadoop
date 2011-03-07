@@ -66,6 +66,9 @@ Trunk (unreleased changes)
     HADOOP-7114. FsShell should dump all exceptions at DEBUG level.
     (todd via tomwhite)
 
+    HADOOP-7159. RPC server should log the client hostname when read exception
+    happened. (Scott Chen via todd)
+
   OPTIMIZATIONS
 
   BUG FIXES
