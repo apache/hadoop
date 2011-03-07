@@ -141,7 +141,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     }
     return (long)(max * limit);
   }
-  
+
   /**
    * The memstore across all regions has exceeded the low water mark. Pick
    * one region to flush and flush it synchronously (this is called from the
@@ -169,7 +169,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
         LOG.fatal("Above memory mark but there are no flushable regions!");
         return false;
       }
-      
+
       HRegion regionToFlush;
       if (bestAnyRegion.memstoreSize.get() > 2 * bestFlushableRegion.memstoreSize.get()) {
         // Even if it's not supposed to be flushed, pick a region if it's more than twice
@@ -187,9 +187,9 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       } else {
         regionToFlush = bestFlushableRegion;
       }
-      
+
       Preconditions.checkState(regionToFlush.memstoreSize.get() > 0);
-      
+
       LOG.info("Flush of region " + regionToFlush + " due to global heap pressure");
       flushedOne = flushRegion(regionToFlush, true);
       if (!flushedOne) {
@@ -226,7 +226,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
               }
             }
             // Enqueue another one of these tokens so we'll wake up again
-            wakeupFlushThread();            
+            wakeupFlushThread();
           }
           continue;
         }
@@ -239,7 +239,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       } catch (ConcurrentModificationException ex) {
         continue;
       } catch (Exception ex) {
-        LOG.error("Cache flusher failed for entry " + fqe);
+        LOG.error("Cache flusher failed for entry " + fqe, ex);
         if (!server.checkFileSystem()) {
           break;
         }
@@ -282,14 +282,14 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     }
     return null;
   }
-  
+
   /**
    * Return true if global memory usage is above the high watermark
    */
   private boolean isAboveHighWaterMark() {
     return server.getGlobalMemStoreSize() >= globalMemStoreLimit;
   }
-  
+
   /**
    * Return true if we're above the high watermark
    */
@@ -329,7 +329,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    * A flushRegion that checks store file count.  If too many, puts the flush
    * on delay queue to retry later.
    * @param fqe
-   * @return true if the region was successfully flushed, false otherwise. If 
+   * @return true if the region was successfully flushed, false otherwise. If
    * false, there will be accompanying log messages explaining why the log was
    * not flushed.
    */
@@ -447,7 +447,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
   }
 
   interface FlushQueueEntry extends Delayed {}
-  
+
   /**
    * Token to insert into the flush queue that ensures that the flusher does not sleep
    */
@@ -462,7 +462,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       return -1;
     }
   }
-  
+
   /**
    * Datastructure used in the flush queue.  Holds region and retry count.
    * Keeps tabs on how old this object is.  Implements {@link Delayed}.  On
@@ -473,7 +473,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
    */
   static class FlushRegionEntry implements FlushQueueEntry {
     private final HRegion region;
-    
+
     private final long createTime;
     private long whenToExpire;
     private int requeueCount = 0;
@@ -499,7 +499,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     public int getRequeueCount() {
       return this.requeueCount;
     }
- 
+
     /**
      * @param when When to expire, when to come up out of the queue.
      * Specify in milliseconds.  This method adds System.currentTimeMillis()
@@ -523,7 +523,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       return Long.valueOf(getDelay(TimeUnit.MILLISECONDS) -
         other.getDelay(TimeUnit.MILLISECONDS)).intValue();
     }
-    
+
     @Override
     public String toString() {
       return "[flush region " + Bytes.toString(region.getRegionName()) + "]";
