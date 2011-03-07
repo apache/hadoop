@@ -98,7 +98,7 @@ public class SecondaryNameNode implements Runnable {
   private Collection<URI> checkpointDirs;
   private Collection<URI> checkpointEditsDirs;
   private long checkpointPeriod;    // in seconds
-  private long checkpointSize;    // size (in MB) of current Edit Log
+  private long checkpointSize;    // size (in bytes) of current Edit Log
 
   /** {@inheritDoc} */
   public String toString() {
@@ -107,7 +107,8 @@ public class SecondaryNameNode implements Runnable {
       + "\nStart Time           : " + new Date(starttime)
       + "\nLast Checkpoint Time : " + (lastCheckpointTime == 0? "--": new Date(lastCheckpointTime))
       + "\nCheckpoint Period    : " + checkpointPeriod + " seconds"
-      + "\nCheckpoint Size      : " + checkpointSize + " MB"
+      + "\nCheckpoint Size      : " + StringUtils.byteDesc(checkpointSize)
+                                    + " (= " + checkpointSize + " bytes)" 
       + "\nCheckpoint Dirs      : " + checkpointDirs
       + "\nCheckpoint Edits Dirs: " + checkpointEditsDirs;
   }
