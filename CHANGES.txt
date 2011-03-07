@@ -460,6 +460,9 @@ Release 0.22.0 - Unreleased
     HDFS-1483. DFSClient.getBlockLocations should indicate if corresponding
     blocks are corrupt. (Patrick Kling via hairong)
 
+    HDFS-259. Remove intentionally corrupt 0.13 directory layout creation.
+    (Todd Lipcon via eli).
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)

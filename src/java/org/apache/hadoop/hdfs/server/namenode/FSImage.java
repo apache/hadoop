@@ -959,12 +959,9 @@ public class FSImage extends Storage {
     return editLog;
   }
 
-  public boolean isConversionNeeded(StorageDirectory sd) throws IOException {
+  public boolean isPreUpgradableLayout(StorageDirectory sd) throws IOException {
     File oldImageDir = new File(sd.getRoot(), "image");
     if (!oldImageDir.exists()) {
-      if(sd.getVersionFile().exists())
-        throw new InconsistentFSStateException(sd.getRoot(),
-            oldImageDir + " does not exist.");
       return false;
     }
     // check the layout version inside the image file
@@ -980,7 +977,7 @@ public class FSImage extends Storage {
     }
     return true;
   }
-  
+
   //
   // Atomic move sequence, to recover from interrupted checkpoint
   //
@@ -2344,25 +2341,6 @@ public class FSImage extends Storage {
       node.setRemaining(remaining);
       node.setLastUpdate(lastUpdate);
       node.setXceiverCount(xceiverCount);
-    }
-  }
-
-  protected void corruptPreUpgradeStorage(File rootDir) throws IOException {
-    File oldImageDir = new File(rootDir, "image");
-    if (!oldImageDir.exists())
-      if (!oldImageDir.mkdir())
-        throw new IOException("Cannot create directory " + oldImageDir);
-    File oldImage = new File(oldImageDir, "fsimage");
-    if (!oldImage.exists())
-      // recreate old image file to let pre-upgrade versions fail
-      if (!oldImage.createNewFile())
-        throw new IOException("Cannot create file " + oldImage);
-    RandomAccessFile oldFile = new RandomAccessFile(oldImage, "rws");
-    // write new version into old image file
-    try {
-      writeCorruptedData(oldFile);
-    } finally {
-      oldFile.close();
     }
   }
 

@@ -298,12 +298,6 @@ public class UpgradeUtilities {
       localFS.copyToLocalFile(new Path(namenodeStorage.toString(), "current"),
                               new Path(newDir.toString()),
                               false);
-      Path newImgDir = new Path(newDir.getParent(), "image");
-      if (!localFS.exists(newImgDir))
-        localFS.copyToLocalFile(
-            new Path(namenodeStorage.toString(), "image"),
-            newImgDir,
-            false);
       retVal[i] = newDir;
     }
     return retVal;
@@ -331,12 +325,6 @@ public class UpgradeUtilities {
       localFS.copyToLocalFile(new Path(datanodeStorage.toString(), "current"),
                               new Path(newDir.toString()),
                               false);
-      Path newStorageFile = new Path(newDir.getParent(), "storage");
-      if (!localFS.exists(newStorageFile))
-        localFS.copyToLocalFile(
-            new Path(datanodeStorage.toString(), "storage"),
-            newStorageFile,
-            false);
       retVal[i] = newDir;
     }
     return retVal;

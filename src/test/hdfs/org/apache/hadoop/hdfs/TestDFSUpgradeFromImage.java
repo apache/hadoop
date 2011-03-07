@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
+import org.apache.hadoop.util.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -48,6 +49,8 @@ public class TestDFSUpgradeFromImage extends TestCase {
   
   private static final Log LOG = LogFactory.getLog(
                     "org.apache.hadoop.hdfs.TestDFSUpgradeFromImage");
+  private static File TEST_ROOT_DIR =
+                      new File(MiniDFSCluster.getBaseDirectory());
   
   public int numDataNodes = 4;
   
@@ -202,6 +205,49 @@ public class TestDFSUpgradeFromImage extends TestCase {
       verifyFileSystem(dfs);
     } finally {
       if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
+  /**
+   * Test that sets up a fake image from Hadoop 0.3.0 and tries to start a
+   * NN, verifying that the correct error message is thrown.
+   */
+  public void testFailOnPreUpgradeImage() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+
+    File namenodeStorage = new File(TEST_ROOT_DIR, "nnimage-0.3.0");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY, namenodeStorage.toString());
+
+    // Set up a fake NN storage that looks like an ancient Hadoop dir circa 0.3.0
+    FileUtil.fullyDelete(namenodeStorage);
+    assertTrue("Make " + namenodeStorage, namenodeStorage.mkdirs());
+    File imageDir = new File(namenodeStorage, "image");
+    assertTrue("Make " + imageDir, imageDir.mkdirs());
+
+    // Hex dump of a formatted image from Hadoop 0.3.0
+    File imageFile = new File(imageDir, "fsimage");
+    byte[] imageBytes = StringUtils.hexStringToByte(
+      "fffffffee17c0d2700000000");
+    FileOutputStream fos = new FileOutputStream(imageFile);
+    try {
+      fos.write(imageBytes);
+    } finally {
+      fos.close();
+    }
+
+    // Now try to start an NN from it
+
+    try {
+      new MiniDFSCluster.Builder(conf).numDataNodes(0)
+        .format(false)
+        .manageDataDfsDirs(false)
+        .manageNameDfsDirs(false)
+        .startupOption(StartupOption.REGULAR)
+        .build();
+      fail("Was able to start NN from 0.3.0 image");
+    } catch (IOException ioe) {
+      LOG.info("Got expected exception", ioe);
+      assertTrue(ioe.toString().contains("Old layout version is 'too old'"));
     }
   }
 }

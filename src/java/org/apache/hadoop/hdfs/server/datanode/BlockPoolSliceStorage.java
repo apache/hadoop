@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -468,22 +467,6 @@ public class BlockPoolSliceStorage extends Storage {
         DataStorage.STORAGE_DIR_FINALIZED), diskLayoutVersion);
   }
 
-  protected void corruptPreUpgradeStorage(File rootDir) throws IOException {
-    File oldF = new File(rootDir, "storage");
-    if (oldF.exists())
-      return;
-    // recreate old storage file to let pre-upgrade versions fail
-    if (!oldF.createNewFile())
-      throw new IOException("Cannot create file " + oldF);
-    RandomAccessFile oldFile = new RandomAccessFile(oldF, "rws");
-    // write new version into old storage file
-    try {
-      writeCorruptedData(oldFile);
-    } finally {
-      oldFile.close();
-    }
-  }
-
   private void verifyDistributedUpgradeProgress(NamespaceInfo nsInfo)
       throws IOException {
     UpgradeManagerDatanode um = 
@@ -509,11 +492,6 @@ public class BlockPoolSliceStorage extends Storage {
   }
 
   @Override
-  public boolean isConversionNeeded(StorageDirectory sd) throws IOException {
-    return false;
-  }
-  
-  @Override
   public String toString() {
     return super.toString() + ";bpid=" + blockpoolID;
   }
@@ -526,5 +504,10 @@ public class BlockPoolSliceStorage extends Storage {
    */
   public static File getBpRoot(String bpID, File dnCurDir) {
     return new File(dnCurDir, bpID);
+  }
+
+  @Override
+  public boolean isPreUpgradableLayout(StorageDirectory sd) throws IOException {
+    return false;
   }
 }

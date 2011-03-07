@@ -591,12 +591,6 @@ public class SecondaryNameNode implements Runnable {
       super(conf);
     }
 
-    @Override
-    public
-    boolean isConversionNeeded(StorageDirectory sd) {
-      return false;
-    }
-
     /**
      * Analyze checkpoint directories.
      * Create directories if they do not exist.
