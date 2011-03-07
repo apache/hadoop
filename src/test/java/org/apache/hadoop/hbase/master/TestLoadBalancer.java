@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -34,6 +35,8 @@ import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import junit.framework.Assert;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.tools.ant.taskdefs.PathConvert.MapEntry;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -133,6 +137,38 @@ public class TestLoadBalancer {
       new int [] { 12, 10 },
       new int [] { 12, 100 },
   };
+
+  @Test
+  public void testRandomizer() {
+    for(int [] mockCluster : clusterStateMocks) {
+      if (mockCluster.length < 5) continue;
+      Map<HServerInfo, List<HRegionInfo>> servers =
+        mockClusterServers(mockCluster);
+      for (Map.Entry<HServerInfo, List<HRegionInfo>> e: servers.entrySet()) {
+        List<HRegionInfo> original = e.getValue();
+        if (original.size() < 5) continue;
+        // Try ten times in case random chances upon original order more than
+        // one or two times in a row.
+        boolean same = true;
+        for (int i = 0; i < 10 && same; i++) {
+          List<HRegionInfo> copy = new ArrayList<HRegionInfo>(original);
+          System.out.println("Randomizing before " + copy.size());
+          for (HRegionInfo hri: copy) {
+            System.out.println(hri.getEncodedName());
+          }
+          List<HRegionInfo> randomized = LoadBalancer.randomize(copy);
+          System.out.println("Randomizing after " + randomized.size());
+          for (HRegionInfo hri: randomized) {
+            System.out.println(hri.getEncodedName());
+          }
+          if (original.equals(randomized)) continue;
+          same = false;
+          break;
+        }
+        assertFalse(same);
+      }
+    }
+  }
 
   /**
    * Test the load balancing algorithm.
@@ -410,7 +446,7 @@ public class TestLoadBalancer {
       Bytes.putInt(start, 0, numRegions << 1);
       Bytes.putInt(end, 0, (numRegions << 1) + 1);
       HRegionInfo hri = new HRegionInfo(
-          new HTableDescriptor(Bytes.toBytes("table")), start, end);
+          new HTableDescriptor(Bytes.toBytes("table" + i)), start, end);
       regions.add(hri);
     }
     return regions;

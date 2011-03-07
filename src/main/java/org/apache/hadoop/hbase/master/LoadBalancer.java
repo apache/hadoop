@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.HServerInfo;
  */
 public class LoadBalancer {
   private static final Log LOG = LogFactory.getLog(LoadBalancer.class);
-  private static final Random rand = new Random();
+  private static final Random RANDOM = new Random(System.currentTimeMillis());
 
   static class RegionPlanComparator implements Comparator<RegionPlan> {
     @Override
@@ -195,7 +195,7 @@ public class LoadBalancer {
         break;
       }
       serversOverloaded++;
-      List<HRegionInfo> regions = server.getValue();
+      List<HRegionInfo> regions = randomize(server.getValue());
       int numToOffload = Math.min(regionCount - max, regions.size());
       int numTaken = 0;
       for (int i = regions.size() - 1; i >= 0; i--) {
@@ -209,8 +209,6 @@ public class LoadBalancer {
       serverBalanceInfo.put(serverInfo,
           new BalanceInfo(numToOffload, (-1)*numTaken));
     }
-    // put young regions at the beginning of regionsToMove
-    Collections.sort(regionsToMove, rpComparator);
 
     // Walk down least loaded, filling each to the min
     int serversUnderloaded = 0; // number of servers that get new regions
@@ -336,6 +334,15 @@ public class LoadBalancer {
   }
 
   /**
+   * @param regions
+   * @return Randomization of passed <code>regions</code>
+   */
+  static List<HRegionInfo> randomize(final List<HRegionInfo> regions) {
+    Collections.shuffle(regions, RANDOM);
+    return regions;
+  }
+
+  /**
    * Stores additional per-server information about the regions added/removed
    * during the run of the balancing algorithm.
    *
@@ -396,7 +403,7 @@ public class LoadBalancer {
     int max = (int)Math.ceil((float)numRegions/numServers);
     int serverIdx = 0;
     if (numServers > 1) {
-      serverIdx = rand.nextInt(numServers);
+      serverIdx = RANDOM.nextInt(numServers);
     }
     int regionIdx = 0;
     for (int j = 0; j < numServers; j++) {
@@ -444,7 +451,7 @@ public class LoadBalancer {
       if (server != null) {
         assignments.get(server).add(region.getKey());
       } else {
-        assignments.get(servers.get(rand.nextInt(assignments.size()))).add(
+        assignments.get(servers.get(RANDOM.nextInt(assignments.size()))).add(
             region.getKey());
       }
     }
@@ -575,7 +582,7 @@ public class LoadBalancer {
     Map<HRegionInfo,HServerInfo> assignments =
       new TreeMap<HRegionInfo,HServerInfo>();
     for(HRegionInfo region : regions) {
-      assignments.put(region, servers.get(rand.nextInt(servers.size())));
+      assignments.put(region, servers.get(RANDOM.nextInt(servers.size())));
     }
     return assignments;
   }
@@ -585,7 +592,7 @@ public class LoadBalancer {
       LOG.warn("Wanted to do random assignment but no servers to assign to");
       return null;
     }
-    return servers.get(rand.nextInt(servers.size()));
+    return servers.get(RANDOM.nextInt(servers.size()));
   }
 
   /**
