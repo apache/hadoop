@@ -179,9 +179,9 @@ public class TestDiskError {
   @Test
   public void testLocalDirs() throws Exception {
     Configuration conf = new Configuration();
-    final String permStr = "755";
+    final String permStr = conf.get(
+      DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_KEY);
     FsPermission expected = new FsPermission(permStr);
-    conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_KEY, permStr);
 
     // Check permissions on directories in 'dfs.data.dir'
     FileSystem localFS = FileSystem.getLocal(conf);

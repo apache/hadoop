@@ -25,6 +25,7 @@ import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
@@ -63,6 +64,7 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
   private DataInputStream in = null; // from where data are read
   private DataChecksum checksum; // from where chunks of a block can be read
   private OutputStream out = null; // to block file at local disk
+  private OutputStream cout = null; // output stream for cehcksum file
   private DataOutputStream checksumOut = null; // to crc file at local disk
   private int bytesPerChecksum;
   private int checksumSize;
@@ -142,10 +144,10 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
           this.bytesPerChecksum, this.checksumSize);
       if (streams != null) {
         this.out = streams.dataOut;
+        this.cout = streams.checksumOut;
         this.checksumOut = new DataOutputStream(new BufferedOutputStream(
-                                                  streams.checksumOut, 
+                                                  streams.checksumOut,
                                                   SMALL_BUFFER_SIZE));
-        
         // write data chunk header if creating a new replica
         if (isCreate) {
           BlockMetadataHeader.writeHeader(checksumOut, checksum);
@@ -186,6 +188,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     try {
       if (checksumOut != null) {
         checksumOut.flush();
+        if (datanode.syncOnClose && (cout instanceof FileOutputStream)) {
+          ((FileOutputStream)cout).getChannel().force(true);
+        }
         checksumOut.close();
         checksumOut = null;
       }
@@ -196,6 +201,9 @@ class BlockReceiver implements java.io.Closeable, FSConstants {
     try {
       if (out != null) {
         out.flush();
+        if (datanode.syncOnClose && (out instanceof FileOutputStream)) {
+          ((FileOutputStream)out).getChannel().force(true);
+        }
         out.close();
         out = null;
       }

@@ -118,8 +118,6 @@ public class BlockManager {
    * Last block index used for replication work.
    */
   private int replIndex = 0;
-  private long missingBlocksInCurIter = 0;
-  private long missingBlocksInPrevIter = 0;
   Random r = new Random();
 
   // for block replicas placement
@@ -668,6 +666,11 @@ public class BlockManager {
     corruptReplicaBlocksCount = corruptReplicas.size();
   }
 
+  /** Return number of under-replicated but not missing blocks */
+  int getUnderReplicatedNotMissingBlocks() {
+    return neededReplications.getUnderReplicatedBlockCount();
+  }
+  
   /**
    * Schedule blocks for deletion at datanodes
    * @param nodesToProcess number of datanodes to schedule deletion work
@@ -749,8 +752,6 @@ public class BlockManager {
     try {
       synchronized (neededReplications) {
         if (neededReplications.size() == 0) {
-          missingBlocksInCurIter = 0;
-          missingBlocksInPrevIter = 0;
           return blocksToReplicate;
         }
 
@@ -769,8 +770,6 @@ public class BlockManager {
           if (!neededReplicationsIterator.hasNext()) {
             // start from the beginning
             replIndex = 0;
-            missingBlocksInPrevIter = missingBlocksInCurIter;
-            missingBlocksInCurIter = 0;
             blocksToProcess = Math.min(blocksToProcess, neededReplications
                 .size());
             if (blkCnt >= blocksToProcess)
@@ -827,10 +826,6 @@ public class BlockManager {
         containingNodes = new ArrayList<DatanodeDescriptor>();
         NumberReplicas numReplicas = new NumberReplicas();
         srcNode = chooseSourceDatanode(block, containingNodes, numReplicas);
-        if ((numReplicas.liveReplicas() + numReplicas.decommissionedReplicas())
-            <= 0) {
-          missingBlocksInCurIter++;
-        }
         if(srcNode == null) // block can not be replicated from any node
           return false;
 
@@ -1724,7 +1719,7 @@ public class BlockManager {
   
   long getMissingBlocksCount() {
     // not locking
-    return Math.max(missingBlocksInPrevIter, missingBlocksInCurIter);
+    return this.neededReplications.getCorruptBlockSize();
   }
 
   BlockInfo addINode(BlockInfo block, INodeFile iNode) {

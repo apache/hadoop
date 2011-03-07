@@ -94,6 +94,7 @@
   <property name="test.junit.printsummary" value="yes" />
   <property name="test.junit.haltonfailure" value="no" />
   <property name="test.junit.maxmemory" value="512m" />
+  <property name="test.conf.dir" value="${build.dir}/test/conf" />
 
   <property name="test.hdfs.build.classes" value="${test.build.dir}/classes"/>
 
@@ -229,7 +230,9 @@
       <include name="hadoop-common-test-${hadoop-common.version}.jar" />
       <exclude name="**/excluded/" />
     </fileset>
-    <path refid="classpath"/>
+    <pathelement location="${build.classes}"/>
+    <pathelement location="${test.conf.dir}"/>
+    <path refid="ivy-common.classpath"/>
   </path>
 
   <!-- the cluster test classpath: uses conf.dir for configuration -->
@@ -285,6 +288,12 @@
     </copy>
 
     <copy todir="${conf.dir}" verbose="true">
+      <fileset dir="${conf.dir}" includes="**/*.template"/>
+      <mapper type="glob" from="*.template" to="*"/>
+    </copy>
+
+    <mkdir dir="${test.conf.dir}"/>
+    <copy todir="${test.conf.dir}" verbose="true">
       <fileset dir="${conf.dir}" includes="**/*.template"/>
       <mapper type="glob" from="*.template" to="*"/>
     </copy>

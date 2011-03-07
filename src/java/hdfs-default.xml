@@ -274,7 +274,7 @@ creations/deletions), or "all".</description>
 
 <property>
   <name>dfs.datanode.data.dir.perm</name>
-  <value>755</value>
+  <value>700</value>
   <description>Permissions for the directories on on the local filesystem where
   the DFS data node store its blocks. The permissions can either be octal or
   symbolic.</description>

@@ -145,7 +145,7 @@ class NamenodeJspHelper {
     // Ideally this should be displayed in RED
     long missingBlocks = fsn.getMissingBlocksCount();
     if (missingBlocks > 0) {
-      return "<br> WARNING :" + " There are about " + missingBlocks
+      return "<br> WARNING :" + " There are " + missingBlocks
           + " missing blocks. Please check the log or run fsck. <br><br>";
     }
     return "";
@@ -165,6 +165,10 @@ class NamenodeJspHelper {
 
     private String colTxt() {
       return "<td id=\"col" + ++colNum + "\"> ";
+    }
+
+    private String colTxt(String title) {
+      return "<td id=\"col" + ++colNum + "\" title=\"" + title + "\"> ";
     }
 
     private void counterReset() {
@@ -321,9 +325,9 @@ class NamenodeJspHelper {
           + "<a href=\"dfsnodelist.jsp?whatNodes=DECOMMISSIONING\">"
           + "Decommissioning Nodes</a> "
           + colTxt() + ":" + colTxt() + decommissioning.size() 
-          + rowTxt() + colTxt()
+          + rowTxt() + colTxt("Excludes missing blocks.")
           + "Number of Under-Replicated Blocks" + colTxt() + ":" + colTxt()
-          + fsn.getUnderReplicatedBlocks()
+          + fsn.getUnderReplicatedNotMissingBlocks()
           + "</table></div><br>\n");
 
       if (live.isEmpty() && dead.isEmpty()) {

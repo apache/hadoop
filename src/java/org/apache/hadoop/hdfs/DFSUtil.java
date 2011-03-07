@@ -229,6 +229,9 @@ public class DFSUtil {
     }
     int nrBlocks = blocks.locatedBlockCount();
     BlockLocation[] blkLocations = new BlockLocation[nrBlocks];
+    if (nrBlocks == 0) {
+      return blkLocations;
+    }
     int idx = 0;
     for (LocatedBlock blk : blocks.getLocatedBlocks()) {
       assert idx < nrBlocks : "Incorrect index";

@@ -50,6 +50,7 @@ public class TestMissingBlocksAlert extends TestCase {
       //minimize test delay
       conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 0);
       int fileLen = 10*1024;
+      conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, fileLen/2);
 
       //start a cluster with single datanode
       cluster = new MiniDFSCluster.Builder(conf).build();
@@ -84,13 +85,16 @@ public class TestMissingBlocksAlert extends TestCase {
         Thread.sleep(100);
       }
       assertTrue(dfs.getMissingBlocksCount() == 1);
+      assertEquals(4, dfs.getUnderReplicatedBlocksCount());
+      assertEquals(3, 
+          cluster.getNamesystem().getUnderReplicatedNotMissingBlocks());
 
 
       // Now verify that it shows up on webui
       URL url = new URL("http://" + conf.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY) + 
                         "/dfshealth.jsp");
       String dfsFrontPage = DFSTestUtil.urlGet(url);
-      String warnStr = "WARNING : There are about ";
+      String warnStr = "WARNING : There are ";
       assertTrue("HDFS Front page does not contain expected warning", 
                  dfsFrontPage.contains(warnStr + "1 missing blocks"));
 
@@ -103,6 +107,10 @@ public class TestMissingBlocksAlert extends TestCase {
       while (dfs.getMissingBlocksCount() > 0) {
         Thread.sleep(100);
       }
+
+      assertEquals(2, dfs.getUnderReplicatedBlocksCount());
+      assertEquals(2, 
+          cluster.getNamesystem().getUnderReplicatedNotMissingBlocks());
 
       // and make sure WARNING disappears
       // Now verify that it shows up on webui

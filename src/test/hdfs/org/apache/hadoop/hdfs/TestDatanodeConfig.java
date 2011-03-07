@@ -76,7 +76,14 @@ public class TestDatanodeConfig {
     // 1. Test unsupported schema. Only "file:" is supported.
     String dnDir = makeURI("shv", null, fileAsURI(dataDir).getPath());
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dnDir);
-    DataNode dn = DataNode.createDataNode(new String[]{}, conf);
+    DataNode dn = null;
+    try {
+      dn = DataNode.createDataNode(new String[]{}, conf);
+    } catch(IOException e) {
+      // expecting exception here
+    }
+    if(dn != null)
+      dn.shutdown();
     assertNull("Data-node startup should have failed.", dn);
 
     // 2. Test "file:" schema and no schema (path-only). Both should work.

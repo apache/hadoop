@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -60,6 +61,17 @@ public class TestSaveNamespace {
 
   private static class FaultySaveImage implements Answer<Void> {
     int count = 0;
+    boolean exceptionType = true;
+
+    // generate a RuntimeException
+    public FaultySaveImage() {
+      this.exceptionType = true;
+    }
+
+    // generate either a RuntimeException or IOException
+    public FaultySaveImage(boolean etype) {
+      this.exceptionType = etype;
+    }
 
     public Void answer(InvocationOnMock invocation) throws Throwable {
       Object[] args = invocation.getArguments();
@@ -67,7 +79,11 @@ public class TestSaveNamespace {
 
       if (count++ == 1) {
         LOG.info("Injecting fault for file: " + f);
-        throw new RuntimeException("Injected fault: saveFSImage second time");
+        if (exceptionType) {
+          throw new RuntimeException("Injected fault: saveFSImage second time");
+        } else {
+          throw new IOException("Injected fault: saveFSImage second time");
+        }
       }
       LOG.info("Not injecting fault for file: " + f);
       return (Void)invocation.callRealMethod();
@@ -135,6 +151,82 @@ public class TestSaveNamespace {
 
       // Make sure the image loaded including our edit.
       checkEditExists(fsn, 1);
+    } finally {
+      if (fsn != null) {
+        fsn.close();
+      }
+    }
+  }
+
+  /**
+   * Verify that a saveNamespace command brings faulty directories
+   * in fs.name.dir and fs.edit.dir back online.
+   */
+  @Test
+  public void testReinsertnamedirsInSavenamespace() throws Exception {
+    // create a configuration with the key to restore error
+    // directories in fs.name.dir
+    Configuration conf = getConf();
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_NAME_DIR_RESTORE_KEY, true);
+
+    NameNode.initMetrics(conf, NamenodeRole.ACTIVE);
+    NameNode.format(conf);
+    FSNamesystem fsn = new FSNamesystem(conf);
+
+    // Replace the FSImage with a spy
+    FSImage originalImage = fsn.dir.fsImage;
+    FSImage spyImage = spy(originalImage);
+    spyImage.setStorageDirectories(
+        FSNamesystem.getNamespaceDirs(conf), 
+        FSNamesystem.getNamespaceEditsDirs(conf));
+    fsn.dir.fsImage = spyImage;
+
+    // inject fault
+    // The spy throws a IOException when writing to the second directory
+    doAnswer(new FaultySaveImage(false)).
+      when(spyImage).saveFSImage((File)anyObject());
+
+    try {
+      doAnEdit(fsn, 1);
+      fsn.setSafeMode(SafeModeAction.SAFEMODE_ENTER);
+
+      // Save namespace - this  injects a fault and marks one
+      // directory as faulty.
+      LOG.info("Doing the first savenamespace.");
+      fsn.saveNamespace();
+      LOG.warn("First savenamespace sucessful.");
+      assertTrue("Savenamespace should have marked one directory as bad." +
+                 " But found " + spyImage.getRemovedStorageDirs().size() +
+                 " bad directories.", 
+                   spyImage.getRemovedStorageDirs().size() == 1);
+
+      // The next call to savenamespace should try inserting the
+      // erroneous directory back to fs.name.dir. This command should
+      // be successful.
+      LOG.info("Doing the second savenamespace.");
+      fsn.saveNamespace();
+      LOG.warn("Second savenamespace sucessful.");
+      assertTrue("Savenamespace should have been successful in removing " +
+                 " bad directories from Image."  +
+                 " But found " + originalImage.getRemovedStorageDirs().size() +
+                 " bad directories.", 
+                 originalImage.getRemovedStorageDirs().size() == 0);
+
+      // Now shut down and restart the namesystem
+      LOG.info("Shutting down fsimage.");
+      originalImage.close();
+      fsn.close();      
+      fsn = null;
+
+      // Start a new namesystem, which should be able to recover
+      // the namespace from the previous incarnation.
+      LOG.info("Loading new FSmage from disk.");
+      fsn = new FSNamesystem(conf);
+
+      // Make sure the image loaded including our edit.
+      LOG.info("Checking reloaded image.");
+      checkEditExists(fsn, 1);
+      LOG.info("Reloaded image is good.");
     } finally {
       if (fsn != null) {
         fsn.close();

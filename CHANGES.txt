@@ -7,6 +7,8 @@ Trunk (unreleased changes)
     HDFS-1526. Dfs client name for a map/reduce task should be unique
     among threads. (hairong)
 
+    HDFS-1536. Improve HDFS WebUI. (hairong)
+
   NEW FEATURES
 
     HDFS-1365. Federation: propose ClusterID and BlockPoolID format 
@@ -244,6 +246,9 @@ Trunk (unreleased changes)
     name node is in safe mode. (Patrick Kling via hairong)
 
     HDFS-1534. Fix some incorrect logs in FSDirectory. (eli)
+    
+    HDFS-1539. A config option for the datanode to fsycn a block file
+    when block is completely written. (dhruba)
 
   OPTIMIZATIONS
 
@@ -273,6 +278,14 @@ Trunk (unreleased changes)
     (Todd Lipcon via hairong)
 
     HDFS-1551. Fix pom templates dependency list (gkesavan)
+
+    HDFS-1509. A savenamespace command writes the fsimage and edits into
+    all configured directories. (dhruba)
+
+    HDFS-1540. Make Datanode handle errors from RPC calls to namenode
+    more elegantly. (dhruba)
+
+    HDFS-1463. Accesstime of a file is not updated in safeMode. (dhruba)
 
 Release 0.22.0 - Unreleased
 
@@ -692,6 +705,19 @@ Release 0.22.0 - Unreleased
     HDFS-1511. 98 Release Audit warnings on trunk and branch-0.22.
     (jghoman)
 
+    HDFS-1560. dfs.data.dir permissions should default to 700. 
+    (Todd Lipcon via eli)
+
+    HDFS-1550. NPE when listing a file with no location. (hairong)
+
+    HDFS-1542. Add test for HADOOP-7082, a deadlock writing Configuration to
+    HDFS. (todd)
+
+    HDFS-1504. FSImageSaver should catch all exceptions, not just IOE. (todd)
+
+    HDFS-884. DataNode throws IOException if all data directories are 
+    unavailable. (Steve Loughran and shv)
+
 Release 0.21.1 - Unreleased
 
     HDFS-1411. Correct backup node startup command in hdfs user guide.
@@ -733,7 +759,9 @@ Release 0.21.1 - Unreleased
     HDFS-1548. Fault-injection tests are executed multiple times if invoked
     with run-test-hdfs-fault-inject target (cos)
 
-Release 0.21.0 - 2010-08-13
+    HDFS-1552. Remove java5 dependencies from build. (cos) 
+
+    HDFS-996. JUnit tests should never depend on anything in conf (cos)
 
   INCOMPATIBLE CHANGES
 

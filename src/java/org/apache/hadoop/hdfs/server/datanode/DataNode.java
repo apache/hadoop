@@ -350,6 +350,7 @@ public class DataNode extends Configured
   int writePacketSize = 0;
   boolean isBlockTokenEnabled;
   BlockPoolTokenSecretManager blockPoolTokenSecretManager;
+  boolean syncOnClose;
   
   public DataBlockScanner blockScanner = null;
   private DirectoryScanner directoryScanner = null;
@@ -440,6 +441,10 @@ public class DataNode extends Configured
         "dfs.blockreport.intervalMsec." + " Setting initial delay to 0 msec:");
     }
     this.heartBeatInterval = conf.getLong("dfs.heartbeat.interval", HEARTBEAT_INTERVAL) * 1000L;
+
+    // do we need to sync block file contents to disk when blockfile is closed?
+    this.syncOnClose = conf.getBoolean(DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_KEY, 
+                                       DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_DEFAULT);
   }
   
   private void startInfoServer(Configuration conf) throws IOException {
@@ -2086,21 +2091,19 @@ public class DataNode extends Configured
                  DFSConfigKeys.DFS_DATANODE_DATA_DIR_PERMISSION_DEFAULT));
     ArrayList<File> dirs = getDataDirsFromURIs(dataDirs, localFS, permission);
 
-    if (dirs.size() > 0) {
-      return new DataNode(conf, dirs, resources);
-    }
-    LOG.error("All directories in "
-        + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + " are invalid.");
-    return null;
+    assert dirs.size() > 0 : "number of data directories should be > 0";
+    return new DataNode(conf, dirs, resources);
   }
 
   // DataNode ctor expects AbstractList instead of List or Collection...
   static ArrayList<File> getDataDirsFromURIs(Collection<URI> dataDirs,
-      LocalFileSystem localFS, FsPermission permission) {
+      LocalFileSystem localFS, FsPermission permission) throws IOException {
     ArrayList<File> dirs = new ArrayList<File>();
+    StringBuilder invalidDirs = new StringBuilder();
     for (URI dirURI : dataDirs) {
       if (!"file".equalsIgnoreCase(dirURI.getScheme())) {
         LOG.warn("Unsupported URI schema in " + dirURI + ". Ignoring ...");
+        invalidDirs.append("\"").append(dirURI).append("\" ");
         continue;
       }
       // drop any (illegal) authority in the URI for backwards compatibility
@@ -2110,10 +2113,14 @@ public class DataNode extends Configured
         dirs.add(data);
       } catch (IOException e) {
         LOG.warn("Invalid directory in: "
-                 + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + ": "
-                 + e.getMessage());
+                 + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + ": ", e);
+        invalidDirs.append("\"").append(data.getCanonicalPath()).append("\" ");
       }
     }
+    if (dirs.size() == 0)
+      throw new IOException("All directories in "
+          + DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY + " are invalid: "
+          + invalidDirs);
     return dirs;
   }
 
