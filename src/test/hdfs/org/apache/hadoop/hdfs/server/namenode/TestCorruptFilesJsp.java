@@ -66,8 +66,8 @@ public class TestCorruptFilesJsp  {
 
       // verify there are not corrupt files
       final NameNode namenode = cluster.getNameNode();
-      Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode
-          .listCorruptFileBlocks("/", null);
+      Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode.
+        getNamesystem().listCorruptFileBlocks("/", null);
       assertTrue("There are " + badFiles.size()
           + " corrupt files, but expecting none", badFiles.size() == 0);
 
@@ -94,7 +94,7 @@ public class TestCorruptFilesJsp  {
       }
 
       // verify if all corrupt files were reported to NN
-      badFiles = namenode.listCorruptFileBlocks("/", null);
+      badFiles = namenode.getNamesystem().listCorruptFileBlocks("/", null);
       assertTrue("Expecting 3 corrupt files, but got " + badFiles.size(),
           badFiles.size() == 3);
 

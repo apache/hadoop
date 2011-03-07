@@ -216,8 +216,8 @@ public class NamenodeFsck {
  
   private void listCorruptFileBlocks() throws AccessControlException,
       IOException {
-    Collection<FSNamesystem.CorruptFileBlockInfo> corruptFiles = namenode
-        .listCorruptFileBlocks(path, startBlockAfter);
+    Collection<FSNamesystem.CorruptFileBlockInfo> corruptFiles = namenode.
+      getNamesystem().listCorruptFileBlocks(path, startBlockAfter);
     int numCorruptFiles = corruptFiles.size();
     String filler;
     if (numCorruptFiles > 0) {

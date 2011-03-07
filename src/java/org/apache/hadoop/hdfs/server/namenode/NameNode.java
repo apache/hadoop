@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.fs.UnresolvedLinkException;
+import org.apache.hadoop.fs.CorruptFileBlocks;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -1138,19 +1139,23 @@ public class NameNode implements NamenodeProtocols, FSConstants {
   }
 
   /**
-   * 
-   * @param path
-   *          Sub-tree used in querying corrupt files
-   * @param startBlockAfter
-   *          Paging support---pass in the last block returned from the previous
-   *          call and some # of corrupt blocks after that point are returned
-   * @return a list in which each entry describes a corrupt file/block
-   * @throws AccessControlException
-   * @throws IOException
+   * {@inheritDoc}
    */
-  public Collection<FSNamesystem.CorruptFileBlockInfo> listCorruptFileBlocks(String path,
-      String startBlockAfter) throws AccessControlException, IOException {
-    return namesystem.listCorruptFileBlocks(path, startBlockAfter);
+  @Override
+  public CorruptFileBlocks
+    listCorruptFileBlocks(String path, String cookie) 
+    throws IOException {
+    Collection<FSNamesystem.CorruptFileBlockInfo> fbs =
+      namesystem.listCorruptFileBlocks(path, cookie);
+    
+    String[] files = new String[fbs.size()];
+    String lastCookie = "";
+    int i = 0;
+    for(FSNamesystem.CorruptFileBlockInfo fb: fbs) {
+      files[i++] = fb.path;
+      lastCookie = fb.block.getBlockName();
+    }
+    return new CorruptFileBlocks(files, lastCookie);
   }
   
   /** {@inheritDoc} */

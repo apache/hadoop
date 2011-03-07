@@ -39,6 +39,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.CorruptFileBlocks;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -483,14 +484,14 @@ public class TestFsck extends TestCase {
 
       // wait for the namenode to see the corruption
       final NameNode namenode = cluster.getNameNode();
-      Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = namenode
+      CorruptFileBlocks corruptFileBlocks = namenode
           .listCorruptFileBlocks("/corruptData", null);
-      int numCorrupt = corruptFileBlocks.size();
+      int numCorrupt = corruptFileBlocks.getFiles().length;
       while (numCorrupt == 0) {
         Thread.sleep(1000);
         corruptFileBlocks = namenode
             .listCorruptFileBlocks("/corruptData", null);
-        numCorrupt = corruptFileBlocks.size();
+        numCorrupt = corruptFileBlocks.getFiles().length;
       }
       outStr = runFsck(conf, -1, true, "/corruptData", "-list-corruptfileblocks");
       System.out.println("2. bad fsck out: " + outStr);

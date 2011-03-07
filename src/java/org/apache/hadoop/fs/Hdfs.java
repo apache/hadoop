@@ -303,6 +303,16 @@ public class Hdfs extends AbstractFileSystem {
     return listing.toArray(new FileStatus[listing.size()]);
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public CorruptFileBlocks listCorruptFileBlocks(String path,
+                                                 String cookie)
+    throws IOException {
+    return dfs.listCorruptFileBlocks(path, cookie);
+  }
+
   @Override
   public void mkdir(Path dir, FsPermission permission, boolean createParent)
     throws IOException, UnresolvedLinkException {

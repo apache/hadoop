@@ -30,10 +30,12 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.BlockMissingException;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 
 /**
  * This class tests the listCorruptFileBlocks API.
@@ -64,8 +66,8 @@ public class TestListCorruptFileBlocks extends TestCase {
 
       // fetch bad file list from namenode. There should be none.
       final NameNode namenode = cluster.getNameNode();
-      Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode
-          .listCorruptFileBlocks("/", null);
+      Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode.
+        getNamesystem().listCorruptFileBlocks("/", null);
       assertTrue("Namenode has " + badFiles.size()
           + " corrupt files. Expecting None.", badFiles.size() == 0);
 
@@ -107,7 +109,7 @@ public class TestListCorruptFileBlocks extends TestCase {
       }
 
       // fetch bad file list from namenode. There should be one file.
-      badFiles = namenode.listCorruptFileBlocks("/", null);
+      badFiles = namenode.getNamesystem().listCorruptFileBlocks("/", null);
       LOG.info("Namenode has bad files. " + badFiles.size());
       assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting 1.",
           badFiles.size() == 1);
@@ -134,8 +136,8 @@ public class TestListCorruptFileBlocks extends TestCase {
       util.createFiles(fs, "/corruptData");
 
       final NameNode namenode = cluster.getNameNode();
-      Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = namenode
-          .listCorruptFileBlocks("/corruptData", null);
+      Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = 
+        namenode.getNamesystem().listCorruptFileBlocks("/corruptData", null);
       int numCorrupt = corruptFileBlocks.size();
       assertTrue(numCorrupt == 0);
       // delete the blocks
@@ -161,11 +163,12 @@ public class TestListCorruptFileBlocks extends TestCase {
       }
 
       int count = 0;
-      corruptFileBlocks = namenode.listCorruptFileBlocks("/corruptData", null);
+      corruptFileBlocks = namenode.getNamesystem().
+        listCorruptFileBlocks("/corruptData", null);
       numCorrupt = corruptFileBlocks.size();
       while (numCorrupt < 3) {
         Thread.sleep(1000);
-        corruptFileBlocks = namenode
+        corruptFileBlocks = namenode.getNamesystem()
             .listCorruptFileBlocks("/corruptData", null);
         numCorrupt = corruptFileBlocks.size();
         count++;
@@ -180,7 +183,8 @@ public class TestListCorruptFileBlocks extends TestCase {
       FSNamesystem.CorruptFileBlockInfo[] cfb = corruptFileBlocks
           .toArray(new FSNamesystem.CorruptFileBlockInfo[0]);
       // now get the 2nd and 3rd file that is corrupt
-      Collection<FSNamesystem.CorruptFileBlockInfo> nextCorruptFileBlocks = namenode
+      Collection<FSNamesystem.CorruptFileBlockInfo> nextCorruptFileBlocks =
+        namenode.getNamesystem()
           .listCorruptFileBlocks("/corruptData", cfb[0].block.getBlockName());
       FSNamesystem.CorruptFileBlockInfo[] ncfb = nextCorruptFileBlocks
           .toArray(new FSNamesystem.CorruptFileBlockInfo[0]);
@@ -189,14 +193,16 @@ public class TestListCorruptFileBlocks extends TestCase {
       assertTrue(ncfb[0].block.getBlockName()
           .equalsIgnoreCase(cfb[1].block.getBlockName()));
 
-      corruptFileBlocks = namenode.listCorruptFileBlocks("/corruptData",
+      corruptFileBlocks = 
+        namenode.getNamesystem().listCorruptFileBlocks("/corruptData",
           ncfb[1].block.getBlockName());
       numCorrupt = corruptFileBlocks.size();
       assertTrue(numCorrupt == 0);
       // Do a listing on a dir which doesn't have any corrupt blocks and
       // validate
       util.createFiles(fs, "/goodData");
-      corruptFileBlocks = namenode.listCorruptFileBlocks("/goodData", null);
+      corruptFileBlocks = 
+        namenode.getNamesystem().listCorruptFileBlocks("/goodData", null);
       numCorrupt = corruptFileBlocks.size();
       assertTrue(numCorrupt == 0);
       util.cleanup(fs, "/corruptData");
@@ -207,7 +213,76 @@ public class TestListCorruptFileBlocks extends TestCase {
       }
     }
   }
-  
+
+  /**
+   * test listCorruptFileBlocks in DistributedFileSystem
+   */ 
+  public void testlistCorruptFileBlocksDFS() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setLong("dfs.blockreport.intervalMsec", 1000);
+    conf.setInt("dfs.datanode.directoryscan.interval", 1); // datanode scans
+                                                           // directories
+    FileSystem fs = null;
+
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).build();
+      cluster.waitActive();
+      fs = cluster.getFileSystem();
+      DistributedFileSystem dfs = (DistributedFileSystem) fs;
+      DFSTestUtil util = new DFSTestUtil("testGetCorruptFiles", 3, 1, 1024);
+      util.createFiles(fs, "/corruptData");
+
+      final NameNode namenode = cluster.getNameNode();
+      CorruptFileBlocks corruptFileBlocks = 
+        dfs.listCorruptFileBlocks("/corruptData", null);
+      int numCorrupt = corruptFileBlocks.getFiles().length;
+      assertTrue(numCorrupt == 0);
+      // delete the blocks
+      File baseDir = new File(System.getProperty("test.build.data",
+          "build/test/data"), "dfs/data");
+      for (int i = 0; i < 8; i++) {
+        File data_dir = new File(baseDir, "data" + (i + 1)
+            + MiniDFSCluster.FINALIZED_DIR_NAME);
+        File[] blocks = data_dir.listFiles();
+        if (blocks == null)
+          continue;
+        // assertTrue("Blocks do not exist in data-dir", (blocks != null) &&
+        // (blocks.length > 0));
+        for (int idx = 0; idx < blocks.length; idx++) {
+          if (!blocks[idx].getName().startsWith("blk_")) {
+            continue;
+          }
+          LOG.info("Deliberately removing file " + blocks[idx].getName());
+          assertTrue("Cannot remove file.", blocks[idx].delete());
+          // break;
+        }
+      }
+
+      int count = 0;
+      corruptFileBlocks = dfs.listCorruptFileBlocks("/corruptData", null);
+      numCorrupt = corruptFileBlocks.getFiles().length;
+      while (numCorrupt < 3) {
+        Thread.sleep(1000);
+        corruptFileBlocks = dfs.listCorruptFileBlocks("/corruptData", null);
+        numCorrupt = corruptFileBlocks.getFiles().length;
+        count++;
+        if (count > 30)
+          break;
+      }
+      // Validate we get all the corrupt files
+      LOG.info("Namenode has bad files. " + numCorrupt);
+      assertTrue(numCorrupt == 3);
+
+      util.cleanup(fs, "/corruptData");
+      util.cleanup(fs, "/goodData");
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+    
   /** check if NN.listCorruptFiles() returns the right limit */
   public void testMaxCorruptFiles() throws Exception {
     MiniDFSCluster cluster = null;
@@ -228,8 +303,8 @@ public class TestListCorruptFileBlocks extends TestCase {
 
       // verify that there are no bad blocks.
       final NameNode namenode = cluster.getNameNode();
-      Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode
-          .listCorruptFileBlocks("/srcdat2", null);
+      Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = namenode.
+        getNamesystem().listCorruptFileBlocks("/srcdat2", null);
       assertTrue("Namenode has " + badFiles.size() + " corrupt files. Expecting none.",
           badFiles.size() == 0);
 
@@ -253,14 +328,17 @@ public class TestListCorruptFileBlocks extends TestCase {
         }
       }
 
-      badFiles = namenode.listCorruptFileBlocks("/srcdat2", null);
+      badFiles = 
+        namenode.getNamesystem().listCorruptFileBlocks("/srcdat2", null);
         
        while (badFiles.size() < maxCorruptFileBlocks) {
         LOG.info("# of corrupt files is: " + badFiles.size());
         Thread.sleep(10000);
-        badFiles = namenode.listCorruptFileBlocks("/srcdat2", null);
+        badFiles = namenode.getNamesystem().
+          listCorruptFileBlocks("/srcdat2", null);
       }
-      badFiles = namenode.listCorruptFileBlocks("/srcdat2", null); 
+      badFiles = namenode.getNamesystem().
+        listCorruptFileBlocks("/srcdat2", null); 
       LOG.info("Namenode has bad files. " + badFiles.size());
       assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting " + 
           maxCorruptFileBlocks + ".",

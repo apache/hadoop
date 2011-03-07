@@ -312,6 +312,7 @@ public class SecondaryNameNode implements Runnable {
         LOG.error("Exception in doCheckpoint: ");
         LOG.error(StringUtils.stringifyException(e));
         e.printStackTrace();
+        checkpointImage.imageDigest = null;
       } catch (Throwable e) {
         LOG.error("Throwable Exception in doCheckpoint: ");
         LOG.error(StringUtils.stringifyException(e));
@@ -324,28 +325,39 @@ public class SecondaryNameNode implements Runnable {
   /**
    * Download <code>fsimage</code> and <code>edits</code>
    * files from the name-node.
+   * @return true if a new image has been downloaded and needs to be loaded
    * @throws IOException
    */
-  private void downloadCheckpointFiles(final CheckpointSignature sig
+  private boolean downloadCheckpointFiles(final CheckpointSignature sig
                                       ) throws IOException {
     try {
-        UserGroupInformation.getCurrentUser().doAs(new PrivilegedExceptionAction<Void>() {
+        Boolean b = UserGroupInformation.getCurrentUser().doAs(
+            new PrivilegedExceptionAction<Boolean>() {
   
           @Override
-          public Void run() throws Exception {
+          public Boolean run() throws Exception {
             checkpointImage.cTime = sig.cTime;
             checkpointImage.checkpointTime = sig.checkpointTime;
-            checkpointImage.imageDigest = sig.imageDigest;
-        
+                    
             // get fsimage
-            String fileid = "getimage=1";
-            Collection<File> list = checkpointImage.getFiles(NameNodeFile.IMAGE,
-                NameNodeDirType.IMAGE);
-            File[] srcNames = list.toArray(new File[list.size()]);
-            assert srcNames.length > 0 : "No checkpoint targets.";
-            TransferFsImage.getFileClient(fsName, fileid, srcNames, false);
-            LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
-                     srcNames[0].length() + " bytes.");
+            String fileid;
+            Collection<File> list;
+            File[] srcNames;
+            boolean downloadImage = true;
+            if (sig.imageDigest.equals(checkpointImage.imageDigest)) {
+              downloadImage = false;
+              LOG.info("Image has not changed. Will not download image.");
+            } else {
+              fileid = "getimage=1";
+              list = checkpointImage.getFiles(NameNodeFile.IMAGE,
+                  NameNodeDirType.IMAGE);
+              srcNames = list.toArray(new File[list.size()]);
+              assert srcNames.length > 0 : "No checkpoint targets.";
+              TransferFsImage.getFileClient(fsName, fileid, srcNames, false);
+              checkpointImage.imageDigest = sig.imageDigest;
+              LOG.info("Downloaded file " + srcNames[0].getName() + " size " +
+                  srcNames[0].length() + " bytes.");
+            }
         
             // get edits file
             fileid = "getedit=1";
@@ -357,9 +369,10 @@ public class SecondaryNameNode implements Runnable {
                 srcNames[0].length() + " bytes.");
         
             checkpointImage.checkpointUploadDone();
-            return null;
+            return Boolean.valueOf(downloadImage);
           }
         });
+        return b.booleanValue();
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
@@ -408,8 +421,9 @@ public class SecondaryNameNode implements Runnable {
 
   /**
    * Create a new checkpoint
+   * @return if the image is fetched from primary or not
    */
-  void doCheckpoint() throws IOException {
+  boolean doCheckpoint() throws IOException {
 
     // Do the required initialization of the merge work area.
     startCheckpoint();
@@ -424,8 +438,8 @@ public class SecondaryNameNode implements Runnable {
                             "after creating edits.new");
     }
 
-    downloadCheckpointFiles(sig);   // Fetch fsimage and edits
-    doMerge(sig);                   // Do the merge
+    boolean loadImage = downloadCheckpointFiles(sig);   // Fetch fsimage and edits
+    doMerge(sig, loadImage);                   // Do the merge
   
     //
     // Upload the new image into the NameNode. Then tell the Namenode
@@ -444,6 +458,8 @@ public class SecondaryNameNode implements Runnable {
 
     LOG.warn("Checkpoint done. New Image Size: " 
               + checkpointImage.getFsImageName().length());
+    
+    return loadImage;
   }
 
   private void startCheckpoint() throws IOException {
@@ -457,11 +473,12 @@ public class SecondaryNameNode implements Runnable {
    * Merge downloaded image and edits and write the new image into
    * current storage directory.
    */
-  private void doMerge(CheckpointSignature sig) throws IOException {
+  private void doMerge(CheckpointSignature sig, boolean loadImage)
+  throws IOException {
     FSNamesystem namesystem = 
             new FSNamesystem(checkpointImage, conf);
     assert namesystem.dir.fsImage == checkpointImage;
-    checkpointImage.doMerge(sig);
+    checkpointImage.doMerge(sig, loadImage);
   }
 
   /**
@@ -665,21 +682,29 @@ public class SecondaryNameNode implements Runnable {
     /**
      * Merge image and edits, and verify consistency with the signature.
      */
-    private void doMerge(CheckpointSignature sig) throws IOException {
+    private void doMerge(CheckpointSignature sig, boolean loadImage)
+    throws IOException {
       getEditLog().open();
       StorageDirectory sdName = null;
       StorageDirectory sdEdits = null;
       Iterator<StorageDirectory> it = null;
-      it = dirIterator(NameNodeDirType.IMAGE);
-      if (it.hasNext())
-        sdName = it.next();
+      if (loadImage) {
+        it = dirIterator(NameNodeDirType.IMAGE);
+        if (it.hasNext())
+          sdName = it.next();
+        if (sdName == null) {
+          throw new IOException("Could not locate checkpoint fsimage");
+        }
+      }
       it = dirIterator(NameNodeDirType.EDITS);
       if (it.hasNext())
         sdEdits = it.next();
-      if ((sdName == null) || (sdEdits == null))
-        throw new IOException("Could not locate checkpoint directories");
-      this.layoutVersion = -1; // to avoid assert in loadFSImage()
-      loadFSImage(FSImage.getImageFile(sdName, NameNodeFile.IMAGE));
+      if (sdEdits == null)
+        throw new IOException("Could not locate checkpoint edits");
+      if (loadImage) {
+        this.layoutVersion = -1; // to avoid assert in loadFSImage()
+        loadFSImage(FSImage.getImageFile(sdName, NameNodeFile.IMAGE));
+      }
       loadFSEdits(sdEdits);
       clusterID = sig.getClusterID();
       blockpoolID = sig.getBlockpoolID();

@@ -211,6 +211,9 @@ Trunk (unreleased changes)
     HDFS-1700. Federation: fsck needs to work with federation changes.
     (Matt Foley via suresh)
 
+    HDFS-1482. Add listCorruptFileBlocks to DistributedFileSystem.
+    (Patrick Kling via hairong)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
@@ -227,7 +230,12 @@ Trunk (unreleased changes)
     HDFS-1588. Remove hardcoded strings for configuration keys, "dfs.hosts"
     and "dfs.hosts.exlude". (Erik Steffl via suresh)
 
+    HDFS-1481. NameNode should validate fsimage before rolling. (hairong)
+
   OPTIMIZATIONS
+
+    HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
+    downloads and loading. (hairong)
 
   BUG FIXES
 
@@ -245,6 +253,8 @@ Trunk (unreleased changes)
     HDFS-1585. Fix build after HDFS-1547 (todd)
 
     HDFS-1684. Balancer cannot start with with multiple namenodes.  (szetszwo)
+
+    HDFS-1516. mvn-install is broken after 0.22 branch creation. (cos)
 
 Release 0.22.0 - Unreleased
 
@@ -463,8 +473,6 @@ Release 0.22.0 - Unreleased
     (Todd Lipcon via eli)
 
     HDFS-1513. Fix a number of warnings. (eli)
-
-    HDFS-1481. NameNode should validate fsimage before rolling. (hairong)
 
   OPTIMIZATIONS
 

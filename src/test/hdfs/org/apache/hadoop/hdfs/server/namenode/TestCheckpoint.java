@@ -870,4 +870,56 @@ public class TestCheckpoint extends TestCase {
     secondary2.shutdown();
     cluster.shutdown();
   }
+  
+  /**
+   * Simulate a secondary node failure to transfer image
+   * back to the name-node.
+   * Used to truncate primary fsimage file.
+   */
+  @SuppressWarnings("deprecation")
+  public void testSecondaryImageDownload(Configuration conf)
+    throws IOException {
+    System.out.println("Starting testSecondaryImageDownload");
+    conf.set(DFSConfigKeys.DFS_NAMENODE_SECONDARY_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    Path dir = new Path("/checkpoint");
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+                                               .numDataNodes(numDatanodes)
+                                               .format(false).build();
+    cluster.waitActive();
+    FileSystem fileSys = cluster.getFileSystem();
+    FSImage image = cluster.getNameNode().getFSImage();
+    try {
+      assertTrue(!fileSys.exists(dir));
+      //
+      // Make the checkpoint
+      //
+      SecondaryNameNode secondary = startSecondaryNameNode(conf);
+      long fsimageLength = FSImage.getImageFile(
+          image.dirIterator(NameNodeDirType.IMAGE).next(),
+          NameNodeFile.IMAGE).length();
+      assertFalse("Image is downloaded", secondary.doCheckpoint());
+
+      // Verify that image file sizes did not change.
+      for (Iterator<StorageDirectory> it = 
+              image.dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
+        assertTrue("Image size does not change", FSImage.getImageFile(it.next(), 
+                                NameNodeFile.IMAGE).length() == fsimageLength);
+      }
+
+      // change namespace
+      fileSys.mkdirs(dir);
+      assertTrue("Image is not downloaded", secondary.doCheckpoint());
+
+      for (Iterator<StorageDirectory> it = 
+        image.dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
+        assertTrue("Image size increased", FSImage.getImageFile(it.next(), 
+                          NameNodeFile.IMAGE).length() > fsimageLength);
+     }
+
+      secondary.shutdown();
+    } finally {
+      fileSys.close();
+      cluster.shutdown();
+    }
+  }
 }

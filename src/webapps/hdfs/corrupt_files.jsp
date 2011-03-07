@@ -34,7 +34,7 @@
   String namenodeLabel = nn.getNameNodeAddress().getHostName() + ":"
       + nn.getNameNodeAddress().getPort();
   Collection<FSNamesystem.CorruptFileBlockInfo> corruptFileBlocks = 
-	nn.listCorruptFileBlocks("/", null);
+	fsn.listCorruptFileBlocks("/", null);
   int corruptFileCount = corruptFileBlocks.size();
 %>
 

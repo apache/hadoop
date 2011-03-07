@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.CorruptFileBlocks;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient.DFSDataInputStream;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -599,6 +600,16 @@ public class DistributedFileSystem extends FileSystem {
    */
   public long getCorruptBlocksCount() throws IOException {
     return dfs.getCorruptBlocksCount();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public CorruptFileBlocks listCorruptFileBlocks(String path,
+                                                 String cookie)
+    throws IOException {
+    return dfs.listCorruptFileBlocks(path, cookie);
   }
 
   /** Return statistics for each datanode. */

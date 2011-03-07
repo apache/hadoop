@@ -28,8 +28,7 @@
  
   <property name="Name" value="Hadoop-Hdfs"/>
   <property name="name" value="hadoop-hdfs"/>
-  <!-- Need to change aop.xml project.version prop. synchronously
-   -->
+  <!-- ATTN: Need to change aop.xml's project.version prop. synchronously -->
   <property name="version" value="0.23.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.hdfs.final.name" value="${name}-test-${version}"/>
