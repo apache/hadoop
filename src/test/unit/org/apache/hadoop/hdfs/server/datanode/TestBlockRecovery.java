@@ -33,7 +33,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.RecoveryInProgressException;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
-import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.BlockRecord;
 import org.apache.hadoop.hdfs.server.datanode.FSDatasetInterface.BlockWriteStreams;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -153,12 +152,12 @@ public class TestBlockRecovery {
     syncList.add(record1);
     syncList.add(record2);
     
-    when(dn1.updateReplicaUnderRecovery((Block)anyObject(), anyLong(), 
-        anyLong())).thenReturn(new Block(block.getBlockId(), 
-            expectLen, block.getGenerationStamp()));
-    when(dn2.updateReplicaUnderRecovery((Block)anyObject(), anyLong(), 
-        anyLong())).thenReturn(new Block(block.getBlockId(), 
-            expectLen, block.getGenerationStamp()));
+    when(dn1.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(), 
+        anyLong())).thenReturn(new ExtendedBlock(block.getBlockPoolId(), 
+            block.getBlockId(), expectLen, block.getGenerationStamp()));
+    when(dn2.updateReplicaUnderRecovery((ExtendedBlock)anyObject(), anyLong(), 
+        anyLong())).thenReturn(new ExtendedBlock(block.getBlockPoolId(), 
+            block.getBlockId(), expectLen, block.getGenerationStamp()));
     dn.syncBlock(rBlock, syncList);
   }
   

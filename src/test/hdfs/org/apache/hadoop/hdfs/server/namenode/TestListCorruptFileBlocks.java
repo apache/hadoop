@@ -248,17 +248,16 @@ public class TestListCorruptFileBlocks {
       DFSTestUtil util = new DFSTestUtil("testGetCorruptFiles", 3, 1, 1024);
       util.createFiles(fs, "/corruptData");
 
-      final NameNode namenode = cluster.getNameNode();
       RemoteIterator<Path> corruptFileBlocks = 
         dfs.listCorruptFileBlocks(new Path("/corruptData"));
       int numCorrupt = countPaths(corruptFileBlocks);
       assertTrue(numCorrupt == 0);
       // delete the blocks
-      File baseDir = new File(System.getProperty("test.build.data",
-          "build/test/data"), "dfs/data");
-      for (int i = 0; i < 8; i++) {
-        File data_dir = new File(baseDir, "data" + (i + 1)
-            + MiniDFSCluster.FINALIZED_DIR_NAME);
+      String bpid = cluster.getNamesystem().getBlockPoolId();
+      // For loop through number of datadirectories per datanode (2)
+      for (int i = 0; i < 2; i++) {
+        File storageDir = MiniDFSCluster.getStorageDir(0, i);
+        File data_dir = MiniDFSCluster.getFinalizedDir(storageDir, bpid);
         File[] blocks = data_dir.listFiles();
         if (blocks == null)
           continue;
