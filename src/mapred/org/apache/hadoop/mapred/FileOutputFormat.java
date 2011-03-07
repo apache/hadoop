@@ -30,6 +30,10 @@ import org.apache.hadoop.util.Progressable;
 /** A base class for {@link OutputFormat}. */
 public abstract class FileOutputFormat<K, V> implements OutputFormat<K, V> {
 
+  public static enum Counter { 
+    BYTES_WRITTEN
+  }
+  
   /**
    * Set whether the output of the job is compressed.
    * @param conf the {@link JobConf} to modify

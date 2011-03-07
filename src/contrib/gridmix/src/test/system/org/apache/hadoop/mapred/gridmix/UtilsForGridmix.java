@@ -29,6 +29,14 @@ import org.apache.hadoop.conf.Configuration;
 import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.io.OutputStream;
+import java.util.Set;
+import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
+import java.io.File;
+import java.io.FileOutputStream;
+import org.apache.hadoop.test.system.ProxyUserDefinitions;
+import org.apache.hadoop.test.system.ProxyUserDefinitions.GroupsAndHost;
 
 /**
  * Gridmix utilities.
@@ -210,5 +218,65 @@ public class UtilsForGridmix {
     " mode for " + GridMixRunMode.getMode(gridmixRunMode));
     int exitCode = ToolRunner.run(conf, gridmix, args);
     return exitCode;
+  }
+
+  /**
+   * Get the proxy users file.
+   * @param ProxyUserDefinitions - proxy users data container.
+   * @return String - proxy users file.
+   * @Exception - if no proxy users found in configuration.
+   */
+  public static String getProxyUsersFile(ProxyUserDefinitions pud)
+      throws Exception  {
+     String fileName = buildProxyUsersFile(pud.getProxyUsers());
+     if (fileName == null) {
+        LOG.error("Proxy users file not found.");
+        throw new Exception("Proxy users file not found.");
+     } else {
+        return fileName;
+     }
+  }
+
+  /**
+   * Build the proxy users file. 
+   * @param proxyUserData - groups and hostnames against proxy user.
+   * @return String - proxy users file.
+   * @throws Exception - if an exception occurs.
+   */
+  public static String buildProxyUsersFile(final Map<String, GroupsAndHost> 
+      proxyUserData) throws Exception {
+     FileOutputStream fos = null;
+     File file = null;
+     StringBuffer input = new StringBuffer();
+     Set users = proxyUserData.keySet();
+     Iterator itr = users.iterator();
+     while (itr.hasNext()) {
+        String user = itr.next().toString();
+        input.append(user);
+        final GroupsAndHost gah = proxyUserData.get(user);
+        final List <String> groups = gah.getGroups();
+        for (String group : groups) {
+           input.append(",");
+           input.append(group);
+        }
+        input.append("\n");
+     }
+     if (input.length() > 0) {
+        try {
+           file = File.createTempFile("proxyusers",null);
+           fos = new FileOutputStream(file);
+           fos.write(input.toString().getBytes());
+        } catch(IOException ioexp) {
+           LOG.warn(ioexp.getMessage());
+           return null;
+        } finally {
+           fos.close();
+           file.deleteOnExit();
+        }
+        LOG.info("file.toString():" + file.toString());
+        return file.toString();
+     } else {
+        return null;
+     }
   }
 }

@@ -97,7 +97,7 @@ public class TestTaskLogsTruncater {
     }
 
     // Need to call up front to set currenttaskid.
-    TaskLog.syncLogs(logLocation.toString(), attemptID, false);
+    TaskLog.syncLogs(logLocation.toString(), attemptID, false, true);
 
     FileOutputStream outputStream = new FileOutputStream(logFile, true);
     Random r = new Random();
@@ -109,7 +109,7 @@ public class TestTaskLogsTruncater {
       }
     }
     outputStream.close();
-    TaskLog.syncLogs(logLocation.toString(), attemptID, false);
+    TaskLog.syncLogs(logLocation.toString(), attemptID, false, true);
     LOG.info("Written " + logFile.length() + " real bytes to the log file "
         + logFile);
   }

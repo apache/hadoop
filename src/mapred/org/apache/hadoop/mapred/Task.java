@@ -73,6 +73,7 @@ abstract public class Task implements Writable, Configurable {
     MAP_SKIPPED_RECORDS,
     MAP_INPUT_BYTES, 
     MAP_OUTPUT_BYTES,
+    MAP_OUTPUT_MATERIALIZED_BYTES,
     COMBINE_INPUT_RECORDS,
     COMBINE_OUTPUT_RECORDS,
     REDUCE_INPUT_GROUPS,
@@ -510,6 +511,8 @@ abstract public class Task implements Writable, Configurable {
     private Progress taskProgress;
     private Thread pingThread = null;
     private static final int PROGRESS_STATUS_LEN_LIMIT = 512;
+    private boolean done = true;
+    private Object lock = new Object();
     
     /**
      * flag that indicates whether progress update needs to be sent to parent.
@@ -604,6 +607,9 @@ abstract public class Task implements Writable, Configurable {
       // get current flag value and reset it as well
       boolean sendProgress = resetProgressFlag();
       while (!taskDone.get()) {
+        synchronized(lock) {
+          done = false;
+        }
         try {
           boolean taskFound = true; // whether TT knows about this task
           // sleep for a bit
@@ -636,6 +642,7 @@ abstract public class Task implements Writable, Configurable {
           // came back up), kill ourselves
           if (!taskFound) {
             LOG.warn("Parent died.  Exiting "+taskId);
+            resetDoneFlag();
             System.exit(66);
           }
 
@@ -648,11 +655,22 @@ abstract public class Task implements Writable, Configurable {
           if (remainingRetries == 0) {
             ReflectionUtils.logThreadInfo(LOG, "Communication exception", 0);
             LOG.warn("Last retry, killing "+taskId);
+            resetDoneFlag();
             System.exit(65);
           }
         }
       }
+      //Notify that we are done with the work
+      resetDoneFlag();
     }
+
+    void resetDoneFlag() {
+      synchronized(lock) {
+        done = true;
+        lock.notify();
+      }
+    }
+
     public void startCommunicationThread() {
       if (pingThread == null) {
         pingThread = new Thread(this, "communication thread");
@@ -662,6 +680,11 @@ abstract public class Task implements Writable, Configurable {
     }
     public void stopCommunicationThread() throws InterruptedException {
       if (pingThread != null) {
+        synchronized(lock) {
+          while(!done) {
+            lock.wait();
+          }
+        }
         pingThread.interrupt();
         pingThread.join();
       }
@@ -990,6 +1013,27 @@ abstract public class Task implements Writable, Configurable {
     done(umbilical, reporter);
   }
   
+  /**
+   * Gets a handle to the Statistics instance based on the scheme associated
+   * with path.
+   * 
+   * @param path
+   *          the path.
+   * @return a Statistics instance, or null if none is found for the scheme.
+   */
+  protected static Statistics getFsStatistics(Path path, Configuration conf)
+      throws IOException {
+    Statistics matchedStats = null;
+    path = path.getFileSystem(conf).makeQualified(path);
+    for (Statistics stats : FileSystem.getAllStatistics()) {
+      if (stats.getScheme().equals(path.toUri().getScheme())) {
+        matchedStats = stats;
+        break;
+      }
+    }
+    return matchedStats;
+  }
+
   public void setConf(Configuration conf) {
     if (conf instanceof JobConf) {
       this.conf = (JobConf) conf;

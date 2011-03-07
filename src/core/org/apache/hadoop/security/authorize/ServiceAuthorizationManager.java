@@ -18,6 +18,7 @@
 package org.apache.hadoop.security.authorize;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -26,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.KerberosInfo;
-import org.apache.hadoop.security.KerberosName;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -65,13 +65,13 @@ public class ServiceAuthorizationManager {
    * @param user user accessing the service 
    * @param protocol service being accessed
    * @param conf configuration to use
-   * @param hostname fully qualified domain name of the client
+   * @param addr InetAddress of the client
    * @throws AuthorizationException on authorization failure
    */
   public static void authorize(UserGroupInformation user, 
                                Class<?> protocol,
                                Configuration conf,
-                               String hostname
+                               InetAddress addr
                                ) throws AuthorizationException {
     AccessControlList acl = protocolToAcl.get(protocol);
     if (acl == null) {
@@ -85,39 +85,24 @@ public class ServiceAuthorizationManager {
     if (krbInfo != null) {
       String clientKey = krbInfo.clientPrincipal();
       if (clientKey != null && !clientKey.equals("")) {
-        if (hostname == null) {
-          throw new AuthorizationException(
-              "Can't authorize client when client hostname is null");
-        }
         try {
           clientPrincipal = SecurityUtil.getServerPrincipal(
-              conf.get(clientKey), hostname);
+              conf.get(clientKey), addr);
         } catch (IOException e) {
           throw (AuthorizationException) new AuthorizationException(
               "Can't figure out Kerberos principal name for connection from "
-                  + hostname + " for user=" + user + " protocol=" + protocol)
+                  + addr + " for user=" + user + " protocol=" + protocol)
               .initCause(e);
         }
       }
     }
-    // when authorizing use the short name only
-    String shortName = clientPrincipal;
-    if(clientPrincipal != null ) {
-      try {
-        shortName = new KerberosName(clientPrincipal).getShortName();
-      } catch (IOException e) {
-        LOG.warn("couldn't get short name from " + clientPrincipal, e);
-        // just keep going
-      }
-    }
-    LOG.debug("for protocol authorization compare (" + clientPrincipal + "): " 
-        + shortName + " with " + user.getShortUserName());
-    if((shortName != null &&  !shortName.equals(user.getShortUserName())) || 
+    if((clientPrincipal != null && !clientPrincipal.equals(user.getUserName())) || 
         !acl.isUserAllowed(user)) {
-      AUDITLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol="+protocol);
+      AUDITLOG.warn(AUTHZ_FAILED_FOR + user + " for protocol=" + protocol
+          + ", expected client Kerberos principal is " + clientPrincipal);
       throw new AuthorizationException("User " + user + 
-          " is not authorized for protocol " + 
-          protocol);
+          " is not authorized for protocol " + protocol + 
+          ", expected client Kerberos principal is " + clientPrincipal);
     }
     AUDITLOG.info(AUTHZ_SUCCESSFULL_FOR + user + " for protocol="+protocol);
   }

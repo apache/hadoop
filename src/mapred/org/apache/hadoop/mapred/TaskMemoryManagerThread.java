@@ -223,6 +223,11 @@ class TaskMemoryManagerThread extends Thread {
                     + tid + " : \n" + pTree.getProcessTreeDump();
             LOG.warn(msg);
             // kill the task
+            TaskInProgress tip = taskTracker.runningTasks.get(tid);
+            if (tip != null) {
+              String[] diag = msg.split("\n");
+              tip.getStatus().setDiagnosticInfo(diag[0]);
+            }
             taskTracker.cleanUpOverMemoryTask(tid, true, msg);
 
             it.remove();
@@ -351,8 +356,13 @@ class TaskMemoryManagerThread extends Thread {
         String msg =
             "Killing one of the least progress tasks - " + tid
                 + ", as the cumulative memory usage of all the tasks on "
-                + "the TaskTracker exceeds virtual memory limit "
+                + "the TaskTracker " + taskTracker.localHostname 
+                + " exceeds virtual memory limit "
                 + maxMemoryAllowedForAllTasks + ".";
+        TaskInProgress tip = taskTracker.runningTasks.get(tid);
+        if (tip != null) {
+           tip.getStatus().setDiagnosticInfo(msg);
+        }
         LOG.warn(msg);
         // Kill the task and mark it as killed.
         taskTracker.cleanUpOverMemoryTask(tid, false, msg);

@@ -40,6 +40,10 @@ import org.apache.hadoop.mapreduce.security.TokenCache;
 /** A base class for {@link OutputFormat}s that read from {@link FileSystem}s.*/
 public abstract class FileOutputFormat<K, V> extends OutputFormat<K, V> {
 
+  public static enum Counter { 
+    BYTES_WRITTEN
+  }
+
   /** Construct output file names so that, when an output directory listing is
    * sorted lexicographically, positions correspond to output partitions.*/
   private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance();

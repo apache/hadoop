@@ -117,13 +117,6 @@ neutral at the forward-port stage -->
   </description>
 </property>
 <property>
-  <name>test.system.hdrc.multi-user.list.path</name>
-  <value>$(YINST_ROOT)/conf/hadoop/proxyusers</value>
-  <description>
-  Multi user list for creating the proxy users.
-  </description>
-</property>
-<property>
   <name>test.system.hdrc.multi-user.binary.path</name>
   <value>$(YINST_ROOT)/conf/hadoop/runAs</value>
   <description>

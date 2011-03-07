@@ -632,7 +632,6 @@ public class JobClient extends Configured implements MRConstants, Tool  {
           " that directory");
     }
     submitJobDir = fs.makeQualified(submitJobDir);
-    submitJobDir = new Path(submitJobDir.toUri().getPath());
     FsPermission mapredSysPerms = new FsPermission(JobSubmissionFiles.JOB_DIR_PERMISSION);
     FileSystem.mkdirs(fs, submitJobDir, mapredSysPerms);
     Path filesDir = JobSubmissionFiles.getJobDistCacheFiles(submitJobDir);

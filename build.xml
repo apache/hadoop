@@ -28,7 +28,7 @@
  
   <property name="Name" value="Hadoop"/>
   <property name="name" value="hadoop"/>
-  <property name="version" value="0.20.202.0-SNAPSHOT"/>
+  <property name="version" value="0.20.204.0-SNAPSHOT"/>
   <property name="final.name" value="${name}-${version}"/>
   <property name="test.final.name" value="${name}-test-${version}"/>
   <property name="year" value="2009"/>
@@ -1871,7 +1871,8 @@
    <taskdef resource="cloverlib.xml" classpath="${clover.jar}"/>
    <mkdir dir="${clover.db.dir}"/>
    <clover-setup initString="${clover.db.dir}/hadoop_coverage.db">
-     <fileset dir="src" includes="core/**/* tools/**/* hdfs/**/* mapred/**/*"/>
+     <fileset dir="${src.dir}" includes="core/**/* tools/**/* hdfs/**/* mapred/**/*"/>
+     <testsources dir="${test.src.dir}" />
    </clover-setup>
 </target>
 

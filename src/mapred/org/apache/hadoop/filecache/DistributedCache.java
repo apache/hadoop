@@ -435,7 +435,7 @@ public class DistributedCache {
   @Deprecated
   public static void addFileToClassPath(Path file, Configuration conf)
         throws IOException {
-    addFileToClassPath(file, conf, FileSystem.get(conf));
+    addFileToClassPath(file, conf, file.getFileSystem(conf));
   }
 
   /**
@@ -450,10 +450,11 @@ public class DistributedCache {
   public static void addFileToClassPath
            (Path file, Configuration conf, FileSystem fs)
         throws IOException {
+    String filepath = file.toUri().getPath();
     String classpath = conf.get("mapred.job.classpath.files");
-    conf.set("mapred.job.classpath.files", classpath == null ? file.toString()
-             : classpath
-                 + System.getProperty("path.separator") + file.toString());
+    conf.set("mapred.job.classpath.files", classpath == null
+        ? filepath
+        : classpath + System.getProperty("path.separator") + filepath);
     URI uri = fs.makeQualified(file).toUri();
     addCacheFile(uri, conf);
   }
@@ -494,7 +495,7 @@ public class DistributedCache {
   public static void addArchiveToClassPath
          (Path archive, Configuration conf)
       throws IOException {
-    addArchiveToClassPath(archive, conf, FileSystem.get(conf));
+    addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
   }
 
   /**
@@ -508,10 +509,11 @@ public class DistributedCache {
   public static void addArchiveToClassPath
          (Path archive, Configuration conf, FileSystem fs)
       throws IOException {
+    String archivepath = archive.toUri().getPath();
     String classpath = conf.get("mapred.job.classpath.archives");
-    conf.set("mapred.job.classpath.archives", classpath == null ? archive
-             .toString() : classpath + System.getProperty("path.separator")
-             + archive.toString());
+    conf.set("mapred.job.classpath.archives", classpath == null
+        ? archivepath
+        : classpath + System.getProperty("path.separator") + archivepath);
     URI uri = fs.makeQualified(archive).toUri();
 
     addCacheArchive(uri, conf);
