@@ -96,6 +96,9 @@ public class TestBlockRecovery {
   public void startUp() throws IOException {
     conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, DATA_DIR);
+    conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
     FileSystem.setDefaultUri(conf, "hdfs://localhost:5020");
     ArrayList<File> dirs = new ArrayList<File>();
     File dataDir = new File(DATA_DIR);

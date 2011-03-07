@@ -52,10 +52,8 @@ public class TestFiHFlush {
     hft.fiCallHFlush.set(a);
     hft.fiErrorOnCallHFlush.set(new DataTransferTestUtil.VerificationAction(methodName, index));
     TestHFlush.doTheJob(conf, methodName, block_size, (short)3);
-    if (!trueVerification)
-      assertTrue(!hft.isSuccess());
-    else
-      assertTrue(hft.isSuccess());      
+    if (trueVerification)
+      assertTrue("Some of expected conditions weren't detected", hft.isSuccess());
   }
   
   /** The tests calls 

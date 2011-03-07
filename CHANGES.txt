@@ -4,6 +4,9 @@ Trunk (unreleased changes)
 
   INCOMPATIBLE CHANGES
 
+    HDFS-1526. Dfs client name for a map/reduce task should be unique
+    among threads. (hairong)
+
   NEW FEATURES
 
     HDFS-1365. Federation: propose ClusterID and BlockPoolID format 
@@ -237,6 +240,9 @@ Trunk (unreleased changes)
     HDFS-1533. A more elegant FileSystem#listCorruptFileBlocks API
     (HDFS portion) (Patrick Kling via hairong)
 
+    HDFS-1476. listCorruptFileBlocks should be functional while the
+    name node is in safe mode. (Patrick Kling via hairong)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -260,6 +266,8 @@ Trunk (unreleased changes)
     HDFS-1684. Balancer cannot start with with multiple namenodes.  (szetszwo)
 
     HDFS-1516. mvn-install is broken after 0.22 branch creation. (cos)
+    HDFS-1360. TestBlockRecovery should bind ephemeral ports.
+    (Todd Lipcon via hairong)
 
 Release 0.22.0 - Unreleased
 
@@ -675,6 +683,8 @@ Release 0.22.0 - Unreleased
 
     HDFS-613. TestBalancer and TestBlockTokenWithDFS fail Balancer assert.
     (Todd Lipcon via cos)
+
+    HDFS-1206. TestFiHFlush fails intermittently. (cos)
 
 Release 0.21.1 - Unreleased
 
@@ -1711,6 +1721,8 @@ Release 0.20.2 - Unreleased
     (Todd Lipcon via szetszwo)
 
     HDFS-464. Fix memory leaks in libhdfs. (Christian Kunz via suresh)
+    
+    HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
 
     HDFS-1377. Quota bug for partial blocks allows quotas to be violated. (eli)
 

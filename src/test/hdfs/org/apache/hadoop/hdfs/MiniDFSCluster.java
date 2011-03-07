@@ -194,20 +194,20 @@ public class MiniDFSCluster {
       this.simulatedCapacities = val;
       return this;
     }
-    
-    /**
-     * Default: null
-     */
-    public Builder clusterId(String cid) {
-      this.clusterId = cid;
-      return this;
-    }
 
     /**
      * Default: true
      */
     public Builder waitSafeMode(boolean val) {
       this.waitSafeMode = val;
+      return this;
+    }
+    
+    /**
+     * Default: null
+     */
+    public Builder clusterId(String cid) {
+      this.clusterId = cid;
       return this;
     }
 
@@ -274,6 +274,7 @@ public class MiniDFSCluster {
   private File base_dir;
   private File data_dir;
   private boolean federation = false; 
+  private boolean waitSafeMode = true;
   
   /**
    * Stores the information related to a namenode in the cluster
@@ -469,6 +470,7 @@ public class MiniDFSCluster {
     base_dir = new File(getBaseDirectory());
     data_dir = new File(base_dir, "data");
     this.federation = federation;
+    this.waitSafeMode = waitSafeMode;
     
     // use alternate RPC engine if spec'd
     String rpcEngineName = System.getProperty("hdfs.rpc.engine");
@@ -1238,7 +1240,8 @@ public class MiniDFSCluster {
   }
   
   /**
-   * Returns true if the given namenode is running and is out of Safe Mode.
+   * Returns true if the NameNode is running and is out of Safe Mode
+   * or if waiting for safe mode is disabled.
    */
   public boolean isNameNodeUp(int nnIndex) {
     NameNode nameNode = nameNodes[nnIndex].nameNode;
@@ -1248,7 +1251,7 @@ public class MiniDFSCluster {
     long[] sizes = nameNode.getStats();
     boolean isUp = false;
     synchronized (this) {
-      isUp = !(nameNode.isInSafeMode() || sizes[0] == 0);
+      isUp = ((!nameNode.isInSafeMode() || !waitSafeMode) && sizes[0] != 0);
     }
     return isUp;
   }

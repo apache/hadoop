@@ -127,7 +127,7 @@ public class DFSClient implements FSConstants, java.io.Closeable {
   volatile boolean clientRunning = true;
   private volatile FsServerDefaults serverDefaults;
   private volatile long serverDefaultsLastUpdate;
-  Random r = new Random();
+  static Random r = new Random();
   final String clientName;
   final LeaseChecker leasechecker = new LeaseChecker();
   Configuration conf;
@@ -252,12 +252,9 @@ public class DFSClient implements FSConstants, java.io.Closeable {
 
     this.ugi = UserGroupInformation.getCurrentUser();
     
-    String taskId = conf.get("mapred.task.id");
-    if (taskId != null) {
-      this.clientName = "DFSClient_" + taskId; 
-    } else {
-      this.clientName = "DFSClient_" + r.nextInt();
-    }
+    String taskId = conf.get("mapred.task.id", "NONMAPREDUCE");
+    this.clientName = "DFSClient_" + taskId + "_" +
+                      r.nextInt() + "_" + Thread.currentThread().getId(); 
     defaultBlockSize = conf.getLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     defaultReplication = (short) conf.getInt("dfs.replication", 3);
 

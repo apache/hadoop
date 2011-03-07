@@ -38,7 +38,10 @@ import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * This class tests the listCorruptFileBlocks API.
@@ -120,6 +123,137 @@ public class TestListCorruptFileBlocks {
       util.cleanup(fs, "/srcdat10");
     } finally {
       if (cluster != null) { cluster.shutdown(); }
+    }
+  }
+
+  /**
+   * Check that listCorruptFileBlocks works while the namenode is still in safemode.
+   */
+  @Test
+  public void testListCorruptFileBlocksInSafeMode() throws Exception {
+    MiniDFSCluster cluster = null;
+    Random random = new Random();
+
+    try {
+      Configuration conf = new HdfsConfiguration();
+      // datanode scans directories
+      conf.setInt("dfs.datanode.directoryscan.interval", 1);
+      // datanode sends block reports
+      conf.setInt("dfs.blockreport.intervalMsec", 3 * 1000);
+      // never leave safemode automatically
+      conf.setFloat(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
+                    1.5f);
+      // start populating repl queues immediately 
+      conf.setFloat(DFSConfigKeys.DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
+                    0f);
+      cluster = new MiniDFSCluster.Builder(conf).waitSafeMode(false).build();
+      cluster.getNameNode().
+        setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+      FileSystem fs = cluster.getFileSystem();
+
+      // create two files with one block each
+      DFSTestUtil util = new DFSTestUtil("testListCorruptFileBlocksInSafeMode",
+                                         2, 1, 512);
+      util.createFiles(fs, "/srcdat10");
+
+      // fetch bad file list from namenode. There should be none.
+      Collection<FSNamesystem.CorruptFileBlockInfo> badFiles = 
+        cluster.getNameNode().getNamesystem().listCorruptFileBlocks("/", null);
+      assertTrue("Namenode has " + badFiles.size()
+          + " corrupt files. Expecting None.", badFiles.size() == 0);
+
+      // Now deliberately corrupt one block
+      File data_dir = new File(System.getProperty("test.build.data"),
+      "dfs/data/data1/current/finalized");
+      assertTrue("data directory does not exist", data_dir.exists());
+      File[] blocks = data_dir.listFiles();
+      assertTrue("Blocks do not exist in data-dir", (blocks != null) &&
+                 (blocks.length > 0));
+      for (int idx = 0; idx < blocks.length; idx++) {
+        if (blocks[idx].getName().startsWith("blk_") &&
+            blocks[idx].getName().endsWith(".meta")) {
+          //
+          // shorten .meta file
+          //
+          RandomAccessFile file = new RandomAccessFile(blocks[idx], "rw");
+          FileChannel channel = file.getChannel();
+          long position = channel.size() - 2;
+          int length = 2;
+          byte[] buffer = new byte[length];
+          random.nextBytes(buffer);
+          channel.write(ByteBuffer.wrap(buffer), position);
+          file.close();
+          LOG.info("Deliberately corrupting file " + blocks[idx].getName() +
+              " at offset " + position + " length " + length);
+
+          // read all files to trigger detection of corrupted replica
+          try {
+            util.checkFiles(fs, "/srcdat10");
+          } catch (BlockMissingException e) {
+            System.out.println("Received BlockMissingException as expected.");
+          } catch (IOException e) {
+            assertTrue("Corrupted replicas not handled properly. " +
+                       "Expecting BlockMissingException " +
+                       " but received IOException " + e, false);
+          }
+          break;
+        }
+      }
+
+      // fetch bad file list from namenode. There should be one file.
+      badFiles = cluster.getNameNode().getNamesystem().
+        listCorruptFileBlocks("/", null);
+      LOG.info("Namenode has bad files. " + badFiles.size());
+      assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting 1.",
+          badFiles.size() == 1);
+ 
+      // restart namenode
+      cluster.restartNameNode(0);
+      fs = cluster.getFileSystem();
+
+      // wait until replication queues have been initialized
+      while (!cluster.getNameNode().namesystem.isPopulatingReplQueues()) {
+        try {
+          LOG.info("waiting for replication queues");
+          Thread.sleep(1000);
+        } catch (InterruptedException ignore) {
+        }
+      }
+
+      // read all files to trigger detection of corrupted replica
+      try {
+        util.checkFiles(fs, "/srcdat10");
+      } catch (BlockMissingException e) {
+        System.out.println("Received BlockMissingException as expected.");
+      } catch (IOException e) {
+        assertTrue("Corrupted replicas not handled properly. " +
+                   "Expecting BlockMissingException " +
+                   " but received IOException " + e, false);
+      }
+
+      // fetch bad file list from namenode. There should be one file.
+      badFiles = cluster.getNameNode().getNamesystem().
+        listCorruptFileBlocks("/", null);
+      LOG.info("Namenode has bad files. " + badFiles.size());
+      assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting 1.",
+          badFiles.size() == 1);
+
+      // check that we are still in safe mode
+      assertTrue("Namenode is not in safe mode", 
+                 cluster.getNameNode().isInSafeMode());
+
+      // now leave safe mode so that we can clean up
+      cluster.getNameNode().
+        setSafeMode(FSConstants.SafeModeAction.SAFEMODE_LEAVE);
+
+      util.cleanup(fs, "/srcdat10");
+    } catch (Exception e) {
+      LOG.error(StringUtils.stringifyException(e));
+      throw e;
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown(); 
+      }
     }
   }
   

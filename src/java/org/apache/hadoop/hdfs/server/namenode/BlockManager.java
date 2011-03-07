@@ -624,7 +624,7 @@ public class BlockManager {
     if (countNodes(storedBlock).liveReplicas() > inode.getReplication()) {
       // the block is over-replicated so invalidate the replicas immediately
       invalidateBlock(storedBlock, node);
-    } else {
+    } else if (namesystem.isPopulatingReplQueues()) {
       // add the block to neededReplication
       updateNeededReplications(storedBlock, -1, 0);
     }
@@ -1154,8 +1154,8 @@ public class BlockManager {
       return storedBlock;
     }
 
-    // do not handle mis-replicated blocks during startup
-    if (namesystem.isInSafeMode())
+    // do not handle mis-replicated blocks during start up
+    if (!namesystem.isPopulatingReplQueues())
       return storedBlock;
 
     // handle underReplication/overReplication
