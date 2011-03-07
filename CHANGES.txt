@@ -232,6 +232,11 @@ Trunk (unreleased changes)
 
     HDFS-1481. NameNode should validate fsimage before rolling. (hairong)
 
+    HDFS-1506. Refactor fsimage loading code. (hairong)
+
+    HDFS-1533. A more elegant FileSystem#listCorruptFileBlocks API
+    (HDFS portion) (Patrick Kling via hairong)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -649,6 +654,27 @@ Release 0.22.0 - Unreleased
 
     HDFS-1167. New property for local conf directory in system-test-hdfs.xml
     file. (Vinay Thota via cos)
+
+    HDFS-1503. TestSaveNamespace fails. (Todd Lipcon via cos)
+
+    HDFS-1524. Image loader should make sure to read every byte in image file.
+    (hairong)
+
+    HDFS-1523. TestLargeBlock is failing on trunk. (cos)
+
+    HDFS-1502. TestBlockRecovery triggers NPE in assert. (hairong via cos)
+
+    HDFS-1532. Exclude Findbugs warning in FSImageFormat$Saver. (Todd Lipcon
+    via cos)
+
+    HDFS-1527. SocketOutputStream.transferToFully fails for blocks >= 2GB on
+    32 bit JVM. (Patrick Kling via cos)
+
+    HDFS-1531. Clean up stack traces due to duplicate MXBean registration.
+    (Todd Lipcon via cos)
+
+    HDFS-613. TestBalancer and TestBlockTokenWithDFS fail Balancer assert.
+    (Todd Lipcon via cos)
 
 Release 0.21.1 - Unreleased
 

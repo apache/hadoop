@@ -60,7 +60,7 @@ class FSImageCompression {
   /**
    * Create a "noop" compression - i.e. uncompressed
    */
-  public static FSImageCompression createNoopCompression() {
+  static FSImageCompression createNoopCompression() {
     return new FSImageCompression();
   }
 
@@ -69,7 +69,7 @@ class FSImageCompression {
    * Configuration object.
    * @throws IOException if the specified codec is not available.
    */
-  public static FSImageCompression createCompression(Configuration conf)
+  static FSImageCompression createCompression(Configuration conf)
     throws IOException {
     boolean compressImage = conf.getBoolean(
       DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY,
@@ -107,7 +107,7 @@ class FSImageCompression {
    * @throws IOException if the specified codec is not available or the
    * underlying IO fails.
    */
-  public static FSImageCompression readCompressionHeader(
+  static FSImageCompression readCompressionHeader(
     Configuration conf,
     DataInputStream dis) throws IOException
   {
@@ -129,7 +129,7 @@ class FSImageCompression {
    * @throws IOException If the decompressor cannot be instantiated or an IO
    * error occurs.
    */
-  public DataInputStream unwrapInputStream(InputStream is) throws IOException {
+  DataInputStream unwrapInputStream(InputStream is) throws IOException {
     if (imageCodec != null) {
       return new DataInputStream(imageCodec.createInputStream(is));
     } else {
@@ -150,7 +150,7 @@ class FSImageCompression {
    * @throws IOException if an IO error occurs or the compressor cannot be
    * instantiated
    */
-  public DataOutputStream writeHeaderAndWrapStream(OutputStream os)
+  DataOutputStream writeHeaderAndWrapStream(OutputStream os)
   throws IOException {
     DataOutputStream dos = new DataOutputStream(os);
 

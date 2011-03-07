@@ -1403,8 +1403,11 @@ public class DataNode extends Configured
     try {
       ObjectName mxbeanName = new ObjectName("HadoopInfo:type=DataNodeInfo");
       mbs.registerMBean(this, mxbeanName);
+    } catch ( javax.management.InstanceAlreadyExistsException iaee ) {
+      // in unit tests, we may have multiple datanodes in the same JVM
+      LOG.info("DataNode MXBean already registered");
     } catch ( javax.management.JMException e ) {
-      LOG.warn("Failed to register NameNode MXBean", e);
+      LOG.warn("Failed to register DataNode MXBean", e);
     }
   }
   

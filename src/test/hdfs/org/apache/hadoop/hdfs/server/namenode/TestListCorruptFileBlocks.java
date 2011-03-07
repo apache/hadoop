@@ -25,13 +25,16 @@ import java.nio.channels.FileChannel;
 import java.util.Collection;
 import java.util.Random;
 
-import junit.framework.TestCase;
+import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.CorruptFileBlocks;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hdfs.BlockMissingException;
+import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -45,10 +48,11 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
  * with a block # from a previous call and validate that the subsequent
  * blocks/files are also returned.
  */
-public class TestListCorruptFileBlocks extends TestCase {
+public class TestListCorruptFileBlocks {
   static Log LOG = NameNode.stateChangeLog;
 
   /** check if nn.getCorruptFiles() returns a file that has corrupted blocks */
+  @Test
   public void testListCorruptFilesCorruptedBlock() throws Exception {
     MiniDFSCluster cluster = null;
     Random random = new Random();
@@ -120,6 +124,7 @@ public class TestListCorruptFileBlocks extends TestCase {
   }
   
   // deliberately remove blocks from a file and validate the list-corrupt-file-blocks API
+  @Test
   public void testlistCorruptFileBlocks() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong("dfs.blockreport.intervalMsec", 1000);
@@ -214,9 +219,19 @@ public class TestListCorruptFileBlocks extends TestCase {
     }
   }
 
+  private int countPaths(RemoteIterator<Path> iter) throws IOException {
+    int i = 0;
+    while (iter.hasNext()) {
+      LOG.info("PATH: " + iter.next().toUri().getPath());
+      i++;
+    }
+    return i;
+  }
+
   /**
    * test listCorruptFileBlocks in DistributedFileSystem
-   */ 
+   */
+  @Test
   public void testlistCorruptFileBlocksDFS() throws Exception {
     Configuration conf = new Configuration();
     conf.setLong("dfs.blockreport.intervalMsec", 1000);
@@ -234,9 +249,9 @@ public class TestListCorruptFileBlocks extends TestCase {
       util.createFiles(fs, "/corruptData");
 
       final NameNode namenode = cluster.getNameNode();
-      CorruptFileBlocks corruptFileBlocks = 
-        dfs.listCorruptFileBlocks("/corruptData", null);
-      int numCorrupt = corruptFileBlocks.getFiles().length;
+      RemoteIterator<Path> corruptFileBlocks = 
+        dfs.listCorruptFileBlocks(new Path("/corruptData"));
+      int numCorrupt = countPaths(corruptFileBlocks);
       assertTrue(numCorrupt == 0);
       // delete the blocks
       File baseDir = new File(System.getProperty("test.build.data",
@@ -260,12 +275,12 @@ public class TestListCorruptFileBlocks extends TestCase {
       }
 
       int count = 0;
-      corruptFileBlocks = dfs.listCorruptFileBlocks("/corruptData", null);
-      numCorrupt = corruptFileBlocks.getFiles().length;
+      corruptFileBlocks = dfs.listCorruptFileBlocks(new Path("/corruptData"));
+      numCorrupt = countPaths(corruptFileBlocks);
       while (numCorrupt < 3) {
         Thread.sleep(1000);
-        corruptFileBlocks = dfs.listCorruptFileBlocks("/corruptData", null);
-        numCorrupt = corruptFileBlocks.getFiles().length;
+        corruptFileBlocks = dfs.listCorruptFileBlocks(new Path("/corruptData"));
+        numCorrupt = countPaths(corruptFileBlocks);
         count++;
         if (count > 30)
           break;
@@ -283,7 +298,12 @@ public class TestListCorruptFileBlocks extends TestCase {
     }
   }
     
-  /** check if NN.listCorruptFiles() returns the right limit */
+  /**
+   * Test if NN.listCorruptFiles() returns the right number of results.
+   * Also, test that DFS.listCorruptFileBlocks can make multiple successive
+   * calls.
+   */
+  @Test
   public void testMaxCorruptFiles() throws Exception {
     MiniDFSCluster cluster = null;
     try {
@@ -343,6 +363,17 @@ public class TestListCorruptFileBlocks extends TestCase {
       assertTrue("Namenode has " + badFiles.size() + " bad files. Expecting " + 
           maxCorruptFileBlocks + ".",
           badFiles.size() == maxCorruptFileBlocks);
+
+      CorruptFileBlockIterator iter = (CorruptFileBlockIterator)
+        fs.listCorruptFileBlocks(new Path("/srcdat2"));
+      int corruptPaths = countPaths(iter);
+      assertTrue("Expected more than " + maxCorruptFileBlocks +
+                 " corrupt file blocks but got " + corruptPaths,
+                 corruptPaths > maxCorruptFileBlocks);
+      assertTrue("Iterator should have made more than 1 call but made " +
+                 iter.getCallsMade(),
+                 iter.getCallsMade() > 1);
+
       util.cleanup(fs, "/srcdat2");
     } finally {
       if (cluster != null) { cluster.shutdown(); }

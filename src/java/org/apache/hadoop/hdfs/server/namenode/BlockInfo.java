@@ -40,6 +40,15 @@ class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
    */
   private Object[] triplets;
 
+  /**
+   * Construct an entry for blocksmap
+   * @param replication the block's replication factor
+   */
+  protected BlockInfo(int replication) {
+    this.triplets = new Object[3*replication];
+    this.inode = null;
+  }
+  
   protected BlockInfo(Block blk, int replication) {
     super(blk);
     this.triplets = new Object[3*replication];

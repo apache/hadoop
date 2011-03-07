@@ -54,6 +54,8 @@ class BlockSender implements java.io.Closeable, FSConstants {
   /** The visible length of a replica. */
   private final long replicaVisibleLength;
 
+  private static final boolean is32Bit = System.getProperty("sun.arch.data.model").equals("32");
+
   private InputStream blockIn; // data stream
   private long blockInPosition = -1; // updated while using transferTo().
   private DataInputStream checksumIn; // checksum datastream
@@ -144,7 +146,11 @@ class BlockSender implements java.io.Closeable, FSConstants {
       this.chunkOffsetOK = chunkOffsetOK;
       this.corruptChecksumOk = corruptChecksumOk;
       this.verifyChecksum = verifyChecksum;
-      this.transferToAllowed = datanode.transferToAllowed;
+
+      // transferToFully() fails on 32 bit platforms for block sizes >= 2GB,
+      // use normal transfer in those cases
+      this.transferToAllowed = datanode.transferToAllowed &&
+        (!is32Bit || length < (long) Integer.MAX_VALUE);
       this.clientTraceFmt = clientTraceFmt;
 
       if ( !corruptChecksumOk || datanode.data.metaFileExists(block) ) {
@@ -397,6 +403,7 @@ class BlockSender implements java.io.Closeable, FSConstants {
       /* exception while writing to the client (well, with transferTo(),
        * it could also be while reading from the local file).
        */
+      LOG.error("BlockSender.sendChunks() exception: " + StringUtils.stringifyException(e));
       throw ioeToSocketException(e);
     }
 

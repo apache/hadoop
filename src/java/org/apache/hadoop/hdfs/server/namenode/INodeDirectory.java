@@ -320,7 +320,7 @@ class INodeDirectory extends INode {
   <T extends INode> T addNode(String path, T newNode, boolean inheritPermission
       ) throws FileNotFoundException, UnresolvedLinkException  {
     byte[][] pathComponents = getPathComponents(path);        
-    if(addToParent(pathComponents, newNode, null,
+    if(addToParent(pathComponents, newNode,
                     inheritPermission, true) == null)
       return null;
     return newNode;
@@ -335,35 +335,62 @@ class INodeDirectory extends INode {
    * @throws  FileNotFoundException if parent does not exist or 
    *          is not a directory.
    */
-  <T extends INode> INodeDirectory addToParent(
-                                      byte[][] pathComponents,
-                                      T newNode,
-                                      INodeDirectory parent,
-                                      boolean inheritPermission,
-                                      boolean propagateModTime
-                                    ) throws FileNotFoundException, 
-                                             UnresolvedLinkException {
+  INodeDirectory addToParent( byte[] localname,
+                              INode newNode,
+                              INodeDirectory parent,
+                              boolean inheritPermission,
+                              boolean propagateModTime
+                              ) throws FileNotFoundException, 
+                                       UnresolvedLinkException {
+    // insert into the parent children list
+    newNode.name = localname;
+    if(parent.addChild(newNode, inheritPermission, propagateModTime) == null)
+      return null;
+    return parent;
+  }
+
+  INodeDirectory getParent(byte[][] pathComponents)
+  throws FileNotFoundException, UnresolvedLinkException {
+    int pathLen = pathComponents.length;
+    if (pathLen < 2)  // add root
+      return null;
+    // Gets the parent INode
+    INode[] inodes  = new INode[2];
+    getExistingPathINodes(pathComponents, inodes, false);
+    INode inode = inodes[0];
+    if (inode == null) {
+      throw new FileNotFoundException("Parent path does not exist: "+
+          DFSUtil.byteArray2String(pathComponents));
+    }
+    if (!inode.isDirectory()) {
+      throw new FileNotFoundException("Parent path is not a directory: "+
+          DFSUtil.byteArray2String(pathComponents));
+    }
+    return (INodeDirectory)inode;
+  }
+  
+  /**
+   * Add new inode 
+   * Optimized version of addNode()
+   * 
+   * @return  parent INode if new inode is inserted
+   *          or null if it already exists.
+   * @throws  FileNotFoundException if parent does not exist or 
+   *          is not a directory.
+   */
+  INodeDirectory addToParent( byte[][] pathComponents,
+                              INode newNode,
+                              boolean inheritPermission,
+                              boolean propagateModTime
+                            ) throws FileNotFoundException, 
+                                     UnresolvedLinkException {
               
     int pathLen = pathComponents.length;
     if (pathLen < 2)  // add root
       return null;
-    if(parent == null) {
-      // Gets the parent INode
-      INode[] inodes  = new INode[2];
-      getExistingPathINodes(pathComponents, inodes, false);
-      INode inode = inodes[0];
-      if (inode == null) {
-        throw new FileNotFoundException("Parent path does not exist: "+
-            DFSUtil.byteArray2String(pathComponents));
-      }
-      if (!inode.isDirectory()) {
-        throw new FileNotFoundException("Parent path is not a directory: "+
-            DFSUtil.byteArray2String(pathComponents));
-      }
-      parent = (INodeDirectory)inode;
-    }
-    // insert into the parent children list
     newNode.name = pathComponents[pathLen-1];
+    // insert into the parent children list
+    INodeDirectory parent = getParent(pathComponents);
     if(parent.addChild(newNode, inheritPermission, propagateModTime) == null)
       return null;
     return parent;

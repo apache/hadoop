@@ -4888,10 +4888,14 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
    * @throws IOException
    */
   Collection<CorruptFileBlockInfo> listCorruptFileBlocks(String path,
-      String startBlockAfter) throws AccessControlException, IOException {
+      String startBlockAfter) throws IOException {
 
     readLock();
     try {
+    if (isInSafeMode()) {
+      throw new IOException("Cannot run listCorruptFileBlocks because " +
+                            "replication queues have not been initialized.");
+    }
     checkSuperuserPrivilege();
     long startBlockId = 0;
     // print a limited # of corrupt files per call
@@ -5186,6 +5190,9 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean, FSClusterSt
     try {
       ObjectName mxbeanName = new ObjectName("HadoopInfo:type=NameNodeInfo");
       mbs.registerMBean(this, mxbeanName);
+    } catch ( javax.management.InstanceAlreadyExistsException iaee ) {
+      // in unit tests, we may run and restart the NN within the same JVM
+      LOG.info("NameNode MXBean already registered");
     } catch ( javax.management.JMException e ) {
       LOG.warn("Failed to register NameNodeMXBean", e);
     }

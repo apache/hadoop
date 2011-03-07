@@ -231,8 +231,8 @@
       wrapped streams, too.
      -->
      <Match>
-       <Class name="org.apache.hadoop.hdfs.server.namenode.FSImageFormat$Writer" />
-       <Method name="write" />
+       <Class name="org.apache.hadoop.hdfs.server.namenode.FSImageFormat$Saver" />
+       <Method name="save" />
        <Bug pattern="OS_OPEN_STREAM" />
      </Match>
  </FindBugsFilter>

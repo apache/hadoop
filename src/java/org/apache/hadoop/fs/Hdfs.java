@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.CorruptFileBlockIterator;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -307,10 +308,9 @@ public class Hdfs extends AbstractFileSystem {
    * {@inheritDoc}
    */
   @Override
-  public CorruptFileBlocks listCorruptFileBlocks(String path,
-                                                 String cookie)
+  public RemoteIterator<Path> listCorruptFileBlocks(Path path)
     throws IOException {
-    return dfs.listCorruptFileBlocks(path, cookie);
+    return new CorruptFileBlockIterator(dfs, path);
   }
 
   @Override

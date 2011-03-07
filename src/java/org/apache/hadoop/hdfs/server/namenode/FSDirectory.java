@@ -287,39 +287,9 @@ class FSDirectory implements Closeable {
 
   }
 
-  INodeDirectory addToParent( byte[][] src,
-                              INodeDirectory parentINode,
-                              PermissionStatus permissions,
-                              Block[] blocks, 
-                              String symlink,
-                              short replication,
-                              long modificationTime,
-                              long atime,
-                              long nsQuota,
-                              long dsQuota,
-                              long preferredBlockSize,
-                              boolean propagateModTime) 
-                              throws UnresolvedLinkException {
+  INodeDirectory addToParent(byte[] src, INodeDirectory parentINode,
+      INode newNode, boolean propagateModTime) throws UnresolvedLinkException {
     // NOTE: This does not update space counts for parents
-    // create new inode
-    INode newNode;
-    if (blocks == null) {
-      if (nsQuota >= 0 || dsQuota >= 0) {
-        newNode = new INodeDirectoryWithQuota(
-            permissions, modificationTime, nsQuota, dsQuota);
-      } else {
-        newNode = new INodeDirectory(permissions, modificationTime);
-      }
-    } else  {
-      if (symlink.length() != 0) {
-        newNode = new INodeSymlink(symlink, modificationTime, atime, permissions);
-        ((INodeSymlink)newNode).setLinkValue(symlink);
-      } else {
-        newNode = new INodeFile(permissions, blocks.length, replication,
-                                modificationTime, atime, preferredBlockSize);
-      }
-    }
-    // add new node to the parent
     INodeDirectory newParent = null;
     writeLock();
     try {
@@ -332,14 +302,12 @@ class FSDirectory implements Closeable {
       }
       if(newParent == null)
         return null;
-      if(blocks != null) {
-        int nrBlocks = blocks.length;
+      if(!newNode.isDirectory() && !newNode.isLink()) {
         // Add file->block mapping
-        assert !newNode.isLink();
         INodeFile newF = (INodeFile)newNode;
-        for (int i = 0; i < nrBlocks; i++) {
-          BlockInfo blockInfo = new BlockInfo(blocks[i], newF.getReplication());
-          newF.setBlock(i, getBlockManager().addINode(blockInfo, newF));
+        BlockInfo[] blocks = newF.getBlocks();
+        for (int i = 0; i < blocks.length; i++) {
+          newF.setBlock(i, getBlockManager().addINode(blocks[i], newF));
         }
       }
     } finally {
@@ -1273,6 +1241,22 @@ class FSDirectory implements Closeable {
     readLock();
     try {
       return rootDir.getExistingPathINodes(path, true);
+    } finally {
+      readUnlock();
+    }
+  }
+  
+  /**
+   * Get the parent node of path.
+   * 
+   * @param path the path to explore
+   * @return its parent node
+   */
+  INodeDirectory getParent(byte[][] path) 
+    throws FileNotFoundException, UnresolvedLinkException {
+    readLock();
+    try {
+      return rootDir.getParent(path);
     } finally {
       readUnlock();
     }

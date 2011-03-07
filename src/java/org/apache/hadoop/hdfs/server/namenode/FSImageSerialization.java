@@ -40,11 +40,18 @@ import org.apache.hadoop.io.Writable;
 /**
  * Static utility functions for serializing various pieces of data in the correct
  * format for the FSImage file.
+ *
+ * Some members are currently public for the benefit of the Offline Image Viewer
+ * which is located outside of this package. These members should be made
+ * package-protected when the OIV is refactored.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class FSImageSerialization {
+public class FSImageSerialization {
 
+  // Static-only class
+  private FSImageSerialization() {}
+  
   /**
    * In order to reduce allocation, we reuse some static objects. However, the methods
    * in this class should be thread-safe since image-saving is multithreaded, so 
