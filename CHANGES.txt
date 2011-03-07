@@ -243,6 +243,8 @@ Trunk (unreleased changes)
     HDFS-1476. listCorruptFileBlocks should be functional while the
     name node is in safe mode. (Patrick Kling via hairong)
 
+    HDFS-1534. Fix some incorrect logs in FSDirectory. (eli)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -266,8 +268,11 @@ Trunk (unreleased changes)
     HDFS-1684. Balancer cannot start with with multiple namenodes.  (szetszwo)
 
     HDFS-1516. mvn-install is broken after 0.22 branch creation. (cos)
+
     HDFS-1360. TestBlockRecovery should bind ephemeral ports.
     (Todd Lipcon via hairong)
+
+    HDFS-1551. Fix pom templates dependency list (gkesavan)
 
 Release 0.22.0 - Unreleased
 
@@ -684,7 +689,8 @@ Release 0.22.0 - Unreleased
     HDFS-613. TestBalancer and TestBlockTokenWithDFS fail Balancer assert.
     (Todd Lipcon via cos)
 
-    HDFS-1206. TestFiHFlush fails intermittently. (cos)
+    HDFS-1511. 98 Release Audit warnings on trunk and branch-0.22.
+    (jghoman)
 
 Release 0.21.1 - Unreleased
 
@@ -721,6 +727,11 @@ Release 0.21.1 - Unreleased
 
     HDFS-1728. SecondaryNameNode.checkpointSize is in bytes but not in MB.
     (szetszwo)
+
+    HDFS-1206. TestFiHFlush fails intermittently. (cos)
+
+    HDFS-1548. Fault-injection tests are executed multiple times if invoked
+    with run-test-hdfs-fault-inject target (cos)
 
 Release 0.21.0 - 2010-08-13
 
@@ -1680,6 +1691,8 @@ Release 0.20.3 - 2011-1-5
 
     HDFS-132. Fix namenode to not report files deleted metrics for deletions
     done while replaying edits during startup. (suresh & shv)
+
+    HDFS-1406. TestCLI fails on Ubuntu with default /etc/hosts. (cos)
 
 Release 0.20.2 - Unreleased
 

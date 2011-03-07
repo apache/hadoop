@@ -486,9 +486,19 @@
   <target name="jar-test-fault-inject" depends="jar-hdfs-test-fault-inject"
           description="Make hadoop-test.jar files"/>
 
-  <target name="run-test-hdfs-fault-inject" depends="injectfaults" 
+  <target name="run-test-hdfs-fault-inject" depends="injectfaults,
+    -run-test-hdfs-fault-inject-all,
+    -run-test-hdfs-fault-inject-withtestcaseonly"
 	  description="Run full set of the unit tests with fault injection">
-    <macro-run-tests-fault-inject target.name="run-test-hdfs"
+  </target>
+  <target name="-run-test-hdfs-fault-inject-all" unless="testcase">
+    <macro-run-tests-fault-inject
+      target.name="run-test-hdfs-excluding-commit-and-smoke"
+      testcasesonly="false"/>
+  </target>
+  <target name="-run-test-hdfs-fault-inject-withtestcaseonly" if="testcase">
+    <macro-run-tests-fault-inject
+      target.name="run-test-hdfs-all-withtestcaseonly"
       testcasesonly="false"/>
   </target>
 
@@ -515,7 +525,8 @@
   <target name="run-fault-inject-with-testcaseonly" depends="injectfaults">
     <fail unless="testcase">Can't run this target without -Dtestcase setting!
     </fail>
-    <macro-run-tests-fault-inject target.name="run-test-hdfs" 
+    <macro-run-tests-fault-inject
+      target.name="run-test-hdfs-all-withtestcaseonly"
       testcasesonly="true"/>
   </target>
   <!-- ================================================================== -->
@@ -1177,6 +1188,35 @@
         <exclude name="CHANGES.txt"/>
         <exclude name="docs/"/>
         <exclude name="lib/jdiff/"/>
+        <exclude name="src/contrib/thriftfs/gen-*/" />
+        <exclude name="**/conf/*" />
+        <exclude name="webapps/**/WEB-INF/web.xml"/>
+        <exclude name="src/docs/releasenotes.html" />
+        <exclude name="src/test/hdfs/org/apache/hadoop/cli/clitest_data/" />
+        <exclude name="**/*/robots.txt" />
+        <exclude name="src/c++/libhdfs/m4/libtool.m4" />
+        <exclude name="src/c++/libhdfs/m4/lt~obsolete.m4" />
+        <exclude name="src/c++/libhdfs/m4/ltoptions.m4" />
+        <exclude name="src/c++/libhdfs/m4/ltsugar.m4" />
+        <exclude name="src/c++/libhdfs/m4/ltversion.m4" />
+        <exclude name="src/test/commit-tests" />
+        <exclude name="src/test/smoke-tests" />
+        <exclude name="src/test/all-tests" />
+        <exclude name="**/*/*.properties" />
+        <exclude name="src/c++/libhdfs/config.guess" />
+        <exclude name="src/c++/libhdfs/config.sub" />
+        <exclude name="src/c++/libhdfs/configure" />
+        <exclude name="src/c++/libhdfs/depcomp" />
+        <exclude name="src/c++/libhdfs/install-sh" />
+        <exclude name="src/c++/libhdfs/ltmain.sh" />
+        <exclude name="src/c++/libhdfs/missing" />
+        <exclude name="src/contrib/hdfsproxy/src/test/resources/" />
+        <exclude name="src/test/checkstyle-noframes-sorted.xsl" />
+        <exclude name="src/test/checkstyle.xml" />
+        <exclude name="src/test/findbugsExcludeFile.xml" />
+        <exclude name="src/docs/**/*.odg" />
+        <exclude name="**/*.tgz" />
+        <exclude name="**/*.tar" />
       </fileset>
     </rat:report>
   </target>

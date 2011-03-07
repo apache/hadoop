@@ -348,7 +348,7 @@ class FSDirectory implements Closeable {
       fileINode.addBlock(blockInfo);
 
       if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.addBlock: "
             + path + " with " + block
             + " block is added to the in-memory "
             + "file system");
@@ -417,9 +417,9 @@ class FSDirectory implements Closeable {
       // write modified block locations to log
       fsImage.getEditLog().logOpenFile(path, fileNode);
       if(NameNode.stateChangeLog.isDebugEnabled()) {
-        NameNode.stateChangeLog.debug("DIR* FSDirectory.addFile: "
+        NameNode.stateChangeLog.debug("DIR* FSDirectory.removeBlock: "
             +path+" with "+block
-            +" block is added to the file system");
+            +" block is removed from the file system");
       }
 
       // update space consumed
