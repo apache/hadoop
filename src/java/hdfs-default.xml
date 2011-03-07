@@ -344,8 +344,23 @@ creations/deletions), or "all".</description>
   <description>
     Specifies the percentage of blocks that should satisfy 
     the minimal replication requirement defined by dfs.namenode.replication.min.
-    Values less than or equal to 0 mean not to start in safe mode.
+    Values less than or equal to 0 mean not to wait for any particular
+    percentage of blocks before exiting safemode.
     Values greater than 1 will make safe mode permanent.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.safemode.min.datanodes</name>
+  <value>0</value>
+  <description>
+    Specifies the number of datanodes that must be considered alive
+    before the name node exits safemode.
+    Values less than or equal to 0 mean not to take the number of live
+    datanodes into account when deciding whether to remain in safe mode
+    during startup.
+    Values greater than the number of datanodes in the cluster
+    will make safe mode permanent.
   </description>
 </property>
 

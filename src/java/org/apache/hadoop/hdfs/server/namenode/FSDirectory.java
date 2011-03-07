@@ -453,6 +453,11 @@ class FSDirectory implements Closeable {
             +path+" with "+block
             +" block is added to the file system");
       }
+
+      // update space consumed
+      INode[] pathINodes = getExistingPathINodes(path);
+      updateCount(pathINodes, pathINodes.length-1, 0,
+          -fileNode.getPreferredBlockSize()*fileNode.getReplication(), true);
     } finally {
       writeUnlock();
     }

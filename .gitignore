@@ -18,6 +18,10 @@
 .project
 .launches/
 .settings
+*.iml
+*.ipr
+*.iws
+.idea
 .svn
 build/
 build-fi/
