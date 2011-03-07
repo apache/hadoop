@@ -2,6 +2,8 @@ Hadoop HDFS Change Log
 
 Trunk (unreleased changes)
 
+  INCOMPATIBLE CHANGES
+
   NEW FEATURES
 
     HDFS-1365. Federation: propose ClusterID and BlockPoolID format 
@@ -247,6 +249,7 @@ Trunk (unreleased changes)
 Release 0.22.0 - Unreleased
 
   NEW FEATURES
+
     HDFS-992. Re-factor block access token implementation to conform to the 
     generic Token interface in Common (Kan Zhang and Jitendra Pandey via jghoman)
 
