@@ -142,6 +142,7 @@ Release 0.90.2 - Unreleased
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
+   HBASE-3285  Hlog recovery takes too much time
 
 Release 0.90.1 - Unreleased
 

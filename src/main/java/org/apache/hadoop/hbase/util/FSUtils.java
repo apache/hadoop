@@ -43,6 +43,8 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -631,8 +633,23 @@ public class FSUtils {
     boolean recovered = false;
     while (!recovered) {
       try {
-        FSDataOutputStream out = fs.append(p);
-        out.close();
+        try {
+          if (fs instanceof DistributedFileSystem) {
+            DistributedFileSystem dfs = (DistributedFileSystem)fs;
+            DistributedFileSystem.class.getMethod("recoverLease",
+              new Class[] {Path.class}).invoke(dfs, p);
+          } else {
+            throw new Exception("Not a DistributedFileSystem");
+          }
+        } catch (InvocationTargetException ite) {
+          // function was properly called, but threw it's own exception
+          throw (IOException) ite.getCause();
+        } catch (Exception e) {
+          LOG.debug("Failed fs.recoverLease invocation, " + e.toString() +
+            ", trying fs.append instead");
+          FSDataOutputStream out = fs.append(p);
+          out.close();
+        }
         recovered = true;
       } catch (IOException e) {
         e = RemoteExceptionHandler.checkIOException(e);
@@ -646,11 +663,6 @@ public class FSUtils {
             LOG.warn("Waited " + waitedFor + "ms for lease recovery on " + p +
               ":" + e.getMessage());
           }
-          try {
-            Thread.sleep(1000);
-          } catch (InterruptedException ex) {
-            // ignore it and try again
-          }
         } else if (e instanceof LeaseExpiredException &&
             e.getMessage().contains("File does not exist")) {
           // This exception comes out instead of FNFE, fix it
@@ -660,8 +672,12 @@ public class FSUtils {
           throw new IOException("Failed to open " + p + " for append", e);
         }
       }
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException ex) {
+        new InterruptedIOException().initCause(ex);
+      }
     }
     LOG.info("Finished lease recover attempt for " + p);
   }
-
 }
