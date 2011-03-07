@@ -331,9 +331,7 @@ public class Balancer {
         IOUtils.closeSocket(sock);
         
         proxySource.removePendingBlock(this);
-        synchronized(target) {
-          target.removePendingBlock(this);
-        }
+        target.removePendingBlock(this);
 
         synchronized (this ) {
           reset();
@@ -1380,8 +1378,9 @@ public class Balancer {
    */
   static int run(List<InetSocketAddress> namenodes, final Parameters p,
       Configuration conf) throws IOException, InterruptedException {
-    final long sleeptime = 2*conf.getLong(
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3);
+    final long sleeptime = 2000*conf.getLong(
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT);
     LOG.info("namenodes = " + namenodes);
     LOG.info("p         = " + p);
     

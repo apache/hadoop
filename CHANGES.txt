@@ -680,6 +680,9 @@ Release 0.21.1 - Unreleased
     HDFS-1189. Quota counts missed between clear quota and set quota.
     (John George via szetszwo)
 
+    HDFS-1665. Balancer misuses dfs.heartbeat.interval as milliseconds.
+    (szetszwo)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
