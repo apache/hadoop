@@ -474,6 +474,9 @@ Release 0.22.0 - Unreleased
 
     HDFS-1513. Fix a number of warnings. (eli)
 
+    HDFS-1473. Refactor storage management into separate classes than fsimage
+    file reading/writing. (Todd Lipcon via eli)
+
   OPTIMIZATIONS
 
     HDFS-1140. Speedup INode.getPathComponents. (Dmytro Molkov via shv)
