@@ -94,6 +94,9 @@ Trunk (unreleased changes)
     HADOOP-7098. Tasktracker property not set in conf/hadoop-env.sh.
     (Bernd Fondermann via tomwhite)
 
+    HADOOP-7131. Exceptions thrown by Text methods should include the causing
+    exception. (Uma Maheswara Rao G via todd)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

@@ -195,7 +195,7 @@ public class Text extends BinaryComparable
       bytes = bb.array();
       length = bb.limit();
     }catch(CharacterCodingException e) {
-      throw new RuntimeException("Should not have happened " + e.toString()); 
+      throw new RuntimeException("Should not have happened ", e); 
     }
   }
 
@@ -269,7 +269,7 @@ public class Text extends BinaryComparable
     try {
       return decode(bytes, 0, length);
     } catch (CharacterCodingException e) { 
-      throw new RuntimeException("Should not have happened " + e.toString()); 
+      throw new RuntimeException("Should not have happened " , e); 
     }
   }
   
