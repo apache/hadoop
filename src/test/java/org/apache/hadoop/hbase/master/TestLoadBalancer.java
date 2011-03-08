@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.master.LoadBalancer.RegionPlan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.tools.ant.taskdefs.PathConvert.MapEntry;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
