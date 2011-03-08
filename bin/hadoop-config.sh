@@ -58,17 +58,38 @@ fi
 # Allow alternate conf dir location.
 export HADOOP_CONF_DIR="${HADOOP_CONF_DIR:-$HADOOP_HOME/conf}"
 
-#check to see it is specified whether to use the slaves or the
-# masters file
+# User can specify hostnames or a file where the hostnames are (not both)
+if [[ ( "$HADOOP_SLAVES" != '' ) && ( "$HADOOP_SLAVE_NAMES" != '' ) ]] ; then
+  echo \
+    "Error: Please specify one variable HADOOP_SLAVES or " \
+    "HADOOP_SLAVE_NAME and not both."
+  exit 1
+fi
+
+# Process command line options that specify hosts or file with host
+# list
 if [ $# -gt 1 ]
 then
     if [ "--hosts" = "$1" ]
     then
         shift
-        slavesfile=$1
+        export HADOOP_SLAVES="${HADOOP_CONF_DIR}/$$1"
         shift
-        export HADOOP_SLAVES="${HADOOP_CONF_DIR}/$slavesfile"
+    elif [ "--hostnames" = "$1" ]
+    then
+        shift
+        export HADOOP_SLAVE_NAMES=$1
+        shift
     fi
+fi
+
+# User can specify hostnames or a file where the hostnames are (not both)
+# (same check as above but now we know it's command line options that cause
+# the problem)
+if [[ ( "$HADOOP_SLAVES" != '' ) && ( "$HADOOP_SLAVE_NAMES" != '' ) ]] ; then
+  echo \
+    "Error: Please specify one of --hosts or --hostnames options and not both."
+  exit 1
 fi
 
 cygwin=false
