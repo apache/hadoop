@@ -326,6 +326,8 @@ Release 0.22.0 - Unreleased
 
     HADOOP-6970. SecurityAuth.audit should be generated under /build. (boryas)
 
+    HADOOP-7154. Should set MALLOC_ARENA_MAX in hadoop-env.sh (todd)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
