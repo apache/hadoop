@@ -406,7 +406,7 @@ public class HttpServer implements FilterContainer {
     for (Context ctx : defaultContexts.keySet()) {
       defineFilter(ctx, name, classname, parameters, ALL_URLS);
     }
-    LOG.info("Added global filter" + name + " (class=" + classname + ")");
+    LOG.info("Added global filter '" + name + "' (class=" + classname + ")");
   }
 
   /**
@@ -738,6 +738,7 @@ public class HttpServer implements FilterContainer {
           response)) {
         return;
       }
+      response.setContentType("text/plain; charset=utf-8");
 
       PrintWriter out = new PrintWriter
                     (HtmlQuoting.quoteOutputStream(response.getOutputStream()));

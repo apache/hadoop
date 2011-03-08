@@ -56,6 +56,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestHttpServer extends HttpServerFunctionalTest {
+  static final Log LOG = LogFactory.getLog(TestHttpServer.class);
   private static HttpServer server;
   private static URL baseUrl;
   private static final int MAX_THREADS = 10;
@@ -116,6 +117,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     server.addServlet("echomap", "/echomap", EchoMapServlet.class);
     server.start();
     baseUrl = getServerURL(server);
+    LOG.info("HTTP server started: "+ baseUrl);
   }
   
   @AfterClass public static void cleanup() throws Exception {
@@ -199,9 +201,6 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * 
    */
   public static class DummyServletFilter implements Filter {
-
-    private static final Log LOG = LogFactory.getLog(
-        DummyServletFilter.class);
     @Override
     public void destroy() { }
 
