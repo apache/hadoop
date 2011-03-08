@@ -345,6 +345,9 @@ Release 0.22.0 - Unreleased
     HADOOP-6496. HttpServer sends wrong content-type for CSS files
     (and others). (Todd Lipcon via tomwhite)
 
+    HADOOP-7057. IOUtils.readFully and IOUtils.skipFully have typo in
+    exception creation's message. (cos)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
