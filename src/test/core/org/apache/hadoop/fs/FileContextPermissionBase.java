@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -25,6 +26,7 @@ import java.util.StringTokenizer;
 import junit.framework.Assert;
 
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.After;
@@ -32,6 +34,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * <p>
@@ -161,6 +164,22 @@ public abstract class FileContextPermissionBase {
       }
     } 
     finally {cleanupFile(fc, f);}
+  }
+  
+  @Test
+  public void testUgi() throws IOException, InterruptedException {
+    
+    UserGroupInformation otherUser = UserGroupInformation
+        .createRemoteUser("otherUser");
+    FileContext newFc = otherUser.doAs(new PrivilegedExceptionAction<FileContext>() {
+
+      public FileContext run() throws Exception {
+        FileContext newFc = FileContext.getFileContext();
+        return newFc;
+      }
+      
+    });
+    assertEquals("otherUser",newFc.getUgi().getUserName());
   }
 
   static List<String> getGroups() throws IOException {
