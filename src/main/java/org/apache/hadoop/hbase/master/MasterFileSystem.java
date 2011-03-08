@@ -231,7 +231,15 @@ public class MasterFileSystem {
     // Filesystem is good. Go ahead and check for hbase.rootdir.
     if (!fs.exists(rd)) {
       fs.mkdirs(rd);
-      FSUtils.setVersion(fs, rd);
+      // DFS leaves safe mode with 0 DNs when there are 0 blocks.
+      // We used to handle this by checking the current DN count and waiting until
+      // it is nonzero. With security, the check for datanode count doesn't work --
+      // it is a privileged op. So instead we adopt the strategy of the jobtracker
+      // and simply retry file creation during bootstrap indefinitely. As soon as
+      // there is one datanode it will succeed. Permission problems should have
+      // already been caught by mkdirs above.
+      FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000));
     } else {
       FSUtils.checkVersion(fs, rd, true);
     }

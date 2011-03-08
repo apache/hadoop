@@ -60,6 +60,8 @@ Release 0.91.0 - Unreleased
    HBASE-3605  Fix balancer log message
    HBASE-3603  Remove -XX:+HeapDumpOnOutOfMemoryError autodump of heap option
                on OOME
+   HBASE-1960  Master should wait for DFS to come up when creating
+               hbase.version; use alternate strategy for waiting for DNs
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

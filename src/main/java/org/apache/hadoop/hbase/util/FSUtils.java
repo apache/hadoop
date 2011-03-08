@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.util.StringUtils;
 
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -207,7 +208,20 @@ public class FSUtils {
    */
   public static void setVersion(FileSystem fs, Path rootdir)
   throws IOException {
-    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION);
+    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, 0);
+  }
+
+  /**
+   * Sets version of file system
+   *
+   * @param fs filesystem object
+   * @param rootdir hbase root
+   * @param wait time to wait for retry
+   * @throws IOException e
+   */
+  public static void setVersion(FileSystem fs, Path rootdir, int wait)
+  throws IOException {
+    setVersion(fs, rootdir, HConstants.FILE_SYSTEM_VERSION, wait);
   }
 
   /**
@@ -216,15 +230,33 @@ public class FSUtils {
    * @param fs filesystem object
    * @param rootdir hbase root directory
    * @param version version to set
+   * @param wait time to wait for retry
    * @throws IOException e
    */
-  public static void setVersion(FileSystem fs, Path rootdir, String version)
-  throws IOException {
-    FSDataOutputStream s =
-      fs.create(new Path(rootdir, HConstants.VERSION_FILE_NAME));
-    s.writeUTF(version);
-    s.close();
-    LOG.debug("Created version file at " + rootdir.toString() + " set its version at:" + version);
+  public static void setVersion(FileSystem fs, Path rootdir, String version,
+      int wait) throws IOException {
+    while (true) try {
+      FSDataOutputStream s =
+        fs.create(new Path(rootdir, HConstants.VERSION_FILE_NAME));
+      s.writeUTF(version);
+      s.close();
+      LOG.debug("Created version file at " + rootdir.toString() +
+        " set its version at:" + version);
+      return;
+    } catch (IOException e) {
+      if (wait > 0) {
+        LOG.warn("Unable to create version file at " + rootdir.toString() +
+          ", retrying: " + StringUtils.stringifyException(e));
+        try {
+          Thread.sleep(wait);
+        } catch (InterruptedException ex) {
+          // ignore
+        }
+      } else {
+        // rethrow
+        throw e;
+      }
+    }
   }
 
   /**
@@ -262,22 +294,6 @@ public class FSUtils {
     FileSystem fs = FileSystem.get(conf);
     if (!(fs instanceof DistributedFileSystem)) return;
     DistributedFileSystem dfs = (DistributedFileSystem)fs;
-    // Are there any data nodes up yet?
-    // Currently the safe mode check falls through if the namenode is up but no
-    // datanodes have reported in yet.
-    try {
-      while (dfs.getDataNodeStats().length == 0) {
-        LOG.info("Waiting for dfs to come up...");
-        try {
-          Thread.sleep(wait);
-        } catch (InterruptedException e) {
-          //continue
-        }
-      }
-    } catch (IOException e) {
-      // getDataNodeStats can fail if superuser privilege is required to run
-      // the datanode report, just ignore it
-    }
     // Make sure dfs is not in safe mode
     while (dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_GET)) {
       LOG.info("Waiting for dfs to exit safe mode...");
