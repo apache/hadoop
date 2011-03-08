@@ -732,16 +732,13 @@ public class HttpServer implements FilterContainer {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response)
       throws ServletException, IOException {
-
+      response.setContentType("text/plain; charset=UTF-8");
       // Do the authorization
       if (!HttpServer.hasAdministratorAccess(getServletContext(), request,
           response)) {
         return;
       }
-      response.setContentType("text/plain; charset=utf-8");
-
-      PrintWriter out = new PrintWriter
-                    (HtmlQuoting.quoteOutputStream(response.getOutputStream()));
+      PrintWriter out = response.getWriter();
       ReflectionUtils.printThreadInfo(out, "");
       out.close();
       ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);      
