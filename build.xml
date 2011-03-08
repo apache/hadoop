@@ -1575,6 +1575,7 @@
         <output path="${build.dir.eclipse-main-classes}" />
         <library pathref="ivy-common.classpath" exported="true" />
         <library pathref="ivy-test.classpath" exported="false" />
+        <variable path="ANT_HOME/lib/ant.jar" exported="false" />
         <library path="${conf.dir}" exported="false" />
       </classpath>
     </eclipse>
