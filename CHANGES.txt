@@ -291,6 +291,9 @@ Trunk (unreleased changes)
     HADOOP-6663.  BlockDecompressorStream get EOF exception when decompressing
     the file compressed from empty file.  (Kang Xiao via tomwhite)
 
+    HADOOP-6991.  Fix SequenceFile::Reader to honor file lengths and call
+    openFile (cdouglas via omalley)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
