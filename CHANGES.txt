@@ -144,6 +144,8 @@ Trunk (unreleased changes)
     HADOOP-6987. Use JUnit Rule to optionally fail test cases that run more
     than 10 seconds (jghoman)
 
+    HADOOP-7005. Update test-patch.sh to remove callback to Hudson. (nigel)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
