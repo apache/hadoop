@@ -308,6 +308,9 @@ Trunk (unreleased changes)
     HADOOP-6975.  Integer overflow in S3InputStream for blocks > 2GB.
     (Patrick Kling via tomwhite)
 
+    HADOOP-6758. MapFile.fix does not allow index interval definition.
+    (Gianmarco De Francisci Morales via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
