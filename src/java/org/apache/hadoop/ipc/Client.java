@@ -1281,7 +1281,7 @@ public class Client {
                   + protocol.getCanonicalName());
         }
         String princ =  SecurityUtil.getServerPrincipal(conf.get(serverKey), address
-            .getAddress().getCanonicalHostName());
+            .getAddress());
         return princ;
       }
       return null;

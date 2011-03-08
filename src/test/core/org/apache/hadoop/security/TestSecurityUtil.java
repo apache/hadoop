@@ -18,14 +18,16 @@ package org.apache.hadoop.security;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.net.InetAddress;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 public class TestSecurityUtil {
   @Test
@@ -50,28 +52,47 @@ public class TestSecurityUtil {
   
   private void verify(String original, String hostname, String expected)
       throws IOException {
-    assertTrue(SecurityUtil.getServerPrincipal(original, hostname).equals(
-        expected));
-    assertTrue(SecurityUtil.getServerPrincipal(original, null).equals(
-        expected));
-    assertTrue(SecurityUtil.getServerPrincipal(original, "").equals(
-        expected));
-    assertTrue(SecurityUtil.getServerPrincipal(original, "0.0.0.0").equals(
-        expected));
+    assertEquals(expected,
+                 SecurityUtil.getServerPrincipal(original, hostname));
+
+    InetAddress addr = mockAddr(hostname);
+    assertEquals(expected,
+                 SecurityUtil.getServerPrincipal(original, addr));
   }
 
+  private InetAddress mockAddr(String reverseTo) {
+    InetAddress mock = Mockito.mock(InetAddress.class);
+    Mockito.doReturn(reverseTo).when(mock).getCanonicalHostName();
+    return mock;
+  }
+  
   @Test
   public void testGetServerPrincipal() throws IOException {
     String service = "hdfs/";
     String realm = "@REALM";
-    String hostname = SecurityUtil.getLocalHostName();
+    String hostname = "foohost";
+    String userPrincipal = "foo@FOOREALM";
     String shouldReplace = service + SecurityUtil.HOSTNAME_PATTERN + realm;
     String replaced = service + hostname + realm;
     verify(shouldReplace, hostname, replaced);
     String shouldNotReplace = service + SecurityUtil.HOSTNAME_PATTERN + "NAME"
         + realm;
     verify(shouldNotReplace, hostname, shouldNotReplace);
-    verify(shouldNotReplace, shouldNotReplace, shouldNotReplace);
+    verify(userPrincipal, hostname, userPrincipal);
+    // testing reverse DNS lookup doesn't happen
+    InetAddress notUsed = Mockito.mock(InetAddress.class);
+    assertEquals(shouldNotReplace,
+                 SecurityUtil.getServerPrincipal(shouldNotReplace, notUsed));
+    Mockito.verify(notUsed, Mockito.never()).getCanonicalHostName();
+  }
+
+  @Test
+  public void testLocalHostNameForNullOrWild() throws Exception {
+    String local = SecurityUtil.getLocalHostName();
+    assertEquals("hdfs/" + local + "@REALM",
+                 SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", (String)null));
+    assertEquals("hdfs/" + local + "@REALM",
+                 SecurityUtil.getServerPrincipal("hdfs/_HOST@REALM", "0.0.0.0"));
   }
   
   @Test
