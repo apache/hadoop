@@ -182,6 +182,8 @@ Trunk (unreleased changes)
 
     HADOOP-7032. Assert type constraints in the FileStatus constructor. (eli)
 
+    HADOOP-6562. FileContextSymlinkBaseTest should use FileContextTestHelper. (eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
