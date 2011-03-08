@@ -96,7 +96,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   
   @After
   public void tearDown() throws Exception {
-    fc.delete(getTestRootPath(fc, "test"), true);
+    fc.delete(new Path(getAbsoluteTestRootPath(fc), new Path("test")), true);
     fc.delete(new Path(LOCAL_FS_ROOT_URI), true);
   }
   
@@ -130,7 +130,7 @@ public abstract class FileContextMainOperationsBaseTest  {
   public void testWorkingDirectory() throws Exception {
 
     // First we cd to our test root
-    Path workDir = new Path(getTestRootDir(fc), new Path("test"));
+    Path workDir = new Path(getAbsoluteTestRootPath(fc), new Path("test"));
     fc.setWorkingDirectory(workDir);
     Assert.assertEquals(workDir, fc.getWorkingDirectory());
 
@@ -143,7 +143,7 @@ public abstract class FileContextMainOperationsBaseTest  {
     // cd using a relative path
 
     // Go back to our test root
-    workDir = getTestRootPath(fc, "test");
+    workDir = new Path(getAbsoluteTestRootPath(fc), new Path("test"));
     fc.setWorkingDirectory(workDir);
     Assert.assertEquals(workDir, fc.getWorkingDirectory());
     
@@ -162,6 +162,11 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path absolutePath = new Path(absoluteDir, "foo");
     fc.create(absolutePath, EnumSet.of(CreateFlag.CREATE)).close();
     fc.open(new Path("foo")).close();
+    
+    
+    // Now mkdir relative to the dir we cd'ed to
+    fc.mkdir(new Path("newDir"), FileContext.DEFAULT_PERM, true);
+    Assert.assertTrue(isDir(fc, new Path(absoluteDir, "newDir")));
 
     absoluteDir = getTestRootPath(fc, "nonexistingPath");
     try {

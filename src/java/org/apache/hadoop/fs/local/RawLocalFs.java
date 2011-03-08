@@ -62,22 +62,22 @@ public class RawLocalFs extends DelegateToFileSystem {
   }
   
   @Override
-  protected int getUriDefaultPort() {
+  public int getUriDefaultPort() {
     return -1; // No default port for file:///
   }
   
   @Override
-  protected FsServerDefaults getServerDefaults() throws IOException {
+  public FsServerDefaults getServerDefaults() throws IOException {
     return LocalConfigKeys.getServerDefaults();
   }
   
   @Override
-  protected boolean supportsSymlinks() {
+  public boolean supportsSymlinks() {
     return true;
   }  
   
   @Override
-  protected void createSymlink(Path target, Path link, boolean createParent) 
+  public void createSymlink(Path target, Path link, boolean createParent) 
       throws IOException {
     final String targetScheme = target.toUri().getScheme();
     if (targetScheme != null && !"file".equals(targetScheme)) {
@@ -123,7 +123,7 @@ public class RawLocalFs extends DelegateToFileSystem {
    * the object the link refers to.
    */
   @Override
-  protected FileStatus getFileLinkStatus(final Path f) throws IOException {
+  public FileStatus getFileLinkStatus(final Path f) throws IOException {
     String target = readLink(f);
     try {
       FileStatus fs = getFileStatus(f);
@@ -160,7 +160,7 @@ public class RawLocalFs extends DelegateToFileSystem {
   }
   
   @Override
-  protected Path getLinkTarget(Path f) throws IOException {
+  public Path getLinkTarget(Path f) throws IOException {
     /* We should never get here. Valid local links are resolved transparently
      * by the underlying local file system and accessing a dangling link will 
      * result in an IOException, not an UnresolvedLinkException, so FileContext

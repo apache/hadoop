@@ -52,12 +52,12 @@ public class FtpFs extends DelegateToFileSystem {
   }
   
   @Override
-  protected int getUriDefaultPort() {
+  public int getUriDefaultPort() {
     return FTP.DEFAULT_PORT;
   }
   
   @Override
-  protected FsServerDefaults getServerDefaults() throws IOException {
+  public FsServerDefaults getServerDefaults() throws IOException {
     return FtpConfigKeys.getServerDefaults();
   }
 }

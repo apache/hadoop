@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -334,7 +333,7 @@ public final class FileContext {
    * @param aConf
    * @return new FileContext with specifed FS as default.
    */
-  protected static FileContext getFileContext(final AbstractFileSystem defFS,
+  public static FileContext getFileContext(final AbstractFileSystem defFS,
                     final Configuration aConf) {
     return new FileContext(defFS, FsPermission.getUMask(aConf), aConf);
   }
@@ -454,21 +453,33 @@ public final class FileContext {
   @InterfaceAudience.Private
   @InterfaceStability.Unstable /* return type will change to AFS once
                                   HADOOP-6223 is completed */
-  protected AbstractFileSystem getDefaultFileSystem() {
+  public AbstractFileSystem getDefaultFileSystem() {
     return defaultFS;
   }
   
   /**
-   * Set the working directory for wd-relative names (such a "foo/bar").
-   * @param newWDir
-   * @throws IOException
+   * Set the working directory for wd-relative names (such a "foo/bar"). Working
+   * directory feature is provided by simply prefixing relative names with the
+   * working dir. Note this is different from Unix where the wd is actually set
+   * to the inode. Hence setWorkingDir does not follow symlinks etc. This works
+   * better in a distributed environment that has multiple independent roots.
+   * {@link #getWorkingDirectory()} should return what setWorkingDir() set.
    * 
-   * newWdir can be one of 
-   *     - relative path:  "foo/bar";
-   *     - absolute without scheme: "/foo/bar"
-   *     - fully qualified with scheme: "xx://auth/foo/bar"
-   *  Illegal WDs:
-   *      - relative with scheme: "xx:foo/bar" 
+   * @param newWDir new working directory
+   * @throws IOException 
+   * <br>
+   *           NewWdir can be one of:
+   *           <ul>
+   *           <li>relative path: "foo/bar";</li>
+   *           <li>absolute without scheme: "/foo/bar"</li>
+   *           <li>fully qualified with scheme: "xx://auth/foo/bar"</li>
+   *           </ul>
+   * <br>
+   *           Illegal WDs:
+   *           <ul>
+   *           <li>relative with scheme: "xx:foo/bar"</li>
+   *           <li>non existent directory</li>
+   *           </ul>
    */
   public void setWorkingDirectory(final Path newWDir) throws IOException {
     checkNotSchemeWithRelative(newWDir);
@@ -476,7 +487,7 @@ public final class FileContext {
      * path is not relative first since resolve requires and returns 
      * an absolute path.
      */  
-    final Path newWorkingDir = resolve(new Path(workingDir, newWDir));
+    final Path newWorkingDir = new Path(workingDir, newWDir);
     FileStatus status = getFileStatus(newWorkingDir);
     if (status.isFile()) {
       throw new FileNotFoundException("Cannot setWD to a file");

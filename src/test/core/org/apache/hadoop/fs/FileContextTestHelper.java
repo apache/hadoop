@@ -17,23 +17,24 @@
  */
 package org.apache.hadoop.fs;
 
-import java.io.BufferedReader;
+
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.FileNotFoundException;
-import java.io.InputStreamReader;
 import java.util.EnumSet;
 
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.CreateOpts.BlockSize;
 import org.apache.hadoop.io.IOUtils;
+import org.junit.Assert;
 
 /**
  * Helper class for unit tests.
  */
 public final class FileContextTestHelper {
-  private static final String TEST_ROOT_DIR = System.getProperty("test.build.data",
-      "build/test/data") + "/test";
+  // The test root is relative to the <wd>/build/test/data by default
+  public static final String TEST_ROOT_DIR = 
+    System.getProperty("test.build.data", "build/test/data") + "/test";
   private static final int DEFAULT_BLOCK_SIZE = 1024;
   private static final int DEFAULT_NUM_BLOCKS = 2;
   private static String absTestRootDir = null;
@@ -61,20 +62,24 @@ public final class FileContextTestHelper {
     return fc.makeQualified(new Path(TEST_ROOT_DIR, pathString));
   }
   
+  
+  // the getAbsolutexxx method is needed because the root test dir
+  // can be messed up by changing the working dir.
+
   public static String getAbsoluteTestRootDir(FileContext fc)
       throws IOException {
     if (absTestRootDir == null) {
       if (TEST_ROOT_DIR.startsWith("/")) {
         absTestRootDir = TEST_ROOT_DIR;
       } else {
-        absTestRootDir = getDefaultWorkingDirectory(fc).toString() + "/"
+        absTestRootDir = fc.getWorkingDirectory().toString() + "/"
             + TEST_ROOT_DIR;
       }
     }
     return absTestRootDir;
   }
   
-  public static Path getTestRootDir(FileContext fc) throws IOException {
+  public static Path getAbsoluteTestRootPath(FileContext fc) throws IOException {
     return fc.makeQualified(new Path(getAbsoluteTestRootDir(fc)));
   }
 
@@ -117,6 +122,11 @@ public final class FileContextTestHelper {
     return path;
   }
   
+  public static void createFileNonRecursive(FileContext fc, String name)
+  throws IOException {
+    Path path = getTestRootPath(fc, name);
+    createFileNonRecursive(fc, path);
+  }
   public static void createFileNonRecursive(FileContext fc, Path path)
       throws IOException {
     createFile(fc, path, DEFAULT_NUM_BLOCKS, CreateOpts.donotCreateParent());
@@ -150,18 +160,71 @@ public final class FileContextTestHelper {
     }
   }
   
-  public static void writeFile(FileContext fc, Path path,byte b[]) throws Exception {
+  public static void writeFile(FileContext fc, Path path, byte b[])
+      throws Exception {
     FSDataOutputStream out = 
       fc.create(path,EnumSet.of(CreateFlag.CREATE), CreateOpts.createParent());
     out.write(b);
     out.close();
   }
   
-  public static byte[] readFile(FileContext fc, Path path, int len ) throws Exception {
+  public static byte[] readFile(FileContext fc, Path path, int len)
+      throws Exception {
     DataInputStream dis = fc.open(path);
     byte[] buffer = new byte[len];
     IOUtils.readFully(dis, buffer, 0, len);
     dis.close();
     return buffer;
+  }
+  public static FileStatus containsPath(FileContext fc, Path path,
+      FileStatus[] dirList)
+    throws IOException {
+    return containsPath(getTestRootPath(fc, path.toString()), dirList);
+  }
+  
+  public static FileStatus containsPath(Path path,
+      FileStatus[] dirList)
+    throws IOException {
+    for(int i = 0; i < dirList.length; i ++) { 
+      if (path.equals(dirList[i].getPath()))
+        return dirList[i];
+      }
+    return null;
+  }
+  
+  public static FileStatus containsPath(FileContext fc, String path,
+      FileStatus[] dirList)
+     throws IOException {
+    return containsPath(fc, new Path(path), dirList);
+  }
+  
+  public static enum fileType {isDir, isFile, isSymlink};
+  
+  public static void checkFileStatus(FileContext aFc, String path,
+      fileType expectedType) throws IOException {
+    FileStatus s = aFc.getFileStatus(new Path(path));
+    Assert.assertNotNull(s);
+    if (expectedType == fileType.isDir) {
+      Assert.assertTrue(s.isDirectory());
+    } else if (expectedType == fileType.isFile) {
+      Assert.assertTrue(s.isFile());
+    } else if (expectedType == fileType.isSymlink) {
+      Assert.assertTrue(s.isSymlink());
+    }
+    Assert.assertEquals(aFc.makeQualified(new Path(path)), s.getPath());
+  }
+  
+  public static void checkFileLinkStatus(FileContext aFc, String path,
+      fileType expectedType) throws IOException {
+    FileStatus s = aFc.getFileLinkStatus(new Path(path));
+    Assert.assertNotNull(s);
+    if (expectedType == fileType.isDir) {
+      Assert.assertTrue(s.isDirectory());
+    } else if (expectedType == fileType.isFile) {
+      Assert.assertTrue(s.isFile());
+    } else if (expectedType == fileType.isSymlink) {
+      Assert.assertTrue(s.isSymlink());
+    }
+    Assert.assertEquals(aFc.makeQualified(new Path(path)), s.getPath());
   }
 }

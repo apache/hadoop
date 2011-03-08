@@ -176,6 +176,10 @@ Trunk (unreleased changes)
     HADOOP-7024. Create a test method for adding file systems during tests.
     (Kan Zhang via jghoman)
 
+    HADOOP-6903 Make AbstractFSileSystem methods and some FileContext methods to be public
+    (Sanjay Radia via Sanjay Radia)
+
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

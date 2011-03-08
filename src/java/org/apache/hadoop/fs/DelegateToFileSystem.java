@@ -50,13 +50,13 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   }
 
   @Override
-  protected Path getInitialWorkingDirectory() {
+  public Path getInitialWorkingDirectory() {
     return fsImpl.getInitialWorkingDirectory();
   }
   
   @Override
   @SuppressWarnings("deprecation") // call to primitiveCreate
-  protected FSDataOutputStream createInternal (Path f,
+  public FSDataOutputStream createInternal (Path f,
       EnumSet<CreateFlag> flag, FsPermission absolutePermission, int bufferSize,
       short replication, long blockSize, Progressable progress,
       int bytesPerChecksum, boolean createParent) throws IOException {
@@ -83,59 +83,59 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   }
 
   @Override
-  protected boolean delete(Path f, boolean recursive) throws IOException {
+  public boolean delete(Path f, boolean recursive) throws IOException {
     checkPath(f);
     return fsImpl.delete(f, recursive);
   }
 
   @Override
-  protected BlockLocation[] getFileBlockLocations(Path f, long start, long len)
+  public BlockLocation[] getFileBlockLocations(Path f, long start, long len)
       throws IOException {
     checkPath(f);
     return fsImpl.getFileBlockLocations(f, start, len);
   }
 
   @Override
-  protected FileChecksum getFileChecksum(Path f) throws IOException {
+  public FileChecksum getFileChecksum(Path f) throws IOException {
     checkPath(f);
     return fsImpl.getFileChecksum(f);
   }
 
   @Override
-  protected FileStatus getFileStatus(Path f) throws IOException {
+  public FileStatus getFileStatus(Path f) throws IOException {
     checkPath(f);
     return fsImpl.getFileStatus(f);
   }
 
   @Override
-  protected FileStatus getFileLinkStatus(final Path f) throws IOException {
+  public FileStatus getFileLinkStatus(final Path f) throws IOException {
     return getFileStatus(f);
   }
 
   @Override
-  protected FsStatus getFsStatus() throws IOException {
+  public FsStatus getFsStatus() throws IOException {
     return fsImpl.getStatus();
   }
 
   @Override
-  protected FsServerDefaults getServerDefaults() throws IOException {
+  public FsServerDefaults getServerDefaults() throws IOException {
     return fsImpl.getServerDefaults();
   }
 
   @Override
-  protected int getUriDefaultPort() {
+  public int getUriDefaultPort() {
     return 0;
   }
 
   @Override
-  protected FileStatus[] listStatus(Path f) throws IOException {
+  public FileStatus[] listStatus(Path f) throws IOException {
     checkPath(f);
     return fsImpl.listStatus(f);
   }
 
   @Override
   @SuppressWarnings("deprecation") // call to primitiveMkdir
-  protected void mkdir(Path dir, FsPermission permission, boolean createParent)
+  public void mkdir(Path dir, FsPermission permission, boolean createParent)
       throws IOException {
     checkPath(dir);
     fsImpl.primitiveMkdir(dir, permission, createParent);
@@ -143,64 +143,64 @@ public abstract class DelegateToFileSystem extends AbstractFileSystem {
   }
 
   @Override
-  protected FSDataInputStream open(Path f, int bufferSize) throws IOException {
+  public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     checkPath(f);
     return fsImpl.open(f, bufferSize);
   }
 
   @Override
   @SuppressWarnings("deprecation") // call to rename
-  protected void renameInternal(Path src, Path dst) throws IOException {
+  public void renameInternal(Path src, Path dst) throws IOException {
     checkPath(src);
     checkPath(dst);
     fsImpl.rename(src, dst, Options.Rename.NONE);
   }
 
   @Override
-  protected void setOwner(Path f, String username, String groupname)
+  public void setOwner(Path f, String username, String groupname)
       throws IOException {
     checkPath(f);
     fsImpl.setOwner(f, username, groupname);
   }
 
   @Override
-  protected void setPermission(Path f, FsPermission permission)
+  public void setPermission(Path f, FsPermission permission)
       throws IOException {
     checkPath(f);
     fsImpl.setPermission(f, permission);
   }
 
   @Override
-  protected boolean setReplication(Path f, short replication)
+  public boolean setReplication(Path f, short replication)
       throws IOException {
     checkPath(f);
     return fsImpl.setReplication(f, replication);
   }
 
   @Override
-  protected void setTimes(Path f, long mtime, long atime) throws IOException {
+  public void setTimes(Path f, long mtime, long atime) throws IOException {
     checkPath(f);
     fsImpl.setTimes(f, mtime, atime);
   }
 
   @Override
-  protected void setVerifyChecksum(boolean verifyChecksum) throws IOException {
+  public void setVerifyChecksum(boolean verifyChecksum) throws IOException {
     fsImpl.setVerifyChecksum(verifyChecksum);
   }
 
   @Override
-  protected boolean supportsSymlinks() {
+  public boolean supportsSymlinks() {
     return false;
   }  
   
   @Override
-  protected void createSymlink(Path target, Path link, boolean createParent) 
+  public void createSymlink(Path target, Path link, boolean createParent) 
       throws IOException { 
     throw new IOException("File system does not support symlinks");
   } 
   
   @Override
-  protected Path getLinkTarget(final Path f) throws IOException {
+  public Path getLinkTarget(final Path f) throws IOException {
     /* We should never get here. Any file system that threw an 
      * UnresolvedLinkException, causing this function to be called,
      * should override getLinkTarget. 

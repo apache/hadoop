@@ -68,7 +68,7 @@ public abstract class FileContextPermissionBase {
     }
   }
   
-  static FileContext fc;
+  protected static FileContext fc;
 
   @Before
   public void setUp() throws Exception {
