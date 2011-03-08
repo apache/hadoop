@@ -184,7 +184,7 @@ public class TestAvroRpc extends TestCase {
         (AvroSpecificTestProtocol)RPC.getProxy(AvroSpecificTestProtocol.class, 
             0, addr, conf);
       
-      Utf8 echo = proxy.echo(new Utf8("hello world"));
+      CharSequence echo = proxy.echo("hello world");
       assertEquals("hello world", echo.toString());
 
       int intResult = proxy.add(1, 2);
@@ -204,7 +204,7 @@ public class TestAvroRpc extends TestCase {
     }
 
     @Override
-    public Utf8 echo(Utf8 msg) throws AvroRemoteException {
+    public CharSequence echo(CharSequence msg) throws AvroRemoteException {
       return msg;
     }
     
