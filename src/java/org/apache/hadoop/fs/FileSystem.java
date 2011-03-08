@@ -214,7 +214,7 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
-   * Get the local file syste
+   * Get the local file system.
    * @param conf the configuration to configure the file system with
    * @return a LocalFileSystem
    */
