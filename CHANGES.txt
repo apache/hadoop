@@ -43,6 +43,9 @@ Trunk (unreleased changes)
     HADOOP-6854. Options.createOpts should provide API to access Progress.
     (Krishna Ramachandran via jitendra)
 
+    HADOOP-7013. Add boolean field isCorrupt to BlockLocation. 
+    (Patrick Kling via hairong)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 

@@ -50,6 +50,7 @@ public class BlockLocation implements Writable {
   private String[] topologyPaths; // full path name in network topology
   private long offset;  //offset of the of the block in the file
   private long length;
+  private boolean corrupt;
 
   /**
    * Default Constructor
@@ -63,6 +64,14 @@ public class BlockLocation implements Writable {
    */
   public BlockLocation(String[] names, String[] hosts, long offset, 
                        long length) {
+    this(names, hosts, offset, length, false);
+  }
+
+  /**
+   * Constructor with host, name, offset, length and corrupt flag
+   */
+  public BlockLocation(String[] names, String[] hosts, long offset, 
+                       long length, boolean corrupt) {
     if (names == null) {
       this.names = new String[0];
     } else {
@@ -76,6 +85,7 @@ public class BlockLocation implements Writable {
     this.offset = offset;
     this.length = length;
     this.topologyPaths = new String[0];
+    this.corrupt = corrupt;
   }
 
   /**
@@ -83,7 +93,16 @@ public class BlockLocation implements Writable {
    */
   public BlockLocation(String[] names, String[] hosts, String[] topologyPaths,
                        long offset, long length) {
-    this(names, hosts, offset, length);
+    this(names, hosts, topologyPaths, offset, length, false);
+  }
+
+  /**
+   * Constructor with host, name, network topology, offset, length 
+   * and corrupt flag
+   */
+  public BlockLocation(String[] names, String[] hosts, String[] topologyPaths,
+                       long offset, long length, boolean corrupt) {
+    this(names, hosts, offset, length, corrupt);
     if (topologyPaths == null) {
       this.topologyPaths = new String[0];
     } else {
@@ -138,7 +157,14 @@ public class BlockLocation implements Writable {
   public long getLength() {
     return length;
   }
-  
+
+  /**
+   * Get the corrupt flag.
+   */
+  public boolean isCorrupt() {
+    return corrupt;
+  }
+
   /**
    * Set the start offset of file associated with this block
    */
@@ -151,6 +177,13 @@ public class BlockLocation implements Writable {
    */
   public void setLength(long length) {
     this.length = length;
+  }
+
+  /**
+   * Set the corrupt flag.
+   */
+  public void setCorrupt(boolean corrupt) {
+    this.corrupt = corrupt;
   }
 
   /**
@@ -192,6 +225,7 @@ public class BlockLocation implements Writable {
   public void write(DataOutput out) throws IOException {
     out.writeLong(offset);
     out.writeLong(length);
+    out.writeBoolean(corrupt);
     out.writeInt(names.length);
     for (int i=0; i < names.length; i++) {
       Text name = new Text(names[i]);
@@ -215,6 +249,7 @@ public class BlockLocation implements Writable {
   public void readFields(DataInput in) throws IOException {
     this.offset = in.readLong();
     this.length = in.readLong();
+    this.corrupt = in.readBoolean();
     int numNames = in.readInt();
     this.names = new String[numNames];
     for (int i = 0; i < numNames; i++) {
@@ -245,6 +280,9 @@ public class BlockLocation implements Writable {
     result.append(offset);
     result.append(',');
     result.append(length);
+    if (corrupt) {
+      result.append("(corrupt)");
+    }
     for(String h: hosts) {
       result.append(',');
       result.append(h);
