@@ -146,6 +146,9 @@ Trunk (unreleased changes)
 
     HADOOP-7005. Update test-patch.sh to remove callback to Hudson. (nigel)
 
+    HADOOP-6985. Suggest that HADOOP_OPTS be preserved in
+    hadoop-env.sh.template. (Ramkumar Vadali via cutting)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
