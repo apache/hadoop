@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import static org.apache.hadoop.hdfs.server.common.Util.now;
 import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.common.Storage;
-import org.apache.hadoop.hdfs.server.namenode.FSEditLog.Ops;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
@@ -122,11 +121,12 @@ public class FSEditLogLoader {
         long mtime = 0;
         long atime = 0;
         long blockSize = 0;
-        byte opcode = -1;
+        FSEditLogOpCodes opCode;
         try {
           in.mark(1);
-          opcode = in.readByte();
-          if (opcode == Ops.OP_INVALID) {
+          byte opCodeByte = in.readByte();
+          opCode = FSEditLogOpCodes.fromByte(opCodeByte);
+          if (opCode == FSEditLogOpCodes.OP_INVALID) {
             in.reset(); // reset back to end of file if somebody reads it again
             break; // no more transactions
           }
@@ -134,9 +134,9 @@ public class FSEditLogLoader {
           break; // no more transactions
         }
         numEdits++;
-        switch (opcode) {
-        case Ops.OP_ADD:
-        case Ops.OP_CLOSE: {
+        switch (opCode) {
+        case OP_ADD:
+        case OP_CLOSE: {
           // versions > 0 support per file replication
           // get name and replication
           int length = in.readInt();
@@ -158,7 +158,7 @@ public class FSEditLogLoader {
             blockSize = readLong(in);
           }
           // get blocks
-          boolean isFileUnderConstruction = (opcode == Ops.OP_ADD);
+          boolean isFileUnderConstruction = (opCode == FSEditLogOpCodes.OP_ADD);
           BlockInfo blocks[] = 
             readBlocks(in, logVersion, isFileUnderConstruction, replication);
 
@@ -181,7 +181,7 @@ public class FSEditLogLoader {
           }
 
           // clientname, clientMachine and block locations of last block.
-          if (opcode == Ops.OP_ADD && logVersion <= -12) {
+          if (opCode == FSEditLogOpCodes.OP_ADD && logVersion <= -12) {
             clientName = FSImageSerialization.readString(in);
             clientMachine = FSImageSerialization.readString(in);
             if (-13 <= logVersion) {
@@ -195,7 +195,7 @@ public class FSEditLogLoader {
           // The open lease transaction re-creates a file if necessary.
           // Delete the file if it already exists.
           if (FSNamesystem.LOG.isDebugEnabled()) {
-            FSNamesystem.LOG.debug(opcode + ": " + path + 
+            FSNamesystem.LOG.debug(opCode + ": " + path + 
                                    " numblocks : " + blocks.length +
                                    " clientHolder " +  clientName +
                                    " clientMachine " + clientMachine);
@@ -229,16 +229,16 @@ public class FSEditLogLoader {
           }
           break;
         } 
-        case Ops.OP_SET_REPLICATION: {
+        case OP_SET_REPLICATION: {
           numOpSetRepl++;
           path = FSImageSerialization.readString(in);
           short replication = fsNamesys.adjustReplication(readShort(in));
           fsDir.unprotectedSetReplication(path, replication, null);
           break;
         } 
-        case Ops.OP_CONCAT_DELETE: {
+        case OP_CONCAT_DELETE: {
           if (logVersion > -22) {
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                 + " for version " + logVersion);
           }
           numOpConcatDelete++;
@@ -257,7 +257,7 @@ public class FSEditLogLoader {
           fsDir.unprotectedConcat(trg, srcs);
           break;
         }
-        case Ops.OP_RENAME_OLD: {
+        case OP_RENAME_OLD: {
           numOpRenameOld++;
           int length = in.readInt();
           if (length != 3) {
@@ -272,7 +272,7 @@ public class FSEditLogLoader {
           fsNamesys.changeLease(s, d, dinfo);
           break;
         }
-        case Ops.OP_DELETE: {
+        case OP_DELETE: {
           numOpDelete++;
           int length = in.readInt();
           if (length != 2) {
@@ -284,7 +284,7 @@ public class FSEditLogLoader {
           fsDir.unprotectedDelete(path, timestamp);
           break;
         }
-        case Ops.OP_MKDIR: {
+        case OP_MKDIR: {
           numOpMkDir++;
           PermissionStatus permissions = fsNamesys.getUpgradePermission();
           int length = in.readInt();
@@ -309,47 +309,47 @@ public class FSEditLogLoader {
           fsDir.unprotectedMkdir(path, permissions, timestamp);
           break;
         }
-        case Ops.OP_SET_GENSTAMP: {
+        case OP_SET_GENSTAMP: {
           numOpSetGenStamp++;
           long lw = in.readLong();
           fsNamesys.setGenerationStamp(lw);
           break;
         } 
-        case Ops.OP_DATANODE_ADD: {
+        case OP_DATANODE_ADD: {
           numOpOther++;
           //Datanodes are not persistent any more.
           FSImageSerialization.DatanodeImage.skipOne(in);
           break;
         }
-        case Ops.OP_DATANODE_REMOVE: {
+        case OP_DATANODE_REMOVE: {
           numOpOther++;
           DatanodeID nodeID = new DatanodeID();
           nodeID.readFields(in);
           //Datanodes are not persistent any more.
           break;
         }
-        case Ops.OP_SET_PERMISSIONS: {
+        case OP_SET_PERMISSIONS: {
           numOpSetPerm++;
           if (logVersion > -11)
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                                   + " for version " + logVersion);
           fsDir.unprotectedSetPermission(
               FSImageSerialization.readString(in), FsPermission.read(in));
           break;
         }
-        case Ops.OP_SET_OWNER: {
+        case OP_SET_OWNER: {
           numOpSetOwner++;
           if (logVersion > -11)
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                                   + " for version " + logVersion);
           fsDir.unprotectedSetOwner(FSImageSerialization.readString(in),
               FSImageSerialization.readString_EmptyAsNull(in),
               FSImageSerialization.readString_EmptyAsNull(in));
           break;
         }
-        case Ops.OP_SET_NS_QUOTA: {
+        case OP_SET_NS_QUOTA: {
           if (logVersion > -16) {
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                 + " for version " + logVersion);
           }
           fsDir.unprotectedSetQuota(FSImageSerialization.readString(in), 
@@ -357,9 +357,9 @@ public class FSEditLogLoader {
                                     FSConstants.QUOTA_DONT_SET);
           break;
         }
-        case Ops.OP_CLEAR_NS_QUOTA: {
+        case OP_CLEAR_NS_QUOTA: {
           if (logVersion > -16) {
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                 + " for version " + logVersion);
           }
           fsDir.unprotectedSetQuota(FSImageSerialization.readString(in),
@@ -368,14 +368,14 @@ public class FSEditLogLoader {
           break;
         }
 
-        case Ops.OP_SET_QUOTA:
+        case OP_SET_QUOTA:
           fsDir.unprotectedSetQuota(FSImageSerialization.readString(in),
                                     readLongWritable(in),
                                     readLongWritable(in));
                                       
           break;
 
-        case Ops.OP_TIMES: {
+        case OP_TIMES: {
           numOpTimes++;
           int length = in.readInt();
           if (length != 3) {
@@ -388,7 +388,7 @@ public class FSEditLogLoader {
           fsDir.unprotectedSetTimes(path, mtime, atime, true);
           break;
         }
-        case Ops.OP_SYMLINK: {
+        case OP_SYMLINK: {
           numOpSymlink++;
           int length = in.readInt();
           if (length != 4) {
@@ -403,9 +403,9 @@ public class FSEditLogLoader {
           fsDir.unprotectedSymlink(path, value, mtime, atime, perm);
           break;
         }
-        case Ops.OP_RENAME: {
+        case OP_RENAME: {
           if (logVersion > -21) {
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                 + " for version " + logVersion);
           }
           numOpRename++;
@@ -423,9 +423,9 @@ public class FSEditLogLoader {
           fsNamesys.changeLease(s, d, dinfo);
           break;
         }
-        case Ops.OP_GET_DELEGATION_TOKEN: {
+        case OP_GET_DELEGATION_TOKEN: {
           if (logVersion > -24) {
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                 + " for version " + logVersion);
           }
           numOpGetDelegationToken++;
@@ -437,9 +437,9 @@ public class FSEditLogLoader {
               .addPersistedDelegationToken(delegationTokenId, expiryTime);
           break;
         }
-        case Ops.OP_RENEW_DELEGATION_TOKEN: {
+        case OP_RENEW_DELEGATION_TOKEN: {
           if (logVersion > -24) {
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                 + " for version " + logVersion);
           }
           numOpRenewDelegationToken++;
@@ -451,9 +451,9 @@ public class FSEditLogLoader {
               .updatePersistedTokenRenewal(delegationTokenId, expiryTime);
           break;
         }
-        case Ops.OP_CANCEL_DELEGATION_TOKEN: {
+        case OP_CANCEL_DELEGATION_TOKEN: {
           if (logVersion > -24) {
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                 + " for version " + logVersion);
           }
           numOpCancelDelegationToken++;
@@ -464,9 +464,9 @@ public class FSEditLogLoader {
               .updatePersistedTokenCancellation(delegationTokenId);
           break;
         }
-        case Ops.OP_UPDATE_MASTER_KEY: {
+        case OP_UPDATE_MASTER_KEY: {
           if (logVersion > -24) {
-            throw new IOException("Unexpected opcode " + opcode
+            throw new IOException("Unexpected opCode " + opCode
                 + " for version " + logVersion);
           }
           numOpUpdateMasterKey++;
@@ -477,7 +477,7 @@ public class FSEditLogLoader {
           break;
         }
         default: {
-          throw new IOException("Never seen opcode " + opcode);
+          throw new IOException("Never seen opCode " + opCode);
         }
         }
       }

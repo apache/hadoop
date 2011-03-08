@@ -21,6 +21,7 @@
 AC_PREREQ(2.61)
 AC_INIT([libhdfs], [0.1.0], omalley@apache.org)
 AC_PREFIX_DEFAULT([`pwd`/../install])
+AC_CONFIG_AUX_DIR([config])
 
 # Generates Makefile from Makefile.am. Modify when new subdirs are added.
 # Change Makefile.am also to add subdirectly.

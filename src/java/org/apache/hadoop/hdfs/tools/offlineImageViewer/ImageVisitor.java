@@ -75,17 +75,6 @@ abstract class ImageVisitor {
   }
   
   /**
-   * Utility class for tracking descent into the structure of the fsimage.
-   */
-  static protected class DepthCounter {
-    private int depth = 0;
-
-    public void incLevel() { depth++; }
-    public void decLevel() { if(depth >= 1) depth--; }
-    public int  getLevel() { return depth; }
-  }
-
-  /**
    * Begin visiting the fsimage structure.  Opportunity to perform
    * any initialization necessary for the implementing visitor.
    */

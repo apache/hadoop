@@ -64,43 +64,48 @@ public class TestHeartbeatHandling extends TestCase {
       final int MAX_REPLICATE_BLOCKS = 2*MAX_REPLICATE_LIMIT+REMAINING_BLOCKS;
       final DatanodeDescriptor[] ONE_TARGET = new DatanodeDescriptor[1];
 
-      synchronized (namesystem.heartbeats) {
-      for (int i=0; i<MAX_REPLICATE_BLOCKS; i++) {
-        dd.addBlockToBeReplicated(
-            new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP), ONE_TARGET);
-      }
-      DatanodeCommand[]cmds = sendHeartBeat(nodeReg, dd, namesystem);
-      assertEquals(1, cmds.length);
-      assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
-      assertEquals(MAX_REPLICATE_LIMIT, ((BlockCommand)cmds[0]).getBlocks().length);
-      
-      ArrayList<Block> blockList = new ArrayList<Block>(MAX_INVALIDATE_BLOCKS);
-      for (int i=0; i<MAX_INVALIDATE_BLOCKS; i++) {
-        blockList.add(new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP));
-      }
-      dd.addBlocksToBeInvalidated(blockList);
-           
-      cmds = sendHeartBeat(nodeReg, dd, namesystem);
-      assertEquals(2, cmds.length);
-      assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
-      assertEquals(MAX_REPLICATE_LIMIT, ((BlockCommand)cmds[0]).getBlocks().length);
-      assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[1].getAction());
-      assertEquals(MAX_INVALIDATE_LIMIT, ((BlockCommand)cmds[1]).getBlocks().length);
-      
-      cmds = sendHeartBeat(nodeReg, dd, namesystem);
-      assertEquals(2, cmds.length);
-      assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
-      assertEquals(REMAINING_BLOCKS, ((BlockCommand)cmds[0]).getBlocks().length);
-      assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[1].getAction());
-      assertEquals(MAX_INVALIDATE_LIMIT, ((BlockCommand)cmds[1]).getBlocks().length);
-      
-      cmds = sendHeartBeat(nodeReg, dd, namesystem);
-      assertEquals(1, cmds.length);
-      assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[0].getAction());
-      assertEquals(REMAINING_BLOCKS, ((BlockCommand)cmds[0]).getBlocks().length);
+      try {
+        namesystem.writeLock();
+        synchronized (namesystem.heartbeats) {
+          for (int i=0; i<MAX_REPLICATE_BLOCKS; i++) {
+            dd.addBlockToBeReplicated(
+                new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP), ONE_TARGET);
+          }
+          DatanodeCommand[]cmds = sendHeartBeat(nodeReg, dd, namesystem);
+          assertEquals(1, cmds.length);
+          assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
+          assertEquals(MAX_REPLICATE_LIMIT, ((BlockCommand)cmds[0]).getBlocks().length);
+          
+          ArrayList<Block> blockList = new ArrayList<Block>(MAX_INVALIDATE_BLOCKS);
+          for (int i=0; i<MAX_INVALIDATE_BLOCKS; i++) {
+            blockList.add(new Block(i, 0, GenerationStamp.FIRST_VALID_STAMP));
+          }
+          dd.addBlocksToBeInvalidated(blockList);
+               
+          cmds = sendHeartBeat(nodeReg, dd, namesystem);
+          assertEquals(2, cmds.length);
+          assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
+          assertEquals(MAX_REPLICATE_LIMIT, ((BlockCommand)cmds[0]).getBlocks().length);
+          assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[1].getAction());
+          assertEquals(MAX_INVALIDATE_LIMIT, ((BlockCommand)cmds[1]).getBlocks().length);
+          
+          cmds = sendHeartBeat(nodeReg, dd, namesystem);
+          assertEquals(2, cmds.length);
+          assertEquals(DatanodeProtocol.DNA_TRANSFER, cmds[0].getAction());
+          assertEquals(REMAINING_BLOCKS, ((BlockCommand)cmds[0]).getBlocks().length);
+          assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[1].getAction());
+          assertEquals(MAX_INVALIDATE_LIMIT, ((BlockCommand)cmds[1]).getBlocks().length);
+          
+          cmds = sendHeartBeat(nodeReg, dd, namesystem);
+          assertEquals(1, cmds.length);
+          assertEquals(DatanodeProtocol.DNA_INVALIDATE, cmds[0].getAction());
+          assertEquals(REMAINING_BLOCKS, ((BlockCommand)cmds[0]).getBlocks().length);
 
-      cmds = sendHeartBeat(nodeReg, dd, namesystem);
-      assertEquals(null, cmds);
+          cmds = sendHeartBeat(nodeReg, dd, namesystem);
+          assertEquals(null, cmds);
+        }
+      } finally {
+        namesystem.writeUnlock();
       }
     } finally {
       cluster.shutdown();

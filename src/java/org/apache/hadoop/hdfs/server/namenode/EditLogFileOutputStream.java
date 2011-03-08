@@ -128,7 +128,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
   @Override
   void setReadyToFlush() throws IOException {
     assert bufReady.size() == 0 : "previous data is not flushed yet";
-    write(FSEditLog.Ops.OP_INVALID); // insert end-of-file marker
+    write(FSEditLogOpCodes.OP_INVALID.getOpCode()); // insert eof marker
     DataOutputBuffer tmp = bufReady;
     bufReady = bufCurrent;
     bufCurrent = tmp;
@@ -189,7 +189,7 @@ class EditLogFileOutputStream extends EditLogOutputStream {
    */
   @Override
   boolean isOperationSupported(byte op) {
-    return op < FSEditLog.Ops.OP_JSPOOL_START - 1;
+    return op < FSEditLogOpCodes.OP_JSPOOL_START.getOpCode() - 1;
   }
 
   /**

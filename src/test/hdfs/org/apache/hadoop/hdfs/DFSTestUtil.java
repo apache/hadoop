@@ -23,6 +23,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.FileInputStream;
+import java.io.DataInputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.security.PrivilegedExceptionAction;
@@ -375,5 +377,16 @@ public class DFSTestUtil {
   
   public static Statistics getStatistics(FileSystem fs) {
     return FileSystem.getStatistics(fs.getUri().getScheme(), fs.getClass());
+  }
+
+  /**
+   * Load file into byte[]
+   */
+  public static byte[] loadFile(String filename) throws IOException {
+    File file = new File(filename);
+    DataInputStream in = new DataInputStream(new FileInputStream(file));
+    byte[] content = new byte[(int)file.length()];
+    in.readFully(content);
+    return content;
   }
 }

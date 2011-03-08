@@ -32,6 +32,7 @@ function print_usage(){
   echo "  balancer             run a cluster balancing utility"
   echo "  jmxget               get JMX exported values from NameNode or DataNode."
   echo "  oiv                  apply the offline fsimage viewer to an fsimage"
+  echo "  oev                  apply the offline edits viewer to an edits file"
   echo "  fetchdt              fetch a delegation token from the NameNode"
   echo "  getconf              get config values from configuration"
   echo "						Use -help to see options"
@@ -90,6 +91,8 @@ elif [ "$COMMAND" = "jmxget" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.JMXGet
 elif [ "$COMMAND" = "oiv" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.offlineImageViewer.OfflineImageViewer
+elif [ "$COMMAND" = "oev" ] ; then
+  CLASS=org.apache.hadoop.hdfs.tools.offlineEditsViewer.OfflineEditsViewer
 elif [ "$COMMAND" = "fetchdt" ] ; then
   CLASS=org.apache.hadoop.hdfs.tools.DelegationTokenFetcher
 elif [ "$COMMAND" = "getconfig" ] ; then

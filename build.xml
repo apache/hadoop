@@ -423,6 +423,8 @@
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/cli/clitest_data/data1k" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV18" todir="${test.cache.data}"/>
     <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineImageViewer/fsimageV19" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineEditsViewer/editsStored" todir="${test.cache.data}"/>
+    <copy file="${test.src.dir}/hdfs/org/apache/hadoop/hdfs/tools/offlineEditsViewer/editsStored.xml" todir="${test.cache.data}"/>
   </target>
 
   <macrodef name="macro-compile-hdfs-test">
@@ -973,7 +975,7 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, api-report, jar-test, ant-tasks, jsvc"
+  <target name="package" depends="compile, jar, javadoc, docs, api-report, create-libhdfs-configure, jar-test, ant-tasks, jsvc"
 	  description="Build distribution">
     <mkdir dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}/lib"/>
@@ -1293,17 +1295,6 @@
     </exec>
   </target>
 
- <target name="create-c++-configure" depends="init" if="compile.c++">
-    <antcall target="create-c++-configure-libhdfs"/>
-  </target>
-
-  <target name="create-c++-configure-libhdfs" depends="check-c++-libhdfs" if="islibhdfs">
-    <exec executable="autoreconf" dir="${c++.libhdfs.src}" 
-          searchpath="yes" failonerror="yes">
-       <arg value="-if"/>
-    </exec>
-  </target>
-
   <target name="check-c++-libhdfs">
     <condition property="islibhdfs">
       <and>
@@ -1313,25 +1304,40 @@
     </condition>
   </target>
 
-  <target name="check-c++-makefile-libhdfs" depends="init,check-c++-libhdfs" if="islibhdfs">
-    <condition property="need.c++.libhdfs.makefile">
-       <not> <available file="${build.c++.libhdfs}/Makefile"/> </not>
+  <target name="check-libhdfs-configure" depends="init,check-c++-libhdfs" if="islibhdfs">
+    <condition property="need.libhdfs.configure">
+       <not> <available file="${c++.libhdfs.src}/configure"/> </not>
     </condition>
   </target>
 
-  <target name="create-c++-libhdfs-makefile" depends="check-c++-makefile-libhdfs" 
-                                           if="need.c++.libhdfs.makefile">
+  <target name="create-libhdfs-configure" depends="check-libhdfs-configure" if="need.libhdfs.configure">
+    <mkdir dir="${c++.libhdfs.src}/config"/>
+    <exec executable="autoreconf" dir="${c++.libhdfs.src}" 
+          searchpath="yes" failonerror="yes">
+       <arg value="-if"/>
+    </exec>
+  </target>
+
+  <target name="check-libhdfs-makefile" depends="init,check-c++-libhdfs" if="islibhdfs">
+    <condition property="need.libhdfs.makefile">
+       <not> <available file="${c++.libhdfs.src}/Makefile"/> </not>
+    </condition>
+  </target>
+
+  <target name="create-libhdfs-makefile" depends="check-libhdfs-makefile" 
+                                           if="need.libhdfs.makefile">
+    <antcall target="create-libhdfs-configure"/>
     <mkdir dir="${build.c++.libhdfs}"/>
-    <chmod file="${c++.libhdfs.src}/configure" perm="ugo+x"/>
     <exec executable="${c++.libhdfs.src}/configure" dir="${build.c++.libhdfs}"
           failonerror="yes">
       <env key="ac_cv_func_malloc_0_nonnull" value="yes"/>
       <env key="JVM_ARCH" value="${jvm.arch}"/>
       <arg value="--prefix=${install.c++}"/>
+      <env key="base_dir" value="${basedir}"/>
     </exec>
   </target>
 
-  <target name="compile-c++-libhdfs" depends="create-c++-libhdfs-makefile" if="islibhdfs">
+  <target name="compile-c++-libhdfs" depends="create-libhdfs-makefile" if="islibhdfs">
     <exec executable="${make.cmd}" dir="${build.c++.libhdfs}" searchpath="yes"
           failonerror="yes">
       <env key="ac_cv_func_malloc_0_nonnull" value="yes"/>

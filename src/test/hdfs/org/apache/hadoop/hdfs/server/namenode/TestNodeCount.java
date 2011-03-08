@@ -65,11 +65,18 @@ public class TestNodeCount extends TestCase {
       // bring down first datanode
       DatanodeDescriptor datanode = datanodes[0];
       DataNodeProperties dnprop = cluster.stopDataNode(datanode.getName());
+      
       // make sure that NN detects that the datanode is down
-      synchronized (namesystem.heartbeats) {
-        datanode.setLastUpdate(0); // mark it dead
-        namesystem.heartbeatCheck();
+      try {
+        namesystem.writeLock();
+        synchronized (namesystem.heartbeats) {
+          datanode.setLastUpdate(0); // mark it dead
+          namesystem.heartbeatCheck();
+        }
+      } finally {
+        namesystem.writeUnlock();
       }
+      
       // the block will be replicated
       DFSTestUtil.waitReplication(fs, FILE_PATH, REPLICATION_FACTOR);
 
@@ -102,20 +109,26 @@ public class TestNodeCount extends TestCase {
       // bring down non excessive datanode
       dnprop = cluster.stopDataNode(nonExcessDN.getName());
       // make sure that NN detects that the datanode is down
-      synchronized (namesystem.heartbeats) {
-        nonExcessDN.setLastUpdate(0); // mark it dead
-        namesystem.heartbeatCheck();
-      }
       
+      try {
+        namesystem.writeLock();
+        synchronized (namesystem.heartbeats) {
+          nonExcessDN.setLastUpdate(0); // mark it dead
+          namesystem.heartbeatCheck();
+        }
+      } finally {
+        namesystem.writeUnlock();
+      }
+
       // The block should be replicated
       do {
         num = namesystem.blockManager.countNodes(block.getLocalBlock());
       } while (num.liveReplicas() != REPLICATION_FACTOR);
-      
+
       // restart the first datanode
       cluster.restartDataNode(dnprop);
       cluster.waitActive();
-      
+
       // check if excessive replica is detected
       do {
        num = namesystem.blockManager.countNodes(block.getLocalBlock());

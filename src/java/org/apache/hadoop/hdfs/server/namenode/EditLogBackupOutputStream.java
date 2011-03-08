@@ -147,7 +147,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
       JournalRecord jRec = null;
       for(; idx < bufReadySize; idx++) {
         jRec = bufReady.get(idx);
-        if(jRec.op >= FSEditLog.Ops.OP_JSPOOL_START)
+        if(jRec.op >= FSEditLogOpCodes.OP_JSPOOL_START.getOpCode())
           break;  // special operation should be sent in a separate call to BN
         jRec.write(out);
       }
@@ -177,7 +177,7 @@ class EditLogBackupOutputStream extends EditLogOutputStream {
   private void send(int ja) throws IOException {
     try {
       int length = out.getLength();
-      out.write(FSEditLog.Ops.OP_INVALID);
+      out.write(FSEditLogOpCodes.OP_INVALID.getOpCode());
       backupNode.journal(nnRegistration, ja, length, out.getData());
     } finally {
       out.reset();

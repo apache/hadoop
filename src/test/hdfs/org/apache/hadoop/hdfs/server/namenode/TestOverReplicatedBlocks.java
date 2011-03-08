@@ -82,24 +82,30 @@ public class TestOverReplicatedBlocks extends TestCase {
             cluster.getDataNodes().get(2), blockPoolId);
          
       final FSNamesystem namesystem = cluster.getNamesystem();
-      synchronized (namesystem.heartbeats) {
-        // set live datanode's remaining space to be 0 
-        // so they will be chosen to be deleted when over-replication occurs
-        String corruptMachineName = corruptDataNode.getName();
-        for (DatanodeDescriptor datanode : namesystem.heartbeats) {
-          if (!corruptMachineName.equals(datanode.getName())) {
-            datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0);
+      try {
+        namesystem.writeLock();
+        synchronized (namesystem.heartbeats) {
+          // set live datanode's remaining space to be 0 
+          // so they will be chosen to be deleted when over-replication occurs
+          String corruptMachineName = corruptDataNode.getName();
+          for (DatanodeDescriptor datanode : namesystem.heartbeats) {
+            if (!corruptMachineName.equals(datanode.getName())) {
+              datanode.updateHeartbeat(100L, 100L, 0L, 100L, 0);
+            }
           }
-        }
-        
-        // decrease the replication factor to 1; 
-        namesystem.setReplication(fileName.toString(), (short)1);
 
-        // corrupt one won't be chosen to be excess one
-        // without 4910 the number of live replicas would be 0: block gets lost
-        assertEquals(1, namesystem.blockManager.countNodes(block.getLocalBlock())
-            .liveReplicas());
+          // decrease the replication factor to 1; 
+          namesystem.setReplication(fileName.toString(), (short)1);
+
+          // corrupt one won't be chosen to be excess one
+          // without 4910 the number of live replicas would be 0: block gets lost
+          assertEquals(1, namesystem.blockManager.countNodes(block.getLocalBlock())
+              .liveReplicas());
+        }
+      } finally {
+        namesystem.writeUnlock();
       }
+      
     } finally {
       cluster.shutdown();
     }

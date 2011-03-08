@@ -54,8 +54,8 @@ public interface NamenodeProtocol extends VersionedProtocol {
   // Journal action codes. See journal().
   public static byte JA_IS_ALIVE = 100; // check whether the journal is alive
   public static byte JA_JOURNAL      = 101; // just journal
-  public static byte JA_JSPOOL_START = 102;  // = FSEditLog.OP_JSPOOL_START
-  public static byte JA_CHECKPOINT_TIME = 103; // = FSEditLog.OP_CHECKPOINT_TIME
+  public static byte JA_JSPOOL_START = 102;  // = FSEditLogOpCodes.OP_JSPOOL_START
+  public static byte JA_CHECKPOINT_TIME = 103; // = FSEditLogOpCodes.OP_CHECKPOINT_TIME
 
   public final static int ACT_UNKNOWN = 0;    // unknown action   
   public final static int ACT_SHUTDOWN = 50;   // shutdown node
