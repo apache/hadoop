@@ -216,5 +216,8 @@ public class CommonConfigurationKeysPublic {
   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
   public static final String  HADOOP_SECURITY_SERVICE_USER_NAME_KEY =
     "hadoop.security.service.user.name.key";
+  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+  public static final String  HADOOP_SECURITY_INFO_CLASS_NAME =
+    "hadoop.security.info.class.name";
 }
 

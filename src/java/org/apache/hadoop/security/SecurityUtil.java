@@ -33,7 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.net.NetUtils;
 
 import sun.security.jgss.krb5.Krb5Util;
@@ -249,4 +249,25 @@ public class SecurityUtil {
     sb.append(host).append(":").append(port);
     return sb.toString();
   }
+
+  @SuppressWarnings("unchecked")
+  /**
+   * Construct the SecurityInfo instance from the given conf for a 
+   * protocol.
+   * @param conf Configuration object with which the protocol is registered.
+   */
+  public static SecurityInfo getSecurityInfo(Configuration conf)
+      throws IOException {
+    try {
+      Class<SecurityInfo> secInfoClass = (Class<SecurityInfo>) 
+      conf.getClass(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_INFO_CLASS_NAME, 
+        AnnotatedSecurityInfo.class);
+      SecurityInfo secInfo = secInfoClass.newInstance();
+      return secInfo;
+    } catch (Exception e) {
+      throw new IOException("Can't create the SecurityInfo instance", e);
+    }
+  }
+
 }

@@ -55,8 +55,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AnnotatedSecurityInfo;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslRpcClient;
+import org.apache.hadoop.security.SecurityInfo;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -251,7 +253,8 @@ public class Client {
       Class<?> protocol = remoteId.getProtocol();
       this.useSasl = UserGroupInformation.isSecurityEnabled();
       if (useSasl && protocol != null) {
-        TokenInfo tokenInfo = protocol.getAnnotation(TokenInfo.class);
+        TokenInfo tokenInfo = SecurityUtil.getSecurityInfo(
+            conf).getTokenInfo(protocol);
         if (tokenInfo != null) {
           TokenSelector<? extends TokenIdentifier> tokenSelector = null;
           try {
@@ -266,7 +269,8 @@ public class Client {
               .getHostAddress() + ":" + addr.getPort()), 
               ticket.getTokens());
         }
-        KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
+        KerberosInfo krbInfo = SecurityUtil.getSecurityInfo(
+            conf).getKerborosInfo(protocol);
         if (krbInfo != null) {
           serverPrincipal = remoteId.getServerPrincipal();
           if (LOG.isDebugEnabled()) {
@@ -1259,7 +1263,8 @@ public class Client {
       if (!UserGroupInformation.isSecurityEnabled() || protocol == null) {
         return null;
       }
-      KerberosInfo krbInfo = protocol.getAnnotation(KerberosInfo.class);
+      KerberosInfo krbInfo = SecurityUtil.getSecurityInfo(
+          conf).getKerborosInfo(protocol);
       if (krbInfo != null) {
         String serverKey = krbInfo.serverPrincipal();
         if (serverKey == null) {
