@@ -168,6 +168,9 @@ Trunk (unreleased changes)
     HADOOP-6943. The GroupMappingServiceProvider interface should be public.
     (Aaron T. Myers via tomwhite)
 
+    HADOOP-4675. Current Ganglia metrics implementation is incompatible with
+    Ganglia 3.1. (Brian Bockelman via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
