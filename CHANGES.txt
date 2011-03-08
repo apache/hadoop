@@ -274,9 +274,6 @@ Trunk (unreleased changes)
 
     HADOOP-6933. TestListFiles is flaky. (Todd Lipcon via tomwhite)
 
-    HADOOP-6663.  BlockDecompressorStream get EOF exception when decompressing
-    the file compressed from empty file.  (Kang Xiao via tomwhite)
-
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

@@ -75,12 +75,6 @@ public class BlockDecompressorStream extends DecompressorStream {
         return -1;
       }
       noUncompressedBytes = 0;
-      // EOF if originalBlockSize is 0
-      // This will occur only when decompressing previous compressed empty file
-      if (originalBlockSize == 0) {
-        eof = true;
-        return -1;
-      }
     }
 
     int n = 0;
