@@ -61,6 +61,9 @@ public class TestPath extends TestCase {
   }
 
   public void testNormalize() {
+    assertEquals("", new Path(".").toString());
+    assertEquals("..", new Path("..").toString());
+    assertEquals("/", new Path("/").toString());
     assertEquals("/", new Path("//").toString());
     assertEquals("/", new Path("///").toString());
     assertEquals("//foo/", new Path("//foo/").toString());
