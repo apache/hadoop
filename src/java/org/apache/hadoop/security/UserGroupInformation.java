@@ -811,8 +811,8 @@ public class UserGroupInformation {
    * Did the login happen via keytab
    * @return true or false
    */
-  public synchronized static boolean isLoginKeytabBased() {
-    return loginUser.isKeytab;
+  public synchronized static boolean isLoginKeytabBased() throws IOException {
+    return getLoginUser().isKeytab;
   }
 
   /**
