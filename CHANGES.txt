@@ -195,6 +195,9 @@ Release 0.22.0 - Unreleased
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
     (Erik Steffl via szetszwo)
 
+    HADOOP-6683. ZlibCompressor does not fully utilize the buffer.
+    (Kang Xiao via eli)
+
   BUG FIXES
 
     HADOOP-6638. try to relogin in a case of failed RPC connection (expired 
