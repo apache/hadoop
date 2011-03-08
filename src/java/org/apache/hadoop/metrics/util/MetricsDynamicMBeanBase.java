@@ -51,8 +51,9 @@ import org.apache.hadoop.metrics.MetricsUtil;
  *  ObjectName mbeanName = MBeanUtil.registerMBean("ServiceFoo",
  *                "TestStatistics", theMBean);
  * 
- *
+ * @deprecated in favor of <code>org.apache.hadoop.metrics2</code> usage.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public abstract class MetricsDynamicMBeanBase implements DynamicMBean {
   private final static String AVG_TIME = "AvgTime";

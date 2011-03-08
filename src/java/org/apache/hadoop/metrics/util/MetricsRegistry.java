@@ -29,7 +29,9 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * Related set of metrics should be declared in a holding class and registered
  * in a registry for those metrics which is also stored in the the holding class.
  *
+ * @deprecated in favor of {@link org.apache.hadoop.metrics2.lib.MetricsRegistry}.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MetricsRegistry {
   private Map<String, MetricsBase> metricsList = new HashMap<String, MetricsBase>();

@@ -40,7 +40,9 @@ import org.apache.commons.logging.LogFactory;
  * Singleton class which reports Java Virtual Machine metrics to the metrics API.  
  * Any application can create an instance of this class in order to emit
  * Java VM metrics.  
+ * @deprecated in favor of <code>org.apache.hadoop.metrics2</code> usage.
  */
+@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class JvmMetrics implements Updater {

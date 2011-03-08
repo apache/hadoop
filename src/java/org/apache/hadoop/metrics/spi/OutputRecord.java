@@ -33,7 +33,9 @@ import org.apache.hadoop.metrics.spi.AbstractMetricsContext.TagMap;
 
 /**
  * Represents a record of metric data to be sent to a metrics system.
+ * @deprecated in favor of <code>org.apache.hadoop.metrics2</code> usage.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class OutputRecord {

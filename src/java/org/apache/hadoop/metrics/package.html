@@ -21,13 +21,14 @@
     <title>org.apache.hadoop.metrics</title>
   </head>
 <body>
-This package defines an API for reporting performance metric information.
-<p/>
-The API is abstract so that it can be implemented on top of
+  <p><em>Note, this package is deprecated in favor of
+    <code>org.apache.hadoop.metrics2</code> usage.</em></p>
+  <p>This package defines an API for reporting performance metric information.</p>
+  <p>The API is abstract so that it can be implemented on top of
 a variety of metrics client libraries.  The choice of 
 client library is a configuration option, and different 
 modules within the same application can use
-different metrics implementation libraries.
+different metrics implementation libraries.</p>
 <p/>
 Sub-packages:
 <dl>

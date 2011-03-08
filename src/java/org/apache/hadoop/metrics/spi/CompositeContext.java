@@ -35,6 +35,10 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 
+/**
+ * @deprecated in favor of <code>org.apache.hadoop.metrics2</code> usage.
+ */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class CompositeContext extends AbstractMetricsContext {

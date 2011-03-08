@@ -22,15 +22,17 @@
     <title>org.apache.hadoop.metrics.spi</title>
   </head>
   <body>
-The Service Provider Interface for the Metrics API.  This package provides
+    <p><em>Note, this package is deprecated in favor of
+      <code>org.apache.hadoop.metrics2</code> usage.</em></p>
+      <p>The Service Provider Interface for the Metrics API.  This package provides
 an interface allowing a variety of metrics reporting implementations to be
 plugged in to the Metrics API.  Examples of such implementations can be found 
 in the packages <code>org.apache.hadoop.metrics.file</code> and
-<code>org.apache.hadoop.metrics.ganglia</code>.<p/>
+<code>org.apache.hadoop.metrics.ganglia</code>.</p>
 
-Plugging in an implementation involves writing a concrete subclass of 
+      <p>Plugging in an implementation involves writing a concrete subclass of
 <code>AbstractMetricsContext</code>.  The subclass should get its
  configuration information using the <code>getAttribute(<i>attributeName</i>)</code>
- method.
+ method.</p>
   </body>
 </html>

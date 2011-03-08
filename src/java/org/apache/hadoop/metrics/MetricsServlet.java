@@ -43,7 +43,9 @@ import org.mortbay.util.ajax.JSON.Output;
  * A servlet to print out metrics data.  By default, the servlet returns a 
  * textual representation (no promises are made for parseability), and
  * users can use "?format=json" for parseable output.
+ * @deprecated in favor of <code>org.apache.hadoop.metrics2</code> usage.
  */
+@Deprecated
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class MetricsServlet extends HttpServlet {

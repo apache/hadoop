@@ -31,9 +31,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 /**
  * This util class provides a method to register an MBean using
  * our standard naming convention as described in the doc
- *  for {link {@link #registerMBean(String, String, Object)}
+ *  for {@link #registerMBean(String, String, Object)}
  *
+ * @deprecated in favor of {@link org.apache.hadoop.metrics2.util.MBeans}.
  */
+@Deprecated
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 public class MBeanUtil {
 	

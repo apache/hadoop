@@ -22,6 +22,7 @@ import org.apache.hadoop.metrics.spi.AbstractMetricsContext.TagMap;
 
 import junit.framework.TestCase;
 
+@Deprecated
 public class TestOutputRecord extends TestCase {
   public void testCopy() {
     TagMap tags = new TagMap();

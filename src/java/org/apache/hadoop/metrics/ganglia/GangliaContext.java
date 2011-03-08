@@ -43,7 +43,9 @@ import org.apache.hadoop.metrics.spi.Util;
 /**
  * Context for sending metrics to Ganglia.
  * 
+ * @deprecated in favor of <code>org.apache.hadoop.metrics2</code> usage.
  */
+@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class GangliaContext extends AbstractMetricsContext {
