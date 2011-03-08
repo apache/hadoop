@@ -1445,8 +1445,9 @@
   </target>  
 
   <target name="veryclean" depends="clean" description="Delete mvn ant task jar and ivy ant taks jar">
-    <delete file="${ant_task.jar}"/>
-    <delete file="${ivy.jar}"/>
+    <delete>
+      <fileset dir="${ivy.dir}" includes="*.jar"/>
+    </delete>
   </target>
 
   <!-- ================================================================== -->
