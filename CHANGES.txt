@@ -160,6 +160,9 @@ Trunk (unreleased changes)
     HADOOP-7009. MD5Hash provides a public factory method that creates an
     instance of thread local MessageDigest. (hairong)
 
+    HADOOP-7008. Enable test-patch.sh to have a configured number of acceptable 
+    findbugs and javadoc warnings. (nigel and gkesavan)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
