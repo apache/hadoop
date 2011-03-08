@@ -365,6 +365,7 @@
   	
     <mkdir dir="${build.native}/lib"/>
     <mkdir dir="${build.native}/src/org/apache/hadoop/io/compress/zlib"/>
+    <mkdir dir="${build.native}/src/org/apache/hadoop/security"/>
 
   	<javah 
   	  classpath="${build.classes}"
@@ -374,6 +375,15 @@
   	  >
   	  <class name="org.apache.hadoop.io.compress.zlib.ZlibCompressor" />
       <class name="org.apache.hadoop.io.compress.zlib.ZlibDecompressor" />
+  	</javah>
+
+  	<javah
+  	  classpath="${build.classes}"
+  	  destdir="${build.native}/src/org/apache/hadoop/security"
+      force="yes"
+  	  verbose="yes"
+  	  >
+  	  <class name="org.apache.hadoop.security.JniBasedUnixGroupsMapping" />
   	</javah>
 
 	<exec dir="${build.native}" executable="sh" failonerror="true">
@@ -392,7 +402,7 @@
     </exec>
 
 	<exec dir="${build.native}" executable="sh" failonerror="true">
-	  <arg line="${build.native}/libtool --mode=install cp ${build.native}/lib/libhadoop.la ${build.native}/lib"/>
+	  <arg line="${build.native}/libtool --mode=install cp ${build.native}/libhadoop.la ${build.native}/lib"/>
     </exec>
 
   </target>

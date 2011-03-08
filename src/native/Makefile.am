@@ -17,10 +17,6 @@
 #
 
 #
-# Top-level makefile template for native hadoop code
-#
-
-#
 # Notes: 
 # 1. This makefile is designed to do the actual builds in $(HADOOP_HOME)/build/native/${os.name}-${os-arch}.
 # 2. This makefile depends on the following environment variables to function correctly:
@@ -35,11 +31,19 @@
 # Export $(PLATFORM) to prevent proliferation of sub-shells
 export PLATFORM = $(shell echo $$OS_NAME | tr [A-Z] [a-z])
 
-# List the sub-directories here
-SUBDIRS = src/org/apache/hadoop/io/compress/zlib lib
+AM_CPPFLAGS = @JNI_CPPFLAGS@ -I$(HADOOP_NATIVE_SRCDIR)/src \
+              -Isrc/org/apache/hadoop/io/compress/zlib \
+              -Isrc/org/apache/hadoop/security
+AM_LDFLAGS = @JNI_LDFLAGS@ -m$(JVM_DATA_MODEL)
+AM_CFLAGS = -g -Wall -fPIC -O2 -m$(JVM_DATA_MODEL)
 
-# The following export is needed to build libhadoop.so in the 'lib' directory
-export SUBDIRS
+lib_LTLIBRARIES = libhadoop.la
+libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
+                       src/org/apache/hadoop/io/compress/zlib/ZlibDecompressor.c \
+                       src/org/apache/hadoop/security/getGroup.c \
+                       src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c
+libhadoop_la_LDFLAGS = -version-info 1:0:0
+libhadoop_la_LIBADD = -ldl -ljvm
 
 #
 #vim: sw=4: ts=4: noet
