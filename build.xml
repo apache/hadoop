@@ -466,6 +466,13 @@
     </jar>
   </target>
 
+  <target name="metrics2.jar" depends="compile-core" description="Make the Hadoop metrics2 framework jar (for use plugin development)">
+    <jar jarfile="${build.dir}/hadoop-metrics2-${version}.jar"
+         basedir="${build.classes}">
+      <include name="**/metrics2/**" />
+    </jar>
+  </target>
+
   <target name="generate-test-records" depends="compile-rcc-compiler">
     <recordcc destdir="${test.generated.dir}">
       <fileset dir="${test.src.dir}"
