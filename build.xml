@@ -778,19 +778,22 @@
     </subant> 
   </target>
 
-  <target name="test-core" description="Run core unit tests">
+  <target name="test-core" description="Run core unit tests"
+          depends="run-test-core"/>
+
+  <target name="test-fi" description="Run fi unit tests"
+          depends="run-test-core-fault-inject"/>
+
+  <target name="test" depends="jar-test" description="Run all unit tests">
     <delete file="${test.build.dir}/testsfailed"/> 
     <property name="continueOnFailure" value="true"/> 
     <antcall target="run-test-core"/>
     <antcall target="run-test-core-fault-inject"/>
-    <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
-    <fail if="testsfailed">Tests failed!</fail> 
-  </target>
-
-  <target name="test" depends="jar-test,test-core" description="Run all unit tests">
     <subant target="test-contrib">	 
       <fileset dir="." includes="build.xml"/>
     </subant>
+    <available file="${test.build.dir}/testsfailed" property="testsfailed"/>
+    <fail if="testsfailed">Tests failed!</fail>
   </target>
 
   <!-- Run all unit tests, not just Test*, and use non-test configuration. -->
@@ -1254,8 +1257,8 @@
          classpathref="mvn-ant-task.classpath"/>
   </target>   
 
-  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version,-mvn-system-install"
-     description="To install hadoop common and test jars to local filesystem's m2 cache">
+  <target name="mvn-install" depends="mvn-taskdef,jar,jar-test,set-version"
+    description="Install hadoop common and test jars to local fs m2 repo">
      <artifact:pom file="${hadoop-common.pom}" id="hadoop.core"/>
      <artifact:pom file="${hadoop-common-test.pom}" id="hadoop.core.test"/>
      <artifact:install file="${hadoop-common.jar}">
@@ -1268,7 +1271,9 @@
      </artifact:install>
   </target>
 
-  
+  <target name="mvn-si-install" depends="mvn-install,-mvn-system-install"
+     description="Install system integration test jars as well"/>
+
   <target name="mvn-deploy" depends="mvn-taskdef, jar, jar-test,
      jar-system, set-version, signanddeploy, simpledeploy"
      description="To deploy hadoop common and test jar's to apache
