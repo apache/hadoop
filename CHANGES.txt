@@ -173,6 +173,9 @@ Trunk (unreleased changes)
 
     HADOOP-6977. Herriot daemon clients should vend statistics (cos)
 
+    HADOOP-7024. Create a test method for adding file systems during tests.
+    (Kan Zhang via jghoman)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
