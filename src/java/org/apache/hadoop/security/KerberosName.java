@@ -399,6 +399,7 @@ public class KerberosName {
   }
 
   public static void main(String[] args) throws Exception {
+    setConfiguration(new Configuration());
     for(String arg: args) {
       KerberosName name = new KerberosName(arg);
       System.out.println("Name: " + name + " to " + name.getShortName());

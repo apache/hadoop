@@ -294,6 +294,9 @@ Trunk (unreleased changes)
     HADOOP-6991.  Fix SequenceFile::Reader to honor file lengths and call
     openFile (cdouglas via omalley)
 
+    HADOOP-7011.  Fix KerberosName.main() to not throw an NPE.
+    (Aaron T. Myers via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
