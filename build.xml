@@ -1258,7 +1258,8 @@
        <pom refid="hadoop.core"/>
        <attach file="${hadoop-common.jar}.asc" type="jar.asc"/>
        <attach file="${hadoop-common.pom}.asc" type="pom.asc"/>
-       <attach file="${hadoop-common-sources.jar}.asc" type="jar.asc" />
+       <attach file="${hadoop-common-sources.jar}.asc" type="jar.asc"
+         classifier="sources"/>
        <attach file="${hadoop-common-sources.jar}" classifier="sources"/>
      </artifact:deploy>
 
@@ -1267,7 +1268,8 @@
        <pom refid="hadoop.core.test"/>
        <attach file="${hadoop-common-test.jar}.asc" type="jar.asc"/>
        <attach file="${hadoop-common-test.pom}.asc" type="pom.asc"/>
-       <attach file="${hadoop-common-test-sources.jar}.asc" type="jar.asc"/>
+       <attach file="${hadoop-common-test-sources.jar}.asc" type="jar.asc"
+         classifier="sources"/>
        <attach file="${hadoop-common-test-sources.jar}" classifier="sources"/>
      </artifact:deploy>
 
@@ -1277,7 +1279,7 @@
        <attach file="${hadoop-common-instrumented.jar}.asc" type="jar.asc"/>
        <attach file="${hadoop-common-instrumented.pom}.asc" type="pom.asc"/>
        <attach file="${hadoop-common-instrumented-sources.jar}.asc" 
-         type="jar.asc"/>
+         type="jar.asc" classifier="sources"/>
        <attach file="${hadoop-common-instrumented-sources.jar}"
          classifier="sources"/>
      </artifact:deploy>

@@ -301,6 +301,9 @@ Release 0.21.1 - Unreleased
     HADOOP-6944. [Herriot] Implement a functionality for getting proxy users
     definitions like groups and hosts. (Vinay Thota via cos)
 
+    HADOOP-6954.  Sources JARs are not correctly published to the Maven
+    repository. (tomwhite)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
