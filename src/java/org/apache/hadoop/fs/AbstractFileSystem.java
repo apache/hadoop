@@ -24,7 +24,7 @@ import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
-import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
@@ -60,9 +60,8 @@ public abstract class AbstractFileSystem {
   static final Log LOG = LogFactory.getLog(AbstractFileSystem.class);
 
   /** Recording statistics per a file system class. */
-  private static final Map<Class<? extends AbstractFileSystem>, Statistics> 
-  STATISTICS_TABLE =
-      new IdentityHashMap<Class<? extends AbstractFileSystem>, Statistics>();
+  private static final Map<URI, Statistics> 
+      STATISTICS_TABLE = new HashMap<URI, Statistics>();
   
   /** Cache of constructors for each file system class. */
   private static final Map<Class<?>, Constructor<?>> CONSTRUCTOR_CACHE = 
@@ -144,21 +143,40 @@ public abstract class AbstractFileSystem {
     }
     return (AbstractFileSystem) newInstance(clazz, uri, conf);
   }
-  
-  
+
   /**
    * Get the statistics for a particular file system.
-   * @param cls the class to lookup
+   * 
+   * @param uri
+   *          used as key to lookup STATISTICS_TABLE. Only scheme and authority
+   *          part of the uri are used.
    * @return a statistics object
    */
-  public static synchronized Statistics getStatistics(String scheme,
-      Class<? extends AbstractFileSystem> cls) {
-    Statistics result = STATISTICS_TABLE.get(cls);
+  protected static synchronized Statistics getStatistics(URI uri) {
+    String scheme = uri.getScheme();
+    if (scheme == null) {
+      throw new IllegalArgumentException("Scheme not defined in the uri: "
+          + uri);
+    }
+    URI baseUri = getBaseUri(uri);
+    Statistics result = STATISTICS_TABLE.get(baseUri);
     if (result == null) {
       result = new Statistics(scheme);
-      STATISTICS_TABLE.put(cls, result);
+      STATISTICS_TABLE.put(baseUri, result);
     }
     return result;
+  }
+  
+  private static URI getBaseUri(URI uri) {
+    String scheme = uri.getScheme();
+    String authority = uri.getAuthority();
+    String baseUriString = scheme + "://";
+    if (authority != null) {
+      baseUriString = baseUriString + authority;
+    } else {
+      baseUriString = baseUriString + "/";
+    }
+    return URI.create(baseUriString);
   }
   
   public static synchronized void clearStatistics() {
@@ -167,12 +185,26 @@ public abstract class AbstractFileSystem {
     }
   }
 
+  /**
+   * Prints statistics for all file systems.
+   */
   public static synchronized void printStatistics() {
-    for (Map.Entry<Class<? extends AbstractFileSystem>, Statistics> pair: 
-            STATISTICS_TABLE.entrySet()) {
-      System.out.println("  FileSystem " + pair.getKey().getName() + 
-                         ": " + pair.getValue());
+    for (Map.Entry<URI, Statistics> pair : STATISTICS_TABLE.entrySet()) {
+      System.out.println("  FileSystem " + pair.getKey().getScheme() + "://"
+          + pair.getKey().getAuthority() + ": " + pair.getValue());
     }
+  }
+  
+  protected static synchronized Map<URI, Statistics> getAllStatistics() {
+    Map<URI, Statistics> statsMap = new HashMap<URI, Statistics>(
+        STATISTICS_TABLE.size());
+    for (Map.Entry<URI, Statistics> pair : STATISTICS_TABLE.entrySet()) {
+      URI key = pair.getKey();
+      Statistics value = pair.getValue();
+      Statistics newStatsObj = new Statistics(value);
+      statsMap.put(URI.create(key.toString()), newStatsObj);
+    }
+    return statsMap;
   }
 
   /**
@@ -211,7 +243,7 @@ public abstract class AbstractFileSystem {
       final boolean authorityNeeded, final int defaultPort)
       throws URISyntaxException {
     myUri = getUri(uri, supportedScheme, authorityNeeded, defaultPort);
-    statistics = getStatistics(supportedScheme, getClass()); 
+    statistics = getStatistics(uri); 
   }
   
   /**

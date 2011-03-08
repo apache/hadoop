@@ -40,6 +40,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem.Statistics;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -812,8 +813,8 @@ public final class FileContext {
    * 
    * @throws AccessControlException If access is denied
    * @throws FileAlreadyExistsException If <code>dst</code> already exists and
-   *           <code>options</options> has {@link Rename#OVERWRITE} option
-   *           false.
+   *           <code>options</options> has {@link Options.Rename#OVERWRITE} 
+   *           option false.
    * @throws FileNotFoundException If <code>src</code> does not exist
    * @throws ParentNotDirectoryException If parent of <code>dst</code> is not a
    *           directory
@@ -2251,5 +2252,41 @@ public final class FileContext {
       }
       return in;
     }
+  }
+  
+  /**
+   * Get the statistics for a particular file system
+   * 
+   * @param uri
+   *          the uri to lookup the statistics. Only scheme and authority part
+   *          of the uri are used as the key to store and lookup.
+   * @return a statistics object
+   */
+  public static Statistics getStatistics(URI uri) {
+    return AbstractFileSystem.getStatistics(uri);
+  }
+
+  /**
+   * Clears all the statistics stored in AbstractFileSystem, for all the file
+   * systems.
+   */
+  public static void clearStatistics() {
+    AbstractFileSystem.clearStatistics();
+  }
+
+  /**
+   * Prints the statistics to standard output. File System is identified by the
+   * scheme and authority.
+   */
+  public static void printStatistics() {
+    AbstractFileSystem.printStatistics();
+  }
+
+  /**
+   * @return Map of uri and statistics for each filesystem instantiated. The uri
+   *         consists of scheme and authority for the filesystem.
+   */
+  public static Map<URI, Statistics> getAllStatistics() {
+    return AbstractFileSystem.getAllStatistics();
   }
 }

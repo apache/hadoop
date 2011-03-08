@@ -2008,6 +2008,18 @@ public abstract class FileSystem extends Configured implements Closeable {
     }
 
     /**
+     * Copy constructor.
+     * 
+     * @param st
+     *          The input Statistics object which is cloned.
+     */
+    public Statistics(Statistics st) {
+      this.scheme = st.scheme;
+      this.bytesRead = new AtomicLong(st.bytesRead.longValue());
+      this.bytesWritten = new AtomicLong(st.bytesWritten.longValue());
+    }
+
+    /**
      * Increment the bytes read in the statistics
      * @param newBytes the additional bytes read
      */
