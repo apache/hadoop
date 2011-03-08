@@ -171,6 +171,8 @@ Trunk (unreleased changes)
     HADOOP-4675. Current Ganglia metrics implementation is incompatible with
     Ganglia 3.1. (Brian Bockelman via tomwhite)
 
+    HADOOP-6977. Herriot daemon clients should vend statistics (cos)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
