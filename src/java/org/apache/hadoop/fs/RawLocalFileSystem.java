@@ -53,6 +53,14 @@ public class RawLocalFileSystem extends FileSystem {
     workingDir = getInitialWorkingDirectory();
   }
   
+  private Path makeAbsolute(Path f) {
+    if (f.isAbsolute()) {
+      return f;
+    } else {
+      return new Path(workingDir, f);
+    }
+  }
+  
   /** Convert a path to a File. */
   public File pathToFile(Path path) {
     checkPath(path);
@@ -368,7 +376,9 @@ public class RawLocalFileSystem extends FileSystem {
    */
   @Override
   public void setWorkingDirectory(Path newDir) {
-    workingDir = newDir;
+    workingDir = makeAbsolute(newDir);
+    checkPath(workingDir);
+    
   }
   
   @Override

@@ -314,6 +314,9 @@ Trunk (unreleased changes)
     HADOOP-6926. SocketInputStream incorrectly implements read().
     (Todd Lipcon via tomwhite)
 
+    HADOOP-6899 RawLocalFileSystem#setWorkingDir() does not work for relative names
+     (Sanjay Radia)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
