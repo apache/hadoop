@@ -21,7 +21,6 @@ package org.apache.hadoop.fs;
 import java.io.*;
 import java.net.URI;
 import java.util.EnumSet;
-import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -94,6 +93,10 @@ public class FilterFileSystem extends FileSystem {
       return fs.getFileBlockLocations(file, start, len);
   }
   
+  @Override
+  public Path resolvePath(final Path p) throws FileNotFoundException {
+    return fs.resolvePath(p);
+  }
   /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open

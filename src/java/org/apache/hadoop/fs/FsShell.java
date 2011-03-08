@@ -154,9 +154,9 @@ public class FsShell extends Configured implements Tool {
    * and copy them to the local name. srcf is kept.
    * When copying multiple files, the destination must be a directory. 
    * Otherwise, IOException is thrown.
-   * @param argv: arguments
-   * @param pos: Ignore everything before argv[pos]  
-   * @exception: IOException  
+   * @param argv arguments
+   * @param pos Ignore everything before argv[pos]  
+   * @throws IOException on error
    * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
   void copyToLocal(String[]argv, int pos) throws IOException {
@@ -289,9 +289,9 @@ public class FsShell extends Configured implements Tool {
    * Get all the files in the directories that match the source file 
    * pattern and merge and sort them to only one file on local fs 
    * srcf is kept.
-   * @param srcf: a file pattern specifying source files
-   * @param dstf: a destination local file/directory 
-   * @exception: IOException  
+   * @param srcf a file pattern specifying source files
+   * @param dstf a destination local file/directory 
+   * @exception IOException  
    * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
   void copyMergeToLocal(String srcf, Path dst) throws IOException {
@@ -306,10 +306,10 @@ public class FsShell extends Configured implements Tool {
    * 
    * Also adds a string between the files (useful for adding \n
    * to a text file)
-   * @param srcf: a file pattern specifying source files
-   * @param dstf: a destination local file/directory
-   * @param endline: if an end of line character is added to a text file 
-   * @exception: IOException  
+   * @param srcf a file pattern specifying source files
+   * @param dstf a destination local file/directory
+   * @param endline if an end of line character is added to a text file 
+   * @throws IOException on error
    * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
   void copyMergeToLocal(String srcf, Path dst, boolean endline) throws IOException {
@@ -339,8 +339,8 @@ public class FsShell extends Configured implements Tool {
   /**
    * Fetch all files that match the file pattern <i>srcf</i> and display
    * their content on stdout. 
-   * @param srcf: a file pattern specifying source files
-   * @exception: IOException
+   * @param srcf a file pattern specifying source files
+   * @throws IOException on error
    * @see org.apache.hadoop.fs.FileSystem.globStatus 
    */
   void cat(String src, boolean verifyChecksum) throws IOException {
@@ -572,9 +572,9 @@ public class FsShell extends Configured implements Tool {
   /**
    * Actually set the replication for this file
    * If it fails either throw IOException or print an error msg
-   * @param file: a file/directory
-   * @param newRep: new replication factor
-   * @throws IOException
+   * @param file a file/directory
+   * @param newRep new replication factor
+   * @throws IOException on error
    */
   private void setFileReplication(Path file, FileSystem srcFs, short newRep, List<Path> waitList)
     throws IOException {
@@ -970,7 +970,7 @@ public class FsShell extends Configured implements Tool {
    * the argvp[] array.
    * If multiple source files are specified, then the destination 
    * must be a directory. Otherwise, IOException is thrown.
-   * @exception: IOException  
+   * @throws IOException on error
    */
   private int rename(String argv[], Configuration conf) throws IOException {
     int i = 0;
@@ -1055,7 +1055,7 @@ public class FsShell extends Configured implements Tool {
    * the argvp[] array.
    * If multiple source files are specified, then the destination 
    * must be a directory. Otherwise, IOException is thrown.
-   * @exception: IOException  
+   * @throws IOException on error
    */
   private int copy(String argv[], Configuration conf) throws IOException {
     int i = 0;
@@ -1153,8 +1153,7 @@ public class FsShell extends Configured implements Tool {
     
     if(!skipTrash) {
       try {
-	      Trash trashTmp = new Trash(srcFs, getConf());
-        if (trashTmp.moveToTrash(src)) {
+        if (Trash.moveToAppropriateTrash(srcFs, src, getConf())) {
           System.out.println("Moved to trash: " + src);
           return;
         }

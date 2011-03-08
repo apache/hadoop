@@ -519,6 +519,18 @@ public abstract class FileSystem extends Configured implements Closeable {
   }
 
   /**
+   * Return the fully-qualified path of path f resolving the path
+   * through any symlinks or mount point
+   * @param p path to be resolved
+   * @return fully qualified path 
+   * @throws FileNotFoundException
+   */
+   public Path resolvePath(final Path p) throws FileNotFoundException {
+     checkPath(p);
+     return p; // default is to return the path
+   }
+
+  /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file name to open
    * @param bufferSize the size of the buffer to be used.

@@ -1,0 +1,626 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.hadoop.fs.viewfs;
+
+import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_RRR;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.StringTokenizer;
+import java.util.Map.Entry;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileChecksum;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FsConstants;
+import org.apache.hadoop.fs.InvalidPathException;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.viewfs.InodeTree.INode;
+import org.apache.hadoop.fs.viewfs.InodeTree.INodeLink;
+import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Progressable;
+
+/**
+ * ViewFileSystem (extends the FileSystem interface) implements a client-side
+ * mount table. Its spec and implementation is identical to {@link ViewFs}.
+ */
+
+@InterfaceAudience.Public
+@InterfaceStability.Evolving /*Evolving for a release,to be changed to Stable */
+public class ViewFileSystem extends FileSystem {
+  static final AccessControlException READONLY_MOUNTABLE =
+    new AccessControlException( "InternalDir of ViewFileSystem is readonly");
+  
+  final long creationTime; // of the the mount table
+  final UserGroupInformation ugi; // the user/group of user who created mtable
+  private Path workingDir;
+  Configuration config;
+  InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
+  
+  /**
+   * Prohibits names which contain a ".", "..", ":" or "/" 
+   */
+  private static boolean isValidName(final String src) {
+    // Check for ".." "." ":" "/"
+    final StringTokenizer tokens = new StringTokenizer(src, Path.SEPARATOR);
+    while(tokens.hasMoreTokens()) {
+      String element = tokens.nextToken();
+      if (element.equals("..") || 
+          element.equals(".")  ||
+          (element.indexOf(":") >= 0)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  /**
+   * Make the path Absolute and get the path-part of a pathname.
+   * Checks that URI matches this file system 
+   * and that the path-part is a valid name.
+   * 
+   * @param p path
+   * @return path-part of the Path p
+   */
+  private String getUriPath(final Path p) {
+    checkPath(p);
+    String s = makeAbsolute(p).toUri().getPath();
+    if (!isValidName(s)) {
+      throw new InvalidPathException("Path part " + s + " from URI" + p
+          + " is not a valid filename.");
+    }
+    return s;
+  }
+  
+  private Path makeAbsolute(final Path f) {
+    return f.isAbsolute() ? f : new Path(workingDir, f);
+  }
+  
+  /**
+   * This is the  constructor with the signature needed by
+   * {@link FileSystem#createFileSystem(URI, Configuration)}
+   * 
+   * After this constructor is called initialize() is called.
+   * @throws IOException 
+   */
+  public ViewFileSystem() throws IOException {
+    ugi = UserGroupInformation.getCurrentUser();
+    creationTime = System.currentTimeMillis();
+  }
+
+  /**
+   * Called after a new FileSystem instance is constructed.
+   * @param theUri a uri whose authority section names the host, port, etc. for
+   *          this FileSystem
+   * @param conf the configuration
+   */
+  public void initialize(final URI theUri, final Configuration conf)
+      throws IOException {
+    super.initialize(theUri, conf);
+    setConf(conf);
+    workingDir =
+      this.makeQualified(new Path("/user/" + ugi.getShortUserName()));
+    config = conf;
+    // Now build  client side view (i.e. client side mount table) from config.
+    final String authority = theUri.getAuthority();
+    try {
+      fsState = new InodeTree<FileSystem>(conf, authority) {
+
+        @Override
+        protected
+        FileSystem getTargetFileSystem(final URI uri)
+          throws URISyntaxException, IOException {
+            return new ChRootedFileSystem(FileSystem.get(uri, config), 
+                new Path(uri.getPath()));
+        }
+
+        @Override
+        protected
+        FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
+          throws URISyntaxException {
+          return new InternalDirOfViewFs(dir, creationTime, ugi);
+        }
+
+        @Override
+        protected
+        FileSystem getTargetFileSystem(URI[] mergeFsURIList)
+            throws URISyntaxException, UnsupportedFileSystemException {
+          throw new UnsupportedFileSystemException("mergefs not implemented");
+          // return MergeFs.createMergeFs(mergeFsURIList, config);
+        }
+      };
+    } catch (URISyntaxException e) {
+      throw new IOException("URISyntax exception: " + theUri);
+    }
+
+  }
+  
+  
+  /**
+   * Convenience Constructor for apps to call directly
+   * @param theUri which must be that of ViewFileSystem
+   * @param conf
+   * @throws IOException
+   */
+  ViewFileSystem(final URI theUri, final Configuration conf)
+    throws IOException {
+    this();
+    initialize(FsConstants.VIEWFS_URI, conf);
+  }
+  
+  /**
+   * Convenience Constructor for apps to call directly
+   * @param conf
+   * @throws IOException
+   */
+  public ViewFileSystem(final Configuration conf) throws IOException {
+    this(FsConstants.VIEWFS_URI, conf);
+  }
+  
+  public Path getTrashCanLocation(final Path f) throws FileNotFoundException {
+    final InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    return res.isInternalDir() ? null : res.targetFileSystem.getHomeDirectory();
+  }
+
+  @Override
+  public URI getUri() {
+    return FsConstants.VIEWFS_URI;
+  }
+  
+  /**
+   * Return the fully-qualified path of path f - ie follow the path
+   * through the mount point.
+   * @param f path
+   * @return resolved fully-qualified path
+   * @throws FileNotFoundException
+   */
+  public Path getResolvedQualifiedPath(final Path f)
+      throws FileNotFoundException {
+    final InodeTree.ResolveResult<FileSystem> res;
+      res = fsState.resolve(getUriPath(f), true);
+    if (res.isInternalDir()) {
+      return f;
+    }
+    final ChRootedFileSystem targetFs = 
+      (ChRootedFileSystem) res.targetFileSystem;
+    return targetFs.getResolvedQualifiedPath(res.remainingPath);
+  }
+  
+  @Override
+  public Path getWorkingDirectory() {
+    return workingDir;
+  }
+
+  @Override
+  public void setWorkingDirectory(final Path new_dir) {
+    getUriPath(new_dir); // this validates the path
+    workingDir = makeAbsolute(new_dir);
+  }
+  
+  @Override
+  public FSDataOutputStream append(final Path f, final int bufferSize,
+      final Progressable progress) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.append(res.remainingPath, bufferSize, progress);
+  }
+  
+  @Override
+  public FSDataOutputStream create(final Path f, final FsPermission permission,
+      final boolean overwrite, final int bufferSize, final short replication,
+      final long blockSize, final Progressable progress) throws IOException {
+    InodeTree.ResolveResult<FileSystem> res;
+    try {
+      res = fsState.resolve(getUriPath(f), false);
+    } catch (FileNotFoundException e) {
+        throw READONLY_MOUNTABLE;
+    }
+    assert(res.remainingPath != null);
+    return res.targetFileSystem.create(res.remainingPath, permission,
+         overwrite, bufferSize, replication, blockSize, progress);
+  }
+
+  
+  @Override
+  public boolean delete(final Path f, final boolean recursive)
+      throws AccessControlException, FileNotFoundException,
+      IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    // If internal dir or target is a mount link (ie remainingPath is Slash)
+    if (res.isInternalDir() || res.remainingPath == InodeTree.SlashPath) {
+      throw READONLY_MOUNTABLE;
+    }
+    return res.targetFileSystem.delete(res.remainingPath, recursive);
+  }
+  
+  @Override
+  public boolean delete(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      IOException {
+      return delete(f, true);
+  }
+  
+  @Override
+  public BlockLocation[] getFileBlockLocations(FileStatus fs, 
+      long start, long len) throws IOException {
+    final InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(fs.getPath()), true);
+    return res.targetFileSystem.getFileBlockLocations(
+          new ViewFsFileStatus(fs, res.remainingPath), start, len);
+  }
+
+  @Override
+  public FileChecksum getFileChecksum(final Path f)
+      throws AccessControlException, FileNotFoundException,
+      IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.getFileChecksum(f);
+  }
+
+  @Override
+  public FileStatus getFileStatus(final Path f) throws AccessControlException,
+      FileNotFoundException, IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    
+    // FileStatus#getPath is a fully qualified path relative to the root of 
+    // target file system.
+    // We need to change it to viewfs URI - relative to root of mount table.
+    
+    // The implementors of RawLocalFileSystem were trying to be very smart.
+    // They implement FileStatus#getOwener lazily -- the object
+    // returned is really a RawLocalFileSystem that expect the
+    // FileStatus#getPath to be unchanged so that it can get owner when needed.
+    // Hence we need to interpose a new ViewFileSystemFileStatus that 
+    // works around.
+    FileStatus status =  res.targetFileSystem.getFileStatus(res.remainingPath);
+    return new ViewFsFileStatus(status, this.makeQualified(f));
+  }
+  
+  
+  @Override
+  public FileStatus[] listStatus(final Path f) throws AccessControlException,
+      FileNotFoundException, IOException {
+    InodeTree.ResolveResult<FileSystem> res =
+      fsState.resolve(getUriPath(f), true);
+    
+    FileStatus[] statusLst = res.targetFileSystem.listStatus(res.remainingPath);
+    if (!res.isInternalDir()) {
+      // We need to change the name in the FileStatus as described in
+      // {@link #getFileStatus }
+      ChRootedFileSystem targetFs;
+      targetFs = (ChRootedFileSystem) res.targetFileSystem;
+      int i = 0;
+      for (FileStatus status : statusLst) {
+          String suffix = targetFs.stripOutRoot(status.getPath());
+          statusLst[i++] = new ViewFsFileStatus(status, this.makeQualified(
+              suffix.length() == 0 ? f : new Path(res.resolvedPath, suffix)));
+      }
+    }
+    return statusLst;
+  }
+
+  @Override
+  public boolean mkdirs(final Path dir, final FsPermission permission)
+      throws IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(dir), false);
+   return  res.targetFileSystem.mkdirs(res.remainingPath, permission);
+  }
+
+  @Override
+  public FSDataInputStream open(final Path f, final int bufferSize)
+      throws AccessControlException, FileNotFoundException,
+      IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+        fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.open(res.remainingPath, bufferSize);
+  }
+
+  
+  @Override
+  public boolean rename(final Path src, final Path dst) throws IOException {
+    // passing resolveLastComponet as false to catch renaming a mount point to 
+    // itself. We need to catch this as an internal operation and fail.
+    InodeTree.ResolveResult<FileSystem> resSrc = 
+      fsState.resolve(getUriPath(src), false); 
+  
+    if (resSrc.isInternalDir()) {
+      throw READONLY_MOUNTABLE;
+    }
+      
+    InodeTree.ResolveResult<FileSystem> resDst = 
+      fsState.resolve(getUriPath(dst), false);
+    if (resDst.isInternalDir()) {
+      throw new AccessControlException(
+          "Cannot Rename within internal dirs of mount table: it is readOnly");
+    }
+    /**
+    // Alternate 1: renames within same file system - valid but we disallow
+    // Alternate 2: (as described in next para - valid but we have disallowed it
+    //
+    // Note we compare the URIs. the URIs include the link targets. 
+    // hence we allow renames across mount links as long as the mount links
+    // point to the same target.
+    if (!resSrc.targetFileSystem.getUri().equals(
+              resDst.targetFileSystem.getUri())) {
+      throw new IOException("Renames across Mount points not supported");
+    }
+    */
+    
+    //
+    // Alternate 3 : renames ONLY within the the same mount links.
+    //
+    if (resSrc.targetFileSystem !=resDst.targetFileSystem) {
+      throw new IOException("Renames across Mount points not supported");
+    }
+    return resSrc.targetFileSystem.rename(resSrc.remainingPath,
+        resDst.remainingPath);
+  }
+  
+  @Override
+  public void setOwner(final Path f, final String username,
+      final String groupname) throws AccessControlException,
+      FileNotFoundException,
+      IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    res.targetFileSystem.setOwner(res.remainingPath, username, groupname); 
+  }
+
+  @Override
+  public void setPermission(final Path f, final FsPermission permission)
+      throws AccessControlException, FileNotFoundException,
+      IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    res.targetFileSystem.setPermission(res.remainingPath, permission); 
+  }
+
+  @Override
+  public boolean setReplication(final Path f, final short replication)
+      throws AccessControlException, FileNotFoundException,
+      IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    return res.targetFileSystem.setReplication(res.remainingPath, replication);
+  }
+
+  @Override
+  public void setTimes(final Path f, final long mtime, final long atime)
+      throws AccessControlException, FileNotFoundException,
+      IOException {
+    InodeTree.ResolveResult<FileSystem> res = 
+      fsState.resolve(getUriPath(f), true);
+    res.targetFileSystem.setTimes(res.remainingPath, mtime, atime); 
+  }
+
+  @Override
+  public void setVerifyChecksum(final boolean verifyChecksum) { 
+    // This is a file system level operations, however ViewFileSystem 
+    // points to many file systems. Noop for ViewFileSystem.
+  }
+  
+  /*
+   * An instance of this class represents an internal dir of the viewFs 
+   * that is internal dir of the mount table.
+   * It is a read only mount tables and create, mkdir or delete operations
+   * are not allowed.
+   * If called on create or mkdir then this target is the parent of the
+   * directory in which one is trying to create or mkdir; hence
+   * in this case the path name passed in is the last component. 
+   * Otherwise this target is the end point of the path and hence
+   * the path name passed in is null. 
+   */
+  static class InternalDirOfViewFs extends FileSystem {
+    final InodeTree.INodeDir<FileSystem>  theInternalDir;
+    final long creationTime; // of the the mount table
+    final UserGroupInformation ugi; // the user/group of user who created mtable
+    
+    public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
+        final long cTime, final UserGroupInformation ugi)
+      throws URISyntaxException {
+      try {
+        initialize(FsConstants.VIEWFS_URI, new Configuration());
+      } catch (IOException e) {
+        throw new RuntimeException("Cannot occur");
+      }
+      theInternalDir = dir;
+      creationTime = cTime;
+      this.ugi = ugi;
+    }
+
+    static private void checkPathIsSlash(final Path f) throws IOException {
+      if (f != InodeTree.SlashPath) {
+        throw new IOException (
+        "Internal implementation error: expected file name to be /" );
+      }
+    }
+    
+    @Override
+    public URI getUri() {
+      return FsConstants.VIEWFS_URI;
+    }
+
+    @Override
+    public Path getWorkingDirectory() {
+      throw new RuntimeException (
+      "Internal impl error: getWorkingDir should not have been called" );
+    }
+
+    @Override
+    public void setWorkingDirectory(final Path new_dir) {
+      throw new RuntimeException (
+      "Internal impl error: getWorkingDir should not have been called" ); 
+    }
+
+    @Override
+    public FSDataOutputStream append(final Path f, final int bufferSize,
+        final Progressable progress) throws IOException {
+      throw READONLY_MOUNTABLE;
+    }
+
+    @Override
+    public FSDataOutputStream create(final Path f,
+        final FsPermission permission, final boolean overwrite,
+        final int bufferSize, final short replication, final long blockSize,
+        final Progressable progress) throws AccessControlException {
+      throw READONLY_MOUNTABLE;
+    }
+
+    @Override
+    public boolean delete(final Path f, final boolean recursive)
+        throws AccessControlException, IOException {
+      checkPathIsSlash(f);
+      throw READONLY_MOUNTABLE;
+    }
+    
+    @Override
+    public boolean delete(final Path f)
+        throws AccessControlException, IOException {
+      return delete(f, true);
+    }
+
+    @Override
+    public BlockLocation[] getFileBlockLocations(final FileStatus fs,
+        final long start, final long len) throws 
+        FileNotFoundException, IOException {
+      checkPathIsSlash(fs.getPath());
+      throw new FileNotFoundException("Path points to dir not a file");
+    }
+
+    @Override
+    public FileChecksum getFileChecksum(final Path f)
+        throws FileNotFoundException, IOException {
+      checkPathIsSlash(f);
+      throw new FileNotFoundException("Path points to dir not a file");
+    }
+
+    @Override
+    public FileStatus getFileStatus(Path f) throws IOException {
+      checkPathIsSlash(f);
+      return new FileStatus(0, true, 0, 0, creationTime, creationTime,
+          PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
+
+          new Path(theInternalDir.fullPath).makeQualified(
+              FsConstants.VIEWFS_URI, null));
+    }
+    
+
+    @Override
+    public FileStatus[] listStatus(Path f) throws AccessControlException,
+        FileNotFoundException, IOException {
+      checkPathIsSlash(f);
+      FileStatus[] result = new FileStatus[theInternalDir.children.size()];
+      int i = 0;
+      for (Entry<String, INode<FileSystem>> iEntry : 
+                                          theInternalDir.children.entrySet()) {
+        INode<FileSystem> inode = iEntry.getValue();
+        if (inode instanceof INodeLink ) {
+          INodeLink<FileSystem> link = (INodeLink<FileSystem>) inode;
+
+          result[i++] = new FileStatus(0, false, 0, 0,
+            creationTime, creationTime, PERMISSION_RRR,
+            ugi.getUserName(), ugi.getGroupNames()[0],
+            link.getTargetLink(),
+            new Path(inode.fullPath).makeQualified(
+                FsConstants.VIEWFS_URI, null));
+        } else {
+          result[i++] = new FileStatus(0, true, 0, 0,
+            creationTime, creationTime, PERMISSION_RRR,
+            ugi.getUserName(), ugi.getGroupNames()[0],
+            new Path(inode.fullPath).makeQualified(
+                FsConstants.VIEWFS_URI, null));
+        }
+      }
+      return result;
+    }
+
+    @Override
+    public boolean mkdirs(Path dir, FsPermission permission)
+        throws AccessControlException, FileAlreadyExistsException {
+      if (theInternalDir.isRoot & dir == null) {
+        throw new FileAlreadyExistsException("/ already exits");
+      }
+      throw READONLY_MOUNTABLE;
+    }
+
+    @Override
+    public FSDataInputStream open(Path f, int bufferSize)
+        throws AccessControlException, FileNotFoundException, IOException {
+      checkPathIsSlash(f);
+      throw new FileNotFoundException("Path points to dir not a file");
+    }
+
+    @Override
+    public boolean rename(Path src, Path dst) throws AccessControlException,
+        IOException {
+      checkPathIsSlash(src);
+      checkPathIsSlash(dst);
+      throw READONLY_MOUNTABLE;     
+    }
+
+    @Override
+    public void setOwner(Path f, String username, String groupname)
+        throws AccessControlException, IOException {
+      checkPathIsSlash(f);
+      throw READONLY_MOUNTABLE;
+    }
+
+    @Override
+    public void setPermission(Path f, FsPermission permission)
+        throws AccessControlException, IOException {
+      checkPathIsSlash(f);
+      throw READONLY_MOUNTABLE;    
+    }
+
+    @Override
+    public boolean setReplication(Path f, short replication)
+        throws AccessControlException, IOException {
+      checkPathIsSlash(f);
+      throw READONLY_MOUNTABLE;
+    }
+
+    @Override
+    public void setTimes(Path f, long mtime, long atime)
+        throws AccessControlException, IOException {
+      checkPathIsSlash(f);
+      throw READONLY_MOUNTABLE;    
+    }
+
+    @Override
+    public void setVerifyChecksum(boolean verifyChecksum) {
+      // Noop for viewfs
+    }
+  }
+}

@@ -86,7 +86,26 @@ public class Trash extends Configured {
                                          FS_TRASH_INTERVAL_DEFAULT) *
                                 MSECS_PER_MINUTE);
   }
-
+  
+  /**
+   * In case of the symlinks or mount points, one has to move the appropriate
+   * trashbin in the actual volume of the path p being deleted.
+   * 
+   * Hence we get the file system of the fully-qualified resolved-path and
+   * then move the path p to the trashbin in that volume,
+   * @param fs - the filesystem of path p
+   * @param p - the  path being deleted - to be moved to trasg
+   * @param conf - configuration
+   * @return false if the item is already in the trash or trash is disabled
+   * @throws IOException on error
+   */
+  public static boolean moveToAppropriateTrash(FileSystem fs, Path p,
+      Configuration conf) throws IOException {
+    Path fullyResolvedPath = fs.resolvePath(p);
+    Trash trash = new Trash(FileSystem.get(fullyResolvedPath.toUri(), conf), conf);
+    return trash.moveToTrash(fullyResolvedPath);
+  }
+  
   private Trash(Path home, Configuration conf) throws IOException {
     super(conf);
     this.fs = home.getFileSystem(conf);

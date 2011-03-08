@@ -511,7 +511,15 @@ public final class FileContext {
   }
   
   /**
-   * 
+   * Return the current user's home directory in this file system.
+   * The default implementation returns "/user/$USER/".
+   * @return the home directory
+   */
+  public Path getHomeDirectory() {
+    return defaultFS.getHomeDirectory();
+  }
+  
+  /**
    * @return the umask of this FileContext
    */
   public FsPermission getUMask() {
