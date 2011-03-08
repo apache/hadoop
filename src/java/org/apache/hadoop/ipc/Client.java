@@ -252,9 +252,10 @@ public class Client {
       UserGroupInformation ticket = remoteId.getTicket();
       Class<?> protocol = remoteId.getProtocol();
       this.useSasl = UserGroupInformation.isSecurityEnabled();
+      LOG.debug("Protocol is " + protocol + " useSasl is " + useSasl);
       if (useSasl && protocol != null) {
         TokenInfo tokenInfo = SecurityUtil.getSecurityInfo(
-            conf).getTokenInfo(protocol);
+            remoteId.conf).getTokenInfo(protocol);
         if (tokenInfo != null) {
           TokenSelector<? extends TokenIdentifier> tokenSelector = null;
           try {
@@ -270,7 +271,10 @@ public class Client {
               ticket.getTokens());
         }
         KerberosInfo krbInfo = SecurityUtil.getSecurityInfo(
-            conf).getKerborosInfo(protocol);
+            remoteId.conf).getKerborosInfo(protocol);
+        LOG.debug("securityinfo class is " + SecurityUtil.getSecurityInfo(
+            remoteId.conf).getClass().getCanonicalName());
+        LOG.debug("KerberosInfo object's class is " + krbInfo);
         if (krbInfo != null) {
           serverPrincipal = remoteId.getServerPrincipal();
           if (LOG.isDebugEnabled()) {
@@ -1187,11 +1191,15 @@ public class Client {
     private boolean doPing; //do we need to send ping message
     private int pingInterval; // how often sends ping to the server in msecs
     
-    ConnectionId(InetSocketAddress address, Class<?> protocol, 
+    // TODO: FIX everywhere
+    Configuration conf;
+
+    ConnectionId(Configuration conf, InetSocketAddress address, Class<?> protocol, 
                  UserGroupInformation ticket, int rpcTimeout,
                  String serverPrincipal, int maxIdleTime, 
                  int maxRetries, boolean tcpNoDelay,
                  boolean doPing, int pingInterval) {
+      this.conf = conf;
       this.protocol = protocol;
       this.address = address;
       this.ticket = ticket;
@@ -1249,7 +1257,7 @@ public class Client {
         Configuration conf) throws IOException {
       String remotePrincipal = getRemotePrincipal(conf, addr, protocol);
       boolean doPing = conf.getBoolean("ipc.client.ping", true);
-      return new ConnectionId(addr, protocol, ticket,
+      return new ConnectionId(conf, addr, protocol, ticket,
           rpcTimeout, remotePrincipal,
           conf.getInt("ipc.client.connection.maxidletime", 10000), // 10s
           conf.getInt("ipc.client.connect.max.retries", 10),
@@ -1272,8 +1280,9 @@ public class Client {
               "Can't obtain server Kerberos config key from protocol="
                   + protocol.getCanonicalName());
         }
-        return SecurityUtil.getServerPrincipal(conf.get(serverKey), address
+        String princ =  SecurityUtil.getServerPrincipal(conf.get(serverKey), address
             .getAddress().getCanonicalHostName());
+        return princ;
       }
       return null;
     }
