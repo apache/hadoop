@@ -180,6 +180,8 @@ Trunk (unreleased changes)
 
     HADOOP-7034. Add TestPath tests to cover dot, dot dot, and slash normalization. (eli)
 
+    HADOOP-7032. Assert type constraints in the FileStatus constructor. (eli)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
