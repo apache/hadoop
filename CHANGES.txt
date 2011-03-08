@@ -149,6 +149,9 @@ Trunk (unreleased changes)
     HADOOP-6985. Suggest that HADOOP_OPTS be preserved in
     hadoop-env.sh.template. (Ramkumar Vadali via cutting)
 
+    HADOOP-7007. Update the hudson-test-patch ant target to work with the
+    latest test-patch.sh script (gkesavan)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

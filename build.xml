@@ -1511,7 +1511,6 @@
     <arg value="${eclipse.home}"/>
     <arg value="${python.home}"/>
     <arg value="${basedir}"/>
-    <arg value="${trigger.url}"/>
     <arg value="${jira.passwd}"/>
     <arg value="${java5.home}"/>
     <arg value="${curl.cmd}"/>
