@@ -33,7 +33,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.common.Util;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
@@ -83,9 +84,10 @@ public class OfflineEditsViewerHelper {
   private String getEditsFilename() throws IOException {
     FSImage image = cluster.getNameNode().getFSImage();
     // it was set up to only have ONE StorageDirectory
-    Iterator<StorageDirectory> it = image.dirIterator(NameNodeDirType.EDITS);
+    Iterator<StorageDirectory> it
+      = image.getStorage().dirIterator(NameNodeDirType.EDITS);
     StorageDirectory sd = it.next();
-    return image.getEditFile(sd).getAbsolutePath();
+    return image.getStorage().getEditFile(sd).getAbsolutePath();
   }
 
   /**

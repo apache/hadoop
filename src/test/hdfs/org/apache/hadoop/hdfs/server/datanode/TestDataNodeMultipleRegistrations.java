@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.BPOfferService;
 import org.apache.hadoop.hdfs.server.datanode.FSDataset.VolumeInfo;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -72,8 +71,8 @@ public class TestDataNodeMultipleRegistrations {
       String cid2 = nn2.getFSImage().getClusterID();
       int lv1 = nn1.getFSImage().getLayoutVersion();
       int lv2 = nn2.getFSImage().getLayoutVersion();
-      int ns1 = nn1.getFSImage().namespaceID;
-      int ns2 = nn2.getFSImage().namespaceID;
+      int ns1 = nn1.getFSImage().getNamespaceID();
+      int ns2 = nn2.getFSImage().getNamespaceID();
       assertNotSame("namespace ids should be different", ns1, ns2);
       LOG.info("nn1: lv=" + lv1 + ";cid=" + cid1 + ";bpid=" + bpid1 + ";uri="
           + nn1.getNameNodeAddress());

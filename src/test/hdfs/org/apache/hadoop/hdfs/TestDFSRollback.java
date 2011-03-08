@@ -267,7 +267,7 @@ public class TestDFSRollback extends TestCase {
           UpgradeUtilities.getCurrentClusterID(null),
           UpgradeUtilities.getCurrentFsscTime(null));
       
-      UpgradeUtilities.createNameNodeVersionFile(baseDirs,
+      UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs,
           storageInfo, UpgradeUtilities.getCurrentBlockPoolID(cluster));
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);

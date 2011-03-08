@@ -104,11 +104,17 @@ public class TestSaveNamespace {
 
     // Replace the FSImage with a spy
     FSImage originalImage = fsn.dir.fsImage;
+    NNStorage storage = originalImage.getStorage();
+    storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
+
+    NNStorage spyStorage = spy(storage);
+    originalImage.storage = spyStorage;
+
     FSImage spyImage = spy(originalImage);
-    spyImage.setStorageDirectories(
-        FSNamesystem.getNamespaceDirs(conf), 
-        FSNamesystem.getNamespaceEditsDirs(conf));
     fsn.dir.fsImage = spyImage;
+    
+    spyImage.getStorage().setStorageDirectories(FSNamesystem.getNamespaceDirs(conf), 
+                                                FSNamesystem.getNamespaceEditsDirs(conf));
 
     // inject fault
     switch(fault) {
@@ -120,12 +126,12 @@ public class TestSaveNamespace {
     case MOVE_CURRENT:
       // The spy throws a RuntimeException when calling moveCurrent()
       doThrow(new RuntimeException("Injected fault: moveCurrent")).
-        when(spyImage).moveCurrent((StorageDirectory)anyObject());
+        when(spyStorage).moveCurrent((StorageDirectory)anyObject());
       break;
     case MOVE_LAST_CHECKPOINT:
       // The spy throws a RuntimeException when calling moveLastCheckpoint()
       doThrow(new RuntimeException("Injected fault: moveLastCheckpoint")).
-        when(spyImage).moveLastCheckpoint((StorageDirectory)anyObject());
+        when(spyStorage).moveLastCheckpoint((StorageDirectory)anyObject());
       break;
     }
 
@@ -175,11 +181,17 @@ public class TestSaveNamespace {
 
     // Replace the FSImage with a spy
     FSImage originalImage = fsn.dir.fsImage;
+    NNStorage storage = originalImage.getStorage();
+    storage.close(); // unlock any directories that FSNamesystem's initialization may have locked
+
+    NNStorage spyStorage = spy(storage);
+    originalImage.storage = spyStorage;
+
     FSImage spyImage = spy(originalImage);
-    spyImage.setStorageDirectories(
-        FSNamesystem.getNamespaceDirs(conf), 
-        FSNamesystem.getNamespaceEditsDirs(conf));
     fsn.dir.fsImage = spyImage;
+
+    spyImage.getStorage().setStorageDirectories(FSNamesystem.getNamespaceDirs(conf), 
+                                                FSNamesystem.getNamespaceEditsDirs(conf));
 
     // inject fault
     // The spy throws a IOException when writing to the second directory
@@ -196,9 +208,9 @@ public class TestSaveNamespace {
       fsn.saveNamespace();
       LOG.warn("First savenamespace sucessful.");
       assertTrue("Savenamespace should have marked one directory as bad." +
-                 " But found " + spyImage.getRemovedStorageDirs().size() +
+                 " But found " + spyStorage.getRemovedStorageDirs().size() +
                  " bad directories.", 
-                   spyImage.getRemovedStorageDirs().size() == 1);
+                   spyStorage.getRemovedStorageDirs().size() == 1);
 
       // The next call to savenamespace should try inserting the
       // erroneous directory back to fs.name.dir. This command should
@@ -208,9 +220,9 @@ public class TestSaveNamespace {
       LOG.warn("Second savenamespace sucessful.");
       assertTrue("Savenamespace should have been successful in removing " +
                  " bad directories from Image."  +
-                 " But found " + originalImage.getRemovedStorageDirs().size() +
+                 " But found " + storage.getRemovedStorageDirs().size() +
                  " bad directories.", 
-                 originalImage.getRemovedStorageDirs().size() == 0);
+                 storage.getRemovedStorageDirs().size() == 0);
 
       // Now shut down and restart the namesystem
       LOG.info("Shutting down fsimage.");
@@ -258,8 +270,10 @@ public class TestSaveNamespace {
 
     // Replace the FSImage with a spy
     final FSImage originalImage = fsn.dir.fsImage;
+    originalImage.getStorage().close();
+
     FSImage spyImage = spy(originalImage);
-    spyImage.setStorageDirectories(
+    spyImage.getStorage().setStorageDirectories(
         FSNamesystem.getNamespaceDirs(conf), 
         FSNamesystem.getNamespaceEditsDirs(conf));
     fsn.dir.fsImage = spyImage;

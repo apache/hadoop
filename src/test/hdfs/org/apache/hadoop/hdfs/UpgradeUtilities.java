@@ -46,7 +46,7 @@ import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.datanode.BlockPoolSliceStorage;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
-import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.test.GenericTestUtils;
 
@@ -372,14 +372,15 @@ public class UpgradeUtilities {
    *
    * @return the created version file
    */
-  public static File[] createNameNodeVersionFile(File[] parent,
-      StorageInfo version, String bpid) throws IOException {
-    FSImage storage = null;
+  public static File[] createNameNodeVersionFile(Configuration conf,
+      File[] parent, StorageInfo version, String bpid) throws IOException {
+    Storage storage = null;
     File[] versionFiles = new File[parent.length];
     for (int i = 0; i < parent.length; i++) {
       File versionFile = new File(parent[i], "VERSION");
       FileUtil.fullyDelete(versionFile);
-      storage = new FSImage(version, bpid);
+      storage = new NNStorage(conf);
+      storage.setStorageInfo(version);
       StorageDirectory sd = storage.new StorageDirectory(parent[i].getParentFile());
       sd.write(versionFile);
       versionFiles[i] = versionFile;

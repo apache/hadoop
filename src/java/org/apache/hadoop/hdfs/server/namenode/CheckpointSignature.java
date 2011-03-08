@@ -43,12 +43,12 @@ public class CheckpointSignature extends StorageInfo
   public CheckpointSignature() {}
 
   CheckpointSignature(FSImage fsImage) {
-    super(fsImage);
+    super(fsImage.getStorage());
     blockpoolID = fsImage.getBlockPoolID();
     editsTime = fsImage.getEditLog().getFsEditTime();
-    checkpointTime = fsImage.getCheckpointTime();
-    imageDigest = fsImage.imageDigest;
-    checkpointTime = fsImage.getCheckpointTime();
+    checkpointTime = fsImage.getStorage().getCheckpointTime();
+    imageDigest = fsImage.getStorage().getImageDigest();
+    checkpointTime = fsImage.getStorage().getCheckpointTime();
   }
 
   CheckpointSignature(String str) {
@@ -109,12 +109,13 @@ public class CheckpointSignature extends StorageInfo
   }
 
   void validateStorageInfo(FSImage si) throws IOException {
-    if(layoutVersion != si.layoutVersion
-        || namespaceID != si.namespaceID || cTime != si.cTime
-        || checkpointTime != si.checkpointTime 
-        || !imageDigest.equals(si.imageDigest)
-        || !clusterID.equals(si.clusterID)
-        || !blockpoolID.equals(si.blockpoolID)) {
+    if(layoutVersion != si.getLayoutVersion()
+        || namespaceID != si.getNamespaceID() 
+        || cTime != si.getStorage().cTime
+        || checkpointTime != si.getStorage().getCheckpointTime() 
+        || !imageDigest.equals(si.getStorage().imageDigest)
+        || !clusterID.equals(si.getClusterID())
+        || !blockpoolID.equals(si.getBlockPoolID())) {
       // checkpointTime can change when the image is saved - do not compare
       throw new IOException("Inconsistent checkpoint fields.\n"
           + "LV = " + layoutVersion + " namespaceID = " + namespaceID
@@ -123,10 +124,12 @@ public class CheckpointSignature extends StorageInfo
           + " ; clusterId = " + clusterID
           + " ; blockpoolId = " + blockpoolID
           + ".\nExpecting respectively: "
-          + si.layoutVersion + "; " + si.namespaceID + "; " + si.cTime
-          + "; " + si.checkpointTime + "; " + si.imageDigest
-          + "; " + si.clusterID + "; " + si.blockpoolID + "."
-          );
+          + si.getLayoutVersion() + "; " 
+          + si.getNamespaceID() + "; " + si.getStorage().cTime
+          + "; " + si.getStorage().getCheckpointTime() + "; " 
+          + si.getStorage().imageDigest
+          + "; " + si.getClusterID() + "; " 
+          + si.getBlockPoolID() + ".");
     }
   }
 

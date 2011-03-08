@@ -255,7 +255,7 @@ public class TestDFSUpgrade extends TestCase {
           UpgradeUtilities.getCurrentClusterID(null),
           UpgradeUtilities.getCurrentFsscTime(null));
       
-      UpgradeUtilities.createNameNodeVersionFile(baseDirs, storageInfo,
+      UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
       
       startNameNodeShouldFail(StartupOption.UPGRADE);
@@ -268,7 +268,7 @@ public class TestDFSUpgrade extends TestCase {
           UpgradeUtilities.getCurrentClusterID(null),
           UpgradeUtilities.getCurrentFsscTime(null));
       
-      UpgradeUtilities.createNameNodeVersionFile(baseDirs, storageInfo,
+      UpgradeUtilities.createNameNodeVersionFile(conf, baseDirs, storageInfo,
           UpgradeUtilities.getCurrentBlockPoolID(cluster));
       
       startNameNodeShouldFail(StartupOption.UPGRADE);

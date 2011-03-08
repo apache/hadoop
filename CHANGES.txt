@@ -222,6 +222,9 @@ Trunk (unreleased changes)
     HDFS-1448. Add a new tool Offline Edits Viewer (oev).  (Erik Steffl
     via szetszwo)
 
+    HDFS-1735. Federation: merge FSImage change in federation to
+    FSImage+NNStorage refactoring in trunk (suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
@@ -254,6 +257,8 @@ Trunk (unreleased changes)
     when block is completely written. (dhruba)
 
     HDFS-1335. HDFS side change of HADDOP-6904: RPC compatibility. (hairong)
+
+    HDFS-1557. Separate Storage from FSImage. (Ivan Kelly via jitendra)
 
   OPTIMIZATIONS
 

@@ -357,7 +357,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     nodeRegistration = new NamenodeRegistration(
         getHostPortString(rpcAddress),
         getHostPortString(httpAddress),
-        getFSImage(), getRole(), getFSImage().getCheckpointTime());
+        getFSImage().getStorage(), getRole(), getFSImage().getStorage().getCheckpointTime());
     return nodeRegistration;
   }
 
@@ -1361,7 +1361,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * Returns the name of the fsImage file
    */
   public File getFsImageName() throws IOException {
-    return getFSImage().getFsImageName();
+    return getFSImage().getStorage().getFsImageName();
   }
     
   public FSImage getFSImage() {
@@ -1373,7 +1373,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
    * checkpointing
    */
   public File[] getFsImageNameCheckpoint() throws IOException {
-    return getFSImage().getFsImageNameCheckpoint();
+    return getFSImage().getStorage().getFsImageNameCheckpoint();
   }
 
   /**
@@ -1453,7 +1453,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     String clusterId = StartupOption.FORMAT.getClusterId();
     if(clusterId == null || clusterId.equals("")) {
       // try to get one from the existing storage
-      clusterId = fsImage.determineClusterId();
+      clusterId = fsImage.getStorage().determineClusterId();
       if (clusterId == null || clusterId.equals("")) {
         throw new IllegalArgumentException("Format must be provided with clusterid");
       }
@@ -1465,7 +1465,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         while(System.in.read() != '\n'); // discard the enter-key
       }
     }
-    nsys.dir.fsImage.format(clusterId);
+    nsys.dir.fsImage.getStorage().format(clusterId);
     return false;
   }
 
@@ -1600,7 +1600,7 @@ public class NameNode implements NamenodeProtocols, FSConstants {
         return null; // avoid javac warning
       case GENCLUSTERID:
         System.err.println("Generating new cluster id:");
-        System.out.println(FSImage.newClusterID());
+        System.out.println(NNStorage.newClusterID());
         System.exit(0);
         return null;
       case FINALIZE:

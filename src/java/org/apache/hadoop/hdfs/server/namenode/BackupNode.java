@@ -128,7 +128,7 @@ public class BackupNode extends NameNode {
 
   @Override // NameNode
   protected void loadNamesystem(Configuration conf) throws IOException {
-    BackupStorage bnImage = new BackupStorage();
+    BackupImage bnImage = new BackupImage();
     this.namesystem = new FSNamesystem(conf, bnImage);
     bnImage.recoverCreateRead(FSNamesystem.getNamespaceDirs(conf),
                               FSNamesystem.getNamespaceEditsDirs(conf));
@@ -224,7 +224,7 @@ public class BackupNode extends NameNode {
     if(!nnRpcAddress.equals(nnReg.getAddress()))
       throw new IOException("Journal request from unexpected name-node: "
           + nnReg.getAddress() + " expecting " + nnRpcAddress);
-    BackupStorage bnImage = (BackupStorage)getFSImage();
+    BackupImage bnImage = (BackupImage)getFSImage();
     switch(jAction) {
       case (int)JA_IS_ALIVE:
         return;
@@ -246,8 +246,8 @@ public class BackupNode extends NameNode {
   boolean shouldCheckpointAtStartup() {
     FSImage fsImage = getFSImage();
     if(isRole(NamenodeRole.CHECKPOINT)) {
-      assert fsImage.getNumStorageDirs() > 0;
-      return ! fsImage.getStorageDir(0).getVersionFile().exists();
+      assert fsImage.getStorage().getNumStorageDirs() > 0;
+      return ! fsImage.getStorage().getStorageDir(0).getVersionFile().exists();
     }
     if(namesystem == null || namesystem.dir == null || getFSImage() == null)
       return true;
@@ -309,14 +309,14 @@ public class BackupNode extends NameNode {
    * @throws IOException
    */
   private void registerWith(NamespaceInfo nsInfo) throws IOException {
-    BackupStorage bnImage = (BackupStorage)getFSImage();
+    BackupImage bnImage = (BackupImage)getFSImage();
     // verify namespaceID
-    if(bnImage.getNamespaceID() == 0) // new backup storage
-      bnImage.setStorageInfo(nsInfo);
-    else if(bnImage.getNamespaceID() != nsInfo.getNamespaceID())
+    if(bnImage.getStorage().getNamespaceID() == 0) // new backup storage
+      bnImage.getStorage().setStorageInfo(nsInfo);
+    else if(bnImage.getStorage().getNamespaceID() != nsInfo.getNamespaceID())
       throw new IOException("Incompatible namespaceIDs"
           + ": active node namespaceID = " + nsInfo.getNamespaceID() 
-          + "; backup node namespaceID = " + bnImage.getNamespaceID());
+          + "; backup node namespaceID = " + bnImage.getStorage().getNamespaceID());
 
     setRegistration();
     NamenodeRegistration nnReg = null;
@@ -351,7 +351,7 @@ public class BackupNode extends NameNode {
    * @throws IOException
    */
   void resetNamespace() throws IOException {
-    ((BackupStorage)getFSImage()).reset();
+    ((BackupImage)getFSImage()).reset();
   }
 
   /**

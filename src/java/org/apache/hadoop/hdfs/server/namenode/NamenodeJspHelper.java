@@ -180,8 +180,8 @@ class NamenodeJspHelper {
         HttpServletRequest request) throws IOException {
       FSNamesystem fsn = nn.getNamesystem();
       FSImage fsImage = fsn.getFSImage();
-      List<Storage.StorageDirectory> removedStorageDirs = fsImage
-          .getRemovedStorageDirs();
+      List<Storage.StorageDirectory> removedStorageDirs 
+        = fsImage.getStorage().getRemovedStorageDirs();
 
       // FS Image storage configuration
       out.print("<h3> " + nn.getRole() + " Storage: </h3>");
@@ -189,7 +189,8 @@ class NamenodeJspHelper {
               + "<thead><tr><td><b>Storage Directory</b></td><td><b>Type</b></td><td><b>State</b></td></tr></thead>");
 
       StorageDirectory st = null;
-      for (Iterator<StorageDirectory> it = fsImage.dirIterator(); it.hasNext();) {
+      for (Iterator<StorageDirectory> it 
+             = fsImage.getStorage().dirIterator(); it.hasNext();) {
         st = it.next();
         String dir = "" + st.getRoot();
         String type = "" + st.getStorageDirType();

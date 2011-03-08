@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -92,7 +91,8 @@ public class TestClusterId {
     Collection<URI> editsToFormat = new ArrayList<URI>(0);
     FSImage fsImage = new FSImage(dirsToFormat, editsToFormat);
     
-    Iterator<StorageDirectory> sdit = fsImage.dirIterator(NameNodeDirType.IMAGE);
+    Iterator<StorageDirectory> sdit = 
+      fsImage.getStorage().dirIterator(NNStorage.NameNodeDirType.IMAGE);
     StorageDirectory sd = sdit.next();
     Properties props = sd.readFrom(sd.getVersionFile());
     String cid = props.getProperty("clusterID");

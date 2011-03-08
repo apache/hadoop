@@ -193,7 +193,7 @@ public class CreateEditsLog {
     FileNameGenerator nameGenerator = new FileNameGenerator(BASE_PATH, 100);
 
     FSEditLog editLog = fsImage.getEditLog();
-    editLog.createEditLogFile(fsImage.getFsEditName());
+    editLog.createEditLogFile(fsImage.getStorage().getFsEditName());
     editLog.open();
     addFiles(editLog, numFiles, replication, numBlocksPerFile, startingBlockId,
              nameGenerator);

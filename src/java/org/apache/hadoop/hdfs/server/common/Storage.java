@@ -65,7 +65,7 @@ public abstract class Storage extends StorageInfo {
   // Constants
   
   // last layout version that did not support upgrades
-  protected static final int LAST_PRE_UPGRADE_LAYOUT_VERSION = -3;
+  public static final int LAST_PRE_UPGRADE_LAYOUT_VERSION = -3;
   
   // this corresponds to Hadoop-0.14.
   public static final int LAST_UPGRADABLE_LAYOUT_VERSION = -7;
@@ -729,7 +729,7 @@ public abstract class Storage extends StorageInfo {
    * 
    * @param oldVersion
    */
-  protected static void checkVersionUpgradable(int oldVersion) 
+  public static void checkVersionUpgradable(int oldVersion) 
                                      throws IOException {
     if (oldVersion > LAST_UPGRADABLE_LAYOUT_VERSION) {
       String msg = "*********** Upgrade is not supported from this " +
@@ -791,7 +791,13 @@ public abstract class Storage extends StorageInfo {
                             + from.getCanonicalPath() + " to " + to.getCanonicalPath());
   }
 
-  protected static void deleteDir(File dir) throws IOException {
+  /**
+   * Recursively delete all the content of the directory first and then 
+   * the directory itself from the local filesystem.
+   * @param dir The directory to delete
+   * @throws IOException
+   */
+  public static void deleteDir(File dir) throws IOException {
     if (!FileUtil.fullyDelete(dir))
       throw new IOException("Failed to delete " + dir.getCanonicalPath());
   }

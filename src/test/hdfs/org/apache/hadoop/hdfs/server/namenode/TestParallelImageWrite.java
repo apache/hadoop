@@ -31,6 +31,8 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.util.PureJavaCrc32;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 
 import java.util.Iterator;
 import java.util.List;
@@ -108,11 +110,11 @@ public class TestParallelImageWrite extends TestCase {
   
   private void checkImages(FSNamesystem fsn) throws Exception {
     Iterator<StorageDirectory> iter = fsn.
-            getFSImage().dirIterator(FSImage.NameNodeDirType.IMAGE);
+            getFSImage().getStorage().dirIterator(NameNodeDirType.IMAGE);
     List<Long> checksums = new ArrayList<Long>();
     while (iter.hasNext()) {
       StorageDirectory sd = iter.next();
-      File fsImage = FSImage.getImageFile(sd, FSImage.NameNodeFile.IMAGE);
+      File fsImage = fsn.getFSImage().getStorage().getStorageFile(sd, NameNodeFile.IMAGE);
       PureJavaCrc32 crc = new PureJavaCrc32();
       FileInputStream in = new FileInputStream(fsImage);
       byte[] buff = new byte[4096];

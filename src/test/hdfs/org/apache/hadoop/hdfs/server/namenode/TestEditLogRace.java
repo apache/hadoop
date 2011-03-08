@@ -38,8 +38,8 @@ import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileInputStream;
 import org.apache.hadoop.hdfs.server.common.HdfsConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeDirType;
-import org.apache.hadoop.hdfs.server.namenode.FSImage.NameNodeFile;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.junit.Assert.*;
@@ -219,8 +219,8 @@ public class TestEditLogRace {
     // If there were any corruptions, it is likely that the reading in
     // of these transactions will throw an exception.
     for (Iterator<StorageDirectory> it = 
-           fsimage.dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
-      File editFile = FSImage.getImageFile(it.next(), NameNodeFile.EDITS);
+           fsimage.getStorage().dirIterator(NameNodeDirType.EDITS); it.hasNext();) {
+      File editFile = fsimage.getStorage().getStorageFile(it.next(), NameNodeFile.EDITS);
       System.out.println("Verifying file: " + editFile);
       int numEdits = new FSEditLogLoader(namesystem).loadFSEdits(
         new EditLogFileInputStream(editFile));
