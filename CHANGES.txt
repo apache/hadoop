@@ -277,6 +277,9 @@ Trunk (unreleased changes)
     HADOOP-6947.  Kerberos relogin should set refreshKrb5Config to true.
     (Todd Lipcon via tomwhite)
 
+    HADOOP-7006. Fix 'fs -getmerge' command to not be a no-op.
+    (Chris Nauroth via cutting)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
