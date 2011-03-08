@@ -193,6 +193,9 @@ Release 0.22.0 - Unreleased
     HADOOP-7028. ant eclipse does not include requisite ant.jar in the 
     classpath. (Patrick Angeles via eli)
 
+    HADOOP-6864. Provide a JNI-based implementation of ShellBasedUnixGroupsNetgroupMapping 
+    (implementation of GroupMappingServiceProvider) (Erik Seffl via boryas)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).

@@ -19,15 +19,152 @@ package org.apache.hadoop.security.authorize;
 
 import java.util.Iterator;
 import java.util.Set;
+import java.util.List;
 
+import org.junit.Test;
+import org.junit.Before;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 
+@InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+@InterfaceStability.Evolving
+public class TestAccessControlList {
 
-import junit.framework.TestCase;
+  private static final Log LOG =
+    LogFactory.getLog(TestAccessControlList.class);
 
-public class TestAccessControlList extends TestCase {
-  
+  /**
+   * Test the netgroups (groups in ACL rules that start with @)
+   *
+   * This is a  manual test because it requires:
+   *   - host setup
+   *   - native code compiled
+   *   - specify the group mapping class
+   *
+   * Host setup:
+   *
+   * /etc/nsswitch.conf should have a line like this:
+   * netgroup: files
+   *
+   * /etc/netgroup should be (the whole file):
+   * lasVegas (,elvis,)
+   * memphis (,elvis,) (,jerryLeeLewis,)
+   *
+   * To run this test:
+   *
+   * export JAVA_HOME='path/to/java'
+   * ant \
+   *   -Dtestcase=TestAccessControlList \
+   *   -Dtest.output=yes \
+   *   -DTestAccessControlListGroupMapping=$className \
+   *   compile-native test
+   *
+   * where $className is one of the classes that provide group
+   * mapping services, i.e. classes that implement
+   * GroupMappingServiceProvider interface, at this time:
+   *   - org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping
+   *   - org.apache.hadoop.security.ShellBasedUnixGroupsNetgroupMapping
+   *
+   */
+  @Test
+  public void testNetgroups() throws Exception {
+
+    if(!NativeCodeLoader.isNativeCodeLoaded()) {
+      LOG.info("Not testing netgroups, " +
+        "this test only runs when native code is compiled");
+      return;
+    }
+
+    String groupMappingClassName =
+      System.getProperty("TestAccessControlListGroupMapping");
+
+    if(groupMappingClassName == null) {
+      LOG.info("Not testing netgroups, no group mapping class specified, " +
+        "use -DTestAccessControlListGroupMapping=$className to specify " +
+        "group mapping class (must implement GroupMappingServiceProvider " +
+        "interface and support netgroups)");
+      return;
+    }
+
+    LOG.info("Testing netgroups using: " + groupMappingClassName);
+
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_GROUP_MAPPING,
+      groupMappingClassName);
+
+    Groups groups = Groups.getUserToGroupsMappingService(conf);
+
+    AccessControlList acl;
+
+    // create these ACLs to populate groups cache
+    acl = new AccessControlList("ja my"); // plain
+    acl = new AccessControlList("sinatra ratpack,@lasVegas"); // netgroup
+    acl = new AccessControlList(" somegroup,@someNetgroup"); // no user
+
+    // this ACL will be used for testing ACLs
+    acl = new AccessControlList("carlPerkins ratpack,@lasVegas");
+    acl.addGroup("@memphis");
+
+    // validate the netgroups before and after rehresh to make
+    // sure refresh works correctly
+    validateNetgroups(groups, acl);
+    groups.refresh();
+    validateNetgroups(groups, acl);
+
+  }
+
+  /**
+   * Validate the netgroups, both group membership and ACL
+   * functionality
+   *
+   * Note: assumes a specific acl setup done by testNetgroups
+   *
+   * @param groups group to user mapping service
+   * @param acl ACL set up in a specific way, see testNetgroups
+   */
+  private void validateNetgroups(Groups groups,
+    AccessControlList acl) throws Exception {
+
+    // check that the netgroups are working
+    List<String> elvisGroups = groups.getGroups("elvis");
+    assertTrue(elvisGroups.contains("@lasVegas"));
+    assertTrue(elvisGroups.contains("@memphis"));
+    List<String> jerryLeeLewisGroups = groups.getGroups("jerryLeeLewis");
+    assertTrue(jerryLeeLewisGroups.contains("@memphis"));
+
+    // allowed becuase his netgroup is in ACL
+    UserGroupInformation elvis = 
+      UserGroupInformation.createRemoteUser("elvis");
+    assertUserAllowed(elvis, acl);
+
+    // allowed because he's in ACL
+    UserGroupInformation carlPerkins = 
+      UserGroupInformation.createRemoteUser("carlPerkins");
+    assertUserAllowed(carlPerkins, acl);
+
+    // not allowed because he's not in ACL and has no netgroups
+    UserGroupInformation littleRichard = 
+      UserGroupInformation.createRemoteUser("littleRichard");
+    assertUserNotAllowed(littleRichard, acl);
+  }
+
+  @Test
   public void testWildCardAccessControlList() throws Exception {
     AccessControlList acl;
     
@@ -46,6 +183,7 @@ public class TestAccessControlList extends TestCase {
 
   // Check if AccessControlList.toString() works as expected.
   // Also validate if getAclString() for various cases.
+  @Test
   public void testAclString() {
     AccessControlList acl;
 
@@ -83,6 +221,7 @@ public class TestAccessControlList extends TestCase {
         new AccessControlList(acl.getAclString()).toString()));
   }
 
+  @Test
   public void testAccessControlList() throws Exception {
     AccessControlList acl;
     Set<String> users;
@@ -134,6 +273,7 @@ public class TestAccessControlList extends TestCase {
   /**
    * Test addUser/Group and removeUser/Group api.
    */
+  @Test
   public void testAddRemoveAPI() {
     AccessControlList acl;
     Set<String> users;
@@ -196,6 +336,7 @@ public class TestAccessControlList extends TestCase {
   /**
    * Tests adding/removing wild card as the user/group.
    */
+  @Test
   public void testAddRemoveWildCard() {
     AccessControlList acl = new AccessControlList("drwho tardis");
     
@@ -237,6 +378,7 @@ public class TestAccessControlList extends TestCase {
   /**
    * Tests adding user/group to an wild card acl.
    */
+  @Test
   public void testAddRemoveToWildCardACL() {
     AccessControlList acl = new AccessControlList(" * ");
     assertTrue(acl.isAllAllowed());
@@ -266,6 +408,7 @@ public class TestAccessControlList extends TestCase {
   /**
    * Verify the method isUserAllowed()
    */
+  @Test
   public void testIsUserAllowed() {
     AccessControlList acl;
 

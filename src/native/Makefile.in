@@ -92,9 +92,14 @@ am__installdirs = "$(DESTDIR)$(libdir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libhadoop_la_DEPENDENCIES =
-am_libhadoop_la_OBJECTS = ZlibCompressor.lo ZlibDecompressor.lo \
-	getGroup.lo JniBasedUnixGroupsMapping.lo file_descriptor.lo \
-	errno_enum.lo NativeIO.lo
+am_libhadoop_la_OBJECTS = ZlibCompressor.lo \
+	ZlibDecompressor.lo \
+	getGroup.lo \
+	JniBasedUnixGroupsMapping.lo \
+	JniBasedUnixGroupsNetgroupMapping.lo \
+	file_descriptor.lo \
+	errno_enum.lo \
+	NativeIO.lo
 libhadoop_la_OBJECTS = $(am_libhadoop_la_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I.
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -233,6 +238,7 @@ libhadoop_la_SOURCES = src/org/apache/hadoop/io/compress/zlib/ZlibCompressor.c \
                        src/org/apache/hadoop/io/compress/zlib/ZlibDecompressor.c \
                        src/org/apache/hadoop/security/getGroup.c \
                        src/org/apache/hadoop/security/JniBasedUnixGroupsMapping.c \
+                       src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c \
                        src/org/apache/hadoop/io/nativeio/file_descriptor.c \
                        src/org/apache/hadoop/io/nativeio/errno_enum.c \
                        src/org/apache/hadoop/io/nativeio/NativeIO.c
@@ -331,6 +337,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/JniBasedUnixGroupsMapping.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/NativeIO.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ZlibCompressor.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ZlibDecompressor.Plo@am__quote@
@@ -407,6 +414,13 @@ NativeIO.lo: src/org/apache/hadoop/io/nativeio/NativeIO.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/org/apache/hadoop/io/nativeio/NativeIO.c' object='NativeIO.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o NativeIO.lo `test -f 'src/org/apache/hadoop/io/nativeio/NativeIO.c' || echo '$(srcdir)/'`src/org/apache/hadoop/io/nativeio/NativeIO.c
+
+JniBasedUnixGroupsNetgroupMapping.lo: src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c
+@am__fastdepCC_TRUE@	if $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT JniBasedUnixGroupsNetgroupMapping.lo -MD -MP -MF "$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Tpo" -c -o JniBasedUnixGroupsNetgroupMapping.lo `test -f 'src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c' || echo '$(srcdir)/'`src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c; \
+@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Tpo" "$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Plo"; else rm -f "$(DEPDIR)/JniBasedUnixGroupsNetgroupMapping.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c' object='JniBasedUnixGroupsNetgroupMapping.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o JniBasedUnixGroupsNetgroupMapping.lo `test -f 'src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c' || echo '$(srcdir)/'`src/org/apache/hadoop/security/JniBasedUnixGroupsNetgroupMapping.c
 
 mostlyclean-libtool:
 	-rm -f *.lo

@@ -56,6 +56,11 @@ abstract public class Shell {
     //'groups username' command return is non-consistent across different unixes
     return new String [] {"bash", "-c", "id -Gn " + user};
   }
+  /** a Unix command to get a given netgroup's user list */
+  public static String[] getUsersForNetgroupCommand(final String netgroup) {
+    //'groups username' command return is non-consistent across different unixes
+    return new String [] {"bash", "-c", "getent netgroup " + netgroup};
+  }
   /** a Unix command to set permission */
   public static final String SET_PERMISSION_COMMAND = "chmod";
   /** a Unix command to set owner */

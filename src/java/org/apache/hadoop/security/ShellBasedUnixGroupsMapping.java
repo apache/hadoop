@@ -38,13 +38,39 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
  */
 @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
 @InterfaceStability.Evolving
-public class ShellBasedUnixGroupsMapping implements GroupMappingServiceProvider {
+public class ShellBasedUnixGroupsMapping
+  implements GroupMappingServiceProvider {
   
-  private static final Log LOG = LogFactory.getLog(ShellBasedUnixGroupsMapping.class);
+  private static final Log LOG =
+    LogFactory.getLog(ShellBasedUnixGroupsMapping.class);
   
+  /**
+   * Returns list of groups for a user
+   *
+   * @param user get groups for this user
+   * @return list of groups for a given user
+   */
   @Override
   public List<String> getGroups(String user) throws IOException {
     return getUnixGroups(user);
+  }
+
+  /**
+   * Caches groups, no need to do that for this provider
+   */
+  @Override
+  public void cacheGroupsRefresh() throws IOException {
+    // does nothing in this provider of user to groups mapping
+  }
+
+  /** 
+   * Adds groups to cache, no need to do that for this provider
+   *
+   * @param groups unused
+   */
+  @Override
+  public void cacheGroupsAdd(List<String> groups) throws IOException {
+    // does nothing in this provider of user to groups mapping
   }
 
   /** 

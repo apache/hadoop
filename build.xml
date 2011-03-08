@@ -396,6 +396,15 @@
   	  <class name="org.apache.hadoop.io.nativeio.NativeIO" />
   	</javah>
 
+  	<javah
+  	  classpath="${build.classes}"
+  	  destdir="${build.native}/src/org/apache/hadoop/security"
+      force="yes"
+  	  verbose="yes"
+  	  >
+  	  <class name="org.apache.hadoop.security.JniBasedUnixGroupsNetgroupMapping" />
+  	</javah>
+
 	<exec dir="${build.native}" executable="sh" failonerror="true">
 	  <env key="OS_NAME" value="${os.name}"/>
 	  <env key="OS_ARCH" value="${os.arch}"/>
@@ -724,6 +733,10 @@
         </syspropertyset>
         <sysproperty key="test.system.hdrc.deployed.hadoopconfdir"
                      value="@{hadoop.conf.dir.deployed}" />
+        <!-- user to group mapping class for TestAccessControlList -->
+        <syspropertyset dynamic="no">
+          <propertyref name="TestAccessControlListGroupMapping"/>
+        </syspropertyset>
         <formatter type="${test.junit.output.format}" />
         <batchtest todir="@{test.dir}" if="tests.notestcase">
           <fileset dir="@{fileset.dir}/core"
