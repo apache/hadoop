@@ -285,6 +285,9 @@ Trunk (unreleased changes)
     HADOOP-7006. Fix 'fs -getmerge' command to not be a no-op.
     (Chris Nauroth via cutting)
 
+    HADOOP-6663.  BlockDecompressorStream get EOF exception when decompressing
+    the file compressed from empty file.  (Kang Xiao via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
