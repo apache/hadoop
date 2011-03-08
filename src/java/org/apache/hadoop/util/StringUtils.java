@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.StringTokenizer;
@@ -740,16 +741,15 @@ public class StringUtils {
    * @param separator Separator to join with.
    * @param strings Strings to join.
    */
-  public static String join(CharSequence separator, Iterable<String> strings) {
-    StringBuilder sb = new StringBuilder();
-    boolean first = true;
-    for (String s : strings) {
-      if (first) {
-        first = false;
-      } else {
-        sb.append(separator);
-      }
-      sb.append(s);
+  public static String join(CharSequence separator, Iterable<?> strings) {
+    Iterator<?> i = strings.iterator();
+    if (!i.hasNext()) {
+      return "";
+    }
+    StringBuilder sb = new StringBuilder(i.next().toString());
+    while (i.hasNext()) {
+      sb.append(separator);
+      sb.append(i.next().toString());
     }
     return sb.toString();
   }
