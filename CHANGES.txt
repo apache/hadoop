@@ -69,6 +69,8 @@ Trunk (unreleased changes)
     HADOOP-7159. RPC server should log the client hostname when read exception
     happened. (Scott Chen via todd)
 
+    HADOOP-7167. Allow using a file to exclude certain tests from build. (todd)
+
   OPTIMIZATIONS
 
   BUG FIXES

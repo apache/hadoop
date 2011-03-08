@@ -95,6 +95,7 @@
   <property name="test.core.build.classes" value="${test.build.dir}/core/classes"/>
 
   <property name="test.all.tests.file" value="${test.src.dir}/all-tests"/>
+  <property name="test.exclude.file" value="/dev/null" />
 
   <property name="javadoc.link.java"
 	    value="http://java.sun.com/javase/6/docs/api/"/>
@@ -770,13 +771,15 @@
                    excludes="**/${test.exclude}.java aop/** system/**">
              <patternset>
                <includesfile name="@{test.file}"/>
+               <excludesfile name="${test.exclude.file}"/>
              </patternset>
          </fileset>
         </batchtest>
         <batchtest todir="${test.build.dir}" if="tests.notestcase.fi">
           <fileset dir="@{fileset.dir}/aop"
                    includes="**/${test.include}.java"
-                   excludes="**/${test.exclude}.java" />
+                   excludes="**/${test.exclude}.java"
+                   excludesfile="${test.exclude.file}" />
          </batchtest>
          <batchtest todir="@{test.dir}" if="tests.testcase">
            <fileset dir="@{fileset.dir}/core"
