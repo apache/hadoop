@@ -165,6 +165,9 @@ Trunk (unreleased changes)
 
     HADOOP-6818. Provides a JNI implementation of group resolution. (ddas)
 
+    HADOOP-6943. The GroupMappingServiceProvider interface should be public.
+    (Aaron T. Myers via tomwhite)
+
   OPTIMIZATIONS
 
     HADOOP-6884. Add LOG.isDebugEnabled() guard for each LOG.debug(..).
