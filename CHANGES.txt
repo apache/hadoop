@@ -35,6 +35,9 @@ Trunk (unreleased changes)
 
     HADOOP-6889. Make RPC to have an option to timeout. (hairong)
 
+    HADOOP-6996. Allow CodecFactory to return a codec object given a codec'
+    class name. (hairong)
+
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 

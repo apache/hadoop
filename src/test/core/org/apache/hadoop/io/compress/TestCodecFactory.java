@@ -124,28 +124,60 @@ public class TestCodecFactory extends TestCase {
       new CompressionCodecFactory(new Configuration());
     CompressionCodec codec = factory.getCodec(new Path("/tmp/foo.bar"));
     assertEquals("default factory foo codec", null, codec);
+    codec = factory.getCodecByClassName(BarCodec.class.getCanonicalName());
+    assertEquals("default factory foo codec", null, codec);
+    
     codec = factory.getCodec(new Path("/tmp/foo.gz"));
     checkCodec("default factory for .gz", GzipCodec.class, codec);
+    codec = factory.getCodecByClassName(GzipCodec.class.getCanonicalName());
+    checkCodec("default factory for gzip codec", GzipCodec.class, codec);
+    
     codec = factory.getCodec(new Path("/tmp/foo.bz2"));
     checkCodec("default factory for .bz2", BZip2Codec.class, codec);
+    codec = factory.getCodecByClassName(BZip2Codec.class.getCanonicalName());
+    checkCodec("default factory for bzip2 codec", BZip2Codec.class, codec);
+    
     factory = setClasses(new Class[0]);
     codec = factory.getCodec(new Path("/tmp/foo.bar"));
     assertEquals("empty codec bar codec", null, codec);
+    codec = factory.getCodecByClassName(BarCodec.class.getCanonicalName());
+    assertEquals("empty codec bar codec", null, codec);
+    
     codec = factory.getCodec(new Path("/tmp/foo.gz"));
     assertEquals("empty codec gz codec", null, codec);
+    codec = factory.getCodecByClassName(GzipCodec.class.getCanonicalName());
+    assertEquals("empty codec gz codec", null, codec);
+    
     codec = factory.getCodec(new Path("/tmp/foo.bz2"));
-    assertEquals("default factory for .bz2", null, codec);
+    assertEquals("empty factory for .bz2", null, codec);
+    codec = factory.getCodecByClassName(BZip2Codec.class.getCanonicalName());
+    assertEquals("empty factory for bzip2 codec", null, codec);
+    
     factory = setClasses(new Class[]{BarCodec.class, FooCodec.class, 
                                      FooBarCodec.class});
     codec = factory.getCodec(new Path("/tmp/.foo.bar.gz"));
     assertEquals("full factory gz codec", null, codec);
+    codec = factory.getCodecByClassName(GzipCodec.class.getCanonicalName());
+    assertEquals("full codec gz codec", null, codec);
+     
     codec = factory.getCodec(new Path("/tmp/foo.bz2"));
-    assertEquals("default factory for .bz2", null, codec);
+    assertEquals("full factory for .bz2", null, codec);
+    codec = factory.getCodecByClassName(BZip2Codec.class.getCanonicalName());
+    assertEquals("full codec bzip2 codec", null, codec);
+    
     codec = factory.getCodec(new Path("/tmp/foo.bar"));
     checkCodec("full factory bar codec", BarCodec.class, codec);
+    codec = factory.getCodecByClassName(BarCodec.class.getCanonicalName());
+    checkCodec("full factory bar codec", BarCodec.class, codec);
+    
     codec = factory.getCodec(new Path("/tmp/foo/baz.foo.bar"));
     checkCodec("full factory foo bar codec", FooBarCodec.class, codec);
+    codec = factory.getCodecByClassName(FooBarCodec.class.getCanonicalName());
+    checkCodec("full factory foo bar codec", FooBarCodec.class, codec);
+    
     codec = factory.getCodec(new Path("/tmp/foo.foo"));
+    checkCodec("full factory foo codec", FooCodec.class, codec);
+    codec = factory.getCodecByClassName(FooCodec.class.getCanonicalName());
     checkCodec("full factory foo codec", FooCodec.class, codec);
   }
 }
