@@ -37,12 +37,9 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.AuthorizationException;
-import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.conf.*;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.util.ReflectionUtils;
 
 /** A simple RPC mechanism.

@@ -34,12 +34,14 @@ import java.util.List;
 import javax.security.auth.login.LoginContext;
 
 import junit.framework.Assert;
+import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.Test;
+import static org.apache.hadoop.test.MetricsAsserts.*;
 
 public class TestUserGroupInformation {
   final private static String USER_NAME = "user1@HADOOP.APACHE.ORG";
@@ -332,18 +334,17 @@ public class TestUserGroupInformation {
     Assert.assertTrue(user1 == user2);
   }
   
-  public static void verifyLoginMetrics(int success, int failure)
+  public static void verifyLoginMetrics(long success, int failure)
       throws IOException {
     // Ensure metrics related to kerberos login is updated.
-    UserGroupInformation.UgiMetrics metrics = UserGroupInformation.metrics;
-    metrics.doUpdates(null);
+    MetricsRecordBuilder rb = getMetrics("UgiMetrics");
     if (success > 0) {
-      assertEquals(success, metrics.loginSuccess.getPreviousIntervalNumOps());
-      assertTrue(metrics.loginSuccess.getPreviousIntervalAverageTime() > 0);
+      assertCounter("LoginSuccessNumOps", success, rb);
+      assertGaugeGt("LoginSuccessAvgTime", 0, rb);
     }
     if (failure > 0) {
-      assertEquals(failure, metrics.loginFailure.getPreviousIntervalNumOps());
-      assertTrue(metrics.loginFailure.getPreviousIntervalAverageTime() > 0);
+      assertCounter("LoginFailureNumPos", failure, rb);
+      assertGaugeGt("LoginFailureAvgTime", 0, rb);
     }
   }
 }

@@ -52,14 +52,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.util.MetricsBase;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.Shell;
@@ -87,34 +84,15 @@ public class UserGroupInformation {
    * UgiMetrics maintains UGI activity statistics
    * and publishes them through the metrics interfaces.
    */
-  static class UgiMetrics implements Updater {
-    final MetricsTimeVaryingRate loginSuccess;
-    final MetricsTimeVaryingRate loginFailure;
-    private final MetricsRecord metricsRecord;
-    private final MetricsRegistry registry;
+  @Metrics(about="User and group related metrics", context="ugi")
+  static class UgiMetrics {
+    @Metric("Rate of successful kerberos logins and latency (milliseconds)")
+    MutableRate loginSuccess;
+    @Metric("Rate of failed kerberos logins and latency (milliseconds)")
+    MutableRate loginFailure;
 
-    UgiMetrics() {
-      registry = new MetricsRegistry();
-      loginSuccess = new MetricsTimeVaryingRate("loginSuccess", registry,
-          "Rate of successful kerberos logins and time taken in milliseconds");
-      loginFailure = new MetricsTimeVaryingRate("loginFailure", registry,
-          "Rate of failed kerberos logins and time taken in milliseconds");
-      final MetricsContext metricsContext = MetricsUtil.getContext("ugi");
-      metricsRecord = MetricsUtil.createRecord(metricsContext, "ugi");
-      metricsContext.registerUpdater(this);
-    }
-
-    /**
-     * Push the metrics to the monitoring subsystem on doUpdate() call.
-     */
-    @Override
-    public void doUpdates(final MetricsContext context) {
-      synchronized (this) {
-        for (MetricsBase m : registry.getMetricsList()) {
-          m.pushMetric(metricsRecord);
-        }
-      }
-      metricsRecord.update();
+    static UgiMetrics create() {
+      return DefaultMetricsSystem.instance().register(new UgiMetrics());
     }
   }
   
@@ -180,7 +158,7 @@ public class UserGroupInformation {
   }
 
   /** Metrics to track UGI activity */
-  static UgiMetrics metrics = new UgiMetrics();
+  static UgiMetrics metrics = UgiMetrics.create();
   /** Are the static variables that depend on configuration initialized? */
   private static boolean isInitialized = false;
   /** Should we use Kerberos configuration? */
@@ -604,13 +582,13 @@ public class UserGroupInformation {
         new LoginContext(HadoopConfiguration.KEYTAB_KERBEROS_CONFIG_NAME, subject);
       start = System.currentTimeMillis();
       login.login();
-      metrics.loginSuccess.inc(System.currentTimeMillis() - start);
+      metrics.loginSuccess.add(System.currentTimeMillis() - start);
       loginUser = new UserGroupInformation(subject);
       loginUser.setLogin(login);
       loginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
     } catch (LoginException le) {
       if (start > 0) {
-        metrics.loginFailure.inc(System.currentTimeMillis() - start);
+        metrics.loginFailure.add(System.currentTimeMillis() - start);
       }
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);
@@ -668,12 +646,12 @@ public class UserGroupInformation {
         LOG.info("Initiating re-login for " + keytabPrincipal);
         start = System.currentTimeMillis();
         login.login();
-        metrics.loginSuccess.inc(System.currentTimeMillis() - start);
+        metrics.loginSuccess.add(System.currentTimeMillis() - start);
         setLogin(login);
       }
     } catch (LoginException le) {
       if (start > 0) {
-        metrics.loginFailure.inc(System.currentTimeMillis() - start);
+        metrics.loginFailure.add(System.currentTimeMillis() - start);
       }
       throw new IOException("Login failure for " + keytabPrincipal + 
           " from keytab " + keytabFile, le);
@@ -753,7 +731,7 @@ public class UserGroupInformation {
        
       start = System.currentTimeMillis();
       login.login();
-      metrics.loginSuccess.inc(System.currentTimeMillis() - start);
+      metrics.loginSuccess.add(System.currentTimeMillis() - start);
       UserGroupInformation newLoginUser = new UserGroupInformation(subject);
       newLoginUser.setLogin(login);
       newLoginUser.setAuthenticationMethod(AuthenticationMethod.KERBEROS);
@@ -761,7 +739,7 @@ public class UserGroupInformation {
       return newLoginUser;
     } catch (LoginException le) {
       if (start > 0) {
-        metrics.loginFailure.inc(System.currentTimeMillis() - start);
+        metrics.loginFailure.add(System.currentTimeMillis() - start);
       }
       throw new IOException("Login failure for " + user + " from keytab " + 
                             path, le);

@@ -19,136 +19,141 @@ package org.apache.hadoop.ipc.metrics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.metrics.MetricsContext;
-import org.apache.hadoop.metrics.MetricsRecord;
-import org.apache.hadoop.metrics.MetricsUtil;
-import org.apache.hadoop.metrics.Updater;
-import org.apache.hadoop.metrics.util.MetricsBase;
-import org.apache.hadoop.metrics.util.MetricsIntValue;
-import org.apache.hadoop.metrics.util.MetricsRegistry;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingInt;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingLong;
-import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.metrics2.annotation.Metric;
+import org.apache.hadoop.metrics2.annotation.Metrics;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.lib.MetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableCounterInt;
+import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableRate;
 
 /**
- * 
  * This class is for maintaining  the various RPC statistics
  * and publishing them through the metrics interfaces.
- * This also registers the JMX MBean for RPC.
- * <p>
- * This class has a number of metrics variables that are publicly accessible;
- * these variables (objects) have methods to update their values;
- * for example:
- *  <p> {@link #rpcQueueTime}.inc(time)
- *
  */
 @InterfaceAudience.Private
-public class RpcMetrics implements Updater {
-  private final MetricsRegistry registry = new MetricsRegistry();
-  private final MetricsRecord metricsRecord;
-  private final Server myServer;
-  private static final Log LOG = LogFactory.getLog(RpcMetrics.class);
-  RpcActivityMBean rpcMBean;
+@Metrics(about="Aggregate RPC metrics", context="rpc")
+public class RpcMetrics {
+
+  static final Log LOG = LogFactory.getLog(RpcMetrics.class);
+  final Server server;
+  final MetricsRegistry registry;
+  final String name;
   
-  public RpcMetrics(final String hostName, final String port,
-      final Server server) {
-    myServer = server;
-    MetricsContext context = MetricsUtil.getContext("rpc");
-    metricsRecord = MetricsUtil.createRecord(context, "metrics");
-
-    metricsRecord.setTag("port", port);
-
-    LOG.info("Initializing RPC Metrics with hostName=" 
-        + hostName + ", port=" + port);
-
-    context.registerUpdater(this);
-    
-    // Need to clean up the interface to RpcMgt - don't need both metrics and server params
-    rpcMBean = new RpcActivityMBean(registry, hostName, port);
+  RpcMetrics(Server server) {
+    String port = String.valueOf(server.getListenerAddress().getPort());
+    name = "RpcActivityForPort"+ port;
+    this.server = server;
+    registry = new MetricsRegistry("rpc").tag("port", "RPC port", port);
+    LOG.debug("Initialized "+ registry);
   }
-  
-  
-  /**
-   * The metrics variables are public:
-   *  - they can be set directly by calling their set/inc methods
-   *  -they can also be read directly - e.g. JMX does this.
-   */
+
+  public String name() { return name; }
+
+  public static RpcMetrics create(Server server) {
+    RpcMetrics m = new RpcMetrics(server);
+    return DefaultMetricsSystem.instance().register(m.name, null, m);
+  }
+
+  @Metric("Number of received bytes") MutableCounterLong receivedBytes;
+  @Metric("Number of sent bytes") MutableCounterLong sentBytes;
+  @Metric("Queue time") MutableRate rpcQueueTime;
+  @Metric("Processsing time") MutableRate rpcProcessingTime;
+  @Metric("Number of authentication failures")
+  MutableCounterInt rpcAuthenticationFailures;
+  @Metric("Number of authentication successes")
+  MutableCounterInt rpcAuthenticationSuccesses;
+  @Metric("Number of authorization failures")
+  MutableCounterInt rpcAuthorizationFailures;
+  @Metric("Number of authorization sucesses")
+  MutableCounterInt rpcAuthorizationSuccesses;
+
+  @Metric("Number of open connections") public int numOpenConnections() {
+    return server.getNumOpenConnections();
+  }
+
+  @Metric("Length of the call queue") public int callQueueLength() {
+    return server.getCallQueueLen();
+  }
+
+  // Public instrumentation methods that could be extracted to an
+  // abstract class if we decide to do custom instrumentation classes a la
+  // JobTrackerInstrumenation. The methods with //@Override comment are
+  // candidates for abstract methods in a abstract instrumentation class.
 
   /**
-   * metrics - number of bytes received
+   * One authentication failure event
    */
-  public final MetricsTimeVaryingLong receivedBytes = 
-         new MetricsTimeVaryingLong("ReceivedBytes", registry);
-  /**
-   * metrics - number of bytes sent
-   */
-  public final MetricsTimeVaryingLong sentBytes = 
-         new MetricsTimeVaryingLong("SentBytes", registry);
-  /**
-   * metrics - rpc queue time
-   */
-  public final MetricsTimeVaryingRate rpcQueueTime =
-          new MetricsTimeVaryingRate("RpcQueueTime", registry);
-  /**
-   * metrics - rpc processing time
-   */
-  public final MetricsTimeVaryingRate rpcProcessingTime =
-          new MetricsTimeVaryingRate("RpcProcessingTime", registry);
-  /**
-   * metrics - number of open connections
-   */
-  public final MetricsIntValue numOpenConnections = 
-          new MetricsIntValue("NumOpenConnections", registry);
-  /**
-   * metrics - length of the queue
-   */
-  public final MetricsIntValue callQueueLen = 
-          new MetricsIntValue("callQueueLen", registry);
-  /**
-   * metrics - number of failed authentications
-   */
-  public final MetricsTimeVaryingInt authenticationFailures = 
-          new MetricsTimeVaryingInt("rpcAuthenticationFailures", registry);
-  /**
-   * metrics - number of successful authentications
-   */
-  public final MetricsTimeVaryingInt authenticationSuccesses = 
-          new MetricsTimeVaryingInt("rpcAuthenticationSuccesses", registry);
-  /**
-   * metrics - number of failed authorizations
-   */
-  public final MetricsTimeVaryingInt authorizationFailures = 
-          new MetricsTimeVaryingInt("rpcAuthorizationFailures", registry);
-  /**
-   * metrics - number of successful authorizations
-   */
-  public final MetricsTimeVaryingInt authorizationSuccesses = 
-         new MetricsTimeVaryingInt("rpcAuthorizationSuccesses", registry);
-  
-  /**
-   * Push the metrics to the monitoring subsystem on doUpdate() call.
-   */
-  public void doUpdates(final MetricsContext context) {
-    
-    synchronized (this) {
-      // ToFix - fix server to use the following two metrics directly so
-      // the metrics do not have be copied here.
-      numOpenConnections.set(myServer.getNumOpenConnections());
-      callQueueLen.set(myServer.getCallQueueLen());
-      for (MetricsBase m : registry.getMetricsList()) {
-        m.pushMetric(metricsRecord);
-      }
-    }
-    metricsRecord.update();
+  //@Override
+  public void incrAuthenticationFailures() {
+    rpcAuthenticationFailures.incr();
   }
 
   /**
-   * shutdown the metrics
+   * One authentication success event
    */
-  public void shutdown() {
-    if (rpcMBean != null) 
-      rpcMBean.shutdown();
+  //@Override
+  public void incrAuthenticationSuccesses() {
+    rpcAuthenticationSuccesses.incr();
+  }
+
+  /**
+   * One authorization success event
+   */
+  //@Override
+  public void incrAuthorizationSuccesses() {
+    rpcAuthorizationSuccesses.incr();
+  }
+
+  /**
+   * One authorization failure event
+   */
+  //@Override
+  public void incrAuthorizationFailures() {
+    rpcAuthorizationFailures.incr();
+  }
+
+  /**
+   * Shutdown the instrumentation for the process
+   */
+  //@Override
+  public void shutdown() {}
+
+  /**
+   * Increment sent bytes by count
+   * @param count to increment
+   */
+  //@Override
+  public void incrSentBytes(int count) {
+    sentBytes.incr(count);
+  }
+
+  /**
+   * Increment received bytes by count
+   * @param count to increment
+   */
+  //@Override
+  public void incrReceivedBytes(int count) {
+    receivedBytes.incr(count);
+  }
+
+  /**
+   * Add an RPC queue time sample
+   * @param qTime the queue time
+   */
+  //@Override
+  public void addRpcQueueTime(int qTime) {
+    rpcQueueTime.add(qTime);
+  }
+
+  /**
+   * Add an RPC processing time sample
+   * @param processingTime the processing time
+   */
+  //@Override
+  public void addRpcProcessingTime(int processingTime) {
+    rpcProcessingTime.add(processingTime);
   }
 }
