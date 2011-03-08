@@ -30,6 +30,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 
@@ -70,6 +71,10 @@ public abstract class FileContextMainOperationsBaseTest  {
       return true;
     }
   };
+
+  static class TestProgress implements Progressable {
+    public void progress() { }
+  }
 
   //A test filter with returns any path containing a "b" 
   final private static PathFilter TEST_X_FILTER = new PathFilter() {
@@ -1052,8 +1057,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     //HADOOP-4760 according to Closeable#close() closing already-closed 
     //streams should have no effect. 
     Path src = getTestRootPath(fc, "test/hadoop/file");
+    Progressable prog = new TestProgress();
     FSDataOutputStream out = fc.create(src, EnumSet.of(CreateFlag.CREATE),
-            Options.CreateOpts.createParent());
+            Options.CreateOpts.createParent(),
+            Options.CreateOpts.Progress.progress(prog));
     
     out.writeChar('H'); //write some data
     out.close();

@@ -55,7 +55,11 @@ public final class Options {
     public static CreateParent donotCreateParent() {
       return new CreateParent(false);
     }
-    
+
+    public static Progress progress(Progressable progress) {
+      return new Progress(progress);
+    }
+
     public static class BlockSize extends CreateOpts {
       private final long blockSize;
       protected BlockSize(long bs) {

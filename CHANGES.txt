@@ -38,12 +38,15 @@ Trunk (unreleased changes)
     HADOOP-6996. Allow CodecFactory to return a codec object given a codec'
     class name. (hairong)
 
-    HADOOP-7171. Support Ugi in the FileContext. (jitendra)
+    HADOOP-7171. Support UGI in the FileContext. (jitendra)
+
+    HADOOP-6854. Options.createOpts should provide API to access Progress.
+    (Krishna Ramachandran via jitendra)
 
   IMPROVEMENTS
 
     HADOOP-6644. util.Shell getGROUPS_FOR_USER_COMMAND method name 
-    - should use common naming convention (boryas)
+    should use common naming convention (boryas)
 
     HADOOP-6778. add isRunning() method to 
     AbstractDelegationTokenSecretManager (for HDFS-1044) (boryas)
