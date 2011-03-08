@@ -635,6 +635,11 @@ public class UserGroupInformation {
          !isKeytab)
       return;
     
+    long now = System.currentTimeMillis();
+    if (!hasSufficientTimeElapsed(now)) {
+      return;
+    }
+
     KerberosTicket tgt = getTGT();
     //Return if TGT is valid and is not going to expire soon.
     if (tgt != null && System.currentTimeMillis() < getRefreshTime(tgt)) {
@@ -645,7 +650,6 @@ public class UserGroupInformation {
     if (login == null || keytabFile == null) {
       throw new IOException("loginUserFromKeyTab must be done first");
     }
-    long now = System.currentTimeMillis();
     
     long start = 0;
     // register most recent relogin attempt
