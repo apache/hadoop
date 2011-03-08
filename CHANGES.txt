@@ -311,6 +311,9 @@ Trunk (unreleased changes)
     HADOOP-6758. MapFile.fix does not allow index interval definition.
     (Gianmarco De Francisci Morales via tomwhite)
 
+    HADOOP-6926. SocketInputStream incorrectly implements read().
+    (Todd Lipcon via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
