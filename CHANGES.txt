@@ -333,6 +333,9 @@ Trunk (unreleased changes)
     HADOOP-6899 RawLocalFileSystem#setWorkingDir() does not work for relative names
      (Sanjay Radia)
 
+    HADOOP-6496. HttpServer sends wrong content-type for CSS files
+    (and others). (Todd Lipcon via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

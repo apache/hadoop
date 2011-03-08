@@ -79,7 +79,7 @@
   <property name="test.build.extraconf" value="${test.build.dir}/extraconf"/>
   <property name="test.build.javadoc" value="${test.build.dir}/docs/api"/>
   <property name="test.build.javadoc.dev" value="${test.build.dir}/docs/dev-api"/>
-  <property name="test.build.webapps" value="${build.dir}/webapps"/>
+  <property name="test.build.webapps" value="${build.dir}/test/webapps"/>
   <property name="test.include" value="Test*"/>
   <property name="test.classpath.id" value="test.classpath"/>
   <property name="test.output" value="no"/>
@@ -206,6 +206,7 @@
     <pathelement location="${test.build.extraconf}"/>
     <pathelement location="${test.core.build.classes}" />
     <pathelement location="${test.src.dir}"/>
+    <pathelement location="${test.build.dir}"/>
     <pathelement location="${build.dir}"/>
     <pathelement location="${build.examples}"/>
     <pathelement location="${build.tools}"/>
@@ -661,7 +662,9 @@
       <delete dir="@{test.dir}/data" />
       <mkdir dir="@{test.dir}/data" />
       <delete dir="${test.build.webapps}"/>
-      <mkdir dir="${test.build.webapps}/test" />
+      <copy todir="${test.build.webapps}">
+        <fileset dir="${test.src.dir}/test-webapps" includes="**/*" />
+      </copy>
       <delete dir="@{test.dir}/logs" />
       <mkdir dir="@{test.dir}/logs" />
       <copy file="${test.src.dir}/hadoop-policy.xml"
