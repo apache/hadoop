@@ -107,8 +107,11 @@ class ChRootedFileSystem extends FileSystem {
      * this issue but if we were to make it external then this needs
      * to be resolved.
      */
-    myUri = new URI(myFs.getUri().toString() //+ Path.SEPARATOR
-        + chRootPathPart.toString().substring(1));
+    // Handle the two cases:
+    //              scheme:/// and scheme://authority/
+    myUri = new URI(myFs.getUri().toString() + 
+        (myFs.getUri().getAuthority() == null ? "" :  Path.SEPARATOR) +
+          chRootPathPart.toString().substring(1));
 
     workingDir = getHomeDirectory();
     // We don't use the wd of the myFs bu set it to root.

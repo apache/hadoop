@@ -265,7 +265,7 @@ public class ViewFs extends AbstractFileSystem {
       protected
       AbstractFileSystem getTargetFileSystem(
           final INodeDir<AbstractFileSystem> dir) throws URISyntaxException {
-        return new InternalDirOfViewFs(dir, creationTime, ugi);
+        return new InternalDirOfViewFs(dir, creationTime, ugi, getUri());
       }
 
       @Override
@@ -603,14 +603,16 @@ public class ViewFs extends AbstractFileSystem {
     final InodeTree.INodeDir<AbstractFileSystem>  theInternalDir;
     final long creationTime; // of the the mount table
     final UserGroupInformation ugi; // the user/group of user who created mtable
+    final URI myUri; // the URI of the outer ViewFs
     
     public InternalDirOfViewFs(final InodeTree.INodeDir<AbstractFileSystem> dir,
-        final long cTime, final UserGroupInformation ugi)
+        final long cTime, final UserGroupInformation ugi, final URI uri)
       throws URISyntaxException {
       super(FsConstants.VIEWFS_URI, FsConstants.VIEWFS_SCHEME, false, -1);
       theInternalDir = dir;
       creationTime = cTime;
       this.ugi = ugi;
+      myUri = uri;
     }
 
     static private void checkPathIsSlash(final Path f) throws IOException {
@@ -659,7 +661,7 @@ public class ViewFs extends AbstractFileSystem {
       return new FileStatus(0, true, 0, 0, creationTime, creationTime, 
           PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
           new Path(theInternalDir.fullPath).makeQualified(
-              FsConstants.VIEWFS_URI, null));
+              myUri, null));
     }
     
     @Override
@@ -680,12 +682,12 @@ public class ViewFs extends AbstractFileSystem {
             PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
             inodelink.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
-                FsConstants.VIEWFS_URI, null));
+                myUri, null));
       } else {
         result = new FileStatus(0, true, 0, 0, creationTime, creationTime,
           PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
           new Path(inode.fullPath).makeQualified(
-              FsConstants.VIEWFS_URI, null));
+              myUri, null));
       }
       return result;
     }
@@ -725,13 +727,13 @@ public class ViewFs extends AbstractFileSystem {
             PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
             link.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
-                FsConstants.VIEWFS_URI, null));
+                myUri, null));
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
             creationTime, creationTime,
             PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
             new Path(inode.fullPath).makeQualified(
-                FsConstants.VIEWFS_URI, null));
+                myUri, null));
         }
       }
       return result;

@@ -25,6 +25,7 @@ import static org.apache.hadoop.fs.FileContextTestHelper.isFile;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -64,6 +65,9 @@ public class ViewFsBaseTest {
   FileContext fcView; // the view file system - the mounts are here
   FileContext fcTarget; // the target file system - the mount will point here
   Path targetTestRoot;
+  Configuration conf;
+  FileContext xfcViewWithAuthority; // same as fsView but with authority
+  URI schemeWithAuthority;
 
   @Before
   public void setUp() throws Exception {
@@ -89,7 +93,7 @@ public class ViewFsBaseTest {
     // in the test root
     
     // Set up the defaultMT in the config with our mount point links
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     ConfigUtil.addLink(conf, "/user",
         new Path(targetTestRoot,"user").toUri());
     ConfigUtil.addLink(conf, "/user2",
@@ -106,6 +110,7 @@ public class ViewFsBaseTest {
         new Path(targetTestRoot,"aFile").toUri());
     
     fcView = FileContext.getFileContext(FsConstants.VIEWFS_URI, conf);
+    // Also try viewfs://default/    - note authority is name of mount table
   }
 
   @After

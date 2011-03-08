@@ -255,18 +255,19 @@ public abstract class AbstractFileSystem {
               + " is not valid");
     }
     String authority = uri.getAuthority();
-    if (!authorityNeeded) {
-      if (authority != null) {
-        throw new HadoopIllegalArgumentException("Scheme with non-null authority: "
-            + uri);
-      }
-      return new URI(supportedScheme + ":///");
-    }
     if (authority == null) {
-      throw new HadoopIllegalArgumentException("Uri without authority: " + uri);
+       if (authorityNeeded) {
+         throw new HadoopIllegalArgumentException("Uri without authority: " + uri);
+       } else {
+         return new URI(supportedScheme + ":///");
+       }   
     }
+    // authority is non null  - AuthorityNeeded may be true or false.
     int port = uri.getPort();
-    port = port == -1 ? defaultPort : port;
+    port = (port == -1 ? defaultPort : port);
+    if (port == -1) { // no port supplied and default port is not specified
+      return new URI(supportedScheme, authority, "/", null);
+    }
     return new URI(supportedScheme + "://" + uri.getHost() + ":" + port);
   }
   

@@ -62,6 +62,8 @@ public class ViewFileSystemBaseTest {
   FileSystem fsView;  // the view file system - the mounts are here
   FileSystem fsTarget;  // the target file system - the mount will point here
   Path targetTestRoot;
+  Configuration conf;
+
 
   @Before
   public void setUp() throws Exception {
@@ -83,7 +85,7 @@ public class ViewFileSystemBaseTest {
     
     // Set up the defaultMT in the config with our mount point links
     //Configuration conf = new Configuration();
-    Configuration conf = ViewFileSystemTestSetup.configWithViewfsScheme();
+    conf = ViewFileSystemTestSetup.configWithViewfsScheme();
     ConfigUtil.addLink(conf, "/user", new Path(targetTestRoot,"user").toUri());
     ConfigUtil.addLink(conf, "/user2", new Path(targetTestRoot,"user").toUri());
     ConfigUtil.addLink(conf, "/data", new Path(targetTestRoot,"data").toUri());
@@ -119,6 +121,7 @@ public class ViewFileSystemBaseTest {
         new Path("/foo/bar").makeQualified(FsConstants.VIEWFS_URI, null),
         fsView.makeQualified(new Path("/foo/bar")));
   }
+
   
   /** 
    * Test modify operations (create, mkdir, delete, etc) 

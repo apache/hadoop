@@ -60,6 +60,7 @@ public class ViewFileSystem extends FileSystem {
   
   final long creationTime; // of the the mount table
   final UserGroupInformation ugi; // the user/group of user who created mtable
+  URI myUri;
   private Path workingDir;
   Configuration config;
   InodeTree<FileSystem> fsState;  // the fs state; ie the mount table
@@ -125,12 +126,13 @@ public class ViewFileSystem extends FileSystem {
       throws IOException {
     super.initialize(theUri, conf);
     setConf(conf);
-    workingDir =
-      this.makeQualified(new Path("/user/" + ugi.getShortUserName()));
     config = conf;
     // Now build  client side view (i.e. client side mount table) from config.
     final String authority = theUri.getAuthority();
     try {
+      myUri = new URI(FsConstants.VIEWFS_SCHEME, authority, "/", null, null);
+      workingDir =
+        this.makeQualified(new Path("/user/" + ugi.getShortUserName()));
       fsState = new InodeTree<FileSystem>(conf, authority) {
 
         @Override
@@ -145,7 +147,7 @@ public class ViewFileSystem extends FileSystem {
         protected
         FileSystem getTargetFileSystem(final INodeDir<FileSystem> dir)
           throws URISyntaxException {
-          return new InternalDirOfViewFs(dir, creationTime, ugi);
+          return new InternalDirOfViewFs(dir, creationTime, ugi, myUri);
         }
 
         @Override
@@ -172,7 +174,7 @@ public class ViewFileSystem extends FileSystem {
   ViewFileSystem(final URI theUri, final Configuration conf)
     throws IOException {
     this();
-    initialize(FsConstants.VIEWFS_URI, conf);
+    initialize(theUri, conf);
   }
   
   /**
@@ -192,7 +194,7 @@ public class ViewFileSystem extends FileSystem {
 
   @Override
   public URI getUri() {
-    return FsConstants.VIEWFS_URI;
+    return myUri;
   }
   
   /**
@@ -446,12 +448,14 @@ public class ViewFileSystem extends FileSystem {
     final InodeTree.INodeDir<FileSystem>  theInternalDir;
     final long creationTime; // of the the mount table
     final UserGroupInformation ugi; // the user/group of user who created mtable
+    final URI myUri;
     
     public InternalDirOfViewFs(final InodeTree.INodeDir<FileSystem> dir,
-        final long cTime, final UserGroupInformation ugi)
+        final long cTime, final UserGroupInformation ugi, URI uri)
       throws URISyntaxException {
+      myUri = uri;
       try {
-        initialize(FsConstants.VIEWFS_URI, new Configuration());
+        initialize(myUri, new Configuration());
       } catch (IOException e) {
         throw new RuntimeException("Cannot occur");
       }
@@ -469,7 +473,7 @@ public class ViewFileSystem extends FileSystem {
     
     @Override
     public URI getUri() {
-      return FsConstants.VIEWFS_URI;
+      return myUri;
     }
 
     @Override
@@ -533,7 +537,7 @@ public class ViewFileSystem extends FileSystem {
           PERMISSION_RRR, ugi.getUserName(), ugi.getGroupNames()[0],
 
           new Path(theInternalDir.fullPath).makeQualified(
-              FsConstants.VIEWFS_URI, null));
+              myUri, null));
     }
     
 
@@ -554,13 +558,13 @@ public class ViewFileSystem extends FileSystem {
             ugi.getUserName(), ugi.getGroupNames()[0],
             link.getTargetLink(),
             new Path(inode.fullPath).makeQualified(
-                FsConstants.VIEWFS_URI, null));
+                myUri, null));
         } else {
           result[i++] = new FileStatus(0, true, 0, 0,
             creationTime, creationTime, PERMISSION_RRR,
             ugi.getUserName(), ugi.getGroupNames()[0],
             new Path(inode.fullPath).makeQualified(
-                FsConstants.VIEWFS_URI, null));
+                myUri, null));
         }
       }
       return result;

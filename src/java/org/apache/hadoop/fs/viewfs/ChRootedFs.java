@@ -94,7 +94,11 @@ class ChRootedFs extends AbstractFileSystem {
      * this issue but if we were to make it external then this needs
      * to be resolved.
      */
-    myUri = new URI(myFs.getUri().toString() + chRootPathPart.toString().substring(1));
+    // Handle the two cases:
+    //              scheme:/// and scheme://authority/
+    myUri = new URI(myFs.getUri().toString() + 
+        (myFs.getUri().getAuthority() == null ? "" :  Path.SEPARATOR) +
+          chRootPathPart.toString().substring(1));
     super.checkPath(theRoot);
   }
   
