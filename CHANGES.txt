@@ -274,6 +274,9 @@ Trunk (unreleased changes)
 
     HADOOP-6933. TestListFiles is flaky. (Todd Lipcon via tomwhite)
 
+    HADOOP-6947.  Kerberos relogin should set refreshKrb5Config to true.
+    (Todd Lipcon via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

@@ -378,6 +378,7 @@ public class UserGroupInformation {
       KEYTAB_KERBEROS_OPTIONS.put("doNotPrompt", "true");
       KEYTAB_KERBEROS_OPTIONS.put("useKeyTab", "true");
       KEYTAB_KERBEROS_OPTIONS.put("storeKey", "true");
+      KEYTAB_KERBEROS_OPTIONS.put("refreshKrb5Config", "true");
     }
     private static final AppConfigurationEntry KEYTAB_KERBEROS_LOGIN =
       new AppConfigurationEntry(Krb5LoginModule.class.getName(),
