@@ -372,6 +372,9 @@ Release 0.21.1 - Unreleased
     HADOOP-6954.  Sources JARs are not correctly published to the Maven
     repository. (tomwhite)
 
+    HADOOP-7052. misspelling of threshold in conf/log4j.properties.
+    (Jingguo Yao via eli)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
