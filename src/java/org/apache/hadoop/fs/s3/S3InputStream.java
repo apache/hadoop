@@ -128,7 +128,7 @@ class S3InputStream extends FSInputStream {
       if (pos > blockEnd) {
         blockSeekTo(pos);
       }
-      int realLen = Math.min(len, (int) (blockEnd - pos + 1));
+      int realLen = (int) Math.min((long) len, (blockEnd - pos + 1L));
       int result = blockStream.read(buf, off, realLen);
       if (result >= 0) {
         pos += result;

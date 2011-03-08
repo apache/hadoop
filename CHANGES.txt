@@ -297,6 +297,9 @@ Trunk (unreleased changes)
     HADOOP-7011.  Fix KerberosName.main() to not throw an NPE.
     (Aaron T. Myers via tomwhite)
 
+    HADOOP-6975.  Integer overflow in S3InputStream for blocks > 2GB.
+    (Patrick Kling via tomwhite)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS
