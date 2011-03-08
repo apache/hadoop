@@ -1,4 +1,4 @@
-Hadoop Common Change Log
+Hadoop Change Log
 
 Trunk (unreleased changes)
 
@@ -34,9 +34,6 @@ Trunk (unreleased changes)
     to clients in secure clusters) (jghoman)
 
     HADOOP-6889. Make RPC to have an option to timeout. (hairong)
-
-    HADOOP-6996. Allow CodecFactory to return a codec object given a codec'
-    class name. (hairong)
 
   IMPROVEMENTS
 
