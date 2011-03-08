@@ -384,7 +384,7 @@ checkReleaseAuditWarnings () {
 
     -1 release audit.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $OK_RELEASEAUDIT_WARNINGS warnings)."
         $GREP '\!?????' $PATCH_DIR/patchReleaseAuditWarnings.txt > $PATCH_DIR/patchReleaseAuditProblems.txt
-        echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." > $PATCH_DIR/patchReleaseAuditProblems.txt
+        echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." >> $PATCH_DIR/patchReleaseAuditProblems.txt
         JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/trunk/patchprocess/patchReleaseAuditProblems.txt
 $JIRA_COMMENT_FOOTER"
         return 1
