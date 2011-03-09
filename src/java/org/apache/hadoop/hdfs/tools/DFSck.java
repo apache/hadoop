@@ -333,11 +333,6 @@ public class DFSck extends Configured implements Tool {
     return errCode;
   }
 
-  static{
-    Configuration.addDefaultResource("hdfs-default.xml");
-    Configuration.addDefaultResource("hdfs-site.xml");
-  }
-  
   public static void main(String[] args) throws Exception {
     // -files option is also used by GenericOptionsParser
     // Make sure that is not the first argument for fsck

@@ -101,6 +101,7 @@
   <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
   <property name="test.hdfs.smoke.tests.file" value="${test.src.dir}/smoke-tests" />
   <property name="test.hdfs.all.tests.file" value="${test.src.dir}/all-tests" />
+  <property name="test.exclude.file" value="/dev/null" />
 
   <property name="test.hdfs.rpc.engine" value=""/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
@@ -638,6 +639,7 @@
               aop/** system/**">
              <patternset>
                <includesfile name="@{test.file}"/>
+               <excludesfile name="${test.exclude.file}" />
              </patternset>
              <patternset refid="@{exclude.list.id}"/>
          </fileset>
@@ -645,7 +647,8 @@
         <batchtest todir="@{test.dir}" if="tests.notestcase.fi">
           <fileset dir="@{fileset.dir}/aop"
             includes="**/${test.include}.java"
-            excludes="**/${test.exclude}.java" />
+            excludes="**/${test.exclude}.java"
+            excludesfile="${test.exclude.file}" />
         </batchtest>
         <batchtest todir="@{test.dir}" if="tests.testcase">
           <fileset dir="@{fileset.dir}/@{suite.type}" includes="**/${testcase}.java"

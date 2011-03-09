@@ -265,6 +265,8 @@ Trunk (unreleased changes)
     HDFS-1629. Add a method to BlockPlacementPolicy for keeping the chosen
     nodes in the output array.  (szetszwo)
 
+    HDFS-1731. Allow using a file to exclude certain tests from build (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -314,6 +316,9 @@ Trunk (unreleased changes)
     on trunk after HADOOP-6904 (todd)
 
     HDFS-1600. Fix release audit warnings on trunk. (todd)
+
+    HDFS-1691. Remove a duplicated static initializer for reading default
+    configurations in DFSck.  (Alexey Diomin via szetszwo)
 
 Release 0.22.0 - Unreleased
 
@@ -813,6 +818,9 @@ Release 0.21.1 - Unreleased
     HDFS-1612. Update HDFS design documentation for append, quota, symlink,
     block placement and checkpoint/backup node features.  (Joe Crobak
     via szetszwo)
+
+
+Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
 
