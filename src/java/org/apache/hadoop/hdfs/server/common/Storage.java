@@ -79,7 +79,7 @@ public abstract class Storage extends StorageInfo {
   public static final int PRE_RBW_LAYOUT_VERSION = -19;
   
   // last layout version that is before federation
-  public static final int LAST_PRE_FEDERATION_LAYOUT_VERSION = -24;
+  public static final int LAST_PRE_FEDERATION_LAYOUT_VERSION = -27;
   
   private   static final String STORAGE_FILE_LOCK     = "in_use.lock";
   protected static final String STORAGE_FILE_VERSION  = "VERSION";

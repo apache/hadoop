@@ -135,7 +135,9 @@ public class DataStorage extends Storage {
       return;
     }
     assert FSConstants.LAYOUT_VERSION == nsInfo.getLayoutVersion() :
-      "Data-node and name-node layout versions must be the same.";
+      "Data-node version " + FSConstants.LAYOUT_VERSION + 
+      " and name-node layout version " + nsInfo.getLayoutVersion() + 
+      " must be the same.";
     
     // 1. For each data directory calculate its state and 
     // check whether all is consistent before transitioning.
@@ -186,8 +188,6 @@ public class DataStorage extends Storage {
       doTransition(getStorageDir(idx), nsInfo, startOpt);
       assert this.getLayoutVersion() == nsInfo.getLayoutVersion() :
         "Data-node and name-node layout versions must be the same.";
-      assert this.getCTime() == nsInfo.getCTime() :
-        "Data-node and name-node CTimes must be the same.";
     }
     
     // make sure we have storage id set - if not - generate new one

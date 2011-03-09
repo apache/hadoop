@@ -223,7 +223,10 @@ Trunk (unreleased changes)
     via szetszwo)
 
     HDFS-1735. Federation: merge FSImage change in federation to
-    FSImage+NNStorage refactoring in trunk (suresh)
+    FSImage+NNStorage refactoring in trunk. (suresh)
+
+    HDFS-1737. Federation: Update the layout version for federation
+    changes. (suresh)
 
   IMPROVEMENTS
 
