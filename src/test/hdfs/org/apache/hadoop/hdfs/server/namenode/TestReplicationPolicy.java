@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -130,6 +131,17 @@ public class TestReplicationPolicy extends TestCase {
         FSConstants.MIN_BLOCKS_FOR_WRITE*BLOCK_SIZE, 0L, 0); 
   }
 
+  private static DatanodeDescriptor[] chooseTarget(
+      BlockPlacementPolicyDefault policy,
+      int numOfReplicas,
+      DatanodeDescriptor writer,
+      List<DatanodeDescriptor> chosenNodes,
+      HashMap<Node, Node> excludedNodes,
+      long blocksize) {
+    return policy.chooseTarget(numOfReplicas, writer, chosenNodes, false,
+        excludedNodes, blocksize);
+  }
+
   /**
    * In this testcase, client is dataNodes[0], but the dataNodes[1] is
    * not allowed to be chosen. So the 1st replica should be
@@ -146,23 +158,23 @@ public class TestReplicationPolicy extends TestCase {
     
     excludedNodes = new HashMap<Node, Node>();
     excludedNodes.put(dataNodes[1], dataNodes[1]); 
-    targets = repl.chooseTarget(
-                                0, dataNodes[0], chosenNodes, excludedNodes, BLOCK_SIZE);
+    targets = chooseTarget(repl, 0, dataNodes[0], chosenNodes, excludedNodes,
+        BLOCK_SIZE);
     assertEquals(targets.length, 0);
     
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.put(dataNodes[1], dataNodes[1]); 
-    targets = repl.chooseTarget(
-                                1, dataNodes[0], chosenNodes, excludedNodes, BLOCK_SIZE);
+    targets = chooseTarget(repl, 1, dataNodes[0], chosenNodes, excludedNodes,
+        BLOCK_SIZE);
     assertEquals(targets.length, 1);
     assertEquals(targets[0], dataNodes[0]);
     
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.put(dataNodes[1], dataNodes[1]); 
-    targets = repl.chooseTarget(
-                                2, dataNodes[0], chosenNodes, excludedNodes, BLOCK_SIZE);
+    targets = chooseTarget(repl, 2, dataNodes[0], chosenNodes, excludedNodes,
+        BLOCK_SIZE);
     assertEquals(targets.length, 2);
     assertEquals(targets[0], dataNodes[0]);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
@@ -170,8 +182,8 @@ public class TestReplicationPolicy extends TestCase {
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.put(dataNodes[1], dataNodes[1]); 
-    targets = repl.chooseTarget(
-                                3, dataNodes[0], chosenNodes, excludedNodes, BLOCK_SIZE);
+    targets = chooseTarget(repl, 3, dataNodes[0], chosenNodes, excludedNodes,
+        BLOCK_SIZE);
     assertEquals(targets.length, 3);
     assertEquals(targets[0], dataNodes[0]);
     assertFalse(cluster.isOnSameRack(targets[0], targets[1]));
@@ -180,8 +192,8 @@ public class TestReplicationPolicy extends TestCase {
     excludedNodes.clear();
     chosenNodes.clear();
     excludedNodes.put(dataNodes[1], dataNodes[1]); 
-    targets = repl.chooseTarget(
-                                4, dataNodes[0], chosenNodes, excludedNodes, BLOCK_SIZE);
+    targets = chooseTarget(repl, 4, dataNodes[0], chosenNodes, excludedNodes,
+        BLOCK_SIZE);
     assertEquals(targets.length, 4);
     assertEquals(targets[0], dataNodes[0]);
     for(int i=1; i<4; i++) {
@@ -190,6 +202,19 @@ public class TestReplicationPolicy extends TestCase {
     assertTrue(cluster.isOnSameRack(targets[1], targets[2]) ||
                cluster.isOnSameRack(targets[2], targets[3]));
     assertFalse(cluster.isOnSameRack(targets[1], targets[3]));
+
+    excludedNodes.clear();
+    chosenNodes.clear();
+    excludedNodes.put(dataNodes[1], dataNodes[1]); 
+    chosenNodes.add(dataNodes[2]);
+    targets = repl.chooseTarget(1, dataNodes[0], chosenNodes, true,
+        excludedNodes, BLOCK_SIZE);
+    System.out.println("targets=" + Arrays.asList(targets));
+    assertEquals(2, targets.length);
+    //make sure that the chosen node is in the target.
+    int i = 0;
+    for(; i < targets.length && !dataNodes[2].equals(targets[i]); i++);
+    assertTrue(i < targets.length);
   }
 
   /**

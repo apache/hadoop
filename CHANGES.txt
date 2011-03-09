@@ -262,6 +262,9 @@ Trunk (unreleased changes)
     
     HDFS-560 Enhancements/tuning to hadoop-hdfs/build.xml
 
+    HDFS-1629. Add a method to BlockPlacementPolicy for keeping the chosen
+    nodes in the output array.  (szetszwo)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -309,8 +312,6 @@ Trunk (unreleased changes)
 
     HDFS-1610. Fix TestClientProtocolWithDelegationToken and TestBlockToken
     on trunk after HADOOP-6904 (todd)
-
-    HDFS-1602. Fix HADOOP-4885 for it is doesn't work as expected. (boryas)
 
     HDFS-1600. Fix release audit warnings on trunk. (todd)
 
@@ -757,6 +758,13 @@ Release 0.22.0 - Unreleased
     HDFS-1597. Batched edit log syncs can reset synctxid and throw assertions
     (todd)
 
+    HDFS-1602. Fix HADOOP-4885 for it is doesn't work as expected. (boryas)
+
+    HDFS-1618. configure files that are generated as part of the released
+    tarball need to have executable bit set (Roman Shaposhnik via cos)
+
+    HDFS-981. test-contrib fails due to test-cactus failure (cos)
+
 Release 0.21.1 - Unreleased
 
     HDFS-1411. Correct backup node startup command in hdfs user guide.
@@ -801,6 +809,10 @@ Release 0.21.1 - Unreleased
     HDFS-1552. Remove java5 dependencies from build. (cos) 
 
     HDFS-996. JUnit tests should never depend on anything in conf (cos)
+
+    HDFS-1612. Update HDFS design documentation for append, quota, symlink,
+    block placement and checkpoint/backup node features.  (Joe Crobak
+    via szetszwo)
 
   INCOMPATIBLE CHANGES
 

@@ -301,7 +301,7 @@
 			<containerset>
 				<cargo containerId="${tomcat.container.id}" timeout="30000" output="${logs.dir}/output.log" log="${logs.dir}/cargo.log">
 				 <zipUrlInstaller
-            installUrl="http://apache.osuosl.org/tomcat/tomcat-6/v6.0.24/bin/apache-tomcat-6.0.24.zip"
+            installUrl="http://archive.apache.org/dist/tomcat/tomcat-6/v6.0.24/bin/apache-tomcat-6.0.24.zip"
             installDir="${target.dir}/${tomcat.container.id}"/>
 				  <configuration type="existing" home="${tomcatconfig.dir}">
 						<property name="cargo.servlet.port" value="${cargo.servlet.http.port}"/>

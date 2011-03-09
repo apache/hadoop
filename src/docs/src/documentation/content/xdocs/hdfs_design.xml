@@ -73,18 +73,22 @@
         <title> Large Data Sets </title>
         <p>
         Applications that run on HDFS have large data sets. A typical file in HDFS is gigabytes to terabytes in size. Thus, HDFS is tuned to 
-        support large files. It should provide high aggregate data bandwidth and scale to hundreds of nodes in a single cluster. It should support 
+        support large files. It should provide high aggregate data bandwidth and scale to thousands of nodes in a single cluster. It should support 
         tens of millions of files in a single instance.
         </p>
       </section>
 
  
       <section> 
-        <title> Simple Coherency Model </title>
+        <title> Appending-Writes and File Syncs </title>
         <p>
-        HDFS applications need a write-once-read-many access model for files. A file once created, written, and closed need not be changed. 
-        This assumption simplifies data coherency issues and enables high throughput data access. A MapReduce application or a web crawler 
-        application fits perfectly with this model. There is a plan to support appending-writes to files in the future. 
+        Most HDFS applications need a write-once-read-many access model for files. HDFS provides two additional advanced features: hflush and
+        append.  Hflush makes the last block of an unclosed file visible to readers while providing read consistency and data durability.  Append
+        provides a mechanism for opening a closed file to add additional data.
+        </p>
+        <p>
+        For complete details of the hflush and append design, see the 
+        <a href="https://issues.apache.org/jira/secure/attachment/12445209/appendDesign3.pdf">Append/Hflush/Read Design document</a> (PDF).
         </p>
       </section>
 
@@ -145,8 +149,10 @@
       <p>
       HDFS supports a traditional hierarchical file organization. A user or an application can create directories and store files inside 
       these directories. The file system namespace hierarchy is similar to most other existing file systems; one can create and 
-      remove files, move a file from one directory to another, or rename a file. HDFS does not yet implement user quotas. HDFS 
-      does not support hard links or soft links. However, the HDFS architecture does not preclude implementing these features.
+      remove files, move a file from one directory to another, or rename a file. HDFS implements user quotas for number of names and 
+      amount of data stored in a particular directory (See 
+      <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_quota_admin_guide.html">HDFS Quota Admin Guide</a>). In addition, HDFS
+      supports <a href="http://hadoop.apache.org/common/docs/current/api/org/apache/hadoop/fs/FileContext.html#createSymlink(org.apache.hadoop.fs.Path, org.apache.hadoop.fs.Path, boolean)">symbolic links</a>.
       </p>
       <p>
       The NameNode maintains the file system namespace. Any change to the file system namespace or its properties is 
@@ -163,8 +169,8 @@
       HDFS is designed to reliably store very large files across machines in a large cluster. It stores each file as a sequence 
       of blocks; all blocks in a file except the last block are the same size. The blocks of a file are replicated for fault tolerance. 
       The block size and replication factor are configurable per file. An application can specify the number of replicas of a file. 
-      The replication factor can be specified at file creation time and can be changed later. Files in HDFS are write-once and 
-      have strictly one writer at any time. 
+      The replication factor can be specified at file creation time and can be changed later. Files in HDFS are strictly one writer at any 
+      time. 
       </p>
       <p>
       The NameNode makes all decisions regarding replication of blocks. It periodically receives a Heartbeat and a Blockreport 
@@ -208,7 +214,8 @@
         data reliability or read performance.
         </p>
         <p>
-        The current, default replica placement policy described here is a work in progress.
+        In addition to the default placement policy described above, HDFS also provides a pluggable interface for block placement. See
+        <a href="http://hadoop.apache.org/hdfs/docs/current/api/org/apache/hadoop/hdfs/server/namenode/BlockPlacementPolicy.html">BlockPlacementPolicy</a>.
         </p>
       </section>
 
@@ -217,7 +224,7 @@
         <p>
         To minimize global bandwidth consumption and read latency, HDFS tries to satisfy a read request from a replica 
         that is closest to the reader. If there exists a replica on the same rack as the reader node, then that replica is 
-        preferred to satisfy the read request. If angg/ HDFS cluster spans multiple data centers, then a replica that is 
+        preferred to satisfy the read request. If an HDFS cluster spans multiple data centers, then a replica that is 
         resident in the local data center is preferred over any remote replica.
         </p>
       </section>
@@ -255,9 +262,12 @@
         huge number of files and directories. When the NameNode starts up, it reads the FsImage and EditLog from 
         disk, applies all the transactions from the EditLog to the in-memory representation of the FsImage, and flushes 
         out this new version into a new FsImage on disk. It can then truncate the old EditLog because its transactions 
-        have been applied to the persistent FsImage. This process is called a checkpoint. In the current implementation, 
-        a checkpoint only occurs when the NameNode starts up. Work is in progress to support periodic checkpointing 
-        in the near future.
+        have been applied to the persistent FsImage. This process is called a checkpoint. The 
+        <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Checkpoint+Node">Checkpoint Node</a> is a 
+        separate daemon that can be configured to periodically build checkpoints from the FsImage and EditLog which are 
+        uploaded to the NameNode.  The 
+        <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Backup+Node">Backup Node</a> builds 
+        checkpoints like the Checkpoint Node and also maintains an up-to-date copy of the FsImage in memory.
         </p>
         <p>
         The DataNode stores HDFS data in files in its local file system. The DataNode has no knowledge about HDFS files. 
