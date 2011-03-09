@@ -248,8 +248,9 @@ class DataXceiver extends DataTransferProtocol.Receiver
              " dest: " + localAddress);
 
     DataOutputStream replyOut = null;   // stream to prev target
-    replyOut = new DataOutputStream(
-                   NetUtils.getOutputStream(s, datanode.socketWriteTimeout));
+    replyOut = new DataOutputStream(new BufferedOutputStream(
+                   NetUtils.getOutputStream(s, datanode.socketWriteTimeout),
+                   SMALL_BUFFER_SIZE));
     DatanodeRegistration dnR = 
       datanode.getDNRegistrationForBP(block.getBlockPoolId());
     if (datanode.isBlockTokenEnabled) {

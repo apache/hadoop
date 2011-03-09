@@ -497,6 +497,13 @@ public class DatanodeDescriptor extends DatanodeInfo {
           storedBlock.getBlockUCState());
     }
 
+    // Ignore replicas already scheduled to be removed from the DN
+    if(blockManager.belongsToInvalidates(getStorageID(), block)) {
+      assert storedBlock.findDatanode(this) < 0 : "Block " + block 
+        + " in recentInvalidatesSet should not appear in DN " + this;
+      return storedBlock;
+    }
+
     // Block is on the DN
     boolean isCorrupt = false;
     switch(rState) {

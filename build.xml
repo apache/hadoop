@@ -17,7 +17,7 @@
    limitations under the License.
 -->
 
-<project name="Hadoop-Hdfs" default="compile" 
+<project name="hadoop-hdfs" default="compile" 
    xmlns:artifact="urn:maven-artifact-ant"
    xmlns:ivy="antlib:org.apache.ivy.ant"> 
 
@@ -1204,6 +1204,7 @@
         <exclude name="webapps/**/WEB-INF/web.xml"/>
         <exclude name="src/docs/releasenotes.html" />
         <exclude name="src/test/hdfs/org/apache/hadoop/cli/clitest_data/" />
+        <exclude name="src/test/hdfs/org/apache/hadoop/hdfs/tools/offlineEditsViewer/editsStored*" />
         <exclude name="**/*/robots.txt" />
         <exclude name="src/c++/libhdfs/m4/libtool.m4" />
         <exclude name="src/c++/libhdfs/m4/lt~obsolete.m4" />
@@ -1846,11 +1847,11 @@
     <ivy:cachepath pathid="ivy-test.classpath" conf="system"/>
   </target>
 
-  <target name="ivy-report" depends="ivy-resolve-releaseaudit"
+  <target name="ivy-report" depends="ivy-resolve"
     description="Generate">
     <ivy:report todir="${build.ivy.report.dir}" settingsRef="${ant.project.name}.ivy.settings"/>
     <echo>
-      Reports generated:${build.ivy.report.dir}
+      Reports generated: ${build.ivy.report.dir}
     </echo>
   </target>
 

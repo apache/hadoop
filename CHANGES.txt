@@ -259,11 +259,15 @@ Trunk (unreleased changes)
     HDFS-1335. HDFS side change of HADDOP-6904: RPC compatibility. (hairong)
 
     HDFS-1557. Separate Storage from FSImage. (Ivan Kelly via jitendra)
+    
+    HDFS-560 Enhancements/tuning to hadoop-hdfs/build.xml
 
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
     downloads and loading. (hairong)
+
+    HDFS-1601. Pipeline ACKs are sent as lots of tiny TCP packets (todd)
 
   BUG FIXES
 
@@ -302,6 +306,13 @@ Trunk (unreleased changes)
 
     HDFS-1607. Fix referenced to misspelled method name getProtocolSigature
     (todd)
+
+    HDFS-1610. Fix TestClientProtocolWithDelegationToken and TestBlockToken
+    on trunk after HADOOP-6904 (todd)
+
+    HDFS-1602. Fix HADOOP-4885 for it is doesn't work as expected. (boryas)
+
+    HDFS-1600. Fix release audit warnings on trunk. (todd)
 
 Release 0.22.0 - Unreleased
 
@@ -737,6 +748,14 @@ Release 0.22.0 - Unreleased
     unavailable. (Steve Loughran and shv)
 
     HDFS-1591. HDFS part of HADOOP-6642. (Chris Douglas, Po Cheung via shv)
+
+    HDFS-900. Corrupt replicas are not processed correctly in block report (shv)
+
+    HDFS-1529. Incorrect handling of interrupts in waitForAckedSeqno can cause
+    deadlock (todd)
+
+    HDFS-1597. Batched edit log syncs can reset synctxid and throw assertions
+    (todd)
 
 Release 0.21.1 - Unreleased
 

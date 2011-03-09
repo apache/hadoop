@@ -397,8 +397,7 @@ public class BlockManager {
       blocksMap.nodeIterator(block); it.hasNext();) {
       String storageID = it.next().getStorageID();
       // filter invalidate replicas
-      Collection<Block> blocks = recentInvalidateSets.get(storageID);
-      if(blocks==null || !blocks.contains(block)) {
+      if( ! belongsToInvalidates(storageID, block)) {
         machineSet.add(storageID);
       }
     }
@@ -496,14 +495,19 @@ public class BlockManager {
                             minReplication);
   }
 
-  void removeFromInvalidates(String datanodeId, Block block) {
-    Collection<Block> v = recentInvalidateSets.get(datanodeId);
+  void removeFromInvalidates(String storageID, Block block) {
+    Collection<Block> v = recentInvalidateSets.get(storageID);
     if (v != null && v.remove(block)) {
       pendingDeletionBlocksCount--;
       if (v.isEmpty()) {
-        recentInvalidateSets.remove(datanodeId);
+        recentInvalidateSets.remove(storageID);
       }
     }
+  }
+
+  boolean belongsToInvalidates(String storageID, Block block) {
+    Collection<Block> invalidateSet = recentInvalidateSets.get(storageID);
+    return invalidateSet != null && invalidateSet.contains(block);
   }
 
   /**

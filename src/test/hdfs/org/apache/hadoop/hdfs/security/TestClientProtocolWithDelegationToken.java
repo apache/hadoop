@@ -19,9 +19,11 @@
 package org.apache.hadoop.hdfs.security;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 import java.net.InetSocketAddress;
@@ -35,6 +37,7 @@ import org.apache.hadoop.io.Text;
 
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -79,6 +82,11 @@ public class TestClientProtocolWithDelegationToken {
     FSNamesystem mockNameSys = mock(FSNamesystem.class);
     when(mockNN.getProtocolVersion(anyString(), anyLong())).thenReturn(
         ClientProtocol.versionID);
+    doReturn(ProtocolSignature.getProtocolSignature(
+        mockNN, ClientProtocol.class.getName(),
+        ClientProtocol.versionID, 0))
+      .when(mockNN).getProtocolSignature(anyString(), anyLong(), anyInt());
+
     DelegationTokenSecretManager sm = new DelegationTokenSecretManager(
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT,
         DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT,

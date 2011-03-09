@@ -26,9 +26,12 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.log4j.Level;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import org.junit.Test;
 
+import java.io.InterruptedIOException;
 import java.io.IOException;
 
 /** Class contains a set of tests to verify the correctness of 
@@ -170,38 +173,107 @@ public class TestHFlush {
     System.out.println("p=" + p);
     
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
-    DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
+    try {
+      DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
 
+      byte[] fileContents = AppendTestUtil.initBuffer(fileLen);
+
+      // create a new file.
+      FSDataOutputStream stm = AppendTestUtil.createFile(fs, p, DATANODE_NUM);
+
+      stm.write(fileContents, 0, 1);
+      Thread.sleep(timeout);
+      stm.hflush();
+      System.out.println("Wrote 1 byte and hflush " + p);
+
+      // write another byte
+      Thread.sleep(timeout);
+      stm.write(fileContents, 1, 1);
+      stm.hflush();
+
+      stm.write(fileContents, 2, 1);
+      Thread.sleep(timeout);
+      stm.hflush();
+
+      stm.write(fileContents, 3, 1);
+      Thread.sleep(timeout);
+      stm.write(fileContents, 4, 1);
+      stm.hflush();
+
+      stm.write(fileContents, 5, 1);
+      Thread.sleep(timeout);
+      stm.close();
+
+      // verify that entire file is good
+      AppendTestUtil.checkFullFile(fs, p, fileLen,
+          fileContents, "Failed to slowly write to a file");
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testHFlushInterrupted() throws Exception {
+    final int DATANODE_NUM = 2;
+    final int fileLen = 6;
     byte[] fileContents = AppendTestUtil.initBuffer(fileLen);
+    Configuration conf = new HdfsConfiguration();
+    final Path p = new Path("/hflush-interrupted");
 
-    // create a new file.
-    FSDataOutputStream stm = AppendTestUtil.createFile(fs, p, DATANODE_NUM);
+    System.out.println("p=" + p);
 
-    stm.write(fileContents, 0, 1);
-    Thread.sleep(timeout);
-    stm.hflush();
-    System.out.println("Wrote 1 byte and hflush " + p);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(DATANODE_NUM).build();
+    try {
+      DistributedFileSystem fs = (DistributedFileSystem)cluster.getFileSystem();
 
-    // write another byte
-    Thread.sleep(timeout);
-    stm.write(fileContents, 1, 1);
-    stm.hflush();
-    
-    stm.write(fileContents, 2, 1);
-    Thread.sleep(timeout);
-    stm.hflush();
-    
-    stm.write(fileContents, 3, 1);
-    Thread.sleep(timeout);
-    stm.write(fileContents, 4, 1);
-    stm.hflush();
-    
-    stm.write(fileContents, 5, 1);
-    Thread.sleep(timeout);
-    stm.close();
+      // create a new file.
+      FSDataOutputStream stm = AppendTestUtil.createFile(fs, p, DATANODE_NUM);
 
-    // verify that entire file is good
-    AppendTestUtil.checkFullFile(fs, p, fileLen,
-        fileContents, "Failed to slowly write to a file");
+      stm.write(fileContents, 0, 2);
+      Thread.currentThread().interrupt();
+      try {
+        stm.hflush();
+        // If we made it past the hflush(), then that means that the ack made it back
+        // from the pipeline before we got to the wait() call. In that case we should
+        // still have interrupted status.
+        assertTrue(Thread.currentThread().interrupted());
+      } catch (InterruptedIOException ie) {
+        System.out.println("Got expected exception during flush");
+      }
+      assertFalse(Thread.currentThread().interrupted());
+
+      // Try again to flush should succeed since we no longer have interrupt status
+      stm.hflush();
+
+      // Write some more data and flush
+      stm.write(fileContents, 2, 2);
+      stm.hflush();
+
+      // Write some data and close while interrupted
+
+      stm.write(fileContents, 4, 2);
+      Thread.currentThread().interrupt();
+      try {
+        stm.close();
+        // If we made it past the close(), then that means that the ack made it back
+        // from the pipeline before we got to the wait() call. In that case we should
+        // still have interrupted status.
+        assertTrue(Thread.currentThread().interrupted());
+      } catch (InterruptedIOException ioe) {
+        System.out.println("Got expected exception during close");
+        // If we got the exception, we shouldn't have interrupted status anymore.
+        assertFalse(Thread.currentThread().interrupted());
+
+        // Now do a successful close.
+        stm.close();
+      }
+
+
+      // verify that entire file is good
+      AppendTestUtil.checkFullFile(fs, p, fileLen,
+        fileContents, "Failed to deal with thread interruptions");
+    } finally {
+      cluster.shutdown();
+    }
   }
 }

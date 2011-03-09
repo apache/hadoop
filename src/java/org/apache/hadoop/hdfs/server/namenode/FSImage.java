@@ -813,7 +813,7 @@ public class FSImage implements NNStorageListener, Closeable {
  
     // try to restore all failed edit logs here
     assert editLog != null : "editLog must be initialized";
-    storage.attemptRestoreRemovedStorage(true);
+    storage.attemptRestoreRemovedStorage();
 
     editLog.close();
     if(renewCheckpointTime)

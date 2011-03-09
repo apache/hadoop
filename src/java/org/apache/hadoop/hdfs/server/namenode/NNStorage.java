@@ -237,7 +237,7 @@ public class NNStorage extends Storage implements Closeable {
    *
    * @param saveNamespace Whether method is being called from saveNamespace()
    */
-  void attemptRestoreRemovedStorage(boolean saveNamespace) {
+  void attemptRestoreRemovedStorage() {
     // if directory is "alive" - copy the images there...
     if(!restoreFailedStorage || removedStorageDirs.size() == 0)
       return; //nothing to restore
@@ -256,15 +256,9 @@ public class NNStorage extends Storage implements Closeable {
         try {
           
           if(root.exists() && root.canWrite()) {
-            /** If this call is being made from savenamespace command, then no
-             * need to format, the savenamespace command will format and write
-             * the new image to this directory anyways.
-             */
-            if (saveNamespace) {
-              sd.clearDirectory();
-            } else {
-              format(sd);
-            }
+            // when we try to restore we just need to remove all the data
+            // without saving current in-memory state (which could've changed).
+            sd.clearDirectory();
             
             LOG.info("restoring dir " + sd.getRoot().getAbsolutePath());
             for (NNStorageListener listener : listeners) {
@@ -543,8 +537,9 @@ public class NNStorage extends Storage implements Closeable {
     for (Iterator<StorageDirectory> it =
       dirIterator(NameNodeDirType.IMAGE); it.hasNext();) {
       sd = it.next();
-      if(sd.getRoot().canRead())
-        return getStorageFile(sd, NameNodeFile.IMAGE);
+      File fsImage = getStorageFile(sd, NameNodeFile.IMAGE);
+      if(sd.getRoot().canRead() && fsImage.exists())
+        return fsImage;
     }
     return null;
   }

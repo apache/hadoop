@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.io.TestWritable;
 import org.apache.hadoop.ipc.Client;
+import org.apache.hadoop.ipc.ProtocolSignature;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -50,9 +51,11 @@ import org.junit.Test;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import org.mockito.invocation.InvocationOnMock;
@@ -192,6 +195,11 @@ public class TestBlockToken {
     ClientDatanodeProtocol mockDN = mock(ClientDatanodeProtocol.class);
     when(mockDN.getProtocolVersion(anyString(), anyLong())).thenReturn(
         ClientDatanodeProtocol.versionID);
+    doReturn(ProtocolSignature.getProtocolSignature(
+        mockDN, ClientDatanodeProtocol.class.getName(),
+        ClientDatanodeProtocol.versionID, 0))
+      .when(mockDN).getProtocolSignature(anyString(), anyLong(), anyInt());
+
     BlockTokenIdentifier id = sm.createIdentifier();
     id.readFields(new DataInputStream(new ByteArrayInputStream(token
         .getIdentifier())));
