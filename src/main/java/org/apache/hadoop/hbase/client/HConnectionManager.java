@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -443,6 +444,7 @@ public class HConnectionManager {
 
     public boolean isTableAvailable(final byte[] tableName) throws IOException {
       final AtomicBoolean available = new AtomicBoolean(true);
+      final AtomicInteger regionCount = new AtomicInteger(0);
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
         @Override
         public boolean processRow(Result row) throws IOException {
@@ -457,13 +459,14 @@ public class HConnectionManager {
                 available.set(false);
                 return false;
               }
+              regionCount.incrementAndGet();
             }
           }
           return true;
         }
       };
       MetaScanner.metaScan(conf, visitor);
-      return available.get();
+      return available.get() && (regionCount.get() > 0);
     }
 
     /*
