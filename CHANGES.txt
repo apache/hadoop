@@ -228,6 +228,10 @@ Trunk (unreleased changes)
     HDFS-1737. Federation: Update the layout version for federation
     changes. (suresh)
 
+    HDFS-1744. Federation: Add new layout version to offline image viewer
+    and edits viewer. (suresh)
+
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

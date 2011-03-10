@@ -49,7 +49,7 @@ import static org.apache.hadoop.hdfs.tools.offlineEditsViewer.Tokenizer.EmptyTok
 class EditsLoaderCurrent implements EditsLoader {
 
   private static int [] supportedVersions = {
-    -18, -19, -20, -21, -22, -23, -24, -25, -26, -27 };
+    -18, -19, -20, -21, -22, -23, -24, -25, -26, -27, -28 };
 
   private EditsVisitor v;
   private int editsVersion = 0;
