@@ -71,6 +71,9 @@ Trunk (unreleased changes)
 
     HADOOP-7167. Allow using a file to exclude certain tests from build. (todd)
 
+    HADOOP-7133. Batch the calls in DataStorage to FileUtil.createHardLink().
+    (Matt Foley via jghoman)
+
   OPTIMIZATIONS
 
   BUG FIXES
