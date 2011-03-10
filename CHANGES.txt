@@ -233,6 +233,8 @@ Trunk (unreleased changes)
 
     HDFS-1745. Federation: Fix fault injection test failures. (suresh)
 
+    HDFS-1746. Federation: TestFileAppend3 fails intermittently. (jitendra)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)
