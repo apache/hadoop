@@ -252,7 +252,7 @@ class Checkpointer extends Daemon {
     }
 
     BackupImage bnImage = getFSImage();
-    bnImage.getStorage().setClusterID(backupNode.getBlockPoolId());
+    bnImage.getStorage().setBlockPoolID(backupNode.getBlockPoolId());
     bnImage.getStorage().setClusterID(backupNode.getClusterId());
     bnImage.loadCheckpoint(sig);
     sig.validateStorageInfo(bnImage);
