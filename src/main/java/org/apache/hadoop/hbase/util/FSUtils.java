@@ -175,13 +175,28 @@ public class FSUtils {
    */
   public static void checkVersion(FileSystem fs, Path rootdir,
       boolean message) throws IOException {
+    checkVersion(fs, rootdir, message, 0);
+  }
+
+  /**
+   * Verifies current version of file system
+   *
+   * @param fs file system
+   * @param rootdir root directory of HBase installation
+   * @param message if true, issues a message on System.out
+   * @param wait wait interval for retry if > 0
+   *
+   * @throws IOException e
+   */
+  public static void checkVersion(FileSystem fs, Path rootdir,
+      boolean message, int wait) throws IOException {
     String version = getVersion(fs, rootdir);
 
     if (version == null) {
       if (!rootRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
         // just create new version file (HBASE-1195)
-        FSUtils.setVersion(fs, rootdir);
+        FSUtils.setVersion(fs, rootdir, wait);
         return;
       }
     } else if (version.compareTo(HConstants.FILE_SYSTEM_VERSION) == 0)

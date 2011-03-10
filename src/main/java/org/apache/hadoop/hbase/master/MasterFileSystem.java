@@ -241,7 +241,9 @@ public class MasterFileSystem {
       FSUtils.setVersion(fs, rd, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000));
     } else {
-      FSUtils.checkVersion(fs, rd, true);
+      // as above
+      FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000));
     }
     // Make sure the root region directory exists!
     if (!FSUtils.rootRegionExists(fs, rd)) {
