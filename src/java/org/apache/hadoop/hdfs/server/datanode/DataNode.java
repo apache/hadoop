@@ -342,7 +342,7 @@ public class DataNode extends Configured
   private InetSocketAddress selfAddr;
   
   private static volatile DataNode datanodeObject = null;
-  private final String hostName; // Host name of this datanode
+  private volatile String hostName; // Host name of this datanode
   
   private static String dnThreadName;
   int socketTimeout;
@@ -1089,13 +1089,14 @@ public class DataNode extends Configured
                 
       while(shouldRun && shouldServiceRun) {
         try {
-          // reset name to machineName. Mainly for web interface. Same for all DB
-          bpRegistration.name = hostName + ":" + bpRegistration.getPort();
+          // Use returned registration from namenode with updated machine name.
           bpRegistration = bpNamenode.registerDatanode(bpRegistration);
 
           LOG.info("bpReg after =" + bpRegistration.storageInfo + 
               ";sid=" + bpRegistration.storageID + ";name="+bpRegistration.getName());
 
+          NetUtils.getHostname();
+          hostName = bpRegistration.getHost();
           break;
         } catch(SocketTimeoutException e) {  // namenode is busy
           LOG.info("Problem connecting to server: " + nnAddr);
@@ -1722,8 +1723,9 @@ public class DataNode extends Configured
   static UpgradeManagerDatanode getUpgradeManagerDatanode(String bpid) {
     DataNode dn = getDataNode();
     BPOfferService bpos = dn.blockPoolManager.get(bpid);
-    if(bpos==null)
+    if(bpos==null) {
       return null;
+    }
     return bpos.getUpgradeManager();
   }
 
@@ -2620,5 +2622,12 @@ public class DataNode extends Configured
       }
     }
     return true;
+  }
+  
+  /** Methods used by fault injection tests */
+  public DatanodeID getDatanodeId() {
+    LOG.info("SURESH machienname " + getMachineName());
+    return new DatanodeID(getMachineName(), getStorageId(),
+        infoServer.getPort(), getIpcPort());
   }
 }

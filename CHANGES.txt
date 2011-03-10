@@ -231,6 +231,7 @@ Trunk (unreleased changes)
     HDFS-1744. Federation: Add new layout version to offline image viewer
     and edits viewer. (suresh)
 
+    HDFS-1745. Federation: Fix fault injection test failures. (suresh)
 
   IMPROVEMENTS
 
