@@ -19,6 +19,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import org.apache.hadoop.hbase.util.Base64;
+
 import java.io.IOException;
 import java.util.ArrayList;
 
@@ -203,8 +205,18 @@ public class ImportTsv {
     @Override
     protected void setup(Context context) {
       Configuration conf = context.getConfiguration();
+
+      // If a custom separator has been used,
+      // decode it back from Base64 encoding.
+      String separator = conf.get(SEPARATOR_CONF_KEY);
+      if (separator == null) {
+        separator = DEFAULT_SEPARATOR;
+      } else {
+        separator = new String(Base64.decode(separator));
+      }
+
       parser = new TsvParser(conf.get(COLUMNS_CONF_KEY),
-                             conf.get(SEPARATOR_CONF_KEY, DEFAULT_SEPARATOR));
+                             separator);
       if (parser.getRowKeyColumnIndex() == -1) {
         throw new RuntimeException("No row key column specified");
       }
@@ -271,6 +283,15 @@ public class ImportTsv {
    */
   public static Job createSubmittableJob(Configuration conf, String[] args)
   throws IOException {
+
+    // Support non-XML supported characters
+    // by re-encoding the passed separator as a Base64 string.
+    String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
+    if (actualSeparator != null) {
+      conf.set(SEPARATOR_CONF_KEY, new String(
+      Base64.encodeBytes(actualSeparator.getBytes())));
+    }
+
     String tableName = args[0];
     Path inputDir = new Path(args[1]);
     Job job = new Job(conf, NAME + "_" + tableName);

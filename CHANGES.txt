@@ -147,6 +147,8 @@ Release 0.90.2 - Unreleased
    HBASE-3542  MultiGet methods in Thrift
    HBASE-3285  Hlog recovery takes too much time
    HBASE-3586  Improve the selection of regions to balance
+   HBASE-3623  Allow non-XML representable separator characters in the ImportTSV tool
+               (Harsh J Chouraria via Stack)
 
 Release 0.90.1 - Unreleased
 
