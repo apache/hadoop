@@ -108,6 +108,21 @@
   </description>
 </property>
 
+<property>
+  <name>hadoop.work.around.non.threadsafe.getpwuid</name>
+  <value>false</value>
+  <description>Some operating systems or authentication modules are known to
+  have broken implementations of getpwuid_r and getpwgid_r, such that these
+  calls are not thread-safe. Symptoms of this problem include JVM crashes
+  with a stack trace inside these functions. If your system exhibits this
+  issue, enable this configuration parameter to include a lock around the
+  calls as a workaround.
+
+  An incomplete list of some systems known to have this issue is available
+  at http://wiki.apache.org/hadoop/KnownBrokenPwuidImplementations
+  </description>
+</property>
+
 <!--- logging properties -->
 
 <property>

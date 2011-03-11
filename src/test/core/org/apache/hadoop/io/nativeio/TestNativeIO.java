@@ -21,6 +21,9 @@ import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assume.*;
@@ -65,6 +68,52 @@ public class TestNativeIO {
     assertTrue(!"".equals(stat.getGroup()));
     assertEquals("Stat mode field should indicate a regular file",
       NativeIO.Stat.S_IFREG, stat.getMode() & NativeIO.Stat.S_IFMT);
+  }
+
+  /**
+   * Test for races in fstat usage
+   *
+   * NOTE: this test is likely to fail on RHEL 6.0 which has a non-threadsafe
+   * implementation of getpwuid_r.
+   */
+  @Test
+  public void testMultiThreadedFstat() throws Exception {
+    final FileOutputStream fos = new FileOutputStream(
+      new File(TEST_DIR, "testfstat"));
+
+    final AtomicReference<Throwable> thrown =
+      new AtomicReference<Throwable>();
+    List<Thread> statters = new ArrayList<Thread>();
+    for (int i = 0; i < 10; i++) {
+      Thread statter = new Thread() {
+        public void run() {
+          long et = System.currentTimeMillis() + 5000;
+          while (System.currentTimeMillis() < et) {
+            try {
+              NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
+              assertEquals(System.getProperty("user.name"), stat.getOwner());
+              assertNotNull(stat.getGroup());
+              assertTrue(!"".equals(stat.getGroup()));
+              assertEquals("Stat mode field should indicate a regular file",
+                NativeIO.Stat.S_IFREG, stat.getMode() & NativeIO.Stat.S_IFMT);
+            } catch (Throwable t) {
+              thrown.set(t);
+            }
+          }
+        }
+      };
+      statters.add(statter);
+      statter.start();
+    }
+    for (Thread t : statters) {
+      t.join();
+    }
+
+    fos.close();
+    
+    if (thrown.get() != null) {
+      throw new RuntimeException(thrown.get());
+    }
   }
 
   @Test
