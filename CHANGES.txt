@@ -74,6 +74,8 @@ Trunk (unreleased changes)
     HADOOP-7133. Batch the calls in DataStorage to FileUtil.createHardLink().
     (Matt Foley via jghoman)
 
+    HADOOP-7166. Add DaemonFactory to common. (Erik Steffl & jitendra)
+
   OPTIMIZATIONS
 
   BUG FIXES
