@@ -34,6 +34,9 @@
 #   HBASE_HEAPSIZE   The maximum amount of heap to use, in MB. 
 #                    Default is 1000.
 #
+#   HBASE_LIBRARY_PATH  HBase additions to JAVA_LIBRARY_PATH for adding
+#                    native libaries.
+#
 #   HBASE_OPTS       Extra Java runtime options.
 #
 #   HBASE_CONF_DIR   Alternate conf dir. Default is ${HBASE_HOME}/conf.
@@ -181,21 +184,26 @@ if $cygwin; then
   HBASE_HOME=`cygpath -d "$HBASE_HOME"`
   HBASE_LOG_DIR=`cygpath -d "$HBASE_LOG_DIR"`
 fi
+
+function append_path() {
+  if [ -z "$1" ]; then
+    echo $2
+  else
+    echo $1:$2
+  fi
+}
+
 # setup 'java.library.path' for native-hadoop code if necessary
-JAVA_LIBRARY_PATH=''
+JAVA_LIBRARY_PATH="$HBASE_LIBRARY_PATH"
 if [ -d "${HBASE_HOME}/build/native" -o -d "${HBASE_HOME}/lib/native" ]; then
   JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
 
   if [ -d "$HBASE_HOME/build/native" ]; then
-    JAVA_LIBRARY_PATH=${HBASE_HOME}/build/native/${JAVA_PLATFORM}/lib
+    JAVA_LIBRARY_PATH=$(append_path "$JAVA_LIBRARY_PATH" ${HBASE_HOME}/build/native/${JAVA_PLATFORM}/lib)
   fi
 
   if [ -d "${HBASE_HOME}/lib/native" ]; then
-    if [ "x$JAVA_LIBRARY_PATH" != "x" ]; then
-      JAVA_LIBRARY_PATH=${JAVA_LIBRARY_PATH}:${HBASE_HOME}/lib/native/${JAVA_PLATFORM}
-    else
-      JAVA_LIBRARY_PATH=${HBASE_HOME}/lib/native/${JAVA_PLATFORM}
-    fi
+    JAVA_LIBRARY_PATH=$(append_path "$JAVA_LIBRARY_PATH" ${HBASE_HOME}/lib/native/${JAVA_PLATFORM})
   fi
 fi
 
