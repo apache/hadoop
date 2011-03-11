@@ -535,6 +535,8 @@ Release 0.22.0 - Unreleased
     HADOOP-7145. Configuration.getLocalPath should trim whitespace from
     the provided directories. (todd)
 
+    HADOOP-7156. Workaround for unsafe implementations of getpwuid_r (todd)
+
 Release 0.21.1 - Unreleased
 
   IMPROVEMENTS

@@ -44,24 +44,60 @@ static jmethodID stat_ctor;
 static jclass nioe_clazz;
 static jmethodID nioe_ctor;
 
+// the monitor used for working around non-threadsafe implementations
+// of getpwuid_r, observed on platforms including RHEL 6.0.
+// Please see HADOOP-7156 for details.
+static jobject pw_lock_object;
+
 // Internal functions
 static void throw_ioe(JNIEnv* env, int errnum);
 static ssize_t get_pw_buflen();
 
+/**
+ * Returns non-zero if the user has specified that the system
+ * has non-threadsafe implementations of getpwuid_r or getgrgid_r.
+ **/
+static int workaround_non_threadsafe_calls(JNIEnv *env, jclass clazz) {
+  jfieldID needs_workaround_field = (*env)->GetStaticFieldID(env, clazz,
+    "workaroundNonThreadSafePasswdCalls", "Z");
+  PASS_EXCEPTIONS_RET(env, 0);
+  assert(needs_workaround_field);
 
-static void stat_init(JNIEnv *env) {
+  jboolean result = (*env)->GetStaticBooleanField(
+    env, clazz, needs_workaround_field);
+  return result;
+}
+
+static void stat_init(JNIEnv *env, jclass nativeio_class) {
   // Init Stat
   jclass clazz = (*env)->FindClass(env, "org/apache/hadoop/io/nativeio/NativeIO$Stat");
   PASS_EXCEPTIONS(env);
   stat_clazz = (*env)->NewGlobalRef(env, clazz);
   stat_ctor = (*env)->GetMethodID(env, stat_clazz, "<init>",
     "(Ljava/lang/String;Ljava/lang/String;I)V");
+  
+  jclass obj_class = (*env)->FindClass(env, "java/lang/Object");
+  assert(obj_class != NULL);
+  jmethodID  obj_ctor = (*env)->GetMethodID(env, obj_class,
+    "<init>", "()V");
+  assert(obj_ctor != NULL);
+
+  if (workaround_non_threadsafe_calls(env, nativeio_class)) {
+    pw_lock_object = (*env)->NewObject(env, obj_class, obj_ctor);
+    PASS_EXCEPTIONS(env);
+    pw_lock_object = (*env)->NewGlobalRef(env, pw_lock_object);
+    PASS_EXCEPTIONS(env);
+  }
 }
 
 static void stat_deinit(JNIEnv *env) {
   if (stat_clazz != NULL) {  
     (*env)->DeleteGlobalRef(env, stat_clazz);
     stat_clazz = NULL;
+  }
+  if (pw_lock_object != NULL) {
+    (*env)->DeleteGlobalRef(env, pw_lock_object);
+    pw_lock_object = NULL;
   }
 }
 
@@ -95,7 +131,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_nativeio_NativeIO_initNative(
 	JNIEnv *env, jclass clazz) {
 
-  stat_init(env);
+  stat_init(env, clazz);
   PASS_EXCEPTIONS_GOTO(env, error);
   nioe_init(env);
   PASS_EXCEPTIONS_GOTO(env, error);
@@ -122,6 +158,7 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_fstat(
 {
   jobject ret = NULL;
   char *pw_buf = NULL;
+  int pw_lock_locked = 0;
 
   int fd = fd_get(env, fd_object);
   PASS_EXCEPTIONS_GOTO(env, cleanup);
@@ -137,6 +174,13 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_fstat(
   if ((pw_buf = malloc(pw_buflen)) == NULL) {
     THROW(env, "java/lang/OutOfMemoryError", "Couldn't allocate memory for pw buffer");
     goto cleanup;
+  }
+
+  if (pw_lock_object != NULL) {
+    if ((*env)->MonitorEnter(env, pw_lock_object) != JNI_OK) {
+      goto cleanup;
+    }
+    pw_lock_locked = 1;
   }
 
   // Grab username
@@ -183,6 +227,9 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_fstat(
 
 cleanup:
   if (pw_buf != NULL) free(pw_buf);
+  if (pw_lock_locked) {
+    (*env)->MonitorExit(env, pw_lock_object);
+  }
   return ret;
 }
 
