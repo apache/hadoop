@@ -9,6 +9,9 @@ Release 0.21.1 - Unreleased
 
     HADOOP-6786. test-patch needs to verify Herriot integrity (cos)
 
+    HADOOP-7177. CodecPool should report which compressor it is using.
+    (Allen Wittenauer via eli)
+
   BUG FIXES
 
     HADOOP-6925. BZip2Codec incorrectly implements read(). 
