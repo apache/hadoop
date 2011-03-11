@@ -235,6 +235,9 @@ Trunk (unreleased changes)
 
     HDFS-1746. Federation: TestFileAppend3 fails intermittently. (jitendra)
 
+    HDFS-1703. Improve start/stop scripts and add decommission tool for
+    federation. (Tanping Wang, Erik Steffl via suresh)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

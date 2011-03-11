@@ -25,17 +25,17 @@ usage="Usage: start-dfs.sh [-upgrade|-rollback]"
 bin=`dirname "${BASH_SOURCE-$0}"`
 bin=`cd "$bin"; pwd`
 
-. "$bin"/hdfs-config.sh
+. "$bin/hdfs-config.sh"
 
 # get arguments
 if [ $# -ge 1 ]; then
-	nameStartOpt=$1
+	nameStartOpt="$1"
 	shift
-	case $nameStartOpt in
+	case "$nameStartOpt" in
 	  (-upgrade)
 	  	;;
 	  (-rollback) 
-	  	dataStartOpt=$nameStartOpt
+	  	dataStartOpt="$nameStartOpt"
 	  	;;
 	  (*)
 		  echo $usage
@@ -44,14 +44,50 @@ if [ $# -ge 1 ]; then
 	esac
 fi
 
-# start dfs daemons
-# start namenode after datanodes, to minimize time namenode is up w/o data
-# note: datanodes will log connection errors until namenode starts
-"$HADOOP_COMMON_HOME"/bin/hadoop-daemon.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs start namenode $nameStartOpt
-#
+#---------------------------------------------------------
+# namenodes
+
+NAMENODES=$($HADOOP_HOME/bin/hdfs getconf -namenodes)
+
+echo "Starting namenodes on [$NAMENODES]"
+
+"$HADOOP_COMMON_HOME/bin/hadoop-daemons.sh" \
+  --config "$HADOOP_CONF_DIR" \
+  --hostnames "$NAMENODES" \
+  --script "$bin/hdfs" start namenode $nameStartOpt
+
+#---------------------------------------------------------
+# datanodes (using defalut slaves file)
+
 if [ -n "$HADOOP_SECURE_DN_USER" ]; then
-  echo "Attempting to start secure cluster, skipping datanodes. Run start-secure-dns.sh as root to complete startup."
+  echo \
+    "Attempting to start secure cluster, skipping datanodes. " \
+    "Run start-secure-dns.sh as root to complete startup."
 else
-"$HADOOP_COMMON_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --script "$bin"/hdfs start datanode $dataStartOpt
+  "$HADOOP_COMMON_HOME/bin/hadoop-daemons.sh" \
+    --config "$HADOOP_CONF_DIR" \
+    --script "$bin/hdfs" start datanode $dataStartOpt
 fi
-"$HADOOP_COMMON_HOME"/bin/hadoop-daemons.sh --config $HADOOP_CONF_DIR --hosts masters --script "$bin"/hdfs start secondarynamenode
+
+#---------------------------------------------------------
+# secondary namenodes (if any)
+
+# if there are no secondary namenodes configured it returns
+# 0.0.0.0 or empty string
+SECONDARY_NAMENODES=$($HADOOP_HOME/bin/hdfs getconf -secondarynamenodes 2>&-)
+SECONDARY_NAMENODES=${SECONDARY_NAMENODES:='0.0.0.0'}
+
+if [ "$SECONDARY_NAMENODES" = '0.0.0.0' ] ; then
+  echo \
+    "Secondary namenodes are not configured. " \
+    "Cannot start secondary namenodes."
+else
+  echo "Starting secondary namenodes [$SECONDARY_NAMENODES]"
+
+  "$HADOOP_COMMON_HOME/bin/hadoop-daemons.sh" \
+    --config "$HADOOP_CONF_DIR" \
+    --hostnames "$SECONDARY_NAMENODES" \
+    --script "$bin/hdfs" start secondarynamenode
+fi
+
+# eof

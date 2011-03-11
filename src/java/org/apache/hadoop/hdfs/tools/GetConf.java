@@ -60,10 +60,12 @@ public class GetConf extends Configured implements Tool {
         "gets list of secondary namenodes in the cluster."),
     BACKUP("-backupNodes", new BackupNodesCommandHandler(),
         "gets list of backup nodes in the cluster."),
-    INCLUDE_FILE("-includeFile", new CommandHandler("dfs.hosts"),
+    INCLUDE_FILE("-includeFile",
+        new CommandHandler("DFSConfigKeys.DFS_HOSTS"),
         "gets the include file path that defines the datanodes " +
         "that can join the cluster."),
-    EXCLUDE_FILE("-excludeFile", new CommandHandler("dfs.hosts.exlucde"),
+    EXCLUDE_FILE("-excludeFile",
+        new CommandHandler("DFSConfigKeys.DFS_HOSTS_EXCLUDE"),
         "gets the exclude file path that defines the datanodes " +
         "that need to decommissioned.");
 
