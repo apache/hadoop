@@ -96,6 +96,7 @@ Release 0.91.0 - Unreleased
    HBASE-3560  the hbase-default entry of "hbase.defaults.for.version" 
                causes tests not to run via not-maven
    HBASE-3513  upgrade thrift to 0.5.0 and use mvn version
+   HBASE-3620  Make HBCK utility faster
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
