@@ -21,7 +21,7 @@
 
 # Instructions:
 # 1. Run Thrift to generate the perl module HBase
-#    thrift --gen perl ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift 
+#    thrift --gen perl ../../../src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
 # 2. Add the gen-perl/Hbase directory to your perl's @INC path:
 #    a. This is one of the paths listed in: perl -e 'print join ("\n", @INC) . "\n"'
 #    -OR-

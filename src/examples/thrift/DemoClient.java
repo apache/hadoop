@@ -50,7 +50,7 @@ import com.facebook.thrift.transport.TTransport;
 /*
  * Instructions:
  * 1. Run Thrift to generate the java module HBase
- *    thrift --gen java ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift
+ *    thrift --gen java ../../../src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
  * 2. Acquire a jar of compiled Thrift java classes.  As of this writing, HBase ships 
  *    with this jar (libthrift-[VERSION].jar).  If this jar is not present, or it is 
  *    out-of-date with your current version of thrift, you can compile the jar 

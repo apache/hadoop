@@ -64,6 +64,7 @@ Release 0.91.0 - Unreleased
                hbase.version; use alternate strategy for waiting for DNs
    HBASE-3612  HBaseAdmin::isTableAvailable returns true when the table does
                not exit
+   HBASE-3626  Update instructions in thrift demo files (Moaz Reyad via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

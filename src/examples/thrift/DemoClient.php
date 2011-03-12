@@ -21,7 +21,7 @@
 
 # Instructions:
 # 1. Run Thrift to generate the php module HBase
-#    thrift -php ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift 
+#    thrift -php ../../../src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
 # 2. Modify the import string below to point to {$THRIFT_HOME}/lib/php/src.
 # 3. Execute {php DemoClient.php}.  Note that you must use php5 or higher.
 # 4. See {$THRIFT_HOME}/lib/php/README for additional help.

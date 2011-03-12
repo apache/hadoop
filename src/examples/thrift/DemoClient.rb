@@ -20,7 +20,7 @@
 
 # Instructions: 
 # 1. Run Thrift to generate the ruby module HBase
-#    thrift --gen rb ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift 
+#    thrift --gen rb ../../../src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
 # 2. Modify the import string below to point to {$THRIFT_HOME}/lib/rb/lib.
 # 3. Execute {ruby DemoClient.rb}.
 

@@ -21,7 +21,7 @@
 /*
  * Instructions:
  * 1. Run Thrift to generate the cpp module HBase
- *    thrift --gen cpp ../../../src/java/org/apache/hadoop/hbase/thrift/Hbase.thrift
+ *    thrift --gen cpp ../../../src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift
  * 2. Execute {make}.
  * 3. Execute {./DemoClient}.
  */ 
