@@ -95,7 +95,7 @@
   <property name="test.core.build.classes" value="${test.build.dir}/core/classes"/>
 
   <property name="test.all.tests.file" value="${test.src.dir}/all-tests"/>
-  <property name="test.exclude.file" value="/dev/null" />
+  <property name="test.exclude.file" value="${test.src.dir}/empty-file" />
 
   <property name="javadoc.link.java"
 	    value="http://java.sun.com/javase/6/docs/api/"/>
@@ -1455,6 +1455,7 @@
         <exclude name="**/VERSION"/>
         <exclude name="**/*.json"/>
         <exclude name="**/hod/*.txt"/>
+        <exclude name="src/test/empty-file" />
       </fileset>
     </rat:report>
   </target>
