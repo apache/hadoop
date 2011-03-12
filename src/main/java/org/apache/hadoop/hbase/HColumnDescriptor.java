@@ -284,7 +284,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         "period: " + Bytes.toString(b));
     }
     for (int i = 0; i < b.length; i++) {
-      if (Character.isISOControl(b[i]) || b[i] == ':') {
+      if (Character.isISOControl(b[i]) || b[i] == ':' || b[i] == '\\' || b[i] == '/') {
         throw new IllegalArgumentException("Illegal character <" + b[i] +
           ">. Family names cannot contain control characters or colons: " +
           Bytes.toString(b));

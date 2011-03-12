@@ -148,6 +148,16 @@ public class TestAdmin {
     assertEquals(htd.compareTo(confirmedHtd), 0);
   }
 
+  @Test
+  public void testHColumnValidName() {
+       boolean exceptionThrown = false;
+       try {
+       HColumnDescriptor fam1 = new HColumnDescriptor("\\test\\abc");
+       } catch(IllegalArgumentException iae) {
+           exceptionThrown = true;
+           assertTrue(exceptionThrown);
+       }
+   }
   /**
    * Verify schema modification takes.
    * @throws IOException
@@ -620,6 +630,11 @@ public class TestAdmin {
   @Test (expected=IllegalArgumentException.class)
   public void testEmptyHHTableDescriptor() throws IOException {
     this.admin.createTable(new HTableDescriptor());
+  }
+
+  @Test (expected=IllegalArgumentException.class)
+  public void testInvalidHColumnDescriptor() throws IOException {
+     HColumnDescriptor hcd = new HColumnDescriptor("/cfamily/name");
   }
 
   @Test

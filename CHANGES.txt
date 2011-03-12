@@ -65,6 +65,7 @@ Release 0.91.0 - Unreleased
    HBASE-3612  HBaseAdmin::isTableAvailable returns true when the table does
                not exit
    HBASE-3626  Update instructions in thrift demo files (Moaz Reyad via Stack)
+   HBASE-3538  Column families allow to have slashes in name (Ian Knome via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
