@@ -37,15 +37,14 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
-import org.apache.hadoop.hbase.thrift.generated.NotFound;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 
-import com.facebook.thrift.TException;
-import com.facebook.thrift.protocol.TBinaryProtocol;
-import com.facebook.thrift.protocol.TProtocol;
-import com.facebook.thrift.transport.TSocket;
-import com.facebook.thrift.transport.TTransport;
+import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.transport.TSocket;
+import org.apache.thrift.transport.TTransport;
 
 /*
  * Instructions:
@@ -65,267 +64,283 @@ import com.facebook.thrift.transport.TTransport;
  * 
  */
 public class DemoClient {
-  
-  protected int port = 9090;
-  CharsetDecoder decoder = null;
 
-  public static void main(String[] args) 
-  throws IOError, TException, NotFound, UnsupportedEncodingException, IllegalArgument, AlreadyExists {
-    DemoClient client = new DemoClient();
-    client.run();
-  }
+    static protected int port;
+    static protected String host;
+    CharsetDecoder decoder = null;
 
-  DemoClient() {
-    decoder = Charset.forName("UTF-8").newDecoder();
-  }
-  
-  // Helper to translate byte[]'s to UTF8 strings
-  private String utf8(byte[] buf) {
-    try {
-      return decoder.decode(ByteBuffer.wrap(buf)).toString();
-    } catch (CharacterCodingException e) {
-      return "[INVALID UTF-8]";
-    }
-  }
-  
-  // Helper to translate strings to UTF8 bytes
-  private byte[] bytes(String s) {
-    try {
-      return s.getBytes("UTF-8");
-    } catch (UnsupportedEncodingException e) {
-      e.printStackTrace();
-      return null;
-    }
-  }
-  
-  private void run() throws IOError, TException, NotFound, IllegalArgument,
-      AlreadyExists {
-    
-    TTransport transport = new TSocket("localhost", port);
-    TProtocol protocol = new TBinaryProtocol(transport, true, true);
-    Hbase.Client client = new Hbase.Client(protocol);
+    public static void main(String[] args)
+            throws IOError, TException, UnsupportedEncodingException, IllegalArgument, AlreadyExists {
 
-    transport.open();
+        if (args.length != 2) {
+            
+            System.out.println("Invalid arguments!");
+            System.out.println("Usage: DemoClient host port");
 
-    byte[] t = bytes("demo_table");
-    
-    //
-    // Scan all tables, look for the demo table and delete it.
-    //
-    System.out.println("scanning tables...");
-    for (byte[] name : client.getTableNames()) {
-      System.out.println("  found: " + utf8(name));
-      if (utf8(name).equals(utf8(t))) {
-        if (client.isTableEnabled(name)) {
-          System.out.println("    disabling table: " + utf8(name));
-          client.disableTable(name);
+            System.exit(-1);
         }
-        System.out.println("    deleting table: " + utf8(name)); 
-        client.deleteTable(name);
-      }
-    }
-    
-    //
-    // Create the demo table with two column families, entry: and unused:
-    //
-    ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>();
-    ColumnDescriptor col = null;
-    col = new ColumnDescriptor();
-    col.name = bytes("entry:");
-    col.maxVersions = 10;
-    columns.add(col);
-    col = new ColumnDescriptor();
-    col.name = bytes("unused:");
-    columns.add(col);
 
-    System.out.println("creating table: " + utf8(t));
-    try {
-      client.createTable(t, columns);
-    } catch (AlreadyExists ae) {
-      System.out.println("WARN: " + ae.message);
-    }
-    
-    System.out.println("column families in " + utf8(t) + ": ");
-    Map<byte[], ColumnDescriptor> columnMap = client.getColumnDescriptors(t);
-    for (ColumnDescriptor col2 : columnMap.values()) {
-      System.out.println("  column: " + utf8(col2.name) + ", maxVer: " + Integer.toString(col2.maxVersions));
-    }
-    
-    //
-    // Test UTF-8 handling
-    //
-    byte[] invalid = { (byte) 'f', (byte) 'o', (byte) 'o', (byte) '-', (byte) 0xfc, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1 };
-    byte[] valid = { (byte) 'f', (byte) 'o', (byte) 'o', (byte) '-', (byte) 0xE7, (byte) 0x94, (byte) 0x9F, (byte) 0xE3, (byte) 0x83, (byte) 0x93, (byte) 0xE3, (byte) 0x83, (byte) 0xBC, (byte) 0xE3, (byte) 0x83, (byte) 0xAB};
+        port = Integer.parseInt(args[1]);
+        host = args[0];
 
-    ArrayList<Mutation> mutations;
-    // non-utf8 is fine for data
-    mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, bytes("entry:foo"), invalid));
-    client.mutateRow(t, bytes("foo"), mutations);
 
-    // try empty strings
-    mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, bytes("entry:"), bytes("")));
-    client.mutateRow(t, bytes(""), mutations);
+        DemoClient client = new DemoClient();
+        client.run();
+    }
 
-    // this row name is valid utf8
-    mutations = new ArrayList<Mutation>();
-    mutations.add(new Mutation(false, bytes("entry:foo"), valid));
-    client.mutateRow(t, valid, mutations);
-    
-    // non-utf8 is not allowed in row names
-    try {
-      mutations = new ArrayList<Mutation>();
-      mutations.add(new Mutation(false, bytes("entry:foo"), invalid));
-      client.mutateRow(t, invalid, mutations);
-      System.out.println("FATAL: shouldn't get here");
-      System.exit(-1);
-    } catch (IOError e) {
-      System.out.println("expected error: " + e.message);
+    DemoClient() {
+        decoder = Charset.forName("UTF-8").newDecoder();
     }
-    
-    // Run a scanner on the rows we just created
-    ArrayList<byte[]> columnNames = new ArrayList<byte[]>();
-    columnNames.add(bytes("entry:"));
-    
-    System.out.println("Starting scanner...");
-    int scanner = client.scannerOpen(t, bytes(""), columnNames);
-    try {
-      while (true) {
-        TRowResult entry = client.scannerGet(scanner);
-        printRow(entry);
-      }
-    } catch (NotFound nf) {
-      client.scannerClose(scanner);
-      System.out.println("Scanner finished");
-    }
-    
-    //
-    // Run some operations on a bunch of rows
-    //
-    for (int i = 100; i >= 0; --i) {
-      // format row keys as "00000" to "00100"
-      NumberFormat nf = NumberFormat.getInstance();
-      nf.setMinimumIntegerDigits(5);
-      nf.setGroupingUsed(false);
-      byte[] row = bytes(nf.format(i));
-      
-      mutations = new ArrayList<Mutation>();
-      mutations.add(new Mutation(false, bytes("unused:"), bytes("DELETE_ME")));
-      client.mutateRow(t, row, mutations);
-      printRow(client.getRow(t, row));
-      client.deleteAllRow(t, row);
 
-      mutations = new ArrayList<Mutation>();
-      mutations.add(new Mutation(false, bytes("entry:num"), bytes("0")));
-      mutations.add(new Mutation(false, bytes("entry:foo"), bytes("FOO")));
-      client.mutateRow(t, row, mutations);
-      printRow(client.getRow(t, row));
+    // Helper to translate byte[]'s to UTF8 strings
+    private String utf8(byte[] buf) {
+        try {
+            return decoder.decode(ByteBuffer.wrap(buf)).toString();
+        } catch (CharacterCodingException e) {
+            return "[INVALID UTF-8]";
+        }
+    }
 
-      Mutation m = null;
-      mutations = new ArrayList<Mutation>();
-      m = new Mutation();
-      m.column = bytes("entry:foo");
-      m.isDelete = true;
-      mutations.add(m);
-      m = new Mutation();
-      m.column = bytes("entry:num");
-      m.value = bytes("-1");
-      mutations.add(m);
-      client.mutateRow(t, row, mutations);
-      printRow(client.getRow(t, row));
-      
-      mutations = new ArrayList<Mutation>();
-      mutations.add(new Mutation(false, bytes("entry:num"), bytes(Integer.toString(i))));
-      mutations.add(new Mutation(false, bytes("entry:sqr"), bytes(Integer.toString(i * i))));
-      client.mutateRow(t, row, mutations);
-      printRow(client.getRow(t, row));
+    // Helper to translate strings to UTF8 bytes
+    private byte[] bytes(String s) {
+        try {
+            return s.getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 
-      // sleep to force later timestamp 
-      try {
-        Thread.sleep(50);
-      } catch (InterruptedException e) {
-        // no-op
-      }
-      
-      mutations.clear();
-      m = new Mutation();
-      m.column = bytes("entry:num");
-      m.value = bytes("-999");
-      mutations.add(m);
-      m = new Mutation();
-      m.column = bytes("entry:sqr");
-      m.isDelete = true;
-      client.mutateRowTs(t, row, mutations, 1); // shouldn't override latest
-      printRow(client.getRow(t, row));
+    private void run() throws IOError, TException, IllegalArgument,
+            AlreadyExists {
 
-      List<TCell> versions = client.getVer(t, row, bytes("entry:num"), 10);
-      printVersions(row, versions);
-      if (versions.size() != 4) {
-        System.out.println("FATAL: wrong # of versions");
-        System.exit(-1);
-      }
-      
-      try {
-        client.get(t, row, bytes("entry:foo"));
-        System.out.println("FATAL: shouldn't get here");
-        System.exit(-1);
-      } catch (NotFound nf2) {
-        // blank
-      }
+        TTransport transport = new TSocket(host, port);
+        TProtocol protocol = new TBinaryProtocol(transport, true, true);
+        Hbase.Client client = new Hbase.Client(protocol);
 
-      System.out.println("");
+        transport.open();
+
+        byte[] t = bytes("demo_table");
+
+        //
+        // Scan all tables, look for the demo table and delete it.
+        //
+        System.out.println("scanning tables...");
+        for (ByteBuffer name : client.getTableNames()) {
+            System.out.println("  found: " + utf8(name.array()));
+            if (utf8(name.array()).equals(utf8(t))) {
+                if (client.isTableEnabled(name)) {
+                    System.out.println("    disabling table: " + utf8(name.array()));
+                    client.disableTable(name);
+                }
+                System.out.println("    deleting table: " + utf8(name.array()));
+                client.deleteTable(name);
+            }
+        }
+
+        //
+        // Create the demo table with two column families, entry: and unused:
+        //
+        ArrayList<ColumnDescriptor> columns = new ArrayList<ColumnDescriptor>();
+        ColumnDescriptor col = null;
+        col = new ColumnDescriptor();
+        col.name = ByteBuffer.wrap(bytes("entry:"));
+        col.maxVersions = 10;
+        columns.add(col);
+        col = new ColumnDescriptor();
+        col.name = ByteBuffer.wrap(bytes("unused:"));
+        columns.add(col);
+
+        System.out.println("creating table: " + utf8(t));
+        try {
+            client.createTable(ByteBuffer.wrap(t), columns);
+        } catch (AlreadyExists ae) {
+            System.out.println("WARN: " + ae.message);
+        }
+
+        System.out.println("column families in " + utf8(t) + ": ");
+        Map<ByteBuffer, ColumnDescriptor> columnMap = client.getColumnDescriptors(ByteBuffer.wrap(t));
+        for (ColumnDescriptor col2 : columnMap.values()) {
+            System.out.println("  column: " + utf8(col2.name.array()) + ", maxVer: " + Integer.toString(col2.maxVersions));
+        }
+
+        //
+        // Test UTF-8 handling
+        //
+        byte[] invalid = {(byte) 'f', (byte) 'o', (byte) 'o', (byte) '-', (byte) 0xfc, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1, (byte) 0xa1};
+        byte[] valid = {(byte) 'f', (byte) 'o', (byte) 'o', (byte) '-', (byte) 0xE7, (byte) 0x94, (byte) 0x9F, (byte) 0xE3, (byte) 0x83, (byte) 0x93, (byte) 0xE3, (byte) 0x83, (byte) 0xBC, (byte) 0xE3, (byte) 0x83, (byte) 0xAB};
+
+        ArrayList<Mutation> mutations;
+        // non-utf8 is fine for data
+        mutations = new ArrayList<Mutation>();
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid)));
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("foo")), mutations);
+
+        // try empty strings
+        mutations = new ArrayList<Mutation>();
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:")), ByteBuffer.wrap(bytes(""))));
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("")), mutations);
+
+        // this row name is valid utf8
+        mutations = new ArrayList<Mutation>();
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(valid)));
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(valid), mutations);
+
+        // non-utf8 is now allowed in row names because HBase stores values as binary
+        ByteBuffer bf = ByteBuffer.wrap(invalid);
+
+        mutations = new ArrayList<Mutation>();
+        mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(invalid)));
+        client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(invalid), mutations);
+
+
+        // Run a scanner on the rows we just created
+        ArrayList<ByteBuffer> columnNames = new ArrayList<ByteBuffer>();
+        columnNames.add(ByteBuffer.wrap(bytes("entry:")));
+
+        System.out.println("Starting scanner...");
+        int scanner = client.scannerOpen(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("")), columnNames);
+        
+        while (true) {
+            List<TRowResult> entry = client.scannerGet(scanner);
+            if (entry.isEmpty()) {
+                break;
+            }
+            printRow(entry);
+        }
+
+        //
+        // Run some operations on a bunch of rows
+        //
+        for (int i = 100; i >= 0; --i) {
+            // format row keys as "00000" to "00100"
+            NumberFormat nf = NumberFormat.getInstance();
+            nf.setMinimumIntegerDigits(5);
+            nf.setGroupingUsed(false);
+            byte[] row = bytes(nf.format(i));
+
+            mutations = new ArrayList<Mutation>();
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("unused:")), ByteBuffer.wrap(bytes("DELETE_ME"))));
+            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations);
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+            client.deleteAllRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row));
+
+            mutations = new ArrayList<Mutation>();
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes("0"))));
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:foo")), ByteBuffer.wrap(bytes("FOO"))));
+            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations);
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+
+            Mutation m = null;
+            mutations = new ArrayList<Mutation>();
+            m = new Mutation();
+            m.column = ByteBuffer.wrap(bytes("entry:foo"));
+            m.isDelete = true;
+            mutations.add(m);
+            m = new Mutation();
+            m.column = ByteBuffer.wrap(bytes("entry:num"));
+            m.value = ByteBuffer.wrap(bytes("-1"));
+            mutations.add(m);
+            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations);
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+
+            mutations = new ArrayList<Mutation>();
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:num")), ByteBuffer.wrap(bytes(Integer.toString(i)))));
+            mutations.add(new Mutation(false, ByteBuffer.wrap(bytes("entry:sqr")), ByteBuffer.wrap(bytes(Integer.toString(i * i)))));
+            client.mutateRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations);
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+
+            // sleep to force later timestamp
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                // no-op
+            }
+
+            mutations.clear();
+            m = new Mutation();
+            m.column = ByteBuffer.wrap(bytes("entry:num"));
+            m.value= ByteBuffer.wrap(bytes("-999"));
+            mutations.add(m);
+            m = new Mutation();
+            m.column = ByteBuffer.wrap(bytes("entry:sqr"));
+            m.isDelete = true;
+            client.mutateRowTs(ByteBuffer.wrap(t), ByteBuffer.wrap(row), mutations, 1); // shouldn't override latest
+            printRow(client.getRow(ByteBuffer.wrap(t), ByteBuffer.wrap(row)));
+
+            List<TCell> versions = client.getVer(ByteBuffer.wrap(t), ByteBuffer.wrap(row), ByteBuffer.wrap(bytes("entry:num")), 10);
+            printVersions(ByteBuffer.wrap(row), versions);
+            if (versions.isEmpty()) {
+                System.out.println("FATAL: wrong # of versions");
+                System.exit(-1);
+            }
+
+            
+            List<TCell> result = client.get(ByteBuffer.wrap(t), ByteBuffer.wrap(row), ByteBuffer.wrap(bytes("entry:foo")));
+            if (result.isEmpty() == false) {
+                System.out.println("FATAL: shouldn't get here");
+                System.exit(-1);
+            }
+
+            System.out.println("");
+        }
+
+        // scan all rows/columnNames
+
+        columnNames.clear();
+        for (ColumnDescriptor col2 : client.getColumnDescriptors(ByteBuffer.wrap(t)).values()) {
+            System.out.println("column with name: " + new String(col2.name.array()));
+            System.out.println(col2.toString());
+
+            columnNames.add(col2.name);
+        }
+
+        System.out.println("Starting scanner...");
+        scanner = client.scannerOpenWithStop(ByteBuffer.wrap(t), ByteBuffer.wrap(bytes("00020")), ByteBuffer.wrap(bytes("00040")),
+                columnNames);
+
+        while (true) {
+            List<TRowResult> entry = client.scannerGet(scanner);
+            if (entry.isEmpty()) {
+                System.out.println("Scanner finished");
+                break;
+            }
+            printRow(entry);
+        }
+
+        transport.close();
     }
-    
-    // scan all rows/columnNames
-    
-    columnNames.clear();
-    for (ColumnDescriptor col2 : client.getColumnDescriptors(t).values()) {
-      System.out.println("column with name: " + new String(col2.name));
-      System.out.println(col2.toString());
-      columnNames.add((utf8(col2.name) + ":").getBytes());
+
+    private final void printVersions(ByteBuffer row, List<TCell> versions) {
+        StringBuilder rowStr = new StringBuilder();
+        for (TCell cell : versions) {
+            rowStr.append(utf8(cell.value.array()));
+            rowStr.append("; ");
+        }
+        System.out.println("row: " + utf8(row.array()) + ", values: " + rowStr);
     }
-    
-    System.out.println("Starting scanner...");
-    scanner = client.scannerOpenWithStop(t, bytes("00020"), bytes("00040"),
-        columnNames);
-    try {
-      while (true) {
-        TRowResult entry = client.scannerGet(scanner);
-        printRow(entry);
-      }
-    } catch (NotFound nf) {
-      client.scannerClose(scanner);
-      System.out.println("Scanner finished");
+
+    private final void printRow(TRowResult rowResult) {
+        // copy values into a TreeMap to get them in sorted order
+
+        TreeMap<String, TCell> sorted = new TreeMap<String, TCell>();
+        for (Map.Entry<ByteBuffer, TCell> column : rowResult.columns.entrySet()) {
+            sorted.put(utf8(column.getKey().array()), column.getValue());
+        }
+
+        StringBuilder rowStr = new StringBuilder();
+        for (SortedMap.Entry<String, TCell> entry : sorted.entrySet()) {
+            rowStr.append(entry.getKey());
+            rowStr.append(" => ");
+            rowStr.append(utf8(entry.getValue().value.array()));
+            rowStr.append("; ");
+        }
+        System.out.println("row: " + utf8(rowResult.row.array()) + ", cols: " + rowStr);
     }
-    
-    transport.close();
-  }
-  
-  private final void printVersions(byte[] row, List<TCell> versions) {
-    StringBuilder rowStr = new StringBuilder();
-    for (TCell cell : versions) {
-      rowStr.append(utf8(cell.value));
-      rowStr.append("; ");
+
+    private void printRow(List<TRowResult> rows) {
+        for (TRowResult rowResult : rows) {
+            printRow(rowResult);
+        }
     }
-    System.out.println("row: " + utf8(row) + ", values: " + rowStr);
-  }
-  
-  private final void printRow(TRowResult rowResult) {
-    // copy values into a TreeMap to get them in sorted order
-    
-    TreeMap<String,TCell> sorted = new TreeMap<String,TCell>();
-    for (Map.Entry<byte[], TCell> column : rowResult.columns.entrySet()) {
-      sorted.put(utf8(column.getKey()), column.getValue());
-    }
-    
-    StringBuilder rowStr = new StringBuilder();
-    for (SortedMap.Entry<String, TCell> entry : sorted.entrySet()) {
-      rowStr.append(entry.getKey());
-      rowStr.append(" => ");
-      rowStr.append(utf8(entry.getValue().value));
-      rowStr.append("; ");
-    }
-    System.out.println("row: " + utf8(rowResult.row) + ", cols: " + rowStr);
-  }
 }
