@@ -160,8 +160,8 @@
       <url>https://repository.apache.org/content/repositories/releases/</url>
     </repository>
     <repository>
-      <id>temp-thrift</id>
-      <name>Thrift 0.2.0</name>
+      <id>hadoop-non-releases</id>
+      <name>Hadoop non-releases</name>
       <url>http://people.apache.org/~rawson/repo/</url>
       <snapshots>
         <enabled>false</enabled>
