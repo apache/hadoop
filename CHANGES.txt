@@ -66,6 +66,8 @@ Release 0.91.0 - Unreleased
                not exit
    HBASE-3626  Update instructions in thrift demo files (Moaz Reyad via Stack)
    HBASE-3538  Column families allow to have slashes in name (Ian Knome via Stack)
+   HBASE-3313  Table name isn't checked in isTableEnabled/isTableDisabled
+               (Ted Yu via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

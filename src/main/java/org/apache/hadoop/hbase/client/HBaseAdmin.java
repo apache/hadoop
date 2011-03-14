@@ -590,6 +590,7 @@ public class HBaseAdmin implements Abortable {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableEnabled(byte[] tableName) throws IOException {
+    HTableDescriptor.isLegalTableName(tableName);
     return connection.isTableEnabled(tableName);
   }
 
@@ -608,6 +609,7 @@ public class HBaseAdmin implements Abortable {
    * @throws IOException if a remote or network exception occurs
    */
   public boolean isTableDisabled(byte[] tableName) throws IOException {
+    HTableDescriptor.isLegalTableName(tableName);
     return connection.isTableDisabled(tableName);
   }
 
