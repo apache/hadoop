@@ -834,11 +834,12 @@ public class Balancer {
         }
       } else {
         datanodeS = new BalancerDatanode(datanode, policy, threshold);
-        if ( isBelowAvgUtilized(datanodeS)) {
+        if ( isBelowOrEqualAvgUtilized(datanodeS)) {
           this.belowAvgUtilizedDatanodes.add(datanodeS);
         } else {
-          assert (isUnderUtilized(datanodeS)) :
-            datanodeS.getName()+ "is not an underUtilized node"; 
+          assert isUnderUtilized(datanodeS) : "isUnderUtilized("
+              + datanodeS.getName() + ")=" + isUnderUtilized(datanodeS)
+              + ", utilization=" + datanodeS.utilization; 
           this.underUtilizedDatanodes.add(datanodeS);
           underLoadedBytes += (long)((avg-threshold-
               datanodeS.utilization)*datanodeS.datanode.getCapacity()/100.0);
@@ -1273,10 +1274,10 @@ public class Balancer {
 
   /* Return true if the given datanode is below average utilized 
    * but not underUtilized */
-  private boolean isBelowAvgUtilized(BalancerDatanode datanode) {
+  private boolean isBelowOrEqualAvgUtilized(BalancerDatanode datanode) {
     final double avg = policy.getAvgUtilization();
     return (datanode.utilization >= (avg-threshold))
-             && (datanode.utilization < avg);
+             && (datanode.utilization <= avg);
   }
 
   // Exit status

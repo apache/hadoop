@@ -338,6 +338,8 @@ Trunk (unreleased changes)
     HDFS-1691. Remove a duplicated static initializer for reading default
     configurations in DFSck.  (Alexey Diomin via szetszwo)
 
+    HDFS-1748. Balancer utilization classification is incomplete.  (szetszwo)
+
 Release 0.22.0 - Unreleased
 
   NEW FEATURES
