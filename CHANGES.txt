@@ -108,6 +108,7 @@ Release 0.91.0 - Unreleased
    HBASE-3630  DemoClient.Java is outdated (Moaz Reyed via Stack)
    HBASE-3618  Add to HBase book, 'schema' chapter - pre-creating regions and
                key types (Doug Meil via Stack)
+   HBASE-3610  Improve RegionSplitter performance
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
