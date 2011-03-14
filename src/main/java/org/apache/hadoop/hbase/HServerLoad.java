@@ -65,6 +65,8 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
     private int memstoreSizeMB;
     /** the current total size of storefile indexes for the region, in MB */
     private int storefileIndexSizeMB;
+    /** the current total request made to region */
+    private long requestsCount;
 
     /**
      * Constructor, for Writable
@@ -80,16 +82,19 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
      * @param storefileSizeMB
      * @param memstoreSizeMB
      * @param storefileIndexSizeMB
+     * @param requestsCount
      */
     public RegionLoad(final byte[] name, final int stores,
         final int storefiles, final int storefileSizeMB,
-        final int memstoreSizeMB, final int storefileIndexSizeMB) {
+        final int memstoreSizeMB, final int storefileIndexSizeMB,
+        final long requestsCount) {
       this.name = name;
       this.stores = stores;
       this.storefiles = storefiles;
       this.storefileSizeMB = storefileSizeMB;
       this.memstoreSizeMB = memstoreSizeMB;
       this.storefileIndexSizeMB = storefileIndexSizeMB;
+      this.requestsCount = requestsCount;
     }
 
     // Getters
@@ -143,6 +148,13 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       return storefileIndexSizeMB;
     }
 
+    /**
+     * @return the number of requests made to region
+     */
+    public long getRequestsCount() {
+      return requestsCount;
+    }
+
     // Setters
 
     /**
@@ -181,6 +193,13 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       this.storefileIndexSizeMB = storefileIndexSizeMB;
     }
 
+    /**
+     * @param requestsCount the number of requests to region
+     */
+    public void setRequestsCount(long requestsCount) {
+      this.requestsCount = requestsCount;
+    }
+
     // Writable
     public void readFields(DataInput in) throws IOException {
       int namelen = in.readInt();
@@ -191,6 +210,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       this.storefileSizeMB = in.readInt();
       this.memstoreSizeMB = in.readInt();
       this.storefileIndexSizeMB = in.readInt();
+      this.requestsCount = in.readLong();
     }
 
     public void write(DataOutput out) throws IOException {
@@ -201,6 +221,7 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
       out.writeInt(storefileSizeMB);
       out.writeInt(memstoreSizeMB);
       out.writeInt(storefileIndexSizeMB);
+      out.writeLong(requestsCount);
     }
 
     /**
@@ -218,6 +239,8 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
         Integer.valueOf(this.memstoreSizeMB));
       sb = Strings.appendKeyValue(sb, "storefileIndexSizeMB",
         Integer.valueOf(this.storefileIndexSizeMB));
+      sb = Strings.appendKeyValue(sb, "requestsCount",
+          Long.valueOf(this.requestsCount));
       return sb.toString();
     }
   }
@@ -452,14 +475,16 @@ public class HServerLoad implements WritableComparable<HServerLoad> {
    * @param storefiles
    * @param memstoreSizeMB
    * @param storefileIndexSizeMB
+   * @param requestsCount
    * @deprecated Use {@link #addRegionInfo(RegionLoad)}
    */
   @Deprecated
   public void addRegionInfo(final byte[] name, final int stores,
       final int storefiles, final int storefileSizeMB,
-      final int memstoreSizeMB, final int storefileIndexSizeMB) {
+      final int memstoreSizeMB, final int storefileIndexSizeMB,
+      final long requestsCount) {
     this.regionLoad.add(new HServerLoad.RegionLoad(name, stores, storefiles,
-      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB));
+      storefileSizeMB, memstoreSizeMB, storefileIndexSizeMB, requestsCount));
   }
 
   // Writable

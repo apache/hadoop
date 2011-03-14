@@ -128,6 +128,11 @@ public class RegionServerMetrics implements Updater {
   public final MetricsIntValue storefiles = new MetricsIntValue("storefiles", registry);
 
   /**
+   * Count of requests
+   */
+  public final MetricsLongValue requestsCount = new MetricsLongValue("requestsCount", registry);
+
+  /**
    * Sum of all the storefile index sizes in this regionserver in MB
    */
   public final MetricsIntValue storefileIndexSizeMB =
@@ -243,6 +248,7 @@ public class RegionServerMetrics implements Updater {
       this.storefiles.pushMetric(this.metricsRecord);
       this.storefileIndexSizeMB.pushMetric(this.metricsRecord);
       this.memstoreSizeMB.pushMetric(this.metricsRecord);
+      this.requestsCount.pushMetric(this.metricsRecord);
       this.regions.pushMetric(this.metricsRecord);
       this.requests.pushMetric(this.metricsRecord);
       this.compactionQueueSize.pushMetric(this.metricsRecord);
@@ -345,6 +351,8 @@ public class RegionServerMetrics implements Updater {
       Integer.valueOf(this.storefileIndexSizeMB.get()));
     sb = Strings.appendKeyValue(sb, "memstoreSize",
       Integer.valueOf(this.memstoreSizeMB.get()));
+    sb = Strings.appendKeyValue(sb, "requestsCount",
+        Long.valueOf(this.requestsCount.get()));
     sb = Strings.appendKeyValue(sb, "compactionQueueSize",
       Integer.valueOf(this.compactionQueueSize.get()));
     sb = Strings.appendKeyValue(sb, "flushQueueSize",

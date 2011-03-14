@@ -556,6 +556,11 @@
       <version>${commons-cli.version}</version>
     </dependency>
     <dependency>
+     <groupId>com.github.stephenc.high-scale-lib</groupId>
+     <artifactId>high-scale-lib</artifactId>
+     <version>1.1.1</version>
+    </dependency>
+    <dependency>
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>${commons-codec.version}</version>
