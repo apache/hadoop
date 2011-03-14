@@ -93,8 +93,14 @@ public class TestTrash extends TestCase {
   protected static void trashShell(final FileSystem fs, final Path base)
       throws IOException {
     Configuration conf = new Configuration();
-    conf.set(FS_TRASH_INTERVAL_KEY, "10"); // 10 minute
     conf.set("fs.default.name", fs.getUri().toString());
+
+    conf.set(FS_TRASH_INTERVAL_KEY, "0"); // disabled
+    assertFalse(new Trash(conf).isEnabled());
+
+    conf.set(FS_TRASH_INTERVAL_KEY, "10"); // 10 minute
+    assertTrue(new Trash(conf).isEnabled());
+
     FsShell shell = new FsShell();
     shell.setConf(conf);
     Path trashRoot = null;

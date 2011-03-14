@@ -102,11 +102,18 @@ public class Trash extends Configured {
     return new Path(basePath + rmFilePath.toUri().getPath());
   }
 
+  /**
+   * Returns whether the trash is enabled for this filesystem
+   */
+  public boolean isEnabled() {
+    return (deletionInterval != 0);
+  }
+
   /** Move a file or directory to the current trash directory.
    * @return false if the item is already in the trash or trash is disabled
    */ 
   public boolean moveToTrash(Path path) throws IOException {
-    if (deletionInterval == 0)
+    if (!isEnabled())
       return false;
 
     if (!path.isAbsolute())                       // make path absolute

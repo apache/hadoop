@@ -79,6 +79,8 @@ Trunk (unreleased changes)
     HADOOP-7167. Amend previous commit under this JIRA to fix issue on
     cygwin. (todd)
 
+    HADOOP-7175. Add isEnabled() to Trash.  (Daryn Sharp via szetszwo)
+
   OPTIMIZATIONS
 
   BUG FIXES
