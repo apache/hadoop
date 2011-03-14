@@ -199,16 +199,16 @@ public class DFSck extends Configured implements Tool {
     return errCode;
   }
   
-  /*
+  /**
    * Derive the namenode http address from the current file system,
    * either default or as set by "-fs" in the generic options.
-   * Returns null if failure.
+   * @return Returns http address or null if failure.
    */
   private String getCurrentNamenodeAddress() {
-    String nnAddress = null;
+    //String nnAddress = null;
     Configuration conf = getConf();
 
-    //get the filesystem object
+    //get the filesystem object to verify it is an HDFS system
     FileSystem fs;
     try {
       fs = FileSystem.get(conf);
@@ -227,41 +227,10 @@ public class DFSck extends Configured implements Tool {
     // The URI may have been provided by a human, and the server name may be
     // aliased, so compare InetSocketAddresses instead of URI strings, and
     // test against both possible variants of RPC address.
-    InetSocketAddress namenode = NameNode.getAddress(dfs.getUri().getAuthority());
-    String nameServiceId = DFSUtil.getNameServiceIdFromAddress(
-        conf, namenode,
-        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+    InetSocketAddress namenode = 
+      NameNode.getAddress(dfs.getUri().getAuthority());
     
-    //Look up nameservice-specific http address
-    String httpAddressKey = UserGroupInformation.isSecurityEnabled() ?
-        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY
-        : DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
-    if (nameServiceId != null) {
-      nnAddress = conf.get(DFSUtil.getNameServiceIdKey(
-          httpAddressKey, nameServiceId));
-      if (nnAddress != null) 
-        return nnAddress;
-      else {
-        System.err.println("Nameservice value for "
-            + DFSUtil.getNameServiceIdKey(httpAddressKey, nameServiceId)
-            + " expected but not available.  Trying generic value.");
-        //and fall through to next block
-      }
-    }
-    // If that didn't work, check to see whether the filesystem URI addresses 
-    // the default namenode.  If so, look up generic http address.
-    boolean isDefaultNamenode = DFSUtil.isDefaultNamenodeAddress(
-        conf, namenode,
-        DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
-    if (isDefaultNamenode) {
-      return NameNode.getInfoServer(conf);
-    } else {
-      System.err.println("Cannot derive an unambiguous value for "
-          + httpAddressKey + " from FileSystem " + fs.getUri());
-      return null;
-    }
+    return DFSUtil.getInfoServer(namenode, conf);
   }
 
   private int doWork(final String[] args) throws IOException {

@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
+import org.apache.hadoop.security.UserGroupInformation;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
 @InterfaceAudience.Private
@@ -440,6 +441,44 @@ public class DFSUtil {
     // didn't find a match
     // client should try {@link isDefaultNamenodeAddress} instead
     return null;
+  }
+
+  /**
+   * return HTTP server info from the configuration
+   * @param conf
+   * @param namenode - namenode address
+   * @return http server info
+   */
+  public static String getInfoServer(
+      InetSocketAddress namenode, Configuration conf) {
+    String httpAddress = null;
+    
+    String httpAddressKey = UserGroupInformation.isSecurityEnabled() ?
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY
+        : DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
+    String httpAddressDefault = UserGroupInformation.isSecurityEnabled() ?
+        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT 
+        :DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
+    
+    if(namenode != null) {
+      // if non-default namenode, try reverse look up 
+      // the nameServiceID if it is available
+      String nameServiceId = DFSUtil.getNameServiceIdFromAddress(
+          conf, namenode,
+          DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
+          DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+      if (nameServiceId != null) {
+        httpAddress = conf.get(DFSUtil.getNameServiceIdKey(
+            httpAddressKey, nameServiceId));
+      }
+    }
+    // else - Use non-federation style configuration
+    if (httpAddress == null) {
+      httpAddress = conf.get(httpAddressKey, httpAddressDefault);
+    }
+
+    return httpAddress;
   }
   
   /**

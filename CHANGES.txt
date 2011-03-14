@@ -241,6 +241,8 @@ Trunk (unreleased changes)
     HDFS-1749. Federation: TestListCorruptFileBlocks failing in federation 
     branch. (jitendra)
 
+   HDFS-1754. Federation: testFsck fails. (boryas)
+
   IMPROVEMENTS
 
     HDFS-1510. Added test-patch.properties required by test-patch.sh (nigel)

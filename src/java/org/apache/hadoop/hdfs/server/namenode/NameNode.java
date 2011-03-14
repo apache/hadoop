@@ -447,14 +447,6 @@ public class NameNode implements NamenodeProtocols, FSConstants {
     this.emptier.setDaemon(true);
     this.emptier.start();
   }
-
-  public static String getInfoServer(Configuration conf) {
-    return UserGroupInformation.isSecurityEnabled() ? conf.get(
-        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT) : conf.get(
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY,
-        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT);
-  }
   
   private void startHttpServer(final Configuration conf) throws IOException {
     final InetSocketAddress infoSocAddr = getHttpServerAddress(conf);
