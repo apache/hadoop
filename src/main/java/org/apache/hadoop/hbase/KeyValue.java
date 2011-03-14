@@ -1493,7 +1493,8 @@ public class KeyValue implements Writable, HeapSize {
       short lrowlength = left.getRowLength();
       short rrowlength = right.getRowLength();
       // TsOffset = end of column data. just comparing Row+CF length of each
-      return left.getTimestampOffset() == right.getTimestampOffset() &&
+      return ((left.getTimestampOffset() - left.getOffset()) == 
+              (right.getTimestampOffset() - right.getOffset())) &&
         matchingRows(left, lrowlength, right, rrowlength) &&
         compareColumns(left, lrowlength, right, rrowlength) == 0;
     }

@@ -157,6 +157,8 @@ Release 0.90.2 - Unreleased
    HBASE-3608  MemstoreFlusher error message doesnt include exception!
    HBASE-3633  ZKUtil::createSetData should only create a node when it
                nonexists (Guanpeng Xu via Stack)
+   HBASE-3636  a bug about deciding whether this key is a new key for the ROWCOL
+               bloomfilter (Liyin Tang via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
