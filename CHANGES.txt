@@ -147,6 +147,8 @@ Release 0.90.2 - Unreleased
    HBASE-3582  Allow HMaster and HRegionServer to login from keytab
                hen on secure Hadoop
    HBASE-3608  MemstoreFlusher error message doesnt include exception!
+   HBASE-3633  ZKUtil::createSetData should only create a node when it
+               nonexists (Guanpeng Xu via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

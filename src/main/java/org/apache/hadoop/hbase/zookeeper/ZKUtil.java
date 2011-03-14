@@ -723,7 +723,7 @@ public class ZKUtil {
   public static void createSetData(final ZooKeeperWatcher zkw, final String znode,
       final byte [] data)
   throws KeeperException {
-    if (checkExists(zkw, znode) != -1) {
+    if (checkExists(zkw, znode) == -1) {
       ZKUtil.createWithParents(zkw, znode);
     }
     ZKUtil.setData(zkw, znode, data);
