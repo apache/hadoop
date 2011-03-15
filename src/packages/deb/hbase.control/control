@@ -1,0 +1,9 @@
+Package: hbase
+Version: @version@
+Section: misc
+Priority: optional
+Architecture: all
+Depends: openjdk-6-jre-headless, hadoop, zookeeper
+Maintainer: Apache Software Foundation <dev@hbase.apache.org>
+Description: HBase is the Hadoop database. Use it when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
+Distribution: development

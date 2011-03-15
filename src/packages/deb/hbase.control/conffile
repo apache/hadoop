@@ -1,0 +1,5 @@
+/etc/hbase/hadoop-metrics.properties
+/etc/hbase/hbase-env.sh
+/etc/hbase/hbase-site.xml
+/etc/hbase/log4j.properties
+/etc/hbase/regionservers

@@ -1,0 +1,149 @@
+<?xml version="1.0"?>
+
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+
+<project name="hbase packaging">
+  <target name="package-deb">
+    <taskdef name="deb"
+           classname="org.vafer.jdeb.ant.DebAntTask">
+    </taskdef>
+    <mkdir dir="${project.build.directory}/deb/hbase.control" />
+    <copy todir="${project.build.directory}/deb/hbase.control">
+      <fileset dir="${basedir}/src/packages/deb/hbase.control">
+        <exclude name="control" />
+      </fileset>
+    </copy>
+    <copy file="src/packages/deb/hbase.control/control" todir="${basedir}/target/deb/hbase.control">
+      <filterchain>
+        <replacetokens>
+          <token key="version" value="${package.version}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <deb destfile="${project.build.directory}/${artifactId}_${package.version}-${package.release}_${os.arch}.deb" control="${basedir}/target/deb/hbase.control">
+      <data src="${project.build.directory}/${final.name}.tar.gz">
+        <mapper type="prefix" strip="1" prefix="${package.prefix}/share/hbase" />
+        <exclude name="${final.name}/conf" />
+        <exclude name="${final.name}/conf/*" />
+        <exclude name="${final.name}/lib/zookeeper*" />
+        <exclude name="${final.name}/lib/hadoop-core*" />
+        <include name="**" />
+      </data>
+      <tarfileset dir="${basedir}/src/packages" filemode="755" prefix="${package.prefix}/share/hbase/sbin">
+        <exclude name=".svn" />
+        <include name="*.sh" />
+      </tarfileset>
+      <tarfileset dir="${basedir}/src/packages/deb/init.d" filemode="755" prefix="${package.prefix}/share/hbase/sbin">
+        <exclude name=".svn" />
+        <include name="**" />
+      </tarfileset>
+      <tarfileset dir="${basedir}/conf" filemode="644" prefix="${package.conf.dir}">
+        <exclude name="hbase-site.xml" />
+        <exclude name=".svn" />
+        <include name="**" />
+      </tarfileset>
+    </deb>
+  </target>
+
+  <target name="package-conf-pseudo-deb">
+    <taskdef name="deb"
+           classname="org.vafer.jdeb.ant.DebAntTask">
+    </taskdef>
+    <mkdir dir="${project.build.directory}/deb/conf-pseudo.control" />
+    <copy todir="${project.build.directory}/deb/conf-pseudo.control">
+      <fileset dir="${basedir}/src/packages/deb/conf-pseudo.control">
+        <exclude name="control" />
+      </fileset>
+    </copy>
+    <copy file="src/packages/deb/conf-pseudo.control/control" todir="${basedir}/target/deb/conf-pseudo.control">
+      <filterchain>
+        <replacetokens>
+          <token key="version" value="${package.version}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <deb destfile="${project.build.directory}/${artifactId}-conf-pseudo_${package.version}-${package.release}_${os.arch}.deb" control="${basedir}/target/deb/conf-pseudo.control">
+      <tarfileset dir="${basedir}/src/packages/conf-pseudo" filemode="644" prefix="${package.conf.dir}">
+        <exclude name=".svn" />
+        <include name="**" />
+      </tarfileset>
+    </deb>
+  </target>
+
+  <target name="package-rpm">
+    <delete dir="${project.build.directory}/rpm/hbase/buildroot" />
+    <mkdir dir="${project.build.directory}/rpm/hbase/SOURCES" />
+    <mkdir dir="${project.build.directory}/rpm/hbase/BUILD" />
+    <mkdir dir="${project.build.directory}/rpm/hbase/RPMS" />
+    <mkdir dir="${project.build.directory}/rpm/hbase/buildroot" />
+    <copy file="${project.build.directory}/${final.name}.tar.gz" todir="${project.build.directory}/rpm/hbase/SOURCES" />
+    <copy file="src/packages/rpm/spec/hbase.spec" todir="target/rpm/hbase/SPECS">
+      <filterchain>
+        <replacetokens>
+          <token key="final.name" value="${final.name}" />
+          <token key="version" value="${package.version}" />
+          <token key="package.name" value="${final.name}.tar.gz" />
+          <token key="package.release" value="${package.release}" />
+          <token key="package.build.dir" value="${project.build.directory}/rpm/hbase/BUILD" />
+          <token key="package.prefix" value="${package.prefix}" />
+          <token key="package.conf.dir" value="${package.conf.dir}" />
+          <token key="package.log.dir" value="${package.log.dir}" />
+          <token key="package.pid.dir" value="${package.pid.dir}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <rpm specFile="hbase.spec" command="-bb" topDir="${project.build.directory}/rpm/hbase" cleanBuildDir="true" failOnError="true"/>
+    <copy todir="${project.build.directory}" flatten="true">
+      <fileset dir="${project.build.directory}/rpm/hbase/RPMS">
+        <include name="**/*.rpm" />
+      </fileset>
+    </copy>
+    <delete dir="${project.build.directory}/rpm" />
+  </target>
+
+  <target name="package-conf-pseudo-rpm">
+    <delete dir="${project.build.directory}/rpm/hbase/buildroot" />
+    <mkdir dir="${project.build.directory}/rpm/hbase/SOURCES" />
+    <mkdir dir="${project.build.directory}/rpm/hbase/BUILD" />
+    <mkdir dir="${project.build.directory}/rpm/hbase/RPMS" />
+    <mkdir dir="${project.build.directory}/rpm/hbase/buildroot" />
+    <copy file="${project.build.directory}/${final.name}.tar.gz" todir="${project.build.directory}/rpm/hbase/SOURCES" />
+    <copy file="src/packages/rpm/spec/conf-pseudo.spec" todir="target/rpm/hbase/SPECS">
+      <filterchain>
+        <replacetokens>
+          <token key="final.name" value="${final.name}" />
+          <token key="version" value="${package.version}" />
+          <token key="package.name" value="${final.name}.tar.gz" />
+          <token key="package.release" value="${package.release}" />
+          <token key="package.build.dir" value="${project.build.directory}/rpm/hbase/BUILD" />
+          <token key="package.prefix" value="${package.prefix}" />
+          <token key="package.conf.dir" value="${package.conf.dir}" />
+          <token key="package.log.dir" value="${package.log.dir}" />
+          <token key="package.pid.dir" value="${package.pid.dir}" />
+        </replacetokens>
+      </filterchain>
+    </copy>
+    <rpm specFile="conf-pseudo.spec" command="-bb" topDir="${project.build.directory}/rpm/hbase" cleanBuildDir="true" failOnError="true"/>
+    <copy todir="${project.build.directory}" flatten="true">
+      <fileset dir="${project.build.directory}/rpm/hbase/RPMS">
+        <include name="**/*.rpm" />
+      </fileset>
+    </copy>
+    <delete dir="${project.build.directory}/rpm" />
+  </target>
+</project>

@@ -137,6 +137,7 @@ Release 0.91.0 - Unreleased
                0.91
    HBASE-3257  Coprocessors: Extend server side API to include HLog operations
                (Mingjie Lai via Andrew Purtell)
+   HBASE-3606  Create an package integration project (Eric Yang via Ryan)
 
 
 Release 0.90.2 - Unreleased

@@ -343,6 +343,15 @@
             <descriptor>src/assembly/all.xml</descriptor>
           </descriptors>
         </configuration>
+        <executions>
+          <execution>
+            <id>tarball</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
 
       <!-- Run with -Dmaven.test.skip.exec=true to build -tests.jar without running tests (this is needed for upstream projects whose tests need this jar simply for compilation)-->
@@ -351,6 +360,7 @@
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>
+            <phase>prepare-package</phase>
             <goals>
               <goal>test-jar</goal>
             </goals>
@@ -379,7 +389,7 @@
         <executions>
           <execution>
             <id>attach-sources</id>
-            <phase>package</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>jar-no-fork</goal>
             </goals>
@@ -529,6 +539,15 @@
     <stax-api.version>1.0.1</stax-api.version>
     <thrift.version>0.5.0</thrift.version><!-- newer version available -->
     <zookeeper.version>3.3.2</zookeeper.version>
+
+    <package.prefix>/usr</package.prefix>	           
+    <package.conf.dir>/etc/hbase</package.conf.dir>  
+    <package.log.dir>/var/log/hbase</package.log.dir>
+    <package.pid.dir>/var/run/hbase</package.pid.dir>
+    <package.release>1</package.release>	       
+    <!-- also must update this when we bump version -->
+    <package.version>0.91.0</package.version>	       
+    <final.name>${artifactId}-${version}</final.name>
 
     <!-- For flaky tests exclusion -->
     <test.exclude></test.exclude>
@@ -841,7 +860,73 @@
   $ mvn -s /my/path/settings.xml deploy
 
   -->
-
+  <profiles>
+    <profile>
+      <id>rpm</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+              <execution>
+                <id>build-rpm</id>
+                <phase>package</phase>
+                <configuration>
+                <target>
+                  <ant antfile="${basedir}/src/packages/build.xml">
+                    <target name="package-rpm"/>
+                    <target name="package-conf-pseudo-rpm"/>
+                  </ant>
+                  </target>
+                </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>deb</id>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+              <execution>
+                <id>build-deb</id>
+                <phase>package</phase>
+                <configuration>
+                  <target>
+                    <property name="artifactId" value="${artifactId}" />
+                    <ant antfile="${basedir}/src/packages/build.xml">
+                      <target name="package-deb"/>
+                      <target name="package-conf-pseudo-deb"/>
+                    </ant>
+                  </target>
+                </configuration>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+              </execution>
+            </executions>
+            <dependencies>
+              <dependency>
+                <groupId>org.vafer</groupId>
+                <artifactId>jdeb</artifactId>
+                <version>0.8</version>
+              </dependency>
+            </dependencies>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+ 
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
     <plugins>

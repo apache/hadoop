@@ -1,0 +1,9 @@
+Package: hbase-conf-pseudo
+Version: @version@
+Section: misc
+Priority: optional
+Architecture: all
+Depends: openjdk-6-jre-headless, hadoop, zookeeper, hbase
+Maintainer: Apache Software Foundation <dev@hbase.apache.org>
+Description: HBase pseudo cluster configuration for single node cluster testing.
+Distribution: development
