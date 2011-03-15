@@ -15,20 +15,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.log;
+package org.apache.hadoop.metrics.util;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.metrics.MetricsRecord;
 
 /**
- * A log4J Appender that simply counts logging events in three levels:
- * fatal, error and warn. The class name is used in log4j.properties
- * @deprecated use {@link org.apache.hadoop.log.metrics.EventCounter} instead
+ * 
+ * This is base class for all metrics
+ *
+ * @deprecated in favor of <code>org.apache.hadoop.metrics2</code> usage.
  */
 @Deprecated
-public class EventCounter extends org.apache.hadoop.log.metrics.EventCounter {
-  static {
-    // The logging system is not started yet.
-    System.err.println("WARNING: "+ EventCounter.class.getName() +
-        " is deprecated. Please use "+
-        org.apache.hadoop.log.metrics.EventCounter.class.getName() +
-        " in all the log4j.properties files.");
+@InterfaceAudience.Private
+public abstract class MetricsBase {
+  public static final String NO_DESCRIPTION = "NoDescription";
+  final private String name;
+  final private String description;
+  
+  protected MetricsBase(final String nam) {
+    name = nam;
+    description = NO_DESCRIPTION;
   }
+  
+  protected MetricsBase(final String nam, final String desc) {
+    name = nam;
+    description = desc;
+  }
+  
+  public abstract void pushMetric(final MetricsRecord mr);
+  
+  public String getName() { return name; }
+  public String getDescription() { return description; };
+
 }

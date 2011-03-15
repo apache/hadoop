@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,20 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.log;
+package org.apache.hadoop.classification;
+
+import java.lang.annotation.Documented;
 
 /**
- * A log4J Appender that simply counts logging events in three levels:
- * fatal, error and warn. The class name is used in log4j.properties
- * @deprecated use {@link org.apache.hadoop.log.metrics.EventCounter} instead
+ * Annotation to inform users of a package, class or method's intended audience.
  */
-@Deprecated
-public class EventCounter extends org.apache.hadoop.log.metrics.EventCounter {
-  static {
-    // The logging system is not started yet.
-    System.err.println("WARNING: "+ EventCounter.class.getName() +
-        " is deprecated. Please use "+
-        org.apache.hadoop.log.metrics.EventCounter.class.getName() +
-        " in all the log4j.properties files.");
-  }
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class InterfaceAudience {
+  /**
+   * Intended for use by any project or application.
+   */
+  @Documented public @interface Public {};
+  
+  /**
+   * Intended only for the project(s) specified in the annotation.
+   * For example, "Common", "HDFS", "MapReduce", "ZooKeeper", "HBase".
+   */
+  @Documented public @interface LimitedPrivate {
+    String[] value();
+  };
+  
+  /**
+   * Intended for use only within Hadoop itself.
+   */
+  @Documented public @interface Private {};
+
+  private InterfaceAudience() {} // Audience can't exist on its own
 }
