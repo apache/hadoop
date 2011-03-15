@@ -165,6 +165,7 @@ Release 0.90.2 - Unreleased
                bloomfilter (Liyin Tang via Stack)
    HBASE-3639  FSUtils.getRootDir should qualify path
    HBASE-3648  [replication] failover is sloppy with znodes
+   HBASE-3613  NPE in MemStoreFlusher
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

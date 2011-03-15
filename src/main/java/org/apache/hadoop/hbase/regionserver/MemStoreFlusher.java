@@ -159,6 +159,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     boolean flushedOne = false;
     while (!flushedOne) {
       // Find the biggest region that doesn't have too many storefiles
+      // (might be null!)
       HRegion bestFlushableRegion = getBiggestMemstoreRegion(
           regionsBySize, excludedRegionNames, true);
       // Find the biggest region, total, even if it might have too many flushes.
@@ -166,12 +167,13 @@ class MemStoreFlusher extends Thread implements FlushRequester {
           regionsBySize, excludedRegionNames, false);
 
       if (bestAnyRegion == null) {
-        LOG.fatal("Above memory mark but there are no flushable regions!");
+        LOG.error("Above memory mark but there are no flushable regions!");
         return false;
       }
 
       HRegion regionToFlush;
-      if (bestAnyRegion.memstoreSize.get() > 2 * bestFlushableRegion.memstoreSize.get()) {
+      if (bestFlushableRegion != null &&
+	  bestAnyRegion.memstoreSize.get() > 2 * bestFlushableRegion.memstoreSize.get()) {
         // Even if it's not supposed to be flushed, pick a region if it's more than twice
         // as big as the best flushable one - otherwise when we're under pressure we make
         // lots of little flushes and cause lots of compactions, etc, which just makes
@@ -183,9 +185,13 @@ class MemStoreFlusher extends Thread implements FlushRequester {
             " vs best flushable region's " +
             StringUtils.humanReadableInt(bestFlushableRegion.memstoreSize.get()) +
             ". Choosing the bigger.");
-        regionToFlush = bestAnyRegion;
+	regionToFlush = bestAnyRegion;
       } else {
-        regionToFlush = bestFlushableRegion;
+	  if (bestFlushableRegion == null) {
+	      regionToFlush = bestAnyRegion;
+	  } else {
+	      regionToFlush = bestFlushableRegion;
+	  }
       }
 
       Preconditions.checkState(regionToFlush.memstoreSize.get() > 0);
