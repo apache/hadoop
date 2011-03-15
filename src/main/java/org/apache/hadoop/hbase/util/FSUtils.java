@@ -337,11 +337,13 @@ public class FSUtils {
   /**
    * @param c configuration
    * @return Path to hbase root directory: i.e. <code>hbase.rootdir</code> from
-   * configuration as a Path.
+   * configuration as a qualified Path.
    * @throws IOException e
    */
   public static Path getRootDir(final Configuration c) throws IOException {
-    return new Path(c.get(HConstants.HBASE_DIR));
+    Path p = new Path(c.get(HConstants.HBASE_DIR));
+    FileSystem fs = p.getFileSystem(c);
+    return p.makeQualified(fs);
   }
 
   /**

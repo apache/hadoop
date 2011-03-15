@@ -81,10 +81,11 @@ public class MasterFileSystem {
     this.rootdir = FSUtils.getRootDir(conf);
     // Cover both bases, the old way of setting default fs and the new.
     // We're supposed to run on 0.20 and 0.21 anyways.
-    conf.set("fs.default.name", this.rootdir.toString());
-    conf.set("fs.defaultFS", this.rootdir.toString());
+    this.fs = this.rootdir.getFileSystem(conf);
+    String fsUri = this.fs.getUri().toString();
+    conf.set("fs.default.name", fsUri);
+    conf.set("fs.defaultFS", fsUri);
     // setup the filesystem variable
-    this.fs = FileSystem.get(conf);
     // set up the archived logs path
     this.oldLogDir = new Path(this.rootdir, HConstants.HREGION_OLDLOGDIR_NAME);
     createInitialFileSystemLayout();
