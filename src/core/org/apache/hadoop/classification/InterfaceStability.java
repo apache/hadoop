@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,20 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.log;
+package org.apache.hadoop.classification;
+
+import java.lang.annotation.Documented;
 
 /**
- * A log4J Appender that simply counts logging events in three levels:
- * fatal, error and warn. The class name is used in log4j.properties
- * @deprecated use {@link org.apache.hadoop.log.metrics.EventCounter} instead
+ * Annotation to inform users of how much to rely on a particular package,
+ * class or method not changing over time.
  */
-@Deprecated
-public class EventCounter extends org.apache.hadoop.log.metrics.EventCounter {
-  static {
-    // The logging system is not started yet.
-    System.err.println("WARNING: "+ EventCounter.class.getName() +
-        " is deprecated. Please use "+
-        org.apache.hadoop.log.metrics.EventCounter.class.getName() +
-        " in all the log4j.properties files.");
-  }
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class InterfaceStability {
+  /**
+   * Can evolve while retaining compatibility for minor release boundaries.; 
+   * can break compatibility only at major release (ie. at m.0).
+   */
+  @Documented
+  public @interface Stable {};
+  
+  /**
+   * Evolving, but can break compatibility at minor release (i.e. m.x)
+   */
+  @Documented
+  public @interface Evolving {};
+  
+  /**
+   * No guarantee is provided as to reliability or stability across any
+   * level of release granularity.
+   */
+  @Documented
+  public @interface Unstable {};
 }

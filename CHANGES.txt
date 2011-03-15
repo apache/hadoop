@@ -7,6 +7,8 @@ Release 0.20.204.0 - unreleased
 
 Release 0.20.203.0 - unreleased
 
+    HADOOP-7190. Add metrics v1 back for backwards compatibility. (omalley)
+
     MAPREDUCE-2360. Remove stripping of scheme, authority from submit dir in 
     support of viewfs. (cdouglas)
     
