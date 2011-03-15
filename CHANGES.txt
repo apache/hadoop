@@ -109,6 +109,8 @@ Release 0.91.0 - Unreleased
    HBASE-3618  Add to HBase book, 'schema' chapter - pre-creating regions and
                key types (Doug Meil via Stack)
    HBASE-3610  Improve RegionSplitter performance
+   HBASE-2495  Allow record filtering with selected row key values in HBase
+               Export (Subbu M Iyer via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
