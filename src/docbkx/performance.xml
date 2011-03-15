@@ -1,0 +1,39 @@
+<?xml version="1.0"?>
+<chapter xml:id="performance"
+      version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+    
+    <title>Performance Tuning</title>
+    <para>Start with the <link xlink:href="http://wiki.apache.org/hadoop/PerformanceTuning">wiki Performance Tuning</link> page.
+        It has a general discussion of the main factors involved; RAM, compression, JVM settings, etc.
+        Afterward, come back here for more pointers.
+    </para>
+    <section xml:id="jvm">
+        <title>Java</title>
+    <section xml:id="gc">
+        <title>The Garage Collector and HBase</title>
+        <section xml:id="gcpause">
+            <title>Long GC pauses</title>
+        <para>
+            In his presentation,
+            <link xlink:href="http://www.slideshare.net/cloudera/hbase-hug-presentation">Avoiding Full GCs with MemStore-Local Allocation Buffers</link>,
+            Todd Lipcon describes two cases of stop-the-world garbage collections common in HBase, especially during loading;
+            CMS failure modes and old generation heap fragmentation brought.  To address the first,
+            start the CMS earlier than default by adding <code>-XX:CMSInitiatingOccupancyFraction</code>
+            and setting it down from defaults.  Start at 60 or 70 percent (The lower you bring down
+            the threshold, the more GCing is done, the more CPU used).  To address the second
+            fragmentation issue, Todd added an experimental facility that must be 
+            explicitly enabled in HBase 0.90.x (Its defaulted to be on in 0.92.x HBase).  See
+            <code>hbase.hregion.memstore.mslab.enabled</code> to true in your
+            <classname>Configuration</classname>.  See the cited slides for background and
+            detail.
+        </para>
+      </section>
+    </section>
+    </section>
+  </chapter>

@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+    <chapter xml:id="upgrading"
+      version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+    <title>Upgrading</title>
+    <para>
+    Review the <link linkend="requirements">requirements</link>
+    section above, in particular the section on Hadoop version.
+    </para>
+    <section xml:id="upgrade0.90">
+    <title>Upgrading to HBase 0.90.x from 0.20.x or 0.89.x</title>
+          <para>This version of 0.90.x HBase can be started on data written by
+              HBase 0.20.x or HBase 0.89.x.  There is no need of a migration step.
+              HBase 0.89.x and 0.90.x does write out the name of region directories
+              differently -- it names them with a md5 hash of the region name rather
+              than a jenkins hash -- so this means that once started, there is no
+              going back to HBase 0.20.x.
+          </para>
+          <para>
+             Be sure to remove the <filename>hbase-default.xml</filename> from
+             your <filename>conf</filename>
+             directory on upgrade.  A 0.20.x version of this file will have
+             sub-optimal configurations for 0.90.x HBase.  The
+             <filename>hbase-default.xml</filename> file is now bundled into the
+             HBase jar and read from there.  If you would like to review
+             the content of this file, see it in the src tree at
+             <filename>src/main/resources/hbase-default.xml</filename> or
+             see <link linkend="hbase_default_configurations">Default HBase Configurations</link>.
+          </para>
+          <para>
+            Finally, if upgrading from 0.20.x, check your 
+            <varname>.META.</varname> schema in the shell.  In the past we would
+            recommend that users run with a 16kb
+            <varname>MEMSTORE_FLUSHSIZE</varname>.
+            Run <code>hbase> scan '-ROOT-'</code> in the shell. This will output
+            the current <varname>.META.</varname> schema.  Check
+            <varname>MEMSTORE_FLUSHSIZE</varname> size.  Is it 16kb (16384)?  If so, you will
+            need to change this (The 'normal'/default value is 64MB (67108864)).
+            Run the script <filename>bin/set_meta_memstore_size.rb</filename>.
+            This will make the necessary edit to your <varname>.META.</varname> schema.
+            Failure to run this change will make for a slow cluster <footnote>
+            <para>
+            See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3499">HBASE-3499 Users upgrading to 0.90.0 need to have their .META. table updated with the right MEMSTORE_SIZE</link>
+            </para>
+            </footnote>
+            .
+
+          </para>
+          </section>
+    </chapter>

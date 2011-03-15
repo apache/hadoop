@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+  <chapter xml:id="shell"
+      version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+    <title>The HBase Shell</title>
+
+    <para>
+        The HBase Shell is <link xlink:href="http://jruby.org">(J)Ruby</link>'s
+        IRB with some HBase particular verbs added.  Anything you can do in
+        IRB, you should be able to do in the HBase Shell.</para>
+        <para>To run the HBase shell, 
+        do as follows:
+        <programlisting>$ ./bin/hbase shell</programlisting>
+        </para>
+            <para>Type <command>help</command> and then <command>&lt;RETURN&gt;</command>
+            to see a listing of shell
+            commands and options. Browse at least the paragraphs at the end of
+            the help emission for the gist of how variables and command
+            arguments are entered into the
+            HBase shell; in particular note how table names, rows, and
+            columns, etc., must be quoted.</para>
+            <para>See <link linkend="shell_exercises">Shell Exercises</link>
+            for example basic shell operation.</para>
+
+    <section xml:id="scripting"><title>Scripting</title>
+        <para>For examples scripting HBase, look in the
+            HBase <filename>bin</filename> directory.  Look at the files
+            that end in <filename>*.rb</filename>.  To run one of these
+            files, do as follows:
+            <programlisting>$ ./bin/hbase org.jruby.Main PATH_TO_SCRIPT</programlisting>
+        </para>
+    </section>
+
+    <section xml:id="shell_tricks"><title>Shell Tricks</title>
+        <section><title><filename>irbrc</filename></title>
+                <para>Create an <filename>.irbrc</filename> file for yourself in your
+                    home directory. Add customizations. A useful one is
+                    command history so commands are save across Shell invocations:
+                    <programlisting>
+                        $ more .irbrc
+                        require 'irb/ext/save-history'
+                        IRB.conf[:SAVE_HISTORY] = 100
+                        IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb-save-history"</programlisting>
+                See the <application>ruby</application> documentation of
+                <filename>.irbrc</filename> to learn about other possible
+                confiurations.
+                </para>
+        </section>
+        <section><title>LOG data to timestamp</title>
+            <para>
+                To convert the date '08/08/16 20:56:29' from an hbase log into a timestamp, do:
+                <programlisting>
+                    hbase(main):021:0> import java.text.SimpleDateFormat
+                    hbase(main):022:0> import java.text.ParsePosition
+                    hbase(main):023:0> SimpleDateFormat.new("yy/MM/dd HH:mm:ss").parse("08/08/16 20:56:29", ParsePosition.new(0)).getTime() => 1218920189000</programlisting>
+            </para>
+            <para>
+                To go the other direction:
+                <programlisting>
+                    hbase(main):021:0> import java.util.Date
+                    hbase(main):022:0> Date.new(1218920189000).toString() => "Sat Aug 16 20:56:29 UTC 2008"</programlisting>
+            </para>
+            <para>
+                To output in a format that is exactly like that of the HBase log format will take a little messing with
+                <link xlink:href="http://download.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html">SimpleDateFormat</link>.
+            </para>
+        </section>
+        <section><title>Debug</title>
+            <section><title>Shell debug switch</title>
+                <para>You can set a debug switch in the shell to see more output
+                    -- e.g. more of the stack trace on exception --
+                    when you run a command:
+                    <programlisting>hbase> debug &lt;RETURN&gt;</programlisting>
+                 </para>
+            </section>
+            <section><title>DEBUG log level</title>
+                <para>To enable DEBUG level logging in the shell,
+                    launch it with the <command>-d</command> option.
+                    <programlisting>$ ./bin/hbase shell -d</programlisting>
+               </para>
+            </section>
+         </section>
+    </section>
+  </chapter>

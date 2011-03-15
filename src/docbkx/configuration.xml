@@ -1,0 +1,291 @@
+<?xml version="1.0"?>
+  <chapter xml:id="configuration"
+      version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+    <title>Configuration</title>
+    <para>
+        HBase uses the same configuration system as Hadoop.
+        To configure a deploy, edit a file of environment variables
+        in <filename>conf/hbase-env.sh</filename> -- this configuration
+        is used mostly by the launcher shell scripts getting the cluster
+        off the ground -- and then add configuration to an XML file to
+        do things like override HBase defaults, tell HBase what Filesystem to
+        use, and the location of the ZooKeeper ensemble
+        <footnote>
+<para>
+Be careful editing XML.  Make sure you close all elements.
+Run your file through <command>xmmlint</command> or similar
+to ensure well-formedness of your document after an edit session.
+</para>
+        </footnote>
+        .
+    </para>
+
+    <para>When running in distributed mode, after you make
+    an edit to an HBase configuration, make sure you copy the
+    content of the <filename>conf</filename> directory to
+    all nodes of the cluster.  HBase will not do this for you.
+    Use <command>rsync</command>.</para>
+
+
+    <section xml:id="hbase.site">
+    <title><filename>hbase-site.xml</filename> and <filename>hbase-default.xml</filename></title>
+    <para>Just as in Hadoop where you add site-specific HDFS configuration
+    to the <filename>hdfs-site.xml</filename> file,
+    for HBase, site specific customizations go into
+    the file <filename>conf/hbase-site.xml</filename>.
+    For the list of configurable properties, see
+    <link linkend="hbase_default_configurations">Default HBase Configurations</link>
+    below or view the raw <filename>hbase-default.xml</filename>
+    source file in the HBase source code at
+    <filename>src/main/resources</filename>.
+    </para>
+    <para>
+    Not all configuration options make it out to
+    <filename>hbase-default.xml</filename>.  Configuration
+    that it is thought rare anyone would change can exist only
+    in code; the only way to turn up such configurations is
+    via a reading of the source code itself.
+    </para>
+      <para>
+      Changes here will require a cluster restart for HBase to notice the change.
+      </para>
+    <!--The file hbase-default.xml is generated as part of
+    the build of the hbase site.  See the hbase pom.xml.
+    The generated file is a docbook section with a glossary
+    in it-->
+    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude"
+      href="../../target/site/hbase-default.xml" />
+    </section>
+
+      <section xml:id="hbase.env.sh">
+      <title><filename>hbase-env.sh</filename></title>
+      <para>Set HBase environment variables in this file.
+      Examples include options to pass the JVM on start of
+      an HBase daemon such as heap size and garbarge collector configs.
+      You also set configurations for HBase configuration, log directories,
+      niceness, ssh options, where to locate process pid files,
+      etc., via settings in this file. Open the file at
+      <filename>conf/hbase-env.sh</filename> and peruse its content.
+      Each option is fairly well documented.  Add your own environment
+      variables here if you want them read by HBase daemon startup.</para>
+      <para>
+      Changes here will require a cluster restart for HBase to notice the change.
+      </para>
+      </section>
+
+      <section xml:id="log4j">
+      <title><filename>log4j.properties</filename></title>
+      <para>Edit this file to change rate at which HBase files
+      are rolled and to change the level at which HBase logs messages.
+      </para>
+      <para>
+      Changes here will require a cluster restart for HBase to notice the change
+      though log levels can be changed for particular daemons via the HBase UI.
+      </para>
+      </section>
+
+      <section xml:id="important_configurations">
+      <title>The Important Configurations</title>
+      <para>Below we list the important Configurations.  We've divided this section into
+      required configuration and worth-a-look recommended configs.
+      </para>
+
+
+      <section xml:id="required_configuration"><title>Required Configurations</title>
+      <para>See the <link linkend="requirements">Requirements</link> section.
+      It lists at least two required configurations needed running HBase bearing
+      load: i.e. <link linkend="ulimit">file descriptors <varname>ulimit</varname></link> and
+      <link linkend="dfs.datanode.max.xcievers"><varname>dfs.datanode.max.xcievers</varname></link>.
+      </para>
+      </section>
+
+      <section xml:id="recommended_configurations"><title>Recommended Configuations</title>
+          <section xml:id="zookeeper.session.timeout"><title><varname>zookeeper.session.timeout</varname></title>
+          <para>The default timeout is three minutes (specified in milliseconds). This means
+              that if a server crashes, it will be three minutes before the Master notices
+              the crash and starts recovery. You might like to tune the timeout down to
+              a minute or even less so the Master notices failures the sooner.
+              Before changing this value, be sure you have your JVM garbage collection
+              configuration under control otherwise, a long garbage collection that lasts
+              beyond the zookeeper session timeout will take out
+              your RegionServer (You might be fine with this -- you probably want recovery to start
+          on the server if a RegionServer has been in GC for a long period of time).</para> 
+
+      <para>To change this configuration, edit <filename>hbase-site.xml</filename>,
+          copy the changed file around the cluster and restart.</para>
+
+          <para>We set this value high to save our having to field noob questions up on the mailing lists asking
+              why a RegionServer went down during a massive import.  The usual cause is that their JVM is untuned and
+              they are running into long GC pauses.  Our thinking is that
+              while users are  getting familiar with HBase, we'd save them having to know all of its
+              intricacies.  Later when they've built some confidence, then they can play
+              with configuration such as this.
+          </para>
+      </section>
+          <section xml:id="hbase.regionserver.handler.count"><title><varname>hbase.regionserver.handler.count</varname></title>
+          <para>
+          This setting defines the number of threads that are kept open to answer
+          incoming requests to user tables. The default of 10 is rather low in order to
+          prevent users from killing their region servers when using large write buffers
+          with a high number of concurrent clients. The rule of thumb is to keep this
+          number low when the payload per request approaches the MB (big puts, scans using
+          a large cache) and high when the payload is small (gets, small puts, ICVs, deletes).
+          </para>
+          <para>
+          It is safe to set that number to the
+          maximum number of incoming clients if their payload is small, the typical example
+          being a cluster that serves a website since puts aren't typically buffered
+          and most of the operations are gets.
+          </para>
+          <para>
+          The reason why it is dangerous to keep this setting high is that the aggregate
+          size of all the puts that are currently happening in a region server may impose
+          too much pressure on its memory, or even trigger an OutOfMemoryError. A region server
+          running on low memory will trigger its JVM's garbage collector to run more frequently
+          up to a point where GC pauses become noticeable (the reason being that all the memory
+          used to keep all the requests' payloads cannot be trashed, no matter how hard the
+          garbage collector tries). After some time, the overall cluster
+          throughput is affected since every request that hits that region server will take longer,
+          which exacerbates the problem even more.
+          </para>
+          </section>
+      <section xml:id="big_memory">
+        <title>Configuration for large memory machines</title>
+        <para>
+          HBase ships with a reasonable, conservative configuration that will
+          work on nearly all
+          machine types that people might want to test with. If you have larger
+          machines -- HBase has 8G and larger heap -- you might the following configuration options helpful.
+          TODO.
+        </para>
+
+      </section>
+
+      <section xml:id="lzo">
+      <title>LZO compression<indexterm><primary>LZO</primary></indexterm></title>
+      <para>You should consider enabling LZO compression.  Its
+      near-frictionless and in most all cases boosts performance.
+      </para>
+      <para>Unfortunately, HBase cannot ship with LZO because of
+      the licensing issues; HBase is Apache-licensed, LZO is GPL.
+      Therefore LZO install is to be done post-HBase install.
+      See the <link xlink:href="http://wiki.apache.org/hadoop/UsingLzoCompression">Using LZO Compression</link>
+      wiki page for how to make LZO work with HBase.
+      </para>
+      <para>A common problem users run into when using LZO is that while initial
+      setup of the cluster runs smooth, a month goes by and some sysadmin goes to
+      add a machine to the cluster only they'll have forgotten to do the LZO
+      fixup on the new machine.  In versions since HBase 0.90.0, we should
+      fail in a way that makes it plain what the problem is, but maybe not.
+      Remember you read this paragraph<footnote><para>See
+      <link linkend="hbase.regionserver.codecs">hbase.regionserver.codecs</link>
+      for a feature to help protect against failed LZO install</para></footnote>.
+      </para>
+      <para>See also the <link linkend="compression">Compression Appendix</link>
+      at the tail of this book.</para>
+      </section>
+      <section xml:id="bigger.regions">
+      <title>Bigger Regions</title>
+      <para>
+      Consider going to larger regions to cut down on the total number of regions
+      on your cluster. Generally less Regions to manage makes for a smoother running
+      cluster (You can always later manually split the big Regions should one prove
+      hot and you want to spread the request load over the cluster).  By default,
+      regions are 256MB in size.  You could run with
+      1G.  Some run with even larger regions; 4G or even larger.  Adjust
+      <code>hbase.hregion.max.filesize</code> in your <filename>hbase-site.xml</filename>.
+      </para>
+      </section>
+      <section xml:id="disable.splitting">
+      <title>Managed Splitting</title>
+      <para>
+      Rather than let HBase auto-split your Regions, manage the splitting manually
+      <footnote><para>What follows is taken from the javadoc at the head of
+      the <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname> tool
+      added to HBase post-0.90.0 release.
+      </para>
+      </footnote>.
+ With growing amounts of data, splits will continually be needed. Since
+ you always know exactly what regions you have, long-term debugging and
+ profiling is much easier with manual splits. It is hard to trace the logs to
+ understand region level problems if it keeps splitting and getting renamed.
+ Data offlining bugs + unknown number of split regions == oh crap! If an
+ <classname>HLog</classname> or <classname>StoreFile</classname>
+ was mistakenly unprocessed by HBase due to a weird bug and
+ you notice it a day or so later, you can be assured that the regions
+ specified in these files are the same as the current regions and you have
+ less headaches trying to restore/replay your data.
+ You can finely tune your compaction algorithm. With roughly uniform data
+ growth, it's easy to cause split / compaction storms as the regions all
+ roughly hit the same data size at the same time. With manual splits, you can
+ let staggered, time-based major compactions spread out your network IO load.
+      </para>
+      <para>
+ How do I turn off automatic splitting? Automatic splitting is determined by the configuration value
+ <code>hbase.hregion.max.filesize</code>. It is not recommended that you set this
+ to <varname>Long.MAX_VALUE</varname> in case you forget about manual splits. A suggested setting
+ is 100GB, which would result in > 1hr major compactions if reached.
+ </para>
+ <para>What's the optimal number of pre-split regions to create?
+ Mileage will vary depending upon your application.
+ You could start low with 10 pre-split regions / server and watch as data grows
+ over time. It's better to err on the side of too little regions and rolling split later.
+ A more complicated answer is that this depends upon the largest storefile
+ in your region. With a growing data size, this will get larger over time. You
+ want the largest region to be just big enough that the <classname>Store</classname> compact
+ selection algorithm only compacts it due to a timed major. If you don't, your
+ cluster can be prone to compaction storms as the algorithm decides to run
+ major compactions on a large series of regions all at once. Note that
+ compaction storms are due to the uniform data growth, not the manual split
+ decision.
+ </para>
+<para> If you pre-split your regions too thin, you can increase the major compaction
+interval by configuring <varname>HConstants.MAJOR_COMPACTION_PERIOD</varname>. If your data size
+grows too large, use the (post-0.90.0 HBase) <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname>
+script to perform a network IO safe rolling split
+of all regions.
+</para>
+      </section>
+
+      </section>
+
+      </section>
+      <section xml:id="client_dependencies"><title>Client configuration and dependencies connecting to an HBase cluster</title>
+
+      <para>
+        Since the HBase Master may move around, clients bootstrap by looking ZooKeeper.  Thus clients
+        require the ZooKeeper quorum information in a <filename>hbase-site.xml</filename> that
+        is on their <varname>CLASSPATH</varname>.</para>
+        <para>If you are configuring an IDE to run a HBase client, you should
+        include the <filename>conf/</filename> directory on your classpath.
+      </para>
+      <para>
+      Minimally, a client of HBase needs the hbase, hadoop, log4j, commons-logging, and zookeeper jars
+      in its <varname>CLASSPATH</varname> connecting to a cluster.
+      </para>
+        <para>
+          An example basic <filename>hbase-site.xml</filename> for client only
+          might look as follows:
+          <programlisting><![CDATA[
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hbase.zookeeper.quorum</name>
+    <value>example1,example2,example3</value>
+    <description>The directory shared by region servers.
+    </description>
+  </property>
+</configuration>
+]]>
+          </programlisting>
+        </para>
+    </section>
+
+  </chapter>
