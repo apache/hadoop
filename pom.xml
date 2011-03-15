@@ -528,8 +528,7 @@
     <jetty.version>6.1.26</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <jersey.version>1.4</jersey.version>
-    <!--JRuby > 1.0.x has *GPL jars in it so we can't upgrade. See HBASE-3374-->
-    <jruby.version>1.0.3</jruby.version>
+    <jruby.version>1.6.0</jruby.version>
     <jsr311.version>1.1.1</jsr311.version>
     <junit.version>4.8.1</junit.version>
     <log4j.version>1.2.16</log4j.version>

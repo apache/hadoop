@@ -112,6 +112,7 @@ Release 0.91.0 - Unreleased
    HBASE-3610  Improve RegionSplitter performance
    HBASE-2495  Allow record filtering with selected row key values in HBase
                Export (Subbu M Iyer via Stack)
+   HBASE-3600  Update our jruby to 1.6.0
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
