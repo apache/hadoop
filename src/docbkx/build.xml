@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+    <chapter xml:id="build"
+      version="5.0" xmlns="http://docbook.org/ns/docbook"
+      xmlns:xlink="http://www.w3.org/1999/xlink"
+      xmlns:xi="http://www.w3.org/2001/XInclude"
+      xmlns:svg="http://www.w3.org/2000/svg"
+      xmlns:m="http://www.w3.org/1998/Math/MathML"
+      xmlns:html="http://www.w3.org/1999/xhtml"
+      xmlns:db="http://docbook.org/ns/docbook">
+    <title>Building HBase</title>
+    <section xml:id="mvn_repo">
+        <para>Follow the instructions at <link xlink:href="http://www.apache.org/dev/publishing-maven-artifacts.html">Publishing Maven Artifacts</link>.
+            The 'trick' to makiing it all work is answering the questions put to you by the mvn release plugin properly,
+            making sure it is using the actual branch,
+            and finally, before doing the mvn release:perform,
+            VERY IMPORTANT, hand edit the release.properties file that was put under HBASE_HOME by the previous step, release:perform. You need to edit it to make it point at right locations in SVN.
+        </para>
+    </section>
+          
+    </chapter>

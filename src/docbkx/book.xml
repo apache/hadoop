@@ -68,6 +68,7 @@
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="upgrading.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="configuration.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="shell.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="build.xml" />
 
 
 
