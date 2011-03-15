@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.ByteBloomFilter;
+import org.apache.hadoop.hbase.util.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -221,9 +222,6 @@ public class HFile {
     // Used to ensure we write in order.
     private final RawComparator<byte []> comparator;
 
-    // A stream made per block written.
-    private DataOutputStream out;
-
     // Number of uncompressed bytes per block.  Reinitialized when we start
     // new block.
     private int blocksize;
@@ -264,9 +262,9 @@ public class HFile {
     // Block cache to optionally fill on write
     private BlockCache blockCache;
 
-    // Additional byte array output stream used to fill block cache
-    private ByteArrayOutputStream baos;
-    private DataOutputStream baosDos;
+    // Byte buffer output stream made per block written.
+    private ByteBufferOutputStream bbos = null;
+    private DataOutputStream bbosDos = null;
     private int blockNumber = 0;
 
     /**
@@ -360,7 +358,7 @@ public class HFile {
      * @throws IOException
      */
     private void checkBlockBoundary() throws IOException {
-      if (this.out != null && this.out.size() < blocksize) return;
+      if (bbosDos != null && bbosDos.size() < blocksize) return;
       finishBlock();
       newBlock();
     }
@@ -370,11 +368,18 @@ public class HFile {
      * @throws IOException
      */
     private void finishBlock() throws IOException {
-      if (this.out == null) return;
+      if (bbosDos == null) return;
+
+      // Flush Data Output Stream
+      bbosDos.flush();
+
+      // Compress Data and write to output stream
+      DataOutputStream compressStream = getCompressingStream();
+      bbos.writeTo(compressStream);
+      int size = releaseCompressingStream(compressStream);
+
       long now = System.currentTimeMillis();
 
-      int size = releaseCompressingStream(this.out);
-      this.out = null;
       blockKeys.add(firstKey);
       blockOffsets.add(Long.valueOf(blockBegin));
       blockDataSizes.add(Integer.valueOf(size));
@@ -384,14 +389,16 @@ public class HFile {
       writeOps++;
 
       if (blockCache != null) {
-        baosDos.flush();
-        byte [] bytes = baos.toByteArray();
-        ByteBuffer blockToCache = ByteBuffer.wrap(bytes, DATABLOCKMAGIC.length,
-            bytes.length - DATABLOCKMAGIC.length);
+        byte[] bytes = bbos.toByteArray(DATABLOCKMAGIC.length, bbos.size() - DATABLOCKMAGIC.length);
+        ByteBuffer blockToCache = ByteBuffer.wrap(bytes);
         String blockName = path.toString() + blockNumber;
         blockCache.cacheBlock(blockName, blockToCache);
-        baosDos.close();
       }
+
+      bbosDos.close();
+      bbosDos = null;
+      bbos = null;
+
       blockNumber++;
     }
 
@@ -402,14 +409,16 @@ public class HFile {
     private void newBlock() throws IOException {
       // This is where the next block begins.
       blockBegin = outputStream.getPos();
-      this.out = getCompressingStream();
-      this.out.write(DATABLOCKMAGIC);
+
       firstKey = null;
-      if (blockCache != null) {
-        this.baos = new ByteArrayOutputStream();
-        this.baosDos = new DataOutputStream(baos);
-        this.baosDos.write(DATABLOCKMAGIC);
-      }
+
+      // to avoid too many calls to realloc(),
+      // pre-allocates the byte stream to the block size + 25%
+      // only if blocksize is under 1Gb
+      int bbosBlocksize = Math.max(blocksize, blocksize + (blocksize / 4));
+      bbos = new ByteBufferOutputStream(bbosBlocksize);
+      bbosDos = new DataOutputStream(bbos);
+      bbosDos.write(DATABLOCKMAGIC);
     }
 
     /*
@@ -467,7 +476,7 @@ public class HFile {
       for (i = 0; i < metaNames.size(); ++i) {
         // stop when the current key is greater than our own
         byte[] cur = metaNames.get(i);
-        if (Bytes.BYTES_RAWCOMPARATOR.compare(cur, 0, cur.length, 
+        if (Bytes.BYTES_RAWCOMPARATOR.compare(cur, 0, cur.length,
             key, 0, key.length) > 0) {
           break;
         }
@@ -563,12 +572,12 @@ public class HFile {
         checkBlockBoundary();
       }
       // Write length of key and value and then actual key and value bytes.
-      this.out.writeInt(klength);
+      this.bbosDos.writeInt(klength);
       this.keylength += klength;
-      this.out.writeInt(vlength);
+      this.bbosDos.writeInt(vlength);
       this.valuelength += vlength;
-      this.out.write(key, koffset, klength);
-      this.out.write(value, voffset, vlength);
+      this.bbosDos.write(key, koffset, klength);
+      this.bbosDos.write(value, voffset, vlength);
       // Are we the first key in this block?
       if (this.firstKey == null) {
         // Copy the key.
@@ -579,13 +588,6 @@ public class HFile {
       this.lastKeyOffset = koffset;
       this.lastKeyLength = klength;
       this.entryCount ++;
-      // If we are pre-caching blocks on write, fill byte array stream
-      if (blockCache != null) {
-        this.baosDos.writeInt(klength);
-        this.baosDos.writeInt(vlength);
-        this.baosDos.write(key, koffset, klength);
-        this.baosDos.write(value, voffset, vlength);
-      }
     }
 
     /*
