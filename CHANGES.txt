@@ -167,6 +167,8 @@ Release 0.90.2 - Unreleased
    HBASE-3586  Improve the selection of regions to balance
    HBASE-3623  Allow non-XML representable separator characters in the ImportTSV tool
                (Harsh J Chouraria via Stack)
+   HBASE-3625  improve/fix support excluding Tests via Maven -D property
+               (Alejandro Abdelnur via todd)
 
 Release 0.90.1 - Unreleased
 
