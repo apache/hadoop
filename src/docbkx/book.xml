@@ -2212,6 +2212,19 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             </answer>
         </qandaentry>
     </qandadiv>
+        <qandadiv><title>Loading</title>
+        <qandaentry>
+            <question><para>
+                    Why do I see pauses when loading HBase?
+            </para></question>
+            <answer>
+                <para>
+                    If compression is enabled, see this thread up on the user list,
+                    <link xlink:href="http://search-hadoop.com/m/WUnLM6ojHm1/Long+client+pauses+with+compression&amp;subj=Long+client+pauses+with+compression">Long client pauses with compression</link>.
+                </para>
+            </answer>
+        </qandaentry>
+    </qandadiv>
     </qandaset>
   </appendix>
 
