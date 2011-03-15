@@ -5,4 +5,14 @@ In addition, this product includes software developed by:
 
 Facebook, Inc. (http://developers.facebook.com/thrift/ -- Page includes the Thrift Software License)
 
-JUnit (http://www.junit.org/)
+JUnit (http://www.junit.org/) included under the Common Public License v1.0.  See
+the full text here: http://junit.sourceforge.net/cpl-v10.html
+
+JRuby (http://jruby.org) is tri-licensed.  We include it under terms of the
+Common Public License v1.0.
+
+JRuby itself includes libraries variously licensed.  See its COPYING document
+for details: https://github.com/jruby/jruby/blob/master/COPYING
+    
+The JRuby community went out of their way to make JRuby compatible with Apache
+projects: See https://issues.apache.org/jira/browse/HBASE-3374)
