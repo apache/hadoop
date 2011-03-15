@@ -76,6 +76,8 @@ public class ReplicationSourceManager {
   private final Path logDir;
   // Path to the hlog archive
   private final Path oldLogDir;
+  // The number of ms that we wait before moving znodes, HBASE-3596
+  private final long sleepBeforeFailover;
 
   /**
    * Creates a replication manager and sets the watch on all the other
@@ -105,6 +107,7 @@ public class ReplicationSourceManager {
     this.fs = fs;
     this.logDir = logDir;
     this.oldLogDir = oldLogDir;
+    this.sleepBeforeFailover = conf.getLong("replication.sleep.before.failover", 2000);
     this.zkHelper.registerRegionServerListener(
         new OtherRegionServerWatcher(this.zkHelper.getZookeeperWatcher()));
     List<String> otherRSs =
@@ -291,6 +294,14 @@ public class ReplicationSourceManager {
    * @param rsZnode
    */
   public void transferQueues(String rsZnode) {
+    // Wait a bit before transferring the queues, we may be shutting down.
+    // This sleep may not be enough in some cases.
+    try {
+      Thread.sleep(this.sleepBeforeFailover);
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while waiting before transferring a queue.");
+      Thread.currentThread().interrupt();
+    }
     // We try to lock that rs' queue directory
     if (this.stopper.isStopped()) {
       LOG.info("Not transferring queue since we are shutting down");

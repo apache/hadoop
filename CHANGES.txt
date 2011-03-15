@@ -162,6 +162,7 @@ Release 0.90.2 - Unreleased
    HBASE-3636  a bug about deciding whether this key is a new key for the ROWCOL
                bloomfilter (Liyin Tang via Stack)
    HBASE-3639  FSUtils.getRootDir should qualify path
+   HBASE-3648  [replication] failover is sloppy with znodes
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
@@ -171,6 +172,7 @@ Release 0.90.2 - Unreleased
                (Harsh J Chouraria via Stack)
    HBASE-3625  improve/fix support excluding Tests via Maven -D property
                (Alejandro Abdelnur via todd)
+   HBASE-3596  [replication] Wait a few seconds before transferring queues
 
 Release 0.90.1 - Unreleased
 

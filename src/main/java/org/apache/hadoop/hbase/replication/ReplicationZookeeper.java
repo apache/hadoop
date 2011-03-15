@@ -516,7 +516,18 @@ public class ReplicationZookeeper {
       String p = ZKUtil.joinZNode(parent, RS_LOCK_ZNODE);
       ZKUtil.createAndWatch(this.zookeeper, p, Bytes.toBytes(rsServerNameZnode));
     } catch (KeeperException e) {
-      LOG.info("Failed lock other rs", e);
+      // This exception will pop up if the znode under which we're trying to
+      // create the lock is already deleted by another region server, meaning
+      // that the transfer already occurred.
+      // NoNode => transfer is done and znodes are already deleted
+      // NodeExists => lock znode already created by another RS
+      if (e instanceof KeeperException.NoNodeException ||
+          e instanceof KeeperException.NodeExistsException) {
+        LOG.info("Won't transfer the queue," +
+            " another RS took care of it because of: " + e.getMessage());
+      } else {
+        LOG.info("Failed lock other rs", e);
+      }
       return false;
     }
     return true;
@@ -597,10 +608,30 @@ public class ReplicationZookeeper {
    * @param znode
    */
   public void deleteRsQueues(String znode) {
+    String fullpath = ZKUtil.joinZNode(rsZNode, znode);
     try {
-      ZKUtil.deleteNodeRecursively(this.zookeeper,
-          ZKUtil.joinZNode(rsZNode, znode));
+      List<String> clusters =
+        ZKUtil.listChildrenNoWatch(this.zookeeper, fullpath);
+      for (String cluster : clusters) {
+        // We'll delete it later
+        if (cluster.equals(RS_LOCK_ZNODE)) {
+          continue;
+        }
+        String fullClusterPath = ZKUtil.joinZNode(fullpath, cluster);
+        ZKUtil.deleteNodeRecursively(this.zookeeper, fullClusterPath);
+      }
+      // Finish cleaning up
+      ZKUtil.deleteNodeRecursively(this.zookeeper, fullpath);
     } catch (KeeperException e) {
+      if (e instanceof KeeperException.NoNodeException ||
+          e instanceof KeeperException.NotEmptyException) {
+        // Testing a special case where another region server was able to
+        // create a lock just after we deleted it, but then was also able to
+        // delete the RS znode before us or its lock znode is still there.
+        if (e.getPath().equals(fullpath)) {
+          return;
+        }
+      }
       this.abortable.abort("Failed delete of " + znode, e);
     }
   }
