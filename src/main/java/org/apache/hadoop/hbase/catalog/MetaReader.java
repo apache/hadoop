@@ -431,21 +431,14 @@ public class MetaReader {
     }
     HRegionInterface metaServer =
       catalogTracker.waitForMetaServerConnectionDefault();
-    byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
-    Scan scan = new Scan(firstRowInTable);
+    Scan scan = getScanForTableName(Bytes.toBytes(tableName));
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     long scannerid = metaServer.openScanner(
         HRegionInfo.FIRST_META_REGIONINFO.getRegionName(), scan);
     try {
       Result data = metaServer.next(scannerid);
       if (data != null && data.size() > 0) {
-        HRegionInfo info = Writables.getHRegionInfo(
-          data.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER));
-        if (info.getTableDesc().getNameAsString().equals(tableName)) {
-          // A region for this table already exists. Ergo table exists.
           return true;
-        }
       }
       return false;
     } finally {
@@ -494,9 +487,8 @@ public class MetaReader {
     HRegionInterface metaServer =
       getCatalogRegionInterface(catalogTracker, tableName);
     List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
-    String tableString = Bytes.toString(tableName);
-    byte[] firstRowInTable = Bytes.toBytes(tableString + ",,");
-    Scan scan = new Scan(firstRowInTable);
+
+    Scan scan = getScanForTableName(tableName);
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     long scannerid =
       metaServer.openScanner(getCatalogRegionNameForTable(tableName), scan);
@@ -507,19 +499,35 @@ public class MetaReader {
           HRegionInfo info = Writables.getHRegionInfo(
               data.getValue(HConstants.CATALOG_FAMILY,
                   HConstants.REGIONINFO_QUALIFIER));
-          if (info.getTableDesc().getNameAsString().equals(tableString)) {
-            // Are we to include split parents in the list?
-            if (excludeOfflinedSplitParents && info.isSplitParent()) continue;
-            regions.add(info);
-          } else {
-            break;
-          }
+          if (excludeOfflinedSplitParents && info.isSplitParent()) continue;
+          regions.add(info);
         }
       }
       return regions;
     } finally {
       metaServer.close(scannerid);
     }
+  }
+
+  /**
+   * This method creates a Scan object that will only scan catalog rows that
+   * belong to the specified table. It doesn't specify any columns.
+   * This is a better alternative to just using a start row and scan until
+   * it hits a new table since that requires parsing the HRI to get the table
+   * name.
+   * @param tableName bytes of table's name
+   * @return configured Scan object
+   */
+  public static Scan getScanForTableName(byte[] tableName) {
+    String strName = Bytes.toString(tableName);
+    // Start key is just the table name with delimiters
+    byte[] startKey = Bytes.toBytes(strName + ",,");
+    // Stop key appends the smallest possible char to the table name
+    byte[] stopKey = Bytes.toBytes(strName + " ,,");
+
+    Scan scan = new Scan(startKey);
+    scan.setStopRow(stopKey);
+    return scan;
   }
 
   /**
@@ -545,8 +553,7 @@ public class MetaReader {
       getCatalogRegionInterface(catalogTracker, tableNameBytes);
     List<Pair<HRegionInfo, HServerAddress>> regions =
       new ArrayList<Pair<HRegionInfo, HServerAddress>>();
-    byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
-    Scan scan = new Scan(firstRowInTable);
+    Scan scan = getScanForTableName(tableNameBytes);
     scan.addFamily(HConstants.CATALOG_FAMILY);
     long scannerid =
       metaServer.openScanner(getCatalogRegionNameForTable(tableNameBytes), scan);
@@ -556,12 +563,7 @@ public class MetaReader {
         if (data != null && data.size() > 0) {
           Pair<HRegionInfo, HServerAddress> region = metaRowToRegionPair(data);
           if (region == null) continue;
-          if (region.getFirst().getTableDesc().getNameAsString().equals(
-              tableName)) {
-            regions.add(region);
-          } else {
-            break;
-          }
+          regions.add(region);
         }
       }
       return regions;

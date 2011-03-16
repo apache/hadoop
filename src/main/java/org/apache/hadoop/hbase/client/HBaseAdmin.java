@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,7 +47,6 @@ import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -371,40 +368,21 @@ public class HBaseAdmin implements Abortable {
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
-    final int batchCount = this.conf.getInt("hbase.admin.scanner.caching", 10);
     // Wait until all regions deleted
     HRegionInterface server =
       connection.getHRegionConnection(firstMetaServer.getServerAddress());
-    HRegionInfo info = new HRegionInfo();
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       long scannerId = -1L;
       try {
-        Scan scan = new Scan().addColumn(HConstants.CATALOG_FAMILY,
-          HConstants.REGIONINFO_QUALIFIER);
+
+        Scan scan = MetaReader.getScanForTableName(tableName);
+        scan.addColumn(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER);
         scannerId = server.openScanner(
           firstMetaServer.getRegionInfo().getRegionName(), scan);
         // Get a batch at a time.
-        Result [] values = server.next(scannerId, batchCount);
-        if (values == null || values.length == 0) {
-          break;
-        }
-        boolean found = false;
-        for (Result r : values) {
-          NavigableMap<byte[], byte[]> infoValues =
-              r.getFamilyMap(HConstants.CATALOG_FAMILY);
-          for (Map.Entry<byte[], byte[]> e : infoValues.entrySet()) {
-            if (Bytes.equals(e.getKey(), HConstants.REGIONINFO_QUALIFIER)) {
-              info = (HRegionInfo) Writables.getWritable(e.getValue(), info);
-              if (Bytes.equals(info.getTableDesc().getName(), tableName)) {
-                found = true;
-              } else {
-                found = false;
-                break;
-              }
-            }
-          }
-        }
-        if (!found) {
+        Result values = server.next(scannerId);
+        if (values == null) {
           break;
         }
       } catch (IOException ex) {

@@ -130,4 +130,34 @@ public class TestMetaReaderEditor {
       pair.getFirst().getEncodedName());
     LOG.info("Finished " + name);
   }
+
+  // Test for the optimization made in HBASE-3650
+  @Test public void testScanMetaForTable() throws IOException {
+    final String name = "testScanMetaForTable";
+    LOG.info("Started " + name);
+
+    /** Create 5 tables
+     - testScanMetaForTable
+     - testScanMetaForTable0
+     - testScanMetaForTable1
+     - testScanMetaForTable2
+     - testScanMetaForTablf
+    **/
+
+    UTIL.createTable(Bytes.toBytes(name), HConstants.CATALOG_FAMILY);
+    for (int i = 3; i < 3; i ++) {
+      UTIL.createTable(Bytes.toBytes(name+i), HConstants.CATALOG_FAMILY);
+    }
+    // name that is +1 greater than the first one (e+1=f)
+    byte[] greaterName = Bytes.toBytes("testScanMetaForTablf");
+    UTIL.createTable(greaterName, HConstants.CATALOG_FAMILY);
+
+    // Now make sure we only get the regions from 1 of the tables at a time
+
+    assertEquals(1, MetaReader.getTableRegions(ct, Bytes.toBytes(name)).size());
+    for (int i = 3; i < 3; i ++) {
+      assertEquals(1, MetaReader.getTableRegions(ct, Bytes.toBytes(name+i)).size());
+    }
+    assertEquals(1, MetaReader.getTableRegions(ct, greaterName).size());
+  }
 }
