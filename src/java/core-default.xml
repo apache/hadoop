@@ -325,42 +325,6 @@
 </property>
 
 <property>
-  <name>fs.checkpoint.dir</name>
-  <value>${hadoop.tmp.dir}/dfs/namesecondary</value>
-  <description>Determines where on the local filesystem the DFS secondary
-      name node should store the temporary images to merge.
-      If this is a comma-delimited list of directories then the image is
-      replicated in all of the directories for redundancy.
-  </description>
-</property>
-
-<property>
-  <name>fs.checkpoint.edits.dir</name>
-  <value>${fs.checkpoint.dir}</value>
-  <description>Determines where on the local filesystem the DFS secondary
-      name node should store the temporary edits to merge.
-      If this is a comma-delimited list of directoires then teh edits is
-      replicated in all of the directoires for redundancy.
-      Default value is same as fs.checkpoint.dir
-  </description>
-</property>
-
-<property>
-  <name>fs.checkpoint.period</name>
-  <value>3600</value>
-  <description>The number of seconds between two periodic checkpoints.
-  </description>
-</property>
-
-<property>
-  <name>fs.checkpoint.size</name>
-  <value>67108864</value>
-  <description>The size of the current edit log (in bytes) that triggers
-       a periodic checkpoint even if the fs.checkpoint.period hasn't expired.
-  </description>
-</property>
-
-<property>
   <name>fs.df.interval</name>
   <value>60000</value>
   <description>Disk usage statistics refresh interval in msec.</description>
