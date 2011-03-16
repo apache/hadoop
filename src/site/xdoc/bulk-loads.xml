@@ -34,7 +34,8 @@
         This document describes HBase's bulk load functionality. The bulk load
         feature uses a MapReduce job to output table data in HBase's internal
         data format, and then directly loads the data files into a running
-        cluster.
+        cluster.  Using bulk load will use less CPU and network than going
+        via the HBase API.
       </p>
     </section>
     <section name="Bulk Load Architecture">
