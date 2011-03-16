@@ -270,9 +270,21 @@ public class DataNode extends Configured
       }
     }
     
-    synchronized void startAll() {
-      for (BPOfferService bpos: nameNodeThreads.values()) {
-        bpos.start();
+    synchronized void startAll() throws IOException {
+      try {
+        UserGroupInformation.getLoginUser().doAs(
+            new PrivilegedExceptionAction<Object>() {
+              public Object run() throws Exception {
+                for (BPOfferService bpos : nameNodeThreads.values()) {
+                  bpos.start();
+                }
+                return null;
+              }
+            });
+      } catch (InterruptedException ex) {
+        IOException ioe = new IOException();
+        ioe.initCause(ex.getCause());
+        throw ioe;
       }
     }
     

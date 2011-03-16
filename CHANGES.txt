@@ -241,7 +241,10 @@ Trunk (unreleased changes)
     HDFS-1749. Federation: TestListCorruptFileBlocks failing in federation 
     branch. (jitendra)
 
-   HDFS-1754. Federation: testFsck fails. (boryas)
+    HDFS-1754. Federation: testFsck fails. (boryas)
+
+    HDFS-1755. Federation: The BPOfferService must always connect to namenode as 
+    the login user. (jitendra)
 
   IMPROVEMENTS
 
