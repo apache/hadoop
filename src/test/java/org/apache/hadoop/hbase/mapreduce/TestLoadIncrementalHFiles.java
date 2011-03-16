@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -186,4 +188,70 @@ public class TestLoadIncrementalHFiles {
       writer.close();
     }
   }
+
+  private void addStartEndKeysForTest(TreeMap<byte[], Integer> map, byte[] first, byte[] last) {
+    Integer value = map.containsKey(first)?(Integer)map.get(first):0;
+    map.put(first, value+1);
+
+    value = map.containsKey(last)?(Integer)map.get(last):0;
+    map.put(last, value-1);
+  }
+
+  @Test 
+  public void testInferBoundaries() {
+    TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+
+    /* Toy example
+     *     c---------i            o------p          s---------t     v------x
+     * a------e    g-----k   m-------------q   r----s            u----w
+     *
+     * Should be inferred as:
+     * a-----------------k   m-------------q   r--------------t  u---------x
+     * 
+     * The output should be (m,r,u) 
+     */
+
+    String first;
+    String last;
+
+    first = "a"; last = "e";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    
+    first = "r"; last = "s";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+
+    first = "o"; last = "p";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+
+    first = "g"; last = "k";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+
+    first = "v"; last = "x";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+
+    first = "c"; last = "i";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+
+    first = "m"; last = "q";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+
+    first = "s"; last = "t";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+    
+    first = "u"; last = "w";
+    addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
+
+    byte[][] keysArray = LoadIncrementalHFiles.inferBoundaries(map);
+    byte[][] compare = new byte[3][];
+    compare[0] = "m".getBytes();
+    compare[1] = "r".getBytes(); 
+    compare[2] = "u".getBytes();
+
+    assertEquals(keysArray.length, 3);
+
+    for (int row = 0; row<keysArray.length; row++){
+      assertArrayEquals(keysArray[row], compare[row]);
+    }
+  }
+
 }

@@ -113,6 +113,8 @@ Release 0.91.0 - Unreleased
    HBASE-2495  Allow record filtering with selected row key values in HBase
                Export (Subbu M Iyer via Stack)
    HBASE-3600  Update our jruby to 1.6.0
+   HBASE-3440  Clean out load_table.rb and make sure all roads lead to
+               completebulkload tool (Vidhyashankar Venkataraman via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
