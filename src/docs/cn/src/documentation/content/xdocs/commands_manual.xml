@@ -548,7 +548,7 @@
 			           </tr>
 			           <tr>
 			          	<td><code>-importCheckpoint</code></td>
-			            <td>从检查点目录装载镜像并保存到当前检查点目录，检查点目录由fs.checkpoint.dir指定。
+			            <td>从检查点目录装载镜像并保存到当前检查点目录，检查点目录由dfs.namenode.checkpoint.dir指定。
 			            </td>
 			           </tr>
 			     </table>
@@ -567,7 +567,7 @@
 			
 			           <tr>
 			          	<td><code>-checkpoint [force]</code></td>
-			            <td>如果EditLog的大小 >= fs.checkpoint.size，启动Secondary namenode的检查点过程。
+			            <td>如果EditLog的大小 >= dfs.namenode.checkpoint.size，启动Secondary namenode的检查点过程。
 			            如果使用了-force，将不考虑EditLog的大小。</td>
 			           </tr>
 			           <tr>
