@@ -41,6 +41,10 @@ Release 0.21.1 - Unreleased
     HADOOP-7162. Rmove a duplicated call FileSystem.listStatus(..) in FsShell.
     (Alexey Diomin via szetszwo)
 
+    HADOOP-7117. Remove fs.checkpoint.* from core-default.xml and replace
+    fs.checkpoint.* with dfs.namenode.checkpoint.* in documentations.
+    (Harsh J Chouraria via szetszwo)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES

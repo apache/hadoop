@@ -706,7 +706,7 @@
 			           <tr>
 			          	<td><code>-importCheckpoint</code></td>
 			            <td>Loads image from a checkpoint directory and saves it into the current one. Checkpoint directory 
-			            is read from property fs.checkpoint.dir
+			            is read from property dfs.namenode.checkpoint.dir
 			            (see <a href="http://hadoop.apache.org/hdfs/docs/current/hdfs_user_guide.html#Import+checkpoint">Import Checkpoint</a>).
 			            </td>
 			           </tr>
@@ -743,7 +743,7 @@
 			
 			           <tr>
 			          	<td><code>-checkpoint [force]</code></td>
-			            <td>Checkpoints the Secondary namenode if EditLog size >= fs.checkpoint.size. 
+			            <td>Checkpoints the Secondary namenode if EditLog size >= dfs.namenode.checkpoint.size. 
 			            If -force is used, checkpoint irrespective of EditLog size.</td>
 			           </tr>
 			           <tr>
