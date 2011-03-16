@@ -702,7 +702,6 @@ public class TestStoreFile extends HBaseTestCase {
     while ((kv1 = scannerOne.next()) != null) {
       kv2 = scannerTwo.next();
       assertTrue(kv1.equals(kv2));
-      assertTrue(Bytes.equals(kv1.getBuffer(), kv2.getBuffer()));
     }
     assertNull(scannerTwo.next());
     assertEquals(startHit + 6, cs.getHitCount());

@@ -90,7 +90,9 @@ public class ByteBufferOutputStream extends OutputStream {
   */
   public synchronized void writeTo(OutputStream out) throws IOException {
     WritableByteChannel channel = Channels.newChannel(out);
-    channel.write(getByteBuffer());
+    ByteBuffer bb = buf.duplicate();
+    bb.flip();
+    channel.write(bb);
   }
 
   @Override
@@ -118,18 +120,13 @@ public class ByteBufferOutputStream extends OutputStream {
   }
 
   public byte[] toByteArray(int offset, int length) {
-    int position = buf.position();
-    byte[] chunk;
+    ByteBuffer bb = buf.duplicate();
+    bb.flip();
 
-    try {
-      buf.position(offset);
+    byte[] chunk = new byte[length];
 
-      chunk = new byte[length];
-      buf.get(chunk, 0, length);
-    } finally {
-      buf.position(position);
-    }
-
+    bb.position(offset);
+    bb.get(chunk, 0, length);
     return chunk;
   }
 }
