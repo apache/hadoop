@@ -41,7 +41,6 @@ Release 0.91.0 - Unreleased
    HBASE-3515  [replication] ReplicationSource can miss a log after RS comes
                out of GC
    HBASE-3665  tighten assertions for testBloomFilterSize
-   HBASE-3595  get_counter broken in shell
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -143,6 +142,7 @@ Release 0.90.2 - Unreleased
    HBASE-3613  NPE in MemStoreFlusher
    HBASE-3650  HBA.delete can return too fast
    HBASE-3659  Fix TestHLog to pass on newer versions of Hadoop
+   HBASE-3595  get_counter broken in shell
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
