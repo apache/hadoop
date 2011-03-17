@@ -191,7 +191,7 @@ module Hbase
       return nil if result.isEmpty
 
       # Fetch cell value
-      cell = result.list.first
+      cell = result.list[0]
       org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValue)
     end
 
