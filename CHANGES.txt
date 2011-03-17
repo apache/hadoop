@@ -182,7 +182,7 @@ Release 0.90.2 - Unreleased
                (Alejandro Abdelnur via todd)
    HBASE-3596  [replication] Wait a few seconds before transferring queues
 
-Release 0.90.1 - Unreleased
+Release 0.90.1 - February 9th, 2011
 
   NEW FEATURES
    HBASE-3455  Add memstore-local allocation buffers to combat heap
