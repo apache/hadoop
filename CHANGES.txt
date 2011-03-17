@@ -25,50 +25,21 @@ Release 0.91.0 - Unreleased
    HBASE-3418  Increment operations can break when qualifiers are split
                between memstore/snapshot and storefiles
    HBASE-3403  Region orphaned after failure during split
-   HBASE-3387  Pair does not deep check arrays for equality -- REVERT THIS PATCH
-   HBASE-3449  Server shutdown handlers deadlocked waiting for META
-   HBASE-3456  Fix hardcoding of 20 second socket timeout down in HBaseClient
-   HBASE-3476  HFile -m option need not scan key values
-               (Prakash Khemani via Lars George)
-   HBASE-3481  max seq id in flushed file can be larger than its correct value 
-               causing data loss during recovery
-   HBASE-3493  HMaster sometimes hangs during initialization due to missing
-               notify call (Bruno Dumon via Stack)
-   HBASE-3494  checkAndPut implementation doesnt verify row param and writable 
-               row are the same
-   HBASE-3416  For intra-row scanning, the update readers notification resets
-               the query matcher and can lead to incorrect behavior
    HBASE-3492  NPE while splitting table with empty column family store
-   HBASE-3495  Shell is failing on subsequent split calls
    HBASE-3400  Coprocessor Support for Generic Interfaces
                (Ed Kohlwey via Gary Helmling)
-   HBASE-3502  Can't open region because can't open .regioninfo because
-               AlreadyBeingCreatedException
-   HBASE-3501  Remove the deletion limit in LogCleaner
-   HBASE-3500  Documentation update for replicatio
-   HBASE-3531  When under global memstore pressure, dont try to flush
-               unflushable regions.
-   HBASE-3550  FilterList reports false positives (Bill Graham via Andrew
-               Purtell)
-   HBASE-3566  writeToWAL is not serialized for increment operation
    HBASE-3552  Coprocessors are unable to load if RegionServer is launched
                using a different classloader than system default
    HBASE-3578  TableInputFormat does not setup the configuration for HBase
                mapreduce jobs correctly (Dan Harvey via Stack)
-   HBASE-3593  DemoClient.cpp is outdated
    HBASE-3601  TestMasterFailover broken in TRUNK
    HBASE-3605  Fix balancer log message
-   HBASE-3603  Remove -XX:+HeapDumpOnOutOfMemoryError autodump of heap option
-               on OOME
-   HBASE-1960  Master should wait for DFS to come up when creating
-               hbase.version; use alternate strategy for waiting for DNs
-   HBASE-3612  HBaseAdmin::isTableAvailable returns true when the table does
-               not exit
-   HBASE-3626  Update instructions in thrift demo files (Moaz Reyad via Stack)
    HBASE-3538  Column families allow to have slashes in name (Ian Knome via Stack)
    HBASE-3313  Table name isn't checked in isTableEnabled/isTableDisabled
                (Ted Yu via Stack)
    HBASE-3514  Speedup HFile.Writer append (Matteo Bertozzi via Ryan)
+   HBASE-3515  [replication] ReplicationSource can miss a log after RS comes
+               out of GC
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -81,16 +52,10 @@ Release 0.91.0 - Unreleased
    HBASE-3308  SplitTransaction.splitStoreFiles slows splits a lot
    HBASE-3328  Added Admin API to specify explicit split points
    HBASE-3377  Upgrade Jetty to 6.1.26
-   HBASE-3387  Pair does not deep check arrays for equality
-               (Jesse Yates via Stack)
    HBASE-3393  Update Avro gateway to use Avro 1.4.1 and the new
                server.join() method (Jeff Hammerbacher via Stack)
-   HBASE-3437  Support Explict Split Points from the Shell
    HBASE-3433  KeyValue API to explicitly distinguish between deep & shallow
                copies
-   HBASE-3305  Allow round-robin distribution for table created with
-               multiple regions (ted yu via jgray)
-   HBASE-3496  HFile CLI Improvements
    HBASE-3522  Unbundle our RPC versioning; rather than a global for all 4
                Interfaces -- region, master, region to master, and
                coprocesssors -- instead version each individually
@@ -101,7 +66,6 @@ Release 0.91.0 - Unreleased
    HBASE-3560  the hbase-default entry of "hbase.defaults.for.version" 
                causes tests not to run via not-maven
    HBASE-3513  upgrade thrift to 0.5.0 and use mvn version
-   HBASE-3620  Make HBCK utility faster
    HBASE-3533  Allow HBASE_LIBRARY_PATH env var to specify extra locations
                of native lib
    HBASE-3631  CLONE - HBase 2984 breaks ability to specify BLOOMFILTER &
@@ -109,10 +73,8 @@ Release 0.91.0 - Unreleased
    HBASE-3630  DemoClient.Java is outdated (Moaz Reyed via Stack)
    HBASE-3618  Add to HBase book, 'schema' chapter - pre-creating regions and
                key types (Doug Meil via Stack)
-   HBASE-3610  Improve RegionSplitter performance
    HBASE-2495  Allow record filtering with selected row key values in HBase
                Export (Subbu M Iyer via Stack)
-   HBASE-3600  Update our jruby to 1.6.0
    HBASE-3440  Clean out load_table.rb and make sure all roads lead to
                completebulkload tool (Vidhyashankar Venkataraman via Stack)
 
@@ -132,7 +94,6 @@ Release 0.91.0 - Unreleased
    HBASE-3256  Coprocessors: Coprocessor host and observer for HMaster
    HBASE-3345  Coprocessors: Allow observers to completely override base
                function
-   HBASE-3448  RegionSplitter, utility class to manually split tables
    HBASE-2824  A filter that randomly includes rows based on a configured
                chance (Ferdy via Andrew Purtell)
    HBASE-3455  Add memstore-local allocation buffers to combat heap
@@ -152,16 +113,23 @@ Release 0.90.2 - Unreleased
    HBASE-3553  HTable ThreadPoolExecutor does not properly initialize
                for hbase.htable.threads.max threads
                (Himanshu Vashishtha via garyh)
+   HBASE-3566  writeToWAL is not serialized for increment operation
    HBASE-3576  MasterAddressTracker is registered to ZooKeeperWatcher twice
    HBASE-3561  OPTS arguments are duplicated
    HBASE-3572  memstore lab can leave half inited data structs (bad!)
    HBASE-3589  test jar should not include mapred-queues.xml and
                log4j.properties
+   HBASE-3593  DemoClient.cpp is outdated
    HBASE-3591  completebulkload doesn't honor generic -D options
    HBASE-3594  Rest server fails because of missing asm jar
    HBASE-3582  Allow HMaster and HRegionServer to login from keytab
-               hen on secure Hadoop
+               when on secure Hadoop
    HBASE-3608  MemstoreFlusher error message doesnt include exception!
+   HBASE-1960  Master should wait for DFS to come up when creating
+               hbase.version; use alternate strategy for waiting for DNs
+   HBASE-3612  HBaseAdmin::isTableAvailable returns true when the table does
+               not exit
+   HBASE-3626  Update instructions in thrift demo files (Moaz Reyad via Stack)
    HBASE-3633  ZKUtil::createSetData should only create a node when it
                nonexists (Guanpeng Xu via Stack)
    HBASE-3636  a bug about deciding whether this key is a new key for the ROWCOL
@@ -174,13 +142,22 @@ Release 0.90.2 - Unreleased
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
+   HBASE-3586  Improve the selection of regions to balance (Ted Yu via Andrew
+               Purtell)  
+   HBASE-3603  Remove -XX:+HeapDumpOnOutOfMemoryError autodump of heap option
+               on OOME
    HBASE-3285  Hlog recovery takes too much time
-   HBASE-3586  Improve the selection of regions to balance
    HBASE-3623  Allow non-XML representable separator characters in the ImportTSV tool
                (Harsh J Chouraria via Stack)
+   HBASE-3620  Make HBCK utility faster
    HBASE-3625  improve/fix support excluding Tests via Maven -D property
                (Alejandro Abdelnur via todd)
+   HBASE-3437  Support Explict Split Points from the Shell
+   HBASE-3448  RegionSplitter, utility class to manually split tables
+   HBASE-3610  Improve RegionSplitter performance
+   HBASE-3496  HFile CLI Improvements
    HBASE-3596  [replication] Wait a few seconds before transferring queues
+   HBASE-3600  Update our jruby to 1.6.0
 
 Release 0.90.1 - February 9th, 2011
 
@@ -190,18 +167,40 @@ Release 0.90.1 - February 9th, 2011
                by default in 0.90.1
   
   BUG FIXES
+   HBASE-3445  Master crashes on data that was moved from different host
+   HBASE-3449  Server shutdown handlers deadlocked waiting for META
+   HBASE-3456  Fix hardcoding of 20 second socket timeout down in HBaseClient
+   HBASE-3476  HFile -m option need not scan key values
+               (Prakash Khemani via Lars George)
+   HBASE-3481  max seq id in flushed file can be larger than its correct value 
+               causing data loss during recovery
+   HBASE-3493  HMaster sometimes hangs during initialization due to missing
+               notify call (Bruno Dumon via Stack)
    HBASE-3483  Memstore lower limit should trigger asynchronous flushes
+   HBASE-3494  checkAndPut implementation doesnt verify row param and writable 
+               row are the same
+   HBASE-3416  For intra-row scanning, the update readers notification resets
+               the query matcher and can lead to incorrect behavior
+   HBASE-3495  Shell is failing on subsequent split calls
+   HBASE-3502  Can't open region because can't open .regioninfo because
+               AlreadyBeingCreatedException
+   HBASE-3501  Remove the deletion limit in LogCleaner
+   HBASE-3500  Documentation update for replicatio
+   HBASE-3419  If re-transition to OPENING during log replay fails, server
+               aborts. Instead, should just cancel region open.
    HBASE-3524  NPE from CompactionChecker
+   HBASE-3531  When under global memstore pressure, dont try to flush
+               unflushable regions.
+   HBASE-3550  FilterList reports false positives (Bill Graham via Andrew
+               Purtell)
 
   IMPROVEMENTS
+   HBASE-3305  Allow round-robin distribution for table created with
+               multiple regions (ted yu via jgray)
    HBASE-3508  LruBlockCache statistics thread should have a name
    HBASE-3511  Allow rolling restart to apply to only RS or only masters
    HBASE-3510  Add thread name for IPC reader threads
    HBASE-3509  Add metric for flush queue length
-   HBASE-3419  If re-transition to OPENING during log replay fails, server
-               aborts. Instead, should just cancel region open.
-   HBASE-3515  [replication] ReplicationSource can miss a log after RS comes
-               out of GC
    HBASE-3517  Store build version in hbase-default.xml and verify at runtime
 
 Release 0.90.0 - January 19th, 2011
