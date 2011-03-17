@@ -276,7 +276,7 @@ public class TestLoadBalancer {
       List<HRegionInfo> regions = randomRegions(mock[0]);
       List<HServerInfo> servers = randomServers(mock[1], 0);
       Map<HServerInfo,List<HRegionInfo>> assignments =
-        LoadBalancer.roundRobinAssignment(regions, servers);
+        LoadBalancer.roundRobinAssignment(regions.toArray(new HRegionInfo[regions.size()]), servers);
       float average = (float)regions.size()/servers.size();
       int min = (int)Math.floor(average);
       int max = (int)Math.ceil(average);

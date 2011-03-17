@@ -1343,13 +1343,13 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws InterruptedException
    * @throws IOException
    */
-  public void assignUserRegions(List<HRegionInfo> regions, List<HServerInfo> servers) throws IOException, InterruptedException {
+  public void assignUserRegions(HRegionInfo[] regions, List<HServerInfo> servers) throws IOException, InterruptedException {
     if (regions == null)
       return;
     Map<HServerInfo, List<HRegionInfo>> bulkPlan = null;
     // Generate a round-robin bulk assignment plan
     bulkPlan = LoadBalancer.roundRobinAssignment(regions, servers);
-    LOG.info("Bulk assigning " + regions.size() + " region(s) round-robin across " +
+    LOG.info("Bulk assigning " + regions.length + " region(s) round-robin across " +
                servers.size() + " server(s)");
     // Use fixed count thread pool assigning.
     BulkAssigner ba = new BulkStartupAssigner(this.master, bulkPlan, this);
@@ -1385,7 +1385,7 @@ public class AssignmentManager extends ZooKeeperListener {
       bulkPlan = LoadBalancer.retainAssignment(allRegions, servers);
     } else {
       // assign regions in round-robin fashion
-      assignUserRegions(new ArrayList<HRegionInfo>(allRegions.keySet()), servers);
+      assignUserRegions(allRegions.keySet().toArray(new HRegionInfo[allRegions.size()]), servers);
       return;
     }
     LOG.info("Bulk assigning " + allRegions.size() + " region(s) across " +

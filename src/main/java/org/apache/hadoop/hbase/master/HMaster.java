@@ -866,7 +866,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     // 5. Trigger immediate assignment of the regions in round-robin fashion
     List<HServerInfo> servers = serverManager.getOnlineServersList();
     try {
-      this.assignmentManager.assignUserRegions(Arrays.asList(newRegions), servers);
+      this.assignmentManager.assignUserRegions(newRegions, servers);
     } catch (InterruptedException ie) {
       LOG.error("Caught " + ie + " during round-robin assignment");
       throw new IOException(ie);

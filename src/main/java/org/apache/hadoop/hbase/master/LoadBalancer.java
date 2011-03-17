@@ -392,13 +392,13 @@ public class LoadBalancer {
    *         assignment is possible (ie. no regions or no servers)
    */
   public static Map<HServerInfo,List<HRegionInfo>> roundRobinAssignment(
-      List<HRegionInfo> regions, List<HServerInfo> servers) {
-    if(regions.size() == 0 || servers.size() == 0) {
+      HRegionInfo[] regions, List<HServerInfo> servers) {
+    if(regions.length == 0 || servers.size() == 0) {
       return null;
     }
     Map<HServerInfo,List<HRegionInfo>> assignments =
       new TreeMap<HServerInfo,List<HRegionInfo>>();
-    int numRegions = regions.size();
+    int numRegions = regions.length;
     int numServers = servers.size();
     int max = (int)Math.ceil((float)numRegions/numServers);
     int serverIdx = 0;
@@ -410,7 +410,7 @@ public class LoadBalancer {
       HServerInfo server = servers.get((j+serverIdx) % numServers);
       List<HRegionInfo> serverRegions = new ArrayList<HRegionInfo>(max);
       for (int i=regionIdx; i<numRegions; i += numServers) {
-        serverRegions.add(regions.get(i % numRegions));
+        serverRegions.add(regions[i % numRegions]);
       }
       assignments.put(server, serverRegions);
       regionIdx++;
