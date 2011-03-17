@@ -77,6 +77,7 @@ Release 0.91.0 - Unreleased
                Export (Subbu M Iyer via Stack)
    HBASE-3440  Clean out load_table.rb and make sure all roads lead to
                completebulkload tool (Vidhyashankar Venkataraman via Stack)
+   HBASE-3653  Parallelize Server Requests on HBase Client
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
