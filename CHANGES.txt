@@ -170,6 +170,7 @@ Release 0.90.2 - Unreleased
    HBASE-3648  [replication] failover is sloppy with znodes
    HBASE-3613  NPE in MemStoreFlusher
    HBASE-3650  HBA.delete can return too fast
+   HBASE-3659  Fix TestHLog to pass on newer versions of Hadoop
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
