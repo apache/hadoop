@@ -228,12 +228,16 @@ public class ReplicationSourceManager {
       LOG.warn("Replication stopped, won't add new log");
       return;
     }
-    
-    if (this.sources.size() > 0) {
-      this.zkHelper.addLogToList(newLog.getName(),
-          this.sources.get(0).getPeerClusterZnode());
-    }
+
     synchronized (this.hlogs) {
+      if (this.sources.size() > 0) {
+        this.zkHelper.addLogToList(newLog.getName(),
+            this.sources.get(0).getPeerClusterZnode());
+      } else {
+        // If there's no slaves, don't need to keep the old hlogs since
+        // we only consider the last one when a new slave comes in
+        this.hlogs.clear();
+      }
       this.hlogs.add(newLog.getName());
     }
     this.latestPath = newLog;
