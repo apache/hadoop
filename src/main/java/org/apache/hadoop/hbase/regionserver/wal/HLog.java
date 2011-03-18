@@ -504,9 +504,6 @@ public class HLog implements Syncable {
       }
 
       synchronized (updateLock) {
-        if (closed) {
-          return regionsToFlush;
-        }
         // Clean up current writer.
         Path oldFile = cleanupCurrentWriter(currentFilenum);
         this.writer = nextWriter;

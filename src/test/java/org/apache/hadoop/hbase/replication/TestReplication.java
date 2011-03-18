@@ -517,6 +517,9 @@ public class TestReplication {
   /**
    * Load up multiple tables over 2 region servers and kill a source during
    * the upload. The failover happens internally.
+   *
+   * WARNING this test sometimes fails because of HBASE-3515
+   *
    * @throws Exception
    */
   @Test
