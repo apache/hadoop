@@ -259,15 +259,21 @@ of all regions.
       <section xml:id="client_dependencies"><title>Client configuration and dependencies connecting to an HBase cluster</title>
 
       <para>
-        Since the HBase Master may move around, clients bootstrap by looking ZooKeeper.  Thus clients
-        require the ZooKeeper quorum information in a <filename>hbase-site.xml</filename> that
-        is on their <varname>CLASSPATH</varname>.</para>
+          Since the HBase Master may move around, clients bootstrap by looking to ZooKeeper for
+          current critical locations.  ZooKeeper is where all these values are kept.  Thus clients
+          require the location of the ZooKeeper ensemble information before they can do anything else.
+          Usually this the ensemble location is kept out in the <filename>hbase-site.xml</filename> and
+          is picked up by the client from the <varname>CLASSPATH</varname>.</para>
+
         <para>If you are configuring an IDE to run a HBase client, you should
-        include the <filename>conf/</filename> directory on your classpath.
+            include the <filename>conf/</filename> directory on your classpath so
+            <filename>hbase-site.xml</filename> settings can be found (or
+            add <filename>src/test/resources</filename> to pick up the hbase-site.xml
+            used by tests).
       </para>
       <para>
-      Minimally, a client of HBase needs the hbase, hadoop, log4j, commons-logging, and zookeeper jars
-      in its <varname>CLASSPATH</varname> connecting to a cluster.
+          Minimally, a client of HBase needs the hbase, hadoop, log4j, commons-logging, commons-lang,
+          and zookeeper jars in its <varname>CLASSPATH</varname> connecting to a cluster.
       </para>
         <para>
           An example basic <filename>hbase-site.xml</filename> for client only
@@ -283,9 +289,31 @@ of all regions.
     </description>
   </property>
 </configuration>
-]]>
-          </programlisting>
+]]></programlisting>
         </para>
+        <section>
+        <title>Java client configuration connecting to an HBase cluster</title>
+        <subtitle>How Java reads <filename>hbase-site.xml</filename> content</subtitle>
+        <para>The configuration used by a client is kept
+        in an <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link> instance.
+        Through the factory method on HBaseConfiguration...
+        <programlisting>Configuration config = HBaseConfiguration.create();</programlisting>        
+        .. a client will pick up a configuration sourced from the first <filename>hbase-site.xml</filename> found on
+        the client's <varname>CLASSPATH</varname>, if one is present
+        (We'll also factor in any <filename>hbase-default.xml</filename> found; an hbase-default.xml ships inside
+        the <filename>hbase.X.X.X.jar</filename>). 
+        It is also possible to specify configuration directly without having to read from a
+        <filename>hbase-site.xml</filename>.  For examplt to set the
+        <link linkend="zookeeper">zookeeper</link> ensemble for the cluster programmatically do as follows...
+        <programlisting>Configuration config = HBaseConfiguration.create();
+        config.set("hbase.zookeeper.quorum", "localhost");  // we are running zookeeper locally
+        </programlisting>    
+        If multiple <link linkend="zookeeper">zookeeper</link> instances make up your zookeeper ensemble,
+        they may be specified in a comma-list (just as in the <filename>hbase-site.xml</filename> file).
+        This populated Configuration instance can then be passed to an 
+        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link> instance via the overloaded constructor.     
+        </para>
+        </section>
     </section>
 
   </chapter>

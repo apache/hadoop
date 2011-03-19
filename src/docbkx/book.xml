@@ -319,7 +319,8 @@ Tables in HBase are initially created with one region by default.  For bulk impo
           <title>Get/Scan</title>
 
           <para>Gets are implemented on top of Scans. The below discussion of
-          Get applies equally to Scans.</para>
+            <link xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Get.html">Get</link> applies equally to <link
+            xlink:href="http://hbase.apache.org/docs/current/api/org/apache/hadoop/hbase/client/Scan.html">Scans</link>.</para>
 
           <para>By default, i.e. if you specify no explicit version, when
           doing a <literal>get</literal>, the cell whose version has the
@@ -343,6 +344,29 @@ Tables in HBase are initially created with one region by default.  For bulk impo
               desired version and set the max versions to 1.</para>
             </listitem>
           </itemizedlist>
+
+        </section>
+        <section>
+        <title>Default Get Example</title>
+        <para>The following Get will only retrieve the current version of the row
+        <programlisting>
+        Get get = new Get( Bytes.toBytes("row1") );
+        Result r = htable.get(get);
+        byte[] b = r.getValue( Bytes.toBytes("cf"), Bytes.toBytes("attr") );  // returns current version of value      
+        </programlisting>
+        </para>
+        </section>
+        <section>
+        <title>Versioned Get Example</title>
+        <para>The following Get will return the last 3 versions of the row.
+        <programlisting>
+        Get get = new Get( Bytes.toBytes("row1") );
+        get.setMaxVersions(3);  // will return last 3 versions of row
+        Result r = htable.get(get);
+        byte[] b = r.getValue( Bytes.toBytes("cf"), Bytes.toBytes("attr") );  // returns current version of value
+        List&lt;KeyValue&gt; kv = r.getColumn( Bytes.toBytes("cf"), Bytes.toBytes("attr") );  // returns all versions of this column       
+        </programlisting>
+        </para>
         </section>
 
         <section>
@@ -358,6 +382,27 @@ Tables in HBase are initially created with one region by default.  For bulk impo
           <para>To overwrite an existing value, do a put at exactly the same
           row, column, and version as that of the cell you would
           overshadow.</para>
+          <section>
+          <title>Implicit Version Example</title>
+          <para>The following Put will be implicitly versioned by HBase with the current time.
+          <programlisting>
+          Put put = new Put(Bytes.toBytes(row));
+          put.add(Bytes.toBytes("cf"), Bytes.toBytes("attr1"), Bytes.toBytes( data));
+          htable.put(put);
+          </programlisting>
+          </para>
+          </section>
+          <section>
+          <title>Explicit Version Example</title>
+          <para>The following Put has the version timestamp explicitly set.
+          <programlisting>
+          Put put = new Put( Bytes.toBytes( row ) );
+          long explicitTimeInMs = 555;  // just an example
+          put.add(Bytes.toBytes("cf"), Bytes.toBytes("attr1"), explicitTimeInMs, Bytes.toBytes( data));
+          htable.put(put);
+          </programlisting>
+          </para>
+          </section>
         </section>
 
         <section>
