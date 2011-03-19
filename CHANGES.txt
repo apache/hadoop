@@ -144,6 +144,8 @@ Release 0.90.2 - Unreleased
    HBASE-3659  Fix TestHLog to pass on newer versions of Hadoop
    HBASE-3595  get_counter broken in shell
    HBASE-3664  [replication] Adding a slave when there's none may kill the cluster
+   HBASE-3671  Split report before we finish parent region open; workaround
+               till 0.92; Race between split and OPENED processing
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

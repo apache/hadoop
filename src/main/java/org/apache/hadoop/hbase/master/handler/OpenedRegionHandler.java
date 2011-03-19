@@ -91,7 +91,14 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
       server.abort("Error deleting OPENED node in ZK for transition ZK node (" +
           regionInfo.getEncodedName() + ")", e);
     }
-    this.assignmentManager.regionOnline(regionInfo, serverInfo);
+    // Code to defend against case where we get SPLIT before region open
+    // processing completes; temporary till we make SPLITs go via zk -- 0.92.
+    if (this.assignmentManager.isRegionInTransition(regionInfo) == null) {
+      this.assignmentManager.regionOnline(regionInfo, serverInfo);
+    } else {
+      LOG.warn("Skipping the onining of " + regionInfo.getRegionNameAsString() +
+        " because regions is NOT in RIT -- presuming this is because it SPLIT");
+    }
     if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
         regionInfo.getTableDesc().getNameAsString())) {
       LOG.debug("Opened region " + regionInfo.getRegionNameAsString() + " but "
