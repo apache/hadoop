@@ -96,7 +96,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     if (this.assignmentManager.isRegionInTransition(regionInfo) == null) {
       this.assignmentManager.regionOnline(regionInfo, serverInfo);
     } else {
-      LOG.warn("Skipping the onining of " + regionInfo.getRegionNameAsString() +
+      LOG.warn("Skipping the onlining of " + regionInfo.getRegionNameAsString() +
         " because regions is NOT in RIT -- presuming this is because it SPLIT");
     }
     if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(
