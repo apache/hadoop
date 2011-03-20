@@ -93,7 +93,7 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
     }
     // Code to defend against case where we get SPLIT before region open
     // processing completes; temporary till we make SPLITs go via zk -- 0.92.
-    if (this.assignmentManager.isRegionInTransition(regionInfo) == null) {
+    if (this.assignmentManager.isRegionInTransition(regionInfo) != null) {
       this.assignmentManager.regionOnline(regionInfo, serverInfo);
     } else {
       LOG.warn("Skipping the onlining of " + regionInfo.getRegionNameAsString() +
