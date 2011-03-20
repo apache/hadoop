@@ -593,9 +593,10 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
   private static Thread getAndStartBalancerChore(final HMaster master) {
     String name = master.getServerName() + "-BalancerChore";
-    int period = master.getConfiguration().getInt("hbase.balancer.period", 300000);
+    int balancerPeriod =
+      master.getConfiguration().getInt("hbase.balancer.period", 300000);
     // Start up the load balancer chore
-    Chore chore = new Chore(name, period, master) {
+    Chore chore = new Chore(name, balancerPeriod, master) {
       @Override
       protected void chore() {
         master.balance();
@@ -674,10 +675,30 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
     return !isStopped();
   }
 
+  /**
+   * @return Maximum time we should run balancer for
+   */
+  private int getBalancerCutoffTime() {
+    int balancerCutoffTime =
+      getConfiguration().getInt("hbase.balancer.max.balancing", -1);
+    if (balancerCutoffTime == -1) {
+      // No time period set so create one -- do half of balancer period.
+      int balancerPeriod =
+        getConfiguration().getInt("hbase.balancer.period", 300000);
+      balancerCutoffTime = balancerPeriod / 2;
+      // If nonsense period, set it to balancerPeriod
+      if (balancerCutoffTime <= 0) balancerCutoffTime = balancerPeriod;
+    }
+    return balancerCutoffTime;
+  }
+
   @Override
   public boolean balance() {
     // If balance not true, don't run balancer.
     if (!this.balanceSwitch) return false;
+    // Do this call outside of synchronized block.
+    int maximumBalanceTime = getBalancerCutoffTime();
+    long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
     synchronized (this.balancer) {
       // Only allow one balance run at at time.
       if (this.assignmentManager.isRegionsInTransition()) {
@@ -717,10 +738,22 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
         }
       }
       List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
+      int rpCount = 0;	// number of RegionPlans balanced so far
+      long totalRegPlanExecTime = 0;
       if (plans != null && !plans.isEmpty()) {
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
+          long balStartTime = System.currentTimeMillis();
           this.assignmentManager.balance(plan);
+          totalRegPlanExecTime += System.currentTimeMillis()-balStartTime;
+          rpCount++;
+          if (rpCount < plans.size() &&
+              // if performing next balance exceeds cutoff time, exit the loop
+              (System.currentTimeMillis() + (totalRegPlanExecTime / rpCount)) > cutoffTime) {
+            LOG.debug("No more balancing till next balance run; maximumBalanceTime=" +
+              maximumBalanceTime);
+            break;
+          }
         }
       }
       if (this.cpHost != null) {
