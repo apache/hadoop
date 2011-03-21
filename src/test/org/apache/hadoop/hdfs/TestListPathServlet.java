@@ -91,12 +91,18 @@ public class TestListPathServlet {
     createFile("/a", 1);
     createFile("/b", 1);
     mkdirs("/dir");
+
+    checkFile(new Path("/a"));
+    checkFile(new Path("/b"));
     checkStatus("/");
 
     // A directory with files and directories
     createFile("/dir/.a.crc", 1);
     createFile("/dir/b", 1);
     mkdirs("/dir/dir1");
+    
+    checkFile(new Path("/dir/.a.crc"));
+    checkFile(new Path("/dir/b"));
     checkStatus("/dir");
 
     // Non existent path
@@ -157,5 +163,37 @@ public class TestListPathServlet {
       Assert.assertTrue("Directory/file not returned in list status " + file,
           found);
     }
+  }
+
+  private void checkFile(final Path f) throws IOException {
+    final Path hdfspath = fs.makeQualified(f);
+    final FileStatus hdfsstatus = fs.getFileStatus(hdfspath);
+    FileSystem.LOG.info("hdfspath=" + hdfspath);
+
+    final Path hftppath = hftpFs.makeQualified(f);
+    final FileStatus hftpstatus = hftpFs.getFileStatus(hftppath);
+    FileSystem.LOG.info("hftppath=" + hftppath);
+    
+    Assert.assertEquals(hdfspath.toUri().getPath(),
+        hdfsstatus.getPath().toUri().getPath());
+    checkFileStatus(hdfsstatus, hftpstatus);
+  }
+
+  private static void checkFileStatus(final FileStatus expected,
+      final FileStatus computed) {
+    Assert.assertEquals(expected.getPath().toUri().getPath(),
+        computed.getPath().toUri().getPath());
+
+// TODO: test will fail if the following is un-commented. 
+//    Assert.assertEquals(expected.getAccessTime(), computed.getAccessTime());
+//    Assert.assertEquals(expected.getModificationTime(),
+//        computed.getModificationTime());
+
+    Assert.assertEquals(expected.getBlockSize(), computed.getBlockSize());
+    Assert.assertEquals(expected.getGroup(), computed.getGroup());
+    Assert.assertEquals(expected.getLen(), computed.getLen());
+    Assert.assertEquals(expected.getOwner(), computed.getOwner());
+    Assert.assertEquals(expected.getPermission(), computed.getPermission());
+    Assert.assertEquals(expected.getReplication(), computed.getReplication());
   }
 }

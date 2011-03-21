@@ -5,6 +5,9 @@ Release 0.20.204.0 - unreleased
     HDFS-1592. At Startup, Valid volumes required in FSDataset doesn't
     handle consistently with volumes tolerated. (Bharath Mundlapudi)
 
+    HDFS-1750. ListPathsServlet should not use HdfsFileStatus.getLocalName()
+    to get file name since it may return an empty string.  (szetszwo)
+
 Release 0.20.203.0 - unreleased
 
     HADOOP-7190. Add metrics v1 back for backwards compatibility. (omalley)
