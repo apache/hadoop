@@ -28,8 +28,6 @@ import java.io.Reader;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,21 +48,14 @@ public class MiniZooKeeperCluster {
   private static final int CONNECTION_TIMEOUT = 30000;
 
   private boolean started;
+  private int clientPort = 21818; // use non-standard port
 
-  private int defaultClientPort = 21818; // use non-standard port
-  private int clientPort = defaultClientPort; 
-  private int zooKeeperCandidateNum = 0;
-  
   private NIOServerCnxn.Factory standaloneServerFactory;
-  private int currentZooKeeper;
-  private List<ZooKeeperServer> zooKeeperServers;
   private int tickTime = 0;
 
   /** Create mini ZooKeeper cluster. */
   public MiniZooKeeperCluster() {
     this.started = false;
-    currentZooKeeper = -1;
-    zooKeeperServers = new ArrayList();
   }
 
   public void setClientPort(int clientPort) {
@@ -78,10 +69,6 @@ public class MiniZooKeeperCluster {
   public void setTickTime(int tickTime) {
     this.tickTime = tickTime;
   }
-  
-  public int getZooKeeperCandidateNum() {
-    return zooKeeperCandidateNum;
-  }
 
   // / XXX: From o.a.zk.t.ClientBase
   private static void setupTestEnv() {
@@ -92,41 +79,30 @@ public class MiniZooKeeperCluster {
     System.setProperty("zookeeper.preAllocSize", "100");
     FileTxnLog.setPreallocSize(100);
   }
-  
-  public int startup(File baseDir) throws IOException,
-  InterruptedException {
-    return startup(baseDir,1);
-  }
 
   /**
    * @param baseDir
-   * @param numZooKeeperServers
    * @return ClientPort server bound to.
    * @throws IOException
    * @throws InterruptedException
    */
-  public int startup(File baseDir, int numZooKeeperServers) throws IOException,
+  public int startup(File baseDir) throws IOException,
       InterruptedException {
-    if (numZooKeeperServers <= 0)
-      return -1;
 
     setupTestEnv();
 
     shutdown();
-    
-    for (int i = 0; i < numZooKeeperServers; i++) {
-      File dir = new File(baseDir, "zookeeper_"+i).getAbsoluteFile();
-      recreateDir(dir);
-  
-      int tickTimeToUse;
-      if (this.tickTime > 0) {
-        tickTimeToUse = this.tickTime;
-      } else {
-        tickTimeToUse = TICK_TIME;
-      }
-      ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);
-      zooKeeperServers.add(server);
+
+    File dir = new File(baseDir, "zookeeper").getAbsoluteFile();
+    recreateDir(dir);
+
+    int tickTimeToUse;
+    if (this.tickTime > 0) {
+      tickTimeToUse = this.tickTime;
+    } else {
+      tickTimeToUse = TICK_TIME;
     }
+    ZooKeeperServer server = new ZooKeeperServer(dir, dir, tickTimeToUse);
     while (true) {
       try {
         standaloneServerFactory =
@@ -139,14 +115,13 @@ public class MiniZooKeeperCluster {
       }
       break;
     }
-    currentZooKeeper = 0;
-    standaloneServerFactory.startup(zooKeeperServers.get(currentZooKeeper));   
+    standaloneServerFactory.startup(server);
+
     if (!waitForServerUp(clientPort, CONNECTION_TIMEOUT)) {
       throw new IOException("Waiting for startup of standalone server");
     }
 
     started = true;
-    zooKeeperCandidateNum = numZooKeeperServers-1;
     LOG.info("Started MiniZK Server on client port: " + clientPort);
     return clientPort;
   }
@@ -176,56 +151,6 @@ public class MiniZooKeeperCluster {
     }
 
     started = false;
-    zooKeeperCandidateNum = 0;
-    LOG.info("Shutdown MiniZK Server on client port: " + clientPort);
-  }
-  
-  /**@return clientPort return clientPort if there is another ZooKeeper Candidate can run; return
-   *         -1, if there is no candidates.
-   * @throws IOException
-   * @throws InterruptedException 
-   */
-  public int killCurrentZooKeeper() throws IOException, 
-                                        InterruptedException {
-    if (!started) {
-      return -1;
-    }
-    // Shutdown the current one
-    standaloneServerFactory.shutdown();
-    if (!waitForServerDown(clientPort, CONNECTION_TIMEOUT)) {
-      throw new IOException("Waiting for shutdown of standalone server");
-    }
-    LOG.info("Kill the current MiniZK Server on client port: " 
-        + clientPort);
-    
-    if (zooKeeperCandidateNum == 0) {
-      return -1;
-    }
-    // Start another ZooKeeper Server
-    clientPort = defaultClientPort;
-    while (true) {
-      try {
-        standaloneServerFactory =
-          new NIOServerCnxn.Factory(new InetSocketAddress(clientPort));
-      } catch (BindException e) {
-        LOG.info("Failed binding ZK Server to client port: " + clientPort);
-        //this port is already in use. try to use another
-        clientPort++;
-        continue;
-      }
-      break;
-    }
-    currentZooKeeper = (++currentZooKeeper) % zooKeeperServers.size() ;
-    standaloneServerFactory.startup(zooKeeperServers.get(currentZooKeeper));
-
-    if (!waitForServerUp(clientPort, CONNECTION_TIMEOUT)) {
-      throw new IOException("Waiting for startup of standalone server");
-    }
-    
-    started = true;
-    zooKeeperCandidateNum--;
-    LOG.info("Started another candidate MiniZK Server on client port: " + clientPort);
-    return clientPort;
   }
 
   // XXX: From o.a.zk.t.ClientBase
