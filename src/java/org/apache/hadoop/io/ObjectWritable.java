@@ -115,21 +115,50 @@ public class ObjectWritable implements Writable, Configurable {
   public static void writeObject(DataOutput out, Object instance,
                                  Class declaredClass, 
                                  Configuration conf) throws IOException {
+    writeObject(out, instance, declaredClass, conf, false);
+  }
+  
+    /** 
+     * Write a {@link Writable}, {@link String}, primitive type, or an array of
+     * the preceding.  
+     * 
+     * @param allowCompactArrays - set true for RPC and internal or intra-cluster
+     * usages.  Set false for inter-cluster, File, and other persisted output 
+     * usages, to preserve the ability to interchange files with other clusters 
+     * that may not be running the same version of software.  Sometime in ~2013 
+     * we can consider removing this parameter and always using the compact format.
+     */
+    public static void writeObject(DataOutput out, Object instance,
+        Class declaredClass, Configuration conf, boolean allowCompactArrays) 
+    throws IOException {
 
     if (instance == null) {                       // null
       instance = new NullInstance(declaredClass, conf);
       declaredClass = Writable.class;
     }
+    
+    // Special case: must come before writing out the declaredClass.
+    // If this is an eligible array of primitives,
+    // wrap it in an ArrayPrimitiveWritable$Internal wrapper class.
+    if (allowCompactArrays && declaredClass.isArray()
+        && instance.getClass().getName().equals(declaredClass.getName())
+        && instance.getClass().getComponentType().isPrimitive()) {
+      instance = new ArrayPrimitiveWritable.Internal(instance);
+      declaredClass = ArrayPrimitiveWritable.Internal.class;
+    }
 
     UTF8.writeString(out, declaredClass.getName()); // always write declared
 
-    if (declaredClass.isArray()) {                // array
+    if (declaredClass.isArray()) {     // non-primitive or non-compact array
       int length = Array.getLength(instance);
       out.writeInt(length);
       for (int i = 0; i < length; i++) {
         writeObject(out, Array.get(instance, i),
-                    declaredClass.getComponentType(), conf);
+            declaredClass.getComponentType(), conf, allowCompactArrays);
       }
+      
+    } else if (declaredClass == ArrayPrimitiveWritable.Internal.class) {
+      ((ArrayPrimitiveWritable.Internal) instance).write(out);
       
     } else if (declaredClass == String.class) {   // String
       UTF8.writeString(out, (String)instance);
@@ -219,6 +248,15 @@ public class ObjectWritable implements Writable, Configurable {
         Array.set(instance, i, readObject(in, conf));
       }
       
+    } else if (declaredClass == ArrayPrimitiveWritable.Internal.class) {
+      // Read and unwrap ArrayPrimitiveWritable$Internal array.
+      // Always allow the read, even if write is disabled by allowCompactArrays.
+      ArrayPrimitiveWritable.Internal temp = 
+          new ArrayPrimitiveWritable.Internal();
+      temp.readFields(in);
+      instance = temp.get();
+      declaredClass = instance.getClass();
+
     } else if (declaredClass == String.class) {        // String
       instance = UTF8.readString(in);
     } else if (declaredClass.isEnum()) {         // enum

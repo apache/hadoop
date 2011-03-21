@@ -87,7 +87,7 @@ public class WritableRpcEngine implements RpcEngine {
       out.writeInt(parameterClasses.length);
       for (int i = 0; i < parameterClasses.length; i++) {
         ObjectWritable.writeObject(out, parameters[i], parameterClasses[i],
-                                   conf);
+                                   conf, true);
       }
     }
 

@@ -85,6 +85,9 @@ Trunk (unreleased changes)
     (Daryn Sharp via szetszwo)
 
   OPTIMIZATIONS
+    
+    HADOOP-6949. Reduce RPC packet size of primitive arrays using
+    ArrayPrimitiveWritable instead of ObjectWritable. (Matt Foley via suresh)
 
   BUG FIXES
 
