@@ -93,7 +93,7 @@ public class AvroUtil {
     asl.numberOfRegions = hsl.getNumberOfRegions();
     asl.numberOfRequests = hsl.getNumberOfRequests();
 
-    Collection<HServerLoad.RegionLoad> regionLoads = hsl.getRegionsLoad();
+    Collection<HServerLoad.RegionLoad> regionLoads = hsl.getRegionsLoad().values();
     Schema s = Schema.createArray(ARegionLoad.SCHEMA$);
     GenericData.Array<ARegionLoad> aregionLoads = null;
     if (regionLoads != null) {

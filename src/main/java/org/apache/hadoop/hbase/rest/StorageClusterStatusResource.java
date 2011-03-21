@@ -82,7 +82,7 @@ public class StorageClusterStatusResource extends ResourceBase {
             info.getStartCode(), load.getUsedHeapMB(),
             load.getMaxHeapMB());
         node.setRequests(load.getNumberOfRequests());
-        for (HServerLoad.RegionLoad region: load.getRegionsLoad()) {
+        for (HServerLoad.RegionLoad region: load.getRegionsLoad().values()) {
           node.addRegion(region.getName(), region.getStores(),
             region.getStorefiles(), region.getStorefileSizeMB(),
             region.getMemStoreSizeMB(), region.getStorefileIndexSizeMB());

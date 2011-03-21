@@ -326,6 +326,18 @@ public class ServerManager {
     // No more piggyback messages on heartbeats for other stuff
     return msgs;
   }
+  
+  /**
+   *  Make server load accessible to AssignmentManager
+   * @param serverName
+   * @return
+   * @throws HServerLoad if serverName is known
+   */
+  HServerLoad getLoad(String serverName) {
+    HServerInfo hsi = this.onlineServers.get(serverName);
+    if (hsi == null) return null;
+    return hsi.getLoad();
+  }
 
   /**
    * @param serverName

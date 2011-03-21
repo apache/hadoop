@@ -84,6 +84,8 @@ Release 0.91.0 - Unreleased
    HBASE-3657  reduce copying of HRegionInfo's (Ted Yu via Stack)
    HBASE-3422  Balancer will try to rebalance thousands of regions in one go;
                needs an upper bound added (Ted Yu via Stack)
+   HBASE-3676  Update region server load for AssignmentManager through
+               regionServerReport() (Ted Yu via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
