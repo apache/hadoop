@@ -41,6 +41,8 @@ Release 0.91.0 - Unreleased
    HBASE-3665  tighten assertions for testBloomFilterSize
    HBASE-3662  REST server does not respect client supplied max versions when
                creating scanner
+   HBASE-3641  LruBlockCache.CacheStats.getHitCount() is not using the
+               correct variable
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

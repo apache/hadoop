@@ -646,7 +646,7 @@ public class LruBlockCache implements BlockCache, HeapSize {
     }
 
     public long getHitCount() {
-      return hitCachingCount.get();
+      return hitCount.get();
     }
 
     public long getHitCachingCount() {
