@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -134,6 +135,28 @@ public class TestHBaseTestingUtility {
       assertEquals(1, cluster.getLiveRegionServerThreads().size());
     } finally {
       cluster.shutdown();
+    }
+  }
+  
+  @Test public void testMiniZooKeeper() throws Exception {
+    MiniZooKeeperCluster cluster1 = this.hbt.startMiniZKCluster();
+    try {
+      assertEquals(0, cluster1.getZooKeeperCandidateNum());
+      assertTrue((cluster1.killCurrentZooKeeper() == -1));
+    } finally {
+      cluster1.shutdown();
+    }
+    
+    this.hbt.shutdownMiniZKCluster();
+    
+    MiniZooKeeperCluster cluster2 = this.hbt.startMiniZKCluster(5);
+    try {
+      assertEquals(4, cluster2.getZooKeeperCandidateNum());
+      assertTrue((cluster2.killCurrentZooKeeper() > 0));
+      assertTrue((cluster2.killCurrentZooKeeper() > 0));
+      assertEquals(2, cluster2.getZooKeeperCandidateNum());
+    } finally {
+      cluster2.shutdown();
     }
   }
 

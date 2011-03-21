@@ -245,18 +245,38 @@ public class HBaseTestingUtility {
    * @return zk cluster started.
    */
   public MiniZooKeeperCluster startMiniZKCluster() throws Exception {
-    return startMiniZKCluster(setupClusterTestBuildDir());
+    return startMiniZKCluster(setupClusterTestBuildDir(),1);
 
   }
+  
+  /**
+   * Call this if you only want a zk cluster.
+   * @param zooKeeperServerNum
+   * @see #startMiniZKCluster() if you want zk + dfs + hbase mini cluster.
+   * @throws Exception
+   * @see #shutdownMiniZKCluster()
+   * @return zk cluster started.
+   */
+  public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum) 
+      throws Exception {
+    return startMiniZKCluster(setupClusterTestBuildDir(), zooKeeperServerNum);
 
+  }
+  
   private MiniZooKeeperCluster startMiniZKCluster(final File dir)
+    throws Exception {
+    return startMiniZKCluster(dir,1);
+  }
+  
+  private MiniZooKeeperCluster startMiniZKCluster(final File dir, 
+      int zooKeeperServerNum)
   throws Exception {
     this.passedZkCluster = false;
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
     }
     this.zkCluster = new MiniZooKeeperCluster();
-    int clientPort = this.zkCluster.startup(dir);
+    int clientPort = this.zkCluster.startup(dir,zooKeeperServerNum);
     this.conf.set("hbase.zookeeper.property.clientPort",
       Integer.toString(clientPort));
     return this.zkCluster;
