@@ -158,6 +158,7 @@ Release 0.90.2 - Unreleased
    HBASE-3621  The timeout handler in AssignmentManager does an RPC while
                holding lock on RIT; a big no-no (Ted Yu via Stack)
    HBASE-3575  Update rename table script
+   HBASE-3687  Bulk assign on startup should handle a ServerNotRunningException
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
