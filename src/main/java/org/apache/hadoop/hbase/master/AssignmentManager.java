@@ -933,6 +933,7 @@ public class AssignmentManager extends ZooKeeperListener {
       while (!this.master.isStopped()) {
         try {
           this.serverManager.sendRegionOpen(destination, regions);
+          break;
         } catch (org.apache.hadoop.hbase.ipc.ServerNotRunningException e) {
           // This is the one exception to retry.  For all else we should just fail
           // the startup.
