@@ -19,21 +19,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DroppedSnapshotException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.util.StringUtils;
-
-import com.google.common.base.Preconditions;
-
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.ConcurrentModificationException;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -46,6 +34,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DroppedSnapshotException;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Thread that flushes cache on request
@@ -152,19 +151,17 @@ class MemStoreFlusher extends Thread implements FlushRequester {
     SortedMap<Long, HRegion> regionsBySize =
         server.getCopyOfOnlineRegionsSortedBySize();
 
-    // TODO: HBASE-3532 - we can't use Set<HRegion> here because it doesn't
-    // implement equals correctly. So, set of region names.
-    Set<byte[]> excludedRegionNames = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
+    Set<HRegion> excludedRegions = new TreeSet<HRegion>();
 
     boolean flushedOne = false;
     while (!flushedOne) {
       // Find the biggest region that doesn't have too many storefiles
       // (might be null!)
       HRegion bestFlushableRegion = getBiggestMemstoreRegion(
-          regionsBySize, excludedRegionNames, true);
+          regionsBySize, excludedRegions, true);
       // Find the biggest region, total, even if it might have too many flushes.
       HRegion bestAnyRegion = getBiggestMemstoreRegion(
-          regionsBySize, excludedRegionNames, false);
+          regionsBySize, excludedRegions, false);
 
       if (bestAnyRegion == null) {
         LOG.error("Above memory mark but there are no flushable regions!");
@@ -201,7 +198,7 @@ class MemStoreFlusher extends Thread implements FlushRequester {
       if (!flushedOne) {
         LOG.info("Excluding unflushable region " + regionToFlush +
           " - trying to find a different region to flush.");
-        excludedRegionNames.add(regionToFlush.getRegionName());
+        excludedRegions.add(regionToFlush);
       }
     }
     return true;
@@ -272,11 +269,11 @@ class MemStoreFlusher extends Thread implements FlushRequester {
 
   private HRegion getBiggestMemstoreRegion(
       SortedMap<Long, HRegion> regionsBySize,
-      Set<byte[]> excludedRegionNames,
+      Set<HRegion> excludedRegions,
       boolean checkStoreFileCount) {
     synchronized (regionsInQueue) {
       for (HRegion region : regionsBySize.values()) {
-        if (excludedRegionNames.contains(region.getRegionName())) {
+        if (excludedRegions.contains(region)) {
           continue;
         }
 

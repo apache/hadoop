@@ -2410,31 +2410,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  /**
-   * @return Returns list of non-closed regions hosted on this server. If no
-   *         regions to check, returns an empty list.
-   */
-  protected Set<HRegion> getRegionsToCheck() {
-    HashSet<HRegion> regionsToCheck = new HashSet<HRegion>();
-    // TODO: is this locking necessary?
-    lock.readLock().lock();
-    try {
-      synchronized (this.onlineRegions) {
-        regionsToCheck.addAll(this.onlineRegions.values());
-      }
-    } finally {
-      lock.readLock().unlock();
-    }
-    // Purge closed regions.
-    for (final Iterator<HRegion> i = regionsToCheck.iterator(); i.hasNext();) {
-      HRegion r = i.next();
-      if (r.isClosed()) {
-        i.remove();
-      }
-    }
-    return regionsToCheck;
-  }
-
   @Override
   @QosPriority(priority=HIGH_QOS)
   public long getProtocolVersion(final String protocol, final long clientVersion)

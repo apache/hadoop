@@ -43,6 +43,7 @@ Release 0.91.0 - Unreleased
                creating scanner
    HBASE-3641  LruBlockCache.CacheStats.getHitCount() is not using the
                correct variable
+   HBASE-3532  HRegion#equals is broken (Ted Yu via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
