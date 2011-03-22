@@ -1276,36 +1276,13 @@ public class AssignmentManager extends ZooKeeperListener {
       // Presume that the split message when it comes in will fix up the master's
       // in memory cluster state.
       return;
-    } catch (ConnectException e) {
-      LOG.info("Failed connect to " + server + ", message=" + e.getMessage() +
-        ", region=" + region.getEncodedName());
-      // Presume that regionserver just failed and we haven't got expired
-      // server from zk yet.  Let expired server deal with clean up.
-    } catch (java.net.SocketTimeoutException e) {
-      LOG.info("Server " + server + " returned " + e.getMessage() + " for " +
-        region.getEncodedName());
-      // Presume retry or server will expire.
-    } catch (EOFException e) {
-      LOG.info("Server " + server + " returned " + e.getMessage() + " for " +
-        region.getEncodedName());
-      // Presume retry or server will expire.
-    } catch (RemoteException re) {
-      IOException ioe = re.unwrapRemoteException();
-      if (ioe instanceof NotServingRegionException) {
-        // Failed to close, so pass through and reassign
-        LOG.debug("Server " + server + " returned " + ioe + " for " +
-          region.getEncodedName());
-      } else if (ioe instanceof EOFException) {
-        // Failed to close, so pass through and reassign
-        LOG.debug("Server " + server + " returned " + ioe + " for " +
-          region.getEncodedName());
-      } else {
-        this.master.abort("Remote unexpected exception", ioe);
-      }
     } catch (Throwable t) {
-      // For now call abort if unexpected exception -- radical, but will get
-      // fellas attention. St.Ack 20101012
-      this.master.abort("Remote unexpected exception", t);
+      if (t instanceof RemoteException) {
+        t = ((RemoteException)t).unwrapRemoteException();
+      }
+      LOG.info("Server " + server + " returned " + t + " for " +
+        region.getEncodedName());
+      // Presume retry or server will expire.
     }
   }
 

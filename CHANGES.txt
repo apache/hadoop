@@ -159,6 +159,8 @@ Release 0.90.2 - Unreleased
                holding lock on RIT; a big no-no (Ted Yu via Stack)
    HBASE-3575  Update rename table script
    HBASE-3687  Bulk assign on startup should handle a ServerNotRunningException
+   HBASE-3617  NoRouteToHostException during balancing will cause Master abort
+               (Ted Yu via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
