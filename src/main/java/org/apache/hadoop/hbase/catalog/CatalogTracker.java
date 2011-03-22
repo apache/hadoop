@@ -320,12 +320,12 @@ public class CatalogTracker {
   throws InterruptedException, IOException, NotAllMetaRegionsOnlineException {
     long stop = System.currentTimeMillis() + timeout;
     synchronized (metaAvailable) {
-      if (getMetaServerConnection(true) != null) {
-        return metaLocation;
-      }
       while(!stopped && !metaAvailable.get() &&
           (timeout == 0 || System.currentTimeMillis() < stop)) {
-        metaAvailable.wait(timeout);
+        if (getMetaServerConnection(true) != null) {
+          return metaLocation;
+        }
+        metaAvailable.wait(timeout == 0 ? 50 : timeout);
       }
       if (getMetaServerConnection(true) == null) {
         throw new NotAllMetaRegionsOnlineException(
