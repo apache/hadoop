@@ -1,5 +1,6 @@
 <%@ page
   contentType="text/html; charset=UTF-8"
+  isThreadSafe="false"
   import="javax.servlet.*"
   import="javax.servlet.http.*"
   import="java.io.*"

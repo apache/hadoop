@@ -8,6 +8,8 @@ Release 0.20.204.0 - unreleased
     HDFS-1750. ListPathsServlet should not use HdfsFileStatus.getLocalName()
     to get file name since it may return an empty string.  (szetszwo)
 
+    HDFS-1758. Make Web UI JSP pages thread safe. (Tanping via suresh)
+
 Release 0.20.203.0 - unreleased
 
     HADOOP-7190. Add metrics v1 back for backwards compatibility. (omalley)
