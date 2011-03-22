@@ -243,7 +243,7 @@ public class HLogSplitter {
     List<Path> corruptedLogs = new ArrayList<Path>();
     List<Path> splits = null;
 
-    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", false);
+    boolean skipErrors = conf.getBoolean("hbase.hlog.split.skip.errors", true);
 
     splitSize = 0;
 
@@ -276,7 +276,7 @@ public class HLogSplitter {
           // If the IOE resulted from bad file format,
           // then this problem is idempotent and retrying won't help
           if (e.getCause() instanceof ParseException) {
-            LOG.warn("ParseException from hlog " + logPath + ".  continuing");
+            LOG.warn("Parse exception from hlog " + logPath + ".  continuing", e);
             processedLogs.add(logPath);
           } else {
             if (skipErrors) {
