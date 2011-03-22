@@ -121,6 +121,9 @@ Trunk (unreleased changes)
     HADOOP-6912. Guard against NPE when calling UGI.isLoginKeytabBased().
     (Kan Zhang via jitendra)
 
+    HADOOP-7204. remove local unused fs variable from CmdHandler 
+    and FsShellPermissions.changePermissions (boryas)
+
 Release 0.22.0 - Unreleased
 
   INCOMPATIBLE CHANGES

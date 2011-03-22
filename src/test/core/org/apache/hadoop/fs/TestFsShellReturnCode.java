@@ -51,7 +51,7 @@ public class TestFsShellReturnCode {
   public void verify(FileSystem fs, String cmd, String argv[], int cmdIndex,
       FsShell fsShell, int exitCode) throws Exception {
     int ec;
-    ec = FsShellPermissions.changePermissions(fs, cmd, argv, cmdIndex, fsShell);
+    ec = FsShellPermissions.changePermissions(cmd, argv, cmdIndex, fsShell);
     Assert.assertEquals(ec, exitCode);
   }
 

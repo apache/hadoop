@@ -55,8 +55,8 @@ class FsShellPermissions {
   
   private static class ChmodHandler extends CmdHandler {
 
-    ChmodHandler(FileSystem fs, String modeStr) throws IOException {
-      super("chmod", fs);
+    ChmodHandler(String modeStr) throws IOException {
+      super("chmod");
       try {
         pp = new ChmodParser(modeStr);
       } catch(IllegalArgumentException iea) {
@@ -103,12 +103,14 @@ class FsShellPermissions {
     protected String owner = null;
     protected String group = null;
 
-    protected ChownHandler(String cmd, FileSystem fs) { //for chgrp
-      super(cmd, fs);
+    protected ChownHandler(String cmd) { //for chgrp
+      super(cmd);
     }
 
-    ChownHandler(FileSystem fs, String ownerStr) throws IOException {
-      super("chown", fs);
+    ChownHandler(String cmd, String ownerStr) throws IOException {
+      super(cmd);
+      if(!cmd.equals("chown"))
+        return;
       Matcher matcher = chownPattern.matcher(ownerStr);
       if (!matcher.matches()) {
         throw new IOException("'" + ownerStr + "' does not match " +
@@ -149,8 +151,8 @@ class FsShellPermissions {
   /*========== chgrp ==========*/    
   
   private static class ChgrpHandler extends ChownHandler {
-    ChgrpHandler(FileSystem fs, String groupStr) throws IOException {
-      super("chgrp", fs);
+    ChgrpHandler(String groupStr) throws IOException {
+      super("chgrp");
 
       Matcher matcher = chgrpPattern.matcher(groupStr);
       if (!matcher.matches()) {
@@ -161,7 +163,7 @@ class FsShellPermissions {
     }
   }
 
-  static int changePermissions(FileSystem fs, String cmd, 
+  static int changePermissions(String cmd, 
                                 String argv[], int startIndex, FsShell shell)
                                 throws IOException {
     CmdHandler handler = null;
@@ -178,11 +180,11 @@ class FsShellPermissions {
     }
 
     if (cmd.equals("-chmod")) {
-      handler = new ChmodHandler(fs, argv[startIndex++]);
+      handler = new ChmodHandler(argv[startIndex++]);
     } else if (cmd.equals("-chown")) {
-      handler = new ChownHandler(fs, argv[startIndex++]);
+      handler = new ChownHandler(argv[startIndex++]);
     } else if (cmd.equals("-chgrp")) {
-      handler = new ChgrpHandler(fs, argv[startIndex++]);
+      handler = new ChgrpHandler(argv[startIndex++]);
     }
 
     return shell.runCmdHandler(handler, argv, startIndex, recursive);

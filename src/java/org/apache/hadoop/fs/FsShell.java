@@ -1263,7 +1263,7 @@ public class FsShell extends Configured implements Tool {
     boolean okToContinue() { return okToContinue; }
     String getName() { return cmdName; }
     
-    protected CmdHandler(String cmdName, FileSystem fs) {
+    protected CmdHandler(String cmdName) {
       this.cmdName = cmdName;
     }
     
@@ -1911,7 +1911,7 @@ public class FsShell extends Configured implements Tool {
       } else if ("-chmod".equals(cmd) || 
                  "-chown".equals(cmd) ||
                  "-chgrp".equals(cmd)) {
-        exitCode = FsShellPermissions.changePermissions(fs, cmd, argv, i, this);
+        exitCode = FsShellPermissions.changePermissions(cmd, argv, i, this);
       } else if ("-ls".equals(cmd)) {
         if (i < argv.length) {
           exitCode = doall(cmd, argv, i);
