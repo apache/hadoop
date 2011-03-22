@@ -95,7 +95,7 @@ oldTableName = ARGV[0]
 newTableName = ARGV[1]
 
 # Get configuration to use.
-c = HBaseConfiguration.new()
+c = HBaseConfiguration.create()
 
 # Set hadoop filesystem configuration using the hbase.rootdir.
 # Otherwise, we'll always use localhost though the hbase.rootdir
@@ -147,13 +147,20 @@ while (result = scanner.next())
     d = Delete.new(result.getRow())
     metaTable.delete(d)
     # Create 'new' region
-    newR = HRegion.new(rootdir, nil, fs, c, newHRI, nil)
+    newR = HRegion.new(newTableDir, nil, fs, c, newHRI, nil)
     # Add new row. NOTE: Presumption is that only one .META. region. If not,
     # need to do the work to figure proper region to add this new region to.
     LOG.info("Adding to meta: " + newR.toString())
+    bytes = Writables.getBytes(newR.getRegionInfo())
     p = Put.new(newR.getRegionName())
-    p.add(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER, Writables.getBytes(newR.getRegionInfo()))
+    p.add(HConstants::CATALOG_FAMILY, HConstants::REGIONINFO_QUALIFIER, bytes)
     metaTable.put(p)
+    # Finally update the .regioninfo under new region location so it has new name.
+    regioninfofile =  Path.new(newR.getRegionDir(), HRegion::REGIONINFO_FILE)
+    fs.delete(regioninfofile, true)
+    out = fs.create(regioninfofile)
+    newR.getRegionInfo().write(out)
+    out.close()
   end
 end
 scanner.close()
