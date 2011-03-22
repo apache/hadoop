@@ -44,8 +44,6 @@ Release 0.91.0 - Unreleased
    HBASE-3641  LruBlockCache.CacheStats.getHitCount() is not using the
                correct variable
    HBASE-3532  HRegion#equals is broken (Ted Yu via Stack)
-   HBASE-3621  The timeout handler in AssignmentManager does an RPC while
-               holding lock on RIT; a big no-no (Ted Yu via Stack)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  
@@ -157,6 +155,8 @@ Release 0.90.2 - Unreleased
                till 0.92; Race between split and OPENED processing
    HBASE-3674  Treat ChecksumException as we would a ParseException splitting
                logs; else we replay split on every restart
+   HBASE-3621  The timeout handler in AssignmentManager does an RPC while
+               holding lock on RIT; a big no-no (Ted Yu via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
