@@ -474,6 +474,9 @@ Release 0.21.1 - Unreleased
     fs.checkpoint.* with dfs.namenode.checkpoint.* in documentations.
     (Harsh J Chouraria via szetszwo)
 
+    HADOOP-7193. Correct the "fs -touchz" command help message.
+    (Uma Maheswara Rao G via szetszwo)
+
 Release 0.21.0 - 2010-08-13
 
   INCOMPATIBLE CHANGES
