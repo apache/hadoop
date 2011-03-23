@@ -24,32 +24,22 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Call;
-import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.coprocessor.*;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.util.StringUtils;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -619,14 +609,16 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param value the expected value
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
    * @param put data to put if check succeeds
    * @return true or false to return to client if default processing should
    * be bypassed, or null otherwise
    * @throws IOException e
    */
   public Boolean preCheckAndPut(final byte [] row, final byte [] family,
-      final byte [] qualifier, final byte [] value, Put put)
+      final byte [] qualifier, final CompareOp compareOp,
+      final WritableByteArrayComparable comparator, Put put)
     throws IOException
   {
     try {
@@ -636,7 +628,7 @@ public class RegionCoprocessorHost
       for (RegionEnvironment env: coprocessors) {
         if (env.getInstance() instanceof RegionObserver) {
           result = ((RegionObserver)env.getInstance()).preCheckAndPut(env, row, family,
-            qualifier, value, put, result);
+            qualifier, compareOp, comparator, put, result);
           bypass |= env.shouldBypass();
           if (env.shouldComplete()) {
             break;
@@ -653,12 +645,14 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param value the expected value
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
    * @param put data to put if check succeeds
    * @throws IOException e
    */
   public boolean postCheckAndPut(final byte [] row, final byte [] family,
-      final byte [] qualifier, final byte [] value, final Put put,
+      final byte [] qualifier, final CompareOp compareOp,
+      final WritableByteArrayComparable comparator, final Put put,
       boolean result)
     throws IOException
   {
@@ -667,7 +661,7 @@ public class RegionCoprocessorHost
       for (RegionEnvironment env: coprocessors) {
         if (env.getInstance() instanceof RegionObserver) {
           result = ((RegionObserver)env.getInstance()).postCheckAndPut(env, row,
-            family, qualifier, value, put, result);
+            family, qualifier, compareOp, comparator, put, result);
           if (env.shouldComplete()) {
             break;
           }
@@ -683,16 +677,17 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param value the expected value
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @return true or false to return to client if default processing should
    * be bypassed, or null otherwise
    * @throws IOException e
    */
   public Boolean preCheckAndDelete(final byte [] row, final byte [] family,
-      final byte [] qualifier, final byte [] value, Delete delete)
-    throws IOException
-  {
+      final byte [] qualifier, final CompareOp compareOp,
+      final WritableByteArrayComparable comparator, Delete delete)
+      throws IOException {
     try {
       boolean bypass = false;
       boolean result = false;
@@ -700,7 +695,7 @@ public class RegionCoprocessorHost
       for (RegionEnvironment env: coprocessors) {
         if (env.getInstance() instanceof RegionObserver) {
           result = ((RegionObserver)env.getInstance()).preCheckAndDelete(env, row,
-            family, qualifier, value, delete, result);
+            family, qualifier, compareOp, comparator, delete, result);
           bypass |= env.shouldBypass();
           if (env.shouldComplete()) {
             break;
@@ -717,12 +712,14 @@ public class RegionCoprocessorHost
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param value the expected value
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @throws IOException e
    */
   public boolean postCheckAndDelete(final byte [] row, final byte [] family,
-      final byte [] qualifier, final byte [] value, final Delete delete,
+      final byte [] qualifier, final CompareOp compareOp,
+      final WritableByteArrayComparable comparator, final Delete delete,
       boolean result)
     throws IOException
   {
@@ -730,8 +727,9 @@ public class RegionCoprocessorHost
       coprocessorLock.readLock().lock();
       for (RegionEnvironment env: coprocessors) {
         if (env.getInstance() instanceof RegionObserver) {
-          result = ((RegionObserver)env.getInstance()).postCheckAndDelete(env, row,
-            family, qualifier, value, delete, result);
+          result = ((RegionObserver)env.getInstance())
+            .postCheckAndDelete(env, row, family, qualifier, compareOp,
+              comparator, delete, result);
           if (env.shouldComplete()) {
             break;
         }

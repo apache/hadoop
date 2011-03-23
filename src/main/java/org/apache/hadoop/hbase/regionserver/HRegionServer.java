@@ -34,7 +34,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -96,6 +95,9 @@ import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.CacheStats;
 import org.apache.hadoop.hbase.ipc.CoprocessorProtocol;
@@ -1694,8 +1696,9 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   }
 
   private boolean checkAndMutate(final byte[] regionName, final byte[] row,
-      final byte[] family, final byte[] qualifier, final byte[] value,
-      final Writable w, Integer lock) throws IOException {
+      final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final WritableByteArrayComparable comparator, final Writable w,
+      Integer lock) throws IOException {
     checkOpen();
     this.requestCount.incrementAndGet();
     HRegion region = getRegion(regionName);
@@ -1703,8 +1706,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       if (!region.getRegionInfo().isMetaTable()) {
         this.cacheFlusher.reclaimMemStoreMemory();
       }
-      return region
-          .checkAndMutate(row, family, qualifier, value, w, lock, true);
+      return region.checkAndMutate(row, family, qualifier, compareOp,
+        comparator, w, lock, true);
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
@@ -1731,18 +1734,59 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           + "regionName is null");
     }
     HRegion region = getRegion(regionName);
+    WritableByteArrayComparable comparator = new BinaryComparator(value);
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost()
-        .preCheckAndPut(row, family, qualifier, value, put);
+        .preCheckAndPut(row, family, qualifier, CompareOp.EQUAL, comparator,
+          put);
       if (result != null) {
         return result.booleanValue();
       }
     }
     boolean result = checkAndMutate(regionName, row, family, qualifier,
-      value, put, getLockFromId(put.getLockId()));
+      CompareOp.EQUAL, new BinaryComparator(value), put,
+      getLockFromId(put.getLockId()));
     if (region.getCoprocessorHost() != null) {
       result = region.getCoprocessorHost().postCheckAndPut(row, family,
-        qualifier, value, put, result);
+        qualifier, CompareOp.EQUAL, comparator, put, result);
+    }
+    return result;
+  }
+
+  /**
+   *
+   * @param regionName
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param compareOp
+   * @param comparator
+   * @param put
+   * @throws IOException
+   * @return true if the new put was execute, false otherwise
+   */
+  public boolean checkAndPut(final byte[] regionName, final byte[] row,
+      final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final WritableByteArrayComparable comparator, final Put put)
+       throws IOException {
+    checkOpen();
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to checkAndPut "
+          + "regionName is null");
+    }
+    HRegion region = getRegion(regionName);
+    if (region.getCoprocessorHost() != null) {
+      Boolean result = region.getCoprocessorHost()
+        .preCheckAndPut(row, family, qualifier, compareOp, comparator, put);
+      if (result != null) {
+        return result.booleanValue();
+      }
+    }
+    boolean result = checkAndMutate(regionName, row, family, qualifier,
+      compareOp, comparator, put, getLockFromId(put.getLockId()));
+    if (region.getCoprocessorHost() != null) {
+      result = region.getCoprocessorHost().postCheckAndPut(row, family,
+        qualifier, compareOp, comparator, put, result);
     }
     return result;
   }
@@ -1769,21 +1813,61 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
           + "regionName is null");
     }
     HRegion region = getRegion(regionName);
+    WritableByteArrayComparable comparator = new BinaryComparator(value);
     if (region.getCoprocessorHost() != null) {
       Boolean result = region.getCoprocessorHost().preCheckAndDelete(row,
-        family, qualifier, value, delete);
+        family, qualifier, CompareOp.EQUAL, comparator, delete);
       if (result != null) {
         return result.booleanValue();
       }
     }
-    boolean result = checkAndMutate(regionName, row, family, qualifier, value,
-      delete, getLockFromId(delete.getLockId()));
+    boolean result = checkAndMutate(regionName, row, family, qualifier,
+      CompareOp.EQUAL, comparator, delete, getLockFromId(delete.getLockId()));
     if (region.getCoprocessorHost() != null) {
       result = region.getCoprocessorHost().postCheckAndDelete(row, family,
-        qualifier, value, delete, result);
+        qualifier, CompareOp.EQUAL, comparator, delete, result);
     }
     return result;
   }
+
+  /**
+   *
+   * @param regionName
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param compareOp
+   * @param comparator
+   * @param delete
+   * @throws IOException
+   * @return true if the new put was execute, false otherwise
+   */
+  public boolean checkAndDelete(final byte[] regionName, final byte[] row,
+      final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final WritableByteArrayComparable comparator, final Delete delete)
+      throws IOException {
+    checkOpen();
+
+    if (regionName == null) {
+      throw new IOException("Invalid arguments to checkAndDelete "
+        + "regionName is null");
+    }
+    HRegion region = getRegion(regionName);
+    if (region.getCoprocessorHost() != null) {
+      Boolean result = region.getCoprocessorHost().preCheckAndDelete(row,
+        family, qualifier, compareOp, comparator, delete);
+     if (result != null) {
+       return result.booleanValue();
+     }
+    }
+    boolean result = checkAndMutate(regionName, row, family, qualifier,
+      compareOp, comparator, delete, getLockFromId(delete.getLockId()));
+   if (region.getCoprocessorHost() != null) {
+     result = region.getCoprocessorHost().postCheckAndDelete(row, family,
+       qualifier, compareOp, comparator, delete, result);
+   }
+   return result;
+ }
 
   //
   // remote scanner interface

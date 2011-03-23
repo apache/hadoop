@@ -87,6 +87,7 @@ Release 0.91.0 - Unreleased
                needs an upper bound added (Ted Yu via Stack)
    HBASE-3676  Update region server load for AssignmentManager through
                regionServerReport() (Ted Yu via Stack)
+   HBASE-3468  Enhance checkAndPut and checkAndDelete with comparators
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel

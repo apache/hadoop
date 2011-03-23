@@ -46,12 +46,12 @@ public class QualifierFilter extends CompareFilter {
 
   /**
    * Constructor.
-   * @param qualifierCompareOp the compare op for column qualifier matching
+   * @param op the compare op for column qualifier matching
    * @param qualifierComparator the comparator for column qualifier matching
    */
-  public QualifierFilter(final CompareOp qualifierCompareOp,
+  public QualifierFilter(final CompareOp op,
       final WritableByteArrayComparable qualifierComparator) {
-    super(qualifierCompareOp, qualifierComparator);
+    super(op, qualifierComparator);
   }
 
   @Override

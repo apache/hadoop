@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.filter.BitComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.DependentColumnFilter;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
@@ -219,6 +220,8 @@ public class HbaseObjectWritable implements Writable, WritableWithSize, Configur
     addToMap(Serializable.class, code++);
 
     addToMap(RandomRowFilter.class, code++);
+
+    addToMap(CompareOp.class, code++);
   }
 
   private Class<?> declaredClass;

@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Exec;
 import org.apache.hadoop.hbase.client.coprocessor.ExecResult;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -435,4 +437,44 @@ public interface HRegionInterface extends VersionedProtocol, Stoppable, Abortabl
    */
   ExecResult execCoprocessor(byte[] regionName, Exec call)
       throws IOException;
+
+  /**
+   * Atomically checks if a row/family/qualifier value match the expectedValue.
+   * If it does, it adds the put. If passed expected value is null, then the
+   * check is for non-existance of the row/column.
+   *
+   * @param regionName
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param compareOp
+   * @param comparator
+   * @param put
+   * @throws IOException
+   * @return true if the new put was execute, false otherwise
+   */
+  public boolean checkAndPut(final byte[] regionName, final byte[] row,
+      final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final WritableByteArrayComparable comparator, final Put put)
+  throws IOException;
+
+  /**
+   * Atomically checks if a row/family/qualifier value match the expectedValue.
+   * If it does, it adds the delete. If passed expected value is null, then the
+   * check is for non-existance of the row/column.
+   *
+   * @param regionName
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param compareOp
+   * @param comparator
+   * @param delete
+   * @throws IOException
+   * @return true if the new put was execute, false otherwise
+   */
+  public boolean checkAndDelete(final byte[] regionName, final byte[] row,
+     final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+     final WritableByteArrayComparable comparator, final Delete delete)
+     throws IOException;
 }

@@ -53,10 +53,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
-import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScanner;
@@ -461,43 +461,47 @@ public class TestHRegion extends HBaseTestCase {
     put.add(fam1, qf1, val1);
 
     //checkAndPut with correct value
-    boolean res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId,
-        true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+        new BinaryComparator(emptyVal), put, lockId, true);
     assertTrue(res);
 
     // not empty anymore
-    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+        new BinaryComparator(emptyVal), put, lockId, true);
     assertFalse(res);
 
     Delete delete = new Delete(row1);
     delete.deleteColumn(fam1, qf1);
-    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
-        true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+        new BinaryComparator(emptyVal), delete, lockId, true);
     assertFalse(res);
 
     put = new Put(row1);
     put.add(fam1, qf1, val2);
     //checkAndPut with correct value
-    res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+        new BinaryComparator(val1), put, lockId, true);
     assertTrue(res);
 
     //checkAndDelete with correct value
     delete = new Delete(row1);
     delete.deleteColumn(fam1, qf1);
     delete.deleteColumn(fam1, qf1);
-    res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+        new BinaryComparator(val2), delete, lockId, true);
     assertTrue(res);
 
     delete = new Delete(row1);
-    res = region.checkAndMutate(row1, fam1, qf1, emptyVal, delete, lockId,
-        true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+        new BinaryComparator(emptyVal), delete, lockId, true);
     assertTrue(res);
 
     //checkAndPut looking for a null value
     put = new Put(row1);
     put.add(fam1, qf1, val1);
 
-    res = region.checkAndMutate(row1, fam1, qf1, null, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+        new NullComparator(), put, lockId, true);
     assertTrue(res);
 
   }
@@ -521,13 +525,15 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     //checkAndPut with wrong value
-    boolean res = region.checkAndMutate(row1, fam1, qf1, val2, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+      new BinaryComparator(val2), put, lockId, true);
     assertEquals(false, res);
 
     //checkAndDelete with wrong value
     Delete delete = new Delete(row1);
     delete.deleteFamily(fam1);
-    res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+      new BinaryComparator(val2), delete, lockId, true);
     assertEquals(false, res);
   }
 
@@ -549,13 +555,15 @@ public class TestHRegion extends HBaseTestCase {
     region.put(put);
 
     //checkAndPut with correct value
-    boolean res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+      new BinaryComparator(val1), put, lockId, true);
     assertEquals(true, res);
 
     //checkAndDelete with correct value
     Delete delete = new Delete(row1);
     delete.deleteColumn(fam1, qf1);
-    res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+      new BinaryComparator(val1), put, lockId, true);
     assertEquals(true, res);
   }
 
@@ -590,7 +598,8 @@ public class TestHRegion extends HBaseTestCase {
     Store store = region.getStore(fam1);
     store.memstore.kvset.size();
 
-    boolean res = region.checkAndMutate(row1, fam1, qf1, val1, put, lockId, true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+      new BinaryComparator(val1), put, lockId, true);
     assertEquals(true, res);
     store.memstore.kvset.size();
 
@@ -613,8 +622,8 @@ public class TestHRegion extends HBaseTestCase {
     Put put = new Put(row2);
     put.add(fam1, qual1, value1);
     try {
-    boolean res = region.checkAndMutate(row,
-        fam1, qual1, value2, put, null, false);
+    boolean res = region.checkAndMutate(row, fam1, qual1, CompareOp.EQUAL,
+        new BinaryComparator(value2), put, null, false);
       fail();
     } catch (DoNotRetryIOException expected) {
       // expected exception.
@@ -660,8 +669,8 @@ public class TestHRegion extends HBaseTestCase {
     delete.deleteColumn(fam1, qf1);
     delete.deleteColumn(fam2, qf1);
     delete.deleteColumn(fam1, qf3);
-    boolean res = region.checkAndMutate(row1, fam1, qf1, val2, delete, lockId,
-        true);
+    boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+      new BinaryComparator(val2), delete, lockId, true);
     assertEquals(true, res);
 
     Get get = new Get(row1);
@@ -676,8 +685,8 @@ public class TestHRegion extends HBaseTestCase {
     //Family delete
     delete = new Delete(row1);
     delete.deleteFamily(fam2);
-    res = region.checkAndMutate(row1, fam2, qf1, emptyVal, delete, lockId,
-        true);
+    res = region.checkAndMutate(row1, fam2, qf1, CompareOp.EQUAL,
+      new BinaryComparator(emptyVal), delete, lockId, true);
     assertEquals(true, res);
 
     get = new Get(row1);
@@ -687,8 +696,8 @@ public class TestHRegion extends HBaseTestCase {
 
     //Row delete
     delete = new Delete(row1);
-    res = region.checkAndMutate(row1, fam1, qf1, val1, delete, lockId,
-        true);
+    res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL,
+      new BinaryComparator(val1), delete, lockId, true);
     assertEquals(true, res);
     get = new Get(row1);
     r = region.get(get, null);
@@ -2389,7 +2398,7 @@ public class TestHRegion extends HBaseTestCase {
     Scan scan = new Scan();
     scan.addFamily(family);
     scan.setFilter(new SingleColumnValueFilter(family, qual1,
-      CompareFilter.CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes(5L))));
+      CompareOp.EQUAL, new BinaryComparator(Bytes.toBytes(5L))));
 
     int expectedCount = 0;
     List<KeyValue> res = new ArrayList<KeyValue>();
@@ -2753,10 +2762,9 @@ public class TestHRegion extends HBaseTestCase {
     idxScan.addFamily(family);
     idxScan.setFilter(new FilterList(FilterList.Operator.MUST_PASS_ALL,
       Arrays.<Filter>asList(new SingleColumnValueFilter(family, qual1,
-        CompareFilter.CompareOp.GREATER_OR_EQUAL,
+        CompareOp.GREATER_OR_EQUAL,
         new BinaryComparator(Bytes.toBytes(0L))),
-        new SingleColumnValueFilter(family, qual1,
-          CompareFilter.CompareOp.LESS_OR_EQUAL,
+        new SingleColumnValueFilter(family, qual1, CompareOp.LESS_OR_EQUAL,
           new BinaryComparator(Bytes.toBytes(3L)))
       )));
     InternalScanner scanner = region.getScanner(idxScan);

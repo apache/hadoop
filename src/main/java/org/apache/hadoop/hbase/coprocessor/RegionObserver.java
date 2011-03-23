@@ -27,7 +27,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.filter.WritableByteArrayComparable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -285,7 +286,8 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param value the expected value
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
    * @param put data to put if check succeeds
    * @param result 
    * @return the return value to return to client if bypassing default
@@ -294,7 +296,8 @@ public interface RegionObserver extends Coprocessor {
    */
   public boolean preCheckAndPut(final RegionCoprocessorEnvironment e,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Put put, final boolean result)
+      final CompareOp compareOp, final WritableByteArrayComparable comparator,
+      final Put put, final boolean result)
     throws IOException;
 
   /**
@@ -306,7 +309,8 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param value the expected value
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
    * @param put data to put if check succeeds
    * @param result from the checkAndPut
    * @return the possibly transformed return value to return to client
@@ -314,7 +318,8 @@ public interface RegionObserver extends Coprocessor {
    */
   public boolean postCheckAndPut(final RegionCoprocessorEnvironment e,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Put put, final boolean result)
+      final CompareOp compareOp, final WritableByteArrayComparable comparator,
+      final Put put, final boolean result)
     throws IOException;
 
   /**
@@ -328,7 +333,8 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param value the expected value
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @param result 
    * @return the value to return to client if bypassing default processing
@@ -336,7 +342,8 @@ public interface RegionObserver extends Coprocessor {
    */
   public boolean preCheckAndDelete(final RegionCoprocessorEnvironment e,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Delete delete, final boolean result)
+      final CompareOp compareOp, final WritableByteArrayComparable comparator,
+      final Delete delete, final boolean result)
     throws IOException;
 
   /**
@@ -348,7 +355,8 @@ public interface RegionObserver extends Coprocessor {
    * @param row row to check
    * @param family column family
    * @param qualifier column qualifier
-   * @param value the expected value
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
    * @param delete delete to commit if check succeeds
    * @param result from the CheckAndDelete
    * @return the possibly transformed returned value to return to client
@@ -356,7 +364,8 @@ public interface RegionObserver extends Coprocessor {
    */
   public boolean postCheckAndDelete(final RegionCoprocessorEnvironment e,
       final byte [] row, final byte [] family, final byte [] qualifier,
-      final byte [] value, final Delete delete, final boolean result)
+      final CompareOp compareOp, final WritableByteArrayComparable comparator,
+      final Delete delete, final boolean result)
     throws IOException;
 
   /**
