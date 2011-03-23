@@ -1499,8 +1499,9 @@ public class FsShell extends Configured implements Tool {
       + "\t\tThe -R flag requests a recursive change of replication level \n"
       + "\t\tfor an entire tree.\n";
 
-    String touchz = "-touchz <path>: Write a timestamp in yyyy-MM-dd HH:mm:ss format\n" +
-      "\t\tin a file at <path>. An error is returned if the file exists with non-zero length\n";
+    String touchz = "-touchz <path>: Creates a file of zero length\n"
+	+ "\t\t at <path> with current time as the timestamp of that <path>.\n"
+	+ "\t\t An error is returned if the file exists with non-zero length\n";
 
     String test = "-test -[ezd] <path>: If file { exists, has zero length, is a directory\n" +
       "\t\tthen return 0, else return 1.\n";
