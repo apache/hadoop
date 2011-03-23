@@ -182,6 +182,7 @@ Release 0.90.2 - Unreleased
    HBASE-3496  HFile CLI Improvements
    HBASE-3596  [replication] Wait a few seconds before transferring queues
    HBASE-3600  Update our jruby to 1.6.0
+   HBASE-3640  [replication] Transferring queues shouldn't be done inline with RS startup
 
 Release 0.90.1 - February 9th, 2011
 
