@@ -5346,6 +5346,7 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
     final Map<String, Object> info = new HashMap<String, Object>();
     final ArrayList<DatanodeDescriptor> deadNodeList =
       this.getDatanodeListForReport(DatanodeReportType.DEAD); 
+    removeDecomNodeFromDeadList(deadNodeList);
     for (DatanodeDescriptor node : deadNodeList) {
       final Map<String, Object> innerinfo = new HashMap<String, Object>();
       innerinfo.put("lastContact", getLastContact(node));
@@ -5433,6 +5434,31 @@ public class FSNamesystem implements FSConstants, FSNamesystemMBean,
       logAuditEvent(UserGroupInformation.getCurrentUser(),
                     remoteAddress,
                     "fsck", src, null, null);
+    }
+  }
+
+
+  /**
+   * Remove an already decommissioned data node who is neither in include nor
+   * exclude lists from the dead node list.
+   * @param dead, array list of dead nodes
+   */
+  void removeDecomNodeFromDeadList(ArrayList<DatanodeDescriptor> dead) {
+    // If the include list is empty, any nodes are welcomed and it does not 
+    // make sense to exclude any nodes from the cluster.  Therefore, no remove.
+    if (hostsReader.getHosts().isEmpty()) {
+      return;
+    }
+    for (Iterator<DatanodeDescriptor> it = dead.iterator();it.hasNext();){
+      DatanodeDescriptor node = it.next();
+      if ((!inHostsList(node,null)) 
+          && (!inExcludedHostsList(node, null))
+          && node.isDecommissioned()){
+        // Include list is not empty, an existing datanode does not appear 
+        // in both include or exclude lists and it has been decommissioned.
+        // Remove it from dead node list.
+        it.remove();
+      } 
     }
   }
 }

@@ -2,13 +2,22 @@ Hadoop Change Log
 
 Release 0.20.204.0 - unreleased
 
+  BUG FIXES
+
     HDFS-1592. At Startup, Valid volumes required in FSDataset doesn't
     handle consistently with volumes tolerated. (Bharath Mundlapudi)
+
+    HDFS-1598. Directory listing on hftp:// does not show
+    .*.crc files.  (szetszwo)
 
     HDFS-1750. ListPathsServlet should not use HdfsFileStatus.getLocalName()
     to get file name since it may return an empty string.  (szetszwo)
 
     HDFS-1758. Make Web UI JSP pages thread safe. (Tanping via suresh)
+
+    HDFS-1773. Do not show decommissioned datanodes, which are not in both
+    include and exclude lists, on web and JMX interfaces.
+    (Tanping Wang via szetszwo)
 
 Release 0.20.203.0 - unreleased
 
@@ -39,9 +48,6 @@ Release 0.20.203.0 - unreleased
 
     MAPREDUCE-2364. Don't hold the rjob lock while localizing resources. (ddas
     via omalley)
-
-    HDFS:1598. Directory listing on hftp:// does not show
-    .*.crc files.  (szetszwo)
 
     MAPREDUCE-2365. New counters for FileInputFormat (BYTES_READ) and 
     FileOutputFormat (BYTES_WRITTEN). 
