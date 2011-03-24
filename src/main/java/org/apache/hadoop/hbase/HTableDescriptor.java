@@ -401,6 +401,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public void setDeferredLogFlush(final boolean isDeferredLogFlush) {
     setValue(DEFERRED_LOG_FLUSH_KEY, isDeferredLogFlush? TRUE: FALSE);
+    this.isDeferredLog = isDeferredLogFlush;
   }
 
   /** @return name of table */
@@ -424,6 +425,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /** @param name name of table */
   public void setName(byte[] name) {
     this.name = name;
+    this.nameAsString = Bytes.toString(this.name);
+    setMetaFlags(this.name);
   }
 
   /**
