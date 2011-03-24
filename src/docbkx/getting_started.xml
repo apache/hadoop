@@ -224,6 +224,7 @@ Usually you'll want to use the latest version available except the problematic u
  </footnote>.
     No official releases have been made from this branch up to now
     so you will have to build your own Hadoop from the tip of this branch.
+    Check it out using this url, <link xlink:href="https://svn.apache.org/repos/asf/hadoop/common/branches/branch-0.20-append/">branch-0.20-append</link>.
     Scroll down in the Hadoop <link xlink:href="http://wiki.apache.org/hadoop/HowToRelease">How To Release</link> to the section
     <emphasis>Build Requirements</emphasis> for instruction on how to build Hadoop.
     </para>
