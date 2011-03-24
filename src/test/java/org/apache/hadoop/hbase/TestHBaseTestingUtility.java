@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -134,6 +135,47 @@ public class TestHBaseTestingUtility {
       assertEquals(1, cluster.getLiveRegionServerThreads().size());
     } finally {
       cluster.shutdown();
+    }
+  }
+  
+  @Test public void testMiniZooKeeper() throws Exception {
+    MiniZooKeeperCluster cluster1 = this.hbt.startMiniZKCluster();
+    try {
+      assertEquals(0, cluster1.getBackupZooKeeperServerNum());    
+      assertTrue((cluster1.killCurrentActiveZooKeeperServer() == -1));
+    } finally {
+      cluster1.shutdown();
+    }
+    
+    this.hbt.shutdownMiniZKCluster();
+    
+    // set up zookeeper cluster with 5 zk servers
+    MiniZooKeeperCluster cluster2 = this.hbt.startMiniZKCluster(5);
+    int defaultClientPort = 21818;
+    cluster2.setDefaultClientPort(defaultClientPort);
+    try {
+      assertEquals(4, cluster2.getBackupZooKeeperServerNum());
+      
+      // killing the current active zk server
+      assertTrue((cluster2.killCurrentActiveZooKeeperServer() >= defaultClientPort));
+      assertTrue((cluster2.killCurrentActiveZooKeeperServer() >= defaultClientPort));     
+      assertEquals(2, cluster2.getBackupZooKeeperServerNum());
+      assertEquals(3, cluster2.getZooKeeperServerNum());
+      
+      // killing the backup zk servers
+      cluster2.killOneBackupZooKeeperServer();
+      cluster2.killOneBackupZooKeeperServer();
+      assertEquals(0, cluster2.getBackupZooKeeperServerNum());
+      assertEquals(1, cluster2.getZooKeeperServerNum());
+      
+      // killing the last zk server
+      assertTrue((cluster2.killCurrentActiveZooKeeperServer() == -1));
+      // this should do nothing.
+      cluster2.killOneBackupZooKeeperServer();
+      assertEquals(-1, cluster2.getBackupZooKeeperServerNum());
+      assertEquals(0, cluster2.getZooKeeperServerNum());         
+    } finally {
+      cluster2.shutdown();
     }
   }
 

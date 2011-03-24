@@ -121,7 +121,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         if (zkClientPort == 0) {
           throw new IOException("No config value for hbase.zookeeper.property.clientPort");
         }
-        zooKeeperCluster.setClientPort(zkClientPort);
+        zooKeeperCluster.setDefaultClientPort(zkClientPort);
         int clientPort = zooKeeperCluster.startup(zkDataPath);
         if (clientPort != zkClientPort) {
           String errorMsg = "Couldnt start ZK at requested address of " +
