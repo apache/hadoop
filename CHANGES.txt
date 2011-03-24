@@ -169,6 +169,8 @@ Release 0.90.2 - Unreleased
                (Ted Yu via Stack)
    HBASE-3668  CatalogTracker.waitForMeta can wait forever and totally stall a RS
    HBASE-3627  NPE in EventHandler when region already reassigned
+   HBASE-3660  HMaster will exit when starting with stale data in cached locations
+               such as -ROOT- or .META.
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
