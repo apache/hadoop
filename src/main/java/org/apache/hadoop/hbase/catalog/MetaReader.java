@@ -308,14 +308,9 @@ public class MetaReader {
     } catch (java.net.SocketTimeoutException e) {
       // Treat this exception + message as unavailable catalog table. Catch it
       // and fall through to return a null
-    } catch (java.net.ConnectException e) {
-      if (e.getMessage() != null &&
-          e.getMessage().contains("Connection refused")) {
-        // Treat this exception + message as unavailable catalog table. Catch it
-        // and fall through to return a null
-      } else {
-        throw e;
-      }
+    } catch (java.net.SocketException e) {
+      // Treat this exception + message as unavailable catalog table. Catch it
+      // and fall through to return a null
     } catch (RemoteException re) {
       IOException ioe = re.unwrapRemoteException();
       if (ioe instanceof NotServingRegionException) {

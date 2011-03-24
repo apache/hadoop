@@ -168,6 +168,7 @@ Release 0.90.2 - Unreleased
    HBASE-3617  NoRouteToHostException during balancing will cause Master abort
                (Ted Yu via Stack)
    HBASE-3668  CatalogTracker.waitForMeta can wait forever and totally stall a RS
+   HBASE-3627  NPE in EventHandler when region already reassigned
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

@@ -576,7 +576,7 @@ public class ZKUtil {
    * @param zkw zk reference
    * @param znode path of node
    * @param stat node status to set if node exists
-   * @return data of the specified znode, or null if does not exist
+   * @return data of the specified znode, or null if node does not exist
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static byte [] getDataNoWatch(ZooKeeperWatcher zkw, String znode,

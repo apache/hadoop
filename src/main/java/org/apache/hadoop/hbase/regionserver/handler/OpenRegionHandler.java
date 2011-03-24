@@ -87,7 +87,11 @@ public class OpenRegionHandler extends EventHandler {
 
     // If fails, just return.  Someone stole the region from under us.
     // Calling transitionZookeeperOfflineToOpening initalizes this.version.
-    if (!transitionZookeeperOfflineToOpening(encodedName)) return;
+    if (!transitionZookeeperOfflineToOpening(encodedName)) {
+      LOG.warn("Region was hijacked? It no longer exists, encodedName=" +
+        encodedName);
+      return;
+    }
 
     // Open region.  After a successful open, failures in subsequent processing
     // needs to do a close as part of cleanup.
@@ -254,7 +258,7 @@ public class OpenRegionHandler extends EventHandler {
   /**
    * @return Instance of HRegion if successful open else null.
    */
-  private HRegion openRegion() {
+  HRegion openRegion() {
     HRegion region = null;
     try {
       // Instantiate the region.  This also periodically tickles our zk OPENING

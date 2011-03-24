@@ -1770,6 +1770,10 @@ public class AssignmentManager extends ZooKeeperListener {
                   Stat stat = new Stat();
                   RegionTransitionData data = ZKAssign.getDataNoWatch(watcher,
                       node, stat);
+                  if (data == null) {
+                    LOG.warn("Data is null, node " + node + " no longer exists");
+                    break;
+                  }
                   if (data.getEventType() == EventType.RS_ZK_REGION_OPENED) {
                     LOG.debug("Region has transitioned to OPENED, allowing " +
                         "watched event handlers to process");

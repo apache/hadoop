@@ -396,7 +396,8 @@ public class ZKAssign {
     zkw.sync(node);
     Stat stat = new Stat();
     byte [] bytes = ZKUtil.getDataNoWatch(zkw, node, stat);
-    if(bytes == null) {
+    if (bytes == null) {
+      // If it came back null, node does not exist.
       throw KeeperException.create(Code.NONODE);
     }
     RegionTransitionData data = RegionTransitionData.fromBytes(bytes);
@@ -674,8 +675,11 @@ public class ZKAssign {
 
     // Read existing data of the node
     Stat stat = new Stat();
-    byte [] existingBytes =
-      ZKUtil.getDataNoWatch(zkw, node, stat);
+    byte [] existingBytes = ZKUtil.getDataNoWatch(zkw, node, stat);
+    if (existingBytes == null) {
+      // Node no longer exists.  Return -1. It means unsuccessful transition.
+      return -1;
+    }
     RegionTransitionData existingData =
       RegionTransitionData.fromBytes(existingBytes);
 
@@ -762,7 +766,7 @@ public class ZKAssign {
    * @param zkw zk reference
    * @param pathOrRegionName fully-specified path or region name
    * @param stat object to store node info into on getData call
-   * @return data for the unassigned node
+   * @return data for the unassigned node or null if node does not exist
    * @throws KeeperException if unexpected zookeeper exception
    */
   public static RegionTransitionData getDataNoWatch(ZooKeeperWatcher zkw,
@@ -771,7 +775,7 @@ public class ZKAssign {
     String node = pathOrRegionName.startsWith("/") ?
         pathOrRegionName : getNodeName(zkw, pathOrRegionName);
     byte [] data = ZKUtil.getDataNoWatch(zkw, node, stat);
-    if(data == null) {
+    if (data == null) {
       return null;
     }
     return RegionTransitionData.fromBytes(data);
