@@ -103,7 +103,7 @@ public class JMXGet {
 
       for (MBeanAttributeInfo mb : mbinfos) {
         val = mbsc.getAttribute(oname, mb.getName());
-        System.out.format(format, mb.getName(), val.toString());
+        System.out.format(format, mb.getName(), (val==null)?"":val.toString());
       }
     }
   }
@@ -130,7 +130,7 @@ public class JMXGet {
       break;
     }
 
-    return (val == null) ? null : val.toString();
+    return (val == null) ? "" : val.toString();
   }
 
   /**

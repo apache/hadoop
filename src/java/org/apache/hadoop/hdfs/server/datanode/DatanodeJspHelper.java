@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URLEncoder;
 import java.security.PrivilegedExceptionAction;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -32,7 +33,6 @@ import javax.servlet.jsp.JspWriter;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FsShell;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -62,6 +62,9 @@ public class DatanodeJspHelper {
         }
       });
   }
+
+  private static final SimpleDateFormat lsDateFormat =
+    new SimpleDateFormat("yyyy-MM-dd HH:mm");
 
   /**
    * Get the default chunk size.
@@ -188,7 +191,7 @@ public class DatanodeJspHelper {
               + JspHelper.getUrlParam(JspHelper.NAMENODE_ADDRESS, nnAddr);
             cols[0] = "<a href=\"" + datanodeUrl + "\">"
               + localFileName + "</a>";
-            cols[5] = FsShell.dateForm.format(new Date((files[i]
+            cols[5] = lsDateFormat.format(new Date((files[i]
               .getModificationTime())));
             cols[6] = files[i].getPermission().toString();
             cols[7] = files[i].getOwner();

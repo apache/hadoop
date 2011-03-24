@@ -101,7 +101,7 @@
   <property name="test.hdfs.commit.tests.file" value="${test.src.dir}/commit-tests" />
   <property name="test.hdfs.smoke.tests.file" value="${test.src.dir}/smoke-tests" />
   <property name="test.hdfs.all.tests.file" value="${test.src.dir}/all-tests" />
-  <property name="test.exclude.file" value="/dev/null" />
+  <property name="test.exclude.file" value="${test.src.dir}/empty-file" />
 
   <property name="test.hdfs.rpc.engine" value=""/>
   <property name="test.libhdfs.dir" value="${test.build.dir}/libhdfs"/>
@@ -1220,6 +1220,7 @@
         <exclude name="src/test/commit-tests" />
         <exclude name="src/test/smoke-tests" />
         <exclude name="src/test/all-tests" />
+        <exclude name="src/test/empty-file" />
         <exclude name="**/*/*.properties" />
         <exclude name="src/c++/libhdfs/config.guess" />
         <exclude name="src/c++/libhdfs/config.sub" />

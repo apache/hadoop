@@ -288,6 +288,12 @@ Trunk (unreleased changes)
 
     HDFS-1731. Allow using a file to exclude certain tests from build (todd)
 
+    HDFS-1736. Remove the dependency from DatanodeJspHelper to FsShell.
+    (Daryn Sharp via szetszwo)
+    
+    HDFS-1731. Amend previous commit for this JIRA to fix build on Cygwin.
+    (todd)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -342,6 +348,9 @@ Trunk (unreleased changes)
     configurations in DFSck.  (Alexey Diomin via szetszwo)
 
     HDFS-1748. Balancer utilization classification is incomplete.  (szetszwo)
+
+    HDFS-1738. change hdfs jmxget to return an empty string instead of 
+    null when an attribute value is not available (tanping vi boryas)
 
 Release 0.22.0 - Unreleased
 
