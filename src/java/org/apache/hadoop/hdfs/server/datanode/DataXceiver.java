@@ -392,7 +392,8 @@ class DataXceiver extends DataTransferProtocol.Receiver
       // if this write is for a replication request or recovering
       // a failed close for client, then confirm block. For other client-writes,
       // the block is finalized in the PacketResponder.
-      if (client.length() == 0 || 
+      if ((client.length() == 0 && stage != BlockConstructionStage.TRANSFER_RBW)
+          ||
           stage == BlockConstructionStage.PIPELINE_CLOSE_RECOVERY) {
         datanode.closeBlock(block, DataNode.EMPTY_DEL_HINT);
         LOG.info("Received block " + block + 

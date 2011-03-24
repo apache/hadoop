@@ -427,7 +427,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
 
   @Override // FSDatasetInterface
   public synchronized void unfinalizeBlock(ExtendedBlock b) throws IOException {
-    if (isBeingWritten(b)) {
+    if (isValidRbw(b)) {
       blockMap.remove(b.getLocalBlock());
     }
   }
@@ -546,7 +546,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
   }
 
   /* check if a block is created but not finalized */
-  private synchronized boolean isBeingWritten(ExtendedBlock b) {
+  @Override
+  public synchronized boolean isValidRbw(ExtendedBlock b) {
     final Map<Block, BInfo> map = blockMap.get(b.getBlockPoolId());
     if (map == null) {
       return false;
@@ -557,7 +558,8 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     }
     return !binfo.isFinalized();  
   }
-  
+
+  @Override
   public String toString() {
     return getStorageInfo();
   }
@@ -642,7 +644,7 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
           throw new ReplicaAlreadyExistsException("Block " + b + 
               " is valid, and cannot be written to.");
       }
-    if (isBeingWritten(b)) {
+    if (isValidRbw(b)) {
         throw new ReplicaAlreadyExistsException("Block " + b + 
             " is being written, and cannot be written to.");
     }
@@ -939,5 +941,22 @@ public class SimulatedFSDataset  implements FSConstants, FSDatasetInterface, Con
     Map<Block, BInfo> map = new HashMap<Block, BInfo>();
     blockMap.put(bpid, map);
     storage.addBlockPool(bpid);
+  }
+
+  @Override
+  public ReplicaInPipelineInterface convertTemporaryToRbw(ExtendedBlock temporary)
+      throws IOException {
+    final Map<Block, BInfo> map = blockMap.get(temporary.getBlockPoolId());
+    if (map == null) {
+      throw new IOException("Block pool not found, temporary=" + temporary);
+    }
+    final BInfo r = map.get(temporary.getLocalBlock());
+    if (r == null) {
+      throw new IOException("Block not found, temporary=" + temporary);
+    } else if (r.isFinalized()) {
+      throw new IOException("Replica already finalized, temporary="
+          + temporary + ", r=" + r);
+    }
+    return r;
   }
 }

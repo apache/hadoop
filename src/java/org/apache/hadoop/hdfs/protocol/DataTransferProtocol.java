@@ -46,11 +46,11 @@ public interface DataTransferProtocol {
    * when protocol changes. It is not very obvious. 
    */
   /*
-   * Version 20:
+   * Version 21:
    *    Changed the protocol methods to use ExtendedBlock instead
    *    of Block.
    */
-  public static final int DATA_TRANSFER_VERSION = 19;
+  public static final int DATA_TRANSFER_VERSION = 21;
 
   /** Operation */
   public enum Op {
@@ -144,7 +144,9 @@ public interface DataTransferProtocol {
     // Recover a failed PIPELINE_CLOSE
     PIPELINE_CLOSE_RECOVERY,
     // pipeline set up for block creation
-    PIPELINE_SETUP_CREATE;
+    PIPELINE_SETUP_CREATE,
+    // similar to replication but transferring rbw instead of finalized
+    TRANSFER_RBW;
     
     final static private byte RECOVERY_BIT = (byte)1;
     
