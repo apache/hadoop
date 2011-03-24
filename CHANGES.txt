@@ -171,6 +171,8 @@ Release 0.90.2 - Unreleased
    HBASE-3627  NPE in EventHandler when region already reassigned
    HBASE-3660  HMaster will exit when starting with stale data in cached locations
                such as -ROOT- or .META.
+   HBASE-3654  Weird blocking between getOnlineRegion and createRegionLoad
+               (Subbu M Iyer via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
