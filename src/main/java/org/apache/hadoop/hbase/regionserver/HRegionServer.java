@@ -1906,7 +1906,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       } catch (IOException e) {
         // If checkOpen failed, server not running or filesystem gone,
         // cancel this lease; filesystem is gone or we're closing or something.
-        this.leases.cancelLease(scannerName);
+        try {
+          this.leases.cancelLease(scannerName);
+        } catch (LeaseException le) {
+          LOG.info("Server shutting down and client tried to access missing scanner " +
+            scannerName);
+        }
         throw e;
       }
       this.leases.renewLease(scannerName);

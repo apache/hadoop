@@ -173,6 +173,7 @@ Release 0.90.2 - Unreleased
                such as -ROOT- or .META.
    HBASE-3654  Weird blocking between getOnlineRegion and createRegionLoad
                (Subbu M Iyer via Stack)
+   HBASE-3666  TestScannerTimeout fails occasionally
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift
