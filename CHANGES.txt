@@ -95,6 +95,8 @@ Release 0.91.0 - Unreleased
    HBASE-3468  Enhance checkAndPut and checkAndDelete with comparators
    HBASE-3683  NMapInputFormat should use a different config param for
                number of maps
+   HBASE-3673  Reduce HTable Pool Contention Using Concurrent Collections
+               (Karthick Sankarachary via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel

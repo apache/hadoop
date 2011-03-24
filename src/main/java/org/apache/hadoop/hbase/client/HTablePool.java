@@ -21,8 +21,10 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -42,8 +44,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <p>Pool will manage its own cluster to the cluster. See {@link HConnectionManager}.
  */
 public class HTablePool {
-  private final ConcurrentMap<String, LinkedList<HTableInterface>> tables =
-    new ConcurrentHashMap<String, LinkedList<HTableInterface>>();
+  private final Map<String, Queue<HTableInterface>> tables =
+    new ConcurrentHashMap<String, Queue<HTableInterface>>();
   private final Configuration config;
   private final int maxSize;
   private final HTableInterfaceFactory tableFactory;
@@ -82,16 +84,13 @@ public class HTablePool {
    * @throws RuntimeException if there is a problem instantiating the HTable
    */
   public HTableInterface getTable(String tableName) {
-    LinkedList<HTableInterface> queue = tables.get(tableName);
+    Queue<HTableInterface> queue = tables.get(tableName);
     if(queue == null) {
-      queue = new LinkedList<HTableInterface>();
-      tables.putIfAbsent(tableName, queue);
+      queue = new ConcurrentLinkedQueue<HTableInterface>();
+      tables.put(tableName, queue);
       return createHTable(tableName);
     }
-    HTableInterface table;
-    synchronized(queue) {
-      table = queue.poll();
-    }
+    HTableInterface table = queue.poll();
     if(table == null) {
       return createHTable(tableName);
     }
@@ -118,11 +117,9 @@ public class HTablePool {
    * @param table table
    */
   public void putTable(HTableInterface table) {
-    LinkedList<HTableInterface> queue = tables.get(Bytes.toString(table.getTableName()));
-    synchronized(queue) {
-      if(queue.size() >= maxSize) return;
-      queue.add(table);
-    }
+    Queue<HTableInterface> queue = tables.get(Bytes.toString(table.getTableName()));
+    if(queue.size() >= maxSize) return;
+    queue.add(table);
   }
 
   protected HTableInterface createHTable(String tableName) {
@@ -140,12 +137,10 @@ public class HTablePool {
    */
   public void closeTablePool(final String tableName)  {
     Queue<HTableInterface> queue = tables.get(tableName);
-    synchronized (queue) {
-      HTableInterface table = queue.poll();
-      while (table != null) {
-        this.tableFactory.releaseHTableInterface(table);
-        table = queue.poll();
-      }
+    HTableInterface table = queue.poll();
+    while (table != null) {
+      this.tableFactory.releaseHTableInterface(table);
+      table = queue.poll();
     }
     HConnectionManager.deleteConnection(this.config, true);
   }
@@ -161,8 +156,6 @@ public class HTablePool {
 
   int getCurrentPoolSize(String tableName) {
     Queue<HTableInterface> queue = tables.get(tableName);
-    synchronized(queue) {
-      return queue.size();
-    }
+    return queue.size();
   }
 }
