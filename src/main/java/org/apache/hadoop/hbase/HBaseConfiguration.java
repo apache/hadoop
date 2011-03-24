@@ -70,11 +70,25 @@ public class HBaseConfiguration extends Configuration {
     }
   }
 
+  private static void checkForClusterFreeMemoryLimit(Configuration conf) {
+      float globalMemstoreLimit = conf.getFloat("hbase.regionserver.global.memstore.upperLimit", 0.4f);
+      float blockCacheUpperLimit = conf.getFloat("hfile.block.cache.size", 0.2f);
+      if (1.0f - (globalMemstoreLimit + blockCacheUpperLimit)
+              < HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
+          throw new RuntimeException(
+        "Current heap configuration for MemStore and BlockCache exceeds the threshold required for " +
+                "successful cluster operation. The combined value cannot exceed 0.8. Please check " +
+                "the settings for hbase.regionserver.global.memstore.upperLimit and" +
+                " hfile.block.cache.size in your configuration.");
+      }
+  }
+
   public static Configuration addHbaseResources(Configuration conf) {
     conf.addResource("hbase-default.xml");
     conf.addResource("hbase-site.xml");
 
     checkDefaultsVersion(conf);
+    checkForClusterFreeMemoryLimit(conf);
     return conf;
   }
 

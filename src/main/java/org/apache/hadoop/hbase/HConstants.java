@@ -364,6 +364,11 @@ public final class HConstants {
   public static final String HBASE_MASTER_LOGCLEANER_PLUGINS =
       "hbase.master.logcleaner.plugins";
 
+   /*
+    * Minimum percentage of free heap necessary for a successful cluster startup.
+    */
+  public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
