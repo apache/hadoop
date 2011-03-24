@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -180,21 +181,22 @@ implements Configurable {
   }
 
   @Override
-  public void setConf(Configuration conf) {
-    String tableName = conf.get(OUTPUT_TABLE);
-    String address = conf.get(QUORUM_ADDRESS);
-    String serverClass = conf.get(REGION_SERVER_CLASS);
-    String serverImpl = conf.get(REGION_SERVER_IMPL);
+  public void setConf(Configuration otherConf) {
+    this.conf = HBaseConfiguration.create(otherConf);
+    String tableName = this.conf.get(OUTPUT_TABLE);
+    String address = this.conf.get(QUORUM_ADDRESS);
+    String serverClass = this.conf.get(REGION_SERVER_CLASS);
+    String serverImpl = this.conf.get(REGION_SERVER_IMPL);
     try {
       if (address != null) {
-        ZKUtil.applyClusterKeyToConf(conf, address);
+        ZKUtil.applyClusterKeyToConf(this.conf, address);
       }
       if (serverClass != null) {
-        conf.set(HConstants.REGION_SERVER_CLASS, serverClass);
-        conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
+        this.conf.set(HConstants.REGION_SERVER_CLASS, serverClass);
+        this.conf.set(HConstants.REGION_SERVER_IMPL, serverImpl);
       }
-      this.table = new HTable(conf, tableName);
-      table.setAutoFlush(false);
+      this.table = new HTable(this.conf, tableName);
+      this.table.setAutoFlush(false);
       LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {
       LOG.error(e);
