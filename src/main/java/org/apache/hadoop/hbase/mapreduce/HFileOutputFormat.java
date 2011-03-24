@@ -20,9 +20,13 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -32,7 +36,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -64,6 +70,7 @@ import org.apache.commons.logging.LogFactory;
  */
 public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, KeyValue> {
   static Log LOG = LogFactory.getLog(HFileOutputFormat.class);
+  static final String COMPRESSION_CONF_KEY = "hbase.hfileoutputformat.families.compression";
   
   public RecordWriter<ImmutableBytesWritable, KeyValue> getRecordWriter(final TaskAttemptContext context)
   throws IOException, InterruptedException {
@@ -78,8 +85,11 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     final int blocksize = conf.getInt("hfile.min.blocksize.size",
         HFile.DEFAULT_BLOCKSIZE);
     // Invented config.  Add to hbase-*.xml if other than default compression.
-    final String compression = conf.get("hfile.compression",
-      Compression.Algorithm.NONE.getName());
+    final String defaultCompression = conf.get("hfile.compression",
+        Compression.Algorithm.NONE.getName());
+
+    // create a map from column family to the compression algorithm
+    final Map<byte[], String> compressionMap = createFamilyCompressionMap(conf);
 
     return new RecordWriter<ImmutableBytesWritable, KeyValue>() {
       // Map of families to writers and how much has been output on the writer.
@@ -153,6 +163,8 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
       private WriterLength getNewWriter(byte[] family) throws IOException {
         WriterLength wl = new WriterLength();
         Path familydir = new Path(outputdir, Bytes.toString(family));
+        String compression = compressionMap.get(family);
+        compression = compression == null ? defaultCompression : compression;
         wl.writer = new HFile.Writer(fs,
           StoreFile.getUniqueFile(fs, familydir), blocksize,
           compression, KeyValue.KEY_COMPARATOR);
@@ -300,7 +312,69 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     DistributedCache.addCacheFile(cacheUri, conf);
     DistributedCache.createSymlink(conf);
     
+    // Set compression algorithms based on column families
+    configureCompression(table, conf);
+    
     LOG.info("Incremental table output configured.");
   }
   
+  /**
+   * Run inside the task to deserialize column family to compression algorithm
+   * map from the
+   * configuration.
+   * 
+   * Package-private for unit tests only.
+   * 
+   * @return a map from column family to the name of the configured compression
+   *         algorithm
+   */
+  static Map<byte[], String> createFamilyCompressionMap(Configuration conf) {
+    Map<byte[], String> compressionMap = new TreeMap<byte[], String>(Bytes.BYTES_COMPARATOR);
+    String compressionConf = conf.get(COMPRESSION_CONF_KEY, "");
+    for (String familyConf : compressionConf.split("&")) {
+      String[] familySplit = familyConf.split("=");
+      if (familySplit.length != 2) {
+        continue;
+      }
+      
+      try {
+        compressionMap.put(URLDecoder.decode(familySplit[0], "UTF-8").getBytes(),
+            URLDecoder.decode(familySplit[1], "UTF-8"));
+      } catch (UnsupportedEncodingException e) {
+        // will not happen with UTF-8 encoding
+        throw new AssertionError(e);
+      }
+    }
+    return compressionMap;
+  }
+
+  /**
+   * Serialize column family to compression algorithm map to configuration.
+   * Invoked while configuring the MR job for incremental load.
+   * 
+   * Package-private for unit tests only.
+   * 
+   * @throws IOException
+   *           on failure to read column family descriptors
+   */
+  static void configureCompression(HTable table, Configuration conf) throws IOException {
+    StringBuilder compressionConfigValue = new StringBuilder();
+    HTableDescriptor tableDescriptor = table.getTableDescriptor();
+    if(tableDescriptor == null){
+      // could happen with mock table instance
+      return;
+    }
+    Collection<HColumnDescriptor> families = tableDescriptor.getFamilies();
+    int i = 0;
+    for (HColumnDescriptor familyDescriptor : families) {
+      if (i++ > 0) {
+        compressionConfigValue.append('&');
+      }
+      compressionConfigValue.append(URLEncoder.encode(familyDescriptor.getNameAsString(), "UTF-8"));
+      compressionConfigValue.append('=');
+      compressionConfigValue.append(URLEncoder.encode(familyDescriptor.getCompression().getName(), "UTF-8"));
+    }
+    // Get rid of the last ampersand
+    conf.set(COMPRESSION_CONF_KEY, compressionConfigValue.toString());
+  }
 }

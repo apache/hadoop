@@ -97,6 +97,7 @@ Release 0.91.0 - Unreleased
                number of maps
    HBASE-3673  Reduce HTable Pool Contention Using Concurrent Collections
                (Karthick Sankarachary via Stack)
+   HBASE-3474  HFileOutputFormat to use column family's compression algorithm
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel
