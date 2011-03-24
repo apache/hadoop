@@ -269,6 +269,12 @@ public class TableResource extends ResourceBase {
     return new SchemaResource(this);
   }
 
+  @Path("multiget")
+  public MultiRowResource getMultipleRowResource(
+          final @QueryParam("v") String versions) throws IOException {
+    return new MultiRowResource(this, versions);
+  }
+
   @Path("{rowspec: .+}")
   public RowResource getRowResource(
       // We need the @Encoded decorator so Jersey won't urldecode before
