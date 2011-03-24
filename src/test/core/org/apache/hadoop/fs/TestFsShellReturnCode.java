@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.fs;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.io.IOUtils;
 
 import org.junit.Test;
 import org.junit.Assert;
@@ -237,4 +241,36 @@ public class TestFsShellReturnCode {
     verify(fs, "-chgrp", argv4, 1, fsShell, 0);
 
   }
+  
+  @Test
+  public void testGetWithInvalidSourcePathShouldNotDisplayNullInConsole()
+      throws Exception {
+    Configuration conf = new Configuration();
+    FsShell shell = new FsShell();
+    shell.setConf(conf);
+    final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    final PrintStream out = new PrintStream(bytes);
+    final PrintStream oldErr = System.err;
+    System.setErr(out);
+    final String results;
+    try {
+      FileSystem fileSys = FileSystem.getLocal(conf);
+      String[] args = new String[3];
+      args[0] = "-get";
+      args[1] = "/invalidPath";
+      args[2] = "/test/tmp";
+      assertTrue("file exists", !fileSys.exists(new Path(args[1])));
+      int run = shell.run(args);
+      results = bytes.toString();
+      assertTrue("Return code should be -1", run == -1);
+      assertTrue(" Null is coming when source path is invalid. ",!results.contains("get: null"));
+      assertTrue(" Not displaying the intended message ",results.contains("get: "+args[1]+": No such file or directory"));
+    } finally {
+      IOUtils.closeStream(out);
+      System.setErr(oldErr);
+    }
+  }
+  
+  
+  
 }
