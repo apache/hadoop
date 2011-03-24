@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * Provides an interface to manage HBase database table metadata + general
@@ -832,8 +834,16 @@ public class HBaseAdmin implements Abortable {
           MetaReader.getTableRegionsAndLocations(getCatalogTracker(),
               Bytes.toString(tableNameOrRegionName));
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+          if (pair.getFirst().isOffline()) continue;
           if (pair.getSecond() == null) continue;
-          flush(pair.getSecond(), pair.getFirst());
+          try {
+            flush(pair.getSecond(), pair.getFirst());
+          } catch (NotServingRegionException e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Trying to flush " + pair.getFirst() + ": " +
+                StringUtils.stringifyException(e));
+            }
+          }
         }
       }
     } finally {
@@ -926,8 +936,17 @@ public class HBaseAdmin implements Abortable {
           MetaReader.getTableRegionsAndLocations(ct,
               Bytes.toString(tableNameOrRegionName));
         for (Pair<HRegionInfo, HServerAddress> pair: pairs) {
+          if (pair.getFirst().isOffline()) continue;
           if (pair.getSecond() == null) continue;
-          compact(pair.getSecond(), pair.getFirst(), major);
+          try {
+            compact(pair.getSecond(), pair.getFirst(), major);
+          } catch (NotServingRegionException e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Trying to" + (major ? " major" : "") + " compact " +
+                pair.getFirst() + ": " +
+                StringUtils.stringifyException(e));
+            }
+          }
         }
       }
     } finally {
