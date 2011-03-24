@@ -694,7 +694,8 @@ public class ZKAssign {
       LOG.warn(zkw.prefix("Attempt to transition the " +
         "unassigned node for " + encoded +
         " from " + beginState + " to " + endState + " failed, " +
-        "the node existed but was in the state " + existingData.getEventType()));
+        "the node existed but was in the state " + existingData.getEventType() +
+        " set by the server " + existingData.getServerName()));
       return -1;
     }
 
