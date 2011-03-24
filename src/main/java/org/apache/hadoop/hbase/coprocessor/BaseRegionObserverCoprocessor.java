@@ -206,14 +206,14 @@ public abstract class BaseRegionObserverCoprocessor implements RegionObserver {
 
   @Override
   public boolean preScannerNext(final RegionCoprocessorEnvironment e,
-      final InternalScanner s, final List<KeyValue> results,
+      final InternalScanner s, final List<Result> results,
       final int limit, final boolean hasMore) throws IOException {
     return hasMore;
   }
 
   @Override
   public boolean postScannerNext(final RegionCoprocessorEnvironment e,
-      final InternalScanner s, final List<KeyValue> results, final int limit,
+      final InternalScanner s, final List<Result> results, final int limit,
       final boolean hasMore) throws IOException {
     return hasMore;
   }

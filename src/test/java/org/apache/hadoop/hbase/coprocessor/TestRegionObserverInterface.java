@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
@@ -32,11 +33,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Increment;
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.coprocessor.Coprocessor.Priority;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -47,6 +44,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import javax.el.MethodNotFoundException;
+
 import static org.junit.Assert.*;
 
 public class TestRegionObserverInterface {
@@ -54,16 +53,10 @@ public class TestRegionObserverInterface {
   static final String DIR = "test/build/data/TestRegionObserver/";
 
   public static final byte[] TEST_TABLE = Bytes.toBytes("TestTable");
-  public static final byte[] TEST_TABLE_2 = Bytes.toBytes("TestTable2");
-  public static final byte[] TEST_FAMILY = Bytes.toBytes("TestFamily");
-  public static final byte[] TEST_QUALIFIER = Bytes.toBytes("TestQualifier");
-
   public final static byte[] A = Bytes.toBytes("a");
   public final static byte[] B = Bytes.toBytes("b");
   public final static byte[] C = Bytes.toBytes("c");
   public final static byte[] ROW = Bytes.toBytes("testrow");
-  public final static byte[] ROW1 = Bytes.toBytes("testrow1");
-  public final static byte[] ROW2 = Bytes.toBytes("testrow2");
 
   private static final int ROWSIZE = 20;
   private static byte [][] ROWS = makeN(ROW, ROWSIZE);
@@ -80,17 +73,6 @@ public class TestRegionObserverInterface {
 
     util.startMiniCluster(2);
     cluster = util.getMiniHBaseCluster();
-
-    HTable table = util.createTable(TEST_TABLE_2, TEST_FAMILY);
-
-    for(int i = 0; i < ROWSIZE; i++) {
-      Put put = new Put(ROWS[i]);
-      put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
-      table.put(put);
-    }
-
-    // sleep here is an ugly hack to allow region transitions to finish
-    Thread.sleep(5000);
   }
 
   @AfterClass
@@ -98,87 +80,157 @@ public class TestRegionObserverInterface {
     util.shutdownMiniCluster();
   }
 
-  HRegion initHRegion (byte [] tableName, String callingMethod,
-      Configuration conf, Class<?> implClass, byte [] ... families)
-      throws IOException{
-    HTableDescriptor htd = new HTableDescriptor(tableName);
-    for(byte [] family : families) {
-      htd.addFamily(new HColumnDescriptor(family));
-    }
-    HRegionInfo info = new HRegionInfo(htd, null, null, false);
-    Path path = new Path(DIR + callingMethod);
-    // this following piece is a hack. currently a coprocessorHost
-    // is secretly loaded at OpenRegionHandler. we don't really
-    // start a region server here, so just manually create cphost
-    // and set it to region.
-    HRegion r = HRegion.createHRegion(info, path, conf);
-    RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
-    r.setCoprocessorHost(host);
-    host.load(implClass, Priority.USER);
-    return r;
-  }
-
   @Test
   public void testRegionObserver() throws IOException {
-    byte[] TABLE = Bytes.toBytes(getClass().getName());
-    byte[][] FAMILIES = new byte[][] { A, B, C } ;
+    byte[] tableName = TEST_TABLE;
+    // recreate table every time in order to reset the status of the
+    // coproccessor.
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+            "hadDelete"},
+        TEST_TABLE,
+        new Boolean[] {false, false, false, false, false});
 
     Put put = new Put(ROW);
     put.add(A, A, A);
     put.add(B, B, B);
     put.add(C, C, C);
+    table.put(put);
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+            "hadDelete"},
+        TEST_TABLE,
+        new Boolean[] {false, false, true, true, false}
+    );
 
     Get get = new Get(ROW);
     get.addColumn(A, A);
     get.addColumn(B, B);
     get.addColumn(C, C);
+    table.get(get);
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+            "hadDelete"},
+        TEST_TABLE,
+        new Boolean[] {true, true, true, true, false}
+    );
 
     Delete delete = new Delete(ROW);
     delete.deleteColumn(A, A);
     delete.deleteColumn(B, B);
     delete.deleteColumn(C, C);
+    table.delete(delete);
 
-    for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
-      for (HRegionInfo r : t.getRegionServer().getOnlineRegions()) {
-        if (!Arrays.equals(r.getTableDesc().getName(), TEST_TABLE)) {
-          continue;
-        }
-        RegionCoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).
-          getCoprocessorHost();
-        Coprocessor c = cph.findCoprocessor(SimpleRegionObserver.class.getName());
-        assertNotNull(c);
-        assertTrue(((SimpleRegionObserver)c).hadPreGet());
-        assertTrue(((SimpleRegionObserver)c).hadPostGet());
-        assertTrue(((SimpleRegionObserver)c).hadPrePut());
-        assertTrue(((SimpleRegionObserver)c).hadPostPut());
-        assertTrue(((SimpleRegionObserver)c).hadDelete());
-      }
-    }
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+            "hadDelete"},
+        TEST_TABLE,
+        new Boolean[] {true, true, true, true, true}
+    );
+    util.deleteTable(tableName);
   }
-
-  // TODO: add tests for other methods which need to be tested
-  // at region servers.
 
   @Test
   public void testIncrementHook() throws IOException {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE_2);
+    byte[] tableName = TEST_TABLE;
 
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
     Increment inc = new Increment(Bytes.toBytes(0));
-    inc.addColumn(TEST_FAMILY, TEST_QUALIFIER, 1);
+    inc.addColumn(A, A, 1);
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreIncrement", "hadPostIncrement"},
+        tableName,
+        new Boolean[] {false, false}
+    );
 
     table.increment(inc);
 
-    for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
-      for (HRegionInfo r : t.getRegionServer().getOnlineRegions()) {
-        if (!Arrays.equals(r.getTableDesc().getName(), TEST_TABLE_2)) {
-          continue;
-        }
-        RegionCoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).
-          getCoprocessorHost();
-        Coprocessor c = cph.findCoprocessor(SimpleRegionObserver.class.getName());
-        assertTrue(((SimpleRegionObserver)c).hadPreIncrement());
-        assertTrue(((SimpleRegionObserver)c).hadPostIncrement());
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreIncrement", "hadPostIncrement"},
+        tableName,
+        new Boolean[] {true, true}
+    );
+    util.deleteTable(tableName);
+  }
+
+  @Test
+  // HBase-3583
+  public void testHBase3583() throws IOException {
+    byte[] tableName = Bytes.toBytes("testHBase3583");
+    util.createTable(tableName, new byte[][] {A, B, C});
+
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "wasScannerNextCalled",
+            "wasScannerCloseCalled"},
+        tableName,
+        new Boolean[] {false, false, false, false}
+    );
+
+    HTable table = new HTable(util.getConfiguration(), tableName);
+    Put put = new Put(ROW);
+    put.add(A, A, A);
+    table.put(put);
+
+    Get get = new Get(ROW);
+    get.addColumn(A, A);
+    table.get(get);
+
+    // verify that scannerNext and scannerClose upcalls won't be invoked
+    // when we perform get().
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"hadPreGet", "hadPostGet", "wasScannerNextCalled",
+            "wasScannerCloseCalled"},
+        tableName,
+        new Boolean[] {true, true, false, false}
+    );
+
+    Scan s = new Scan();
+    ResultScanner scanner = table.getScanner(s);
+    try {
+      for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
       }
+    } finally {
+      scanner.close();
+    }
+
+    // now scanner hooks should be invoked.
+    verifyMethodResult(SimpleRegionObserver.class,
+        new String[] {"wasScannerNextCalled", "wasScannerCloseCalled"},
+        tableName,
+        new Boolean[] {true, true}
+    );
+    util.deleteTable(tableName);
+  }
+
+  // check each region whether the coprocessor upcalls are called or not.
+  private void verifyMethodResult(Class c, String methodName[], byte[] tableName,
+                                  Object value[]) throws IOException {
+    try {
+      for (JVMClusterUtil.RegionServerThread t : cluster.getRegionServerThreads()) {
+        for (HRegionInfo r : t.getRegionServer().getOnlineRegions()) {
+          if (!Arrays.equals(r.getTableDesc().getName(), tableName)) {
+            continue;
+          }
+          RegionCoprocessorHost cph = t.getRegionServer().getOnlineRegion(r.getRegionName()).
+              getCoprocessorHost();
+
+          Coprocessor cp = cph.findCoprocessor(c.getName());
+          assertNotNull(cp);
+          for (int i = 0; i < methodName.length; ++i) {
+            Method m = c.getMethod(methodName[i]);
+            Object o = m.invoke(cp);
+            assertTrue("Result of " + c.getName() + "." + methodName[i]
+                + " is expected to be " + value[i].toString()
+                + ", while we get " + o.toString(), o.equals(value[i]));
+          }
+        }
+      }
+    } catch (Exception e) {
+      throw new IOException(e.toString());
     }
   }
 

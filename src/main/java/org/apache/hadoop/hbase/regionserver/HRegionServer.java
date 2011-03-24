@@ -1929,6 +1929,32 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       List<Result> results = new ArrayList<Result>(nbRows);
       long currentScanResultSize = 0;
       List<KeyValue> values = new ArrayList<KeyValue>();
+
+      // Call coprocessor. Get region info from scanner.
+      HRegion region = null;
+      if (s instanceof HRegion.RegionScanner) {
+        HRegion.RegionScanner rs = (HRegion.RegionScanner) s;
+        region = getRegion(rs.getRegionName().getRegionName());
+      } else {
+        throw new IOException("InternalScanner implementation is expected " +
+            "to be HRegion.RegionScanner.");
+      }
+      if (region != null && region.getCoprocessorHost() != null) {
+        Boolean bypass = region.getCoprocessorHost().preScannerNext(s,
+            results, nbRows);
+        if (!results.isEmpty()) {
+          for (Result r : results) {
+            for (KeyValue kv : r.raw()) {
+              currentScanResultSize += kv.heapSize();
+            }
+          }
+        }
+        if (bypass != null) {
+          return ((HRegion.RegionScanner) s).isFilterDone() && results.isEmpty() ? null
+              : results.toArray(new Result[0]);
+        }
+      }
+
       for (int i = 0; i < nbRows
           && currentScanResultSize < maxScannerResultSize; i++) {
         requestCount.incrementAndGet();
@@ -1945,6 +1971,12 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
         values.clear();
       }
+
+      // coprocessor postNext hook
+      if (region != null && region.getCoprocessorHost() != null) {
+        region.getCoprocessorHost().postScannerNext(s, results, nbRows, true);
+      }
+
       // Below is an ugly hack where we cast the InternalScanner to be a
       // HRegion.RegionScanner. The alternative is to change InternalScanner
       // interface but its used everywhere whereas we just need a bit of info
@@ -1967,10 +1999,33 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       checkOpen();
       requestCount.incrementAndGet();
       String scannerName = String.valueOf(scannerId);
-      InternalScanner s = scanners.remove(scannerName);
+      InternalScanner s = scanners.get(scannerName);
+
+      HRegion region = null;
+      if (s != null) {
+        // call coprocessor.
+        if (s instanceof HRegion.RegionScanner) {
+          HRegion.RegionScanner rs = (HRegion.RegionScanner) s;
+          region = getRegion(rs.getRegionName().getRegionName());
+        } else {
+          throw new IOException("InternalScanner implementation is expected " +
+              "to be HRegion.RegionScanner.");
+        }
+        if (region != null && region.getCoprocessorHost() != null) {
+          if (region.getCoprocessorHost().preScannerClose(s)) {
+            return; // bypass
+          }
+        }
+      }
+
+      s = scanners.remove(scannerName);
       if (s != null) {
         s.close();
         this.leases.cancelLease(scannerName);
+
+        if (region != null && region.getCoprocessorHost() != null) {
+          region.getCoprocessorHost().postScannerClose(s);
+        }
       }
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));

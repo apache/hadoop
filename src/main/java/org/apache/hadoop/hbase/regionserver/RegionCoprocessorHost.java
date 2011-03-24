@@ -911,7 +911,7 @@ public class RegionCoprocessorHost
    * @exception IOException Exception
    */
   public Boolean preScannerNext(final InternalScanner s,
-      final List<KeyValue> results, int limit) throws IOException {
+      final List<Result> results, int limit) throws IOException {
     try {
       boolean bypass = false;
       boolean hasNext = false;
@@ -941,7 +941,7 @@ public class RegionCoprocessorHost
    * @exception IOException Exception
    */
   public boolean postScannerNext(final InternalScanner s,
-      final List<KeyValue> results, final int limit, boolean hasMore)
+      final List<Result> results, final int limit, boolean hasMore)
       throws IOException {
     try {
       coprocessorLock.readLock().lock();

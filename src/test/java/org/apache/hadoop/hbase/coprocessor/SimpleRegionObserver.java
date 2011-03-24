@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -68,6 +69,10 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
   boolean hadPostIncrement = false;
   boolean hadPreWALRestored = false;
   boolean hadPostWALRestored = false;
+  boolean hadPreScannerNext = false;
+  boolean hadPostScannerNext = false;
+  boolean hadPreScannerClose = false;
+  boolean hadPostScannerClose = false;
 
   @Override
   public void preOpen(RegionCoprocessorEnvironment e) {
@@ -135,6 +140,35 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
     hadPostCompact = true;
   }
 
+
+  @Override
+  public boolean preScannerNext(final RegionCoprocessorEnvironment e,
+      final InternalScanner s, final List<Result> results,
+      final int limit, final boolean hasMore) throws IOException {
+    hadPreScannerNext = true;
+    return hasMore;
+  }
+
+  @Override
+  public boolean postScannerNext(final RegionCoprocessorEnvironment e,
+      final InternalScanner s, final List<Result> results, final int limit,
+      final boolean hasMore) throws IOException {
+    hadPostScannerNext = true;
+    return hasMore;
+  }
+
+  @Override
+  public void preScannerClose(final RegionCoprocessorEnvironment e,
+      final InternalScanner s) throws IOException {
+    hadPreScannerClose = true;
+  }
+
+  @Override
+  public void postScannerClose(final RegionCoprocessorEnvironment e,
+      final InternalScanner s) throws IOException {
+    hadPostScannerClose = true;
+  }
+
   public boolean wasCompacted() {
     return hadPreCompact && hadPostCompact;
   }
@@ -146,10 +180,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
     assertNotNull(e.getRegion());
     assertNotNull(get);
     assertNotNull(results);
-    if (Arrays.equals(e.getRegion().getTableDesc().getName(),
-        TestRegionObserverInterface.TEST_TABLE)) {
-      hadPreGet = true;
-    }
+    hadPreGet = true;
   }
 
   @Override
@@ -178,8 +209,8 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
       assertTrue(foundA);
       assertTrue(foundB);
       assertTrue(foundC);
-      hadPostGet = true;
     }
+    hadPostGet = true;
   }
 
   @Override
@@ -205,8 +236,8 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
       assertNotNull(kvs.get(0));
       assertTrue(Bytes.equals(kvs.get(0).getQualifier(),
           TestRegionObserverInterface.C));
-      hadPrePut = true;
     }
+    hadPrePut = true;
   }
 
   @Override
@@ -232,8 +263,8 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
       assertNotNull(kvs.get(0));
       assertTrue(Bytes.equals(kvs.get(0).getQualifier(),
           TestRegionObserverInterface.C));
-      hadPostPut = true;
     }
+    hadPostPut = true;
   }
 
   @Override
@@ -242,8 +273,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(familyMap);
-    if (beforeDelete && e.getRegion().getTableDesc().getName().equals(
-        TestRegionObserverInterface.TEST_TABLE)) {
+    if (beforeDelete) {
       hadPreDeleted = true;
     }
   }
@@ -254,11 +284,8 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
     assertNotNull(e);
     assertNotNull(e.getRegion());
     assertNotNull(familyMap);
-    if (Arrays.equals(e.getRegion().getTableDesc().getName(),
-        TestRegionObserverInterface.TEST_TABLE)) {
-      beforeDelete = false;
-      hadPostDeleted = true;
-    }
+    beforeDelete = false;
+    hadPostDeleted = true;
   }
 
   @Override
@@ -269,8 +296,7 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
     assertNotNull(e.getRegion());
     assertNotNull(row);
     assertNotNull(result);
-    if (beforeDelete && e.getRegion().getTableDesc().getName().equals(
-        TestRegionObserverInterface.TEST_TABLE)) {
+    if (beforeDelete) {
       hadPreGetClosestRowBefore = true;
     }
   }
@@ -283,63 +309,59 @@ public class SimpleRegionObserver extends BaseRegionObserverCoprocessor {
     assertNotNull(e.getRegion());
     assertNotNull(row);
     assertNotNull(result);
-    if (Arrays.equals(e.getRegion().getTableDesc().getName(),
-        TestRegionObserverInterface.TEST_TABLE)) {
-      hadPostGetClosestRowBefore = true;
-    }
+    hadPostGetClosestRowBefore = true;
   }
 
   @Override
   public void preIncrement(final RegionCoprocessorEnvironment e,
       final Increment increment, final Result result) throws IOException {
-    if (Arrays.equals(e.getRegion().getTableDesc().getName(),
-        TestRegionObserverInterface.TEST_TABLE_2)) {
-      hadPreIncrement = true;
-    }
+    hadPreIncrement = true;
   }
 
   @Override
   public void postIncrement(final RegionCoprocessorEnvironment e,
       final Increment increment, final Result result) throws IOException {
-    if (Arrays.equals(e.getRegion().getTableDesc().getName(),
-        TestRegionObserverInterface.TEST_TABLE_2)) {
-      hadPostIncrement = true;
-    }
+    hadPostIncrement = true;
   }
 
-  boolean hadPreGet() {
+  public boolean hadPreGet() {
     return hadPreGet;
   }
 
-  boolean hadPostGet() {
+  public boolean hadPostGet() {
     return hadPostGet;
   }
 
-  boolean hadPrePut() {
+  public boolean hadPrePut() {
     return hadPrePut;
   }
 
-  boolean hadPostPut() {
+  public boolean hadPostPut() {
     return hadPostPut;
   }
-
-  boolean hadDelete() {
+  public boolean hadDelete() {
     return !beforeDelete;
   }
 
-  boolean hadPreIncrement() {
+  public boolean hadPreIncrement() {
     return hadPreIncrement;
   }
 
-  boolean hadPostIncrement() {
+  public boolean hadPostIncrement() {
     return hadPostIncrement;
   }
 
-  boolean hadPreWALRestored() {
+  public boolean hadPreWALRestored() {
     return hadPreWALRestored;
   }
 
-  boolean hadPostWALRestored() {
+  public boolean hadPostWALRestored() {
     return hadPostWALRestored;
+  }
+  public boolean wasScannerNextCalled() {
+    return hadPreScannerNext && hadPostScannerNext;
+  }
+  public boolean wasScannerCloseCalled() {
+    return hadPreScannerClose && hadPostScannerClose;
   }
 }

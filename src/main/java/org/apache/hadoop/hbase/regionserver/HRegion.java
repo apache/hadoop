@@ -2461,14 +2461,6 @@ public class HRegion implements HeapSize { // , Writable{
 
     public synchronized boolean next(List<KeyValue> outResults, int limit)
         throws IOException {
-      if (coprocessorHost != null) {
-        Boolean result = coprocessorHost.preScannerNext((InternalScanner)this,
-          outResults, limit);
-        if (result != null) {
-          return result.booleanValue();
-        }
-      }
-
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -2483,11 +2475,6 @@ public class HRegion implements HeapSize { // , Writable{
         results.clear();
 
         boolean returnResult = nextInternal(limit);
-
-        if (coprocessorHost != null) {
-          returnResult = coprocessorHost.postScannerNext((InternalScanner)this,
-            results, limit, returnResult);
-        }
 
         outResults.addAll(results);
         resetFilters();
@@ -2596,20 +2583,12 @@ public class HRegion implements HeapSize { // , Writable{
               currentRow, 0, currentRow.length) <= isScan);
     }
 
-    public synchronized void close() throws IOException {
-      if (coprocessorHost != null) {
-        if (coprocessorHost.preScannerClose((InternalScanner)this)) {
-          return;
-        }
-      }
+    public synchronized void close() {
       if (storeHeap != null) {
         storeHeap.close();
         storeHeap = null;
       }
       this.filterClosed = true;
-      if (coprocessorHost != null) {
-        coprocessorHost.postScannerClose((InternalScanner)this);
-      }
     }
   }
 

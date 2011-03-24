@@ -46,6 +46,9 @@ Release 0.91.0 - Unreleased
    HBASE-3532  HRegion#equals is broken (Ted Yu via Stack)
    HBASE-3697  Admin actions that use MetaReader to iterate regions need to
                skip offline ones
+   HBASE-3583  Coprocessors: scannerNext and scannerClose hooks are called
+               when HRegionInterface#get is invoked (Mingjie Lai via
+               Andrew Purtell)
 
   IMPROVEMENTS
    HBASE-3290  Max Compaction Size (Nicolas Spiegelberg via Stack)  

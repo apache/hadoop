@@ -492,7 +492,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   public boolean preScannerNext(final RegionCoprocessorEnvironment e,
-      final InternalScanner s, final List<KeyValue> result,
+      final InternalScanner s, final List<Result> result,
       final int limit, final boolean hasNext)
     throws IOException;
 
@@ -510,7 +510,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    */
   public boolean postScannerNext(final RegionCoprocessorEnvironment e,
-      final InternalScanner s, final List<KeyValue> result, final int limit,
+      final InternalScanner s, final List<Result> result, final int limit,
       final boolean hasNext)
     throws IOException;
 
