@@ -2626,15 +2626,6 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     }
   }
 
-  public HRegionInfo[] getRegionsAssignment() throws IOException {
-    HRegionInfo [] regions = new HRegionInfo[getNumberOfOnlineRegions()];
-    Iterator<HRegion> ite = onlineRegions.values().iterator();
-    for (int i = 0; ite.hasNext(); i++) {
-      regions[i] = ite.next().getRegionInfo();
-    }
-    return regions;
-  }
-
   /** {@inheritDoc} */
   @Override
   @QosPriority(priority=HIGH_QOS)
