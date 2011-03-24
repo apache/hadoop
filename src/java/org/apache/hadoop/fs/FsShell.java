@@ -189,6 +189,9 @@ public class FsShell extends Configured implements Tool {
         copyCrc = false;
       }
       FileStatus[] srcs = srcFS.globStatus(srcpath);
+      if (null == srcs) {
+	throw new IOException(srcpath + ": No such file or directory");
+      }
       boolean dstIsDir = dst.isDirectory(); 
       if (srcs.length > 1 && !dstIsDir) {
         throw new IOException("When copying multiple files, "
