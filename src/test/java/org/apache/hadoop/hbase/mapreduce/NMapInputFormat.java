@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -34,13 +35,13 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
- * Input format that creates as many map tasks as configured in
- * mapred.map.tasks, each provided with a single row of
- * NullWritables. This can be useful when trying to write mappers
- * which don't have any real input (eg when the mapper is simply
- * producing random data as output)
+ * Input format that creates a configurable number of map tasks
+ * each provided with a single row of NullWritables. This can be
+ * useful when trying to write mappers which don't have any real
+ * input (eg when the mapper is simply producing random data as output)
  */
 public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
+  private static final String NMAPS_KEY = "nmapinputformat.num.maps";
 
   @Override
   public RecordReader<NullWritable, NullWritable> createRecordReader(
@@ -53,12 +54,20 @@ public class NMapInputFormat extends InputFormat<NullWritable, NullWritable> {
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException,
       InterruptedException {
-    int count = context.getConfiguration().getInt("mapred.map.tasks", 1);
+    int count = getNumMapTasks(context.getConfiguration());
     List<InputSplit> splits = new ArrayList<InputSplit>(count);
     for (int i = 0; i < count; i++) {
       splits.add(new NullInputSplit());
     }
     return splits;
+  }
+
+  public static void setNumMapTasks(Configuration conf, int numTasks) {
+    conf.setInt(NMAPS_KEY, numTasks);
+  }
+
+  public static int getNumMapTasks(Configuration conf) {
+    return conf.getInt(NMAPS_KEY, 1);
   }
 
   private static class NullInputSplit extends InputSplit implements Writable {

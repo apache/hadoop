@@ -62,8 +62,7 @@ import org.mockito.Mockito;
  * Simple test for {@link KeyValueSortReducer} and {@link HFileOutputFormat}.
  * Sets up and runs a mapreduce job that writes hfile output.
  * Creates a few inner classes to implement splits and an inputformat that
- * emits keys and values like those of {@link PerformanceEvaluation}.  Makes
- * as many splits as "mapred.map.tasks" maps.
+ * emits keys and values like those of {@link PerformanceEvaluation}.
  */
 public class TestHFileOutputFormat  {
   private final static int ROWSPERSPLIT = 1024;
@@ -325,7 +324,7 @@ public class TestHFileOutputFormat  {
       new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
       
       // Ensure data shows up
-      int expectedRows = conf.getInt("mapred.map.tasks", 1) * ROWSPERSPLIT;
+      int expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
       assertEquals("LoadIncrementalHFiles should put expected data in table",
           expectedRows, util.countRows(table));
       Scan scan = new Scan();
