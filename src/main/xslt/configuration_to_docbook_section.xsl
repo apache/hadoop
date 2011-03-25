@@ -40,7 +40,7 @@ version="5.0" xmlns="http://docbook.org/ns/docbook"
 <glossary xmlns='http://docbook.org/ns/docbook' xml:id="hbase.default.configuration">
 <title>HBase Default Configuration</title>
 <para>
-This documentation is generated using the default hbase configuration file,
+The documentation below is generated using the default hbase configuration file,
 <filename>hbase-default.xml</filename>, as source.
 </para>
 

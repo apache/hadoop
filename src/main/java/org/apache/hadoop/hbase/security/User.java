@@ -125,7 +125,7 @@ public abstract class User {
    *
    * <p><strong>This is only applicable when
    * running on secure Hadoop</strong> -- see
-   * {@link org.apache.hadoop.security.SecurityUtil#login(Configuration,String,String,String)}.
+   * org.apache.hadoop.security.SecurityUtil#login(Configuration,String,String,String).
    * On regular Hadoop (without security features), this will safely be ignored.
    * </p>
    *
