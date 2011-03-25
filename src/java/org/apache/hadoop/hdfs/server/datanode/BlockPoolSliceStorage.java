@@ -28,6 +28,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
 import org.apache.hadoop.hdfs.server.common.Storage;
@@ -463,8 +464,9 @@ public class BlockPoolSliceStorage extends Storage {
     // do the link
     int diskLayoutVersion = this.getLayoutVersion();
     // hardlink finalized blocks in tmpDir
+    HardLink hardLink = new HardLink();
     DataStorage.linkBlocks(fromDir, new File(toDir,
-        DataStorage.STORAGE_DIR_FINALIZED), diskLayoutVersion);
+        DataStorage.STORAGE_DIR_FINALIZED), diskLayoutVersion, hardLink);
   }
 
   private void verifyDistributedUpgradeProgress(NamespaceInfo nsInfo)

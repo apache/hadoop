@@ -47,7 +47,7 @@ int dfs_truncate(const char *path, off_t size)
   hdfsFS userFS;
   // if not connected, try to connect and fail out if we can't.
   if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port)) == NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not connect");
     return -EIO;
   }
 
@@ -55,12 +55,12 @@ int dfs_truncate(const char *path, off_t size)
 
   hdfsFile file;
   if ((file = (hdfsFile)hdfsOpenFile(userFS, path, flags,  0, 0, 0)) == NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect open file %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not connect open file %s", path);
     return -EIO;
   }
 
   if (hdfsCloseFile(userFS, file) != 0) {
-    syslog(LOG_ERR, "ERROR: could not connect close file %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not close file %s", path);
     return -EIO;
   }
   return 0;

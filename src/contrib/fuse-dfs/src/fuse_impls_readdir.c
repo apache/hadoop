@@ -42,7 +42,7 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   hdfsFS userFS;
   // if not connected, try to connect and fail out if we can't.
   if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not connect");
     return -EIO;
   }
 
@@ -61,7 +61,7 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   for (i = 0; i < numEntries; i++) {
 
     if (NULL == info[i].mName) {
-      syslog(LOG_ERR,"ERROR: for <%s> info[%d].mName==NULL %s:%d", path, i, __FILE__,__LINE__);
+      ERROR("Path %s info[%d].mName is NULL", path, i);
       continue;
     }
 
@@ -71,8 +71,7 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     // Find the final path component
     const char *str = strrchr(info[i].mName, '/');
     if (NULL == str) {
-      syslog(LOG_ERR, "ERROR: invalid URI %s %s:%d",
-             info[i].mName, __FILE__,__LINE__);
+      ERROR("Invalid URI %s", info[i].mName);
       continue;
     }
     str++;
@@ -80,7 +79,7 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     // pack this entry into the fuse buffer
     int res = 0;
     if ((res = filler(buf,str,&st,0)) != 0) {
-      syslog(LOG_ERR, "ERROR: readdir filling the buffer %d %s:%d\n",res, __FILE__, __LINE__);
+      ERROR("Readdir filler failed: %d\n",res);
     }
   }
 
@@ -111,7 +110,7 @@ int dfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
       // flatten the info using fuse's function into a buffer
       int res = 0;
       if ((res = filler(buf,str,&st,0)) != 0) {
-        syslog(LOG_ERR, "ERROR: readdir filling the buffer %d %s:%d", res, __FILE__, __LINE__);
+	ERROR("Readdir filler failed: %d\n",res);
       }
     }
   // free the info pointers

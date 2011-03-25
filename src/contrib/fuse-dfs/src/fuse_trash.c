@@ -47,10 +47,10 @@ int move_to_trash(const char *item, hdfsFS userFS) {
 
 
   char fname[4096]; // or last element of the directory path
-  char parent_directory[4096]; // the directory the fname resides in
+  char parent_dir[4096]; // the directory the fname resides in
 
   if (strlen(item) > sizeof(fname) - strlen(TrashDir)) {
-    syslog(LOG_ERR, "ERROR: internal buffer too small to accomodate path of length %d %s:%d\n", (int)strlen(item), __FILE__, __LINE__);
+    ERROR("Buffer too small to accomodate path of len %d", (int)strlen(item));
     return -EIO;
   }
 
@@ -60,16 +60,17 @@ int move_to_trash(const char *item, hdfsFS userFS) {
     int length_of_fname = strlen(item) - length_of_parent_dir - 1; // the '/'
 
     // note - the below strncpys should be safe from overflow because of the check on item's string length above.
-    strncpy(parent_directory, item, length_of_parent_dir);
-    parent_directory[length_of_parent_dir ] = 0;
+    strncpy(parent_dir, item, length_of_parent_dir);
+    parent_dir[length_of_parent_dir ] = 0;
     strncpy(fname, item + length_of_parent_dir + 1, strlen(item));
     fname[length_of_fname + 1] = 0;
   }
 
   // create the target trash directory
   char trash_dir[4096];
-  if (snprintf(trash_dir, sizeof(trash_dir), "%s%s",TrashDir,parent_directory) >= sizeof trash_dir) {
-    syslog(LOG_ERR, "move_to_trash error target is not big enough to hold new name for %s %s:%d\n",item, __FILE__, __LINE__);
+  if (snprintf(trash_dir, sizeof(trash_dir), "%s%s", TrashDir, parent_dir) 
+      >= sizeof trash_dir) {
+    ERROR("Move to trash error target not big enough for %s", item);
     return -EIO;
   }
 
@@ -89,19 +90,19 @@ int move_to_trash(const char *item, hdfsFS userFS) {
   char target[4096];
   int j ;
   if ( snprintf(target, sizeof target,"%s/%s",trash_dir, fname) >= sizeof target) {
-    syslog(LOG_ERR, "move_to_trash error target is not big enough to hold new name for %s %s:%d\n",item, __FILE__, __LINE__);
+    ERROR("Move to trash error target not big enough for %s", item);
     return -EIO;
   }
 
   // NOTE: this loop differs from the java version by capping the #of tries
   for (j = 1; ! hdfsExists(userFS, target) && j < TRASH_RENAME_TRIES ; j++) {
     if (snprintf(target, sizeof target,"%s/%s.%d",trash_dir, fname, j) >= sizeof target) {
-      syslog(LOG_ERR, "move_to_trash error target is not big enough to hold new name for %s %s:%d\n",item, __FILE__, __LINE__);
+      ERROR("Move to trash error target not big enough for %s", item);
       return -EIO;
     }
   }
   if (hdfsRename(userFS, item, target)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to rename %s to %s",item, target);
+    ERROR("Trying to rename %s to %s", item, target);
     return -EIO;
   }
   return 0;
@@ -117,9 +118,9 @@ int hdfsDeleteWithTrash(hdfsFS userFS, const char *path, int useTrash) {
   }
 
   if (hdfsDelete(userFS, path, 1)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to delete the file %s",path);
+    ERROR("Trying to delete the file %s", path);
     return -EIO;
   }
-  return 0;
 
+  return 0;
 }

@@ -511,7 +511,7 @@ creations/deletions), or "all".</description>
       name node should store the temporary edits to merge.
       If this is a comma-delimited list of directoires then teh edits is
       replicated in all of the directoires for redundancy.
-      Default value is same as fs.checkpoint.dir
+      Default value is same as dfs.namenode.checkpoint.dir
   </description>
 </property>
 
@@ -526,7 +526,7 @@ creations/deletions), or "all".</description>
   <name>dfs.namenode.checkpoint.size</name>
   <value>67108864</value>
   <description>The size of the current edit log (in bytes) that triggers
-       a periodic checkpoint even if the fs.checkpoint.period hasn't expired.
+       a periodic checkpoint even if the dfs.namenode.checkpoint.period hasn't expired.
   </description>
 </property>
 

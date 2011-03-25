@@ -41,12 +41,12 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
   // retrieve dfs specific data
   dfs_fh *fh = (dfs_fh*)malloc(sizeof (dfs_fh));
   if (fh == NULL) {
-    syslog(LOG_ERR, "ERROR: malloc of new file handle failed %s:%d\n", __FILE__, __LINE__);
+    ERROR("Malloc of new file handle failed");
     return -EIO;
   }
 
   if ((fh->fs = doConnectAsUser(dfs->nn_hostname,dfs->nn_port)) == NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not connect to dfs");
     return -EIO;
   }
 
@@ -66,8 +66,7 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
   }
 
   if ((fh->hdfsFH = hdfsOpenFile(fh->fs, path, flags,  0, 0, 0)) == NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect open file %s:%d\n", __FILE__, __LINE__);
-    syslog(LOG_ERR, "ERROR: errno %d\n", errno);
+    ERROR("Could not open file %s (errno=%d)", path, errno);
     if (errno == 0 || errno == EINTERNAL) {
       return -EIO;
     }
@@ -88,7 +87,7 @@ int dfs_open(const char *path, struct fuse_file_info *fi)
     assert(dfs->rdbuffer_size > 0);
 
     if (NULL == (fh->buf = (char*)malloc(dfs->rdbuffer_size*sizeof (char)))) {
-      syslog(LOG_ERR, "ERROR: could not allocate memory for file buffer for a read for file %s dfs %s:%d\n", path,__FILE__, __LINE__);
+      ERROR("Could not allocate memory for a read for file %s\n", path);
       ret = -EIO;
     }
 

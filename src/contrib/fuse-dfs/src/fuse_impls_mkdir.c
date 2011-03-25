@@ -34,35 +34,34 @@ int dfs_mkdir(const char *path, mode_t mode)
   assert('/' == *path);
 
   if (is_protected(path)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to create the directory: %s", path);
+    ERROR("HDFS trying to create directory %s", path);
     return -EACCES;
   }
 
   if (dfs->read_only) {
-    syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot create the directory %s\n",path);
+    ERROR("HDFS is configured read-only, cannot create directory %s", path);
     return -EACCES;
   }
   
   hdfsFS userFS;
   // if not connected, try to connect and fail out if we can't.
   if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not connect");
     return -EIO;
   }
 
   // In theory the create and chmod should be atomic.
 
   if (hdfsCreateDirectory(userFS, path)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to create directory %s",path);
+    ERROR("HDFS could not create directory %s", path);
     return -EIO;
   }
 
 #if PERMS
   if (hdfsChmod(userFS, path, (short)mode)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to chmod %s to %d",path, (int)mode);
+    ERROR("Could not chmod %s to %d", path, (int)mode);
     return -EIO;
   }
 #endif
   return 0;
-
 }

@@ -33,7 +33,7 @@ int dfs_access(const char *path, int mask)
 
   hdfsFS userFS;
   if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port)) == NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not connect to HDFS");
     return -EIO;
   }
   //  return hdfsAccess(userFS, path, mask);

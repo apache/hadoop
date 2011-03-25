@@ -37,12 +37,12 @@ int dfs_chmod(const char *path, mode_t mode)
   hdfsFS userFS;
   // if not connected, try to connect and fail out if we can't.
   if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not connect to HDFS");
     return -EIO;
   }
 
   if (hdfsChmod(userFS, path, (short)mode)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to chmod %s to %d",path, (int)mode);
+    ERROR("Could not chmod %s to %d", path, (int)mode);
     return -EIO;
   }
 #endif

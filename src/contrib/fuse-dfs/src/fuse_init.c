@@ -97,7 +97,7 @@ void *dfs_init()
   dfs_context *dfs = (dfs_context*)malloc(sizeof (dfs_context));
 
   if (NULL == dfs) {
-    syslog(LOG_ERR, "FATAL: could not malloc fuse dfs context struct - out of memory %s:%d", __FILE__, __LINE__);
+    ERROR("FATAL: could not malloc dfs_context");
     exit(1);
   }
 
@@ -112,13 +112,13 @@ void *dfs_init()
   dfs->rdbuffer_size         = options.rdbuffer_size;
   dfs->direct_io             = options.direct_io;
 
-  syslog(LOG_INFO, "mounting %s:%d", dfs->nn_hostname, dfs->nn_port);
+  INFO("Mounting %s:%d", dfs->nn_hostname, dfs->nn_port);
 
   init_protectedpaths(dfs);
   assert(dfs->protectedpaths != NULL);
 
   if (dfs->rdbuffer_size <= 0) {
-    syslog(LOG_DEBUG, "WARN: dfs->rdbuffersize <= 0 = %ld %s:%d", dfs->rdbuffer_size, __FILE__, __LINE__);
+    DEBUG("dfs->rdbuffersize <= 0 = %ld", dfs->rdbuffer_size);
     dfs->rdbuffer_size = 32768;
   }
   return (void*)dfs;

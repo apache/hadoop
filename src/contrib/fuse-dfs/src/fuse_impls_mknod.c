@@ -19,8 +19,9 @@
 #include "fuse_dfs.h"
 #include "fuse_impls.h"
 
- int dfs_mknod(const char *path, mode_t mode, dev_t rdev) {
-  TRACE1("mknod", path)
-  syslog(LOG_DEBUG,"in dfs_mknod");
+int dfs_mknod(const char *path, mode_t mode, dev_t rdev)
+{
+  TRACE1("mknod", path);
+  DEBUG("dfs_mknod");
   return 0;
 }

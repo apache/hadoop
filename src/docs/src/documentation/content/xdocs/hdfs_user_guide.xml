@@ -267,11 +267,11 @@
    </p>
    <ul>
       <li>
-        <code>fs.checkpoint.period</code>, set to 1 hour by default, specifies
+        <code>dfs.namenode.checkpoint.period</code>, set to 1 hour by default, specifies
         the maximum delay between two consecutive checkpoints, and 
       </li>
       <li>
-        <code>fs.checkpoint.size</code>, set to 64MB by default, defines the
+        <code>dfs.namenode.checkpoint.size</code>, set to 64MB by default, defines the
         size of the edits log file that forces an urgent checkpoint even if 
         the maximum checkpoint delay is not reached.
       </li>
@@ -318,11 +318,11 @@
    </p>
    <ul>
       <li>
-        <code>fs.checkpoint.period</code>, set to 1 hour by default, specifies
+        <code>dfs.namenode.checkpoint.period</code>, set to 1 hour by default, specifies
         the maximum delay between two consecutive checkpoints 
       </li>
       <li>
-        <code>fs.checkpoint.size</code>, set to 64MB by default, defines the
+        <code>dfs.namenode.checkpoint.size</code>, set to 64MB by default, defines the
         size of the edits log file that forces an urgent checkpoint even if 
         the maximum checkpoint delay is not reached.
       </li>
@@ -409,7 +409,7 @@
       </li>
       <li>
         Specify the location of the checkpoint directory in the 
-        configuration variable <code>fs.checkpoint.dir</code>;
+        configuration variable <code>dfs.namenode.checkpoint.dir</code>;
       </li>
       <li>
         and start the NameNode with <code>-importCheckpoint</code> option.
@@ -417,11 +417,11 @@
    </ul>
    <p>
      The NameNode will upload the checkpoint from the 
-     <code>fs.checkpoint.dir</code> directory and then save it to the NameNode
+     <code>dfs.namenode.checkpoint.dir</code> directory and then save it to the NameNode
      directory(s) set in <code>dfs.name.dir</code>.
      The NameNode will fail if a legal image is contained in 
      <code>dfs.name.dir</code>.
-     The NameNode verifies that the image in <code>fs.checkpoint.dir</code> is
+     The NameNode verifies that the image in <code>dfs.namenode.checkpoint.dir</code> is
      consistent, but does not modify it in any way.
    </p>
    <p>

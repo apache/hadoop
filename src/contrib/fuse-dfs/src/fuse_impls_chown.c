@@ -41,16 +41,14 @@
 
   user = getUsername(uid);
   if (NULL == user) {
-    syslog(LOG_ERR,"Could not lookup the user id string %d\n",(int)uid); 
-    fprintf(stderr, "could not lookup userid %d\n", (int)uid); 
+    ERROR("Could not lookup the user id string %d",(int)uid); 
     ret = -EIO;
   }
 
   if (0 == ret) {
     group = getGroup(gid);
     if (group == NULL) {
-      syslog(LOG_ERR,"Could not lookup the group id string %d\n",(int)gid); 
-      fprintf(stderr, "could not lookup group %d\n", (int)gid); 
+      ERROR("Could not lookup the group id string %d",(int)gid);
       ret = -EIO;
     } 
   }
@@ -59,15 +57,14 @@
   if (0 == ret) {
     // if not connected, try to connect and fail out if we can't.
     if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
-      syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+      ERROR("Could not connect to HDFS");
       ret = -EIO;
     }
   }
 
   if (0 == ret) {
-    //  fprintf(stderr, "DEBUG: chown %s %d->%s %d->%s\n", path, (int)uid, user, (int)gid, group);
     if (hdfsChown(userFS, path, user, group)) {
-      syslog(LOG_ERR,"ERROR: hdfs trying to chown %s to %d/%d",path, (int)uid, gid);
+      ERROR("Could not chown %s to %d:%d", path, (int)uid, gid);
       ret = -EIO;
     }
   }

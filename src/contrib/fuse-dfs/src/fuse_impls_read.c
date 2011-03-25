@@ -108,7 +108,7 @@ int dfs_read(const char *path, char *buf, size_t size, off_t offset,
       if (total_read < size && num_read < 0) {
         // invalidate the buffer 
         fh->bufferSize = 0; 
-        syslog(LOG_ERR, "Read error - pread failed for %s with return code %d %s:%d", path, (int)num_read, __FILE__, __LINE__);
+        ERROR("pread failed for %s with return code %d", path, (int)num_read);
         ret = -EIO;
       } else {
         // Either EOF, all read or read beyond size, but then there was an error

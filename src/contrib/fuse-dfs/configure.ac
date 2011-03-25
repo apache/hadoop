@@ -45,6 +45,9 @@ AC_SUBST([DEFS])
 AC_FUNC_GETGROUPS
 AC_TYPE_GETGROUPS
 
+AC_PROG_CC
+AC_SYS_LARGEFILE
+
 ############################################################################
 # Section 2:
 # User Configurable system defaults. Change With CAUTION!

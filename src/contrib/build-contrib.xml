@@ -46,6 +46,7 @@
   <!-- NB: sun.arch.data.model is not supported on all platforms -->
   <property name="build.platform"
             value="${os.name}-${os.arch}-${sun.arch.data.model}"/>
+  <property name="build.c++.libhdfs" value="${build.dir}/../../c++/${build.platform}/lib"/>
   <property name="build.test" location="${build.dir}/test"/>
   <property name="build.examples" location="${build.dir}/examples"/>
   <property name="hadoop.log.dir" location="${build.dir}/test/logs"/>

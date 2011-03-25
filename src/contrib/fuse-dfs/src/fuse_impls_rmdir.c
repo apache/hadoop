@@ -36,19 +36,19 @@ int dfs_rmdir(const char *path)
   assert('/' == *path);
 
   if (is_protected(path)) {
-    syslog(LOG_ERR,"ERROR: hdfs trying to delete a protected directory: %s ",path);
+    ERROR("Trying to delete protected directory %s", path);
     return -EACCES;
   }
 
   if (dfs->read_only) {
-    syslog(LOG_ERR,"ERROR: hdfs is configured as read-only, cannot delete the directory %s\n",path);
+    ERROR("HDFS configured read-only, cannot delete directory %s", path);
     return -EACCES;
   }
 
   hdfsFS userFS;
   // if not connected, try to connect and fail out if we can't.
   if ((userFS = doConnectAsUser(dfs->nn_hostname,dfs->nn_port))== NULL) {
-    syslog(LOG_ERR, "ERROR: could not connect to dfs %s:%d\n", __FILE__, __LINE__);
+    ERROR("Could not connect");
     return -EIO;
   }
 
@@ -63,7 +63,7 @@ int dfs_rmdir(const char *path)
   }
 
   if (hdfsDeleteWithTrash(userFS, path, dfs->usetrash)) {
-    syslog(LOG_ERR,"ERROR: hdfs error trying to delete the directory %s\n",path);
+    ERROR("Error trying to delete directory %s", path);
     return -EIO;
   }
 

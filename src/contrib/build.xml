@@ -28,7 +28,8 @@
   <!-- ====================================================== -->
   <target name="compile">
     <subant target="compile">
-      <fileset dir="." includes="*/build.xml"/>
+      <fileset dir="." includes="thriftfs/build.xml"/>
+      <fileset dir="." includes="hdfsproxy/build.xml"/>
     </subant>
   </target>
   

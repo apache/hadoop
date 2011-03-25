@@ -49,16 +49,39 @@
 //
 int is_protected(const char *path);
 
+#undef INFO
+#define INFO(_fmt, ...) {                       \
+  fprintf(stdout, "INFO %s:%d " _fmt "\n",      \
+          __FILE__, __LINE__, ## __VA_ARGS__);  \
+  syslog(LOG_INFO, "INFO %s:%d " _fmt "\n",     \
+          __FILE__, __LINE__, ## __VA_ARGS__);  \
+}
+
+#undef DEBUG
+#define DEBUG(_fmt, ...) {                      \
+  fprintf(stdout, "DEBUG %s:%d " _fmt "\n",     \
+          __FILE__, __LINE__, ## __VA_ARGS__);  \
+  syslog(LOG_DEBUG, "DEBUG %s:%d " _fmt "\n",   \
+          __FILE__, __LINE__, ## __VA_ARGS__);  \
+}
+
+#undef ERROR
+#define ERROR(_fmt, ...) {                      \
+  fprintf(stderr, "ERROR %s:%d " _fmt "\n",     \
+          __FILE__, __LINE__, ## __VA_ARGS__);  \
+  syslog(LOG_ERR, "ERROR %s:%d " _fmt "\n",     \
+          __FILE__, __LINE__, ## __VA_ARGS__);  \
+}
 
 //#define DOTRACE
 #ifdef DOTRACE
-#define TRACE(x) \
-  syslog(LOG_ERR, "fuse_dfs TRACE - %s\n", x);  \
-  fprintf(stderr, "fuse_dfs TRACE - %s\n", x);
+#define TRACE(x) {        \
+    DEBUG("TRACE %s", x); \
+}
 
-#define TRACE1(x,y)                              \
-  syslog(LOG_ERR, "fuse_dfs TRACE - %s %s\n", x,y);  \
-  fprintf(stderr, "fuse_dfs TRACE - %s %s\n", x,y);
+#define TRACE1(x,y) {             \
+    DEBUG("TRACE %s %s\n", x, y); \
+}
 #else
 #define TRACE(x) ; 
 #define TRACE1(x,y) ; 

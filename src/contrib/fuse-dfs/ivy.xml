@@ -40,14 +40,25 @@
     <artifact conf="master"/>
   </publications>
   <dependencies>
-    <dependency org="commons-logging"
-      name="commons-logging"
-      rev="${commons-logging.version}"
+    <dependency org="org.apache.hadoop"
+      name="hadoop-common"
+      rev="${hadoop-common.version}"
+      conf="common->default"/>
+    <dependency org="org.apache.hadoop"
+      name="hadoop-common-test"
+      rev="${hadoop-common.version}"
       conf="common->default"/>
     <dependency org="log4j"
       name="log4j"
       rev="${log4j.version}"
       conf="common->master"/>
-    </dependencies>
-  
+    <dependency org="commons-logging"
+      name="commons-logging"
+      rev="${commons-logging.version}"
+      conf="common->master"/>
+    <dependency org="junit"
+      name="junit"
+      rev="${junit.version}"
+      conf="common->master"/>
+  </dependencies>
 </ivy-module>

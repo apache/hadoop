@@ -38,7 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.FileUtil.HardLink;
+import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -618,24 +618,26 @@ public class DataStorage extends Storage {
    * @throws IOException if error occurs during hardlink
    */
   private void linkAllBlocks(File fromDir, File toDir) throws IOException {
+    HardLink hardLink = new HardLink();
     // do the link
     int diskLayoutVersion = this.getLayoutVersion();
     if (diskLayoutVersion < PRE_RBW_LAYOUT_VERSION) { // RBW version
       // hardlink finalized blocks in tmpDir/finalized
       linkBlocks(new File(fromDir, STORAGE_DIR_FINALIZED), 
-          new File(toDir, STORAGE_DIR_FINALIZED), diskLayoutVersion);
+          new File(toDir, STORAGE_DIR_FINALIZED), diskLayoutVersion, hardLink);
       // hardlink rbw blocks in tmpDir/finalized
       linkBlocks(new File(fromDir, STORAGE_DIR_RBW), 
-          new File(toDir, STORAGE_DIR_RBW), diskLayoutVersion);
+          new File(toDir, STORAGE_DIR_RBW), diskLayoutVersion, hardLink);
     } else { // pre-RBW version
       // hardlink finalized blocks in tmpDir
-      linkBlocks(fromDir, 
-          new File(toDir, STORAGE_DIR_FINALIZED), diskLayoutVersion);      
-    }    
+      linkBlocks(fromDir, new File(toDir, STORAGE_DIR_FINALIZED), 
+          diskLayoutVersion, hardLink);      
+    } 
+    LOG.info( hardLink.linkStats.report() );
   }
   
-  static void linkBlocks(File from, File to, int oldLV)
-      throws IOException {
+  static void linkBlocks(File from, File to, int oldLV, HardLink hl) 
+  throws IOException {
     if (!from.exists()) {
       return;
     }
@@ -646,6 +648,7 @@ public class DataStorage extends Storage {
           FileOutputStream out = new FileOutputStream(to);
           try {
             IOUtils.copyBytes(in, out, 16*1024);
+            hl.linkStats.countPhysicalFileCopies++;
           } finally {
             out.close();
           }
@@ -661,23 +664,60 @@ public class DataStorage extends Storage {
         }
         
         HardLink.createHardLink(from, to);
+        hl.linkStats.countSingleLinks++;
       }
       return;
     }
     // from is a directory
+    hl.linkStats.countDirs++;
+    
     if (!to.mkdirs())
       throw new IOException("Cannot create directory " + to);
-    String[] blockNames = from.list(new java.io.FilenameFilter() {
+    
+    //If upgrading from old stuff, need to munge the filenames.  That has to
+    //be done one file at a time, so hardlink them one at a time (slow).
+    if (oldLV >= PRE_GENERATIONSTAMP_LAYOUT_VERSION) {
+      String[] blockNames = from.list(new java.io.FilenameFilter() {
+          public boolean accept(File dir, String name) {
+            return name.startsWith(BLOCK_SUBDIR_PREFIX) 
+              || name.startsWith(BLOCK_FILE_PREFIX)
+              || name.startsWith(COPY_FILE_PREFIX);
+          }
+        });
+      if (blockNames.length == 0) {
+        hl.linkStats.countEmptyDirs++;
+      }
+      else for(int i = 0; i < blockNames.length; i++)
+        linkBlocks(new File(from, blockNames[i]), 
+            new File(to, blockNames[i]), oldLV, hl);
+    } 
+    else {
+      //If upgrading from a relatively new version, we only need to create
+      //links with the same filename.  This can be done in bulk (much faster).
+      String[] blockNames = from.list(new java.io.FilenameFilter() {
         public boolean accept(File dir, String name) {
-          return name.startsWith(BLOCK_SUBDIR_PREFIX) 
-            || name.startsWith(BLOCK_FILE_PREFIX)
-            || name.startsWith(COPY_FILE_PREFIX);
+          return name.startsWith(BLOCK_FILE_PREFIX);
         }
       });
-    
-    for(int i = 0; i < blockNames.length; i++)
-      linkBlocks(new File(from, blockNames[i]), 
-                 new File(to, blockNames[i]), oldLV);
+      if (blockNames.length > 0) {
+        HardLink.createHardLinkMult(from, blockNames, to);
+        hl.linkStats.countMultLinks++;
+        hl.linkStats.countFilesMultLinks += blockNames.length;
+      } else {
+        hl.linkStats.countEmptyDirs++;
+      }
+      
+      //now take care of the rest of the files and subdirectories
+      String[] otherNames = from.list(new java.io.FilenameFilter() {
+          public boolean accept(File dir, String name) {
+            return name.startsWith(BLOCK_SUBDIR_PREFIX) 
+              || name.startsWith(COPY_FILE_PREFIX);
+          }
+        });
+      for(int i = 0; i < otherNames.length; i++)
+        linkBlocks(new File(from, otherNames[i]), 
+            new File(to, otherNames[i]), oldLV, hl);
+    }
   }
 
   private void verifyDistributedUpgradeProgress(

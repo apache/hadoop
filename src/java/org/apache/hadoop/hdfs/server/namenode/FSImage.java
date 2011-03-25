@@ -1156,7 +1156,7 @@ public class FSImage implements NNStorageListener, Closeable {
    * @param conf the Configuration
    * @param defaultValue a default value for the attribute, if null
    * @return a Collection of URIs representing the values in 
-   * fs.checkpoint.dir configuration property
+   * dfs.namenode.checkpoint.dir configuration property
    */
   static Collection<URI> getCheckpointDirs(Configuration conf,
       String defaultValue) {

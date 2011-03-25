@@ -23,29 +23,38 @@
 #include "fuse_context_handle.h"
 
 void print_options() {
-  fprintf(stderr,"options:\n");
-  fprintf(stderr, "\tprotected=%s\n",options.protected);
-  fprintf(stderr, "\tserver=%s\n",options.server);
-  fprintf(stderr, "\tport=%d\n",options.port);
-  fprintf(stderr, "\tdebug=%d\n",options.debug);
-  fprintf(stderr, "\tread_only=%d\n",options.read_only);
-  fprintf(stderr, "\tusetrash=%d\n",options.usetrash);
-  fprintf(stderr, "\tentry_timeout=%d\n",options.entry_timeout);
-  fprintf(stderr, "\tattribute_timeout=%d\n",options.attribute_timeout);
-  fprintf(stderr, "\tprivate=%d\n",options.private);
-  fprintf(stderr, "\trdbuffer_size=%d (KBs)\n",(int)options.rdbuffer_size/1024);
+  printf("options:\n"
+	 "\tprotected=%s\n"
+	 "\tserver=%s\n"
+	 "\tport=%d\n"
+	 "\tdebug=%d\n"
+	 "\tread_only=%d\n"
+	 "\tusetrash=%d\n"
+	 "\tentry_timeout=%d\n"
+	 "\tattribute_timeout=%d\n"
+	 "\tprivate=%d\n"
+	 "\trdbuffer_size=%d (KBs)\n", 
+	 options.protected, options.server, options.port, options.debug,
+	 options.read_only, options.usetrash, options.entry_timeout, 
+	 options.attribute_timeout, options.private, 
+	 (int)options.rdbuffer_size / 1024);
 }
 
-const char *program;  
-
+const char *program;
 
 /** macro to define options */
 #define DFSFS_OPT_KEY(t, p, v) { t, offsetof(struct options, p), v }
 
 void print_usage(const char *pname)
 {
-  fprintf(stdout,"USAGE: %s [debug] [--help] [--version] [-oprotected=<colon_seped_list_of_paths] [rw] [-onotrash] [-ousetrash] [-obig_writes] [-oprivate (single user)] [ro] [-oserver=<hadoop_servername>] [-oport=<hadoop_port>] [-oentry_timeout=<secs>] [-oattribute_timeout=<secs>] [-odirect_io] [-onopoermissions] [-o<other fuse option>] <mntpoint> [fuse options]\n",pname);
-  fprintf(stdout,"NOTE: debugging option for fuse is -debug\n");
+  printf("USAGE: %s [debug] [--help] [--version] "
+	 "[-oprotected=<colon_seped_list_of_paths] [rw] [-onotrash] "
+	 "[-ousetrash] [-obig_writes] [-oprivate (single user)] [ro] "
+	 "[-oserver=<hadoop_servername>] [-oport=<hadoop_port>] "
+	 "[-oentry_timeout=<secs>] [-oattribute_timeout=<secs>] "
+	 "[-odirect_io] [-onopoermissions] [-o<other fuse option>] "
+	 "<mntpoint> [fuse options]\n", pname);
+  printf("NOTE: debugging option for fuse is -debug\n");
 }
 
 
@@ -98,10 +107,10 @@ int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs
 
   switch (key) {
   case FUSE_OPT_KEY_OPT:
-    fprintf(stderr,"fuse-dfs ignoring option %s\n",arg);
+    fprintf(stderr, "fuse-dfs ignoring option %s\n", arg);
     return 1;
   case  KEY_VERSION:
-    fprintf(stdout,"%s %s\n",program,_FUSE_DFS_VERSION);
+    fprintf(stdout, "%s %s\n", program, _FUSE_DFS_VERSION);
     exit(0);
   case KEY_HELP:
     print_usage(program);
@@ -150,14 +159,14 @@ int dfs_options(void *data, const char *arg, int key,  struct fuse_args *outargs
       } else if (strcmp(arg,"rw") == 0) {
         options.read_only = 0;
       } else {
-        fprintf(stderr,"fuse-dfs didn't recognize %s,%d\n",arg,key);
+        ERROR("fuse-dfs didn't recognize %s,%d\n",arg,key);
         fuse_opt_add_arg(outargs,arg);
         return 0;
       }
     } else {
       options.port = tmp_port;
       options.server = strdup(tmp_server);
-      fprintf(stderr, "port=%d,server=%s\n", options.port, options.server);
+      ERROR("port=%d,server=%s\n", options.port, options.server);
     }
   }
   }

@@ -194,7 +194,7 @@ char ** getGroups(uid_t uid, int *num_groups)
   for (i=0; i < *num_groups; i++)  {
     groupnames[i] = getGroup(grouplist[i]);
     if (groupnames[i] == NULL) {
-      fprintf(stderr, "error could not lookup group %d\n",(int)grouplist[i]);
+      ERROR("Could not lookup group %d\n", (int)grouplist[i]);
     }
   } 
   free(grouplist);

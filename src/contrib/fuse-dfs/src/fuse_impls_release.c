@@ -55,8 +55,7 @@ int dfs_release (const char *path, struct fuse_file_info *fi) {
 
     if (NULL != file_handle) {
       if (hdfsCloseFile(fh->fs, file_handle) != 0) {
-        syslog(LOG_ERR, "ERROR: dfs problem - could not close file_handle(%ld) for %s %s:%d\n",(long)file_handle,path, __FILE__, __LINE__);
-        fprintf(stderr, "ERROR: dfs problem - could not close file_handle(%ld) for %s %s:%d\n",(long)file_handle,path, __FILE__, __LINE__);
+        ERROR("Could not close handle %ld for %s\n",(long)file_handle, path);
         ret = -EIO;
       }
     }

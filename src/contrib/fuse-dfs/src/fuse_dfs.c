@@ -56,7 +56,7 @@ static struct fuse_operations dfs_oper = {
   .write	= dfs_write,
   .flush        = dfs_flush,
   .mknod        = dfs_mknod,
-	.utimens	= dfs_utimens,
+  .utimens      = dfs_utimens,
   .chmod	= dfs_chmod,
   .chown	= dfs_chown,
   .truncate	= dfs_truncate,
@@ -118,15 +118,11 @@ int main(int argc, char *argv[])
     if ((temp = hdfsConnect(options.server, options.port)) == NULL) {
       const char *cp = getenv("CLASSPATH");
       const char *ld = getenv("LD_LIBRARY_PATH");
-      fprintf(stderr, "FATAL: misconfiguration problem, cannot connect to hdfs - here's your environment\n");
-      fprintf(stderr, "LD_LIBRARY_PATH=%s\n",ld == NULL ? "NULL" : ld);
-      fprintf(stderr, "CLASSPATH=%s\n",cp == NULL ? "NULL" : cp);
-      syslog(LOG_ERR, "FATAL: misconfiguration problem, cannot connect to hdfs - here's your environment\n");
-      syslog(LOG_ERR, "LD_LIBRARY_PATH=%s\n",ld == NULL ? "NULL" : ld);
-      syslog(LOG_ERR, "CLASSPATH=%s\n",cp == NULL ? "NULL" : cp);
+      ERROR("FATAL: misconfiguration - cannot connect to HDFS");
+      ERROR("LD_LIBRARY_PATH=%s",ld == NULL ? "NULL" : ld);
+      ERROR("CLASSPATH=%s",cp == NULL ? "NULL" : cp);
       exit(0);
-    }  
-    temp = NULL;
+    }
   }
 
   int ret = fuse_main(args.argc, args.argv, &dfs_oper, NULL);

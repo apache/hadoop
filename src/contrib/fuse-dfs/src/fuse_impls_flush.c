@@ -46,7 +46,7 @@ int dfs_flush(const char *path, struct fuse_file_info *fi) {
 
     assert(fh->fs);
     if (hdfsFlush(fh->fs, file_handle) != 0) {
-      syslog(LOG_ERR, "ERROR: dfs problem - could not flush file_handle(%lx) for %s %s:%d\n",(long)file_handle,path, __FILE__, __LINE__);
+      ERROR("Could not flush %lx for %s\n",(long)file_handle, path);
       return -EIO;
     }
   }

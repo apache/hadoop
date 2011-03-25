@@ -33,8 +33,9 @@ int dfs_getattr(const char *path, struct stat *st)
   assert(st);
 
   // if not connected, try to connect and fail out if we can't.
-  if (NULL == dfs->fs && NULL == (dfs->fs = hdfsConnect(dfs->nn_hostname,dfs->nn_port))) {
-    syslog(LOG_ERR, "ERROR: could not connect to %s:%d %s:%d\n", dfs->nn_hostname, dfs->nn_port,__FILE__, __LINE__);
+  if (NULL == dfs->fs && 
+      NULL == (dfs->fs = hdfsConnect(dfs->nn_hostname,dfs->nn_port))) {
+    ERROR("Could not connect to %s:%d", dfs->nn_hostname, dfs->nn_port);
     return -EIO;
   }
 

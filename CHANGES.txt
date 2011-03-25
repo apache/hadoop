@@ -296,6 +296,11 @@ Trunk (unreleased changes)
     HDFS-1731. Amend previous commit for this JIRA to fix build on Cygwin.
     (todd)
 
+    HDFS-780. Revive TestFuseDFS. (eli)
+
+    HDFS-1445. Batch the calls in DataStorage to FileUtil.createHardLink().
+    (Matt Foley via jghoman)
+
   OPTIMIZATIONS
 
     HDFS-1458. Improve checkpoint performance by avoiding unnecessary image
@@ -353,6 +358,8 @@ Trunk (unreleased changes)
 
     HDFS-1738. change hdfs jmxget to return an empty string instead of 
     null when an attribute value is not available (tanping vi boryas)
+
+    HDFS-1757. Don't compile fuse-dfs by default. (eli)
 
 Release 0.22.0 - Unreleased
 
@@ -853,6 +860,9 @@ Release 0.21.1 - Unreleased
     block placement and checkpoint/backup node features.  (Joe Crobak
     via szetszwo)
 
+
+    HDFS-1596. Replace fs.checkpoint.* with dfs.namenode.checkpoint.*
+    in documentations.  (Harsh J Chouraria via szetszwo)
 
 Release 0.21.0 - 2010-08-13
 
