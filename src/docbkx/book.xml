@@ -959,15 +959,29 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             </answer>
         </qandaentry>
     </qandadiv>
-        <qandadiv><title>Loading</title>
+        <qandadiv><title>Runtime</title>
         <qandaentry>
             <question><para>
-                    Why do I see pauses when loading HBase?
+                    Loading, why do I see pauses when loading HBase?
             </para></question>
             <answer>
                 <para>
                     If compression is enabled, see this thread up on the user list,
                     <link xlink:href="http://search-hadoop.com/m/WUnLM6ojHm1/Long+client+pauses+with+compression&amp;subj=Long+client+pauses+with+compression">Long client pauses with compression</link>.
+                </para>
+            </answer>
+        </qandaentry>
+        <qandaentry>
+            <question><para>
+                    Why does my RegionServer hang inexplicitly?
+            </para></question>
+            <answer>
+                <para>
+                Are you running an old JVM (&lt; 1.6.0_u21?)?  When you look at a thread dump,
+                does it look like threads are BLOCKED but no one holds the lock all are
+                blocked on?  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3622">HBASE 3622 Deadlock in HBaseServer (JVM bug?)</link>.
+                Adding <code>-XX:+UseMembar</code> to the HBase <varname>HBASE_OPTS</varname> in <filename>conf/hbase-env.sh</filename>
+                may fix it.
                 </para>
             </answer>
         </qandaentry>
