@@ -206,6 +206,7 @@ Release 0.90.2 - Unreleased
    HBASE-3600  Update our jruby to 1.6.0
    HBASE-3640  [replication] Transferring queues shouldn't be done inline with RS startup
    HBASE-3658  Alert when heap is over committed (Subbu M Iyer via Stack)
+   HBASE-3681  Check the sloppiness of the region load before balancing (Ted Yu via JD)
 
 Release 0.90.1 - February 9th, 2011
 

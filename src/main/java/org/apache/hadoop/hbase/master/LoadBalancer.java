@@ -32,6 +32,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -59,7 +60,15 @@ import org.apache.hadoop.hbase.HServerInfo;
 public class LoadBalancer {
   private static final Log LOG = LogFactory.getLog(LoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());
+  // slop for regions
+  private float slop;
 
+  LoadBalancer(Configuration conf) {
+    this.slop = conf.getFloat("hbase.regions.slop", (float) 0.2);
+    if (slop < 0) slop = 0;
+    else if (slop > 1) slop = 1;
+  }
+  
   static class RegionPlanComparator implements Comparator<RegionPlan> {
     @Override
     public int compare(RegionPlan l, RegionPlan r) {
@@ -165,10 +174,11 @@ public class LoadBalancer {
 
     // Check if we even need to do any load balancing
     float average = (float)numRegions / numServers; // for logging
-    int min = numRegions / numServers;
-    int max = numRegions % numServers == 0 ? min : min + 1;
-    if(serversByLoad.lastKey().getLoad().getNumberOfRegions() <= max &&
-       serversByLoad.firstKey().getLoad().getNumberOfRegions() >= min) {
+    // HBASE-3681 check sloppiness first
+    int floor = (int) Math.floor(average * (1 - slop));
+    int ceiling = (int) Math.ceil(average * (1 + slop));
+    if(serversByLoad.lastKey().getLoad().getNumberOfRegions() <= ceiling &&
+       serversByLoad.firstKey().getLoad().getNumberOfRegions() >= floor) {
       // Skipped because no server outside (min,max) range
       LOG.info("Skipping load balancing.  servers=" + numServers + " " +
           "regions=" + numRegions + " average=" + average + " " +
@@ -176,6 +186,8 @@ public class LoadBalancer {
           " leastloaded=" + serversByLoad.firstKey().getLoad().getNumberOfRegions());
       return null;
     }
+    int min = numRegions / numServers;
+    int max = numRegions % numServers == 0 ? min : min + 1;
 
     // Balance the cluster
     // TODO: Look at data block locality or a more complex load to do this

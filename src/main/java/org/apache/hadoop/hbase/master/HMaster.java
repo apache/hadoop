@@ -163,7 +163,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
   // Instance of the hbase executor service.
   ExecutorService executorService;
 
-  private LoadBalancer balancer = new LoadBalancer();
+  private LoadBalancer balancer;
   private Thread balancerChore;
   // If 'true', the balancer is 'on'.  If 'false', the balancer will not run.
   private volatile boolean balanceSwitch = true;
@@ -358,6 +358,7 @@ implements HMasterInterface, HMasterRegionInterface, MasterServices, Server {
 
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.catalogTracker, this.executorService);
+    this.balancer = new LoadBalancer(conf);
     zooKeeper.registerListenerFirst(assignmentManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,

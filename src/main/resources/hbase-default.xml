@@ -282,6 +282,13 @@
     </description>
   </property>
   <property>
+    <name>hbase.regions.slop</name>
+    <value>0.2</value>
+    <description>Rebalance if any regionserver has average + (average * slop) regions.
+    Default is 20% slop.
+    </description>
+  </property>
+  <property>
     <name>hbase.master.logcleaner.ttl</name>
     <value>600000</value>
     <description>Maximum time a HLog can stay in the .oldlogdir directory,

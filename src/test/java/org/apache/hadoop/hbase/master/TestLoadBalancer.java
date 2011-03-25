@@ -39,6 +39,8 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -57,7 +59,9 @@ public class TestLoadBalancer {
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-    loadBalancer = new LoadBalancer();
+    Configuration conf = HBaseConfiguration.create();
+    conf.set("hbase.regions.slop", "0");
+    loadBalancer = new LoadBalancer(conf);
     rand = new Random();
   }
 
