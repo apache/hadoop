@@ -56,7 +56,7 @@
  %>
 <tr><td><%= r.getRegionNameAsString() %></td>
     <td><%= Bytes.toStringBinary(r.getStartKey()) %></td><td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
-    <td><%= load.toString() %></td>
+    <td><%= load == null? "null": load.toString() %></td>
     </tr>
 <%   } %>
 </table>

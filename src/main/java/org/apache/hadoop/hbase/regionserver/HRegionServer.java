@@ -918,7 +918,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   public HServerLoad.RegionLoad createRegionLoad(final String encodedRegionName) {
     HRegion r = null;
     r = this.onlineRegions.get(encodedRegionName);
-    return createRegionLoad(r);
+    return r != null ? createRegionLoad(r) : null;
   }
 
   /*
@@ -2362,7 +2362,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
   @Override
   @QosPriority(priority=HIGH_QOS)
   public List<HRegionInfo> getOnlineRegions() {
-    List<HRegionInfo> list = new ArrayList<HRegionInfo>();
+    List<HRegionInfo> list = new ArrayList<HRegionInfo>(onlineRegions.size());
     for (Map.Entry<String,HRegion> e: this.onlineRegions.entrySet()) {
       list.add(e.getValue().getRegionInfo());
     }
