@@ -19,7 +19,7 @@
         <footnote>
 <para>
 Be careful editing XML.  Make sure you close all elements.
-Run your file through <command>xmmlint</command> or similar
+Run your file through <command>xmllint</command> or similar
 to ensure well-formedness of your document after an edit session.
 </para>
         </footnote>
@@ -53,7 +53,7 @@ to ensure well-formedness of your document after an edit session.
     via a reading of the source code itself.
     </para>
       <para>
-      Changes here will require a cluster restart for HBase to notice the change.
+      Currently, changes here will require a cluster restart for HBase to notice the change.
       </para>
     <!--The file hbase-default.xml is generated as part of
     the build of the hbase site.  See the hbase pom.xml.
@@ -68,12 +68,12 @@ to ensure well-formedness of your document after an edit session.
       <para>Set HBase environment variables in this file.
       Examples include options to pass the JVM on start of
       an HBase daemon such as heap size and garbarge collector configs.
-      You also set configurations for HBase configuration, log directories,
+      You can also set configurations for HBase configuration, log directories,
       niceness, ssh options, where to locate process pid files,
-      etc., via settings in this file. Open the file at
+      etc. Open the file at
       <filename>conf/hbase-env.sh</filename> and peruse its content.
       Each option is fairly well documented.  Add your own environment
-      variables here if you want them read by HBase daemon startup.</para>
+      variables here if you want them read by HBase daemons on startup.</para>
       <para>
       Changes here will require a cluster restart for HBase to notice the change.
       </para>
@@ -92,7 +92,8 @@ to ensure well-formedness of your document after an edit session.
 
       <section xml:id="important_configurations">
       <title>The Important Configurations</title>
-      <para>Below we list the important Configurations.  We've divided this section into
+      <para>Below we list what the <emphasis>important</emphasis>
+      Configurations.  We've divided this section into
       required configuration and worth-a-look recommended configs.
       </para>
 
@@ -292,26 +293,25 @@ of all regions.
 ]]></programlisting>
         </para>
         <section>
-        <title>Java client configuration connecting to an HBase cluster</title>
+        <title>Java client configuration</title>
         <subtitle>How Java reads <filename>hbase-site.xml</filename> content</subtitle>
-        <para>The configuration used by a client is kept
+        <para>The configuration used by a java client is kept
         in an <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link> instance.
-        Through the factory method on HBaseConfiguration...
-        <programlisting>Configuration config = HBaseConfiguration.create();</programlisting>        
-        .. a client will pick up a configuration sourced from the first <filename>hbase-site.xml</filename> found on
+        The factory method on HBaseConfiguration, <code>HBaseConfiguration.create();</code>,
+        on invocation, will read in the content of the first <filename>hbase-site.xml</filename> found on
         the client's <varname>CLASSPATH</varname>, if one is present
-        (We'll also factor in any <filename>hbase-default.xml</filename> found; an hbase-default.xml ships inside
-        the <filename>hbase.X.X.X.jar</filename>). 
+        (Invocation will also factor in any <filename>hbase-default.xml</filename> found;
+        an hbase-default.xml ships inside the <filename>hbase.X.X.X.jar</filename>). 
         It is also possible to specify configuration directly without having to read from a
-        <filename>hbase-site.xml</filename>.  For examplt to set the
-        <link linkend="zookeeper">zookeeper</link> ensemble for the cluster programmatically do as follows...
+        <filename>hbase-site.xml</filename>.  For example, to set the
+        <link linkend="zookeeper">zookeeper</link> ensemble for the cluster programmatically do as follows:
         <programlisting>Configuration config = HBaseConfiguration.create();
-        config.set("hbase.zookeeper.quorum", "localhost");  // we are running zookeeper locally
-        </programlisting>    
+config.set("hbase.zookeeper.quorum", "localhost");  // Here we are running zookeeper locally</programlisting>    
         If multiple <link linkend="zookeeper">zookeeper</link> instances make up your zookeeper ensemble,
-        they may be specified in a comma-list (just as in the <filename>hbase-site.xml</filename> file).
-        This populated Configuration instance can then be passed to an 
-        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link> instance via the overloaded constructor.     
+        they may be specified in a comma-separated list (just as in the <filename>hbase-site.xml</filename> file).
+        This populated <classname>Configuration</classname> instance can then be passed to an 
+        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
+        and so on.
         </para>
         </section>
     </section>

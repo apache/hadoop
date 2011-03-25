@@ -43,7 +43,6 @@
     <revhistory>
       <revision>
         <date />
-
         <revdescription>Adding first cuts at Configuration, Getting Started, Data Model</revdescription>
         <revnumber>
           <?eval ${project.version}?>
@@ -74,42 +73,40 @@
 
   <chapter xml:id="mapreduce">
   <title>HBase and MapReduce</title>
-  <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">HBase and MapReduce</link> up in javadocs.  Start there.  Below are is some additional
-  help.</para>
+  <para>See <link xlink:href="http://hbase.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#package_description">HBase and MapReduce</link> up in javadocs.
+  Start there.  Below is some additional help.</para>
   <section xml:id="splitter">
   <title>The default HBase MapReduce Splitter</title>
-  <para>When an HBase table is used as a MapReduce source,
-  a map task will be created for each region in the table.
+  <para>When <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableInputFormat.html">TableInputFormat</link>,
+  is used to source an HBase table in a MapReduce job,
+  its splitter will make a map task for each region of the table.
   Thus, if there are 100 regions in the table, there will be
   100 map-tasks for the job - regardless of how many column families are selected in the Scan.</para>
   </section>
   <section xml:id="mapreduce.example">
   <title>HBase Input MapReduce Example</title>
-  <para>To use HBase as a MapReduce source, the job would be configured via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapReduceUtil.html">TableMapReduceUtil</link> in the following manner...
-	<programlisting>
-  Job job = ...;	
-  Scan scan = new Scan();
-  scan.setCaching(500);  // 1 is the default in Scan, which will be bad for MapReduce jobs
-  scan.setCacheBlocks(false);  
-  // set other scan attrs
+  <para>To use HBase as a MapReduce source,
+  the job would be configured via <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapReduceUtil.html">TableMapReduceUtil</link> in the following manner...
+	<programlisting>Job job = ...;	
+Scan scan = new Scan();
+scan.setCaching(500);  // 1 is the default in Scan, which will be bad for MapReduce jobs
+scan.setCacheBlocks(false);  
+// Now set other scan attrs
+...
   
-  TableMapReduceUtil.initTableMapperJob(
-    tableName,   		// input HBase table name
-    scan, 			// Scan instance to control CF and attribute selection
-    MyMapper.class,		// mapper
-    Text.class,		// reducer key 
-    LongWritable.class,	// reducer value
-    job			// job instance
-    );
-  </programlisting>
+TableMapReduceUtil.initTableMapperJob(
+  tableName,   		// input HBase table name
+  scan, 			// Scan instance to control CF and attribute selection
+  MyMapper.class,		// mapper
+  Text.class,		// reducer key 
+  LongWritable.class,	// reducer value
+  job			// job instance
+  );</programlisting>
   ...and the mapper instance would extend <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html">TableMapper</link>...
-	<programlisting>
-    public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
-  	  public void map(ImmutableBytesWritable row, Result value, Context context) 
-      throws InterruptedException, IOException {
-
-      // process data for the row from the Result instance.
-    </programlisting>
+	<programlisting>public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
+public void map(ImmutableBytesWritable row, Result value, Context context) 
+throws InterruptedException, IOException {
+// process data for the row from the Result instance.</programlisting>
   	</para>
    </section>
    <section xml:id="mapreduce.htable.access">
@@ -118,21 +115,24 @@
     MapReduce job, other HBase tables can 
 	be accessed as lookup tables, etc., in a
     MapReduce job via creating an HTable instance in the setup method of the Mapper.
-	<programlisting>
-    public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
-  	  private HTable myOtherTable;
+	<programlisting>public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
+  private HTable myOtherTable;
 
-      @Override
-      public void setup(Context context) {
-        myOtherTable = new HTable("myOtherTable");
-     }
-   </programlisting>
+  @Override
+  public void setup(Context context) {
+    myOtherTable = new HTable("myOtherTable");
+  }</programlisting>
    </para>
     </section>
   </chapter>
 
   <chapter xml:id="schema">
   <title>HBase and Schema Design</title>
+      <para>A good general introduction on the strength and weaknesses modelling on
+          the various non-rdbms datastores is Ian Varleys' Master thesis,
+          <link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link>.
+          Recommended.
+      </para>
   <section xml:id="schema.creation">
   <title>
       Schema Creation
@@ -142,10 +142,6 @@
       </para>
   </section>   
   <section xml:id="number.of.cfs">
-      <para>A good general introduction on the strength and weaknesses modelling on
-          the various non-rdbms datastores is Ian Varleys' Master thesis,
-          <link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link>.
-      </para>
   <title>
       On the number of column families
   </title>
@@ -177,7 +173,7 @@
   <para>If you do need to upload time series data into HBase, you should
   study <link xlink:href="http://opentsdb.net/">OpenTSDB</link> as a
   successful example.  It has a page describing the <link xlink:href=" http://opentsdb.net/schema.html">schema</link> it uses in
-  HBase.  The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key.  However, the difference is that the timestamp is not in the <b>lead</b> position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types.  Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
+  HBase.  The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key.  However, the difference is that the timestamp is not in the <emphasis>lead</emphasis> position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types.  Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
  </para>
   </section>
   <section xml:id="keysize">
@@ -207,35 +203,32 @@
 Tables in HBase are initially created with one region by default.  For bulk imports, this means that all clients will write to the same region until it is large enough to split and become distributed across the cluster.  A useful pattern to speed up the bulk import process is to pre-create empty regions.  Be somewhat conservative in this, because too-many regions can actually degrade performance.  An example of pre-creation using hex-keys is as follows (note:  this example may need to be tweaked to the individual applications keys):
 </para>
 <para>
-<programlisting>
-  public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
-    throws IOException {
-      try {
-        admin.createTable( table, splits );
-        return true;
-      } catch (TableExistsException e) {
-        logger.info("table " + table.getNameAsString() + " already exists");
-         // the table already exists...
-        return false;  
-      }
-    }
-    public static byte[][] getHexSplits(String startKey, String endKey, int numRegions) {
-      byte[][] splits = new byte[numRegions-1][];
-      BigInteger lowestKey = new BigInteger(startKey, 16);
-      BigInteger highestKey = new BigInteger(endKey, 16);
-      BigInteger range = highestKey.subtract(lowestKey);
- 
-      BigInteger regionIncrement = range.divide(BigInteger.valueOf(numRegions));
-      lowestKey = lowestKey.add(regionIncrement);
-      for(int i=0; i &lt; numRegions-1;i++) {
-        BigInteger key = lowestKey.add(regionIncrement.multiply(BigInteger.valueOf(i)));
-        byte[] b = String.format("%016x", key).getBytes();
-        splits[i] = b;
-      }
+<programlisting>public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
+throws IOException {
+  try {
+    admin.createTable( table, splits );
+    return true;
+  } catch (TableExistsException e) {
+    logger.info("table " + table.getNameAsString() + " already exists");
+    // the table already exists...
+    return false;  
+  }
+}
 
-      return splits;
-    }
-  </programlisting>
+public static byte[][] getHexSplits(String startKey, String endKey, int numRegions) {
+  byte[][] splits = new byte[numRegions-1][];
+  BigInteger lowestKey = new BigInteger(startKey, 16);
+  BigInteger highestKey = new BigInteger(endKey, 16);
+  BigInteger range = highestKey.subtract(lowestKey);
+  BigInteger regionIncrement = range.divide(BigInteger.valueOf(numRegions));
+  lowestKey = lowestKey.add(regionIncrement);
+  for(int i=0; i &lt; numRegions-1;i++) {
+    BigInteger key = lowestKey.add(regionIncrement.multiply(BigInteger.valueOf(i)));
+    byte[] b = String.format("%016x", key).getBytes();
+    splits[i] = b;
+  }
+  return splits;
+}</programlisting>
   </para>
   </section>
 
@@ -422,7 +415,7 @@ Tables in HBase are initially created with one region by default.  For bulk impo
           basically a synopsis of this article by Bruno Dumon.</para>
         </footnote>.</para>
 
-      <section xml:id="versions">
+      <section xml:id="versions.ops">
         <title>Versions and HBase Operations</title>
 
         <para>In this section we look at the behavior of the version dimension
@@ -674,14 +667,17 @@ Tables in HBase are initially created with one region by default.  For bulk impo
         participate. The RegionServer splits a region, offlines the split
         region and then adds the daughter regions to META, opens daughters on
         the parent's hosting RegionServer and then reports the split to the
-        Master.</para>
+        Master. See <link linkend="disable.splitting">Managed Splitting</link> for how to manually manage
+        splits (and for why you might do this)</para>
       </section>
 
       <section>
         <title>Region Load Balancer</title>
 
         <para>
-        Periodically, and when there are not any regions in transition, a load balancer will run and move regions around to balance cluster load.
+        Periodically, and when there are not any regions in transition,
+        a load balancer will run and move regions around to balance cluster load.
+        The period at which it runs can be configured.
         </para>
       </section>
 
@@ -1071,7 +1067,7 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
             </answer>
         </qandaentry>
     </qandadiv>
-        <qandadiv><title>Runtime</title>
+    <qandadiv><title>Runtime</title>
         <qandaentry>
             <question><para>
                     Loading, why do I see pauses when loading HBase?
@@ -1094,6 +1090,19 @@ When I build, why do I always get <code>Unable to find resource 'VM_global_libra
                 blocked on?  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3622">HBASE 3622 Deadlock in HBaseServer (JVM bug?)</link>.
                 Adding <code>-XX:+UseMembar</code> to the HBase <varname>HBASE_OPTS</varname> in <filename>conf/hbase-env.sh</filename>
                 may fix it.
+                </para>
+            </answer>
+        </qandaentry>
+    </qandadiv>
+    <qandadiv><title>How do I...?</title>
+        <qandaentry xml:id="secondary.indices">
+            <question><para>
+                    Secondary Indexes in HBase?
+            </para></question>
+            <answer>
+                <para>
+                For a useful introduction to the issues involved maintaining a secondary Index in a store like HBase,
+                see the David Butler message in this thread, <link xlink:href="http://search-hadoop.com/m/nvbiBp2TDP/Stargate%252Bhbase&amp;subj=Stargate+hbase">HBase, mail # user - Stargate+hbase</link>
                 </para>
             </answer>
         </qandaentry>

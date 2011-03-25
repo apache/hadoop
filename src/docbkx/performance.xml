@@ -104,17 +104,15 @@
       <title>AutoFlush</title>
 
       <para>When performing a lot of Puts, make sure that setAutoFlush is set
-      to false on <link
+      to false on your <link
       xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
       instance. Otherwise, the Puts will be sent one at a time to the
-      regionserver. Puts added via... <programlisting>
-htable.add(Put);
-</programlisting> ... and ... <programlisting>
-htable.add( &lt;List&gt; Put);
-</programlisting> ... wind up in the same write buffer. If autoFlush=false,
+      regionserver. Puts added via <code> htable.add(Put)</code> and <code> htable.add( &lt;List&gt; Put)</code>
+      wind up in the same write buffer. If <code>autoFlush = false</code>,
       these messages are not sent until the write-buffer is filled. To
-      explicitly flush the messages, call .flushCommits(). Calling .close() on
-      the htable instance will invoke flushCommits().</para>
+      explicitly flush the messages, call <methodname>flushCommits</methodname>.
+      Calling <methodname>close</methodname> on the <classname>HTable</classname>
+      instance will invoke <methodname>flushCommits</methodname>.</para>
     </section>
 
     <section xml:id="perf.hbase.client.caching">
@@ -123,7 +121,7 @@ htable.add( &lt;List&gt; Put);
       <para>If HBase is used as an input source for a MapReduce job, for
       example, make sure that the input <link
       xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
-      instance to the MapReduce job has setCaching set to something greater
+      instance to the MapReduce job has <methodname>setCaching</methodname> set to something greater
       than the default (which is 1). Using the default value means that the
       map-task will make call back to the region-server for every record
       processed. Setting this value to 500, for example, will transfer 500
@@ -150,8 +148,7 @@ try {
 } finally {
   rs.close();  // always close the ResultScanner!
 }
-htable.close();
-</programlisting></para>
+htable.close();</programlisting></para>
     </section>
 
     <section xml:id="perf.hbase.client.blockcache">
@@ -160,8 +157,8 @@ htable.close();
       <para><link
       xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
       instances can be set to use the block cache in the region server via the
-      setCacheBlocks method. For input Scans to MapReduce jobs, this should be
-      false. For frequently access rows, it is advisable to use the block
+      <methodname>setCacheBlocks</methodname> method. For input Scans to MapReduce jobs, this should be
+      <varname>false</varname>. For frequently accessed rows, it is advisable to use the block
       cache.</para>
     </section>
   </section>

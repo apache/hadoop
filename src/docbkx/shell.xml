@@ -11,7 +11,7 @@
 
     <para>
         The HBase Shell is <link xlink:href="http://jruby.org">(J)Ruby</link>'s
-        IRB with some HBase particular verbs added.  Anything you can do in
+        IRB with some HBase particular commands added.  Anything you can do in
         IRB, you should be able to do in the HBase Shell.</para>
         <para>To run the HBase shell, 
         do as follows:
