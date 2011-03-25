@@ -18,6 +18,11 @@ Release 0.20.204.0 - unreleased
     HDFS-1773. Do not show decommissioned datanodes, which are not in both
     include and exclude lists, on web and JMX interfaces.
     (Tanping Wang via szetszwo)
+  
+  IMPROVEMENTS
+
+    HDFS-1541. Not marking datanodes dead when namenode in safemode.
+    (hairong)
 
 Release 0.20.203.0 - unreleased
 
