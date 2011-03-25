@@ -102,6 +102,8 @@ Release 0.91.0 - Unreleased
    HBASE-3541  REST Multi Gets (Elliott Clark via Stack)
    HBASE-3052  Add ability to have multiple ZK servers in a quorum in
                MiniZooKeeperCluster for test writing (Liyin Tang via Stack)
+   HBASE-3696  isMajorCompaction() check triggers lots of listStatus DFS RPC
+               calls from HBase (Liyin Tang via Stack)
 
   TASK
    HBASE-3559  Move report of split to master OFF the heartbeat channel

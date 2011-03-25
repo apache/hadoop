@@ -725,23 +725,11 @@ public class Store implements HeapSize {
    * @param dir
    * @throws IOException
    */
-  private static long getLowestTimestamp(FileSystem fs,
-      final List<StoreFile> candidates) throws IOException {
+  public static long getLowestTimestamp(final List<StoreFile> candidates) 
+      throws IOException {
     long minTs = Long.MAX_VALUE;
-    if (candidates.isEmpty()) {
-      return minTs;
-    }
-    Path[] p = new Path[candidates.size()];
-    for (int i = 0; i < candidates.size(); ++i) {
-      p[i] = candidates.get(i).getPath();
-    }
-
-    FileStatus[] stats = fs.listStatus(p);
-    if (stats == null || stats.length == 0) {
-      return minTs;
-    }
-    for (FileStatus s : stats) {
-      minTs = Math.min(minTs, s.getModificationTime());
+    for (StoreFile storeFile : candidates) {
+      minTs = Math.min(minTs, storeFile.getModificationTimeStamp());
     }
     return minTs;
   }
@@ -781,7 +769,7 @@ public class Store implements HeapSize {
       return result;
         }
     // TODO: Use better method for determining stamp of last major (HBASE-2990)
-    long lowTimestamp = getLowestTimestamp(fs, filesToCompact);
+    long lowTimestamp = getLowestTimestamp(filesToCompact);
     long now = System.currentTimeMillis();
     if (lowTimestamp > 0l && lowTimestamp < (now - this.majorCompactionTime)) {
       // Major compaction time has elapsed.

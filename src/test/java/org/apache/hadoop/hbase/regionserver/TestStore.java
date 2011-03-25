@@ -132,6 +132,54 @@ public class TestStore extends TestCase {
     store = new Store(basedir, region, hcd, fs, conf);
   }
 
+  public void testLowestModificationTime() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    FileSystem fs = FileSystem.get(conf);
+    // Initialize region
+    init(getName(), conf);
+    
+    int storeFileNum = 4;
+    for (int i = 1; i <= storeFileNum; i++) {
+      LOG.info("Adding some data for the store file #"+i);
+      this.store.add(new KeyValue(row, family, qf1, i, (byte[])null));
+      this.store.add(new KeyValue(row, family, qf2, i, (byte[])null));
+      this.store.add(new KeyValue(row, family, qf3, i, (byte[])null));
+      flush(i);
+    }
+    // after flush; check the lowest time stamp
+    long lowestTimeStampFromStore = 
+        Store.getLowestTimestamp(store.getStorefiles());
+    long lowestTimeStampFromFS = 
+      getLowestTimeStampFromFS(fs,store.getStorefiles());
+    assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS);
+    
+    // after compact; check the lowest time stamp
+    store.compact();
+    lowestTimeStampFromStore = Store.getLowestTimestamp(store.getStorefiles());
+    lowestTimeStampFromFS = getLowestTimeStampFromFS(fs,store.getStorefiles());
+    assertEquals(lowestTimeStampFromStore,lowestTimeStampFromFS); 
+  }
+  
+  private static long getLowestTimeStampFromFS(FileSystem fs, 
+      final List<StoreFile> candidates) throws IOException {
+    long minTs = Long.MAX_VALUE;
+    if (candidates.isEmpty()) {
+      return minTs; 
+    }
+    Path[] p = new Path[candidates.size()];
+    for (int i = 0; i < candidates.size(); ++i) {
+      p[i] = candidates.get(i).getPath();
+    }
+    
+    FileStatus[] stats = fs.listStatus(p);
+    if (stats == null || stats.length == 0) {
+      return minTs;
+    }
+    for (FileStatus s : stats) {
+      minTs = Math.min(minTs, s.getModificationTime());
+    }
+    return minTs;
+  }
 
   //////////////////////////////////////////////////////////////////////////////
   // Get tests

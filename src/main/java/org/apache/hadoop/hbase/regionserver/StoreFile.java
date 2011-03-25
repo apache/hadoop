@@ -40,6 +40,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
@@ -171,6 +172,8 @@ public class StoreFile {
   private final Configuration conf;
   private final BloomType bloomType;
 
+  // the last modification time stamp
+  private long modificationTimeStamp = 0L;
 
   /**
    * Constructor, loads a reader and it's indices, etc. May allocate a
@@ -206,6 +209,14 @@ public class StoreFile {
     } else {
       this.bloomType = BloomType.NONE;
       LOG.info("Ignoring bloom filter check for file (disabled in config)");
+    }
+    
+    // cache the modification time stamp of this store file
+    FileStatus[] stats = fs.listStatus(p);
+    if (stats != null && stats.length == 1) {
+      this.modificationTimeStamp = stats[0].getModificationTime();
+    } else {
+      this.modificationTimeStamp = 0;
     }
   }
 
@@ -294,6 +305,10 @@ public class StoreFile {
    */
   public long getMaxSequenceId() {
     return this.sequenceid;
+  }
+
+  public long getModificationTimeStamp() {
+    return modificationTimeStamp;
   }
 
   /**
