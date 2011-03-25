@@ -49,6 +49,7 @@ public class TestScannerTimeout {
   // Be careful w/ what you set this timer too... it can get in the way of
   // the mini cluster coming up -- the verification in particular.
   private final static int SCANNER_TIMEOUT = 10000;
+  private final static int SCANNER_CACHING = 5;
 
    /**
    * @throws java.lang.Exception
@@ -132,6 +133,61 @@ public class TestScannerTimeout {
     rs.abort("die!");
     Result[] results = r.next(NB_ROWS);
     assertEquals(NB_ROWS, results.length);
+    r.close();
+  }
+  
+  /**
+   * Test that scanner won't miss any rows if the region server it was reading
+   * from failed. Before 3686, it would skip rows in the scan.
+   * @throws Exception
+   */
+  @Test
+  public void test3686a() throws Exception {
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    Scan scan = new Scan();
+    scan.setCaching(SCANNER_CACHING);
+    
+    HTable table = new HTable(TABLE_NAME);
+    ResultScanner r = table.getScanner(scan);
+    int count = 1;
+    r.next();
+    // Kill after one call to next(), which got 5 rows.
+    rs.abort("die!");
+    while(r.next() != null) {
+      count ++;
+    }
+    assertEquals(NB_ROWS, count);
+    r.close();
+  }
+  
+  /**
+   * Make sure that no rows are lost if the scanner timeout is longer on the
+   * client than the server, and the scan times out on the server but not the
+   * client.
+   * @throws Exception
+   */
+  @Test
+  public void test3686b() throws Exception {
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLE_NAME);
+    Scan scan = new Scan();
+    scan.setCaching(SCANNER_CACHING);
+    // Set a very high timeout, we want to test what happens when a RS
+    // fails but the region is recovered before the lease times out.
+    // Since the RS is already created, this conf is client-side only for
+    // this new table
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setInt(
+        HConstants.HBASE_REGIONSERVER_LEASE_PERIOD_KEY, SCANNER_TIMEOUT*100);
+    HTable higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
+    ResultScanner r = higherScanTimeoutTable.getScanner(scan);
+    int count = 1;
+    r.next();
+    // Sleep, allowing the scan to timeout on the server but not on the client.
+    Thread.sleep(SCANNER_TIMEOUT+2000);
+    while(r.next() != null) {
+      count ++;
+    }
+    assertEquals(NB_ROWS, count);
     r.close();
   }
 }

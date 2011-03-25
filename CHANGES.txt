@@ -185,6 +185,8 @@ Release 0.90.2 - Unreleased
    HBASE-3666  TestScannerTimeout fails occasionally
    HBASE-3497  TableMapReduceUtil.initTableReducerJob broken due to setConf 
                method in TableOutputFormat
+   HBASE-3686  ClientScanner skips too many rows on recovery if using scanner
+               caching (Sean Sechrist via Stack)
 
   IMPROVEMENTS
    HBASE-3542  MultiGet methods in Thrift

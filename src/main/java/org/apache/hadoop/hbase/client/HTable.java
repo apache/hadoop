@@ -1101,15 +1101,18 @@ public class HTable implements HTableInterface {
         boolean skipFirst = false;
         do {
           try {
+            if (skipFirst) {
+              // Skip only the first row (which was the last row of the last
+              // already-processed batch).
+              callable.setCaching(1);
+              values = getConnection().getRegionServerWithRetries(callable);
+              callable.setCaching(this.caching);
+              skipFirst = false;
+            }
             // Server returns a null values if scanning is to stop.  Else,
             // returns an empty array if scanning is to go on and we've just
             // exhausted current region.
             values = getConnection().getRegionServerWithRetries(callable);
-            if (skipFirst) {
-              skipFirst = false;
-              // Reget.
-              values = getConnection().getRegionServerWithRetries(callable);
-            }
           } catch (DoNotRetryIOException e) {
             if (e instanceof UnknownScannerException) {
               long timeout = lastNext + scannerTimeout;
